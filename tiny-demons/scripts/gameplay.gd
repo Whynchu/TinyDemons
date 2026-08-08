@@ -119,6 +119,7 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var target_health_fill: Sprite2D = $UI/EnemyHpFill
 @onready var player_health_fill: Sprite2D = $UI/HpBarFill
 @onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
+var player_equipment: EquipmentComponent = null
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -236,9 +237,6 @@ var room_number_indicator: Sprite2D = null
 var gold_indicator: Sprite2D = null
 var target_health_text: Sprite2D = null
 var player_health_text: Sprite2D = null
-var player_overhead_frame: Sprite2D = null
-var player_overhead_fill: Sprite2D = null
-var player_overhead_damage_fill: Sprite2D = null
 var player_start_position := Vector2.ZERO
 var chest_start_position := Vector2.ZERO
 var target_health: Dictionary = {}
@@ -305,12 +303,17 @@ func _ready() -> void:
 	_build_slime_direction_textures()
 	_build_slime_attack_frames()
 	_build_enemy_health_ui()
-	_build_player_overhead_health_ui()
 	_build_target_health_text()
 	_build_interact_prompt()
 	_build_room_number_indicator()
 	_build_gold_indicator()
 	_build_game_over_ui()
+	player_equipment = player.get_node_or_null("Equipment") as EquipmentComponent
+	if player_equipment == null:
+		player_equipment = EquipmentComponent.new()
+		player_equipment.name = "Equipment"
+		player_equipment.equip_default_loadout()
+		player.add_child(player_equipment)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_regen_delay_timer = 0.0
@@ -845,7 +848,10 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 		return 1.0
 	var attacker_str := float(attacker_stats.strength)
 	var defender_def := float(defender_stats.def) if defender_stats != null else 0.0
-	var raw_damage := DAMAGE_BASE + attacker_str
+	var attacker_equipment_damage := player_equipment.damage_bonus if attacker_stats == player_stats and player_equipment != null else 0.0
+	var defender_equipment_defense := player_equipment.defense_bonus if defender_stats == player_stats and player_equipment != null else 0.0
+	var raw_damage := DAMAGE_BASE + attacker_str + attacker_equipment_damage
+	defender_def += defender_equipment_defense
 	# Diminishing returns keep DEF useful without letting it erase damage.
 	# At DEF equal to DAMAGE_DEFENSE_SCALE, the defender takes half damage;
 	# every point beyond that has progressively less impact.
@@ -856,7 +862,8 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 func _max_health_for_stats(stats: StatsComponent) -> float:
 	if stats == null:
 		return TARGET_HEALTH_MAX
-	return HEALTH_BASE + float(stats.vit) * HEALTH_PER_VIT
+	var equipment_health := player_equipment.health_bonus if stats == player_stats and player_equipment != null else 0.0
+	return HEALTH_BASE + float(stats.vit) * HEALTH_PER_VIT + equipment_health
 
 
 func _player_max_health() -> float:
@@ -983,37 +990,12 @@ func _build_target_health_text() -> void:
 	ui.add_child(target_health_text)
 
 
-func _build_player_overhead_health_ui() -> void:
-	var blue_fill := target_overhead_fill_textures.get(slime_blue, hp_overhead_fill.texture) as Texture2D
-	var blue_damage := _brighter_bar_texture(blue_fill)
-	player_overhead_frame = Sprite2D.new()
-	player_overhead_frame.texture = hp_overhead.texture
-	player_overhead_frame.centered = hp_overhead.centered
-	player_overhead_frame.position = hp_overhead.position
-	player_overhead_frame.z_as_relative = false
-	player_overhead_frame.z_index = OVERWORLD_UI_Z
-	player.add_child(player_overhead_frame)
-	player_overhead_damage_fill = Sprite2D.new()
-	player_overhead_damage_fill.texture = blue_damage
-	player_overhead_damage_fill.centered = hp_overhead_fill.centered
-	player_overhead_damage_fill.position = hp_overhead_fill.position
-	player_overhead_damage_fill.z_as_relative = false
-	player_overhead_damage_fill.z_index = OVERWORLD_UI_Z + 1
-	player.add_child(player_overhead_damage_fill)
-	player_overhead_fill = Sprite2D.new()
-	player_overhead_fill.texture = blue_fill
-	player_overhead_fill.centered = hp_overhead_fill.centered
-	player_overhead_fill.position = hp_overhead_fill.position
-	player_overhead_fill.z_as_relative = false
-	player_overhead_fill.z_index = OVERWORLD_UI_Z + 2
-	player.add_child(player_overhead_fill)
-
 	player_health_text = Sprite2D.new()
 	player_health_text.name = "PlayerHealthText"
 	player_health_text.centered = true
 	player_health_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	player_health_text.z_index = 3
-	player_health_text.position = player_health_fill.position + player_health_fill.texture.get_size() * 0.5
+	player_health_text.position = player_health_fill.position + player_health_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	ui.add_child(player_health_text)
 
 
@@ -3049,17 +3031,6 @@ func _set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 
 
 func _update_overworld_ui() -> void:
-	if player_overhead_frame != null:
-		var player_max_health := _player_max_health()
-		var player_health_ratio := player_health / player_max_health
-		var player_overhead_size := player_overhead_fill.texture.get_size()
-		var player_overhead_position := player.global_position + (hp_overhead.global_position - slime_green.global_position)
-		player_overhead_frame.global_position = player_overhead_position
-		player_overhead_damage_fill.global_position = player_overhead_position
-		player_overhead_fill.global_position = player_overhead_position
-		_set_fill_ratio(player_overhead_damage_fill, player_overhead_size, player_health_ratio)
-		_set_fill_ratio(player_overhead_fill, player_overhead_size, player_health_ratio)
-
 	for slime in slimes:
 		var frame := target_overhead_frames.get(slime) as Sprite2D
 		var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D

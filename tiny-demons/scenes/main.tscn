@@ -23,6 +23,7 @@
 [ext_resource type="Texture2D" uid="uid://e2bcakb34ad0" path="res://assets/artwork/HpBarBlueBar.png" id="21_hp_bar_blue"]
 [ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
 [ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
+[ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
 
 [node name="Main" type="Node2D" unique_id=422795878]
 texture_filter = 1
@@ -498,6 +499,13 @@ centered = false
 
 [node name="Stats" type="Node" parent="Actors/TinyDemon" unique_id=402301846]
 script = ExtResource("20_stats_component")
+
+[node name="Equipment" type="Node" parent="Actors/TinyDemon" unique_id=1798955296]
+script = ExtResource("26_equipment_component")
+health_bonus = 14.0
+damage_bonus = 1.0
+weapon_name = "Basic Sword"
+armor_name = "Basic Tunic"
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
 script = ExtResource("19_collision_guide")
