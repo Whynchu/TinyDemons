@@ -230,7 +230,20 @@ var player_death_scale := Vector2.ONE
 var player_death_texture: Texture2D = null
 var game_over_overlay: ColorRect = null
 var game_over_button: Button = null
+var game_over_title_button: Button = null
 var game_over_fade_timer := 0.0
+var title_overlay: ColorRect = null
+var title_start_button: Button = null
+var title_frame_timer := 0.0
+var title_screen_text: Sprite2D = null
+var title_start_text: Sprite2D = null
+var title_transition_active := false
+var title_transition_timer := 0.0
+var title_particles: Array[Dictionary] = []
+var title_particle_layer: Node2D = null
+var scene_transition_overlay: ColorRect = null
+var scene_transition_timer := 0.0
+var scene_transition_active := false
 var gold := 0
 var interact_input_was_down := false
 var chest_unlocked := false
@@ -329,6 +342,8 @@ func _ready() -> void:
 	_build_gold_indicator()
 	_build_button_hud()
 	_build_game_over_ui()
+	_build_title_screen()
+	_build_scene_transition()
 	player_equipment = player.get_node_or_null("Equipment") as EquipmentComponent
 	if player_equipment == null:
 		player_equipment = EquipmentComponent.new()
@@ -381,6 +396,19 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if walkable_outline.is_empty():
 		return
+	if scene_transition_active:
+		scene_transition_timer += delta
+		scene_transition_overlay.modulate.a = clampf(scene_transition_timer / 0.28, 0.0, 1.0)
+		# Hold the fully black frame briefly before reloading the scene.
+		if scene_transition_timer >= 0.34:
+			get_tree().reload_current_scene()
+		return
+	if title_transition_active or (title_overlay != null and title_overlay.visible):
+		_update_title_screen(delta)
+		if title_transition_active and title_transition_timer < 0.72:
+			return
+		if not title_transition_active:
+			return
 	if hitstop_timer > 0.0:
 		hitstop_timer = maxf(hitstop_timer - delta, 0.0)
 		return
@@ -509,7 +537,11 @@ func _update_player_death(delta: float) -> void:
 		game_over_fade_timer += delta
 		game_over_overlay.modulate.a = clampf(game_over_fade_timer / GAME_OVER_FADE_TIME, 0.0, 1.0)
 		if game_over_button != null:
-			game_over_button.modulate.a = 0.55 + sin(game_over_fade_timer * 7.0) * 0.45
+			game_over_button.modulate.a = _retro_button_alpha(game_over_fade_timer)
+			game_over_button.position.y = 105.0 + _retro_button_bob(game_over_fade_timer)
+		if game_over_title_button != null:
+			game_over_title_button.modulate.a = _retro_button_alpha(game_over_fade_timer + 0.6)
+			game_over_title_button.position.y = 121.0 + _retro_button_bob(game_over_fade_timer + 0.4)
 	elif player_death_timer >= death_effect_end + PLAYER_DEATH_OBSERVE_TIME:
 		_show_game_over()
 
@@ -557,7 +589,7 @@ func _build_game_over_ui() -> void:
 	game_over_overlay.name = "GameOverOverlay"
 	game_over_overlay.position = Vector2.ZERO
 	game_over_overlay.size = Vector2(240, 160)
-	game_over_overlay.color = Color(0, 0, 0, 0.82)
+	game_over_overlay.color = Color(0, 0, 0, 0.62)
 	game_over_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	game_over_overlay.visible = false
 	game_over_overlay.modulate.a = 0.0
@@ -594,6 +626,23 @@ func _build_game_over_ui() -> void:
 	game_over_button.add_child(restart_text)
 	game_over_button.pressed.connect(_restart_game)
 	game_over_overlay.add_child(game_over_button)
+	game_over_title_button = Button.new()
+	game_over_title_button.position = Vector2(99, 121)
+	game_over_title_button.size = Vector2(42, 12)
+	game_over_title_button.text = ""
+	game_over_title_button.focus_mode = Control.FOCUS_ALL
+	game_over_title_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	game_over_title_button.add_theme_stylebox_override("normal", normal_style)
+	game_over_title_button.add_theme_stylebox_override("hover", focus_style)
+	game_over_title_button.add_theme_stylebox_override("focus", focus_style)
+	var title_button_text := Sprite2D.new()
+	title_button_text.texture = _pixel_text_texture("TITLE", Color.WHITE)
+	title_button_text.centered = true
+	title_button_text.position = game_over_title_button.size * 0.5
+	title_button_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	game_over_title_button.add_child(title_button_text)
+	game_over_title_button.pressed.connect(_return_to_title)
+	game_over_overlay.add_child(game_over_title_button)
 
 
 func _show_game_over() -> void:
@@ -605,6 +654,206 @@ func _show_game_over() -> void:
 	game_over_button.grab_focus()
 
 
+func _build_title_screen() -> void:
+	title_overlay = ColorRect.new()
+	title_overlay.name = "TitleOverlay"
+	title_overlay.position = Vector2.ZERO
+	title_overlay.size = Vector2(240, 160)
+	title_overlay.color = Color.BLACK
+	title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	title_overlay.z_index = 0
+	ui.add_child(title_overlay)
+
+	title_screen_text = Sprite2D.new()
+	title_screen_text.texture = _pixel_text_texture("TINY DEMONS", Color.WHITE)
+	title_screen_text.centered = false
+	title_screen_text.scale = Vector2(3, 3)
+	title_screen_text.position = Vector2((240.0 - title_screen_text.texture.get_width() * 3.0) * 0.5, 48)
+	title_screen_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	title_overlay.add_child(title_screen_text)
+
+	title_start_button = Button.new()
+	title_start_button.position = Vector2(99, 103)
+	title_start_button.size = Vector2(42, 14)
+	title_start_button.text = ""
+	title_start_button.focus_mode = Control.FOCUS_ALL
+	title_start_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = Color(0, 0, 0, 0)
+	normal_style.border_color = Color.WHITE
+	normal_style.set_border_width_all(1)
+	var focus_style := StyleBoxFlat.new()
+	focus_style.bg_color = Color(1, 1, 1, 0.12)
+	focus_style.border_color = Color.WHITE
+	focus_style.set_border_width_all(1)
+	title_start_button.add_theme_stylebox_override("normal", normal_style)
+	title_start_button.add_theme_stylebox_override("hover", focus_style)
+	title_start_button.add_theme_stylebox_override("focus", focus_style)
+	title_start_text = Sprite2D.new()
+	title_start_text.texture = _pixel_text_texture("START", Color.WHITE)
+	title_start_text.centered = true
+	title_start_text.position = title_start_button.size * 0.5
+	title_start_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	title_start_button.add_child(title_start_text)
+	title_start_button.pressed.connect(_start_from_title)
+	title_overlay.add_child(title_start_button)
+	title_start_button.grab_focus()
+
+
+func _update_title_screen(delta: float) -> void:
+	if title_transition_active:
+		_update_title_particles(delta)
+		title_transition_timer += delta
+		var fade_start := 0.72
+		var fade_duration := 0.42
+		title_overlay.modulate.a = 1.0 if title_transition_timer < fade_start else clampf(1.0 - (title_transition_timer - fade_start) / fade_duration, 0.0, 1.0)
+		if title_transition_timer >= fade_start + fade_duration:
+			title_transition_active = false
+			title_overlay.visible = false
+		return
+	title_frame_timer += delta
+	var pulse := _retro_button_alpha(title_frame_timer)
+	if title_start_button != null:
+		title_start_button.modulate.a = pulse
+		title_start_button.position.y = 103.0 + _retro_button_bob(title_frame_timer)
+	if Input.is_action_just_pressed("ui_accept") or _is_interact_input_pressed():
+		_start_from_title()
+
+
+func _retro_button_alpha(timer: float) -> float:
+	var cycle := 2.4
+	var phase := fmod(timer, cycle)
+	var pulse := 1.0
+	if phase >= 0.6 and phase < 1.5:
+		pulse = lerpf(1.0, 0.45, (phase - 0.6) / 0.9)
+	elif phase >= 1.5 and phase < 2.1:
+		pulse = lerpf(0.45, 1.0, (phase - 1.5) / 0.6)
+	# Quantize both time and brightness into deliberate pixel-art steps.
+	return snappedf(snappedf(pulse, 0.08), 0.125)
+
+
+func _retro_button_bob(timer: float) -> float:
+	return snappedf(sin(timer / 3.6 * TAU) * 1.5, 0.5)
+
+
+func _start_from_title() -> void:
+	if title_overlay == null or not title_overlay.visible:
+		return
+	_spawn_title_pixel_breakup(title_screen_text)
+	_spawn_title_pixel_breakup(title_start_text)
+	title_overlay.visible = true
+	title_overlay.modulate.a = 1.0
+	title_transition_active = true
+	title_transition_timer = 0.0
+	if title_screen_text != null:
+		title_screen_text.visible = false
+	if title_start_text != null:
+		title_start_text.visible = false
+	if title_start_button != null:
+		title_start_button.visible = false
+		title_start_button.release_focus()
+
+
+func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
+	if source_sprite == null or source_sprite.texture == null:
+		return
+	if title_particle_layer == null:
+		title_particle_layer = Node2D.new()
+		title_particle_layer.name = "TitleParticleLayer"
+		title_particle_layer.z_index = 10
+		ui.add_child(title_particle_layer)
+	var image := source_sprite.texture.get_image()
+	if image == null:
+		return
+	var noise := FastNoiseLite.new()
+	noise.seed = rng.randi()
+	noise.frequency = 0.28
+	for y in image.get_height():
+		for x in image.get_width():
+			var color := image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			var pixel_position := source_sprite.global_position
+			var pixel_size := source_sprite.scale
+			if source_sprite.centered:
+				pixel_position -= Vector2(image.get_width(), image.get_height()) * pixel_size * 0.5
+			pixel_position += Vector2(x, y) * pixel_size
+			var noise_value := noise.get_noise_2d(float(x), float(y))
+			var direction := Vector2(noise_value, -1.0).normalized()
+			var speed := 8.0 + (noise_value + 1.0) * 14.0
+			var particle := Sprite2D.new()
+			particle.texture = _pixel_particle_texture(color)
+			particle.centered = false
+			particle.scale = pixel_size
+			particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			particle.z_as_relative = true
+			particle.z_index = 3
+			particle.position = pixel_position
+			title_particle_layer.add_child(particle)
+			title_particles.append({
+				"sprite": particle,
+				"velocity": direction * speed,
+				"timer": 1.14,
+				"lifetime": 1.14,
+				"gravity": 0.0,
+			})
+
+	_spawn_title_button_frame_breakup()
+
+
+func _spawn_title_button_frame_breakup() -> void:
+	if title_start_button == null:
+		return
+	var origin := title_start_button.position
+	var width := int(title_start_button.size.x)
+	var height := int(title_start_button.size.y)
+	for x in range(width):
+		_spawn_title_frame_particle(origin + Vector2(x, 0))
+		_spawn_title_frame_particle(origin + Vector2(x, height - 1))
+	for y in range(1, height - 1):
+		_spawn_title_frame_particle(origin + Vector2(0, y))
+		_spawn_title_frame_particle(origin + Vector2(width - 1, y))
+
+
+func _spawn_title_frame_particle(frame_position: Vector2) -> void:
+	var particle := Sprite2D.new()
+	particle.texture = _pixel_particle_texture(Color.WHITE)
+	particle.centered = false
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = true
+	particle.z_index = 3
+	particle.position = frame_position
+	title_particle_layer.add_child(particle)
+	var noise_value := rng.randf_range(-1.0, 1.0)
+	title_particles.append({
+		"sprite": particle,
+		"velocity": Vector2(noise_value * 14.0, -10.0 - absf(noise_value) * 10.0),
+		"timer": 1.14,
+		"lifetime": 1.14,
+		"gravity": 0.0,
+	})
+
+
+func _update_title_particles(delta: float) -> void:
+	for index in range(title_particles.size() - 1, -1, -1):
+		var particle_data := title_particles[index]
+		var particle := particle_data["sprite"] as Sprite2D
+		var timer := float(particle_data["timer"]) - delta
+		if particle == null or timer <= 0.0:
+			if particle != null:
+				particle.queue_free()
+			title_particles.remove_at(index)
+			continue
+		var velocity := particle_data["velocity"] as Vector2
+		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
+		logical_position += velocity * delta
+		particle_data["logical_position"] = logical_position
+		particle.position = _snap_half_pixel(logical_position)
+		var lifetime := float(particle_data.get("lifetime", 1.14))
+		particle.modulate.a = clampf(timer / lifetime, 0.0, 1.0)
+		particle_data["timer"] = timer
+
+
 func _update_game_over_input() -> void:
 	if game_over_overlay == null or not game_over_overlay.visible:
 		return
@@ -613,7 +862,31 @@ func _update_game_over_input() -> void:
 
 
 func _restart_game() -> void:
-	get_tree().reload_current_scene()
+	_begin_scene_transition()
+
+
+func _return_to_title() -> void:
+	_begin_scene_transition()
+
+
+func _build_scene_transition() -> void:
+	scene_transition_overlay = ColorRect.new()
+	scene_transition_overlay.name = "SceneTransitionOverlay"
+	scene_transition_overlay.position = Vector2.ZERO
+	scene_transition_overlay.size = Vector2(240, 160)
+	scene_transition_overlay.color = Color.BLACK
+	scene_transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	scene_transition_overlay.z_index = 200
+	scene_transition_overlay.modulate.a = 0.0
+	ui.add_child(scene_transition_overlay)
+
+
+func _begin_scene_transition() -> void:
+	if scene_transition_active or scene_transition_overlay == null:
+		return
+	scene_transition_active = true
+	scene_transition_timer = 0.0
+	scene_transition_overlay.visible = true
 
 
 func _move_player(delta: float) -> void:
@@ -1642,8 +1915,8 @@ func _update_pixel_particles(delta: float) -> void:
 		particle_data["timer"] = timer
 
 
-func _snap_half_pixel(position: Vector2) -> Vector2:
-	return Vector2(snappedf(position.x, 0.5), snappedf(position.y, 0.5))
+func _snap_half_pixel(world_position: Vector2) -> Vector2:
+	return Vector2(snappedf(world_position.x, 0.5), snappedf(world_position.y, 0.5))
 
 
 func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:
@@ -2120,6 +2393,12 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 		"R": ["110", "101", "110", "101", "101"],
 		"S": ["111", "100", "111", "001", "111"],
 		"T": ["111", "010", "010", "010", "010"],
+		"I": ["111", "010", "010", "010", "111"],
+		"Y": ["101", "101", "010", "010", "010"],
+		"N": ["1001", "1101", "1011", "1001", "1001"],
+		"D": ["110", "101", "101", "101", "110"],
+		"U": ["101", "101", "101", "101", "111"],
+		"L": ["100", "100", "100", "100", "111"],
 		"0": ["111", "101", "101", "101", "111"],
 		"1": ["010", "110", "010", "010", "111"],
 		"2": ["111", "001", "111", "100", "111"],
