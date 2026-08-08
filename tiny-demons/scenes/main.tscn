@@ -1,0 +1,632 @@
+[gd_scene format=3 uid="uid://cqglsgesc12h7"]
+
+[ext_resource type="Texture2D" uid="uid://d11oi65batt74" path="res://assets/artwork/BG.png" id="1_bg"]
+[ext_resource type="Texture2D" uid="uid://dn1k7etqwr57i" path="res://assets/artwork/Tile.png" id="2_tile"]
+[ext_resource type="Texture2D" uid="uid://bss155baws2ai" path="res://assets/artwork/WallLeft.png" id="3_wall_left"]
+[ext_resource type="Texture2D" uid="uid://b7v1k8gok6lhs" path="res://assets/artwork/WallRight.png" id="4_wall_right"]
+[ext_resource type="Texture2D" uid="uid://c2k6nhy3riyvq" path="res://assets/artwork/DoorRight.png" id="5_door"]
+[ext_resource type="Texture2D" uid="uid://bdfi7adnkl6sx" path="res://assets/artwork/ChestGrey.png" id="6_chest"]
+[ext_resource type="Texture2D" uid="uid://dy7ra3eprvwy6" path="res://assets/artwork/TinyDemon.png" id="7_demon"]
+[ext_resource type="Texture2D" uid="uid://c0krlv2p2r8hp" path="res://assets/artwork/SlimeBlue.png" id="8_slime_blue"]
+[ext_resource type="Texture2D" uid="uid://by84hoph461ir" path="res://assets/artwork/SlimeGreen.png" id="9_slime_green"]
+[ext_resource type="Texture2D" uid="uid://8fgx5pr7dffa" path="res://assets/artwork/SlimeRed.png" id="10_slime_red"]
+[ext_resource type="Texture2D" uid="uid://bmhr71mqr5v2r" path="res://assets/artwork/HpBar.png" id="11_hp_bar"]
+[ext_resource type="Texture2D" uid="uid://c6bdtykoa0vpn" path="res://assets/artwork/HpText.png" id="12_hp_text"]
+[ext_resource type="Texture2D" uid="uid://p1ikyaelccda" path="res://assets/artwork/EnemyHp.png" id="13_enemy_hp"]
+[ext_resource type="Texture2D" uid="uid://buwfuu48fkska" path="res://assets/artwork/SlimeText.png" id="14_slime_text"]
+[ext_resource type="Texture2D" uid="uid://ub5dtvrx1hsa" path="res://assets/artwork/HpOverhead.png" id="15_hp_overhead"]
+[ext_resource type="Texture2D" uid="uid://dk5sq30181jto" path="res://assets/artwork/BlackBars.png" id="16_black_bars"]
+[ext_resource type="Script" uid="uid://bolgaay1voxyo" path="res://scripts/gameplay.gd" id="17_gameplay"]
+[ext_resource type="Texture2D" uid="uid://cqc78kjjt5xk8" path="res://assets/artwork/TinyDemonShadow.png" id="18_demon_shadow"]
+[ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor_collision_guide.gd" id="19_collision_guide"]
+[ext_resource type="Script" path="res://scripts/stats_component.gd" id="20_stats_component"]
+[ext_resource type="Texture2D" uid="uid://e2bcakb34ad0" path="res://assets/artwork/HpBarBlueBar.png" id="21_hp_bar_blue"]
+[ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
+[ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
+
+[node name="Main" type="Node2D" unique_id=422795878]
+texture_filter = 1
+script = ExtResource("17_gameplay")
+
+[node name="Background" type="Sprite2D" parent="." unique_id=1363256938]
+texture = ExtResource("1_bg")
+centered = false
+
+[node name="Map" type="Node2D" parent="." unique_id=635886819]
+
+[node name="FloorTiles" type="Node2D" parent="Map" unique_id=238769299]
+
+[node name="FloorCollisionGuide" type="Polygon2D" parent="Map/FloorTiles" unique_id=1468149751]
+z_index = 2048
+position = Vector2(105, 95)
+color = Color(0.1, 1, 0.35, 0.28)
+polygon = PackedVector2Array(-49, -6, -49, -7, 13, -38, 17, -38, 79, -7, 79, -6, 17, 25, 13, 25, -25, 6, -31, 9, -35, 9, -45, 4, -45, 3, -37, 0, -37, -1)
+
+[node name="Tile_0_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=913323991]
+position = Vector2(112, 56)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=324414665]
+position = Vector2(120, 60)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1699181076]
+position = Vector2(128, 64)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=2097161250]
+position = Vector2(136, 68)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=492603458]
+position = Vector2(144, 72)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=856601323]
+position = Vector2(152, 76)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1218052957]
+position = Vector2(160, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_0_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1839624130]
+position = Vector2(168, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=644275638]
+position = Vector2(104, 60)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1254937608]
+position = Vector2(112, 64)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1071833133]
+position = Vector2(120, 68)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=854230405]
+position = Vector2(128, 72)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=579053184]
+position = Vector2(136, 76)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=1114011856]
+position = Vector2(144, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1436619768]
+position = Vector2(152, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_1_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1163383290]
+position = Vector2(160, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=821258587]
+position = Vector2(96, 64)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=445836224]
+position = Vector2(104, 68)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1979412119]
+position = Vector2(112, 72)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1508180176]
+position = Vector2(120, 76)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=942061969]
+position = Vector2(128, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=813775909]
+position = Vector2(136, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=254193127]
+position = Vector2(144, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_2_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1455469432]
+position = Vector2(152, 92)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=995764610]
+position = Vector2(88, 68)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1126130158]
+position = Vector2(96, 72)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1152537001]
+position = Vector2(104, 76)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=16302317]
+position = Vector2(112, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=1532140552]
+position = Vector2(120, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=1610986682]
+position = Vector2(128, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=32984359]
+position = Vector2(136, 92)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_3_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=439610697]
+position = Vector2(144, 96)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=1382896356]
+position = Vector2(80, 72)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=410986066]
+position = Vector2(88, 76)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=977979431]
+position = Vector2(96, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=695322375]
+position = Vector2(104, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=1707427687]
+position = Vector2(112, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=599192917]
+position = Vector2(120, 92)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=298524637]
+position = Vector2(128, 96)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_4_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1110459008]
+position = Vector2(136, 100)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=1396071712]
+position = Vector2(72, 76)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1602120980]
+position = Vector2(80, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1815756015]
+position = Vector2(88, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1939080191]
+position = Vector2(96, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=828160894]
+position = Vector2(104, 92)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=7954179]
+position = Vector2(112, 96)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1709086676]
+position = Vector2(120, 100)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_5_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1989104574]
+position = Vector2(128, 104)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=867962751]
+position = Vector2(64, 80)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1568446484]
+position = Vector2(72, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=2078030694]
+position = Vector2(80, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1329759315]
+position = Vector2(88, 92)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=2120643489]
+position = Vector2(96, 96)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=2008727638]
+position = Vector2(104, 100)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1005675032]
+position = Vector2(112, 104)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_6_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1764212225]
+position = Vector2(120, 108)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=688640479]
+position = Vector2(56, 84)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=2005484957]
+position = Vector2(64, 88)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1577826893]
+position = Vector2(72, 92)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1721074010]
+position = Vector2(80, 96)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=705553118]
+position = Vector2(88, 100)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=769294262]
+position = Vector2(96, 104)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=278900508]
+position = Vector2(104, 108)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile_7_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1890712793]
+position = Vector2(112, 112)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Entrance" type="Sprite2D" parent="Map/FloorTiles" unique_id=1338102268]
+position = Vector2(60, 94)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile 2" type="Sprite2D" parent="Map/FloorTiles/Entrance" unique_id=470963060]
+position = Vector2(4, 2)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="EntranceReturnGuide" type="Polygon2D" parent="Map/FloorTiles/Entrance" unique_id=1539425418]
+z_index = 2048
+position = Vector2(3, -2)
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(-3, 6, -1, 6, 11, 12, 7, 12, -3, 7)
+
+[node name="Walls" type="Node2D" parent="Map" unique_id=1369138822]
+
+[node name="WallLeft_0" type="Sprite2D" parent="Map/Walls" unique_id=495715685]
+position = Vector2(56, 56)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_1" type="Sprite2D" parent="Map/Walls" unique_id=474078756]
+position = Vector2(64, 52)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_2" type="Sprite2D" parent="Map/Walls" unique_id=14971443]
+position = Vector2(72, 48)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_3" type="Sprite2D" parent="Map/Walls" unique_id=1542897740]
+position = Vector2(80, 44)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_0" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=1109855140]
+position = Vector2(8, -4)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_1" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=503109809]
+position = Vector2(16, -8)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_2" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=1874649256]
+position = Vector2(24, -12)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallLeft_3" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=1625701774]
+position = Vector2(32, -16)
+texture = ExtResource("3_wall_left")
+centered = false
+
+[node name="WallRight_0" type="Sprite2D" parent="Map/Walls" unique_id=1381759809]
+position = Vector2(112, 28)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_1" type="Sprite2D" parent="Map/Walls" unique_id=185373374]
+position = Vector2(120, 32)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_2" type="Sprite2D" parent="Map/Walls" unique_id=256765422]
+position = Vector2(128, 36)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_0" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=1640103676]
+position = Vector2(16, 8)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_1" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=558043772]
+position = Vector2(24, 12)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_2" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=1538076756]
+position = Vector2(32, 16)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_3" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=1672237501]
+position = Vector2(40, 20)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="WallRight_3" type="Sprite2D" parent="Map/Walls" unique_id=659672368]
+position = Vector2(136, 40)
+texture = ExtResource("4_wall_right")
+centered = false
+
+[node name="DoorRight" type="Sprite2D" parent="Map/Walls" unique_id=1819223406]
+position = Vector2(154, 49)
+texture = ExtResource("5_door")
+centered = false
+
+[node name="DoorExitGuide" type="Polygon2D" parent="Map/Walls/DoorRight" unique_id=2046201733]
+z_index = 2048
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(4, 24, 16, 30, 16, 33, 4, 27)
+
+[node name="Actors" type="Node2D" parent="." unique_id=1069239336]
+
+[node name="Chest" type="Sprite2D" parent="Actors" unique_id=382431945]
+position = Vector2(132, 57)
+texture = ExtResource("6_chest")
+centered = false
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/Chest" unique_id=75466058]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(2.5, 8.5)
+rect_size = Vector2(11, 6)
+fill_color = Color(0.1, 0.45, 1, 0.22)
+outline_color = Color(0.1, 0.35, 1, 0.85)
+
+[node name="TinyDemonShadow" type="Sprite2D" parent="Actors" unique_id=9400076]
+self_modulate = Color(1, 1, 1, 0.25)
+position = Vector2(106, 68)
+scale = Vector2(1, 0.6874999)
+texture = ExtResource("18_demon_shadow")
+centered = false
+
+[node name="TinyDemon" type="Sprite2D" parent="Actors" unique_id=505468505]
+position = Vector2(106, 62)
+texture = ExtResource("7_demon")
+centered = false
+
+[node name="Stats" type="Node" parent="Actors/TinyDemon"]
+script = ExtResource("20_stats_component")
+level = 1
+points_per_level = 10
+allocation_profile = 0
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(6.5, 10.5)
+rect_size = Vector2(4, 5)
+
+[node name="DoorFeetGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1516849712]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(6.5, 13.5)
+rect_size = Vector2(4, 2)
+fill_color = Color(1, 0.85, 0.1, 0.22)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="SwordHitboxRight" type="Node2D" parent="Actors/TinyDemon" unique_id=730166737]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, -4.5)
+rect_size = Vector2(22, 26)
+fill_color = Color(1, 1, 0.1, 0.18)
+outline_color = Color(1, 0.9, 0.1, 0.85)
+
+[node name="SwordHitboxLeft" type="Node2D" parent="Actors/TinyDemon" unique_id=998020771]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(-8.5, -4.5)
+rect_size = Vector2(22, 26)
+fill_color = Color(1, 0.55, 0.1, 0.18)
+outline_color = Color(1, 0.45, 0.1, 0.85)
+
+[node name="TinyDemonAttack" type="Sprite2D" parent="Actors" unique_id=1810667410]
+visible = false
+position = Vector2(96, 52)
+centered = false
+
+[node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
+position = Vector2(103, 88)
+texture = ExtResource("8_slime_blue")
+centered = false
+
+[node name="Stats" type="Node" parent="Actors/SlimeBlue"]
+script = ExtResource("20_stats_component")
+level = 1
+points_per_level = 10
+allocation_profile = 3
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=302225224]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, 7.5)
+rect_size = Vector2(9, 4)
+
+[node name="SlimeGreen" type="Sprite2D" parent="Actors" unique_id=1286052185]
+position = Vector2(131, 79)
+texture = ExtResource("9_slime_green")
+centered = false
+
+[node name="Stats" type="Node" parent="Actors/SlimeGreen"]
+script = ExtResource("20_stats_component")
+level = 1
+points_per_level = 10
+allocation_profile = 1
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/SlimeGreen" unique_id=1632574546]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, 7.5)
+rect_size = Vector2(9, 4)
+
+[node name="HpOverhead" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=332032270]
+position = Vector2(2, 0)
+texture = ExtResource("15_hp_overhead")
+centered = false
+
+[node name="HpOverheadFill" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=313971386]
+z_index = 1
+position = Vector2(2, 0)
+texture = ExtResource("25_hp_overhead_green")
+centered = false
+
+[node name="SlimeRed" type="Sprite2D" parent="Actors" unique_id=1653609669]
+position = Vector2(82, 68)
+texture = ExtResource("10_slime_red")
+centered = false
+
+[node name="Stats" type="Node" parent="Actors/SlimeRed"]
+script = ExtResource("20_stats_component")
+level = 1
+points_per_level = 10
+allocation_profile = 2
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=573711278]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, 7.5)
+rect_size = Vector2(9, 4)
+
+[node name="UI" type="Node2D" parent="." unique_id=272886269]
+z_index = 4096
+
+[node name="BlackBars" type="Sprite2D" parent="UI" unique_id=688445834]
+texture = ExtResource("16_black_bars")
+centered = false
+
+[node name="SlimeText" type="Sprite2D" parent="UI" unique_id=1660814645]
+position = Vector2(112, 144)
+texture = ExtResource("14_slime_text")
+centered = false
+
+[node name="EnemyHp" type="Sprite2D" parent="UI" unique_id=912346691]
+position = Vector2(81, 147)
+texture = ExtResource("13_enemy_hp")
+centered = false
+
+[node name="EnemyHpFill" type="Sprite2D" parent="UI" unique_id=195377949]
+z_index = 1
+position = Vector2(81, 147)
+texture = ExtResource("22_enemy_hp_green")
+centered = false
+
+[node name="HpBar" type="Sprite2D" parent="UI" unique_id=1912636597]
+position = Vector2(14, 0)
+texture = ExtResource("11_hp_bar")
+centered = false
+
+[node name="HpText" type="Sprite2D" parent="UI/HpBar" unique_id=1935652195]
+position = Vector2(-10, 3)
+texture = ExtResource("12_hp_text")
+centered = false
+
+[node name="HpBarFill" type="Sprite2D" parent="UI" unique_id=925410818]
+z_index = 1
+position = Vector2(14, 0)
+texture = ExtResource("21_hp_bar_blue")
+centered = false
