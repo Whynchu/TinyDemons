@@ -485,15 +485,8 @@ rect_size = Vector2(11, 6)
 fill_color = Color(0.1, 0.45, 1, 0.22)
 outline_color = Color(0.1, 0.35, 1, 0.85)
 
-[node name="TinyDemonShadow" type="Sprite2D" parent="Actors" unique_id=9400076]
-self_modulate = Color(1, 1, 1, 0.25)
-position = Vector2(106, 68)
-scale = Vector2(1, 0.6874999)
-texture = ExtResource("18_demon_shadow")
-centered = false
-
 [node name="TinyDemon" type="Sprite2D" parent="Actors" unique_id=505468505]
-position = Vector2(106, 62)
+position = Vector2(71, 81)
 texture = ExtResource("7_demon")
 centered = false
 
@@ -535,11 +528,18 @@ outline_color = Color(1, 0.45, 0.1, 0.85)
 
 [node name="TinyDemonAttack" type="Sprite2D" parent="Actors" unique_id=1810667410]
 visible = false
-position = Vector2(96, 52)
+position = Vector2(61, 71)
+centered = false
+
+[node name="TinyDemonShadow" type="Sprite2D" parent="Actors" unique_id=9400076]
+self_modulate = Color(1, 1, 1, 0.25)
+position = Vector2(71, 87)
+scale = Vector2(1, 0.6874999)
+texture = ExtResource("18_demon_shadow")
 centered = false
 
 [node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
-position = Vector2(103, 88)
+position = Vector2(112, 57)
 texture = ExtResource("8_slime_blue")
 centered = false
 
@@ -578,7 +578,7 @@ fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)
 
 [node name="SlimeGreen" type="Sprite2D" parent="Actors" unique_id=1286052185]
-position = Vector2(131, 79)
+position = Vector2(128, 91)
 texture = ExtResource("9_slime_green")
 centered = false
 
@@ -619,7 +619,7 @@ texture = ExtResource("25_hp_overhead_green")
 centered = false
 
 [node name="SlimeRed" type="Sprite2D" parent="Actors" unique_id=1653609669]
-position = Vector2(82, 68)
+position = Vector2(157, 79)
 texture = ExtResource("10_slime_red")
 centered = false
 

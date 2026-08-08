@@ -57,6 +57,8 @@ const HEALTH_BASE := 8.0
 const HEALTH_PER_VIT := 2.0
 const DAMAGE_BASE := 2.0
 const DAMAGE_DEFENSE_SCALE := 12.0
+const DAMAGE_ROLL_MIN := 0.85
+const DAMAGE_ROLL_MAX := 1.15
 const PLAYER_ATTACK_KNOCKBACK := 16.0
 const PLAYER_ATTACK_HITBOX_SIZE := Vector2(24, 24)
 const PLAYER_ATTACK_HITBOX_RIGHT_OFFSET := Vector2(6, -7)
@@ -74,6 +76,7 @@ const ENEMY_HEALTH_DRAIN_FILL_SPEED := 18.0
 const ENEMY_HEALTH_REGEN_FILL_SPEED := 10.0
 const ENEMY_HEALTH_DAMAGE_HANG_TIME := 0.14
 const DAMAGE_NUMBER_LIFETIME := 0.65
+const DAMAGE_NUMBER_POP_TIME := 0.10
 const DAMAGE_NUMBER_FLOAT_SPEED := 12.0
 const SLIME_DEATH_PARTICLE_COUNT := 26
 const SLIME_DEATH_PARTICLE_LIFETIME := 0.7
@@ -248,6 +251,10 @@ var interact_prompt_base_position := Vector2.ZERO
 var interact_prompt_timer := 0.0
 var room_number_indicator: Sprite2D = null
 var gold_indicator: Sprite2D = null
+var gold_amount_indicator: Sprite2D = null
+var gold_animation_frames: Array[Texture2D] = []
+var gold_animation_timer := 0.0
+var button_hud_sprites: Array[Sprite2D] = []
 var target_health_text: Sprite2D = null
 var player_health_text: Sprite2D = null
 var player_start_position := Vector2.ZERO
@@ -320,6 +327,7 @@ func _ready() -> void:
 	_build_interact_prompt()
 	_build_room_number_indicator()
 	_build_gold_indicator()
+	_build_button_hud()
 	_build_game_over_ui()
 	player_equipment = player.get_node_or_null("Equipment") as EquipmentComponent
 	if player_equipment == null:
@@ -407,7 +415,7 @@ func _physics_process(delta: float) -> void:
 		player_combo_buffer_timer = PLAYER_COMBO_WINDOW
 
 	# if there is a buffered combo and player is free, start attack2
-	if player_combo_buffered and not player_is_attacking and player_attack2_cooldown_timer <= 0.0:
+	if player_combo_buffered and not player_is_attacking and player_between_timer <= 0.0 and player_attack2_cooldown_timer <= 0.0:
 		_start_player_attack(2)
 		player_combo_buffered = false
 
@@ -569,6 +577,8 @@ func _build_game_over_ui() -> void:
 	game_over_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var normal_style := StyleBoxFlat.new()
 	normal_style.bg_color = Color(0, 0, 0, 0)
+	normal_style.border_color = Color(0.72, 0.72, 0.72, 0.9)
+	normal_style.set_border_width_all(1)
 	var focus_style := StyleBoxFlat.new()
 	focus_style.bg_color = Color(1, 1, 1, 0.12)
 	focus_style.border_color = Color.WHITE
@@ -797,6 +807,7 @@ func _update_player_attack_animation(delta: float) -> void:
 	var hit_frame := PLAYER_ATTACK2_HIT_FRAME if player_anim_name == "attack2" else PLAYER_ATTACK_HIT_FRAME
 
 	if player_anim_frame >= frames.size():
+		var finished_attack1_with_combo := player_anim_name == "attack1" and player_combo_buffered and player_between_attack_texture != null
 		if player_anim_name == "attack2":
 			player_attack2_cooldown_timer = PLAYER_ATTACK2_COOLDOWN
 			player_just_finished_attack2 = true
@@ -809,6 +820,9 @@ func _update_player_attack_animation(delta: float) -> void:
 		player_anim_frame = 0
 		player_anim_timer = 0.0
 		_apply_player_animation_frame()
+		if finished_attack1_with_combo:
+			player_between_timer = PLAYER_BETWEEN_ATTACK_TIME
+			_set_actor_base_texture(player, player_between_attack_texture)
 		return
 
 	_apply_player_animation_frame()
@@ -918,7 +932,9 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 	# At DEF equal to DAMAGE_DEFENSE_SCALE, the defender takes half damage;
 	# every point beyond that has progressively less impact.
 	var defense_multiplier := DAMAGE_DEFENSE_SCALE / (DAMAGE_DEFENSE_SCALE + maxf(defender_def, 0.0))
-	return maxf(1.0, raw_damage * defense_multiplier)
+	var calculated_damage := raw_damage * defense_multiplier
+	var damage_roll := maxf(rng.randf_range(DAMAGE_ROLL_MIN, DAMAGE_ROLL_MAX), DAMAGE_ROLL_MIN)
+	return maxf(1.0, floorf(calculated_damage * damage_roll))
 
 
 func _max_health_for_stats(stats: StatsComponent) -> float:
@@ -1004,13 +1020,13 @@ func _build_interact_prompt() -> void:
 	interact_prompt = Sprite2D.new()
 	interact_prompt.name = "InteractPrompt"
 	interact_prompt.texture = _pixel_number_texture("!", Color8(255, 205, 117))
-	interact_prompt.scale = Vector2(2.0, 2.0)
+	interact_prompt.scale = Vector2(1.5, 1.5)
 	interact_prompt.centered = false
 	interact_prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	interact_prompt.z_as_relative = false
 	interact_prompt.z_index = OVERWORLD_UI_Z + 1
 	interact_prompt.visible = false
-	interact_prompt_base_position = Vector2(5, -10)
+	interact_prompt_base_position = Vector2(6, -7)
 	add_child(interact_prompt)
 
 
@@ -1029,16 +1045,45 @@ func _build_gold_indicator() -> void:
 	gold_indicator = Sprite2D.new()
 	gold_indicator.name = "GoldIndicator"
 	gold_indicator.centered = false
+	gold_animation_frames = _slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
+	gold_indicator.texture = gold_animation_frames[0] if not gold_animation_frames.is_empty() else null
 	gold_indicator.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gold_indicator.scale = Vector2.ONE
 	gold_indicator.z_index = 2
-	gold_indicator.position = Vector2(72, 4)
+	gold_indicator.position = Vector2(64, 4)
 	ui.add_child(gold_indicator)
+	gold_amount_indicator = Sprite2D.new()
+	gold_amount_indicator.name = "GoldAmount"
+	gold_amount_indicator.centered = false
+	gold_amount_indicator.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gold_amount_indicator.z_index = 2
+	gold_amount_indicator.position = Vector2(72, 4)
+	ui.add_child(gold_amount_indicator)
 	_update_gold_indicator()
 
 
 func _update_gold_indicator() -> void:
 	if gold_indicator != null:
-		gold_indicator.texture = _pixel_number_texture("G%d" % gold, Color8(255, 205, 117))
+		gold_amount_indicator.texture = _pixel_number_texture(str(gold), Color8(255, 205, 117))
+
+
+func _build_button_hud() -> void:
+	var button_data := [
+		{"texture": "triangle55.png", "position": Vector2(224, 64)},
+		{"texture": "square55.png", "position": Vector2(219, 69)},
+		{"texture": "x55.png", "position": Vector2(224, 74)},
+		{"texture": "circle55.png", "position": Vector2(229, 69)},
+	]
+	button_hud_sprites.clear()
+	for data in button_data:
+		var button_sprite := Sprite2D.new()
+		button_sprite.texture = _load_texture_or_null("res://assets/artwork/" + data["texture"])
+		button_sprite.centered = false
+		button_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		button_sprite.position = data["position"]
+		button_sprite.z_index = 2
+		ui.add_child(button_sprite)
+		button_hud_sprites.append(button_sprite)
 
 
 func _build_target_health_text() -> void:
@@ -1155,8 +1200,9 @@ func _update_interact_prompt(delta: float) -> void:
 		return
 
 	interact_prompt_timer = fmod(interact_prompt_timer + delta, INTERACT_PROMPT_BOB_TIME)
-	var bob := sin((interact_prompt_timer / INTERACT_PROMPT_BOB_TIME) * TAU) * 1.0
-	interact_prompt.global_position = chest.global_position + interact_prompt_base_position + Vector2(0, bob)
+	var bob_phase := (interact_prompt_timer / INTERACT_PROMPT_BOB_TIME) * TAU
+	var bob := snappedf(sin(bob_phase) * 1.0, 0.5)
+	interact_prompt.global_position = _snap_half_pixel(chest.global_position + interact_prompt_base_position + Vector2(0, bob))
 	interact_prompt.z_index = OVERWORLD_UI_Z + 1
 
 
@@ -1463,7 +1509,8 @@ func _start_chest_flash() -> void:
 	chest_flash_overlay.z_as_relative = false
 	chest_flash_overlay.z_index = chest.z_index + 1
 	chest_flash_overlay.global_position = chest.global_position
-	chest_flash_overlay.modulate = Color(1, 1, 1, 0)
+	# Start at full white so pressing the chest produces an immediate flash.
+	chest_flash_overlay.modulate = Color.WHITE
 	add_child(chest_flash_overlay)
 
 
@@ -1550,7 +1597,7 @@ func _spawn_chest_evaporation_pixels() -> void:
 	for index in count:
 		var source_pixel := candidates[index]
 		var particle := Sprite2D.new()
-		particle.texture = _pixel_particle_texture(Color.WHITE)
+		particle.texture = _pixel_particle_texture(image.get_pixelv(source_pixel))
 		particle.centered = false
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
@@ -1583,13 +1630,20 @@ func _update_pixel_particles(delta: float) -> void:
 
 		var velocity := particle_data["velocity"] as Vector2
 		velocity.y += float(particle_data.get("gravity", 18.0)) * delta
-		particle.position += velocity * delta
+		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
+		logical_position += velocity * delta
+		particle_data["logical_position"] = logical_position
+		particle.position = _snap_half_pixel(logical_position)
 		var color := particle.modulate
 		var lifetime := float(particle_data.get("lifetime", SLIME_DEATH_PARTICLE_LIFETIME))
 		color.a = clampf(timer / lifetime, 0.0, 1.0)
 		particle.modulate = color
 		particle_data["velocity"] = velocity
 		particle_data["timer"] = timer
+
+
+func _snap_half_pixel(position: Vector2) -> Vector2:
+	return Vector2(snappedf(position.x, 0.5), snappedf(position.y, 0.5))
 
 
 func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:
@@ -1977,6 +2031,7 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 	damage_numbers.append({
 		"sprite": sprite,
 		"timer": DAMAGE_NUMBER_LIFETIME,
+		"pop_timer": DAMAGE_NUMBER_POP_TIME,
 		"velocity": velocity,
 	})
 
@@ -1985,14 +2040,24 @@ func _update_damage_numbers(delta: float) -> void:
 	for index in range(damage_numbers.size() - 1, -1, -1):
 		var damage_number := damage_numbers[index]
 		var sprite := damage_number["sprite"] as Sprite2D
+		if sprite == null:
+			damage_numbers.remove_at(index)
+			continue
+		var pop_timer := float(damage_number.get("pop_timer", 0.0))
+		if pop_timer > 0.0:
+			damage_number["pop_timer"] = maxf(pop_timer - delta, 0.0)
+			sprite.modulate = Color.WHITE
+			continue
 		var timer := float(damage_number["timer"]) - delta
-		if sprite == null or timer <= 0.0:
-			if sprite != null:
-				sprite.queue_free()
+		if timer <= 0.0:
+			sprite.queue_free()
 			damage_numbers.remove_at(index)
 			continue
 
-		sprite.position += damage_number.get("velocity", Vector2.ZERO) as Vector2 * delta
+		var logical_position := damage_number.get("logical_position", sprite.position) as Vector2
+		logical_position += damage_number.get("velocity", Vector2.ZERO) as Vector2 * delta
+		damage_number["logical_position"] = logical_position
+		sprite.position = _snap_half_pixel(logical_position)
 		var color := Color.WHITE
 		color.a = clampf(timer / DAMAGE_NUMBER_LIFETIME, 0.0, 1.0)
 		sprite.modulate = color
@@ -2005,6 +2070,43 @@ func _damage_number_texture(value: int) -> Texture2D:
 
 func _pixel_text_texture(text: String, color: Color) -> Texture2D:
 	return _pixel_number_texture(text, color)
+
+
+func _pixel_name_texture(text: String, color: Color) -> Texture2D:
+	# Seven-pixel name glyphs based on the original SlimeText lettering.
+	var glyphs := {
+		"B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+		"G": ["01110", "10001", "10000", "10111", "10001", "10001", "01110"],
+		"R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+		"S": ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+		"d": ["00001", "00001", "01101", "10011", "10001", "10011", "01101"],
+		"i": ["010", "000", "110", "010", "010", "010", "111"],
+		"l": ["110", "010", "010", "010", "010", "010", "111"],
+		"r": ["000", "000", "101", "110", "100", "100", "100"],
+		"u": ["000", "000", "101", "101", "101", "111", "101"],
+		"e": ["000", "000", "010", "101", "111", "100", "011"],
+		"n": ["000", "000", "110", "101", "101", "101", "101"],
+		"m": ["00000", "00000", "11011", "10101", "10101", "10101", "10101"],
+		" ": ["0", "0", "0", "0", "0", "0", "0"],
+	}
+	var spacing := 1
+	var image_width := 0
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs[" "])
+		image_width += (pattern[0] as String).length() + spacing
+	image_width = maxi(image_width - spacing, 1)
+	var image := Image.create(image_width, 7, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var x_offset := 0
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs[" "])
+		for y in 7:
+			var row := pattern[y] as String
+			for x in row.length():
+				if row[x] == "1":
+					image.set_pixel(x_offset + x, y, color)
+		x_offset += (pattern[0] as String).length() + spacing
+	return ImageTexture.create_from_image(image)
 
 
 func _pixel_number_texture(text: String, color: Color) -> Texture2D:
@@ -3065,6 +3167,9 @@ func _update_target_ui() -> void:
 		return
 
 	_set_target_ui_visible(true)
+	target_name_text.texture = _pixel_name_texture(_slime_display_name(current_target), Color.WHITE)
+	target_name_text.centered = true
+	target_name_text.position = Vector2(120, 148)
 	var fill_texture := target_health_fill_textures.get(current_target, target_health_fill.texture) as Texture2D
 	if fill_texture != null and target_health_fill.texture != fill_texture:
 		target_health_fill.texture = fill_texture
@@ -3092,6 +3197,14 @@ func _set_target_ui_visible(target_visible: bool) -> void:
 		target_health_text.visible = target_visible
 
 
+func _slime_display_name(slime: Sprite2D) -> String:
+	if slime == slime_blue:
+		return "Blue Slime"
+	if slime == slime_red:
+		return "Red Slime"
+	return "Green Slime"
+
+
 func _update_player_health_ui() -> void:
 	var max_health := _player_max_health()
 	_set_fill_ratio(player_health_fill, player_health_fill_size, clampf(player_health / max_health, 0.0, 1.0))
@@ -3104,7 +3217,31 @@ func _set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(ratio, 0.0, 1.0), fill_size.y))
 
 
+func _update_button_hud() -> void:
+	if button_hud_sprites.size() < 4:
+		return
+	var devices := _controller_devices()
+	var triangle_pressed := false
+	var square_pressed := false
+	var x_pressed := false
+	var circle_pressed := false
+	for device in devices:
+		triangle_pressed = triangle_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_Y)
+		square_pressed = square_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_X)
+		x_pressed = x_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_A)
+		circle_pressed = circle_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_B)
+	var pressed := [triangle_pressed, square_pressed, x_pressed, circle_pressed]
+	for index in button_hud_sprites.size():
+		button_hud_sprites[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+
+
 func _update_overworld_ui() -> void:
+	_update_button_hud()
+	if gold_indicator != null and not gold_animation_frames.is_empty():
+		gold_animation_timer = fmod(gold_animation_timer + get_process_delta_time(), 0.48)
+		var gold_frame_index := mini(int(gold_animation_timer / 0.12), gold_animation_frames.size() - 1)
+		gold_indicator.texture = gold_animation_frames[gold_frame_index]
+
 	for slime in slimes:
 		var frame := target_overhead_frames.get(slime) as Sprite2D
 		var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D
