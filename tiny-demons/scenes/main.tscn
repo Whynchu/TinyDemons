@@ -19,7 +19,7 @@
 [ext_resource type="Script" uid="uid://bolgaay1voxyo" path="res://scripts/gameplay.gd" id="17_gameplay"]
 [ext_resource type="Texture2D" uid="uid://cqc78kjjt5xk8" path="res://assets/artwork/TinyDemonShadow.png" id="18_demon_shadow"]
 [ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor_collision_guide.gd" id="19_collision_guide"]
-[ext_resource type="Script" path="res://scripts/stats_component.gd" id="20_stats_component"]
+[ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/stats_component.gd" id="20_stats_component"]
 [ext_resource type="Texture2D" uid="uid://e2bcakb34ad0" path="res://assets/artwork/HpBarBlueBar.png" id="21_hp_bar_blue"]
 [ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
 [ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
@@ -496,11 +496,8 @@ position = Vector2(106, 62)
 texture = ExtResource("7_demon")
 centered = false
 
-[node name="Stats" type="Node" parent="Actors/TinyDemon"]
+[node name="Stats" type="Node" parent="Actors/TinyDemon" unique_id=402301846]
 script = ExtResource("20_stats_component")
-level = 1
-points_per_level = 10
-allocation_profile = 0
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
 script = ExtResource("19_collision_guide")
@@ -538,10 +535,8 @@ position = Vector2(103, 88)
 texture = ExtResource("8_slime_blue")
 centered = false
 
-[node name="Stats" type="Node" parent="Actors/SlimeBlue"]
+[node name="Stats" type="Node" parent="Actors/SlimeBlue" unique_id=1328484161]
 script = ExtResource("20_stats_component")
-level = 1
-points_per_level = 10
 allocation_profile = 3
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=302225224]
@@ -549,21 +544,60 @@ script = ExtResource("19_collision_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
 
+[node name="AttackGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=147484808]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(18, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+draw_in_game = true
+
+[node name="AttackGuideL" type="Node2D" parent="Actors/SlimeBlue" unique_id=850140732]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="AttackGuideR" type="Node2D" parent="Actors/SlimeBlue" unique_id=966756253]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(13.5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
 [node name="SlimeGreen" type="Sprite2D" parent="Actors" unique_id=1286052185]
 position = Vector2(131, 79)
 texture = ExtResource("9_slime_green")
 centered = false
 
-[node name="Stats" type="Node" parent="Actors/SlimeGreen"]
+[node name="Stats" type="Node" parent="Actors/SlimeGreen" unique_id=586404895]
 script = ExtResource("20_stats_component")
-level = 1
-points_per_level = 10
 allocation_profile = 1
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeGreen" unique_id=1632574546]
 script = ExtResource("19_collision_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
+
+[node name="AttackGuideL" type="Node2D" parent="Actors/SlimeGreen" unique_id=968253540]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.31764707, 0.050980393, 0.9019608)
+
+[node name="AttackGuideR" type="Node2D" parent="Actors/SlimeGreen" unique_id=29236929]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(13.5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
 
 [node name="HpOverhead" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=332032270]
 position = Vector2(2, 0)
@@ -581,16 +615,39 @@ position = Vector2(82, 68)
 texture = ExtResource("10_slime_red")
 centered = false
 
-[node name="Stats" type="Node" parent="Actors/SlimeRed"]
+[node name="Stats" type="Node" parent="Actors/SlimeRed" unique_id=2039895840]
 script = ExtResource("20_stats_component")
-level = 1
-points_per_level = 10
 allocation_profile = 2
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=573711278]
 script = ExtResource("19_collision_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
+
+[node name="AttackGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=30032113]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(18, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+draw_in_game = true
+
+[node name="AttackGuideL" type="Node2D" parent="Actors/SlimeRed" unique_id=1536968880]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="AttackGuideR" type="Node2D" parent="Actors/SlimeRed" unique_id=742802159]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(13.5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
 
 [node name="UI" type="Node2D" parent="." unique_id=272886269]
 z_index = 4096

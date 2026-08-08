@@ -26,14 +26,21 @@ extends Node2D
 		draw_in_editor = value
 		queue_redraw()
 
+@export var draw_in_game := false
+
+
+func _process(_delta: float) -> void:
+	if draw_in_game:
+		queue_redraw()
+
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
-		visible = false
+		visible = draw_in_game
 
 
 func _draw() -> void:
-	if not Engine.is_editor_hint() or not draw_in_editor:
+	if (not Engine.is_editor_hint() and not draw_in_game) or (Engine.is_editor_hint() and not draw_in_editor):
 		return
 
 	var rect := Rect2(rect_position, rect_size)
