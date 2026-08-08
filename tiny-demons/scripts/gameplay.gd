@@ -36,6 +36,9 @@ const PLAYER_ATTACK_FRAME_SIZE := Vector2i(36, 36)
 const PLAYER_IDLE_FRAME_TIME := 0.22
 const PLAYER_WALK_FRAME_TIME := 0.18
 const PLAYER_ATTACK_FRAME_TIME := 0.09
+const PLAYER_ATTACK2_HIT_FRAME := 2
+const PLAYER_COMBO_WINDOW := 0.18
+const PLAYER_BETWEEN_ATTACK_TIME := 0.12
 const PLAYER_ATTACK_HIT_FRAME := 2
 const PLAYER_ROLL_FRAME_TIME := 0.05
 const PLAYER_ROLL_DISTANCE := 30.0
@@ -124,7 +127,14 @@ var player_equipment: EquipmentComponent = null
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
 var player_attack_frames: Array[Texture2D] = []
+var player_attack2_frames: Array[Texture2D] = []
 var player_attack_left_frames: Array[Texture2D] = []
+var player_attack2_left_frames: Array[Texture2D] = []
+var player_attack_backup_frames: Array[Texture2D] = []
+var player_between_attack_texture: Texture2D = null
+var player_combo_buffered := false
+var player_combo_buffer_timer := 0.0
+var player_between_timer := 0.0
 var player_anim_name := "idle"
 var player_anim_frame := 0
 var player_anim_timer := 0.0
@@ -383,7 +393,27 @@ func _physics_process(delta: float) -> void:
 		_update_overworld_ui()
 		_update_game_over_input()
 		return
+	var prev_attack_input_was_down := player_attack_input_was_down
+	var prev_player_was_attacking := player_is_attacking
 	_update_player_attack_input()
+	# detect rising-edge press during attack for buffering
+	var attack_input_down := _is_attack_input_pressed()
+	if attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
+		player_combo_buffered = true
+		player_combo_buffer_timer = PLAYER_COMBO_WINDOW
+
+	# if there is a buffered combo and player is free, start attack2
+	if player_combo_buffered and not player_is_attacking:
+		if not player_attack2_frames.is_empty():
+			# swap in attack2 frames, call attack start
+			player_attack_backup_frames = player_attack_frames
+			player_attack_frames = player_attack2_frames
+			player_attack_left_frames = player_attack2_left_frames
+			_start_player_attack()
+			player_combo_buffered = false
+		else:
+			player_combo_buffered = false
+
 	_update_player_roll_input()
 	_update_player_attack_lunge(delta)
 	_update_player_roll(delta)
@@ -404,6 +434,26 @@ func _physics_process(delta: float) -> void:
 	_update_actor_occlusion(delta)
 	_stabilize_collision_guides()
 	_update_player_attack_visual()
+	# restore attack frames if attack finished and we had swapped to attack2
+	if not player_is_attacking and player_attack_backup_frames.size() > 0 and player_attack_frames == player_attack2_frames:
+		player_attack_frames = player_attack_backup_frames
+		player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
+		player_attack_backup_frames = []
+
+	# handle transition from an attack into the between-attack frame
+	if prev_player_was_attacking and not player_is_attacking:
+		# if a combo wasn't buffered and a between-frame texture exists, show it briefly
+		if not player_combo_buffered and player_between_attack_texture != null:
+			player_between_timer = PLAYER_BETWEEN_ATTACK_TIME
+			_set_actor_base_texture(player, player_between_attack_texture)
+
+	# tick down the between-frame timer and restore idle when it expires
+	if player_between_timer > 0.0:
+		player_between_timer = maxf(player_between_timer - delta, 0.0)
+		if player_between_timer <= 0.0:
+			if not player_idle_frames.is_empty():
+				_set_actor_base_texture(player, player_idle_frames[0])
+
 	_update_player_shadow()
 	_update_overworld_ui()
 
@@ -2654,6 +2704,12 @@ func _build_player_animation_frames() -> void:
 	player_walk_frames = _slice_frames("res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME_SIZE)
 	player_roll_frames = _slice_frames("res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME_SIZE)
 	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
+	# attempt to load attack2 and between-attack frame; fall back to attack1 if not present
+	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
+	if player_attack2_frames.is_empty():
+		player_attack2_frames = player_attack_frames.duplicate()
+	player_attack2_left_frames = _flip_frames_horizontally(player_attack2_frames)
+	player_between_attack_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-attack-between.png")
 	player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
 	_warm_player_frame_caches()
 	if not player_idle_frames.is_empty():
