@@ -130,7 +130,6 @@ var player_attack_frames: Array[Texture2D] = []
 var player_attack2_frames: Array[Texture2D] = []
 var player_attack_left_frames: Array[Texture2D] = []
 var player_attack2_left_frames: Array[Texture2D] = []
-var player_attack_backup_frames: Array[Texture2D] = []
 var player_between_attack_texture: Texture2D = null
 var player_combo_buffered := false
 var player_combo_buffer_timer := 0.0
@@ -405,14 +404,8 @@ func _physics_process(delta: float) -> void:
 	# if there is a buffered combo and player is free, start attack2
 	if player_combo_buffered and not player_is_attacking:
 		if not player_attack2_frames.is_empty():
-			# swap in attack2 frames, call attack start
-			player_attack_backup_frames = player_attack_frames
-			player_attack_frames = player_attack2_frames
-			player_attack_left_frames = player_attack2_left_frames
-			_start_player_attack()
-			player_combo_buffered = false
-		else:
-			player_combo_buffered = false
+			_start_player_attack(2)
+		player_combo_buffered = false
 
 	_update_player_roll_input()
 	_update_player_attack_lunge(delta)
@@ -434,11 +427,6 @@ func _physics_process(delta: float) -> void:
 	_update_actor_occlusion(delta)
 	_stabilize_collision_guides()
 	_update_player_attack_visual()
-	# restore attack frames if attack finished and we had swapped to attack2
-	if not player_is_attacking and player_attack_backup_frames.size() > 0 and player_attack_frames == player_attack2_frames:
-		player_attack_frames = player_attack_backup_frames
-		player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
-		player_attack_backup_frames = []
 
 	# handle transition from an attack into the between-attack frame
 	if prev_player_was_attacking and not player_is_attacking:
@@ -691,8 +679,10 @@ func _update_player_roll(delta: float) -> void:
 		_apply_player_animation_frame()
 
 
-func _start_player_attack() -> void:
-	if player_attack_frames.is_empty():
+func _start_player_attack(variant: int = 1) -> void:
+	if variant == 1 and player_attack_frames.is_empty():
+		return
+	if variant == 2 and player_attack2_frames.is_empty():
 		return
 
 	player_is_attacking = true
@@ -701,7 +691,7 @@ func _start_player_attack() -> void:
 	player_attack_flip_h = player.flip_h
 	player_attack_lunge_timer = PLAYER_ATTACK_LUNGE_DURATION
 	player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (PLAYER_ATTACK_LUNGE_DISTANCE / PLAYER_ATTACK_LUNGE_DURATION))
-	player_anim_name = "attack1"
+	player_anim_name = "attack2" if variant == 2 else "attack1"
 	player_anim_frame = 0
 	player_anim_timer = 0.0
 	player.visible = false
@@ -787,7 +777,11 @@ func _update_player_attack_animation(delta: float) -> void:
 	player_anim_timer = fmod(player_anim_timer, PLAYER_ATTACK_FRAME_TIME)
 	player_anim_frame += 1
 
-	if player_anim_frame >= player_attack_frames.size():
+	# select frames and hit frame per attack variant
+	var frames := player_attack2_frames if player_anim_name == "attack2" else player_attack_frames
+	var hit_frame := PLAYER_ATTACK2_HIT_FRAME if player_anim_name == "attack2" else PLAYER_ATTACK_HIT_FRAME
+
+	if player_anim_frame >= frames.size():
 		player_is_attacking = false
 		player_attack_hit_done = false
 		player_attack_hit_targets.clear()
@@ -800,7 +794,7 @@ func _update_player_attack_animation(delta: float) -> void:
 		return
 
 	_apply_player_animation_frame()
-	if player_anim_frame == PLAYER_ATTACK_HIT_FRAME and not player_attack_hit_done:
+	if player_anim_frame == hit_frame and not player_attack_hit_done:
 		_apply_player_attack_hitbox()
 		player_attack_hit_done = true
 
@@ -812,8 +806,8 @@ func _apply_player_animation_frame() -> void:
 	if player_is_rolling:
 		_set_actor_base_texture(player, frames[player_roll_frame])
 		return
-	if player_anim_name == "attack1":
-		var attack_frames := player_attack_left_frames if player_attack_flip_h else player_attack_frames
+	if player_anim_name == "attack1" or player_anim_name == "attack2":
+		var attack_frames := player_attack2_left_frames if player_anim_name == "attack2" and player_attack_flip_h else player_attack_left_frames if player_attack_flip_h else player_attack2_frames if player_anim_name == "attack2" else player_attack_frames
 		if attack_frames.is_empty():
 			return
 		player_attack_visual.texture = attack_frames[player_anim_frame]
@@ -2704,10 +2698,8 @@ func _build_player_animation_frames() -> void:
 	player_walk_frames = _slice_frames("res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME_SIZE)
 	player_roll_frames = _slice_frames("res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME_SIZE)
 	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
-	# attempt to load attack2 and between-attack frame; fall back to attack1 if not present
+	# attempt to load attack2 and between-attack frame (optional)
 	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
-	if player_attack2_frames.is_empty():
-		player_attack2_frames = player_attack_frames.duplicate()
 	player_attack2_left_frames = _flip_frames_horizontally(player_attack2_frames)
 	player_between_attack_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-attack-between.png")
 	player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
