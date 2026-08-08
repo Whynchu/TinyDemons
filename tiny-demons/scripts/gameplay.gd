@@ -948,7 +948,7 @@ func _build_interact_prompt() -> void:
 	interact_prompt.z_as_relative = false
 	interact_prompt.z_index = OVERWORLD_UI_Z + 1
 	interact_prompt.visible = false
-	interact_prompt_base_position = Vector2(5, -12)
+	interact_prompt_base_position = Vector2(5, -10)
 	add_child(interact_prompt)
 
 
