@@ -39,6 +39,7 @@ const PLAYER_ATTACK_FRAME_TIME := 0.09
 const PLAYER_ATTACK2_HIT_FRAME := 2
 const PLAYER_COMBO_WINDOW := 0.18
 const PLAYER_BETWEEN_ATTACK_TIME := 0.12
+const PLAYER_ATTACK2_COOLDOWN := 0.16
 const PLAYER_ATTACK_HIT_FRAME := 2
 const PLAYER_ROLL_FRAME_TIME := 0.05
 const PLAYER_ROLL_DISTANCE := 30.0
@@ -131,9 +132,12 @@ var player_attack2_frames: Array[Texture2D] = []
 var player_attack_left_frames: Array[Texture2D] = []
 var player_attack2_left_frames: Array[Texture2D] = []
 var player_between_attack_texture: Texture2D = null
+var player_after_attack2_texture: Texture2D = null
+var player_just_finished_attack2 := false
 var player_combo_buffered := false
 var player_combo_buffer_timer := 0.0
 var player_between_timer := 0.0
+var player_attack2_cooldown_timer := 0.0
 var player_anim_name := "idle"
 var player_anim_frame := 0
 var player_anim_timer := 0.0
@@ -395,6 +399,7 @@ func _physics_process(delta: float) -> void:
 	var prev_attack_input_was_down := player_attack_input_was_down
 	var prev_player_was_attacking := player_is_attacking
 	_update_player_attack_input()
+	player_attack2_cooldown_timer = maxf(player_attack2_cooldown_timer - delta, 0.0)
 	# detect rising-edge press during attack for buffering
 	var attack_input_down := _is_attack_input_pressed()
 	if attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
@@ -402,9 +407,8 @@ func _physics_process(delta: float) -> void:
 		player_combo_buffer_timer = PLAYER_COMBO_WINDOW
 
 	# if there is a buffered combo and player is free, start attack2
-	if player_combo_buffered and not player_is_attacking:
-		if not player_attack2_frames.is_empty():
-			_start_player_attack(2)
+	if player_combo_buffered and not player_is_attacking and player_attack2_cooldown_timer <= 0.0:
+		_start_player_attack(2)
 		player_combo_buffered = false
 
 	_update_player_roll_input()
@@ -430,10 +434,14 @@ func _physics_process(delta: float) -> void:
 
 	# handle transition from an attack into the between-attack frame
 	if prev_player_was_attacking and not player_is_attacking:
-		# if a combo wasn't buffered and a between-frame texture exists, show it briefly
-		if not player_combo_buffered and player_between_attack_texture != null:
+		if player_just_finished_attack2 and player_after_attack2_texture != null:
+			player_between_timer = PLAYER_ATTACK2_COOLDOWN
+			_set_actor_base_texture(player, player_after_attack2_texture)
+		# If attack 1 was not buffered, show the transition frame briefly.
+		elif not player_combo_buffered and player_between_attack_texture != null:
 			player_between_timer = PLAYER_BETWEEN_ATTACK_TIME
 			_set_actor_base_texture(player, player_between_attack_texture)
+		player_just_finished_attack2 = false
 
 	# tick down the between-frame timer and restore idle when it expires
 	if player_between_timer > 0.0:
@@ -619,8 +627,12 @@ func _move_player(delta: float) -> void:
 
 func _update_player_attack_input() -> void:
 	var attack_input_down := _is_attack_input_pressed()
-	if attack_input_down and not player_attack_input_was_down and not player_is_attacking and not player_is_rolling:
-		_start_player_attack()
+	if attack_input_down and not player_attack_input_was_down and not player_is_attacking and not player_is_rolling and player_attack2_cooldown_timer <= 0.0:
+		if player_between_timer > 0.0:
+			# A late input during the transition still completes the combo.
+			player_combo_buffered = true
+		else:
+			_start_player_attack()
 	player_attack_input_was_down = attack_input_down
 
 
@@ -686,12 +698,15 @@ func _start_player_attack(variant: int = 1) -> void:
 		return
 
 	player_is_attacking = true
+	player_just_finished_attack2 = false
 	player_attack_hit_done = false
 	player_attack_hit_targets.clear()
 	player_attack_flip_h = player.flip_h
 	player_attack_lunge_timer = PLAYER_ATTACK_LUNGE_DURATION
 	player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (PLAYER_ATTACK_LUNGE_DISTANCE / PLAYER_ATTACK_LUNGE_DURATION))
 	player_anim_name = "attack2" if variant == 2 else "attack1"
+	if variant == 2:
+		player_between_timer = 0.0
 	player_anim_frame = 0
 	player_anim_timer = 0.0
 	player.visible = false
@@ -782,6 +797,9 @@ func _update_player_attack_animation(delta: float) -> void:
 	var hit_frame := PLAYER_ATTACK2_HIT_FRAME if player_anim_name == "attack2" else PLAYER_ATTACK_HIT_FRAME
 
 	if player_anim_frame >= frames.size():
+		if player_anim_name == "attack2":
+			player_attack2_cooldown_timer = PLAYER_ATTACK2_COOLDOWN
+			player_just_finished_attack2 = true
 		player_is_attacking = false
 		player_attack_hit_done = false
 		player_attack_hit_targets.clear()
@@ -800,7 +818,7 @@ func _update_player_attack_animation(delta: float) -> void:
 
 
 func _apply_player_animation_frame() -> void:
-	var frames := player_roll_frames if player_is_rolling else player_attack_frames if player_anim_name == "attack1" else player_walk_frames if player_anim_name == "walk" else player_idle_frames
+	var frames := player_roll_frames if player_is_rolling else player_attack2_frames if player_anim_name == "attack2" else player_attack_frames if player_anim_name == "attack1" else player_walk_frames if player_anim_name == "walk" else player_idle_frames
 	if frames.is_empty():
 		return
 	if player_is_rolling:
@@ -2700,8 +2718,12 @@ func _build_player_animation_frames() -> void:
 	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
 	# attempt to load attack2 and between-attack frame (optional)
 	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
+	if player_attack2_frames.is_empty():
+		# Keep the combo playable until a dedicated attack2 sheet is supplied.
+		player_attack2_frames = player_attack_frames.duplicate()
 	player_attack2_left_frames = _flip_frames_horizontally(player_attack2_frames)
 	player_between_attack_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-attack-between.png")
+	player_after_attack2_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-after-attack2.png")
 	player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
 	_warm_player_frame_caches()
 	if not player_idle_frames.is_empty():
@@ -2736,6 +2758,10 @@ func _warm_player_frame_caches() -> void:
 	for texture in player_roll_frames:
 		_warm_texture_cache(texture)
 	for texture in player_attack_frames:
+		_warm_texture_cache(texture)
+	for texture in player_attack2_frames:
+		_warm_texture_cache(texture)
+	for texture in player_attack2_left_frames:
 		_warm_texture_cache(texture)
 	for texture in player_attack_left_frames:
 		_warm_texture_cache(texture)
