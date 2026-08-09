@@ -2635,10 +2635,14 @@ func _save_current_room_state() -> void:
 	var state := room_states.get(current_room_id, {}) as Dictionary
 	state["finished"] = chest_claimed
 	room_states[current_room_id] = state
+	if room_controller != null and chest_claimed:
+		room_controller.mark_cleared(current_room_id)
 
 
 func _apply_room_state() -> void:
 	var state := room_states.get(current_room_id, {}) as Dictionary
+	if room_controller != null and room_controller.is_cleared(current_room_id):
+		state["finished"] = true
 	if current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_REST:
 		_apply_rest_room_state()
 	elif current_room_type == DungeonGraph.ROOM_NPC:

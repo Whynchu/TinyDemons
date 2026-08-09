@@ -404,6 +404,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
   traversal remains in the coordinator pending parity migration.
 - [x] Emit room-enter events for connected-room traversal through the new
   controller boundary.
+- [x] Synchronize room-cleared persistence with `RoomController` while legacy
+  room-state storage remains authoritative.
 - [x] Define and attach `OcclusionRenderer` cache/occluder boundary; image
   generation remains in the coordinator pending performance parity checks.
 - [ ] Verify every socket direction, return traversal, room persistence, and
