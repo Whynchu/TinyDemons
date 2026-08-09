@@ -341,7 +341,7 @@ func _ready() -> void:
 	current_room_id = dungeon_graph.start_room_id
 	_sync_current_room_metadata()
 	room_controller.set_current_room(current_room_id, current_room_type)
-	_collect_room_controller.dungeon_sockets()
+	_collect_dungeon_sockets()
 	_validate_dungeon_socket_setup()
 	_ensure_current_room_layout()
 	player_start_position = player.position
