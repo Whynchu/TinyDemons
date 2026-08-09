@@ -393,6 +393,7 @@ var cloaked_demon_wander_target := Vector2.ZERO
 var cloaked_demon_wander_has_target := false
 var cloaked_demon_visual_bounds := Rect2(12, 10, 12, 16)
 var rng := RandomNumberGenerator.new()
+var sprite_frame_library := SpriteFrameLibrary.new()
 var last_damage_was_critical := false
 
 
@@ -4301,40 +4302,11 @@ func _build_player_animation_frames() -> void:
 
 
 func _slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
-	var frames: Array[Texture2D] = []
-	var texture := _load_texture_or_null(path)
-	if texture == null:
-		return frames
-
-	var sheet := _cached_texture_image(texture)
-	var frame_count := int(float(sheet.get_width()) / float(frame_size.x))
-	for frame_index in range(frame_count):
-		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
-		frame.blit_rect(
-			sheet,
-			Rect2i(frame_index * frame_size.x, 0, frame_size.x, frame_size.y),
-			Vector2i.ZERO
-		)
-		frames.append(ImageTexture.create_from_image(frame))
-
-	return frames
+	return sprite_frame_library.slice_frames(path, frame_size)
 
 
 func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
-	var source_image := _cached_texture_image(source)
-	var image := source_image.duplicate()
-	image.resize(source_image.get_width() * EFFECT_RESOLUTION_SCALE, source_image.get_height() * EFFECT_RESOLUTION_SCALE, Image.INTERPOLATE_NEAREST)
-	var bayer := PackedInt32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5])
-	for y in range(image.get_height()):
-		for x in range(image.get_width()):
-			var color: Color = image.get_pixel(x, y)
-			if color.a <= 0.0:
-				continue
-			var threshold := (float(bayer[(y % 4) * 4 + x % 4]) + 1.0) / 16.0
-			if threshold <= dissolve:
-				color.a = 0.0
-				image.set_pixel(x, y, color)
-	return _effect_texture_with_display_size(image, source_image.get_size())
+	return sprite_frame_library.dither_roll_dust_frame(source, dissolve)
 
 
 func _warm_player_frame_caches() -> void:
@@ -4359,21 +4331,11 @@ func _warm_player_frame_caches() -> void:
 
 
 func _flip_frames_horizontally(frames: Array[Texture2D]) -> Array[Texture2D]:
-	var flipped_frames: Array[Texture2D] = []
-	for texture in frames:
-		var image := _cached_texture_image(texture).duplicate()
-		image.flip_x()
-		flipped_frames.append(ImageTexture.create_from_image(image))
-	return flipped_frames
+	return sprite_frame_library.flip_frames(frames)
 
 
 func _flip_effect_frames_horizontally(frames: Array[Texture2D], display_size: Vector2i) -> Array[Texture2D]:
-	var flipped_frames: Array[Texture2D] = []
-	for texture in frames:
-		var image := _cached_texture_image(texture).duplicate()
-		image.flip_x()
-		flipped_frames.append(_effect_texture_with_display_size(image, display_size))
-	return flipped_frames
+	return sprite_frame_library.flip_effect_frames(frames, display_size)
 
 
 func _apply_player_palette(palette_name: String) -> void:
@@ -4394,36 +4356,11 @@ func _apply_player_palette(palette_name: String) -> void:
 
 
 func _recolor_player_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]:
-	var recolored: Array[Texture2D] = []
-	for texture in frames:
-		recolored.append(_recolor_player_texture(texture, palette_name))
-	return recolored
+	return sprite_frame_library.recolor_frames(frames, palette_name)
 
 
 func _recolor_player_texture(source: Texture2D, palette_name: String) -> Texture2D:
-	if source == null:
-		return null
-	var palette := {
-		# Player art is a duotone: shadow tone, body tone, then unchanged white.
-		"blue": [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)],
-		"orange": [Color8(171, 82, 54), Color8(239, 125, 87), Color8(244, 244, 244)],
-		"green": [Color8(37, 113, 121), Color8(56, 183, 100), Color8(244, 244, 244)],
-		"red": [Color8(93, 39, 93), Color8(177, 62, 83), Color8(244, 244, 244)],
-		"yellow": [Color8(181, 97, 55), Color8(255, 205, 117), Color8(244, 244, 244)],
-		"grey": [Color8(59, 63, 82), Color8(86, 108, 134), Color8(244, 244, 244)],
-	}
-	var target: Array = palette.get(palette_name, palette["blue"])
-	var image: Image = source.get_image().duplicate()
-	var source_colors: Array[Color] = [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)]
-	for y in image.get_height():
-		for x in image.get_width():
-			var color: Color = image.get_pixel(x, y)
-			for color_index in source_colors.size():
-				if _rgb_key(color) == _rgb_key(source_colors[color_index]):
-					var replacement: Color = target[color_index]
-					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
-					break
-	return ImageTexture.create_from_image(image)
+	return sprite_frame_library.recolor_texture(source, palette_name)
 
 
 func _warm_texture_cache(texture: Texture2D) -> void:

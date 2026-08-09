@@ -273,7 +273,8 @@ resource schemas and move lists are approved. Use Terra for boundary conflicts.
 - [x] Extract `CombatCalculator` without changing damage results. Integration
   preserves the existing RNG, equipment context, critical flag, and formulas;
   runtime parser verification remains pending Godot availability.
-- [ ] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
+- [x] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
+  Gameplay retains temporary one-line delegates while callers migrate safely.
 - [ ] Introduce typed player, slime, combat, and effects tuning resources.
 - [ ] Replace constants only after parity is verified.
 
