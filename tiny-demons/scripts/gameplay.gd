@@ -71,6 +71,7 @@ var player_controller: PlayerController = null
 var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
 var player_animation_component: PlayerAnimationComponent = null
+var walkable_area: WalkableArea = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -318,6 +319,9 @@ var last_damage_was_critical := false
 
 
 func _ready() -> void:
+	walkable_area = WalkableArea.new()
+	walkable_area.name = "WalkableArea"
+	add_child(walkable_area)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id
@@ -434,6 +438,8 @@ func _ready() -> void:
 	_collect_walkable_tiles(floor_tiles)
 	_build_entrance_block_polygons()
 	_build_walkable_outline()
+	if walkable_area != null:
+		walkable_area.set_geometry(walkable_polygons, walkable_outline)
 	if walkable_outline.is_empty():
 		push_warning("No floor tiles found. Actor movement will be disabled.")
 		return

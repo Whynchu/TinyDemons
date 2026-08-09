@@ -386,6 +386,8 @@ persistence boundaries; GPT-5.4 implements APIs after the design is settled.
 Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 
 - [ ] Extract walkable geometry and queries into `WalkableArea`.
+- [x] Define and attach `WalkableArea` geometry/query boundary; tile extraction
+  remains in the coordinator pending parity verification.
 - [ ] Extract actor contact/static collision into `ActorCollisionSystem`.
 - [ ] Extract depth ordering and shadows.
 - [ ] Extract dungeon graph, room state, sockets, and transitions into
