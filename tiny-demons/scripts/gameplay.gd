@@ -55,14 +55,6 @@ const GAME_OVER_FADE_TIME := 0.8
 const PLAYER_TEXTURE_OFFSET := Vector2(-10, -10)
 const PLAYER_ATTACK_LUNGE_DISTANCE := 6.0
 const PLAYER_ATTACK_LUNGE_DURATION := 0.18
-const HEALTH_BASE := 8.0
-const HEALTH_PER_VIT := 2.0
-const DAMAGE_BASE := 2.0
-const DAMAGE_DEFENSE_SCALE := 12.0
-const DAMAGE_ROLL_MIN := 0.85
-const DAMAGE_ROLL_MAX := 1.15
-const CRITICAL_HIT_CHANCE := 0.10
-const CRITICAL_DAMAGE_MULTIPLIER := 1.5
 const PLAYER_ATTACK_KNOCKBACK := 16.0
 const PLAYER_ATTACK_HITBOX_SIZE := Vector2(24, 24)
 const PLAYER_ATTACK_HITBOX_RIGHT_OFFSET := Vector2(6, -7)
@@ -108,7 +100,6 @@ const ACTOR_CONTACT_RADIUS := 3.6
 const CHEST_COLLISION_SIZE := Vector2(11, 6)
 const SLIME_WEIGHT := 1.45
 const PLAYER_WEIGHT := 1.0
-const TARGET_HEALTH_MAX := 10.0
 const TARGET_LOCK_MAX_DISTANCE := 9999.0
 const OCCLUSION_RELEASE_GRACE := 0.08
 const CONTROLLER_DEADZONE := 0.25
@@ -1796,33 +1787,23 @@ func _player_attack_damage_against(slime: Sprite2D) -> float:
 
 
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
-	last_damage_was_critical = false
-	if attacker_stats == null:
-		return 1.0
-	var attacker_str := float(attacker_stats.strength)
-	var defender_def := float(defender_stats.def) if defender_stats != null else 0.0
 	var attacker_equipment_damage := player_equipment.damage_bonus if attacker_stats == player_stats and player_equipment != null else 0.0
 	var defender_equipment_defense := player_equipment.defense_bonus if defender_stats == player_stats and player_equipment != null else 0.0
-	var raw_damage := DAMAGE_BASE + attacker_str + attacker_equipment_damage
-	defender_def += defender_equipment_defense
-	# Diminishing returns keep DEF useful without letting it erase damage.
-	# At DEF equal to DAMAGE_DEFENSE_SCALE, the defender takes half damage;
-	# every point beyond that has progressively less impact.
-	var defense_multiplier := DAMAGE_DEFENSE_SCALE / (DAMAGE_DEFENSE_SCALE + maxf(defender_def, 0.0))
-	var calculated_damage := raw_damage * defense_multiplier
-	var damage_roll := maxf(rng.randf_range(DAMAGE_ROLL_MIN, DAMAGE_ROLL_MAX), DAMAGE_ROLL_MIN)
-	var damage := calculated_damage * damage_roll
-	if attacker_stats == player_stats and rng.randf() < CRITICAL_HIT_CHANCE:
-		last_damage_was_critical = true
-		damage *= CRITICAL_DAMAGE_MULTIPLIER
-	return maxf(1.0, floorf(damage))
+	var result := CombatCalculator.calculate_damage(
+		attacker_stats,
+		defender_stats,
+		attacker_equipment_damage,
+		defender_equipment_defense,
+		attacker_stats == player_stats,
+		rng
+	)
+	last_damage_was_critical = result.critical
+	return result.amount
 
 
 func _max_health_for_stats(stats: StatsComponent) -> float:
-	if stats == null:
-		return TARGET_HEALTH_MAX
 	var equipment_health := player_equipment.health_bonus if stats == player_stats and player_equipment != null else 0.0
-	return HEALTH_BASE + float(stats.vit) * HEALTH_PER_VIT + equipment_health
+	return CombatCalculator.max_health_for_stats(stats, equipment_health)
 
 
 func _player_max_health() -> float:

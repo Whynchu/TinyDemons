@@ -270,7 +270,9 @@ environment-blocked.
 Model route: GPT-5.4 at medium effort for extraction and GPT-5.4 mini after
 resource schemas and move lists are approved. Use Terra for boundary conflicts.
 
-- [ ] Extract `CombatCalculator` without changing damage results.
+- [x] Extract `CombatCalculator` without changing damage results. Integration
+  preserves the existing RNG, equipment context, critical flag, and formulas;
+  runtime parser verification remains pending Godot availability.
 - [ ] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
 - [ ] Introduce typed player, slime, combat, and effects tuning resources.
 - [ ] Replace constants only after parity is verified.
@@ -381,7 +383,7 @@ Update this table in every consolidation pull request.
 | Milestone | Status | Default model | Owner | PR/commit | Notes |
 | --- | --- | --- | --- | --- | --- |
 | M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot parser unavailable |
-| M1 Utilities/tuning | Not started | GPT-5.4, medium | - | - | GPT-5.4 mini for mechanical moves |
+| M1 Utilities/tuning | In progress | GPT-5.4, medium | - | - | CombatCalculator extracted; parser verification pending |
 | M2 Health | Not started | Terra, high | - | - | |
 | M3 Player | Not started | GPT-5.5, high | - | - | Sol only for unresolved ordering |
 | M4 Enemies | Not started | Terra, high | - | - | |
