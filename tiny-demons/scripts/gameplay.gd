@@ -990,7 +990,7 @@ func _update_title_screen(delta: float) -> void:
 		_update_archetype_input(delta)
 		return
 	if title_transition_active:
-		_update_screen_state_controller.title_particles(delta)
+		_update_title_particles(delta)
 		title_transition_timer += delta
 		var fade_start := 0.72
 		var fade_duration := 0.42
@@ -1363,7 +1363,7 @@ func _spawn_title_frame_particle(frame_position: Vector2) -> void:
 	})
 
 
-func _update_title_screen(delta: float) -> void:
+func _update_title_particles(delta: float) -> void:
 	for index in range(screen_state_controller.title_particles.size() - 1, -1, -1):
 		var particle_data := screen_state_controller.title_particles[index]
 		var particle := particle_data["sprite"] as Sprite2D
