@@ -152,6 +152,7 @@ var player_after_attack2_texture: Texture2D = null
 var player_just_finished_attack2 := false
 var player_combo_buffered := false
 var player_combo_buffer_timer := 0.0
+var player_combo_buffer_movement := Vector2.ZERO
 var player_between_timer := 0.0
 var player_attack2_cooldown_timer := 0.0
 var player_anim_name := "idle"
@@ -304,6 +305,11 @@ var player_base_health_fill_texture: Texture2D = null
 var scene_transition_overlay: ColorRect = null
 var scene_transition_timer := 0.0
 var scene_transition_active := false
+var loading_screen_overlay: ColorRect = null
+var loading_screen_text: Sprite2D = null
+var loading_screen_active := false
+var loading_screen_fading := false
+var loading_screen_timer := 0.0
 var gold := 0
 var interact_input_was_down := false
 var chest_unlocked := false
@@ -388,6 +394,10 @@ var cloaked_demon_patrol_direction := -1.0
 var cloaked_demon_patrol_paused := false
 var cloaked_demon_patrol_pause_timer := 0.0
 var cloaked_demon_patrol_position_x := 0.0
+var cloaked_demon_patrol_min_x := 0.0
+var cloaked_demon_patrol_max_x := 0.0
+var cloaked_demon_wander_target := Vector2.ZERO
+var cloaked_demon_wander_has_target := false
 var cloaked_demon_visual_bounds := Rect2(12, 10, 12, 16)
 var rng := RandomNumberGenerator.new()
 var last_damage_was_critical := false
@@ -456,6 +466,7 @@ func _ready() -> void:
 	_build_game_over_ui()
 	_build_title_screen()
 	_build_scene_transition()
+	_build_loading_screen()
 	player_equipment = player.get_node_or_null("Equipment") as EquipmentComponent
 	if player_equipment == null:
 		player_equipment = EquipmentComponent.new()
@@ -524,6 +535,9 @@ func _physics_process(delta: float) -> void:
 			return
 		if not title_transition_active:
 			return
+	if loading_screen_active:
+		_update_loading_screen(delta)
+		return
 	var dialogue_was_active := npc_dialogue_box != null and npc_dialogue_box.visible
 	var player_input_locked := dialogue_was_active
 	if dialogue_was_active:
@@ -557,11 +571,25 @@ func _physics_process(delta: float) -> void:
 	if not player_input_locked:
 		_update_player_attack_input()
 	player_attack2_cooldown_timer = maxf(player_attack2_cooldown_timer - delta, 0.0)
+	if player_combo_buffered and not player_is_attacking:
+		player_combo_buffer_timer = maxf(player_combo_buffer_timer - delta, 0.0)
+		if player_combo_buffer_timer <= 0.0:
+			player_combo_buffered = false
 	# detect rising-edge press during attack for buffering
 	var attack_input_down := _is_attack_input_pressed()
 	if not player_input_locked and attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
 		player_combo_buffered = true
 		player_combo_buffer_timer = PLAYER_COMBO_WINDOW
+		player_combo_buffer_movement = _movement_input()
+	if player_combo_buffered and player_is_attacking and player_anim_name == "attack1":
+		var movement_input := _movement_input()
+		var direction_changed := movement_input.length() > 0.25 and (
+			player_combo_buffer_movement.length() <= 0.25
+			or movement_input.normalized().dot(player_combo_buffer_movement.normalized()) < 0.99
+		)
+		if direction_changed:
+			player_combo_buffered = false
+			player_combo_buffer_timer = 0.0
 
 	# if there is a buffered combo and player is free, start attack2
 	if player_combo_buffered and not player_is_attacking and player_between_timer <= 0.0 and player_attack2_cooldown_timer <= 0.0:
@@ -1137,21 +1165,88 @@ func _set_archetype_button_state(button: Button, active: bool, color: Color) -> 
 
 
 func _start_selected_archetype() -> void:
-	if archetype_overlay == null or not archetype_overlay.visible:
+	if archetype_overlay == null or not archetype_overlay.visible or loading_screen_active:
 		return
 	player_stats.allocation_profile = selected_archetype
 	player_palette_name = ["blue", "orange", "green", "red", "yellow", "grey"][archetype_color_index]
-	_apply_player_palette(player_palette_name)
+	loading_screen_active = true
+	loading_screen_fading = false
+	loading_screen_timer = 0.0
+	loading_screen_overlay.visible = true
+	loading_screen_overlay.modulate.a = 1.0
+	archetype_overlay.visible = false
+	archetype_hold_cover.visible = false
+	if title_overlay != null:
+		title_overlay.visible = false
+	await get_tree().process_frame
+	await _apply_player_palette_async(player_palette_name)
 	_update_player_aggro_marker_colors()
 	player_health = _player_max_health()
 	player_display_health = player_health
 	player_damage_fill_hold_timer = 0.0
 	_update_player_health_ui()
-	archetype_transition_active = true
-	archetype_transition_timer = 0.0
-	archetype_fade_out = true
 	player.visible = true
 	_apply_player_animation_frame()
+	loading_screen_fading = true
+	loading_screen_timer = 0.0
+
+
+func _build_loading_screen() -> void:
+	loading_screen_overlay = ColorRect.new()
+	loading_screen_overlay.name = "LoadingScreen"
+	loading_screen_overlay.position = Vector2.ZERO
+	loading_screen_overlay.size = Vector2(240, 160)
+	loading_screen_overlay.color = Color.BLACK
+	loading_screen_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	loading_screen_overlay.z_index = 4090
+	loading_screen_overlay.visible = false
+	ui.add_child(loading_screen_overlay)
+	loading_screen_text = Sprite2D.new()
+	loading_screen_text.name = "LoadingText"
+	loading_screen_text.centered = false
+	loading_screen_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	loading_screen_text.z_index = 4091
+	loading_screen_text.texture = _pixel_text_texture("LOADING", Color.WHITE)
+	loading_screen_text.position = Vector2(240, 160) - loading_screen_text.texture.get_size() - Vector2(4, 4)
+	loading_screen_overlay.add_child(loading_screen_text)
+
+
+func _update_loading_screen(delta: float) -> void:
+	if loading_screen_fading:
+		loading_screen_timer += delta
+		loading_screen_overlay.modulate.a = clampf(1.0 - loading_screen_timer / 0.35, 0.0, 1.0)
+		if loading_screen_timer >= 0.35:
+			loading_screen_active = false
+			loading_screen_fading = false
+			loading_screen_overlay.visible = false
+		return
+	loading_screen_timer += delta
+	var dot_count := mini(int(loading_screen_timer / 0.28) % 4, 3)
+	var labels := ["LOADING", "LOADING.", "LOADING..", "LOADING..."]
+	loading_screen_text.texture = _pixel_text_texture(labels[dot_count], Color.WHITE)
+	loading_screen_text.position = Vector2(240, 160) - loading_screen_text.texture.get_size() - Vector2(4, 4)
+
+
+func _apply_player_palette_async(palette_name: String) -> void:
+	player_idle_frames = _recolor_player_frames(player_base_idle_frames, palette_name)
+	await get_tree().process_frame
+	player_walk_frames = _recolor_player_frames(player_base_walk_frames, palette_name)
+	await get_tree().process_frame
+	player_roll_frames = _recolor_player_frames(player_base_roll_frames, palette_name)
+	await get_tree().process_frame
+	player_attack_frames = _recolor_player_frames(player_base_attack_frames, palette_name)
+	player_attack2_frames = _recolor_player_frames(player_base_attack2_frames, palette_name)
+	await get_tree().process_frame
+	player_attack_left_frames = _recolor_player_frames(player_base_attack_left_frames, palette_name)
+	player_attack2_left_frames = _recolor_player_frames(player_base_attack2_left_frames, palette_name)
+	player_between_attack_texture = _recolor_player_texture(player_base_between_attack_texture, palette_name)
+	player_after_attack2_texture = _recolor_player_texture(player_base_after_attack2_texture, palette_name)
+	await get_tree().process_frame
+	if player_base_health_fill_texture != null:
+		player_health_fill.texture = _recolor_player_texture(player_base_health_fill_texture, palette_name)
+		if player_health_damage_fill != null:
+			player_health_damage_fill.texture = _brighter_bar_texture(player_health_fill.texture)
+	_warm_player_frame_caches()
 
 
 func _update_player_aggro_marker_colors() -> void:
@@ -1330,6 +1425,8 @@ func _update_player_attack_input() -> void:
 		if player_between_timer > 0.0:
 			# A late input during the transition still completes the combo.
 			player_combo_buffered = true
+			player_combo_buffer_timer = PLAYER_COMBO_WINDOW
+			player_combo_buffer_movement = _movement_input()
 		else:
 			_start_player_attack()
 	player_attack_input_was_down = attack_input_down
@@ -1595,6 +1692,7 @@ func _update_player_attack_animation(delta: float) -> void:
 		_apply_player_animation_frame()
 		if finished_attack1_with_combo:
 			player_between_timer = PLAYER_BETWEEN_ATTACK_TIME
+			player_combo_buffer_timer = PLAYER_COMBO_WINDOW
 			_set_actor_base_texture(player, player_between_attack_texture)
 		return
 
@@ -2048,16 +2146,26 @@ func _update_cloaked_demon_animation(delta: float) -> void:
 	if walking and not cloaked_demon_walk_frames.is_empty():
 		frames = cloaked_demon_walk_frames
 		frame_time = 0.18
-		var patrol_limit := 12.0
-		var next_x := cloaked_demon_patrol_position_x + cloaked_demon_patrol_direction * 6.0 * delta
-		var min_x := cloaked_demon_wander_origin.x - patrol_limit
-		var max_x := cloaked_demon_wander_origin.x + patrol_limit
-		cloaked_demon_patrol_position_x = clampf(next_x, min_x, max_x)
-		cloaked_demon.position.x = snappedf(cloaked_demon_patrol_position_x, 0.5)
-		cloaked_demon.flip_h = cloaked_demon_patrol_direction < 0.0
-		if is_equal_approx(cloaked_demon_patrol_position_x, min_x) or is_equal_approx(cloaked_demon_patrol_position_x, max_x):
+		var foot := _cloaked_demon_foot_position()
+		if not cloaked_demon_wander_has_target:
+			cloaked_demon_wander_target = _random_npc_walkable_point_near(foot, 24.0)
+			cloaked_demon_wander_has_target = true
+		var direction := cloaked_demon_wander_target - foot
+		if direction.length_squared() <= 1.0:
+			cloaked_demon_wander_has_target = false
 			cloaked_demon_patrol_paused = true
-			cloaked_demon_patrol_pause_timer = 2.4
+			cloaked_demon_patrol_pause_timer = rng.randf_range(1.1, 2.4)
+		elif direction.length_squared() > 0.01:
+			direction = direction.normalized()
+			var moved := _try_move_actor_swept(cloaked_demon, _perspective_movement(direction * 6.0 * delta), 0.5)
+			if direction.x < -0.01:
+				cloaked_demon.flip_h = true
+			elif direction.x > 0.01:
+				cloaked_demon.flip_h = false
+			if not moved:
+				cloaked_demon_wander_has_target = false
+				cloaked_demon_patrol_paused = true
+				cloaked_demon_patrol_pause_timer = rng.randf_range(1.1, 2.4)
 	elif patrolling:
 		cloaked_demon_patrol_pause_timer = maxf(cloaked_demon_patrol_pause_timer - delta, 0.0)
 		cloaked_demon.flip_h = cloaked_demon_patrol_direction < 0.0
@@ -2501,6 +2609,7 @@ func _apply_rest_room_state() -> void:
 		cloaked_demon_patrol_paused = false
 		cloaked_demon_patrol_pause_timer = 0.0
 		cloaked_demon_patrol_position_x = cloaked_demon.position.x
+		_configure_cloaked_demon_patrol_route()
 		if not collision_sprites.has(cloaked_demon):
 			collision_sprites.append(cloaked_demon)
 	else:
@@ -2532,6 +2641,7 @@ func _apply_npc_room_state() -> void:
 	cloaked_demon_patrol_paused = false
 	cloaked_demon_patrol_pause_timer = 0.0
 	cloaked_demon_patrol_position_x = cloaked_demon.position.x
+	_configure_cloaked_demon_patrol_route()
 	if not collision_sprites.has(cloaked_demon):
 		collision_sprites.append(cloaked_demon)
 	_set_door_active(true)
@@ -3321,6 +3431,7 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 	var digit_patterns := {
 		"+": ["000", "010", "111", "010", "000"],
 		"!": ["010", "010", "010", "000", "010"],
+		".": ["0", "0", "0", "0", "1"],
 		"/": ["001", "001", "010", "100", "100"],
 		"R": ["110", "101", "110", "101", "101"],
 		"S": ["111", "100", "111", "001", "111"],
@@ -3753,6 +3864,9 @@ func _build_depth_lists() -> void:
 			occluder_sprites.append(slime)
 	if rest_fire.visible:
 		occluder_sprites.append(rest_fire)
+	if cloaked_demon.visible:
+		occluder_sprites.append(cloaked_demon)
+		sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
 	if rest_fire.visible:
 		sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
 
@@ -4085,6 +4199,60 @@ func _cloaked_demon_visual_center() -> Vector2:
 
 func _cloaked_demon_foot_position() -> Vector2:
 	return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.end.y - 1.0)
+
+
+func _configure_cloaked_demon_patrol_route() -> void:
+	if walkable_outline.is_empty() or cloaked_demon == null:
+		return
+	var original_foot := _cloaked_demon_foot_position()
+	var anchor_foot := original_foot
+	if not _is_walkable(anchor_foot):
+		var found_anchor := false
+		for step in range(1, 49):
+			var distance := float(step) * 0.5
+			for offset_x in [-distance, distance]:
+				var candidate := original_foot + Vector2(offset_x, 0.0)
+				if _is_walkable(candidate):
+					anchor_foot = candidate
+					found_anchor = true
+					break
+			if found_anchor:
+				break
+	cloaked_demon.global_position += anchor_foot - original_foot
+	var patrol_foot := _cloaked_demon_foot_position()
+	var left_extent := 0.0
+	var right_extent := 0.0
+	for step in range(1, 25):
+		var distance := float(step) * 0.5
+		if _is_walkable(patrol_foot + Vector2(-distance, 0.0)):
+			left_extent = distance
+		else:
+			break
+	for step in range(1, 25):
+		var distance := float(step) * 0.5
+		if _is_walkable(patrol_foot + Vector2(distance, 0.0)):
+			right_extent = distance
+		else:
+			break
+	cloaked_demon_patrol_min_x = cloaked_demon.position.x - left_extent
+	cloaked_demon_patrol_max_x = cloaked_demon.position.x + right_extent
+	cloaked_demon_wander_origin = cloaked_demon.position
+	cloaked_demon_patrol_position_x = cloaked_demon.position.x
+	cloaked_demon_wander_target = _cloaked_demon_foot_position()
+	cloaked_demon_wander_has_target = false
+
+
+func _random_npc_walkable_point_near(point: Vector2, radius: float) -> Vector2:
+	var candidates: Array[Vector2] = []
+	for index in 32:
+		var angle := rng.randf_range(0.0, TAU)
+		var distance := rng.randf_range(3.0, radius)
+		var candidate := point + _perspective_movement(Vector2(cos(angle), sin(angle)) * distance)
+		if _is_walkable(candidate):
+			candidates.append(candidate)
+	if candidates.is_empty():
+		return point
+	return candidates[rng.randi_range(0, candidates.size() - 1)]
 
 
 func _cloaked_demon_texture_origin() -> Vector2:
@@ -4424,6 +4592,8 @@ func _update_cloaked_demon_shadow() -> void:
 	if cloaked_demon_shadow == null:
 		return
 	cloaked_demon_shadow.visible = cloaked_demon.visible
+	if cloaked_demon_sprite_shadow != null:
+		cloaked_demon_sprite_shadow.visible = cloaked_demon.visible
 	if not cloaked_demon.visible:
 		return
 	cloaked_demon_shadow.global_position = cloaked_demon.global_position + cloaked_demon_shadow_offset
@@ -4437,7 +4607,7 @@ func _update_cloaked_demon_shadow() -> void:
 		cloaked_demon_sprite_shadow.offset = cloaked_demon.offset
 		cloaked_demon_sprite_shadow.scale = cloaked_demon.scale
 		cloaked_demon_sprite_shadow.flip_h = cloaked_demon.flip_h
-		cloaked_demon_sprite_shadow.visible = cloaked_demon.visible and cloaked_demon.texture != null
+		cloaked_demon_sprite_shadow.visible = cloaked_demon.texture != null
 		cloaked_demon_sprite_shadow.z_index = cloaked_demon.z_index - 1
 
 
@@ -4745,7 +4915,9 @@ func _depth_key(sprite: Sprite2D) -> float:
 	if sprite == rest_fire:
 		return rest_fire_depth_marker.global_position.y
 	if sprite == cloaked_demon:
-		return cloaked_demon_depth_marker.global_position.y
+		# Use the visible character's actual foot instead of the scene marker.
+		# The marker sits below the art and incorrectly draws the NPC over the player.
+		return _cloaked_demon_foot_position().y
 	if sprite.name.begins_with("WallLeft") or sprite.name.begins_with("WallRight"):
 		return sprite.global_position.y + 28.0
 	if sprite.name.begins_with("Door"):
@@ -5064,8 +5236,8 @@ func _collect_floor_collision_guide() -> bool:
 
 func _build_entrance_block_polygons() -> void:
 	entrance_block_polygons.clear()
-	for socket_id in [DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
-		if active_entrance_sockets.has(socket_id):
+	for socket_id in dungeon_sockets.keys():
+		if active_door_sockets.has(socket_id) or active_entrance_sockets.has(socket_id):
 			continue
 		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
 		if socket == null:
@@ -5077,6 +5249,10 @@ func _build_entrance_block_polygons() -> void:
 func _is_walkable(point: Vector2) -> bool:
 	if _is_point_in_entrance_block(point):
 		return false
+	return _is_inside_base_walkable(point)
+
+
+func _is_inside_base_walkable(point: Vector2) -> bool:
 	if Geometry2D.is_point_in_polygon(point, walkable_outline):
 		return true
 	return _is_point_near_polygon_edge(point, walkable_outline)
@@ -5150,13 +5326,17 @@ func _distance_to_segment(point: Vector2, segment_start: Vector2, segment_end: V
 
 
 func _nearest_walkable_point(point: Vector2) -> Vector2:
-	var nearest := walkable_points[0]
-	var nearest_distance := point.distance_squared_to(nearest)
+	var nearest := point
+	var nearest_distance := INF
 	for walkable_point in walkable_points:
+		if not _is_walkable(walkable_point):
+			continue
 		var distance := point.distance_squared_to(walkable_point)
 		if distance < nearest_distance:
 			nearest = walkable_point
 			nearest_distance = distance
+	if nearest_distance == INF and not walkable_points.is_empty():
+		nearest = walkable_points[0]
 	return nearest
 
 

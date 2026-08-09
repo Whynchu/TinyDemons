@@ -254,20 +254,20 @@ position = Vector2(148, 75)
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
 
 [node name="CloakedDemonShadow" type="Sprite2D" parent="Actors" unique_id=110558620]
-position = Vector2(148, 69.00001)
+position = Vector2(144, 71)
 scale = Vector2(1, 0.6875)
 texture = ExtResource("18_demon_shadow")
 centered = false
 
 [node name="CloakedDemon" type="Sprite2D" parent="Actors" unique_id=1755463594]
-position = Vector2(156, 71)
+position = Vector2(152, 73)
 texture = ExtResource("34_cloaked_idle")
 hframes = 5
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/CloakedDemon" unique_id=375845748]
 script = ExtResource("19_collision_guide")
-rect_position = Vector2(-2, 2.5)
-rect_size = Vector2(5, 5)
+rect_position = Vector2(-2, 4.5)
+rect_size = Vector2(5, 3)
 
 [node name="DepthMarker" type="Marker2D" parent="Actors/CloakedDemon" unique_id=297377238]
 position = Vector2(8, 34)
