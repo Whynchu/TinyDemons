@@ -74,6 +74,7 @@ var player_animation_component: PlayerAnimationComponent = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
+var slime_animation_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -513,6 +514,12 @@ func _ready() -> void:
 			combat.name = "Combat"
 			slime.add_child(combat)
 		slime_combat_components[slime] = combat
+		var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
+		if animation == null:
+			animation = SlimeAnimationComponent.new()
+			animation.name = "Animation"
+			slime.add_child(animation)
+		slime_animation_components[slime] = animation
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
 	_apply_room_state()
@@ -3080,6 +3087,9 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 		var frame_index := mini(int(floor(timer / slime_tuning.attack_frame_time)), frames.size() - 1)
 		slime_attack_timers[slime] = timer
 		slime_attack_frame_indices[slime] = frame_index
+		var animation := slime_animation_components.get(slime) as SlimeAnimationComponent
+		if animation != null:
+			animation.set_attack_frame(frame_index)
 		_set_actor_base_texture(slime, frames[frame_index])
 		var combat := slime_combat_components.get(slime) as SlimeCombatComponent
 		if frame_index == slime_tuning.attack_hit_frame and not bool(slime_attack_hit_done.get(slime, false)) and (combat == null or combat.confirm_hit()):
@@ -3110,6 +3120,9 @@ func _start_slime_attack(slime: Sprite2D) -> void:
 	var direction := _actor_foot(player) - _actor_foot(slime)
 	var face_left := direction.x < 0.0
 	slime_attack_face_left[slime] = face_left
+	var animation := slime_animation_components.get(slime) as SlimeAnimationComponent
+	if animation != null:
+		animation.set_facing(face_left)
 	_set_slime_facing(slime, -1.0 if face_left else 1.0)
 	slime_attack_timers[slime] = 0.001
 	var combat := slime_combat_components.get(slime) as SlimeCombatComponent

@@ -349,6 +349,8 @@ template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
   repath, hold, and attack cooldown timing.
 - [x] Define and attach `SlimeCombatComponent` for attack lifecycle, cooldown,
   and hit confirmation state.
+- [x] Define and attach `SlimeAnimationComponent` for facing and attack-frame
+  presentation state.
 - [ ] Replace blue/green/red setup with configured scene instances.
 - [ ] Remove all remaining slime-keyed behavior dictionaries.
 - [ ] Verify multi-slime collision, targeting, room reset, and difficulty level.
