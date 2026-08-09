@@ -517,7 +517,7 @@ Update this table in every consolidation pull request.
 | M3 Player | Complete | GPT-5.5, high | - | - | Motor, controller, roll, attack, combo, lunge, and animation boundaries established |
 | M4 Enemies | Complete | Terra, high | - | - | Component state migration, live variant metadata, and smoke verification complete |
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
-| M6 Interactions/presentation | In progress | GPT-5.4, medium | - | - | Controller boundaries wired; final end-to-end verification checkpoint ready |
+| M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Not started | Terra, medium | - | - | GPT-5.5 performs final architecture review |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
