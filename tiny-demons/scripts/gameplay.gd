@@ -244,6 +244,7 @@ var player_shadow_scale := Vector2.ONE
 var cloaked_demon_shadow_offset := Vector2.ZERO
 var cloaked_demon_shadow_scale := Vector2.ONE
 var player_sprite_shadow: Sprite2D = null
+var cloaked_demon_sprite_shadow: Sprite2D = null
 var current_target: Sprite2D = null
 var target_input_was_down := false
 var player_health := 0.0
@@ -329,6 +330,7 @@ var interact_prompt_timer := 0.0
 var npc_dialogue_box: ColorRect = null
 var npc_dialogue_text: Sprite2D = null
 var npc_dialogue_button: Sprite2D = null
+var npc_dialogue_button_shadow: Sprite2D = null
 var npc_dialogue_timer := 0.0
 var npc_dialogue_full_message := ""
 var npc_dialogue_character_index := 0
@@ -441,6 +443,7 @@ func _ready() -> void:
 	_build_rest_fire_frames()
 	_build_cloaked_demon_frames()
 	_build_player_sprite_shadow()
+	_build_cloaked_demon_sprite_shadow()
 	_build_slime_direction_textures()
 	_build_slime_attack_frames()
 	_build_enemy_health_ui()
@@ -521,10 +524,11 @@ func _physics_process(delta: float) -> void:
 			return
 		if not title_transition_active:
 			return
-	if npc_dialogue_box != null and npc_dialogue_box.visible:
+	var dialogue_was_active := npc_dialogue_box != null and npc_dialogue_box.visible
+	var player_input_locked := dialogue_was_active
+	if dialogue_was_active:
 		_update_npc_dialogue(delta)
 		_update_npc_dialogue_input()
-		return
 	if hitstop_timer > 0.0:
 		hitstop_timer = maxf(hitstop_timer - delta, 0.0)
 		return
@@ -550,11 +554,12 @@ func _physics_process(delta: float) -> void:
 		return
 	var prev_attack_input_was_down := player_attack_input_was_down
 	var prev_player_was_attacking := player_is_attacking
-	_update_player_attack_input()
+	if not player_input_locked:
+		_update_player_attack_input()
 	player_attack2_cooldown_timer = maxf(player_attack2_cooldown_timer - delta, 0.0)
 	# detect rising-edge press during attack for buffering
 	var attack_input_down := _is_attack_input_pressed()
-	if attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
+	if not player_input_locked and attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
 		player_combo_buffered = true
 		player_combo_buffer_timer = PLAYER_COMBO_WINDOW
 
@@ -563,12 +568,14 @@ func _physics_process(delta: float) -> void:
 		_start_player_attack(2)
 		player_combo_buffered = false
 
-	_update_player_roll_input()
+	if not player_input_locked:
+		_update_player_roll_input()
 	_update_player_attack_lunge(delta)
 	_update_player_roll(delta)
 	_update_roll_dust(delta)
 	_update_player_hit_reaction(delta)
-	_move_player(delta)
+	if not player_input_locked:
+		_move_player(delta)
 	_update_player_animation(delta)
 	_move_slimes(delta)
 	_update_enemy_hit_flashes(delta)
@@ -577,7 +584,8 @@ func _physics_process(delta: float) -> void:
 	_update_player_health_ui(delta)
 	_update_damage_numbers(delta)
 	_update_pixel_particles(delta)
-	_update_chest_interaction()
+	if not dialogue_was_active:
+		_update_chest_interaction()
 	_update_chest_visuals(delta)
 	_update_rest_fire_animation(delta)
 	_update_cloaked_demon_animation(delta)
@@ -1821,10 +1829,21 @@ func _build_npc_dialogue() -> void:
 	npc_dialogue_button.name = "NpcDialogueContinue"
 	npc_dialogue_button.texture = _load_texture_or_null("res://assets/artwork/circle55.png")
 	npc_dialogue_button.centered = false
+	npc_dialogue_button.z_as_relative = false
 	npc_dialogue_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	npc_dialogue_button.z_index = OVERWORLD_UI_Z + 1
+	npc_dialogue_button.z_index = OVERWORLD_UI_Z + 3
 	npc_dialogue_button.visible = false
 	ui.add_child(npc_dialogue_button)
+	npc_dialogue_button_shadow = Sprite2D.new()
+	npc_dialogue_button_shadow.name = "NpcDialogueContinueShadow"
+	npc_dialogue_button_shadow.texture = npc_dialogue_button.texture
+	npc_dialogue_button_shadow.centered = false
+	npc_dialogue_button_shadow.z_as_relative = false
+	npc_dialogue_button_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	npc_dialogue_button_shadow.z_index = OVERWORLD_UI_Z + 1
+	npc_dialogue_button_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.45)
+	npc_dialogue_button_shadow.visible = false
+	ui.add_child(npc_dialogue_button_shadow)
 
 
 func _build_room_number_indicator() -> void:
@@ -2070,14 +2089,22 @@ func _update_npc_dialogue(delta: float) -> void:
 		if npc_dialogue_character_index >= npc_dialogue_full_message.length():
 			npc_dialogue_complete = true
 			npc_dialogue_button.visible = true
-	var text_size := npc_dialogue_text.texture.get_size() if npc_dialogue_text.texture != null else Vector2.ZERO
-	var box_size := text_size + Vector2(6, 6)
-	var box_position := _snap_half_pixel(_cloaked_demon_head_position() + Vector2(-box_size.x * 0.5, -box_size.y - 2))
+	var full_text_texture := _pixel_text_texture(npc_dialogue_full_message, Color.WHITE)
+	var box_size := full_text_texture.get_size() + Vector2(10, 10)
+	var box_position := _snap_half_pixel(_cloaked_demon_head_position() + Vector2(-box_size.x * 0.5, -box_size.y - 6))
 	npc_dialogue_box.position = box_position
 	npc_dialogue_box.size = box_size
-	npc_dialogue_text.position = _snap_half_pixel(box_position + Vector2(3, 3))
+	npc_dialogue_text.position = _snap_half_pixel(box_position + Vector2(5, 5))
 	if npc_dialogue_button.visible:
-		npc_dialogue_button.position = _snap_half_pixel(box_position + box_size - Vector2(npc_dialogue_button.texture.get_width() + 1, npc_dialogue_button.texture.get_height() + 1))
+		var button_size := npc_dialogue_button.texture.get_size()
+		var button_position := _snap_half_pixel(box_position + box_size - button_size * 0.5 + Vector2(2, 2))
+		npc_dialogue_button.position = button_position
+		# Keep the fractional offset; snapping both sprites to the same half-pixel
+		# coordinate can collapse the shadow into the button.
+		npc_dialogue_button_shadow.position = button_position + Vector2(-0.5, 0.5)
+		npc_dialogue_button_shadow.visible = true
+	else:
+		npc_dialogue_button_shadow.visible = false
 
 
 func _show_npc_dialogue() -> void:
@@ -2094,6 +2121,16 @@ func _show_npc_dialogue() -> void:
 	npc_dialogue_button.visible = false
 	npc_dialogue_input_was_down = _is_interact_input_pressed()
 	npc_dialogue_box.visible = true
+	player_is_moving = false
+	player_is_attacking = false
+	player_is_rolling = false
+	player_attack_visual.visible = false
+	player_attack_lunge_timer = 0.0
+	player_attack_lunge_velocity = Vector2.ZERO
+	player_anim_name = "idle"
+	player_anim_frame = 0
+	player_anim_timer = 0.0
+	_apply_player_animation_frame()
 	interact_prompt.visible = false
 	_update_npc_dialogue(0.0)
 
@@ -2105,6 +2142,8 @@ func _hide_npc_dialogue() -> void:
 		npc_dialogue_text.visible = false
 	if npc_dialogue_button != null:
 		npc_dialogue_button.visible = false
+	if npc_dialogue_button_shadow != null:
+		npc_dialogue_button_shadow.visible = false
 	npc_dialogue_input_was_down = false
 
 
@@ -2130,6 +2169,9 @@ func _can_interact_with_npc() -> bool:
 
 func _update_interact_prompt(delta: float) -> void:
 	if interact_prompt == null:
+		return
+	if npc_dialogue_box != null and npc_dialogue_box.visible:
+		interact_prompt.visible = false
 		return
 
 	var near_chest := _can_interact_with_chest()
@@ -2761,6 +2803,25 @@ func _update_pixel_particles(delta: float) -> void:
 
 func _snap_half_pixel(world_position: Vector2) -> Vector2:
 	return Vector2(snappedf(world_position.x, 0.5), snappedf(world_position.y, 0.5))
+
+
+func _dialogue_button_shadow_texture(source: Texture2D) -> Texture2D:
+	if source == null:
+		return null
+	var source_image := source.get_image()
+	var shadow_image := Image.create_empty(source_image.get_width(), source_image.get_height(), false, Image.FORMAT_RGBA8)
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			var color := source_image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			var shadow_x := x - 1
+			var shadow_y := y + 1
+			if shadow_x < 0 or shadow_y >= source_image.get_height():
+				continue
+			if source_image.get_pixel(shadow_x, shadow_y).a <= 0.0:
+				shadow_image.set_pixel(shadow_x, shadow_y, Color(1.0, 1.0, 1.0, color.a))
+	return ImageTexture.create_from_image(shadow_image)
 
 
 func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:
@@ -3692,10 +3753,8 @@ func _build_depth_lists() -> void:
 			occluder_sprites.append(slime)
 	if rest_fire.visible:
 		occluder_sprites.append(rest_fire)
+	if rest_fire.visible:
 		sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
-	if cloaked_demon.visible:
-		occluder_sprites.append(cloaked_demon)
-		sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
 
 	if chest.visible:
 		for path in OCCLUDER_PATHS:
@@ -4306,6 +4365,8 @@ func _update_actor_occlusion(delta: float) -> void:
 		for occluder in occluder_sprites:
 			if occluder == actor:
 				continue
+			# Keep the cloaked demon solid when the player is in front of it.
+			# Normal occlusion still applies when the demon is in front of the player.
 			if _depth_key(occluder) <= actor_depth:
 				continue
 			var overlap := actor_rect.intersection(_sprite_source_global_rect(occluder))
@@ -4370,6 +4431,14 @@ func _update_cloaked_demon_shadow() -> void:
 	cloaked_demon_shadow.flip_h = cloaked_demon.flip_h
 	cloaked_demon_shadow.self_modulate = Color(1, 1, 1, 0.25)
 	cloaked_demon_shadow.z_index = int(round(_cloaked_demon_foot_position().y * DEPTH_Z_SCALE)) - 1
+	if cloaked_demon_sprite_shadow != null:
+		cloaked_demon_sprite_shadow.texture = cloaked_demon.texture
+		cloaked_demon_sprite_shadow.global_position = cloaked_demon.global_position + Vector2(-0.5, 0.0)
+		cloaked_demon_sprite_shadow.offset = cloaked_demon.offset
+		cloaked_demon_sprite_shadow.scale = cloaked_demon.scale
+		cloaked_demon_sprite_shadow.flip_h = cloaked_demon.flip_h
+		cloaked_demon_sprite_shadow.visible = cloaked_demon.visible and cloaked_demon.texture != null
+		cloaked_demon_sprite_shadow.z_index = cloaked_demon.z_index - 1
 
 
 func _build_player_sprite_shadow() -> void:
@@ -4381,6 +4450,17 @@ func _build_player_sprite_shadow() -> void:
 	player_sprite_shadow.z_as_relative = false
 	player_sprite_shadow.z_index = player.z_index - 1
 	player.get_parent().add_child(player_sprite_shadow)
+
+
+func _build_cloaked_demon_sprite_shadow() -> void:
+	cloaked_demon_sprite_shadow = Sprite2D.new()
+	cloaked_demon_sprite_shadow.name = "CloakedDemonSpriteShadow"
+	cloaked_demon_sprite_shadow.centered = cloaked_demon.centered
+	cloaked_demon_sprite_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	cloaked_demon_sprite_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.25)
+	cloaked_demon_sprite_shadow.z_as_relative = false
+	cloaked_demon_sprite_shadow.z_index = cloaked_demon.z_index - 1
+	cloaked_demon.get_parent().add_child(cloaked_demon_sprite_shadow)
 
 
 func _update_targeting() -> void:
