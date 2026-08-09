@@ -511,8 +511,13 @@ and 40 dictionary declarations. The line increase is expected during staged
 composition; M7 must reduce coordinator ownership rather than merely move
 text elsewhere.
 
+Latest snapshot after the first cleanup pass: 5,631 physical lines, 304
+functions, 38 constants, 263 root vars, 22 `@onready` references, and 40
+dictionary declarations.
+
 - [ ] Reduce `gameplay.gd` to startup, global modes, and signal wiring.
 - [ ] Remove compatibility delegates and unused state.
+- [x] Remove the migrated `SpriteFrameLibrary` slicing compatibility delegate.
 - [ ] Ensure no component reaches into another component's internal fields.
 - [ ] Repeat the complete smoke-test checklist.
 - [ ] Record final metrics and compare them with the baseline.
