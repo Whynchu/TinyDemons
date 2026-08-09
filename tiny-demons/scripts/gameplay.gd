@@ -88,6 +88,7 @@ const SLIME_DEATH_PARTICLE_LIFETIME := 0.7
 const SLIME_DEATH_PARTICLE_SPEED_MIN := 14.0
 const SLIME_DEATH_PARTICLE_SPEED_MAX := 38.0
 const CHEST_INTERACT_DISTANCE := 16.0
+const NPC_INTERACT_DISTANCE := 24.0
 const CHEST_REWARD_GOLD := 100
 const INTERACT_PROMPT_BOB_TIME := 0.8
 const CHEST_COLLECT_FLASH_TIME := 0.12
@@ -95,6 +96,10 @@ const CHEST_UNLOCK_FADE_TIME := 0.45
 const CHEST_EVAPORATE_PARTICLE_COUNT := 34
 const CHEST_EVAPORATE_LIFETIME_MIN := 0.45
 const CHEST_EVAPORATE_LIFETIME_MAX := 0.9
+const FIRE_FRAME_TIME := 0.16
+const FIRE_FRAME_SIZE := Vector2i(16, 16)
+const CLOAKED_DEMON_FRAME_SIZE := Vector2i(36, 36)
+const NPC_DIALOGUE_TIME := 3.2
 const PLAYER_DOOR_FOOT_COLLIDER_SIZE := Vector2(3, 3)
 const ACTOR_COLLISION_WIDTH := 9.0
 const ACTOR_COLLISION_HEIGHT := 4.0
@@ -117,15 +122,18 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var player: Sprite2D = $Actors/TinyDemon
 @onready var player_attack_visual: Sprite2D = $Actors/TinyDemonAttack
 @onready var player_shadow: Sprite2D = $Actors/TinyDemonShadow
+@onready var cloaked_demon_shadow: Sprite2D = $Actors/CloakedDemonShadow
 @onready var slime_blue: Sprite2D = $Actors/SlimeBlue
 @onready var slime_green: Sprite2D = $Actors/SlimeGreen
 @onready var slime_red: Sprite2D = $Actors/SlimeRed
-@onready var door: Sprite2D = $Map/Walls/DoorRight
-@onready var entrance_tile_a: Sprite2D = $Map/FloorTiles/Entrance
-@onready var entrance_tile_b: Sprite2D = $"Map/FloorTiles/Entrance/Tile 2"
+@onready var sockets_root: Node2D = $Map/Sockets
 @onready var hp_overhead: Sprite2D = $Actors/SlimeGreen/HpOverhead
 @onready var hp_overhead_fill: Sprite2D = $Actors/SlimeGreen/HpOverheadFill
 @onready var chest: Sprite2D = $Actors/Chest
+@onready var rest_fire: Sprite2D = $Actors/RestFire
+@onready var rest_fire_depth_marker: Marker2D = $Actors/RestFire/DepthMarker
+@onready var cloaked_demon: Sprite2D = $Actors/CloakedDemon
+@onready var cloaked_demon_depth_marker: Marker2D = $Actors/CloakedDemon/DepthMarker
 @onready var target_name_text: Sprite2D = $UI/SlimeText
 @onready var target_health_bar: Sprite2D = $UI/EnemyHp
 @onready var target_health_fill: Sprite2D = $UI/EnemyHpFill
@@ -185,6 +193,9 @@ var walkable_points: Array[Vector2] = []
 var walkable_polygons: Array[PackedVector2Array] = []
 var walkable_outline: PackedVector2Array = PackedVector2Array()
 var entrance_block_polygons: Array[PackedVector2Array] = []
+var dungeon_sockets: Dictionary = {}
+var active_door_sockets: Dictionary = {}
+var active_entrance_sockets: Dictionary = {}
 var use_walkable_polygon_direct := false
 var slimes: Array[Sprite2D] = []
 var depth_sprites: Array[Sprite2D] = []
@@ -230,6 +241,8 @@ var damage_number_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
+var cloaked_demon_shadow_offset := Vector2.ZERO
+var cloaked_demon_shadow_scale := Vector2.ONE
 var player_sprite_shadow: Sprite2D = null
 var current_target: Sprite2D = null
 var target_input_was_down := false
@@ -299,8 +312,13 @@ var chest_unlock_fade_timer := 0.0
 var chest_evaporated := false
 var door_active := false
 var entrance_open := false
-var room_number := 1
+var dungeon_graph := DungeonGraph.new()
+var current_room_id: StringName = DungeonGraph.START_ROOM_ID
+var current_room_depth := 0
+var current_room_display_number := 1
+var current_room_type: StringName = DungeonGraph.ROOM_START
 var room_states: Dictionary = {}
+var room_transition_locked := false
 var chest_normal_texture: Texture2D = null
 var chest_gray_texture: Texture2D = null
 var chest_unlock_overlay: Sprite2D = null
@@ -308,6 +326,17 @@ var chest_flash_overlay: Sprite2D = null
 var interact_prompt: Sprite2D = null
 var interact_prompt_base_position := Vector2.ZERO
 var interact_prompt_timer := 0.0
+var npc_dialogue_box: ColorRect = null
+var npc_dialogue_text: Sprite2D = null
+var npc_dialogue_button: Sprite2D = null
+var npc_dialogue_timer := 0.0
+var npc_dialogue_full_message := ""
+var npc_dialogue_character_index := 0
+var npc_dialogue_type_timer := 0.0
+var npc_dialogue_complete := false
+var npc_dialogue_input_was_down := false
+var npc_dialogue_index := 0
+var npc_dialogue_messages := ["GO ON", "TRUST YOUR PATH", "THE FIRE KNOWS", "YOU ARE CLOSE"]
 var room_number_indicator: Sprite2D = null
 var gold_indicator: Sprite2D = null
 var gold_amount_indicator: Sprite2D = null
@@ -318,6 +347,7 @@ var target_health_text: Sprite2D = null
 var player_health_text: Sprite2D = null
 var player_start_position := Vector2.ZERO
 var chest_start_position := Vector2.ZERO
+var cloaked_demon_start_position := Vector2.ZERO
 var target_health: Dictionary = {}
 var target_display_health: Dictionary = {}
 var target_damage_fill_hold_timers: Dictionary = {}
@@ -343,18 +373,40 @@ var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
 var player_regen_delay_timer := 0.0
 var player_regen_accumulator := 0.0
+var rest_fire_animation_timer := 0.0
+var rest_fire_frame_index := 0
+var rest_fire_frames: Array[Texture2D] = []
+var cloaked_demon_idle_frames: Array[Texture2D] = []
+var cloaked_demon_walk_frames: Array[Texture2D] = []
+var cloaked_demon_animation_timer := 0.0
+var cloaked_demon_animation_frame := 0
+var cloaked_demon_wander_timer := 0.0
+var cloaked_demon_wander_origin := Vector2.ZERO
+var cloaked_demon_patrol_direction := -1.0
+var cloaked_demon_patrol_paused := false
+var cloaked_demon_patrol_pause_timer := 0.0
+var cloaked_demon_patrol_position_x := 0.0
+var cloaked_demon_visual_bounds := Rect2(12, 10, 12, 16)
 var rng := RandomNumberGenerator.new()
 var last_damage_was_critical := false
 
 
 func _ready() -> void:
 	rng.randomize()
+	dungeon_graph.initialize(rng.randi())
+	current_room_id = dungeon_graph.start_room_id
+	_sync_current_room_metadata()
+	_collect_dungeon_sockets()
+	_validate_dungeon_socket_setup()
+	_ensure_current_room_layout()
 	player_start_position = player.position
 	chest_start_position = chest.position
+	cloaked_demon_start_position = cloaked_demon.position
 	chest_gray_texture = chest.texture
 	chest_normal_texture = _load_texture_or_null("res://assets/artwork/Chest.png")
-	_set_door_active(false)
-	_set_entrance_open(false)
+	rest_fire.visible = false
+	rest_fire.frame = 0
+	_configure_room_sockets(false)
 	slimes.clear()
 	slimes.append(slime_blue)
 	slimes.append(slime_green)
@@ -373,6 +425,9 @@ func _ready() -> void:
 	player_shadow_offset = player_shadow.global_position - player.global_position
 	player_shadow_scale = player_shadow.global_scale
 	player_shadow.z_as_relative = false
+	cloaked_demon_shadow_offset = cloaked_demon_shadow.global_position - cloaked_demon.global_position
+	cloaked_demon_shadow_scale = cloaked_demon_shadow.global_scale
+	cloaked_demon_shadow.z_as_relative = false
 	player_attack_visual.z_as_relative = false
 	player_attack_visual.visible = false
 	_hide_editor_only_guides()
@@ -383,12 +438,15 @@ func _ready() -> void:
 	_build_depth_lists()
 	_build_sprite_images()
 	_build_player_animation_frames()
+	_build_rest_fire_frames()
+	_build_cloaked_demon_frames()
 	_build_player_sprite_shadow()
 	_build_slime_direction_textures()
 	_build_slime_attack_frames()
 	_build_enemy_health_ui()
 	_build_target_health_text()
 	_build_interact_prompt()
+	_build_npc_dialogue()
 	_build_room_number_indicator()
 	_build_gold_indicator()
 	_build_button_hud()
@@ -443,6 +501,8 @@ func _ready() -> void:
 		target_damage_fill_hold_timers[slime] = 0.0
 		target_regen_delay_timers[slime] = 0.0
 		target_regen_accumulators[slime] = 0.0
+	_apply_room_state()
+	_build_depth_lists()
 
 
 func _physics_process(delta: float) -> void:
@@ -461,6 +521,10 @@ func _physics_process(delta: float) -> void:
 			return
 		if not title_transition_active:
 			return
+	if npc_dialogue_box != null and npc_dialogue_box.visible:
+		_update_npc_dialogue(delta)
+		_update_npc_dialogue_input()
+		return
 	if hitstop_timer > 0.0:
 		hitstop_timer = maxf(hitstop_timer - delta, 0.0)
 		return
@@ -515,6 +579,8 @@ func _physics_process(delta: float) -> void:
 	_update_pixel_particles(delta)
 	_update_chest_interaction()
 	_update_chest_visuals(delta)
+	_update_rest_fire_animation(delta)
+	_update_cloaked_demon_animation(delta)
 	_update_door_transition()
 	_update_depth_sorting()
 	_update_targeting()
@@ -541,6 +607,7 @@ func _physics_process(delta: float) -> void:
 				_set_actor_base_texture(player, player_idle_frames[0])
 
 	_update_player_shadow()
+	_update_cloaked_demon_shadow()
 	_update_overworld_ui()
 
 
@@ -1658,7 +1725,7 @@ func _enemy_max_health(slime: Sprite2D) -> float:
 
 
 func _enemy_level_for_room() -> int:
-	return maxi(1, room_number)
+	return maxi(1, current_room_depth)
 
 
 func _apply_enemy_room_level(slime: Sprite2D) -> void:
@@ -1733,6 +1800,31 @@ func _build_interact_prompt() -> void:
 	interact_prompt.visible = false
 	interact_prompt_base_position = Vector2(6, -7)
 	add_child(interact_prompt)
+
+
+func _build_npc_dialogue() -> void:
+	npc_dialogue_box = ColorRect.new()
+	npc_dialogue_box.name = "NpcDialogueBox"
+	npc_dialogue_box.color = Color(0.0, 0.0, 0.0, 0.94)
+	npc_dialogue_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	npc_dialogue_box.z_index = OVERWORLD_UI_Z
+	npc_dialogue_box.visible = false
+	ui.add_child(npc_dialogue_box)
+	npc_dialogue_text = Sprite2D.new()
+	npc_dialogue_text.name = "NpcDialogueText"
+	npc_dialogue_text.centered = false
+	npc_dialogue_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	npc_dialogue_text.z_index = OVERWORLD_UI_Z + 1
+	npc_dialogue_text.visible = false
+	ui.add_child(npc_dialogue_text)
+	npc_dialogue_button = Sprite2D.new()
+	npc_dialogue_button.name = "NpcDialogueContinue"
+	npc_dialogue_button.texture = _load_texture_or_null("res://assets/artwork/circle55.png")
+	npc_dialogue_button.centered = false
+	npc_dialogue_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	npc_dialogue_button.z_index = OVERWORLD_UI_Z + 1
+	npc_dialogue_button.visible = false
+	ui.add_child(npc_dialogue_button)
 
 
 func _build_room_number_indicator() -> void:
@@ -1814,15 +1906,25 @@ func _build_target_health_text() -> void:
 func _update_room_number_indicator() -> void:
 	if room_number_indicator == null:
 		return
-	room_number_indicator.texture = _pixel_number_texture("R%d" % room_number, Color8(244, 244, 244))
+	var room_label := "D%d" % current_room_display_number
+	if current_room_type == DungeonGraph.ROOM_START:
+		room_label = "START"
+	elif current_room_type == DungeonGraph.ROOM_REST:
+		room_label = "REST"
+	elif current_room_type == DungeonGraph.ROOM_TRADER:
+		room_label = "TRADER"
+	elif current_room_type == DungeonGraph.ROOM_NPC:
+		room_label = "CLOAKED"
+	room_number_indicator.texture = _pixel_number_texture(room_label, Color8(244, 244, 244))
 
 
 func _set_entrance_open(is_open: bool) -> void:
 	entrance_open = is_open
-	if entrance_tile_a != null:
-		entrance_tile_a.visible = is_open
-	if entrance_tile_b != null:
-		entrance_tile_b.visible = is_open
+	for socket_value in active_entrance_sockets.values():
+		var socket := socket_value as DungeonSocket
+		var visual := socket.visual()
+		if visual != null:
+			visual.visible = true
 
 
 func _start_chest_unlock_fade() -> void:
@@ -1863,16 +1965,20 @@ func _update_chest_unlock_fade(delta: float) -> void:
 
 func _update_chest_interaction() -> void:
 	var interact_input_down := _is_interact_input_pressed()
-	if interact_input_down and not interact_input_was_down and chest_unlocked and not chest_claimed:
-		if _can_interact_with_chest():
+	if interact_input_down and not interact_input_was_down:
+		if chest_unlocked and not chest_claimed and _can_interact_with_chest():
 			chest_claimed = true
-			room_states[room_number] = {"finished": true}
+			var state := room_states.get(current_room_id, {}) as Dictionary
+			state["finished"] = true
+			room_states[current_room_id] = state
 			chest_collect_flash_timer = CHEST_COLLECT_FLASH_TIME
 			_start_chest_flash()
 			gold += CHEST_REWARD_GOLD
 			_update_gold_indicator()
 			_spawn_gold_number(chest.global_position + Vector2(5, -8), CHEST_REWARD_GOLD)
 			print("Gold: %d" % gold)
+		elif _can_interact_with_npc():
+			_show_npc_dialogue()
 	interact_input_was_down = interact_input_down
 
 
@@ -1891,15 +1997,144 @@ func _update_chest_visuals(delta: float) -> void:
 		chest.self_modulate = Color.WHITE
 
 
+func _update_rest_fire_animation(delta: float) -> void:
+	if rest_fire == null or not rest_fire.visible or rest_fire_frames.is_empty():
+		return
+	rest_fire_animation_timer += delta
+	while rest_fire_animation_timer >= FIRE_FRAME_TIME:
+		rest_fire_animation_timer -= FIRE_FRAME_TIME
+		_set_rest_fire_frame((rest_fire_frame_index + 1) % rest_fire_frames.size())
+
+
+func _set_rest_fire_frame(frame_index: int) -> void:
+	if rest_fire_frames.is_empty():
+		return
+	rest_fire_frame_index = posmod(frame_index, rest_fire_frames.size())
+	rest_fire.texture = rest_fire_frames[rest_fire_frame_index]
+	rest_fire.hframes = 1
+	rest_fire.frame = 0
+	sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
+
+
+func _update_cloaked_demon_animation(delta: float) -> void:
+	if cloaked_demon == null or not cloaked_demon.visible or cloaked_demon_idle_frames.is_empty():
+		return
+	var near_player := _can_interact_with_npc()
+	var in_npc_room := current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC
+	var patrolling := in_npc_room and not near_player and (npc_dialogue_box == null or not npc_dialogue_box.visible)
+	var walking := patrolling and not cloaked_demon_patrol_paused
+	var frames := cloaked_demon_idle_frames
+	cloaked_demon_animation_timer += delta
+	var frame_time := 0.28
+	if walking and not cloaked_demon_walk_frames.is_empty():
+		frames = cloaked_demon_walk_frames
+		frame_time = 0.18
+		var patrol_limit := 12.0
+		var next_x := cloaked_demon_patrol_position_x + cloaked_demon_patrol_direction * 6.0 * delta
+		var min_x := cloaked_demon_wander_origin.x - patrol_limit
+		var max_x := cloaked_demon_wander_origin.x + patrol_limit
+		cloaked_demon_patrol_position_x = clampf(next_x, min_x, max_x)
+		cloaked_demon.position.x = snappedf(cloaked_demon_patrol_position_x, 0.5)
+		cloaked_demon.flip_h = cloaked_demon_patrol_direction < 0.0
+		if is_equal_approx(cloaked_demon_patrol_position_x, min_x) or is_equal_approx(cloaked_demon_patrol_position_x, max_x):
+			cloaked_demon_patrol_paused = true
+			cloaked_demon_patrol_pause_timer = 2.4
+	elif patrolling:
+		cloaked_demon_patrol_pause_timer = maxf(cloaked_demon_patrol_pause_timer - delta, 0.0)
+		cloaked_demon.flip_h = cloaked_demon_patrol_direction < 0.0
+		if cloaked_demon_patrol_pause_timer <= 0.0:
+			cloaked_demon_patrol_paused = false
+			cloaked_demon_patrol_direction *= -1.0
+	elif near_player:
+		cloaked_demon.flip_h = _actor_foot(player).x < _actor_foot(cloaked_demon).x
+	if cloaked_demon_animation_timer < frame_time:
+		return
+	cloaked_demon_animation_timer = fmod(cloaked_demon_animation_timer, frame_time)
+	cloaked_demon_animation_frame = (cloaked_demon_animation_frame + 1) % frames.size()
+	cloaked_demon.texture = frames[cloaked_demon_animation_frame]
+	sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
+
+
+func _update_npc_dialogue(delta: float) -> void:
+	if npc_dialogue_box == null or not npc_dialogue_box.visible:
+		return
+	if not cloaked_demon.visible:
+		_hide_npc_dialogue()
+		return
+	if not npc_dialogue_complete:
+		npc_dialogue_type_timer += delta
+		while npc_dialogue_type_timer >= 0.045 and npc_dialogue_character_index < npc_dialogue_full_message.length():
+			npc_dialogue_type_timer -= 0.045
+			npc_dialogue_character_index += 1
+			npc_dialogue_text.texture = _pixel_text_texture(npc_dialogue_full_message.substr(0, npc_dialogue_character_index), Color.WHITE)
+		if npc_dialogue_character_index >= npc_dialogue_full_message.length():
+			npc_dialogue_complete = true
+			npc_dialogue_button.visible = true
+	var text_size := npc_dialogue_text.texture.get_size() if npc_dialogue_text.texture != null else Vector2.ZERO
+	var box_size := text_size + Vector2(6, 6)
+	var box_position := _snap_half_pixel(_cloaked_demon_head_position() + Vector2(-box_size.x * 0.5, -box_size.y - 2))
+	npc_dialogue_box.position = box_position
+	npc_dialogue_box.size = box_size
+	npc_dialogue_text.position = _snap_half_pixel(box_position + Vector2(3, 3))
+	if npc_dialogue_button.visible:
+		npc_dialogue_button.position = _snap_half_pixel(box_position + box_size - Vector2(npc_dialogue_button.texture.get_width() + 1, npc_dialogue_button.texture.get_height() + 1))
+
+
+func _show_npc_dialogue() -> void:
+	if npc_dialogue_box == null or not cloaked_demon.visible:
+		return
+	var message := npc_dialogue_messages[npc_dialogue_index % npc_dialogue_messages.size()] as String
+	npc_dialogue_index += 1
+	npc_dialogue_full_message = message
+	npc_dialogue_character_index = 0
+	npc_dialogue_type_timer = 0.0
+	npc_dialogue_complete = false
+	npc_dialogue_text.texture = _pixel_text_texture("", Color.WHITE)
+	npc_dialogue_text.visible = true
+	npc_dialogue_button.visible = false
+	npc_dialogue_input_was_down = _is_interact_input_pressed()
+	npc_dialogue_box.visible = true
+	interact_prompt.visible = false
+	_update_npc_dialogue(0.0)
+
+
+func _hide_npc_dialogue() -> void:
+	if npc_dialogue_box != null:
+		npc_dialogue_box.visible = false
+	if npc_dialogue_text != null:
+		npc_dialogue_text.visible = false
+	if npc_dialogue_button != null:
+		npc_dialogue_button.visible = false
+	npc_dialogue_input_was_down = false
+
+
+func _update_npc_dialogue_input() -> void:
+	var input_down := _is_interact_input_pressed()
+	if npc_dialogue_complete and input_down and not npc_dialogue_input_was_down:
+		_hide_npc_dialogue()
+	npc_dialogue_input_was_down = input_down
+
+
+
 func _can_interact_with_chest() -> bool:
 	return chest_unlocked and not chest_claimed and _actor_foot(player).distance_to(_collision_rect(chest).get_center()) <= CHEST_INTERACT_DISTANCE
+
+
+func _can_interact_with_npc() -> bool:
+	if cloaked_demon == null or not cloaked_demon.visible:
+		return false
+	# NPC art sits within a larger animation frame, so use its visual center and
+	# a slightly more forgiving radius than the small chest interaction zone.
+	return _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
 
 
 func _update_interact_prompt(delta: float) -> void:
 	if interact_prompt == null:
 		return
 
-	var should_show := _can_interact_with_chest()
+	var near_chest := _can_interact_with_chest()
+	var near_npc := _can_interact_with_npc()
+	var should_show := near_chest or near_npc
 	interact_prompt.visible = should_show
 	if not should_show:
 		return
@@ -1907,7 +2142,12 @@ func _update_interact_prompt(delta: float) -> void:
 	interact_prompt_timer = fmod(interact_prompt_timer + delta, INTERACT_PROMPT_BOB_TIME)
 	var bob_phase := (interact_prompt_timer / INTERACT_PROMPT_BOB_TIME) * TAU
 	var bob := snappedf(sin(bob_phase) * 1.0, 0.5)
-	interact_prompt.global_position = _snap_half_pixel(chest.global_position + interact_prompt_base_position + Vector2(0, bob))
+	if near_npc and not near_chest:
+		var prompt_size := interact_prompt.texture.get_size() * interact_prompt.scale
+		var head_position := _cloaked_demon_head_position()
+		interact_prompt.global_position = _snap_half_pixel(head_position + Vector2(-prompt_size.x * 0.5, -prompt_size.y - 2 + bob))
+	else:
+		interact_prompt.global_position = _snap_half_pixel(chest.global_position + interact_prompt_base_position + Vector2(0, bob))
 	interact_prompt.z_index = OVERWORLD_UI_Z + 1
 
 
@@ -1929,69 +2169,169 @@ func _start_chest_evaporation() -> void:
 
 func _set_door_active(is_active: bool) -> void:
 	door_active = is_active
-	door.visible = is_active
+	for socket_value in active_door_sockets.values():
+		var socket := socket_value as DungeonSocket
+		var visual := socket.visual()
+		if visual != null:
+			visual.visible = is_active
+
+
+func _collect_dungeon_sockets() -> void:
+	dungeon_sockets.clear()
+	if sockets_root == null:
+		return
+	for child in sockets_root.get_children():
+		var socket := child as DungeonSocket
+		if socket != null:
+			dungeon_sockets[socket.socket_id()] = socket
+
+
+func _validate_dungeon_socket_setup() -> void:
+	var expected_pairs := {
+		DungeonGraph.WALL_LEFT: DungeonGraph.BOTTOM_RIGHT,
+		DungeonGraph.WALL_RIGHT: DungeonGraph.BOTTOM_LEFT,
+		DungeonGraph.BOTTOM_LEFT: DungeonGraph.WALL_RIGHT,
+		DungeonGraph.BOTTOM_RIGHT: DungeonGraph.WALL_LEFT,
+	}
+	for socket_id_value in expected_pairs.keys():
+		var socket_id := StringName(socket_id_value)
+		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
+		if socket == null:
+			push_error("Missing dungeon socket: %s" % socket_id)
+			continue
+		if socket.paired_socket_id != StringName(expected_pairs[socket_id]):
+			push_error("Dungeon socket %s has the wrong paired socket." % socket_id)
+		if socket.visual() == null or socket.trigger() == null or socket.spawn_marker() == null:
+			push_error("Dungeon socket %s is missing a visual, trigger, or spawn marker." % socket_id)
+
+
+func _sync_current_room_metadata() -> void:
+	var room := dungeon_graph.get_room(current_room_id)
+	if room == null:
+		return
+	current_room_depth = room.depth
+	current_room_display_number = room.display_number
+	current_room_type = room.room_type
+
+
+func _ensure_current_room_layout() -> void:
+	var room := dungeon_graph.get_room(current_room_id)
+	if room == null:
+		return
+	var state := room_states.get(current_room_id, {}) as Dictionary
+	if not state.has("generated_exits"):
+		var exits: Array[StringName] = []
+		if current_room_type == DungeonGraph.ROOM_REST or current_room_type == DungeonGraph.ROOM_TRADER:
+			pass
+		elif current_room_type == DungeonGraph.ROOM_NPC:
+			var npc_exit := DungeonGraph.WALL_LEFT if room.generation_seed % 2 == 0 else DungeonGraph.WALL_RIGHT
+			exits.append(npc_exit)
+			dungeon_graph.ensure_connection(current_room_id, npc_exit, DungeonGraph.ROOM_COMBAT)
+		elif current_room_depth == 0:
+			exits.assign([DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT])
+			for exit_socket in exits:
+				dungeon_graph.ensure_connection(current_room_id, exit_socket, DungeonGraph.ROOM_COMBAT)
+		else:
+			var layout_rng := RandomNumberGenerator.new()
+			layout_rng.seed = room.generation_seed
+			var primary := DungeonGraph.WALL_LEFT if layout_rng.randi_range(0, 1) == 0 else DungeonGraph.WALL_RIGHT
+			exits.append(primary)
+			dungeon_graph.ensure_connection(current_room_id, primary, DungeonGraph.ROOM_COMBAT)
+			if current_room_depth + 1 != 6 and current_room_depth + 1 != 11 and layout_rng.randf() < 0.45:
+				var secondary := DungeonGraph.WALL_RIGHT if primary == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT
+				var secondary_type := DungeonGraph.ROOM_REST if layout_rng.randf() < 0.40 else DungeonGraph.ROOM_COMBAT
+				exits.append(secondary)
+				dungeon_graph.ensure_connection(current_room_id, secondary, secondary_type)
+		state["generated_exits"] = exits
+		state["room_type"] = current_room_type
+		state["finished"] = bool(state.get("finished", false))
+		room_states[current_room_id] = state
+	_configure_room_sockets(bool(state.get("finished", false)))
+
+
+func _configure_room_sockets(is_unlocked: bool) -> void:
+	active_door_sockets.clear()
+	active_entrance_sockets.clear()
+	for socket_value in dungeon_sockets.values():
+		var socket := socket_value as DungeonSocket
+		var visual := socket.visual()
+		if visual != null:
+			visual.visible = false
+
+	var room := dungeon_graph.get_room(current_room_id)
+	if room == null:
+		return
+	var state := room_states.get(current_room_id, {}) as Dictionary
+	var generated_exits := state.get("generated_exits", []) as Array
+	for exit_value in generated_exits:
+		var exit_socket := StringName(exit_value)
+		var socket := dungeon_sockets.get(exit_socket) as DungeonSocket
+		if socket != null:
+			active_door_sockets[exit_socket] = socket
+	for entry_value in room.incoming_connections.keys():
+		var entry_socket := StringName(entry_value)
+		var socket := dungeon_sockets.get(entry_socket) as DungeonSocket
+		if socket != null:
+			active_entrance_sockets[entry_socket] = socket
+			var visual := socket.visual()
+			if visual != null:
+				visual.visible = true
+	door_active = is_unlocked
+	entrance_open = is_unlocked
+	_set_door_active(is_unlocked)
+	_build_entrance_block_polygons()
 
 
 func _update_door_transition() -> void:
-	_try_enter_active_door()
-	_try_enter_active_entrance()
+	if room_transition_locked:
+		return
+	_try_enter_any_active_socket()
+
+
+func _try_enter_any_active_socket() -> bool:
+	if _try_enter_active_door():
+		return true
+	return _try_enter_active_entrance()
 
 
 func _try_enter_active_door() -> bool:
-	if not door_active:
+	if not door_active or room_transition_locked:
 		return false
 	var player_feet := _player_door_feet_rect()
-	var trigger_polygon := _door_trigger_polygon()
-	if trigger_polygon.size() >= 3:
-		if _rect_touches_polygon(player_feet, trigger_polygon):
-			_enter_fresh_room(1)
-			return true
-		return false
-
-	var trigger := _door_trigger_rect()
-	if trigger.intersects(player_feet, false):
-		_enter_fresh_room(1)
-		return true
-	return false
-
-
-func _try_enter_active_entrance() -> bool:
-	if not entrance_open or room_number <= 1:
-		return false
-
-	var player_feet := _player_door_feet_rect()
-	var trigger_polygon := _entrance_return_polygon()
-	if trigger_polygon.size() >= 3 and _rect_touches_polygon(player_feet, trigger_polygon):
-		_enter_fresh_room(-1)
-		return true
-	if trigger_polygon.size() < 3:
-		for polygon in entrance_block_polygons:
-			if _rect_touches_polygon(player_feet, polygon):
-				_enter_fresh_room(-1)
+	for socket_id_value in active_door_sockets.keys():
+		var socket_id := StringName(socket_id_value)
+		var socket := active_door_sockets.get(socket_id) as DungeonSocket
+		var trigger_polygon := _socket_trigger_polygon(socket)
+		if trigger_polygon.size() >= 3 and _rect_touches_polygon(player_feet, trigger_polygon):
+			var connection := dungeon_graph.get_connection(current_room_id, socket_id)
+			if connection != null:
+				_enter_connected_room(connection.destination_room_id, connection.destination_entry)
 				return true
 	return false
 
 
-func _door_trigger_rect() -> Rect2:
-	return Rect2(door.global_position + Vector2(-18, 4), Vector2(38, 28))
+func _try_enter_active_entrance() -> bool:
+	if not entrance_open or room_transition_locked:
+		return false
+	var player_feet := _player_door_feet_rect()
+	for socket_id_value in active_entrance_sockets.keys():
+		var socket_id := StringName(socket_id_value)
+		var socket := active_entrance_sockets.get(socket_id) as DungeonSocket
+		var trigger_polygon := _socket_trigger_polygon(socket)
+		if trigger_polygon.size() >= 3 and _rect_touches_polygon(player_feet, trigger_polygon):
+			var connection := dungeon_graph.get_connection_for_entry(current_room_id, socket_id)
+			if connection != null:
+				_enter_connected_room(connection.source_room_id, connection.exit_socket)
+				return true
+	return false
 
 
-func _door_trigger_polygon() -> PackedVector2Array:
-	var guide := door.get_node_or_null("DoorExitGuide") as Polygon2D
+func _socket_trigger_polygon(socket: DungeonSocket) -> PackedVector2Array:
+	if socket == null:
+		return PackedVector2Array()
+	var guide := socket.trigger()
 	if guide == null or guide.polygon.size() < 3:
 		return PackedVector2Array()
-
-	return _guide_polygon_global(guide)
-
-
-func _entrance_return_polygon() -> PackedVector2Array:
-	if entrance_tile_a == null:
-		return PackedVector2Array()
-
-	var guide := entrance_tile_a.get_node_or_null("EntranceReturnGuide") as Polygon2D
-	if guide == null or guide.polygon.size() < 3:
-		return PackedVector2Array()
-
 	return _guide_polygon_global(guide)
 
 
@@ -2045,56 +2385,124 @@ func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
 	return false
 
 
-func _enter_fresh_room(direction: int) -> void:
+func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: StringName) -> void:
+	room_transition_locked = true
 	_save_current_room_state()
-	room_number = maxi(1, room_number + direction)
+	current_room_id = destination_room_id
+	_sync_current_room_metadata()
+	_ensure_current_room_layout()
 	_update_room_number_indicator()
-	player.position = _room_entry_position(direction)
-	player.flip_h = false
+	var arrival_socket := dungeon_sockets.get(arrival_socket_id) as DungeonSocket
+	var spawn_marker: Marker2D = null
+	if arrival_socket != null:
+		spawn_marker = arrival_socket.spawn_marker()
+	player.global_position = spawn_marker.global_position if spawn_marker != null else player_start_position
+	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
 	player_is_attacking = false
 	player_attack_visual.visible = false
 	current_target = null
+	target_input_was_down = false
+	_hide_npc_dialogue()
 	_set_target_ui_visible(false)
 	_apply_room_state()
 	_build_depth_lists()
+	call_deferred("_release_room_transition_lock")
 
 
-func _room_entry_position(direction: int) -> Vector2:
-	if direction > 0:
-		return _entrance_spawn_position()
-	return _exit_spawn_position()
-
-
-func _entrance_spawn_position() -> Vector2:
-	if entrance_tile_b == null:
-		return player_start_position
-	var tile_center := entrance_tile_b.to_global(Vector2(8, 4))
-	return tile_center + Vector2(12, -10) - ACTOR_FOOT_OFFSET
-
-
-func _exit_spawn_position() -> Vector2:
-	var trigger_bounds := _polygon_bounds(_door_trigger_polygon())
-	if trigger_bounds.has_area():
-		return trigger_bounds.get_center() + Vector2(-16, 8) - ACTOR_FOOT_OFFSET
-	return door.global_position + Vector2(-8, 20) - ACTOR_FOOT_OFFSET
+func _release_room_transition_lock() -> void:
+	room_transition_locked = false
 
 
 func _save_current_room_state() -> void:
-	room_states[room_number] = {
-		"finished": chest_claimed,
-	}
+	var state := room_states.get(current_room_id, {}) as Dictionary
+	state["finished"] = chest_claimed
+	room_states[current_room_id] = state
 
 
 func _apply_room_state() -> void:
-	var state := room_states.get(room_number, {}) as Dictionary
-	if bool(state.get("finished", false)):
+	var state := room_states.get(current_room_id, {}) as Dictionary
+	if current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_REST:
+		_apply_rest_room_state()
+	elif current_room_type == DungeonGraph.ROOM_NPC:
+		_apply_npc_room_state()
+	elif bool(state.get("finished", false)):
 		_apply_finished_room_state()
 	else:
+		cloaked_demon.visible = false
+		collision_sprites.erase(cloaked_demon)
 		_reset_chest_for_room()
 		_reset_slimes_for_room()
 
 
+func _apply_rest_room_state() -> void:
+	_reset_slimes_for_room()
+	for slime in slimes:
+		_kill_slime_without_effects(slime)
+	chest.visible = false
+	chest_unlocked = true
+	chest_claimed = true
+	chest_evaporated = true
+	collision_sprites.erase(chest)
+	depth_sprites.erase(chest)
+	occluder_sprites.erase(chest)
+	_set_door_active(true)
+	_set_entrance_open(true)
+	rest_fire.visible = true
+	cloaked_demon.visible = current_room_type == DungeonGraph.ROOM_START
+	if cloaked_demon.visible:
+		# The wander update is relative to this origin. Without resetting it for
+		# the starter room, the demon is pulled toward world origin on frame one.
+		cloaked_demon.position = cloaked_demon_start_position
+		cloaked_demon_wander_origin = cloaked_demon_start_position
+		cloaked_demon_wander_timer = 0.0
+		cloaked_demon_patrol_direction = -1.0
+		cloaked_demon_patrol_paused = false
+		cloaked_demon_patrol_pause_timer = 0.0
+		cloaked_demon_patrol_position_x = cloaked_demon.position.x
+		if not collision_sprites.has(cloaked_demon):
+			collision_sprites.append(cloaked_demon)
+	else:
+		collision_sprites.erase(cloaked_demon)
+	_set_rest_fire_frame(0)
+	rest_fire_animation_timer = 0.0
+	var state := room_states.get(current_room_id, {}) as Dictionary
+	state["finished"] = true
+	room_states[current_room_id] = state
+
+
+func _apply_npc_room_state() -> void:
+	_reset_slimes_for_room()
+	for slime in slimes:
+		_kill_slime_without_effects(slime)
+	chest.visible = false
+	chest_unlocked = true
+	chest_claimed = true
+	chest_evaporated = true
+	collision_sprites.erase(chest)
+	depth_sprites.erase(chest)
+	occluder_sprites.erase(chest)
+	rest_fire.visible = false
+	cloaked_demon.visible = true
+	cloaked_demon.position = cloaked_demon_start_position
+	cloaked_demon_wander_origin = cloaked_demon.position
+	cloaked_demon_wander_timer = 0.0
+	cloaked_demon_patrol_direction = -1.0
+	cloaked_demon_patrol_paused = false
+	cloaked_demon_patrol_pause_timer = 0.0
+	cloaked_demon_patrol_position_x = cloaked_demon.position.x
+	if not collision_sprites.has(cloaked_demon):
+		collision_sprites.append(cloaked_demon)
+	_set_door_active(true)
+	_set_entrance_open(true)
+	var state := room_states.get(current_room_id, {}) as Dictionary
+	state["finished"] = true
+	room_states[current_room_id] = state
+
+
 func _apply_finished_room_state() -> void:
+	rest_fire.visible = false
+	cloaked_demon.visible = false
+	collision_sprites.erase(cloaked_demon)
 	_reset_slimes_for_room()
 	for slime in slimes:
 		_kill_slime_without_effects(slime)
@@ -2144,6 +2552,8 @@ func _kill_slime_without_effects(slime: Sprite2D) -> void:
 
 
 func _reset_chest_for_room() -> void:
+	rest_fire.visible = false
+	cloaked_demon.visible = false
 	chest.position = chest_start_position
 	chest.texture = chest_gray_texture
 	chest.visible = true
@@ -2186,7 +2596,9 @@ func _reset_slimes_for_room() -> void:
 		slime_attack_timers[slime] = 0.0
 		slime_attack_frame_indices[slime] = 0
 		slime_attack_hit_done[slime] = false
+		slime_attack_face_left[slime] = false
 		slime_attack_cooldowns[slime] = rng.randf_range(0.2, 0.6)
+		slime_persistent_aggro[slime] = false
 		slime_scoot_starts[slime] = slime.position
 		slime_scoot_targets[slime] = slime.position
 		slime_scoot_timers[slime] = 0.0
@@ -2618,6 +3030,9 @@ func _mark_player_in_combat() -> void:
 
 
 func _update_player_health_regen(delta: float) -> void:
+	if current_room_type != DungeonGraph.ROOM_START and current_room_type != DungeonGraph.ROOM_REST:
+		player_regen_accumulator = 0.0
+		return
 	var max_health := _player_max_health()
 	if player_health >= max_health:
 		player_regen_delay_timer = maxf(player_regen_delay_timer - delta, 0.0)
@@ -2868,6 +3283,10 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 		"8": ["111", "101", "111", "101", "111"],
 		"9": ["111", "101", "111", "001", "111"],
 		"G": ["111", "100", "101", "101", "111"],
+		"H": ["101", "101", "111", "101", "101"],
+		"K": ["101", "110", "100", "110", "101"],
+		"P": ["110", "101", "110", "100", "100"],
+		"W": ["10101", "10101", "10101", "11011", "01010"],
 		"A": ["010", "101", "111", "101", "101"],
 		"B": ["110", "101", "110", "101", "110"],
 		"M": ["10001", "11011", "10101", "10001", "10001"],
@@ -3032,7 +3451,7 @@ func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool:
 	var original := actor.position
 
 	actor.position.x += movement.x
-	if actor == player and _try_enter_active_door():
+	if actor == player and _try_enter_any_active_socket():
 		return true
 	if not _can_actor_stand_at_current_position(actor):
 		actor.position.x = original.x
@@ -3040,7 +3459,7 @@ func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool:
 		_resolve_actor_contacts(actor, Vector2(movement.x, 0.0))
 
 	actor.position.y += movement.y
-	if actor == player and _try_enter_active_door():
+	if actor == player and _try_enter_any_active_socket():
 		return true
 	if not _can_actor_stand_at_current_position(actor):
 		actor.position.y = original.y
@@ -3075,9 +3494,13 @@ func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void:
 		if not _actors_are_in_contact(actor, other):
 			continue
 
-		if other == chest:
-			_separate_from_static(actor, other)
-		elif slimes.has(actor) and slimes.has(other):
+	if other == chest:
+		_separate_from_static(actor, other)
+	elif other == cloaked_demon:
+		# The wandering NPC is a solid floor-level character, not something the
+		# player can shove out of its patrol route.
+		_separate_actor_from_actor(actor, other)
+	elif slimes.has(actor) and slimes.has(other):
 			_push_actor(actor, other, movement)
 		elif actor != player and other == player and _is_enemy_control_locked(actor):
 			_separate_actor_from_actor(actor, other)
@@ -3258,11 +3681,21 @@ func _build_depth_lists() -> void:
 			_add_depth_sprite(slime)
 	if chest.visible:
 		_add_depth_sprite(chest)
+	if rest_fire.visible:
+		_add_depth_sprite(rest_fire)
+	if cloaked_demon.visible:
+		_add_depth_sprite(cloaked_demon)
 
 	occluder_sprites.append(player)
 	for slime in slimes:
 		if not _is_slime_dead(slime):
 			occluder_sprites.append(slime)
+	if rest_fire.visible:
+		occluder_sprites.append(rest_fire)
+		sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
+	if cloaked_demon.visible:
+		occluder_sprites.append(cloaked_demon)
+		sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
 
 	if chest.visible:
 		for path in OCCLUDER_PATHS:
@@ -3277,13 +3710,11 @@ func _hide_editor_only_guides() -> void:
 	var floor_collision_guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as CanvasItem
 	if floor_collision_guide != null:
 		floor_collision_guide.visible = false
-	var door_exit_guide := door.get_node_or_null("DoorExitGuide") as CanvasItem
-	if door_exit_guide != null:
-		door_exit_guide.visible = false
-	if entrance_tile_a != null:
-		var entrance_return_guide := entrance_tile_a.get_node_or_null("EntranceReturnGuide") as CanvasItem
-		if entrance_return_guide != null:
-			entrance_return_guide.visible = false
+	for socket_value in dungeon_sockets.values():
+		var socket := socket_value as DungeonSocket
+		var trigger := socket.trigger()
+		if trigger != null:
+			trigger.visible = false
 
 
 func _build_sprite_images() -> void:
@@ -3308,9 +3739,15 @@ func _build_sprite_images() -> void:
 		var image := _cached_texture_image(actor.texture)
 		original_actor_images[actor] = image
 		sprite_images[actor] = image
-		occluded_actor_textures[actor] = ImageTexture.create_from_image(_cached_effect_image(actor.texture, image))
+		occluded_actor_textures[actor] = _effect_texture_with_display_size(
+			_cached_effect_image(actor.texture, image),
+			image.get_size()
+		)
 		actor_occlusion_grace[actor] = 0.0
-		highlighted_actor_textures[actor] = ImageTexture.create_from_image(_cached_highlighted_image(actor.texture, image))
+		highlighted_actor_textures[actor] = _effect_texture_with_display_size(
+			_cached_highlighted_image(actor.texture, image),
+			image.get_size()
+		)
 		white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(actor.texture, image))
 
 	for occluder in occluder_sprites:
@@ -3561,6 +3998,43 @@ func _load_texture_or_null(path: String) -> Texture2D:
 	return load(path) as Texture2D
 
 
+func _build_rest_fire_frames() -> void:
+	rest_fire_frames = _slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE)
+	if not rest_fire_frames.is_empty():
+		_set_rest_fire_frame(0)
+
+
+func _build_cloaked_demon_frames() -> void:
+	cloaked_demon_idle_frames = _slice_frames("res://assets/artwork/TinyDemonCloacked-Idle.png", CLOAKED_DEMON_FRAME_SIZE)
+	cloaked_demon_walk_frames = _slice_frames("res://assets/artwork/TinyDemonCloacked-Walk.png", CLOAKED_DEMON_FRAME_SIZE)
+	if not cloaked_demon_idle_frames.is_empty():
+		cloaked_demon.texture = cloaked_demon_idle_frames[0]
+		cloaked_demon.hframes = 1
+		var image := _cached_texture_image(cloaked_demon.texture)
+		var used_rect := image.get_used_rect()
+		if used_rect.has_area():
+			cloaked_demon_visual_bounds = Rect2(used_rect.position, used_rect.size)
+
+
+func _cloaked_demon_head_position() -> Vector2:
+	return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.position.y)
+
+
+func _cloaked_demon_visual_center() -> Vector2:
+	return _cloaked_demon_texture_origin() + cloaked_demon_visual_bounds.get_center()
+
+
+func _cloaked_demon_foot_position() -> Vector2:
+	return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.end.y - 1.0)
+
+
+func _cloaked_demon_texture_origin() -> Vector2:
+	var origin := cloaked_demon.global_position + cloaked_demon.offset
+	if cloaked_demon.centered and cloaked_demon.texture != null:
+		origin -= cloaked_demon.texture.get_size() * 0.5
+	return origin
+
+
 func _build_player_animation_frames() -> void:
 	player_idle_frames = _slice_frames("res://assets/artwork/TinyDemon-idle.png", PLAYER_FRAME_SIZE)
 	player_walk_frames = _slice_frames("res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME_SIZE)
@@ -3570,7 +4044,7 @@ func _build_player_animation_frames() -> void:
 	for frame_index in raw_roll_dust_frames.size():
 		var dissolve := float(frame_index) / float(maxi(raw_roll_dust_frames.size(), 1))
 		roll_dust_frames.append(_dither_roll_dust_frame(raw_roll_dust_frames[frame_index], dissolve))
-	roll_dust_flipped_frames = _flip_frames_horizontally(roll_dust_frames)
+	roll_dust_flipped_frames = _flip_effect_frames_horizontally(roll_dust_frames, ROLL_DUST_FRAME_SIZE)
 	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
 	# attempt to load attack2 and between-attack frame (optional)
 	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
@@ -3617,7 +4091,9 @@ func _slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
 
 
 func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
-	var image := _cached_texture_image(source).duplicate()
+	var source_image := _cached_texture_image(source)
+	var image := source_image.duplicate()
+	image.resize(source_image.get_width() * EFFECT_RESOLUTION_SCALE, source_image.get_height() * EFFECT_RESOLUTION_SCALE, Image.INTERPOLATE_NEAREST)
 	var bayer := PackedInt32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5])
 	for y in range(image.get_height()):
 		for x in range(image.get_width()):
@@ -3628,7 +4104,7 @@ func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
 			if threshold <= dissolve:
 				color.a = 0.0
 				image.set_pixel(x, y, color)
-	return ImageTexture.create_from_image(image)
+	return _effect_texture_with_display_size(image, source_image.get_size())
 
 
 func _warm_player_frame_caches() -> void:
@@ -3658,6 +4134,15 @@ func _flip_frames_horizontally(frames: Array[Texture2D]) -> Array[Texture2D]:
 		var image := _cached_texture_image(texture).duplicate()
 		image.flip_x()
 		flipped_frames.append(ImageTexture.create_from_image(image))
+	return flipped_frames
+
+
+func _flip_effect_frames_horizontally(frames: Array[Texture2D], display_size: Vector2i) -> Array[Texture2D]:
+	var flipped_frames: Array[Texture2D] = []
+	for texture in frames:
+		var image := _cached_texture_image(texture).duplicate()
+		image.flip_x()
+		flipped_frames.append(_effect_texture_with_display_size(image, display_size))
 	return flipped_frames
 
 
@@ -3761,8 +4246,14 @@ func _set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
 	var image := _cached_texture_image(texture)
 	original_actor_images[actor] = image
 	sprite_images[actor] = image
-	occluded_actor_textures[actor] = ImageTexture.create_from_image(_cached_effect_image(texture, image))
-	highlighted_actor_textures[actor] = ImageTexture.create_from_image(_cached_highlighted_image(texture, image))
+	occluded_actor_textures[actor] = _effect_texture_with_display_size(
+		_cached_effect_image(texture, image),
+		image.get_size()
+	)
+	highlighted_actor_textures[actor] = _effect_texture_with_display_size(
+		_cached_highlighted_image(texture, image),
+		image.get_size()
+	)
 	white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(texture, image))
 	actor.texture = texture
 
@@ -3866,6 +4357,19 @@ func _update_player_shadow() -> void:
 		player_sprite_shadow.flip_h = source_sprite.flip_h
 		player_sprite_shadow.visible = source_sprite.visible and source_sprite.texture != null
 		player_sprite_shadow.z_index = source_sprite.z_index - 1
+
+
+func _update_cloaked_demon_shadow() -> void:
+	if cloaked_demon_shadow == null:
+		return
+	cloaked_demon_shadow.visible = cloaked_demon.visible
+	if not cloaked_demon.visible:
+		return
+	cloaked_demon_shadow.global_position = cloaked_demon.global_position + cloaked_demon_shadow_offset
+	cloaked_demon_shadow.global_scale = cloaked_demon_shadow_scale
+	cloaked_demon_shadow.flip_h = cloaked_demon.flip_h
+	cloaked_demon_shadow.self_modulate = Color(1, 1, 1, 0.25)
+	cloaked_demon_shadow.z_index = int(round(_cloaked_demon_foot_position().y * DEPTH_Z_SCALE)) - 1
 
 
 func _build_player_sprite_shadow() -> void:
@@ -4158,9 +4662,13 @@ func _update_overworld_ui() -> void:
 func _depth_key(sprite: Sprite2D) -> float:
 	if actor_sprites.has(sprite):
 		return _actor_foot(sprite).y
+	if sprite == rest_fire:
+		return rest_fire_depth_marker.global_position.y
+	if sprite == cloaked_demon:
+		return cloaked_demon_depth_marker.global_position.y
 	if sprite.name.begins_with("WallLeft") or sprite.name.begins_with("WallRight"):
 		return sprite.global_position.y + 28.0
-	if sprite.name == "DoorRight":
+	if sprite.name.begins_with("Door"):
 		return sprite.global_position.y + 30.0
 	return sprite.global_position.y + float(sprite.texture.get_height() if sprite.texture != null else 0)
 
@@ -4233,7 +4741,8 @@ func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Arra
 		_apply_half_pixel_outline(result_image)
 
 	var texture := occluded_actor_textures[actor] as ImageTexture
-	texture.update(result_image)
+	texture.set_image(result_image)
+	texture.set_size_override(source_image.get_size())
 	return texture
 
 
@@ -4340,14 +4849,16 @@ func _source_pixel_position(sprite: Sprite2D, world_pixel: Vector2) -> Vector2:
 	return source_pixel
 
 
-func _apply_actor_scale(actor: Sprite2D, use_effect_texture: bool) -> void:
+func _effect_texture_with_display_size(image: Image, display_size: Vector2i) -> ImageTexture:
+	var texture := ImageTexture.create_from_image(image)
+	texture.set_size_override(display_size)
+	return texture
+
+
+func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void:
 	var screen_scale := _actor_screen_scale(actor)
-	if use_effect_texture:
-		actor.scale = screen_scale / float(EFFECT_RESOLUTION_SCALE)
-		actor.offset = _actor_visual_offset(actor) * float(EFFECT_RESOLUTION_SCALE)
-	else:
-		actor.scale = screen_scale
-		actor.offset = _actor_visual_offset(actor)
+	actor.scale = screen_scale
+	actor.offset = _actor_visual_offset(actor)
 
 
 func _restore_actor_base_visual_scale(actor: Sprite2D) -> void:
@@ -4473,14 +4984,18 @@ func _collect_floor_collision_guide() -> bool:
 
 func _build_entrance_block_polygons() -> void:
 	entrance_block_polygons.clear()
-	if entrance_tile_a != null:
-		entrance_block_polygons.append(_tile_top_polygon(entrance_tile_a))
-	if entrance_tile_b != null:
-		entrance_block_polygons.append(_tile_top_polygon(entrance_tile_b))
+	for socket_id in [DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
+		if active_entrance_sockets.has(socket_id):
+			continue
+		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
+		if socket == null:
+			continue
+		for tile in socket.block_tiles():
+			entrance_block_polygons.append(_tile_top_polygon(tile))
 
 
 func _is_walkable(point: Vector2) -> bool:
-	if not entrance_open and _is_point_in_entrance_block(point):
+	if _is_point_in_entrance_block(point):
 		return false
 	if Geometry2D.is_point_in_polygon(point, walkable_outline):
 		return true
@@ -4509,7 +5024,7 @@ func _can_actor_stand_at_current_position(actor: Sprite2D) -> bool:
 
 
 func _is_slime_walkable_point(point: Vector2) -> bool:
-	if not entrance_open and _is_point_in_entrance_block(point):
+	if _is_point_in_entrance_block(point):
 		return false
 	if not Geometry2D.is_point_in_polygon(point, walkable_outline):
 		return false
@@ -4639,4 +5154,6 @@ func _is_point_near_other_slime(point: Vector2, ignored_slime: Sprite2D = null) 
 
 
 func _actor_foot(actor: Sprite2D) -> Vector2:
+	if actor == cloaked_demon:
+		return _cloaked_demon_foot_position()
 	return actor.global_position + ACTOR_FOOT_OFFSET
