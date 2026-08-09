@@ -2603,6 +2603,8 @@ func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
 
 func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: StringName) -> void:
 	room_transition_locked = true
+	if room_controller != null:
+		room_controller.begin_transition()
 	_save_current_room_state()
 	current_room_id = destination_room_id
 	_sync_current_room_metadata()
@@ -2629,6 +2631,8 @@ func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: S
 
 func _release_room_transition_lock() -> void:
 	room_transition_locked = false
+	if room_controller != null:
+		room_controller.end_transition()
 
 
 func _save_current_room_state() -> void:

@@ -6,6 +6,7 @@ signal room_cleared(room_id: StringName)
 
 var current_room_id: StringName = &""
 var arrival_socket_id: StringName = &""
+var transition_locked := false
 var room_states: Dictionary = {}
 
 
@@ -17,6 +18,14 @@ func set_current_room(room_id: StringName, room_type: StringName) -> void:
 func enter_room(room_id: StringName, room_type: StringName, arrival_socket: StringName = &"") -> void:
 	arrival_socket_id = arrival_socket
 	set_current_room(room_id, room_type)
+
+
+func begin_transition() -> void:
+	transition_locked = true
+
+
+func end_transition() -> void:
+	transition_locked = false
 
 
 func mark_cleared(room_id: StringName) -> void:
