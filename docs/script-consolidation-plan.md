@@ -437,6 +437,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
   room-state storage remains authoritative.
 - [x] Define and attach `OcclusionRenderer` cache/occluder boundary; image
   generation remains in the coordinator pending performance parity checks.
+- [x] Record occlusion update count and accumulated time for representative
+  room performance verification.
 - [ ] Verify every socket direction, return traversal, room persistence, and
   actor placement.
 
