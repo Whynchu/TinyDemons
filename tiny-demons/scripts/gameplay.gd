@@ -1320,6 +1320,9 @@ func _start_player_attack(variant: int = 1) -> void:
 		player_between_timer = 0.0
 	player_anim_frame = 0
 	player_anim_timer = 0.0
+	# The normal player sprite is hidden during attacks. Restore its base
+	# transform so an earlier occlusion pass cannot leak its effect-texture scale.
+	_restore_actor_base_visual_scale(player)
 	player.visible = false
 	player_attack_visual.visible = true
 	_apply_player_animation_frame()
@@ -1333,6 +1336,7 @@ func _interrupt_player_attack() -> void:
 	player_attack_lunge_velocity = Vector2.ZERO
 	player_attack_visual.visible = false
 	player.visible = true
+	_restore_actor_base_visual_scale(player)
 	player_anim_name = "walk" if player_is_moving else "idle"
 	player_anim_frame = 0
 	player_anim_timer = 0.0
@@ -1429,6 +1433,7 @@ func _update_player_attack_animation(delta: float) -> void:
 		player_is_attacking = false
 		player_attack_hit_done = false
 		player_attack_hit_targets.clear()
+		_restore_actor_base_visual_scale(player)
 		player.visible = true
 		player_attack_visual.visible = false
 		player_anim_name = "walk" if player_is_moving else "idle"
@@ -3684,6 +3689,12 @@ func _update_depth_sorting() -> void:
 
 func _update_actor_occlusion(delta: float) -> void:
 	for actor in actor_sprites:
+		# Hidden actors must not retain an occlusion transform. The player is
+		# hidden while the separate attack sprite is displayed.
+		if not actor.visible:
+			if actor == player:
+				_restore_actor_base_visual_scale(actor)
+			continue
 		var is_flashing := float(slime_flash_timers.get(actor, 0.0)) > 0.0
 		if actor == player:
 			is_flashing = player_hit_flash_timer > 0.0
@@ -4234,6 +4245,13 @@ func _apply_actor_scale(actor: Sprite2D, use_effect_texture: bool) -> void:
 	else:
 		actor.scale = screen_scale
 		actor.offset = _actor_visual_offset(actor)
+
+
+func _restore_actor_base_visual_scale(actor: Sprite2D) -> void:
+	if not original_actor_scales.has(actor):
+		return
+	actor.scale = original_actor_scales[actor] as Vector2
+	actor.offset = _actor_visual_offset(actor)
 
 
 func _actor_screen_scale(actor: Sprite2D) -> Vector2:
