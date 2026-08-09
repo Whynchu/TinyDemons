@@ -26,9 +26,9 @@
 [ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
 [ext_resource type="Script" uid="uid://uu0fgifhsaen" path="res://scripts/ui_layout_guide.gd" id="27_ui_layout_guide"]
 [ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="28_isometric_room_layer"]
-[ext_resource type="Texture2D" path="res://assets/artwork/TileFloor.png" id="29_tile_floor"]
-[ext_resource type="Texture2D" path="res://assets/artwork/TileLface.png" id="30_tile_lface"]
-[ext_resource type="Texture2D" path="res://assets/artwork/TileRface.png" id="31_tile_rface"]
+[ext_resource type="Texture2D" uid="uid://l17ya4sh8lu4" path="res://assets/artwork/TileFloor.png" id="29_tile_floor"]
+[ext_resource type="Texture2D" uid="uid://brd1e4d23tsph" path="res://assets/artwork/TileLface.png" id="30_tile_lface"]
+[ext_resource type="Texture2D" uid="uid://dvmnqcr5rjst4" path="res://assets/artwork/TileRface.png" id="31_tile_rface"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -97,22 +97,23 @@ centered = false
 [node name="FloorLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=867366707]
 texture_filter = 1
 position = Vector2(120, 64)
-z_index = 1
 tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAUAAAAAAAAAAAACAAUAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAUAAAAAAAAAAAAFAAUAAAAAAAAAAAAGAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAD//wcAAAAAAAAAAAD//wYAAAAAAAAAAAD//wUAAAAAAAAAAAD//wQAAAAAAAAAAAD//wMAAAAAAAAAAAD//wIAAAAAAAAAAAD//wEAAAAAAAAAAAD//wAAAAAAAAAAAAA=")
 tile_set = SubResource("TileSet_vxglm")
 script = ExtResource("28_isometric_room_layer")
 tile_texture = ExtResource("29_tile_floor")
 
-[node name="FloorLFaceLayer" type="TileMapLayer" parent="Map/FloorTiles"]
+[node name="FloorLFaceLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=1376366888]
 texture_filter = 1
 position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAAAAAcAAAAAAAAAAAD//wcAAAAAAAAAAAA=")
 tile_set = SubResource("TileSet_tile_lface")
 script = ExtResource("28_isometric_room_layer")
 tile_texture = ExtResource("30_tile_lface")
 
-[node name="FloorRFaceLayer" type="TileMapLayer" parent="Map/FloorTiles"]
+[node name="FloorRFaceLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=1329971706]
 texture_filter = 1
 position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAAGAAAAAAAAAAAAAAAGAAEAAAAAAAAAAAAGAAIAAAAAAAAAAAAGAAMAAAAAAAAAAAAGAAQAAAAAAAAAAAAGAAUAAAAAAAAAAAAGAAYAAAAAAAAAAAAGAAcAAAAAAAAAAAA=")
 tile_set = SubResource("TileSet_tile_rface")
 script = ExtResource("28_isometric_room_layer")
 tile_texture = ExtResource("31_tile_rface")
