@@ -165,6 +165,8 @@ var roll_dust_sprite: Sprite2D = null
 var roll_dust_frame := 0
 var roll_dust_timer := 0.0
 var roll_dust_uses_flipped_frames := false
+var roll_dust_origin_position := Vector2.ZERO
+var roll_dust_drift_direction := Vector2.ZERO
 var player_attack_input_was_down := false
 var player_attack_hit_done := false
 var player_attack_hit_targets: Array[Sprite2D] = []
@@ -1337,10 +1339,12 @@ func _start_roll_dust(direction: Vector2) -> void:
 	roll_dust_sprite.z_as_relative = false
 	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
 	var emission_anchor := _actor_foot(player) + Vector2(0.0, -3.0) - direction * 2.0
-	var placement_tweak := Vector2(-2.0, 3.0) if roll_dust_uses_flipped_frames else Vector2(2.0, 3.0)
+	var placement_tweak := Vector2(0.0, 3.0)
 	emission_anchor += placement_tweak
 	var texture_anchor := Vector2(15.0, 15.0) if roll_dust_uses_flipped_frames else Vector2(0.0, 15.0)
 	roll_dust_sprite.global_position = _snap_half_pixel(emission_anchor - texture_anchor)
+	roll_dust_origin_position = roll_dust_sprite.global_position
+	roll_dust_drift_direction = Vector2.LEFT if roll_dust_uses_flipped_frames else Vector2.RIGHT
 	add_child(roll_dust_sprite)
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
@@ -1362,6 +1366,7 @@ func _update_roll_dust(delta: float) -> void:
 		return
 	var active_frames: Array[Texture2D] = roll_dust_flipped_frames if roll_dust_uses_flipped_frames else roll_dust_frames
 	roll_dust_sprite.texture = active_frames[roll_dust_frame]
+	roll_dust_sprite.global_position = _snap_half_pixel(roll_dust_origin_position + roll_dust_drift_direction * float(roll_dust_frame) * 0.5)
 
 
 func _clear_roll_dust() -> void:
@@ -1371,6 +1376,8 @@ func _clear_roll_dust() -> void:
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
 	roll_dust_uses_flipped_frames = false
+	roll_dust_origin_position = Vector2.ZERO
+	roll_dust_drift_direction = Vector2.ZERO
 
 
 func _start_player_attack(variant: int = 1) -> void:
