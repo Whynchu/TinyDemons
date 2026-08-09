@@ -319,7 +319,8 @@ are fixed. Reserve Sol for an unresolved ordering problem.
 - [x] Route player knockback and roll lifecycle through the motor boundary.
 - [x] Introduce the `PlayerController` input-lock boundary; action-state
   migration remains incremental to preserve update order.
-- [ ] Extract roll state and roll-dust event.
+- [x] Extract roll lifecycle state into `PlayerRollComponent`; dust rendering
+  remains in the coordinator pending the effects slice.
 - [ ] Extract attack, combo buffering, lunge, hitbox, and hit tracking.
 - [ ] Extract animation state and palette/frame application.
 - [ ] Verify dialogue locks, hit-stop, combo timing, collision, and death.

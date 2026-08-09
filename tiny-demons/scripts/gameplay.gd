@@ -68,6 +68,7 @@ var player_equipment: EquipmentComponent = null
 var player_health_component: HealthComponent = null
 var player_motor: ActorMotor = null
 var player_controller: PlayerController = null
+var player_roll_component: PlayerRollComponent = null
 var slime_health_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
@@ -425,6 +426,11 @@ func _ready() -> void:
 		player_controller = PlayerController.new()
 		player_controller.name = "Controller"
 		player.add_child(player_controller)
+	player_roll_component = player.get_node_or_null("Roll") as PlayerRollComponent
+	if player_roll_component == null:
+		player_roll_component = PlayerRollComponent.new()
+		player_roll_component.name = "Roll"
+		player.add_child(player_roll_component)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -1432,6 +1438,8 @@ func _start_player_roll() -> void:
 	elif direction.x > 0.0:
 		player.flip_h = false
 	player_is_rolling = true
+	if player_roll_component != null:
+		player_roll_component.begin(direction)
 	if player_motor != null:
 		player_motor.begin_roll()
 	player_roll_direction = direction
@@ -1447,6 +1455,8 @@ func _start_player_roll() -> void:
 func _update_player_roll(delta: float) -> void:
 	if not player_is_rolling:
 		return
+	if player_roll_component != null:
+		player_roll_component.advance(delta, player_tuning.roll_duration)
 	var elapsed := player_roll_timer + float(player_roll_frame) * player_tuning.roll_frame_time
 	var step_time := minf(delta, maxf(player_tuning.roll_duration - elapsed, 0.0))
 	# Movement continues at quarter speed during the penultimate frame hold.
@@ -1470,6 +1480,8 @@ func _update_player_roll(delta: float) -> void:
 		player_roll_frame += 1
 		if player_roll_frame >= player_roll_frames.size():
 			player_is_rolling = false
+			if player_roll_component != null:
+				player_roll_component.cancel()
 			if player_motor != null:
 				player_motor.end_roll()
 			player_roll_frame = 0
