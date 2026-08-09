@@ -75,6 +75,7 @@ var walkable_area: WalkableArea = null
 var actor_collision_system: ActorCollisionSystem = null
 var depth_sorter: DepthSorter = null
 var occlusion_renderer: OcclusionRenderer = null
+var room_controller: RoomController = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -334,6 +335,9 @@ func _ready() -> void:
 	occlusion_renderer = OcclusionRenderer.new()
 	occlusion_renderer.name = "OcclusionRenderer"
 	add_child(occlusion_renderer)
+	room_controller = RoomController.new()
+	room_controller.name = "RoomController"
+	add_child(room_controller)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id
