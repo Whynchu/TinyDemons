@@ -182,19 +182,26 @@ may exceed that when its state and dependencies remain singular and clear.
 ## Model routing and token budget
 
 Model recommendations are based on the [official OpenAI model
-guidance](https://developers.openai.com/api/docs/models), which positions GPT-5.6
-Luna for cost-sensitive high-volume work, GPT-5.6 Terra for balancing capability
-and cost, and GPT-5.6 Sol for complex reasoning and coding. Recheck that page if
-the plan is executed after the audit date because model availability can change.
+guidance](https://developers.openai.com/api/docs/models). The available pool also
+includes [GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5) for
+complex coding and professional work,
+[GPT-5.4](https://developers.openai.com/api/docs/models/gpt-5.4) for affordable
+coding work, and [GPT-5.4
+mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini) for fast,
+efficient coding and subagent workloads. Recheck these pages if the plan is
+executed after the audit date because model availability can change.
 
 The model is selected by risk, not by milestone size. Use the lowest tier that
 can safely own the decision being made.
 
 | Tier | Model and effort | Appropriate work | Do not assign |
 | --- | --- | --- | --- |
-| Mechanical | `gpt-5.6-luna`, low | Metrics, documentation, formatting, repetitive resource population, known renames, checklist execution | Architecture, state ownership, timing-sensitive behavior |
-| Implementation | `gpt-5.6-terra`, medium by default; high for coupled state | Focused component extraction, typed APIs, signal wiring, tests, scene edits with established boundaries | Unresolved cross-system architecture or subtle global update-order changes |
-| Architecture | `gpt-5.6-sol`, high | Boundary design, interleaved state machines, collision/room transitions, difficult regressions, final architecture review | Bulk mechanical edits that Luna or Terra can perform |
+| Clerical | `gpt-5.6-luna`, low | Metrics, documentation, inventories, formatting, checklist transcription | Production code whose behavior or ownership must be inferred |
+| Mechanical coding | `gpt-5.4-mini`, low or medium | Known renames, resource population, repetitive scene changes, focused tests, implementing an exact contract | Designing contracts, changing update order, diagnosing broad regressions |
+| Everyday coding | `gpt-5.4`, medium | Isolated utilities/components, typed resources, straightforward scene wiring, local cleanup | Interleaved state machines or unresolved cross-system ownership |
+| Integration | `gpt-5.6-terra`, medium by default; high for coupled state | Cross-file extraction, typed APIs, signals, component integration, behavior diagnosis | The hardest architecture impasses or bulk mechanical edits |
+| Complex refactor | `gpt-5.5`, high | Player/enemy state machines, collision/room boundaries, coupled refactors, difficult regression analysis | Repetitive migrations after the design is settled |
+| Architecture authority | `gpt-5.6-sol`, high | Final boundary decisions, unresolved update-order problems, architecture review after lower tiers identify the issue | Routine implementation, documentation, or first-pass diagnosis |
 
 Use `xhigh` only after a concrete high-effort attempt identifies a genuinely
 unresolved architecture or behavior problem. Do not begin routine work at
@@ -208,26 +215,31 @@ unresolved architecture or behavior problem. Do not begin routine work at
 3. Give the model the relevant function ranges, component contract, current
    scene nodes, and validation criteria. Do not paste all of `gameplay.gd` when
    targeted file inspection is available.
-4. Escalate Luna to Terra when the task requires choosing ownership, changing a
-   signal/API contract, or diagnosing a failed behavior check.
-5. Escalate Terra to Sol when work crosses three or more systems, changes global
-   update order, exposes circular dependencies, or fails the same acceptance
-   check twice for a non-mechanical reason.
-6. After Sol resolves the design decision, return implementation and repetitive
-   follow-up work to Terra or Luna with the decision recorded in this document.
+4. Move from Luna to GPT-5.4 mini for bounded code changes, then to GPT-5.4 when
+   the implementation requires local judgment rather than exact instructions.
+5. Move from GPT-5.4 to Terra when work chooses ownership, changes a signal/API
+   contract, integrates multiple components, or diagnoses a failed behavior
+   check.
+6. Move from Terra to GPT-5.5 when work crosses three or more systems, changes
+   global update order, exposes circular dependencies, or fails the same
+   acceptance check twice for a non-mechanical reason.
+7. Use Sol only when GPT-5.5 has isolated an unresolved architecture decision,
+   for the initial design of the highest-risk boundary, or for final review.
+8. After a higher tier records the decision, return repetitive implementation to
+   GPT-5.4 or GPT-5.4 mini instead of leaving the entire milestone on that tier.
 
 ### Milestone model assignments
 
 | Milestone | Default | Use the cheaper tier for | Escalate when |
 | --- | --- | --- | --- |
-| M0 Baseline/safeguards | Luna, low | Metrics, smoke-check transcription, documentation | Terra, medium, if building a test harness or diagnosing inconsistent baseline behavior |
-| M1 Utilities/tuning | Terra, medium | Luna, low, for approved constant/resource moves and formatting | Sol, high, only if extraction reveals an unresolved shared cache or ownership boundary |
-| M2 Health | Terra, high | Luna, low, for adding established component nodes/resources after the first actor works | Sol, high, if death, regeneration, room reset, and UI ownership cannot be separated cleanly |
-| M3 Player | Sol, high | Terra, medium, for implementing isolated components after contracts and update phases are decided | Sol, xhigh, only for an unresolved combo/roll/hit-stop ordering regression |
-| M4 Enemies | Terra, high | Luna, low, for creating slime variants from an approved scene/resource template | Sol, high, if removing dictionaries changes multi-enemy ordering, targeting, or collision behavior |
-| M5 World/rooms | Sol, high | Terra, medium, for implementing a settled world-service API | Sol, xhigh, only for an unresolved collision, socket traversal, or persistence defect |
-| M6 Interactions/presentation | Terra, medium | Luna, low, for repetitive UI hookups and resource moves | Sol, high, for occlusion performance/design or event-order regressions spanning gameplay and UI |
-| M7 Cleanup | Terra, medium | Luna, low, for metrics, dead-code inventory, and documentation updates | Sol, high, for the final dependency/update-order review or a cross-system regression |
+| M0 Baseline/safeguards | Luna, low | GPT-5.4 mini, low, for an explicitly designed parser/smoke harness | GPT-5.4, medium, if baseline behavior must be diagnosed |
+| M1 Utilities/tuning | GPT-5.4, medium | GPT-5.4 mini, low, for approved constant/resource moves and focused tests | Terra, medium, if extraction reveals a shared cache or ownership boundary |
+| M2 Health | Terra, high | GPT-5.4, medium, for established UI hookups; GPT-5.4 mini for repeated scene-node additions | GPT-5.5, high, if death, regeneration, room reset, and UI ownership cannot be separated cleanly |
+| M3 Player | GPT-5.5, high | GPT-5.4/Terra for isolated components after contracts and update phases are decided | Sol, high; use xhigh only for an unresolved combo/roll/hit-stop ordering regression |
+| M4 Enemies | Terra, high | GPT-5.4 mini, medium, for variants from an approved template; GPT-5.4 for focused behavior extraction | GPT-5.5, high, if removing dictionaries changes multi-enemy ordering, targeting, or collision |
+| M5 World/rooms | GPT-5.5, high | GPT-5.4, medium, for implementing a settled world-service API | Sol, high; use xhigh only for an unresolved collision, traversal, or persistence boundary |
+| M6 Interactions/presentation | GPT-5.4, medium | GPT-5.4 mini, low, for repetitive UI hookups and resource moves | Terra for occlusion integration; GPT-5.5 for cross-system event-order regressions |
+| M7 Cleanup | Terra, medium | Luna for metrics/docs; GPT-5.4 mini for exact dead-code removals | GPT-5.5 for final dependency review; Sol only for an unresolved architecture defect |
 
 ## Migration roadmap
 
@@ -236,8 +248,8 @@ temporarily delegate to new components before old fields and methods are removed
 
 ### M0 - Baseline and safeguards
 
-Model route: Luna at low effort by default; Terra at medium effort for harness
-design or baseline diagnosis.
+Model route: Luna at low effort by default, GPT-5.4 mini for an explicitly
+designed harness, and GPT-5.4 at medium effort for baseline diagnosis.
 
 - [x] Record source metrics and responsibility map.
 - [x] Preserve baseline commit on `main`.
@@ -252,8 +264,8 @@ milestone.
 
 ### M1 - Pure utilities and tuning data
 
-Model route: Terra at medium effort for extraction; Luna at low effort after
-resource schemas and move lists are approved.
+Model route: GPT-5.4 at medium effort for extraction and GPT-5.4 mini after
+resource schemas and move lists are approved. Use Terra for boundary conflicts.
 
 - [ ] Extract `CombatCalculator` without changing damage results.
 - [ ] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
@@ -266,7 +278,8 @@ on the gameplay scene root.
 ### M2 - Health composition
 
 Model route: Terra at high effort because lifecycle state crosses combat, UI,
-death, regeneration, and room reset. Escalate boundary conflicts to Sol.
+death, regeneration, and room reset. Use GPT-5.4 for settled UI work and escalate
+unresolved lifecycle boundaries to GPT-5.5.
 
 - [ ] Add `HealthComponent` to the player and each slime.
 - [ ] Move health, maximum health, regen, and death state into the component.
@@ -280,8 +293,9 @@ health state by actor.
 
 ### M3 - Player composition
 
-Model route: Sol at high effort for the initial state/update-order design; route
-isolated implementation slices back to Terra after contracts are fixed.
+Model route: GPT-5.5 at high effort for the initial state/update-order design;
+route isolated implementation slices back to Terra or GPT-5.4 after contracts
+are fixed. Reserve Sol for an unresolved ordering problem.
 
 - [ ] Add `ActorMotor` and move normal movement/knockback behind its API.
 - [ ] Extract player input/action coordination into `PlayerController`.
@@ -295,8 +309,9 @@ timers or animation frames.
 
 ### M4 - Enemy composition
 
-Model route: Terra at high effort for the first reusable slime; Luna can create
-later variants from the approved template. Escalate behavioral coupling to Sol.
+Model route: Terra at high effort for the first reusable slime, GPT-5.4 for
+focused behavior extraction, and GPT-5.4 mini for variants from the approved
+template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
 
 - [ ] Create a reusable `slime.tscn` with exported visual/tuning resources.
 - [ ] Move aggro, repath, scoot, hold, attack, hit reaction, and death state to
@@ -310,8 +325,9 @@ not new root-script state.
 
 ### M5 - World and room systems
 
-Model route: Sol at high effort for collision, walkability, transition, and
-persistence boundaries; Terra implements APIs after the design is settled.
+Model route: GPT-5.5 at high effort for collision, walkability, transition, and
+persistence boundaries; GPT-5.4 implements APIs after the design is settled.
+Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 
 - [ ] Extract walkable geometry and queries into `WalkableArea`.
 - [ ] Extract actor contact/static collision into `ActorCollisionSystem`.
@@ -326,8 +342,9 @@ APIs; they do not inspect map implementation details.
 
 ### M6 - Interactions and presentation
 
-Model route: Terra at medium effort by default; use Luna for repetitive UI
-wiring and Sol only for cross-system occlusion or event-order problems.
+Model route: GPT-5.4 at medium effort by default; use GPT-5.4 mini for repetitive
+UI wiring, Terra for occlusion integration, and GPT-5.5 for cross-system
+event-order problems.
 
 - [ ] Give chest, NPC, and rest fire dedicated controllers.
 - [ ] Centralize nearby interaction selection in an interaction component.
@@ -340,8 +357,9 @@ owning gameplay outcomes.
 
 ### M7 - Coordinator cleanup
 
-Model route: Terra at medium effort for cleanup, Luna for metrics/docs, and Sol
-at high effort for the final dependency and update-order review.
+Model route: Terra at medium effort for cleanup, Luna for metrics/docs, GPT-5.4
+mini for exact removals, and GPT-5.5 for final dependency/update-order review.
+Use Sol only if that review exposes an unresolved architecture defect.
 
 - [ ] Reduce `gameplay.gd` to startup, global modes, and signal wiring.
 - [ ] Remove compatibility delegates and unused state.
@@ -359,14 +377,14 @@ Update this table in every consolidation pull request.
 
 | Milestone | Status | Default model | Owner | PR/commit | Notes |
 | --- | --- | --- | --- | --- | --- |
-| M0 Baseline | In progress | Luna, low | - | - | Audit complete; behavior safeguards remain |
-| M1 Utilities/tuning | Not started | Terra, medium | - | - | |
+| M0 Baseline | In progress | Luna, low | - | - | GPT-5.4 mini for harness implementation |
+| M1 Utilities/tuning | Not started | GPT-5.4, medium | - | - | GPT-5.4 mini for mechanical moves |
 | M2 Health | Not started | Terra, high | - | - | |
-| M3 Player | Not started | Sol, high | - | - | |
+| M3 Player | Not started | GPT-5.5, high | - | - | Sol only for unresolved ordering |
 | M4 Enemies | Not started | Terra, high | - | - | |
-| M5 World/rooms | Not started | Sol, high | - | - | |
-| M6 Interactions/presentation | Not started | Terra, medium | - | - | |
-| M7 Cleanup | Not started | Terra, medium | - | - | Sol performs final architecture review |
+| M5 World/rooms | Not started | GPT-5.5, high | - | - | Sol only for unresolved boundaries |
+| M6 Interactions/presentation | Not started | GPT-5.4, medium | - | - | Terra handles occlusion integration |
+| M7 Cleanup | Not started | Terra, medium | - | - | GPT-5.5 performs final architecture review |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
 
