@@ -75,6 +75,7 @@ var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
 var slime_animation_components: Dictionary = {}
+var slime_visual_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -121,10 +122,6 @@ var player_hit_flash_timer := 0.0
 var player_hit_knockback_velocity := Vector2.ZERO
 var player_hit_knockback_timer := 0.0
 var player_hitstun_timer := 0.0
-var slime_left_textures: Dictionary = {}
-var slime_right_textures: Dictionary = {}
-var slime_attack_left_frames: Dictionary = {}
-var slime_attack_right_frames: Dictionary = {}
 var walkable_points: Array[Vector2] = []
 var walkable_polygons: Array[PackedVector2Array] = []
 var walkable_outline: PackedVector2Array = PackedVector2Array()
@@ -499,6 +496,12 @@ func _ready() -> void:
 			animation.name = "Animation"
 			slime.add_child(animation)
 		slime_animation_components[slime] = animation
+		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			visual = SlimeVisualComponent.new()
+			visual.name = "Visual"
+			slime.add_child(visual)
+		slime_visual_components[slime] = visual
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
 	_apply_room_state()
@@ -3147,7 +3150,10 @@ func _start_slime_attack(slime: Sprite2D) -> void:
 
 
 func _slime_attack_frames(slime: Sprite2D) -> Array[Texture2D]:
-	return slime_attack_left_frames.get(slime, []) if _slime_combat(slime).face_left else slime_attack_right_frames.get(slime, [])
+	var visual := slime_visual_components.get(slime) as SlimeVisualComponent
+	if visual == null:
+		return []
+	return visual.attack_left_frames if _slime_combat(slime).face_left else visual.attack_right_frames
 
 
 func _restore_slime_idle_texture(slime: Sprite2D) -> void:
@@ -4070,33 +4076,31 @@ func _build_sprite_images() -> void:
 
 
 func _build_slime_direction_textures() -> void:
-	slime_left_textures = {
-		slime_blue: _load_texture_or_null("res://assets/artwork/SlimeBlueLeft.png"),
-		slime_green: _load_texture_or_null("res://assets/artwork/SlimeGreenLeft.png"),
-		slime_red: _load_texture_or_null("res://assets/artwork/SlimeRedLeft.png"),
+	var paths := {
+		slime_blue: ["res://assets/artwork/SlimeBlueLeft.png", "res://assets/artwork/SlimeBlueRight.png"],
+		slime_green: ["res://assets/artwork/SlimeGreenLeft.png", "res://assets/artwork/SlimeGreenRight.png"],
+		slime_red: ["res://assets/artwork/SlimeRedLeft.png", "res://assets/artwork/SlimeRedRight.png"],
 	}
-	slime_right_textures = {
-		slime_blue: _load_texture_or_null("res://assets/artwork/SlimeBlueRight.png"),
-		slime_green: _load_texture_or_null("res://assets/artwork/SlimeGreenRight.png"),
-		slime_red: _load_texture_or_null("res://assets/artwork/SlimeRedRight.png"),
-	}
+	for slime in slimes:
+		var visual := slime_visual_components.get(slime) as SlimeVisualComponent
+		if visual != null and paths.has(slime):
+			var slime_paths: Array = paths[slime]
+			visual.left_texture = _load_texture_or_null(slime_paths[0])
+			visual.right_texture = _load_texture_or_null(slime_paths[1])
 
 
 func _build_slime_attack_frames() -> void:
 	var green_left_frames := _slice_frames("res://assets/artwork/SlimeGreen_AttackL.png", SLIME_ATTACK_FRAME_SIZE)
 	var green_right_frames := _slice_frames("res://assets/artwork/SlimeGreen_AttackR.png", SLIME_ATTACK_FRAME_SIZE)
-	slime_attack_left_frames.clear()
-	slime_attack_right_frames.clear()
-	slime_attack_left_frames[slime_green] = green_left_frames
-	slime_attack_right_frames[slime_green] = green_right_frames
-	slime_attack_left_frames[slime_red] = _recolor_slime_attack_frames(green_left_frames, slime_red)
-	slime_attack_right_frames[slime_red] = _recolor_slime_attack_frames(green_right_frames, slime_red)
-	slime_attack_left_frames[slime_blue] = _recolor_slime_attack_frames(green_left_frames, slime_blue)
-	slime_attack_right_frames[slime_blue] = _recolor_slime_attack_frames(green_right_frames, slime_blue)
 	for slime in slimes:
-		for texture in slime_attack_left_frames.get(slime, []):
+		var visual := slime_visual_components.get(slime) as SlimeVisualComponent
+		if visual == null:
+			continue
+		visual.attack_left_frames = green_left_frames if slime == slime_green else _recolor_slime_attack_frames(green_left_frames, slime)
+		visual.attack_right_frames = green_right_frames if slime == slime_green else _recolor_slime_attack_frames(green_right_frames, slime)
+		for texture in visual.attack_left_frames:
 			_warm_texture_cache(texture)
-		for texture in slime_attack_right_frames.get(slime, []):
+		for texture in visual.attack_right_frames:
 			_warm_texture_cache(texture)
 
 
@@ -4513,12 +4517,14 @@ func _set_slime_facing(slime: Sprite2D, direction_x: float) -> void:
 
 	var texture: Texture2D = null
 	if direction_x < 0.0:
-		texture = slime_left_textures.get(slime)
+		var visual := slime_visual_components.get(slime) as SlimeVisualComponent
+		texture = visual.left_texture if visual != null else null
 		slime.flip_h = false
 	else:
-		texture = slime_right_textures.get(slime)
-		if texture == null and slime_left_textures.get(slime) != null:
-			texture = slime_left_textures.get(slime)
+		var visual := slime_visual_components.get(slime) as SlimeVisualComponent
+		texture = visual.right_texture if visual != null else null
+		if texture == null and visual != null and visual.left_texture != null:
+			texture = visual.left_texture
 			slime.flip_h = true
 		else:
 			slime.flip_h = false
