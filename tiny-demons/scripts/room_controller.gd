@@ -8,6 +8,9 @@ var current_room_id: StringName = &""
 var arrival_socket_id: StringName = &""
 var transition_locked := false
 var room_states: Dictionary = {}
+var dungeon_sockets: Dictionary = {}
+var active_door_sockets: Dictionary = {}
+var active_entrance_sockets: Dictionary = {}
 
 
 func set_current_room(room_id: StringName, room_type: StringName) -> void:

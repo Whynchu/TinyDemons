@@ -140,9 +140,6 @@ var walkable_points: Array[Vector2] = []
 var walkable_polygons: Array[PackedVector2Array] = []
 var walkable_outline: PackedVector2Array = PackedVector2Array()
 var entrance_block_polygons: Array[PackedVector2Array] = []
-var dungeon_sockets: Dictionary = {}
-var active_door_sockets: Dictionary = {}
-var active_entrance_sockets: Dictionary = {}
 var use_walkable_polygon_direct := false
 var slimes: Array[Sprite2D] = []
 var depth_sprites: Array[Sprite2D] = []
@@ -179,7 +176,6 @@ var title_screen_text: Sprite2D = null
 var title_start_text: Sprite2D = null
 var title_transition_active := false
 var title_transition_timer := 0.0
-var title_particles: Array[Dictionary] = []
 var title_particle_layer: Node2D = null
 var archetype_overlay: ColorRect = null
 var archetype_hold_cover: ColorRect = null
@@ -233,7 +229,6 @@ var current_room_id: StringName = DungeonGraph.START_ROOM_ID
 var current_room_depth := 0
 var current_room_display_number := 1
 var current_room_type: StringName = DungeonGraph.ROOM_START
-var room_states: Dictionary = {}
 var room_transition_locked := false
 var chest_normal_texture: Texture2D = null
 var chest_gray_texture: Texture2D = null
@@ -346,7 +341,7 @@ func _ready() -> void:
 	current_room_id = dungeon_graph.start_room_id
 	_sync_current_room_metadata()
 	room_controller.set_current_room(current_room_id, current_room_type)
-	_collect_dungeon_sockets()
+	_collect_room_controller.dungeon_sockets()
 	_validate_dungeon_socket_setup()
 	_ensure_current_room_layout()
 	player_start_position = player.position
@@ -995,7 +990,7 @@ func _update_title_screen(delta: float) -> void:
 		_update_archetype_input(delta)
 		return
 	if title_transition_active:
-		_update_title_particles(delta)
+		_update_screen_state_controller.title_particles(delta)
 		title_transition_timer += delta
 		var fade_start := 0.72
 		var fade_duration := 0.42
@@ -1324,7 +1319,7 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 			particle.z_index = 3
 			particle.position = pixel_position
 			title_particle_layer.add_child(particle)
-			title_particles.append({
+			screen_state_controller.title_particles.append({
 				"sprite": particle,
 				"velocity": Vector2(0.0, -speed),
 				"timer": 1.14,
@@ -1359,7 +1354,7 @@ func _spawn_title_frame_particle(frame_position: Vector2) -> void:
 	particle.position = frame_position
 	title_particle_layer.add_child(particle)
 	var noise_value := rng.randf_range(-1.0, 1.0)
-	title_particles.append({
+	screen_state_controller.title_particles.append({
 		"sprite": particle,
 		"velocity": Vector2(0.0, -10.0 - absf(noise_value) * 10.0),
 		"timer": 1.14,
@@ -1368,15 +1363,15 @@ func _spawn_title_frame_particle(frame_position: Vector2) -> void:
 	})
 
 
-func _update_title_particles(delta: float) -> void:
-	for index in range(title_particles.size() - 1, -1, -1):
-		var particle_data := title_particles[index]
+func _update_title_screen(delta: float) -> void:
+	for index in range(screen_state_controller.title_particles.size() - 1, -1, -1):
+		var particle_data := screen_state_controller.title_particles[index]
 		var particle := particle_data["sprite"] as Sprite2D
 		var timer := float(particle_data["timer"]) - delta
 		if particle == null or timer <= 0.0:
 			if particle != null:
 				particle.queue_free()
-			title_particles.remove_at(index)
+			screen_state_controller.title_particles.remove_at(index)
 			continue
 		var velocity := particle_data["velocity"] as Vector2
 		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
@@ -2098,7 +2093,7 @@ func _update_room_number_indicator() -> void:
 
 func _set_entrance_open(is_open: bool) -> void:
 	entrance_open = is_open
-	for socket_value in active_entrance_sockets.values():
+	for socket_value in room_controller.active_entrance_sockets.values():
 		var socket := socket_value as DungeonSocket
 		var visual := socket.visual()
 		if visual != null:
@@ -2146,9 +2141,9 @@ func _update_chest_interaction() -> void:
 	if interact_input_down and not interact_input_was_down:
 		if chest_unlocked and not chest_claimed and _can_interact_with_chest():
 			chest_claimed = true
-			var state := room_states.get(current_room_id, {}) as Dictionary
+			var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 			state["finished"] = true
-			room_states[current_room_id] = state
+			room_controller.room_states[current_room_id] = state
 			chest_collect_flash_timer = CHEST_COLLECT_FLASH_TIME
 			_start_chest_flash()
 			gold += CHEST_REWARD_GOLD
@@ -2384,7 +2379,7 @@ func _start_chest_evaporation() -> void:
 
 func _set_door_active(is_active: bool) -> void:
 	door_active = is_active
-	for socket_value in active_door_sockets.values():
+	for socket_value in room_controller.active_door_sockets.values():
 		var socket := socket_value as DungeonSocket
 		var visual := socket.visual()
 		if visual != null:
@@ -2392,13 +2387,13 @@ func _set_door_active(is_active: bool) -> void:
 
 
 func _collect_dungeon_sockets() -> void:
-	dungeon_sockets.clear()
+	room_controller.dungeon_sockets.clear()
 	if sockets_root == null:
 		return
 	for child in sockets_root.get_children():
 		var socket := child as DungeonSocket
 		if socket != null:
-			dungeon_sockets[socket.socket_id()] = socket
+			room_controller.dungeon_sockets[socket.socket_id()] = socket
 
 
 func _validate_dungeon_socket_setup() -> void:
@@ -2410,7 +2405,7 @@ func _validate_dungeon_socket_setup() -> void:
 	}
 	for socket_id_value in expected_pairs.keys():
 		var socket_id := StringName(socket_id_value)
-		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
+		var socket := room_controller.dungeon_sockets.get(socket_id) as DungeonSocket
 		if socket == null:
 			push_error("Missing dungeon socket: %s" % socket_id)
 			continue
@@ -2433,7 +2428,7 @@ func _ensure_current_room_layout() -> void:
 	var room := dungeon_graph.get_room(current_room_id)
 	if room == null:
 		return
-	var state := room_states.get(current_room_id, {}) as Dictionary
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	if not state.has("generated_exits"):
 		var exits: Array[StringName] = []
 		if current_room_type == DungeonGraph.ROOM_REST or current_room_type == DungeonGraph.ROOM_TRADER:
@@ -2460,14 +2455,14 @@ func _ensure_current_room_layout() -> void:
 		state["generated_exits"] = exits
 		state["room_type"] = current_room_type
 		state["finished"] = bool(state.get("finished", false))
-		room_states[current_room_id] = state
+		room_controller.room_states[current_room_id] = state
 	_configure_room_sockets(bool(state.get("finished", false)))
 
 
 func _configure_room_sockets(is_unlocked: bool) -> void:
-	active_door_sockets.clear()
-	active_entrance_sockets.clear()
-	for socket_value in dungeon_sockets.values():
+	room_controller.active_door_sockets.clear()
+	room_controller.active_entrance_sockets.clear()
+	for socket_value in room_controller.dungeon_sockets.values():
 		var socket := socket_value as DungeonSocket
 		var visual := socket.visual()
 		if visual != null:
@@ -2476,18 +2471,18 @@ func _configure_room_sockets(is_unlocked: bool) -> void:
 	var room := dungeon_graph.get_room(current_room_id)
 	if room == null:
 		return
-	var state := room_states.get(current_room_id, {}) as Dictionary
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	var generated_exits := state.get("generated_exits", []) as Array
 	for exit_value in generated_exits:
 		var exit_socket := StringName(exit_value)
-		var socket := dungeon_sockets.get(exit_socket) as DungeonSocket
+		var socket := room_controller.dungeon_sockets.get(exit_socket) as DungeonSocket
 		if socket != null:
-			active_door_sockets[exit_socket] = socket
+			room_controller.active_door_sockets[exit_socket] = socket
 	for entry_value in room.incoming_connections.keys():
 		var entry_socket := StringName(entry_value)
-		var socket := dungeon_sockets.get(entry_socket) as DungeonSocket
+		var socket := room_controller.dungeon_sockets.get(entry_socket) as DungeonSocket
 		if socket != null:
-			active_entrance_sockets[entry_socket] = socket
+			room_controller.active_entrance_sockets[entry_socket] = socket
 			var visual := socket.visual()
 			if visual != null:
 				visual.visible = true
@@ -2513,9 +2508,9 @@ func _try_enter_active_door() -> bool:
 	if not door_active or room_transition_locked:
 		return false
 	var player_feet := _player_door_feet_rect()
-	for socket_id_value in active_door_sockets.keys():
+	for socket_id_value in room_controller.active_door_sockets.keys():
 		var socket_id := StringName(socket_id_value)
-		var socket := active_door_sockets.get(socket_id) as DungeonSocket
+		var socket := room_controller.active_door_sockets.get(socket_id) as DungeonSocket
 		var trigger_polygon := _socket_trigger_polygon(socket)
 		if trigger_polygon.size() >= 3 and _rect_touches_polygon(player_feet, trigger_polygon):
 			var connection := dungeon_graph.get_connection(current_room_id, socket_id)
@@ -2529,9 +2524,9 @@ func _try_enter_active_entrance() -> bool:
 	if not entrance_open or room_transition_locked:
 		return false
 	var player_feet := _player_door_feet_rect()
-	for socket_id_value in active_entrance_sockets.keys():
+	for socket_id_value in room_controller.active_entrance_sockets.keys():
 		var socket_id := StringName(socket_id_value)
-		var socket := active_entrance_sockets.get(socket_id) as DungeonSocket
+		var socket := room_controller.active_entrance_sockets.get(socket_id) as DungeonSocket
 		var trigger_polygon := _socket_trigger_polygon(socket)
 		if trigger_polygon.size() >= 3 and _rect_touches_polygon(player_feet, trigger_polygon):
 			var connection := dungeon_graph.get_connection_for_entry(current_room_id, socket_id)
@@ -2611,7 +2606,7 @@ func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: S
 		room_controller.enter_room(current_room_id, current_room_type, arrival_socket_id)
 	_ensure_current_room_layout()
 	_update_room_number_indicator()
-	var arrival_socket := dungeon_sockets.get(arrival_socket_id) as DungeonSocket
+	var arrival_socket := room_controller.dungeon_sockets.get(arrival_socket_id) as DungeonSocket
 	var spawn_marker: Marker2D = null
 	if arrival_socket != null:
 		spawn_marker = arrival_socket.spawn_marker()
@@ -2635,15 +2630,15 @@ func _release_room_transition_lock() -> void:
 
 
 func _save_current_room_state() -> void:
-	var state := room_states.get(current_room_id, {}) as Dictionary
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	state["finished"] = chest_claimed
-	room_states[current_room_id] = state
+	room_controller.room_states[current_room_id] = state
 	if room_controller != null and chest_claimed:
 		room_controller.mark_cleared(current_room_id)
 
 
 func _apply_room_state() -> void:
-	var state := room_states.get(current_room_id, {}) as Dictionary
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	if room_controller != null and room_controller.is_cleared(current_room_id):
 		state["finished"] = true
 	if current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_REST:
@@ -2691,9 +2686,9 @@ func _apply_rest_room_state() -> void:
 		collision_sprites.erase(cloaked_demon)
 	_set_rest_fire_frame(0)
 	rest_fire_animation_timer = 0.0
-	var state := room_states.get(current_room_id, {}) as Dictionary
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	state["finished"] = true
-	room_states[current_room_id] = state
+	room_controller.room_states[current_room_id] = state
 
 
 func _apply_npc_room_state() -> void:
@@ -2721,9 +2716,9 @@ func _apply_npc_room_state() -> void:
 		collision_sprites.append(cloaked_demon)
 	_set_door_active(true)
 	_set_entrance_open(true)
-	var state := room_states.get(current_room_id, {}) as Dictionary
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	state["finished"] = true
-	room_states[current_room_id] = state
+	room_controller.room_states[current_room_id] = state
 
 
 func _apply_finished_room_state() -> void:
@@ -4097,7 +4092,7 @@ func _hide_editor_only_guides() -> void:
 	var floor_collision_guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as CanvasItem
 	if floor_collision_guide != null:
 		floor_collision_guide.visible = false
-	for socket_value in dungeon_sockets.values():
+	for socket_value in room_controller.dungeon_sockets.values():
 		var socket := socket_value as DungeonSocket
 		var trigger := socket.trigger()
 		if trigger != null:
@@ -5417,10 +5412,10 @@ func _collect_floor_collision_guide() -> bool:
 
 func _build_entrance_block_polygons() -> void:
 	entrance_block_polygons.clear()
-	for socket_id in dungeon_sockets.keys():
-		if active_door_sockets.has(socket_id) or active_entrance_sockets.has(socket_id):
+	for socket_id in room_controller.dungeon_sockets.keys():
+		if room_controller.active_door_sockets.has(socket_id) or room_controller.active_entrance_sockets.has(socket_id):
 			continue
-		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
+		var socket := room_controller.dungeon_sockets.get(socket_id) as DungeonSocket
 		if socket == null:
 			continue
 		for tile in socket.block_tiles():
