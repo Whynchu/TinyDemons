@@ -24,6 +24,7 @@ class_name SlimeTuning
 @export var regen_amount := 1.0
 @export var health_drain_fill_speed := 18.0
 @export var health_regen_fill_speed := 6.0
+@export var health_damage_hang_time := 0.14
 @export var hit_flash_time := 0.12
 @export var hitstun_time := 1.0 / 30.0
 @export var knockback_duration := 0.14
