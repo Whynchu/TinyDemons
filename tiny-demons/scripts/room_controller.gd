@@ -13,6 +13,10 @@ func set_current_room(room_id: StringName, room_type: StringName) -> void:
 	room_entered.emit(room_id, room_type)
 
 
+func enter_room(room_id: StringName, room_type: StringName) -> void:
+	set_current_room(room_id, room_type)
+
+
 func mark_cleared(room_id: StringName) -> void:
 	room_states[room_id] = true
 	room_cleared.emit(room_id)
