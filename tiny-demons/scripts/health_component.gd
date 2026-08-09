@@ -9,14 +9,14 @@ signal damaged(amount: float)
 signal healed(amount: float)
 signal died
 
-@export var maximum_health := 1.0
-@export var regen_delay := 0.0
-@export var regen_interval := 1.0
-@export var regen_amount := 0.0
+@export var maximum_health: float = 1.0
+@export var regen_delay: float = 0.0
+@export var regen_interval: float = 1.0
+@export var regen_amount: float = 0.0
 
-var current_health := 0.0
-var regen_delay_timer := 0.0
-var regen_accumulator := 0.0
+var current_health: float = 0.0
+var regen_delay_timer: float = 0.0
+var regen_accumulator: float = 0.0
 var _dead := false
 
 
@@ -44,7 +44,7 @@ func set_maximum_health(value: float, preserve_ratio := true) -> void:
 
 
 func apply_damage(amount: float) -> float:
-	var applied := minf(maxf(amount, 0.0), current_health)
+	var applied: float = minf(maxf(amount, 0.0), current_health)
 	if applied <= 0.0:
 		return 0.0
 	current_health -= applied
@@ -59,7 +59,7 @@ func apply_damage(amount: float) -> float:
 
 
 func apply_healing(amount: float) -> float:
-	var applied := minf(maxf(amount, 0.0), maximum_health - current_health)
+	var applied: float = minf(maxf(amount, 0.0), maximum_health - current_health)
 	if applied <= 0.0:
 		return 0.0
 	current_health += applied
@@ -77,7 +77,7 @@ func tick_regeneration(delta: float) -> float:
 	if regen_delay_timer > 0.0:
 		return 0.0
 	regen_accumulator += delta
-	var healed_total := 0.0
+	var healed_total: float = 0.0
 	while regen_accumulator >= regen_interval and current_health < maximum_health:
 		regen_accumulator -= regen_interval
 		healed_total += apply_healing(regen_amount)
