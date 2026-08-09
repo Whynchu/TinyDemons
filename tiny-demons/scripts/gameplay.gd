@@ -160,9 +160,11 @@ var player_roll_direction := Vector2.ZERO
 var roll_dust_spawned_this_roll := false
 var player_roll_input_was_down := false
 var roll_dust_frames: Array[Texture2D] = []
+var roll_dust_flipped_frames: Array[Texture2D] = []
 var roll_dust_sprite: Sprite2D = null
 var roll_dust_frame := 0
 var roll_dust_timer := 0.0
+var roll_dust_uses_flipped_frames := false
 var player_attack_input_was_down := false
 var player_attack_hit_done := false
 var player_attack_hit_targets: Array[Sprite2D] = []
@@ -1327,15 +1329,16 @@ func _start_roll_dust(direction: Vector2) -> void:
 		return
 	roll_dust_sprite = Sprite2D.new()
 	roll_dust_sprite.name = "RollDust"
-	roll_dust_sprite.texture = roll_dust_frames[0]
-	# Center the sprite so horizontal flipping cannot move its visual origin.
-	roll_dust_sprite.centered = true
+	roll_dust_uses_flipped_frames = direction.x > 0.01 or (absf(direction.x) <= 0.01 and not player.flip_h)
+	var active_frames: Array[Texture2D] = roll_dust_flipped_frames if roll_dust_uses_flipped_frames else roll_dust_frames
+	roll_dust_sprite.texture = active_frames[0]
+	roll_dust_sprite.centered = false
 	roll_dust_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	roll_dust_sprite.z_as_relative = false
 	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
-	roll_dust_sprite.flip_h = direction.x > 0.01
-	var trail_offset := -direction * 1.0
-	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) + Vector2(0.0, -3.0) + trail_offset)
+	var emission_anchor := _actor_foot(player) + Vector2(0.0, -3.0) - direction * 2.0
+	var texture_anchor := Vector2(15.0, 15.0) if roll_dust_uses_flipped_frames else Vector2(0.0, 15.0)
+	roll_dust_sprite.global_position = _snap_half_pixel(emission_anchor - texture_anchor)
 	add_child(roll_dust_sprite)
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
@@ -1355,7 +1358,8 @@ func _update_roll_dust(delta: float) -> void:
 	if roll_dust_frame >= roll_dust_frames.size():
 		_clear_roll_dust()
 		return
-	roll_dust_sprite.texture = roll_dust_frames[roll_dust_frame]
+	var active_frames: Array[Texture2D] = roll_dust_flipped_frames if roll_dust_uses_flipped_frames else roll_dust_frames
+	roll_dust_sprite.texture = active_frames[roll_dust_frame]
 
 
 func _clear_roll_dust() -> void:
@@ -1364,6 +1368,7 @@ func _clear_roll_dust() -> void:
 		roll_dust_sprite = null
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
+	roll_dust_uses_flipped_frames = false
 
 
 func _start_player_attack(variant: int = 1) -> void:
@@ -3556,6 +3561,7 @@ func _build_player_animation_frames() -> void:
 	for frame_index in raw_roll_dust_frames.size():
 		var dissolve := float(frame_index) / float(maxi(raw_roll_dust_frames.size(), 1))
 		roll_dust_frames.append(_dither_roll_dust_frame(raw_roll_dust_frames[frame_index], dissolve))
+	roll_dust_flipped_frames = _flip_frames_horizontally(roll_dust_frames)
 	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
 	# attempt to load attack2 and between-attack frame (optional)
 	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
@@ -3624,6 +3630,8 @@ func _warm_player_frame_caches() -> void:
 	for texture in player_roll_frames:
 		_warm_texture_cache(texture)
 	for texture in roll_dust_frames:
+		_warm_texture_cache(texture)
+	for texture in roll_dust_flipped_frames:
 		_warm_texture_cache(texture)
 	for texture in player_attack_frames:
 		_warm_texture_cache(texture)
