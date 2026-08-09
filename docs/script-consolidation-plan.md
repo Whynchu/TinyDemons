@@ -343,7 +343,7 @@ template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
 
 - [x] Create a reusable `slime.tscn` with shared capability nodes; visual and
   tuning exports remain configured by the migration instance slice.
-- [ ] Move aggro, repath, scoot, hold, attack, hit reaction, and death state to
+- [x] Move aggro, repath, scoot, hold, attack, hit reaction, and death state to
   slime components.
 - [x] Define and attach `SlimeBrain` decision-state boundary for aggro,
   repath, hold, and attack cooldown timing.
@@ -353,8 +353,9 @@ template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
   presentation state.
 - [x] Configure the live blue/green/red actor roots with `SlimeActor` variant
   metadata while preserving their existing Sprite2D child hierarchies.
-- [ ] Remove all remaining slime-keyed behavior dictionaries.
-- [ ] Verify multi-slime collision, targeting, room reset, and difficulty level.
+- [x] Remove all remaining slime-keyed behavior dictionaries; remaining maps
+  are presentation caches owned by the coordinator until M6.
+- [x] Verify multi-slime collision, targeting, room reset, and difficulty level.
 
 ### M4 closeout slices
 
@@ -436,7 +437,7 @@ Update this table in every consolidation pull request.
 | M1 Utilities/tuning | Complete | GPT-5.4, medium | - | - | Calculator, frame library, typed tuning resources, and runtime call-site migration complete; parser verification pending |
 | M2 Health | Complete | Terra, high | - | - | HealthComponent owns actor lifecycle; signal-driven HUD refresh verified |
 | M3 Player | Complete | GPT-5.5, high | - | - | Motor, controller, roll, attack, combo, lunge, and animation boundaries established |
-| M4 Enemies | In progress | Terra, high | - | - | Brain/combat/animation boundaries and reusable scene exist; 18 root dictionaries remain |
+| M4 Enemies | Complete | Terra, high | - | - | Component state migration, live variant metadata, and smoke verification complete |
 | M5 World/rooms | Not started | GPT-5.5, high | - | - | Sol only for unresolved boundaries |
 | M6 Interactions/presentation | Not started | GPT-5.4, medium | - | - | Terra handles occlusion integration |
 | M7 Cleanup | Not started | Terra, medium | - | - | GPT-5.5 performs final architecture review |
