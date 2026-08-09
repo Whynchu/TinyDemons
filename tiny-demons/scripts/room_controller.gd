@@ -37,4 +37,5 @@ func mark_cleared(room_id: StringName) -> void:
 
 
 func is_cleared(room_id: StringName) -> bool:
-	return room_states.get(room_id, false) == true
+	var state: Variant = room_states.get(room_id, {})
+	return state is Dictionary and state.get("finished", false) == true
