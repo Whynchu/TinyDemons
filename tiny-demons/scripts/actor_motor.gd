@@ -10,6 +10,7 @@ signal knockback_finished
 
 var knockback_velocity := Vector2.ZERO
 var knockback_remaining := 0.0
+var rolling := false
 
 
 func request_motion(motion: Vector2) -> void:
@@ -38,3 +39,11 @@ func consume_knockback(delta: float) -> Vector2:
 
 func is_in_knockback() -> bool:
 	return knockback_remaining > 0.0
+
+
+func begin_roll() -> void:
+	rolling = true
+
+
+func end_roll() -> void:
+	rolling = false

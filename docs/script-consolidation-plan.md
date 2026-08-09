@@ -316,7 +316,9 @@ are fixed. Reserve Sol for an unresolved ordering problem.
 
 - [x] Define `ActorMotor` motion/knockback API while collision resolution stays
   in the coordinator for update-order safety.
-- [ ] Extract player input/action coordination into `PlayerController`.
+- [x] Route player knockback and roll lifecycle through the motor boundary.
+- [x] Introduce the `PlayerController` input-lock boundary; action-state
+  migration remains incremental to preserve update order.
 - [ ] Extract roll state and roll-dust event.
 - [ ] Extract attack, combo buffering, lunge, hitbox, and hit tracking.
 - [ ] Extract animation state and palette/frame application.

@@ -67,6 +67,7 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 var player_equipment: EquipmentComponent = null
 var player_health_component: HealthComponent = null
 var player_motor: ActorMotor = null
+var player_controller: PlayerController = null
 var slime_health_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
@@ -419,6 +420,11 @@ func _ready() -> void:
 		player_motor.name = "Motor"
 		player.add_child(player_motor)
 	player_motor.motion_requested.connect(_on_player_motor_motion)
+	player_controller = player.get_node_or_null("Controller") as PlayerController
+	if player_controller == null:
+		player_controller = PlayerController.new()
+		player_controller.name = "Controller"
+		player.add_child(player_controller)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -1365,6 +1371,9 @@ func _begin_scene_transition() -> void:
 
 
 func _move_player(delta: float) -> void:
+	if player_controller != null and not player_controller.can_receive_input():
+		player_is_moving = false
+		return
 	if player_death_pending or player_is_attacking or player_is_rolling or player_hit_knockback_timer > 0.0 or player_hitstun_timer > 0.0:
 		player_is_moving = false
 		return
@@ -1423,6 +1432,8 @@ func _start_player_roll() -> void:
 	elif direction.x > 0.0:
 		player.flip_h = false
 	player_is_rolling = true
+	if player_motor != null:
+		player_motor.begin_roll()
 	player_roll_direction = direction
 	roll_dust_spawned_this_roll = false
 	player_attack_visual.visible = false
@@ -1459,6 +1470,8 @@ func _update_player_roll(delta: float) -> void:
 		player_roll_frame += 1
 		if player_roll_frame >= player_roll_frames.size():
 			player_is_rolling = false
+			if player_motor != null:
+				player_motor.end_roll()
 			player_roll_frame = 0
 			player_roll_timer = 0.0
 			player_roll_velocity = Vector2.ZERO
@@ -1591,9 +1604,9 @@ func _update_player_hit_reaction(delta: float) -> void:
 	if player_hit_knockback_timer <= 0.0:
 		return
 
-	var step_time := minf(delta, player_hit_knockback_timer)
+	var motion := player_motor.consume_knockback(delta) if player_motor != null else player_hit_knockback_velocity * minf(delta, player_hit_knockback_timer)
 	player_hit_knockback_timer = maxf(player_hit_knockback_timer - delta, 0.0)
-	_try_move_actor_swept(player, player_hit_knockback_velocity * step_time, 0.75)
+	_try_move_actor_swept(player, motion, 0.75)
 	if player_hit_knockback_timer <= 0.0:
 		player_hit_knockback_velocity = Vector2.ZERO
 
@@ -3270,6 +3283,8 @@ func _apply_player_hit_knockback(slime: Sprite2D) -> void:
 		direction = Vector2.RIGHT if player.global_position.x >= slime.global_position.x else Vector2.LEFT
 	player_hit_knockback_velocity = _perspective_movement(direction.normalized() * (player_tuning.hit_knockback / player_tuning.hit_knockback_duration))
 	player_hit_knockback_timer = player_tuning.hit_knockback_duration
+	if player_motor != null:
+		player_motor.start_knockback(player_hit_knockback_velocity, player_hit_knockback_timer)
 
 
 func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool:
