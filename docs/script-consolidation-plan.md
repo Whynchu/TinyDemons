@@ -412,6 +412,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
   controller boundary.
 - [x] Route connected-room entry through `RoomController.enter_room` while
   preserving socket arrival placement in the coordinator.
+- [x] Carry arrival-socket intent through `RoomController` so transition and
+  spawn resolution share one room-entry contract.
 - [x] Synchronize room-cleared persistence with `RoomController` while legacy
   room-state storage remains authoritative.
 - [x] Define and attach `OcclusionRenderer` cache/occluder boundary; image

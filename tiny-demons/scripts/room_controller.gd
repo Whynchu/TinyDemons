@@ -5,6 +5,7 @@ signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
 
 var current_room_id: StringName = &""
+var arrival_socket_id: StringName = &""
 var room_states: Dictionary = {}
 
 
@@ -13,7 +14,8 @@ func set_current_room(room_id: StringName, room_type: StringName) -> void:
 	room_entered.emit(room_id, room_type)
 
 
-func enter_room(room_id: StringName, room_type: StringName) -> void:
+func enter_room(room_id: StringName, room_type: StringName, arrival_socket: StringName = &"") -> void:
+	arrival_socket_id = arrival_socket
 	set_current_room(room_id, room_type)
 
 
