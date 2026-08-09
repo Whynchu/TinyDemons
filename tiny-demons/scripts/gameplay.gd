@@ -1105,7 +1105,7 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	noise.frequency = 0.28
 	for y in image.get_height():
 		for x in image.get_width():
-			var color := image.get_pixel(x, y)
+			var color: Color = image.get_pixel(x, y)
 			if color.a <= 0.0:
 				continue
 			var pixel_position := source_sprite.global_position
