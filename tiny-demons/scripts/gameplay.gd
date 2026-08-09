@@ -547,6 +547,8 @@ func _start_player_death() -> void:
 	player_death_texture = player.texture
 	player.visible = false
 	player_shadow.visible = false
+	if player_sprite_shadow != null:
+		player_sprite_shadow.visible = false
 	player_death_overlay = Sprite2D.new()
 	player_death_overlay.name = "PlayerDeathWhite"
 	player_death_overlay.texture = _white_texture(player_death_texture)
