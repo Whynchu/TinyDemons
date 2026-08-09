@@ -45,17 +45,17 @@ func _draw_region(rect: Rect2, color: Color, label: String) -> void:
 
 func _draw_top_hud_preview() -> void:
 	# The HP bar itself is a scene Sprite2D. Only its code-generated value is previewed here.
-	_draw_pixel_text(Vector2(27, 5), "12/15", Color.WHITE, 1)
-	_draw_pixel_text(Vector2(64, 5), "0", Color("#ffcd75"), 1)
+	_draw_pixel_text(Vector2(35, 1), "12/15", Color.WHITE, 1)
+	_draw_pixel_text(Vector2(72, 4), "0", Color("#ffcd75"), 1)
 	var coin := load("res://assets/artwork/GoldFresh2.png") as Texture2D
 	if coin != null:
-		draw_texture_rect_region(coin, Rect2(56, 4, 5, 5), Rect2(0, 0, 5, 5))
+		draw_texture_rect_region(coin, Rect2(64, 4, 5, 5), Rect2(0, 0, 5, 5))
 	_draw_pixel_text(Vector2(208, 4), "R1", Color("#f4f4f4"), 1)
 
 
 func _draw_target_hud_preview() -> void:
 	# The name and bar frame/fill are scene Sprite2Ds. Only the runtime health value is previewed.
-	_draw_pixel_text(Vector2(109, 148), "8/13", Color.WHITE, 1)
+	_draw_pixel_text(Vector2(121, 149), "8/13", Color.WHITE, 1)
 
 
 func _draw_action_buttons_preview() -> void:
