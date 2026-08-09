@@ -37,7 +37,7 @@ func reset(value: float = -1.0) -> void:
 
 
 func set_maximum_health(value: float, preserve_ratio := true) -> void:
-	var ratio := current_health / maximum_health if maximum_health > 0.0 else 1.0
+	var ratio: float = current_health / maximum_health if maximum_health > 0.0 else 1.0
 	maximum_health = maxf(value, 1.0)
 	current_health = clampf(maximum_health * ratio if preserve_ratio else current_health, 0.0, maximum_health)
 	health_changed.emit(current_health, maximum_health)
