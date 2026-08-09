@@ -31,7 +31,7 @@
 [ext_resource type="Texture2D" uid="uid://dvmnqcr5rjst4" path="res://assets/artwork/TileRface.png" id="31_tile_rface"]
 [ext_resource type="Script" uid="uid://b7cke64rytrh1" path="res://scripts/dungeon_socket.gd" id="32_dungeon_socket"]
 [ext_resource type="Texture2D" uid="uid://ma3hpplhe1x" path="res://assets/artwork/Fire.png" id="33_fire"]
-[ext_resource type="Texture2D" uid="uid://dfws8gxgqm3iu" path="res://assets/artwork/TinyDemonCloacked-Idle.png" id="34_cloaked_idle"]
+[ext_resource type="Texture2D" uid="uid://dowvff0q335kb" path="res://assets/artwork/TinyDemonCloacked-Idle.png" id="34_cloaked_idle"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -253,8 +253,8 @@ position = Vector2(148, 75)
 
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
 
-[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors"]
-position = Vector2(147, 78)
+[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors" unique_id=110558620]
+position = Vector2(148, 69.00001)
 scale = Vector2(1, 0.6875)
 texture = ExtResource("18_demon_shadow")
 centered = false
@@ -264,9 +264,9 @@ position = Vector2(156, 71)
 texture = ExtResource("34_cloaked_idle")
 hframes = 5
 
-[node name="CollisionGuide" type="Node2D" parent="Actors/CloakedDemon"]
+[node name="CollisionGuide" type="Node2D" parent="Actors/CloakedDemon" unique_id=375845748]
 script = ExtResource("19_collision_guide")
-rect_position = Vector2(-3.5, 3)
+rect_position = Vector2(-2, 2.5)
 rect_size = Vector2(5, 5)
 
 [node name="DepthMarker" type="Marker2D" parent="Actors/CloakedDemon" unique_id=297377238]

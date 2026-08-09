@@ -3494,13 +3494,13 @@ func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void:
 		if not _actors_are_in_contact(actor, other):
 			continue
 
-	if other == chest:
-		_separate_from_static(actor, other)
-	elif other == cloaked_demon:
-		# The wandering NPC is a solid floor-level character, not something the
-		# player can shove out of its patrol route.
-		_separate_actor_from_actor(actor, other)
-	elif slimes.has(actor) and slimes.has(other):
+		if other == chest:
+			_separate_from_static(actor, other)
+		elif other == cloaked_demon:
+			# The wandering NPC is a solid floor-level character, not something the
+			# player can shove out of its patrol route.
+			_separate_actor_from_actor(actor, other)
+		elif slimes.has(actor) and slimes.has(other):
 			_push_actor(actor, other, movement)
 		elif actor != player and other == player and _is_enemy_control_locked(actor):
 			_separate_actor_from_actor(actor, other)
