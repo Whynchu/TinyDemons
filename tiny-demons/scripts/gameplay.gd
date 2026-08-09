@@ -3028,12 +3028,12 @@ func _dialogue_button_shadow_texture(source: Texture2D) -> Texture2D:
 func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:
 	var key := "%s:%d" % [_rgb_key(color), size]
 	if effects_spawner.pixel_particle_texture_cache.has(key):
-		return pixel_particle_texture_cache[key]
+		return effects_spawner.pixel_particle_texture_cache[key]
 
 	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
 	image.fill(color)
 	var texture := ImageTexture.create_from_image(image)
-	pixel_particle_texture_cache[key] = texture
+	effects_spawner.pixel_particle_texture_cache[key] = texture
 	return texture
 
 
@@ -3042,7 +3042,7 @@ func _white_texture(source: Texture2D) -> Texture2D:
 		return null
 	var key := "%s:white_texture" % source.resource_path
 	if occlusion_renderer.white_image_cache.has(key):
-		return white_image_cache[key]
+		return occlusion_renderer.white_image_cache[key]
 
 	var image := _cached_texture_image(source).duplicate()
 	for y in image.get_height():
@@ -3051,7 +3051,7 @@ func _white_texture(source: Texture2D) -> Texture2D:
 			if color.a > 0.0:
 				image.set_pixel(x, y, Color(1, 1, 1, color.a))
 	var texture := ImageTexture.create_from_image(image)
-	white_image_cache[key] = texture
+	occlusion_renderer.white_image_cache[key] = texture
 	return texture
 
 
@@ -4359,7 +4359,7 @@ func _brighter_bar_texture(source: Texture2D) -> Texture2D:
 		return null
 	var cache_key := source.resource_path if not source.resource_path.is_empty() else str(source.get_instance_id())
 	if occlusion_renderer.texture_image_cache.has("%s:bright_bar" % cache_key):
-		return texture_image_cache["%s:bright_bar" % cache_key]
+		return occlusion_renderer.texture_image_cache["%s:bright_bar" % cache_key]
 
 	var image := source.get_image()
 	if image == null:
@@ -4379,7 +4379,7 @@ func _brighter_bar_texture(source: Texture2D) -> Texture2D:
 			image.set_pixel(x, y, Color(bright_color.r, bright_color.g, bright_color.b, color.a))
 
 	var texture := ImageTexture.create_from_image(image)
-	texture_image_cache["%s:bright_bar" % cache_key] = texture
+	occlusion_renderer.texture_image_cache["%s:bright_bar" % cache_key] = texture
 	return texture
 
 
