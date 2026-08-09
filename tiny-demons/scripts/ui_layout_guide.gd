@@ -29,8 +29,10 @@ func _rebuild_preview() -> void:
 		return
 
 	# These are editor-only Sprite2D nodes. Runtime gameplay hides this guide node.
-	_add_pixel_sprite("EditorPlayerHealth", Vector2(35, 1.5), "12/15", Color.WHITE, true)
-	_add_pixel_sprite("EditorTargetHealth", Vector2(129, 150), "8/13", Color.WHITE, true)
+	# Runtime: HpBarFill (14, 0) + 48x16 / 2 + (0, -1).
+	_add_pixel_sprite("EditorPlayerHealth", Vector2(38, 7), "12/15", Color.WHITE, true)
+	# Runtime: EnemyHp (81, 147) + 80x16 / 2.
+	_add_pixel_sprite("EditorTargetHealth", Vector2(121, 155), "8/13", Color.WHITE, true)
 	_add_pixel_sprite("EditorGoldAmount", Vector2(72, 4), "0", Color("#ffcd75"), false)
 	_add_pixel_sprite("EditorRoomNumber", Vector2(208, 4), "R1", Color("#f4f4f4"), false)
 	_add_texture_sprite("EditorGold", "res://assets/artwork/GoldFresh2.png", Vector2(64, 4), Vector2(0, 0), Vector2(5, 5))
