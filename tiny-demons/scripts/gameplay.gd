@@ -504,6 +504,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if player_attack_component != null:
+		player_attack_component.tick_combo(delta)
 	if walkable_outline.is_empty():
 		return
 	if scene_transition_active:
@@ -1424,6 +1426,8 @@ func _update_player_attack_input() -> void:
 			# A late input during the transition still completes the combo.
 			player_combo_buffered = true
 			player_combo_buffer_timer = player_tuning.combo_window
+			if player_attack_component != null:
+				player_attack_component.buffer_combo(player_tuning.combo_window)
 			player_combo_buffer_movement = _movement_input()
 		else:
 			_start_player_attack()
