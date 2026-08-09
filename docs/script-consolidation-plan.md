@@ -314,7 +314,8 @@ Model route: GPT-5.5 at high effort for the initial state/update-order design;
 route isolated implementation slices back to Terra or GPT-5.4 after contracts
 are fixed. Reserve Sol for an unresolved ordering problem.
 
-- [ ] Add `ActorMotor` and move normal movement/knockback behind its API.
+- [x] Define `ActorMotor` motion/knockback API while collision resolution stays
+  in the coordinator for update-order safety.
 - [ ] Extract player input/action coordination into `PlayerController`.
 - [ ] Extract roll state and roll-dust event.
 - [ ] Extract attack, combo buffering, lunge, hitbox, and hit tracking.
