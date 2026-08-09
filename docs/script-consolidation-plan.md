@@ -297,6 +297,9 @@ unresolved lifecycle boundaries to GPT-5.5.
 - [ ] Connect health UI and effects using signals.
 - [x] Remove actor health and regen dictionaries from `gameplay.gd`; retain
   display-health interpolation state until the HUD signal slice.
+- [x] Connect damage/healing signals to the existing delayed-fill presentation
+  hooks without changing bar timing.
+- [ ] Replace per-frame health presentation polling with HUD subscriptions.
 - [ ] Verify damage rolls, critical hits, regen delays, death, and room reset.
 
 Exit criteria: each actor owns its health lifecycle; the root does not index

@@ -409,6 +409,8 @@ func _ready() -> void:
 		player_health_component.name = "Health"
 		player.add_child(player_health_component)
 	player_health_component.set_process(false)
+	player_health_component.damaged.connect(_on_player_health_damaged)
+	player_health_component.healed.connect(_on_player_health_healed)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -459,6 +461,8 @@ func _ready() -> void:
 		health_component.regen_interval = slime_tuning.regen_interval
 		health_component.regen_amount = slime_tuning.regen_amount
 		health_component.reset(max_health)
+		health_component.damaged.connect(_on_slime_health_damaged.bind(slime))
+		health_component.healed.connect(_on_slime_health_healed.bind(slime))
 		slime_health_components[slime] = health_component
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
@@ -3163,6 +3167,27 @@ func _slime_attack_damage(slime: Sprite2D) -> float:
 func _mark_player_in_combat() -> void:
 	player_regen_delay_timer = player_tuning.regen_delay
 	player_regen_accumulator = 0.0
+	if player_health_component != null:
+		player_health_component.regen_delay_timer = player_tuning.regen_delay
+		player_health_component.regen_accumulator = 0.0
+
+
+func _on_player_health_damaged(_amount: float) -> void:
+	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
+
+
+func _on_player_health_healed(_amount: float) -> void:
+	player_display_health = minf(player_display_health, player_health)
+
+
+func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void:
+	target_damage_fill_hold_timers[slime] = slime_tuning.health_damage_hang_time
+
+
+func _on_slime_health_healed(_amount: float, slime: Sprite2D) -> void:
+	var health_component := slime_health_components.get(slime) as HealthComponent
+	if health_component != null:
+		target_display_health[slime] = minf(float(target_display_health.get(slime, health_component.maximum_health)), health_component.current_health)
 
 
 func _update_player_health_regen(delta: float) -> void:
