@@ -388,6 +388,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 - [ ] Extract walkable geometry and queries into `WalkableArea`.
 - [x] Define and attach `WalkableArea` geometry/query boundary; tile extraction
   remains in the coordinator pending parity verification.
+- [x] Delegate nearest walkable queries to `WalkableArea` with a legacy
+  point-sample fallback when geometry is unavailable.
 - [ ] Extract actor contact/static collision into `ActorCollisionSystem`.
 - [x] Define and attach `ActorCollisionSystem` actor-set boundary; existing
   resolution remains authoritative pending parity migration.

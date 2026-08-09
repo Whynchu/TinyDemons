@@ -5497,6 +5497,8 @@ func _distance_to_segment(point: Vector2, segment_start: Vector2, segment_end: V
 
 
 func _nearest_walkable_point(point: Vector2) -> Vector2:
+	if walkable_area != null and not walkable_area.is_empty():
+		return walkable_area.nearest_point(point)
 	var nearest := point
 	var nearest_distance := INF
 	for walkable_point in walkable_points:
