@@ -29,3 +29,8 @@ func contacts_for(actor: Sprite2D) -> Array[Sprite2D]:
 		if actor.global_position.distance_to(other.global_position) <= contact_distance:
 			contacts.append(other)
 	return contacts
+
+
+func resolve_contacts(actor: Sprite2D, movement: Vector2, resolver: Callable) -> void:
+	for other in contacts_for(actor):
+		resolver.call(actor, other, movement)

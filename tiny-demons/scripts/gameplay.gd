@@ -3872,23 +3872,27 @@ func _try_move_actor_swept(actor: Sprite2D, movement: Vector2, max_step: float) 
 func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void:
 	if actor_collision_system != null:
 		actor_collision_system.set_actors(collision_sprites)
-	var candidates: Array[Sprite2D] = actor_collision_system.contacts_for(actor) if actor_collision_system != null else collision_sprites
-	for other in candidates:
-		if not _actors_are_in_contact(actor, other):
-			continue
+		actor_collision_system.resolve_contacts(actor, movement, _resolve_actor_contact_pair)
+		return
+	for other in collision_sprites:
+		_resolve_actor_contact_pair(actor, other, movement)
 
-		if other == chest:
-			_separate_from_static(actor, other)
-		elif other == cloaked_demon:
-			# The wandering NPC is a solid floor-level character, not something the
-			# player can shove out of its patrol route.
-			_separate_actor_from_actor(actor, other)
-		elif slimes.has(actor) and slimes.has(other):
-			_push_actor(actor, other, movement)
-		elif actor != player and other == player and _is_enemy_control_locked(actor):
-			_separate_actor_from_actor(actor, other)
-		else:
-			_push_actor(actor, other, movement)
+
+func _resolve_actor_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2) -> void:
+	if other == actor or not _actors_are_in_contact(actor, other):
+		return
+	if other == chest:
+		_separate_from_static(actor, other)
+	elif other == cloaked_demon:
+		# The wandering NPC is a solid floor-level character, not something the
+		# player can shove out of its patrol route.
+		_separate_actor_from_actor(actor, other)
+	elif slimes.has(actor) and slimes.has(other):
+		_push_actor(actor, other, movement)
+	elif actor != player and other == player and _is_enemy_control_locked(actor):
+		_separate_actor_from_actor(actor, other)
+	else:
+		_push_actor(actor, other, movement)
 
 
 func _resolve_slime_contact(slime: Sprite2D, other: Sprite2D) -> void:
