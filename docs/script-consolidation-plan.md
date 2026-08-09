@@ -522,6 +522,8 @@ dictionary declarations.
 - [x] Move pixel-particle texture caching into `EffectsSpawner`.
 - [x] Move texture/image caches into `OcclusionRenderer`.
 - [x] Move target and overhead health presentation maps into `HudController`.
+- [x] Move occluded, highlighted, and white actor texture maps into
+  `OcclusionRenderer`.
 - [ ] Ensure no component reaches into another component's internal fields.
 - [ ] Repeat the complete smoke-test checklist.
 - [ ] Record final metrics and compare them with the baseline.

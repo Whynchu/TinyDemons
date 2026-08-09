@@ -155,10 +155,7 @@ var original_actor_textures: Dictionary = {}
 var original_actor_images: Dictionary = {}
 var original_actor_scales: Dictionary = {}
 var actor_visual_scales: Dictionary = {}
-var occluded_actor_textures: Dictionary = {}
 var actor_occlusion_grace: Dictionary = {}
-var highlighted_actor_textures: Dictionary = {}
-var white_actor_textures: Dictionary = {}
 var sprite_images: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
@@ -4124,10 +4121,10 @@ func _build_sprite_images() -> void:
 	original_actor_images.clear()
 	original_actor_scales.clear()
 	actor_visual_scales.clear()
-	occluded_actor_textures.clear()
+	occlusion_renderer.occluded_actor_textures.clear()
 	actor_occlusion_grace.clear()
-	highlighted_actor_textures.clear()
-	white_actor_textures.clear()
+	occlusion_renderer.highlighted_actor_textures.clear()
+	occlusion_renderer.white_actor_textures.clear()
 	sprite_images.clear()
 
 	for actor in actor_sprites:
@@ -4139,16 +4136,16 @@ func _build_sprite_images() -> void:
 		var image := _cached_texture_image(actor.texture)
 		original_actor_images[actor] = image
 		sprite_images[actor] = image
-		occluded_actor_textures[actor] = _effect_texture_with_display_size(
+		occlusion_renderer.occluded_actor_textures[actor] = _effect_texture_with_display_size(
 			_cached_effect_image(actor.texture, image),
 			image.get_size()
 		)
 		actor_occlusion_grace[actor] = 0.0
-		highlighted_actor_textures[actor] = _effect_texture_with_display_size(
+		occlusion_renderer.highlighted_actor_textures[actor] = _effect_texture_with_display_size(
 			_cached_highlighted_image(actor.texture, image),
 			image.get_size()
 		)
-		white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(actor.texture, image))
+		occlusion_renderer.white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(actor.texture, image))
 
 	for occluder in occluder_sprites:
 		if not sprite_images.has(occluder):
@@ -4632,15 +4629,15 @@ func _set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
 	var image := _cached_texture_image(texture)
 	original_actor_images[actor] = image
 	sprite_images[actor] = image
-	occluded_actor_textures[actor] = _effect_texture_with_display_size(
+	occlusion_renderer.occluded_actor_textures[actor] = _effect_texture_with_display_size(
 		_cached_effect_image(texture, image),
 		image.get_size()
 	)
-	highlighted_actor_textures[actor] = _effect_texture_with_display_size(
+	occlusion_renderer.highlighted_actor_textures[actor] = _effect_texture_with_display_size(
 		_cached_highlighted_image(texture, image),
 		image.get_size()
 	)
-	white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(texture, image))
+	occlusion_renderer.white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(texture, image))
 	actor.texture = texture
 
 
@@ -4681,7 +4678,7 @@ func _update_actor_occlusion(delta: float) -> void:
 		if actor == player:
 			is_flashing = player_hit_flash_timer > 0.0
 		if is_flashing:
-			actor.texture = white_actor_textures[actor]
+			actor.texture = occlusion_renderer.white_actor_textures[actor]
 			_apply_actor_scale(actor, false)
 			continue
 
@@ -4720,12 +4717,12 @@ func _update_actor_occlusion(delta: float) -> void:
 func _apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float) -> void:
 	var grace := maxf(float(actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
 	actor_occlusion_grace[actor] = grace
-	if grace > 0.0 and actor.texture == occluded_actor_textures.get(actor):
+	if grace > 0.0 and actor.texture == occlusion_renderer.occluded_actor_textures.get(actor):
 		_apply_actor_scale(actor, true)
 		return
 
 	if is_target:
-		actor.texture = highlighted_actor_textures[actor]
+		actor.texture = occlusion_renderer.highlighted_actor_textures[actor]
 		_apply_actor_scale(actor, true)
 	else:
 		actor.texture = original_actor_textures[actor]
@@ -5186,7 +5183,7 @@ func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Arra
 	if include_outline:
 		_apply_half_pixel_outline(result_image)
 
-	var texture := occluded_actor_textures[actor] as ImageTexture
+	var texture := occlusion_renderer.occluded_actor_textures[actor] as ImageTexture
 	texture.set_image(result_image)
 	texture.set_size_override(source_image.get_size())
 	return texture

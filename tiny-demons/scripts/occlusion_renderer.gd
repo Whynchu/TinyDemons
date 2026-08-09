@@ -7,6 +7,9 @@ var texture_image_cache: Dictionary = {}
 var effect_image_cache: Dictionary = {}
 var highlighted_image_cache: Dictionary = {}
 var white_image_cache: Dictionary = {}
+var occluded_actor_textures: Dictionary = {}
+var highlighted_actor_textures: Dictionary = {}
+var white_actor_textures: Dictionary = {}
 var update_count := 0
 var update_time := 0.0
 
