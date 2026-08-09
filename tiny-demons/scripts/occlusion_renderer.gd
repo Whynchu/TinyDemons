@@ -17,6 +17,7 @@ var original_actor_images: Dictionary = {}
 var original_actor_scales: Dictionary = {}
 var actor_visual_scales: Dictionary = {}
 var sprite_images: Dictionary = {}
+var actor_occlusion_grace: Dictionary = {}
 var update_count := 0
 var update_time := 0.0
 

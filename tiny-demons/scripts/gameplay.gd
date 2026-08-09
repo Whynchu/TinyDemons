@@ -149,7 +149,6 @@ var depth_sprites: Array[Sprite2D] = []
 var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
-var actor_occlusion_grace: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
 var cloaked_demon_shadow_offset := Vector2.ZERO
@@ -273,8 +272,6 @@ var player_health_fill_size := Vector2.ZERO
 var player_health_damage_fill: Sprite2D = null
 var player_display_health := 0.0
 var player_damage_fill_hold_timer := 0.0
-var damage_numbers: Array[Dictionary] = []
-var pixel_particles: Array[Dictionary] = []
 var player_regen_delay_timer := 0.0
 var player_regen_accumulator := 0.0
 var rest_fire_animation_timer := 0.0
@@ -756,7 +753,7 @@ func _spawn_player_death_pixels() -> void:
 		particle.position = player_death_origin + player_death_offset + Vector2(source_pixel) * player_death_scale
 		add_child(particle)
 		var lifetime := rng.randf_range(1.2, player_tuning.death_particle_lifetime)
-		pixel_particles.append({
+		effects_spawner.pixel_particles.append({
 			"sprite": particle,
 			# Fizzle particles rise from their source pixel without horizontal drift.
 			"velocity": Vector2(0.0, rng.randf_range(-18.0, -7.0)),
@@ -2896,7 +2893,7 @@ func _spawn_slime_death_pixels(slime: Sprite2D) -> void:
 
 		var horizontal_direction := -1.0 if float(source_pixel.x) < float(image.get_width()) * 0.5 else 1.0
 		var horizontal_speed := rng.randf_range(effects_tuning.slime_death_particle_speed_min * 0.5, effects_tuning.slime_death_particle_speed_max * 0.75)
-		pixel_particles.append({
+		effects_spawner.pixel_particles.append({
 			"sprite": particle,
 			"velocity": Vector2(horizontal_direction * horizontal_speed, rng.randf_range(-10.0, -2.0)),
 			"timer": effects_tuning.slime_death_particle_lifetime,
@@ -2913,7 +2910,7 @@ func _spawn_gold_number(world_position: Vector2, amount: int) -> void:
 	sprite.z_index = OVERWORLD_UI_Z + 2
 	sprite.position = world_position
 	add_child(sprite)
-	damage_numbers.append({
+	effects_spawner.damage_numbers.append({
 		"sprite": sprite,
 		"timer": effects_tuning.damage_number_lifetime,
 	})
@@ -2958,7 +2955,7 @@ func _spawn_chest_evaporation_pixels() -> void:
 		var lifetime := rng.randf_range(CHEST_EVAPORATE_LIFETIME_MIN, CHEST_EVAPORATE_LIFETIME_MAX)
 		# Keep chest fizzle columns vertically aligned with the source sprite.
 		var drift := Vector2(0.0, rng.randf_range(-24.0, -12.0))
-		pixel_particles.append({
+		effects_spawner.pixel_particles.append({
 			"sprite": particle,
 			"velocity": drift,
 			"timer": lifetime,
@@ -2968,14 +2965,14 @@ func _spawn_chest_evaporation_pixels() -> void:
 
 
 func _update_pixel_particles(delta: float) -> void:
-	for index in range(pixel_particles.size() - 1, -1, -1):
-		var particle_data := pixel_particles[index]
+	for index in range(effects_spawner.pixel_particles.size() - 1, -1, -1):
+		var particle_data := effects_spawner.pixel_particles[index]
 		var particle := particle_data["sprite"] as Sprite2D
 		var timer := float(particle_data["timer"]) - delta
 		if particle == null or timer <= 0.0:
 			if particle != null:
 				particle.queue_free()
-			pixel_particles.remove_at(index)
+			effects_spawner.pixel_particles.remove_at(index)
 			continue
 
 		var velocity := particle_data["velocity"] as Vector2
@@ -3543,7 +3540,7 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 	sprite.z_index = OVERWORLD_UI_Z + 2
 	sprite.position = world_position
 	add_child(sprite)
-	damage_numbers.append({
+	effects_spawner.damage_numbers.append({
 		"sprite": sprite,
 		"shadow": shadow,
 		"timer": effects_tuning.damage_number_lifetime,
@@ -3553,14 +3550,14 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 
 
 func _update_damage_numbers(delta: float) -> void:
-	for index in range(damage_numbers.size() - 1, -1, -1):
-		var damage_number := damage_numbers[index]
+	for index in range(effects_spawner.damage_numbers.size() - 1, -1, -1):
+		var damage_number := effects_spawner.damage_numbers[index]
 		var sprite := damage_number["sprite"] as Sprite2D
 		var shadow := damage_number.get("shadow") as Sprite2D
 		if sprite == null:
 			if shadow != null:
 				shadow.queue_free()
-			damage_numbers.remove_at(index)
+			effects_spawner.damage_numbers.remove_at(index)
 			continue
 		var pop_timer := float(damage_number.get("pop_timer", 0.0))
 		if pop_timer > 0.0:
@@ -3572,7 +3569,7 @@ func _update_damage_numbers(delta: float) -> void:
 			sprite.queue_free()
 			if shadow != null:
 				shadow.queue_free()
-			damage_numbers.remove_at(index)
+			effects_spawner.damage_numbers.remove_at(index)
 			continue
 
 		var logical_position := damage_number.get("logical_position", sprite.position) as Vector2
@@ -4115,7 +4112,7 @@ func _build_sprite_images() -> void:
 	occlusion_renderer.original_actor_scales.clear()
 	occlusion_renderer.actor_visual_scales.clear()
 	occlusion_renderer.occluded_actor_textures.clear()
-	actor_occlusion_grace.clear()
+	occlusion_renderer.actor_occlusion_grace.clear()
 	occlusion_renderer.highlighted_actor_textures.clear()
 	occlusion_renderer.white_actor_textures.clear()
 	occlusion_renderer.sprite_images.clear()
@@ -4133,7 +4130,7 @@ func _build_sprite_images() -> void:
 			_cached_effect_image(actor.texture, image),
 			image.get_size()
 		)
-		actor_occlusion_grace[actor] = 0.0
+		occlusion_renderer.actor_occlusion_grace[actor] = 0.0
 		occlusion_renderer.highlighted_actor_textures[actor] = _effect_texture_with_display_size(
 			_cached_highlighted_image(actor.texture, image),
 			image.get_size()
@@ -4700,7 +4697,7 @@ func _update_actor_occlusion(delta: float) -> void:
 			if texture == null:
 				_apply_unoccluded_actor_texture(actor, is_target, delta)
 			else:
-				actor_occlusion_grace[actor] = OCCLUSION_RELEASE_GRACE
+				occlusion_renderer.actor_occlusion_grace[actor] = OCCLUSION_RELEASE_GRACE
 				actor.texture = texture
 				_apply_actor_scale(actor, true)
 				if not active_occluders.has(player):
@@ -4708,8 +4705,8 @@ func _update_actor_occlusion(delta: float) -> void:
 
 
 func _apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float) -> void:
-	var grace := maxf(float(actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
-	actor_occlusion_grace[actor] = grace
+	var grace := maxf(float(occlusion_renderer.actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
+	occlusion_renderer.actor_occlusion_grace[actor] = grace
 	if grace > 0.0 and actor.texture == occlusion_renderer.occluded_actor_textures.get(actor):
 		_apply_actor_scale(actor, true)
 		return

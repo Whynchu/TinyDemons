@@ -526,6 +526,8 @@ dictionary declarations.
   `OcclusionRenderer`.
 - [x] Move actor default/original textures, images, scales, and sprite-image
   caches into `OcclusionRenderer`.
+- [x] Move occlusion grace state into `OcclusionRenderer` and damage-number/
+  pixel-particle collections into `EffectsSpawner`.
 - [ ] Ensure no component reaches into another component's internal fields.
 - [ ] Repeat the complete smoke-test checklist.
 - [ ] Record final metrics and compare them with the baseline.
