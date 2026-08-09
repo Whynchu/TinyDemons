@@ -10,3 +10,7 @@ func set_sprites(new_sprites: Array[Sprite2D]) -> void:
 
 func depth_key(_sprite: Sprite2D, foot_y: float) -> float:
 	return foot_y
+
+
+func z_index_for(sprite: Sprite2D, foot_y: float, scale: float) -> int:
+	return int(round(depth_key(sprite, foot_y) * scale))

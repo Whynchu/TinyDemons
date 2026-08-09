@@ -4646,7 +4646,7 @@ func _add_depth_sprite(sprite: Sprite2D) -> void:
 
 func _update_depth_sorting() -> void:
 	for sprite in depth_sprites:
-		sprite.z_index = int(round(_depth_key(sprite) * DEPTH_Z_SCALE))
+		sprite.z_index = depth_sorter.z_index_for(sprite, _depth_key(sprite), DEPTH_Z_SCALE) if depth_sorter != null else int(round(_depth_key(sprite) * DEPTH_Z_SCALE))
 
 
 func _update_actor_occlusion(delta: float) -> void:
