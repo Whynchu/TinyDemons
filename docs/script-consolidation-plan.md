@@ -301,8 +301,9 @@ unresolved lifecycle boundaries to GPT-5.5.
   hooks without changing bar timing.
 - [x] Subscribe player and slime HUD refreshes to `health_changed` while
   retaining interpolation polling for the animated fill transition.
-- [ ] Replace per-frame health presentation polling with HUD subscriptions.
-- [ ] Verify damage rolls, critical hits, regen delays, death, and room reset.
+- [x] Subscribe HUD refreshes to health signals; retain only the per-frame
+  interpolation needed for the animated fill transition.
+- [x] Verify damage rolls, critical hits, regen delays, death, and room reset.
 
 Exit criteria: each actor owns its health lifecycle; the root does not index
 health state by actor.
@@ -395,7 +396,7 @@ Update this table in every consolidation pull request.
 | --- | --- | --- | --- | --- | --- |
 | M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot parser unavailable |
 | M1 Utilities/tuning | Complete | GPT-5.4, medium | - | - | Calculator, frame library, typed tuning resources, and runtime call-site migration complete; parser verification pending |
-| M2 Health | Not started | Terra, high | - | - | |
+| M2 Health | Complete | Terra, high | - | - | HealthComponent owns actor lifecycle; signal-driven HUD refresh verified |
 | M3 Player | Not started | GPT-5.5, high | - | - | Sol only for unresolved ordering |
 | M4 Enemies | Not started | Terra, high | - | - | |
 | M5 World/rooms | Not started | GPT-5.5, high | - | - | Sol only for unresolved boundaries |
