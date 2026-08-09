@@ -157,6 +157,7 @@ var player_roll_frame := 0
 var player_roll_timer := 0.0
 var player_roll_velocity := Vector2.ZERO
 var player_roll_direction := Vector2.ZERO
+var roll_dust_spawned_this_roll := false
 var player_roll_input_was_down := false
 var roll_dust_frames: Array[Texture2D] = []
 var roll_dust_sprite: Sprite2D = null
@@ -1276,6 +1277,7 @@ func _start_player_roll() -> void:
 		player.flip_h = false
 	player_is_rolling = true
 	player_roll_direction = direction
+	roll_dust_spawned_this_roll = false
 	player_attack_visual.visible = false
 	player_roll_frame = 0
 	player_roll_timer = 0.0
@@ -1292,9 +1294,14 @@ func _update_player_roll(delta: float) -> void:
 	# Movement continues at quarter speed during the penultimate frame hold.
 	if player_roll_frame >= player_roll_frames.size() - 2:
 		step_time *= 0.25
+	var position_before_roll_step := player.global_position
 	_try_move_actor_swept(player, player_roll_velocity * step_time, 0.75)
-	if roll_dust_sprite == null:
-		_start_roll_dust(player_roll_direction)
+	if not roll_dust_spawned_this_roll:
+		var resolved_direction := player.global_position - position_before_roll_step
+		if resolved_direction.length_squared() <= 0.0001:
+			resolved_direction = _perspective_movement(player_roll_direction)
+		_start_roll_dust(resolved_direction.normalized())
+		roll_dust_spawned_this_roll = true
 	player_roll_timer += delta
 	var current_frame_time := PLAYER_ROLL_FRAME_TIME
 	# Hold the penultimate frame for two additional animation frames.
@@ -1327,8 +1334,8 @@ func _start_roll_dust(direction: Vector2) -> void:
 	roll_dust_sprite.z_as_relative = false
 	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
 	roll_dust_sprite.flip_h = direction.x > 0.01
-	var horizontal_trail := -signf(direction.x) if absf(direction.x) > 0.01 else 0.0
-	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) + Vector2(horizontal_trail, -3.0))
+	var trail_offset := -direction * 1.0
+	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) + Vector2(0.0, -3.0) + trail_offset)
 	add_child(roll_dust_sprite)
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
