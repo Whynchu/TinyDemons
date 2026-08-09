@@ -528,6 +528,8 @@ dictionary declarations.
   caches into `OcclusionRenderer`.
 - [x] Move occlusion grace state into `OcclusionRenderer` and damage-number/
   pixel-particle collections into `EffectsSpawner`.
+- [x] Move dungeon socket maps and room state into `RoomController`; move title
+  particle state into `ScreenStateController`.
 - [ ] Ensure no component reaches into another component's internal fields.
 - [ ] Repeat the complete smoke-test checklist.
 - [ ] Record final metrics and compare them with the baseline.
