@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cqglsgesc12h7"]
+[gd_scene format=4 uid="uid://cqglsgesc12h7"]
 
 [ext_resource type="Texture2D" uid="uid://d11oi65batt74" path="res://assets/artwork/BG.png" id="1_bg"]
 [ext_resource type="Texture2D" uid="uid://dn1k7etqwr57i" path="res://assets/artwork/Tile.png" id="2_tile"]
@@ -26,6 +26,61 @@
 [ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
 [ext_resource type="Script" uid="uid://uu0fgifhsaen" path="res://scripts/ui_layout_guide.gd" id="27_ui_layout_guide"]
 [ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="28_isometric_room_layer"]
+[ext_resource type="Texture2D" path="res://assets/artwork/TileFloor.png" id="29_tile_floor"]
+[ext_resource type="Texture2D" path="res://assets/artwork/TileLface.png" id="30_tile_lface"]
+[ext_resource type="Texture2D" path="res://assets/artwork/TileRface.png" id="31_tile_rface"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
+texture = ExtResource("29_tile_floor")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_vxglm"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_2wyq8")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tile_lface"]
+texture = ExtResource("30_tile_lface")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tile_lface"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_tile_lface")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tile_rface"]
+texture = ExtResource("31_tile_rface")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tile_rface"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_tile_rface")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2f3dj"]
+texture = ExtResource("3_wall_left")
+texture_region_size = Vector2i(16, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_yq6so"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_2f3dj")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_fv21b"]
+texture = ExtResource("4_wall_right")
+texture_region_size = Vector2i(16, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tel4y"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_fv21b")
 
 [node name="Main" type="Node2D" unique_id=422795878]
 texture_filter = 1
@@ -39,11 +94,28 @@ centered = false
 
 [node name="FloorTiles" type="Node2D" parent="Map" unique_id=238769299]
 
-[node name="FloorLayer" type="TileMapLayer" parent="Map/FloorTiles"]
-position = Vector2(120, 64)
+[node name="FloorLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=867366707]
 texture_filter = 1
+position = Vector2(120, 64)
+z_index = 1
+tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAUAAAAAAAAAAAACAAUAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAUAAAAAAAAAAAAFAAUAAAAAAAAAAAAGAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAD//wcAAAAAAAAAAAD//wYAAAAAAAAAAAD//wUAAAAAAAAAAAD//wQAAAAAAAAAAAD//wMAAAAAAAAAAAD//wIAAAAAAAAAAAD//wEAAAAAAAAAAAD//wAAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_vxglm")
 script = ExtResource("28_isometric_room_layer")
-tile_texture = ExtResource("2_tile")
+tile_texture = ExtResource("29_tile_floor")
+
+[node name="FloorLFaceLayer" type="TileMapLayer" parent="Map/FloorTiles"]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_set = SubResource("TileSet_tile_lface")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("30_tile_lface")
+
+[node name="FloorRFaceLayer" type="TileMapLayer" parent="Map/FloorTiles"]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_set = SubResource("TileSet_tile_rface")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("31_tile_rface")
 
 [node name="FloorCollisionGuide" type="Polygon2D" parent="Map/FloorTiles" unique_id=1468149751]
 z_index = 2048
@@ -69,17 +141,21 @@ polygon = PackedVector2Array(-3, 6, -1, 6, 11, 12, 7, 12, -3, 7)
 
 [node name="Walls" type="Node2D" parent="Map" unique_id=1369138822]
 
-[node name="WallLeftLayer" type="TileMapLayer" parent="Map/Walls"]
-position = Vector2(64, 72)
+[node name="WallLeftLayer" type="TileMapLayer" parent="Map/Walls" unique_id=242950098]
 texture_filter = 1
+position = Vector2(64, 72)
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAD/////AAAAAAAAAAD///7/AAAAAAAAAAD///z/AAAAAAAAAAD///3/AAAAAAAAAAD///v/AAAAAAAAAAD///r/AAAAAAAAAAD///n/AAAAAAAAAAA=")
+tile_set = SubResource("TileSet_yq6so")
 script = ExtResource("28_isometric_room_layer")
 tile_texture = ExtResource("3_wall_left")
 layout_kind = 1
 layout_height = 1
 
-[node name="WallRightLayer" type="TileMapLayer" parent="Map/Walls"]
-position = Vector2(120, 44)
+[node name="WallRightLayer" type="TileMapLayer" parent="Map/Walls" unique_id=1927772174]
 texture_filter = 1
+position = Vector2(120, 44)
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_tel4y")
 script = ExtResource("28_isometric_room_layer")
 tile_texture = ExtResource("4_wall_right")
 layout_kind = 2
