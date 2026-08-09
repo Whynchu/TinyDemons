@@ -15,6 +15,7 @@ var scoot_target := Vector2.ZERO
 var scoot_timer := 0.0
 var persistent_aggro := false
 var start_position := Vector2.ZERO
+var idle_breath_timer := 0.0
 
 
 func tick(delta: float) -> void:

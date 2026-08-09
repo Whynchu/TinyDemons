@@ -138,8 +138,6 @@ var depth_sprites: Array[Sprite2D] = []
 var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
-var slime_idle_breath_timers: Dictionary = {}
-var actor_stats: Dictionary = {}
 var actor_default_textures: Dictionary = {}
 var actor_default_materials: Dictionary = {}
 var original_actor_textures: Dictionary = {}
@@ -451,7 +449,7 @@ func _ready() -> void:
 		_slime_brain(slime).scoot_target = slime.position
 		_slime_brain(slime).scoot_timer = 0.0
 		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
-		slime_idle_breath_timers[slime] = rng.randf_range(0.0, slime_tuning.idle_breath_time)
+		_slime_brain(slime).idle_breath_timer = rng.randf_range(0.0, slime_tuning.idle_breath_time)
 		_slime_combat(slime).flash_timer = 0.0
 		_slime_combat(slime).hitstun_timer = 0.0
 		_slime_combat(slime).knockback_velocity = Vector2.ZERO
@@ -464,7 +462,6 @@ func _ready() -> void:
 		_slime_combat(slime).cooldown = rng.randf_range(0.2, 0.6)
 		_slime_brain(slime).persistent_aggro = false
 		_slime_combat(slime).dead = false
-		actor_stats[slime] = slime.get_node_or_null("Stats") as StatsComponent
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
 		var health_component := slime.get_node_or_null("Health") as HealthComponent
@@ -1823,7 +1820,7 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 
 
 func _player_attack_damage_against(slime: Sprite2D) -> float:
-	var slime_stats := actor_stats.get(slime) as StatsComponent
+	var slime_stats := _slime_stats(slime)
 	return _combat_damage(player_stats, slime_stats)
 
 
@@ -1853,7 +1850,7 @@ func _player_max_health() -> float:
 
 
 func _enemy_max_health(slime: Sprite2D) -> float:
-	return _max_health_for_stats(actor_stats.get(slime) as StatsComponent)
+	return _max_health_for_stats(_slime_stats(slime))
 
 
 func _enemy_level_for_room() -> int:
@@ -1861,7 +1858,7 @@ func _enemy_level_for_room() -> int:
 
 
 func _apply_enemy_room_level(slime: Sprite2D) -> void:
-	var stats := actor_stats.get(slime) as StatsComponent
+	var stats := _slime_stats(slime)
 	if stats == null:
 		return
 	stats.level = _enemy_level_for_room()
@@ -3051,6 +3048,10 @@ func _slime_combat(slime: Sprite2D) -> SlimeCombatComponent:
 	return combat
 
 
+func _slime_stats(slime: Sprite2D) -> StatsComponent:
+	return slime.get_node_or_null("Stats") as StatsComponent
+
+
 func _move_slimes(delta: float) -> void:
 	for slime in slimes:
 		var brain := slime_brains.get(slime) as SlimeBrain
@@ -3277,7 +3278,7 @@ func _slime_attack_rect(slime: Sprite2D) -> Rect2:
 
 
 func _slime_attack_damage(slime: Sprite2D) -> float:
-	var slime_stats := actor_stats.get(slime) as StatsComponent
+	var slime_stats := _slime_stats(slime)
 	return _combat_damage(slime_stats, player_stats)
 
 
@@ -3729,7 +3730,7 @@ func _start_slime_hold(slime: Sprite2D) -> void:
 	if not _is_slime_aggroed(slime) and rng.randf() < slime_tuning.chill_chance:
 		hold_time = rng.randf_range(slime_tuning.chill_min, slime_tuning.chill_max)
 	_slime_brain(slime).hold_timer = hold_time
-	slime_idle_breath_timers[slime] = 0.0
+	_slime_brain(slime).idle_breath_timer = 0.0
 
 
 func _scoot_ease(progress: float) -> float:
@@ -3747,8 +3748,8 @@ func _set_slime_squish(slime: Sprite2D, progress: float, movement: Vector2) -> v
 
 
 func _set_slime_idle_breath(slime: Sprite2D, delta: float) -> void:
-	var timer := float(slime_idle_breath_timers.get(slime, 0.0)) + delta
-	slime_idle_breath_timers[slime] = fmod(timer, slime_tuning.idle_breath_time)
+	var timer := float(_slime_brain(slime).idle_breath_timer) + delta
+	_slime_brain(slime).idle_breath_timer = fmod(timer, slime_tuning.idle_breath_time)
 	var pulse := (sin((timer / slime_tuning.idle_breath_time) * TAU - PI * 0.5) + 1.0) * 0.5
 	var stretch_x := 1.0 + pulse * 0.05
 	var stretch_y := 1.0 - pulse * 0.04
