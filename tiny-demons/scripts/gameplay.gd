@@ -1735,7 +1735,6 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	else:
 		previous_health = maxf(previous_health - amount, 0.0)
 	target_display_health[slime] = maxf(float(target_display_health.get(slime, previous_health)), previous_health)
-	target_damage_fill_hold_timers[slime] = slime_tuning.health_damage_hang_time
 	if health_component != null:
 		health_component.regen_delay_timer = slime_tuning.regen_delay
 		health_component.regen_accumulator = 0.0
@@ -3137,7 +3136,6 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 		player_health = player_health_component.current_health
 	else:
 		player_health = maxf(player_health - damage, 0.0)
-	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 	if player_is_attacking:
 		_interrupt_player_attack()
 	player_hit_flash_timer = player_tuning.hit_flash_time
@@ -3177,7 +3175,8 @@ func _on_player_health_damaged(_amount: float) -> void:
 
 
 func _on_player_health_healed(_amount: float) -> void:
-	player_display_health = minf(player_display_health, player_health)
+	var current := player_health_component.current_health if player_health_component != null else player_health
+	player_display_health = minf(player_display_health, current)
 
 
 func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void:
