@@ -293,10 +293,10 @@ unresolved lifecycle boundaries to GPT-5.5.
 - [x] Define reusable `HealthComponent` lifecycle API (damage, healing, regen,
   reset, and death signals).
 - [ ] Add `HealthComponent` to the player and each slime.
-- [ ] Move health, maximum health, regen, and death state into the component.
+- [x] Move health, maximum health, regen, and death state into the component.
 - [ ] Connect health UI and effects using signals.
-- [ ] Remove actor health, display-health, regen, and death dictionaries from
-  `gameplay.gd`.
+- [x] Remove actor health and regen dictionaries from `gameplay.gd`; retain
+  display-health interpolation state until the HUD signal slice.
 - [ ] Verify damage rolls, critical hits, regen delays, death, and room reset.
 
 Exit criteria: each actor owns its health lifecycle; the root does not index
