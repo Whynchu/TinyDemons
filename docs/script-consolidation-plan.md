@@ -398,6 +398,8 @@ Run the relevant subset for every milestone and the full list for M7.
 - [ ] Roll timing, distance, collision, direction, and dust match baseline.
 - [ ] Slimes wander, aggro, attack, receive knockback, regenerate, and die.
 - [ ] Health bars, delayed damage fills, targeting, and floating numbers update.
+- [ ] Every health bar shows a bright trailing loss on damage and a bright
+  leading gain on healing while the darker main fill catches up.
 - [ ] Chest unlocking/reward, NPC dialogue, and rest-room behavior work.
 - [ ] All dungeon sockets transition correctly and revisited rooms retain state.
 - [ ] Title, archetype selection, loading, death, restart, and return-to-title work.

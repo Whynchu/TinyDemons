@@ -77,7 +77,7 @@ const PLAYER_REGEN_DELAY := 2.0
 const PLAYER_REGEN_INTERVAL := 1.0
 const PLAYER_REGEN_AMOUNT := 1.0
 const ENEMY_HEALTH_DRAIN_FILL_SPEED := 18.0
-const ENEMY_HEALTH_REGEN_FILL_SPEED := 10.0
+const ENEMY_HEALTH_REGEN_FILL_SPEED := 6.0
 const ENEMY_HEALTH_DAMAGE_HANG_TIME := 0.14
 const PLAYER_HEALTH_DAMAGE_HANG_TIME := ENEMY_HEALTH_DAMAGE_HANG_TIME
 const DAMAGE_NUMBER_LIFETIME := 0.65
@@ -1290,7 +1290,8 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 				pixel_position -= Vector2(image.get_width(), image.get_height()) * pixel_size * 0.5
 			pixel_position += Vector2(x, y) * pixel_size
 			var noise_value := noise.get_noise_2d(float(x), float(y))
-			var direction := Vector2(noise_value, -1.0).normalized()
+			# Title breakup particles rise vertically like chest and death fizzle
+			# particles; noise changes only their individual upward speed.
 			var speed := 8.0 + (noise_value + 1.0) * 14.0
 			var particle := Sprite2D.new()
 			particle.texture = _pixel_particle_texture(color)
@@ -1303,7 +1304,7 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 			title_particle_layer.add_child(particle)
 			title_particles.append({
 				"sprite": particle,
-				"velocity": direction * speed,
+				"velocity": Vector2(0.0, -speed),
 				"timer": 1.14,
 				"lifetime": 1.14,
 				"gravity": 0.0,
@@ -1338,7 +1339,7 @@ func _spawn_title_frame_particle(frame_position: Vector2) -> void:
 	var noise_value := rng.randf_range(-1.0, 1.0)
 	title_particles.append({
 		"sprite": particle,
-		"velocity": Vector2(noise_value * 14.0, -10.0 - absf(noise_value) * 10.0),
+		"velocity": Vector2(0.0, -10.0 - absf(noise_value) * 10.0),
 		"timer": 1.14,
 		"lifetime": 1.14,
 		"gravity": 0.0,
@@ -3219,9 +3220,14 @@ func _update_player_health_regen(delta: float) -> void:
 		return
 
 	player_regen_accumulator += delta
+	var health_before_regen := player_health
 	while player_regen_accumulator >= PLAYER_REGEN_INTERVAL and player_health < max_health:
 		player_health = minf(player_health + PLAYER_REGEN_AMOUNT, max_health)
 		player_regen_accumulator -= PLAYER_REGEN_INTERVAL
+	if player_health > health_before_regen:
+		# Healing reverses the damage-bar presentation: show the newly healed
+		# amount in the bright transition layer, then let the dark fill catch up.
+		player_display_health = minf(player_display_health, health_before_regen)
 	_update_player_health_ui()
 
 
@@ -3278,6 +3284,7 @@ func _update_enemy_health(delta: float) -> void:
 		var regen_delay := maxf(float(target_regen_delay_timers.get(slime, 0.0)) - delta, 0.0)
 		target_regen_delay_timers[slime] = regen_delay
 
+		var health_before_regen := health
 		if health < max_health and regen_delay <= 0.0:
 			var regen_accumulator := float(target_regen_accumulators.get(slime, 0.0)) + delta
 			while regen_accumulator >= ENEMY_REGEN_INTERVAL and health < max_health:
@@ -3289,6 +3296,8 @@ func _update_enemy_health(delta: float) -> void:
 			target_regen_accumulators[slime] = 0.0
 
 		var display_health := float(target_display_health.get(slime, max_health))
+		if health > health_before_regen:
+			display_health = minf(display_health, health_before_regen)
 		if not is_equal_approx(display_health, health):
 			var display_goal := health
 			var fill_speed := ENEMY_HEALTH_REGEN_FILL_SPEED
@@ -4795,9 +4804,14 @@ func _update_target_ui() -> void:
 	var health := float(target_health.get(current_target, max_health))
 	var display_health := float(target_display_health.get(current_target, max_health))
 	target_health_text.texture = _pixel_number_texture("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
-	_set_fill_ratio(target_health_fill, target_health_bar_size, health / max_health)
-	if target_health_damage_fill != null:
-		_set_fill_ratio(target_health_damage_fill, target_health_bar_size, display_health / max_health)
+	_set_health_bar_values(
+		target_health_fill,
+		target_health_damage_fill,
+		target_health_bar_size,
+		health,
+		display_health,
+		max_health
+	)
 
 
 func _set_target_ui_visible(target_visible: bool) -> void:
@@ -4820,19 +4834,46 @@ func _slime_display_name(slime: Sprite2D) -> String:
 
 func _update_player_health_ui(delta: float = 0.0) -> void:
 	var max_health := _player_max_health()
-	if player_display_health <= 0.0:
-		player_display_health = player_health
 	if player_health > player_display_health:
 		player_display_health = move_toward(player_display_health, player_health, ENEMY_HEALTH_REGEN_FILL_SPEED * delta)
 	if player_damage_fill_hold_timer > 0.0:
 		player_damage_fill_hold_timer = maxf(player_damage_fill_hold_timer - delta, 0.0)
 	elif player_display_health > player_health:
 		player_display_health = move_toward(player_display_health, player_health, ENEMY_HEALTH_DRAIN_FILL_SPEED * delta)
-	_set_fill_ratio(player_health_fill, player_health_fill_size, clampf(player_health / max_health, 0.0, 1.0))
-	if player_health_damage_fill != null:
-		_set_fill_ratio(player_health_damage_fill, player_health_fill_size, clampf(player_display_health / max_health, 0.0, 1.0))
+	_set_health_bar_values(
+		player_health_fill,
+		player_health_damage_fill,
+		player_health_fill_size,
+		player_health,
+		player_display_health,
+		max_health
+	)
 	if player_health_text != null:
 		player_health_text.texture = _pixel_number_texture("%d/%d" % [ceili(player_health), ceili(max_health)], Color.WHITE)
+
+
+func _set_health_bar_values(
+	main_fill: Sprite2D,
+	transition_fill: Sprite2D,
+	fill_size: Vector2,
+	health: float,
+	display_health: float,
+	max_health: float
+) -> void:
+	if main_fill == null or max_health <= 0.0:
+		return
+	var health_ratio := clampf(health / max_health, 0.0, 1.0)
+	var display_ratio := clampf(display_health / max_health, 0.0, 1.0)
+	var main_ratio := health_ratio
+	var transition_ratio := display_ratio
+	if display_health < health:
+		# During healing, the brighter transition layer reaches the new health
+		# immediately while the darker main layer fills over it.
+		main_ratio = display_ratio
+		transition_ratio = health_ratio
+	_set_fill_ratio(main_fill, fill_size, main_ratio)
+	if transition_fill != null:
+		_set_fill_ratio(transition_fill, fill_size, transition_ratio)
 
 
 func _set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
@@ -4905,8 +4946,7 @@ func _update_overworld_ui() -> void:
 		aggro_marker.z_index = OVERWORLD_UI_Z + 3
 		var display_health := float(target_display_health.get(slime, max_health))
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
-		_set_fill_ratio(damage_fill, fill_size, display_health / max_health)
-		_set_fill_ratio(fill, fill_size, health / max_health)
+		_set_health_bar_values(fill, damage_fill, fill_size, health, display_health, max_health)
 
 
 func _depth_key(sprite: Sprite2D) -> float:
