@@ -34,12 +34,9 @@ func _ready() -> void:
 func _draw() -> void:
 	if not show_guides:
 		return
-	_draw_region(title_rect, Color(0.4, 0.7, 1.0, 0.18), "TITLE / ARCHETYPE")
-	_draw_region(game_over_rect, Color(1.0, 0.35, 0.35, 0.18), "GAME OVER")
 	_draw_top_hud_preview()
 	_draw_target_hud_preview()
 	_draw_action_buttons_preview()
-	_draw_region(Rect2(0, 0, 240, 160), Color(0.8, 0.8, 0.8, 0.12), "GAME VIEW 240 x 160")
 
 func _draw_region(rect: Rect2, color: Color, label: String) -> void:
 	draw_rect(rect, color, false, 1.0)
@@ -47,8 +44,7 @@ func _draw_region(rect: Rect2, color: Color, label: String) -> void:
 
 
 func _draw_top_hud_preview() -> void:
-	# These are editor-only stand-ins for the code-generated HUD sprites.
-	_draw_bar(Rect2(14, 4, 42, 5), Color("#5a2732"), Color("#d84f5b"), 0.78)
+	# The HP bar itself is a scene Sprite2D. Only its code-generated value is previewed here.
 	_draw_pixel_text(Vector2(27, 5), "12/15", Color.WHITE, 1)
 	_draw_pixel_text(Vector2(64, 5), "0", Color("#ffcd75"), 1)
 	var coin := load("res://assets/artwork/GoldFresh2.png") as Texture2D
@@ -58,8 +54,7 @@ func _draw_top_hud_preview() -> void:
 
 
 func _draw_target_hud_preview() -> void:
-	_draw_bar(Rect2(72, 140, 96, 6), Color("#25202b"), Color("#4ab36b"), 0.62)
-	_draw_pixel_text(Vector2(103, 141), "BLUE SLIME", Color.WHITE, 1)
+	# The name and bar frame/fill are scene Sprite2Ds. Only the runtime health value is previewed.
 	_draw_pixel_text(Vector2(109, 148), "8/13", Color.WHITE, 1)
 
 
@@ -74,12 +69,6 @@ func _draw_action_buttons_preview() -> void:
 		var texture := load("res://assets/artwork/" + data[0]) as Texture2D
 		if texture != null:
 			draw_texture(texture, data[1])
-
-
-func _draw_bar(rect: Rect2, background: Color, fill: Color, ratio: float) -> void:
-	draw_rect(rect, background)
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x * ratio, rect.size.y)), fill)
-	draw_rect(rect, Color.WHITE, false, 1.0)
 
 
 func _draw_pixel_text(position: Vector2, value: String, color: Color, scale: int) -> void:
