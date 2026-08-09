@@ -324,6 +324,8 @@ are fixed. Reserve Sol for an unresolved ordering problem.
 - [x] Introduce `PlayerAttackComponent` for attack lifecycle and hit-target
   registration and combo-buffer state; animation timing remains in the
   coordinator.
+- [x] Move attack-lunge timer and velocity state behind the attack component;
+  swept collision remains in the coordinator.
 - [x] Introduce `PlayerAnimationComponent` as the animation state boundary;
   frame construction and palette application remain in the coordinator.
 - [ ] Verify dialogue locks, hit-stop, combo timing, collision, and death.

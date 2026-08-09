@@ -9,6 +9,8 @@ var variant := 1
 var hit_targets: Array[Sprite2D] = []
 var combo_buffered := false
 var combo_timer := 0.0
+var lunge_velocity := Vector2.ZERO
+var lunge_remaining := 0.0
 
 
 func begin(new_variant: int) -> void:
@@ -55,3 +57,19 @@ func consume_combo() -> bool:
 	combo_buffered = false
 	combo_timer = 0.0
 	return true
+
+
+func start_lunge(velocity: Vector2, duration: float) -> void:
+	lunge_velocity = velocity
+	lunge_remaining = maxf(duration, 0.0)
+
+
+func consume_lunge(delta: float) -> Vector2:
+	if lunge_remaining <= 0.0:
+		return Vector2.ZERO
+	var step := minf(delta, lunge_remaining)
+	lunge_remaining = maxf(lunge_remaining - delta, 0.0)
+	var motion := lunge_velocity * step
+	if lunge_remaining <= 0.0:
+		lunge_velocity = Vector2.ZERO
+	return motion

@@ -1579,6 +1579,8 @@ func _start_player_attack(variant: int = 1) -> void:
 	player_attack_flip_h = player.flip_h
 	player_attack_lunge_timer = player_tuning.attack_lunge_duration
 	player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (player_tuning.attack_lunge_distance / player_tuning.attack_lunge_duration))
+	if player_attack_component != null:
+		player_attack_component.start_lunge(player_attack_lunge_velocity, player_attack_lunge_timer)
 	player_anim_name = "attack2" if variant == 2 else "attack1"
 	if variant == 2:
 		player_between_timer = 0.0
@@ -1613,9 +1615,9 @@ func _update_player_attack_lunge(delta: float) -> void:
 	if player_attack_lunge_timer <= 0.0:
 		return
 
-	var step_time := minf(delta, player_attack_lunge_timer)
+	var motion: Vector2 = player_attack_component.consume_lunge(delta) if player_attack_component != null else player_attack_lunge_velocity * minf(delta, player_attack_lunge_timer)
 	player_attack_lunge_timer = maxf(player_attack_lunge_timer - delta, 0.0)
-	_try_move_player_attack_lunge(player_attack_lunge_velocity * step_time)
+	_try_move_player_attack_lunge(motion)
 
 
 func _try_move_player_attack_lunge(movement: Vector2) -> void:
