@@ -272,6 +272,9 @@ var player_base_attack_frames: Array[Texture2D] = []
 var player_base_attack2_frames: Array[Texture2D] = []
 var player_base_attack_left_frames: Array[Texture2D] = []
 var player_base_attack2_left_frames: Array[Texture2D] = []
+var player_base_between_attack_texture: Texture2D = null
+var player_base_after_attack2_texture: Texture2D = null
+var player_base_health_fill_texture: Texture2D = null
 var scene_transition_overlay: ColorRect = null
 var scene_transition_timer := 0.0
 var scene_transition_active := false
@@ -3329,6 +3332,7 @@ func _build_enemy_health_ui() -> void:
 	player_health_damage_fill.z_as_relative = true
 	player_health_fill.z_as_relative = true
 	player_health_damage_fill.get_parent().move_child(player_health_damage_fill, player_health_fill.get_index())
+	player_base_health_fill_texture = player_health_fill.texture
 
 	var green_offset := hp_overhead.global_position - slime_green.global_position
 	_register_overhead_bar(slime_green, hp_overhead, hp_overhead_fill, green_offset)
@@ -3423,8 +3427,9 @@ func _duplicate_fill_sprite(source: Sprite2D, sprite_name: String) -> Sprite2D:
 func _brighter_bar_texture(source: Texture2D) -> Texture2D:
 	if source == null:
 		return null
-	if texture_image_cache.has("%s:bright_bar" % source.resource_path):
-		return texture_image_cache["%s:bright_bar" % source.resource_path]
+	var cache_key := source.resource_path if not source.resource_path.is_empty() else str(source.get_instance_id())
+	if texture_image_cache.has("%s:bright_bar" % cache_key):
+		return texture_image_cache["%s:bright_bar" % cache_key]
 
 	var image := source.get_image()
 	if image == null:
@@ -3444,7 +3449,7 @@ func _brighter_bar_texture(source: Texture2D) -> Texture2D:
 			image.set_pixel(x, y, Color(bright_color.r, bright_color.g, bright_color.b, color.a))
 
 	var texture := ImageTexture.create_from_image(image)
-	texture_image_cache["%s:bright_bar" % source.resource_path] = texture
+	texture_image_cache["%s:bright_bar" % cache_key] = texture
 	return texture
 
 
@@ -3482,6 +3487,8 @@ func _build_player_animation_frames() -> void:
 	player_base_attack2_frames = player_attack2_frames.duplicate()
 	player_base_attack_left_frames = player_attack_left_frames.duplicate()
 	player_base_attack2_left_frames = player_attack2_left_frames.duplicate()
+	player_base_between_attack_texture = player_between_attack_texture
+	player_base_after_attack2_texture = player_after_attack2_texture
 	_apply_player_palette("blue")
 	_warm_player_frame_caches()
 	if not player_idle_frames.is_empty():
@@ -3542,8 +3549,12 @@ func _apply_player_palette(palette_name: String) -> void:
 	player_attack2_frames = _recolor_player_frames(player_base_attack2_frames, palette_name)
 	player_attack_left_frames = _recolor_player_frames(player_base_attack_left_frames, palette_name)
 	player_attack2_left_frames = _recolor_player_frames(player_base_attack2_left_frames, palette_name)
-	player_between_attack_texture = _recolor_player_texture(player_between_attack_texture, palette_name)
-	player_after_attack2_texture = _recolor_player_texture(player_after_attack2_texture, palette_name)
+	player_between_attack_texture = _recolor_player_texture(player_base_between_attack_texture, palette_name)
+	player_after_attack2_texture = _recolor_player_texture(player_base_after_attack2_texture, palette_name)
+	if player_base_health_fill_texture != null:
+		player_health_fill.texture = _recolor_player_texture(player_base_health_fill_texture, palette_name)
+		if player_health_damage_fill != null:
+			player_health_damage_fill.texture = _brighter_bar_texture(player_health_fill.texture)
 	_warm_player_frame_caches()
 
 
@@ -3558,16 +3569,17 @@ func _recolor_player_texture(source: Texture2D, palette_name: String) -> Texture
 	if source == null:
 		return null
 	var palette := {
-		"blue": [Color8(59, 93, 201), Color8(65, 166, 246), Color8(115, 239, 247)],
-		"orange": [Color8(239, 125, 87), Color8(255, 205, 117), Color8(255, 205, 117)],
-		"green": [Color8(56, 183, 100), Color8(167, 240, 112), Color8(167, 240, 112)],
-		"red": [Color8(177, 62, 83), Color8(239, 125, 87), Color8(255, 205, 117)],
-		"yellow": [Color8(255, 205, 117), Color8(255, 240, 150), Color8(244, 244, 244)],
-		"grey": [Color8(86, 108, 134), Color8(148, 176, 194), Color8(244, 244, 244)],
+		# Player art is a duotone: shadow tone, body tone, then unchanged white.
+		"blue": [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)],
+		"orange": [Color8(171, 82, 54), Color8(239, 125, 87), Color8(244, 244, 244)],
+		"green": [Color8(37, 113, 121), Color8(56, 183, 100), Color8(244, 244, 244)],
+		"red": [Color8(93, 39, 93), Color8(177, 62, 83), Color8(244, 244, 244)],
+		"yellow": [Color8(181, 97, 55), Color8(255, 205, 117), Color8(244, 244, 244)],
+		"grey": [Color8(59, 63, 82), Color8(86, 108, 134), Color8(244, 244, 244)],
 	}
 	var target: Array = palette.get(palette_name, palette["blue"])
 	var image: Image = source.get_image().duplicate()
-	var source_colors: Array[Color] = [Color8(59, 93, 201), Color8(65, 166, 246), Color8(115, 239, 247)]
+	var source_colors: Array[Color] = [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)]
 	for y in image.get_height():
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)
