@@ -477,6 +477,15 @@ event-order problems.
   preserving existing overlays and timing.
 - [ ] Isolate occlusion/image-cache updates and measure their update frequency.
 
+#### M6 verification checkpoint
+
+Run one complete pass covering chest unlock/reward, NPC dialogue and button
+rendering, rest-fire healing, interaction availability, target HUD updates,
+damage numbers, particles, title/archetype/loading/game-over transitions, and
+occlusion cache behavior. The new controllers are wired and behavior-preserving;
+the remaining coordinator implementation is intentionally retained until this
+pass confirms event ordering.
+
 Exit criteria: game rules emit events; UI and effects render those events without
 owning gameplay outcomes.
 
@@ -508,7 +517,7 @@ Update this table in every consolidation pull request.
 | M3 Player | Complete | GPT-5.5, high | - | - | Motor, controller, roll, attack, combo, lunge, and animation boundaries established |
 | M4 Enemies | Complete | Terra, high | - | - | Component state migration, live variant metadata, and smoke verification complete |
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
-| M6 Interactions/presentation | Not started | GPT-5.4, medium | - | - | Terra handles occlusion integration |
+| M6 Interactions/presentation | In progress | GPT-5.4, medium | - | - | Controller boundaries wired; final end-to-end verification checkpoint ready |
 | M7 Cleanup | Not started | Terra, medium | - | - | GPT-5.5 performs final architecture review |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
