@@ -44,6 +44,8 @@ const PLAYER_ATTACK_HIT_FRAME := 2
 const PLAYER_ROLL_FRAME_TIME := 0.05
 const PLAYER_ROLL_DISTANCE := 30.0
 const PLAYER_ROLL_DURATION := 0.30
+const ROLL_DUST_FRAME_SIZE := Vector2i(16, 16)
+const ROLL_DUST_FRAME_TIME := 0.05
 const PLAYER_DEATH_PARTICLE_LIFETIME := 1.8
 const PLAYER_DEATH_FADE_TIME := 0.7
 const PLAYER_DEATH_PARTICLE_DELAY := 0.7
@@ -155,6 +157,10 @@ var player_roll_frame := 0
 var player_roll_timer := 0.0
 var player_roll_velocity := Vector2.ZERO
 var player_roll_input_was_down := false
+var roll_dust_frames: Array[Texture2D] = []
+var roll_dust_sprite: Sprite2D = null
+var roll_dust_frame := 0
+var roll_dust_timer := 0.0
 var player_attack_input_was_down := false
 var player_attack_hit_done := false
 var player_attack_hit_targets: Array[Sprite2D] = []
@@ -490,6 +496,7 @@ func _physics_process(delta: float) -> void:
 	_update_player_roll_input()
 	_update_player_attack_lunge(delta)
 	_update_player_roll(delta)
+	_update_roll_dust(delta)
 	_update_player_hit_reaction(delta)
 	_move_player(delta)
 	_update_player_animation(delta)
@@ -540,6 +547,7 @@ func _start_player_death() -> void:
 	player_death_particles_started = false
 	player_is_attacking = false
 	player_is_rolling = false
+	_clear_roll_dust()
 	player_attack_visual.visible = false
 	player_death_origin = player.global_position
 	player_death_offset = player.offset
@@ -1266,6 +1274,7 @@ func _start_player_roll() -> void:
 	elif direction.x > 0.0:
 		player.flip_h = false
 	player_is_rolling = true
+	_start_roll_dust(direction)
 	player_attack_visual.visible = false
 	player_roll_frame = 0
 	player_roll_timer = 0.0
@@ -1300,6 +1309,45 @@ func _update_player_roll(delta: float) -> void:
 			_apply_player_animation_frame()
 			return
 		_apply_player_animation_frame()
+
+
+func _start_roll_dust(direction: Vector2) -> void:
+	_clear_roll_dust()
+	if roll_dust_frames.is_empty():
+		return
+	roll_dust_sprite = Sprite2D.new()
+	roll_dust_sprite.name = "RollDust"
+	roll_dust_sprite.texture = roll_dust_frames[0]
+	roll_dust_sprite.centered = false
+	roll_dust_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	roll_dust_sprite.z_as_relative = false
+	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
+	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) - Vector2(8, 8) - direction * 3.0)
+	add_child(roll_dust_sprite)
+	roll_dust_frame = 0
+	roll_dust_timer = 0.0
+
+
+func _update_roll_dust(delta: float) -> void:
+	if roll_dust_sprite == null:
+		return
+	roll_dust_timer += delta
+	if roll_dust_timer < ROLL_DUST_FRAME_TIME:
+		return
+	roll_dust_timer = fmod(roll_dust_timer, ROLL_DUST_FRAME_TIME)
+	roll_dust_frame += 1
+	if roll_dust_frame >= roll_dust_frames.size():
+		_clear_roll_dust()
+		return
+	roll_dust_sprite.texture = roll_dust_frames[roll_dust_frame]
+
+
+func _clear_roll_dust() -> void:
+	if roll_dust_sprite != null:
+		roll_dust_sprite.queue_free()
+		roll_dust_sprite = null
+	roll_dust_frame = 0
+	roll_dust_timer = 0.0
 
 
 func _start_player_attack(variant: int = 1) -> void:
@@ -3487,6 +3535,11 @@ func _build_player_animation_frames() -> void:
 	player_idle_frames = _slice_frames("res://assets/artwork/TinyDemon-idle.png", PLAYER_FRAME_SIZE)
 	player_walk_frames = _slice_frames("res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME_SIZE)
 	player_roll_frames = _slice_frames("res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME_SIZE)
+	roll_dust_frames.clear()
+	var raw_roll_dust_frames := _slice_frames("res://assets/artwork/rolldust.png", ROLL_DUST_FRAME_SIZE)
+	for frame_index in raw_roll_dust_frames.size():
+		var dissolve := float(frame_index) / float(maxi(raw_roll_dust_frames.size(), 1))
+		roll_dust_frames.append(_dither_roll_dust_frame(raw_roll_dust_frames[frame_index], dissolve))
 	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
 	# attempt to load attack2 and between-attack frame (optional)
 	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
@@ -3532,12 +3585,29 @@ func _slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
 	return frames
 
 
+func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
+	var image := _cached_texture_image(source).duplicate()
+	var bayer := PackedInt32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5])
+	for y in image.get_height():
+		for x in image.get_width():
+			var color := image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			var threshold := (float(bayer[(y % 4) * 4 + x % 4]) + 1.0) / 16.0
+			if threshold <= dissolve:
+				color.a = 0.0
+				image.set_pixel(x, y, color)
+	return ImageTexture.create_from_image(image)
+
+
 func _warm_player_frame_caches() -> void:
 	for texture in player_idle_frames:
 		_warm_texture_cache(texture)
 	for texture in player_walk_frames:
 		_warm_texture_cache(texture)
 	for texture in player_roll_frames:
+		_warm_texture_cache(texture)
+	for texture in roll_dust_frames:
 		_warm_texture_cache(texture)
 	for texture in player_attack_frames:
 		_warm_texture_cache(texture)
