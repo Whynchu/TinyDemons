@@ -71,7 +71,7 @@ func apply_healing(amount: float) -> float:
 
 func tick_regeneration(delta: float) -> float:
 	if _dead or regen_amount <= 0.0 or current_health >= maximum_health:
-	regen_accumulator = 0.0
+		regen_accumulator = 0.0
 		return 0.0
 	regen_delay_timer = maxf(regen_delay_timer - delta, 0.0)
 	if regen_delay_timer > 0.0:

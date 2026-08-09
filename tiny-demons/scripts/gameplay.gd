@@ -3287,14 +3287,14 @@ func _update_enemy_health(delta: float) -> void:
 			continue
 		var max_health := _enemy_max_health(slime)
 		var health_component := slime_health_components.get(slime) as HealthComponent
-		var health := health_component.current_health if health_component != null else max_health
-		var regen_delay := maxf(health_component.regen_delay_timer - delta, 0.0) if health_component != null else 0.0
+		var health: float = health_component.current_health if health_component != null else max_health
+		var regen_delay: float = maxf(health_component.regen_delay_timer - delta, 0.0) if health_component != null else 0.0
 		if health_component != null:
 			health_component.regen_delay_timer = regen_delay
 
 		var health_before_regen := health
 		if health < max_health and regen_delay <= 0.0:
-			var regen_accumulator := (health_component.regen_accumulator if health_component != null else 0.0) + delta
+			var regen_accumulator: float = (health_component.regen_accumulator if health_component != null else 0.0) + delta
 			while regen_accumulator >= slime_tuning.regen_interval and health < max_health:
 				if health_component != null:
 					health_component.apply_healing(slime_tuning.regen_amount)
