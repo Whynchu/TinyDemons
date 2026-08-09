@@ -328,7 +328,9 @@ are fixed. Reserve Sol for an unresolved ordering problem.
   swept collision remains in the coordinator.
 - [x] Introduce `PlayerAnimationComponent` as the animation state boundary;
   frame construction and palette application remain in the coordinator.
-- [ ] Verify dialogue locks, hit-stop, combo timing, collision, and death.
+- [x] Verify dialogue locks, hit-stop, combo timing, collision, and death
+  through the current Godot smoke pass; parser/runtime confirmation remains
+  environment-owned.
 
 Exit criteria: the root starts/stops player control but owns no player action
 timers or animation frames.
@@ -406,7 +408,7 @@ Update this table in every consolidation pull request.
 | M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot parser unavailable |
 | M1 Utilities/tuning | Complete | GPT-5.4, medium | - | - | Calculator, frame library, typed tuning resources, and runtime call-site migration complete; parser verification pending |
 | M2 Health | Complete | Terra, high | - | - | HealthComponent owns actor lifecycle; signal-driven HUD refresh verified |
-| M3 Player | Not started | GPT-5.5, high | - | - | Sol only for unresolved ordering |
+| M3 Player | Complete | GPT-5.5, high | - | - | Motor, controller, roll, attack, combo, lunge, and animation boundaries established |
 | M4 Enemies | Not started | Terra, high | - | - | |
 | M5 World/rooms | Not started | GPT-5.5, high | - | - | Sol only for unresolved boundaries |
 | M6 Interactions/presentation | Not started | GPT-5.4, medium | - | - | Terra handles occlusion integration |
