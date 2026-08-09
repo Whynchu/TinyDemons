@@ -24,6 +24,7 @@
 [ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
 [ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
 [ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
+[ext_resource type="Script" uid="uid://uu0fgifhsaen" path="res://scripts/ui_layout_guide.gd" id="27_ui_layout_guide"]
 
 [node name="Main" type="Node2D" unique_id=422795878]
 texture_filter = 1
@@ -695,3 +696,6 @@ z_index = 1
 position = Vector2(14, 0)
 texture = ExtResource("21_hp_bar_blue")
 centered = false
+
+[node name="EditorLayoutGuide" type="Node2D" parent="UI" unique_id=696458322]
+script = ExtResource("27_ui_layout_guide")
