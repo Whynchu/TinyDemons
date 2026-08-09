@@ -395,6 +395,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
   resolution remains authoritative pending parity migration.
 - [x] Delegate actor-contact candidate filtering to `ActorCollisionSystem`,
   retaining exact gameplay contact rules and static collision fallback.
+- [x] Verify broad-phase coverage for slimes and the cloaked demon after actor
+  set synchronization and contact-radius correction.
 - [ ] Extract depth ordering and shadows.
 - [x] Define and attach `DepthSorter` ownership boundary; current ordering
   logic remains in the coordinator pending parity migration.
