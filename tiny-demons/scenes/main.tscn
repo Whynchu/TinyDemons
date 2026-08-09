@@ -25,6 +25,7 @@
 [ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
 [ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
 [ext_resource type="Script" uid="uid://uu0fgifhsaen" path="res://scripts/ui_layout_guide.gd" id="27_ui_layout_guide"]
+[ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="28_isometric_room_layer"]
 
 [node name="Main" type="Node2D" unique_id=422795878]
 texture_filter = 1
@@ -38,331 +39,17 @@ centered = false
 
 [node name="FloorTiles" type="Node2D" parent="Map" unique_id=238769299]
 
+[node name="FloorLayer" type="TileMapLayer" parent="Map/FloorTiles"]
+position = Vector2(120, 64)
+texture_filter = 1
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("2_tile")
+
 [node name="FloorCollisionGuide" type="Polygon2D" parent="Map/FloorTiles" unique_id=1468149751]
 z_index = 2048
 position = Vector2(105, 95)
 color = Color(0.1, 1, 0.35, 0.28)
 polygon = PackedVector2Array(-49, -6, -49, -7, 13, -38, 17, -38, 79, -7, 79, -6, 17, 25, 13, 25, -25, 6, -31, 9, -35, 9, -45, 4, -45, 3, -37, 0, -37, -1)
-
-[node name="Tile_0_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=913323991]
-position = Vector2(112, 56)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=324414665]
-position = Vector2(120, 60)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1699181076]
-position = Vector2(128, 64)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=2097161250]
-position = Vector2(136, 68)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=492603458]
-position = Vector2(144, 72)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=856601323]
-position = Vector2(152, 76)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1218052957]
-position = Vector2(160, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_0_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1839624130]
-position = Vector2(168, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=644275638]
-position = Vector2(104, 60)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1254937608]
-position = Vector2(112, 64)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1071833133]
-position = Vector2(120, 68)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=854230405]
-position = Vector2(128, 72)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=579053184]
-position = Vector2(136, 76)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=1114011856]
-position = Vector2(144, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1436619768]
-position = Vector2(152, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_1_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1163383290]
-position = Vector2(160, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=821258587]
-position = Vector2(96, 64)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=445836224]
-position = Vector2(104, 68)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1979412119]
-position = Vector2(112, 72)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1508180176]
-position = Vector2(120, 76)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=942061969]
-position = Vector2(128, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=813775909]
-position = Vector2(136, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=254193127]
-position = Vector2(144, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_2_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1455469432]
-position = Vector2(152, 92)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=995764610]
-position = Vector2(88, 68)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1126130158]
-position = Vector2(96, 72)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1152537001]
-position = Vector2(104, 76)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=16302317]
-position = Vector2(112, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=1532140552]
-position = Vector2(120, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=1610986682]
-position = Vector2(128, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=32984359]
-position = Vector2(136, 92)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_3_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=439610697]
-position = Vector2(144, 96)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=1382896356]
-position = Vector2(80, 72)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=410986066]
-position = Vector2(88, 76)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=977979431]
-position = Vector2(96, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=695322375]
-position = Vector2(104, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=1707427687]
-position = Vector2(112, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=599192917]
-position = Vector2(120, 92)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=298524637]
-position = Vector2(128, 96)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_4_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1110459008]
-position = Vector2(136, 100)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=1396071712]
-position = Vector2(72, 76)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1602120980]
-position = Vector2(80, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1815756015]
-position = Vector2(88, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1939080191]
-position = Vector2(96, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=828160894]
-position = Vector2(104, 92)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=7954179]
-position = Vector2(112, 96)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1709086676]
-position = Vector2(120, 100)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_5_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1989104574]
-position = Vector2(128, 104)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=867962751]
-position = Vector2(64, 80)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=1568446484]
-position = Vector2(72, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=2078030694]
-position = Vector2(80, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1329759315]
-position = Vector2(88, 92)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=2120643489]
-position = Vector2(96, 96)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=2008727638]
-position = Vector2(104, 100)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=1005675032]
-position = Vector2(112, 104)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_6_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1764212225]
-position = Vector2(120, 108)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_0" type="Sprite2D" parent="Map/FloorTiles" unique_id=688640479]
-position = Vector2(56, 84)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_1" type="Sprite2D" parent="Map/FloorTiles" unique_id=2005484957]
-position = Vector2(64, 88)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_2" type="Sprite2D" parent="Map/FloorTiles" unique_id=1577826893]
-position = Vector2(72, 92)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_3" type="Sprite2D" parent="Map/FloorTiles" unique_id=1721074010]
-position = Vector2(80, 96)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_4" type="Sprite2D" parent="Map/FloorTiles" unique_id=705553118]
-position = Vector2(88, 100)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_5" type="Sprite2D" parent="Map/FloorTiles" unique_id=769294262]
-position = Vector2(96, 104)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_6" type="Sprite2D" parent="Map/FloorTiles" unique_id=278900508]
-position = Vector2(104, 108)
-texture = ExtResource("2_tile")
-centered = false
-
-[node name="Tile_7_7" type="Sprite2D" parent="Map/FloorTiles" unique_id=1890712793]
-position = Vector2(112, 112)
-texture = ExtResource("2_tile")
-centered = false
 
 [node name="Entrance" type="Sprite2D" parent="Map/FloorTiles" unique_id=1338102268]
 position = Vector2(60, 94)
@@ -382,85 +69,21 @@ polygon = PackedVector2Array(-3, 6, -1, 6, 11, 12, 7, 12, -3, 7)
 
 [node name="Walls" type="Node2D" parent="Map" unique_id=1369138822]
 
-[node name="WallLeft_0" type="Sprite2D" parent="Map/Walls" unique_id=495715685]
-position = Vector2(56, 56)
-texture = ExtResource("3_wall_left")
-centered = false
+[node name="WallLeftLayer" type="TileMapLayer" parent="Map/Walls"]
+position = Vector2(64, 72)
+texture_filter = 1
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("3_wall_left")
+layout_kind = 1
+layout_height = 1
 
-[node name="WallLeft_1" type="Sprite2D" parent="Map/Walls" unique_id=474078756]
-position = Vector2(64, 52)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallLeft_2" type="Sprite2D" parent="Map/Walls" unique_id=14971443]
-position = Vector2(72, 48)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallLeft_3" type="Sprite2D" parent="Map/Walls" unique_id=1542897740]
-position = Vector2(80, 44)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallLeft_0" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=1109855140]
-position = Vector2(8, -4)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallLeft_1" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=503109809]
-position = Vector2(16, -8)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallLeft_2" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=1874649256]
-position = Vector2(24, -12)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallLeft_3" type="Sprite2D" parent="Map/Walls/WallLeft_3" unique_id=1625701774]
-position = Vector2(32, -16)
-texture = ExtResource("3_wall_left")
-centered = false
-
-[node name="WallRight_0" type="Sprite2D" parent="Map/Walls" unique_id=1381759809]
-position = Vector2(112, 28)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_1" type="Sprite2D" parent="Map/Walls" unique_id=185373374]
-position = Vector2(120, 32)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_2" type="Sprite2D" parent="Map/Walls" unique_id=256765422]
-position = Vector2(128, 36)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_0" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=1640103676]
-position = Vector2(16, 8)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_1" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=558043772]
-position = Vector2(24, 12)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_2" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=1538076756]
-position = Vector2(32, 16)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_3" type="Sprite2D" parent="Map/Walls/WallRight_2" unique_id=1672237501]
-position = Vector2(40, 20)
-texture = ExtResource("4_wall_right")
-centered = false
-
-[node name="WallRight_3" type="Sprite2D" parent="Map/Walls" unique_id=659672368]
-position = Vector2(136, 40)
-texture = ExtResource("4_wall_right")
-centered = false
+[node name="WallRightLayer" type="TileMapLayer" parent="Map/Walls"]
+position = Vector2(120, 44)
+texture_filter = 1
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("4_wall_right")
+layout_kind = 2
+layout_height = 1
 
 [node name="DoorRight" type="Sprite2D" parent="Map/Walls" unique_id=1819223406]
 position = Vector2(126, 35)
