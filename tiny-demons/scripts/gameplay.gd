@@ -3590,7 +3590,7 @@ func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
 	var bayer := PackedInt32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5])
 	for y in range(image.get_height()):
 		for x in range(image.get_width()):
-			var color := image.get_pixel(x, y)
+			var color: Color = image.get_pixel(x, y)
 			if color.a <= 0.0:
 				continue
 			var threshold := (float(bayer[(y % 4) * 4 + x % 4]) + 1.0) / 16.0
