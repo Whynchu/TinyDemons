@@ -100,6 +100,7 @@ const FIRE_FRAME_TIME := 0.16
 const FIRE_FRAME_SIZE := Vector2i(16, 16)
 const CLOAKED_DEMON_FRAME_SIZE := Vector2i(36, 36)
 const NPC_DIALOGUE_TIME := 3.2
+const NPC_DIALOGUE_BUTTON_BOB_TIME := 1.6
 const PLAYER_DOOR_FOOT_COLLIDER_SIZE := Vector2(3, 3)
 const ACTOR_COLLISION_WIDTH := 9.0
 const ACTOR_COLLISION_HEIGHT := 4.0
@@ -337,6 +338,7 @@ var npc_dialogue_box: ColorRect = null
 var npc_dialogue_text: Sprite2D = null
 var npc_dialogue_button: Sprite2D = null
 var npc_dialogue_button_shadow: Sprite2D = null
+var npc_dialogue_layer: CanvasLayer = null
 var npc_dialogue_timer := 0.0
 var npc_dialogue_full_message := ""
 var npc_dialogue_character_index := 0
@@ -1910,39 +1912,46 @@ func _build_interact_prompt() -> void:
 
 
 func _build_npc_dialogue() -> void:
+	npc_dialogue_layer = CanvasLayer.new()
+	npc_dialogue_layer.name = "NpcDialogueLayer"
+	npc_dialogue_layer.layer = 20
+	add_child(npc_dialogue_layer)
 	npc_dialogue_box = ColorRect.new()
 	npc_dialogue_box.name = "NpcDialogueBox"
 	npc_dialogue_box.color = Color(0.0, 0.0, 0.0, 0.94)
 	npc_dialogue_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	npc_dialogue_box.z_index = OVERWORLD_UI_Z
+	npc_dialogue_box.z_index = 0
 	npc_dialogue_box.visible = false
-	ui.add_child(npc_dialogue_box)
+	npc_dialogue_layer.add_child(npc_dialogue_box)
 	npc_dialogue_text = Sprite2D.new()
 	npc_dialogue_text.name = "NpcDialogueText"
 	npc_dialogue_text.centered = false
 	npc_dialogue_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	npc_dialogue_text.z_index = OVERWORLD_UI_Z + 1
+	npc_dialogue_text.z_index = 1
 	npc_dialogue_text.visible = false
-	ui.add_child(npc_dialogue_text)
+	npc_dialogue_layer.add_child(npc_dialogue_text)
 	npc_dialogue_button = Sprite2D.new()
 	npc_dialogue_button.name = "NpcDialogueContinue"
 	npc_dialogue_button.texture = _load_texture_or_null("res://assets/artwork/circle55.png")
 	npc_dialogue_button.centered = false
-	npc_dialogue_button.z_as_relative = false
 	npc_dialogue_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	npc_dialogue_button.z_index = OVERWORLD_UI_Z + 3
+	# The dialogue layer has local ordering: box, text, shadow, button.
+	npc_dialogue_button.z_index = 3
 	npc_dialogue_button.visible = false
-	ui.add_child(npc_dialogue_button)
+	npc_dialogue_layer.add_child(npc_dialogue_button)
 	npc_dialogue_button_shadow = Sprite2D.new()
 	npc_dialogue_button_shadow.name = "NpcDialogueContinueShadow"
 	npc_dialogue_button_shadow.texture = npc_dialogue_button.texture
 	npc_dialogue_button_shadow.centered = false
-	npc_dialogue_button_shadow.z_as_relative = false
 	npc_dialogue_button_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	npc_dialogue_button_shadow.z_index = OVERWORLD_UI_Z + 1
+	npc_dialogue_button_shadow.z_index = 2
 	npc_dialogue_button_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.45)
 	npc_dialogue_button_shadow.visible = false
-	ui.add_child(npc_dialogue_button_shadow)
+	npc_dialogue_layer.add_child(npc_dialogue_button_shadow)
+	# Keep both sprites at the front of the UI child order as well as using
+	# explicit z-indices, so later-created UI nodes cannot cover the button.
+	npc_dialogue_layer.move_child(npc_dialogue_button_shadow, -1)
+	npc_dialogue_layer.move_child(npc_dialogue_button, -1)
 
 
 func _build_room_number_indicator() -> void:
@@ -2205,12 +2214,15 @@ func _update_npc_dialogue(delta: float) -> void:
 	npc_dialogue_box.size = box_size
 	npc_dialogue_text.position = _snap_half_pixel(box_position + Vector2(5, 5))
 	if npc_dialogue_button.visible:
+		npc_dialogue_timer = fmod(npc_dialogue_timer + delta, NPC_DIALOGUE_BUTTON_BOB_TIME)
+		var bob_phase := (npc_dialogue_timer / NPC_DIALOGUE_BUTTON_BOB_TIME) * TAU
+		var button_bob := snappedf(sin(bob_phase) * 0.5, 0.5)
 		var button_size := npc_dialogue_button.texture.get_size()
-		var button_position := _snap_half_pixel(box_position + box_size - button_size * 0.5 + Vector2(2, 2))
-		npc_dialogue_button.position = button_position
+		var button_position := _snap_half_pixel(box_position + box_size - button_size * 0.5 + Vector2(0, -1))
+		npc_dialogue_button.position = button_position + Vector2(0, button_bob)
 		# Keep the fractional offset; snapping both sprites to the same half-pixel
 		# coordinate can collapse the shadow into the button.
-		npc_dialogue_button_shadow.position = button_position + Vector2(-0.5, 0.5)
+		npc_dialogue_button_shadow.position = button_position + Vector2(0, button_bob) + Vector2(-0.5, 0.5)
 		npc_dialogue_button_shadow.visible = true
 	else:
 		npc_dialogue_button_shadow.visible = false
@@ -2224,6 +2236,7 @@ func _show_npc_dialogue() -> void:
 	npc_dialogue_full_message = message
 	npc_dialogue_character_index = 0
 	npc_dialogue_type_timer = 0.0
+	npc_dialogue_timer = 0.0
 	npc_dialogue_complete = false
 	npc_dialogue_text.texture = _pixel_text_texture("", Color.WHITE)
 	npc_dialogue_text.visible = true
