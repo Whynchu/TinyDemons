@@ -72,6 +72,7 @@ var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
 var player_animation_component: PlayerAnimationComponent = null
 var slime_health_components: Dictionary = {}
+var slime_brains: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -497,6 +498,14 @@ func _ready() -> void:
 		health_component.healed.connect(_on_slime_health_healed.bind(slime))
 		health_component.health_changed.connect(_on_slime_health_changed.bind(slime))
 		slime_health_components[slime] = health_component
+		var brain := slime.get_node_or_null("Brain") as SlimeBrain
+		if brain == null:
+			brain = SlimeBrain.new()
+			brain.name = "Brain"
+			slime.add_child(brain)
+		brain.repath_timer = slime_repath_timers[slime]
+		brain.hold_timer = slime_hold_timers[slime]
+		slime_brains[slime] = brain
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
 	_apply_room_state()
@@ -3024,6 +3033,9 @@ func _separate_slime_from_player(slime: Sprite2D) -> void:
 
 func _move_slimes(delta: float) -> void:
 	for slime in slimes:
+		var brain := slime_brains.get(slime) as SlimeBrain
+		if brain != null:
+			brain.tick(delta)
 		if _is_slime_dead(slime):
 			continue
 		slime_attack_cooldowns[slime] = maxf(float(slime_attack_cooldowns.get(slime, 0.0)) - delta, 0.0)

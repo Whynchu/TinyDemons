@@ -344,6 +344,8 @@ template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
 - [ ] Create a reusable `slime.tscn` with exported visual/tuning resources.
 - [ ] Move aggro, repath, scoot, hold, attack, hit reaction, and death state to
   slime components.
+- [x] Define and attach `SlimeBrain` decision-state boundary for aggro,
+  repath, hold, and attack cooldown timing.
 - [ ] Replace blue/green/red setup with configured scene instances.
 - [ ] Remove all remaining slime-keyed behavior dictionaries.
 - [ ] Verify multi-slime collision, targeting, room reset, and difficulty level.
