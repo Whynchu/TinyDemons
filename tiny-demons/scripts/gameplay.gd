@@ -73,6 +73,7 @@ var player_attack_component: PlayerAttackComponent = null
 var player_animation_component: PlayerAnimationComponent = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
+var slime_combat_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -506,6 +507,12 @@ func _ready() -> void:
 		brain.repath_timer = slime_repath_timers[slime]
 		brain.hold_timer = slime_hold_timers[slime]
 		slime_brains[slime] = brain
+		var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+		if combat == null:
+			combat = SlimeCombatComponent.new()
+			combat.name = "Combat"
+			slime.add_child(combat)
+		slime_combat_components[slime] = combat
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
 	_apply_room_state()
@@ -3036,6 +3043,9 @@ func _move_slimes(delta: float) -> void:
 		var brain := slime_brains.get(slime) as SlimeBrain
 		if brain != null:
 			brain.tick(delta)
+		var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+		if combat != null:
+			combat.tick(delta)
 		if _is_slime_dead(slime):
 			continue
 		slime_attack_cooldowns[slime] = maxf(float(slime_attack_cooldowns.get(slime, 0.0)) - delta, 0.0)
@@ -3071,7 +3081,8 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 		slime_attack_timers[slime] = timer
 		slime_attack_frame_indices[slime] = frame_index
 		_set_actor_base_texture(slime, frames[frame_index])
-		if frame_index == slime_tuning.attack_hit_frame and not bool(slime_attack_hit_done.get(slime, false)):
+		var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+		if frame_index == slime_tuning.attack_hit_frame and not bool(slime_attack_hit_done.get(slime, false)) and (combat == null or combat.confirm_hit()):
 			_apply_slime_attack_lunge(slime)
 			_apply_slime_attack_hit(slime)
 			slime_attack_hit_done[slime] = true
@@ -3080,6 +3091,9 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 			slime_attack_frame_indices[slime] = 0
 			slime_attack_hit_done[slime] = false
 			slime_attack_cooldowns[slime] = slime_tuning.attack_cooldown
+			var finished_combat := slime_combat_components.get(slime) as SlimeCombatComponent
+			if finished_combat != null:
+				finished_combat.finish(slime_tuning.attack_cooldown)
 			_restore_slime_idle_texture(slime)
 		return true
 
@@ -3098,6 +3112,9 @@ func _start_slime_attack(slime: Sprite2D) -> void:
 	slime_attack_face_left[slime] = face_left
 	_set_slime_facing(slime, -1.0 if face_left else 1.0)
 	slime_attack_timers[slime] = 0.001
+	var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+	if combat != null:
+		combat.begin()
 	slime_attack_frame_indices[slime] = 0
 	slime_attack_hit_done[slime] = false
 	var frames := _slime_attack_frames(slime)
