@@ -161,6 +161,7 @@ var roll_dust_frames: Array[Texture2D] = []
 var roll_dust_sprite: Sprite2D = null
 var roll_dust_frame := 0
 var roll_dust_timer := 0.0
+var roll_dust_direction := Vector2.ZERO
 var player_attack_input_was_down := false
 var player_attack_hit_done := false
 var player_attack_hit_targets: Array[Sprite2D] = []
@@ -1329,11 +1330,15 @@ func _start_roll_dust(direction: Vector2) -> void:
 	add_child(roll_dust_sprite)
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
+	roll_dust_direction = direction
 
 
 func _update_roll_dust(delta: float) -> void:
 	if roll_dust_sprite == null:
 		return
+	var horizontal_trail := -signf(roll_dust_direction.x) if absf(roll_dust_direction.x) > 0.01 else 0.0
+	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) + Vector2(horizontal_trail, -3.0))
+	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
 	roll_dust_timer += delta
 	if roll_dust_timer < ROLL_DUST_FRAME_TIME:
 		return
@@ -1351,6 +1356,7 @@ func _clear_roll_dust() -> void:
 		roll_dust_sprite = null
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
+	roll_dust_direction = Vector2.ZERO
 
 
 func _start_player_attack(variant: int = 1) -> void:
