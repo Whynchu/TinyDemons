@@ -439,8 +439,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
   generation remains in the coordinator pending performance parity checks.
 - [x] Record occlusion update count and accumulated time for representative
   room performance verification.
-- [ ] Verify every socket direction, return traversal, room persistence, and
-  actor placement.
+- [x] Verify every socket direction, return traversal, room persistence, and
+  actor placement through the final Godot smoke pass.
 
 Exit criteria: actors request movement and room transitions through narrow world
 APIs; they do not inspect map implementation details.
@@ -487,7 +487,7 @@ Update this table in every consolidation pull request.
 | M2 Health | Complete | Terra, high | - | - | HealthComponent owns actor lifecycle; signal-driven HUD refresh verified |
 | M3 Player | Complete | GPT-5.5, high | - | - | Motor, controller, roll, attack, combo, lunge, and animation boundaries established |
 | M4 Enemies | Complete | Terra, high | - | - | Component state migration, live variant metadata, and smoke verification complete |
-| M5 World/rooms | Not started | GPT-5.5, high | - | - | Sol only for unresolved boundaries |
+| M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Not started | GPT-5.4, medium | - | - | Terra handles occlusion integration |
 | M7 Cleanup | Not started | Terra, medium | - | - | GPT-5.5 performs final architecture review |
 
