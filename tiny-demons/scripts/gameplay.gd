@@ -4477,7 +4477,7 @@ func _build_player_animation_frames() -> void:
 	var raw_roll_dust_frames := sprite_frame_library.slice_frames("res://assets/artwork/rolldust.png", ROLL_DUST_FRAME_SIZE)
 	for frame_index in raw_roll_dust_frames.size():
 		var dissolve := float(frame_index) / float(maxi(raw_roll_dust_frames.size(), 1))
-		roll_dust_frames.append(_dither_roll_dust_frame(raw_roll_dust_frames[frame_index], dissolve))
+		roll_dust_frames.append(sprite_frame_library.dither_roll_dust_frame(raw_roll_dust_frames[frame_index], dissolve))
 	roll_dust_flipped_frames = _flip_effect_frames_horizontally(roll_dust_frames, ROLL_DUST_FRAME_SIZE)
 	player_attack_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
 	# attempt to load attack2 and between-attack frame (optional)
@@ -4485,10 +4485,10 @@ func _build_player_animation_frames() -> void:
 	if player_attack2_frames.is_empty():
 		# Keep the combo playable until a dedicated attack2 sheet is supplied.
 		player_attack2_frames = player_attack_frames.duplicate()
-	player_attack2_left_frames = _flip_frames_horizontally(player_attack2_frames)
+	player_attack2_left_frames = sprite_frame_library.flip_frames(player_attack2_frames)
 	player_between_attack_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-attack-between.png")
 	player_after_attack2_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-after-attack2.png")
-	player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
+	player_attack_left_frames = sprite_frame_library.flip_frames(player_attack_frames)
 	player_base_idle_frames = player_idle_frames.duplicate()
 	player_base_walk_frames = player_walk_frames.duplicate()
 	player_base_roll_frames = player_roll_frames.duplicate()
@@ -4502,10 +4502,6 @@ func _build_player_animation_frames() -> void:
 	_warm_player_frame_caches()
 	if not player_idle_frames.is_empty():
 		_set_actor_base_texture(player, player_idle_frames[0])
-
-
-func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
-	return sprite_frame_library.dither_roll_dust_frame(source, dissolve)
 
 
 func _warm_player_frame_caches() -> void:
@@ -4527,10 +4523,6 @@ func _warm_player_frame_caches() -> void:
 		_warm_texture_cache(texture)
 	for texture in player_attack_left_frames:
 		_warm_texture_cache(texture)
-
-
-func _flip_frames_horizontally(frames: Array[Texture2D]) -> Array[Texture2D]:
-	return sprite_frame_library.flip_frames(frames)
 
 
 func _flip_effect_frames_horizontally(frames: Array[Texture2D], display_size: Vector2i) -> Array[Texture2D]:
