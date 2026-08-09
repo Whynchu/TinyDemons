@@ -3,6 +3,10 @@ class_name OcclusionRenderer
 
 var occluders: Array[Sprite2D] = []
 var cached_images: Dictionary = {}
+var texture_image_cache: Dictionary = {}
+var effect_image_cache: Dictionary = {}
+var highlighted_image_cache: Dictionary = {}
+var white_image_cache: Dictionary = {}
 var update_count := 0
 var update_time := 0.0
 

@@ -160,11 +160,6 @@ var actor_occlusion_grace: Dictionary = {}
 var highlighted_actor_textures: Dictionary = {}
 var white_actor_textures: Dictionary = {}
 var sprite_images: Dictionary = {}
-var texture_image_cache: Dictionary = {}
-var effect_image_cache: Dictionary = {}
-var highlighted_image_cache: Dictionary = {}
-var white_image_cache: Dictionary = {}
-var pixel_particle_texture_cache: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
 var cloaked_demon_shadow_offset := Vector2.ZERO
@@ -282,16 +277,6 @@ var player_health_text: Sprite2D = null
 var player_start_position := Vector2.ZERO
 var chest_start_position := Vector2.ZERO
 var cloaked_demon_start_position := Vector2.ZERO
-var target_health_fill_textures: Dictionary = {}
-var target_health_damage_fill_textures: Dictionary = {}
-var target_overhead_fill_textures: Dictionary = {}
-var target_overhead_damage_fill_textures: Dictionary = {}
-var target_overhead_frames: Dictionary = {}
-var target_overhead_damage_fills: Dictionary = {}
-var target_overhead_fills: Dictionary = {}
-var target_overhead_offsets: Dictionary = {}
-var target_overhead_fill_sizes: Dictionary = {}
-var target_overhead_aggro_markers: Dictionary = {}
 var target_health_damage_fill: Sprite2D = null
 var target_health_bar_size := Vector2.ZERO
 var player_health_fill_size := Vector2.ZERO
@@ -1309,7 +1294,7 @@ func _update_player_aggro_marker_colors() -> void:
 		"grey": Color8(86, 108, 134),
 	}
 	var color: Color = marker_colors.get(player_palette_name, marker_colors["blue"])
-	for marker in target_overhead_aggro_markers.values():
+	for marker in hud_controller.target_overhead_aggro_markers.values():
 		var aggro_marker := marker as Sprite2D
 		if aggro_marker != null:
 			aggro_marker.texture = _pixel_particle_texture(color)
@@ -2797,9 +2782,9 @@ func _kill_slime_without_effects(slime: Sprite2D) -> void:
 	if health_component != null:
 		health_component.reset(0.0)
 	_slime_health_presenter(slime).display_health = 0.0
-	var frame := target_overhead_frames.get(slime) as Sprite2D
-	var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D
-	var fill := target_overhead_fills.get(slime) as Sprite2D
+	var frame := hud_controller.target_overhead_frames.get(slime) as Sprite2D
+	var damage_fill := hud_controller.target_overhead_damage_fills.get(slime) as Sprite2D
+	var fill := hud_controller.target_overhead_fills.get(slime) as Sprite2D
 	if frame != null:
 		frame.visible = false
 	if damage_fill != null:
@@ -3042,7 +3027,7 @@ func _dialogue_button_shadow_texture(source: Texture2D) -> Texture2D:
 
 func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:
 	var key := "%s:%d" % [_rgb_key(color), size]
-	if pixel_particle_texture_cache.has(key):
+	if effects_spawner.pixel_particle_texture_cache.has(key):
 		return pixel_particle_texture_cache[key]
 
 	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -3056,7 +3041,7 @@ func _white_texture(source: Texture2D) -> Texture2D:
 	if source == null:
 		return null
 	var key := "%s:white_texture" % source.resource_path
-	if white_image_cache.has(key):
+	if occlusion_renderer.white_image_cache.has(key):
 		return white_image_cache[key]
 
 	var image := _cached_texture_image(source).duplicate()
@@ -4238,28 +4223,28 @@ func _slime_attack_palette_color(color: Color, slime: Sprite2D) -> Color:
 
 
 func _build_enemy_health_ui() -> void:
-	target_health_fill_textures = {
+	hud_controller.target_health_fill_textures = {
 		slime_blue: _load_texture_or_null("res://assets/artwork/EnemyHpBlueBar.png"),
 		slime_green: _load_texture_or_null("res://assets/artwork/EnemyHpGreenBar.png"),
 		slime_red: _load_texture_or_null("res://assets/artwork/EnemyHpRedBar.png"),
 	}
-	target_overhead_fill_textures = {
+	hud_controller.target_overhead_fill_textures = {
 		slime_blue: _load_texture_or_null("res://assets/artwork/HpOverheadBlueBar.png"),
 		slime_green: _load_texture_or_null("res://assets/artwork/HpOverheadGreenBar.png"),
 		slime_red: _load_texture_or_null("res://assets/artwork/HpOverheadRedBar.png"),
 	}
-	target_health_damage_fill_textures.clear()
-	target_overhead_damage_fill_textures.clear()
+	hud_controller.target_health_damage_fill_textures.clear()
+	hud_controller.target_overhead_damage_fill_textures.clear()
 	for slime in slimes:
-		target_health_damage_fill_textures[slime] = _brighter_bar_texture(target_health_fill_textures.get(slime) as Texture2D)
-		target_overhead_damage_fill_textures[slime] = _brighter_bar_texture(target_overhead_fill_textures.get(slime) as Texture2D)
+		hud_controller.target_health_damage_fill_textures[slime] = _brighter_bar_texture(hud_controller.target_health_fill_textures.get(slime) as Texture2D)
+		hud_controller.target_overhead_damage_fill_textures[slime] = _brighter_bar_texture(hud_controller.target_overhead_fill_textures.get(slime) as Texture2D)
 
-	target_overhead_frames.clear()
-	target_overhead_damage_fills.clear()
-	target_overhead_fills.clear()
-	target_overhead_offsets.clear()
-	target_overhead_fill_sizes.clear()
-	target_overhead_aggro_markers.clear()
+	hud_controller.target_overhead_frames.clear()
+	hud_controller.target_overhead_damage_fills.clear()
+	hud_controller.target_overhead_fills.clear()
+	hud_controller.target_overhead_offsets.clear()
+	hud_controller.target_overhead_fill_sizes.clear()
+	hud_controller.target_overhead_aggro_markers.clear()
 
 	target_health_damage_fill = _duplicate_fill_sprite(target_health_fill, "EnemyHpDamageFill")
 	target_health_bar.z_index = 0
@@ -4297,7 +4282,7 @@ func _build_enemy_health_ui() -> void:
 
 		var damage_fill := Sprite2D.new()
 		damage_fill.name = "HpOverheadDamageFill"
-		damage_fill.texture = target_overhead_damage_fill_textures.get(slime, hp_overhead_fill.texture)
+		damage_fill.texture = hud_controller.target_overhead_damage_fill_textures.get(slime, hp_overhead_fill.texture)
 		damage_fill.centered = hp_overhead_fill.centered
 		damage_fill.position = hp_overhead_fill.position
 		damage_fill.z_index = 1
@@ -4306,7 +4291,7 @@ func _build_enemy_health_ui() -> void:
 
 		var fill := Sprite2D.new()
 		fill.name = "HpOverheadFill"
-		fill.texture = target_overhead_fill_textures.get(slime, hp_overhead_fill.texture)
+		fill.texture = hud_controller.target_overhead_fill_textures.get(slime, hp_overhead_fill.texture)
 		fill.centered = hp_overhead_fill.centered
 		fill.position = hp_overhead_fill.position
 		fill.z_index = 2
@@ -4317,7 +4302,7 @@ func _build_enemy_health_ui() -> void:
 
 
 func _register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, offset: Vector2) -> void:
-	var fill_texture := target_overhead_fill_textures.get(slime, fill.texture) as Texture2D
+	var fill_texture := hud_controller.target_overhead_fill_textures.get(slime, fill.texture) as Texture2D
 	if fill_texture != null:
 		fill.texture = fill_texture
 	var damage_fill := fill.get_parent().get_node_or_null("HpOverheadDamageFill") as Sprite2D
@@ -4325,7 +4310,7 @@ func _register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, of
 		damage_fill = _duplicate_fill_sprite(fill, "HpOverheadDamageFill")
 		damage_fill.z_index = 1
 	fill.z_index = 2
-	var damage_fill_texture := target_overhead_damage_fill_textures.get(slime, damage_fill.texture) as Texture2D
+	var damage_fill_texture := hud_controller.target_overhead_damage_fill_textures.get(slime, damage_fill.texture) as Texture2D
 	if damage_fill_texture != null:
 		damage_fill.texture = damage_fill_texture
 	var aggro_marker := fill.get_parent().get_node_or_null("AggroMarker") as Sprite2D
@@ -4340,12 +4325,12 @@ func _register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, of
 		aggro_marker.z_as_relative = false
 		fill.get_parent().add_child(aggro_marker)
 
-	target_overhead_frames[slime] = frame
-	target_overhead_damage_fills[slime] = damage_fill
-	target_overhead_fills[slime] = fill
-	target_overhead_offsets[slime] = offset
-	target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO
-	target_overhead_aggro_markers[slime] = aggro_marker
+	hud_controller.target_overhead_frames[slime] = frame
+	hud_controller.target_overhead_damage_fills[slime] = damage_fill
+	hud_controller.target_overhead_fills[slime] = fill
+	hud_controller.target_overhead_offsets[slime] = offset
+	hud_controller.target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO
+	hud_controller.target_overhead_aggro_markers[slime] = aggro_marker
 	frame.visible = false
 	damage_fill.visible = false
 	fill.visible = false
@@ -4373,7 +4358,7 @@ func _brighter_bar_texture(source: Texture2D) -> Texture2D:
 	if source == null:
 		return null
 	var cache_key := source.resource_path if not source.resource_path.is_empty() else str(source.get_instance_id())
-	if texture_image_cache.has("%s:bright_bar" % cache_key):
+	if occlusion_renderer.texture_image_cache.has("%s:bright_bar" % cache_key):
 		return texture_image_cache["%s:bright_bar" % cache_key]
 
 	var image := source.get_image()
@@ -4959,11 +4944,11 @@ func _update_target_ui() -> void:
 	target_name_text.texture = _pixel_name_texture(_slime_display_name(current_target), Color.WHITE)
 	target_name_text.centered = true
 	target_name_text.position = Vector2(120, 148)
-	var fill_texture := target_health_fill_textures.get(current_target, target_health_fill.texture) as Texture2D
+	var fill_texture := hud_controller.target_health_fill_textures.get(current_target, target_health_fill.texture) as Texture2D
 	if fill_texture != null and target_health_fill.texture != fill_texture:
 		target_health_fill.texture = fill_texture
 		target_health_bar_size = fill_texture.get_size()
-	var damage_fill_texture := target_health_damage_fill_textures.get(current_target, target_health_fill.texture) as Texture2D
+	var damage_fill_texture := hud_controller.target_health_damage_fill_textures.get(current_target, target_health_fill.texture) as Texture2D
 	if target_health_damage_fill != null and damage_fill_texture != null:
 		target_health_damage_fill.texture = damage_fill_texture
 
@@ -5075,10 +5060,10 @@ func _update_overworld_ui() -> void:
 		gold_indicator.texture = gold_animation_frames[gold_frame_index]
 
 	for slime in slimes:
-		var frame := target_overhead_frames.get(slime) as Sprite2D
-		var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D
-		var fill := target_overhead_fills.get(slime) as Sprite2D
-		var aggro_marker := target_overhead_aggro_markers.get(slime) as Sprite2D
+		var frame := hud_controller.target_overhead_frames.get(slime) as Sprite2D
+		var damage_fill := hud_controller.target_overhead_damage_fills.get(slime) as Sprite2D
+		var fill := hud_controller.target_overhead_fills.get(slime) as Sprite2D
+		var aggro_marker := hud_controller.target_overhead_aggro_markers.get(slime) as Sprite2D
 		if frame == null or damage_fill == null or fill == null or aggro_marker == null:
 			continue
 		if _is_slime_dead(slime):
@@ -5100,7 +5085,7 @@ func _update_overworld_ui() -> void:
 		if not should_show:
 			continue
 
-		var overhead_position := slime.global_position + (target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2)
+		var overhead_position := slime.global_position + (hud_controller.target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2)
 		frame.global_position = overhead_position
 		frame.global_scale = Vector2.ONE
 		frame.z_index = OVERWORLD_UI_Z
@@ -5114,7 +5099,7 @@ func _update_overworld_ui() -> void:
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = OVERWORLD_UI_Z + 3
 		var display_health := _slime_health_presenter(slime).display_health
-		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
+		var fill_size := hud_controller.target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
 		_set_health_bar_values(fill, damage_fill, fill_size, health, display_health, max_health)
 
 
@@ -5344,38 +5329,38 @@ func _sprite_source_offset(sprite: Sprite2D) -> Vector2:
 
 
 func _cached_texture_image(texture: Texture2D) -> Image:
-	if texture_image_cache.has(texture):
-		return texture_image_cache[texture]
+	if occlusion_renderer.texture_image_cache.has(texture):
+		return occlusion_renderer.texture_image_cache[texture]
 
 	var image := _texture_image(texture)
-	texture_image_cache[texture] = image
+	occlusion_renderer.texture_image_cache[texture] = image
 	return image
 
 
 func _cached_effect_image(texture: Texture2D, source_image: Image) -> Image:
-	if effect_image_cache.has(texture):
-		return effect_image_cache[texture]
+	if occlusion_renderer.effect_image_cache.has(texture):
+		return occlusion_renderer.effect_image_cache[texture]
 
 	var image := _make_effect_image(source_image)
-	effect_image_cache[texture] = image
+	occlusion_renderer.effect_image_cache[texture] = image
 	return image
 
 
 func _cached_highlighted_image(texture: Texture2D, source_image: Image) -> Image:
-	if highlighted_image_cache.has(texture):
-		return highlighted_image_cache[texture]
+	if occlusion_renderer.highlighted_image_cache.has(texture):
+		return occlusion_renderer.highlighted_image_cache[texture]
 
 	var image := _make_highlighted_effect_image(source_image)
-	highlighted_image_cache[texture] = image
+	occlusion_renderer.highlighted_image_cache[texture] = image
 	return image
 
 
 func _cached_white_image(texture: Texture2D, source_image: Image) -> Image:
-	if white_image_cache.has(texture):
-		return white_image_cache[texture]
+	if occlusion_renderer.white_image_cache.has(texture):
+		return occlusion_renderer.white_image_cache[texture]
 
 	var image := _make_white_image(source_image)
-	white_image_cache[texture] = image
+	occlusion_renderer.white_image_cache[texture] = image
 	return image
 
 
