@@ -1334,6 +1334,9 @@ func _start_roll_dust(direction: Vector2) -> void:
 func _update_roll_dust(delta: float) -> void:
 	if roll_dust_sprite == null:
 		return
+	# Keep the dust at its original feet position, but follow the player's
+	# depth as wall collision changes the roll's final position.
+	roll_dust_sprite.z_index = maxi(player.z_index - 1, 0)
 	roll_dust_timer += delta
 	if roll_dust_timer < ROLL_DUST_FRAME_TIME:
 		return
