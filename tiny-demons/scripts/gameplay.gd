@@ -139,11 +139,6 @@ var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
 var slime_idle_breath_timers: Dictionary = {}
-var slime_attack_timers: Dictionary = {}
-var slime_attack_frame_indices: Dictionary = {}
-var slime_attack_hit_done: Dictionary = {}
-var slime_attack_face_left: Dictionary = {}
-var slime_attack_cooldowns: Dictionary = {}
 var slime_persistent_aggro: Dictionary = {}
 var dead_slimes: Dictionary = {}
 var slime_start_positions: Dictionary = {}
@@ -464,12 +459,12 @@ func _ready() -> void:
 		_slime_combat(slime).hitstun_timer = 0.0
 		_slime_combat(slime).knockback_velocity = Vector2.ZERO
 		_slime_combat(slime).knockback_timer = 0.0
-		slime_attack_timers[slime] = 0.0
-		slime_attack_frame_indices[slime] = 0
-		slime_attack_hit_done[slime] = false
-		slime_attack_face_left[slime] = false
+		_slime_combat(slime).timer = 0.0
+		_slime_combat(slime).frame = 0
+		_slime_combat(slime).hit_done = false
+		_slime_combat(slime).face_left = false
 		_update_slime_attack_guides(slime)
-		slime_attack_cooldowns[slime] = rng.randf_range(0.2, 0.6)
+		_slime_combat(slime).cooldown = rng.randf_range(0.2, 0.6)
 		slime_persistent_aggro[slime] = false
 		dead_slimes[slime] = false
 		actor_stats[slime] = slime.get_node_or_null("Stats") as StatsComponent
@@ -2728,9 +2723,9 @@ func _apply_finished_room_state() -> void:
 func _kill_slime_without_effects(slime: Sprite2D) -> void:
 	dead_slimes[slime] = true
 	slime.visible = false
-	slime_attack_timers[slime] = 0.0
-	slime_attack_frame_indices[slime] = 0
-	slime_attack_hit_done[slime] = false
+	_slime_combat(slime).timer = 0.0
+	_slime_combat(slime).frame = 0
+	_slime_combat(slime).hit_done = false
 	collision_sprites.erase(slime)
 	depth_sprites.erase(slime)
 	occluder_sprites.erase(slime)
@@ -2793,11 +2788,11 @@ func _reset_slimes_for_room() -> void:
 		_slime_combat(slime).hitstun_timer = 0.0
 		_slime_combat(slime).knockback_velocity = Vector2.ZERO
 		_slime_combat(slime).knockback_timer = 0.0
-		slime_attack_timers[slime] = 0.0
-		slime_attack_frame_indices[slime] = 0
-		slime_attack_hit_done[slime] = false
-		slime_attack_face_left[slime] = false
-		slime_attack_cooldowns[slime] = rng.randf_range(0.2, 0.6)
+		_slime_combat(slime).timer = 0.0
+		_slime_combat(slime).frame = 0
+		_slime_combat(slime).hit_done = false
+		_slime_combat(slime).face_left = false
+		_slime_combat(slime).cooldown = rng.randf_range(0.2, 0.6)
 		slime_persistent_aggro[slime] = false
 		_slime_brain(slime).scoot_start = slime.position
 		_slime_brain(slime).scoot_target = slime.position
@@ -3069,7 +3064,7 @@ func _move_slimes(delta: float) -> void:
 			combat.tick(delta)
 		if _is_slime_dead(slime):
 			continue
-		slime_attack_cooldowns[slime] = maxf(float(slime_attack_cooldowns.get(slime, 0.0)) - delta, 0.0)
+		_slime_combat(slime).cooldown = maxf(_slime_combat(slime).cooldown - delta, 0.0)
 		if _update_slime_knockback(slime, delta):
 			continue
 
@@ -3088,40 +3083,40 @@ func _move_slimes(delta: float) -> void:
 
 func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 	if player_dead:
-		slime_attack_timers[slime] = 0.0
+		_slime_combat(slime).timer = 0.0
 		return false
-	var timer := float(slime_attack_timers.get(slime, 0.0))
+	var timer: float = _slime_combat(slime).timer
 	if timer > 0.0:
 		timer += delta
 		var frames := _slime_attack_frames(slime)
 		if frames.is_empty():
-			slime_attack_timers[slime] = 0.0
+			_slime_combat(slime).timer = 0.0
 			return false
 
 		var frame_index := mini(int(floor(timer / slime_tuning.attack_frame_time)), frames.size() - 1)
-		slime_attack_timers[slime] = timer
-		slime_attack_frame_indices[slime] = frame_index
+		_slime_combat(slime).timer = timer
+		_slime_combat(slime).frame = frame_index
 		var animation := slime_animation_components.get(slime) as SlimeAnimationComponent
 		if animation != null:
 			animation.set_attack_frame(frame_index)
 		_set_actor_base_texture(slime, frames[frame_index])
 		var combat := slime_combat_components.get(slime) as SlimeCombatComponent
-		if frame_index == slime_tuning.attack_hit_frame and not bool(slime_attack_hit_done.get(slime, false)) and (combat == null or combat.confirm_hit()):
+		if frame_index == slime_tuning.attack_hit_frame and not _slime_combat(slime).hit_done and (combat == null or combat.confirm_hit()):
 			_apply_slime_attack_lunge(slime)
 			_apply_slime_attack_hit(slime)
-			slime_attack_hit_done[slime] = true
+			_slime_combat(slime).hit_done = true
 		if timer >= slime_tuning.attack_frame_time * float(frames.size()):
-			slime_attack_timers[slime] = 0.0
-			slime_attack_frame_indices[slime] = 0
-			slime_attack_hit_done[slime] = false
-			slime_attack_cooldowns[slime] = slime_tuning.attack_cooldown
+			_slime_combat(slime).timer = 0.0
+			_slime_combat(slime).frame = 0
+			_slime_combat(slime).hit_done = false
+			_slime_combat(slime).cooldown = slime_tuning.attack_cooldown
 			var finished_combat := slime_combat_components.get(slime) as SlimeCombatComponent
 			if finished_combat != null:
 				finished_combat.finish(slime_tuning.attack_cooldown)
 			_restore_slime_idle_texture(slime)
 		return true
 
-	if float(slime_attack_cooldowns.get(slime, 0.0)) > 0.0:
+	if _slime_combat(slime).cooldown > 0.0:
 		return false
 	if not _can_slime_attack_player(slime):
 		return false
@@ -3133,17 +3128,17 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 func _start_slime_attack(slime: Sprite2D) -> void:
 	var direction := _actor_foot(player) - _actor_foot(slime)
 	var face_left := direction.x < 0.0
-	slime_attack_face_left[slime] = face_left
+	_slime_combat(slime).face_left = face_left
 	var animation := slime_animation_components.get(slime) as SlimeAnimationComponent
 	if animation != null:
 		animation.set_facing(face_left)
 	_set_slime_facing(slime, -1.0 if face_left else 1.0)
-	slime_attack_timers[slime] = 0.001
+	_slime_combat(slime).timer = 0.001
 	var combat := slime_combat_components.get(slime) as SlimeCombatComponent
 	if combat != null:
 		combat.begin()
-	slime_attack_frame_indices[slime] = 0
-	slime_attack_hit_done[slime] = false
+	_slime_combat(slime).frame = 0
+	_slime_combat(slime).hit_done = false
 	var frames := _slime_attack_frames(slime)
 	if not frames.is_empty():
 		_set_actor_base_texture(slime, frames[0])
@@ -3154,11 +3149,11 @@ func _start_slime_attack(slime: Sprite2D) -> void:
 
 
 func _slime_attack_frames(slime: Sprite2D) -> Array[Texture2D]:
-	return slime_attack_left_frames.get(slime, []) if bool(slime_attack_face_left.get(slime, false)) else slime_attack_right_frames.get(slime, [])
+	return slime_attack_left_frames.get(slime, []) if _slime_combat(slime).face_left else slime_attack_right_frames.get(slime, [])
 
 
 func _restore_slime_idle_texture(slime: Sprite2D) -> void:
-	_set_slime_facing(slime, -1.0 if bool(slime_attack_face_left.get(slime, false)) else 1.0)
+	_set_slime_facing(slime, -1.0 if _slime_combat(slime).face_left else 1.0)
 
 
 func _can_slime_attack_player(slime: Sprite2D) -> bool:
@@ -3365,7 +3360,7 @@ func _update_player_health_regen(delta: float) -> void:
 func _apply_slime_attack_lunge(slime: Sprite2D) -> void:
 	var direction := _actor_foot(player) - _actor_foot(slime)
 	if direction.length_squared() < 0.01:
-		direction = Vector2.LEFT if bool(slime_attack_face_left.get(slime, false)) else Vector2.RIGHT
+		direction = Vector2.LEFT if _slime_combat(slime).face_left else Vector2.RIGHT
 	else:
 		direction = direction.normalized()
 	# Perspective compresses vertical movement, so give the attack lunge a
@@ -4540,7 +4535,7 @@ func _set_slime_facing(slime: Sprite2D, direction_x: float) -> void:
 func _update_slime_attack_guides(slime: Sprite2D) -> void:
 	# These are debug visuals only. Exactly one directional guide is visible;
 	# guides never participate in movement or actor separation.
-	var active_name := "AttackGuideL" if bool(slime_attack_face_left.get(slime, false)) else "AttackGuideR"
+	var active_name := "AttackGuideL" if _slime_combat(slime).face_left else "AttackGuideR"
 	for child in slime.get_children():
 		if child is Node2D and child.name.begins_with("AttackGuide"):
 			(child as Node2D).visible = child.name == active_name
