@@ -321,7 +321,8 @@ are fixed. Reserve Sol for an unresolved ordering problem.
   migration remains incremental to preserve update order.
 - [x] Extract roll lifecycle state into `PlayerRollComponent`; dust rendering
   remains in the coordinator pending the effects slice.
-- [ ] Extract attack, combo buffering, lunge, hitbox, and hit tracking.
+- [x] Introduce `PlayerAttackComponent` for attack lifecycle and hit-target
+  registration; animation timing and combo buffering remain in the coordinator.
 - [ ] Extract animation state and palette/frame application.
 - [ ] Verify dialogue locks, hit-stop, combo timing, collision, and death.
 

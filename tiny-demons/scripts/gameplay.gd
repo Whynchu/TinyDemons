@@ -69,6 +69,7 @@ var player_health_component: HealthComponent = null
 var player_motor: ActorMotor = null
 var player_controller: PlayerController = null
 var player_roll_component: PlayerRollComponent = null
+var player_attack_component: PlayerAttackComponent = null
 var slime_health_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
@@ -431,6 +432,11 @@ func _ready() -> void:
 		player_roll_component = PlayerRollComponent.new()
 		player_roll_component.name = "Roll"
 		player.add_child(player_roll_component)
+	player_attack_component = player.get_node_or_null("Attack") as PlayerAttackComponent
+	if player_attack_component == null:
+		player_attack_component = PlayerAttackComponent.new()
+		player_attack_component.name = "Attack"
+		player.add_child(player_attack_component)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -1555,6 +1561,8 @@ func _start_player_attack(variant: int = 1) -> void:
 		return
 
 	player_is_attacking = true
+	if player_attack_component != null:
+		player_attack_component.begin(variant)
 	player_just_finished_attack2 = false
 	player_attack_hit_done = false
 	player_attack_hit_targets.clear()
@@ -1576,6 +1584,8 @@ func _start_player_attack(variant: int = 1) -> void:
 
 func _interrupt_player_attack() -> void:
 	player_is_attacking = false
+	if player_attack_component != null:
+		player_attack_component.cancel()
 	player_attack_hit_done = false
 	player_attack_hit_targets.clear()
 	player_attack_lunge_timer = 0.0
@@ -1677,6 +1687,8 @@ func _update_player_attack_animation(delta: float) -> void:
 			player_attack2_cooldown_timer = player_tuning.attack2_cooldown
 			player_just_finished_attack2 = true
 		player_is_attacking = false
+		if player_attack_component != null:
+			player_attack_component.finish()
 		player_attack_hit_done = false
 		player_attack_hit_targets.clear()
 		_restore_actor_base_visual_scale(player)
@@ -1735,7 +1747,7 @@ func _apply_player_attack_hitbox() -> void:
 	for slime in slimes:
 		if _is_slime_dead(slime):
 			continue
-		if player_attack_hit_targets.has(slime):
+		if player_attack_hit_targets.has(slime) or (player_attack_component != null and player_attack_component.hit_targets.has(slime)):
 			continue
 		if not hitbox.intersects(_collision_rect(slime), false):
 			continue
@@ -1746,6 +1758,8 @@ func _apply_player_attack_hitbox() -> void:
 		return
 	for slime in hit_targets:
 		player_attack_hit_targets.append(slime)
+		if player_attack_component != null:
+			player_attack_component.register_hit(slime)
 		var damage := _player_attack_damage_against(slime)
 		var was_critical := last_damage_was_critical
 		var divided_damage := floorf(damage / float(target_count))
