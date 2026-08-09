@@ -139,11 +139,9 @@ var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
 var slime_targets: Dictionary = {}
-var slime_repath_timers: Dictionary = {}
 var slime_scoot_starts: Dictionary = {}
 var slime_scoot_targets: Dictionary = {}
 var slime_scoot_timers: Dictionary = {}
-var slime_hold_timers: Dictionary = {}
 var slime_idle_breath_timers: Dictionary = {}
 var slime_flash_timers: Dictionary = {}
 var slime_hitstun_timers: Dictionary = {}
@@ -464,11 +462,11 @@ func _ready() -> void:
 	for slime in slimes:
 		slime_start_positions[slime] = slime.position
 		slime_targets[slime] = _nearest_slime_walkable_point(_actor_foot(slime))
-		slime_repath_timers[slime] = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
+		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 		slime_scoot_starts[slime] = slime.position
 		slime_scoot_targets[slime] = slime.position
 		slime_scoot_timers[slime] = 0.0
-		slime_hold_timers[slime] = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
+		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
 		slime_idle_breath_timers[slime] = rng.randf_range(0.0, slime_tuning.idle_breath_time)
 		slime_flash_timers[slime] = 0.0
 		slime_hitstun_timers[slime] = 0.0
@@ -505,8 +503,8 @@ func _ready() -> void:
 			brain = SlimeBrain.new()
 			brain.name = "Brain"
 			slime.add_child(brain)
-		brain.repath_timer = slime_repath_timers[slime]
-		brain.hold_timer = slime_hold_timers[slime]
+		brain.repath_timer = _slime_brain(slime).repath_timer
+		brain.hold_timer = _slime_brain(slime).hold_timer
 		slime_brains[slime] = brain
 		var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 		if combat == null:
@@ -1898,7 +1896,7 @@ func _knockback_slime(slime: Sprite2D) -> void:
 	slime_scoot_starts[slime] = slime.position
 	slime_scoot_targets[slime] = slime.position
 	slime_scoot_timers[slime] = 0.0
-	slime_hold_timers[slime] = slime_tuning.hitstun_time
+	_slime_brain(slime).hold_timer = slime_tuning.hitstun_time
 
 
 func _kill_slime(slime: Sprite2D) -> void:
@@ -2812,8 +2810,8 @@ func _reset_slimes_for_room() -> void:
 		slime_scoot_starts[slime] = slime.position
 		slime_scoot_targets[slime] = slime.position
 		slime_scoot_timers[slime] = 0.0
-		slime_hold_timers[slime] = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
-		slime_repath_timers[slime] = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
+		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
+		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 		_set_actor_base_texture(slime, actor_default_textures[slime])
 		_set_actor_visual_scale(slime, Vector2.ONE)
 		if not actor_sprites.has(slime):
@@ -3045,6 +3043,18 @@ func _separate_slime_from_player(slime: Sprite2D) -> void:
 	_try_move_actor_swept(slime, overlap_push, 0.75)
 
 
+func _slime_brain(slime: Sprite2D) -> SlimeBrain:
+	var brain := slime_brains.get(slime) as SlimeBrain
+	if brain == null:
+		brain = slime.get_node_or_null("Brain") as SlimeBrain
+		if brain == null:
+			brain = SlimeBrain.new()
+			brain.name = "Brain"
+			slime.add_child(brain)
+		slime_brains[slime] = brain
+	return brain
+
+
 func _move_slimes(delta: float) -> void:
 	for slime in slimes:
 		var brain := slime_brains.get(slime) as SlimeBrain
@@ -3068,7 +3078,7 @@ func _move_slimes(delta: float) -> void:
 			slime_targets[slime] = _aggro_slime_target(slime)
 			_update_slime_scoot(slime, delta)
 			continue
-		slime_repath_timers[slime] = float(slime_repath_timers[slime]) - delta
+		_slime_brain(slime).repath_timer = float(_slime_brain(slime).repath_timer) - delta
 		_update_slime_scoot(slime, delta)
 
 
@@ -3201,7 +3211,7 @@ func _move_slime_toward_player(slime: Sprite2D, delta: float) -> void:
 	var distance := offset.length()
 	if distance <= slime_tuning.attack_range:
 		slime_scoot_timers[slime] = 0.0
-		slime_hold_timers[slime] = 0.0
+		_slime_brain(slime).hold_timer = 0.0
 		_set_actor_visual_scale(slime, Vector2.ONE)
 		return
 
@@ -3652,9 +3662,9 @@ func _update_slime_scoot(slime: Sprite2D, delta: float) -> void:
 			_start_slime_hold(slime)
 		return
 
-	var hold_timer := float(slime_hold_timers[slime])
+	var hold_timer := float(_slime_brain(slime).hold_timer)
 	if hold_timer > 0.0:
-		slime_hold_timers[slime] = maxf(hold_timer - delta, 0.0)
+		_slime_brain(slime).hold_timer = maxf(hold_timer - delta, 0.0)
 		if _is_slime_aggroed(slime):
 			_set_actor_visual_scale(slime, Vector2.ONE)
 		else:
@@ -3672,17 +3682,17 @@ func _start_slime_scoot(slime: Sprite2D) -> void:
 	if is_aggroed:
 		target = _aggro_slime_target(slime)
 		slime_targets[slime] = target
-		slime_repath_timers[slime] = 0.08
-	elif foot.distance_to(target) < 2.0 or float(slime_repath_timers[slime]) <= 0.0:
+		_slime_brain(slime).repath_timer = 0.08
+	elif foot.distance_to(target) < 2.0 or float(_slime_brain(slime).repath_timer) <= 0.0:
 		target = _random_slime_walkable_point_near(foot, 5, slime)
 		slime_targets[slime] = target
-		slime_repath_timers[slime] = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
+		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 
 	var direction := target - foot
 	if direction.length_squared() < 0.01:
 		if is_aggroed:
 			slime_targets[slime] = _aggro_slime_target(slime)
-			slime_repath_timers[slime] = 0.0
+			_slime_brain(slime).repath_timer = 0.0
 			return
 		_start_slime_hold(slime)
 		return
@@ -3708,13 +3718,13 @@ func _repath_slime_after_block(slime: Sprite2D) -> void:
 	slime_scoot_timers[slime] = 0.0
 	slime_scoot_starts[slime] = slime.position
 	slime_scoot_targets[slime] = slime.position
-	slime_repath_timers[slime] = 0.0
+	_slime_brain(slime).repath_timer = 0.0
 	if _is_slime_aggroed(slime):
 		slime_targets[slime] = _aggro_slime_target(slime)
-		slime_hold_timers[slime] = 0.0
+		_slime_brain(slime).hold_timer = 0.0
 	else:
 		slime_targets[slime] = _random_slime_walkable_point_near(_actor_foot(slime), 8, slime)
-		slime_hold_timers[slime] = rng.randf_range(0.08, 0.18)
+		_slime_brain(slime).hold_timer = rng.randf_range(0.08, 0.18)
 	_set_actor_visual_scale(slime, Vector2.ONE)
 
 
@@ -3722,7 +3732,7 @@ func _start_slime_hold(slime: Sprite2D) -> void:
 	var hold_time := rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
 	if not _is_slime_aggroed(slime) and rng.randf() < slime_tuning.chill_chance:
 		hold_time = rng.randf_range(slime_tuning.chill_min, slime_tuning.chill_max)
-	slime_hold_timers[slime] = hold_time
+	_slime_brain(slime).hold_timer = hold_time
 	slime_idle_breath_timers[slime] = 0.0
 
 
