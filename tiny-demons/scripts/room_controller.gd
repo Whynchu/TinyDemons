@@ -32,7 +32,9 @@ func end_transition() -> void:
 
 
 func mark_cleared(room_id: StringName) -> void:
-	room_states[room_id] = true
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	state["finished"] = true
+	room_states[room_id] = state
 	room_cleared.emit(room_id)
 
 
