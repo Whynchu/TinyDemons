@@ -81,6 +81,9 @@ var interaction_component: InteractionComponent = null
 var chest_controller: ChestController = null
 var npc_controller: NpcController = null
 var rest_fire_controller: RestFireController = null
+var hud_controller: HudController = null
+var effects_spawner: EffectsSpawner = null
+var screen_state_controller: ScreenStateController = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -358,6 +361,15 @@ func _ready() -> void:
 	rest_fire_controller = RestFireController.new()
 	rest_fire_controller.name = "RestFireController"
 	rest_fire.add_child(rest_fire_controller)
+	hud_controller = HudController.new()
+	hud_controller.name = "HudController"
+	ui.add_child(hud_controller)
+	effects_spawner = EffectsSpawner.new()
+	effects_spawner.name = "EffectsSpawner"
+	add_child(effects_spawner)
+	screen_state_controller = ScreenStateController.new()
+	screen_state_controller.name = "ScreenStateController"
+	add_child(screen_state_controller)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id

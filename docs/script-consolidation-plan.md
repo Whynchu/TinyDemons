@@ -470,7 +470,11 @@ event-order problems.
   `InteractionComponent` event boundaries while preserving current outcomes.
 - [ ] Centralize nearby interaction selection in an interaction component.
 - [ ] Extract HUD, targeting display, damage numbers, and particles.
+- [x] Attach `HudController` and `EffectsSpawner` event boundaries while
+  preserving existing presentation implementations.
 - [ ] Extract title, archetype, loading, game-over, and transition screens.
+- [x] Attach `ScreenStateController` as the shared screen-state boundary while
+  preserving existing overlays and timing.
 - [ ] Isolate occlusion/image-cache updates and measure their update frequency.
 
 Exit criteria: game rules emit events; UI and effects render those events without
