@@ -73,6 +73,8 @@ var player_attack_component: PlayerAttackComponent = null
 var player_animation_component: PlayerAnimationComponent = null
 var walkable_area: WalkableArea = null
 var actor_collision_system: ActorCollisionSystem = null
+var depth_sorter: DepthSorter = null
+var occlusion_renderer: OcclusionRenderer = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -326,6 +328,12 @@ func _ready() -> void:
 	actor_collision_system = ActorCollisionSystem.new()
 	actor_collision_system.name = "ActorCollisionSystem"
 	add_child(actor_collision_system)
+	depth_sorter = DepthSorter.new()
+	depth_sorter.name = "DepthSorter"
+	add_child(depth_sorter)
+	occlusion_renderer = OcclusionRenderer.new()
+	occlusion_renderer.name = "OcclusionRenderer"
+	add_child(occlusion_renderer)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id
@@ -357,6 +365,8 @@ func _ready() -> void:
 	collision_sprites.append(slime_red)
 	collision_sprites.append(chest)
 	actor_collision_system.set_actors(collision_sprites)
+	depth_sorter.set_sprites(actor_sprites)
+	occlusion_renderer.set_occluders(occluder_sprites)
 	player_shadow_offset = player_shadow.global_position - player.global_position
 	player_shadow_scale = player_shadow.global_scale
 	player_shadow.z_as_relative = false

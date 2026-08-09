@@ -392,8 +392,12 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 - [x] Define and attach `ActorCollisionSystem` actor-set boundary; existing
   resolution remains authoritative pending parity migration.
 - [ ] Extract depth ordering and shadows.
+- [x] Define and attach `DepthSorter` ownership boundary; current ordering
+  logic remains in the coordinator pending parity migration.
 - [ ] Extract dungeon graph, room state, sockets, and transitions into
   `RoomController`.
+- [x] Define and attach `OcclusionRenderer` cache/occluder boundary; image
+  generation remains in the coordinator pending performance parity checks.
 - [ ] Verify every socket direction, return traversal, room persistence, and
   actor placement.
 
