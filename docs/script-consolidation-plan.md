@@ -515,6 +515,11 @@ Latest snapshot after the first cleanup pass: 5,631 physical lines, 304
 functions, 38 constants, 263 root vars, 22 `@onready` references, and 40
 dictionary declarations.
 
+Final M7 checkpoint snapshot after cache/state ownership cleanup: 5,589
+physical lines, 302 functions, 38 constants, 229 root vars, 22 `@onready`
+references, and 6 root dictionary declarations. The remaining dictionaries are
+component registries or local temporary maps rather than actor lifecycle state.
+
 - [ ] Reduce `gameplay.gd` to startup, global modes, and signal wiring.
 - [ ] Remove compatibility delegates and unused state.
 - [x] Remove the migrated `SpriteFrameLibrary` slicing compatibility delegate.
@@ -551,7 +556,7 @@ Update this table in every consolidation pull request.
 | M4 Enemies | Complete | Terra, high | - | - | Component state migration, live variant metadata, and smoke verification complete |
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
-| M7 Cleanup | Not started | Terra, medium | - | - | GPT-5.5 performs final architecture review |
+| M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
 
