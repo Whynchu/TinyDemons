@@ -342,6 +342,9 @@ focused behavior extraction, and GPT-5.4 mini for variants from the approved
 template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
 
 - [ ] Create a reusable `slime.tscn` with exported visual/tuning resources.
+- [x] Add the reusable `slime.tscn` capability template with shared Stats,
+  Health, and Brain nodes; visual and tuning exports remain for the instance
+  migration slice.
 - [ ] Move aggro, repath, scoot, hold, attack, hit reaction, and death state to
   slime components.
 - [x] Define and attach `SlimeBrain` decision-state boundary for aggro,
