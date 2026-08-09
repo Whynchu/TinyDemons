@@ -394,6 +394,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 - [ ] Extract depth ordering and shadows.
 - [x] Define and attach `DepthSorter` ownership boundary; current ordering
   logic remains in the coordinator pending parity migration.
+- [x] Define and attach `ShadowController` ownership boundary; shadow
+  placement remains coordinator-owned pending render parity migration.
 - [ ] Extract dungeon graph, room state, sockets, and transitions into
   `RoomController`.
 - [x] Define and attach `RoomController` room-state/event boundary; dungeon

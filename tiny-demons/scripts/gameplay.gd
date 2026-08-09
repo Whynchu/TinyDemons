@@ -76,6 +76,7 @@ var actor_collision_system: ActorCollisionSystem = null
 var depth_sorter: DepthSorter = null
 var occlusion_renderer: OcclusionRenderer = null
 var room_controller: RoomController = null
+var shadow_controller: ShadowController = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -338,10 +339,14 @@ func _ready() -> void:
 	room_controller = RoomController.new()
 	room_controller.name = "RoomController"
 	add_child(room_controller)
+	shadow_controller = ShadowController.new()
+	shadow_controller.name = "ShadowController"
+	add_child(shadow_controller)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id
 	_sync_current_room_metadata()
+	room_controller.set_current_room(current_room_id, current_room_type)
 	_collect_dungeon_sockets()
 	_validate_dungeon_socket_setup()
 	_ensure_current_room_layout()
