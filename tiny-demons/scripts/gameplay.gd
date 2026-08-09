@@ -139,10 +139,6 @@ var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
 var slime_idle_breath_timers: Dictionary = {}
-var slime_flash_timers: Dictionary = {}
-var slime_hitstun_timers: Dictionary = {}
-var slime_knockback_velocities: Dictionary = {}
-var slime_knockback_timers: Dictionary = {}
 var slime_attack_timers: Dictionary = {}
 var slime_attack_frame_indices: Dictionary = {}
 var slime_attack_hit_done: Dictionary = {}
@@ -464,10 +460,10 @@ func _ready() -> void:
 		_slime_brain(slime).scoot_timer = 0.0
 		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
 		slime_idle_breath_timers[slime] = rng.randf_range(0.0, slime_tuning.idle_breath_time)
-		slime_flash_timers[slime] = 0.0
-		slime_hitstun_timers[slime] = 0.0
-		slime_knockback_velocities[slime] = Vector2.ZERO
-		slime_knockback_timers[slime] = 0.0
+		_slime_combat(slime).flash_timer = 0.0
+		_slime_combat(slime).hitstun_timer = 0.0
+		_slime_combat(slime).knockback_velocity = Vector2.ZERO
+		_slime_combat(slime).knockback_timer = 0.0
 		slime_attack_timers[slime] = 0.0
 		slime_attack_frame_indices[slime] = 0
 		slime_attack_hit_done[slime] = false
@@ -1826,8 +1822,8 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	if health_component != null:
 		health_component.regen_delay_timer = slime_tuning.regen_delay
 		health_component.regen_accumulator = 0.0
-	slime_flash_timers[slime] = slime_tuning.hit_flash_time
-	slime_hitstun_timers[slime] = slime_tuning.hitstun_time
+	_slime_combat(slime).flash_timer = slime_tuning.hit_flash_time
+	_slime_combat(slime).hitstun_timer = slime_tuning.hitstun_time
 	_spawn_damage_number(slime, amount, was_critical)
 	hitstop_timer = player_tuning.hitstop_duration
 	if health_component != null and health_component.is_dead():
@@ -1887,8 +1883,8 @@ func _knockback_slime(slime: Sprite2D) -> void:
 	if direction.length_squared() < 0.01:
 		direction = Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
 
-	slime_knockback_velocities[slime] = _perspective_movement(direction.normalized() * (player_tuning.attack_knockback / slime_tuning.knockback_duration))
-	slime_knockback_timers[slime] = slime_tuning.knockback_duration
+	_slime_combat(slime).knockback_velocity = _perspective_movement(direction.normalized() * (player_tuning.attack_knockback / slime_tuning.knockback_duration))
+	_slime_combat(slime).knockback_timer = slime_tuning.knockback_duration
 	_slime_brain(slime).scoot_start = slime.position
 	_slime_brain(slime).scoot_target = slime.position
 	_slime_brain(slime).scoot_timer = 0.0
@@ -2793,10 +2789,10 @@ func _reset_slimes_for_room() -> void:
 			health_component.reset(max_health)
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
-		slime_flash_timers[slime] = 0.0
-		slime_hitstun_timers[slime] = 0.0
-		slime_knockback_velocities[slime] = Vector2.ZERO
-		slime_knockback_timers[slime] = 0.0
+		_slime_combat(slime).flash_timer = 0.0
+		_slime_combat(slime).hitstun_timer = 0.0
+		_slime_combat(slime).knockback_velocity = Vector2.ZERO
+		_slime_combat(slime).knockback_timer = 0.0
 		slime_attack_timers[slime] = 0.0
 		slime_attack_frame_indices[slime] = 0
 		slime_attack_hit_done[slime] = false
@@ -3051,6 +3047,18 @@ func _slime_brain(slime: Sprite2D) -> SlimeBrain:
 	return brain
 
 
+func _slime_combat(slime: Sprite2D) -> SlimeCombatComponent:
+	var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+	if combat == null:
+		combat = slime.get_node_or_null("Combat") as SlimeCombatComponent
+		if combat == null:
+			combat = SlimeCombatComponent.new()
+			combat.name = "Combat"
+			slime.add_child(combat)
+		slime_combat_components[slime] = combat
+	return combat
+
+
 func _move_slimes(delta: float) -> void:
 	for slime in slimes:
 		var brain := slime_brains.get(slime) as SlimeBrain
@@ -3065,8 +3073,8 @@ func _move_slimes(delta: float) -> void:
 		if _update_slime_knockback(slime, delta):
 			continue
 
-		slime_hitstun_timers[slime] = maxf(float(slime_hitstun_timers.get(slime, 0.0)) - delta, 0.0)
-		if float(slime_hitstun_timers[slime]) > 0.0:
+		_slime_combat(slime).hitstun_timer = maxf(_slime_combat(slime).hitstun_timer - delta, 0.0)
+		if float(_slime_combat(slime).hitstun_timer) > 0.0:
 			continue
 		if _update_slime_attack(slime, delta):
 			continue
@@ -3378,15 +3386,15 @@ func _apply_player_hit_knockback(slime: Sprite2D) -> void:
 
 
 func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool:
-	var timer := float(slime_knockback_timers.get(slime, 0.0))
+	var timer: float = _slime_combat(slime).knockback_timer
 	if timer <= 0.0:
 		return false
 
 	var step_time := minf(delta, timer)
-	slime_knockback_timers[slime] = maxf(timer - delta, 0.0)
-	_try_knockback_slime(slime, (slime_knockback_velocities[slime] as Vector2) * step_time)
-	if float(slime_knockback_timers[slime]) <= 0.0:
-		slime_knockback_velocities[slime] = Vector2.ZERO
+	_slime_combat(slime).knockback_timer = maxf(timer - delta, 0.0)
+	_try_knockback_slime(slime, (_slime_combat(slime).knockback_velocity as Vector2) * step_time)
+	if float(_slime_combat(slime).knockback_timer) <= 0.0:
+		_slime_combat(slime).knockback_velocity = Vector2.ZERO
 		_slime_brain(slime).scoot_start = slime.position
 		_slime_brain(slime).scoot_target = slime.position
 	return true
@@ -3396,8 +3404,8 @@ func _update_enemy_hit_flashes(delta: float) -> void:
 	for slime in slimes:
 		if _is_slime_dead(slime):
 			continue
-		var timer := maxf(float(slime_flash_timers.get(slime, 0.0)) - delta, 0.0)
-		slime_flash_timers[slime] = timer
+		var timer: float = maxf(_slime_combat(slime).flash_timer - delta, 0.0)
+		_slime_combat(slime).flash_timer = timer
 
 
 func _update_enemy_health(delta: float) -> void:
@@ -3865,7 +3873,7 @@ func _separate_actor_from_actor(actor: Sprite2D, other: Sprite2D) -> void:
 
 
 func _is_enemy_control_locked(actor: Sprite2D) -> bool:
-	return float(slime_hitstun_timers.get(actor, 0.0)) > 0.0 or float(slime_knockback_timers.get(actor, 0.0)) > 0.0
+	return _slime_combat(actor).hitstun_timer > 0.0 or _slime_combat(actor).knockback_timer > 0.0
 
 
 func _collides_with_static(actor: Sprite2D) -> bool:
@@ -4592,7 +4600,7 @@ func _update_actor_occlusion(delta: float) -> void:
 			if actor == player:
 				_restore_actor_base_visual_scale(actor)
 			continue
-		var is_flashing := float(slime_flash_timers.get(actor, 0.0)) > 0.0
+		var is_flashing: bool = _slime_combat(actor).flash_timer > 0.0
 		if actor == player:
 			is_flashing = player_hit_flash_timer > 0.0
 		if is_flashing:

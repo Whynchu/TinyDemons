@@ -9,6 +9,10 @@ var active := false
 var timer := 0.0
 var hit_done := false
 var cooldown := 0.0
+var flash_timer := 0.0
+var hitstun_timer := 0.0
+var knockback_velocity := Vector2.ZERO
+var knockback_timer := 0.0
 
 
 func tick(delta: float) -> void:
