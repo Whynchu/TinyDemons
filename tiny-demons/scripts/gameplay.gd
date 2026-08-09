@@ -4660,6 +4660,8 @@ func _update_depth_sorting() -> void:
 
 
 func _update_actor_occlusion(delta: float) -> void:
+	if occlusion_renderer != null:
+		occlusion_renderer.record_update(delta)
 	for actor in actor_sprites:
 		# Hidden actors must not retain an occlusion transform. The player is
 		# hidden while the separate attack sprite is displayed.
