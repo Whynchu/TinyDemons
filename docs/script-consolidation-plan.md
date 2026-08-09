@@ -275,7 +275,9 @@ resource schemas and move lists are approved. Use Terra for boundary conflicts.
   runtime parser verification remains pending Godot availability.
 - [x] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
   Gameplay retains temporary one-line delegates while callers migrate safely.
-- [ ] Introduce typed player, slime, combat, and effects tuning resources.
+- [x] Introduce typed player, slime, combat, and effects tuning resources.
+- [ ] Migrate the remaining player, slime, and effects call sites from root
+  constants after parity checks.
 - [ ] Replace constants only after parity is verified.
 
 Exit criteria: pure calculations and static asset preparation no longer depend

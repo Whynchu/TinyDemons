@@ -394,6 +394,10 @@ var cloaked_demon_wander_has_target := false
 var cloaked_demon_visual_bounds := Rect2(12, 10, 12, 16)
 var rng := RandomNumberGenerator.new()
 var sprite_frame_library := SpriteFrameLibrary.new()
+var combat_tuning := CombatTuning.new()
+var player_tuning := PlayerTuning.new()
+var slime_tuning := SlimeTuning.new()
+var effects_tuning := EffectsTuning.new()
 var last_damage_was_critical := false
 
 
@@ -1796,7 +1800,8 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 		attacker_equipment_damage,
 		defender_equipment_defense,
 		attacker_stats == player_stats,
-		rng
+		rng,
+		combat_tuning
 	)
 	last_damage_was_critical = result.critical
 	return result.amount
@@ -1804,7 +1809,7 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 
 func _max_health_for_stats(stats: StatsComponent) -> float:
 	var equipment_health := player_equipment.health_bonus if stats == player_stats and player_equipment != null else 0.0
-	return CombatCalculator.max_health_for_stats(stats, equipment_health)
+	return CombatCalculator.max_health_for_stats(stats, equipment_health, combat_tuning)
 
 
 func _player_max_health() -> float:
