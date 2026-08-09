@@ -1322,7 +1322,9 @@ func _start_roll_dust(direction: Vector2) -> void:
 	roll_dust_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	roll_dust_sprite.z_as_relative = false
 	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
-	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) - Vector2(8, 8) - direction * 3.0)
+	roll_dust_sprite.flip_h = direction.x > 0.01
+	var horizontal_trail := -signf(direction.x) if absf(direction.x) > 0.01 else 0.0
+	roll_dust_sprite.global_position = _snap_half_pixel(_actor_foot(player) - Vector2(8, 8) + Vector2(horizontal_trail, 0.0))
 	add_child(roll_dust_sprite)
 	roll_dust_frame = 0
 	roll_dust_timer = 0.0
