@@ -254,13 +254,16 @@ designed harness, and GPT-5.4 at medium effort for baseline diagnosis.
 - [x] Record source metrics and responsibility map.
 - [x] Preserve baseline commit on `main`.
 - [x] Create a dedicated consolidation branch.
-- [ ] Write a manual smoke-test checklist for the current playable loop.
-- [ ] Capture expected room, combat, interaction, and death behavior.
-- [ ] Add a headless scene-load/parser check if the Godot executable is
+- [x] Write a manual smoke-test checklist for the current playable loop in
+  [`gameplay-smoke-checklist.md`](gameplay-smoke-checklist.md).
+- [x] Capture expected room, combat, interaction, and death behavior in the
+  smoke-test checklist.
+- [ ] Add a headless scene-load/parser check when a Godot executable is
   available in development and CI environments.
 
 Exit criteria: behavior checks are documented and can be repeated after every
-milestone.
+milestone. M0 documentation is complete; the automated parser check remains
+environment-blocked.
 
 ### M1 - Pure utilities and tuning data
 
@@ -377,7 +380,7 @@ Update this table in every consolidation pull request.
 
 | Milestone | Status | Default model | Owner | PR/commit | Notes |
 | --- | --- | --- | --- | --- | --- |
-| M0 Baseline | In progress | Luna, low | - | - | GPT-5.4 mini for harness implementation |
+| M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot parser unavailable |
 | M1 Utilities/tuning | Not started | GPT-5.4, medium | - | - | GPT-5.4 mini for mechanical moves |
 | M2 Health | Not started | Terra, high | - | - | |
 | M3 Player | Not started | GPT-5.5, high | - | - | Sol only for unresolved ordering |
