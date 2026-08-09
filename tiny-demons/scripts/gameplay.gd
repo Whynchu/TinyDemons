@@ -1337,7 +1337,7 @@ func _start_roll_dust(direction: Vector2) -> void:
 	roll_dust_sprite.z_as_relative = false
 	roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
 	var emission_anchor := _actor_foot(player) + Vector2(0.0, -3.0) - direction * 2.0
-	var placement_tweak := Vector2(-2.0, 1.0) if roll_dust_uses_flipped_frames else Vector2(2.0, 1.0)
+	var placement_tweak := Vector2(-2.0, 3.0) if roll_dust_uses_flipped_frames else Vector2(2.0, 3.0)
 	emission_anchor += placement_tweak
 	var texture_anchor := Vector2(15.0, 15.0) if roll_dust_uses_flipped_frames else Vector2(0.0, 15.0)
 	roll_dust_sprite.global_position = _snap_half_pixel(emission_anchor - texture_anchor)
