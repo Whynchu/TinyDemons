@@ -156,6 +156,7 @@ var player_roll_frames: Array[Texture2D] = []
 var player_roll_frame := 0
 var player_roll_timer := 0.0
 var player_roll_velocity := Vector2.ZERO
+var player_roll_direction := Vector2.ZERO
 var player_roll_input_was_down := false
 var roll_dust_frames: Array[Texture2D] = []
 var roll_dust_sprite: Sprite2D = null
@@ -1274,7 +1275,7 @@ func _start_player_roll() -> void:
 	elif direction.x > 0.0:
 		player.flip_h = false
 	player_is_rolling = true
-	_start_roll_dust(direction)
+	player_roll_direction = direction
 	player_attack_visual.visible = false
 	player_roll_frame = 0
 	player_roll_timer = 0.0
@@ -1292,6 +1293,8 @@ func _update_player_roll(delta: float) -> void:
 	if player_roll_frame >= player_roll_frames.size() - 2:
 		step_time *= 0.25
 	_try_move_actor_swept(player, player_roll_velocity * step_time, 0.75)
+	if roll_dust_sprite == null:
+		_start_roll_dust(player_roll_direction)
 	player_roll_timer += delta
 	var current_frame_time := PLAYER_ROLL_FRAME_TIME
 	# Hold the penultimate frame for two additional animation frames.
