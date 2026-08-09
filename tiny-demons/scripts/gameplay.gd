@@ -65,6 +65,7 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var player_health_fill: Sprite2D = $UI/HpBarFill
 @onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
 var player_equipment: EquipmentComponent = null
+var player_health_component: HealthComponent = null
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -404,8 +405,16 @@ func _ready() -> void:
 		player_equipment.name = "Equipment"
 		player_equipment.equip_default_loadout()
 		player.add_child(player_equipment)
+	player_health_component = player.get_node_or_null("Health") as HealthComponent
+	if player_health_component == null:
+		player_health_component = HealthComponent.new()
+		player_health_component.name = "Health"
+		player.add_child(player_health_component)
+	player_health_component.set_process(false)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
+	player_health_component.maximum_health = player_health
+	player_health_component.reset(player_health)
 	player_display_health = player_health
 	player_regen_delay_timer = 0.0
 	player_regen_accumulator = 0.0
@@ -1113,6 +1122,9 @@ func _start_selected_archetype() -> void:
 	await _apply_player_palette_async(player_palette_name)
 	_update_player_aggro_marker_colors()
 	player_health = _player_max_health()
+	if player_health_component != null:
+		player_health_component.maximum_health = player_health
+		player_health_component.reset(player_health)
 	player_display_health = player_health
 	player_damage_fill_hold_timer = 0.0
 	_update_player_health_ui()
@@ -3101,7 +3113,11 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 
 	var damage := _slime_attack_damage(slime)
 	_mark_player_in_combat()
-	player_health = maxf(player_health - damage, 0.0)
+	if player_health_component != null:
+		player_health_component.apply_damage(damage)
+		player_health = player_health_component.current_health
+	else:
+		player_health = maxf(player_health - damage, 0.0)
 	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 	if player_is_attacking:
 		_interrupt_player_attack()
@@ -3155,7 +3171,11 @@ func _update_player_health_regen(delta: float) -> void:
 	player_regen_accumulator += delta
 	var health_before_regen := player_health
 	while player_regen_accumulator >= player_tuning.regen_interval and player_health < max_health:
-		player_health = minf(player_health + player_tuning.regen_amount, max_health)
+		if player_health_component != null:
+			player_health_component.apply_healing(player_tuning.regen_amount)
+			player_health = player_health_component.current_health
+		else:
+			player_health = minf(player_health + player_tuning.regen_amount, max_health)
 		player_regen_accumulator -= player_tuning.regen_interval
 	if player_health > health_before_regen:
 		# Healing reverses the damage-bar presentation: show the newly healed
