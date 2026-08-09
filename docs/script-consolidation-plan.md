@@ -179,12 +179,65 @@ as `health.apply_damage(hit)`, `motor.try_move(motion)`, or
 Target size is generally 100-350 lines per cohesive script. A complex controller
 may exceed that when its state and dependencies remain singular and clear.
 
+## Model routing and token budget
+
+Model recommendations are based on the [official OpenAI model
+guidance](https://developers.openai.com/api/docs/models), which positions GPT-5.6
+Luna for cost-sensitive high-volume work, GPT-5.6 Terra for balancing capability
+and cost, and GPT-5.6 Sol for complex reasoning and coding. Recheck that page if
+the plan is executed after the audit date because model availability can change.
+
+The model is selected by risk, not by milestone size. Use the lowest tier that
+can safely own the decision being made.
+
+| Tier | Model and effort | Appropriate work | Do not assign |
+| --- | --- | --- | --- |
+| Mechanical | `gpt-5.6-luna`, low | Metrics, documentation, formatting, repetitive resource population, known renames, checklist execution | Architecture, state ownership, timing-sensitive behavior |
+| Implementation | `gpt-5.6-terra`, medium by default; high for coupled state | Focused component extraction, typed APIs, signal wiring, tests, scene edits with established boundaries | Unresolved cross-system architecture or subtle global update-order changes |
+| Architecture | `gpt-5.6-sol`, high | Boundary design, interleaved state machines, collision/room transitions, difficult regressions, final architecture review | Bulk mechanical edits that Luna or Terra can perform |
+
+Use `xhigh` only after a concrete high-effort attempt identifies a genuinely
+unresolved architecture or behavior problem. Do not begin routine work at
+`xhigh` or `max`.
+
+### Escalation rules
+
+1. Start with the milestone's default model below.
+2. Keep each assignment to one coherent slice, normally one to three scripts and
+   one explicit acceptance test. Do not request an entire milestone in one run.
+3. Give the model the relevant function ranges, component contract, current
+   scene nodes, and validation criteria. Do not paste all of `gameplay.gd` when
+   targeted file inspection is available.
+4. Escalate Luna to Terra when the task requires choosing ownership, changing a
+   signal/API contract, or diagnosing a failed behavior check.
+5. Escalate Terra to Sol when work crosses three or more systems, changes global
+   update order, exposes circular dependencies, or fails the same acceptance
+   check twice for a non-mechanical reason.
+6. After Sol resolves the design decision, return implementation and repetitive
+   follow-up work to Terra or Luna with the decision recorded in this document.
+
+### Milestone model assignments
+
+| Milestone | Default | Use the cheaper tier for | Escalate when |
+| --- | --- | --- | --- |
+| M0 Baseline/safeguards | Luna, low | Metrics, smoke-check transcription, documentation | Terra, medium, if building a test harness or diagnosing inconsistent baseline behavior |
+| M1 Utilities/tuning | Terra, medium | Luna, low, for approved constant/resource moves and formatting | Sol, high, only if extraction reveals an unresolved shared cache or ownership boundary |
+| M2 Health | Terra, high | Luna, low, for adding established component nodes/resources after the first actor works | Sol, high, if death, regeneration, room reset, and UI ownership cannot be separated cleanly |
+| M3 Player | Sol, high | Terra, medium, for implementing isolated components after contracts and update phases are decided | Sol, xhigh, only for an unresolved combo/roll/hit-stop ordering regression |
+| M4 Enemies | Terra, high | Luna, low, for creating slime variants from an approved scene/resource template | Sol, high, if removing dictionaries changes multi-enemy ordering, targeting, or collision behavior |
+| M5 World/rooms | Sol, high | Terra, medium, for implementing a settled world-service API | Sol, xhigh, only for an unresolved collision, socket traversal, or persistence defect |
+| M6 Interactions/presentation | Terra, medium | Luna, low, for repetitive UI hookups and resource moves | Sol, high, for occlusion performance/design or event-order regressions spanning gameplay and UI |
+| M7 Cleanup | Terra, medium | Luna, low, for metrics, dead-code inventory, and documentation updates | Sol, high, for the final dependency/update-order review or a cross-system regression |
+
 ## Migration roadmap
 
 Each milestone must leave the game runnable. During migration, `gameplay.gd` may
 temporarily delegate to new components before old fields and methods are removed.
 
 ### M0 - Baseline and safeguards
+
+Model route: Luna at low effort by default; Terra at medium effort for harness
+design or baseline diagnosis.
 
 - [x] Record source metrics and responsibility map.
 - [x] Preserve baseline commit on `main`.
@@ -199,6 +252,9 @@ milestone.
 
 ### M1 - Pure utilities and tuning data
 
+Model route: Terra at medium effort for extraction; Luna at low effort after
+resource schemas and move lists are approved.
+
 - [ ] Extract `CombatCalculator` without changing damage results.
 - [ ] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
 - [ ] Introduce typed player, slime, combat, and effects tuning resources.
@@ -208,6 +264,9 @@ Exit criteria: pure calculations and static asset preparation no longer depend
 on the gameplay scene root.
 
 ### M2 - Health composition
+
+Model route: Terra at high effort because lifecycle state crosses combat, UI,
+death, regeneration, and room reset. Escalate boundary conflicts to Sol.
 
 - [ ] Add `HealthComponent` to the player and each slime.
 - [ ] Move health, maximum health, regen, and death state into the component.
@@ -221,6 +280,9 @@ health state by actor.
 
 ### M3 - Player composition
 
+Model route: Sol at high effort for the initial state/update-order design; route
+isolated implementation slices back to Terra after contracts are fixed.
+
 - [ ] Add `ActorMotor` and move normal movement/knockback behind its API.
 - [ ] Extract player input/action coordination into `PlayerController`.
 - [ ] Extract roll state and roll-dust event.
@@ -233,6 +295,9 @@ timers or animation frames.
 
 ### M4 - Enemy composition
 
+Model route: Terra at high effort for the first reusable slime; Luna can create
+later variants from the approved template. Escalate behavioral coupling to Sol.
+
 - [ ] Create a reusable `slime.tscn` with exported visual/tuning resources.
 - [ ] Move aggro, repath, scoot, hold, attack, hit reaction, and death state to
   slime components.
@@ -244,6 +309,9 @@ Exit criteria: adding a slime variant requires a resource/scene configuration,
 not new root-script state.
 
 ### M5 - World and room systems
+
+Model route: Sol at high effort for collision, walkability, transition, and
+persistence boundaries; Terra implements APIs after the design is settled.
 
 - [ ] Extract walkable geometry and queries into `WalkableArea`.
 - [ ] Extract actor contact/static collision into `ActorCollisionSystem`.
@@ -258,6 +326,9 @@ APIs; they do not inspect map implementation details.
 
 ### M6 - Interactions and presentation
 
+Model route: Terra at medium effort by default; use Luna for repetitive UI
+wiring and Sol only for cross-system occlusion or event-order problems.
+
 - [ ] Give chest, NPC, and rest fire dedicated controllers.
 - [ ] Centralize nearby interaction selection in an interaction component.
 - [ ] Extract HUD, targeting display, damage numbers, and particles.
@@ -268,6 +339,9 @@ Exit criteria: game rules emit events; UI and effects render those events withou
 owning gameplay outcomes.
 
 ### M7 - Coordinator cleanup
+
+Model route: Terra at medium effort for cleanup, Luna for metrics/docs, and Sol
+at high effort for the final dependency and update-order review.
 
 - [ ] Reduce `gameplay.gd` to startup, global modes, and signal wiring.
 - [ ] Remove compatibility delegates and unused state.
@@ -283,16 +357,16 @@ dictionaries, and new gameplay objects are assembled through composition.
 
 Update this table in every consolidation pull request.
 
-| Milestone | Status | Owner | PR/commit | Notes |
-| --- | --- | --- | --- | --- |
-| M0 Baseline | In progress | - | - | Audit complete; behavior safeguards remain |
-| M1 Utilities/tuning | Not started | - | - | |
-| M2 Health | Not started | - | - | |
-| M3 Player | Not started | - | - | |
-| M4 Enemies | Not started | - | - | |
-| M5 World/rooms | Not started | - | - | |
-| M6 Interactions/presentation | Not started | - | - | |
-| M7 Cleanup | Not started | - | - | |
+| Milestone | Status | Default model | Owner | PR/commit | Notes |
+| --- | --- | --- | --- | --- | --- |
+| M0 Baseline | In progress | Luna, low | - | - | Audit complete; behavior safeguards remain |
+| M1 Utilities/tuning | Not started | Terra, medium | - | - | |
+| M2 Health | Not started | Terra, high | - | - | |
+| M3 Player | Not started | Sol, high | - | - | |
+| M4 Enemies | Not started | Terra, high | - | - | |
+| M5 World/rooms | Not started | Sol, high | - | - | |
+| M6 Interactions/presentation | Not started | Terra, medium | - | - | |
+| M7 Cleanup | Not started | Terra, medium | - | - | Sol performs final architecture review |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
 
