@@ -827,9 +827,9 @@ func _style_archetype_button(button: Button) -> void:
 	button.add_theme_stylebox_override("focus", focus)
 
 
-func _make_retro_button(label: String, position: Vector2, size: Vector2) -> Button:
+func _make_retro_button(label: String, button_position: Vector2, size: Vector2) -> Button:
 	var button := Button.new()
-	button.position = position
+	button.position = button_position
 	button.size = size
 	button.text = ""
 	button.focus_mode = Control.FOCUS_ALL
@@ -946,9 +946,19 @@ func _update_archetype_input(delta: float) -> void:
 	elif Input.is_action_just_pressed("ui_down"):
 		_select_archetype_menu_row(archetype_menu_row + 1)
 	elif Input.is_action_just_pressed("ui_left"):
-		_shift_archetype(-1) if archetype_menu_row == 0 else _shift_archetype_color(-1) if archetype_menu_row == 1 else _select_archetype_menu_row(2)
+		if archetype_menu_row == 0:
+			_shift_archetype(-1)
+		elif archetype_menu_row == 1:
+			_shift_archetype_color(-1)
+		else:
+			_select_archetype_menu_row(2)
 	elif Input.is_action_just_pressed("ui_right"):
-		_shift_archetype(1) if archetype_menu_row == 0 else _shift_archetype_color(1) if archetype_menu_row == 1 else _select_archetype_menu_row(2)
+		if archetype_menu_row == 0:
+			_shift_archetype(1)
+		elif archetype_menu_row == 1:
+			_shift_archetype_color(1)
+		else:
+			_select_archetype_menu_row(2)
 	if Input.is_action_just_pressed("ui_accept") or _is_interact_input_pressed():
 		if archetype_menu_row == 2:
 			_start_selected_archetype()
@@ -958,7 +968,7 @@ func _update_archetype_input(delta: float) -> void:
 
 func _shift_archetype(direction: int) -> void:
 	archetype_index = posmod(archetype_index + direction, 4)
-	selected_archetype = archetype_index
+	selected_archetype = archetype_index as StatsComponent.AllocationProfile
 	_archetype_arrow_pulse(direction)
 	_update_archetype_screen()
 
