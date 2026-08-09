@@ -15,8 +15,8 @@ signal died
 @export var regen_amount := 0.0
 
 var current_health := 0.0
-var _regen_delay_timer := 0.0
-var _regen_accumulator := 0.0
+var regen_delay_timer := 0.0
+var regen_accumulator := 0.0
 var _dead := false
 
 
@@ -30,8 +30,8 @@ func _process(delta: float) -> void:
 
 func reset(value: float = -1.0) -> void:
 	current_health = maximum_health if value < 0.0 else clampf(value, 0.0, maximum_health)
-	_regen_delay_timer = 0.0
-	_regen_accumulator = 0.0
+	regen_delay_timer = 0.0
+	regen_accumulator = 0.0
 	_dead = current_health <= 0.0
 	health_changed.emit(current_health, maximum_health)
 
@@ -48,8 +48,8 @@ func apply_damage(amount: float) -> float:
 	if applied <= 0.0:
 		return 0.0
 	current_health -= applied
-	_regen_delay_timer = regen_delay
-	_regen_accumulator = 0.0
+	regen_delay_timer = regen_delay
+	regen_accumulator = 0.0
 	damaged.emit(applied)
 	health_changed.emit(current_health, maximum_health)
 	if current_health <= 0.0 and not _dead:
@@ -71,15 +71,15 @@ func apply_healing(amount: float) -> float:
 
 func tick_regeneration(delta: float) -> float:
 	if _dead or regen_amount <= 0.0 or current_health >= maximum_health:
-		_regen_accumulator = 0.0
+	regen_accumulator = 0.0
 		return 0.0
-	_regen_delay_timer = maxf(_regen_delay_timer - delta, 0.0)
-	if _regen_delay_timer > 0.0:
+	regen_delay_timer = maxf(regen_delay_timer - delta, 0.0)
+	if regen_delay_timer > 0.0:
 		return 0.0
-	_regen_accumulator += delta
+	regen_accumulator += delta
 	var healed_total := 0.0
-	while _regen_accumulator >= regen_interval and current_health < maximum_health:
-		_regen_accumulator -= regen_interval
+	while regen_accumulator >= regen_interval and current_health < maximum_health:
+		regen_accumulator -= regen_interval
 		healed_total += apply_healing(regen_amount)
 	return healed_total
 

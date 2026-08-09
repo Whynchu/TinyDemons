@@ -284,11 +284,8 @@ var player_health_text: Sprite2D = null
 var player_start_position := Vector2.ZERO
 var chest_start_position := Vector2.ZERO
 var cloaked_demon_start_position := Vector2.ZERO
-var target_health: Dictionary = {}
 var target_display_health: Dictionary = {}
 var target_damage_fill_hold_timers: Dictionary = {}
-var target_regen_delay_timers: Dictionary = {}
-var target_regen_accumulators: Dictionary = {}
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
 var target_overhead_fill_textures: Dictionary = {}
@@ -463,11 +460,8 @@ func _ready() -> void:
 		health_component.regen_amount = slime_tuning.regen_amount
 		health_component.reset(max_health)
 		slime_health_components[slime] = health_component
-		target_health[slime] = max_health
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
-		target_regen_delay_timers[slime] = 0.0
-		target_regen_accumulators[slime] = 0.0
 	_apply_room_state()
 	_build_depth_lists()
 
@@ -1730,22 +1724,22 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 
 	_mark_player_in_combat()
 	var health_component := slime_health_components.get(slime) as HealthComponent
-	var previous_health := health_component.current_health if health_component != null else float(target_health.get(slime, _enemy_max_health(slime)))
+	var previous_health := health_component.current_health if health_component != null else _enemy_max_health(slime)
 	slime_persistent_aggro[slime] = true
 	if health_component != null:
 		health_component.apply_damage(amount)
-		target_health[slime] = health_component.current_health
 	else:
-		target_health[slime] = maxf(previous_health - amount, 0.0)
+		previous_health = maxf(previous_health - amount, 0.0)
 	target_display_health[slime] = maxf(float(target_display_health.get(slime, previous_health)), previous_health)
 	target_damage_fill_hold_timers[slime] = slime_tuning.health_damage_hang_time
-	target_regen_delay_timers[slime] = slime_tuning.regen_delay
-	target_regen_accumulators[slime] = 0.0
+	if health_component != null:
+		health_component.regen_delay_timer = slime_tuning.regen_delay
+		health_component.regen_accumulator = 0.0
 	slime_flash_timers[slime] = slime_tuning.hit_flash_time
 	slime_hitstun_timers[slime] = slime_tuning.hitstun_time
 	_spawn_damage_number(slime, amount, was_critical)
 	hitstop_timer = player_tuning.hitstop_duration
-	if float(target_health[slime]) <= 0.0:
+	if health_component != null and health_component.is_dead():
 		_kill_slime(slime)
 
 
@@ -2654,7 +2648,9 @@ func _kill_slime_without_effects(slime: Sprite2D) -> void:
 	depth_sprites.erase(slime)
 	occluder_sprites.erase(slime)
 	actor_sprites.erase(slime)
-	target_health[slime] = 0.0
+	var health_component := slime_health_components.get(slime) as HealthComponent
+	if health_component != null:
+		health_component.reset(0.0)
 	target_display_health[slime] = 0.0
 	var frame := target_overhead_frames.get(slime) as Sprite2D
 	var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D
@@ -2704,11 +2700,8 @@ func _reset_slimes_for_room() -> void:
 		if health_component != null:
 			health_component.maximum_health = max_health
 			health_component.reset(max_health)
-		target_health[slime] = max_health
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
-		target_regen_delay_timers[slime] = 0.0
-		target_regen_accumulators[slime] = 0.0
 		slime_flash_timers[slime] = 0.0
 		slime_hitstun_timers[slime] = 0.0
 		slime_knockback_velocities[slime] = Vector2.ZERO
@@ -3256,13 +3249,14 @@ func _update_enemy_health(delta: float) -> void:
 			continue
 		var max_health := _enemy_max_health(slime)
 		var health_component := slime_health_components.get(slime) as HealthComponent
-		var health := health_component.current_health if health_component != null else float(target_health.get(slime, max_health))
-		var regen_delay := maxf(float(target_regen_delay_timers.get(slime, 0.0)) - delta, 0.0)
-		target_regen_delay_timers[slime] = regen_delay
+		var health := health_component.current_health if health_component != null else max_health
+		var regen_delay := maxf(health_component.regen_delay_timer - delta, 0.0) if health_component != null else 0.0
+		if health_component != null:
+			health_component.regen_delay_timer = regen_delay
 
 		var health_before_regen := health
 		if health < max_health and regen_delay <= 0.0:
-			var regen_accumulator := float(target_regen_accumulators.get(slime, 0.0)) + delta
+			var regen_accumulator := (health_component.regen_accumulator if health_component != null else 0.0) + delta
 			while regen_accumulator >= slime_tuning.regen_interval and health < max_health:
 				if health_component != null:
 					health_component.apply_healing(slime_tuning.regen_amount)
@@ -3270,11 +3264,11 @@ func _update_enemy_health(delta: float) -> void:
 				else:
 					health = minf(health + slime_tuning.regen_amount, max_health)
 				regen_accumulator -= slime_tuning.regen_interval
-			target_health[slime] = health
-			target_regen_accumulators[slime] = regen_accumulator
+			if health_component != null:
+				health_component.regen_accumulator = regen_accumulator
 		elif health >= max_health:
-			target_regen_accumulators[slime] = 0.0
-
+			if health_component != null:
+				health_component.regen_accumulator = 0.0
 		var display_health := float(target_display_health.get(slime, max_health))
 		if health > health_before_regen:
 			display_health = minf(display_health, health_before_regen)
@@ -4717,7 +4711,8 @@ func _update_target_ui() -> void:
 		target_health_damage_fill.texture = damage_fill_texture
 
 	var max_health := _enemy_max_health(current_target)
-	var health := float(target_health.get(current_target, max_health))
+	var health_component := slime_health_components.get(current_target) as HealthComponent
+	var health := health_component.current_health if health_component != null else max_health
 	var display_health := float(target_display_health.get(current_target, max_health))
 	target_health_text.texture = _pixel_number_texture("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
 	_set_health_bar_values(
@@ -4837,7 +4832,8 @@ func _update_overworld_ui() -> void:
 			continue
 
 		var max_health := _enemy_max_health(slime)
-		var health := float(target_health.get(slime, max_health))
+		var health_component := slime_health_components.get(slime) as HealthComponent
+		var health := health_component.current_health if health_component != null else max_health
 		var is_aggroed := _is_slime_aggroed(slime)
 		var should_show := health < max_health or is_aggroed
 		frame.visible = should_show
