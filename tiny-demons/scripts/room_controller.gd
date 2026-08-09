@@ -37,4 +37,4 @@ func mark_cleared(room_id: StringName) -> void:
 
 
 func is_cleared(room_id: StringName) -> bool:
-	return bool(room_states.get(room_id, false))
+	return room_states.get(room_id, false) == true
