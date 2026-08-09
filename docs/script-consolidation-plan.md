@@ -389,6 +389,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 - [x] Define and attach `WalkableArea` geometry/query boundary; tile extraction
   remains in the coordinator pending parity verification.
 - [ ] Extract actor contact/static collision into `ActorCollisionSystem`.
+- [x] Define and attach `ActorCollisionSystem` actor-set boundary; existing
+  resolution remains authoritative pending parity migration.
 - [ ] Extract depth ordering and shadows.
 - [ ] Extract dungeon graph, room state, sockets, and transitions into
   `RoomController`.

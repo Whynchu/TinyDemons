@@ -72,6 +72,7 @@ var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
 var player_animation_component: PlayerAnimationComponent = null
 var walkable_area: WalkableArea = null
+var actor_collision_system: ActorCollisionSystem = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -322,6 +323,9 @@ func _ready() -> void:
 	walkable_area = WalkableArea.new()
 	walkable_area.name = "WalkableArea"
 	add_child(walkable_area)
+	actor_collision_system = ActorCollisionSystem.new()
+	actor_collision_system.name = "ActorCollisionSystem"
+	add_child(actor_collision_system)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id
@@ -352,6 +356,7 @@ func _ready() -> void:
 	collision_sprites.append(slime_green)
 	collision_sprites.append(slime_red)
 	collision_sprites.append(chest)
+	actor_collision_system.set_actors(collision_sprites)
 	player_shadow_offset = player_shadow.global_position - player.global_position
 	player_shadow_scale = player_shadow.global_scale
 	player_shadow.z_as_relative = false
