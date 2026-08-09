@@ -5,7 +5,7 @@ class_name ActorCollisionSystem
 ## until static-map and actor-contact parity is verified.
 
 var actors: Array[Sprite2D] = []
-@export var contact_distance := 12.0
+@export var contact_distance := 64.0
 
 
 func set_actors(new_actors: Array[Sprite2D]) -> void:
