@@ -66,6 +66,7 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
 var player_equipment: EquipmentComponent = null
 var player_health_component: HealthComponent = null
+var slime_health_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -450,6 +451,18 @@ func _ready() -> void:
 		actor_stats[slime] = slime.get_node_or_null("Stats") as StatsComponent
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
+		var health_component := slime.get_node_or_null("Health") as HealthComponent
+		if health_component == null:
+			health_component = HealthComponent.new()
+			health_component.name = "Health"
+			slime.add_child(health_component)
+		health_component.set_process(false)
+		health_component.maximum_health = max_health
+		health_component.regen_delay = slime_tuning.regen_delay
+		health_component.regen_interval = slime_tuning.regen_interval
+		health_component.regen_amount = slime_tuning.regen_amount
+		health_component.reset(max_health)
+		slime_health_components[slime] = health_component
 		target_health[slime] = max_health
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
@@ -1716,9 +1729,14 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 		return
 
 	_mark_player_in_combat()
-	var previous_health := float(target_health.get(slime, _enemy_max_health(slime)))
+	var health_component := slime_health_components.get(slime) as HealthComponent
+	var previous_health := health_component.current_health if health_component != null else float(target_health.get(slime, _enemy_max_health(slime)))
 	slime_persistent_aggro[slime] = true
-	target_health[slime] = maxf(previous_health - amount, 0.0)
+	if health_component != null:
+		health_component.apply_damage(amount)
+		target_health[slime] = health_component.current_health
+	else:
+		target_health[slime] = maxf(previous_health - amount, 0.0)
 	target_display_health[slime] = maxf(float(target_display_health.get(slime, previous_health)), previous_health)
 	target_damage_fill_hold_timers[slime] = slime_tuning.health_damage_hang_time
 	target_regen_delay_timers[slime] = slime_tuning.regen_delay
@@ -2682,6 +2700,10 @@ func _reset_slimes_for_room() -> void:
 		dead_slimes[slime] = false
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
+		var health_component := slime_health_components.get(slime) as HealthComponent
+		if health_component != null:
+			health_component.maximum_health = max_health
+			health_component.reset(max_health)
 		target_health[slime] = max_health
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
@@ -3233,7 +3255,8 @@ func _update_enemy_health(delta: float) -> void:
 		if _is_slime_dead(slime):
 			continue
 		var max_health := _enemy_max_health(slime)
-		var health := float(target_health.get(slime, max_health))
+		var health_component := slime_health_components.get(slime) as HealthComponent
+		var health := health_component.current_health if health_component != null else float(target_health.get(slime, max_health))
 		var regen_delay := maxf(float(target_regen_delay_timers.get(slime, 0.0)) - delta, 0.0)
 		target_regen_delay_timers[slime] = regen_delay
 
@@ -3241,7 +3264,11 @@ func _update_enemy_health(delta: float) -> void:
 		if health < max_health and regen_delay <= 0.0:
 			var regen_accumulator := float(target_regen_accumulators.get(slime, 0.0)) + delta
 			while regen_accumulator >= slime_tuning.regen_interval and health < max_health:
-				health = minf(health + slime_tuning.regen_amount, max_health)
+				if health_component != null:
+					health_component.apply_healing(slime_tuning.regen_amount)
+					health = health_component.current_health
+				else:
+					health = minf(health + slime_tuning.regen_amount, max_health)
 				regen_accumulator -= slime_tuning.regen_interval
 			target_health[slime] = health
 			target_regen_accumulators[slime] = regen_accumulator
