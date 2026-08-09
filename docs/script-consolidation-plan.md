@@ -451,7 +451,23 @@ Model route: GPT-5.4 at medium effort by default; use GPT-5.4 mini for repetitiv
 UI wiring, Terra for occlusion integration, and GPT-5.5 for cross-system
 event-order problems.
 
+#### M6 single-pass implementation plan
+
+1. Interactions: attach `ChestController`, `NpcController`,
+   `RestFireController`, and `InteractionComponent`; preserve existing reward,
+   dialogue, and healing outcomes behind event contracts.
+2. Presentation: attach HUD/targeting/effects presenters and route display
+   refreshes through domain signals without moving gameplay decisions.
+3. Screens: attach title, archetype, loading, game-over, and transition state
+   controllers while retaining current overlays and timing.
+4. Occlusion: move cache ownership/invalidation into `OcclusionRenderer` and
+   retain update measurements.
+5. Verification: replay chest reward, NPC dialogue, rest healing, targeting,
+   particles, every screen transition, and occlusion behavior in one smoke pass.
+
 - [ ] Give chest, NPC, and rest fire dedicated controllers.
+- [x] Attach `ChestController`, `NpcController`, `RestFireController`, and
+  `InteractionComponent` event boundaries while preserving current outcomes.
 - [ ] Centralize nearby interaction selection in an interaction component.
 - [ ] Extract HUD, targeting display, damage numbers, and particles.
 - [ ] Extract title, archetype, loading, game-over, and transition screens.

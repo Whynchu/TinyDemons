@@ -77,6 +77,10 @@ var depth_sorter: DepthSorter = null
 var occlusion_renderer: OcclusionRenderer = null
 var room_controller: RoomController = null
 var shadow_controller: ShadowController = null
+var interaction_component: InteractionComponent = null
+var chest_controller: ChestController = null
+var npc_controller: NpcController = null
+var rest_fire_controller: RestFireController = null
 var slime_health_components: Dictionary = {}
 var slime_brains: Dictionary = {}
 var slime_combat_components: Dictionary = {}
@@ -342,6 +346,18 @@ func _ready() -> void:
 	shadow_controller = ShadowController.new()
 	shadow_controller.name = "ShadowController"
 	add_child(shadow_controller)
+	interaction_component = InteractionComponent.new()
+	interaction_component.name = "InteractionComponent"
+	add_child(interaction_component)
+	chest_controller = ChestController.new()
+	chest_controller.name = "ChestController"
+	chest.add_child(chest_controller)
+	npc_controller = NpcController.new()
+	npc_controller.name = "NpcController"
+	cloaked_demon.add_child(npc_controller)
+	rest_fire_controller = RestFireController.new()
+	rest_fire_controller.name = "RestFireController"
+	rest_fire.add_child(rest_fire_controller)
 	rng.randomize()
 	dungeon_graph.initialize(rng.randi())
 	current_room_id = dungeon_graph.start_room_id
