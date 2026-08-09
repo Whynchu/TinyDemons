@@ -3588,8 +3588,8 @@ func _slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
 func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
 	var image := _cached_texture_image(source).duplicate()
 	var bayer := PackedInt32Array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5])
-	for y in image.get_height():
-		for x in image.get_width():
+	for y in range(image.get_height()):
+		for x in range(image.get_width()):
 			var color := image.get_pixel(x, y)
 			if color.a <= 0.0:
 				continue
