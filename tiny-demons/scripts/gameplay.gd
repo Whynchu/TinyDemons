@@ -149,14 +149,7 @@ var depth_sprites: Array[Sprite2D] = []
 var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
-var actor_default_textures: Dictionary = {}
-var actor_default_materials: Dictionary = {}
-var original_actor_textures: Dictionary = {}
-var original_actor_images: Dictionary = {}
-var original_actor_scales: Dictionary = {}
-var actor_visual_scales: Dictionary = {}
 var actor_occlusion_grace: Dictionary = {}
-var sprite_images: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
 var cloaked_demon_shadow_offset := Vector2.ZERO
@@ -2146,7 +2139,7 @@ func _update_chest_unlock_fade(delta: float) -> void:
 	chest_unlock_overlay.modulate = Color(1, 1, 1, 1.0 - chest_unlock_fade_timer / CHEST_UNLOCK_FADE_TIME)
 	if chest_unlock_fade_timer <= 0.0:
 		chest.texture = chest_normal_texture
-		sprite_images[chest] = _cached_texture_image(chest_normal_texture)
+		occlusion_renderer.sprite_images[chest] = _cached_texture_image(chest_normal_texture)
 		chest_unlock_overlay.queue_free()
 		chest_unlock_overlay = null
 
@@ -2201,7 +2194,7 @@ func _set_rest_fire_frame(frame_index: int) -> void:
 	rest_fire.texture = rest_fire_frames[rest_fire_frame_index]
 	rest_fire.hframes = 1
 	rest_fire.frame = 0
-	sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
+	occlusion_renderer.sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
 
 
 func _update_cloaked_demon_animation(delta: float) -> void:
@@ -2250,7 +2243,7 @@ func _update_cloaked_demon_animation(delta: float) -> void:
 	cloaked_demon_animation_timer = fmod(cloaked_demon_animation_timer, frame_time)
 	cloaked_demon_animation_frame = (cloaked_demon_animation_frame + 1) % frames.size()
 	cloaked_demon.texture = frames[cloaked_demon_animation_frame]
-	sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
+	occlusion_renderer.sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
 
 
 func _update_npc_dialogue(delta: float) -> void:
@@ -2812,7 +2805,7 @@ func _reset_chest_for_room() -> void:
 		chest_flash_overlay = null
 	if not collision_sprites.has(chest):
 		collision_sprites.append(chest)
-	sprite_images[chest] = _cached_texture_image(chest_gray_texture)
+	occlusion_renderer.sprite_images[chest] = _cached_texture_image(chest_gray_texture)
 
 
 func _reset_slimes_for_room() -> void:
@@ -2844,7 +2837,7 @@ func _reset_slimes_for_room() -> void:
 		_slime_brain(slime).scoot_timer = 0.0
 		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
 		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
-		_set_actor_base_texture(slime, actor_default_textures[slime])
+		_set_actor_base_texture(slime, occlusion_renderer.actor_default_textures[slime])
 		_set_actor_visual_scale(slime, Vector2.ONE)
 		if not actor_sprites.has(slime):
 			actor_sprites.append(slime)
@@ -2873,7 +2866,7 @@ func _start_chest_flash() -> void:
 
 func _spawn_slime_death_pixels(slime: Sprite2D) -> void:
 	# Death particles always use the stable base sprite, never an attack frame.
-	var texture := actor_default_textures.get(slime) as Texture2D
+	var texture := occlusion_renderer.actor_default_textures.get(slime) as Texture2D
 	if texture == null:
 		return
 	var image := texture.get_image()
@@ -3835,7 +3828,7 @@ func _set_slime_idle_breath(slime: Sprite2D, delta: float) -> void:
 
 
 func _set_actor_visual_scale(actor: Sprite2D, visual_scale: Vector2) -> void:
-	actor_visual_scales[actor] = visual_scale
+	occlusion_renderer.actor_visual_scales[actor] = visual_scale
 
 
 func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool:
@@ -4090,9 +4083,9 @@ func _build_depth_lists() -> void:
 		occluder_sprites.append(rest_fire)
 	if cloaked_demon.visible:
 		occluder_sprites.append(cloaked_demon)
-		sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
+		occlusion_renderer.sprite_images[cloaked_demon] = _cached_texture_image(cloaked_demon.texture)
 	if rest_fire.visible:
-		sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
+		occlusion_renderer.sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
 
 	if chest.visible:
 		for path in OCCLUDER_PATHS:
@@ -4115,27 +4108,27 @@ func _hide_editor_only_guides() -> void:
 
 
 func _build_sprite_images() -> void:
-	original_actor_textures.clear()
-	actor_default_textures.clear()
-	actor_default_materials.clear()
-	original_actor_images.clear()
-	original_actor_scales.clear()
-	actor_visual_scales.clear()
+	occlusion_renderer.original_actor_textures.clear()
+	occlusion_renderer.actor_default_textures.clear()
+	occlusion_renderer.actor_default_materials.clear()
+	occlusion_renderer.original_actor_images.clear()
+	occlusion_renderer.original_actor_scales.clear()
+	occlusion_renderer.actor_visual_scales.clear()
 	occlusion_renderer.occluded_actor_textures.clear()
 	actor_occlusion_grace.clear()
 	occlusion_renderer.highlighted_actor_textures.clear()
 	occlusion_renderer.white_actor_textures.clear()
-	sprite_images.clear()
+	occlusion_renderer.sprite_images.clear()
 
 	for actor in actor_sprites:
-		actor_default_textures[actor] = actor.texture
-		actor_default_materials[actor] = actor.material
-		original_actor_textures[actor] = actor.texture
-		original_actor_scales[actor] = actor.scale
-		actor_visual_scales[actor] = Vector2.ONE
+		occlusion_renderer.actor_default_textures[actor] = actor.texture
+		occlusion_renderer.actor_default_materials[actor] = actor.material
+		occlusion_renderer.original_actor_textures[actor] = actor.texture
+		occlusion_renderer.original_actor_scales[actor] = actor.scale
+		occlusion_renderer.actor_visual_scales[actor] = Vector2.ONE
 		var image := _cached_texture_image(actor.texture)
-		original_actor_images[actor] = image
-		sprite_images[actor] = image
+		occlusion_renderer.original_actor_images[actor] = image
+		occlusion_renderer.sprite_images[actor] = image
 		occlusion_renderer.occluded_actor_textures[actor] = _effect_texture_with_display_size(
 			_cached_effect_image(actor.texture, image),
 			image.get_size()
@@ -4148,8 +4141,8 @@ func _build_sprite_images() -> void:
 		occlusion_renderer.white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(actor.texture, image))
 
 	for occluder in occluder_sprites:
-		if not sprite_images.has(occluder):
-			sprite_images[occluder] = _cached_texture_image(occluder.texture)
+		if not occlusion_renderer.sprite_images.has(occluder):
+			occlusion_renderer.sprite_images[occluder] = _cached_texture_image(occluder.texture)
 
 
 func _build_slime_direction_textures() -> void:
@@ -4603,7 +4596,7 @@ func _set_slime_facing(slime: Sprite2D, direction_x: float) -> void:
 			slime.flip_h = false
 
 	if texture == null:
-		texture = actor_default_textures[slime]
+		texture = occlusion_renderer.actor_default_textures[slime]
 
 	_set_actor_base_texture(slime, texture)
 	_update_slime_attack_guides(slime)
@@ -4621,14 +4614,14 @@ func _update_slime_attack_guides(slime: Sprite2D) -> void:
 func _set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
 	if texture == null:
 		return
-	if original_actor_textures[actor] == texture:
+	if occlusion_renderer.original_actor_textures[actor] == texture:
 		actor.texture = texture
 		return
 
-	original_actor_textures[actor] = texture
+	occlusion_renderer.original_actor_textures[actor] = texture
 	var image := _cached_texture_image(texture)
-	original_actor_images[actor] = image
-	sprite_images[actor] = image
+	occlusion_renderer.original_actor_images[actor] = image
+	occlusion_renderer.sprite_images[actor] = image
 	occlusion_renderer.occluded_actor_textures[actor] = _effect_texture_with_display_size(
 		_cached_effect_image(texture, image),
 		image.get_size()
@@ -4725,7 +4718,7 @@ func _apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: fl
 		actor.texture = occlusion_renderer.highlighted_actor_textures[actor]
 		_apply_actor_scale(actor, true)
 	else:
-		actor.texture = original_actor_textures[actor]
+		actor.texture = occlusion_renderer.original_actor_textures[actor]
 		_apply_actor_scale(actor, false)
 
 
@@ -5133,7 +5126,7 @@ func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2:
 		return Rect2(sprite.global_position, Vector2.ZERO)
 
 	var sprite_scale := sprite.scale.abs()
-	if original_actor_scales.has(sprite):
+	if occlusion_renderer.original_actor_scales.has(sprite):
 		sprite_scale = _actor_screen_scale(sprite).abs()
 
 	var size := texture.get_size() * sprite_scale
@@ -5144,13 +5137,13 @@ func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2:
 
 
 func _source_texture_for_rect(sprite: Sprite2D) -> Texture2D:
-	if original_actor_textures.has(sprite):
-		return original_actor_textures[sprite]
+	if occlusion_renderer.original_actor_textures.has(sprite):
+		return occlusion_renderer.original_actor_textures[sprite]
 	return sprite.texture
 
 
 func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], include_outline: bool) -> Texture2D:
-	var source_image := original_actor_images[actor] as Image
+	var source_image := occlusion_renderer.original_actor_images[actor] as Image
 	var result_image := _make_effect_image(source_image)
 	var width := result_image.get_width()
 	var height := result_image.get_height()
@@ -5167,7 +5160,7 @@ func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Arra
 			if actor.flip_h:
 				source_x = float(source_image.get_width()) - source_x
 
-			var world_pixel := actor.global_position + _actor_visual_offset(actor) * (original_actor_scales[actor] as Vector2) + Vector2(source_x, source_y) * (original_actor_scales[actor] as Vector2)
+			var world_pixel := actor.global_position + _actor_visual_offset(actor) * (occlusion_renderer.original_actor_scales[actor] as Vector2) + Vector2(source_x, source_y) * (occlusion_renderer.original_actor_scales[actor] as Vector2)
 			if not _is_pixel_covered_by_occluder(world_pixel, active_occluders):
 				continue
 
@@ -5258,7 +5251,7 @@ func _has_opaque_neighbor(image: Image, x: int, y: int) -> bool:
 
 func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D]) -> bool:
 	for occluder in active_occluders:
-		var image := sprite_images[occluder] as Image
+		var image := occlusion_renderer.sprite_images[occluder] as Image
 		var local_pixel := _source_pixel_position(occluder, world_pixel)
 		var x := int(floor(local_pixel.x))
 		var y := int(floor(local_pixel.y))
@@ -5274,7 +5267,7 @@ func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array
 func _source_pixel_position(sprite: Sprite2D, world_pixel: Vector2) -> Vector2:
 	var sprite_scale := sprite.scale
 	var offset := sprite.offset
-	if original_actor_scales.has(sprite):
+	if occlusion_renderer.original_actor_scales.has(sprite):
 		sprite_scale = _actor_screen_scale(sprite)
 		offset = _actor_visual_offset(sprite)
 
@@ -5286,8 +5279,8 @@ func _source_pixel_position(sprite: Sprite2D, world_pixel: Vector2) -> Vector2:
 		local_pixel.x / sprite_scale.x,
 		local_pixel.y / sprite_scale.y
 	)
-	if sprite.flip_h and sprite_images.has(sprite):
-		var image := sprite_images[sprite] as Image
+	if sprite.flip_h and occlusion_renderer.sprite_images.has(sprite):
+		var image := occlusion_renderer.sprite_images[sprite] as Image
 		source_pixel.x = float(image.get_width()) - source_pixel.x - 1.0
 	return source_pixel
 
@@ -5305,14 +5298,14 @@ func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void:
 
 
 func _restore_actor_base_visual_scale(actor: Sprite2D) -> void:
-	if not original_actor_scales.has(actor):
+	if not occlusion_renderer.original_actor_scales.has(actor):
 		return
-	actor.scale = original_actor_scales[actor] as Vector2
+	actor.scale = occlusion_renderer.original_actor_scales[actor] as Vector2
 	actor.offset = _actor_visual_offset(actor)
 
 
 func _actor_screen_scale(actor: Sprite2D) -> Vector2:
-	return (original_actor_scales[actor] as Vector2) * (actor_visual_scales.get(actor, Vector2.ONE) as Vector2)
+	return (occlusion_renderer.original_actor_scales[actor] as Vector2) * (occlusion_renderer.actor_visual_scales.get(actor, Vector2.ONE) as Vector2)
 
 
 func _actor_visual_offset(actor: Sprite2D) -> Vector2:
@@ -5320,7 +5313,7 @@ func _actor_visual_offset(actor: Sprite2D) -> Vector2:
 
 
 func _sprite_source_offset(sprite: Sprite2D) -> Vector2:
-	if original_actor_scales.has(sprite):
+	if occlusion_renderer.original_actor_scales.has(sprite):
 		return _actor_visual_offset(sprite)
 	return sprite.offset
 

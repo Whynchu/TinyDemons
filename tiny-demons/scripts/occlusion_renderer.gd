@@ -10,6 +10,13 @@ var white_image_cache: Dictionary = {}
 var occluded_actor_textures: Dictionary = {}
 var highlighted_actor_textures: Dictionary = {}
 var white_actor_textures: Dictionary = {}
+var actor_default_textures: Dictionary = {}
+var actor_default_materials: Dictionary = {}
+var original_actor_textures: Dictionary = {}
+var original_actor_images: Dictionary = {}
+var original_actor_scales: Dictionary = {}
+var actor_visual_scales: Dictionary = {}
+var sprite_images: Dictionary = {}
 var update_count := 0
 var update_time := 0.0
 

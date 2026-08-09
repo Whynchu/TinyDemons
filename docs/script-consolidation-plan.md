@@ -524,6 +524,8 @@ dictionary declarations.
 - [x] Move target and overhead health presentation maps into `HudController`.
 - [x] Move occluded, highlighted, and white actor texture maps into
   `OcclusionRenderer`.
+- [x] Move actor default/original textures, images, scales, and sprite-image
+  caches into `OcclusionRenderer`.
 - [ ] Ensure no component reaches into another component's internal fields.
 - [ ] Repeat the complete smoke-test checklist.
 - [ ] Record final metrics and compare them with the baseline.
