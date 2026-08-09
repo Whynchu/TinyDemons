@@ -543,6 +543,62 @@ component registries or local temporary maps rather than actor lifecycle state.
 Exit criteria: the coordinator is 150-300 lines, has no actor-keyed state
 dictionaries, and new gameplay objects are assembled through composition.
 
+### M8 - Deep feature extraction
+
+Model route: GPT-5.5 for the initial boundary decisions; GPT-5.4/Terra for
+implementation slices; GPT-5.4 mini for mechanical call-site migrations.
+
+Focus on the largest cohesive regions still inside `gameplay.gd`:
+
+- [ ] Extract `HudController` health bars, targeting, damage text, and HUD
+  construction.
+- [ ] Extract screen flow into title, archetype, loading, game-over, and
+  transition controllers.
+- [ ] Extract `OcclusionRenderer` image generation and pixel coverage helpers.
+- [ ] Extract walkable geometry, floor collision guides, and placement queries
+  into `WalkableArea`.
+- [ ] Extract remaining interaction presentation and particle orchestration.
+- [ ] Re-run the complete smoke checklist after each feature group.
+
+Exit criteria: each extracted feature owns its state, construction, and update
+methods; `gameplay.gd` only sequences feature controllers.
+
+### M9 - Coordinator reduction
+
+Model route: Terra at high effort for cross-controller integration; GPT-5.4 for
+settled API migrations; GPT-5.4 mini for exact dead-code removal; GPT-5.5 for
+update-order regressions.
+
+- [ ] Reduce `_ready()` to dependency composition and controller startup.
+- [ ] Reduce `_physics_process()` to explicit phase/controller calls.
+- [ ] Remove compatibility delegates and duplicate state mirrors.
+- [ ] Replace broad scene-tree references with typed controller dependencies.
+- [ ] Remove root dictionaries that are only registries or presentation caches.
+- [ ] Add a repeatable metrics command to CI/development documentation.
+
+Exit criteria: `gameplay.gd` is a coordinator rather than a feature
+implementation, with no function larger than 30 lines without a documented
+reason.
+
+### M10 - Final architecture hardening
+
+Model route: GPT-5.5 for final dependency/update-order review; Terra for fixes;
+GPT-5.4 mini for mechanical cleanup; Sol only for an unresolved architecture
+boundary after the GPT-5.5 review.
+
+- [ ] Run the complete keyboard/controller, combat, room, interaction, screen,
+  depth, shadow, occlusion, and performance checklist.
+- [ ] Capture final metrics and compare them with the baseline and M7/M9.
+- [ ] Verify no component reaches into another component's private state.
+- [ ] Document how to add a player capability, enemy variant, room interaction,
+  and HUD presenter.
+- [ ] Remove temporary migration comments, fallbacks, and unused scripts.
+- [ ] Tag the final consolidation release and archive the migration notes.
+
+Exit criteria: composition is the default extension path, the coordinator is
+small and phase-oriented, and the full game loop passes without meaningful
+behavior or frame-time regression.
+
 ## Progress dashboard
 
 Update this table in every consolidation pull request.
@@ -557,6 +613,9 @@ Update this table in every consolidation pull request.
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
+| M8 Deep extraction | Not started | GPT-5.5, high | - | - | Health/UI, screens, occlusion, geometry, and effects feature extraction |
+| M9 Coordinator reduction | Not started | Terra, high | - | - | Reduce ready/physics orchestration and remove migration mirrors |
+| M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
 
