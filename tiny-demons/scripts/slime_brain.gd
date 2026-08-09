@@ -9,6 +9,10 @@ var holding := false
 var repath_timer := 0.0
 var hold_timer := 0.0
 var attack_cooldown := 0.0
+var target := Vector2.ZERO
+var scoot_start := Vector2.ZERO
+var scoot_target := Vector2.ZERO
+var scoot_timer := 0.0
 
 
 func tick(delta: float) -> void:

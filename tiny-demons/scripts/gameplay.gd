@@ -138,10 +138,6 @@ var depth_sprites: Array[Sprite2D] = []
 var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
-var slime_targets: Dictionary = {}
-var slime_scoot_starts: Dictionary = {}
-var slime_scoot_targets: Dictionary = {}
-var slime_scoot_timers: Dictionary = {}
 var slime_idle_breath_timers: Dictionary = {}
 var slime_flash_timers: Dictionary = {}
 var slime_hitstun_timers: Dictionary = {}
@@ -461,11 +457,11 @@ func _ready() -> void:
 		return
 	for slime in slimes:
 		slime_start_positions[slime] = slime.position
-		slime_targets[slime] = _nearest_slime_walkable_point(_actor_foot(slime))
+		_slime_brain(slime).target = _nearest_slime_walkable_point(_actor_foot(slime))
 		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
-		slime_scoot_starts[slime] = slime.position
-		slime_scoot_targets[slime] = slime.position
-		slime_scoot_timers[slime] = 0.0
+		_slime_brain(slime).scoot_start = slime.position
+		_slime_brain(slime).scoot_target = slime.position
+		_slime_brain(slime).scoot_timer = 0.0
 		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
 		slime_idle_breath_timers[slime] = rng.randf_range(0.0, slime_tuning.idle_breath_time)
 		slime_flash_timers[slime] = 0.0
@@ -1893,9 +1889,9 @@ func _knockback_slime(slime: Sprite2D) -> void:
 
 	slime_knockback_velocities[slime] = _perspective_movement(direction.normalized() * (player_tuning.attack_knockback / slime_tuning.knockback_duration))
 	slime_knockback_timers[slime] = slime_tuning.knockback_duration
-	slime_scoot_starts[slime] = slime.position
-	slime_scoot_targets[slime] = slime.position
-	slime_scoot_timers[slime] = 0.0
+	_slime_brain(slime).scoot_start = slime.position
+	_slime_brain(slime).scoot_target = slime.position
+	_slime_brain(slime).scoot_timer = 0.0
 	_slime_brain(slime).hold_timer = slime_tuning.hitstun_time
 
 
@@ -2807,9 +2803,9 @@ func _reset_slimes_for_room() -> void:
 		slime_attack_face_left[slime] = false
 		slime_attack_cooldowns[slime] = rng.randf_range(0.2, 0.6)
 		slime_persistent_aggro[slime] = false
-		slime_scoot_starts[slime] = slime.position
-		slime_scoot_targets[slime] = slime.position
-		slime_scoot_timers[slime] = 0.0
+		_slime_brain(slime).scoot_start = slime.position
+		_slime_brain(slime).scoot_target = slime.position
+		_slime_brain(slime).scoot_timer = 0.0
 		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
 		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 		_set_actor_base_texture(slime, actor_default_textures[slime])
@@ -3075,7 +3071,7 @@ func _move_slimes(delta: float) -> void:
 		if _update_slime_attack(slime, delta):
 			continue
 		if _is_slime_aggroed(slime):
-			slime_targets[slime] = _aggro_slime_target(slime)
+			_slime_brain(slime).target = _aggro_slime_target(slime)
 			_update_slime_scoot(slime, delta)
 			continue
 		_slime_brain(slime).repath_timer = float(_slime_brain(slime).repath_timer) - delta
@@ -3143,9 +3139,9 @@ func _start_slime_attack(slime: Sprite2D) -> void:
 	var frames := _slime_attack_frames(slime)
 	if not frames.is_empty():
 		_set_actor_base_texture(slime, frames[0])
-	slime_scoot_timers[slime] = 0.0
-	slime_scoot_starts[slime] = slime.position
-	slime_scoot_targets[slime] = slime.position
+	_slime_brain(slime).scoot_timer = 0.0
+	_slime_brain(slime).scoot_start = slime.position
+	_slime_brain(slime).scoot_target = slime.position
 	_set_actor_visual_scale(slime, Vector2.ONE)
 
 
@@ -3201,16 +3197,16 @@ func _aggro_slime_target(slime: Sprite2D) -> Vector2:
 
 
 func _move_slime_toward_player(slime: Sprite2D, delta: float) -> void:
-	var scoot_timer := float(slime_scoot_timers.get(slime, 0.0))
+	var scoot_timer: float = _slime_brain(slime).scoot_timer
 	if scoot_timer > 0.0:
-		slime_scoot_timers[slime] = maxf(scoot_timer - delta, 0.0)
-		_set_slime_squish(slime, 1.0 - (scoot_timer / slime_tuning.scoot_duration), slime_scoot_targets.get(slime, Vector2.ZERO) as Vector2)
+		_slime_brain(slime).scoot_timer = maxf(scoot_timer - delta, 0.0)
+		_set_slime_squish(slime, 1.0 - (scoot_timer / slime_tuning.scoot_duration), _slime_brain(slime).scoot_target)
 		return
 
 	var offset := _actor_foot(player) - _actor_foot(slime)
 	var distance := offset.length()
 	if distance <= slime_tuning.attack_range:
-		slime_scoot_timers[slime] = 0.0
+		_slime_brain(slime).scoot_timer = 0.0
 		_slime_brain(slime).hold_timer = 0.0
 		_set_actor_visual_scale(slime, Vector2.ONE)
 		return
@@ -3231,8 +3227,8 @@ func _move_slime_toward_player(slime: Sprite2D, delta: float) -> void:
 	var step_distance := minf(slime_tuning.scoot_distance, maxf(distance - slime_tuning.attack_range, 0.0))
 	var movement := _perspective_movement(direction * step_distance)
 	_try_move_actor(slime, movement)
-	slime_scoot_targets[slime] = movement
-	slime_scoot_timers[slime] = slime_tuning.scoot_duration
+	_slime_brain(slime).scoot_target = movement
+	_slime_brain(slime).scoot_timer = slime_tuning.scoot_duration
 	_set_slime_squish(slime, 0.0, movement)
 
 
@@ -3391,8 +3387,8 @@ func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool:
 	_try_knockback_slime(slime, (slime_knockback_velocities[slime] as Vector2) * step_time)
 	if float(slime_knockback_timers[slime]) <= 0.0:
 		slime_knockback_velocities[slime] = Vector2.ZERO
-		slime_scoot_starts[slime] = slime.position
-		slime_scoot_targets[slime] = slime.position
+		_slime_brain(slime).scoot_start = slime.position
+		_slime_brain(slime).scoot_target = slime.position
 	return true
 
 
@@ -3640,15 +3636,15 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 
 
 func _update_slime_scoot(slime: Sprite2D, delta: float) -> void:
-	var scoot_timer := float(slime_scoot_timers[slime])
+	var scoot_timer := float(_slime_brain(slime).scoot_timer)
 	if scoot_timer > 0.0:
 		var previous_progress := 1.0 - (scoot_timer / slime_tuning.scoot_duration)
 		scoot_timer = maxf(scoot_timer - delta, 0.0)
 		var progress := 1.0 - (scoot_timer / slime_tuning.scoot_duration)
-		slime_scoot_timers[slime] = scoot_timer
+		_slime_brain(slime).scoot_timer = scoot_timer
 
-		var start := slime_scoot_starts[slime] as Vector2
-		var target := slime_scoot_targets[slime] as Vector2
+		var start := _slime_brain(slime).scoot_start as Vector2
+		var target := _slime_brain(slime).scoot_target as Vector2
 		var previous_ease := _scoot_ease(previous_progress)
 		var eased_progress := _scoot_ease(progress)
 		var movement := (target - start) * (eased_progress - previous_ease)
@@ -3676,22 +3672,22 @@ func _update_slime_scoot(slime: Sprite2D, delta: float) -> void:
 
 func _start_slime_scoot(slime: Sprite2D) -> void:
 	_set_actor_visual_scale(slime, Vector2.ONE)
-	var target: Vector2 = slime_targets[slime]
+	var target: Vector2 = _slime_brain(slime).target
 	var foot := _actor_foot(slime)
 	var is_aggroed := _is_slime_aggroed(slime)
 	if is_aggroed:
 		target = _aggro_slime_target(slime)
-		slime_targets[slime] = target
+		_slime_brain(slime).target = target
 		_slime_brain(slime).repath_timer = 0.08
 	elif foot.distance_to(target) < 2.0 or float(_slime_brain(slime).repath_timer) <= 0.0:
 		target = _random_slime_walkable_point_near(foot, 5, slime)
-		slime_targets[slime] = target
+		_slime_brain(slime).target = target
 		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 
 	var direction := target - foot
 	if direction.length_squared() < 0.01:
 		if is_aggroed:
-			slime_targets[slime] = _aggro_slime_target(slime)
+			_slime_brain(slime).target = _aggro_slime_target(slime)
 			_slime_brain(slime).repath_timer = 0.0
 			return
 		_start_slime_hold(slime)
@@ -3707,23 +3703,23 @@ func _start_slime_scoot(slime: Sprite2D) -> void:
 	var desired_position := slime.position + movement
 	_set_slime_facing(slime, movement.x)
 
-	slime_scoot_starts[slime] = slime.position
-	slime_scoot_targets[slime] = desired_position
-	slime_scoot_timers[slime] = slime_tuning.scoot_duration
+	_slime_brain(slime).scoot_start = slime.position
+	_slime_brain(slime).scoot_target = desired_position
+	_slime_brain(slime).scoot_timer = slime_tuning.scoot_duration
 
 
 func _repath_slime_after_block(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime):
 		return
-	slime_scoot_timers[slime] = 0.0
-	slime_scoot_starts[slime] = slime.position
-	slime_scoot_targets[slime] = slime.position
+	_slime_brain(slime).scoot_timer = 0.0
+	_slime_brain(slime).scoot_start = slime.position
+	_slime_brain(slime).scoot_target = slime.position
 	_slime_brain(slime).repath_timer = 0.0
 	if _is_slime_aggroed(slime):
-		slime_targets[slime] = _aggro_slime_target(slime)
+		_slime_brain(slime).target = _aggro_slime_target(slime)
 		_slime_brain(slime).hold_timer = 0.0
 	else:
-		slime_targets[slime] = _random_slime_walkable_point_near(_actor_foot(slime), 8, slime)
+		_slime_brain(slime).target = _random_slime_walkable_point_near(_actor_foot(slime), 8, slime)
 		_slime_brain(slime).hold_timer = rng.randf_range(0.08, 0.18)
 	_set_actor_visual_scale(slime, Vector2.ONE)
 
