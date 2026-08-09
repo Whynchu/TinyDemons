@@ -299,6 +299,8 @@ unresolved lifecycle boundaries to GPT-5.5.
   display-health interpolation state until the HUD signal slice.
 - [x] Connect damage/healing signals to the existing delayed-fill presentation
   hooks without changing bar timing.
+- [x] Subscribe player and slime HUD refreshes to `health_changed` while
+  retaining interpolation polling for the animated fill transition.
 - [ ] Replace per-frame health presentation polling with HUD subscriptions.
 - [ ] Verify damage rolls, critical hits, regen delays, death, and room reset.
 

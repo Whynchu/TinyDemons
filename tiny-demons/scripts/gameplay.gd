@@ -411,6 +411,7 @@ func _ready() -> void:
 	player_health_component.set_process(false)
 	player_health_component.damaged.connect(_on_player_health_damaged)
 	player_health_component.healed.connect(_on_player_health_healed)
+	player_health_component.health_changed.connect(_on_player_health_changed)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -463,6 +464,7 @@ func _ready() -> void:
 		health_component.reset(max_health)
 		health_component.damaged.connect(_on_slime_health_damaged.bind(slime))
 		health_component.healed.connect(_on_slime_health_healed.bind(slime))
+		health_component.health_changed.connect(_on_slime_health_changed.bind(slime))
 		slime_health_components[slime] = health_component
 		target_display_health[slime] = max_health
 		target_damage_fill_hold_timers[slime] = 0.0
@@ -3174,6 +3176,12 @@ func _on_player_health_damaged(_amount: float) -> void:
 	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 
 
+func _on_player_health_changed(current: float, _maximum: float) -> void:
+	player_health = current
+	if is_instance_valid(player_health_fill):
+		_update_player_health_ui()
+
+
 func _on_player_health_healed(_amount: float) -> void:
 	var current := player_health_component.current_health if player_health_component != null else player_health
 	player_display_health = minf(player_display_health, current)
@@ -3181,6 +3189,12 @@ func _on_player_health_healed(_amount: float) -> void:
 
 func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void:
 	target_damage_fill_hold_timers[slime] = slime_tuning.health_damage_hang_time
+
+
+func _on_slime_health_changed(current: float, _maximum: float, slime: Sprite2D) -> void:
+	target_display_health[slime] = minf(float(target_display_health.get(slime, current)), current)
+	if slime == current_target and is_instance_valid(target_health_fill):
+		_update_target_ui()
 
 
 func _on_slime_health_healed(_amount: float, slime: Sprite2D) -> void:
