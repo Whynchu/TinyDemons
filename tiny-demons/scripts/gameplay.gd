@@ -1,84 +1,17 @@
 extends Node2D
 
-const PLAYER_SPEED := 36.0
-const SLIME_SCOOT_DISTANCE := 5.0
-const SLIME_SCOOT_DURATION := 0.34
 const SLIME_ATTACK_FRAME_SIZE := Vector2i(16, 16)
-const SLIME_ATTACK_FRAME_TIME := 0.08
-const SLIME_ATTACK_HIT_FRAME := 5
-const SLIME_ATTACK_RANGE := 14.0
-const SLIME_ATTACK_HIT_RANGE := 16.0
-const SLIME_ATTACK_VERTICAL_HIT_RANGE := 10.0
-const SLIME_AGGRO_RANGE := 28.0
-const SLIME_ATTACK_COOLDOWN := 1.0
-const SLIME_ATTACK_LUNGE_DISTANCE := 4.0
-const PLAYER_HIT_FLASH_TIME := 0.12
-const PLAYER_HITSTUN_TIME := 1.0 / 30.0
-const PLAYER_HIT_KNOCKBACK := 10.0
-const PLAYER_HIT_KNOCKBACK_DURATION := 0.12
-const SLIME_HOLD_MIN := 0.22
-const SLIME_HOLD_MAX := 0.48
-const SLIME_CHILL_CHANCE := 0.22
-const SLIME_CHILL_MIN := 1.0
-const SLIME_CHILL_MAX := 2.2
-const SLIME_IDLE_BREATH_TIME := 1.4
-const SLIME_REPATH_MIN := 0.7
-const SLIME_REPATH_MAX := 1.8
 const EDGE_MARGIN := 0.35
 const SLIME_EDGE_PADDING := 3.0
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const DEPTH_Z_SCALE := 10.0
-const EFFECT_RESOLUTION_SCALE := 2
 const OVERWORLD_UI_Z := 4090
 const VERTICAL_MOVEMENT_SCALE := 0.5
 const PLAYER_FRAME_SIZE := Vector2i(36, 36)
 const PLAYER_ATTACK_FRAME_SIZE := Vector2i(36, 36)
-const PLAYER_IDLE_FRAME_TIME := 0.22
-const PLAYER_WALK_FRAME_TIME := 0.18
-const PLAYER_ATTACK_FRAME_TIME := 0.09
-const PLAYER_ATTACK2_HIT_FRAME := 2
-const PLAYER_COMBO_WINDOW := 0.18
-const PLAYER_BETWEEN_ATTACK_TIME := 0.12
-const PLAYER_ATTACK2_COOLDOWN := 0.16
-const PLAYER_ATTACK_HIT_FRAME := 2
-const PLAYER_ROLL_FRAME_TIME := 0.05
-const PLAYER_ROLL_DISTANCE := 30.0
-const PLAYER_ROLL_DURATION := 0.30
 const ROLL_DUST_FRAME_SIZE := Vector2i(16, 16)
-const ROLL_DUST_FRAME_TIME := 0.05
-const PLAYER_DEATH_PARTICLE_LIFETIME := 1.8
-const PLAYER_DEATH_FADE_TIME := 0.7
-const PLAYER_DEATH_PARTICLE_DELAY := 0.7
-const HITSTOP_DURATION := 1.0 / 40.0
-const PLAYER_DEATH_OBSERVE_TIME := 1.4
 const GAME_OVER_FADE_TIME := 0.8
 const PLAYER_TEXTURE_OFFSET := Vector2(-10, -10)
-const PLAYER_ATTACK_LUNGE_DISTANCE := 6.0
-const PLAYER_ATTACK_LUNGE_DURATION := 0.18
-const PLAYER_ATTACK_KNOCKBACK := 16.0
-const PLAYER_ATTACK_HITBOX_SIZE := Vector2(24, 24)
-const PLAYER_ATTACK_HITBOX_RIGHT_OFFSET := Vector2(6, -7)
-const PLAYER_ATTACK_HITBOX_LEFT_OFFSET := Vector2(-14, -7)
-const ENEMY_HIT_FLASH_TIME := 0.12
-const ENEMY_HITSTUN_TIME := 1.0 / 30.0
-const ENEMY_KNOCKBACK_DURATION := 0.14
-const ENEMY_REGEN_DELAY := 3.0
-const ENEMY_REGEN_INTERVAL := 0.5
-const ENEMY_REGEN_AMOUNT := 1.0
-const PLAYER_REGEN_DELAY := 2.0
-const PLAYER_REGEN_INTERVAL := 1.0
-const PLAYER_REGEN_AMOUNT := 1.0
-const ENEMY_HEALTH_DRAIN_FILL_SPEED := 18.0
-const ENEMY_HEALTH_REGEN_FILL_SPEED := 6.0
-const ENEMY_HEALTH_DAMAGE_HANG_TIME := 0.14
-const PLAYER_HEALTH_DAMAGE_HANG_TIME := ENEMY_HEALTH_DAMAGE_HANG_TIME
-const DAMAGE_NUMBER_LIFETIME := 0.65
-const DAMAGE_NUMBER_POP_TIME := 0.10
-const DAMAGE_NUMBER_FLOAT_SPEED := 12.0
-const SLIME_DEATH_PARTICLE_COUNT := 26
-const SLIME_DEATH_PARTICLE_LIFETIME := 0.7
-const SLIME_DEATH_PARTICLE_SPEED_MIN := 14.0
-const SLIME_DEATH_PARTICLE_SPEED_MAX := 38.0
 const CHEST_INTERACT_DISTANCE := 16.0
 const NPC_INTERACT_DISTANCE := 24.0
 const CHEST_REWARD_GOLD := 100
@@ -487,12 +420,12 @@ func _ready() -> void:
 	for slime in slimes:
 		slime_start_positions[slime] = slime.position
 		slime_targets[slime] = _nearest_slime_walkable_point(_actor_foot(slime))
-		slime_repath_timers[slime] = rng.randf_range(SLIME_REPATH_MIN, SLIME_REPATH_MAX)
+		slime_repath_timers[slime] = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 		slime_scoot_starts[slime] = slime.position
 		slime_scoot_targets[slime] = slime.position
 		slime_scoot_timers[slime] = 0.0
-		slime_hold_timers[slime] = rng.randf_range(SLIME_HOLD_MIN, SLIME_HOLD_MAX)
-		slime_idle_breath_timers[slime] = rng.randf_range(0.0, SLIME_IDLE_BREATH_TIME)
+		slime_hold_timers[slime] = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
+		slime_idle_breath_timers[slime] = rng.randf_range(0.0, slime_tuning.idle_breath_time)
 		slime_flash_timers[slime] = 0.0
 		slime_hitstun_timers[slime] = 0.0
 		slime_knockback_velocities[slime] = Vector2.ZERO
@@ -554,7 +487,7 @@ func _physics_process(delta: float) -> void:
 		_update_pixel_particles(delta)
 		_update_player_death(delta)
 		_update_damage_numbers(delta)
-		if player_death_particles_started and player_death_timer >= PLAYER_DEATH_PARTICLE_DELAY + PLAYER_DEATH_PARTICLE_LIFETIME:
+		if player_death_particles_started and player_death_timer >= player_tuning.death_particle_delay + player_tuning.death_particle_lifetime:
 			_move_slimes(delta)
 			_update_enemy_hit_flashes(delta)
 			_update_enemy_health(delta)
@@ -577,7 +510,7 @@ func _physics_process(delta: float) -> void:
 	var attack_input_down := _is_attack_input_pressed()
 	if not player_input_locked and attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
 		player_combo_buffered = true
-		player_combo_buffer_timer = PLAYER_COMBO_WINDOW
+		player_combo_buffer_timer = player_tuning.combo_window
 		player_combo_buffer_movement = _movement_input()
 	if player_combo_buffered and player_is_attacking and player_anim_name == "attack1":
 		var movement_input := _movement_input()
@@ -625,11 +558,11 @@ func _physics_process(delta: float) -> void:
 	# handle transition from an attack into the between-attack frame
 	if prev_player_was_attacking and not player_is_attacking:
 		if player_just_finished_attack2 and player_after_attack2_texture != null:
-			player_between_timer = PLAYER_ATTACK2_COOLDOWN
+			player_between_timer = player_tuning.attack2_cooldown
 			_set_actor_base_texture(player, player_after_attack2_texture)
 		# If attack 1 was not buffered, show the transition frame briefly.
 		elif not player_combo_buffered and player_between_attack_texture != null:
-			player_between_timer = PLAYER_BETWEEN_ATTACK_TIME
+			player_between_timer = player_tuning.between_attack_time
 			_set_actor_base_texture(player, player_between_attack_texture)
 		player_just_finished_attack2 = false
 
@@ -681,8 +614,8 @@ func _start_player_death() -> void:
 func _update_player_death(delta: float) -> void:
 	player_death_timer += delta
 	if player_death_overlay != null:
-		if player_death_timer < PLAYER_DEATH_PARTICLE_DELAY:
-			player_death_overlay.modulate.a = clampf(player_death_timer / PLAYER_DEATH_FADE_TIME, 0.0, 1.0)
+		if player_death_timer < player_tuning.death_particle_delay:
+			player_death_overlay.modulate.a = clampf(player_death_timer / player_tuning.death_fade_time, 0.0, 1.0)
 		elif not player_death_particles_started:
 			player_death_particles_started = true
 			_spawn_player_death_pixels()
@@ -690,7 +623,7 @@ func _update_player_death(delta: float) -> void:
 			player_death_overlay = null
 	if not player_death_particles_started:
 		return
-	var death_effect_end := PLAYER_DEATH_PARTICLE_DELAY + PLAYER_DEATH_PARTICLE_LIFETIME
+	var death_effect_end := player_tuning.death_particle_delay + player_tuning.death_particle_lifetime
 	if game_over_overlay != null and game_over_overlay.visible:
 		game_over_fade_timer += delta
 		game_over_overlay.modulate.a = clampf(game_over_fade_timer / GAME_OVER_FADE_TIME, 0.0, 1.0)
@@ -700,7 +633,7 @@ func _update_player_death(delta: float) -> void:
 		if game_over_title_button != null:
 			game_over_title_button.modulate.a = _retro_button_alpha(game_over_fade_timer + 0.6)
 			game_over_title_button.position.y = 121.0 + _retro_button_bob(game_over_fade_timer + 0.4)
-	elif player_death_timer >= death_effect_end + PLAYER_DEATH_OBSERVE_TIME:
+	elif player_death_timer >= death_effect_end + player_tuning.death_observe_time:
 		_show_game_over()
 
 
@@ -731,7 +664,7 @@ func _spawn_player_death_pixels() -> void:
 		particle.z_index = int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2
 		particle.position = player_death_origin + player_death_offset + Vector2(source_pixel) * player_death_scale
 		add_child(particle)
-		var lifetime := rng.randf_range(1.2, PLAYER_DEATH_PARTICLE_LIFETIME)
+		var lifetime := rng.randf_range(1.2, player_tuning.death_particle_lifetime)
 		pixel_particles.append({
 			"sprite": particle,
 			# Fizzle particles rise from their source pixel without horizontal drift.
@@ -1415,7 +1348,7 @@ func _move_player(delta: float) -> void:
 	elif input.x > 0.0:
 		player.flip_h = false
 
-	_try_move_actor(player, _perspective_movement(input.normalized() * PLAYER_SPEED * delta))
+	_try_move_actor(player, _perspective_movement(input.normalized() * player_tuning.speed * delta))
 
 
 func _update_player_attack_input() -> void:
@@ -1424,7 +1357,7 @@ func _update_player_attack_input() -> void:
 		if player_between_timer > 0.0:
 			# A late input during the transition still completes the combo.
 			player_combo_buffered = true
-			player_combo_buffer_timer = PLAYER_COMBO_WINDOW
+			player_combo_buffer_timer = player_tuning.combo_window
 			player_combo_buffer_movement = _movement_input()
 		else:
 			_start_player_attack()
@@ -1456,7 +1389,7 @@ func _start_player_roll() -> void:
 	player_attack_visual.visible = false
 	player_roll_frame = 0
 	player_roll_timer = 0.0
-	player_roll_velocity = _perspective_movement(direction * (PLAYER_ROLL_DISTANCE / PLAYER_ROLL_DURATION))
+	player_roll_velocity = _perspective_movement(direction * (player_tuning.roll_distance / player_tuning.roll_duration))
 	player.visible = true
 	_apply_player_animation_frame()
 
@@ -1464,8 +1397,8 @@ func _start_player_roll() -> void:
 func _update_player_roll(delta: float) -> void:
 	if not player_is_rolling:
 		return
-	var elapsed := player_roll_timer + float(player_roll_frame) * PLAYER_ROLL_FRAME_TIME
-	var step_time := minf(delta, maxf(PLAYER_ROLL_DURATION - elapsed, 0.0))
+	var elapsed := player_roll_timer + float(player_roll_frame) * player_tuning.roll_frame_time
+	var step_time := minf(delta, maxf(player_tuning.roll_duration - elapsed, 0.0))
 	# Movement continues at quarter speed during the penultimate frame hold.
 	if player_roll_frame >= player_roll_frames.size() - 2:
 		step_time *= 0.25
@@ -1478,7 +1411,7 @@ func _update_player_roll(delta: float) -> void:
 		_start_roll_dust(resolved_direction.normalized())
 		roll_dust_spawned_this_roll = true
 	player_roll_timer += delta
-	var current_frame_time := PLAYER_ROLL_FRAME_TIME
+	var current_frame_time := player_tuning.roll_frame_time
 	# Hold the penultimate frame for two additional animation frames.
 	if player_roll_frame == player_roll_frames.size() - 2:
 		current_frame_time *= 3.0
@@ -1528,9 +1461,9 @@ func _update_roll_dust(delta: float) -> void:
 	# depth as wall collision changes the roll's final position.
 	roll_dust_sprite.z_index = maxi(player.z_index - 1, 0)
 	roll_dust_timer += delta
-	if roll_dust_timer < ROLL_DUST_FRAME_TIME:
+	if roll_dust_timer < effects_tuning.roll_dust_frame_time:
 		return
-	roll_dust_timer = fmod(roll_dust_timer, ROLL_DUST_FRAME_TIME)
+	roll_dust_timer = fmod(roll_dust_timer, effects_tuning.roll_dust_frame_time)
 	roll_dust_frame += 1
 	if roll_dust_frame >= roll_dust_frames.size():
 		_clear_roll_dust()
@@ -1562,8 +1495,8 @@ func _start_player_attack(variant: int = 1) -> void:
 	player_attack_hit_done = false
 	player_attack_hit_targets.clear()
 	player_attack_flip_h = player.flip_h
-	player_attack_lunge_timer = PLAYER_ATTACK_LUNGE_DURATION
-	player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (PLAYER_ATTACK_LUNGE_DISTANCE / PLAYER_ATTACK_LUNGE_DURATION))
+	player_attack_lunge_timer = player_tuning.attack_lunge_duration
+	player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (player_tuning.attack_lunge_distance / player_tuning.attack_lunge_duration))
 	player_anim_name = "attack2" if variant == 2 else "attack1"
 	if variant == 2:
 		player_between_timer = 0.0
@@ -1648,7 +1581,7 @@ func _update_player_animation(delta: float) -> void:
 		_apply_player_animation_frame()
 		return
 
-	var frame_time := PLAYER_WALK_FRAME_TIME if player_anim_name == "walk" else PLAYER_IDLE_FRAME_TIME
+	var frame_time := player_tuning.walk_frame_time if player_anim_name == "walk" else player_tuning.idle_frame_time
 	player_anim_timer += delta
 	if player_anim_timer < frame_time:
 		return
@@ -1664,20 +1597,20 @@ func _update_player_animation(delta: float) -> void:
 
 func _update_player_attack_animation(delta: float) -> void:
 	player_anim_timer += delta
-	if player_anim_timer < PLAYER_ATTACK_FRAME_TIME:
+	if player_anim_timer < player_tuning.attack_frame_time:
 		return
 
-	player_anim_timer = fmod(player_anim_timer, PLAYER_ATTACK_FRAME_TIME)
+	player_anim_timer = fmod(player_anim_timer, player_tuning.attack_frame_time)
 	player_anim_frame += 1
 
 	# select frames and hit frame per attack variant
 	var frames := player_attack2_frames if player_anim_name == "attack2" else player_attack_frames
-	var hit_frame := PLAYER_ATTACK2_HIT_FRAME if player_anim_name == "attack2" else PLAYER_ATTACK_HIT_FRAME
+	var hit_frame := player_tuning.attack2_hit_frame if player_anim_name == "attack2" else player_tuning.attack_hit_frame
 
 	if player_anim_frame >= frames.size():
 		var finished_attack1_with_combo := player_anim_name == "attack1" and player_combo_buffered and player_between_attack_texture != null
 		if player_anim_name == "attack2":
-			player_attack2_cooldown_timer = PLAYER_ATTACK2_COOLDOWN
+			player_attack2_cooldown_timer = player_tuning.attack2_cooldown
 			player_just_finished_attack2 = true
 		player_is_attacking = false
 		player_attack_hit_done = false
@@ -1690,8 +1623,8 @@ func _update_player_attack_animation(delta: float) -> void:
 		player_anim_timer = 0.0
 		_apply_player_animation_frame()
 		if finished_attack1_with_combo:
-			player_between_timer = PLAYER_BETWEEN_ATTACK_TIME
-			player_combo_buffer_timer = PLAYER_COMBO_WINDOW
+			player_between_timer = player_tuning.between_attack_time
+			player_combo_buffer_timer = player_tuning.combo_window
 			_set_actor_base_texture(player, player_between_attack_texture)
 		return
 
@@ -1762,8 +1695,8 @@ func _player_attack_hitbox() -> Rect2:
 	if guide_rect.has_area():
 		return guide_rect
 
-	var offset := PLAYER_ATTACK_HITBOX_LEFT_OFFSET if player_attack_flip_h else PLAYER_ATTACK_HITBOX_RIGHT_OFFSET
-	return Rect2(player.global_position + offset, PLAYER_ATTACK_HITBOX_SIZE)
+	var offset := player_tuning.attack_hitbox_left_offset if player_attack_flip_h else player_tuning.attack_hitbox_right_offset
+	return Rect2(player.global_position + offset, player_tuning.attack_hitbox_size)
 
 
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
@@ -1775,13 +1708,13 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	slime_persistent_aggro[slime] = true
 	target_health[slime] = maxf(previous_health - amount, 0.0)
 	target_display_health[slime] = maxf(float(target_display_health.get(slime, previous_health)), previous_health)
-	target_damage_fill_hold_timers[slime] = ENEMY_HEALTH_DAMAGE_HANG_TIME
-	target_regen_delay_timers[slime] = ENEMY_REGEN_DELAY
+	target_damage_fill_hold_timers[slime] = slime_tuning.health_damage_hang_time
+	target_regen_delay_timers[slime] = slime_tuning.regen_delay
 	target_regen_accumulators[slime] = 0.0
-	slime_flash_timers[slime] = ENEMY_HIT_FLASH_TIME
-	slime_hitstun_timers[slime] = ENEMY_HITSTUN_TIME
+	slime_flash_timers[slime] = slime_tuning.hit_flash_time
+	slime_hitstun_timers[slime] = slime_tuning.hitstun_time
 	_spawn_damage_number(slime, amount, was_critical)
-	hitstop_timer = HITSTOP_DURATION
+	hitstop_timer = player_tuning.hitstop_duration
 	if float(target_health[slime]) <= 0.0:
 		_kill_slime(slime)
 
@@ -1839,12 +1772,12 @@ func _knockback_slime(slime: Sprite2D) -> void:
 	if direction.length_squared() < 0.01:
 		direction = Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
 
-	slime_knockback_velocities[slime] = _perspective_movement(direction.normalized() * (PLAYER_ATTACK_KNOCKBACK / ENEMY_KNOCKBACK_DURATION))
-	slime_knockback_timers[slime] = ENEMY_KNOCKBACK_DURATION
+	slime_knockback_velocities[slime] = _perspective_movement(direction.normalized() * (player_tuning.attack_knockback / slime_tuning.knockback_duration))
+	slime_knockback_timers[slime] = slime_tuning.knockback_duration
 	slime_scoot_starts[slime] = slime.position
 	slime_scoot_targets[slime] = slime.position
 	slime_scoot_timers[slime] = 0.0
-	slime_hold_timers[slime] = ENEMY_HITSTUN_TIME
+	slime_hold_timers[slime] = slime_tuning.hitstun_time
 
 
 func _kill_slime(slime: Sprite2D) -> void:
@@ -2755,8 +2688,8 @@ func _reset_slimes_for_room() -> void:
 		slime_scoot_starts[slime] = slime.position
 		slime_scoot_targets[slime] = slime.position
 		slime_scoot_timers[slime] = 0.0
-		slime_hold_timers[slime] = rng.randf_range(SLIME_HOLD_MIN, SLIME_HOLD_MAX)
-		slime_repath_timers[slime] = rng.randf_range(SLIME_REPATH_MIN, SLIME_REPATH_MAX)
+		slime_hold_timers[slime] = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
+		slime_repath_timers[slime] = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 		_set_actor_base_texture(slime, actor_default_textures[slime])
 		_set_actor_visual_scale(slime, Vector2.ONE)
 		if not actor_sprites.has(slime):
@@ -2800,7 +2733,7 @@ func _spawn_slime_death_pixels(slime: Sprite2D) -> void:
 				source_pixels.append(Vector2i(x, y))
 	source_pixels.shuffle()
 
-	var particle_count := mini(SLIME_DEATH_PARTICLE_COUNT, source_pixels.size())
+	var particle_count := mini(effects_tuning.slime_death_particle_count, source_pixels.size())
 	for index in particle_count:
 		var source_pixel := source_pixels[index]
 		var color := image.get_pixelv(source_pixel)
@@ -2815,11 +2748,11 @@ func _spawn_slime_death_pixels(slime: Sprite2D) -> void:
 		add_child(particle)
 
 		var horizontal_direction := -1.0 if float(source_pixel.x) < float(image.get_width()) * 0.5 else 1.0
-		var horizontal_speed := rng.randf_range(SLIME_DEATH_PARTICLE_SPEED_MIN * 0.5, SLIME_DEATH_PARTICLE_SPEED_MAX * 0.75)
+		var horizontal_speed := rng.randf_range(effects_tuning.slime_death_particle_speed_min * 0.5, effects_tuning.slime_death_particle_speed_max * 0.75)
 		pixel_particles.append({
 			"sprite": particle,
 			"velocity": Vector2(horizontal_direction * horizontal_speed, rng.randf_range(-10.0, -2.0)),
-			"timer": SLIME_DEATH_PARTICLE_LIFETIME,
+			"timer": effects_tuning.slime_death_particle_lifetime,
 			"gravity": 30.0,
 		})
 
@@ -2835,7 +2768,7 @@ func _spawn_gold_number(world_position: Vector2, amount: int) -> void:
 	add_child(sprite)
 	damage_numbers.append({
 		"sprite": sprite,
-		"timer": DAMAGE_NUMBER_LIFETIME,
+		"timer": effects_tuning.damage_number_lifetime,
 	})
 
 
@@ -2905,7 +2838,7 @@ func _update_pixel_particles(delta: float) -> void:
 		particle_data["logical_position"] = logical_position
 		particle.position = _snap_half_pixel(logical_position)
 		var color := particle.modulate
-		var lifetime := float(particle_data.get("lifetime", SLIME_DEATH_PARTICLE_LIFETIME))
+		var lifetime := float(particle_data.get("lifetime", effects_tuning.slime_death_particle_lifetime))
 		color.a = clampf(timer / lifetime, 0.0, 1.0)
 		particle.modulate = color
 		particle_data["velocity"] = velocity
@@ -3021,19 +2954,19 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 			slime_attack_timers[slime] = 0.0
 			return false
 
-		var frame_index := mini(int(floor(timer / SLIME_ATTACK_FRAME_TIME)), frames.size() - 1)
+		var frame_index := mini(int(floor(timer / slime_tuning.attack_frame_time)), frames.size() - 1)
 		slime_attack_timers[slime] = timer
 		slime_attack_frame_indices[slime] = frame_index
 		_set_actor_base_texture(slime, frames[frame_index])
-		if frame_index == SLIME_ATTACK_HIT_FRAME and not bool(slime_attack_hit_done.get(slime, false)):
+		if frame_index == slime_tuning.attack_hit_frame and not bool(slime_attack_hit_done.get(slime, false)):
 			_apply_slime_attack_lunge(slime)
 			_apply_slime_attack_hit(slime)
 			slime_attack_hit_done[slime] = true
-		if timer >= SLIME_ATTACK_FRAME_TIME * float(frames.size()):
+		if timer >= slime_tuning.attack_frame_time * float(frames.size()):
 			slime_attack_timers[slime] = 0.0
 			slime_attack_frame_indices[slime] = 0
 			slime_attack_hit_done[slime] = false
-			slime_attack_cooldowns[slime] = SLIME_ATTACK_COOLDOWN
+			slime_attack_cooldowns[slime] = slime_tuning.attack_cooldown
 			_restore_slime_idle_texture(slime)
 		return true
 
@@ -3075,7 +3008,7 @@ func _can_slime_attack_player(slime: Sprite2D) -> bool:
 	if player_dead:
 		return false
 	var to_player := _actor_foot(player) - _actor_foot(slime)
-	if to_player.length() > SLIME_ATTACK_RANGE:
+	if to_player.length() > slime_tuning.attack_range:
 		return false
 	return true
 
@@ -3083,7 +3016,7 @@ func _can_slime_attack_player(slime: Sprite2D) -> bool:
 func _is_slime_aggroed(slime: Sprite2D) -> bool:
 	if _is_slime_dead(slime) or player_dead:
 		return false
-	return bool(slime_persistent_aggro.get(slime, false)) or _actor_foot(slime).distance_to(_actor_foot(player)) <= SLIME_AGGRO_RANGE
+	return bool(slime_persistent_aggro.get(slime, false)) or _actor_foot(slime).distance_to(_actor_foot(player)) <= slime_tuning.aggro_range
 
 
 func _is_any_slime_aggroed() -> bool:
@@ -3099,7 +3032,7 @@ func _aggro_slime_target(slime: Sprite2D) -> Vector2:
 	var approach := slime_foot - player_foot
 	if approach.length_squared() < 0.01:
 		approach = Vector2.RIGHT
-	var desired := player_foot + approach.normalized() * (SLIME_ATTACK_RANGE * 0.72)
+	var desired := player_foot + approach.normalized() * (slime_tuning.attack_range * 0.72)
 	var buddy_avoidance := Vector2.ZERO
 	for buddy in slimes:
 		if buddy == slime or _is_slime_dead(buddy):
@@ -3118,12 +3051,12 @@ func _move_slime_toward_player(slime: Sprite2D, delta: float) -> void:
 	var scoot_timer := float(slime_scoot_timers.get(slime, 0.0))
 	if scoot_timer > 0.0:
 		slime_scoot_timers[slime] = maxf(scoot_timer - delta, 0.0)
-		_set_slime_squish(slime, 1.0 - (scoot_timer / SLIME_SCOOT_DURATION), slime_scoot_targets.get(slime, Vector2.ZERO) as Vector2)
+		_set_slime_squish(slime, 1.0 - (scoot_timer / slime_tuning.scoot_duration), slime_scoot_targets.get(slime, Vector2.ZERO) as Vector2)
 		return
 
 	var offset := _actor_foot(player) - _actor_foot(slime)
 	var distance := offset.length()
-	if distance <= SLIME_ATTACK_RANGE:
+	if distance <= slime_tuning.attack_range:
 		slime_scoot_timers[slime] = 0.0
 		slime_hold_timers[slime] = 0.0
 		_set_actor_visual_scale(slime, Vector2.ONE)
@@ -3142,11 +3075,11 @@ func _move_slime_toward_player(slime: Sprite2D, delta: float) -> void:
 	if buddy_avoidance.length_squared() > 0.001:
 		direction = (direction + buddy_avoidance * 1.35).normalized()
 	_set_slime_facing(slime, direction.x)
-	var step_distance := minf(SLIME_SCOOT_DISTANCE, maxf(distance - SLIME_ATTACK_RANGE, 0.0))
+	var step_distance := minf(slime_tuning.scoot_distance, maxf(distance - slime_tuning.attack_range, 0.0))
 	var movement := _perspective_movement(direction * step_distance)
 	_try_move_actor(slime, movement)
 	slime_scoot_targets[slime] = movement
-	slime_scoot_timers[slime] = SLIME_SCOOT_DURATION
+	slime_scoot_timers[slime] = slime_tuning.scoot_duration
 	_set_slime_squish(slime, 0.0, movement)
 
 
@@ -3160,8 +3093,8 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 	# from changing the effective hitbox.
 	var attack_delta := _actor_foot(player) - _actor_foot(slime)
 	var attack_ellipse := Vector2(
-		attack_delta.x / SLIME_ATTACK_HIT_RANGE,
-		attack_delta.y / SLIME_ATTACK_VERTICAL_HIT_RANGE
+		attack_delta.x / slime_tuning.attack_hit_range,
+		attack_delta.y / slime_tuning.attack_vertical_hit_range
 	)
 	if attack_ellipse.length_squared() > 1.0:
 		return
@@ -3169,15 +3102,15 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 	var damage := _slime_attack_damage(slime)
 	_mark_player_in_combat()
 	player_health = maxf(player_health - damage, 0.0)
-	player_damage_fill_hold_timer = PLAYER_HEALTH_DAMAGE_HANG_TIME
+	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 	if player_is_attacking:
 		_interrupt_player_attack()
-	player_hit_flash_timer = PLAYER_HIT_FLASH_TIME
-	player_hitstun_timer = PLAYER_HITSTUN_TIME
+	player_hit_flash_timer = player_tuning.hit_flash_time
+	player_hitstun_timer = player_tuning.hitstun_time
 	_apply_player_hit_knockback(slime)
 	_spawn_player_damage_number(damage)
 	_update_player_health_ui()
-	hitstop_timer = HITSTOP_DURATION
+	hitstop_timer = player_tuning.hitstop_duration
 	if player_health <= 0.0:
 		player_death_pending = true
 		_interrupt_player_attack()
@@ -3187,8 +3120,8 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 func _slime_attack_rect(slime: Sprite2D) -> Rect2:
 	# Kept as a helper for debug/tools that may still query the attack area.
 	var foot := _actor_foot(slime)
-	var diameter := SLIME_ATTACK_HIT_RANGE * 2.0
-	return Rect2(foot - Vector2.ONE * SLIME_ATTACK_HIT_RANGE, Vector2.ONE * diameter)
+	var diameter := slime_tuning.attack_hit_range * 2.0
+	return Rect2(foot - Vector2.ONE * slime_tuning.attack_hit_range, Vector2.ONE * diameter)
 
 
 func _slime_attack_damage(slime: Sprite2D) -> float:
@@ -3197,7 +3130,7 @@ func _slime_attack_damage(slime: Sprite2D) -> float:
 
 
 func _mark_player_in_combat() -> void:
-	player_regen_delay_timer = PLAYER_REGEN_DELAY
+	player_regen_delay_timer = player_tuning.regen_delay
 	player_regen_accumulator = 0.0
 
 
@@ -3221,9 +3154,9 @@ func _update_player_health_regen(delta: float) -> void:
 
 	player_regen_accumulator += delta
 	var health_before_regen := player_health
-	while player_regen_accumulator >= PLAYER_REGEN_INTERVAL and player_health < max_health:
-		player_health = minf(player_health + PLAYER_REGEN_AMOUNT, max_health)
-		player_regen_accumulator -= PLAYER_REGEN_INTERVAL
+	while player_regen_accumulator >= player_tuning.regen_interval and player_health < max_health:
+		player_health = minf(player_health + player_tuning.regen_amount, max_health)
+		player_regen_accumulator -= player_tuning.regen_interval
 	if player_health > health_before_regen:
 		# Healing reverses the damage-bar presentation: show the newly healed
 		# amount in the bright transition layer, then let the dark fill catch up.
@@ -3241,15 +3174,15 @@ func _apply_slime_attack_lunge(slime: Sprite2D) -> void:
 	# little extra vertical reach while preserving horizontal movement.
 	direction.y *= 1.5
 	direction = direction.normalized()
-	_try_move_actor_swept(slime, _perspective_movement(direction * SLIME_ATTACK_LUNGE_DISTANCE), 0.75)
+	_try_move_actor_swept(slime, _perspective_movement(direction * slime_tuning.attack_lunge_distance), 0.75)
 
 
 func _apply_player_hit_knockback(slime: Sprite2D) -> void:
 	var direction := _actor_foot(player) - _actor_foot(slime)
 	if direction.length_squared() < 0.01:
 		direction = Vector2.RIGHT if player.global_position.x >= slime.global_position.x else Vector2.LEFT
-	player_hit_knockback_velocity = _perspective_movement(direction.normalized() * (PLAYER_HIT_KNOCKBACK / PLAYER_HIT_KNOCKBACK_DURATION))
-	player_hit_knockback_timer = PLAYER_HIT_KNOCKBACK_DURATION
+	player_hit_knockback_velocity = _perspective_movement(direction.normalized() * (player_tuning.hit_knockback / player_tuning.hit_knockback_duration))
+	player_hit_knockback_timer = player_tuning.hit_knockback_duration
 
 
 func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool:
@@ -3287,9 +3220,9 @@ func _update_enemy_health(delta: float) -> void:
 		var health_before_regen := health
 		if health < max_health and regen_delay <= 0.0:
 			var regen_accumulator := float(target_regen_accumulators.get(slime, 0.0)) + delta
-			while regen_accumulator >= ENEMY_REGEN_INTERVAL and health < max_health:
-				health = minf(health + ENEMY_REGEN_AMOUNT, max_health)
-				regen_accumulator -= ENEMY_REGEN_INTERVAL
+			while regen_accumulator >= slime_tuning.regen_interval and health < max_health:
+				health = minf(health + slime_tuning.regen_amount, max_health)
+				regen_accumulator -= slime_tuning.regen_interval
 			target_health[slime] = health
 			target_regen_accumulators[slime] = regen_accumulator
 		elif health >= max_health:
@@ -3300,13 +3233,13 @@ func _update_enemy_health(delta: float) -> void:
 			display_health = minf(display_health, health_before_regen)
 		if not is_equal_approx(display_health, health):
 			var display_goal := health
-			var fill_speed := ENEMY_HEALTH_REGEN_FILL_SPEED
+			var fill_speed := slime_tuning.health_regen_fill_speed
 			if display_health > health:
 				var hold_timer := maxf(float(target_damage_fill_hold_timers.get(slime, 0.0)) - delta, 0.0)
 				target_damage_fill_hold_timers[slime] = hold_timer
 				if hold_timer <= 0.0:
 					display_goal = maxf(health, ceilf(display_health) - 1.0)
-					fill_speed = ENEMY_HEALTH_DRAIN_FILL_SPEED
+					fill_speed = slime_tuning.health_drain_fill_speed
 					display_health = move_toward(display_health, display_goal, fill_speed * delta)
 			else:
 				display_goal = minf(health, floorf(display_health) + 1.0)
@@ -3314,11 +3247,11 @@ func _update_enemy_health(delta: float) -> void:
 		target_display_health[slime] = display_health
 
 func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
-	_spawn_floating_number(slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -DAMAGE_NUMBER_FLOAT_SPEED), was_critical)
+	_spawn_floating_number(slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -effects_tuning.damage_number_float_speed), was_critical)
 
 
 func _spawn_player_damage_number(amount: float) -> void:
-	_spawn_floating_number(player.global_position + Vector2(5, 6), int(round(amount)), Vector2(0.0, DAMAGE_NUMBER_FLOAT_SPEED))
+	_spawn_floating_number(player.global_position + Vector2(5, 6), int(round(amount)), Vector2(0.0, effects_tuning.damage_number_float_speed))
 
 
 func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vector2, was_critical: bool = false) -> void:
@@ -3343,8 +3276,8 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 	damage_numbers.append({
 		"sprite": sprite,
 		"shadow": shadow,
-		"timer": DAMAGE_NUMBER_LIFETIME,
-		"pop_timer": DAMAGE_NUMBER_POP_TIME,
+		"timer": effects_tuning.damage_number_lifetime,
+		"pop_timer": effects_tuning.damage_number_pop_time,
 		"velocity": velocity,
 	})
 
@@ -3379,7 +3312,7 @@ func _update_damage_numbers(delta: float) -> void:
 		if shadow != null:
 			shadow.position = _snap_half_pixel(logical_position + Vector2(0.0, 0.5))
 		var color := Color.WHITE
-		color.a = clampf(timer / DAMAGE_NUMBER_LIFETIME, 0.0, 1.0)
+		color.a = clampf(timer / effects_tuning.damage_number_lifetime, 0.0, 1.0)
 		sprite.modulate = color
 		var shadow_color := Color.WHITE
 		shadow_color.a = color.a
@@ -3507,9 +3440,9 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 func _update_slime_scoot(slime: Sprite2D, delta: float) -> void:
 	var scoot_timer := float(slime_scoot_timers[slime])
 	if scoot_timer > 0.0:
-		var previous_progress := 1.0 - (scoot_timer / SLIME_SCOOT_DURATION)
+		var previous_progress := 1.0 - (scoot_timer / slime_tuning.scoot_duration)
 		scoot_timer = maxf(scoot_timer - delta, 0.0)
-		var progress := 1.0 - (scoot_timer / SLIME_SCOOT_DURATION)
+		var progress := 1.0 - (scoot_timer / slime_tuning.scoot_duration)
 		slime_scoot_timers[slime] = scoot_timer
 
 		var start := slime_scoot_starts[slime] as Vector2
@@ -3551,7 +3484,7 @@ func _start_slime_scoot(slime: Sprite2D) -> void:
 	elif foot.distance_to(target) < 2.0 or float(slime_repath_timers[slime]) <= 0.0:
 		target = _random_slime_walkable_point_near(foot, 5, slime)
 		slime_targets[slime] = target
-		slime_repath_timers[slime] = rng.randf_range(SLIME_REPATH_MIN, SLIME_REPATH_MAX)
+		slime_repath_timers[slime] = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 
 	var direction := target - foot
 	if direction.length_squared() < 0.01:
@@ -3568,13 +3501,13 @@ func _start_slime_scoot(slime: Sprite2D) -> void:
 		# pursuit so slimes above/below the player close distance decisively.
 		steering_direction.y *= 2.0
 		steering_direction = steering_direction.normalized()
-	var movement := _perspective_movement(steering_direction * minf(SLIME_SCOOT_DISTANCE, direction.length()))
+	var movement := _perspective_movement(steering_direction * minf(slime_tuning.scoot_distance, direction.length()))
 	var desired_position := slime.position + movement
 	_set_slime_facing(slime, movement.x)
 
 	slime_scoot_starts[slime] = slime.position
 	slime_scoot_targets[slime] = desired_position
-	slime_scoot_timers[slime] = SLIME_SCOOT_DURATION
+	slime_scoot_timers[slime] = slime_tuning.scoot_duration
 
 
 func _repath_slime_after_block(slime: Sprite2D) -> void:
@@ -3594,9 +3527,9 @@ func _repath_slime_after_block(slime: Sprite2D) -> void:
 
 
 func _start_slime_hold(slime: Sprite2D) -> void:
-	var hold_time := rng.randf_range(SLIME_HOLD_MIN, SLIME_HOLD_MAX)
-	if not _is_slime_aggroed(slime) and rng.randf() < SLIME_CHILL_CHANCE:
-		hold_time = rng.randf_range(SLIME_CHILL_MIN, SLIME_CHILL_MAX)
+	var hold_time := rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
+	if not _is_slime_aggroed(slime) and rng.randf() < slime_tuning.chill_chance:
+		hold_time = rng.randf_range(slime_tuning.chill_min, slime_tuning.chill_max)
 	slime_hold_timers[slime] = hold_time
 	slime_idle_breath_timers[slime] = 0.0
 
@@ -3617,8 +3550,8 @@ func _set_slime_squish(slime: Sprite2D, progress: float, movement: Vector2) -> v
 
 func _set_slime_idle_breath(slime: Sprite2D, delta: float) -> void:
 	var timer := float(slime_idle_breath_timers.get(slime, 0.0)) + delta
-	slime_idle_breath_timers[slime] = fmod(timer, SLIME_IDLE_BREATH_TIME)
-	var pulse := (sin((timer / SLIME_IDLE_BREATH_TIME) * TAU - PI * 0.5) + 1.0) * 0.5
+	slime_idle_breath_timers[slime] = fmod(timer, slime_tuning.idle_breath_time)
+	var pulse := (sin((timer / slime_tuning.idle_breath_time) * TAU - PI * 0.5) + 1.0) * 0.5
 	var stretch_x := 1.0 + pulse * 0.05
 	var stretch_y := 1.0 - pulse * 0.04
 	_set_actor_visual_scale(slime, Vector2(stretch_x, stretch_y))
@@ -4771,11 +4704,11 @@ func _slime_display_name(slime: Sprite2D) -> String:
 func _update_player_health_ui(delta: float = 0.0) -> void:
 	var max_health := _player_max_health()
 	if player_health > player_display_health:
-		player_display_health = move_toward(player_display_health, player_health, ENEMY_HEALTH_REGEN_FILL_SPEED * delta)
+		player_display_health = move_toward(player_display_health, player_health, slime_tuning.health_regen_fill_speed * delta)
 	if player_damage_fill_hold_timer > 0.0:
 		player_damage_fill_hold_timer = maxf(player_damage_fill_hold_timer - delta, 0.0)
 	elif player_display_health > player_health:
-		player_display_health = move_toward(player_display_health, player_health, ENEMY_HEALTH_DRAIN_FILL_SPEED * delta)
+		player_display_health = move_toward(player_display_health, player_health, slime_tuning.health_drain_fill_speed * delta)
 	_set_health_bar_values(
 		player_health_fill,
 		player_health_damage_fill,
@@ -4947,8 +4880,8 @@ func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Arra
 			if color.a <= 0.0:
 				continue
 
-			var source_x := (float(x) + 0.5) / float(EFFECT_RESOLUTION_SCALE)
-			var source_y := (float(y) + 0.5) / float(EFFECT_RESOLUTION_SCALE)
+			var source_x := (float(x) + 0.5) / float(effects_tuning.resolution_scale)
+			var source_y := (float(y) + 0.5) / float(effects_tuning.resolution_scale)
 			if actor.flip_h:
 				source_x = float(source_image.get_width()) - source_x
 
@@ -4975,8 +4908,8 @@ func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Arra
 
 
 func _make_effect_image(source_image: Image) -> Image:
-	var width := source_image.get_width() * EFFECT_RESOLUTION_SCALE
-	var height := source_image.get_height() * EFFECT_RESOLUTION_SCALE
+	var width := source_image.get_width() * effects_tuning.resolution_scale
+	var height := source_image.get_height() * effects_tuning.resolution_scale
 	var image := Image.create_empty(width, height, false, source_image.get_format())
 
 	for y in range(height):
@@ -4985,8 +4918,8 @@ func _make_effect_image(source_image: Image) -> Image:
 				x,
 				y,
 				source_image.get_pixel(
-					int(float(x) / float(EFFECT_RESOLUTION_SCALE)),
-					int(float(y) / float(EFFECT_RESOLUTION_SCALE))
+					int(float(x) / float(effects_tuning.resolution_scale)),
+					int(float(y) / float(effects_tuning.resolution_scale))
 				)
 			)
 

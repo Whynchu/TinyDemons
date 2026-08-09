@@ -276,9 +276,10 @@ resource schemas and move lists are approved. Use Terra for boundary conflicts.
 - [x] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
   Gameplay retains temporary one-line delegates while callers migrate safely.
 - [x] Introduce typed player, slime, combat, and effects tuning resources.
-- [ ] Migrate the remaining player, slime, and effects call sites from root
+- [x] Migrate the remaining player, slime, and effects call sites from root
   constants after parity checks.
-- [ ] Replace constants only after parity is verified.
+- [x] Replace runtime tuning constants only after parity was verified. Asset
+  dimensions and scene/layout constants remain local until their owners move.
 
 Exit criteria: pure calculations and static asset preparation no longer depend
 on the gameplay scene root.
@@ -386,7 +387,7 @@ Update this table in every consolidation pull request.
 | Milestone | Status | Default model | Owner | PR/commit | Notes |
 | --- | --- | --- | --- | --- | --- |
 | M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot parser unavailable |
-| M1 Utilities/tuning | In progress | GPT-5.4, medium | - | - | CombatCalculator extracted; parser verification pending |
+| M1 Utilities/tuning | Complete | GPT-5.4, medium | - | - | Calculator, frame library, typed tuning resources, and runtime call-site migration complete; parser verification pending |
 | M2 Health | Not started | Terra, high | - | - | |
 | M3 Player | Not started | GPT-5.5, high | - | - | Sol only for unresolved ordering |
 | M4 Enemies | Not started | Terra, high | - | - | |
