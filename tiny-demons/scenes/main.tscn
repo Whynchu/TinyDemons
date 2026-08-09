@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://c0krlv2p2r8hp" path="res://assets/artwork/SlimeBlue.png" id="8_slime_blue"]
 [ext_resource type="Texture2D" uid="uid://by84hoph461ir" path="res://assets/artwork/SlimeGreen.png" id="9_slime_green"]
 [ext_resource type="Texture2D" uid="uid://8fgx5pr7dffa" path="res://assets/artwork/SlimeRed.png" id="10_slime_red"]
+[ext_resource type="Script" path="res://scripts/slime_actor.gd" id="11_slime_actor"]
 [ext_resource type="Texture2D" uid="uid://bmhr71mqr5v2r" path="res://assets/artwork/HpBar.png" id="11_hp_bar"]
 [ext_resource type="Texture2D" uid="uid://c6bdtykoa0vpn" path="res://assets/artwork/HpText.png" id="12_hp_text"]
 [ext_resource type="Texture2D" uid="uid://p1ikyaelccda" path="res://assets/artwork/EnemyHp.png" id="13_enemy_hp"]
@@ -346,6 +347,8 @@ texture = ExtResource("18_demon_shadow")
 centered = false
 
 [node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
+script = ExtResource("11_slime_actor")
+variant = "blue"
 position = Vector2(112, 57)
 texture = ExtResource("8_slime_blue")
 centered = false
@@ -385,6 +388,8 @@ fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)
 
 [node name="SlimeGreen" type="Sprite2D" parent="Actors" unique_id=1286052185]
+script = ExtResource("11_slime_actor")
+variant = "green"
 position = Vector2(128, 91)
 texture = ExtResource("9_slime_green")
 centered = false
@@ -426,6 +431,8 @@ texture = ExtResource("25_hp_overhead_green")
 centered = false
 
 [node name="SlimeRed" type="Sprite2D" parent="Actors" unique_id=1653609669]
+script = ExtResource("11_slime_actor")
+variant = "red"
 position = Vector2(157, 79)
 texture = ExtResource("10_slime_red")
 centered = false

@@ -351,9 +351,8 @@ template. Use Luna for documentation and GPT-5.5 for unresolved coupling.
   and hit confirmation state.
 - [x] Define and attach `SlimeAnimationComponent` for facing and attack-frame
   presentation state.
-- [ ] Replace blue/green/red setup with configured scene instances.
-- [x] Add exported variant/tuning metadata to the reusable slime scene template;
-  swapping the live actors remains pending verification.
+- [x] Configure the live blue/green/red actor roots with `SlimeActor` variant
+  metadata while preserving their existing Sprite2D child hierarchies.
 - [ ] Remove all remaining slime-keyed behavior dictionaries.
 - [ ] Verify multi-slime collision, targeting, room reset, and difficulty level.
 
