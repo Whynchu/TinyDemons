@@ -290,6 +290,8 @@ Model route: Terra at high effort because lifecycle state crosses combat, UI,
 death, regeneration, and room reset. Use GPT-5.4 for settled UI work and escalate
 unresolved lifecycle boundaries to GPT-5.5.
 
+- [x] Define reusable `HealthComponent` lifecycle API (damage, healing, regen,
+  reset, and death signals).
 - [ ] Add `HealthComponent` to the player and each slime.
 - [ ] Move health, maximum health, regen, and death state into the component.
 - [ ] Connect health UI and effects using signals.
