@@ -139,9 +139,6 @@ var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
 var slime_idle_breath_timers: Dictionary = {}
-var slime_persistent_aggro: Dictionary = {}
-var dead_slimes: Dictionary = {}
-var slime_start_positions: Dictionary = {}
 var actor_stats: Dictionary = {}
 var actor_default_textures: Dictionary = {}
 var actor_default_materials: Dictionary = {}
@@ -447,7 +444,7 @@ func _ready() -> void:
 		push_warning("No floor tiles found. Actor movement will be disabled.")
 		return
 	for slime in slimes:
-		slime_start_positions[slime] = slime.position
+		_slime_brain(slime).start_position = slime.position
 		_slime_brain(slime).target = _nearest_slime_walkable_point(_actor_foot(slime))
 		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
 		_slime_brain(slime).scoot_start = slime.position
@@ -465,8 +462,8 @@ func _ready() -> void:
 		_slime_combat(slime).face_left = false
 		_update_slime_attack_guides(slime)
 		_slime_combat(slime).cooldown = rng.randf_range(0.2, 0.6)
-		slime_persistent_aggro[slime] = false
-		dead_slimes[slime] = false
+		_slime_brain(slime).persistent_aggro = false
+		_slime_combat(slime).dead = false
 		actor_stats[slime] = slime.get_node_or_null("Stats") as StatsComponent
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
@@ -1808,7 +1805,7 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	_mark_player_in_combat()
 	var health_component := slime_health_components.get(slime) as HealthComponent
 	var previous_health := health_component.current_health if health_component != null else _enemy_max_health(slime)
-	slime_persistent_aggro[slime] = true
+	_slime_brain(slime).persistent_aggro = true
 	if health_component != null:
 		health_component.apply_damage(amount)
 	else:
@@ -1904,7 +1901,7 @@ func _kill_slime(slime: Sprite2D) -> void:
 
 
 func _is_slime_dead(slime: Sprite2D) -> bool:
-	return bool(dead_slimes.get(slime, false))
+	return _slime_combat(slime).dead
 
 
 func _are_all_slimes_dead() -> bool:
@@ -2721,7 +2718,7 @@ func _apply_finished_room_state() -> void:
 
 
 func _kill_slime_without_effects(slime: Sprite2D) -> void:
-	dead_slimes[slime] = true
+	_slime_combat(slime).dead = true
 	slime.visible = false
 	_slime_combat(slime).timer = 0.0
 	_slime_combat(slime).frame = 0
@@ -2772,10 +2769,10 @@ func _reset_chest_for_room() -> void:
 
 func _reset_slimes_for_room() -> void:
 	for slime in slimes:
-		slime.position = slime_start_positions.get(slime, slime.position) as Vector2
+		slime.position = _slime_brain(slime).start_position
 		slime.visible = true
 		slime.flip_h = false
-		dead_slimes[slime] = false
+		_slime_combat(slime).dead = false
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
 		var health_component := slime_health_components.get(slime) as HealthComponent
@@ -2793,7 +2790,7 @@ func _reset_slimes_for_room() -> void:
 		_slime_combat(slime).hit_done = false
 		_slime_combat(slime).face_left = false
 		_slime_combat(slime).cooldown = rng.randf_range(0.2, 0.6)
-		slime_persistent_aggro[slime] = false
+		_slime_brain(slime).persistent_aggro = false
 		_slime_brain(slime).scoot_start = slime.position
 		_slime_brain(slime).scoot_target = slime.position
 		_slime_brain(slime).scoot_timer = 0.0
@@ -3168,7 +3165,7 @@ func _can_slime_attack_player(slime: Sprite2D) -> bool:
 func _is_slime_aggroed(slime: Sprite2D) -> bool:
 	if _is_slime_dead(slime) or player_dead:
 		return false
-	return bool(slime_persistent_aggro.get(slime, false)) or _actor_foot(slime).distance_to(_actor_foot(player)) <= slime_tuning.aggro_range
+	return _slime_brain(slime).persistent_aggro or _actor_foot(slime).distance_to(_actor_foot(player)) <= slime_tuning.aggro_range
 
 
 func _is_any_slime_aggroed() -> bool:

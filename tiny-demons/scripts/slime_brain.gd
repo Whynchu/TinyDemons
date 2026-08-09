@@ -13,6 +13,8 @@ var target := Vector2.ZERO
 var scoot_start := Vector2.ZERO
 var scoot_target := Vector2.ZERO
 var scoot_timer := 0.0
+var persistent_aggro := false
+var start_position := Vector2.ZERO
 
 
 func tick(delta: float) -> void:

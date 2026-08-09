@@ -15,6 +15,7 @@ var flash_timer := 0.0
 var hitstun_timer := 0.0
 var knockback_velocity := Vector2.ZERO
 var knockback_timer := 0.0
+var dead := false
 
 
 func tick(delta: float) -> void:
