@@ -462,7 +462,7 @@ texture = ExtResource("4_wall_right")
 centered = false
 
 [node name="DoorRight" type="Sprite2D" parent="Map/Walls" unique_id=1819223406]
-position = Vector2(154, 49)
+position = Vector2(126, 35)
 texture = ExtResource("5_door")
 centered = false
 

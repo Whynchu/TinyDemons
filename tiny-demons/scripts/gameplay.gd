@@ -59,6 +59,8 @@ const DAMAGE_BASE := 2.0
 const DAMAGE_DEFENSE_SCALE := 12.0
 const DAMAGE_ROLL_MIN := 0.85
 const DAMAGE_ROLL_MAX := 1.15
+const CRITICAL_HIT_CHANCE := 0.10
+const CRITICAL_DAMAGE_MULTIPLIER := 1.5
 const PLAYER_ATTACK_KNOCKBACK := 16.0
 const PLAYER_ATTACK_HITBOX_SIZE := Vector2(24, 24)
 const PLAYER_ATTACK_HITBOX_RIGHT_OFFSET := Vector2(6, -7)
@@ -75,6 +77,7 @@ const PLAYER_REGEN_AMOUNT := 1.0
 const ENEMY_HEALTH_DRAIN_FILL_SPEED := 18.0
 const ENEMY_HEALTH_REGEN_FILL_SPEED := 10.0
 const ENEMY_HEALTH_DAMAGE_HANG_TIME := 0.14
+const PLAYER_HEALTH_DAMAGE_HANG_TIME := ENEMY_HEALTH_DAMAGE_HANG_TIME
 const DAMAGE_NUMBER_LIFETIME := 0.65
 const DAMAGE_NUMBER_POP_TIME := 0.10
 const DAMAGE_NUMBER_FLOAT_SPEED := 12.0
@@ -215,6 +218,7 @@ var damage_number_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
+var player_sprite_shadow: Sprite2D = null
 var current_target: Sprite2D = null
 var target_input_was_down := false
 var player_health := 0.0
@@ -241,6 +245,33 @@ var title_transition_active := false
 var title_transition_timer := 0.0
 var title_particles: Array[Dictionary] = []
 var title_particle_layer: Node2D = null
+var archetype_overlay: ColorRect = null
+var archetype_hold_cover: ColorRect = null
+var archetype_preview: Sprite2D = null
+var archetype_name_text: Sprite2D = null
+var archetype_start_button: Button = null
+var archetype_left_buttons: Array[Button] = []
+var archetype_right_buttons: Array[Button] = []
+var archetype_type_left_button: Button = null
+var archetype_type_right_button: Button = null
+var archetype_frame_timer := 0.0
+var archetype_index := 0
+var archetype_color_index := 0
+var archetype_menu_row := 0
+var archetype_transition_active := false
+var archetype_transition_timer := 0.0
+var archetype_fade_out := false
+var archetype_arrow_anim_timer := 0.0
+var archetype_arrow_anim_direction := 0
+var selected_archetype := StatsComponent.AllocationProfile.BALANCED
+var player_palette_name := "blue"
+var player_base_idle_frames: Array[Texture2D] = []
+var player_base_walk_frames: Array[Texture2D] = []
+var player_base_roll_frames: Array[Texture2D] = []
+var player_base_attack_frames: Array[Texture2D] = []
+var player_base_attack2_frames: Array[Texture2D] = []
+var player_base_attack_left_frames: Array[Texture2D] = []
+var player_base_attack2_left_frames: Array[Texture2D] = []
 var scene_transition_overlay: ColorRect = null
 var scene_transition_timer := 0.0
 var scene_transition_active := false
@@ -290,11 +321,15 @@ var target_overhead_aggro_markers: Dictionary = {}
 var target_health_damage_fill: Sprite2D = null
 var target_health_bar_size := Vector2.ZERO
 var player_health_fill_size := Vector2.ZERO
+var player_health_damage_fill: Sprite2D = null
+var player_display_health := 0.0
+var player_damage_fill_hold_timer := 0.0
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
 var player_regen_delay_timer := 0.0
 var player_regen_accumulator := 0.0
 var rng := RandomNumberGenerator.new()
+var last_damage_was_critical := false
 
 
 func _ready() -> void:
@@ -333,6 +368,7 @@ func _ready() -> void:
 	_build_depth_lists()
 	_build_sprite_images()
 	_build_player_animation_frames()
+	_build_player_sprite_shadow()
 	_build_slime_direction_textures()
 	_build_slime_attack_frames()
 	_build_enemy_health_ui()
@@ -352,6 +388,7 @@ func _ready() -> void:
 		player.add_child(player_equipment)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
+	player_display_health = player_health
 	player_regen_delay_timer = 0.0
 	player_regen_accumulator = 0.0
 	_update_player_health_ui()
@@ -403,7 +440,7 @@ func _physics_process(delta: float) -> void:
 		if scene_transition_timer >= 0.34:
 			get_tree().reload_current_scene()
 		return
-	if title_transition_active or (title_overlay != null and title_overlay.visible):
+	if title_transition_active or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
 		_update_title_screen(delta)
 		if title_transition_active and title_transition_timer < 0.72:
 			return
@@ -457,6 +494,7 @@ func _physics_process(delta: float) -> void:
 	_update_enemy_hit_flashes(delta)
 	_update_enemy_health(delta)
 	_update_player_health_regen(delta)
+	_update_player_health_ui(delta)
 	_update_damage_numbers(delta)
 	_update_pixel_particles(delta)
 	_update_chest_interaction()
@@ -661,7 +699,7 @@ func _build_title_screen() -> void:
 	title_overlay.size = Vector2(240, 160)
 	title_overlay.color = Color.BLACK
 	title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	title_overlay.z_index = 0
+	title_overlay.z_index = 2
 	ui.add_child(title_overlay)
 
 	title_screen_text = Sprite2D.new()
@@ -698,9 +736,123 @@ func _build_title_screen() -> void:
 	title_start_button.pressed.connect(_start_from_title)
 	title_overlay.add_child(title_start_button)
 	title_start_button.grab_focus()
+	_build_archetype_screen()
+
+
+func _build_archetype_screen() -> void:
+	archetype_overlay = ColorRect.new()
+	archetype_overlay.name = "ArchetypeOverlay"
+	archetype_overlay.size = Vector2(240, 160)
+	archetype_overlay.color = Color.BLACK
+	archetype_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	archetype_overlay.z_index = 1
+	archetype_overlay.visible = false
+	ui.add_child(archetype_overlay)
+
+	archetype_preview = Sprite2D.new()
+	archetype_preview.centered = false
+	archetype_preview.scale = Vector2(3, 3)
+	archetype_preview.position = Vector2(102, 28)
+	archetype_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	archetype_overlay.add_child(archetype_preview)
+
+	archetype_name_text = Sprite2D.new()
+	archetype_name_text.centered = false
+	archetype_name_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	archetype_overlay.add_child(archetype_name_text)
+
+	for side in [-1, 1]:
+		var button := Button.new()
+		button.text = "<" if side < 0 else ">"
+		button.position = Vector2(48 if side < 0 else 178, 42)
+		button.size = Vector2(14, 14)
+		button.focus_mode = Control.FOCUS_NONE
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_style_archetype_button(button)
+		button.pressed.connect(_shift_archetype_color.bind(side))
+		archetype_overlay.add_child(button)
+		(archetype_left_buttons if side < 0 else archetype_right_buttons).append(button)
+
+	var label_left := Button.new()
+	archetype_type_left_button = label_left
+	label_left.text = "<"
+	label_left.position = Vector2(58, 15)
+	label_left.size = Vector2(14, 14)
+	label_left.focus_mode = Control.FOCUS_NONE
+	_style_archetype_button(label_left)
+	label_left.pressed.connect(_shift_archetype.bind(-1))
+	archetype_overlay.add_child(label_left)
+
+	var label_right := Button.new()
+	archetype_type_right_button = label_right
+	label_right.text = ">"
+	label_right.position = Vector2(168, 15)
+	label_right.size = Vector2(14, 14)
+	label_right.focus_mode = Control.FOCUS_NONE
+	_style_archetype_button(label_right)
+	label_right.pressed.connect(_shift_archetype.bind(1))
+	archetype_overlay.add_child(label_right)
+
+	archetype_start_button = _make_retro_button("START", Vector2(99, 127), Vector2(42, 14))
+	archetype_start_button.pressed.connect(_start_selected_archetype)
+	archetype_overlay.add_child(archetype_start_button)
+	archetype_hold_cover = ColorRect.new()
+	archetype_hold_cover.name = "ArchetypeHoldCover"
+	archetype_hold_cover.size = Vector2(240, 160)
+	archetype_hold_cover.color = Color.BLACK
+	archetype_hold_cover.mouse_filter = Control.MOUSE_FILTER_STOP
+	archetype_hold_cover.z_index = 10
+	archetype_overlay.add_child(archetype_hold_cover)
+	_update_archetype_screen()
+
+
+func _style_archetype_button(button: Button) -> void:
+	button.add_theme_font_size_override("font_size", 8)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_focus_color", Color.WHITE)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0, 0, 0, 0)
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(1, 1, 1, 0.12)
+	focus.border_color = Color.WHITE
+	focus.set_border_width_all(1)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", focus)
+	button.add_theme_stylebox_override("focus", focus)
+
+
+func _make_retro_button(label: String, position: Vector2, size: Vector2) -> Button:
+	var button := Button.new()
+	button.position = position
+	button.size = size
+	button.text = ""
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0, 0, 0, 0)
+	normal.border_color = Color.WHITE
+	normal.set_border_width_all(1)
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(1, 1, 1, 0.12)
+	focus.border_color = Color.WHITE
+	focus.set_border_width_all(1)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", focus)
+	button.add_theme_stylebox_override("focus", focus)
+	var text := Sprite2D.new()
+	text.texture = _pixel_text_texture(label, Color.WHITE)
+	text.centered = true
+	text.position = size * 0.5
+	text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	button.add_child(text)
+	return button
 
 
 func _update_title_screen(delta: float) -> void:
+	if archetype_overlay != null and archetype_overlay.visible and not title_transition_active:
+		_update_archetype_input(delta)
+		return
 	if title_transition_active:
 		_update_title_particles(delta)
 		title_transition_timer += delta
@@ -710,6 +862,8 @@ func _update_title_screen(delta: float) -> void:
 		if title_transition_timer >= fade_start + fade_duration:
 			title_transition_active = false
 			title_overlay.visible = false
+			archetype_transition_timer = -0.35
+			_select_archetype_menu_row(0)
 		return
 	title_frame_timer += delta
 	var pulse := _retro_button_alpha(title_frame_timer)
@@ -751,7 +905,165 @@ func _start_from_title() -> void:
 		title_start_text.visible = false
 	if title_start_button != null:
 		title_start_button.visible = false
-		title_start_button.release_focus()
+	title_start_button.release_focus()
+	archetype_overlay.visible = true
+	archetype_overlay.modulate.a = 1.0
+	archetype_hold_cover.visible = true
+	archetype_transition_active = true
+	archetype_transition_timer = -1.0
+	archetype_fade_out = false
+
+
+func _update_archetype_input(delta: float) -> void:
+	if archetype_transition_active:
+		archetype_transition_timer += delta
+		if archetype_transition_timer < 0.0:
+			return
+		if not archetype_fade_out:
+			archetype_hold_cover.visible = false
+			archetype_transition_active = false
+			return
+		archetype_overlay.modulate.a = clampf(1.0 - archetype_transition_timer / 0.42, 0.0, 1.0)
+		if archetype_transition_timer >= 0.42:
+			archetype_transition_active = false
+			if archetype_fade_out:
+				archetype_overlay.visible = false
+			else:
+				archetype_overlay.modulate.a = 1.0
+		return
+	archetype_frame_timer += delta
+	archetype_arrow_anim_timer = maxf(archetype_arrow_anim_timer - delta, 0.0)
+	_update_archetype_arrow_animation()
+	archetype_start_button.modulate.a = _retro_button_alpha(archetype_frame_timer)
+	archetype_start_button.position.y = 127.0 + _retro_button_bob(archetype_frame_timer)
+	if Input.is_action_just_pressed("ui_up"):
+		_select_archetype_menu_row(archetype_menu_row - 1)
+	elif Input.is_action_just_pressed("ui_down"):
+		_select_archetype_menu_row(archetype_menu_row + 1)
+	elif Input.is_action_just_pressed("ui_left"):
+		_shift_archetype(-1) if archetype_menu_row == 0 else _shift_archetype_color(-1) if archetype_menu_row == 1 else _select_archetype_menu_row(2)
+	elif Input.is_action_just_pressed("ui_right"):
+		_shift_archetype(1) if archetype_menu_row == 0 else _shift_archetype_color(1) if archetype_menu_row == 1 else _select_archetype_menu_row(2)
+	if Input.is_action_just_pressed("ui_accept") or _is_interact_input_pressed():
+		if archetype_menu_row == 2:
+			_start_selected_archetype()
+		else:
+			_select_archetype_menu_row(archetype_menu_row + 1)
+
+
+func _shift_archetype(direction: int) -> void:
+	archetype_index = posmod(archetype_index + direction, 4)
+	selected_archetype = archetype_index
+	_archetype_arrow_pulse(direction)
+	_update_archetype_screen()
+
+
+func _shift_archetype_color(direction: int) -> void:
+	archetype_color_index = posmod(archetype_color_index + direction, 6)
+	_archetype_arrow_pulse(direction)
+	_update_archetype_screen()
+
+
+func _archetype_arrow_pulse(direction: int) -> void:
+	archetype_arrow_anim_direction = direction
+	archetype_arrow_anim_timer = 0.18
+
+
+func _update_archetype_arrow_animation() -> void:
+	var amount := clampf(archetype_arrow_anim_timer / 0.18, 0.0, 1.0)
+	var pulse := 1.0 + amount * 0.22
+	archetype_type_left_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 0 else 1.0)
+	archetype_type_right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 0 else 1.0)
+	for button in archetype_left_buttons:
+		button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 1 else 1.0)
+	for button in archetype_right_buttons:
+		button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 1 else 1.0)
+
+
+func _select_archetype_menu_row(row: int) -> void:
+	archetype_menu_row = posmod(row, 3)
+	_update_archetype_button_styles()
+	if archetype_menu_row == 2:
+		archetype_start_button.grab_focus()
+
+
+func _update_archetype_screen() -> void:
+	var names := ["BALANCED", "VIT", "STR", "DEF"]
+	var colors := ["blue", "orange", "green", "red", "yellow", "grey"]
+	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], Color.WHITE)
+	archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 21)
+	if not player_idle_frames.is_empty():
+		archetype_preview.texture = _recolor_player_texture(player_idle_frames[0], colors[archetype_color_index])
+		archetype_preview.position.x = (240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5
+	_update_archetype_button_styles()
+
+
+func _update_archetype_button_styles() -> void:
+	var highlight_colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194)]
+	var color: Color = highlight_colors[archetype_color_index]
+	var type_active := archetype_menu_row == 0
+	var sprite_active := archetype_menu_row == 1
+	var start_active := archetype_menu_row == 2
+	_set_archetype_button_state(archetype_type_left_button, type_active, color)
+	_set_archetype_button_state(archetype_type_right_button, type_active, color)
+	for button in archetype_left_buttons:
+		_set_archetype_button_state(button, sprite_active, color)
+	for button in archetype_right_buttons:
+		_set_archetype_button_state(button, sprite_active, color)
+	_set_archetype_button_state(archetype_start_button, start_active, color)
+
+
+func _set_archetype_button_state(button: Button, active: bool, color: Color) -> void:
+	if button == null:
+		return
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0, 0, 0, 0)
+	normal.border_color = Color(color if active else Color.WHITE, 0.95 if active else 0.0)
+	normal.set_border_width_all(1 if active else 0)
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(color, 0.18 if active else 0.0)
+	focus.border_color = color if active else Color.WHITE
+	focus.set_border_width_all(1 if active else 0)
+	button.add_theme_color_override("font_color", color if active else Color.WHITE)
+	button.add_theme_color_override("font_hover_color", color if active else Color.WHITE)
+	button.add_theme_color_override("font_focus_color", color if active else Color.WHITE)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", focus)
+	button.add_theme_stylebox_override("focus", focus)
+
+
+func _start_selected_archetype() -> void:
+	if archetype_overlay == null or not archetype_overlay.visible:
+		return
+	player_stats.allocation_profile = selected_archetype
+	player_palette_name = ["blue", "orange", "green", "red", "yellow", "grey"][archetype_color_index]
+	_apply_player_palette(player_palette_name)
+	_update_player_aggro_marker_colors()
+	player_health = _player_max_health()
+	player_display_health = player_health
+	player_damage_fill_hold_timer = 0.0
+	_update_player_health_ui()
+	archetype_transition_active = true
+	archetype_transition_timer = 0.0
+	archetype_fade_out = true
+	player.visible = true
+	_apply_player_animation_frame()
+
+
+func _update_player_aggro_marker_colors() -> void:
+	var marker_colors: Dictionary = {
+		"blue": Color8(59, 93, 201),
+		"orange": Color8(239, 125, 87),
+		"green": Color8(56, 183, 100),
+		"red": Color8(177, 62, 83),
+		"yellow": Color8(255, 205, 117),
+		"grey": Color8(86, 108, 134),
+	}
+	var color: Color = marker_colors.get(player_palette_name, marker_colors["blue"])
+	for marker in target_overhead_aggro_markers.values():
+		var aggro_marker := marker as Sprite2D
+		if aggro_marker != null:
+			aggro_marker.texture = _pixel_particle_texture(color)
 
 
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
@@ -939,6 +1251,7 @@ func _start_player_roll() -> void:
 	elif direction.x > 0.0:
 		player.flip_h = false
 	player_is_rolling = true
+	player_attack_visual.visible = false
 	player_roll_frame = 0
 	player_roll_timer = 0.0
 	player_roll_velocity = _perspective_movement(direction * (PLAYER_ROLL_DISTANCE / PLAYER_ROLL_DURATION))
@@ -994,6 +1307,20 @@ func _start_player_attack(variant: int = 1) -> void:
 	player_anim_timer = 0.0
 	player.visible = false
 	player_attack_visual.visible = true
+	_apply_player_animation_frame()
+
+
+func _interrupt_player_attack() -> void:
+	player_is_attacking = false
+	player_attack_hit_done = false
+	player_attack_hit_targets.clear()
+	player_attack_lunge_timer = 0.0
+	player_attack_lunge_velocity = Vector2.ZERO
+	player_attack_visual.visible = false
+	player.visible = true
+	player_anim_name = "walk" if player_is_moving else "idle"
+	player_anim_frame = 0
+	player_anim_timer = 0.0
 	_apply_player_animation_frame()
 
 
@@ -1152,8 +1479,10 @@ func _apply_player_attack_hitbox() -> void:
 		return
 	for slime in hit_targets:
 		player_attack_hit_targets.append(slime)
-		var divided_damage := floorf(_player_attack_damage_against(slime) / float(target_count))
-		_damage_slime(slime, maxf(divided_damage, 1.0))
+		var damage := _player_attack_damage_against(slime)
+		var was_critical := last_damage_was_critical
+		var divided_damage := floorf(damage / float(target_count))
+		_damage_slime(slime, maxf(divided_damage, 1.0), was_critical)
 		_knockback_slime(slime)
 
 
@@ -1167,7 +1496,7 @@ func _player_attack_hitbox() -> Rect2:
 	return Rect2(player.global_position + offset, PLAYER_ATTACK_HITBOX_SIZE)
 
 
-func _damage_slime(slime: Sprite2D, amount: float) -> void:
+func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
 	if _is_slime_dead(slime):
 		return
 
@@ -1181,7 +1510,7 @@ func _damage_slime(slime: Sprite2D, amount: float) -> void:
 	target_regen_accumulators[slime] = 0.0
 	slime_flash_timers[slime] = ENEMY_HIT_FLASH_TIME
 	slime_hitstun_timers[slime] = ENEMY_HITSTUN_TIME
-	_spawn_damage_number(slime, amount)
+	_spawn_damage_number(slime, amount, was_critical)
 	hitstop_timer = HITSTOP_DURATION
 	if float(target_health[slime]) <= 0.0:
 		_kill_slime(slime)
@@ -1193,6 +1522,7 @@ func _player_attack_damage_against(slime: Sprite2D) -> float:
 
 
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
+	last_damage_was_critical = false
 	if attacker_stats == null:
 		return 1.0
 	var attacker_str := float(attacker_stats.strength)
@@ -1207,7 +1537,11 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 	var defense_multiplier := DAMAGE_DEFENSE_SCALE / (DAMAGE_DEFENSE_SCALE + maxf(defender_def, 0.0))
 	var calculated_damage := raw_damage * defense_multiplier
 	var damage_roll := maxf(rng.randf_range(DAMAGE_ROLL_MIN, DAMAGE_ROLL_MAX), DAMAGE_ROLL_MIN)
-	return maxf(1.0, floorf(calculated_damage * damage_roll))
+	var damage := calculated_damage * damage_roll
+	if attacker_stats == player_stats and rng.randf() < CRITICAL_HIT_CHANCE:
+		last_damage_was_critical = true
+		damage *= CRITICAL_DAMAGE_MULTIPLIER
+	return maxf(1.0, floorf(damage))
 
 
 func _max_health_for_stats(stats: StatsComponent) -> float:
@@ -2153,6 +2487,9 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 	var damage := _slime_attack_damage(slime)
 	_mark_player_in_combat()
 	player_health = maxf(player_health - damage, 0.0)
+	player_damage_fill_hold_timer = PLAYER_HEALTH_DAMAGE_HANG_TIME
+	if player_is_attacking:
+		_interrupt_player_attack()
 	player_hit_flash_timer = PLAYER_HIT_FLASH_TIME
 	player_hitstun_timer = PLAYER_HITSTUN_TIME
 	_apply_player_hit_knockback(slime)
@@ -2161,9 +2498,8 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 	hitstop_timer = HITSTOP_DURATION
 	if player_health <= 0.0:
 		player_death_pending = true
-		player_is_attacking = false
+		_interrupt_player_attack()
 		player_is_rolling = false
-		player_attack_visual.visible = false
 
 
 func _slime_attack_rect(slime: Sprite2D) -> Rect2:
@@ -2284,17 +2620,27 @@ func _update_enemy_health(delta: float) -> void:
 				display_health = move_toward(display_health, display_goal, fill_speed * delta)
 		target_display_health[slime] = display_health
 
-func _spawn_damage_number(slime: Sprite2D, amount: float) -> void:
-	_spawn_floating_number(slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -DAMAGE_NUMBER_FLOAT_SPEED))
+func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
+	_spawn_floating_number(slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -DAMAGE_NUMBER_FLOAT_SPEED), was_critical)
 
 
 func _spawn_player_damage_number(amount: float) -> void:
-	_spawn_floating_number(player.global_position + Vector2(5, -2), int(round(amount)), Vector2(0.0, DAMAGE_NUMBER_FLOAT_SPEED))
+	_spawn_floating_number(player.global_position + Vector2(5, 6), int(round(amount)), Vector2(0.0, DAMAGE_NUMBER_FLOAT_SPEED))
 
 
-func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vector2) -> void:
+func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vector2, was_critical: bool = false) -> void:
+	var number_color := Color8(255, 226, 92) if was_critical else Color.WHITE
+	var shadow := Sprite2D.new()
+	shadow.texture = _pixel_number_texture(str(maxi(value, 0)), Color8(0, 0, 0, 76))
+	shadow.centered = false
+	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shadow.z_as_relative = false
+	shadow.z_index = OVERWORLD_UI_Z + 1
+	shadow.position = _snap_half_pixel(world_position + Vector2(0.0, 0.5))
+	add_child(shadow)
+
 	var sprite := Sprite2D.new()
-	sprite.texture = _damage_number_texture(value)
+	sprite.texture = _damage_number_texture(value, number_color)
 	sprite.centered = false
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false
@@ -2303,6 +2649,7 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 	add_child(sprite)
 	damage_numbers.append({
 		"sprite": sprite,
+		"shadow": shadow,
 		"timer": DAMAGE_NUMBER_LIFETIME,
 		"pop_timer": DAMAGE_NUMBER_POP_TIME,
 		"velocity": velocity,
@@ -2313,7 +2660,10 @@ func _update_damage_numbers(delta: float) -> void:
 	for index in range(damage_numbers.size() - 1, -1, -1):
 		var damage_number := damage_numbers[index]
 		var sprite := damage_number["sprite"] as Sprite2D
+		var shadow := damage_number.get("shadow") as Sprite2D
 		if sprite == null:
+			if shadow != null:
+				shadow.queue_free()
 			damage_numbers.remove_at(index)
 			continue
 		var pop_timer := float(damage_number.get("pop_timer", 0.0))
@@ -2324,6 +2674,8 @@ func _update_damage_numbers(delta: float) -> void:
 		var timer := float(damage_number["timer"]) - delta
 		if timer <= 0.0:
 			sprite.queue_free()
+			if shadow != null:
+				shadow.queue_free()
 			damage_numbers.remove_at(index)
 			continue
 
@@ -2331,14 +2683,20 @@ func _update_damage_numbers(delta: float) -> void:
 		logical_position += damage_number.get("velocity", Vector2.ZERO) as Vector2 * delta
 		damage_number["logical_position"] = logical_position
 		sprite.position = _snap_half_pixel(logical_position)
+		if shadow != null:
+			shadow.position = _snap_half_pixel(logical_position + Vector2(0.0, 0.5))
 		var color := Color.WHITE
 		color.a = clampf(timer / DAMAGE_NUMBER_LIFETIME, 0.0, 1.0)
 		sprite.modulate = color
+		var shadow_color := Color.WHITE
+		shadow_color.a = color.a
+		if shadow != null:
+			shadow.modulate = shadow_color
 		damage_number["timer"] = timer
 
 
-func _damage_number_texture(value: int) -> Texture2D:
-	return _pixel_number_texture(str(maxi(value, 0)), Color.WHITE)
+func _damage_number_texture(value: int, color: Color = Color.WHITE) -> Texture2D:
+	return _pixel_number_texture(str(maxi(value, 0)), color)
 
 
 func _pixel_text_texture(text: String, color: Color) -> Texture2D:
@@ -2397,6 +2755,8 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 		"Y": ["101", "101", "010", "010", "010"],
 		"N": ["1001", "1101", "1011", "1001", "1001"],
 		"D": ["110", "101", "101", "101", "110"],
+		"F": ["111", "100", "110", "100", "100"],
+		"C": ["111", "100", "100", "100", "111"],
 		"U": ["101", "101", "101", "101", "111"],
 		"L": ["100", "100", "100", "100", "111"],
 		"0": ["111", "101", "101", "101", "111"],
@@ -2411,6 +2771,7 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 		"9": ["111", "101", "111", "001", "111"],
 		"G": ["111", "100", "101", "101", "111"],
 		"A": ["010", "101", "111", "101", "101"],
+		"B": ["110", "101", "110", "101", "110"],
 		"M": ["10001", "11011", "10101", "10001", "10001"],
 		"E": ["111", "100", "110", "100", "111"],
 		"O": ["111", "101", "101", "101", "111"],
@@ -2961,6 +3322,14 @@ func _build_enemy_health_ui() -> void:
 	target_health_fill.z_as_relative = true
 	target_health_damage_fill.get_parent().move_child(target_health_damage_fill, target_health_fill.get_index())
 
+	player_health_damage_fill = _duplicate_fill_sprite(player_health_fill, "HpBarDamageFill")
+	player_health_damage_fill.texture = _brighter_bar_texture(player_health_fill.texture)
+	player_health_damage_fill.z_index = 1
+	player_health_fill.z_index = 2
+	player_health_damage_fill.z_as_relative = true
+	player_health_fill.z_as_relative = true
+	player_health_damage_fill.get_parent().move_child(player_health_damage_fill, player_health_fill.get_index())
+
 	var green_offset := hp_overhead.global_position - slime_green.global_position
 	_register_overhead_bar(slime_green, hp_overhead, hp_overhead_fill, green_offset)
 
@@ -3106,6 +3475,14 @@ func _build_player_animation_frames() -> void:
 	player_between_attack_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-attack-between.png")
 	player_after_attack2_texture = _load_texture_or_null("res://assets/artwork/TinyDemon-after-attack2.png")
 	player_attack_left_frames = _flip_frames_horizontally(player_attack_frames)
+	player_base_idle_frames = player_idle_frames.duplicate()
+	player_base_walk_frames = player_walk_frames.duplicate()
+	player_base_roll_frames = player_roll_frames.duplicate()
+	player_base_attack_frames = player_attack_frames.duplicate()
+	player_base_attack2_frames = player_attack2_frames.duplicate()
+	player_base_attack_left_frames = player_attack_left_frames.duplicate()
+	player_base_attack2_left_frames = player_attack2_left_frames.duplicate()
+	_apply_player_palette("blue")
 	_warm_player_frame_caches()
 	if not player_idle_frames.is_empty():
 		_set_actor_base_texture(player, player_idle_frames[0])
@@ -3155,6 +3532,51 @@ func _flip_frames_horizontally(frames: Array[Texture2D]) -> Array[Texture2D]:
 		image.flip_x()
 		flipped_frames.append(ImageTexture.create_from_image(image))
 	return flipped_frames
+
+
+func _apply_player_palette(palette_name: String) -> void:
+	player_idle_frames = _recolor_player_frames(player_base_idle_frames, palette_name)
+	player_walk_frames = _recolor_player_frames(player_base_walk_frames, palette_name)
+	player_roll_frames = _recolor_player_frames(player_base_roll_frames, palette_name)
+	player_attack_frames = _recolor_player_frames(player_base_attack_frames, palette_name)
+	player_attack2_frames = _recolor_player_frames(player_base_attack2_frames, palette_name)
+	player_attack_left_frames = _recolor_player_frames(player_base_attack_left_frames, palette_name)
+	player_attack2_left_frames = _recolor_player_frames(player_base_attack2_left_frames, palette_name)
+	player_between_attack_texture = _recolor_player_texture(player_between_attack_texture, palette_name)
+	player_after_attack2_texture = _recolor_player_texture(player_after_attack2_texture, palette_name)
+	_warm_player_frame_caches()
+
+
+func _recolor_player_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]:
+	var recolored: Array[Texture2D] = []
+	for texture in frames:
+		recolored.append(_recolor_player_texture(texture, palette_name))
+	return recolored
+
+
+func _recolor_player_texture(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null:
+		return null
+	var palette := {
+		"blue": [Color8(59, 93, 201), Color8(65, 166, 246), Color8(115, 239, 247)],
+		"orange": [Color8(239, 125, 87), Color8(255, 205, 117), Color8(255, 205, 117)],
+		"green": [Color8(56, 183, 100), Color8(167, 240, 112), Color8(167, 240, 112)],
+		"red": [Color8(177, 62, 83), Color8(239, 125, 87), Color8(255, 205, 117)],
+		"yellow": [Color8(255, 205, 117), Color8(255, 240, 150), Color8(244, 244, 244)],
+		"grey": [Color8(86, 108, 134), Color8(148, 176, 194), Color8(244, 244, 244)],
+	}
+	var target: Array = palette.get(palette_name, palette["blue"])
+	var image: Image = source.get_image().duplicate()
+	var source_colors: Array[Color] = [Color8(59, 93, 201), Color8(65, 166, 246), Color8(115, 239, 247)]
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			for color_index in source_colors.size():
+				if _rgb_key(color) == _rgb_key(source_colors[color_index]):
+					var replacement: Color = target[color_index]
+					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
+					break
+	return ImageTexture.create_from_image(image)
 
 
 func _warm_texture_cache(texture: Texture2D) -> void:
@@ -3297,6 +3719,26 @@ func _update_player_shadow() -> void:
 	player_shadow.self_modulate = Color(1, 1, 1, 0.25)
 	player_shadow.flip_h = player.flip_h
 	player_shadow.z_index = int(round(_actor_foot(player).y * DEPTH_Z_SCALE)) - 1
+	if player_sprite_shadow != null:
+		var source_sprite := player_attack_visual if player_is_attacking else player
+		player_sprite_shadow.texture = source_sprite.texture
+		player_sprite_shadow.global_position = source_sprite.global_position + Vector2(-0.5, 0.0)
+		player_sprite_shadow.offset = source_sprite.offset
+		player_sprite_shadow.scale = source_sprite.scale
+		player_sprite_shadow.flip_h = source_sprite.flip_h
+		player_sprite_shadow.visible = source_sprite.visible and source_sprite.texture != null
+		player_sprite_shadow.z_index = source_sprite.z_index - 1
+
+
+func _build_player_sprite_shadow() -> void:
+	player_sprite_shadow = Sprite2D.new()
+	player_sprite_shadow.name = "PlayerSpriteShadow"
+	player_sprite_shadow.centered = player.centered
+	player_sprite_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	player_sprite_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.25)
+	player_sprite_shadow.z_as_relative = false
+	player_sprite_shadow.z_index = player.z_index - 1
+	player.get_parent().add_child(player_sprite_shadow)
 
 
 func _update_targeting() -> void:
@@ -3484,9 +3926,19 @@ func _slime_display_name(slime: Sprite2D) -> String:
 	return "Green Slime"
 
 
-func _update_player_health_ui() -> void:
+func _update_player_health_ui(delta: float = 0.0) -> void:
 	var max_health := _player_max_health()
+	if player_display_health <= 0.0:
+		player_display_health = player_health
+	if player_health > player_display_health:
+		player_display_health = move_toward(player_display_health, player_health, ENEMY_HEALTH_REGEN_FILL_SPEED * delta)
+	if player_damage_fill_hold_timer > 0.0:
+		player_damage_fill_hold_timer = maxf(player_damage_fill_hold_timer - delta, 0.0)
+	elif player_display_health > player_health:
+		player_display_health = move_toward(player_display_health, player_health, ENEMY_HEALTH_DRAIN_FILL_SPEED * delta)
 	_set_fill_ratio(player_health_fill, player_health_fill_size, clampf(player_health / max_health, 0.0, 1.0))
+	if player_health_damage_fill != null:
+		_set_fill_ratio(player_health_damage_fill, player_health_fill_size, clampf(player_display_health / max_health, 0.0, 1.0))
 	if player_health_text != null:
 		player_health_text.texture = _pixel_number_texture("%d/%d" % [ceili(player_health), ceili(max_health)], Color.WHITE)
 
