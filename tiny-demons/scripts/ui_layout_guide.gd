@@ -1,106 +1,104 @@
 @tool
 extends Node2D
 
-@export var show_guides := true:
+@export var show_preview := true:
 	set(value):
-		show_guides = value
-		queue_redraw()
-@export var title_rect := Rect2(0, 0, 240, 160):
-	set(value):
-		title_rect = value
-		queue_redraw()
-@export var game_over_rect := Rect2(0, 0, 240, 160):
-	set(value):
-		game_over_rect = value
-		queue_redraw()
-@export var top_hud_rect := Rect2(0, 0, 240, 14):
-	set(value):
-		top_hud_rect = value
-		queue_redraw()
-@export var target_hud_rect := Rect2(72, 140, 96, 20):
-	set(value):
-		target_hud_rect = value
-		queue_redraw()
-@export var action_buttons_rect := Rect2(210, 56, 28, 32):
-	set(value):
-		action_buttons_rect = value
-		queue_redraw()
+		show_preview = value
+		_rebuild_preview()
+
+var preview_nodes: Array[Node2D] = []
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		visible = false
-	queue_redraw()
-
-func _draw() -> void:
-	if not show_guides:
 		return
-	_draw_top_hud_preview()
-	_draw_target_hud_preview()
-	_draw_action_buttons_preview()
-
-func _draw_region(rect: Rect2, color: Color, label: String) -> void:
-	draw_rect(rect, color, false, 1.0)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(1, 7), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 5, color.lightened(0.35))
+	_rebuild_preview()
 
 
-func _draw_top_hud_preview() -> void:
-	# The HP bar itself is a scene Sprite2D. Only its code-generated value is previewed here.
-	_draw_pixel_text(Vector2(35, 1), "12/15", Color.WHITE, 1)
-	_draw_pixel_text(Vector2(72, 4), "0", Color("#ffcd75"), 1)
-	var coin := load("res://assets/artwork/GoldFresh2.png") as Texture2D
-	if coin != null:
-		draw_texture_rect_region(coin, Rect2(64, 4, 5, 5), Rect2(0, 0, 5, 5))
-	_draw_pixel_text(Vector2(208, 4), "R1", Color("#f4f4f4"), 1)
+func _process(_delta: float) -> void:
+	if Engine.is_editor_hint() and preview_nodes.is_empty():
+		_rebuild_preview()
 
 
-func _draw_target_hud_preview() -> void:
-	# The name and bar frame/fill are scene Sprite2Ds. Only the runtime health value is previewed.
-	_draw_pixel_text(Vector2(121, 149), "8/13", Color.WHITE, 1)
+func _rebuild_preview() -> void:
+	for child in preview_nodes:
+		if is_instance_valid(child):
+			child.free()
+	preview_nodes.clear()
+	if not show_preview:
+		return
+
+	# These are editor-only Sprite2D nodes. Runtime gameplay hides this guide node.
+	_add_pixel_sprite("EditorPlayerHealth", Vector2(35, 1.5), "12/15", Color.WHITE, true)
+	_add_pixel_sprite("EditorTargetHealth", Vector2(129, 150), "8/13", Color.WHITE, true)
+	_add_pixel_sprite("EditorGoldAmount", Vector2(72, 4), "0", Color("#ffcd75"), false)
+	_add_pixel_sprite("EditorRoomNumber", Vector2(208, 4), "R1", Color("#f4f4f4"), false)
+	_add_texture_sprite("EditorGold", "res://assets/artwork/GoldFresh2.png", Vector2(64, 4), Vector2(0, 0), Vector2(5, 5))
+	_add_texture_sprite("EditorTriangle", "res://assets/artwork/triangle55.png", Vector2(224, 64))
+	_add_texture_sprite("EditorSquare", "res://assets/artwork/square55.png", Vector2(219, 69))
+	_add_texture_sprite("EditorX", "res://assets/artwork/x55.png", Vector2(224, 74))
+	_add_texture_sprite("EditorCircle", "res://assets/artwork/circle55.png", Vector2(229, 69))
 
 
-func _draw_action_buttons_preview() -> void:
-	var button_data := [
-		["triangle55.png", Vector2(224, 64)],
-		["square55.png", Vector2(219, 69)],
-		["x55.png", Vector2(224, 74)],
-		["circle55.png", Vector2(229, 69)],
-	]
-	for data in button_data:
-		var texture := load("res://assets/artwork/" + data[0]) as Texture2D
-		if texture != null:
-			draw_texture(texture, data[1])
+func _add_texture_sprite(node_name: String, path: String, sprite_position: Vector2, region_position := Vector2.ZERO, region_size := Vector2.ZERO) -> void:
+	var texture := load(path) as Texture2D
+	if texture == null:
+		return
+	var sprite := Sprite2D.new()
+	sprite.name = node_name
+	sprite.texture = texture
+	sprite.position = sprite_position
+	sprite.centered = false
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_index = 4
+	if region_size != Vector2.ZERO:
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(region_position, region_size)
+	add_child(sprite)
+	preview_nodes.append(sprite)
 
 
-func _draw_pixel_text(position: Vector2, value: String, color: Color, scale: int) -> void:
-	var x := position.x
-	for character in value:
-		var glyph: Array = _glyph(character)
-		for y in glyph.size():
-			var row := glyph[y] as String
-			for pixel_x in row.length():
-				if row[pixel_x] == "1":
-					draw_rect(Rect2(x + pixel_x * scale, position.y + y * scale, scale, scale), color)
-		x += (glyph[0] as String).length() * scale + scale
+func _add_pixel_sprite(node_name: String, sprite_position: Vector2, value: String, color: Color, centered: bool) -> void:
+	var sprite := Sprite2D.new()
+	sprite.name = node_name
+	sprite.texture = _pixel_number_texture(value, color)
+	sprite.position = sprite_position
+	sprite.centered = centered
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_index = 4
+	add_child(sprite)
+	preview_nodes.append(sprite)
 
 
-func _glyph(character: String) -> Array:
-	return {
-		"A": ["010", "101", "111", "101", "101"],
-		"B": ["110", "101", "110", "101", "110"],
-		"C": ["111", "100", "100", "100", "111"],
-		"D": ["110", "101", "101", "101", "110"],
-		"E": ["111", "100", "110", "100", "111"],
-		"L": ["100", "100", "100", "100", "111"],
-		"M": ["10001", "11011", "10101", "10001", "10001"],
-		"N": ["1001", "1101", "1011", "1001", "1001"],
-		"P": ["110", "101", "110", "100", "100"],
-		"R": ["110", "101", "110", "101", "101"],
-		"S": ["111", "100", "111", "001", "111"],
-		"U": ["101", "101", "101", "101", "111"],
+func _pixel_number_texture(value: String, color: Color) -> Texture2D:
+	var glyphs := {
 		"0": ["111", "101", "101", "101", "111"],
 		"1": ["010", "110", "010", "010", "111"],
 		"2": ["110", "001", "010", "100", "111"],
 		"3": ["110", "001", "010", "001", "110"],
+		"4": ["101", "101", "111", "001", "001"],
+		"5": ["111", "100", "110", "001", "110"],
+		"6": ["011", "100", "111", "101", "111"],
+		"7": ["111", "001", "010", "010", "010"],
+		"8": ["111", "101", "111", "101", "111"],
+		"9": ["111", "101", "111", "001", "110"],
 		"/": ["001", "001", "010", "100", "100"],
+		"R": ["110", "101", "110", "101", "101"],
 		" ": ["0", "0", "0", "0", "0"],
-	}.get(character, ["0", "0", "0", "0", "0"])
+	}
+	var width := 0
+	for character in value:
+		width += ((glyphs.get(character, glyphs[" "]) as Array)[0] as String).length() + 1
+	width = maxi(width - 1, 1)
+	var image := Image.create(width, 5, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var x_offset := 0
+	for character in value:
+		var glyph: Array = glyphs.get(character, glyphs[" "])
+		for y in glyph.size():
+			var row := glyph[y] as String
+			for x in row.length():
+				if row[x] == "1":
+					image.set_pixel(x_offset + x, y, color)
+		x_offset += (glyph[0] as String).length() + 1
+	return ImageTexture.create_from_image(image)
