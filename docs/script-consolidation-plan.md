@@ -385,6 +385,23 @@ Model route: GPT-5.5 at high effort for collision, walkability, transition, and
 persistence boundaries; GPT-5.4 implements APIs after the design is settled.
 Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 
+#### M5 closeout implementation plan
+
+1. Collision pass: move broad-phase, static-contact requests, and actor-contact
+   resolution behind `ActorCollisionSystem`; retain exact gameplay callbacks as
+   a compatibility fallback.
+2. Render pass: move depth-index application, shadow registration, and shadow
+   placement behind `DepthSorter`/`ShadowController`; compare z-order and scale
+   against the current scene.
+3. Room pass: move graph/socket selection, arrival context, transition locks,
+   and persistence commands behind `RoomController`; retain dungeon data as a
+   read-only dependency during migration.
+4. Occlusion pass: move image/cache ownership and invalidation behind
+   `OcclusionRenderer`, then measure update frequency in representative rooms.
+5. Verification pass: replay every socket direction, return traversal, room
+   reset, actor placement, collision, depth, shadows, and occlusion case before
+   marking M5 complete.
+
 - [ ] Extract walkable geometry and queries into `WalkableArea`.
 - [x] Define and attach `WalkableArea` geometry/query boundary; tile extraction
   remains in the coordinator pending parity verification.
