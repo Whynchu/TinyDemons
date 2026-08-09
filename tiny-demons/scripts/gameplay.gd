@@ -3866,9 +3866,8 @@ func _try_move_actor_swept(actor: Sprite2D, movement: Vector2, max_step: float) 
 
 
 func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void:
-	for other in collision_sprites:
-		if other == actor:
-			continue
+	var candidates: Array[Sprite2D] = actor_collision_system.contacts_for(actor) if actor_collision_system != null else collision_sprites
+	for other in candidates:
 		if not _actors_are_in_contact(actor, other):
 			continue
 

@@ -393,6 +393,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
 - [ ] Extract actor contact/static collision into `ActorCollisionSystem`.
 - [x] Define and attach `ActorCollisionSystem` actor-set boundary; existing
   resolution remains authoritative pending parity migration.
+- [x] Delegate actor-contact candidate filtering to `ActorCollisionSystem`,
+  retaining exact gameplay contact rules and static collision fallback.
 - [ ] Extract depth ordering and shadows.
 - [x] Define and attach `DepthSorter` ownership boundary; current ordering
   logic remains in the coordinator pending parity migration.
