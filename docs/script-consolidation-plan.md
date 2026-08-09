@@ -495,6 +495,22 @@ Model route: Terra at medium effort for cleanup, Luna for metrics/docs, GPT-5.4
 mini for exact removals, and GPT-5.5 for final dependency/update-order review.
 Use Sol only if that review exposes an unresolved architecture defect.
 
+#### M7 cleanup pass plan
+
+1. Remove compatibility delegates whose callers have migrated.
+2. Move remaining texture/image caches and HUD dictionaries to their owning
+   presenters in grouped, behavior-preserving changes.
+3. Reduce direct scene references through controller dependencies.
+4. Re-run source metrics and compare root size, state count, dictionary count,
+   and largest component size against the baseline.
+5. Run the complete smoke checklist and perform a final dependency review.
+
+Current M7 starting snapshot (`gameplay.gd`, 2026-08-09): 5,635 physical
+lines, 305 functions, 38 constants, 263 root vars, 22 `@onready` references,
+and 40 dictionary declarations. The line increase is expected during staged
+composition; M7 must reduce coordinator ownership rather than merely move
+text elsewhere.
+
 - [ ] Reduce `gameplay.gd` to startup, global modes, and signal wiring.
 - [ ] Remove compatibility delegates and unused state.
 - [ ] Ensure no component reaches into another component's internal fields.
