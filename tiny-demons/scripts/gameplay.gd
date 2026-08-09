@@ -2606,6 +2606,8 @@ func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: S
 	_save_current_room_state()
 	current_room_id = destination_room_id
 	_sync_current_room_metadata()
+	if room_controller != null:
+		room_controller.set_current_room(current_room_id, current_room_type)
 	_ensure_current_room_layout()
 	_update_room_number_indicator()
 	var arrival_socket := dungeon_sockets.get(arrival_socket_id) as DungeonSocket

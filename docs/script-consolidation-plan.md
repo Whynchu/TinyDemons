@@ -400,6 +400,8 @@ Reserve Sol for a boundary GPT-5.5 cannot resolve safely.
   `RoomController`.
 - [x] Define and attach `RoomController` room-state/event boundary; dungeon
   traversal remains in the coordinator pending parity migration.
+- [x] Emit room-enter events for connected-room traversal through the new
+  controller boundary.
 - [x] Define and attach `OcclusionRenderer` cache/occluder boundary; image
   generation remains in the coordinator pending performance parity checks.
 - [ ] Verify every socket direction, return traversal, room persistence, and
