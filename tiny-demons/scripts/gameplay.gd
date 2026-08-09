@@ -2049,7 +2049,7 @@ func _build_gold_indicator() -> void:
 	gold_indicator = Sprite2D.new()
 	gold_indicator.name = "GoldIndicator"
 	gold_indicator.centered = false
-	gold_animation_frames = _slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
+	gold_animation_frames = sprite_frame_library.slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
 	gold_indicator.texture = gold_animation_frames[0] if not gold_animation_frames.is_empty() else null
 	gold_indicator.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	gold_indicator.scale = Vector2.ONE
@@ -4186,8 +4186,8 @@ func _build_slime_direction_textures() -> void:
 
 
 func _build_slime_attack_frames() -> void:
-	var green_left_frames := _slice_frames("res://assets/artwork/SlimeGreen_AttackL.png", SLIME_ATTACK_FRAME_SIZE)
-	var green_right_frames := _slice_frames("res://assets/artwork/SlimeGreen_AttackR.png", SLIME_ATTACK_FRAME_SIZE)
+	var green_left_frames := sprite_frame_library.slice_frames("res://assets/artwork/SlimeGreen_AttackL.png", SLIME_ATTACK_FRAME_SIZE)
+	var green_right_frames := sprite_frame_library.slice_frames("res://assets/artwork/SlimeGreen_AttackR.png", SLIME_ATTACK_FRAME_SIZE)
 	for slime in slimes:
 		var visual := _slime_visual(slime)
 		if visual == null:
@@ -4413,14 +4413,14 @@ func _load_texture_or_null(path: String) -> Texture2D:
 
 
 func _build_rest_fire_frames() -> void:
-	rest_fire_frames = _slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE)
+	rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE)
 	if not rest_fire_frames.is_empty():
 		_set_rest_fire_frame(0)
 
 
 func _build_cloaked_demon_frames() -> void:
-	cloaked_demon_idle_frames = _slice_frames("res://assets/artwork/TinyDemonCloacked-Idle.png", CLOAKED_DEMON_FRAME_SIZE)
-	cloaked_demon_walk_frames = _slice_frames("res://assets/artwork/TinyDemonCloacked-Walk.png", CLOAKED_DEMON_FRAME_SIZE)
+	cloaked_demon_idle_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemonCloacked-Idle.png", CLOAKED_DEMON_FRAME_SIZE)
+	cloaked_demon_walk_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemonCloacked-Walk.png", CLOAKED_DEMON_FRAME_SIZE)
 	if not cloaked_demon_idle_frames.is_empty():
 		cloaked_demon.texture = cloaked_demon_idle_frames[0]
 		cloaked_demon.hframes = 1
@@ -4504,18 +4504,18 @@ func _cloaked_demon_texture_origin() -> Vector2:
 
 
 func _build_player_animation_frames() -> void:
-	player_idle_frames = _slice_frames("res://assets/artwork/TinyDemon-idle.png", PLAYER_FRAME_SIZE)
-	player_walk_frames = _slice_frames("res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME_SIZE)
-	player_roll_frames = _slice_frames("res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME_SIZE)
+	player_idle_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemon-idle.png", PLAYER_FRAME_SIZE)
+	player_walk_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME_SIZE)
+	player_roll_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME_SIZE)
 	roll_dust_frames.clear()
-	var raw_roll_dust_frames := _slice_frames("res://assets/artwork/rolldust.png", ROLL_DUST_FRAME_SIZE)
+	var raw_roll_dust_frames := sprite_frame_library.slice_frames("res://assets/artwork/rolldust.png", ROLL_DUST_FRAME_SIZE)
 	for frame_index in raw_roll_dust_frames.size():
 		var dissolve := float(frame_index) / float(maxi(raw_roll_dust_frames.size(), 1))
 		roll_dust_frames.append(_dither_roll_dust_frame(raw_roll_dust_frames[frame_index], dissolve))
 	roll_dust_flipped_frames = _flip_effect_frames_horizontally(roll_dust_frames, ROLL_DUST_FRAME_SIZE)
-	player_attack_frames = _slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
+	player_attack_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", PLAYER_ATTACK_FRAME_SIZE)
 	# attempt to load attack2 and between-attack frame (optional)
-	player_attack2_frames = _slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
+	player_attack2_frames = sprite_frame_library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", PLAYER_ATTACK_FRAME_SIZE)
 	if player_attack2_frames.is_empty():
 		# Keep the combo playable until a dedicated attack2 sheet is supplied.
 		player_attack2_frames = player_attack_frames.duplicate()
@@ -4536,10 +4536,6 @@ func _build_player_animation_frames() -> void:
 	_warm_player_frame_caches()
 	if not player_idle_frames.is_empty():
 		_set_actor_base_texture(player, player_idle_frames[0])
-
-
-func _slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
-	return sprite_frame_library.slice_frames(path, frame_size)
 
 
 func _dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
