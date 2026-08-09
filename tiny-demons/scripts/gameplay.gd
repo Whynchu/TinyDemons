@@ -164,7 +164,6 @@ var texture_image_cache: Dictionary = {}
 var effect_image_cache: Dictionary = {}
 var highlighted_image_cache: Dictionary = {}
 var white_image_cache: Dictionary = {}
-var damage_number_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var player_shadow_offset := Vector2.ZERO
 var player_shadow_scale := Vector2.ONE
@@ -3664,8 +3663,8 @@ func _pixel_name_texture(text: String, color: Color) -> Texture2D:
 
 func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 	var cache_key := "%s:%s" % [text, _rgb_key(color)]
-	if damage_number_texture_cache.has(cache_key):
-		return damage_number_texture_cache[cache_key]
+	if effects_spawner.damage_number_texture_cache.has(cache_key):
+		return effects_spawner.damage_number_texture_cache[cache_key]
 	var digit_patterns := {
 		"+": ["000", "010", "111", "010", "000"],
 		"!": ["010", "010", "010", "000", "010"],
@@ -3729,7 +3728,7 @@ func _pixel_number_texture(text: String, color: Color) -> Texture2D:
 					image.set_pixel(x_offset + x, y, color)
 
 	var texture := ImageTexture.create_from_image(image)
-	damage_number_texture_cache[cache_key] = texture
+	effects_spawner.damage_number_texture_cache[cache_key] = texture
 	return texture
 
 

@@ -518,6 +518,7 @@ dictionary declarations.
 - [ ] Reduce `gameplay.gd` to startup, global modes, and signal wiring.
 - [ ] Remove compatibility delegates and unused state.
 - [x] Remove the migrated `SpriteFrameLibrary` slicing compatibility delegate.
+- [x] Move damage-number texture caching into `EffectsSpawner`.
 - [ ] Ensure no component reaches into another component's internal fields.
 - [ ] Repeat the complete smoke-test checklist.
 - [ ] Record final metrics and compare them with the baseline.
