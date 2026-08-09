@@ -66,6 +66,7 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
 var player_equipment: EquipmentComponent = null
 var player_health_component: HealthComponent = null
+var player_motor: ActorMotor = null
 var slime_health_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
@@ -412,6 +413,12 @@ func _ready() -> void:
 	player_health_component.damaged.connect(_on_player_health_damaged)
 	player_health_component.healed.connect(_on_player_health_healed)
 	player_health_component.health_changed.connect(_on_player_health_changed)
+	player_motor = player.get_node_or_null("Motor") as ActorMotor
+	if player_motor == null:
+		player_motor = ActorMotor.new()
+		player_motor.name = "Motor"
+		player.add_child(player_motor)
+	player_motor.motion_requested.connect(_on_player_motor_motion)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -1373,7 +1380,14 @@ func _move_player(delta: float) -> void:
 	elif input.x > 0.0:
 		player.flip_h = false
 
-	_try_move_actor(player, _perspective_movement(input.normalized() * player_tuning.speed * delta))
+	if player_motor != null:
+		player_motor.request_motion(_perspective_movement(input.normalized() * player_tuning.speed * delta))
+	else:
+		_try_move_actor(player, _perspective_movement(input.normalized() * player_tuning.speed * delta))
+
+
+func _on_player_motor_motion(motion: Vector2) -> void:
+	_try_move_actor(player, motion)
 
 
 func _update_player_attack_input() -> void:
