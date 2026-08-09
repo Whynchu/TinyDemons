@@ -4727,7 +4727,7 @@ func _update_player_shadow() -> void:
 	player_shadow.global_scale = player_shadow_scale
 	player_shadow.self_modulate = Color(1, 1, 1, 0.25)
 	player_shadow.flip_h = player.flip_h
-	player_shadow.z_index = int(round(_actor_foot(player).y * DEPTH_Z_SCALE)) - 1
+	player_shadow.z_index = shadow_controller.z_index_for(_actor_foot(player).y, DEPTH_Z_SCALE) if shadow_controller != null else int(round(_actor_foot(player).y * DEPTH_Z_SCALE)) - 1
 	if player_sprite_shadow != null:
 		var source_sprite := player_attack_visual if player_is_attacking else player
 		player_sprite_shadow.texture = source_sprite.texture
@@ -4751,7 +4751,7 @@ func _update_cloaked_demon_shadow() -> void:
 	cloaked_demon_shadow.global_scale = cloaked_demon_shadow_scale
 	cloaked_demon_shadow.flip_h = cloaked_demon.flip_h
 	cloaked_demon_shadow.self_modulate = Color(1, 1, 1, 0.25)
-	cloaked_demon_shadow.z_index = int(round(_cloaked_demon_foot_position().y * DEPTH_Z_SCALE)) - 1
+	cloaked_demon_shadow.z_index = shadow_controller.z_index_for(_cloaked_demon_foot_position().y, DEPTH_Z_SCALE) if shadow_controller != null else int(round(_cloaked_demon_foot_position().y * DEPTH_Z_SCALE)) - 1
 	if cloaked_demon_sprite_shadow != null:
 		cloaked_demon_sprite_shadow.texture = cloaked_demon.texture
 		cloaked_demon_sprite_shadow.global_position = cloaked_demon.global_position + Vector2(-0.5, 0.0)
