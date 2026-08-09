@@ -371,7 +371,8 @@ group can be verified without changing update order:
    replayed after every group.
 
 M4 is not complete until all four groups are migrated and the verification
-   checklist passes. Current inventory: 18 slime-keyed runtime dictionaries.
+checklist passes. Current inventory: 16 slime-keyed dictionaries, with core
+decision/combat/death state now component-owned.
 
 Exit criteria: adding a slime variant requires a resource/scene configuration,
 not new root-script state.
