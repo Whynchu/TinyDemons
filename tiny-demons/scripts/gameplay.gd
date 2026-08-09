@@ -70,6 +70,7 @@ var player_motor: ActorMotor = null
 var player_controller: PlayerController = null
 var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
+var player_animation_component: PlayerAnimationComponent = null
 var slime_health_components: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
@@ -437,6 +438,11 @@ func _ready() -> void:
 		player_attack_component = PlayerAttackComponent.new()
 		player_attack_component.name = "Attack"
 		player.add_child(player_attack_component)
+	player_animation_component = player.get_node_or_null("Animation") as PlayerAnimationComponent
+	if player_animation_component == null:
+		player_animation_component = PlayerAnimationComponent.new()
+		player_animation_component.name = "Animation"
+		player.add_child(player_animation_component)
 	_set_target_ui_visible(false)
 	player_health = _player_max_health()
 	player_health_component.maximum_health = player_health
@@ -1711,6 +1717,10 @@ func _update_player_attack_animation(delta: float) -> void:
 
 
 func _apply_player_animation_frame() -> void:
+	if player_animation_component != null:
+		player_animation_component.animation_name = StringName(player_anim_name)
+		player_animation_component.frame = player_anim_frame
+		player_animation_component.timer = player_anim_timer
 	var frames := player_roll_frames if player_is_rolling else player_attack2_frames if player_anim_name == "attack2" else player_attack_frames if player_anim_name == "attack1" else player_walk_frames if player_anim_name == "walk" else player_idle_frames
 	if frames.is_empty():
 		return

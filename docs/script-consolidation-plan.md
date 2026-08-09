@@ -323,7 +323,8 @@ are fixed. Reserve Sol for an unresolved ordering problem.
   remains in the coordinator pending the effects slice.
 - [x] Introduce `PlayerAttackComponent` for attack lifecycle and hit-target
   registration; animation timing and combo buffering remain in the coordinator.
-- [ ] Extract animation state and palette/frame application.
+- [x] Introduce `PlayerAnimationComponent` as the animation state boundary;
+  frame construction and palette application remain in the coordinator.
 - [ ] Verify dialogue locks, hit-stop, combo timing, collision, and death.
 
 Exit criteria: the root starts/stops player control but owns no player action
