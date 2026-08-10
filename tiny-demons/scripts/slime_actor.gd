@@ -54,12 +54,11 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		return
 	if update_attack.call(self, delta):
 		return
+	var brain := get_node_or_null("Brain") as SlimeBrain
 	if is_aggroed.call(self):
-		var brain := get_node_or_null("Brain") as SlimeBrain
 		if brain != null: brain.target = aggro_target.call(self)
 		update_scoot.call(self, delta)
 		return
-	var brain := get_node_or_null("Brain") as SlimeBrain
 	if brain != null: brain.repath_timer = float(brain.repath_timer) - delta
 	update_scoot.call(self, delta)
 
