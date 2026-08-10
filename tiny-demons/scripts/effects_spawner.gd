@@ -8,6 +8,61 @@ var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
 
 
+func number_texture(text: String, color: Color) -> Texture2D:
+	var cache_key := "%s:%s" % [text, _rgb_key(color)]
+	if damage_number_texture_cache.has(cache_key):
+		return damage_number_texture_cache[cache_key]
+	var patterns := {
+		"+": ["000", "010", "111", "010", "000"], "!": ["010", "010", "010", "000", "010"], ".": ["0", "0", "0", "0", "1"], "/": ["001", "001", "010", "100", "100"],
+		"R": ["110", "101", "110", "101", "101"], "S": ["111", "100", "111", "001", "111"], "T": ["111", "010", "010", "010", "010"], "I": ["111", "010", "010", "010", "111"], "Y": ["101", "101", "010", "010", "010"],
+		"N": ["1001", "1101", "1011", "1001", "1001"], "D": ["110", "101", "101", "101", "110"], "F": ["111", "100", "110", "100", "100"], "C": ["111", "100", "100", "100", "111"], "U": ["101", "101", "101", "101", "111"], "L": ["100", "100", "100", "100", "111"],
+		"0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"], "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"], "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"], "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"], "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+		"G": ["111", "100", "101", "101", "111"], "H": ["101", "101", "111", "101", "101"], "K": ["101", "110", "100", "110", "101"], "P": ["110", "101", "110", "100", "100"], "W": ["10101", "10101", "10101", "11011", "01010"], "A": ["010", "101", "111", "101", "101"], "B": ["110", "101", "110", "101", "110"], "M": ["10001", "11011", "10101", "10001", "10001"], "E": ["111", "100", "110", "100", "111"], "O": ["111", "101", "101", "101", "111"], "V": ["101", "101", "101", "101", "010"], " ": ["0", "0", "0", "0", "0"]
+	}
+	var image_width := 0
+	for digit in text:
+		image_width += (patterns.get(digit, patterns["0"])[0] as String).length() + 1
+	image_width = maxi(image_width - 1, 1)
+	var image := Image.create(image_width, 5, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var x_offset := 0
+	for digit in text:
+		var pattern: Array = patterns.get(digit, patterns["0"])
+		for y in 5:
+			var row := pattern[y] as String
+			for x in row.length():
+				if row[x] == "1":
+					image.set_pixel(x_offset + x, y, color)
+		x_offset += (pattern[0] as String).length() + 1
+	var texture := ImageTexture.create_from_image(image)
+	damage_number_texture_cache[cache_key] = texture
+	return texture
+
+
+func name_texture(text: String, color: Color) -> Texture2D:
+	var glyphs := {"B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"], "G": ["01110", "10001", "10000", "10111", "10001", "10001", "01110"], "R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"], "S": ["01111", "10000", "10000", "01110", "00001", "00001", "11110"], "d": ["00001", "00001", "01101", "10011", "10001", "10011", "01101"], "i": ["010", "000", "110", "010", "010", "010", "111"], "l": ["110", "010", "010", "010", "010", "010", "111"], "r": ["000", "000", "101", "110", "100", "100", "100"], "u": ["000", "000", "101", "101", "101", "111", "101"], "e": ["000", "000", "010", "101", "111", "100", "011"], "n": ["000", "000", "110", "101", "101", "101", "101"], "m": ["00000", "00000", "11011", "10101", "10101", "10101", "10101"], " ": ["0", "0", "0", "0", "0", "0", "0"]}
+	var width := 0
+	for character in text:
+		width += (glyphs.get(character, glyphs[" "])[0] as String).length() + 1
+	width = maxi(width - 1, 1)
+	var image := Image.create(width, 7, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var x_offset := 0
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs[" "])
+		for y in 7:
+			var row := pattern[y] as String
+			for x in row.length():
+				if row[x] == "1":
+					image.set_pixel(x_offset + x, y, color)
+		x_offset += (pattern[0] as String).length() + 1
+	return ImageTexture.create_from_image(image)
+
+
+func _rgb_key(color: Color) -> String:
+	return "%02x%02x%02x%02x" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0), roundi(color.a * 255.0)]
+
+
 func request_effect(kind: StringName, position: Vector2) -> void:
 	effect_requested.emit(kind, position)
 

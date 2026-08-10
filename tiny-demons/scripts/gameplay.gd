@@ -3245,119 +3245,19 @@ func _update_damage_numbers(delta: float) -> void:
 
 
 func _damage_number_texture(value: int, color: Color = Color.WHITE) -> Texture2D:
-	return _pixel_number_texture(str(maxi(value, 0)), color)
+	return effects_spawner.number_texture(str(maxi(value, 0)), color)
 
 
 func _pixel_text_texture(text: String, color: Color) -> Texture2D:
-	return _pixel_number_texture(text, color)
+	return effects_spawner.number_texture(text, color)
 
 
 func _pixel_name_texture(text: String, color: Color) -> Texture2D:
-	# Seven-pixel name glyphs based on the original SlimeText lettering.
-	var glyphs := {
-		"B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
-		"G": ["01110", "10001", "10000", "10111", "10001", "10001", "01110"],
-		"R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
-		"S": ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
-		"d": ["00001", "00001", "01101", "10011", "10001", "10011", "01101"],
-		"i": ["010", "000", "110", "010", "010", "010", "111"],
-		"l": ["110", "010", "010", "010", "010", "010", "111"],
-		"r": ["000", "000", "101", "110", "100", "100", "100"],
-		"u": ["000", "000", "101", "101", "101", "111", "101"],
-		"e": ["000", "000", "010", "101", "111", "100", "011"],
-		"n": ["000", "000", "110", "101", "101", "101", "101"],
-		"m": ["00000", "00000", "11011", "10101", "10101", "10101", "10101"],
-		" ": ["0", "0", "0", "0", "0", "0", "0"],
-	}
-	var spacing := 1
-	var image_width := 0
-	for character in text:
-		var pattern: Array = glyphs.get(character, glyphs[" "])
-		image_width += (pattern[0] as String).length() + spacing
-	image_width = maxi(image_width - spacing, 1)
-	var image := Image.create(image_width, 7, false, Image.FORMAT_RGBA8)
-	image.fill(Color.TRANSPARENT)
-	var x_offset := 0
-	for character in text:
-		var pattern: Array = glyphs.get(character, glyphs[" "])
-		for y in 7:
-			var row := pattern[y] as String
-			for x in row.length():
-				if row[x] == "1":
-					image.set_pixel(x_offset + x, y, color)
-		x_offset += (pattern[0] as String).length() + spacing
-	return ImageTexture.create_from_image(image)
+	return effects_spawner.name_texture(text, color)
 
 
 func _pixel_number_texture(text: String, color: Color) -> Texture2D:
-	var cache_key := "%s:%s" % [text, _rgb_key(color)]
-	if effects_spawner.damage_number_texture_cache.has(cache_key):
-		return effects_spawner.damage_number_texture_cache[cache_key]
-	var digit_patterns := {
-		"+": ["000", "010", "111", "010", "000"],
-		"!": ["010", "010", "010", "000", "010"],
-		".": ["0", "0", "0", "0", "1"],
-		"/": ["001", "001", "010", "100", "100"],
-		"R": ["110", "101", "110", "101", "101"],
-		"S": ["111", "100", "111", "001", "111"],
-		"T": ["111", "010", "010", "010", "010"],
-		"I": ["111", "010", "010", "010", "111"],
-		"Y": ["101", "101", "010", "010", "010"],
-		"N": ["1001", "1101", "1011", "1001", "1001"],
-		"D": ["110", "101", "101", "101", "110"],
-		"F": ["111", "100", "110", "100", "100"],
-		"C": ["111", "100", "100", "100", "111"],
-		"U": ["101", "101", "101", "101", "111"],
-		"L": ["100", "100", "100", "100", "111"],
-		"0": ["111", "101", "101", "101", "111"],
-		"1": ["010", "110", "010", "010", "111"],
-		"2": ["111", "001", "111", "100", "111"],
-		"3": ["111", "001", "111", "001", "111"],
-		"4": ["101", "101", "111", "001", "001"],
-		"5": ["111", "100", "111", "001", "111"],
-		"6": ["111", "100", "111", "101", "111"],
-		"7": ["111", "001", "010", "010", "010"],
-		"8": ["111", "101", "111", "101", "111"],
-		"9": ["111", "101", "111", "001", "111"],
-		"G": ["111", "100", "101", "101", "111"],
-		"H": ["101", "101", "111", "101", "101"],
-		"K": ["101", "110", "100", "110", "101"],
-		"P": ["110", "101", "110", "100", "100"],
-		"W": ["10101", "10101", "10101", "11011", "01010"],
-		"A": ["010", "101", "111", "101", "101"],
-		"B": ["110", "101", "110", "101", "110"],
-		"M": ["10001", "11011", "10101", "10001", "10001"],
-		"E": ["111", "100", "110", "100", "111"],
-		"O": ["111", "101", "101", "101", "111"],
-		"V": ["101", "101", "101", "101", "010"],
-		" ": ["0", "0", "0", "0", "0"],
-	}
-	var digit_height := 5
-	var spacing := 1
-	var image_width := 0
-	for digit in text:
-		var pattern: Array = digit_patterns.get(digit, digit_patterns["0"])
-		image_width += (pattern[0] as String).length() + spacing
-	image_width = maxi(image_width - spacing, 1)
-	var image := Image.create(image_width, digit_height, false, Image.FORMAT_RGBA8)
-	image.fill(Color.TRANSPARENT)
-
-	for digit_index in text.length():
-		var digit := text[digit_index]
-		var pattern: Array = digit_patterns.get(digit, digit_patterns["0"])
-		var x_offset := 0
-		for prior_index in digit_index:
-			var prior_pattern: Array = digit_patterns.get(text[prior_index], digit_patterns["0"])
-			x_offset += (prior_pattern[0] as String).length() + spacing
-		for y in digit_height:
-			var row := pattern[y] as String
-			for x in row.length():
-				if row[x] == "1":
-					image.set_pixel(x_offset + x, y, color)
-
-	var texture := ImageTexture.create_from_image(image)
-	effects_spawner.damage_number_texture_cache[cache_key] = texture
-	return texture
+	return effects_spawner.number_texture(text, color)
 
 
 func _update_slime_scoot(slime: Sprite2D, delta: float) -> void:

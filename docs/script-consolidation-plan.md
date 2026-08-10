@@ -612,6 +612,7 @@ update-order regressions.
   - [x] Move slime capability construction, health configuration, and component ticking behind `SlimeActor`.
   - [x] Move slime runtime reset state behind `SlimeActor` while retaining room setup and movement decisions in the coordinator.
   - [x] Move slime health regeneration ticking behind `SlimeActor`; retain presentation interpolation in the HUD path.
+  - [x] Move pixel number/name texture generation into `EffectsSpawner` behind coordinator compatibility calls.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
