@@ -66,23 +66,26 @@ func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_t
 			add_particle({"sprite": particle, "velocity": Vector2(0.0, -(8.0 + (noise.get_noise_2d(float(x), float(y)) + 1.0) * 14.0)), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
 
 
-func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable) -> void:
+func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
 	if button == null:
 		return
+	var noise := FastNoiseLite.new()
+	noise.seed = random_seed
+	noise.frequency = 0.28
 	var origin := button.position
 	if particle_parent is Node2D:
 		origin = (particle_parent as Node2D).to_local(button.global_position)
 	var width := int(button.size.x)
 	var height := int(button.size.y)
 	for x in range(width):
-		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, x, 0)
-		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, x, height - 1)
+		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, noise.get_noise_2d(float(x), 0.0))
+		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, noise.get_noise_2d(float(x), float(height - 1)))
 	for y in range(1, height - 1):
-		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, 0, y)
-		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, width - 1, y)
+		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, noise.get_noise_2d(0.0, float(y)))
+		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, noise.get_noise_2d(float(width - 1), float(y)))
 
 
-func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, x: int, y: int) -> void:
+func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, noise_value: float) -> void:
 	var particle := Sprite2D.new()
 	particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
 	particle.centered = false
@@ -91,7 +94,7 @@ func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel
 	particle.z_index = 3
 	particle.position = frame_position
 	particle_parent.add_child(particle)
-	var rise_speed := 8.0 + float(posmod(x * 17 + y * 31, 29))
+	var rise_speed := 8.0 + (noise_value + 1.0) * 14.0
 	add_particle({"sprite": particle, "velocity": Vector2(0.0, -rise_speed), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
 
 

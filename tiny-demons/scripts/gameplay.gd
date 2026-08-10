@@ -878,7 +878,7 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 		ui.add_child(title_particle_layer)
 	screen_state_controller.spawn_pixel_breakup(source_sprite, title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_button_frame_breakup() -> void:
-	screen_state_controller.spawn_button_frame_breakup(title_start_button, title_particle_layer, Callable(self, "_pixel_particle_texture"))
+	screen_state_controller.spawn_button_frame_breakup(title_start_button, title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _update_title_particles(delta: float) -> void:
 	screen_state_controller.update_particles(delta, Callable(self, "_snap_half_pixel"))
 func _update_game_over_input() -> void:
