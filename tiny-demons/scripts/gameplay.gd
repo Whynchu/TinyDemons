@@ -429,7 +429,7 @@ func _ready() -> void:
 	player_regen_delay_timer = 0.0
 	player_regen_accumulator = 0.0
 	_update_player_health_ui()
-	use_walkable_polygon_direct = false
+	use_walkable_polygon_direct = true
 	_collect_walkable_tiles(floor_tiles)
 	_build_entrance_block_polygons()
 	_build_walkable_outline()
