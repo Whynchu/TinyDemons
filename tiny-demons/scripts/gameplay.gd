@@ -1999,7 +1999,7 @@ func _start_chest_unlock_fade() -> void:
 
 	chest.texture = chest_gray_texture
 	chest.visible = true
-	chest_unlock_fade_timer = CHEST_UNLOCK_FADE_TIME
+	chest_controller.begin_unlock_fade(CHEST_UNLOCK_FADE_TIME)
 	chest_unlock_overlay = Sprite2D.new()
 	chest_unlock_overlay.name = "ChestUnlockOverlay"
 	chest_unlock_overlay.texture = chest_normal_texture
@@ -2017,13 +2017,7 @@ func _start_chest_unlock_fade() -> void:
 func _update_chest_unlock_fade(delta: float) -> void:
 	if chest_unlock_overlay == null:
 		return
-
-	chest_unlock_fade_timer = maxf(chest_unlock_fade_timer - delta, 0.0)
-	chest_unlock_overlay.global_position = chest.global_position
-	chest_unlock_overlay.z_index = chest.z_index + 1
-	chest_unlock_overlay.modulate = Color(1, 1, 1, 1.0 - chest_unlock_fade_timer / CHEST_UNLOCK_FADE_TIME)
-	if chest_unlock_fade_timer <= 0.0:
-		chest.texture = chest_normal_texture
+	if chest_controller.update_unlock_fade(delta, chest, chest_unlock_overlay, chest_normal_texture, CHEST_UNLOCK_FADE_TIME):
 		occlusion_renderer.sprite_images[chest] = _cached_texture_image(chest_normal_texture)
 		chest_unlock_overlay.queue_free()
 		chest_unlock_overlay = null
@@ -2064,18 +2058,18 @@ func _update_chest_visuals(delta: float) -> void:
 
 
 func _update_rest_fire_animation(delta: float) -> void:
-	if rest_fire == null or not rest_fire.visible or rest_fire_frames.is_empty():
-		return
-	rest_fire_animation_timer += delta
-	while rest_fire_animation_timer >= FIRE_FRAME_TIME:
-		rest_fire_animation_timer -= FIRE_FRAME_TIME
-		_set_rest_fire_frame((rest_fire_frame_index + 1) % rest_fire_frames.size())
+	rest_fire_controller.update_animation(rest_fire, rest_fire_frames, delta, FIRE_FRAME_TIME, Callable(self, "_refresh_rest_fire_image"))
+
+
+func _refresh_rest_fire_image(fire: Sprite2D) -> void:
+	occlusion_renderer.sprite_images[fire] = _cached_texture_image(fire.texture)
 
 
 func _set_rest_fire_frame(frame_index: int) -> void:
 	if rest_fire_frames.is_empty():
 		return
 	rest_fire_frame_index = posmod(frame_index, rest_fire_frames.size())
+	rest_fire_controller.frame_index = rest_fire_frame_index
 	rest_fire.texture = rest_fire_frames[rest_fire_frame_index]
 	rest_fire.hframes = 1
 	rest_fire.frame = 0
@@ -2137,34 +2131,18 @@ func _update_npc_dialogue(delta: float) -> void:
 	if not cloaked_demon.visible:
 		_hide_npc_dialogue()
 		return
-	if not npc_dialogue_complete:
-		npc_dialogue_type_timer += delta
-		while npc_dialogue_type_timer >= 0.045 and npc_dialogue_character_index < npc_dialogue_full_message.length():
-			npc_dialogue_type_timer -= 0.045
-			npc_dialogue_character_index += 1
-			npc_dialogue_text.texture = _pixel_text_texture(npc_dialogue_full_message.substr(0, npc_dialogue_character_index), Color.WHITE)
-		if npc_dialogue_character_index >= npc_dialogue_full_message.length():
-			npc_dialogue_complete = true
-			npc_dialogue_button.visible = true
-	var full_text_texture := _pixel_text_texture(npc_dialogue_full_message, Color.WHITE)
-	var box_size := full_text_texture.get_size() + Vector2(10, 10)
-	var box_position := _snap_half_pixel(_cloaked_demon_head_position() + Vector2(-box_size.x * 0.5, -box_size.y - 6))
-	npc_dialogue_box.position = box_position
-	npc_dialogue_box.size = box_size
-	npc_dialogue_text.position = _snap_half_pixel(box_position + Vector2(5, 5))
-	if npc_dialogue_button.visible:
-		npc_dialogue_timer = fmod(npc_dialogue_timer + delta, NPC_DIALOGUE_BUTTON_BOB_TIME)
-		var bob_phase := (npc_dialogue_timer / NPC_DIALOGUE_BUTTON_BOB_TIME) * TAU
-		var button_bob := snappedf(sin(bob_phase) * 0.5, 0.5)
-		var button_size := npc_dialogue_button.texture.get_size()
-		var button_position := _snap_half_pixel(box_position + box_size - button_size * 0.5 + Vector2(0, -1))
-		npc_dialogue_button.position = button_position + Vector2(0, button_bob)
-		# Keep the fractional offset; snapping both sprites to the same half-pixel
-		# coordinate can collapse the shadow into the button.
-		npc_dialogue_button_shadow.position = button_position + Vector2(0, button_bob) + Vector2(-0.5, 0.5)
-		npc_dialogue_button_shadow.visible = true
-	else:
-		npc_dialogue_button_shadow.visible = false
+	npc_controller.update_dialogue(
+		delta,
+		npc_dialogue_box,
+		npc_dialogue_text,
+		npc_dialogue_button,
+		npc_dialogue_button_shadow,
+		_cloaked_demon_head_position(),
+		Callable(self, "_pixel_text_texture"),
+		Callable(self, "_snap_half_pixel"),
+		0.045,
+		NPC_DIALOGUE_BUTTON_BOB_TIME
+	)
 
 
 func _show_npc_dialogue() -> void:
@@ -2173,6 +2151,7 @@ func _show_npc_dialogue() -> void:
 	var message := npc_dialogue_messages[npc_dialogue_index % npc_dialogue_messages.size()] as String
 	npc_dialogue_index += 1
 	npc_dialogue_full_message = message
+	npc_controller.begin_dialogue(message)
 	npc_dialogue_character_index = 0
 	npc_dialogue_type_timer = 0.0
 	npc_dialogue_timer = 0.0
@@ -2197,6 +2176,7 @@ func _show_npc_dialogue() -> void:
 
 
 func _hide_npc_dialogue() -> void:
+	npc_controller.end_dialogue()
 	if npc_dialogue_box != null:
 		npc_dialogue_box.visible = false
 	if npc_dialogue_text != null:
@@ -2210,7 +2190,7 @@ func _hide_npc_dialogue() -> void:
 
 func _update_npc_dialogue_input() -> void:
 	var input_down := _is_interact_input_pressed()
-	if npc_dialogue_complete and input_down and not npc_dialogue_input_was_down:
+	if npc_controller.dialogue_complete and input_down and not npc_dialogue_input_was_down:
 		_hide_npc_dialogue()
 	npc_dialogue_input_was_down = input_down
 
@@ -2229,29 +2209,21 @@ func _can_interact_with_npc() -> bool:
 
 
 func _update_interact_prompt(delta: float) -> void:
-	if interact_prompt == null:
-		return
-	if npc_dialogue_box != null and npc_dialogue_box.visible:
-		interact_prompt.visible = false
-		return
-
 	var near_chest := _can_interact_with_chest()
 	var near_npc := _can_interact_with_npc()
-	var should_show := near_chest or near_npc
-	interact_prompt.visible = should_show
-	if not should_show:
-		return
-
-	interact_prompt_timer = fmod(interact_prompt_timer + delta, INTERACT_PROMPT_BOB_TIME)
-	var bob_phase := (interact_prompt_timer / INTERACT_PROMPT_BOB_TIME) * TAU
-	var bob := snappedf(sin(bob_phase) * 1.0, 0.5)
-	if near_npc and not near_chest:
-		var prompt_size := interact_prompt.texture.get_size() * interact_prompt.scale
-		var head_position := _cloaked_demon_head_position()
-		interact_prompt.global_position = _snap_half_pixel(head_position + Vector2(-prompt_size.x * 0.5, -prompt_size.y - 2 + bob))
-	else:
-		interact_prompt.global_position = _snap_half_pixel(chest.global_position + interact_prompt_base_position + Vector2(0, bob))
-	interact_prompt.z_index = OVERWORLD_UI_Z + 1
+	interaction_component.update_prompt(
+		delta,
+		interact_prompt,
+		npc_dialogue_box != null and npc_dialogue_box.visible,
+		near_chest,
+		near_npc,
+		chest.global_position,
+		_cloaked_demon_head_position(),
+		interact_prompt_base_position,
+		Callable(self, "_snap_half_pixel"),
+		INTERACT_PROMPT_BOB_TIME,
+		OVERWORLD_UI_Z + 1
+	)
 
 
 func _start_chest_evaporation() -> void:

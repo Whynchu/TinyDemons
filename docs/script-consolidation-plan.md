@@ -568,6 +568,9 @@ ScreenStateController; screen-specific callbacks and timing remain in the
 coordinator.
 The complete actor occlusion action phase is now owned by OcclusionRenderer;
 the coordinator supplies actor-specific callbacks and scene collections.
+Chest unlock fade, rest-fire animation, interaction prompt placement, and NPC
+dialogue presentation updates are now owned by their interaction controllers;
+gameplay outcomes and input decisions remain coordinator-owned.
 Retro screen button construction/styling and unoccluded actor texture/grace
 handling are also controller-owned; screen layout and interaction outcomes
 remain coordinator-compatible.
@@ -640,7 +643,7 @@ Update this table in every consolidation pull request.
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
-| M8 Deep extraction | In progress | GPT-5.5, high | - | - | Walkability, HUD presentation, screen state/layout helpers, effects, and complete occlusion action-phase helpers moved; interaction presentation remains |
+| M8 Deep extraction | In progress | GPT-5.5, high | - | - | Walkability, HUD presentation, screen state/layout helpers, effects, complete occlusion action phase, and interaction presentation updates moved; small construction/final ownership cleanup remains |
 | M9 Coordinator reduction | Not started | Terra, high | - | - | Reduce ready/physics orchestration and remove migration mirrors |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 
