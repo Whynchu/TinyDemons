@@ -1457,14 +1457,7 @@ func _move_slimes(delta: float) -> void:
 		var slime_actor := slime as SlimeActor
 		if slime_actor != null:
 			slime_actor.tick_components(delta); slime_actor.tick_runtime(delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot")); continue
-		if _is_slime_dead(slime): continue
-		var combat := _slime_combat(slime); combat.cooldown = maxf(combat.cooldown - delta, 0.0)
-		if _update_slime_knockback(slime, delta): continue
-		combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0); if combat.hitstun_timer > 0.0 or _update_slime_attack(slime, delta): continue
-		if _is_slime_aggroed(slime):
-			_slime_brain(slime).target = _aggro_slime_target(slime); _update_slime_scoot(slime, delta)
-			continue
-		_slime_brain(slime).repath_timer = float(_slime_brain(slime).repath_timer) - delta; _update_slime_scoot(slime, delta)
+		SlimeActor.tick_legacy_runtime(slime, delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot"))
 func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 	return _slime_combat(slime).tick_attack(delta, slime, slime_tuning, _slime_attack_frames(slime), player_dead, Callable(self, "_set_slime_attack_frame"), Callable(self, "_set_actor_base_texture"), Callable(self, "_apply_slime_attack_lunge"), Callable(self, "_apply_slime_attack_hit"), Callable(self, "_restore_slime_idle_texture"), Callable(self, "_can_slime_attack_player"), Callable(self, "_start_slime_attack"))
 func _set_slime_attack_frame(slime: Sprite2D, frame_index: int) -> void: _slime_animation(slime).set_attack_frame(frame_index)

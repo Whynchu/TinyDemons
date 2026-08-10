@@ -64,6 +64,29 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	update_scoot.call(self, delta)
 
 
+static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable) -> void:
+	if bool(is_dead.call(actor)):
+		return
+	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
+	if combat == null:
+		return
+	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
+	if bool(update_knockback.call(actor, delta)):
+		return
+	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
+	if combat.hitstun_timer > 0.0 or bool(update_attack.call(actor, delta)):
+		return
+	var brain := actor.get_node_or_null("Brain") as SlimeBrain
+	if bool(is_aggroed.call(actor)):
+		if brain != null:
+			brain.target = aggro_target.call(actor)
+		update_scoot.call(actor, delta)
+		return
+	if brain != null:
+		brain.repath_timer = float(brain.repath_timer) - delta
+	update_scoot.call(actor, delta)
+
+
 func tick_health(delta: float) -> float:
 	var health := get_node_or_null("Health") as HealthComponent
 	if health == null:
