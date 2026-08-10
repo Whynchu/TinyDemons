@@ -21,6 +21,61 @@ func set_geometry(new_polygons: Array[PackedVector2Array], new_outline: PackedVe
 			points.append(point)
 
 
+func collect_geometry(node: Node, tile_polygon: Callable) -> void:
+	polygons.clear()
+	points.clear()
+	if collect_floor_collision_guide(node):
+		return
+	_collect_tiles(node, tile_polygon)
+
+
+func _collect_tiles(node: Node, tile_polygon: Callable) -> void:
+	for child in node.get_children():
+		if child is Sprite2D and child.texture != null:
+			var tile := child as Sprite2D
+			points.append(tile.to_global(Vector2(8, 4)))
+			polygons.append(tile_polygon.call(tile) as PackedVector2Array)
+		_collect_tiles(child, tile_polygon)
+
+
+func collect_floor_collision_guide(node: Node) -> bool:
+	var guide := node.get_node_or_null("FloorCollisionGuide") as Node2D
+	if guide == null:
+		return false
+	var local_points := PackedVector2Array()
+	if guide is Polygon2D:
+		local_points = (guide as Polygon2D).polygon
+	elif guide.get("points") != null:
+		local_points = guide.get("points")
+	if local_points.size() < 3:
+		return false
+	var polygon := PackedVector2Array()
+	var center := Vector2.ZERO
+	for point in local_points:
+		var global_point := guide.to_global(point)
+		polygon.append(global_point)
+		points.append(global_point)
+		center += global_point
+	center /= float(local_points.size())
+	points.append(center)
+	polygons.append(polygon)
+	return true
+
+
+func build_outline(use_polygon_direct: bool) -> void:
+	if polygons.is_empty():
+		outline = PackedVector2Array()
+		return
+	if use_polygon_direct:
+		outline = polygons[0]
+		return
+	var all_points := PackedVector2Array()
+	for polygon in polygons:
+		for point in polygon:
+			all_points.append(point)
+	outline = Geometry2D.convex_hull(all_points)
+
+
 func set_entrance_blocks(new_blocks: Array[PackedVector2Array]) -> void:
 	entrance_block_polygons = new_blocks.duplicate()
 

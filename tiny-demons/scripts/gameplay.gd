@@ -4967,48 +4967,26 @@ func _update_overworld_ui() -> void:
 		var gold_frame_index := mini(int(gold_animation_timer / 0.12), gold_animation_frames.size() - 1)
 		gold_indicator.texture = gold_animation_frames[gold_frame_index]
 
-	for slime in slimes:
-		var frame := hud_controller.target_overhead_frames.get(slime) as Sprite2D
-		var damage_fill := hud_controller.target_overhead_damage_fills.get(slime) as Sprite2D
-		var fill := hud_controller.target_overhead_fills.get(slime) as Sprite2D
-		var aggro_marker := hud_controller.target_overhead_aggro_markers.get(slime) as Sprite2D
-		if frame == null or damage_fill == null or fill == null or aggro_marker == null:
-			continue
-		if _is_slime_dead(slime):
-			frame.visible = false
-			damage_fill.visible = false
-			fill.visible = false
-			aggro_marker.visible = false
-			continue
+	hud_controller.update_overhead_bars(
+		slimes,
+		Callable(self, "_enemy_max_health"),
+		Callable(self, "_slime_current_health"),
+		Callable(self, "_slime_display_health"),
+		Callable(self, "_is_slime_dead"),
+		Callable(self, "_is_slime_aggroed"),
+		Callable(self, "_set_health_bar_values"),
+		OVERWORLD_UI_Z
+	)
 
-		var max_health := _enemy_max_health(slime)
-		var health_component := slime_health_components.get(slime) as HealthComponent
-		var health := health_component.current_health if health_component != null else max_health
-		var is_aggroed := _is_slime_aggroed(slime)
-		var should_show := health < max_health or is_aggroed
-		frame.visible = should_show
-		damage_fill.visible = should_show
-		fill.visible = should_show
-		aggro_marker.visible = is_aggroed
-		if not should_show:
-			continue
 
-		var overhead_position := slime.global_position + (hud_controller.target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2)
-		frame.global_position = overhead_position
-		frame.global_scale = Vector2.ONE
-		frame.z_index = OVERWORLD_UI_Z
-		damage_fill.global_position = overhead_position
-		damage_fill.global_scale = Vector2.ONE
-		damage_fill.z_index = OVERWORLD_UI_Z + 1
-		fill.global_position = overhead_position
-		fill.global_scale = Vector2.ONE
-		fill.z_index = OVERWORLD_UI_Z + 2
-		aggro_marker.global_position = overhead_position
-		aggro_marker.global_scale = Vector2.ONE
-		aggro_marker.z_index = OVERWORLD_UI_Z + 3
-		var display_health := _slime_health_presenter(slime).display_health
-		var fill_size := hud_controller.target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
-		_set_health_bar_values(fill, damage_fill, fill_size, health, display_health, max_health)
+func _slime_current_health(slime: Sprite2D) -> float:
+	var max_health := _enemy_max_health(slime)
+	var health_component := slime_health_components.get(slime) as HealthComponent
+	return health_component.current_health if health_component != null else max_health
+
+
+func _slime_display_health(slime: Sprite2D) -> float:
+	return _slime_health_presenter(slime).display_health
 
 
 func _depth_key(sprite: Sprite2D) -> float:
@@ -5208,60 +5186,22 @@ func _texture_image(texture: Texture2D) -> Image:
 
 
 func _collect_walkable_tiles(node: Node) -> void:
-	if node == floor_tiles and _collect_floor_collision_guide():
+	if walkable_area == null:
 		return
-
-	for child in node.get_children():
-		if child is Sprite2D and child.texture != null:
-			var tile := child as Sprite2D
-			walkable_points.append(tile.to_global(Vector2(8, 4)))
-			walkable_polygons.append(_tile_top_polygon(tile))
-		_collect_walkable_tiles(child)
+	walkable_area.collect_geometry(node, Callable(self, "_tile_top_polygon"))
+	walkable_points = walkable_area.points.duplicate()
+	walkable_polygons = walkable_area.polygons.duplicate()
 
 
 func _build_walkable_outline() -> void:
-	if walkable_polygons.is_empty():
+	if walkable_area == null:
 		return
-
-	if use_walkable_polygon_direct:
-		walkable_outline = walkable_polygons[0]
-		return
-
-	var points := PackedVector2Array()
-	for polygon in walkable_polygons:
-		for point in polygon:
-			points.append(point)
-
-	walkable_outline = Geometry2D.convex_hull(points)
+	walkable_area.build_outline(use_walkable_polygon_direct)
+	walkable_outline = walkable_area.outline
 
 
 func _collect_floor_collision_guide() -> bool:
-	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Node2D
-	if guide == null:
-		return false
-
-	var local_points := PackedVector2Array()
-	if guide is Polygon2D:
-		local_points = (guide as Polygon2D).polygon
-	elif guide.get("points") != null:
-		local_points = guide.get("points")
-
-	if local_points.size() < 3:
-		return false
-
-	var polygon := PackedVector2Array()
-	var center := Vector2.ZERO
-	for point in local_points:
-		var global_point := guide.to_global(point)
-		polygon.append(global_point)
-		walkable_points.append(global_point)
-		center += global_point
-
-	center /= float(local_points.size())
-	walkable_points.append(center)
-	walkable_polygons.append(polygon)
-	use_walkable_polygon_direct = true
-	return true
+	return walkable_area != null and walkable_area.collect_floor_collision_guide(floor_tiles)
 
 
 func _build_entrance_block_polygons() -> void:
