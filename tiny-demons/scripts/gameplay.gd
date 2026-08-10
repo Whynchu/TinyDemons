@@ -3181,25 +3181,11 @@ func _update_enemy_health(delta: float) -> void:
 		var max_health := _enemy_max_health(slime)
 		var health_component := _slime_health(slime)
 		var health: float = health_component.current_health if health_component != null else max_health
-		var regen_delay: float = maxf(health_component.regen_delay_timer - delta, 0.0) if health_component != null else 0.0
-		if health_component != null:
-			health_component.regen_delay_timer = regen_delay
-
+		var slime_actor := slime as SlimeActor
 		var health_before_regen := health
-		if health < max_health and regen_delay <= 0.0:
-			var regen_accumulator: float = (health_component.regen_accumulator if health_component != null else 0.0) + delta
-			while regen_accumulator >= slime_tuning.regen_interval and health < max_health:
-				if health_component != null:
-					health_component.apply_healing(slime_tuning.regen_amount)
-					health = health_component.current_health
-				else:
-					health = minf(health + slime_tuning.regen_amount, max_health)
-				regen_accumulator -= slime_tuning.regen_interval
-			if health_component != null:
-				health_component.regen_accumulator = regen_accumulator
-		elif health >= max_health:
-			if health_component != null:
-				health_component.regen_accumulator = 0.0
+		if slime_actor != null:
+			health_before_regen = slime_actor.tick_health(delta)
+			health = health_component.current_health if health_component != null else max_health
 		var display_health := _slime_health_presenter(slime).display_health
 		if health > health_before_regen:
 			display_health = minf(display_health, health_before_regen)

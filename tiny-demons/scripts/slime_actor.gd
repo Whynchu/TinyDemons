@@ -42,6 +42,15 @@ func tick_components(delta: float) -> void:
 		combat.tick(delta)
 
 
+func tick_health(delta: float) -> float:
+	var health := get_node_or_null("Health") as HealthComponent
+	if health == null:
+		return 0.0
+	var previous_health := health.current_health
+	health.tick_regeneration(delta)
+	return previous_health
+
+
 func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_delay: float, hold_delay: float, idle_breath_delay: float, attack_cooldown_delay: float) -> void:
 	var brain := get_node_or_null("Brain") as SlimeBrain
 	if brain != null:
