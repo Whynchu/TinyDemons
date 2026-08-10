@@ -704,35 +704,10 @@ func _show_game_over() -> void:
 	game_over_button.grab_focus()
 
 func _build_title_screen() -> void:
-	title_overlay = screen_state_controller.create_overlay(ui, "TitleOverlay", Vector2(240, 160), Color.BLACK, 2)
-	var title_texture := _pixel_text_texture("TINY DEMONS", Color.WHITE)
-	title_screen_text = screen_state_controller.create_sprite(title_overlay, "TitleText", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
-	title_start_button = Button.new()
-	title_start_button.position = Vector2(99, 103)
-	title_start_button.size = Vector2(42, 14)
-	title_start_button.text = ""
-	title_start_button.focus_mode = Control.FOCUS_ALL
-	title_start_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var normal_style := StyleBoxFlat.new()
-	normal_style.bg_color = Color(0, 0, 0, 0)
-	normal_style.border_color = Color.WHITE
-	normal_style.set_border_width_all(1)
-	var focus_style := StyleBoxFlat.new()
-	focus_style.bg_color = Color(1, 1, 1, 0.12)
-	focus_style.border_color = Color.WHITE
-	focus_style.set_border_width_all(1)
-	title_start_button.add_theme_stylebox_override("normal", normal_style)
-	title_start_button.add_theme_stylebox_override("hover", focus_style)
-	title_start_button.add_theme_stylebox_override("focus", focus_style)
-	title_start_text = Sprite2D.new()
-	title_start_text.texture = _pixel_text_texture("START", Color.WHITE)
-	title_start_text.centered = true
-	title_start_text.position = title_start_button.size * 0.5
-	title_start_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	title_start_button.add_child(title_start_text)
-	title_start_button.pressed.connect(_start_from_title)
-	title_overlay.add_child(title_start_button)
-	title_start_button.grab_focus()
+	var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_from_title"))
+	title_overlay = controls["overlay"] as ColorRect
+	title_screen_text = controls["text"] as Sprite2D
+	title_start_button = controls["button"] as Button
 	_build_archetype_screen()
 
 func _build_archetype_screen() -> void:

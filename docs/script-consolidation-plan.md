@@ -617,6 +617,7 @@ update-order regressions.
   - [x] Move slime attack palette recoloring into `SlimeVisualComponent`.
   - [x] Remove obsolete coordinator compatibility helpers and unused geometry/occlusion helpers.
   - [x] Move game-over UI construction into `ScreenStateController`.
+  - [x] Move title screen construction into `ScreenStateController`.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.

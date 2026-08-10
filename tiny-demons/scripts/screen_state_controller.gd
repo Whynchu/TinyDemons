@@ -155,6 +155,17 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 	return {"overlay": overlay, "restart": restart_button, "title": title_button}
 
 
+func build_title(parent: Node, pixel_texture: Callable, start_callback: Callable) -> Dictionary:
+	var overlay := create_overlay(parent, "TitleOverlay", Vector2(240, 160), Color.BLACK, 2)
+	var title_texture := pixel_texture.call("TINY DEMONS", Color.WHITE) as Texture2D
+	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
+	var button := make_retro_button("START", Vector2(99, 103), Vector2(42, 14), pixel_texture)
+	button.pressed.connect(start_callback)
+	overlay.add_child(button)
+	button.grab_focus()
+	return {"overlay": overlay, "text": title_text, "button": button}
+
+
 func _make_text_button(label: String, button_position: Vector2, normal_style: StyleBoxFlat, focus_style: StyleBoxFlat, pixel_texture: Callable, pressed_callback: Callable) -> Button:
 	var button := Button.new()
 	button.position = button_position
