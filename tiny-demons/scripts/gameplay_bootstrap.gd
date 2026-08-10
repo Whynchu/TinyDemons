@@ -41,6 +41,7 @@ func initialize(root: Object) -> void:
 	(root.get("hp_overhead") as Sprite2D).z_as_relative = false; (root.get("hp_overhead_fill") as Sprite2D).z_as_relative = false
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
 	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
+	root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
 	(root.get("player_animation_component") as PlayerAnimationComponent).build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_title_screen"); root.call("_build_scene_transition"); root.call("_build_loading_screen")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
