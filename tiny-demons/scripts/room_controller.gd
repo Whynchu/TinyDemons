@@ -120,7 +120,7 @@ func apply_state(root: Object) -> void:
 	elif room_type == DungeonGraph.ROOM_NPC: root.call("_apply_npc_room_state")
 	elif bool(state.get("finished", false)): root.call("_apply_finished_room_state")
 	else:
-		(root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); root.call("_reset_chest_for_room"); root.call("_reset_slimes_for_room")
+		(root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_chest_for_room(root); reset_slimes_for_room(root)
 
 
 func build_entrance_blocks(root: Object) -> void:
@@ -186,8 +186,8 @@ func is_cleared(room_id: StringName) -> bool:
 
 
 func apply_rest_state(root: Object) -> void:
-	root.call("_reset_slimes_for_room")
-	for slime in root.get("slimes") as Array[Sprite2D]: root.call("_kill_slime_without_effects", slime)
+	reset_slimes_for_room(root)
+	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D
 	var collision := root.get("collision_sprites") as Array[Sprite2D]
 	chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest)
@@ -203,22 +203,50 @@ func apply_rest_state(root: Object) -> void:
 
 
 func apply_npc_state(root: Object) -> void:
-	root.call("_reset_slimes_for_room")
-	for slime in root.get("slimes") as Array[Sprite2D]: root.call("_kill_slime_without_effects", slime)
+	reset_slimes_for_room(root)
+	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D; var collision := root.get("collision_sprites") as Array[Sprite2D]; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); (root.get("rest_fire") as Sprite2D).visible = false
 	var demon := root.get("cloaked_demon") as Sprite2D; demon.visible = true; demon.position = root.get("cloaked_demon_start_position"); root.set("cloaked_demon_wander_origin", demon.position); root.set("cloaked_demon_wander_timer", 0.0); root.set("cloaked_demon_patrol_direction", -1.0); root.set("cloaked_demon_patrol_paused", false); root.set("cloaked_demon_patrol_pause_timer", 0.0); root.set("cloaked_demon_patrol_position_x", demon.position.x); root.call("_configure_cloaked_demon_patrol_route"); if not collision.has(demon): collision.append(demon)
 	root.call("_set_door_active", true); root.call("_set_entrance_open", true); _mark_finished(root)
 
 
 func apply_finished_state(root: Object) -> void:
-	(root.get("rest_fire") as Sprite2D).visible = false; (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); root.call("_reset_slimes_for_room")
-	for slime in root.get("slimes") as Array[Sprite2D]: root.call("_kill_slime_without_effects", slime)
+	(root.get("rest_fire") as Sprite2D).visible = false; (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_slimes_for_room(root)
+	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", true); root.call("_set_entrance_open", true); (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
 	for key in [&"chest_unlock_overlay", &"chest_flash_overlay"]:
 		var overlay := root.get(key) as Sprite2D
 		if overlay != null: overlay.queue_free(); root.set(key, null)
 	var prompt := root.get("interact_prompt") as Sprite2D
 	if prompt != null: prompt.visible = false
+
+
+func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent; combat.dead = true; slime.visible = false; combat.timer = 0.0; combat.frame = 0; combat.hit_done = false
+	(root.get("collision_sprites") as Array[Sprite2D]).erase(slime); (root.get("depth_sprites") as Array[Sprite2D]).erase(slime); (root.get("occluder_sprites") as Array[Sprite2D]).erase(slime); (root.get("actor_sprites") as Array[Sprite2D]).erase(slime)
+	var health := root.call("_slime_health", slime) as HealthComponent; if health != null: health.reset(0.0)
+	(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).display_health = 0.0
+	var hud := root.get("hud_controller") as HudController
+	for item in [hud.target_overhead_frames.get(slime), hud.target_overhead_damage_fills.get(slime), hud.target_overhead_fills.get(slime)]: if item != null: (item as Sprite2D).visible = false
+
+
+func reset_chest_for_room(root: Object) -> void:
+	var rest_fire := root.get("rest_fire") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var chest := root.get("chest") as Sprite2D
+	rest_fire.visible = false; demon.visible = false; chest.position = root.get("chest_start_position"); chest.texture = root.get("chest_gray_texture"); chest.visible = true; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false); root.call("_set_entrance_open", false)
+	var unlock_overlay := root.get("chest_unlock_overlay") as Sprite2D; if unlock_overlay != null: unlock_overlay.queue_free(); root.set("chest_unlock_overlay", null)
+	var flash_overlay := root.get("chest_flash_overlay") as Sprite2D; if flash_overlay != null: flash_overlay.queue_free(); root.set("chest_flash_overlay", null)
+	var collision := root.get("collision_sprites") as Array[Sprite2D]; if not collision.has(chest): collision.append(chest)
+	(root.get("occlusion_renderer") as OcclusionRenderer).sprite_images[chest] = (root.get("occlusion_renderer") as OcclusionRenderer).cached_texture_image(chest.texture)
+
+
+func reset_slimes_for_room(root: Object) -> void:
+	var slimes := root.get("slimes") as Array[Sprite2D]; var tuning := root.get("slime_tuning") as SlimeTuning; var rng := root.get("rng") as RandomNumberGenerator; var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]; var collision := root.get("collision_sprites") as Array[Sprite2D]; var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
+	for slime in slimes:
+		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; slime.position = brain.start_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime)
+		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(brain.start_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
+		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; root.call("_set_actor_base_texture", slime, occlusion.actor_default_textures[slime]); root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+		if not actor_sprites.has(slime): actor_sprites.append(slime)
+		if not collision.has(slime): collision.append(slime)
 
 
 func _mark_finished(root: Object) -> void:

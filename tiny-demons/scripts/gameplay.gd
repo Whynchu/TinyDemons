@@ -1,261 +1,4 @@
-extends Node2D
-const SLIME_ATTACK_FRAME_SIZE := Vector2i(16, 16)
-const EDGE_MARGIN := 0.35
-const SLIME_EDGE_PADDING := 3.0
-const ACTOR_FOOT_OFFSET := Vector2(8, 15)
-const DEPTH_Z_SCALE := 10.0
-const OVERWORLD_UI_Z := 4090
-const VERTICAL_MOVEMENT_SCALE := 0.5
-const PLAYER_FRAME_SIZE := Vector2i(36, 36)
-const PLAYER_ATTACK_FRAME_SIZE := Vector2i(36, 36)
-const ROLL_DUST_FRAME_SIZE := Vector2i(16, 16)
-const GAME_OVER_FADE_TIME := 0.8
-const PLAYER_TEXTURE_OFFSET := Vector2(-10, -10)
-const CHEST_INTERACT_DISTANCE := 16.0
-const NPC_INTERACT_DISTANCE := 24.0
-const CHEST_REWARD_GOLD := 100
-const INTERACT_PROMPT_BOB_TIME := 0.8
-const CHEST_COLLECT_FLASH_TIME := 0.12
-const CHEST_UNLOCK_FADE_TIME := 0.45
-const CHEST_EVAPORATE_PARTICLE_COUNT := 34
-const CHEST_EVAPORATE_LIFETIME_MIN := 0.45
-const CHEST_EVAPORATE_LIFETIME_MAX := 0.9
-const FIRE_FRAME_TIME := 0.16
-const FIRE_FRAME_SIZE := Vector2i(16, 16)
-const CLOAKED_DEMON_FRAME_SIZE := Vector2i(36, 36)
-const NPC_DIALOGUE_TIME := 3.2
-const NPC_DIALOGUE_BUTTON_BOB_TIME := 1.6
-const PLAYER_DOOR_FOOT_COLLIDER_SIZE := Vector2(3, 3)
-const ACTOR_COLLISION_WIDTH := 9.0
-const ACTOR_COLLISION_HEIGHT := 4.0
-const ACTOR_CONTACT_RADIUS := 3.6
-const CHEST_COLLISION_SIZE := Vector2(11, 6)
-const SLIME_WEIGHT := 1.45
-const PLAYER_WEIGHT := 1.0
-const TARGET_LOCK_MAX_DISTANCE := 9999.0
-const OCCLUSION_RELEASE_GRACE := 0.08
-const CONTROLLER_DEADZONE := 0.25
-const CONTROLLER_TRIGGER_DEADZONE := 0.35
-const OCCLUDER_PATHS: Array[NodePath] = [
-	^"Actors/Chest",
-]
-@onready var floor_tiles: Node2D = $Map/FloorTiles
-@onready var ui: Node2D = $UI
-@onready var player: Sprite2D = $Actors/TinyDemon
-@onready var player_attack_visual: Sprite2D = $Actors/TinyDemonAttack
-@onready var player_shadow: Sprite2D = $Actors/TinyDemonShadow
-@onready var cloaked_demon_shadow: Sprite2D = $Actors/CloakedDemonShadow
-@onready var slime_blue: Sprite2D = $Actors/SlimeBlue
-@onready var slime_green: Sprite2D = $Actors/SlimeGreen
-@onready var slime_red: Sprite2D = $Actors/SlimeRed
-@onready var sockets_root: Node2D = $Map/Sockets
-@onready var hp_overhead: Sprite2D = $Actors/SlimeGreen/HpOverhead
-@onready var hp_overhead_fill: Sprite2D = $Actors/SlimeGreen/HpOverheadFill
-@onready var chest: Sprite2D = $Actors/Chest
-@onready var rest_fire: Sprite2D = $Actors/RestFire
-@onready var rest_fire_depth_marker: Marker2D = $Actors/RestFire/DepthMarker
-@onready var cloaked_demon: Sprite2D = $Actors/CloakedDemon
-@onready var cloaked_demon_depth_marker: Marker2D = $Actors/CloakedDemon/DepthMarker
-@onready var target_name_text: Sprite2D = $UI/SlimeText
-@onready var target_health_bar: Sprite2D = $UI/EnemyHp
-@onready var target_health_fill: Sprite2D = $UI/EnemyHpFill
-@onready var player_health_fill: Sprite2D = $UI/HpBarFill
-@onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
-var player_equipment: EquipmentComponent = null
-var player_health_component: HealthComponent = null
-var player_motor: ActorMotor = null
-var player_controller: PlayerController = null
-var player_roll_component: PlayerRollComponent = null
-var player_attack_component: PlayerAttackComponent = null
-var player_animation_component: PlayerAnimationComponent = null
-var walkable_area: WalkableArea = null
-var actor_collision_system: ActorCollisionSystem = null
-var depth_sorter: DepthSorter = null
-var occlusion_renderer: OcclusionRenderer = null
-var room_controller: RoomController = null
-var shadow_controller: ShadowController = null
-var interaction_component: InteractionComponent = null
-var chest_controller: ChestController = null
-var npc_controller: NpcController = null
-var rest_fire_controller: RestFireController = null
-var hud_controller: HudController = null
-var effects_spawner: EffectsSpawner = null
-var screen_state_controller: ScreenStateController = null
-var gameplay_frame_controller: GameplayFrameController = null
-var player_idle_frames: Array[Texture2D] = []
-var player_walk_frames: Array[Texture2D] = []
-var player_attack_frames: Array[Texture2D] = []
-var player_attack2_frames: Array[Texture2D] = []
-var player_attack_left_frames: Array[Texture2D] = []
-var player_attack2_left_frames: Array[Texture2D] = []
-var player_between_attack_texture: Texture2D = null
-var player_after_attack2_texture: Texture2D = null
-var player_just_finished_attack2 := false
-var player_between_timer := 0.0
-var player_anim_name := "idle"
-var player_anim_frame := 0
-var player_anim_timer := 0.0
-var player_is_moving := false
-var player_is_attacking := false
-var player_is_rolling := false
-var player_roll_frames: Array[Texture2D] = []
-var roll_dust_spawned_this_roll := false
-var player_roll_input_was_down := false
-var roll_dust_frames: Array[Texture2D] = []
-var roll_dust_flipped_frames: Array[Texture2D] = []
-var player_attack_input_was_down := false
-var player_attack_hit_done := false
-var player_attack_hit_targets: Array[Sprite2D] = []
-var player_attack_flip_h := false
-var player_hit_flash_timer := 0.0
-var player_hitstun_timer := 0.0
-var walkable_points: Array[Vector2] = []
-var walkable_polygons: Array[PackedVector2Array] = []
-var walkable_outline: PackedVector2Array = PackedVector2Array()
-var entrance_block_polygons: Array[PackedVector2Array] = []
-var use_walkable_polygon_direct := false
-var slimes: Array[Sprite2D] = []
-var depth_sprites: Array[Sprite2D] = []
-var actor_sprites: Array[Sprite2D] = []
-var collision_sprites: Array[Sprite2D] = []
-var occluder_sprites: Array[Sprite2D] = []
-var player_shadow_offset := Vector2.ZERO
-var player_shadow_scale := Vector2.ONE
-var cloaked_demon_shadow_offset := Vector2.ZERO
-var cloaked_demon_shadow_scale := Vector2.ONE
-var player_sprite_shadow: Sprite2D = null
-var cloaked_demon_sprite_shadow: Sprite2D = null
-var current_target: Sprite2D = null
-var target_input_was_down := false
-var player_health := 0.0
-var player_death_pending := false
-var player_dead := false
-var player_death_timer := 0.0
-var player_death_particles_started := false
-var hitstop_timer := 0.0
-var player_death_overlay: Sprite2D = null
-var player_death_origin := Vector2.ZERO
-var player_death_offset := Vector2.ZERO
-var player_death_scale := Vector2.ONE
-var player_death_texture: Texture2D = null
-var game_over_overlay: ColorRect = null
-var game_over_button: Button = null
-var game_over_title_button: Button = null
-var game_over_fade_timer := 0.0
-var title_overlay: ColorRect = null
-var title_start_button: Button = null
-var title_frame_timer := 0.0
-var title_screen_text: Sprite2D = null
-var title_start_text: Sprite2D = null
-var title_transition_active := false
-var title_transition_timer := 0.0
-var title_particle_layer: Node2D = null
-var archetype_overlay: ColorRect = null
-var archetype_hold_cover: ColorRect = null
-var archetype_preview: Sprite2D = null
-var archetype_name_text: Sprite2D = null
-var archetype_start_button: Button = null
-var archetype_left_buttons: Array[Button] = []
-var archetype_right_buttons: Array[Button] = []
-var archetype_type_left_button: Button = null
-var archetype_type_right_button: Button = null
-var archetype_frame_timer := 0.0
-var archetype_index := 0
-var archetype_color_index := 0
-var archetype_menu_row := 0
-var archetype_transition_active := false
-var archetype_transition_timer := 0.0
-var archetype_fade_out := false
-var archetype_arrow_anim_timer := 0.0
-var archetype_arrow_anim_direction := 0
-var selected_archetype := StatsComponent.AllocationProfile.BALANCED
-var player_palette_name := "blue"
-var player_base_idle_frames: Array[Texture2D] = []
-var player_base_walk_frames: Array[Texture2D] = []
-var player_base_roll_frames: Array[Texture2D] = []
-var player_base_attack_frames: Array[Texture2D] = []
-var player_base_attack2_frames: Array[Texture2D] = []
-var player_base_attack_left_frames: Array[Texture2D] = []
-var player_base_attack2_left_frames: Array[Texture2D] = []
-var player_base_between_attack_texture: Texture2D = null
-var player_base_after_attack2_texture: Texture2D = null
-var player_base_health_fill_texture: Texture2D = null
-var scene_transition_overlay: ColorRect = null
-var scene_transition_timer := 0.0
-var scene_transition_active := false
-var loading_screen_overlay: ColorRect = null
-var loading_screen_text: Sprite2D = null
-var loading_screen_active := false
-var loading_screen_fading := false
-var loading_screen_timer := 0.0
-var gold := 0
-var interact_input_was_down := false
-var chest_unlocked := false
-var chest_claimed := false
-var chest_collect_flash_timer := 0.0
-var chest_evaporated := false
-var door_active := false
-var entrance_open := false
-var dungeon_graph := DungeonGraph.new()
-var current_room_id: StringName = DungeonGraph.START_ROOM_ID
-var current_room_depth := 0
-var current_room_display_number := 1
-var current_room_type: StringName = DungeonGraph.ROOM_START
-var room_transition_locked := false
-var chest_normal_texture: Texture2D = null
-var chest_gray_texture: Texture2D = null
-var chest_unlock_overlay: Sprite2D = null
-var chest_flash_overlay: Sprite2D = null
-var interact_prompt: Sprite2D = null
-var interact_prompt_base_position := Vector2.ZERO
-var npc_dialogue_box: ColorRect = null
-var npc_dialogue_text: Sprite2D = null
-var npc_dialogue_button: Sprite2D = null
-var npc_dialogue_button_shadow: Sprite2D = null
-var npc_dialogue_layer: CanvasLayer = null
-var npc_dialogue_input_was_down := false
-var npc_dialogue_index := 0
-var npc_dialogue_messages := ["GO ON", "TRUST YOUR PATH", "THE FIRE KNOWS", "YOU ARE CLOSE"]
-var room_number_indicator: Sprite2D = null
-var gold_indicator: Sprite2D = null
-var gold_amount_indicator: Sprite2D = null
-var gold_animation_frames: Array[Texture2D] = []
-var gold_animation_timer := 0.0
-var button_hud_sprites: Array[Sprite2D] = []
-var target_health_text: Sprite2D = null
-var player_health_text: Sprite2D = null
-var player_start_position := Vector2.ZERO
-var chest_start_position := Vector2.ZERO
-var cloaked_demon_start_position := Vector2.ZERO
-var target_health_damage_fill: Sprite2D = null
-var target_health_bar_size := Vector2.ZERO
-var player_health_fill_size := Vector2.ZERO
-var player_health_damage_fill: Sprite2D = null
-var player_display_health := 0.0
-var player_damage_fill_hold_timer := 0.0
-var rest_fire_frames: Array[Texture2D] = []
-var cloaked_demon_idle_frames: Array[Texture2D] = []
-var cloaked_demon_walk_frames: Array[Texture2D] = []
-var cloaked_demon_animation_timer := 0.0
-var cloaked_demon_animation_frame := 0
-var cloaked_demon_wander_timer := 0.0
-var cloaked_demon_wander_origin := Vector2.ZERO
-var cloaked_demon_patrol_direction := -1.0
-var cloaked_demon_patrol_paused := false
-var cloaked_demon_patrol_pause_timer := 0.0
-var cloaked_demon_patrol_position_x := 0.0
-var cloaked_demon_patrol_min_x := 0.0
-var cloaked_demon_patrol_max_x := 0.0
-var cloaked_demon_wander_target := Vector2.ZERO
-var cloaked_demon_wander_has_target := false
-var cloaked_demon_visual_bounds := Rect2(12, 10, 12, 16)
-var rng := RandomNumberGenerator.new()
-var sprite_frame_library := SpriteFrameLibrary.new()
-var combat_tuning := CombatTuning.new()
-var player_tuning := PlayerTuning.new()
-var slime_tuning := SlimeTuning.new()
-var effects_tuning := EffectsTuning.new()
-var last_damage_was_critical := false
+extends GameplayState
 func _add_runtime_node(script: Script, node_name: StringName, parent: Node = self) -> Node:
 	var node := script.new() as Node
 	node.name = node_name
@@ -275,13 +18,11 @@ func _start_player_death() -> void: effects_spawner.begin_player_death(self, DEP
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
 func _spawn_player_death_pixels() -> void:
 	effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
-func _build_game_over_ui() -> void:
-	var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_restart_game"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button
+func _build_game_over_ui() -> void: var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_restart_game"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button
 func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible: return
 	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; game_over_button.grab_focus()
-func _build_title_screen() -> void:
-	var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_from_title")); title_overlay = controls["overlay"] as ColorRect; title_screen_text = controls["text"] as Sprite2D; title_start_button = controls["button"] as Button; title_start_text = controls["start_text"] as Sprite2D; _build_archetype_screen()
+func _build_title_screen() -> void: var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_from_title")); title_overlay = controls["overlay"] as ColorRect; title_screen_text = controls["text"] as Sprite2D; title_start_button = controls["button"] as Button; title_start_text = controls["start_text"] as Sprite2D; _build_archetype_screen()
 func _build_archetype_screen() -> void:
 	var controls := screen_state_controller.build_archetype(ui, Callable(self, "_style_archetype_button"), Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); archetype_overlay = controls["overlay"] as ColorRect; archetype_preview = controls["preview"] as Sprite2D; archetype_name_text = controls["name"] as Sprite2D
 	archetype_left_buttons = controls["left"] as Array[Button]; archetype_right_buttons = controls["right"] as Array[Button]; archetype_type_left_button = controls["type_left"] as Button; archetype_type_right_button = controls["type_right"] as Button; archetype_start_button = controls["start"] as Button; archetype_hold_cover = controls["cover"] as ColorRect
@@ -313,8 +54,7 @@ func _update_archetype_screen() -> void:
 	_update_archetype_button_styles()
 func _update_archetype_button_styles() -> void: screen_state_controller.update_archetype_button_styles(self)
 func _start_selected_archetype() -> void: screen_state_controller.start_selected_archetype(self)
-func _build_loading_screen() -> void:
-	var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
+func _build_loading_screen() -> void: var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
 func _update_loading_screen(delta: float) -> void:
 	var result := screen_state_controller.update_loading(loading_screen_overlay, loading_screen_text, loading_screen_fading, loading_screen_timer, delta, Callable(self, "_pixel_text_texture")); loading_screen_fading = result["fading"]; loading_screen_timer = result["timer"]; if result["finished"]: loading_screen_active = false
 func _apply_player_palette_async(palette_name: String) -> void:
@@ -387,7 +127,7 @@ func _knockback_slime(slime: Sprite2D) -> void:
 	var brain := _slime_brain(slime); brain.scoot_start = slime.position; brain.scoot_target = slime.position; brain.scoot_timer = 0.0; brain.hold_timer = slime_tuning.hitstun_time
 func _kill_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
-	_spawn_slime_death_pixels(slime); _kill_slime_without_effects(slime)
+	_spawn_slime_death_pixels(slime); room_controller.kill_slime_without_effects(self, slime)
 	if current_target == slime:
 		if _is_target_input_held(): _set_current_target(_closest_target())
 		else: _set_current_target(null); _set_target_ui_visible(false)
@@ -500,29 +240,6 @@ func _apply_room_state() -> void: room_controller.apply_state(self)
 func _apply_rest_room_state() -> void: room_controller.apply_rest_state(self)
 func _apply_npc_room_state() -> void: room_controller.apply_npc_state(self)
 func _apply_finished_room_state() -> void: room_controller.apply_finished_state(self)
-func _kill_slime_without_effects(slime: Sprite2D) -> void:
-	var combat := _slime_combat(slime); combat.dead = true; slime.visible = false; combat.timer = 0.0; combat.frame = 0; combat.hit_done = false; collision_sprites.erase(slime); depth_sprites.erase(slime); occluder_sprites.erase(slime); actor_sprites.erase(slime)
-	var health_component := _slime_health(slime)
-	if health_component != null: health_component.reset(0.0)
-	_slime_health_presenter(slime).display_health = 0.0
-	for item in [hud_controller.target_overhead_frames.get(slime), hud_controller.target_overhead_damage_fills.get(slime), hud_controller.target_overhead_fills.get(slime)]:
-		if item != null: (item as Sprite2D).visible = false
-func _reset_chest_for_room() -> void:
-	rest_fire.visible = false; cloaked_demon.visible = false; chest.position = chest_start_position; chest.texture = chest_gray_texture; chest.visible = true; chest.self_modulate = Color.WHITE; chest_unlocked = false; chest_claimed = false; chest_evaporated = false; chest_collect_flash_timer = 0.0; _set_door_active(false); _set_entrance_open(false)
-	if chest_unlock_overlay != null: chest_unlock_overlay.queue_free(); chest_unlock_overlay = null
-	if chest_flash_overlay != null: chest_flash_overlay.queue_free(); chest_flash_overlay = null
-	if not collision_sprites.has(chest): collision_sprites.append(chest)
-	occlusion_renderer.sprite_images[chest] = occlusion_renderer.cached_texture_image(chest_gray_texture)
-func _reset_slimes_for_room() -> void:
-	for slime in slimes:
-		var actor := slime as SlimeActor; var brain := _slime_brain(slime); slime.position = brain.start_position; slime.visible = true; slime.flip_h = false
-		_apply_enemy_room_level(slime)
-		var max_health := _enemy_max_health(slime)
-		if actor != null: actor.configure_health(max_health, slime_tuning.regen_delay, slime_tuning.regen_interval, slime_tuning.regen_amount); actor.reset_runtime_state(brain.start_position, slime.position, rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max), rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
-		_slime_health_presenter(slime).display_health = max_health; _slime_health_presenter(slime).damage_fill_hold_timer = 0.0
-		_set_actor_base_texture(slime, occlusion_renderer.actor_default_textures[slime]); _set_actor_visual_scale(slime, Vector2.ONE)
-		if not actor_sprites.has(slime): actor_sprites.append(slime)
-		if not collision_sprites.has(slime): collision_sprites.append(slime)
 func _start_chest_flash() -> void:
 	if chest_flash_overlay != null: chest_flash_overlay.queue_free()
 	chest_flash_overlay = Sprite2D.new(); chest_flash_overlay.name = "ChestFlashOverlay"; chest_flash_overlay.texture = _white_texture(chest.texture); chest_flash_overlay.centered = chest.centered; chest_flash_overlay.offset = chest.offset; chest_flash_overlay.scale = chest.scale; chest_flash_overlay.texture_filter = chest.texture_filter; chest_flash_overlay.z_as_relative = false; chest_flash_overlay.z_index = chest.z_index + 1; chest_flash_overlay.global_position = chest.global_position; chest_flash_overlay.modulate = Color.WHITE; add_child(chest_flash_overlay)
