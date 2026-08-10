@@ -73,9 +73,11 @@ func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_
 	if transition_fill != null:
 		var base_edge := floorf(fill_size.x * health_ratio)
 		var display_edge := ceilf(fill_size.x * display_ratio)
-		var difference_pixels := absf(display_edge - base_edge)
+		var transition_start := maxf(minf(base_edge, display_edge) - 1.0, 0.0)
+		var transition_end := minf(maxf(base_edge, display_edge) + 1.0, fill_size.x)
+		var difference_pixels := transition_end - transition_start
 		transition_fill.visible = difference_pixels >= 1.0
-		transition_fill.position = main_fill.position + Vector2(minf(base_edge, display_edge), 0.0)
+		transition_fill.position = main_fill.position + Vector2(transition_start, 0.0)
 		set_fill_ratio(transition_fill, fill_size, difference_pixels / maxf(fill_size.x, 1.0))
 
 
