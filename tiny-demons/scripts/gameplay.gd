@@ -4445,49 +4445,26 @@ func _update_depth_sorting() -> void:
 
 
 func _update_actor_occlusion(delta: float) -> void:
-	if occlusion_renderer != null:
-		occlusion_renderer.record_update(delta)
-	for actor in actor_sprites:
-		# Hidden actors must not retain an occlusion transform. The player is
-		# hidden while the separate attack sprite is displayed.
-		if not actor.visible:
-			if actor == player:
-				_restore_actor_base_visual_scale(actor)
-			continue
-		var is_flashing: bool = _slime_combat(actor).flash_timer > 0.0
-		if actor == player:
-			is_flashing = player_hit_flash_timer > 0.0
-		if is_flashing:
-			actor.texture = occlusion_renderer.white_actor_textures[actor]
-			_apply_actor_scale(actor, false)
-			continue
+	occlusion_renderer.update_actor_occlusion(
+		actor_sprites,
+		occluder_sprites,
+		player,
+		current_target,
+		delta,
+		OCCLUSION_RELEASE_GRACE,
+		Callable(self, "_is_actor_occlusion_flashing"),
+		Callable(self, "_depth_key"),
+		Callable(self, "_sprite_source_global_rect"),
+		Callable(self, "_build_exact_occluded_actor_texture"),
+		Callable(self, "_apply_actor_scale"),
+		Callable(self, "_restore_actor_base_visual_scale")
+	)
 
-		var is_target := actor == current_target
-		var actor_depth := _depth_key(actor)
-		var actor_rect := _sprite_source_global_rect(actor)
-		var occlusion_candidates := occlusion_renderer.active_occluders_for(
-			actor,
-			occluder_sprites,
-			actor_depth,
-			actor_rect,
-			Callable(self, "_depth_key"),
-			Callable(self, "_sprite_source_global_rect")
-		)
-		var active_occluders := occlusion_candidates["occluders"] as Array[Sprite2D]
-		var highest_occluder_z := int(occlusion_candidates["highest_z"])
 
-		if active_occluders.is_empty():
-			_apply_unoccluded_actor_texture(actor, is_target, delta)
-		else:
-			var texture := _build_exact_occluded_actor_texture(actor, active_occluders, is_target)
-			if texture == null:
-				_apply_unoccluded_actor_texture(actor, is_target, delta)
-			else:
-				occlusion_renderer.actor_occlusion_grace[actor] = OCCLUSION_RELEASE_GRACE
-				actor.texture = texture
-				_apply_actor_scale(actor, true)
-				if not active_occluders.has(player):
-					actor.z_index = min(highest_occluder_z + 1, 4095)
+func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool:
+	if actor == player:
+		return player_hit_flash_timer > 0.0
+	return _slime_combat(actor).flash_timer > 0.0
 
 
 func _apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float) -> void:

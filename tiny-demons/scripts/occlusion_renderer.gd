@@ -97,6 +97,50 @@ func active_occluders_for(actor: Sprite2D, occluder_sprites: Array[Sprite2D], ac
 	return {"occluders": active_occluders, "highest_z": highest_occluder_z}
 
 
+func update_actor_occlusion(
+	actors: Array[Sprite2D],
+	occluder_sprites: Array[Sprite2D],
+	player: Sprite2D,
+	current_target: Sprite2D,
+	delta: float,
+	release_grace: float,
+	is_flashing: Callable,
+	depth_key: Callable,
+	source_rect: Callable,
+	build_exact_texture: Callable,
+	apply_actor_scale: Callable,
+	restore_actor_scale: Callable
+) -> void:
+	record_update(delta)
+	for actor in actors:
+		if not actor.visible:
+			if actor == player:
+				restore_actor_scale.call(actor)
+			continue
+		if bool(is_flashing.call(actor)):
+			actor.texture = white_actor_textures[actor]
+			apply_actor_scale.call(actor, false)
+			continue
+		var is_target := actor == current_target
+		var actor_depth := float(depth_key.call(actor))
+		var actor_rect := source_rect.call(actor) as Rect2
+		var occlusion_candidates := active_occluders_for(actor, occluder_sprites, actor_depth, actor_rect, depth_key, source_rect)
+		var active_occluders := occlusion_candidates["occluders"] as Array[Sprite2D]
+		var highest_occluder_z := int(occlusion_candidates["highest_z"])
+		if active_occluders.is_empty():
+			apply_unoccluded_actor_texture(actor, is_target, delta, apply_actor_scale, release_grace)
+			continue
+		var texture := build_exact_texture.call(actor, active_occluders, is_target) as Texture2D
+		if texture == null:
+			apply_unoccluded_actor_texture(actor, is_target, delta, apply_actor_scale, release_grace)
+			continue
+		actor_occlusion_grace[actor] = release_grace
+		actor.texture = texture
+		apply_actor_scale.call(actor, true)
+		if not active_occluders.has(player):
+			actor.z_index = mini(highest_occluder_z + 1, 4095)
+
+
 func cached_texture_image(texture: Texture2D) -> Image:
 	if texture_image_cache.has(texture):
 		return texture_image_cache[texture]
