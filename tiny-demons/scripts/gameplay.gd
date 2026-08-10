@@ -1052,7 +1052,12 @@ func _update_player_animation(delta: float) -> void:
 	var frame_time := player_tuning.walk_frame_time if player_anim_name == "walk" else player_tuning.idle_frame_time
 	player_anim_timer += delta
 	if player_anim_timer < frame_time: return
-	player_anim_timer = fmod(player_anim_timer, frame_time); var frames := player_walk_frames if player_anim_name == "walk" else player_idle_frames; if frames.is_empty(): return; player_anim_frame = (player_anim_frame + 1) % frames.size(); _apply_player_animation_frame()
+	player_anim_timer = fmod(player_anim_timer, frame_time)
+	var frames := player_walk_frames if player_anim_name == "walk" else player_idle_frames
+	if frames.is_empty():
+		return
+	player_anim_frame = (player_anim_frame + 1) % frames.size()
+	_apply_player_animation_frame()
 func _update_player_attack_animation(delta: float) -> void:
 	player_anim_timer += delta
 	if player_anim_timer < player_tuning.attack_frame_time: return
@@ -2137,6 +2142,10 @@ func _build_enemy_health_ui() -> void:
 	player_base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_texture_or_null"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
 	target_health_damage_fill = target_health_fill.get_parent().get_node_or_null("EnemyHpDamageFill") as Sprite2D
 	player_health_damage_fill = player_health_fill.get_parent().get_node_or_null("HpBarDamageFill") as Sprite2D
+	var target_texture := hud_controller.target_health_fill_textures.get(slime_green, target_health_fill.texture) as Texture2D
+	if target_texture != null: target_health_fill.texture = target_texture
+	if player_base_health_fill_texture != null: player_health_fill.texture = player_base_health_fill_texture
+	if player_health_damage_fill != null: player_health_damage_fill.texture = hud_controller.brighter_bar_texture(player_health_fill.texture)
 func _load_texture_or_null(path: String) -> Texture2D:
 	return load(path) as Texture2D if ResourceLoader.exists(path) else null
 func _build_rest_fire_frames() -> void:
@@ -2299,7 +2308,7 @@ func _update_cloaked_demon_shadow() -> void:
 	if cloaked_demon_sprite_shadow != null:
 		cloaked_demon_sprite_shadow.texture = cloaked_demon.texture; cloaked_demon_sprite_shadow.global_position = cloaked_demon.global_position + Vector2(-0.5, 0.0); cloaked_demon_sprite_shadow.offset = cloaked_demon.offset; cloaked_demon_sprite_shadow.scale = cloaked_demon.scale; cloaked_demon_sprite_shadow.flip_h = cloaked_demon.flip_h; cloaked_demon_sprite_shadow.visible = cloaked_demon.texture != null; cloaked_demon_sprite_shadow.z_index = cloaked_demon.z_index - 1
 func _build_player_sprite_shadow() -> void:
-	player_sprite_shadow = Sprite2D.new(); player_sprite_shadow.name = "PlayerSpriteShadow"; player_sprite_shadow.centered = player.centered; player_sprite_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; player_sprite_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.25); player_sprite_shadow.z_as_relative = false; player_sprite_shadow.z_index = player.z_index - 1; player.get_parent().add_child(player_sprite_shadow)
+	player_sprite_shadow = null
 func _build_cloaked_demon_sprite_shadow() -> void:
 	cloaked_demon_sprite_shadow = Sprite2D.new(); cloaked_demon_sprite_shadow.name = "CloakedDemonSpriteShadow"; cloaked_demon_sprite_shadow.centered = cloaked_demon.centered; cloaked_demon_sprite_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; cloaked_demon_sprite_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.25); cloaked_demon_sprite_shadow.z_as_relative = false; cloaked_demon_sprite_shadow.z_index = cloaked_demon.z_index - 1; cloaked_demon.get_parent().add_child(cloaked_demon_sprite_shadow)
 func _update_targeting() -> void:

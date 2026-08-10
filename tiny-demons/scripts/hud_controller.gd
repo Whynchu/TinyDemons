@@ -38,9 +38,12 @@ func update_target_ui(target: Sprite2D, target_name: Sprite2D, target_bar: Sprit
 	if target == null: return bar_size
 	target_name.texture = pixel_name.call(display_name.call(target), Color.WHITE); target_name.centered = true; target_name.position = Vector2(120, 148)
 	var fill_texture := target_health_fill_textures.get(target, target_fill.texture) as Texture2D
-	if fill_texture != null and target_fill.texture != fill_texture: target_fill.texture = fill_texture; bar_size = fill_texture.get_size()
+	if fill_texture != null:
+		target_fill.texture = fill_texture
+		bar_size = fill_texture.get_size()
 	var damage_fill_texture := target_health_damage_fill_textures.get(target, target_fill.texture) as Texture2D
-	if target_damage_fill != null and damage_fill_texture != null: target_damage_fill.texture = damage_fill_texture
+	if target_damage_fill != null and damage_fill_texture != null:
+		target_damage_fill.texture = damage_fill_texture
 	var max_health := float(max_health_for.call(target)); var health := float(health_for.call(target)); var display_health := float(display_health_for.call(target))
 	target_health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
 	set_values.call(target_fill, target_damage_fill, bar_size, health, display_health, max_health)
