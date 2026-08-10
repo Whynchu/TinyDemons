@@ -84,12 +84,6 @@ var rest_fire_controller: RestFireController = null
 var hud_controller: HudController = null
 var effects_spawner: EffectsSpawner = null
 var screen_state_controller: ScreenStateController = null
-var slime_health_components: Dictionary = {}
-var slime_brains: Dictionary = {}
-var slime_combat_components: Dictionary = {}
-var slime_animation_components: Dictionary = {}
-var slime_visual_components: Dictionary = {}
-var slime_health_presenters: Dictionary = {}
 
 var player_idle_frames: Array[Texture2D] = []
 var player_walk_frames: Array[Texture2D] = []
@@ -490,7 +484,6 @@ func _ready() -> void:
 		health_component.damaged.connect(_on_slime_health_damaged.bind(slime))
 		health_component.healed.connect(_on_slime_health_healed.bind(slime))
 		health_component.health_changed.connect(_on_slime_health_changed.bind(slime))
-		slime_health_components[slime] = health_component
 		var brain := slime.get_node_or_null("Brain") as SlimeBrain
 		if brain == null:
 			brain = SlimeBrain.new()
@@ -498,25 +491,21 @@ func _ready() -> void:
 			slime.add_child(brain)
 		brain.repath_timer = _slime_brain(slime).repath_timer
 		brain.hold_timer = _slime_brain(slime).hold_timer
-		slime_brains[slime] = brain
 		var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 		if combat == null:
 			combat = SlimeCombatComponent.new()
 			combat.name = "Combat"
 			slime.add_child(combat)
-		slime_combat_components[slime] = combat
 		var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
 		if animation == null:
 			animation = SlimeAnimationComponent.new()
 			animation.name = "Animation"
 			slime.add_child(animation)
-		slime_animation_components[slime] = animation
 		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 		if visual == null:
 			visual = SlimeVisualComponent.new()
 			visual.name = "Visual"
 			slime.add_child(visual)
-		slime_visual_components[slime] = visual
 		_slime_health_presenter(slime).display_health = max_health
 		_slime_health_presenter(slime).damage_fill_hold_timer = 0.0
 	_apply_room_state()
@@ -1699,7 +1688,7 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 		return
 
 	_mark_player_in_combat()
-	var health_component := slime_health_components.get(slime) as HealthComponent
+	var health_component := _slime_health(slime)
 	var previous_health := health_component.current_health if health_component != null else _enemy_max_health(slime)
 	_slime_brain(slime).persistent_aggro = true
 	if health_component != null:
@@ -2555,7 +2544,7 @@ func _kill_slime_without_effects(slime: Sprite2D) -> void:
 	depth_sprites.erase(slime)
 	occluder_sprites.erase(slime)
 	actor_sprites.erase(slime)
-	var health_component := slime_health_components.get(slime) as HealthComponent
+	var health_component := _slime_health(slime)
 	if health_component != null:
 		health_component.reset(0.0)
 	_slime_health_presenter(slime).display_health = 0.0
@@ -2602,7 +2591,7 @@ func _reset_slimes_for_room() -> void:
 		_slime_combat(slime).dead = false
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
-		var health_component := slime_health_components.get(slime) as HealthComponent
+		var health_component := _slime_health(slime)
 		if health_component != null:
 			health_component.maximum_health = max_health
 			health_component.reset(max_health)
@@ -2815,26 +2804,20 @@ func _separate_slime_from_player(slime: Sprite2D) -> void:
 
 
 func _slime_brain(slime: Sprite2D) -> SlimeBrain:
-	var brain := slime_brains.get(slime) as SlimeBrain
+	var brain := slime.get_node_or_null("Brain") as SlimeBrain
 	if brain == null:
-		brain = slime.get_node_or_null("Brain") as SlimeBrain
-		if brain == null:
-			brain = SlimeBrain.new()
-			brain.name = "Brain"
-			slime.add_child(brain)
-		slime_brains[slime] = brain
+		brain = SlimeBrain.new()
+		brain.name = "Brain"
+		slime.add_child(brain)
 	return brain
 
 
 func _slime_combat(slime: Sprite2D) -> SlimeCombatComponent:
-	var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null:
-		combat = slime.get_node_or_null("Combat") as SlimeCombatComponent
-		if combat == null:
-			combat = SlimeCombatComponent.new()
-			combat.name = "Combat"
-			slime.add_child(combat)
-		slime_combat_components[slime] = combat
+		combat = SlimeCombatComponent.new()
+		combat.name = "Combat"
+		slime.add_child(combat)
 	return combat
 
 
@@ -2843,37 +2826,40 @@ func _slime_stats(slime: Sprite2D) -> StatsComponent:
 
 
 func _slime_visual(slime: Sprite2D) -> SlimeVisualComponent:
-	var visual := slime_visual_components.get(slime) as SlimeVisualComponent
+	var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 	if visual == null:
-		visual = slime.get_node_or_null("Visual") as SlimeVisualComponent
-		if visual == null:
-			visual = SlimeVisualComponent.new()
-			visual.name = "Visual"
-			slime.add_child(visual)
-		slime_visual_components[slime] = visual
+		visual = SlimeVisualComponent.new()
+		visual.name = "Visual"
+		slime.add_child(visual)
 	return visual
 
 
+func _slime_animation(slime: Sprite2D) -> SlimeAnimationComponent:
+	var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
+	if animation == null:
+		animation = SlimeAnimationComponent.new()
+		animation.name = "Animation"
+		slime.add_child(animation)
+	return animation
+
+
 func _slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter:
-	var presenter := slime_health_presenters.get(slime) as SlimeHealthPresenter
+	var presenter := slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter
 	if presenter == null:
-		presenter = slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter
-		if presenter == null:
-			presenter = SlimeHealthPresenter.new()
-			presenter.name = "HealthPresenter"
-			slime.add_child(presenter)
-		slime_health_presenters[slime] = presenter
+		presenter = SlimeHealthPresenter.new()
+		presenter.name = "HealthPresenter"
+		slime.add_child(presenter)
 	return presenter
+
+
+func _slime_health(slime: Sprite2D) -> HealthComponent:
+	return slime.get_node_or_null("Health") as HealthComponent
 
 
 func _move_slimes(delta: float) -> void:
 	for slime in slimes:
-		var brain := slime_brains.get(slime) as SlimeBrain
-		if brain != null:
-			brain.tick(delta)
-		var combat := slime_combat_components.get(slime) as SlimeCombatComponent
-		if combat != null:
-			combat.tick(delta)
+		_slime_brain(slime).tick(delta)
+		_slime_combat(slime).tick(delta)
 		if _is_slime_dead(slime):
 			continue
 		_slime_combat(slime).cooldown = maxf(_slime_combat(slime).cooldown - delta, 0.0)
@@ -2908,11 +2894,11 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 		var frame_index := mini(int(floor(timer / slime_tuning.attack_frame_time)), frames.size() - 1)
 		_slime_combat(slime).timer = timer
 		_slime_combat(slime).frame = frame_index
-		var animation := slime_animation_components.get(slime) as SlimeAnimationComponent
+		var animation := _slime_animation(slime)
 		if animation != null:
 			animation.set_attack_frame(frame_index)
 		_set_actor_base_texture(slime, frames[frame_index])
-		var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+		var combat := _slime_combat(slime)
 		if frame_index == slime_tuning.attack_hit_frame and not _slime_combat(slime).hit_done and (combat == null or combat.confirm_hit()):
 			_apply_slime_attack_lunge(slime)
 			_apply_slime_attack_hit(slime)
@@ -2922,7 +2908,7 @@ func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 			_slime_combat(slime).frame = 0
 			_slime_combat(slime).hit_done = false
 			_slime_combat(slime).cooldown = slime_tuning.attack_cooldown
-			var finished_combat := slime_combat_components.get(slime) as SlimeCombatComponent
+			var finished_combat := _slime_combat(slime)
 			if finished_combat != null:
 				finished_combat.finish(slime_tuning.attack_cooldown)
 			_restore_slime_idle_texture(slime)
@@ -2941,12 +2927,12 @@ func _start_slime_attack(slime: Sprite2D) -> void:
 	var direction := _actor_foot(player) - _actor_foot(slime)
 	var face_left := direction.x < 0.0
 	_slime_combat(slime).face_left = face_left
-	var animation := slime_animation_components.get(slime) as SlimeAnimationComponent
+	var animation := _slime_animation(slime)
 	if animation != null:
 		animation.set_facing(face_left)
 	_set_slime_facing(slime, -1.0 if face_left else 1.0)
 	_slime_combat(slime).timer = 0.001
-	var combat := slime_combat_components.get(slime) as SlimeCombatComponent
+	var combat := _slime_combat(slime)
 	if combat != null:
 		combat.begin()
 	_slime_combat(slime).frame = 0
@@ -3133,7 +3119,7 @@ func _on_slime_health_changed(current: float, _maximum: float, slime: Sprite2D) 
 
 
 func _on_slime_health_healed(_amount: float, slime: Sprite2D) -> void:
-	var health_component := slime_health_components.get(slime) as HealthComponent
+	var health_component := _slime_health(slime)
 	if health_component != null:
 		_slime_health_presenter(slime).display_health = minf(_slime_health_presenter(slime).display_health, health_component.current_health)
 
@@ -3223,7 +3209,7 @@ func _update_enemy_health(delta: float) -> void:
 		if _is_slime_dead(slime):
 			continue
 		var max_health := _enemy_max_health(slime)
-		var health_component := slime_health_components.get(slime) as HealthComponent
+		var health_component := _slime_health(slime)
 		var health: float = health_component.current_health if health_component != null else max_health
 		var regen_delay: float = maxf(health_component.regen_delay_timer - delta, 0.0) if health_component != null else 0.0
 		if health_component != null:
@@ -4582,7 +4568,7 @@ func _update_target_ui() -> void:
 		target_health_damage_fill.texture = damage_fill_texture
 
 	var max_health := _enemy_max_health(current_target)
-	var health_component := slime_health_components.get(current_target) as HealthComponent
+	var health_component := _slime_health(current_target)
 	var health := health_component.current_health if health_component != null else max_health
 	var display_health := _slime_health_presenter(current_target).display_health
 	target_health_text.texture = _pixel_number_texture("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
@@ -4686,7 +4672,7 @@ func _update_overworld_ui() -> void:
 
 func _slime_current_health(slime: Sprite2D) -> float:
 	var max_health := _enemy_max_health(slime)
-	var health_component := slime_health_components.get(slime) as HealthComponent
+	var health_component := _slime_health(slime)
 	return health_component.current_health if health_component != null else max_health
 
 

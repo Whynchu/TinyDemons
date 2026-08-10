@@ -607,7 +607,8 @@ update-order regressions.
 
 - [ ] Reduce `_ready()` to dependency composition and controller startup.
 - [ ] Reduce `_physics_process()` to explicit phase/controller calls.
-  - [x] Begin removing duplicate state mirrors with attack-combo and attack-2 cooldown ownership.
+- [x] Begin removing duplicate state mirrors with attack-combo and attack-2 cooldown ownership.
+  - [x] Remove slime health, brain, combat, animation, visual, and health-presenter registries from the coordinator.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
@@ -651,7 +652,7 @@ Update this table in every consolidation pull request.
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
 | M8 Deep extraction | Complete | GPT-5.5, high | - | - | Deep extraction and construction/ownership cleanup complete; headless Godot validation passed, with the full interactive smoke pass remaining tester-owned |
-| M9 Coordinator reduction | In progress | Terra, high | - | - | First slice moves attack-combo and attack-2 cooldown ownership into PlayerAttackComponent |
+| M9 Coordinator reduction | In progress | Terra, high | - | - | Attack state and slime component registries now live behind component/node ownership; ready/physics reduction remains |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.
