@@ -17,7 +17,7 @@ func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) ->
 
 
 func spawn_chest_evaporation_from_root(root: Object) -> void:
-	var tuning := root.get("effects_tuning") as EffectsTuning; var chest := root.get("chest") as Sprite2D; spawn_chest_evaporation_particles(root, chest.texture, chest.global_position, int(round(root.call("_depth_key", chest) * root.get("DEPTH_Z_SCALE"))) + 1, int(root.get("CHEST_EVAPORATE_PARTICLE_COUNT")), float(root.get("CHEST_EVAPORATE_LIFETIME_MIN")), float(root.get("CHEST_EVAPORATE_LIFETIME_MAX")), root.get("rng"), Callable(root, "_pixel_particle_texture"))
+	var chest := root.get("chest") as Sprite2D; spawn_chest_evaporation_particles(root, chest.texture, chest.global_position, int(round(root.call("_depth_key", chest) * root.get("DEPTH_Z_SCALE"))) + 1, int(root.get("CHEST_EVAPORATE_PARTICLE_COUNT")), float(root.get("CHEST_EVAPORATE_LIFETIME_MIN")), float(root.get("CHEST_EVAPORATE_LIFETIME_MAX")), root.get("rng"), Callable(root, "_pixel_particle_texture"))
 
 
 func update_pixel_particles_from_root(root: Object, delta: float) -> void:

@@ -79,12 +79,12 @@ func start_random_hold(tuning: SlimeTuning, random_source: RandomNumberGenerator
 	idle_breath_timer = 0.0
 
 
-func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumberGenerator, actor_foot: Callable, aggro_target: Callable, random_point: Callable, perspective: Callable, set_facing: Callable) -> void:
+func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumberGenerator, actor_foot: Callable, aggro_target_callable: Callable, random_point: Callable, perspective: Callable, set_facing: Callable) -> void:
 	var target_position: Vector2 = target
 	var foot: Vector2 = actor_foot.call(actor)
 	var is_aggroed := aggroed
 	if is_aggroed:
-		target_position = aggro_target.call(actor)
+		target_position = aggro_target_callable.call(actor)
 		target = target_position
 		repath_timer = 0.08
 	elif foot.distance_to(target_position) < 2.0 or repath_timer <= 0.0:
