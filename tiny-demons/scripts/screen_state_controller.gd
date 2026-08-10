@@ -75,14 +75,14 @@ func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_tex
 	var width := int(button.size.x)
 	var height := int(button.size.y)
 	for x in range(width):
-		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture)
-		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture)
+		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, x, 0)
+		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, x, height - 1)
 	for y in range(1, height - 1):
-		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture)
-		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture)
+		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, 0, y)
+		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, width - 1, y)
 
 
-func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable) -> void:
+func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, x: int, y: int) -> void:
 	var particle := Sprite2D.new()
 	particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
 	particle.centered = false
@@ -91,7 +91,8 @@ func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel
 	particle.z_index = 3
 	particle.position = frame_position
 	particle_parent.add_child(particle)
-	add_particle({"sprite": particle, "velocity": Vector2(0.0, -10.0), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
+	var rise_speed := 8.0 + float(posmod(x * 17 + y * 31, 29))
+	add_particle({"sprite": particle, "velocity": Vector2(0.0, -rise_speed), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
 
 
 func style_archetype_button(button: Button) -> void:
