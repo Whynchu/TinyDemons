@@ -14,3 +14,22 @@ func depth_key(_sprite: Sprite2D, foot_y: float) -> float:
 
 func z_index_for(sprite: Sprite2D, foot_y: float, scale: float) -> int:
 	return int(round(depth_key(sprite, foot_y) * scale))
+
+
+func visible_lists(player: Sprite2D, slimes: Array[Sprite2D], chest: Sprite2D, rest_fire: Sprite2D, cloaked_demon: Sprite2D, is_dead: Callable) -> Dictionary:
+	var depth: Array[Sprite2D] = [player]
+	var occluders: Array[Sprite2D] = [player]
+	for slime in slimes:
+		if is_dead.call(slime):
+			continue
+		depth.append(slime)
+		occluders.append(slime)
+	if chest.visible:
+		depth.append(chest)
+	if rest_fire.visible:
+		depth.append(rest_fire)
+		occluders.append(rest_fire)
+	if cloaked_demon.visible:
+		depth.append(cloaked_demon)
+		occluders.append(cloaked_demon)
+	return {"depth": depth, "occluders": occluders}

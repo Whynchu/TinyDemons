@@ -13,6 +13,73 @@ func set_state(new_state: StringName) -> void:
 	state_changed.emit(state)
 
 
+func update_title_flow(root: Object, delta: float) -> void:
+	var archetype := root.get("archetype_overlay") as ColorRect
+	var title_transition := bool(root.get("title_transition_active"))
+	if archetype != null and archetype.visible and not title_transition:
+		root.call("_update_archetype_input", delta)
+		return
+	if title_transition:
+		root.call("_update_title_particles", delta)
+		var timer := float(root.get("title_transition_timer")) + delta
+		root.set("title_transition_timer", timer)
+		var overlay := root.get("title_overlay") as ColorRect
+		var fade_start := 0.72
+		var fade_duration := 0.42
+		overlay.modulate.a = 1.0 if timer < fade_start else clampf(1.0 - (timer - fade_start) / fade_duration, 0.0, 1.0)
+		if timer >= fade_start + fade_duration:
+			root.set("title_transition_active", false)
+			overlay.visible = false
+			root.set("archetype_transition_timer", -0.35)
+			root.call("_select_archetype_menu_row", 0)
+		return
+	var frame_timer := float(root.get("title_frame_timer")) + delta
+	root.set("title_frame_timer", frame_timer)
+	var button := root.get("title_start_button") as Button
+	if button != null:
+		button.modulate.a = root.call("_retro_button_alpha", frame_timer)
+		button.position.y = 103.0 + root.call("_retro_button_bob", frame_timer)
+	if Input.is_action_just_pressed("ui_accept") or root.call("_is_interact_input_pressed"):
+		root.call("_start_from_title")
+
+
+func update_archetype_input(root: Object, delta: float) -> void:
+	if bool(root.get("archetype_transition_active")):
+		var transition_timer := float(root.get("archetype_transition_timer")) + delta
+		root.set("archetype_transition_timer", transition_timer)
+		if transition_timer < 0.0:
+			return
+		if not bool(root.get("archetype_fade_out")):
+			(root.get("archetype_hold_cover") as ColorRect).visible = false
+			root.set("archetype_transition_active", false)
+			return
+		(root.get("archetype_overlay") as ColorRect).modulate.a = clampf(1.0 - transition_timer / 0.42, 0.0, 1.0)
+		if transition_timer >= 0.42:
+			root.set("archetype_transition_active", false)
+			if bool(root.get("archetype_fade_out")):
+				(root.get("archetype_overlay") as ColorRect).visible = false
+		return
+	root.set("archetype_frame_timer", float(root.get("archetype_frame_timer")) + delta)
+	root.set("archetype_arrow_anim_timer", maxf(float(root.get("archetype_arrow_anim_timer")) - delta, 0.0))
+	root.call("_update_archetype_arrow_animation")
+	var button := root.get("archetype_start_button") as Button
+	button.modulate.a = root.call("_retro_button_alpha", root.get("archetype_frame_timer"))
+	button.position.y = 127.0 + root.call("_retro_button_bob", root.get("archetype_frame_timer"))
+	var row := int(root.get("archetype_menu_row"))
+	if Input.is_action_just_pressed("ui_up"):
+		root.call("_select_archetype_menu_row", row - 1)
+	elif Input.is_action_just_pressed("ui_down"):
+		root.call("_select_archetype_menu_row", row + 1)
+	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
+		if row == 0: root.call("_shift_archetype", direction)
+		elif row == 1: root.call("_shift_archetype_color", direction)
+		else: root.call("_select_archetype_menu_row", 2)
+	if Input.is_action_just_pressed("ui_accept") or root.call("_is_interact_input_pressed"):
+		if row == 2: root.call("_start_selected_archetype")
+		else: root.call("_select_archetype_menu_row", row + 1)
+
+
 func add_particle(particle_data: Dictionary) -> void:
 	title_particles.append(particle_data)
 

@@ -6,6 +6,12 @@ var damage_number_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
+var roll_dust_sprite: Sprite2D = null
+var roll_dust_frame := 0
+var roll_dust_timer := 0.0
+var roll_dust_flipped := false
+var roll_dust_origin := Vector2.ZERO
+var roll_dust_drift := Vector2.ZERO
 
 
 func number_texture(text: String, color: Color) -> Texture2D:
@@ -216,3 +222,27 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 		if shadow != null:
 			shadow.modulate.a = alpha
 		damage_number["timer"] = timer
+
+
+func start_roll_dust(parent: Node, player: Sprite2D, direction: Vector2, frames: Array[Texture2D], flipped_frames: Array[Texture2D], actor_foot: Callable, snap_position: Callable) -> void:
+	clear_roll_dust()
+	if frames.is_empty(): return
+	roll_dust_flipped = direction.x > 0.01 or (absf(direction.x) <= 0.01 and not player.flip_h)
+	var active_frames := flipped_frames if roll_dust_flipped else frames
+	roll_dust_sprite = Sprite2D.new(); roll_dust_sprite.name = "RollDust"; roll_dust_sprite.texture = active_frames[0]; roll_dust_sprite.centered = false; roll_dust_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; roll_dust_sprite.z_as_relative = false; roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
+	var emission_anchor: Vector2 = actor_foot.call(player) + Vector2(0.0, -3.0) - direction * 2.0 + Vector2(0.0, 3.0); var texture_anchor := Vector2(15.0, 15.0) if roll_dust_flipped else Vector2(0.0, 15.0); roll_dust_sprite.global_position = snap_position.call(emission_anchor - texture_anchor); roll_dust_origin = roll_dust_sprite.global_position; roll_dust_drift = Vector2.LEFT if roll_dust_flipped else Vector2.RIGHT; parent.add_child(roll_dust_sprite); roll_dust_frame = 0; roll_dust_timer = 0.0
+
+
+func update_roll_dust(delta: float, player_z: int, frames: Array[Texture2D], flipped_frames: Array[Texture2D], frame_time: float, snap_position: Callable) -> void:
+	if roll_dust_sprite == null: return
+	roll_dust_sprite.z_index = maxi(player_z - 1, 0); roll_dust_timer += delta
+	if roll_dust_timer < frame_time: return
+	roll_dust_timer = fmod(roll_dust_timer, frame_time); roll_dust_frame += 1
+	var active_frames := flipped_frames if roll_dust_flipped else frames
+	if roll_dust_frame >= active_frames.size(): clear_roll_dust(); return
+	roll_dust_sprite.texture = active_frames[roll_dust_frame]; roll_dust_sprite.global_position = snap_position.call(roll_dust_origin + roll_dust_drift * float(roll_dust_frame) * 0.5)
+
+
+func clear_roll_dust() -> void:
+	if roll_dust_sprite != null: roll_dust_sprite.queue_free()
+	roll_dust_sprite = null; roll_dust_frame = 0; roll_dust_timer = 0.0; roll_dust_flipped = false; roll_dust_origin = Vector2.ZERO; roll_dust_drift = Vector2.ZERO

@@ -42,6 +42,28 @@ func tick_components(delta: float) -> void:
 		combat.tick(delta)
 
 
+func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable) -> void:
+	var combat := get_node_or_null("Combat") as SlimeCombatComponent
+	if combat == null or is_dead.call(self):
+		return
+	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
+	if update_knockback.call(self, delta):
+		return
+	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
+	if combat.hitstun_timer > 0.0:
+		return
+	if update_attack.call(self, delta):
+		return
+	if is_aggroed.call(self):
+		var brain := get_node_or_null("Brain") as SlimeBrain
+		if brain != null: brain.target = aggro_target.call(self)
+		update_scoot.call(self, delta)
+		return
+	var brain := get_node_or_null("Brain") as SlimeBrain
+	if brain != null: brain.repath_timer = float(brain.repath_timer) - delta
+	update_scoot.call(self, delta)
+
+
 func tick_health(delta: float) -> float:
 	var health := get_node_or_null("Health") as HealthComponent
 	if health == null:

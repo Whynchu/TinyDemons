@@ -7,6 +7,40 @@ var attack_left_frames: Array[Texture2D] = []
 var attack_right_frames: Array[Texture2D] = []
 
 
+static func build_direction_textures(slimes: Array[Sprite2D], paths: Dictionary, load_texture: Callable) -> void:
+	for slime in slimes:
+		if not paths.has(slime):
+			continue
+		var visual := slime.get_node_or_null("SlimeVisualComponent") as SlimeVisualComponent
+		if visual == null:
+			visual = slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			visual = SlimeVisualComponent.new()
+			visual.name = "Visual"
+			slime.add_child(visual)
+		var slime_paths: Array = paths[slime]
+		visual.left_texture = load_texture.call(slime_paths[0])
+		visual.right_texture = load_texture.call(slime_paths[1])
+
+
+static func build_attack_frames(slimes: Array[Sprite2D], frame_library: SpriteFrameLibrary, frame_size: Vector2i, cache: Dictionary, warm_texture: Callable) -> void:
+	var left_frames := frame_library.slice_frames("res://assets/artwork/SlimeGreen_AttackL.png", frame_size)
+	var right_frames := frame_library.slice_frames("res://assets/artwork/SlimeGreen_AttackR.png", frame_size)
+	for slime in slimes:
+		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			visual = SlimeVisualComponent.new()
+			visual.name = "Visual"
+			slime.add_child(visual)
+		var palette := "red" if slime.name == "SlimeRed" else ("blue" if slime.name == "SlimeBlue" else "green")
+		visual.attack_left_frames = left_frames if palette == "green" else visual.recolor_attack_frames(left_frames, palette, cache)
+		visual.attack_right_frames = right_frames if palette == "green" else visual.recolor_attack_frames(right_frames, palette, cache)
+		for texture in visual.attack_left_frames:
+			warm_texture.call(texture)
+		for texture in visual.attack_right_frames:
+			warm_texture.call(texture)
+
+
 func squish_scale(progress: float, movement: Vector2) -> Vector2:
 	var pulse := sin(clampf(progress, 0.0, 1.0) * PI)
 	var stretch_x := 1.0 + pulse * 0.18

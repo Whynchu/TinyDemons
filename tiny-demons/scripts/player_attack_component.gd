@@ -82,6 +82,10 @@ func start_lunge(velocity: Vector2, duration: float) -> void:
 	lunge_remaining = maxf(duration, 0.0)
 
 
+func has_lunge() -> bool:
+	return lunge_remaining > 0.0
+
+
 func consume_lunge(delta: float) -> Vector2:
 	if lunge_remaining <= 0.0:
 		return Vector2.ZERO

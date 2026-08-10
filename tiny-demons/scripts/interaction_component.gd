@@ -8,6 +8,20 @@ var available := false
 var prompt_timer := 0.0
 
 
+func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: float, actor_foot: Callable, is_dead: Callable) -> Sprite2D:
+	var closest: Sprite2D = null
+	var closest_distance := max_distance
+	var player_foot: Vector2 = actor_foot.call(player)
+	for slime in slimes:
+		if bool(is_dead.call(slime)):
+			continue
+		var distance := player_foot.distance_squared_to(actor_foot.call(slime))
+		if distance < closest_distance:
+			closest = slime
+			closest_distance = distance
+	return closest
+
+
 func set_available(value: bool) -> void:
 	if available == value:
 		return

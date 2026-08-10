@@ -5,7 +5,7 @@ var display_health := 0.0
 var damage_fill_hold_timer := 0.0
 
 
-func update(delta: float, health: HealthComponent, max_health: float, tuning: SlimeTuning) -> void:
+func update(delta: float, health: HealthComponent, _max_health: float, tuning: SlimeTuning) -> void:
 	if health == null:
 		return
 	var previous_health := health.current_health

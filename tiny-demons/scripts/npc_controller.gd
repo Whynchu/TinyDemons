@@ -131,3 +131,47 @@ func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprit
 		button_shadow.visible = true
 	else:
 		button_shadow.visible = false
+
+
+func update_patrol_animation(actor: Sprite2D, idle_frames: Array[Texture2D], walk_frames: Array[Texture2D], delta: float, near_player: bool, patrolling: bool, patrol_paused: bool, wander_target: Vector2, has_target: bool, pause_timer: float, patrol_direction: float, player_x: float, random_source: RandomNumberGenerator, foot_position: Callable, random_point: Callable, move_actor: Callable, perspective: Callable, cache_texture: Callable, animation_timer: float, animation_frame: int) -> Dictionary:
+	if actor == null or not actor.visible or idle_frames.is_empty():
+		return {"wander_target": wander_target, "has_target": has_target, "paused": patrol_paused, "pause_timer": pause_timer, "direction": patrol_direction, "timer": animation_timer, "frame": animation_frame}
+	var frames := idle_frames
+	var frame_time := 0.28
+	animation_timer += delta
+	if patrolling and not patrol_paused and not walk_frames.is_empty():
+		frames = walk_frames
+		frame_time = 0.18
+		var foot: Vector2 = foot_position.call()
+		if not has_target:
+			wander_target = random_point.call(foot, 24.0)
+			has_target = true
+		var direction := wander_target - foot
+		if direction.length_squared() <= 1.0:
+			has_target = false
+			patrol_paused = true
+			pause_timer = random_source.randf_range(1.1, 2.4)
+		elif direction.length_squared() > 0.01:
+			direction = direction.normalized()
+			var moved: bool = move_actor.call(perspective.call(direction * 6.0 * delta), 0.5)
+			if direction.x < -0.01: actor.flip_h = true
+			elif direction.x > 0.01: actor.flip_h = false
+			if not moved:
+				has_target = false
+				patrol_paused = true
+				pause_timer = random_source.randf_range(1.1, 2.4)
+	elif patrolling:
+		pause_timer = maxf(pause_timer - delta, 0.0)
+		actor.flip_h = patrol_direction < 0.0
+		if pause_timer <= 0.0:
+			patrol_paused = false
+			patrol_direction *= -1.0
+	elif near_player:
+		actor.flip_h = player_x < actor.global_position.x
+	if animation_timer < frame_time:
+		return {"wander_target": wander_target, "has_target": has_target, "paused": patrol_paused, "pause_timer": pause_timer, "direction": patrol_direction, "timer": animation_timer, "frame": animation_frame}
+	animation_timer = fmod(animation_timer, frame_time)
+	animation_frame = (animation_frame + 1) % frames.size()
+	actor.texture = frames[animation_frame]
+	cache_texture.call(actor, actor.texture)
+	return {"wander_target": wander_target, "has_target": has_target, "paused": patrol_paused, "pause_timer": pause_timer, "direction": patrol_direction, "timer": animation_timer, "frame": animation_frame}

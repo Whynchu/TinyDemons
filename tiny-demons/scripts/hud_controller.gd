@@ -34,7 +34,7 @@ func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_
 		target_health_text.visible = visible
 
 
-func update_target_ui(target: Sprite2D, target_name: Sprite2D, target_bar: Sprite2D, target_damage_fill: Sprite2D, target_fill: Sprite2D, target_health_text: Sprite2D, bar_size: Vector2, display_name: Callable, max_health_for: Callable, health_for: Callable, display_health_for: Callable, pixel_name: Callable, pixel_number: Callable, set_values: Callable) -> Vector2:
+func update_target_ui(target: Sprite2D, target_name: Sprite2D, _target_bar: Sprite2D, target_damage_fill: Sprite2D, target_fill: Sprite2D, target_health_text: Sprite2D, bar_size: Vector2, display_name: Callable, max_health_for: Callable, health_for: Callable, display_health_for: Callable, pixel_name: Callable, pixel_number: Callable, set_values: Callable) -> Vector2:
 	if target == null: return bar_size
 	target_name.texture = pixel_name.call(display_name.call(target), Color.WHITE); target_name.centered = true; target_name.position = Vector2(120, 148)
 	var fill_texture := target_health_fill_textures.get(target, target_fill.texture) as Texture2D
@@ -81,7 +81,7 @@ func update_overhead_bars(
 	display_health_for: Callable,
 	is_dead_for: Callable,
 	is_aggroed_for: Callable,
-	set_health_bar_values: Callable,
+	set_values: Callable,
 	overwold_ui_z: int
 ) -> void:
 	for slime in slimes:
@@ -121,7 +121,7 @@ func update_overhead_bars(
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
-		set_health_bar_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
+		set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
 
 func update_button_hud(buttons: Array[Sprite2D], devices: Array[int]) -> void:
@@ -146,6 +146,58 @@ func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta:
 	return timer
 
 
+func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable, target_bar: Sprite2D, _target_fill: Sprite2D, player_fill: Sprite2D) -> Dictionary:
+	var room_number := Sprite2D.new()
+	room_number.name = "RoomNumber"
+	room_number.centered = false
+	room_number.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	room_number.z_index = 2
+	room_number.position = Vector2(208, 4)
+	parent.add_child(room_number)
+	var gold := Sprite2D.new()
+	gold.name = "GoldIndicator"
+	gold.centered = false
+	gold.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gold.z_index = 2
+	gold.position = Vector2(64, 4)
+	parent.add_child(gold)
+	var gold_amount := Sprite2D.new()
+	gold_amount.name = "GoldAmount"
+	gold_amount.centered = false
+	gold_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gold_amount.z_index = 2
+	gold_amount.position = Vector2(72, 4)
+	parent.add_child(gold_amount)
+	var gold_frames := library.slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
+	gold.texture = gold_frames[0] if not gold_frames.is_empty() else null
+	var buttons: Array[Sprite2D] = []
+	for data in [{"texture": "triangle55.png", "position": Vector2(224, 64)}, {"texture": "square55.png", "position": Vector2(219, 69)}, {"texture": "x55.png", "position": Vector2(224, 74)}, {"texture": "circle55.png", "position": Vector2(229, 69)}]:
+		var button := Sprite2D.new()
+		button.texture = load_texture.call("res://assets/artwork/" + data["texture"])
+		button.centered = false
+		button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		button.position = data["position"]
+		button.z_index = 2
+		parent.add_child(button)
+		buttons.append(button)
+	var target_text := Sprite2D.new()
+	target_text.name = "TargetHealthText"
+	target_text.centered = true
+	target_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	target_text.z_index = 3
+	target_text.position = target_bar.position + target_bar.texture.get_size() * 0.5
+	target_text.visible = false
+	parent.add_child(target_text)
+	var player_text := Sprite2D.new()
+	player_text.name = "PlayerHealthText"
+	player_text.centered = true
+	player_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	player_text.z_index = 3
+	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
+	parent.add_child(player_text)
+	return {"room": room_number, "gold": gold, "gold_amount": gold_amount, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "player_text": player_text}
+
+
 func update_aggro_markers(markers: Dictionary, palette_name: String, pixel_particle: Callable) -> void:
 	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134)}
 	var color: Color = colors.get(palette_name, colors["blue"])
@@ -160,7 +212,7 @@ func build_enemy_health_ui(
 	target_health_fill: Sprite2D,
 	target_health_bar: Sprite2D,
 	player_health_fill: Sprite2D,
-	player_health_damage_fill: Sprite2D,
+	_player_health_damage_fill: Sprite2D,
 	hp_overhead: Sprite2D,
 	hp_overhead_fill: Sprite2D,
 	slime_green: Sprite2D,
