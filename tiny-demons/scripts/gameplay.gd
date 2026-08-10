@@ -2179,11 +2179,18 @@ func _build_slime_attack_frames() -> void:
 		for texture in visual.attack_right_frames:
 			_warm_texture_cache(texture)
 func _build_enemy_health_ui() -> void:
-	player_base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_texture_or_null"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
+	player_base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
 	target_health_damage_fill = target_health_fill.get_parent().get_node_or_null("EnemyHpDamageFill") as Sprite2D
 	player_health_damage_fill = player_health_fill.get_parent().get_node_or_null("HpBarDamageFill") as Sprite2D
+	var player_base_texture := _load_health_bar_texture("res://assets/artwork/HpBarBlueBar.png")
+	if player_base_texture != null:
+		player_base_health_fill_texture = player_base_texture
+		player_health_fill.texture = player_base_texture
+		if player_health_damage_fill != null: player_health_damage_fill.texture = hud_controller.brighter_bar_texture(player_base_texture)
 func _load_texture_or_null(path: String) -> Texture2D:
 	return load(path) as Texture2D if ResourceLoader.exists(path) else null
+func _load_health_bar_texture(path: String) -> Texture2D:
+	return ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE) as Texture2D if ResourceLoader.exists(path) else null
 func _build_rest_fire_frames() -> void:
 	rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE)
 	if not rest_fire_frames.is_empty(): _set_rest_fire_frame(0)
