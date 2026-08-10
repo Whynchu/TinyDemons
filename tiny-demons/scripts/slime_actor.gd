@@ -42,6 +42,32 @@ func tick_components(delta: float) -> void:
 		combat.tick(delta)
 
 
+func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_delay: float, hold_delay: float, idle_breath_delay: float, attack_cooldown_delay: float) -> void:
+	var brain := get_node_or_null("Brain") as SlimeBrain
+	if brain != null:
+		brain.start_position = start_pos
+		brain.target = initial_target
+		brain.repath_timer = repath_delay
+		brain.scoot_start = position
+		brain.scoot_target = position
+		brain.scoot_timer = 0.0
+		brain.hold_timer = hold_delay
+		brain.idle_breath_timer = idle_breath_delay
+		brain.persistent_aggro = false
+	var combat := get_node_or_null("Combat") as SlimeCombatComponent
+	if combat != null:
+		combat.flash_timer = 0.0
+		combat.hitstun_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		combat.knockback_timer = 0.0
+		combat.timer = 0.0
+		combat.frame = 0
+		combat.hit_done = false
+		combat.face_left = false
+		combat.cooldown = attack_cooldown_delay
+		combat.dead = false
+
+
 func _ensure_component(node_name: String, component_type: Variant) -> Node:
 	var component := get_node_or_null(node_name)
 	if component != null:

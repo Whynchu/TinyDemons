@@ -448,26 +448,17 @@ func _ready() -> void:
 		push_warning("No floor tiles found. Actor movement will be disabled.")
 		return
 	for slime in slimes:
-		_slime_brain(slime).start_position = slime.position
-		_slime_brain(slime).target = _nearest_slime_walkable_point(_actor_foot(slime))
-		_slime_brain(slime).repath_timer = rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max)
-		_slime_brain(slime).scoot_start = slime.position
-		_slime_brain(slime).scoot_target = slime.position
-		_slime_brain(slime).scoot_timer = 0.0
-		_slime_brain(slime).hold_timer = rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max)
-		_slime_brain(slime).idle_breath_timer = rng.randf_range(0.0, slime_tuning.idle_breath_time)
-		_slime_combat(slime).flash_timer = 0.0
-		_slime_combat(slime).hitstun_timer = 0.0
-		_slime_combat(slime).knockback_velocity = Vector2.ZERO
-		_slime_combat(slime).knockback_timer = 0.0
-		_slime_combat(slime).timer = 0.0
-		_slime_combat(slime).frame = 0
-		_slime_combat(slime).hit_done = false
-		_slime_combat(slime).face_left = false
+		var actor_owner := slime as SlimeActor
+		if actor_owner != null:
+			actor_owner.reset_runtime_state(
+				slime.position,
+				_nearest_slime_walkable_point(_actor_foot(slime)),
+				rng.randf_range(slime_tuning.repath_min, slime_tuning.repath_max),
+				rng.randf_range(slime_tuning.hold_min, slime_tuning.hold_max),
+				rng.randf_range(0.0, slime_tuning.idle_breath_time),
+				rng.randf_range(0.2, 0.6)
+			)
 		_update_slime_attack_guides(slime)
-		_slime_combat(slime).cooldown = rng.randf_range(0.2, 0.6)
-		_slime_brain(slime).persistent_aggro = false
-		_slime_combat(slime).dead = false
 		_apply_enemy_room_level(slime)
 		var max_health := _enemy_max_health(slime)
 		var slime_actor := slime as SlimeActor

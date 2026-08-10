@@ -610,6 +610,7 @@ update-order regressions.
 - [x] Begin removing duplicate state mirrors with attack-combo and attack-2 cooldown ownership.
   - [x] Remove slime health, brain, combat, animation, visual, and health-presenter registries from the coordinator.
   - [x] Move slime capability construction, health configuration, and component ticking behind `SlimeActor`.
+  - [x] Move slime runtime reset state behind `SlimeActor` while retaining room setup and movement decisions in the coordinator.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
