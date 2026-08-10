@@ -663,7 +663,7 @@ func _show_game_over() -> void:
 	game_over_overlay.modulate.a = 0.0
 	game_over_button.grab_focus()
 func _build_title_screen() -> void:
-	var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_from_title")); title_overlay = controls["overlay"] as ColorRect; title_screen_text = controls["text"] as Sprite2D; title_start_button = controls["button"] as Button; _build_archetype_screen()
+	var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_from_title")); title_overlay = controls["overlay"] as ColorRect; title_screen_text = controls["text"] as Sprite2D; title_start_button = controls["button"] as Button; title_start_text = controls["start_text"] as Sprite2D; _build_archetype_screen()
 func _build_archetype_screen() -> void:
 	var controls := screen_state_controller.build_archetype(ui, Callable(self, "_style_archetype_button"), Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); archetype_overlay = controls["overlay"] as ColorRect; archetype_preview = controls["preview"] as Sprite2D; archetype_name_text = controls["name"] as Sprite2D
 	archetype_left_buttons = controls["left"] as Array[Button]
@@ -707,6 +707,7 @@ func _start_from_title() -> void:
 		return
 	_spawn_title_pixel_breakup(title_screen_text)
 	_spawn_title_pixel_breakup(title_start_text)
+	_spawn_title_button_frame_breakup()
 	title_overlay.visible = true
 	title_overlay.modulate.a = 1.0
 	title_transition_active = true
@@ -876,7 +877,6 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 		title_particle_layer.z_index = 10
 		ui.add_child(title_particle_layer)
 	screen_state_controller.spawn_pixel_breakup(source_sprite, title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
-	_spawn_title_button_frame_breakup()
 func _spawn_title_button_frame_breakup() -> void:
 	screen_state_controller.spawn_button_frame_breakup(title_start_button, title_particle_layer, Callable(self, "_pixel_particle_texture"))
 func _update_title_particles(delta: float) -> void:

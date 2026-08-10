@@ -163,7 +163,7 @@ func build_title(parent: Node, pixel_texture: Callable, start_callback: Callable
 	button.pressed.connect(start_callback)
 	overlay.add_child(button)
 	button.grab_focus()
-	return {"overlay": overlay, "text": title_text, "button": button}
+	return {"overlay": overlay, "text": title_text, "button": button, "start_text": button.get_child(0) as Sprite2D}
 
 
 func build_archetype(parent: Node, style_button: Callable, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:
