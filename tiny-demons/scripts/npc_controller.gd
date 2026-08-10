@@ -44,6 +44,36 @@ func configure_patrol_route(actor: Sprite2D, outline: PackedVector2Array, foot_p
 signal dialogue_requested
 
 
+func update_dialogue_from_root(root: Object, delta: float) -> void:
+	var box := root.get("npc_dialogue_box") as ColorRect
+	if box == null or not box.visible: return
+	if not (root.get("cloaked_demon") as Sprite2D).visible: hide_dialogue(root); return
+	update_dialogue(delta, box, root.get("npc_dialogue_text"), root.get("npc_dialogue_button"), root.get("npc_dialogue_button_shadow"), root.call("_cloaked_demon_head_position"), Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), 0.045, root.get("NPC_DIALOGUE_BUTTON_BOB_TIME"))
+
+
+func show_dialogue(root: Object) -> void:
+	var demon := root.get("cloaked_demon") as Sprite2D
+	if root.get("npc_dialogue_box") == null or not demon.visible: return
+	var message := (root.get("npc_dialogue_messages") as Array)[int(root.get("npc_dialogue_index")) % (root.get("npc_dialogue_messages") as Array).size()] as String; root.set("npc_dialogue_index", int(root.get("npc_dialogue_index")) + 1); begin_dialogue(message)
+	(root.get("npc_dialogue_text") as Sprite2D).texture = root.call("_pixel_text_texture", "", Color.WHITE); (root.get("npc_dialogue_text") as Sprite2D).visible = true; (root.get("npc_dialogue_button") as Sprite2D).visible = false; root.set("npc_dialogue_input_was_down", root.call("_is_interact_input_pressed")); (root.get("npc_dialogue_box") as ColorRect).visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); (root.get("player_attack_visual") as Sprite2D).visible = false; root.set("player_anim_name", "idle"); root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root); (root.get("interact_prompt") as Sprite2D).visible = false
+	update_dialogue_from_root(root, 0.0)
+
+
+func hide_dialogue(root: Object) -> void:
+	end_dialogue()
+	var box := root.get("npc_dialogue_box") as ColorRect; if box != null: box.visible = false
+	var text := root.get("npc_dialogue_text") as Sprite2D; if text != null: text.visible = false
+	var button := root.get("npc_dialogue_button") as Sprite2D; if button != null: button.visible = false
+	var shadow := root.get("npc_dialogue_button_shadow") as Sprite2D; if shadow != null: shadow.visible = false
+	root.set("npc_dialogue_input_was_down", false)
+
+
+func update_dialogue_input(root: Object) -> void:
+	var input_down: bool = root.call("_is_interact_input_pressed")
+	if dialogue_complete and input_down and not bool(root.get("npc_dialogue_input_was_down")): hide_dialogue(root)
+	root.set("npc_dialogue_input_was_down", input_down)
+
+
 func request_dialogue() -> void:
 	dialogue_requested.emit()
 

@@ -14,6 +14,18 @@ var scoot_start := Vector2.ZERO
 var scoot_target := Vector2.ZERO
 var scoot_timer := 0.0
 var persistent_aggro := false
+
+
+static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
+	var slime_foot: Vector2 = root.call("_actor_foot", slime); var player_foot: Vector2 = root.call("_actor_foot", root.get("player")); var approach := slime_foot - player_foot; if approach.length_squared() < 0.01: approach = Vector2.RIGHT
+	var tuning := root.get("slime_tuning") as SlimeTuning; var desired := player_foot + approach.normalized() * (tuning.attack_range * 0.72); var buddy_avoidance := Vector2.ZERO
+	var collision := root.get("actor_collision_system") as ActorCollisionSystem
+	for buddy in root.get("slimes") as Array[Sprite2D]:
+		if buddy == slime or bool(root.call("_is_slime_dead", buddy)): continue
+		var buddy_delta: Vector2 = slime_foot - root.call("_actor_foot", buddy); var buddy_distance: float = buddy_delta.length(); var clear_distance: float = collision.actor_contact_radius(root, slime) + collision.actor_contact_radius(root, buddy) + 4.0
+		if buddy_distance > 0.01 and buddy_distance < clear_distance: buddy_avoidance += buddy_delta.normalized() * (clear_distance - buddy_distance) / clear_distance
+	if buddy_avoidance.length_squared() > 0.001: desired += buddy_avoidance.normalized() * 7.0
+	return root.call("_nearest_slime_walkable_point", desired)
 var start_position := Vector2.ZERO
 var idle_breath_timer := 0.0
 

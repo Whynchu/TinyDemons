@@ -8,6 +8,22 @@ var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
 
 
+func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
+	var tuning := root.get("effects_tuning") as EffectsTuning; spawn_slime_death_particles(root, (root.get("occlusion_renderer") as OcclusionRenderer).actor_default_textures.get(slime) as Texture2D, slime.global_position, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"))
+
+
+func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
+	var tuning := root.get("effects_tuning") as EffectsTuning; var sprite := Sprite2D.new(); sprite.texture = root.call("_pixel_number_texture", "+%d" % amount, Color8(255, 205, 117)); sprite.centered = false; sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; sprite.z_as_relative = false; sprite.z_index = int(root.get("OVERWORLD_UI_Z")) + 2; sprite.position = world_position; root.add_child(sprite); damage_numbers.append({"sprite": sprite, "timer": tuning.damage_number_lifetime})
+
+
+func spawn_chest_evaporation_from_root(root: Object) -> void:
+	var tuning := root.get("effects_tuning") as EffectsTuning; var chest := root.get("chest") as Sprite2D; spawn_chest_evaporation_particles(root, chest.texture, chest.global_position, int(round(root.call("_depth_key", chest) * root.get("DEPTH_Z_SCALE"))) + 1, int(root.get("CHEST_EVAPORATE_PARTICLE_COUNT")), float(root.get("CHEST_EVAPORATE_LIFETIME_MIN")), float(root.get("CHEST_EVAPORATE_LIFETIME_MAX")), root.get("rng"), Callable(root, "_pixel_particle_texture"))
+
+
+func update_pixel_particles_from_root(root: Object, delta: float) -> void:
+	update_pixel_particles(delta, Callable(root, "_snap_half_pixel"), (root.get("effects_tuning") as EffectsTuning).slime_death_particle_lifetime)
+
+
 func begin_player_death(root: Object, depth_scale: float) -> void:
 	if bool(root.get("player_dead")):
 		return

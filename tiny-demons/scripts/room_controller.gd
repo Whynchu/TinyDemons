@@ -105,7 +105,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	root.set("current_target", null)
 	root.set("target_input_was_down", false)
-	root.call("_hide_npc_dialogue")
+	(root.get("npc_controller") as NpcController).hide_dialogue(root)
 	root.call("_set_target_ui_visible", false)
 	root.call("_apply_room_state")
 	root.call("_build_depth_lists")
