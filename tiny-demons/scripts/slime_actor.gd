@@ -104,6 +104,38 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	if health != null and health.is_dead(): root.call("_kill_slime", slime)
 
 
+static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
+	var player := root.get("player") as Sprite2D
+	var direction: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime)
+	var face_left := direction.x < 0.0
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	if combat != null: combat.face_left = face_left; combat.timer = 0.001; combat.begin(); combat.frame = 0; combat.hit_done = false
+	var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
+	if animation != null: animation.set_facing(face_left)
+	root.call("_set_slime_facing", slime, -1.0 if face_left else 1.0)
+	var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+	var frames: Array[Texture2D] = [] if visual == null else visual.attack_left_frames if face_left else visual.attack_right_frames
+	if frames.is_empty(): return
+	root.call("_set_actor_base_texture", slime, frames[0])
+	var brain := slime.get_node_or_null("Brain") as SlimeBrain
+	if brain != null: brain.scoot_timer = 0.0; brain.scoot_start = slime.position; brain.scoot_target = slime.position
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+
+
+static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
+	if bool(root.get("player_is_rolling")): return
+	var player := root.get("player") as Sprite2D; var tuning := root.get("slime_tuning") as SlimeTuning
+	var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / tuning.attack_hit_range, delta.y / tuning.attack_vertical_hit_range)
+	if ellipse.length_squared() > 1.0: return
+	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
+	var health := root.get("player_health_component") as HealthComponent
+	if health != null: health.apply_damage(damage); root.set("player_health", health.current_health)
+	else: root.set("player_health", maxf(float(root.get("player_health")) - damage, 0.0))
+	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
+	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); root.call("_spawn_player_damage_number", damage); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
+	if float(root.get("player_health")) <= 0.0: root.set("player_death_pending", true); root.call("_interrupt_player_attack"); root.set("player_is_rolling", false)
+
+
 func tick_health(delta: float) -> float:
 	var health := get_node_or_null("Health") as HealthComponent
 	if health == null:

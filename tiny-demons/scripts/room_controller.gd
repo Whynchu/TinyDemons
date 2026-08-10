@@ -104,6 +104,27 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.call_deferred("_release_room_transition_lock")
 
 
+func apply_state(root: Object) -> void:
+	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
+	var state := room_states.get(room_id, {}) as Dictionary
+	if is_cleared(room_id): state["finished"] = true
+	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST: root.call("_apply_rest_room_state")
+	elif room_type == DungeonGraph.ROOM_NPC: root.call("_apply_npc_room_state")
+	elif bool(state.get("finished", false)): root.call("_apply_finished_room_state")
+	else:
+		(root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); root.call("_reset_chest_for_room"); root.call("_reset_slimes_for_room")
+
+
+func build_entrance_blocks(root: Object) -> void:
+	var blocks: Array[PackedVector2Array] = []
+	for socket_id in dungeon_sockets.keys():
+		if active_door_sockets.has(socket_id) or active_entrance_sockets.has(socket_id): continue
+		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
+		if socket == null: continue
+		for tile in socket.block_tiles(): blocks.append(root.call("_tile_top_polygon", tile))
+	root.set("entrance_block_polygons", blocks)
+
+
 func mark_cleared(room_id: StringName) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	state["finished"] = true

@@ -13,6 +13,19 @@ var knockback_remaining := 0.0
 var rolling := false
 
 
+func move_player(root: Object, delta: float) -> void:
+	var controller := root.get("player_controller") as PlayerController
+	if controller != null and not controller.can_receive_input(): root.set("player_is_moving", false); return
+	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0: root.set("player_is_moving", false); return
+	var input: Vector2 = root.call("_movement_input"); var moving := input.length_squared() > 0.0; root.set("player_is_moving", moving)
+	if not moving: return
+	var player := root.get("player") as Sprite2D
+	if input.x < 0.0: player.flip_h = true
+	elif input.x > 0.0: player.flip_h = false
+	var tuning := root.get("player_tuning") as PlayerTuning
+	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * delta))
+
+
 func request_motion(motion: Vector2) -> void:
 	if motion.length_squared() > 0.0:
 		motion_requested.emit(motion)

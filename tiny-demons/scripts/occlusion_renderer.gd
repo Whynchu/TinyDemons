@@ -70,6 +70,30 @@ func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]
 			sprite_images[occluder] = cached_texture_image(occluder.texture)
 
 
+func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
+	if texture == null: return
+	if original_actor_textures.get(actor) == texture:
+		actor.texture = texture; return
+	original_actor_textures[actor] = texture
+	var image := cached_texture_image(texture)
+	original_actor_images[actor] = image; sprite_images[actor] = image
+	occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(texture, image), image.get_size())
+	highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(texture, image), image.get_size())
+	white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(texture, image)); actor.texture = texture
+
+
+func white_texture(source: Texture2D) -> Texture2D:
+	if source == null: return null
+	var key := "%s:white_texture" % source.resource_path
+	if white_image_cache.has(key): return white_image_cache[key]
+	var image := cached_texture_image(source).duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			if color.a > 0.0: image.set_pixel(x, y, Color(1, 1, 1, color.a))
+	var texture := ImageTexture.create_from_image(image); white_image_cache[key] = texture; return texture
+
+
 func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float, apply_actor_scale: Callable, _grace_duration: float) -> void:
 	var grace := maxf(float(actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
 	actor_occlusion_grace[actor] = grace

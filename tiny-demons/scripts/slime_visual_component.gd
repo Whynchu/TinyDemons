@@ -41,6 +41,17 @@ static func build_attack_frames(slimes: Array[Sprite2D], frame_library: SpriteFr
 			warm_texture.call(texture)
 
 
+static func set_facing(root: Object, slime: Sprite2D, direction_x: float) -> void:
+	if absf(direction_x) < 0.1: return
+	var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+	var texture: Texture2D = visual.left_texture if direction_x < 0.0 and visual != null else visual.right_texture if visual != null else null
+	if direction_x < 0.0: slime.flip_h = false
+	elif texture == null and visual != null and visual.left_texture != null: texture = visual.left_texture; slime.flip_h = true
+	else: slime.flip_h = false
+	if texture == null: texture = (root.get("occlusion_renderer") as OcclusionRenderer).actor_default_textures.get(slime)
+	root.call("_set_actor_base_texture", slime, texture); root.call("_update_slime_attack_guides", slime)
+
+
 func squish_scale(progress: float, movement: Vector2) -> Vector2:
 	var pulse := sin(clampf(progress, 0.0, 1.0) * PI)
 	var stretch_x := 1.0 + pulse * 0.18

@@ -8,6 +8,19 @@ var frame := 0
 var timer := 0.0
 
 
+func apply_palette_async(root: Object, palette_name: String) -> void:
+	root.set("player_idle_frames", root.call("_recolor_player_frames", root.get("player_base_idle_frames"), palette_name)); await root.get_tree().process_frame
+	root.set("player_walk_frames", root.call("_recolor_player_frames", root.get("player_base_walk_frames"), palette_name)); await root.get_tree().process_frame
+	root.set("player_roll_frames", root.call("_recolor_player_frames", root.get("player_base_roll_frames"), palette_name)); await root.get_tree().process_frame
+	root.set("player_attack_frames", root.call("_recolor_player_frames", root.get("player_base_attack_frames"), palette_name)); root.set("player_attack2_frames", root.call("_recolor_player_frames", root.get("player_base_attack2_frames"), palette_name)); await root.get_tree().process_frame
+	root.set("player_attack_left_frames", root.call("_recolor_player_frames", root.get("player_base_attack_left_frames"), palette_name)); root.set("player_attack2_left_frames", root.call("_recolor_player_frames", root.get("player_base_attack2_left_frames"), palette_name)); root.set("player_between_attack_texture", root.call("_recolor_player_texture", root.get("player_base_between_attack_texture"), palette_name)); root.set("player_after_attack2_texture", root.call("_recolor_player_texture", root.get("player_base_after_attack2_texture"), palette_name)); await root.get_tree().process_frame
+	var health_texture := root.get("player_base_health_fill_texture") as Texture2D
+	if health_texture != null:
+		var fill := root.get("player_health_fill") as Sprite2D; fill.texture = root.call("_recolor_player_texture", health_texture, palette_name); var damage_fill := root.get("player_health_damage_fill") as Sprite2D
+		if damage_fill != null: damage_fill.texture = (root.get("hud_controller") as HudController).brighter_bar_texture(fill.texture)
+	root.call("_warm_player_frame_caches")
+
+
 func play(new_name: StringName, restart := true) -> void:
 	if animation_name != new_name:
 		animation_name = new_name

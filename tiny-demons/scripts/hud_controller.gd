@@ -143,6 +143,17 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z)
 
 
+func update_room_number(root: Object) -> void:
+	var indicator := root.get("room_number_indicator") as Sprite2D
+	if indicator == null: return
+	var room_label := "D%d" % int(root.get("current_room_display_number")); var room_type: StringName = root.get("current_room_type")
+	if room_type == DungeonGraph.ROOM_START: room_label = "START"
+	elif room_type == DungeonGraph.ROOM_REST: room_label = "REST"
+	elif room_type == DungeonGraph.ROOM_TRADER: room_label = "TRADER"
+	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
+	indicator.texture = root.call("_pixel_number_texture", room_label, Color8(244, 244, 244))
+
+
 func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta: float) -> float:
 	if indicator == null or frames.is_empty():
 		return 0.0
