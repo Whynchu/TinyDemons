@@ -70,6 +70,8 @@ func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_tex
 	if button == null:
 		return
 	var origin := button.position
+	if particle_parent is Node2D:
+		origin = (particle_parent as Node2D).to_local(button.global_position)
 	var width := int(button.size.x)
 	var height := int(button.size.y)
 	for x in range(width):
