@@ -6,9 +6,11 @@ signal animation_changed(name: StringName)
 var animation_name: StringName = &"idle"
 var frame := 0
 var timer := 0.0
+var coordinator_root: Object = null
 
 
 func build_frames(root: Object) -> void:
+	coordinator_root = root
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary; var size := Vector2i(36, 36)
 	root.set("player_idle_frames", library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size)); root.set("player_walk_frames", library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size)); root.set("player_roll_frames", library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size))
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
@@ -25,9 +27,9 @@ func apply_palette(root: Object, palette_name: String) -> void:
 	root.set("player_between_attack_texture", recolor_texture(root.get("player_base_between_attack_texture"), palette_name)); root.set("player_after_attack2_texture", recolor_texture(root.get("player_base_after_attack2_texture"), palette_name)); warm_player_caches(root)
 
 
-func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]: return (get_parent().get("sprite_frame_library") as SpriteFrameLibrary).recolor_frames(frames, palette_name)
-func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D: return (get_parent().get("sprite_frame_library") as SpriteFrameLibrary).recolor_texture(source, palette_name)
-func warm_texture_cache(texture: Texture2D) -> void: var renderer := get_parent().get("occlusion_renderer") as OcclusionRenderer; var image := renderer.cached_texture_image(texture); renderer.cached_effect_image(texture, image); renderer.cached_highlighted_image(texture, image); renderer.cached_white_image(texture, image)
+func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]: return (coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary).recolor_frames(frames, palette_name)
+func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D: return (coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary).recolor_texture(source, palette_name)
+func warm_texture_cache(texture: Texture2D) -> void: var renderer := coordinator_root.get("occlusion_renderer") as OcclusionRenderer; var image := renderer.cached_texture_image(texture); renderer.cached_effect_image(texture, image); renderer.cached_highlighted_image(texture, image); renderer.cached_white_image(texture, image)
 func warm_player_caches(root: Object) -> void:
 	for key in ["player_idle_frames", "player_walk_frames", "player_roll_frames", "roll_dust_frames", "roll_dust_flipped_frames", "player_attack_frames", "player_attack2_frames", "player_attack2_left_frames", "player_attack_left_frames"]:
 		for texture in root.get(key) as Array[Texture2D]: warm_texture_cache(texture)
