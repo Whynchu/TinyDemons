@@ -689,52 +689,10 @@ func _spawn_player_death_pixels() -> void:
 		})
 
 func _build_game_over_ui() -> void:
-	game_over_overlay = screen_state_controller.create_overlay(ui, "GameOverOverlay", Vector2(240, 160), Color(0, 0, 0, 0.62), 0, false)
-	game_over_overlay.modulate.a = 0.0
-	var title_texture := _pixel_text_texture("GAME OVER", Color.WHITE)
-	var title := screen_state_controller.create_sprite(game_over_overlay, "GameOverTitle", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))
-	game_over_button = Button.new()
-	game_over_button.position = Vector2(99, 105)
-	game_over_button.size = Vector2(42, 12)
-	game_over_button.text = ""
-	game_over_button.focus_mode = Control.FOCUS_ALL
-	game_over_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var normal_style := StyleBoxFlat.new()
-	normal_style.bg_color = Color(0, 0, 0, 0)
-	normal_style.border_color = Color(0.72, 0.72, 0.72, 0.9)
-	normal_style.set_border_width_all(1)
-	var focus_style := StyleBoxFlat.new()
-	focus_style.bg_color = Color(1, 1, 1, 0.12)
-	focus_style.border_color = Color.WHITE
-	focus_style.set_border_width_all(1)
-	game_over_button.add_theme_stylebox_override("normal", normal_style)
-	game_over_button.add_theme_stylebox_override("hover", focus_style)
-	game_over_button.add_theme_stylebox_override("focus", focus_style)
-	var restart_text := Sprite2D.new()
-	restart_text.texture = _pixel_text_texture("RESTART", Color.WHITE)
-	restart_text.centered = true
-	restart_text.position = game_over_button.size * 0.5
-	restart_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	game_over_button.add_child(restart_text)
-	game_over_button.pressed.connect(_restart_game)
-	game_over_overlay.add_child(game_over_button)
-	game_over_title_button = Button.new()
-	game_over_title_button.position = Vector2(99, 121)
-	game_over_title_button.size = Vector2(42, 12)
-	game_over_title_button.text = ""
-	game_over_title_button.focus_mode = Control.FOCUS_ALL
-	game_over_title_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	game_over_title_button.add_theme_stylebox_override("normal", normal_style)
-	game_over_title_button.add_theme_stylebox_override("hover", focus_style)
-	game_over_title_button.add_theme_stylebox_override("focus", focus_style)
-	var title_button_text := Sprite2D.new()
-	title_button_text.texture = _pixel_text_texture("TITLE", Color.WHITE)
-	title_button_text.centered = true
-	title_button_text.position = game_over_title_button.size * 0.5
-	title_button_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	game_over_title_button.add_child(title_button_text)
-	game_over_title_button.pressed.connect(_return_to_title)
-	game_over_overlay.add_child(game_over_title_button)
+	var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_restart_game"), Callable(self, "_return_to_title"))
+	game_over_overlay = controls["overlay"] as ColorRect
+	game_over_button = controls["restart"] as Button
+	game_over_title_button = controls["title"] as Button
 
 func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible:

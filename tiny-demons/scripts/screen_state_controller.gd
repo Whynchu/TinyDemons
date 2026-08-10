@@ -135,6 +135,46 @@ func make_retro_button(label: String, button_position: Vector2, size: Vector2, p
 	return button
 
 
+func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, return_title: Callable) -> Dictionary:
+	var overlay := create_overlay(parent, "GameOverOverlay", Vector2(240, 160), Color(0, 0, 0, 0.62), 0, false)
+	overlay.modulate.a = 0.0
+	var title_texture := pixel_texture.call("GAME OVER", Color.WHITE) as Texture2D
+	create_sprite(overlay, "GameOverTitle", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = Color(0, 0, 0, 0)
+	normal_style.border_color = Color(0.72, 0.72, 0.72, 0.9)
+	normal_style.set_border_width_all(1)
+	var focus_style := StyleBoxFlat.new()
+	focus_style.bg_color = Color(1, 1, 1, 0.12)
+	focus_style.border_color = Color.WHITE
+	focus_style.set_border_width_all(1)
+	var restart_button := _make_text_button("RESTART", Vector2(99, 105), normal_style, focus_style, pixel_texture, restart)
+	var title_button := _make_text_button("TITLE", Vector2(99, 121), normal_style, focus_style, pixel_texture, return_title)
+	overlay.add_child(restart_button)
+	overlay.add_child(title_button)
+	return {"overlay": overlay, "restart": restart_button, "title": title_button}
+
+
+func _make_text_button(label: String, button_position: Vector2, normal_style: StyleBoxFlat, focus_style: StyleBoxFlat, pixel_texture: Callable, pressed_callback: Callable) -> Button:
+	var button := Button.new()
+	button.position = button_position
+	button.size = Vector2(42, 12)
+	button.text = ""
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("hover", focus_style)
+	button.add_theme_stylebox_override("focus", focus_style)
+	var text := Sprite2D.new()
+	text.texture = pixel_texture.call(label, Color.WHITE) as Texture2D
+	text.centered = true
+	text.position = button.size * 0.5
+	text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	button.add_child(text)
+	button.pressed.connect(pressed_callback)
+	return button
+
+
 func create_overlay(parent: Node, overlay_name: String, size: Vector2, color: Color, z_index: int, visible: bool = true) -> ColorRect:
 	var overlay := ColorRect.new()
 	overlay.name = overlay_name
