@@ -195,8 +195,8 @@ func _on_player_health_damaged(_amount: float) -> void: player_damage_fill_hold_
 func _on_player_health_changed(current: float, _maximum: float) -> void: player_health = current; if is_instance_valid(player_health_fill): _update_player_health_ui()
 func _on_player_health_healed(_amount: float) -> void: player_display_health = minf(player_display_health, player_health_component.current_health if player_health_component != null else player_health)
 func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void: _slime_health_presenter(slime).damage_fill_hold_timer = slime_tuning.health_damage_hang_time
-func _on_slime_health_changed(current: float, _maximum: float, slime: Sprite2D) -> void:
-	_slime_health_presenter(slime).display_health = minf(_slime_health_presenter(slime).display_health, current); if slime == current_target and is_instance_valid(target_health_fill): _update_target_ui()
+func _on_slime_health_changed(_current: float, _maximum: float, slime: Sprite2D) -> void:
+	if slime == current_target and is_instance_valid(target_health_fill): _update_target_ui()
 func _on_slime_health_healed(_amount: float, slime: Sprite2D) -> void:
 	var health_component := _slime_health(slime); if health_component != null: _slime_health_presenter(slime).display_health = minf(_slime_health_presenter(slime).display_health, health_component.current_health)
 func _update_player_health_regen(delta: float) -> void:
