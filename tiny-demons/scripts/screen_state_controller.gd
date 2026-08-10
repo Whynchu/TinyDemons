@@ -206,6 +206,13 @@ func build_archetype(parent: Node, style_button: Callable, shift_type: Callable,
 	return {"overlay": overlay, "preview": preview, "name": name_text, "left": left_buttons, "right": right_buttons, "type_left": left_type, "type_right": right_type, "start": start_button, "cover": hold_cover}
 
 
+func build_loading(parent: Node, pixel_texture: Callable) -> Dictionary:
+	var overlay := create_overlay(parent, "LoadingScreen", Vector2(240, 160), Color.BLACK, 4090, false)
+	var text := create_sprite(overlay, "LoadingText", pixel_texture.call("LOADING", Color.WHITE) as Texture2D, Vector2.ZERO, false, Vector2.ONE, 4091)
+	text.position = Vector2(240, 160) - text.texture.get_size() - Vector2(4, 4)
+	return {"overlay": overlay, "text": text}
+
+
 func _make_text_button(label: String, button_position: Vector2, normal_style: StyleBoxFlat, focus_style: StyleBoxFlat, pixel_texture: Callable, pressed_callback: Callable) -> Button:
 	var button := Button.new()
 	button.position = button_position

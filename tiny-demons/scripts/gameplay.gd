@@ -652,41 +652,17 @@ func _update_player_death(delta: float) -> void:
 		_show_game_over()
 
 func _spawn_player_death_pixels() -> void:
-	var texture := player_death_texture
-	if texture == null:
-		return
-	var image := texture.get_image()
-	if image == null:
-		return
-	var noise := FastNoiseLite.new()
-	noise.seed = rng.randi()
-	noise.frequency = 0.32
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	var candidates: Array[Vector2i] = []
-	for y in image.get_height():
-		for x in image.get_width():
-			if image.get_pixel(x, y).a > 0.0 and noise.get_noise_2d(float(x), float(y)) > -0.22:
-				candidates.append(Vector2i(x, y))
-	candidates.shuffle()
-	for source_pixel in candidates:
-		var particle := Sprite2D.new()
-		particle.texture = _pixel_particle_texture(Color.WHITE)
-		particle.centered = false
-		particle.scale = player_death_scale
-		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		particle.z_as_relative = false
-		particle.z_index = int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2
-		particle.position = player_death_origin + player_death_offset + Vector2(source_pixel) * player_death_scale
-		add_child(particle)
-		var lifetime := rng.randf_range(1.2, player_tuning.death_particle_lifetime)
-		effects_spawner.pixel_particles.append({
-			"sprite": particle,
-			# Fizzle particles rise from their source pixel without horizontal drift.
-			"velocity": Vector2(0.0, rng.randf_range(-18.0, -7.0)),
-			"timer": lifetime,
-			"lifetime": lifetime,
-			"gravity": 0.0,
-		})
+	effects_spawner.spawn_player_death_particles(
+		self,
+		player_death_texture,
+		player_death_origin,
+		player_death_offset,
+		player_death_scale,
+		int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2,
+		player_tuning.death_particle_lifetime,
+		rng.randi(),
+		Callable(self, "_pixel_particle_texture")
+	)
 
 func _build_game_over_ui() -> void:
 	var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_restart_game"), Callable(self, "_return_to_title"))
@@ -941,9 +917,9 @@ func _start_selected_archetype() -> void:
 	loading_screen_timer = 0.0
 
 func _build_loading_screen() -> void:
-	loading_screen_overlay = screen_state_controller.create_overlay(ui, "LoadingScreen", Vector2(240, 160), Color.BLACK, 4090, false)
-	loading_screen_text = screen_state_controller.create_sprite(loading_screen_overlay, "LoadingText", _pixel_text_texture("LOADING", Color.WHITE), Vector2.ZERO, false, Vector2.ONE, 4091)
-	loading_screen_text.position = Vector2(240, 160) - loading_screen_text.texture.get_size() - Vector2(4, 4)
+	var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture"))
+	loading_screen_overlay = controls["overlay"] as ColorRect
+	loading_screen_text = controls["text"] as Sprite2D
 
 func _update_loading_screen(delta: float) -> void:
 	if loading_screen_fading:

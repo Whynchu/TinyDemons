@@ -59,6 +59,36 @@ func name_texture(text: String, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable) -> void:
+	if texture == null:
+		return
+	var image := texture.get_image()
+	if image == null:
+		return
+	var noise := FastNoiseLite.new()
+	noise.seed = random_seed
+	noise.frequency = 0.32
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	var candidates: Array[Vector2i] = []
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > 0.0 and noise.get_noise_2d(float(x), float(y)) > -0.22:
+				candidates.append(Vector2i(x, y))
+	candidates.shuffle()
+	for source_pixel in candidates:
+		var particle := Sprite2D.new()
+		particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
+		particle.centered = false
+		particle.scale = scale
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = z_index
+		particle.position = origin + offset + Vector2(source_pixel) * scale
+		parent.add_child(particle)
+		var lifetime := randf_range(1.2, lifetime_max)
+		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+
+
 func _rgb_key(color: Color) -> String:
 	return "%02x%02x%02x%02x" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0), roundi(color.a * 255.0)]
 
