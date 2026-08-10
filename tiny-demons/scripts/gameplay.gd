@@ -181,18 +181,15 @@ func _start_slime_attack(slime: Sprite2D) -> void: SlimeActor.start_attack_actor
 func _slime_attack_frames(slime: Sprite2D) -> Array[Texture2D]:
 	var visual := _slime_visual(slime); return [] if visual == null else visual.attack_left_frames if _slime_combat(slime).face_left else visual.attack_right_frames
 func _restore_slime_idle_texture(slime: Sprite2D) -> void: _set_slime_facing(slime, -1.0 if _slime_combat(slime).face_left else 1.0)
-func _can_slime_attack_player(slime: Sprite2D) -> bool:
-	return not player_dead and _actor_foot(player).distance_to(_actor_foot(slime)) <= slime_tuning.attack_range
+func _can_slime_attack_player(slime: Sprite2D) -> bool: return not player_dead and _actor_foot(player).distance_to(_actor_foot(slime)) <= slime_tuning.attack_range
 func _is_slime_aggroed(slime: Sprite2D) -> bool:
 	return not _is_slime_dead(slime) and not player_dead and (_slime_brain(slime).persistent_aggro or _actor_foot(slime).distance_to(_actor_foot(player)) <= slime_tuning.aggro_range)
 func _is_any_slime_aggroed() -> bool:
 	for slime in slimes: if _is_slime_aggroed(slime): return true
 	return false
-func _aggro_slime_target(slime: Sprite2D) -> Vector2:
-	return SlimeBrain.aggro_target(self, slime)
+func _aggro_slime_target(slime: Sprite2D) -> Vector2: return SlimeBrain.aggro_target(self, slime)
 func _apply_slime_attack_hit(slime: Sprite2D) -> void: SlimeActor.apply_attack_hit(self, slime)
-func _slime_attack_damage(slime: Sprite2D) -> float:
-	return _combat_damage(_slime_stats(slime), player_stats)
+func _slime_attack_damage(slime: Sprite2D) -> float: return _combat_damage(_slime_stats(slime), player_stats)
 func _mark_player_in_combat() -> void: if player_health_component != null: player_health_component.regen_delay_timer = player_tuning.regen_delay; player_health_component.regen_accumulator = 0.0
 func _on_player_health_damaged(_amount: float) -> void: player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 func _on_player_health_changed(current: float, _maximum: float) -> void: player_health = current; if is_instance_valid(player_health_fill): _update_player_health_ui()
@@ -281,7 +278,10 @@ func _build_cloaked_demon_frames() -> void: var frames := npc_controller.build_c
 func _cloaked_demon_head_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.position.y)
 func _cloaked_demon_visual_center() -> Vector2: return _cloaked_demon_texture_origin() + cloaked_demon_visual_bounds.get_center()
 func _cloaked_demon_foot_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.end.y - 1.0)
-func _configure_cloaked_demon_patrol_route() -> void: var route := npc_controller.configure_patrol_route(cloaked_demon, walkable_outline, Callable(self, "_cloaked_demon_foot_position"), Callable(self, "_is_walkable")); if route.is_empty(): return; cloaked_demon_patrol_min_x = route["min_x"]; cloaked_demon_patrol_max_x = route["max_x"]; cloaked_demon_wander_origin = route["origin"]; cloaked_demon_patrol_position_x = route["position_x"]; cloaked_demon_wander_target = route["target"]; cloaked_demon_wander_has_target = route["has_target"]
+func _configure_cloaked_demon_patrol_route() -> void:
+	var route := npc_controller.configure_patrol_route(cloaked_demon, walkable_outline, Callable(self, "_cloaked_demon_foot_position"), Callable(self, "_is_walkable"))
+	if route.is_empty(): return
+	cloaked_demon_patrol_min_x = route["min_x"]; cloaked_demon_patrol_max_x = route["max_x"]; cloaked_demon_wander_origin = route["origin"]; cloaked_demon_patrol_position_x = route["position_x"]; cloaked_demon_wander_target = route["target"]; cloaked_demon_wander_has_target = route["has_target"]
 func _random_npc_walkable_point_near(point: Vector2, radius: float) -> Vector2:
 	var candidates: Array[Vector2] = []
 	for index in 32: var angle := rng.randf_range(0.0, TAU); var distance := rng.randf_range(3.0, radius); var candidate := point + _perspective_movement(Vector2(cos(angle), sin(angle)) * distance); if _is_walkable(candidate): candidates.append(candidate)
