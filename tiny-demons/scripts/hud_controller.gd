@@ -137,6 +137,12 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int]) -> void:
 		buttons[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
 
 
+func update_overworld(root: Object, delta: float, ui_z: int) -> void:
+	update_button_hud(root.get("button_hud_sprites"), root.call("_controller_devices"))
+	var timer := fmod(float(root.get("gold_animation_timer")) + delta, 0.48); root.set("gold_animation_timer", timer); update_gold_indicator(root.get("gold_indicator"), root.get("gold_animation_frames"), timer)
+	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z)
+
+
 func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta: float) -> float:
 	if indicator == null or frames.is_empty():
 		return 0.0

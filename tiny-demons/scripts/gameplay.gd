@@ -525,60 +525,9 @@ func _physics_process(delta: float) -> void:
 	_update_cloaked_demon_shadow()
 	_update_overworld_ui()
 func _start_player_death() -> void:
-	if player_dead:
-		return
-	player_dead = true
-	player_death_pending = false
-	player_death_timer = 0.0
-	player_death_particles_started = false
-	player_is_attacking = false
-	player_is_rolling = false
-	_clear_roll_dust()
-	player_attack_visual.visible = false
-	player_death_origin = player.global_position
-	player_death_offset = player.offset
-	player_death_scale = player.scale
-	player_death_texture = player.texture
-	player.visible = false
-	player_shadow.visible = false
-	if player_sprite_shadow != null:
-		player_sprite_shadow.visible = false
-	player_death_overlay = Sprite2D.new()
-	player_death_overlay.name = "PlayerDeathWhite"
-	player_death_overlay.texture = _white_texture(player_death_texture)
-	player_death_overlay.centered = player.centered
-	player_death_overlay.offset = player_death_offset
-	player_death_overlay.scale = player_death_scale
-	player_death_overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	player_death_overlay.z_as_relative = false
-	player_death_overlay.z_index = int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2
-	player_death_overlay.global_position = player_death_origin
-	player_death_overlay.modulate = Color(1, 1, 1, 0)
-	add_child(player_death_overlay)
+	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 func _update_player_death(delta: float) -> void:
-	player_death_timer += delta
-	if player_death_overlay != null:
-		if player_death_timer < player_tuning.death_particle_delay:
-			player_death_overlay.modulate.a = clampf(player_death_timer / player_tuning.death_fade_time, 0.0, 1.0)
-		elif not player_death_particles_started:
-			player_death_particles_started = true
-			_spawn_player_death_pixels()
-			player_death_overlay.queue_free()
-			player_death_overlay = null
-	if not player_death_particles_started:
-		return
-	var death_effect_end := player_tuning.death_particle_delay + player_tuning.death_particle_lifetime
-	if game_over_overlay != null and game_over_overlay.visible:
-		game_over_fade_timer += delta
-		game_over_overlay.modulate.a = clampf(game_over_fade_timer / GAME_OVER_FADE_TIME, 0.0, 1.0)
-		if game_over_button != null:
-			game_over_button.modulate.a = _retro_button_alpha(game_over_fade_timer)
-			game_over_button.position.y = 105.0 + _retro_button_bob(game_over_fade_timer)
-		if game_over_title_button != null:
-			game_over_title_button.modulate.a = _retro_button_alpha(game_over_fade_timer + 0.6)
-			game_over_title_button.position.y = 121.0 + _retro_button_bob(game_over_fade_timer + 0.4)
-	elif player_death_timer >= death_effect_end + player_tuning.death_observe_time:
-		_show_game_over()
+	screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
 func _spawn_player_death_pixels() -> void:
 	effects_spawner.spawn_player_death_particles(
 		self,
@@ -620,29 +569,7 @@ func _retro_button_alpha(timer: float) -> float:
 func _retro_button_bob(timer: float) -> float:
 	return snappedf(sin(timer / 3.6 * TAU) * 1.5, 0.5)
 func _start_from_title() -> void:
-	if title_overlay == null or not title_overlay.visible:
-		return
-	_spawn_title_pixel_breakup(title_screen_text)
-	_spawn_title_pixel_breakup(title_start_text)
-	_spawn_title_button_frame_breakup()
-	title_overlay.visible = true
-	title_overlay.modulate.a = 1.0
-	title_transition_active = true
-	title_transition_timer = 0.0
-	if title_screen_text != null:
-		title_screen_text.visible = false
-	if title_start_text != null:
-		title_start_text.visible = false
-	if title_start_button != null:
-		title_start_button.visible = false
-	title_start_button.release_focus()
-	archetype_overlay.visible = true
-	screen_state_controller.set_state(&"archetype")
-	archetype_overlay.modulate.a = 1.0
-	archetype_hold_cover.visible = true
-	archetype_transition_active = true
-	archetype_transition_timer = -1.0
-	archetype_fade_out = false
+	screen_state_controller.start_from_title(self)
 func _update_archetype_input(delta: float) -> void:
 	screen_state_controller.update_archetype_input(self, delta)
 func _shift_archetype(direction: int) -> void:
@@ -690,34 +617,7 @@ func _set_archetype_button_state(button: Button, active: bool, color: Color) -> 
 	var focus := StyleBoxFlat.new(); focus.bg_color = Color(color, 0.18 if active else 0.0); focus.border_color = color if active else Color.WHITE; focus.set_border_width_all(1 if active else 0)
 	button.add_theme_color_override("font_color", color if active else Color.WHITE); button.add_theme_color_override("font_hover_color", color if active else Color.WHITE); button.add_theme_color_override("font_focus_color", color if active else Color.WHITE); button.add_theme_stylebox_override("normal", normal); button.add_theme_stylebox_override("hover", focus); button.add_theme_stylebox_override("focus", focus)
 func _start_selected_archetype() -> void:
-	if archetype_overlay == null or not archetype_overlay.visible or loading_screen_active:
-		return
-	player_stats.allocation_profile = selected_archetype
-	player_palette_name = ["blue", "orange", "green", "red", "yellow", "grey"][archetype_color_index]
-	loading_screen_active = true
-	screen_state_controller.set_state(&"loading")
-	loading_screen_fading = false
-	loading_screen_timer = 0.0
-	loading_screen_overlay.visible = true
-	loading_screen_overlay.modulate.a = 1.0
-	archetype_overlay.visible = false
-	archetype_hold_cover.visible = false
-	if title_overlay != null:
-		title_overlay.visible = false
-	await get_tree().process_frame
-	await _apply_player_palette_async(player_palette_name)
-	_update_player_aggro_marker_colors()
-	player_health = _player_max_health()
-	if player_health_component != null:
-		player_health_component.maximum_health = player_health
-		player_health_component.reset(player_health)
-	player_display_health = player_health
-	player_damage_fill_hold_timer = 0.0
-	_update_player_health_ui()
-	player.visible = true
-	_apply_player_animation_frame()
-	loading_screen_fading = true
-	loading_screen_timer = 0.0
+	screen_state_controller.start_selected_archetype(self)
 func _build_loading_screen() -> void:
 	var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
 func _update_loading_screen(delta: float) -> void:
@@ -852,29 +752,7 @@ func _update_roll_dust(delta: float) -> void:
 func _clear_roll_dust() -> void:
 	effects_spawner.clear_roll_dust()
 func _start_player_attack(variant: int = 1) -> void:
-	if variant == 1 and player_attack_frames.is_empty():
-		return
-	if variant == 2 and player_attack2_frames.is_empty():
-		return
-	player_is_attacking = true
-	if player_attack_component != null:
-		player_attack_component.begin(variant)
-	player_just_finished_attack2 = false
-	player_attack_hit_done = false
-	player_attack_hit_targets.clear()
-	player_attack_flip_h = player.flip_h
-	if player_attack_component != null:
-		var lunge_velocity := _perspective_movement(_player_facing_vector() * (player_tuning.attack_lunge_distance / player_tuning.attack_lunge_duration))
-		player_attack_component.start_lunge(lunge_velocity, player_tuning.attack_lunge_duration)
-	player_anim_name = "attack2" if variant == 2 else "attack1"
-	if variant == 2:
-		player_between_timer = 0.0
-	player_anim_frame = 0
-	player_anim_timer = 0.0
-	_restore_actor_base_visual_scale(player)
-	player.visible = false
-	player_attack_visual.visible = true
-	_apply_player_animation_frame()
+	if player_attack_component != null: player_attack_component.start_player_attack(self, variant)
 func _interrupt_player_attack() -> void:
 	player_is_attacking = false
 	if player_attack_component != null:
@@ -925,70 +803,20 @@ func _apply_player_animation_frame() -> void:
 func _update_player_attack_visual() -> void:
 	player_animation_component.update_attack_visual(player, player_attack_visual, player_is_attacking, PLAYER_TEXTURE_OFFSET, player.z_index)
 func _apply_player_attack_hitbox() -> void:
-	var hitbox := _player_attack_hitbox()
-	var hit_targets: Array[Sprite2D] = []
-	for slime in slimes:
-		if _is_slime_dead(slime):
-			continue
-		if player_attack_hit_targets.has(slime) or (player_attack_component != null and player_attack_component.hit_targets.has(slime)):
-			continue
-		if not hitbox.intersects(_collision_rect(slime), false):
-			continue
-		hit_targets.append(slime)
-	var target_count := hit_targets.size()
-	if target_count == 0:
-		return
-	for slime in hit_targets:
-		player_attack_hit_targets.append(slime)
-		if player_attack_component != null:
-			player_attack_component.register_hit(slime)
-		var damage := _player_attack_damage_against(slime)
-		var was_critical := last_damage_was_critical
-		var divided_damage := floorf(damage / float(target_count))
-		_damage_slime(slime, maxf(divided_damage, 1.0), was_critical)
-		_knockback_slime(slime)
+	if player_attack_component != null: player_attack_component.apply_hitbox(self)
 func _player_attack_hitbox() -> Rect2:
 	var guide_name := "SwordHitboxLeft" if player_attack_flip_h else "SwordHitboxRight"
 	var guide_rect := _collision_guide_rect_by_name(player, guide_name)
-	if guide_rect.has_area():
-		return guide_rect
-	var offset := player_tuning.attack_hitbox_left_offset if player_attack_flip_h else player_tuning.attack_hitbox_right_offset
-	return Rect2(player.global_position + offset, player_tuning.attack_hitbox_size)
+	if guide_rect.has_area(): return guide_rect
+	var offset := player_tuning.attack_hitbox_left_offset if player_attack_flip_h else player_tuning.attack_hitbox_right_offset; return Rect2(player.global_position + offset, player_tuning.attack_hitbox_size)
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
-	if _is_slime_dead(slime):
-		return
-	_mark_player_in_combat()
-	var health_component := _slime_health(slime)
-	var previous_health := health_component.current_health if health_component != null else _enemy_max_health(slime)
-	_slime_brain(slime).persistent_aggro = true
-	if health_component != null:
-		health_component.apply_damage(amount)
-	else:
-		previous_health = maxf(previous_health - amount, 0.0)
-	_slime_health_presenter(slime).display_health = maxf(_slime_health_presenter(slime).display_health, previous_health)
-	if health_component != null:
-		health_component.regen_delay_timer = slime_tuning.regen_delay
-		health_component.regen_accumulator = 0.0
-	_slime_combat(slime).flash_timer = slime_tuning.hit_flash_time
-	_slime_combat(slime).hitstun_timer = slime_tuning.hitstun_time
-	_spawn_damage_number(slime, amount, was_critical)
-	hitstop_timer = player_tuning.hitstop_duration
-	if health_component != null and health_component.is_dead():
-		_kill_slime(slime)
+	SlimeActor.damage_actor(self, slime, amount, was_critical)
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	return _combat_damage(player_stats, _slime_stats(slime))
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
 	var attacker_equipment_damage := player_equipment.damage_bonus if attacker_stats == player_stats and player_equipment != null else 0.0
 	var defender_equipment_defense := player_equipment.defense_bonus if defender_stats == player_stats and player_equipment != null else 0.0
-	var result := CombatCalculator.calculate_damage(
-		attacker_stats,
-		defender_stats,
-		attacker_equipment_damage,
-		defender_equipment_defense,
-		attacker_stats == player_stats,
-		rng,
-		combat_tuning
-	)
+	var result := CombatCalculator.calculate_damage(attacker_stats, defender_stats, attacker_equipment_damage, defender_equipment_defense, attacker_stats == player_stats, rng, combat_tuning)
 	last_damage_was_critical = result.critical
 	return result.amount
 func _max_health_for_stats(stats: StatsComponent) -> float:
@@ -1079,22 +907,7 @@ func _update_chest_unlock_fade(delta: float) -> void:
 	if chest_controller.update_unlock_fade(delta, chest, chest_unlock_overlay, chest_normal_texture, CHEST_UNLOCK_FADE_TIME):
 		occlusion_renderer.sprite_images[chest] = occlusion_renderer.cached_texture_image(chest_normal_texture); chest_unlock_overlay.queue_free(); chest_unlock_overlay = null
 func _update_chest_interaction() -> void:
-	var interact_input_down := _is_interact_input_pressed()
-	if interact_input_down and not interact_input_was_down:
-		if chest_unlocked and not chest_claimed and _can_interact_with_chest():
-			chest_claimed = true
-			var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
-			state["finished"] = true
-			room_controller.room_states[current_room_id] = state
-			chest_collect_flash_timer = CHEST_COLLECT_FLASH_TIME
-			_start_chest_flash()
-			gold += CHEST_REWARD_GOLD
-			_update_gold_indicator()
-			_spawn_gold_number(chest.global_position + Vector2(5, -8), CHEST_REWARD_GOLD)
-			print("Gold: %d" % gold)
-		elif _can_interact_with_npc():
-			_show_npc_dialogue()
-	interact_input_was_down = interact_input_down
+	chest_controller.update_interaction(self, _is_interact_input_pressed(), interact_input_was_down, CHEST_REWARD_GOLD, CHEST_COLLECT_FLASH_TIME)
 func _update_chest_visuals(delta: float) -> void:
 	_update_interact_prompt(delta); _update_chest_unlock_fade(delta)
 	if chest_collect_flash_timer > 0.0:
@@ -1158,21 +971,7 @@ func _can_interact_with_chest() -> bool:
 func _can_interact_with_npc() -> bool:
 	return cloaked_demon != null and cloaked_demon.visible and _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
 func _update_interact_prompt(delta: float) -> void:
-	var near_chest := _can_interact_with_chest()
-	var near_npc := _can_interact_with_npc()
-	interaction_component.update_prompt(
-		delta,
-		interact_prompt,
-		npc_dialogue_box != null and npc_dialogue_box.visible,
-		near_chest,
-		near_npc,
-		chest.global_position,
-		_cloaked_demon_head_position(),
-		interact_prompt_base_position,
-		Callable(self, "_snap_half_pixel"),
-		INTERACT_PROMPT_BOB_TIME,
-		OVERWORLD_UI_Z + 1
-	)
+	interaction_component.update_world_prompt(self, delta, INTERACT_PROMPT_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _start_chest_evaporation() -> void:
 	chest_evaporated = true
 	_spawn_chest_evaporation_pixels()
@@ -1287,31 +1086,7 @@ func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
 		if rect.has_point(point): return true
 	return false
 func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: StringName) -> void:
-	room_transition_locked = true
-	if room_controller != null:
-		room_controller.begin_transition()
-	_save_current_room_state()
-	current_room_id = destination_room_id
-	_sync_current_room_metadata()
-	if room_controller != null:
-		room_controller.enter_room(current_room_id, current_room_type, arrival_socket_id)
-	_ensure_current_room_layout()
-	_update_room_number_indicator()
-	var arrival_socket := room_controller.dungeon_sockets.get(arrival_socket_id) as DungeonSocket
-	var spawn_marker: Marker2D = null
-	if arrival_socket != null:
-		spawn_marker = arrival_socket.spawn_marker()
-	player.global_position = spawn_marker.global_position if spawn_marker != null else player_start_position
-	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
-	player_is_attacking = false
-	player_attack_visual.visible = false
-	current_target = null
-	target_input_was_down = false
-	_hide_npc_dialogue()
-	_set_target_ui_visible(false)
-	_apply_room_state()
-	_build_depth_lists()
-	call_deferred("_release_room_transition_lock")
+	room_controller.enter_connected_room(self, destination_room_id, arrival_socket_id)
 func _release_room_transition_lock() -> void:
 	room_transition_locked = false; if room_controller != null: room_controller.end_transition()
 func _save_current_room_state() -> void:
@@ -1671,15 +1446,12 @@ func _build_depth_lists() -> void:
 	var lists := depth_sorter.visible_lists(player, slimes, chest, rest_fire, cloaked_demon, Callable(self, "_is_slime_dead"))
 	depth_sprites = lists["depth"] as Array[Sprite2D]
 	occluder_sprites = lists["occluders"] as Array[Sprite2D]
-	if cloaked_demon.visible:
-		occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(cloaked_demon.texture)
-	if rest_fire.visible:
-		occlusion_renderer.sprite_images[rest_fire] = occlusion_renderer.cached_texture_image(rest_fire.texture)
+	if cloaked_demon.visible: occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(cloaked_demon.texture)
+	if rest_fire.visible: occlusion_renderer.sprite_images[rest_fire] = occlusion_renderer.cached_texture_image(rest_fire.texture)
 	if chest.visible:
 		for path in OCCLUDER_PATHS:
 			var node := get_node_or_null(path)
-			if node != null:
-				_collect_occluders(node)
+			if node != null: _collect_occluders(node)
 	_update_depth_sorting()
 func _hide_editor_only_guides() -> void:
 	room_controller.hide_editor_only_guides(floor_tiles)
@@ -1867,20 +1639,7 @@ func _update_cloaked_demon_shadow() -> void:
 func _build_cloaked_demon_sprite_shadow() -> void:
 	cloaked_demon_sprite_shadow = Sprite2D.new(); cloaked_demon_sprite_shadow.name = "CloakedDemonSpriteShadow"; cloaked_demon_sprite_shadow.centered = cloaked_demon.centered; cloaked_demon_sprite_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; cloaked_demon_sprite_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.25); cloaked_demon_sprite_shadow.z_as_relative = false; cloaked_demon_sprite_shadow.z_index = cloaked_demon.z_index - 1; cloaked_demon.get_parent().add_child(cloaked_demon_sprite_shadow)
 func _update_targeting() -> void:
-	var should_target := _is_target_input_held()
-	if not should_target:
-		_set_current_target(null)
-		_set_target_ui_visible(false)
-		target_input_was_down = false
-		return
-	if not target_input_was_down:
-		_set_current_target(_closest_target())
-		target_input_was_down = true
-	if current_target != null and _is_slime_dead(current_target):
-		_set_current_target(null)
-	if current_target != null and not player_is_attacking:
-		player.flip_h = _actor_foot(current_target).x < _actor_foot(player).x
-	_update_target_ui()
+	interaction_component.update_targeting(self)
 func _movement_input() -> Vector2:
 	return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_target_input_held() -> bool:
@@ -1910,19 +1669,7 @@ func _slime_display_name(slime: Sprite2D) -> String:
 func _update_player_health_ui(delta: float = 0.0) -> void:
 	var result := hud_controller.update_player_health_ui(player_health, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
 func _update_overworld_ui() -> void:
-	hud_controller.update_button_hud(button_hud_sprites, _controller_devices())
-	gold_animation_timer = fmod(gold_animation_timer + get_process_delta_time(), 0.48)
-	hud_controller.update_gold_indicator(gold_indicator, gold_animation_frames, gold_animation_timer)
-	hud_controller.update_overhead_bars(
-		slimes,
-		Callable(self, "_enemy_max_health"),
-		Callable(self, "_slime_current_health"),
-		Callable(self, "_slime_display_health"),
-		Callable(self, "_is_slime_dead"),
-		Callable(self, "_is_slime_aggroed"),
-		Callable(hud_controller, "set_health_bar_values"),
-		OVERWORLD_UI_Z
-	)
+	hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _slime_current_health(slime: Sprite2D) -> float:
 	var max_health := _enemy_max_health(slime); var health_component := _slime_health(slime); return health_component.current_health if health_component != null else max_health
 func _slime_display_health(slime: Sprite2D) -> float:

@@ -86,6 +86,24 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	update_scoot.call(actor, delta)
 
 
+static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool) -> void:
+	if bool(root.call("_is_slime_dead", slime)): return
+	root.call("_mark_player_in_combat")
+	var health := slime.get_node_or_null("Health") as HealthComponent
+	var maximum := float(root.call("_enemy_max_health", slime))
+	var previous_health := health.current_health if health != null else maximum
+	var brain := slime.get_node_or_null("Brain") as SlimeBrain
+	if brain != null: brain.persistent_aggro = true
+	if health != null: health.apply_damage(amount)
+	else: previous_health = maxf(previous_health - amount, 0.0); (slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health = maxf((slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health, previous_health)
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	if health != null: health.regen_delay_timer = tuning.regen_delay; health.regen_accumulator = 0.0
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	if combat != null: combat.flash_timer = tuning.hit_flash_time; combat.hitstun_timer = tuning.hitstun_time
+	root.call("_spawn_damage_number", slime, amount, was_critical); root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
+	if health != null and health.is_dead(): root.call("_kill_slime", slime)
+
+
 func tick_health(delta: float) -> float:
 	var health := get_node_or_null("Health") as HealthComponent
 	if health == null:

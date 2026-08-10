@@ -22,6 +22,23 @@ func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: flo
 	return closest
 
 
+func update_targeting(root: Object) -> void:
+	var should_target := bool(root.call("_is_target_input_held"))
+	if not should_target:
+		root.call("_set_current_target", null); root.call("_set_target_ui_visible", false); root.set("target_input_was_down", false); return
+	if not bool(root.get("target_input_was_down")):
+		root.call("_set_current_target", root.call("_closest_target")); root.set("target_input_was_down", true)
+	var target := root.get("current_target") as Sprite2D
+	if target != null and bool(root.call("_is_slime_dead", target)): root.call("_set_current_target", null); target = null
+	var player := root.get("player") as Sprite2D
+	if target != null and not bool(root.get("player_is_attacking")): player.flip_h = root.call("_actor_foot", target).x < root.call("_actor_foot", player).x
+	root.call("_update_target_ui")
+
+
+func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int) -> void:
+	update_prompt(delta, root.get("interact_prompt"), bool((root.get("npc_dialogue_box") as ColorRect) != null and (root.get("npc_dialogue_box") as ColorRect).visible), bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), (root.get("chest") as Sprite2D).global_position, root.call("_cloaked_demon_head_position"), root.get("interact_prompt_base_position"), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
+
+
 func set_available(value: bool) -> void:
 	if available == value:
 		return

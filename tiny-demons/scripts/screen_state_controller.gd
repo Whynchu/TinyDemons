@@ -80,6 +80,85 @@ func update_archetype_input(root: Object, delta: float) -> void:
 		else: root.call("_select_archetype_menu_row", row + 1)
 
 
+func start_selected_archetype(root: Object) -> void:
+	var overlay := root.get("archetype_overlay") as ColorRect
+	if overlay == null or not overlay.visible or bool(root.get("loading_screen_active")):
+		return
+	(root.get("player_stats") as StatsComponent).allocation_profile = root.get("selected_archetype")
+	var palette_name: String = ["blue", "orange", "green", "red", "yellow", "grey"][int(root.get("archetype_color_index"))]
+	root.set("player_palette_name", palette_name)
+	root.set("loading_screen_active", true)
+	set_state(&"loading")
+	root.set("loading_screen_fading", false)
+	root.set("loading_screen_timer", 0.0)
+	var loading_overlay := root.get("loading_screen_overlay") as ColorRect
+	loading_overlay.visible = true; loading_overlay.modulate.a = 1.0
+	overlay.visible = false
+	(root.get("archetype_hold_cover") as ColorRect).visible = false
+	var title_overlay := root.get("title_overlay") as ColorRect
+	if title_overlay != null: title_overlay.visible = false
+	await root.get_tree().process_frame
+	await root.call("_apply_player_palette_async", palette_name)
+	root.call("_update_player_aggro_marker_colors")
+	var player_health := float(root.call("_player_max_health"))
+	root.set("player_health", player_health)
+	var health := root.get("player_health_component") as HealthComponent
+	if health != null: health.maximum_health = player_health; health.reset(player_health)
+	root.set("player_display_health", player_health)
+	root.set("player_damage_fill_hold_timer", 0.0)
+	root.call("_update_player_health_ui")
+	(root.get("player") as Sprite2D).visible = true
+	root.call("_apply_player_animation_frame")
+	root.set("loading_screen_fading", true); root.set("loading_screen_timer", 0.0)
+
+
+func start_from_title(root: Object) -> void:
+	var title_overlay := root.get("title_overlay") as ColorRect
+	if title_overlay == null or not title_overlay.visible:
+		return
+	root.call("_spawn_title_pixel_breakup", root.get("title_screen_text"))
+	root.call("_spawn_title_pixel_breakup", root.get("title_start_text"))
+	root.call("_spawn_title_button_frame_breakup")
+	title_overlay.visible = true; title_overlay.modulate.a = 1.0
+	root.set("title_transition_active", true); root.set("title_transition_timer", 0.0)
+	var title_text := root.get("title_screen_text") as Sprite2D
+	var start_text := root.get("title_start_text") as Sprite2D
+	var start_button := root.get("title_start_button") as Button
+	if title_text != null: title_text.visible = false
+	if start_text != null: start_text.visible = false
+	if start_button != null: start_button.visible = false; start_button.release_focus()
+	var archetype_overlay := root.get("archetype_overlay") as ColorRect
+	archetype_overlay.visible = true; set_state(&"archetype")
+	archetype_overlay.modulate.a = 1.0
+	(root.get("archetype_hold_cover") as ColorRect).visible = true
+	root.set("archetype_transition_active", true); root.set("archetype_transition_timer", -1.0); root.set("archetype_fade_out", false)
+
+
+func update_player_death(root: Object, delta: float, game_over_fade_time: float) -> void:
+	var death_timer := float(root.get("player_death_timer")) + delta
+	root.set("player_death_timer", death_timer)
+	var overlay := root.get("player_death_overlay") as Sprite2D
+	var tuning := root.get("player_tuning") as PlayerTuning
+	if overlay != null:
+		if death_timer < tuning.death_particle_delay:
+			overlay.modulate.a = clampf(death_timer / tuning.death_fade_time, 0.0, 1.0)
+		elif not bool(root.get("player_death_particles_started")):
+			root.set("player_death_particles_started", true); root.call("_spawn_player_death_pixels"); overlay.queue_free(); root.set("player_death_overlay", null)
+	if not bool(root.get("player_death_particles_started")):
+		return
+	var death_effect_end := tuning.death_particle_delay + tuning.death_particle_lifetime
+	var game_over := root.get("game_over_overlay") as ColorRect
+	if game_over != null and game_over.visible:
+		var fade_timer := float(root.get("game_over_fade_timer")) + delta
+		root.set("game_over_fade_timer", fade_timer); game_over.modulate.a = clampf(fade_timer / game_over_fade_time, 0.0, 1.0)
+		var restart := root.get("game_over_button") as Button
+		var title := root.get("game_over_title_button") as Button
+		if restart != null: restart.modulate.a = root.call("_retro_button_alpha", fade_timer); restart.position.y = 105.0 + root.call("_retro_button_bob", fade_timer)
+		if title != null: title.modulate.a = root.call("_retro_button_alpha", fade_timer + 0.6); title.position.y = 121.0 + root.call("_retro_button_bob", fade_timer + 0.4)
+	elif death_timer >= death_effect_end + float(root.get("player_tuning").death_observe_time):
+		root.call("_show_game_over")
+
+
 func add_particle(particle_data: Dictionary) -> void:
 	title_particles.append(particle_data)
 

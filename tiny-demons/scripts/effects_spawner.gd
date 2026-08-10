@@ -6,6 +6,24 @@ var damage_number_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
+
+
+func begin_player_death(root: Object, depth_scale: float) -> void:
+	if bool(root.get("player_dead")):
+		return
+	root.set("player_dead", true); root.set("player_death_pending", false); root.set("player_death_timer", 0.0); root.set("player_death_particles_started", false)
+	root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.call("_clear_roll_dust")
+	var player := root.get("player") as Sprite2D
+	(root.get("player_attack_visual") as Sprite2D).visible = false
+	root.set("player_death_origin", player.global_position); root.set("player_death_offset", player.offset); root.set("player_death_scale", player.scale); root.set("player_death_texture", player.texture)
+	player.visible = false
+	var shadow := root.get("player_shadow") as Sprite2D
+	if shadow != null: shadow.visible = false
+	var sprite_shadow := root.get("player_sprite_shadow") as Sprite2D
+	if sprite_shadow != null: sprite_shadow.visible = false
+	var overlay := Sprite2D.new()
+	overlay.name = "PlayerDeathWhite"; overlay.texture = root.call("_white_texture", player.texture); overlay.centered = player.centered; overlay.offset = player.offset; overlay.scale = player.scale; overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; overlay.z_as_relative = false; overlay.z_index = int(round(root.call("_depth_key", player) * depth_scale)) + 2; overlay.global_position = player.global_position; overlay.modulate = Color(1, 1, 1, 0)
+	root.add_child(overlay); root.set("player_death_overlay", overlay)
 var roll_dust_sprite: Sprite2D = null
 var roll_dust_frame := 0
 var roll_dust_timer := 0.0

@@ -15,6 +15,35 @@ var lunge_velocity := Vector2.ZERO
 var lunge_remaining := 0.0
 
 
+func start_player_attack(root: Object, new_variant: int) -> void:
+	var frames: Array = root.get("player_attack_frames") if new_variant == 1 else root.get("player_attack2_frames")
+	if frames.is_empty(): return
+	root.set("player_is_attacking", true); begin(new_variant); root.set("player_just_finished_attack2", false); root.set("player_attack_hit_done", false); hit_targets.clear()
+	var player := root.get("player") as Sprite2D; root.set("player_attack_flip_h", player.flip_h)
+	var tuning := root.get("player_tuning") as PlayerTuning
+	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance / tuning.attack_lunge_duration)), tuning.attack_lunge_duration)
+	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
+	if new_variant == 2: root.set("player_between_timer", 0.0)
+	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; root.call("_apply_player_animation_frame")
+
+
+func apply_hitbox(root: Object) -> void:
+	var hitbox: Rect2 = root.call("_player_attack_hitbox")
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	var attack_component := root.get("player_attack_component") as PlayerAttackComponent
+	var hit_targets: Array[Sprite2D] = []
+	for slime in slimes:
+		if bool(root.call("_is_slime_dead", slime)) or hit_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
+		if not hitbox.intersects(root.call("_collision_rect", slime), false): continue
+		hit_targets.append(slime)
+	if hit_targets.is_empty(): return
+	var target_count := hit_targets.size()
+	for slime in hit_targets:
+		(root.get("player_attack_hit_targets") as Array[Sprite2D]).append(slime); register_hit(slime)
+		var damage := float(root.call("_player_attack_damage_against", slime)); var divided_damage := floorf(damage / float(target_count))
+		root.call("_damage_slime", slime, maxf(divided_damage, 1.0), bool(root.get("last_damage_was_critical"))); root.call("_knockback_slime", slime)
+
+
 func begin(new_variant: int) -> void:
 	active = true
 	variant = new_variant

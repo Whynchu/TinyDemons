@@ -79,6 +79,31 @@ func end_transition() -> void:
 	transition_locked = false
 
 
+func enter_connected_room(root: Object, destination_room_id: StringName, arrival_socket_id: StringName) -> void:
+	root.set("room_transition_locked", true)
+	begin_transition()
+	root.call("_save_current_room_state")
+	root.set("current_room_id", destination_room_id)
+	root.call("_sync_current_room_metadata")
+	enter_room(destination_room_id, root.get("current_room_type"), arrival_socket_id)
+	root.call("_ensure_current_room_layout")
+	root.call("_update_room_number_indicator")
+	var arrival_socket := dungeon_sockets.get(arrival_socket_id) as DungeonSocket
+	var spawn_marker: Marker2D = arrival_socket.spawn_marker() if arrival_socket != null else null
+	var player := root.get("player") as Sprite2D
+	player.global_position = spawn_marker.global_position if spawn_marker != null else root.get("player_start_position")
+	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
+	root.set("player_is_attacking", false)
+	(root.get("player_attack_visual") as Sprite2D).visible = false
+	root.set("current_target", null)
+	root.set("target_input_was_down", false)
+	root.call("_hide_npc_dialogue")
+	root.call("_set_target_ui_visible", false)
+	root.call("_apply_room_state")
+	root.call("_build_depth_lists")
+	root.call_deferred("_release_room_transition_lock")
+
+
 func mark_cleared(room_id: StringName) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	state["finished"] = true
