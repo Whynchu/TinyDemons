@@ -558,6 +558,9 @@ coverage and source-coordinate mapping are now controller-owned as well;
 actor registration and exact occluded-texture assembly remain in the
 coordinator. Exact occluded-texture assembly is now controller-owned as well;
 actor registration and render-phase decisions remain in the coordinator.
+ScreenStateController now receives title, archetype, loading, gameplay,
+transition, and game-over state transitions while overlay timing remains
+coordinator-compatible.
 
 Model route: GPT-5.5 for the initial boundary decisions; GPT-5.4/Terra for
 implementation slices; GPT-5.4 mini for mechanical call-site migrations.
@@ -627,7 +630,7 @@ Update this table in every consolidation pull request.
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
-| M8 Deep extraction | In progress | GPT-5.5, high | - | - | Walkability collection/queries, overhead HUD refresh, effect/title-particle updates, HUD target/fill helpers, and occlusion image/cache/coverage/assembly helpers moved; screen construction, actor registration, and interaction presentation remain |
+| M8 Deep extraction | In progress | GPT-5.5, high | - | - | Walkability, overhead HUD, effects, screen-state transitions, and occlusion image/cache/coverage/assembly helpers moved; screen construction, actor registration, and interaction presentation remain |
 | M9 Coordinator reduction | Not started | Terra, high | - | - | Reduce ready/physics orchestration and remove migration mirrors |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 

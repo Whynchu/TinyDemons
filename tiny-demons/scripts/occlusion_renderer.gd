@@ -40,6 +40,36 @@ func average_update_time() -> float:
 	return update_time / float(update_count) if update_count > 0 else 0.0
 
 
+func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]) -> void:
+	original_actor_textures.clear()
+	actor_default_textures.clear()
+	actor_default_materials.clear()
+	original_actor_images.clear()
+	original_actor_scales.clear()
+	actor_visual_scales.clear()
+	occluded_actor_textures.clear()
+	actor_occlusion_grace.clear()
+	highlighted_actor_textures.clear()
+	white_actor_textures.clear()
+	sprite_images.clear()
+	for actor in actors:
+		actor_default_textures[actor] = actor.texture
+		actor_default_materials[actor] = actor.material
+		original_actor_textures[actor] = actor.texture
+		original_actor_scales[actor] = actor.scale
+		actor_visual_scales[actor] = Vector2.ONE
+		var image := cached_texture_image(actor.texture)
+		original_actor_images[actor] = image
+		sprite_images[actor] = image
+		occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(actor.texture, image), image.get_size())
+		actor_occlusion_grace[actor] = 0.0
+		highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(actor.texture, image), image.get_size())
+		white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(actor.texture, image))
+	for occluder in occluder_sprites:
+		if not sprite_images.has(occluder):
+			sprite_images[occluder] = cached_texture_image(occluder.texture)
+
+
 func cached_texture_image(texture: Texture2D) -> Image:
 	if texture_image_cache.has(texture):
 		return texture_image_cache[texture]

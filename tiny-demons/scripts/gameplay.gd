@@ -404,6 +404,7 @@ func _ready() -> void:
 	_build_title_screen()
 	_build_scene_transition()
 	_build_loading_screen()
+	screen_state_controller.set_state(&"title")
 	player_equipment = player.get_node_or_null("Equipment") as EquipmentComponent
 	if player_equipment == null:
 		player_equipment = EquipmentComponent.new()
@@ -827,6 +828,7 @@ func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible:
 		return
 	game_over_overlay.visible = true
+	screen_state_controller.set_state(&"game_over")
 	game_over_fade_timer = 0.0
 	game_over_overlay.modulate.a = 0.0
 	game_over_button.grab_focus()
@@ -1047,6 +1049,7 @@ func _start_from_title() -> void:
 		title_start_button.visible = false
 	title_start_button.release_focus()
 	archetype_overlay.visible = true
+	screen_state_controller.set_state(&"archetype")
 	archetype_overlay.modulate.a = 1.0
 	archetype_hold_cover.visible = true
 	archetype_transition_active = true
@@ -1188,6 +1191,7 @@ func _start_selected_archetype() -> void:
 	player_stats.allocation_profile = selected_archetype
 	player_palette_name = ["blue", "orange", "green", "red", "yellow", "grey"][archetype_color_index]
 	loading_screen_active = true
+	screen_state_controller.set_state(&"loading")
 	loading_screen_fading = false
 	loading_screen_timer = 0.0
 	loading_screen_overlay.visible = true
@@ -1240,6 +1244,7 @@ func _update_loading_screen(delta: float) -> void:
 			loading_screen_active = false
 			loading_screen_fading = false
 			loading_screen_overlay.visible = false
+			screen_state_controller.set_state(&"gameplay")
 		return
 	loading_screen_timer += delta
 	var dot_count := mini(int(loading_screen_timer / 0.28) % 4, 3)
@@ -1402,6 +1407,7 @@ func _begin_scene_transition() -> void:
 	if scene_transition_active or scene_transition_overlay == null:
 		return
 	scene_transition_active = true
+	screen_state_controller.set_state(&"transition")
 	scene_transition_timer = 0.0
 	scene_transition_overlay.visible = true
 
@@ -4032,41 +4038,7 @@ func _hide_editor_only_guides() -> void:
 
 
 func _build_sprite_images() -> void:
-	occlusion_renderer.original_actor_textures.clear()
-	occlusion_renderer.actor_default_textures.clear()
-	occlusion_renderer.actor_default_materials.clear()
-	occlusion_renderer.original_actor_images.clear()
-	occlusion_renderer.original_actor_scales.clear()
-	occlusion_renderer.actor_visual_scales.clear()
-	occlusion_renderer.occluded_actor_textures.clear()
-	occlusion_renderer.actor_occlusion_grace.clear()
-	occlusion_renderer.highlighted_actor_textures.clear()
-	occlusion_renderer.white_actor_textures.clear()
-	occlusion_renderer.sprite_images.clear()
-
-	for actor in actor_sprites:
-		occlusion_renderer.actor_default_textures[actor] = actor.texture
-		occlusion_renderer.actor_default_materials[actor] = actor.material
-		occlusion_renderer.original_actor_textures[actor] = actor.texture
-		occlusion_renderer.original_actor_scales[actor] = actor.scale
-		occlusion_renderer.actor_visual_scales[actor] = Vector2.ONE
-		var image := _cached_texture_image(actor.texture)
-		occlusion_renderer.original_actor_images[actor] = image
-		occlusion_renderer.sprite_images[actor] = image
-		occlusion_renderer.occluded_actor_textures[actor] = _effect_texture_with_display_size(
-			_cached_effect_image(actor.texture, image),
-			image.get_size()
-		)
-		occlusion_renderer.actor_occlusion_grace[actor] = 0.0
-		occlusion_renderer.highlighted_actor_textures[actor] = _effect_texture_with_display_size(
-			_cached_highlighted_image(actor.texture, image),
-			image.get_size()
-		)
-		occlusion_renderer.white_actor_textures[actor] = ImageTexture.create_from_image(_cached_white_image(actor.texture, image))
-
-	for occluder in occluder_sprites:
-		if not occlusion_renderer.sprite_images.has(occluder):
-			occlusion_renderer.sprite_images[occluder] = _cached_texture_image(occluder.texture)
+	occlusion_renderer.register_sprites(actor_sprites, occluder_sprites)
 
 
 func _build_slime_direction_textures() -> void:
