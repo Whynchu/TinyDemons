@@ -70,6 +70,20 @@ func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]
 			sprite_images[occluder] = cached_texture_image(occluder.texture)
 
 
+func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float, apply_actor_scale: Callable, grace_duration: float) -> void:
+	var grace := maxf(float(actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
+	actor_occlusion_grace[actor] = grace
+	if grace > 0.0 and actor.texture == occluded_actor_textures.get(actor):
+		apply_actor_scale.call(actor, true)
+		return
+	if is_target:
+		actor.texture = highlighted_actor_textures[actor]
+		apply_actor_scale.call(actor, true)
+	else:
+		actor.texture = original_actor_textures[actor]
+		apply_actor_scale.call(actor, false)
+
+
 func cached_texture_image(texture: Texture2D) -> Image:
 	if texture_image_cache.has(texture):
 		return texture_image_cache[texture]

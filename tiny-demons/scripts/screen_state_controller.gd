@@ -33,3 +33,46 @@ func update_particles(delta: float, snap_position: Callable) -> void:
 		particle.position = snap_position.call(logical_position)
 		particle.modulate.a = clampf(timer / float(particle_data.get("lifetime", 1.14)), 0.0, 1.0)
 		particle_data["timer"] = timer
+
+
+func style_archetype_button(button: Button) -> void:
+	button.add_theme_font_size_override("font_size", 8)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_focus_color", Color.WHITE)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0, 0, 0, 0)
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(1, 1, 1, 0.12)
+	focus.border_color = Color.WHITE
+	focus.set_border_width_all(1)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", focus)
+	button.add_theme_stylebox_override("focus", focus)
+
+
+func make_retro_button(label: String, button_position: Vector2, size: Vector2, pixel_texture: Callable) -> Button:
+	var button := Button.new()
+	button.position = button_position
+	button.size = size
+	button.text = ""
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0, 0, 0, 0)
+	normal.border_color = Color.WHITE
+	normal.set_border_width_all(1)
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(1, 1, 1, 0.12)
+	focus.border_color = Color.WHITE
+	focus.set_border_width_all(1)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", focus)
+	button.add_theme_stylebox_override("focus", focus)
+	var text := Sprite2D.new()
+	text.texture = pixel_texture.call(label, Color.WHITE) as Texture2D
+	text.centered = true
+	text.position = size * 0.5
+	text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	button.add_child(text)
+	return button

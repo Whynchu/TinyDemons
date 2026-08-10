@@ -949,46 +949,11 @@ func _build_archetype_screen() -> void:
 
 
 func _style_archetype_button(button: Button) -> void:
-	button.add_theme_font_size_override("font_size", 8)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_color_override("font_focus_color", Color.WHITE)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0, 0, 0, 0)
-	var focus := StyleBoxFlat.new()
-	focus.bg_color = Color(1, 1, 1, 0.12)
-	focus.border_color = Color.WHITE
-	focus.set_border_width_all(1)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", focus)
-	button.add_theme_stylebox_override("focus", focus)
+	screen_state_controller.style_archetype_button(button)
 
 
 func _make_retro_button(label: String, button_position: Vector2, size: Vector2) -> Button:
-	var button := Button.new()
-	button.position = button_position
-	button.size = size
-	button.text = ""
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0, 0, 0, 0)
-	normal.border_color = Color.WHITE
-	normal.set_border_width_all(1)
-	var focus := StyleBoxFlat.new()
-	focus.bg_color = Color(1, 1, 1, 0.12)
-	focus.border_color = Color.WHITE
-	focus.set_border_width_all(1)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", focus)
-	button.add_theme_stylebox_override("focus", focus)
-	var text := Sprite2D.new()
-	text.texture = _pixel_text_texture(label, Color.WHITE)
-	text.centered = true
-	text.position = size * 0.5
-	text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	button.add_child(text)
-	return button
+	return screen_state_controller.make_retro_button(label, button_position, size, Callable(self, "_pixel_text_texture"))
 
 
 func _update_title_screen(delta: float) -> void:
@@ -4596,18 +4561,13 @@ func _update_actor_occlusion(delta: float) -> void:
 
 
 func _apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float) -> void:
-	var grace := maxf(float(occlusion_renderer.actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
-	occlusion_renderer.actor_occlusion_grace[actor] = grace
-	if grace > 0.0 and actor.texture == occlusion_renderer.occluded_actor_textures.get(actor):
-		_apply_actor_scale(actor, true)
-		return
-
-	if is_target:
-		actor.texture = occlusion_renderer.highlighted_actor_textures[actor]
-		_apply_actor_scale(actor, true)
-	else:
-		actor.texture = occlusion_renderer.original_actor_textures[actor]
-		_apply_actor_scale(actor, false)
+	occlusion_renderer.apply_unoccluded_actor_texture(
+		actor,
+		is_target,
+		delta,
+		Callable(self, "_apply_actor_scale"),
+		OCCLUSION_RELEASE_GRACE
+	)
 
 
 func _update_player_shadow() -> void:
