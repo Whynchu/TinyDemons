@@ -599,13 +599,16 @@ methods; `gameplay.gd` only sequences feature controllers.
 
 ### M9 - Coordinator reduction
 
+Status: In progress. The first slice moves attack-combo buffering and attack-2 cooldown ownership into `PlayerAttackComponent`; the coordinator continues to make input and phase decisions through that API.
+
 Model route: Terra at high effort for cross-controller integration; GPT-5.4 for
 settled API migrations; GPT-5.4 mini for exact dead-code removal; GPT-5.5 for
 update-order regressions.
 
 - [ ] Reduce `_ready()` to dependency composition and controller startup.
 - [ ] Reduce `_physics_process()` to explicit phase/controller calls.
-- [ ] Remove compatibility delegates and duplicate state mirrors.
+  - [x] Begin removing duplicate state mirrors with attack-combo and attack-2 cooldown ownership.
+  - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
 - [ ] Add a repeatable metrics command to CI/development documentation.
@@ -648,7 +651,7 @@ Update this table in every consolidation pull request.
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
 | M8 Deep extraction | Complete | GPT-5.5, high | - | - | Deep extraction and construction/ownership cleanup complete; headless Godot validation passed, with the full interactive smoke pass remaining tester-owned |
-| M9 Coordinator reduction | Not started | Terra, high | - | - | Reduce ready/physics orchestration and remove migration mirrors |
+| M9 Coordinator reduction | In progress | Terra, high | - | - | First slice moves attack-combo and attack-2 cooldown ownership into PlayerAttackComponent |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.

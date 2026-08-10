@@ -9,6 +9,8 @@ var variant := 1
 var hit_targets: Array[Sprite2D] = []
 var combo_buffered := false
 var combo_timer := 0.0
+var combo_movement := Vector2.ZERO
+var attack2_cooldown_timer := 0.0
 var lunge_velocity := Vector2.ZERO
 var lunge_remaining := 0.0
 
@@ -43,6 +45,10 @@ func buffer_combo(window: float) -> void:
 	combo_timer = maxf(window, 0.0)
 
 
+func set_combo_movement(movement: Vector2) -> void:
+	combo_movement = movement
+
+
 func tick_combo(delta: float) -> void:
 	if combo_timer <= 0.0:
 		return
@@ -57,6 +63,18 @@ func consume_combo() -> bool:
 	combo_buffered = false
 	combo_timer = 0.0
 	return true
+
+
+func tick_attack2_cooldown(delta: float) -> void:
+	attack2_cooldown_timer = maxf(attack2_cooldown_timer - delta, 0.0)
+
+
+func can_start_attack2() -> bool:
+	return attack2_cooldown_timer <= 0.0
+
+
+func start_attack2_cooldown(duration: float) -> void:
+	attack2_cooldown_timer = maxf(duration, 0.0)
 
 
 func start_lunge(velocity: Vector2, duration: float) -> void:

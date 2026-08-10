@@ -100,11 +100,7 @@ var player_attack2_left_frames: Array[Texture2D] = []
 var player_between_attack_texture: Texture2D = null
 var player_after_attack2_texture: Texture2D = null
 var player_just_finished_attack2 := false
-var player_combo_buffered := false
-var player_combo_buffer_timer := 0.0
-var player_combo_buffer_movement := Vector2.ZERO
 var player_between_timer := 0.0
-var player_attack2_cooldown_timer := 0.0
 var player_anim_name := "idle"
 var player_anim_frame := 0
 var player_anim_timer := 0.0
@@ -530,6 +526,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if player_attack_component != null:
 		player_attack_component.tick_combo(delta)
+		player_attack_component.tick_attack2_cooldown(delta)
 	if walkable_outline.is_empty():
 		return
 	if scene_transition_active:
@@ -580,31 +577,25 @@ func _physics_process(delta: float) -> void:
 	var prev_player_was_attacking := player_is_attacking
 	if not player_input_locked:
 		_update_player_attack_input()
-	player_attack2_cooldown_timer = maxf(player_attack2_cooldown_timer - delta, 0.0)
-	if player_combo_buffered and not player_is_attacking:
-		player_combo_buffer_timer = maxf(player_combo_buffer_timer - delta, 0.0)
-		if player_combo_buffer_timer <= 0.0:
-			player_combo_buffered = false
 	# detect rising-edge press during attack for buffering
 	var attack_input_down := _is_attack_input_pressed()
 	if not player_input_locked and attack_input_down and not prev_attack_input_was_down and prev_player_was_attacking and player_anim_name == "attack1":
-		player_combo_buffered = true
-		player_combo_buffer_timer = player_tuning.combo_window
-		player_combo_buffer_movement = _movement_input()
-	if player_combo_buffered and player_is_attacking and player_anim_name == "attack1":
+		if player_attack_component != null:
+			player_attack_component.buffer_combo(player_tuning.combo_window)
+			player_attack_component.set_combo_movement(_movement_input())
+	if player_attack_component != null and player_attack_component.combo_buffered and player_is_attacking and player_anim_name == "attack1":
 		var movement_input := _movement_input()
 		var direction_changed := movement_input.length() > 0.25 and (
-			player_combo_buffer_movement.length() <= 0.25
-			or movement_input.normalized().dot(player_combo_buffer_movement.normalized()) < 0.99
+			player_attack_component.combo_movement.length() <= 0.25
+			or movement_input.normalized().dot(player_attack_component.combo_movement.normalized()) < 0.99
 		)
 		if direction_changed:
-			player_combo_buffered = false
-			player_combo_buffer_timer = 0.0
+			player_attack_component.consume_combo()
 
 	# if there is a buffered combo and player is free, start attack2
-	if player_combo_buffered and not player_is_attacking and player_between_timer <= 0.0 and player_attack2_cooldown_timer <= 0.0:
+	if player_attack_component != null and player_attack_component.combo_buffered and not player_is_attacking and player_between_timer <= 0.0 and player_attack_component.can_start_attack2():
 		_start_player_attack(2)
-		player_combo_buffered = false
+		player_attack_component.consume_combo()
 
 	if not player_input_locked:
 		_update_player_roll_input()
@@ -640,7 +631,7 @@ func _physics_process(delta: float) -> void:
 			player_between_timer = player_tuning.attack2_cooldown
 			_set_actor_base_texture(player, player_after_attack2_texture)
 		# If attack 1 was not buffered, show the transition frame briefly.
-		elif not player_combo_buffered and player_between_attack_texture != null:
+		elif (player_attack_component == null or not player_attack_component.combo_buffered) and player_between_attack_texture != null:
 			player_between_timer = player_tuning.between_attack_time
 			_set_actor_base_texture(player, player_between_attack_texture)
 		player_just_finished_attack2 = false
@@ -1333,14 +1324,12 @@ func _on_player_motor_motion(motion: Vector2) -> void:
 
 func _update_player_attack_input() -> void:
 	var attack_input_down := _is_attack_input_pressed()
-	if attack_input_down and not player_attack_input_was_down and not player_is_attacking and not player_is_rolling and player_attack2_cooldown_timer <= 0.0:
+	if attack_input_down and not player_attack_input_was_down and not player_is_attacking and not player_is_rolling and (player_attack_component == null or player_attack_component.can_start_attack2()):
 		if player_between_timer > 0.0:
 			# A late input during the transition still completes the combo.
-			player_combo_buffered = true
-			player_combo_buffer_timer = player_tuning.combo_window
 			if player_attack_component != null:
 				player_attack_component.buffer_combo(player_tuning.combo_window)
-			player_combo_buffer_movement = _movement_input()
+				player_attack_component.set_combo_movement(_movement_input())
 		else:
 			_start_player_attack()
 	player_attack_input_was_down = attack_input_down
@@ -1606,9 +1595,10 @@ func _update_player_attack_animation(delta: float) -> void:
 	var hit_frame := player_tuning.attack2_hit_frame if player_anim_name == "attack2" else player_tuning.attack_hit_frame
 
 	if player_anim_frame >= frames.size():
-		var finished_attack1_with_combo := player_anim_name == "attack1" and player_combo_buffered and player_between_attack_texture != null
+		var finished_attack1_with_combo := player_anim_name == "attack1" and player_attack_component != null and player_attack_component.combo_buffered and player_between_attack_texture != null
 		if player_anim_name == "attack2":
-			player_attack2_cooldown_timer = player_tuning.attack2_cooldown
+			if player_attack_component != null:
+				player_attack_component.start_attack2_cooldown(player_tuning.attack2_cooldown)
 			player_just_finished_attack2 = true
 		player_is_attacking = false
 		if player_attack_component != null:
@@ -1624,7 +1614,6 @@ func _update_player_attack_animation(delta: float) -> void:
 		_apply_player_animation_frame()
 		if finished_attack1_with_combo:
 			player_between_timer = player_tuning.between_attack_time
-			player_combo_buffer_timer = player_tuning.combo_window
 			_set_actor_base_texture(player, player_between_attack_texture)
 		return
 
