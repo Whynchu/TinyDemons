@@ -6,13 +6,13 @@ class_name SlimeActor
 
 
 static func component(actor: Sprite2D, node_name: String, component_type: Variant) -> Node:
-	var component := actor.get_node_or_null(node_name)
-	if component != null:
-		return component
-	component = component_type.new()
-	component.name = node_name
-	actor.add_child(component)
-	return component
+	var node := actor.get_node_or_null(node_name)
+	if node != null:
+		return node
+	node = component_type.new()
+	node.name = node_name
+	actor.add_child(node)
+	return node
 
 
 func _ready() -> void:
@@ -106,10 +106,10 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	if brain != null: brain.persistent_aggro = true
 	if health != null: health.apply_damage(amount)
 	else: previous_health = maxf(previous_health - amount, 0.0); (slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health = maxf((slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health, previous_health)
-	var slime_tuning := root.get("slime_tuning") as SlimeTuning
-	if health != null: health.regen_delay_timer = slime_tuning.regen_delay; health.regen_accumulator = 0.0
+	var slime_config := root.get("slime_tuning") as SlimeTuning
+	if health != null: health.regen_delay_timer = slime_config.regen_delay; health.regen_accumulator = 0.0
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
-	if combat != null: combat.flash_timer = slime_tuning.hit_flash_time; combat.hitstun_timer = slime_tuning.hitstun_time
+	if combat != null: combat.flash_timer = slime_config.hit_flash_time; combat.hitstun_timer = slime_config.hitstun_time
 	root.call("_spawn_damage_number", slime, amount, was_critical); root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
 	if health != null and health.is_dead(): root.call("_kill_slime", slime)
 
@@ -182,10 +182,10 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 
 
 func _ensure_component(node_name: String, component_type: Variant) -> Node:
-	var component := get_node_or_null(node_name)
-	if component != null:
-		return component
-	component = component_type.new()
-	component.name = node_name
-	add_child(component)
-	return component
+	var node := get_node_or_null(node_name)
+	if node != null:
+		return node
+	node = component_type.new()
+	node.name = node_name
+	add_child(node)
+	return node

@@ -133,8 +133,8 @@ func build_entrance_blocks(root: Object) -> void:
 	root.set("entrance_block_polygons", blocks)
 
 
-func try_enter_active_socket(root: Object, door_active: bool, entrance_open: bool, transition_locked: bool) -> bool:
-	if transition_locked: return false
+func try_enter_active_socket(root: Object, door_active: bool, entrance_open: bool, transition_lock: bool) -> bool:
+	if transition_lock: return false
 	var feet: Rect2 = root.call("_collision_guide_rect_by_name", root.get("player"), "DoorFeetGuide")
 	if not feet.has_area():
 		var foot: Vector2 = root.call("_actor_foot", root.get("player")); var size: Vector2 = root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") if root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") != null else Vector2(4, 2); feet = Rect2(foot - size * 0.5, size)

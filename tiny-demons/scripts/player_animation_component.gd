@@ -23,11 +23,11 @@ func build_frames(root: Object) -> void:
 
 
 func apply_frame(root: Object) -> void:
-	var player := root.get("player") as Sprite2D; animation_name = StringName(root.get("player_anim_name")); frame = int(root.get("player_anim_frame")); timer = float(root.get("player_anim_timer")); var name: String = root.get("player_anim_name"); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if name == "attack2" else root.get("player_attack_frames") if name == "attack1" else root.get("player_walk_frames") if name == "walk" else root.get("player_idle_frames")
+	var player := root.get("player") as Sprite2D; animation_name = StringName(root.get("player_anim_name")); frame = int(root.get("player_anim_frame")); timer = float(root.get("player_anim_timer")); var animation_key: String = root.get("player_anim_name"); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if animation_key == "attack2" else root.get("player_attack_frames") if animation_key == "attack1" else root.get("player_walk_frames") if animation_key == "walk" else root.get("player_idle_frames")
 	if frames.is_empty(): return
 	if bool(root.get("player_is_rolling")): root.call("_set_actor_base_texture", player, frames[int(root.get("player_roll_component").frame)]); return
-	if name == "attack1" or name == "attack2":
-		var flip: bool = root.get("player_attack_flip_h"); var attack_frames: Array[Texture2D] = root.get("player_attack2_left_frames") if name == "attack2" and flip else root.get("player_attack_left_frames") if flip else root.get("player_attack2_frames") if name == "attack2" else root.get("player_attack_frames")
+	if animation_key == "attack1" or animation_key == "attack2":
+		var flip: bool = root.get("player_attack_flip_h"); var attack_frames: Array[Texture2D] = root.get("player_attack2_left_frames") if animation_key == "attack2" and flip else root.get("player_attack_left_frames") if flip else root.get("player_attack2_frames") if animation_key == "attack2" else root.get("player_attack_frames")
 		if attack_frames.is_empty(): return
 		var visual := root.get("player_attack_visual") as Sprite2D; visual.texture = attack_frames[frame]; update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index); return
 	player.offset = Vector2(-10, -10); root.call("_set_actor_base_texture", player, frames[frame])
