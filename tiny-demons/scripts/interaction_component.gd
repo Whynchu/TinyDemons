@@ -20,6 +20,20 @@ func interact() -> void:
 		interacted.emit()
 
 
+func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:
+	var prompt := Sprite2D.new()
+	prompt.name = "InteractPrompt"
+	prompt.texture = texture
+	prompt.scale = Vector2(1.5, 1.5)
+	prompt.centered = false
+	prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	prompt.z_as_relative = false
+	prompt.z_index = ui_z
+	prompt.visible = false
+	parent.add_child(prompt)
+	return prompt
+
+
 func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, chest_position: Vector2, npc_head_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
 	if prompt == null:
 		return

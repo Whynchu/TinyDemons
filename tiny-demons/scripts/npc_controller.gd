@@ -12,6 +12,47 @@ signal dialogue_requested
 
 func request_dialogue() -> void:
 	dialogue_requested.emit()
+
+
+func build_dialogue(parent: Node, continue_texture: Texture2D) -> Dictionary:
+	var layer := CanvasLayer.new()
+	layer.name = "NpcDialogueLayer"
+	layer.layer = 20
+	parent.add_child(layer)
+	var box := ColorRect.new()
+	box.name = "NpcDialogueBox"
+	box.color = Color(0.0, 0.0, 0.0, 0.94)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.z_index = 0
+	box.visible = false
+	layer.add_child(box)
+	var text := Sprite2D.new()
+	text.name = "NpcDialogueText"
+	text.centered = false
+	text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	text.z_index = 1
+	text.visible = false
+	layer.add_child(text)
+	var button := Sprite2D.new()
+	button.name = "NpcDialogueContinue"
+	button.texture = continue_texture
+	button.centered = false
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	button.z_index = 3
+	button.visible = false
+	layer.add_child(button)
+	var shadow := Sprite2D.new()
+	shadow.name = "NpcDialogueContinueShadow"
+	shadow.texture = continue_texture
+	shadow.centered = false
+	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shadow.z_index = 2
+	shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.45)
+	shadow.visible = false
+	layer.add_child(shadow)
+	layer.move_child(shadow, -1)
+	layer.move_child(button, -1)
+	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow}
 func begin_dialogue(message: String) -> void:
 	full_message = message
 	character_index = 0

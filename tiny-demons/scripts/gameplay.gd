@@ -220,7 +220,6 @@ var interact_input_was_down := false
 var chest_unlocked := false
 var chest_claimed := false
 var chest_collect_flash_timer := 0.0
-var chest_unlock_fade_timer := 0.0
 var chest_evaporated := false
 var door_active := false
 var entrance_open := false
@@ -236,17 +235,11 @@ var chest_unlock_overlay: Sprite2D = null
 var chest_flash_overlay: Sprite2D = null
 var interact_prompt: Sprite2D = null
 var interact_prompt_base_position := Vector2.ZERO
-var interact_prompt_timer := 0.0
 var npc_dialogue_box: ColorRect = null
 var npc_dialogue_text: Sprite2D = null
 var npc_dialogue_button: Sprite2D = null
 var npc_dialogue_button_shadow: Sprite2D = null
 var npc_dialogue_layer: CanvasLayer = null
-var npc_dialogue_timer := 0.0
-var npc_dialogue_full_message := ""
-var npc_dialogue_character_index := 0
-var npc_dialogue_type_timer := 0.0
-var npc_dialogue_complete := false
 var npc_dialogue_input_was_down := false
 var npc_dialogue_index := 0
 var npc_dialogue_messages := ["GO ON", "TRUST YOUR PATH", "THE FIRE KNOWS", "YOU ARE CLOSE"]
@@ -269,8 +262,6 @@ var player_display_health := 0.0
 var player_damage_fill_hold_timer := 0.0
 var player_regen_delay_timer := 0.0
 var player_regen_accumulator := 0.0
-var rest_fire_animation_timer := 0.0
-var rest_fire_frame_index := 0
 var rest_fire_frames: Array[Texture2D] = []
 var cloaked_demon_idle_frames: Array[Texture2D] = []
 var cloaked_demon_walk_frames: Array[Texture2D] = []
@@ -1837,60 +1828,17 @@ func _unlock_chest() -> void:
 
 
 func _build_interact_prompt() -> void:
-	interact_prompt = Sprite2D.new()
-	interact_prompt.name = "InteractPrompt"
-	interact_prompt.texture = _pixel_number_texture("!", Color8(255, 205, 117))
-	interact_prompt.scale = Vector2(1.5, 1.5)
-	interact_prompt.centered = false
-	interact_prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	interact_prompt.z_as_relative = false
-	interact_prompt.z_index = OVERWORLD_UI_Z + 1
-	interact_prompt.visible = false
+	interact_prompt = interaction_component.build_prompt(self, _pixel_number_texture("!", Color8(255, 205, 117)), OVERWORLD_UI_Z + 1)
 	interact_prompt_base_position = Vector2(6, -7)
-	add_child(interact_prompt)
 
 
 func _build_npc_dialogue() -> void:
-	npc_dialogue_layer = CanvasLayer.new()
-	npc_dialogue_layer.name = "NpcDialogueLayer"
-	npc_dialogue_layer.layer = 20
-	add_child(npc_dialogue_layer)
-	npc_dialogue_box = ColorRect.new()
-	npc_dialogue_box.name = "NpcDialogueBox"
-	npc_dialogue_box.color = Color(0.0, 0.0, 0.0, 0.94)
-	npc_dialogue_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	npc_dialogue_box.z_index = 0
-	npc_dialogue_box.visible = false
-	npc_dialogue_layer.add_child(npc_dialogue_box)
-	npc_dialogue_text = Sprite2D.new()
-	npc_dialogue_text.name = "NpcDialogueText"
-	npc_dialogue_text.centered = false
-	npc_dialogue_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	npc_dialogue_text.z_index = 1
-	npc_dialogue_text.visible = false
-	npc_dialogue_layer.add_child(npc_dialogue_text)
-	npc_dialogue_button = Sprite2D.new()
-	npc_dialogue_button.name = "NpcDialogueContinue"
-	npc_dialogue_button.texture = _load_texture_or_null("res://assets/artwork/circle55.png")
-	npc_dialogue_button.centered = false
-	npc_dialogue_button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# The dialogue layer has local ordering: box, text, shadow, button.
-	npc_dialogue_button.z_index = 3
-	npc_dialogue_button.visible = false
-	npc_dialogue_layer.add_child(npc_dialogue_button)
-	npc_dialogue_button_shadow = Sprite2D.new()
-	npc_dialogue_button_shadow.name = "NpcDialogueContinueShadow"
-	npc_dialogue_button_shadow.texture = npc_dialogue_button.texture
-	npc_dialogue_button_shadow.centered = false
-	npc_dialogue_button_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	npc_dialogue_button_shadow.z_index = 2
-	npc_dialogue_button_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.45)
-	npc_dialogue_button_shadow.visible = false
-	npc_dialogue_layer.add_child(npc_dialogue_button_shadow)
-	# Keep both sprites at the front of the UI child order as well as using
-	# explicit z-indices, so later-created UI nodes cannot cover the button.
-	npc_dialogue_layer.move_child(npc_dialogue_button_shadow, -1)
-	npc_dialogue_layer.move_child(npc_dialogue_button, -1)
+	var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png"))
+	npc_dialogue_layer = dialogue["layer"] as CanvasLayer
+	npc_dialogue_box = dialogue["box"] as ColorRect
+	npc_dialogue_text = dialogue["text"] as Sprite2D
+	npc_dialogue_button = dialogue["button"] as Sprite2D
+	npc_dialogue_button_shadow = dialogue["shadow"] as Sprite2D
 
 
 func _build_room_number_indicator() -> void:
@@ -2068,9 +2016,8 @@ func _refresh_rest_fire_image(fire: Sprite2D) -> void:
 func _set_rest_fire_frame(frame_index: int) -> void:
 	if rest_fire_frames.is_empty():
 		return
-	rest_fire_frame_index = posmod(frame_index, rest_fire_frames.size())
-	rest_fire_controller.frame_index = rest_fire_frame_index
-	rest_fire.texture = rest_fire_frames[rest_fire_frame_index]
+	rest_fire_controller.frame_index = posmod(frame_index, rest_fire_frames.size())
+	rest_fire.texture = rest_fire_frames[rest_fire_controller.frame_index]
 	rest_fire.hframes = 1
 	rest_fire.frame = 0
 	occlusion_renderer.sprite_images[rest_fire] = _cached_texture_image(rest_fire.texture)
@@ -2150,12 +2097,7 @@ func _show_npc_dialogue() -> void:
 		return
 	var message := npc_dialogue_messages[npc_dialogue_index % npc_dialogue_messages.size()] as String
 	npc_dialogue_index += 1
-	npc_dialogue_full_message = message
 	npc_controller.begin_dialogue(message)
-	npc_dialogue_character_index = 0
-	npc_dialogue_type_timer = 0.0
-	npc_dialogue_timer = 0.0
-	npc_dialogue_complete = false
 	npc_dialogue_text.texture = _pixel_text_texture("", Color.WHITE)
 	npc_dialogue_text.visible = true
 	npc_dialogue_button.visible = false
@@ -2550,7 +2492,7 @@ func _apply_rest_room_state() -> void:
 	else:
 		collision_sprites.erase(cloaked_demon)
 	_set_rest_fire_frame(0)
-	rest_fire_animation_timer = 0.0
+	rest_fire_controller.reset_animation()
 	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
 	state["finished"] = true
 	room_controller.room_states[current_room_id] = state
@@ -2599,7 +2541,6 @@ func _apply_finished_room_state() -> void:
 	chest_claimed = true
 	chest_evaporated = true
 	chest_collect_flash_timer = 0.0
-	chest_unlock_fade_timer = 0.0
 	_set_door_active(true)
 	_set_entrance_open(true)
 	collision_sprites.erase(chest)
@@ -2651,7 +2592,6 @@ func _reset_chest_for_room() -> void:
 	chest_claimed = false
 	chest_evaporated = false
 	chest_collect_flash_timer = 0.0
-	chest_unlock_fade_timer = 0.0
 	_set_door_active(false)
 	_set_entrance_open(false)
 	if chest_unlock_overlay != null:
@@ -2830,25 +2770,6 @@ func _update_pixel_particles(delta: float) -> void:
 
 func _snap_half_pixel(world_position: Vector2) -> Vector2:
 	return Vector2(snappedf(world_position.x, 0.5), snappedf(world_position.y, 0.5))
-
-
-func _dialogue_button_shadow_texture(source: Texture2D) -> Texture2D:
-	if source == null:
-		return null
-	var source_image := source.get_image()
-	var shadow_image := Image.create_empty(source_image.get_width(), source_image.get_height(), false, Image.FORMAT_RGBA8)
-	for y in source_image.get_height():
-		for x in source_image.get_width():
-			var color := source_image.get_pixel(x, y)
-			if color.a <= 0.0:
-				continue
-			var shadow_x := x - 1
-			var shadow_y := y + 1
-			if shadow_x < 0 or shadow_y >= source_image.get_height():
-				continue
-			if source_image.get_pixel(shadow_x, shadow_y).a <= 0.0:
-				shadow_image.set_pixel(shadow_x, shadow_y, Color(1.0, 1.0, 1.0, color.a))
-	return ImageTexture.create_from_image(shadow_image)
 
 
 func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:

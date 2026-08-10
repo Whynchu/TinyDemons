@@ -571,6 +571,10 @@ the coordinator supplies actor-specific callbacks and scene collections.
 Chest unlock fade, rest-fire animation, interaction prompt placement, and NPC
 dialogue presentation updates are now owned by their interaction controllers;
 gameplay outcomes and input decisions remain coordinator-owned.
+Interaction prompt and dialogue node construction are now controller-owned as
+well, and the former coordinator presentation timers/state mirrors have been
+removed. M8 implementation cleanup is complete; the full manual smoke pass
+remains tester-owned because it requires interactive gameplay input.
 Retro screen button construction/styling and unoccluded actor texture/grace
 handling are also controller-owned; screen layout and interaction outcomes
 remain coordinator-compatible.
@@ -580,14 +584,14 @@ implementation slices; GPT-5.4 mini for mechanical call-site migrations.
 
 Focus on the largest cohesive regions still inside `gameplay.gd`:
 
-- [ ] Extract `HudController` health bars, targeting, damage text, and HUD
+- [x] Extract `HudController` health bars, targeting, damage text, and HUD
   construction.
-- [ ] Extract screen flow into title, archetype, loading, game-over, and
+- [x] Extract screen flow into title, archetype, loading, game-over, and
   transition controllers.
-- [ ] Extract `OcclusionRenderer` image generation and pixel coverage helpers.
-- [ ] Extract walkable geometry, floor collision guides, and placement queries
+- [x] Extract `OcclusionRenderer` image generation and pixel coverage helpers.
+- [x] Extract walkable geometry, floor collision guides, and placement queries
   into `WalkableArea`.
-- [ ] Extract remaining interaction presentation and particle orchestration.
+- [x] Extract remaining interaction presentation and particle orchestration.
 - [ ] Re-run the complete smoke checklist after each feature group.
 
 Exit criteria: each extracted feature owns its state, construction, and update
@@ -643,7 +647,7 @@ Update this table in every consolidation pull request.
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
-| M8 Deep extraction | In progress | GPT-5.5, high | - | - | Walkability, HUD presentation, screen state/layout helpers, effects, complete occlusion action phase, and interaction presentation updates moved; small construction/final ownership cleanup remains |
+| M8 Deep extraction | Complete | GPT-5.5, high | - | - | Deep extraction and construction/ownership cleanup complete; headless Godot validation passed, with the full interactive smoke pass remaining tester-owned |
 | M9 Coordinator reduction | Not started | Terra, high | - | - | Reduce ready/physics orchestration and remove migration mirrors |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 
