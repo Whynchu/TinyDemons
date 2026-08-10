@@ -1,6 +1,6 @@
 # TinyDemons
 
-![TinyDemons gameplay screenshot](docs/game-screenshot.png)
+![TinyDemons first gameplay room](docs/game-screenshot.png)
 
 TinyDemons is a small pixel-art isometric action prototype built in Godot. Fight colorful slime enemies, lock onto targets, dodge with a roll, collect chest rewards, and clear rooms while managing health and enemy aggro.
 
