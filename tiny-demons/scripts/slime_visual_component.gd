@@ -7,6 +7,16 @@ var attack_left_frames: Array[Texture2D] = []
 var attack_right_frames: Array[Texture2D] = []
 
 
+func squish_scale(progress: float, movement: Vector2) -> Vector2:
+	var pulse := sin(clampf(progress, 0.0, 1.0) * PI)
+	var stretch_x := 1.0 + pulse * 0.18
+	var stretch_y := 1.0 - pulse * 0.14
+	if absf(movement.y) > absf(movement.x):
+		stretch_x = 1.0 + pulse * 0.12
+		stretch_y = 1.0 - pulse * 0.18
+	return Vector2(stretch_x, stretch_y)
+
+
 func recolor_attack_frames(source_frames: Array[Texture2D], palette: String, texture_cache: Dictionary) -> Array[Texture2D]:
 	var recolored: Array[Texture2D] = []
 	for texture in source_frames:

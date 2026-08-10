@@ -89,6 +89,53 @@ func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vect
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 
 
+func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, speed_min: float, speed_max: float, lifetime: float, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:
+	if texture == null:
+		return
+	var image := texture.get_image()
+	if image == null:
+		return
+	var pixels: Array[Vector2i] = []
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > 0.0:
+				pixels.append(Vector2i(x, y))
+	pixels.shuffle()
+	for index in mini(count, pixels.size()):
+		var source_pixel := pixels[index]
+		var particle := Sprite2D.new()
+		particle.texture = pixel_texture.call(image.get_pixelv(source_pixel)) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = z_index
+		particle.position = position + Vector2(source_pixel) + Vector2(0, -2)
+		parent.add_child(particle)
+		var direction := -1.0 if float(source_pixel.x) < float(image.get_width()) * 0.5 else 1.0
+		pixel_particles.append({"sprite": particle, "velocity": Vector2(direction * random_source.randf_range(speed_min * 0.5, speed_max * 0.75), random_source.randf_range(-10.0, -2.0)), "timer": lifetime, "gravity": 30.0})
+
+
+func spawn_damage_number(parent: Node, world_position: Vector2, value: int, velocity: Vector2, was_critical: bool, pixel_number: Callable, snap_position: Callable, lifetime: float, pop_time: float) -> void:
+	var color := Color8(255, 226, 92) if was_critical else Color.WHITE
+	var shadow := Sprite2D.new()
+	shadow.texture = pixel_number.call(str(maxi(value, 0)), Color8(0, 0, 0, 76)) as Texture2D
+	shadow.centered = false
+	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shadow.z_as_relative = false
+	shadow.z_index = 4091
+	shadow.position = snap_position.call(world_position + Vector2(0.0, 0.5))
+	parent.add_child(shadow)
+	var sprite := Sprite2D.new()
+	sprite.texture = pixel_number.call(str(maxi(value, 0)), color) as Texture2D
+	sprite.centered = false
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_as_relative = false
+	sprite.z_index = 4092
+	sprite.position = world_position
+	parent.add_child(sprite)
+	damage_numbers.append({"sprite": sprite, "shadow": shadow, "timer": lifetime, "pop_timer": pop_time, "velocity": velocity})
+
+
 func _rgb_key(color: Color) -> String:
 	return "%02x%02x%02x%02x" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0), roundi(color.a * 255.0)]
 
