@@ -71,10 +71,12 @@ func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_
 	var health_ratio := clampf(health / max_health, 0.0, 1.0); var display_ratio := clampf(display_health / max_health, 0.0, 1.0)
 	set_fill_ratio(main_fill, fill_size, health_ratio)
 	if transition_fill != null:
-		var difference_ratio := absf(display_ratio - health_ratio)
-		transition_fill.visible = difference_ratio > 0.0001
-		transition_fill.position = main_fill.position + Vector2(minf(health_ratio, display_ratio) * fill_size.x, 0.0)
-		set_fill_ratio(transition_fill, fill_size, difference_ratio)
+		var base_edge := floorf(fill_size.x * health_ratio)
+		var display_edge := ceilf(fill_size.x * display_ratio)
+		var difference_pixels := absf(display_edge - base_edge)
+		transition_fill.visible = difference_pixels >= 1.0
+		transition_fill.position = main_fill.position + Vector2(minf(base_edge, display_edge), 0.0)
+		set_fill_ratio(transition_fill, fill_size, difference_pixels / maxf(fill_size.x, 1.0))
 
 
 func update_overhead_bars(
