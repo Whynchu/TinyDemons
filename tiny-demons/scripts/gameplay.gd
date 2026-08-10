@@ -358,8 +358,8 @@ func _ready() -> void:
 	_hide_editor_only_guides()
 	hp_overhead.z_as_relative = false
 	hp_overhead_fill.z_as_relative = false
-	target_health_bar.z_index = 3
-	player_health_bar.z_index = 3
+	target_health_bar.z_index = 0
+	player_health_bar.z_index = 0
 	target_health_bar_size = target_health_fill.texture.get_size()
 	player_health_fill_size = player_health_fill.texture.get_size()
 	_build_depth_lists()
