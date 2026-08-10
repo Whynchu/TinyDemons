@@ -764,22 +764,10 @@ func _spawn_player_death_pixels() -> void:
 
 
 func _build_game_over_ui() -> void:
-	game_over_overlay = ColorRect.new()
-	game_over_overlay.name = "GameOverOverlay"
-	game_over_overlay.position = Vector2.ZERO
-	game_over_overlay.size = Vector2(240, 160)
-	game_over_overlay.color = Color(0, 0, 0, 0.62)
-	game_over_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	game_over_overlay.visible = false
+	game_over_overlay = screen_state_controller.create_overlay(ui, "GameOverOverlay", Vector2(240, 160), Color(0, 0, 0, 0.62), 0, false)
 	game_over_overlay.modulate.a = 0.0
-	ui.add_child(game_over_overlay)
-	var title := Sprite2D.new()
-	title.texture = _pixel_text_texture("GAME OVER", Color.WHITE)
-	title.centered = false
-	title.scale = Vector2(3, 3)
-	title.position = Vector2((240.0 - title.texture.get_width() * 3.0) * 0.5, 50)
-	title.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	game_over_overlay.add_child(title)
+	var title_texture := _pixel_text_texture("GAME OVER", Color.WHITE)
+	var title := screen_state_controller.create_sprite(game_over_overlay, "GameOverTitle", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))
 	game_over_button = Button.new()
 	game_over_button.position = Vector2(99, 105)
 	game_over_button.size = Vector2(42, 12)
@@ -835,22 +823,10 @@ func _show_game_over() -> void:
 
 
 func _build_title_screen() -> void:
-	title_overlay = ColorRect.new()
-	title_overlay.name = "TitleOverlay"
-	title_overlay.position = Vector2.ZERO
-	title_overlay.size = Vector2(240, 160)
-	title_overlay.color = Color.BLACK
-	title_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	title_overlay.z_index = 2
-	ui.add_child(title_overlay)
+	title_overlay = screen_state_controller.create_overlay(ui, "TitleOverlay", Vector2(240, 160), Color.BLACK, 2)
 
-	title_screen_text = Sprite2D.new()
-	title_screen_text.texture = _pixel_text_texture("TINY DEMONS", Color.WHITE)
-	title_screen_text.centered = false
-	title_screen_text.scale = Vector2(3, 3)
-	title_screen_text.position = Vector2((240.0 - title_screen_text.texture.get_width() * 3.0) * 0.5, 48)
-	title_screen_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	title_overlay.add_child(title_screen_text)
+	var title_texture := _pixel_text_texture("TINY DEMONS", Color.WHITE)
+	title_screen_text = screen_state_controller.create_sprite(title_overlay, "TitleText", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
 
 	title_start_button = Button.new()
 	title_start_button.position = Vector2(99, 103)
@@ -882,26 +858,11 @@ func _build_title_screen() -> void:
 
 
 func _build_archetype_screen() -> void:
-	archetype_overlay = ColorRect.new()
-	archetype_overlay.name = "ArchetypeOverlay"
-	archetype_overlay.size = Vector2(240, 160)
-	archetype_overlay.color = Color.BLACK
-	archetype_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	archetype_overlay.z_index = 1
-	archetype_overlay.visible = false
-	ui.add_child(archetype_overlay)
+	archetype_overlay = screen_state_controller.create_overlay(ui, "ArchetypeOverlay", Vector2(240, 160), Color.BLACK, 1, false)
 
-	archetype_preview = Sprite2D.new()
-	archetype_preview.centered = false
-	archetype_preview.scale = Vector2(3, 3)
-	archetype_preview.position = Vector2(102, 28)
-	archetype_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	archetype_overlay.add_child(archetype_preview)
+	archetype_preview = screen_state_controller.create_sprite(archetype_overlay, "ArchetypePreview", null, Vector2(102, 28), false, Vector2(3, 3))
 
-	archetype_name_text = Sprite2D.new()
-	archetype_name_text.centered = false
-	archetype_name_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	archetype_overlay.add_child(archetype_name_text)
+	archetype_name_text = screen_state_controller.create_sprite(archetype_overlay, "ArchetypeName", null, Vector2.ZERO, false)
 
 	for side in [-1, 1]:
 		var button := Button.new()
@@ -938,13 +899,7 @@ func _build_archetype_screen() -> void:
 	archetype_start_button = _make_retro_button("START", Vector2(99, 127), Vector2(42, 14))
 	archetype_start_button.pressed.connect(_start_selected_archetype)
 	archetype_overlay.add_child(archetype_start_button)
-	archetype_hold_cover = ColorRect.new()
-	archetype_hold_cover.name = "ArchetypeHoldCover"
-	archetype_hold_cover.size = Vector2(240, 160)
-	archetype_hold_cover.color = Color.BLACK
-	archetype_hold_cover.mouse_filter = Control.MOUSE_FILTER_STOP
-	archetype_hold_cover.z_index = 10
-	archetype_overlay.add_child(archetype_hold_cover)
+	archetype_hold_cover = screen_state_controller.create_overlay(archetype_overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
 	_update_archetype_screen()
 
 
@@ -1182,23 +1137,9 @@ func _start_selected_archetype() -> void:
 
 
 func _build_loading_screen() -> void:
-	loading_screen_overlay = ColorRect.new()
-	loading_screen_overlay.name = "LoadingScreen"
-	loading_screen_overlay.position = Vector2.ZERO
-	loading_screen_overlay.size = Vector2(240, 160)
-	loading_screen_overlay.color = Color.BLACK
-	loading_screen_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	loading_screen_overlay.z_index = 4090
-	loading_screen_overlay.visible = false
-	ui.add_child(loading_screen_overlay)
-	loading_screen_text = Sprite2D.new()
-	loading_screen_text.name = "LoadingText"
-	loading_screen_text.centered = false
-	loading_screen_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	loading_screen_text.z_index = 4091
-	loading_screen_text.texture = _pixel_text_texture("LOADING", Color.WHITE)
+	loading_screen_overlay = screen_state_controller.create_overlay(ui, "LoadingScreen", Vector2(240, 160), Color.BLACK, 4090, false)
+	loading_screen_text = screen_state_controller.create_sprite(loading_screen_overlay, "LoadingText", _pixel_text_texture("LOADING", Color.WHITE), Vector2.ZERO, false, Vector2.ONE, 4091)
 	loading_screen_text.position = Vector2(240, 160) - loading_screen_text.texture.get_size() - Vector2(4, 4)
-	loading_screen_overlay.add_child(loading_screen_text)
 
 
 func _update_loading_screen(delta: float) -> void:
@@ -1357,15 +1298,8 @@ func _return_to_title() -> void:
 
 
 func _build_scene_transition() -> void:
-	scene_transition_overlay = ColorRect.new()
-	scene_transition_overlay.name = "SceneTransitionOverlay"
-	scene_transition_overlay.position = Vector2.ZERO
-	scene_transition_overlay.size = Vector2(240, 160)
-	scene_transition_overlay.color = Color.BLACK
-	scene_transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	scene_transition_overlay.z_index = 200
+	scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", Vector2(240, 160), Color.BLACK, 200)
 	scene_transition_overlay.modulate.a = 0.0
-	ui.add_child(scene_transition_overlay)
 
 
 func _begin_scene_transition() -> void:

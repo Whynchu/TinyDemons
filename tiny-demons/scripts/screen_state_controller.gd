@@ -76,3 +76,29 @@ func make_retro_button(label: String, button_position: Vector2, size: Vector2, p
 	text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	button.add_child(text)
 	return button
+
+
+func create_overlay(parent: Node, overlay_name: String, size: Vector2, color: Color, z_index: int, visible: bool = true) -> ColorRect:
+	var overlay := ColorRect.new()
+	overlay.name = overlay_name
+	overlay.position = Vector2.ZERO
+	overlay.size = size
+	overlay.color = color
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.z_index = z_index
+	overlay.visible = visible
+	parent.add_child(overlay)
+	return overlay
+
+
+func create_sprite(parent: Node, sprite_name: String, texture: Texture2D, sprite_position: Vector2, centered: bool, scale: Vector2 = Vector2.ONE, z_index: int = 0) -> Sprite2D:
+	var sprite := Sprite2D.new()
+	sprite.name = sprite_name
+	sprite.texture = texture
+	sprite.centered = centered
+	sprite.position = sprite_position
+	sprite.scale = scale
+	sprite.z_index = z_index
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	parent.add_child(sprite)
+	return sprite
