@@ -5099,39 +5099,21 @@ func _has_opaque_neighbor(image: Image, x: int, y: int) -> bool:
 
 
 func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D]) -> bool:
-	for occluder in active_occluders:
-		var image := occlusion_renderer.sprite_images[occluder] as Image
-		var local_pixel := _source_pixel_position(occluder, world_pixel)
-		var x := int(floor(local_pixel.x))
-		var y := int(floor(local_pixel.y))
-
-		if x < 0 or y < 0 or x >= image.get_width() or y >= image.get_height():
-			continue
-		if image.get_pixel(x, y).a > 0.0:
-			return true
-
-	return false
+	return occlusion_renderer.is_pixel_covered_by_occluder(
+		world_pixel,
+		active_occluders,
+		Callable(self, "_actor_screen_scale"),
+		Callable(self, "_actor_visual_offset")
+	)
 
 
 func _source_pixel_position(sprite: Sprite2D, world_pixel: Vector2) -> Vector2:
-	var sprite_scale := sprite.scale
-	var offset := sprite.offset
-	if occlusion_renderer.original_actor_scales.has(sprite):
-		sprite_scale = _actor_screen_scale(sprite)
-		offset = _actor_visual_offset(sprite)
-
-	var local_pixel := world_pixel - sprite.global_position - offset * sprite_scale
-	if sprite.centered and sprite.texture != null:
-		local_pixel += sprite.texture.get_size() * sprite_scale * 0.5
-
-	var source_pixel := Vector2(
-		local_pixel.x / sprite_scale.x,
-		local_pixel.y / sprite_scale.y
+	return occlusion_renderer.source_pixel_position(
+		sprite,
+		world_pixel,
+		Callable(self, "_actor_screen_scale"),
+		Callable(self, "_actor_visual_offset")
 	)
-	if sprite.flip_h and occlusion_renderer.sprite_images.has(sprite):
-		var image := occlusion_renderer.sprite_images[sprite] as Image
-		source_pixel.x = float(image.get_width()) - source_pixel.x - 1.0
-	return source_pixel
 
 
 func _effect_texture_with_display_size(image: Image, display_size: Vector2i) -> ImageTexture:
