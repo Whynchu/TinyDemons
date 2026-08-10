@@ -35,6 +35,63 @@ func update_particles(delta: float, snap_position: Callable) -> void:
 		particle_data["timer"] = timer
 
 
+func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
+	if source_sprite == null or source_sprite.texture == null:
+		return
+	var image := source_sprite.texture.get_image()
+	if image == null:
+		return
+	var noise := FastNoiseLite.new()
+	noise.seed = random_seed
+	noise.frequency = 0.28
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			var pixel_position := source_sprite.global_position
+			var pixel_size := source_sprite.scale
+			if source_sprite.centered:
+				pixel_position -= Vector2(image.get_width(), image.get_height()) * pixel_size * 0.5
+			pixel_position += Vector2(x, y) * pixel_size
+			var particle := Sprite2D.new()
+			particle.texture = pixel_texture.call(color) as Texture2D
+			particle.centered = false
+			particle.scale = pixel_size
+			particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			particle.z_as_relative = true
+			particle.z_index = 3
+			particle.position = pixel_position
+			particle_parent.add_child(particle)
+			add_particle({"sprite": particle, "velocity": Vector2(0.0, -(8.0 + (noise.get_noise_2d(float(x), float(y)) + 1.0) * 14.0)), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
+
+
+func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable) -> void:
+	if button == null:
+		return
+	var origin := button.position
+	var width := int(button.size.x)
+	var height := int(button.size.y)
+	for x in range(width):
+		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture)
+		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture)
+	for y in range(1, height - 1):
+		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture)
+		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture)
+
+
+func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable) -> void:
+	var particle := Sprite2D.new()
+	particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
+	particle.centered = false
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = true
+	particle.z_index = 3
+	particle.position = frame_position
+	particle_parent.add_child(particle)
+	add_particle({"sprite": particle, "velocity": Vector2(0.0, -10.0), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
+
+
 func style_archetype_button(button: Button) -> void:
 	button.add_theme_font_size_override("font_size", 8)
 	button.add_theme_color_override("font_color", Color.WHITE)
