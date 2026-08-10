@@ -922,20 +922,11 @@ func _build_loading_screen() -> void:
 	loading_screen_text = controls["text"] as Sprite2D
 
 func _update_loading_screen(delta: float) -> void:
-	if loading_screen_fading:
-		loading_screen_timer += delta
-		loading_screen_overlay.modulate.a = clampf(1.0 - loading_screen_timer / 0.35, 0.0, 1.0)
-		if loading_screen_timer >= 0.35:
-			loading_screen_active = false
-			loading_screen_fading = false
-			loading_screen_overlay.visible = false
-			screen_state_controller.set_state(&"gameplay")
-		return
-	loading_screen_timer += delta
-	var dot_count := mini(int(loading_screen_timer / 0.28) % 4, 3)
-	var labels := ["LOADING", "LOADING.", "LOADING..", "LOADING..."]
-	loading_screen_text.texture = _pixel_text_texture(labels[dot_count], Color.WHITE)
-	loading_screen_text.position = Vector2(240, 160) - loading_screen_text.texture.get_size() - Vector2(4, 4)
+	var result := screen_state_controller.update_loading(loading_screen_overlay, loading_screen_text, loading_screen_fading, loading_screen_timer, delta, Callable(self, "_pixel_text_texture"))
+	loading_screen_fading = result["fading"]
+	loading_screen_timer = result["timer"]
+	if result["finished"]:
+		loading_screen_active = false
 
 func _apply_player_palette_async(palette_name: String) -> void:
 	player_idle_frames = _recolor_player_frames(player_base_idle_frames, palette_name)
@@ -959,19 +950,7 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	_warm_player_frame_caches()
 
 func _update_player_aggro_marker_colors() -> void:
-	var marker_colors: Dictionary = {
-		"blue": Color8(59, 93, 201),
-		"orange": Color8(239, 125, 87),
-		"green": Color8(56, 183, 100),
-		"red": Color8(177, 62, 83),
-		"yellow": Color8(255, 205, 117),
-		"grey": Color8(86, 108, 134),
-	}
-	var color: Color = marker_colors.get(player_palette_name, marker_colors["blue"])
-	for marker in hud_controller.target_overhead_aggro_markers.values():
-		var aggro_marker := marker as Sprite2D
-		if aggro_marker != null:
-			aggro_marker.texture = _pixel_particle_texture(color)
+	hud_controller.update_aggro_markers(hud_controller.target_overhead_aggro_markers, player_palette_name, Callable(self, "_pixel_particle_texture"))
 
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	if title_particle_layer == null:

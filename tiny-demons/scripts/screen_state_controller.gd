@@ -213,6 +213,22 @@ func build_loading(parent: Node, pixel_texture: Callable) -> Dictionary:
 	return {"overlay": overlay, "text": text}
 
 
+func update_loading(overlay: ColorRect, text: Sprite2D, fading: bool, timer: float, delta: float, pixel_texture: Callable) -> Dictionary:
+	if fading:
+		timer += delta
+		overlay.modulate.a = clampf(1.0 - timer / 0.35, 0.0, 1.0)
+		if timer >= 0.35:
+			fading = false
+			overlay.visible = false
+			set_state(&"gameplay")
+		return {"fading": fading, "timer": timer, "finished": timer >= 0.35}
+	timer += delta
+	var labels := ["LOADING", "LOADING.", "LOADING..", "LOADING..."]
+	text.texture = pixel_texture.call(labels[mini(int(timer / 0.28) % 4, 3)], Color.WHITE) as Texture2D
+	text.position = Vector2(240, 160) - text.texture.get_size() - Vector2(4, 4)
+	return {"fading": fading, "timer": timer, "finished": false}
+
+
 func _make_text_button(label: String, button_position: Vector2, normal_style: StyleBoxFlat, focus_style: StyleBoxFlat, pixel_texture: Callable, pressed_callback: Callable) -> Button:
 	var button := Button.new()
 	button.position = button_position

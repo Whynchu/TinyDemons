@@ -620,6 +620,7 @@ update-order regressions.
   - [x] Move title screen construction into `ScreenStateController`.
   - [x] Move archetype screen construction into `ScreenStateController`.
   - [x] Move loading-screen construction and player death-particle spawning into owning controllers.
+  - [x] Move loading animation updates and aggro-marker palette updates into owning controllers.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.

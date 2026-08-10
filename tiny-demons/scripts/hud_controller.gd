@@ -110,3 +110,12 @@ func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta:
 	var frame_index := mini(int(timer / 0.12), frames.size() - 1)
 	indicator.texture = frames[frame_index]
 	return timer
+
+
+func update_aggro_markers(markers: Dictionary, palette_name: String, pixel_particle: Callable) -> void:
+	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134)}
+	var color: Color = colors.get(palette_name, colors["blue"])
+	for marker in markers.values():
+		var aggro_marker := marker as Sprite2D
+		if aggro_marker != null:
+			aggro_marker.texture = pixel_particle.call(color) as Texture2D
