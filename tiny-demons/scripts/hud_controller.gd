@@ -69,11 +69,12 @@ func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, health: float, display_health: float, max_health: float) -> void:
 	if main_fill == null or max_health <= 0.0: return
 	var health_ratio := clampf(health / max_health, 0.0, 1.0); var display_ratio := clampf(display_health / max_health, 0.0, 1.0)
-	var main_ratio := display_ratio if display_health < health else health_ratio; var transition_ratio := health_ratio if display_health < health else display_ratio
-	set_fill_ratio(main_fill, fill_size, main_ratio)
+	set_fill_ratio(main_fill, fill_size, health_ratio)
 	if transition_fill != null:
-		transition_fill.visible = not is_equal_approx(health_ratio, display_ratio)
-		set_fill_ratio(transition_fill, fill_size, transition_ratio)
+		var difference_ratio := absf(display_ratio - health_ratio)
+		transition_fill.visible = difference_ratio > 0.0001
+		transition_fill.position = main_fill.position + Vector2(minf(health_ratio, display_ratio) * fill_size.x, 0.0)
+		set_fill_ratio(transition_fill, fill_size, difference_ratio)
 
 
 func update_overhead_bars(
