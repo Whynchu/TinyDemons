@@ -609,6 +609,7 @@ update-order regressions.
 - [ ] Reduce `_physics_process()` to explicit phase/controller calls.
 - [x] Begin removing duplicate state mirrors with attack-combo and attack-2 cooldown ownership.
   - [x] Remove slime health, brain, combat, animation, visual, and health-presenter registries from the coordinator.
+  - [x] Move slime capability construction, health configuration, and component ticking behind `SlimeActor`.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
