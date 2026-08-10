@@ -7,6 +7,40 @@ var type_timer := 0.0
 var button_timer := 0.0
 var dialogue_complete := false
 
+
+func build_cloaked_demon_frames(library: SpriteFrameLibrary, actor: Sprite2D, frame_size: Vector2i, cached_image: Callable) -> Dictionary:
+	var idle_frames := library.slice_frames("res://assets/artwork/TinyDemonCloacked-Idle.png", frame_size)
+	var walk_frames := library.slice_frames("res://assets/artwork/TinyDemonCloacked-Walk.png", frame_size)
+	var bounds := Rect2()
+	if not idle_frames.is_empty():
+		actor.texture = idle_frames[0]; actor.hframes = 1
+		var used_rect: Rect2 = cached_image.call(actor.texture).get_used_rect()
+		if used_rect.has_area(): bounds = Rect2(used_rect.position, used_rect.size)
+	return {"idle": idle_frames, "walk": walk_frames, "bounds": bounds}
+
+
+func configure_patrol_route(actor: Sprite2D, outline: PackedVector2Array, foot_position: Callable, is_walkable: Callable) -> Dictionary:
+	if outline.is_empty() or actor == null: return {}
+	var original_foot: Vector2 = foot_position.call(); var anchor_foot := original_foot
+	if not is_walkable.call(anchor_foot):
+		for step in range(1, 49):
+			var distance := float(step) * 0.5
+			for offset_x in [-distance, distance]:
+				var candidate := original_foot + Vector2(offset_x, 0.0)
+				if is_walkable.call(candidate): anchor_foot = candidate; break
+			if anchor_foot != original_foot: break
+	actor.global_position += anchor_foot - original_foot
+	var patrol_foot: Vector2 = foot_position.call(); var left_extent := 0.0; var right_extent := 0.0
+	for step in range(1, 25):
+		var distance := float(step) * 0.5
+		if is_walkable.call(patrol_foot + Vector2(-distance, 0.0)): left_extent = distance
+		else: break
+	for step in range(1, 25):
+		var distance := float(step) * 0.5
+		if is_walkable.call(patrol_foot + Vector2(distance, 0.0)): right_extent = distance
+		else: break
+	return {"min_x": actor.position.x - left_extent, "max_x": actor.position.x + right_extent, "origin": actor.position, "position_x": actor.position.x, "target": foot_position.call(), "has_target": false}
+
 signal dialogue_requested
 
 

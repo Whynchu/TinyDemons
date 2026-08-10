@@ -115,6 +115,21 @@ func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vec
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(direction * random_source.randf_range(speed_min * 0.5, speed_max * 0.75), random_source.randf_range(-10.0, -2.0)), "timer": lifetime, "gravity": 30.0})
 
 
+func spawn_chest_evaporation_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, lifetime_min: float, lifetime_max: float, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:
+	if texture == null: return
+	var image: Image = texture.get_image()
+	if image == null: return
+	var noise := FastNoiseLite.new(); noise.seed = random_source.randi(); noise.frequency = 0.45; noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	var candidates: Array[Vector2i] = []
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > 0.0 and noise.get_noise_2d(float(x), float(y)) > -0.18: candidates.append(Vector2i(x, y))
+	candidates.shuffle()
+	for index in mini(count, candidates.size()):
+		var source_pixel := candidates[index]; var particle := Sprite2D.new(); particle.texture = pixel_texture.call(image.get_pixelv(source_pixel)); particle.centered = false; particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; particle.z_as_relative = false; particle.z_index = z_index; particle.position = position + Vector2(source_pixel); parent.add_child(particle)
+		var lifetime := random_source.randf_range(lifetime_min, lifetime_max); pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, random_source.randf_range(-24.0, -12.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+
+
 func spawn_damage_number(parent: Node, world_position: Vector2, value: int, velocity: Vector2, was_critical: bool, pixel_number: Callable, snap_position: Callable, lifetime: float, pop_time: float) -> void:
 	var color := Color8(255, 226, 92) if was_critical else Color.WHITE
 	var shadow := Sprite2D.new()

@@ -624,6 +624,7 @@ update-order regressions.
   - [x] Move slime easing, scoot, attack, knockback, regeneration, and death-effect updates behind slime/effects ownership APIs.
   - [x] Reach the M9 3,500-line coordinator checkpoint: `gameplay.gd` is exactly 3,500 physical lines after the extraction slice.
   - [x] Reach the M9 3,000-line coordinator checkpoint: `gameplay.gd` is 2,999 physical lines after moving HUD, input, walkability, and texture ownership outward.
+  - [x] Reach the M9 2,500-line checkpoint: `gameplay.gd` is 2,499 physical lines after moving room layout, NPC patrol, evaporation effects, and player/room update slices outward.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
