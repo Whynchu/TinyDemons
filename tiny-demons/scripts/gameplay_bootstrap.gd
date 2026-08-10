@@ -25,7 +25,7 @@ func initialize(root: Object) -> void:
 	dungeon_graph.initialize(rng.randi()); root.set("current_room_id", dungeon_graph.start_room_id)
 	root.call("_sync_current_room_metadata")
 	(root.get("room_controller") as RoomController).set_current_room(root.get("current_room_id"), root.get("current_room_type"))
-	root.call("_collect_dungeon_sockets"); root.call("_validate_dungeon_socket_setup"); root.call("_ensure_current_room_layout")
+	root.call("_collect_dungeon_sockets"); (root.get("room_controller") as RoomController).validate_socket_setup(); root.call("_ensure_current_room_layout")
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
 	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
@@ -41,7 +41,7 @@ func initialize(root: Object) -> void:
 	(root.get("hp_overhead") as Sprite2D).z_as_relative = false; (root.get("hp_overhead_fill") as Sprite2D).z_as_relative = false
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
 	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
-	root.call("_build_player_animation_frames"); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_title_screen"); root.call("_build_scene_transition"); root.call("_build_loading_screen")
+	(root.get("player_animation_component") as PlayerAnimationComponent).build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_title_screen"); root.call("_build_scene_transition"); root.call("_build_loading_screen")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
 	_initialize_walkable_area(root, root.get("EDGE_MARGIN") if root.get("EDGE_MARGIN") != null else 0.35, root.get("SLIME_EDGE_PADDING") if root.get("SLIME_EDGE_PADDING") != null else 3.0)

@@ -49,6 +49,14 @@ var dungeon_sockets: Dictionary = {}
 var active_door_sockets: Dictionary = {}
 var active_entrance_sockets: Dictionary = {}
 
+func validate_socket_setup() -> void:
+	var pairs := {DungeonGraph.WALL_LEFT: DungeonGraph.BOTTOM_RIGHT, DungeonGraph.WALL_RIGHT: DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_LEFT: DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_RIGHT: DungeonGraph.WALL_LEFT}
+	for value in pairs.keys():
+		var id := StringName(value); var socket := dungeon_sockets.get(id) as DungeonSocket
+		if socket == null: push_error("Missing dungeon socket: %s" % id); continue
+		if socket.paired_socket_id != StringName(pairs[id]): push_error("Dungeon socket %s has the wrong paired socket." % id)
+		if socket.visual() == null or socket.trigger() == null or socket.spawn_marker() == null: push_error("Dungeon socket %s is missing a visual, trigger, or spawn marker." % id)
+
 
 func hide_editor_only_guides(floor_tiles: Node2D) -> void:
 	var floor_collision_guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as CanvasItem
@@ -123,6 +131,46 @@ func build_entrance_blocks(root: Object) -> void:
 		if socket == null: continue
 		for tile in socket.block_tiles(): blocks.append(root.call("_tile_top_polygon", tile))
 	root.set("entrance_block_polygons", blocks)
+
+
+func try_enter_active_socket(root: Object, door_active: bool, entrance_open: bool, transition_locked: bool) -> bool:
+	if transition_locked: return false
+	var feet: Rect2 = root.call("_collision_guide_rect_by_name", root.get("player"), "DoorFeetGuide")
+	if not feet.has_area():
+		var foot: Vector2 = root.call("_actor_foot", root.get("player")); var size: Vector2 = root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") if root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") != null else Vector2(4, 2); feet = Rect2(foot - size * 0.5, size)
+	if door_active and _try_enter_socket_set(root, active_door_sockets, feet, false): return true
+	return entrance_open and _try_enter_socket_set(root, active_entrance_sockets, feet, true)
+
+
+func _try_enter_socket_set(root: Object, sockets: Dictionary, feet: Rect2, is_entrance: bool) -> bool:
+	for socket_value in sockets.values():
+		var socket := socket_value as DungeonSocket; var polygon := _socket_trigger_polygon(socket)
+		if polygon.size() < 3 or not _rect_touches_polygon(feet, polygon): continue
+		var socket_id := socket.socket_id(); var graph := root.get("dungeon_graph") as DungeonGraph; var room_id: StringName = root.get("current_room_id")
+		var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
+		if connection == null: continue
+		var destination: StringName = connection.source_room_id if is_entrance else connection.destination_room_id; var arrival: StringName = connection.exit_socket if is_entrance else connection.destination_entry
+		root.call("_enter_connected_room", destination, arrival); return true
+	return false
+
+
+func _socket_trigger_polygon(socket: DungeonSocket) -> PackedVector2Array:
+	if socket == null or socket.trigger() == null or socket.trigger().polygon.size() < 3: return PackedVector2Array()
+	var polygon := PackedVector2Array(); var guide := socket.trigger()
+	for point in guide.polygon: polygon.append(guide.to_global(point))
+	return polygon
+
+
+func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
+	if polygon.size() < 3: return false
+	var bounds := Rect2(polygon[0], Vector2.ZERO)
+	for index in range(1, polygon.size()): bounds = bounds.expand(polygon[index])
+	if not bounds.intersects(rect, false): return false
+	if Geometry2D.is_point_in_polygon(rect.get_center(), polygon): return true
+	var corners := [rect.position, rect.position + Vector2(rect.size.x, 0), rect.position + rect.size, rect.position + Vector2(0, rect.size.y)]
+	for point in corners: if Geometry2D.is_point_in_polygon(point, polygon): return true
+	for point in polygon: if rect.has_point(point): return true
+	return false
 
 
 func mark_cleared(room_id: StringName) -> void:

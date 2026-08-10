@@ -33,7 +33,7 @@ func start_from_root(root: Object) -> void:
 func update_from_root(root: Object, delta: float) -> void:
 	if not bool(root.get("player_is_rolling")): return
 	var tuning := root.get("player_tuning") as PlayerTuning; var player := root.get("player") as Sprite2D; var before := player.global_position
-	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time, (root.get("player_roll_frames") as Array[Texture2D]).size(), Callable(root, "_move_player_roll"))
+	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time, (root.get("player_roll_frames") as Array[Texture2D]).size(), Callable(self, "move_swept").bind(root))
 	if not bool(root.get("roll_dust_spawned_this_roll")):
 		var direction := player.global_position - before
 		if direction.length_squared() <= 0.0001: direction = root.call("_perspective_movement", self.direction)
@@ -44,6 +44,10 @@ func update_from_root(root: Object, delta: float) -> void:
 		if motor != null: motor.end_roll()
 		root.set("player_anim_name", "idle")
 	root.call("_apply_player_animation_frame")
+
+
+func move_swept(movement: Vector2, root: Object) -> bool:
+	return (root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(root.get("player"), movement, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 
 
 func begin(new_direction: Vector2) -> void:

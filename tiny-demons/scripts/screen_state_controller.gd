@@ -5,6 +5,16 @@ signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
 
+func retro_button_alpha(timer: float) -> float:
+	var phase := fmod(timer, 2.4); var pulse := lerpf(1.0, 0.45, (phase - 0.6) / 0.9) if phase >= 0.6 and phase < 1.5 else lerpf(0.45, 1.0, (phase - 1.5) / 0.6) if phase >= 1.5 and phase < 2.1 else 1.0; return snappedf(snappedf(pulse, 0.08), 0.125)
+
+func retro_button_bob(timer: float) -> float: return snappedf(sin(timer / 3.6 * TAU) * 1.5, 0.5)
+
+func set_archetype_button_state(button: Button, active: bool, color: Color) -> void:
+	if button == null: return
+	var normal := StyleBoxFlat.new(); normal.bg_color = Color(0, 0, 0, 0); normal.border_color = Color(color if active else Color.WHITE, 0.95 if active else 0.0); normal.set_border_width_all(1 if active else 0); var focus := StyleBoxFlat.new(); focus.bg_color = Color(color, 0.18 if active else 0.0); focus.border_color = color if active else Color.WHITE; focus.set_border_width_all(1 if active else 0)
+	button.add_theme_color_override("font_color", color if active else Color.WHITE); button.add_theme_color_override("font_hover_color", color if active else Color.WHITE); button.add_theme_color_override("font_focus_color", color if active else Color.WHITE); button.add_theme_stylebox_override("normal", normal); button.add_theme_stylebox_override("hover", focus); button.add_theme_stylebox_override("focus", focus)
+
 
 func set_state(new_state: StringName) -> void:
 	if state == new_state:
@@ -20,7 +30,7 @@ func update_title_flow(root: Object, delta: float) -> void:
 		root.call("_update_archetype_input", delta)
 		return
 	if title_transition:
-		root.call("_update_title_particles", delta)
+		update_particles(delta, Callable(root, "_snap_half_pixel"))
 		var timer := float(root.get("title_transition_timer")) + delta
 		root.set("title_transition_timer", timer)
 		var overlay := root.get("title_overlay") as ColorRect
@@ -37,8 +47,8 @@ func update_title_flow(root: Object, delta: float) -> void:
 	root.set("title_frame_timer", frame_timer)
 	var button := root.get("title_start_button") as Button
 	if button != null:
-		button.modulate.a = root.call("_retro_button_alpha", frame_timer)
-		button.position.y = 103.0 + root.call("_retro_button_bob", frame_timer)
+		button.modulate.a = retro_button_alpha(frame_timer)
+		button.position.y = 103.0 + retro_button_bob(frame_timer)
 	if Input.is_action_just_pressed("ui_accept") or root.call("_is_interact_input_pressed"):
 		root.call("_start_from_title")
 
@@ -63,8 +73,8 @@ func update_archetype_input(root: Object, delta: float) -> void:
 	root.set("archetype_arrow_anim_timer", maxf(float(root.get("archetype_arrow_anim_timer")) - delta, 0.0))
 	root.call("_update_archetype_arrow_animation")
 	var button := root.get("archetype_start_button") as Button
-	button.modulate.a = root.call("_retro_button_alpha", root.get("archetype_frame_timer"))
-	button.position.y = 127.0 + root.call("_retro_button_bob", root.get("archetype_frame_timer"))
+	button.modulate.a = retro_button_alpha(root.get("archetype_frame_timer"))
+	button.position.y = 127.0 + retro_button_bob(root.get("archetype_frame_timer"))
 	var row := int(root.get("archetype_menu_row"))
 	if Input.is_action_just_pressed("ui_up"):
 		root.call("_select_archetype_menu_row", row - 1)
@@ -153,8 +163,8 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 		root.set("game_over_fade_timer", fade_timer); game_over.modulate.a = clampf(fade_timer / game_over_fade_time, 0.0, 1.0)
 		var restart := root.get("game_over_button") as Button
 		var title := root.get("game_over_title_button") as Button
-		if restart != null: restart.modulate.a = root.call("_retro_button_alpha", fade_timer); restart.position.y = 105.0 + root.call("_retro_button_bob", fade_timer)
-		if title != null: title.modulate.a = root.call("_retro_button_alpha", fade_timer + 0.6); title.position.y = 121.0 + root.call("_retro_button_bob", fade_timer + 0.4)
+		if restart != null: restart.modulate.a = retro_button_alpha(fade_timer); restart.position.y = 105.0 + retro_button_bob(fade_timer)
+		if title != null: title.modulate.a = retro_button_alpha(fade_timer + 0.6); title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
 	elif death_timer >= death_effect_end + float(root.get("player_tuning").death_observe_time):
 		root.call("_show_game_over")
 
@@ -164,10 +174,10 @@ func update_archetype_button_styles(root: Object) -> void:
 	var color: Color = colors[int(root.get("archetype_color_index"))]; var row := int(root.get("archetype_menu_row"))
 	var type_active := row == 0; var sprite_active := row == 1; var start_active := row == 2
 	var type_left := root.get("archetype_type_left_button") as Button; var type_right := root.get("archetype_type_right_button") as Button; var start := root.get("archetype_start_button") as Button
-	root.call("_set_archetype_button_state", type_left, type_active, color); root.call("_set_archetype_button_state", type_right, type_active, color)
-	for button in root.get("archetype_left_buttons") as Array[Button]: root.call("_set_archetype_button_state", button, sprite_active, color)
-	for button in root.get("archetype_right_buttons") as Array[Button]: root.call("_set_archetype_button_state", button, sprite_active, color)
-	root.call("_set_archetype_button_state", start, start_active, color)
+	set_archetype_button_state(type_left, type_active, color); set_archetype_button_state(type_right, type_active, color)
+	for button in root.get("archetype_left_buttons") as Array[Button]: set_archetype_button_state(button, sprite_active, color)
+	for button in root.get("archetype_right_buttons") as Array[Button]: set_archetype_button_state(button, sprite_active, color)
+	set_archetype_button_state(start, start_active, color)
 
 
 func add_particle(particle_data: Dictionary) -> void:
