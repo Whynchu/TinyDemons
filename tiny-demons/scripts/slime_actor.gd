@@ -134,8 +134,8 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 
 static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	if bool(root.get("player_is_rolling")): return
-	var player := root.get("player") as Sprite2D; var tuning := root.get("slime_tuning") as SlimeTuning
-	var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / tuning.attack_hit_range, delta.y / tuning.attack_vertical_hit_range)
+	var player := root.get("player") as Sprite2D; var slime_config := root.get("slime_tuning") as SlimeTuning
+	var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / slime_config.attack_hit_range, delta.y / slime_config.attack_vertical_hit_range)
 	if ellipse.length_squared() > 1.0: return
 	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
 	var health := root.get("player_health_component") as HealthComponent
