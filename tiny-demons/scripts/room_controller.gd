@@ -79,16 +79,16 @@ func end_transition() -> void:
 	transition_locked = false
 
 
-func enter_connected_room(root: Object, destination_room_id: StringName, arrival_socket_id: StringName) -> void:
+func enter_connected_room(root: Object, destination_room_id: StringName, destination_socket_id: StringName) -> void:
 	root.set("room_transition_locked", true)
 	begin_transition()
 	root.call("_save_current_room_state")
 	root.set("current_room_id", destination_room_id)
 	root.call("_sync_current_room_metadata")
-	enter_room(destination_room_id, root.get("current_room_type"), arrival_socket_id)
+	enter_room(destination_room_id, root.get("current_room_type"), destination_socket_id)
 	root.call("_ensure_current_room_layout")
 	root.call("_update_room_number_indicator")
-	var arrival_socket := dungeon_sockets.get(arrival_socket_id) as DungeonSocket
+	var arrival_socket := dungeon_sockets.get(destination_socket_id) as DungeonSocket
 	var spawn_marker: Marker2D = arrival_socket.spawn_marker() if arrival_socket != null else null
 	var player := root.get("player") as Sprite2D
 	player.global_position = spawn_marker.global_position if spawn_marker != null else root.get("player_start_position")

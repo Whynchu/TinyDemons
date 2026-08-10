@@ -96,10 +96,10 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	if brain != null: brain.persistent_aggro = true
 	if health != null: health.apply_damage(amount)
 	else: previous_health = maxf(previous_health - amount, 0.0); (slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health = maxf((slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health, previous_health)
-	var tuning := root.get("slime_tuning") as SlimeTuning
-	if health != null: health.regen_delay_timer = tuning.regen_delay; health.regen_accumulator = 0.0
+	var slime_tuning := root.get("slime_tuning") as SlimeTuning
+	if health != null: health.regen_delay_timer = slime_tuning.regen_delay; health.regen_accumulator = 0.0
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
-	if combat != null: combat.flash_timer = tuning.hit_flash_time; combat.hitstun_timer = tuning.hitstun_time
+	if combat != null: combat.flash_timer = slime_tuning.hit_flash_time; combat.hitstun_timer = slime_tuning.hitstun_time
 	root.call("_spawn_damage_number", slime, amount, was_critical); root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
 	if health != null and health.is_dead(): root.call("_kill_slime", slime)
 

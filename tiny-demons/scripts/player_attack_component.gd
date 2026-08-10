@@ -31,14 +31,14 @@ func apply_hitbox(root: Object) -> void:
 	var hitbox: Rect2 = root.call("_player_attack_hitbox")
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var attack_component := root.get("player_attack_component") as PlayerAttackComponent
-	var hit_targets: Array[Sprite2D] = []
+	var eligible_targets: Array[Sprite2D] = []
 	for slime in slimes:
-		if bool(root.call("_is_slime_dead", slime)) or hit_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
+		if bool(root.call("_is_slime_dead", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
 		if not hitbox.intersects(root.call("_collision_rect", slime), false): continue
-		hit_targets.append(slime)
-	if hit_targets.is_empty(): return
-	var target_count := hit_targets.size()
-	for slime in hit_targets:
+		eligible_targets.append(slime)
+	if eligible_targets.is_empty(): return
+	var target_count := eligible_targets.size()
+	for slime in eligible_targets:
 		(root.get("player_attack_hit_targets") as Array[Sprite2D]).append(slime); register_hit(slime)
 		var damage := float(root.call("_player_attack_damage_against", slime)); var divided_damage := floorf(damage / float(target_count))
 		root.call("_damage_slime", slime, maxf(divided_damage, 1.0), bool(root.get("last_damage_was_critical"))); root.call("_knockback_slime", slime)
