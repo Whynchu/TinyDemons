@@ -166,6 +166,46 @@ func build_title(parent: Node, pixel_texture: Callable, start_callback: Callable
 	return {"overlay": overlay, "text": title_text, "button": button}
 
 
+func build_archetype(parent: Node, style_button: Callable, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:
+	var overlay := create_overlay(parent, "ArchetypeOverlay", Vector2(240, 160), Color.BLACK, 1, false)
+	var preview := create_sprite(overlay, "ArchetypePreview", null, Vector2(102, 28), false, Vector2(3, 3))
+	var name_text := create_sprite(overlay, "ArchetypeName", null, Vector2.ZERO, false)
+	var left_buttons: Array[Button] = []
+	var right_buttons: Array[Button] = []
+	for side in [-1, 1]:
+		var button := Button.new()
+		button.text = "<" if side < 0 else ">"
+		button.position = Vector2(48 if side < 0 else 178, 42)
+		button.size = Vector2(14, 14)
+		button.focus_mode = Control.FOCUS_NONE
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		style_button.call(button)
+		button.pressed.connect(shift_color.bind(side))
+		overlay.add_child(button)
+		(left_buttons if side < 0 else right_buttons).append(button)
+	var left_type := Button.new()
+	left_type.text = "<"
+	left_type.position = Vector2(58, 15)
+	left_type.size = Vector2(14, 14)
+	left_type.focus_mode = Control.FOCUS_NONE
+	style_button.call(left_type)
+	left_type.pressed.connect(shift_type.bind(-1))
+	overlay.add_child(left_type)
+	var right_type := Button.new()
+	right_type.text = ">"
+	right_type.position = Vector2(168, 15)
+	right_type.size = Vector2(14, 14)
+	right_type.focus_mode = Control.FOCUS_NONE
+	style_button.call(right_type)
+	right_type.pressed.connect(shift_type.bind(1))
+	overlay.add_child(right_type)
+	var start_button := make_retro_button("START", Vector2(99, 127), Vector2(42, 14), pixel_texture)
+	start_button.pressed.connect(start_callback)
+	overlay.add_child(start_button)
+	var hold_cover := create_overlay(overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
+	return {"overlay": overlay, "preview": preview, "name": name_text, "left": left_buttons, "right": right_buttons, "type_left": left_type, "type_right": right_type, "start": start_button, "cover": hold_cover}
+
+
 func _make_text_button(label: String, button_position: Vector2, normal_style: StyleBoxFlat, focus_style: StyleBoxFlat, pixel_texture: Callable, pressed_callback: Callable) -> Button:
 	var button := Button.new()
 	button.position = button_position

@@ -711,42 +711,16 @@ func _build_title_screen() -> void:
 	_build_archetype_screen()
 
 func _build_archetype_screen() -> void:
-	archetype_overlay = screen_state_controller.create_overlay(ui, "ArchetypeOverlay", Vector2(240, 160), Color.BLACK, 1, false)
-	archetype_preview = screen_state_controller.create_sprite(archetype_overlay, "ArchetypePreview", null, Vector2(102, 28), false, Vector2(3, 3))
-	archetype_name_text = screen_state_controller.create_sprite(archetype_overlay, "ArchetypeName", null, Vector2.ZERO, false)
-	for side in [-1, 1]:
-		var button := Button.new()
-		button.text = "<" if side < 0 else ">"
-		button.position = Vector2(48 if side < 0 else 178, 42)
-		button.size = Vector2(14, 14)
-		button.focus_mode = Control.FOCUS_NONE
-		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		_style_archetype_button(button)
-		button.pressed.connect(_shift_archetype_color.bind(side))
-		archetype_overlay.add_child(button)
-		(archetype_left_buttons if side < 0 else archetype_right_buttons).append(button)
-	var label_left := Button.new()
-	archetype_type_left_button = label_left
-	label_left.text = "<"
-	label_left.position = Vector2(58, 15)
-	label_left.size = Vector2(14, 14)
-	label_left.focus_mode = Control.FOCUS_NONE
-	_style_archetype_button(label_left)
-	label_left.pressed.connect(_shift_archetype.bind(-1))
-	archetype_overlay.add_child(label_left)
-	var label_right := Button.new()
-	archetype_type_right_button = label_right
-	label_right.text = ">"
-	label_right.position = Vector2(168, 15)
-	label_right.size = Vector2(14, 14)
-	label_right.focus_mode = Control.FOCUS_NONE
-	_style_archetype_button(label_right)
-	label_right.pressed.connect(_shift_archetype.bind(1))
-	archetype_overlay.add_child(label_right)
-	archetype_start_button = _make_retro_button("START", Vector2(99, 127), Vector2(42, 14))
-	archetype_start_button.pressed.connect(_start_selected_archetype)
-	archetype_overlay.add_child(archetype_start_button)
-	archetype_hold_cover = screen_state_controller.create_overlay(archetype_overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
+	var controls := screen_state_controller.build_archetype(ui, Callable(self, "_style_archetype_button"), Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture"))
+	archetype_overlay = controls["overlay"] as ColorRect
+	archetype_preview = controls["preview"] as Sprite2D
+	archetype_name_text = controls["name"] as Sprite2D
+	archetype_left_buttons = controls["left"] as Array[Button]
+	archetype_right_buttons = controls["right"] as Array[Button]
+	archetype_type_left_button = controls["type_left"] as Button
+	archetype_type_right_button = controls["type_right"] as Button
+	archetype_start_button = controls["start"] as Button
+	archetype_hold_cover = controls["cover"] as ColorRect
 	_update_archetype_screen()
 
 func _style_archetype_button(button: Button) -> void:
