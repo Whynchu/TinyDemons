@@ -545,6 +545,15 @@ dictionaries, and new gameplay objects are assembled through composition.
 
 ### M8 - Deep feature extraction
 
+Status: In progress. The first multi-slice pass moved walkability queries,
+effect lifetime updates, title-particle lifecycle, target ownership, target
+visibility, and health-bar region updates behind the existing controllers.
+The next pass moved reusable occlusion image generation, outline, whitening,
+display-size, and image-cache helpers into `OcclusionRenderer`. Scene
+construction, full HUD update orchestration, screen construction/state
+transitions, actor coverage/traversal, and interaction presentation remain in
+the follow-up slices below.
+
 Model route: GPT-5.5 for the initial boundary decisions; GPT-5.4/Terra for
 implementation slices; GPT-5.4 mini for mechanical call-site migrations.
 
@@ -613,7 +622,7 @@ Update this table in every consolidation pull request.
 | M5 World/rooms | Complete | GPT-5.5, high | - | - | World boundaries, collision delegation, room events, shadows, and occlusion measurement verified |
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
-| M8 Deep extraction | Not started | GPT-5.5, high | - | - | Health/UI, screens, occlusion, geometry, and effects feature extraction |
+| M8 Deep extraction | In progress | GPT-5.5, high | - | - | Walkability, effect/title-particle updates, HUD target/fill helpers, and reusable occlusion image/cache helpers moved; construction, actor coverage, and interaction presentation remain |
 | M9 Coordinator reduction | Not started | Terra, high | - | - | Reduce ready/physics orchestration and remove migration mirrors |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 

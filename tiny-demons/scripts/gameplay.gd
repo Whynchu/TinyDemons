@@ -308,6 +308,7 @@ func _ready() -> void:
 	add_child(depth_sorter)
 	occlusion_renderer = OcclusionRenderer.new()
 	occlusion_renderer.name = "OcclusionRenderer"
+	occlusion_renderer.resolution_scale = effects_tuning.resolution_scale
 	add_child(occlusion_renderer)
 	room_controller = RoomController.new()
 	room_controller.name = "RoomController"
@@ -458,6 +459,9 @@ func _ready() -> void:
 	_build_walkable_outline()
 	if walkable_area != null:
 		walkable_area.set_geometry(walkable_polygons, walkable_outline)
+		walkable_area.edge_margin = EDGE_MARGIN
+		walkable_area.slime_edge_padding = SLIME_EDGE_PADDING
+		walkable_area.set_entrance_blocks(entrance_block_polygons)
 	if walkable_outline.is_empty():
 		push_warning("No floor tiles found. Actor movement will be disabled.")
 		return
@@ -1319,7 +1323,7 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 			particle.z_index = 3
 			particle.position = pixel_position
 			title_particle_layer.add_child(particle)
-			screen_state_controller.title_particles.append({
+			screen_state_controller.add_particle({
 				"sprite": particle,
 				"velocity": Vector2(0.0, -speed),
 				"timer": 1.14,
@@ -1354,7 +1358,7 @@ func _spawn_title_frame_particle(frame_position: Vector2) -> void:
 	particle.position = frame_position
 	title_particle_layer.add_child(particle)
 	var noise_value := rng.randf_range(-1.0, 1.0)
-	screen_state_controller.title_particles.append({
+	screen_state_controller.add_particle({
 		"sprite": particle,
 		"velocity": Vector2(0.0, -10.0 - absf(noise_value) * 10.0),
 		"timer": 1.14,
@@ -1364,23 +1368,7 @@ func _spawn_title_frame_particle(frame_position: Vector2) -> void:
 
 
 func _update_title_particles(delta: float) -> void:
-	for index in range(screen_state_controller.title_particles.size() - 1, -1, -1):
-		var particle_data := screen_state_controller.title_particles[index]
-		var particle := particle_data["sprite"] as Sprite2D
-		var timer := float(particle_data["timer"]) - delta
-		if particle == null or timer <= 0.0:
-			if particle != null:
-				particle.queue_free()
-			screen_state_controller.title_particles.remove_at(index)
-			continue
-		var velocity := particle_data["velocity"] as Vector2
-		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
-		logical_position += velocity * delta
-		particle_data["logical_position"] = logical_position
-		particle.position = _snap_half_pixel(logical_position)
-		var lifetime := float(particle_data.get("lifetime", 1.14))
-		particle.modulate.a = clampf(timer / lifetime, 0.0, 1.0)
-		particle_data["timer"] = timer
+	screen_state_controller.update_particles(delta, Callable(self, "_snap_half_pixel"))
 
 
 func _update_game_over_input() -> void:
@@ -2960,28 +2948,7 @@ func _spawn_chest_evaporation_pixels() -> void:
 
 
 func _update_pixel_particles(delta: float) -> void:
-	for index in range(effects_spawner.pixel_particles.size() - 1, -1, -1):
-		var particle_data := effects_spawner.pixel_particles[index]
-		var particle := particle_data["sprite"] as Sprite2D
-		var timer := float(particle_data["timer"]) - delta
-		if particle == null or timer <= 0.0:
-			if particle != null:
-				particle.queue_free()
-			effects_spawner.pixel_particles.remove_at(index)
-			continue
-
-		var velocity := particle_data["velocity"] as Vector2
-		velocity.y += float(particle_data.get("gravity", 18.0)) * delta
-		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
-		logical_position += velocity * delta
-		particle_data["logical_position"] = logical_position
-		particle.position = _snap_half_pixel(logical_position)
-		var color := particle.modulate
-		var lifetime := float(particle_data.get("lifetime", effects_tuning.slime_death_particle_lifetime))
-		color.a = clampf(timer / lifetime, 0.0, 1.0)
-		particle.modulate = color
-		particle_data["velocity"] = velocity
-		particle_data["timer"] = timer
+	effects_spawner.update_pixel_particles(delta, Callable(self, "_snap_half_pixel"), effects_tuning.slime_death_particle_lifetime)
 
 
 func _snap_half_pixel(world_position: Vector2) -> Vector2:
@@ -3545,42 +3512,7 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 
 
 func _update_damage_numbers(delta: float) -> void:
-	for index in range(effects_spawner.damage_numbers.size() - 1, -1, -1):
-		var damage_number := effects_spawner.damage_numbers[index]
-		var sprite := damage_number["sprite"] as Sprite2D
-		var shadow := damage_number.get("shadow") as Sprite2D
-		if sprite == null:
-			if shadow != null:
-				shadow.queue_free()
-			effects_spawner.damage_numbers.remove_at(index)
-			continue
-		var pop_timer := float(damage_number.get("pop_timer", 0.0))
-		if pop_timer > 0.0:
-			damage_number["pop_timer"] = maxf(pop_timer - delta, 0.0)
-			sprite.modulate = Color.WHITE
-			continue
-		var timer := float(damage_number["timer"]) - delta
-		if timer <= 0.0:
-			sprite.queue_free()
-			if shadow != null:
-				shadow.queue_free()
-			effects_spawner.damage_numbers.remove_at(index)
-			continue
-
-		var logical_position := damage_number.get("logical_position", sprite.position) as Vector2
-		logical_position += damage_number.get("velocity", Vector2.ZERO) as Vector2 * delta
-		damage_number["logical_position"] = logical_position
-		sprite.position = _snap_half_pixel(logical_position)
-		if shadow != null:
-			shadow.position = _snap_half_pixel(logical_position + Vector2(0.0, 0.5))
-		var color := Color.WHITE
-		color.a = clampf(timer / effects_tuning.damage_number_lifetime, 0.0, 1.0)
-		sprite.modulate = color
-		var shadow_color := Color.WHITE
-		shadow_color.a = color.a
-		if shadow != null:
-			shadow.modulate = shadow_color
-		damage_number["timer"] = timer
+	effects_spawner.update_damage_numbers(delta, Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime)
 
 
 func _damage_number_texture(value: int, color: Color = Color.WHITE) -> Texture2D:
@@ -4907,6 +4839,8 @@ func _set_current_target(target: Sprite2D) -> void:
 		return
 
 	current_target = target
+	if hud_controller != null:
+		hud_controller.set_target(target)
 
 
 func _update_target_ui() -> void:
@@ -4942,13 +4876,14 @@ func _update_target_ui() -> void:
 
 
 func _set_target_ui_visible(target_visible: bool) -> void:
-	target_name_text.visible = target_visible
-	target_health_bar.visible = target_visible
-	if target_health_damage_fill != null:
-		target_health_damage_fill.visible = target_visible
-	target_health_fill.visible = target_visible
-	if target_health_text != null:
-		target_health_text.visible = target_visible
+	hud_controller.set_visible(
+		target_name_text,
+		target_health_bar,
+		target_health_damage_fill,
+		target_health_fill,
+		target_health_text,
+		target_visible
+	)
 
 
 func _slime_display_name(slime: Sprite2D) -> String:
@@ -5004,8 +4939,7 @@ func _set_health_bar_values(
 
 
 func _set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
-	fill.region_enabled = true
-	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(ratio, 0.0, 1.0), fill_size.y))
+	hud_controller.set_fill_ratio(fill, fill_size, ratio)
 
 
 func _update_button_hud() -> void:
@@ -5167,70 +5101,23 @@ func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Arra
 
 
 func _make_effect_image(source_image: Image) -> Image:
-	var width := source_image.get_width() * effects_tuning.resolution_scale
-	var height := source_image.get_height() * effects_tuning.resolution_scale
-	var image := Image.create_empty(width, height, false, source_image.get_format())
-
-	for y in range(height):
-		for x in range(width):
-			image.set_pixel(
-				x,
-				y,
-				source_image.get_pixel(
-					int(float(x) / float(effects_tuning.resolution_scale)),
-					int(float(y) / float(effects_tuning.resolution_scale))
-				)
-			)
-
-	return image
+	return occlusion_renderer.make_effect_image(source_image)
 
 
 func _make_highlighted_effect_image(source_image: Image) -> Image:
-	var image := _make_effect_image(source_image)
-	_apply_half_pixel_outline(image)
-	return image
+	return occlusion_renderer.make_highlighted_effect_image(source_image)
 
 
 func _make_white_image(source_image: Image) -> Image:
-	var image := Image.create_empty(source_image.get_width(), source_image.get_height(), false, source_image.get_format())
-	for y in range(source_image.get_height()):
-		for x in range(source_image.get_width()):
-			var color := source_image.get_pixel(x, y)
-			if color.a > 0.05:
-				image.set_pixel(x, y, Color(1.0, 1.0, 1.0, color.a))
-			else:
-				image.set_pixel(x, y, Color(0.0, 0.0, 0.0, 0.0))
-	return image
+	return occlusion_renderer.make_white_image(source_image)
 
 
 func _apply_half_pixel_outline(image: Image) -> void:
-	var outline_points: Array[Vector2i] = []
-	var width := image.get_width()
-	var height := image.get_height()
-
-	for y in range(height):
-		for x in range(width):
-			if image.get_pixel(x, y).a > 0.05:
-				continue
-			if _has_opaque_neighbor(image, x, y):
-				outline_points.append(Vector2i(x, y))
-
-	for point in outline_points:
-		image.set_pixel(point.x, point.y, Color.WHITE)
+	occlusion_renderer.apply_half_pixel_outline(image)
 
 
 func _has_opaque_neighbor(image: Image, x: int, y: int) -> bool:
-	for offset_y in range(-1, 2):
-		for offset_x in range(-1, 2):
-			if offset_x == 0 and offset_y == 0:
-				continue
-			var sample_x := x + offset_x
-			var sample_y := y + offset_y
-			if sample_x < 0 or sample_y < 0 or sample_x >= image.get_width() or sample_y >= image.get_height():
-				continue
-			if image.get_pixel(sample_x, sample_y).a > 0.05:
-				return true
-	return false
+	return occlusion_renderer.has_opaque_neighbor(image, x, y)
 
 
 func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D]) -> bool:
@@ -5270,9 +5157,7 @@ func _source_pixel_position(sprite: Sprite2D, world_pixel: Vector2) -> Vector2:
 
 
 func _effect_texture_with_display_size(image: Image, display_size: Vector2i) -> ImageTexture:
-	var texture := ImageTexture.create_from_image(image)
-	texture.set_size_override(display_size)
-	return texture
+	return occlusion_renderer.effect_texture_with_display_size(image, display_size)
 
 
 func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void:
@@ -5303,46 +5188,23 @@ func _sprite_source_offset(sprite: Sprite2D) -> Vector2:
 
 
 func _cached_texture_image(texture: Texture2D) -> Image:
-	if occlusion_renderer.texture_image_cache.has(texture):
-		return occlusion_renderer.texture_image_cache[texture]
-
-	var image := _texture_image(texture)
-	occlusion_renderer.texture_image_cache[texture] = image
-	return image
+	return occlusion_renderer.cached_texture_image(texture)
 
 
 func _cached_effect_image(texture: Texture2D, source_image: Image) -> Image:
-	if occlusion_renderer.effect_image_cache.has(texture):
-		return occlusion_renderer.effect_image_cache[texture]
-
-	var image := _make_effect_image(source_image)
-	occlusion_renderer.effect_image_cache[texture] = image
-	return image
+	return occlusion_renderer.cached_effect_image(texture, source_image)
 
 
 func _cached_highlighted_image(texture: Texture2D, source_image: Image) -> Image:
-	if occlusion_renderer.highlighted_image_cache.has(texture):
-		return occlusion_renderer.highlighted_image_cache[texture]
-
-	var image := _make_highlighted_effect_image(source_image)
-	occlusion_renderer.highlighted_image_cache[texture] = image
-	return image
+	return occlusion_renderer.cached_highlighted_image(texture, source_image)
 
 
 func _cached_white_image(texture: Texture2D, source_image: Image) -> Image:
-	if occlusion_renderer.white_image_cache.has(texture):
-		return occlusion_renderer.white_image_cache[texture]
-
-	var image := _make_white_image(source_image)
-	occlusion_renderer.white_image_cache[texture] = image
-	return image
+	return occlusion_renderer.cached_white_image(texture, source_image)
 
 
 func _texture_image(texture: Texture2D) -> Image:
-	var image := texture.get_image()
-	if image.is_compressed():
-		image.decompress()
-	return image
+	return occlusion_renderer.cached_texture_image(texture)
 
 
 func _collect_walkable_tiles(node: Node) -> void:
@@ -5412,18 +5274,16 @@ func _build_entrance_block_polygons() -> void:
 			continue
 		for tile in socket.block_tiles():
 			entrance_block_polygons.append(_tile_top_polygon(tile))
+	if walkable_area != null:
+		walkable_area.set_entrance_blocks(entrance_block_polygons)
 
 
 func _is_walkable(point: Vector2) -> bool:
-	if _is_point_in_entrance_block(point):
-		return false
-	return _is_inside_base_walkable(point)
+	return walkable_area == null or walkable_area.is_walkable(point)
 
 
 func _is_inside_base_walkable(point: Vector2) -> bool:
-	if Geometry2D.is_point_in_polygon(point, walkable_outline):
-		return true
-	return _is_point_near_polygon_edge(point, walkable_outline)
+	return walkable_area != null and walkable_area.is_walkable(point)
 
 
 func _can_actor_stand_at_current_position(actor: Sprite2D) -> bool:
@@ -5448,18 +5308,11 @@ func _can_actor_stand_at_current_position(actor: Sprite2D) -> bool:
 
 
 func _is_slime_walkable_point(point: Vector2) -> bool:
-	if _is_point_in_entrance_block(point):
-		return false
-	if not Geometry2D.is_point_in_polygon(point, walkable_outline):
-		return false
-	return _distance_to_polygon_edge(point, walkable_outline) >= SLIME_EDGE_PADDING
+	return walkable_area != null and walkable_area.is_slime_walkable(point)
 
 
 func _is_point_in_entrance_block(point: Vector2) -> bool:
-	for polygon in entrance_block_polygons:
-		if Geometry2D.is_point_in_polygon(point, polygon):
-			return true
-	return false
+	return walkable_area != null and walkable_area.is_in_entrance_block(point)
 
 
 func _tile_top_polygon(tile: Sprite2D) -> PackedVector2Array:
@@ -5495,7 +5348,7 @@ func _distance_to_segment(point: Vector2, segment_start: Vector2, segment_end: V
 
 func _nearest_walkable_point(point: Vector2) -> Vector2:
 	if walkable_area != null and not walkable_area.is_empty():
-		return walkable_area.nearest_point(point)
+		return walkable_area.nearest_walkable_point(point)
 	var nearest := point
 	var nearest_distance := INF
 	for walkable_point in walkable_points:
@@ -5511,6 +5364,8 @@ func _nearest_walkable_point(point: Vector2) -> Vector2:
 
 
 func _nearest_slime_walkable_point(point: Vector2) -> Vector2:
+	if walkable_area != null and not walkable_area.is_empty():
+		return walkable_area.nearest_slime_walkable_point(point)
 	if _is_slime_walkable_point(point):
 		return point
 	var nearest := _nearest_walkable_point(point)
