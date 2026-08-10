@@ -157,3 +157,35 @@ func source_pixel_position(sprite: Sprite2D, world_pixel: Vector2, actor_screen_
 		var image := sprite_images[sprite] as Image
 		source_pixel.x = float(image.get_width()) - source_pixel.x - 1.0
 	return source_pixel
+
+
+func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], include_outline: bool, is_pixel_covered: Callable, actor_visual_offset: Callable) -> Texture2D:
+	var source_image := original_actor_images[actor] as Image
+	var result_image := make_effect_image(source_image)
+	var original_scale := original_actor_scales[actor] as Vector2
+	var visual_offset := actor_visual_offset.call(actor) as Vector2
+	var any_occluded_pixel := false
+	for y in range(result_image.get_height()):
+		for x in range(result_image.get_width()):
+			var color := result_image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			var source_x := (float(x) + 0.5) / float(resolution_scale)
+			var source_y := (float(y) + 0.5) / float(resolution_scale)
+			if actor.flip_h:
+				source_x = float(source_image.get_width()) - source_x
+			var world_pixel := actor.global_position + visual_offset * original_scale + Vector2(source_x, source_y) * original_scale
+			if not is_pixel_covered.call(world_pixel, active_occluders):
+				continue
+			any_occluded_pixel = true
+			if (x + y) % 2 == 0:
+				color.a = 0.0
+				result_image.set_pixel(x, y, color)
+	if not any_occluded_pixel and not include_outline:
+		return null
+	if include_outline:
+		apply_half_pixel_outline(result_image)
+	var texture := occluded_actor_textures[actor] as ImageTexture
+	texture.set_image(result_image)
+	texture.set_size_override(source_image.get_size())
+	return texture

@@ -5039,43 +5039,13 @@ func _source_texture_for_rect(sprite: Sprite2D) -> Texture2D:
 
 
 func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], include_outline: bool) -> Texture2D:
-	var source_image := occlusion_renderer.original_actor_images[actor] as Image
-	var result_image := _make_effect_image(source_image)
-	var width := result_image.get_width()
-	var height := result_image.get_height()
-	var any_occluded_pixel := false
-
-	for y in range(height):
-		for x in range(width):
-			var color := result_image.get_pixel(x, y)
-			if color.a <= 0.0:
-				continue
-
-			var source_x := (float(x) + 0.5) / float(effects_tuning.resolution_scale)
-			var source_y := (float(y) + 0.5) / float(effects_tuning.resolution_scale)
-			if actor.flip_h:
-				source_x = float(source_image.get_width()) - source_x
-
-			var world_pixel := actor.global_position + _actor_visual_offset(actor) * (occlusion_renderer.original_actor_scales[actor] as Vector2) + Vector2(source_x, source_y) * (occlusion_renderer.original_actor_scales[actor] as Vector2)
-			if not _is_pixel_covered_by_occluder(world_pixel, active_occluders):
-				continue
-
-			any_occluded_pixel = true
-			if (x + y) % 2 == 0:
-				color.a = 0.0
-				result_image.set_pixel(x, y, color)
-
-	if not any_occluded_pixel:
-		if not include_outline:
-			return null
-
-	if include_outline:
-		_apply_half_pixel_outline(result_image)
-
-	var texture := occlusion_renderer.occluded_actor_textures[actor] as ImageTexture
-	texture.set_image(result_image)
-	texture.set_size_override(source_image.get_size())
-	return texture
+	return occlusion_renderer.build_exact_occluded_actor_texture(
+		actor,
+		active_occluders,
+		include_outline,
+		Callable(self, "_is_pixel_covered_by_occluder"),
+		Callable(self, "_actor_visual_offset")
+	)
 
 
 func _make_effect_image(source_image: Image) -> Image:
