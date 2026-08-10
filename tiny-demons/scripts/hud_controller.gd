@@ -66,11 +66,11 @@ func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(ratio, 0.0, 1.0), fill_size.y))
 
 
-func set_fill_pixels(fill: Sprite2D, fill_size: Vector2, width: float) -> void:
+func set_fill_pixels(fill: Sprite2D, fill_size: Vector2, width: float, source_x: float = 0.0) -> void:
 	if fill == null:
 		return
 	fill.region_enabled = true
-	fill.region_rect = Rect2(Vector2.ZERO, Vector2(clampf(width, 0.0, fill_size.x), fill_size.y))
+	fill.region_rect = Rect2(Vector2(source_x, 0.0), Vector2(clampf(width, 0.0, fill_size.x), fill_size.y))
 
 
 func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, health: float, display_health: float, max_health: float) -> void:
@@ -94,7 +94,7 @@ func set_main_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, 
 	if transition_pixels < 1.0: return
 	transition_fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	transition_fill.position = main_fill.position + Vector2(minf(base_edge, display_edge), 0.0)
-	set_fill_pixels(transition_fill, fill_size, transition_pixels)
+	set_fill_pixels(transition_fill, fill_size, transition_pixels, 1.0)
 
 
 func update_overhead_bars(
