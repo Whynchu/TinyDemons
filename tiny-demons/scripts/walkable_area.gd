@@ -152,6 +152,20 @@ func nearest_slime_walkable_point(point: Vector2) -> Vector2:
 	return best
 
 
+func random_slime_walkable_point_near(point: Vector2, sample_count: int, ignored_slime: Sprite2D, random_source: RandomNumberGenerator, near_other: Callable) -> Vector2:
+	var nearest := nearest_slime_walkable_point(point)
+	var candidates: Array[Vector2] = []
+	var radius := 8.0 * float(sample_count)
+	var bounds := Rect2()
+	for outline_point in outline: bounds = bounds.expand(outline_point)
+	for index in 24:
+		var candidate := point + Vector2(random_source.randf_range(-radius, radius), random_source.randf_range(-radius, radius))
+		if bounds.has_point(candidate) and is_slime_walkable(candidate) and not near_other.call(candidate, ignored_slime): candidates.append(candidate)
+	for walkable_point in points:
+		if is_slime_walkable(walkable_point) and not near_other.call(walkable_point, ignored_slime) and walkable_point.distance_to(nearest) <= radius: candidates.append(walkable_point)
+	return nearest if candidates.is_empty() else candidates[random_source.randi_range(0, candidates.size() - 1)]
+
+
 func distance_to_polygon_edge(point: Vector2, polygon: PackedVector2Array) -> float:
 	var nearest_distance := INF
 	for index in polygon.size():

@@ -623,6 +623,7 @@ update-order regressions.
   - [x] Move loading animation updates and aggro-marker palette updates into owning controllers.
   - [x] Move slime easing, scoot, attack, knockback, regeneration, and death-effect updates behind slime/effects ownership APIs.
   - [x] Reach the M9 3,500-line coordinator checkpoint: `gameplay.gd` is exactly 3,500 physical lines after the extraction slice.
+  - [x] Reach the M9 3,000-line coordinator checkpoint: `gameplay.gd` is 2,999 physical lines after moving HUD, input, walkability, and texture ownership outward.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
