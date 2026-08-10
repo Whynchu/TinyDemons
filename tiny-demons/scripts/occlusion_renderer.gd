@@ -84,6 +84,19 @@ func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: flo
 		apply_actor_scale.call(actor, false)
 
 
+func active_occluders_for(actor: Sprite2D, occluder_sprites: Array[Sprite2D], actor_depth: float, actor_rect: Rect2, depth_key: Callable, source_rect: Callable) -> Dictionary:
+	var active_occluders: Array[Sprite2D] = []
+	var highest_occluder_z := actor.z_index
+	for occluder in occluder_sprites:
+		if occluder == actor or float(depth_key.call(occluder)) <= actor_depth:
+			continue
+		var overlap := actor_rect.intersection(source_rect.call(occluder) as Rect2)
+		if overlap.has_area():
+			active_occluders.append(occluder)
+			highest_occluder_z = maxi(highest_occluder_z, occluder.z_index)
+	return {"occluders": active_occluders, "highest_z": highest_occluder_z}
+
+
 func cached_texture_image(texture: Texture2D) -> Image:
 	if texture_image_cache.has(texture):
 		return texture_image_cache[texture]

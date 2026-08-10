@@ -4531,20 +4531,16 @@ func _update_actor_occlusion(delta: float) -> void:
 		var is_target := actor == current_target
 		var actor_depth := _depth_key(actor)
 		var actor_rect := _sprite_source_global_rect(actor)
-		var active_occluders: Array[Sprite2D] = []
-		var highest_occluder_z := actor.z_index
-
-		for occluder in occluder_sprites:
-			if occluder == actor:
-				continue
-			# Keep the cloaked demon solid when the player is in front of it.
-			# Normal occlusion still applies when the demon is in front of the player.
-			if _depth_key(occluder) <= actor_depth:
-				continue
-			var overlap := actor_rect.intersection(_sprite_source_global_rect(occluder))
-			if overlap.has_area():
-				active_occluders.append(occluder)
-				highest_occluder_z = maxi(highest_occluder_z, occluder.z_index)
+		var occlusion_candidates := occlusion_renderer.active_occluders_for(
+			actor,
+			occluder_sprites,
+			actor_depth,
+			actor_rect,
+			Callable(self, "_depth_key"),
+			Callable(self, "_sprite_source_global_rect")
+		)
+		var active_occluders := occlusion_candidates["occluders"] as Array[Sprite2D]
+		var highest_occluder_z := int(occlusion_candidates["highest_z"])
 
 		if active_occluders.is_empty():
 			_apply_unoccluded_actor_texture(actor, is_target, delta)
@@ -4875,29 +4871,13 @@ func _set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 
 
 func _update_button_hud() -> void:
-	if button_hud_sprites.size() < 4:
-		return
-	var devices := _controller_devices()
-	var triangle_pressed := false
-	var square_pressed := false
-	var x_pressed := false
-	var circle_pressed := false
-	for device in devices:
-		triangle_pressed = triangle_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_Y)
-		square_pressed = square_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_X)
-		x_pressed = x_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_A)
-		circle_pressed = circle_pressed or Input.is_joy_button_pressed(device, JOY_BUTTON_B)
-	var pressed := [triangle_pressed, square_pressed, x_pressed, circle_pressed]
-	for index in button_hud_sprites.size():
-		button_hud_sprites[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+	hud_controller.update_button_hud(button_hud_sprites, _controller_devices())
 
 
 func _update_overworld_ui() -> void:
 	_update_button_hud()
-	if gold_indicator != null and not gold_animation_frames.is_empty():
-		gold_animation_timer = fmod(gold_animation_timer + get_process_delta_time(), 0.48)
-		var gold_frame_index := mini(int(gold_animation_timer / 0.12), gold_animation_frames.size() - 1)
-		gold_indicator.texture = gold_animation_frames[gold_frame_index]
+	gold_animation_timer = fmod(gold_animation_timer + get_process_delta_time(), 0.48)
+	hud_controller.update_gold_indicator(gold_indicator, gold_animation_frames, gold_animation_timer)
 
 	hud_controller.update_overhead_bars(
 		slimes,

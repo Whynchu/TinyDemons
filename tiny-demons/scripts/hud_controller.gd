@@ -88,3 +88,25 @@ func update_overhead_bars(
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
 		set_health_bar_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
+
+
+func update_button_hud(buttons: Array[Sprite2D], devices: Array[int]) -> void:
+	if buttons.size() < 4:
+		return
+	var pressed := [false, false, false, false]
+	for device in devices:
+		pressed[0] = pressed[0] or Input.is_joy_button_pressed(device, JOY_BUTTON_Y)
+		pressed[1] = pressed[1] or Input.is_joy_button_pressed(device, JOY_BUTTON_X)
+		pressed[2] = pressed[2] or Input.is_joy_button_pressed(device, JOY_BUTTON_A)
+		pressed[3] = pressed[3] or Input.is_joy_button_pressed(device, JOY_BUTTON_B)
+	for index in buttons.size():
+		buttons[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+
+
+func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta: float) -> float:
+	if indicator == null or frames.is_empty():
+		return 0.0
+	var timer := fmod(delta, 0.48)
+	var frame_index := mini(int(timer / 0.12), frames.size() - 1)
+	indicator.texture = frames[frame_index]
+	return timer
