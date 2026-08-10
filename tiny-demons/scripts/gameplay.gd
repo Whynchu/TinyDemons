@@ -1000,8 +1000,30 @@ func _clear_roll_dust() -> void:
 		roll_dust_sprite.queue_free(); roll_dust_sprite = null
 	roll_dust_frame = 0; roll_dust_timer = 0.0; roll_dust_uses_flipped_frames = false; roll_dust_origin_position = Vector2.ZERO; roll_dust_drift_direction = Vector2.ZERO
 func _start_player_attack(variant: int = 1) -> void:
-	if variant == 1 and player_attack_frames.is_empty() or variant == 2 and player_attack2_frames.is_empty(): return
-	player_is_attacking = true; if player_attack_component != null: player_attack_component.begin(variant); player_just_finished_attack2 = false; player_attack_hit_done = false; player_attack_hit_targets.clear(); player_attack_flip_h = player.flip_h; player_attack_lunge_timer = player_tuning.attack_lunge_duration; player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (player_tuning.attack_lunge_distance / player_tuning.attack_lunge_duration)); if player_attack_component != null: player_attack_component.start_lunge(player_attack_lunge_velocity, player_attack_lunge_timer); player_anim_name = "attack2" if variant == 2 else "attack1"; if variant == 2: player_between_timer = 0.0; player_anim_frame = 0; player_anim_timer = 0.0; _restore_actor_base_visual_scale(player); player.visible = false; player_attack_visual.visible = true; _apply_player_animation_frame()
+	if variant == 1 and player_attack_frames.is_empty():
+		return
+	if variant == 2 and player_attack2_frames.is_empty():
+		return
+	player_is_attacking = true
+	if player_attack_component != null:
+		player_attack_component.begin(variant)
+	player_just_finished_attack2 = false
+	player_attack_hit_done = false
+	player_attack_hit_targets.clear()
+	player_attack_flip_h = player.flip_h
+	player_attack_lunge_timer = player_tuning.attack_lunge_duration
+	player_attack_lunge_velocity = _perspective_movement(_player_facing_vector() * (player_tuning.attack_lunge_distance / player_tuning.attack_lunge_duration))
+	if player_attack_component != null:
+		player_attack_component.start_lunge(player_attack_lunge_velocity, player_attack_lunge_timer)
+	player_anim_name = "attack2" if variant == 2 else "attack1"
+	if variant == 2:
+		player_between_timer = 0.0
+	player_anim_frame = 0
+	player_anim_timer = 0.0
+	_restore_actor_base_visual_scale(player)
+	player.visible = false
+	player_attack_visual.visible = true
+	_apply_player_animation_frame()
 func _interrupt_player_attack() -> void:
 	player_is_attacking = false
 	if player_attack_component != null:
@@ -1061,18 +1083,36 @@ func _update_player_animation(delta: float) -> void:
 func _update_player_attack_animation(delta: float) -> void:
 	player_anim_timer += delta
 	if player_anim_timer < player_tuning.attack_frame_time: return
-	player_anim_timer = fmod(player_anim_timer, player_tuning.attack_frame_time); player_anim_frame += 1; var frames := player_attack2_frames if player_anim_name == "attack2" else player_attack_frames; var hit_frame := player_tuning.attack2_hit_frame if player_anim_name == "attack2" else player_tuning.attack_hit_frame
+	player_anim_timer = fmod(player_anim_timer, player_tuning.attack_frame_time)
+	player_anim_frame += 1
+	var frames := player_attack2_frames if player_anim_name == "attack2" else player_attack_frames
+	var hit_frame := player_tuning.attack2_hit_frame if player_anim_name == "attack2" else player_tuning.attack_hit_frame
 	if player_anim_frame >= frames.size():
 		var finished_attack1_with_combo := player_anim_name == "attack1" and player_attack_component != null and player_attack_component.combo_buffered and player_between_attack_texture != null
 		if player_anim_name == "attack2":
-			if player_attack_component != null: player_attack_component.start_attack2_cooldown(player_tuning.attack2_cooldown)
+			if player_attack_component != null:
+				player_attack_component.start_attack2_cooldown(player_tuning.attack2_cooldown)
 			player_just_finished_attack2 = true
-		player_is_attacking = false; if player_attack_component != null: player_attack_component.finish(); player_attack_hit_done = false; player_attack_hit_targets.clear(); _restore_actor_base_visual_scale(player); player.visible = true; player_attack_visual.visible = false; player_anim_name = "walk" if player_is_moving else "idle"; player_anim_frame = 0; player_anim_timer = 0.0; _apply_player_animation_frame()
+		player_is_attacking = false
+		if player_attack_component != null:
+			player_attack_component.finish()
+		player_attack_hit_done = false
+		player_attack_hit_targets.clear()
+		_restore_actor_base_visual_scale(player)
+		player.visible = true
+		player_attack_visual.visible = false
+		player_anim_name = "walk" if player_is_moving else "idle"
+		player_anim_frame = 0
+		player_anim_timer = 0.0
+		_apply_player_animation_frame()
 		if finished_attack1_with_combo:
-			player_between_timer = player_tuning.between_attack_time; _set_actor_base_texture(player, player_between_attack_texture)
+			player_between_timer = player_tuning.between_attack_time
+			_set_actor_base_texture(player, player_between_attack_texture)
 		return
 	_apply_player_animation_frame()
-	if player_anim_frame == hit_frame and not player_attack_hit_done: _apply_player_attack_hitbox(); player_attack_hit_done = true
+	if player_anim_frame == hit_frame and not player_attack_hit_done:
+		_apply_player_attack_hitbox()
+		player_attack_hit_done = true
 func _apply_player_animation_frame() -> void:
 	if player_animation_component != null:
 		player_animation_component.animation_name = StringName(player_anim_name); player_animation_component.frame = player_anim_frame; player_animation_component.timer = player_anim_timer

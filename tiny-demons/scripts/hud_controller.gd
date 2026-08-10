@@ -215,7 +215,7 @@ func brighter_bar_texture(source: Texture2D) -> Texture2D:
 	if source == null: return null
 	var key := source.resource_path if not source.resource_path.is_empty() else str(source.get_instance_id())
 	if bright_bar_cache.has(key): return bright_bar_cache[key]
-	var image := source.get_image()
+	var image: Image = source.get_image().duplicate()
 	if image == null: return source
 	var palette_step := {"B13E53": Color8(239, 125, 87), "3B5DC9": Color8(65, 166, 246), "38B764": Color8(167, 240, 112)}
 	for y in image.get_height():
