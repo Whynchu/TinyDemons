@@ -2184,6 +2184,8 @@ func _build_enemy_health_ui() -> void:
 	player_health_damage_fill = player_health_fill.get_parent().get_node_or_null("HpBarDamageFill") as Sprite2D
 	var target_texture := hud_controller.target_health_fill_textures.get(slime_green, target_health_fill.texture) as Texture2D
 	if target_texture != null: target_health_fill.texture = target_texture
+	var target_damage_texture := hud_controller.target_health_damage_fill_textures.get(slime_green, target_health_damage_fill.texture if target_health_damage_fill != null else null) as Texture2D
+	if target_health_damage_fill != null and target_damage_texture != null: target_health_damage_fill.texture = target_damage_texture
 	if player_base_health_fill_texture != null: player_health_fill.texture = player_base_health_fill_texture
 	if player_health_damage_fill != null: player_health_damage_fill.texture = hud_controller.brighter_bar_texture(player_health_fill.texture)
 func _load_texture_or_null(path: String) -> Texture2D:
