@@ -5,6 +5,16 @@ class_name SlimeActor
 @export var tuning: SlimeTuning
 
 
+static func component(actor: Sprite2D, node_name: String, component_type: Variant) -> Node:
+	var component := actor.get_node_or_null(node_name)
+	if component != null:
+		return component
+	component = component_type.new()
+	component.name = node_name
+	actor.add_child(component)
+	return component
+
+
 func _ready() -> void:
 	if tuning == null:
 		tuning = SlimeTuning.new()

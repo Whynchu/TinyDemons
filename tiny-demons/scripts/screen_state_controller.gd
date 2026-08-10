@@ -118,7 +118,7 @@ func start_selected_archetype(root: Object) -> void:
 	root.set("player_damage_fill_hold_timer", 0.0)
 	root.call("_update_player_health_ui")
 	(root.get("player") as Sprite2D).visible = true
-	root.call("_apply_player_animation_frame")
+	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
 	root.set("loading_screen_fading", true); root.set("loading_screen_timer", 0.0)
 
 

@@ -22,6 +22,17 @@ func build_frames(root: Object) -> void:
 	root.set("player_base_between_attack_texture", root.get("player_between_attack_texture")); root.set("player_base_after_attack2_texture", root.get("player_after_attack2_texture")); apply_palette(root, "blue"); warm_player_caches(root)
 
 
+func apply_frame(root: Object) -> void:
+	var player := root.get("player") as Sprite2D; animation_name = StringName(root.get("player_anim_name")); frame = int(root.get("player_anim_frame")); timer = float(root.get("player_anim_timer")); var name: String = root.get("player_anim_name"); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if name == "attack2" else root.get("player_attack_frames") if name == "attack1" else root.get("player_walk_frames") if name == "walk" else root.get("player_idle_frames")
+	if frames.is_empty(): return
+	if bool(root.get("player_is_rolling")): root.call("_set_actor_base_texture", player, frames[int(root.get("player_roll_component").frame)]); return
+	if name == "attack1" or name == "attack2":
+		var flip: bool = root.get("player_attack_flip_h"); var attack_frames: Array[Texture2D] = root.get("player_attack2_left_frames") if name == "attack2" and flip else root.get("player_attack_left_frames") if flip else root.get("player_attack2_frames") if name == "attack2" else root.get("player_attack_frames")
+		if attack_frames.is_empty(): return
+		var visual := root.get("player_attack_visual") as Sprite2D; visual.texture = attack_frames[frame]; update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index); return
+	player.offset = Vector2(-10, -10); root.call("_set_actor_base_texture", player, frames[frame])
+
+
 func apply_palette(root: Object, palette_name: String) -> void:
 	for key in ["idle", "walk", "roll", "attack", "attack2", "attack_left", "attack2_left"]: root.set("player_%s_frames" % key, recolor_frames(root.get("player_base_%s_frames" % key), palette_name))
 	root.set("player_between_attack_texture", recolor_texture(root.get("player_base_between_attack_texture"), palette_name)); root.set("player_after_attack2_texture", recolor_texture(root.get("player_base_after_attack2_texture"), palette_name)); warm_player_caches(root)
@@ -67,7 +78,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 	var rolling := bool(root.get("player_is_rolling"))
 	if attacking or rolling:
 		if rolling:
-			root.call("_apply_player_animation_frame")
+			apply_frame(root)
 			return
 		var attack_timer := float(root.get("player_anim_timer")) + delta
 		var attack_tuning := root.get("player_tuning") as PlayerTuning
@@ -96,14 +107,14 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			root.set("player_anim_name", attack_name)
 			root.set("player_anim_frame", 0)
 			root.set("player_anim_timer", 0.0)
-			root.call("_apply_player_animation_frame")
+			apply_frame(root)
 			if combo:
 				root.set("player_between_timer", attack_tuning.between_attack_time)
 				root.call("_set_actor_base_texture", root.get("player"), root.get("player_between_attack_texture"))
 			return
 		root.set("player_anim_timer", attack_timer)
 		root.set("player_anim_frame", animation_frame)
-		root.call("_apply_player_animation_frame")
+		apply_frame(root)
 		if animation_frame == hit_frame and not bool(root.get("player_attack_hit_done")):
 			root.call("_apply_player_attack_hitbox")
 			root.set("player_attack_hit_done", true)
@@ -113,7 +124,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		root.set("player_anim_name", idle_name)
 		root.set("player_anim_frame", 0)
 		root.set("player_anim_timer", 0.0)
-		root.call("_apply_player_animation_frame")
+		apply_frame(root)
 		return
 	var idle_tuning := root.get("player_tuning") as PlayerTuning
 	var idle_timer := float(root.get("player_anim_timer")) + delta
@@ -125,7 +136,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 	var idle_frames := (root.get("player_walk_frames") as Array[Texture2D]) if idle_name == "walk" else (root.get("player_idle_frames") as Array[Texture2D])
 	if idle_frames.is_empty(): return
 	root.set("player_anim_frame", (int(root.get("player_anim_frame")) + 1) % idle_frames.size())
-	root.call("_apply_player_animation_frame")
+	apply_frame(root)
 
 
 func update_attack_visual(player: Sprite2D, attack_visual: Sprite2D, active: bool, texture_offset: Vector2, z_index_value: int) -> void:

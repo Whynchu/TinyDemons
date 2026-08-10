@@ -24,7 +24,7 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance / tuning.attack_lunge_duration)), tuning.attack_lunge_duration)
 	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
 	if new_variant == 2: root.set("player_between_timer", 0.0)
-	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; root.call("_apply_player_animation_frame")
+	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
 
 
 func apply_hitbox(root: Object) -> void:
@@ -124,3 +124,10 @@ func consume_lunge(delta: float) -> Vector2:
 	if lunge_remaining <= 0.0:
 		lunge_velocity = Vector2.ZERO
 	return motion
+
+
+func update_lunge(root: Object, delta: float) -> void:
+	if not has_lunge(): return
+	var player := root.get("player") as Sprite2D; var original := player.position; var movement := consume_lunge(delta)
+	player.position.x += movement.x; if not root.call("_is_walkable", root.call("_actor_foot", player)) or root.call("_collides_with_static", player): player.position.x = original.x
+	player.position.y += movement.y; if not root.call("_is_walkable", root.call("_actor_foot", player)) or root.call("_collides_with_static", player): player.position.y = original.y

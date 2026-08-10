@@ -27,7 +27,7 @@ func start_from_root(root: Object) -> void:
 	root.set("roll_dust_spawned_this_roll", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	var tuning := root.get("player_tuning") as PlayerTuning
 	start_motion(root.call("_perspective_movement", direction * (tuning.roll_distance / tuning.roll_duration))); player.visible = true
-	root.call("_apply_player_animation_frame")
+	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
 
 
 func update_from_root(root: Object, delta: float) -> void:
@@ -43,7 +43,7 @@ func update_from_root(root: Object, delta: float) -> void:
 		var motor := root.get("player_motor") as ActorMotor
 		if motor != null: motor.end_roll()
 		root.set("player_anim_name", "idle")
-	root.call("_apply_player_animation_frame")
+	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
 
 
 func move_swept(movement: Vector2, root: Object) -> bool:

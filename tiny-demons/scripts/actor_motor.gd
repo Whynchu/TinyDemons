@@ -50,6 +50,12 @@ func consume_knockback(delta: float) -> Vector2:
 	return motion
 
 
+func update_player_hit_reaction(root: Object, delta: float) -> void:
+	root.set("player_hit_flash_timer", maxf(float(root.get("player_hit_flash_timer")) - delta, 0.0)); root.set("player_hitstun_timer", maxf(float(root.get("player_hitstun_timer")) - delta, 0.0))
+	if not is_in_knockback(): return
+	(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(root.get("player"), consume_knockback(delta), 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+
+
 func is_in_knockback() -> bool:
 	return knockback_remaining > 0.0
 

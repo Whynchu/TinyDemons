@@ -2,6 +2,19 @@ extends Node
 class_name GameplayFrameController
 
 
+func update_player_input(root: Object) -> void:
+	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
+	if attack_down and not bool(root.get("player_attack_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and (attack == null or attack.can_start_attack2()):
+		if float(root.get("player_between_timer")) > 0.0:
+			if attack != null: attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input"))
+		elif attack != null: attack.start_player_attack(root, 1)
+	root.set("player_attack_input_was_down", attack_down)
+	var roll_down: bool = root.call("_is_roll_input_pressed")
+	if roll_down and not bool(root.get("player_roll_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
+		var roll := root.get("player_roll_component") as PlayerRollComponent; if roll != null: roll.start_from_root(root)
+	root.set("player_roll_input_was_down", roll_down)
+
+
 func tick(root: Object, delta: float) -> void:
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta)
@@ -22,7 +35,7 @@ func tick(root: Object, delta: float) -> void:
 	var hitstop: float = root.get("hitstop_timer")
 	if hitstop > 0.0: root.set("hitstop_timer", maxf(hitstop - delta, 0.0)); return
 	if bool(root.get("player_death_pending")) and not bool(root.get("player_dead")):
-		root.call("_update_player_hit_reaction", delta); root.call("_update_damage_numbers", delta)
+		(root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta); root.call("_update_damage_numbers", delta)
 		var motor := root.get("player_motor") as ActorMotor
 		if motor == null or not motor.is_in_knockback(): root.call("_start_player_death")
 		return
@@ -34,7 +47,7 @@ func tick(root: Object, delta: float) -> void:
 	var player_input_locked: bool = dialogue_was_active
 	var player_tuning := root.get("player_tuning") as PlayerTuning
 	var previous_attack_input: bool = root.get("player_attack_input_was_down"); var previous_attacking: bool = root.get("player_is_attacking")
-	if not player_input_locked: root.call("_update_player_attack_input")
+	if not player_input_locked: update_player_input(root)
 	var attack_input_down: bool = root.call("_is_attack_input_pressed")
 	var player_attack := root.get("player_attack_component") as PlayerAttackComponent
 	if not player_input_locked and attack_input_down and not previous_attack_input and previous_attacking and root.get("player_anim_name") == "attack1":
@@ -43,10 +56,9 @@ func tick(root: Object, delta: float) -> void:
 		var movement: Vector2 = root.call("_movement_input"); var combo_direction_changed := movement.length() > 0.25 and (player_attack.combo_movement.length() <= 0.25 or movement.normalized().dot(player_attack.combo_movement.normalized()) < 0.99)
 		if combo_direction_changed: player_attack.consume_combo()
 	if player_attack != null and player_attack.combo_buffered and not bool(root.get("player_is_attacking")) and float(root.get("player_between_timer")) <= 0.0 and player_attack.can_start_attack2(): player_attack.start_player_attack(root, 2); player_attack.consume_combo()
-	if not player_input_locked: root.call("_update_player_roll_input")
-	root.call("_update_player_attack_lunge", delta)
+	if player_attack != null: player_attack.update_lunge(root, delta)
 	if root.get("player_roll_component") != null: (root.get("player_roll_component") as PlayerRollComponent).update_from_root(root, delta)
-	root.call("_update_roll_dust", delta); root.call("_update_player_hit_reaction", delta)
+	root.call("_update_roll_dust", delta); (root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta)
 	if not player_input_locked and root.get("player_motor") != null: (root.get("player_motor") as ActorMotor).move_player(root, delta)
 	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_damage_numbers", delta); root.call("_update_pixel_particles", delta)
 	if not dialogue_was_active:
