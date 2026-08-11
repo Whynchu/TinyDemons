@@ -78,7 +78,7 @@ func update_archetype_input(root: Object, delta: float) -> void:
 	root.call("_update_archetype_arrow_animation")
 	var button := root.get("archetype_start_button") as Button
 	button.modulate.a = retro_button_alpha(root.get("archetype_frame_timer"))
-	button.position.y = 127.0 + retro_button_bob(root.get("archetype_frame_timer"))
+	button.position.y = 99.0 + retro_button_bob(root.get("archetype_frame_timer"))
 	var row := int(root.get("archetype_menu_row"))
 	if Input.is_action_just_pressed("ui_up"):
 		root.call("_select_archetype_menu_row", row - 1)
