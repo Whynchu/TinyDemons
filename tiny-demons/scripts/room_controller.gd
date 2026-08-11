@@ -279,7 +279,7 @@ func reset_slimes_for_room(root: Object) -> void:
 		if slot >= slimes.size(): break
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
 	root.call("_build_slime_direction_textures")
-	root.call("_build_slime_attack_frames")
+	root.call("_assign_slime_attack_frames")
 	root.call("_refresh_enemy_palette_textures")
 	var player := root.get("player") as Sprite2D; var player_foot: Vector2 = root.call("_actor_foot", player); var chest := root.get("chest") as Sprite2D; var chest_rect: Rect2 = root.call("_collision_rect", chest)
 	var occupied: Array[Vector2] = []
