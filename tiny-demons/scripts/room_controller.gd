@@ -46,10 +46,17 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 101
 	var count := 1
-	for slot in range(1, 6):
-		var additional_enemy_chance := clampf(0.18 + float(room_depth) * 0.09 + float(slot) * 0.02, 0.18, 0.94)
-		if encounter_rng.randf() > additional_enemy_chance: break
-		count += 1
+	var depth := maxi(room_depth, 0)
+	if encounter_rng.randf() < clampf(0.38 + float(depth) * 0.04, 0.38, 0.68):
+		count = 2
+		if encounter_rng.randf() < clampf(0.35 + float(depth) * 0.04, 0.35, 0.67):
+			count = 3
+			if encounter_rng.randf() < clampf(float(depth - 2) * 0.10, 0.0, 0.60):
+				count = 4
+				if encounter_rng.randf() < clampf(float(depth - 4) * 0.07, 0.0, 0.45):
+					count = 5
+					if encounter_rng.randf() < clampf(float(depth - 8) * 0.03, 0.0, 0.08):
+						count = 6
 	var variants: Array[String] = []
 	var levels: Array[int] = []
 	var available_variants: Array[String] = ["blue", "green", "red"]
