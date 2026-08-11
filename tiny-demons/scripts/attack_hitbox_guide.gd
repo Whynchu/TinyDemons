@@ -52,8 +52,10 @@ func _refresh_preview() -> void:
 	if preview != null:
 		preview.visible = show_preview
 		preview.texture = attack_sheet
-		preview.hframes = maxi(1, int(attack_sheet.get_width()) / maxi(frame_size.x, 1)) if attack_sheet != null else 1
-		preview.vframes = maxi(1, int(attack_sheet.get_height()) / maxi(frame_size.y, 1)) if attack_sheet != null else 1
+		var frame_width := maxi(frame_size.x, 1)
+		var frame_height := maxi(frame_size.y, 1)
+		preview.hframes = maxi(1, floori(float(attack_sheet.get_width()) / float(frame_width))) if attack_sheet != null else 1
+		preview.vframes = maxi(1, floori(float(attack_sheet.get_height()) / float(frame_height))) if attack_sheet != null else 1
 		preview.frame = clampi(frame_index, 0, preview.hframes * preview.vframes - 1)
 	if hitbox != null:
 		hitbox.visible = show_preview
