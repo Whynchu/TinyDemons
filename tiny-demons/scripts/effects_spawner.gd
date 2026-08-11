@@ -9,7 +9,10 @@ var pixel_particles: Array[Dictionary] = []
 
 
 func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
-	var tuning := root.get("effects_tuning") as EffectsTuning; spawn_slime_death_particles(root, (root.get("occlusion_renderer") as OcclusionRenderer).actor_default_textures.get(slime) as Texture2D, slime.global_position, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"))
+	var tuning := root.get("effects_tuning") as EffectsTuning
+	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
+	var source_texture: Texture2D = occlusion.original_actor_textures.get(slime, slime.texture)
+	spawn_slime_death_particles(root, source_texture, slime.global_position, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"))
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
