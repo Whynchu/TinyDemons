@@ -363,8 +363,8 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 
 func make_archetype_arrow(parent: Node, side: int, button_position: Vector2, pressed_callback: Callable, pixel_texture: Callable) -> Button:
 	var button := Button.new(); button.position = button_position; button.size = Vector2(10, 10); button.text = ""; button.focus_mode = Control.FOCUS_NONE; button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; button.set_meta("archetype_arrow", true)
-	for state in ["normal", "hover", "pressed", "focus"]:
-		var style := StyleBoxFlat.new(); style.bg_color = Color.TRANSPARENT; style.border_width_left = 0; style.border_width_top = 0; style.border_width_right = 0; style.border_width_bottom = 0; button.add_theme_stylebox_override(state, style)
+	for style_state in ["normal", "hover", "pressed", "focus"]:
+		var style := StyleBoxFlat.new(); style.bg_color = Color.TRANSPARENT; style.border_width_left = 0; style.border_width_top = 0; style.border_width_right = 0; style.border_width_bottom = 0; button.add_theme_stylebox_override(style_state, style)
 	var glyph := Sprite2D.new(); glyph.texture = pixel_texture.call("<" if side < 0 else ">", Color.WHITE) as Texture2D; glyph.centered = true; glyph.position = button.size * 0.5; glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; button.add_child(glyph)
 	button.pressed.connect(pressed_callback); parent.add_child(button); return button
 
