@@ -28,13 +28,14 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 
 
 func apply_hitbox(root: Object) -> void:
-	var hitbox: Rect2 = root.call("_player_attack_hitbox")
+	var hitbox := attack_polygon(root)
+	if hitbox.size() < 3: return
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var attack_component := root.get("player_attack_component") as PlayerAttackComponent
 	var eligible_targets: Array[Sprite2D] = []
 	for slime in slimes:
 		if bool(root.call("_is_slime_dead", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
-		if not hitbox.intersects(root.call("_collision_rect", slime), false): continue
+		if not polygon_intersects_rect(hitbox, root.call("_collision_rect", slime)): continue
 		eligible_targets.append(slime)
 	if eligible_targets.is_empty(): return
 	var target_count := eligible_targets.size()
@@ -42,6 +43,25 @@ func apply_hitbox(root: Object) -> void:
 		(root.get("player_attack_hit_targets") as Array[Sprite2D]).append(slime); register_hit(slime)
 		var damage := float(root.call("_player_attack_damage_against", slime)); var divided_damage := floorf(damage / float(target_count))
 		root.call("_damage_slime", slime, maxf(divided_damage, 1.0), bool(root.get("last_damage_was_critical"))); root.call("_knockback_slime", slime)
+
+
+func attack_polygon(root: Object) -> PackedVector2Array:
+	var player := root.get("player") as Sprite2D
+	var guide_name := "Attack2HitboxShape" if variant == 2 else "Attack1HitboxShape"
+	var guide := player.get_node_or_null(guide_name) as AttackHitboxGuide
+	if guide != null:
+		var polygon := guide.world_polygon(bool(root.get("player_attack_flip_h")))
+		if polygon.size() >= 3: return polygon
+	var fallback: Rect2 = root.call("_player_attack_hitbox")
+	return rect_polygon(fallback)
+
+
+func polygon_intersects_rect(polygon: PackedVector2Array, rect: Rect2) -> bool:
+	return not Geometry2D.intersect_polygons(polygon, rect_polygon(rect)).is_empty()
+
+
+func rect_polygon(rect: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)])
 
 
 func begin(new_variant: int) -> void:
