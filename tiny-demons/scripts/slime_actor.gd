@@ -167,6 +167,7 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		brain.hold_timer = hold_delay
 		brain.idle_breath_timer = idle_breath_delay
 		brain.persistent_aggro = false
+		brain.blocked_repath_cooldown = 0.0
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
 	if combat != null:
 		combat.flash_timer = 0.0

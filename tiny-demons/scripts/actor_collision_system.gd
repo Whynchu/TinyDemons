@@ -1,10 +1,8 @@
 extends Node
 class_name ActorCollisionSystem
 
-## Contact-resolution boundary. Existing gameplay resolver remains authoritative
-## until static-map and actor-contact parity is verified.
+## Handles static movement checks and bounded actor-contact resolution.
 
-var actors: Array[Sprite2D] = []
 @export var contact_distance := 64.0
 
 
@@ -20,49 +18,66 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 			update_attack_guides.call(actor)
 
 
-func set_actors(new_actors: Array[Sprite2D]) -> void:
-	actors = new_actors.duplicate()
-
-
-func add_actor(actor: Sprite2D) -> void:
-	if not actors.has(actor):
-		actors.append(actor)
-
-
-func remove_actor(actor: Sprite2D) -> void:
-	actors.erase(actor)
-
-
-func contacts_for(actor: Sprite2D) -> Array[Sprite2D]:
-	var contacts: Array[Sprite2D] = []
-	for other in actors:
+func resolve_motion_contacts(actor: Sprite2D, movement: Vector2, candidates: Array[Sprite2D], root: Object) -> void:
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	var actor_is_slime := slimes.has(actor)
+	for other in candidates:
 		if other == actor or not is_instance_valid(other) or not other.visible:
 			continue
-		if actor.global_position.distance_to(other.global_position) <= contact_distance:
-			contacts.append(other)
-	return contacts
+		if actor_is_slime and slimes.has(other):
+			continue
+		if actor.global_position.distance_squared_to(other.global_position) > contact_distance * contact_distance:
+			continue
+		resolve_contact_pair(actor, other, movement, root)
 
 
-func resolve_contacts(actor: Sprite2D, movement: Vector2, resolver: Callable) -> void:
-	for other in contacts_for(actor):
-		resolver.call(actor, other, movement)
+func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: int = 2) -> int:
+	var resolved_pairs := 0
+	for _separation_pass in max_passes:
+		var resolved_this_pass := false
+		for actor_index in slimes.size():
+			var actor := slimes[actor_index]
+			if not is_instance_valid(actor) or not actor.visible:
+				continue
+			for other_index in range(actor_index + 1, slimes.size()):
+				var other := slimes[other_index]
+				if not is_instance_valid(other) or not other.visible:
+					continue
+				var push := actor_contact_push_vector(root, actor, other)
+				if push == Vector2.ZERO:
+					continue
+				if _separate_slime_pair(root, actor, other, push):
+					resolved_pairs += 1
+					resolved_this_pass = true
+		if not resolved_this_pass:
+			break
+	return resolved_pairs
 
 
-func try_move(actor: Sprite2D, movement: Vector2, can_stand: Callable, collides_static: Callable, resolve_contacts_for: Callable) -> bool:
-	var original := actor.position
-	if absf(movement.x) > 0.001:
-		actor.position.x += movement.x
-		if not can_stand.call(actor) or collides_static.call(actor):
-			actor.position.x = original.x
-		else:
-			resolve_contacts_for.call(actor, Vector2(movement.x, 0.0))
-	if absf(movement.y) > 0.001:
-		actor.position.y += movement.y
-		if not can_stand.call(actor) or collides_static.call(actor):
-			actor.position.y = original.y
-		else:
-			resolve_contacts_for.call(actor, Vector2(0.0, movement.y))
-	return actor.position.distance_squared_to(original) > 0.0001
+func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:
+	var actor_start := actor.position
+	var other_start := other.position
+	actor.position += push * 0.5
+	other.position -= push * 0.5
+	var actor_valid := _position_is_valid(root, actor)
+	var other_valid := _position_is_valid(root, other)
+	if actor_valid and other_valid:
+		return true
+	actor.position = actor_start
+	other.position = other_start
+	actor.position += push
+	if _position_is_valid(root, actor):
+		return true
+	actor.position = actor_start
+	other.position -= push
+	if _position_is_valid(root, other):
+		return true
+	other.position = other_start
+	return false
+
+
+func _position_is_valid(root: Object, actor: Sprite2D) -> bool:
+	return bool(root.call("_can_actor_stand_at_current_position", actor)) and not bool(root.call("_collides_with_static", actor))
 
 
 func try_move_swept(actor: Sprite2D, movement: Vector2, max_step: float, can_stand: Callable, collides_static: Callable) -> bool:
@@ -99,8 +114,6 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 		separate_actor(root, actor, other)
 	elif other == root.get("cloaked_demon"):
 		separate_actor(root, actor, other)
-	elif (root.get("slimes") as Array[Sprite2D]).has(actor) and (root.get("slimes") as Array[Sprite2D]).has(other):
-		push_actor(root, actor, other, movement)
 	elif actor != root.get("player") and other == root.get("player") and bool(root.call("_is_enemy_control_locked", actor)):
 		separate_actor(root, actor, other)
 	else:

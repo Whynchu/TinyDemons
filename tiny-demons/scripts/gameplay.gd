@@ -182,6 +182,7 @@ func _move_slimes(delta: float) -> void:
 		if slime_actor != null:
 			slime_actor.tick_components(delta); slime_actor.tick_runtime(delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot")); continue
 		SlimeActor.tick_legacy_runtime(slime, delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot"))
+	actor_collision_system.resolve_slime_contacts(slimes, self)
 func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 	return _slime_combat(slime).tick_attack(delta, slime, slime_tuning, _slime_attack_frames(slime), player_dead, Callable(self, "_set_slime_attack_frame"), Callable(self, "_set_actor_base_texture"), Callable(self, "_apply_slime_attack_lunge"), Callable(self, "_apply_slime_attack_hit"), Callable(self, "_restore_slime_idle_texture"), Callable(self, "_can_slime_attack_player"), Callable(self, "_start_slime_attack"))
 func _set_slime_attack_frame(slime: Sprite2D, frame_index: int) -> void: _slime_animation(slime).set_attack_frame(frame_index)
@@ -236,6 +237,8 @@ func _start_slime_scoot(slime: Sprite2D) -> void: _set_actor_visual_scale(slime,
 func _repath_slime_after_block(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
 	var brain := _slime_brain(slime); brain.scoot_timer = 0.0; brain.scoot_start = slime.position; brain.scoot_target = slime.position; brain.repath_timer = 0.0
+	if brain.blocked_repath_cooldown > 0.0: brain.hold_timer = maxf(brain.hold_timer, brain.blocked_repath_cooldown); _set_actor_visual_scale(slime, Vector2.ONE); return
+	brain.blocked_repath_cooldown = rng.randf_range(0.10, 0.18)
 	if _is_slime_aggroed(slime): brain.target = _aggro_slime_target(slime); brain.hold_timer = 0.0
 	else: brain.target = _random_slime_walkable_point_near(_actor_foot(slime), 8, slime); brain.hold_timer = rng.randf_range(0.08, 0.18)
 	_set_actor_visual_scale(slime, Vector2.ONE)
@@ -251,8 +254,7 @@ func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool:
 	else: _resolve_actor_contacts(actor, Vector2(0.0, movement.y))
 	return actor.position.distance_squared_to(original) > 0.0001
 func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void:
-	if actor_collision_system != null: actor_collision_system.set_actors(collision_sprites); actor_collision_system.resolve_contacts(actor, movement, Callable(actor_collision_system, "resolve_contact_pair").bind(self)); return
-	for other in collision_sprites: actor_collision_system.resolve_contact_pair(actor, other, movement, self)
+	if actor_collision_system != null: actor_collision_system.resolve_motion_contacts(actor, movement, collision_sprites, self)
 func _is_enemy_control_locked(actor: Sprite2D) -> bool: return _slime_combat(actor).hitstun_timer > 0.0 or _slime_combat(actor).knockback_timer > 0.0
 func _collides_with_static(actor: Sprite2D) -> bool:
 	for other in collision_sprites: if other != actor and other == chest and _collision_rect(actor).intersects(_collision_rect(other), false): return true

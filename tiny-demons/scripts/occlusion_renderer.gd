@@ -112,7 +112,9 @@ func active_occluders_for(actor: Sprite2D, occluder_sprites: Array[Sprite2D], ac
 	var active_occluders: Array[Sprite2D] = []
 	var highest_occluder_z := actor.z_index
 	for occluder in occluder_sprites:
-		if occluder == actor or float(depth_key.call(occluder)) <= actor_depth:
+		# Moving actors already cross correctly through foot-based depth sorting.
+		# Exact actor-on-actor masks are prohibitively expensive in crowded rooms.
+		if occluder == actor or original_actor_textures.has(occluder) or float(depth_key.call(occluder)) <= actor_depth:
 			continue
 		var overlap := actor_rect.intersection(source_rect.call(occluder) as Rect2)
 		if overlap.has_area():

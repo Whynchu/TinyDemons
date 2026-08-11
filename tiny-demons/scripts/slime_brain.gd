@@ -14,6 +14,7 @@ var scoot_start := Vector2.ZERO
 var scoot_target := Vector2.ZERO
 var scoot_timer := 0.0
 var persistent_aggro := false
+var blocked_repath_cooldown := 0.0
 
 
 static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
@@ -34,6 +35,7 @@ func tick(delta: float) -> void:
 	repath_timer = maxf(repath_timer - delta, 0.0)
 	hold_timer = maxf(hold_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
+	blocked_repath_cooldown = maxf(blocked_repath_cooldown - delta, 0.0)
 
 
 func set_aggro(value: bool) -> void:
