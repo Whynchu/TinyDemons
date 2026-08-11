@@ -55,7 +55,11 @@ func show_dialogue(root: Object) -> void:
 	var demon := root.get("cloaked_demon") as Sprite2D
 	if root.get("npc_dialogue_box") == null or not demon.visible: return
 	var message := (root.get("npc_dialogue_messages") as Array)[int(root.get("npc_dialogue_index")) % (root.get("npc_dialogue_messages") as Array).size()] as String; root.set("npc_dialogue_index", int(root.get("npc_dialogue_index")) + 1); begin_dialogue(message)
-	(root.get("npc_dialogue_text") as Sprite2D).texture = root.call("_pixel_text_texture", "", Color.WHITE); (root.get("npc_dialogue_text") as Sprite2D).visible = true; (root.get("npc_dialogue_button") as Sprite2D).visible = false; root.set("npc_dialogue_input_was_down", root.call("_is_interact_input_pressed")); (root.get("npc_dialogue_box") as ColorRect).visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); (root.get("player_attack_visual") as Sprite2D).visible = false; root.set("player_anim_name", "idle"); root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root); (root.get("interact_prompt") as Sprite2D).visible = false
+	var player_was_idle := String(root.get("player_anim_name")) == "idle"
+	(root.get("npc_dialogue_text") as Sprite2D).texture = root.call("_pixel_text_texture", "", Color.WHITE); (root.get("npc_dialogue_text") as Sprite2D).visible = true; (root.get("npc_dialogue_button") as Sprite2D).visible = false; root.set("npc_dialogue_input_was_down", root.call("_is_interact_input_pressed")); (root.get("npc_dialogue_box") as ColorRect).visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); (root.get("player_attack_visual") as Sprite2D).visible = false
+	if not player_was_idle:
+		root.set("player_anim_name", "idle"); root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
+	(root.get("interact_prompt") as Sprite2D).visible = false
 	update_dialogue_from_root(root, 0.0)
 
 

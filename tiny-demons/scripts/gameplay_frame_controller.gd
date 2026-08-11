@@ -31,7 +31,7 @@ func tick(root: Object, delta: float) -> void:
 		if not bool(root.get("title_transition_active")): return
 	if bool(root.get("loading_screen_active")): root.call("_update_loading_screen", delta); return
 	var dialogue_box := root.get("npc_dialogue_box") as ColorRect; var dialogue_was_active: bool = dialogue_box != null and dialogue_box.visible
-	if dialogue_was_active: (root.get("npc_controller") as NpcController).update_dialogue_from_root(root, delta); (root.get("npc_controller") as NpcController).update_dialogue_input(root)
+	if dialogue_was_active: (root.get("npc_controller") as NpcController).update_dialogue_from_root(root, delta); (root.get("npc_controller") as NpcController).update_dialogue_input(root); root.call("_update_cloaked_demon_animation", delta)
 	var hitstop: float = root.get("hitstop_timer")
 	if hitstop > 0.0: root.set("hitstop_timer", maxf(hitstop - delta, 0.0)); return
 	if bool(root.get("player_death_pending")) and not bool(root.get("player_dead")):
