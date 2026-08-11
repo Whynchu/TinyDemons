@@ -40,13 +40,13 @@ func claim_reward() -> void:
 
 func start_flash(root: Object) -> void:
 	var old_overlay := root.get("chest_flash_overlay") as Sprite2D; if old_overlay != null: old_overlay.queue_free()
-	var chest := root.get("chest") as Sprite2D; var overlay := Sprite2D.new(); overlay.name = "ChestFlashOverlay"; overlay.texture = root.call("_white_texture", chest.texture); overlay.centered = chest.centered; overlay.offset = chest.offset; overlay.scale = chest.scale; overlay.texture_filter = chest.texture_filter; overlay.z_as_relative = false; overlay.z_index = chest.z_index + 1; overlay.global_position = chest.global_position; overlay.modulate = Color.WHITE; root.add_child(overlay); root.set("chest_flash_overlay", overlay)
+	var chest := root.get("chest") as Sprite2D; var overlay := Sprite2D.new(); overlay.name = "ChestFlashOverlay"; overlay.texture = root.call("_white_texture", chest.texture); overlay.centered = chest.centered; overlay.offset = chest.offset; overlay.scale = chest.scale; overlay.flip_h = chest.flip_h; overlay.texture_filter = chest.texture_filter; overlay.z_as_relative = false; overlay.z_index = chest.z_index + 1; overlay.global_position = chest.global_position; overlay.modulate = Color.WHITE; root.add_child(overlay); root.set("chest_flash_overlay", overlay)
 
 
 func start_unlock_fade(root: Object) -> void:
 	var old_overlay := root.get("chest_unlock_overlay") as Sprite2D; if old_overlay != null: old_overlay.queue_free()
 	var chest := root.get("chest") as Sprite2D; var normal_texture := root.get("chest_normal_texture") as Texture2D; chest.texture = root.get("chest_gray_texture"); chest.visible = true; begin_unlock_fade(float(root.get("CHEST_UNLOCK_FADE_TIME")))
-	var overlay := Sprite2D.new(); overlay.name = "ChestUnlockOverlay"; overlay.texture = normal_texture; overlay.centered = chest.centered; overlay.offset = chest.offset; overlay.scale = chest.scale; overlay.texture_filter = chest.texture_filter; overlay.z_as_relative = false; overlay.z_index = chest.z_index + 1; overlay.global_position = chest.global_position; overlay.modulate = Color(1, 1, 1, 0); root.add_child(overlay); root.set("chest_unlock_overlay", overlay)
+	var overlay := Sprite2D.new(); overlay.name = "ChestUnlockOverlay"; overlay.texture = normal_texture; overlay.centered = chest.centered; overlay.offset = chest.offset; overlay.scale = chest.scale; overlay.flip_h = chest.flip_h; overlay.texture_filter = chest.texture_filter; overlay.z_as_relative = false; overlay.z_index = chest.z_index + 1; overlay.global_position = chest.global_position; overlay.modulate = Color(1, 1, 1, 0); root.add_child(overlay); root.set("chest_unlock_overlay", overlay)
 
 
 func update_visuals_from_root(root: Object, delta: float) -> void:
