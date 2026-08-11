@@ -239,8 +239,11 @@ func build_enemy_health_ui(
 	register_overhead: Callable,
 	pixel_particle: Callable
 ) -> Texture2D:
-	target_health_fill_textures = {slimes[0]: load_texture.call("res://assets/artwork/EnemyHpBlueBar.png"), slimes[1]: load_texture.call("res://assets/artwork/EnemyHpGreenBar.png"), slimes[2]: load_texture.call("res://assets/artwork/EnemyHpRedBar.png")}
-	target_overhead_fill_textures = {slimes[0]: load_texture.call("res://assets/artwork/HpOverheadBlueBar.png"), slimes[1]: load_texture.call("res://assets/artwork/HpOverheadGreenBar.png"), slimes[2]: load_texture.call("res://assets/artwork/HpOverheadRedBar.png")}
+	var target_bar_paths := {"blue": "EnemyHpBlueBar.png", "green": "EnemyHpGreenBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadBlueBar.png", "green": "HpOverheadGreenBar.png", "red": "HpOverheadRedBar.png"}
+	target_health_fill_textures.clear(); target_overhead_fill_textures.clear()
+	for slime in slimes:
+		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
+		target_health_fill_textures[slime] = load_texture.call("res://assets/artwork/" + target_bar_paths[palette]); target_overhead_fill_textures[slime] = load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette])
 	target_health_damage_fill_textures.clear(); target_overhead_damage_fill_textures.clear()
 	for slime in slimes:
 		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_fill_textures.get(slime) as Texture2D)
@@ -259,6 +262,18 @@ func build_enemy_health_ui(
 		var fill := Sprite2D.new(); fill.name = "HpOverheadFill"; fill.texture = target_overhead_fill_textures.get(slime, hp_overhead_fill.texture); fill.centered = hp_overhead_fill.centered; fill.position = hp_overhead_fill.position; fill.z_index = 2; fill.z_as_relative = false; slime.add_child(fill)
 		register_overhead.call(slime, frame, fill, hp_overhead.global_position - slime_green.global_position, duplicate_fill, pixel_particle)
 	return base_texture
+
+
+func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Callable, bright_texture: Callable) -> void:
+	var target_bar_paths := {"blue": "EnemyHpBlueBar.png", "green": "EnemyHpGreenBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadBlueBar.png", "green": "HpOverheadGreenBar.png", "red": "HpOverheadRedBar.png"}
+	for slime in slimes:
+		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
+		var target_texture := load_texture.call("res://assets/artwork/" + target_bar_paths[palette]) as Texture2D; var overhead_texture := load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette]) as Texture2D
+		target_health_fill_textures[slime] = target_texture; target_health_damage_fill_textures[slime] = bright_texture.call(target_texture)
+		target_overhead_fill_textures[slime] = overhead_texture; target_overhead_damage_fill_textures[slime] = bright_texture.call(overhead_texture)
+		var overhead_fill := target_overhead_fills.get(slime) as Sprite2D; var overhead_damage := target_overhead_damage_fills.get(slime) as Sprite2D
+		if overhead_fill != null: overhead_fill.texture = overhead_texture
+		if overhead_damage != null: overhead_damage.texture = target_overhead_damage_fill_textures[slime]
 
 
 func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, offset: Vector2, duplicate_fill: Callable, pixel_particle: Callable) -> void:

@@ -83,7 +83,12 @@ func _max_health_for_stats(stats: StatsComponent) -> float: return CombatCalcula
 func _player_max_health() -> float: return _max_health_for_stats(player_stats)
 func _enemy_max_health(slime: Sprite2D) -> float: return _max_health_for_stats(_slime_stats(slime))
 func _enemy_level_for_room() -> int: return maxi(1, current_room_depth)
-func _apply_enemy_room_level(slime: Sprite2D) -> void: var stats := _slime_stats(slime); if stats != null: stats.level = _enemy_level_for_room()
+func _apply_enemy_room_level(slime: Sprite2D, level_override: int = 0) -> void: var stats := _slime_stats(slime); if stats != null: stats.level = maxi(1, level_override if level_override > 0 else _enemy_level_for_room())
+func _configure_slime_variant(slime: Sprite2D, variant: String) -> void:
+	var palette := variant if variant == "blue" or variant == "green" or variant == "red" else "green"
+	slime.set("variant", palette)
+	var stats := _slime_stats(slime)
+	if stats != null: stats.allocation_profile = StatsComponent.AllocationProfile.FAVOR_DEF if palette == "blue" else StatsComponent.AllocationProfile.FAVOR_STR if palette == "red" else StatsComponent.AllocationProfile.FAVOR_VIT
 func _knockback_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
 	var direction := _actor_foot(slime) - _actor_foot(player); if direction.length_squared() < 0.01: direction = Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
@@ -268,12 +273,17 @@ func _build_depth_lists() -> void:
 	if chest.visible: for path in OCCLUDER_PATHS: _collect_occluders(get_node_or_null(path))
 	_update_depth_sorting()
 func _hide_editor_only_guides() -> void: room_controller.hide_editor_only_guides(floor_tiles)
-func _build_slime_direction_textures() -> void: var paths := {slime_blue: ["res://assets/artwork/SlimeBlueLeft.png", "res://assets/artwork/SlimeBlueRight.png"], slime_green: ["res://assets/artwork/SlimeGreenLeft.png", "res://assets/artwork/SlimeGreenRight.png"], slime_red: ["res://assets/artwork/SlimeRedLeft.png", "res://assets/artwork/SlimeRedRight.png"]}; SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(self, "_load_texture_or_null"))
+func _build_slime_direction_textures() -> void:
+	var paths := {}
+	for slime in slimes:
+		var palette := String(slime.get("variant")); paths[slime] = ["res://assets/artwork/Slime%sLeft.png" % palette.capitalize(), "res://assets/artwork/Slime%sRight.png" % palette.capitalize()]
+	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(self, "_load_texture_or_null"))
 func _build_slime_attack_frames() -> void: SlimeVisualComponent.build_attack_frames(slimes, sprite_frame_library, SLIME_ATTACK_FRAME_SIZE, occlusion_renderer.texture_image_cache, Callable(player_animation_component, "warm_texture_cache"))
 func _build_enemy_health_ui() -> void:
 	player_base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
 	target_health_damage_fill = target_health_fill.get_parent().get_node_or_null("EnemyHpDamageFill") as Sprite2D; player_health_damage_fill = player_health_fill.get_parent().get_node_or_null("HpBarDamageFill") as Sprite2D
 	var player_base_texture := _load_health_bar_texture("res://assets/artwork/HpBarBlueBar.png"); if player_base_texture != null: player_base_health_fill_texture = player_base_texture; player_health_fill.texture = player_base_texture; if player_health_damage_fill != null: player_health_damage_fill.texture = hud_controller.brighter_bar_texture(player_base_texture)
+func _refresh_enemy_palette_textures() -> void: hud_controller.refresh_enemy_palette_textures(slimes, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"))
 func _load_texture_or_null(path: String) -> Texture2D: return load(path) as Texture2D if ResourceLoader.exists(path) else null
 func _load_health_bar_texture(path: String) -> Texture2D: return ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE) as Texture2D if ResourceLoader.exists(path) else null
 func _build_rest_fire_frames() -> void: rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE); if not rest_fire_frames.is_empty(): _set_rest_fire_frame(0)
@@ -321,7 +331,8 @@ func _update_target_ui() -> void:
 	if current_target == null: _set_target_ui_visible(false); return
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values"))
 func _set_target_ui_visible(target_visible: bool) -> void: hud_controller.set_visible(target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_visible)
-func _slime_display_name(slime: Sprite2D) -> String: return "Blue Slime" if slime == slime_blue else "Red Slime" if slime == slime_red else "Green Slime"
+func _slime_display_name(slime: Sprite2D) -> String:
+	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Green Slime"; var stats := _slime_stats(slime); return "%s LV.%d" % [display_name, stats.level if stats != null else 1]
 func _update_player_health_ui(delta: float = 0.0) -> void: var result := hud_controller.update_player_health_ui(player_health, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
 func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _slime_current_health(slime: Sprite2D) -> float: var max_health := _enemy_max_health(slime); var health_component := _slime_health(slime); return health_component.current_health if health_component != null else max_health

@@ -32,7 +32,7 @@ static func build_attack_frames(slimes: Array[Sprite2D], frame_library: SpriteFr
 			visual = SlimeVisualComponent.new()
 			visual.name = "Visual"
 			slime.add_child(visual)
-		var palette := "red" if slime.name == "SlimeRed" else ("blue" if slime.name == "SlimeBlue" else "green")
+		var palette := String(slime.get("variant")); if palette != "blue" and palette != "red": palette = "green"
 		visual.attack_left_frames = left_frames if palette == "green" else visual.recolor_attack_frames(left_frames, palette, cache)
 		visual.attack_right_frames = right_frames if palette == "green" else visual.recolor_attack_frames(right_frames, palette, cache)
 		for texture in visual.attack_left_frames:

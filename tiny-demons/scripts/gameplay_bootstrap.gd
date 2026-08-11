@@ -29,7 +29,7 @@ func initialize(root: Object) -> void:
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
 	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
-	var slimes: Array[Sprite2D] = [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]; root.set("slimes", slimes)
+	var slimes: Array[Sprite2D] = [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]; _expand_slime_roster(root, slimes); root.set("slimes", slimes)
 	var actors: Array[Sprite2D] = [player, slimes[0], slimes[1], slimes[2]]; root.set("actor_sprites", actors)
 	var collision: Array[Sprite2D] = [player, slimes[0], slimes[1], slimes[2], chest]; root.set("collision_sprites", collision)
 	(root.get("actor_collision_system") as ActorCollisionSystem).set_actors(collision); (root.get("depth_sorter") as DepthSorter).set_sprites(actors); occlusion.set_occluders(root.get("occluder_sprites"))
@@ -84,3 +84,16 @@ func _initialize_slimes(root: Object, slimes: Array[Sprite2D]) -> void:
 		var health := root.call("_slime_health", slime) as HealthComponent
 		if slime_actor != null: health = slime_actor.configure_health(maximum, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
 		health.damaged.connect(Callable(root, "_on_slime_health_damaged").bind(slime)); health.healed.connect(Callable(root, "_on_slime_health_healed").bind(slime)); health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(slime)); var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = maximum; presenter.damage_fill_hold_timer = 0.0
+
+
+func _expand_slime_roster(root: Object, slimes: Array[Sprite2D]) -> void:
+	var template := root.get("slime_blue") as Sprite2D
+	if template == null:
+		return
+	var parent := template.get_parent()
+	for slot in range(slimes.size(), 6):
+		var clone := template.duplicate() as Sprite2D
+		clone.name = "SlimeSlot%d" % (slot + 1)
+		clone.position = template.position
+		parent.add_child(clone)
+		slimes.append(clone)
