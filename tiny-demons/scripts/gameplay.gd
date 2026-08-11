@@ -215,7 +215,12 @@ func _update_player_health_regen(delta: float) -> void:
 	if player_health_component != null: player_health_component.tick_regeneration(delta)
 	_update_player_health_ui()
 func _apply_slime_attack_lunge(slime: Sprite2D) -> void: var direction := _actor_foot(player) - _actor_foot(slime); direction = Vector2.LEFT if direction.length_squared() < 0.01 and _slime_combat(slime).face_left else Vector2.RIGHT if direction.length_squared() < 0.01 else direction.normalized(); direction = Vector2(direction.x, direction.y * 1.5).normalized(); actor_collision_system.try_move_swept(slime, _perspective_movement(direction * slime_tuning.attack_lunge_distance), 0.75, Callable(self, "_can_actor_stand_at_current_position"), Callable(self, "_collides_with_static"))
-func _apply_player_hit_knockback(slime: Sprite2D) -> void: var direction := _actor_foot(player) - _actor_foot(slime); if direction.length_squared() < 0.01: direction = Vector2.RIGHT if player.global_position.x >= slime.global_position.x else Vector2.LEFT; if player_motor != null: player_motor.start_knockback(_perspective_movement(direction.normalized() * (player_tuning.hit_knockback / player_tuning.hit_knockback_duration)), player_tuning.hit_knockback_duration)
+func _apply_player_hit_knockback(slime: Sprite2D) -> void:
+	var direction := _actor_foot(player) - _actor_foot(slime)
+	if direction.length_squared() < 0.01:
+		direction = Vector2.RIGHT if player.global_position.x >= slime.global_position.x else Vector2.LEFT
+	if player_motor != null:
+		player_motor.start_knockback(_perspective_movement(direction.normalized() * (player_tuning.hit_knockback / player_tuning.hit_knockback_duration)), player_tuning.hit_knockback_duration)
 func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool: return _slime_combat(slime).tick_knockback(delta, slime, Callable(self, "_try_knockback_slime"), Callable(self, "_reset_slime_scoot"))
 func _reset_slime_scoot(slime: Sprite2D) -> void: _slime_brain(slime).scoot_start = slime.position; _slime_brain(slime).scoot_target = slime.position
 func _update_enemy_hit_flashes(delta: float) -> void:
