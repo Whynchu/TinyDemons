@@ -345,16 +345,16 @@ func build_title(parent: Node, pixel_texture: Callable, start_callback: Callable
 
 func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:
 	var overlay := create_overlay(parent, "ArchetypeOverlay", Vector2(240, 160), Color.BLACK, 1, false)
-	var preview := create_sprite(overlay, "ArchetypePreview", null, Vector2(0, 31), false, Vector2(1.5, 1.5))
+	var preview := create_sprite(overlay, "ArchetypePreview", null, Vector2(0, 43), false, Vector2(1.5, 1.5))
 	var name_text := create_sprite(overlay, "ArchetypeName", null, Vector2.ZERO, false)
 	var left_buttons: Array[Button] = []
 	var right_buttons: Array[Button] = []
 	for side in [-1, 1]:
-		var button := make_archetype_arrow(overlay, side, Vector2(75 if side < 0 else 155, 53), shift_color.bind(side), pixel_texture)
+		var button := make_archetype_arrow(overlay, side, Vector2(75 if side < 0 else 155, 64), shift_color.bind(side), pixel_texture)
 		(left_buttons if side < 0 else right_buttons).append(button)
-	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 17), shift_type.bind(-1), pixel_texture)
-	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 17), shift_type.bind(1), pixel_texture)
-	var start_button := make_retro_button("START", Vector2(99, 127), Vector2(42, 14), pixel_texture)
+	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 28), shift_type.bind(-1), pixel_texture)
+	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 28), shift_type.bind(1), pixel_texture)
+	var start_button := make_retro_button("START", Vector2(99, 106), Vector2(42, 14), pixel_texture)
 	start_button.pressed.connect(start_callback)
 	overlay.add_child(start_button)
 	var hold_cover := create_overlay(overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
