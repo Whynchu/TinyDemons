@@ -78,7 +78,7 @@ func update_archetype_input(root: Object, delta: float) -> void:
 	root.call("_update_archetype_arrow_animation")
 	var button := root.get("archetype_start_button") as Button
 	button.modulate.a = retro_button_alpha(root.get("archetype_frame_timer"))
-	button.position.y = 99.0 + retro_button_bob(root.get("archetype_frame_timer"))
+	button.position.y = 104.0 + retro_button_bob(root.get("archetype_frame_timer"))
 	var row := int(root.get("archetype_menu_row"))
 	if Input.is_action_just_pressed("ui_up"):
 		root.call("_select_archetype_menu_row", row - 1)
@@ -350,11 +350,11 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 	var left_buttons: Array[Button] = []
 	var right_buttons: Array[Button] = []
 	for side in [-1, 1]:
-		var button := make_archetype_arrow(overlay, side, Vector2(75 if side < 0 else 155, 64), shift_color.bind(side), pixel_texture)
+		var button := make_archetype_arrow(overlay, side, Vector2(75 if side < 0 else 155, 69), shift_color.bind(side), pixel_texture)
 		(left_buttons if side < 0 else right_buttons).append(button)
-	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 28), shift_type.bind(-1), pixel_texture)
-	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 28), shift_type.bind(1), pixel_texture)
-	var start_button := make_retro_button("START", Vector2(99, 99), Vector2(42, 14), pixel_texture)
+	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 33), shift_type.bind(-1), pixel_texture)
+	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 33), shift_type.bind(1), pixel_texture)
+	var start_button := make_retro_button("START", Vector2(99, 104), Vector2(42, 14), pixel_texture)
 	start_button.pressed.connect(start_callback)
 	overlay.add_child(start_button)
 	var hold_cover := create_overlay(overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)

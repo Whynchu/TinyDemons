@@ -32,7 +32,7 @@ func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(r
 func _update_archetype_screen() -> void:
 	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey"]
 	var highlight_colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194)]
-	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], highlight_colors[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 31)
+	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], highlight_colors[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 36)
 	if not player_idle_frames.is_empty():
 		if archetype_preview_palette != colors[archetype_color_index] or archetype_preview_frames.size() != player_idle_frames.size():
 			archetype_preview_frames.clear(); archetype_preview_palette = colors[archetype_color_index]
@@ -42,7 +42,7 @@ func _update_archetype_screen() -> void:
 func _update_archetype_preview_animation() -> void:
 	if archetype_preview == null or archetype_preview_frames.is_empty(): return
 	var frame_time := maxf(player_tuning.idle_frame_time, 0.01); var frame_index := posmod(int(archetype_frame_timer / frame_time), archetype_preview_frames.size())
-	archetype_preview.texture = archetype_preview_frames[frame_index]; archetype_preview.position = Vector2((240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5, 43)
+	archetype_preview.texture = archetype_preview_frames[frame_index]; archetype_preview.position = Vector2((240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5, 48)
 func _update_archetype_button_styles() -> void: screen_state_controller.update_archetype_button_styles(self)
 func _start_selected_archetype() -> void: screen_state_controller.start_selected_archetype(self)
 func _build_loading_screen() -> void: var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
