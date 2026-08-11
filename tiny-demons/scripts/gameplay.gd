@@ -72,11 +72,6 @@ func _interrupt_player_attack() -> void:
 	player_attack_hit_done = false; player_attack_hit_targets.clear(); player_attack_visual.visible = false; player.visible = true; _restore_actor_base_visual_scale(player); player_anim_name = "walk" if player_is_moving else "idle"; player_anim_frame = 0; player_anim_timer = 0.0; player_animation_component.apply_frame(self)
 func _player_facing_vector() -> Vector2: return Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT if player_is_attacking else Vector2.LEFT if player.flip_h else Vector2.RIGHT
 func _apply_player_attack_hitbox() -> void: if player_attack_component != null: player_attack_component.apply_hitbox(self)
-func _player_attack_hitbox() -> Rect2:
-	var guide_name := "SwordHitboxLeft" if player_attack_flip_h else "SwordHitboxRight"
-	var guide_rect := _collision_guide_rect_by_name(player, guide_name)
-	if guide_rect.has_area(): return guide_rect
-	var offset := player_tuning.attack_hitbox_left_offset if player_attack_flip_h else player_tuning.attack_hitbox_right_offset; return Rect2(player.global_position + offset, player_tuning.attack_hitbox_size)
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void: SlimeActor.damage_actor(self, slime, amount, was_critical)
 func _player_attack_damage_against(slime: Sprite2D) -> float: return _combat_damage(player_stats, _slime_stats(slime))
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:

@@ -25,9 +25,6 @@ class_name PlayerTuning
 @export var attack_lunge_distance := 6.0
 @export var attack_lunge_duration := 0.18
 @export var attack_knockback := 16.0
-@export var attack_hitbox_size := Vector2(24, 24)
-@export var attack_hitbox_right_offset := Vector2(6, -7)
-@export var attack_hitbox_left_offset := Vector2(-14, -7)
 @export var regen_delay := 2.0
 @export var regen_interval := 1.0
 @export var regen_amount := 1.0

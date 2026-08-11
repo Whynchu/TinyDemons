@@ -14,7 +14,7 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 		if absf(actor_scale.x) < 0.001 or absf(actor_scale.y) < 0.001:
 			continue
 		for child in actor.get_children():
-			if child is Node2D and (child.name.ends_with("Guide") or child.name.begins_with("AttackGuide") or child.name.begins_with("SwordHitbox")):
+			if child is Node2D and (child.name.ends_with("Guide") or child.name.begins_with("AttackGuide")):
 				(child as Node2D).scale = Vector2(1.0 / actor_scale.x, 1.0 / actor_scale.y)
 		if actor.name.begins_with("Slime"):
 			update_attack_guides.call(actor)

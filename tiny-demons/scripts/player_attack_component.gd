@@ -49,11 +49,7 @@ func attack_polygon(root: Object) -> PackedVector2Array:
 	var player := root.get("player") as Sprite2D
 	var guide_name := "Attack2HitboxShape" if variant == 2 else "Attack1HitboxShape"
 	var guide := player.get_node_or_null(guide_name) as AttackHitboxGuide
-	if guide != null:
-		var polygon := guide.world_polygon(bool(root.get("player_attack_flip_h")))
-		if polygon.size() >= 3: return polygon
-	var fallback: Rect2 = root.call("_player_attack_hitbox")
-	return rect_polygon(fallback)
+	return guide.world_polygon(bool(root.get("player_attack_flip_h"))) if guide != null else PackedVector2Array()
 
 
 func polygon_intersects_rect(polygon: PackedVector2Array, rect: Rect2) -> bool:
