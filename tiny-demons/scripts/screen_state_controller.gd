@@ -354,7 +354,7 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 		(left_buttons if side < 0 else right_buttons).append(button)
 	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 28), shift_type.bind(-1), pixel_texture)
 	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 28), shift_type.bind(1), pixel_texture)
-	var start_button := make_retro_button("START", Vector2(99, 106), Vector2(42, 14), pixel_texture)
+	var start_button := make_retro_button("START", Vector2(99, 99), Vector2(42, 14), pixel_texture)
 	start_button.pressed.connect(start_callback)
 	overlay.add_child(start_button)
 	var hold_cover := create_overlay(overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
