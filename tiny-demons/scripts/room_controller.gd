@@ -10,7 +10,6 @@ var transition_locked := false
 var room_states: Dictionary = {}
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
-const CHEST_LEFT_WALL_OFFSET := Vector2(-40, 0)
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 
@@ -36,8 +35,6 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_slime_indices"] = _generate_enemy_indices(room.generation_seed)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
-		if not state.has("chest_wall"):
-			state["chest_wall"] = _choose_chest_wall(state, room.generation_seed)
 		room_states[room_id] = state
 	return state
 
@@ -53,17 +50,6 @@ func _generate_enemy_indices(generation_seed: int) -> Array[int]:
 		indices[swap_index] = selected
 	indices.resize(layout_rng.randi_range(1, indices.size()))
 	return indices
-
-
-func _choose_chest_wall(state: Dictionary, generation_seed: int) -> StringName:
-	var candidates: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]
-	for exit_value in state.get("generated_exits", []) as Array:
-		candidates.erase(StringName(exit_value))
-	if candidates.is_empty():
-		candidates = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]
-	var layout_rng := RandomNumberGenerator.new()
-	layout_rng.seed = generation_seed + 202
-	return candidates[layout_rng.randi_range(0, candidates.size() - 1)]
 
 
 func configure_sockets(graph: DungeonGraph, room_id: StringName, _unlocked: bool, set_blocks: Callable) -> void:
@@ -269,8 +255,7 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 
 func reset_chest_for_room(root: Object) -> void:
 	var rest_fire := root.get("rest_fire") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var chest := root.get("chest") as Sprite2D
-	var state := room_states.get(root.get("current_room_id"), {}) as Dictionary; var chest_wall := StringName(state.get("chest_wall", DungeonGraph.WALL_RIGHT)); var chest_start := root.get("chest_start_position") as Vector2
-	rest_fire.visible = false; demon.visible = false; chest.position = chest_start + CHEST_LEFT_WALL_OFFSET if chest_wall == DungeonGraph.WALL_LEFT else chest_start; chest.flip_h = chest_wall == DungeonGraph.WALL_LEFT; chest.texture = root.get("chest_gray_texture"); chest.visible = true; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false); root.call("_set_entrance_open", false)
+	rest_fire.visible = false; demon.visible = false; chest.position = root.get("chest_start_position"); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = true; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false); root.call("_set_entrance_open", false)
 	var unlock_overlay := root.get("chest_unlock_overlay") as Sprite2D; if unlock_overlay != null: unlock_overlay.queue_free(); root.set("chest_unlock_overlay", null)
 	var flash_overlay := root.get("chest_flash_overlay") as Sprite2D; if flash_overlay != null: flash_overlay.queue_free(); root.set("chest_flash_overlay", null)
 	var collision := root.get("collision_sprites") as Array[Sprite2D]; if not collision.has(chest): collision.append(chest)
@@ -281,13 +266,14 @@ func reset_slimes_for_room(root: Object) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]; var tuning := root.get("slime_tuning") as SlimeTuning; var rng := root.get("rng") as RandomNumberGenerator; var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]; var collision := root.get("collision_sprites") as Array[Sprite2D]; var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
 	for slime in slimes: kill_slime_without_effects(root, slime)
 	var room_id: StringName = root.get("current_room_id"); var state: Dictionary = room_states.get(room_id, {}) as Dictionary; var active_indices := state.get("enemy_slime_indices", []) as Array; var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary; var spawn_seed := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303)); var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = spawn_seed
+	var player := root.get("player") as Sprite2D; var player_foot: Vector2 = root.call("_actor_foot", player); var chest := root.get("chest") as Sprite2D; var chest_rect: Rect2 = root.call("_collision_rect", chest)
 	var occupied: Array[Vector2] = []
 	for index_value in active_indices:
 		var slime_index := int(index_value); if slime_index < 0 or slime_index >= slimes.size(): continue
 		var slime := slimes[slime_index]; var spawn_position: Vector2 = spawn_positions.get(slime_index, Vector2.ZERO)
-		if not spawn_positions.has(slime_index):
-			spawn_position = _choose_enemy_spawn_position(root, layout_rng, occupied); spawn_positions[slime_index] = spawn_position
-		occupied.append(spawn_position)
+		if not spawn_positions.has(slime_index) or not _valid_enemy_spawn_foot(root, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
+			spawn_position = _choose_enemy_spawn_position(root, slime, layout_rng, occupied); spawn_positions[slime_index] = spawn_position
+		occupied.append(spawn_position + ACTOR_FOOT_OFFSET)
 		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; brain.start_position = spawn_position; slime.position = spawn_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime)
 		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
 		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; root.call("_set_actor_base_texture", slime, occlusion.actor_default_textures[slime]); root.call("_set_actor_visual_scale", slime, Vector2.ONE)
@@ -296,7 +282,7 @@ func reset_slimes_for_room(root: Object) -> void:
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state
 
 
-func _choose_enemy_spawn_position(root: Object, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
+func _choose_enemy_spawn_position(root: Object, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
 	var area := root.get("walkable_area") as WalkableArea
 	var bounds := Rect2()
 	if area != null:
@@ -305,19 +291,40 @@ func _choose_enemy_spawn_position(root: Object, layout_rng: RandomNumberGenerato
 	for attempt in 96:
 		if bounds.size == Vector2.ZERO: break
 		var candidate_foot := Vector2(layout_rng.randf_range(bounds.position.x, bounds.end.x), layout_rng.randf_range(bounds.position.y, bounds.end.y))
-		if _valid_enemy_spawn_foot(root, candidate_foot, player_foot, chest_rect, occupied): return candidate_foot - ACTOR_FOOT_OFFSET
+		if _valid_enemy_spawn_foot(root, slime, candidate_foot, player_foot, chest_rect, occupied): return candidate_foot - ACTOR_FOOT_OFFSET
 	if area != null:
 		for candidate_foot in area.points:
-			if _valid_enemy_spawn_foot(root, candidate_foot, player_foot, chest_rect, occupied): return candidate_foot - ACTOR_FOOT_OFFSET
-	return root.call("_nearest_slime_walkable_point", player_foot) - ACTOR_FOOT_OFFSET
+			if _valid_enemy_spawn_foot(root, slime, candidate_foot, player_foot, chest_rect, occupied): return candidate_foot - ACTOR_FOOT_OFFSET
+	var nearest_foot: Vector2 = root.call("_nearest_slime_walkable_point", player_foot)
+	for radius_value in [0.0, 4.0, 8.0, 12.0, 16.0, 24.0, 32.0]:
+		var radius: float = radius_value
+		for direction_index in 16:
+			var candidate_foot: Vector2 = nearest_foot + Vector2.RIGHT.rotated(TAU * float(direction_index) / 16.0) * radius
+			if _valid_enemy_spawn_foot(root, slime, candidate_foot, player_foot, chest_rect, occupied): return candidate_foot - ACTOR_FOOT_OFFSET
+	return nearest_foot - ACTOR_FOOT_OFFSET
 
 
-func _valid_enemy_spawn_foot(root: Object, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
-	if not bool(root.call("_is_slime_walkable_point", candidate_foot)): return false
+func _valid_enemy_spawn_foot(root: Object, slime: Sprite2D, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
+	var collision_rect := _enemy_collision_rect_at(slime, candidate_foot)
+	if not _is_collision_rect_walkable(root, collision_rect): return false
 	if candidate_foot.distance_to(player_foot) < ENEMY_MIN_PLAYER_DISTANCE: return false
-	if chest_rect.grow(4.0).has_point(candidate_foot): return false
+	if chest_rect.grow(4.0).intersects(collision_rect, false): return false
 	for occupied_foot in occupied:
 		if candidate_foot.distance_to(occupied_foot) < ENEMY_MIN_SPAWN_DISTANCE: return false
+	return true
+
+
+func _enemy_collision_rect_at(slime: Sprite2D, foot: Vector2) -> Rect2:
+	var guide := slime.get_node_or_null("CollisionGuide") as Node2D
+	if guide == null: return Rect2(foot - Vector2(4.5, 2.2), Vector2(9, 4))
+	var guide_position: Vector2 = guide.get("rect_position"); var guide_size: Vector2 = guide.get("rect_size"); var actor_position := foot - ACTOR_FOOT_OFFSET; var origin := actor_position + guide.position + guide_position + Vector2(minf(guide_size.x, 0.0), minf(guide_size.y, 0.0))
+	return Rect2(origin, guide_size.abs())
+
+
+func _is_collision_rect_walkable(root: Object, collision_rect: Rect2) -> bool:
+	var samples := [collision_rect.position, collision_rect.position + Vector2(collision_rect.size.x, 0), collision_rect.position + collision_rect.size, collision_rect.position + Vector2(0, collision_rect.size.y), collision_rect.get_center(), collision_rect.position + Vector2(collision_rect.size.x * 0.5, 0), collision_rect.position + Vector2(collision_rect.size.x, collision_rect.size.y * 0.5), collision_rect.position + Vector2(collision_rect.size.x * 0.5, collision_rect.size.y), collision_rect.position + Vector2(0, collision_rect.size.y * 0.5)]
+	for sample in samples:
+		if not bool(root.call("_is_slime_walkable_point", sample)): return false
 	return true
 
 
