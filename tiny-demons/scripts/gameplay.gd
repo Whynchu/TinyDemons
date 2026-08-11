@@ -16,7 +16,7 @@ func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible: return
 	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; game_over_button.grab_focus()
 func _build_title_screen() -> void: var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_from_title")); title_overlay = controls["overlay"] as ColorRect; title_screen_text = controls["text"] as Sprite2D; title_start_button = controls["button"] as Button; title_start_text = controls["start_text"] as Sprite2D; _build_archetype_screen()
-func _build_archetype_screen() -> void: var controls := screen_state_controller.build_archetype(ui, Callable(self, "_style_archetype_button"), Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); archetype_overlay = controls["overlay"] as ColorRect; archetype_preview = controls["preview"] as Sprite2D; archetype_name_text = controls["name"] as Sprite2D; archetype_left_buttons = controls["left"] as Array[Button]; archetype_right_buttons = controls["right"] as Array[Button]; archetype_type_left_button = controls["type_left"] as Button; archetype_type_right_button = controls["type_right"] as Button; archetype_start_button = controls["start"] as Button; archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
+func _build_archetype_screen() -> void: var controls := screen_state_controller.build_archetype(ui, Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); archetype_overlay = controls["overlay"] as ColorRect; archetype_preview = controls["preview"] as Sprite2D; archetype_name_text = controls["name"] as Sprite2D; archetype_left_buttons = controls["left"] as Array[Button]; archetype_right_buttons = controls["right"] as Array[Button]; archetype_type_left_button = controls["type_left"] as Button; archetype_type_right_button = controls["type_right"] as Button; archetype_start_button = controls["start"] as Button; archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
 func _style_archetype_button(button: Button) -> void: screen_state_controller.style_archetype_button(button)
 func _update_title_screen(delta: float) -> void: screen_state_controller.update_title_flow(self, delta)
 func _start_from_title() -> void: screen_state_controller.start_from_title(self)
@@ -28,13 +28,18 @@ func _update_archetype_arrow_animation() -> void:
 	var amount := clampf(archetype_arrow_anim_timer / 0.18, 0.0, 1.0); var pulse := 1.0 + amount * 0.22
 	archetype_type_left_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 0 else 1.0); archetype_type_right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 0 else 1.0)
 	for button in archetype_left_buttons: button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 1 else 1.0); for right_button in archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 1 else 1.0)
-func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(row, 3); _update_archetype_button_styles(); if archetype_menu_row == 2: archetype_start_button.grab_focus()
+func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(row, 3); _update_archetype_screen(); if archetype_menu_row == 2: archetype_start_button.grab_focus()
 func _update_archetype_screen() -> void:
 	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey"]
-	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 21)
+	var highlight_colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194)]
+	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], highlight_colors[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 21)
 	if not player_idle_frames.is_empty():
-		archetype_preview.texture = player_animation_component.recolor_texture(player_idle_frames[0], colors[archetype_color_index]); archetype_preview.position.x = (240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5
+		archetype_preview.texture = player_animation_component.recolor_texture(player_idle_frames[0], colors[archetype_color_index]); archetype_preview.position = Vector2((240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5, 31)
 	_update_archetype_button_styles()
+func _update_archetype_preview_animation() -> void:
+	if archetype_preview == null or player_idle_frames.is_empty(): return
+	var colors := ["blue", "orange", "green", "red", "yellow", "grey"]; var frame_time := maxf(player_tuning.idle_frame_time, 0.01); var frame_index := posmod(int(archetype_frame_timer / frame_time), player_idle_frames.size())
+	archetype_preview.texture = player_animation_component.recolor_texture(player_idle_frames[frame_index], colors[archetype_color_index]); archetype_preview.position = Vector2((240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5, 31)
 func _update_archetype_button_styles() -> void: screen_state_controller.update_archetype_button_styles(self)
 func _start_selected_archetype() -> void: screen_state_controller.start_selected_archetype(self)
 func _build_loading_screen() -> void: var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D

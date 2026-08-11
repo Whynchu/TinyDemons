@@ -12,6 +12,9 @@ func retro_button_bob(timer: float) -> float: return snappedf(sin(timer / 3.6 * 
 
 func set_archetype_button_state(button: Button, active: bool, color: Color) -> void:
 	if button == null: return
+	if bool(button.get_meta("archetype_arrow", false)):
+		button.modulate = color if active else Color.WHITE
+		return
 	var normal := StyleBoxFlat.new(); normal.bg_color = Color(0, 0, 0, 0); normal.border_color = Color(color if active else Color.WHITE, 0.95 if active else 0.0); normal.set_border_width_all(1 if active else 0); var focus := StyleBoxFlat.new(); focus.bg_color = Color(color, 0.18 if active else 0.0); focus.border_color = color if active else Color.WHITE; focus.set_border_width_all(1 if active else 0)
 	button.add_theme_color_override("font_color", color if active else Color.WHITE); button.add_theme_color_override("font_hover_color", color if active else Color.WHITE); button.add_theme_color_override("font_focus_color", color if active else Color.WHITE); button.add_theme_stylebox_override("normal", normal); button.add_theme_stylebox_override("hover", focus); button.add_theme_stylebox_override("focus", focus)
 
@@ -71,6 +74,7 @@ func update_archetype_input(root: Object, delta: float) -> void:
 		return
 	root.set("archetype_frame_timer", float(root.get("archetype_frame_timer")) + delta)
 	root.set("archetype_arrow_anim_timer", maxf(float(root.get("archetype_arrow_anim_timer")) - delta, 0.0))
+	root.call("_update_archetype_preview_animation")
 	root.call("_update_archetype_arrow_animation")
 	var button := root.get("archetype_start_button") as Button
 	button.modulate.a = retro_button_alpha(root.get("archetype_frame_timer"))
@@ -339,44 +343,30 @@ func build_title(parent: Node, pixel_texture: Callable, start_callback: Callable
 	return {"overlay": overlay, "text": title_text, "button": button, "start_text": button.get_child(0) as Sprite2D}
 
 
-func build_archetype(parent: Node, style_button: Callable, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:
+func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:
 	var overlay := create_overlay(parent, "ArchetypeOverlay", Vector2(240, 160), Color.BLACK, 1, false)
-	var preview := create_sprite(overlay, "ArchetypePreview", null, Vector2(102, 28), false, Vector2(3, 3))
+	var preview := create_sprite(overlay, "ArchetypePreview", null, Vector2(0, 31), false, Vector2(1.5, 1.5))
 	var name_text := create_sprite(overlay, "ArchetypeName", null, Vector2.ZERO, false)
 	var left_buttons: Array[Button] = []
 	var right_buttons: Array[Button] = []
 	for side in [-1, 1]:
-		var button := Button.new()
-		button.text = "<" if side < 0 else ">"
-		button.position = Vector2(48 if side < 0 else 178, 42)
-		button.size = Vector2(14, 14)
-		button.focus_mode = Control.FOCUS_NONE
-		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		style_button.call(button)
-		button.pressed.connect(shift_color.bind(side))
-		overlay.add_child(button)
+		var button := make_archetype_arrow(overlay, side, Vector2(75 if side < 0 else 155, 53), shift_color.bind(side), pixel_texture)
 		(left_buttons if side < 0 else right_buttons).append(button)
-	var left_type := Button.new()
-	left_type.text = "<"
-	left_type.position = Vector2(58, 15)
-	left_type.size = Vector2(14, 14)
-	left_type.focus_mode = Control.FOCUS_NONE
-	style_button.call(left_type)
-	left_type.pressed.connect(shift_type.bind(-1))
-	overlay.add_child(left_type)
-	var right_type := Button.new()
-	right_type.text = ">"
-	right_type.position = Vector2(168, 15)
-	right_type.size = Vector2(14, 14)
-	right_type.focus_mode = Control.FOCUS_NONE
-	style_button.call(right_type)
-	right_type.pressed.connect(shift_type.bind(1))
-	overlay.add_child(right_type)
+	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 17), shift_type.bind(-1), pixel_texture)
+	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 17), shift_type.bind(1), pixel_texture)
 	var start_button := make_retro_button("START", Vector2(99, 127), Vector2(42, 14), pixel_texture)
 	start_button.pressed.connect(start_callback)
 	overlay.add_child(start_button)
 	var hold_cover := create_overlay(overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
 	return {"overlay": overlay, "preview": preview, "name": name_text, "left": left_buttons, "right": right_buttons, "type_left": left_type, "type_right": right_type, "start": start_button, "cover": hold_cover}
+
+
+func make_archetype_arrow(parent: Node, side: int, button_position: Vector2, pressed_callback: Callable, pixel_texture: Callable) -> Button:
+	var button := Button.new(); button.position = button_position; button.size = Vector2(10, 10); button.text = ""; button.focus_mode = Control.FOCUS_NONE; button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; button.set_meta("archetype_arrow", true)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var style := StyleBoxFlat.new(); style.bg_color = Color.TRANSPARENT; style.border_width_left = 0; style.border_width_top = 0; style.border_width_right = 0; style.border_width_bottom = 0; button.add_theme_stylebox_override(state, style)
+	var glyph := Sprite2D.new(); glyph.texture = pixel_texture.call("<" if side < 0 else ">", Color.WHITE) as Texture2D; glyph.centered = true; glyph.position = button.size * 0.5; glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; button.add_child(glyph)
+	button.pressed.connect(pressed_callback); parent.add_child(button); return button
 
 
 func build_loading(parent: Node, pixel_texture: Callable) -> Dictionary:
