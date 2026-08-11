@@ -99,7 +99,7 @@ func start_selected_archetype(root: Object) -> void:
 	if overlay == null or not overlay.visible or bool(root.get("loading_screen_active")):
 		return
 	(root.get("player_stats") as StatsComponent).allocation_profile = root.get("selected_archetype")
-	var palette_name: String = ["blue", "orange", "green", "red", "yellow", "grey"][int(root.get("archetype_color_index"))]
+	var palette_name: String = ["blue", "orange", "green", "red", "yellow", "grey", "purple"][int(root.get("archetype_color_index"))]
 	root.set("player_palette_name", palette_name)
 	root.set("loading_screen_active", true)
 	set_state(&"loading")
@@ -174,7 +174,7 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 
 
 func update_archetype_button_styles(root: Object) -> void:
-	var colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194)]
+	var colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194), Color8(118, 78, 142)]
 	var color: Color = colors[int(root.get("archetype_color_index"))]; var row := int(root.get("archetype_menu_row"))
 	var type_active := row == 0; var sprite_active := row == 1; var start_active := row == 2
 	var type_left := root.get("archetype_type_left_button") as Button; var type_right := root.get("archetype_type_right_button") as Button; var start := root.get("archetype_start_button") as Button

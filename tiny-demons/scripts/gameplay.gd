@@ -22,7 +22,7 @@ func _update_title_screen(delta: float) -> void: screen_state_controller.update_
 func _start_from_title() -> void: screen_state_controller.start_from_title(self)
 func _update_archetype_input(delta: float) -> void: screen_state_controller.update_archetype_input(self, delta)
 func _shift_archetype(direction: int) -> void: archetype_index = posmod(archetype_index + direction, 4); selected_archetype = archetype_index as StatsComponent.AllocationProfile; _archetype_arrow_pulse(direction); _update_archetype_screen()
-func _shift_archetype_color(direction: int) -> void: archetype_color_index = posmod(archetype_color_index + direction, 6); _archetype_arrow_pulse(direction); _update_archetype_screen()
+func _shift_archetype_color(direction: int) -> void: archetype_color_index = posmod(archetype_color_index + direction, 7); _archetype_arrow_pulse(direction); _update_archetype_screen()
 func _archetype_arrow_pulse(direction: int) -> void: archetype_arrow_anim_direction = direction; archetype_arrow_anim_timer = 0.18
 func _update_archetype_arrow_animation() -> void:
 	var amount := clampf(archetype_arrow_anim_timer / 0.18, 0.0, 1.0); var pulse := 1.0 + amount * 0.22
@@ -30,8 +30,8 @@ func _update_archetype_arrow_animation() -> void:
 	for button in archetype_left_buttons: button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 1 else 1.0); for right_button in archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 1 else 1.0)
 func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(row, 3); _update_archetype_screen(); if archetype_menu_row == 2: archetype_start_button.grab_focus()
 func _update_archetype_screen() -> void:
-	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey"]
-	var highlight_colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194)]
+	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey", "purple"]
+	var highlight_colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194), Color8(118, 78, 142)]
 	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], highlight_colors[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 36)
 	if not player_idle_frames.is_empty():
 		if archetype_preview_palette != colors[archetype_color_index] or archetype_preview_frames.size() != player_idle_frames.size():

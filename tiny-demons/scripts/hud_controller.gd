@@ -216,7 +216,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 
 
 func update_aggro_markers(markers: Dictionary, palette_name: String, pixel_particle: Callable) -> void:
-	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134)}
+	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142)}
 	var color: Color = colors.get(palette_name, colors["blue"])
 	for marker in markers.values():
 		var aggro_marker := marker as Sprite2D
@@ -301,7 +301,7 @@ func brighter_bar_texture(source: Texture2D) -> Texture2D:
 	if bright_bar_cache.has(key): return bright_bar_cache[key]
 	var image: Image = source.get_image().duplicate()
 	if image == null: return source
-	var palette_step := {"B13E53": Color8(239, 125, 87), "3B5DC9": Color8(65, 166, 246), "38B764": Color8(167, 240, 112)}
+	var palette_step := {"B13E53": Color8(239, 125, 87), "3B5DC9": Color8(65, 166, 246), "38B764": Color8(167, 240, 112), "764E8E": Color8(170, 145, 167)}
 	for y in image.get_height():
 		for x in image.get_width():
 			var color := image.get_pixel(x, y)

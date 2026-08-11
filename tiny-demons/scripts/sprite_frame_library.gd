@@ -81,6 +81,7 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 		"red": [Color8(93, 39, 93), Color8(177, 62, 83), Color8(244, 244, 244)],
 		"yellow": [Color8(181, 97, 55), Color8(255, 205, 117), Color8(244, 244, 244)],
 		"grey": [Color8(59, 63, 82), Color8(86, 108, 134), Color8(244, 244, 244)],
+		"purple": [Color8(67, 47, 102), Color8(118, 78, 142), Color8(244, 244, 244)],
 	}
 	var target: Array = palette.get(palette_name, palette["blue"])
 	var image := _cached_image(source).duplicate()
