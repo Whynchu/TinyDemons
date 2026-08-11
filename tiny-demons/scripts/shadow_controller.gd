@@ -18,9 +18,9 @@ func z_index_for(foot_y: float, depth_scale: float) -> int:
 
 
 func update_player_shadow(root: Object, depth_scale: float) -> void:
-	var player := root.get("player") as Sprite2D; var shadow := root.get("player_shadow") as Sprite2D
+	var player := root.get("player") as Sprite2D; var shadow := root.get("player_shadow") as Sprite2D; var attack_visual := root.get("player_attack_visual") as Sprite2D
 	if shadow == null: return
-	shadow.visible = player.visible
+	shadow.visible = player.visible or (attack_visual != null and attack_visual.visible)
 	shadow.global_position = player.global_position + root.get("player_shadow_offset"); shadow.global_scale = root.get("player_shadow_scale"); shadow.self_modulate = Color(1, 1, 1, 0.25); shadow.flip_h = player.flip_h; shadow.z_index = z_index_for(root.call("_actor_foot", player).y, depth_scale)
 	var sprite_shadow := root.get("player_sprite_shadow") as Sprite2D
 	if sprite_shadow != null:
