@@ -357,7 +357,33 @@ func _can_actor_stand_at_current_position(actor: Sprite2D) -> bool: return actor
 func _is_slime_walkable_point(point: Vector2) -> bool: return walkable_area != null and walkable_area.is_slime_walkable(point)
 func _tile_top_polygon(tile: Sprite2D) -> PackedVector2Array: return PackedVector2Array([tile.to_global(Vector2(8, 0)), tile.to_global(Vector2(16, 4)), tile.to_global(Vector2(8, 7)), tile.to_global(Vector2(0, 4))])
 func _nearest_slime_walkable_point(point: Vector2) -> Vector2: return walkable_area.nearest_slime_walkable_point(point) if walkable_area != null and not walkable_area.is_empty() else point
-func _random_slime_walkable_point_near(point: Vector2, sample_count: int, ignored_slime: Sprite2D = null) -> Vector2: return walkable_area.random_slime_walkable_point_near(point, sample_count, ignored_slime, rng, Callable(self, "_is_point_near_other_slime"))
+func _random_slime_walkable_point_near(point: Vector2, sample_count: int, ignored_slime: Sprite2D = null) -> Vector2:
+	if walkable_area == null: return point
+	for attempt in 16:
+		var candidate := walkable_area.random_slime_walkable_point_near(point, sample_count, ignored_slime, rng, Callable(self, "_is_point_near_other_slime"))
+		if ignored_slime == null or _is_slime_collision_rect_walkable_at(ignored_slime, candidate): return candidate
+	return _nearest_valid_slime_walkable_point(point, ignored_slime)
+
+
+func _nearest_valid_slime_walkable_point(point: Vector2, slime: Sprite2D) -> Vector2:
+	var nearest := walkable_area.nearest_slime_walkable_point(point)
+	for radius_value in [0.0, 4.0, 8.0, 12.0, 16.0, 24.0, 32.0]:
+		var radius: float = radius_value
+		for direction_index in 16:
+			var candidate := nearest + Vector2.RIGHT.rotated(TAU * float(direction_index) / 16.0) * radius
+			if _is_slime_collision_rect_walkable_at(slime, candidate): return candidate
+	return point
+
+
+func _is_slime_collision_rect_walkable_at(slime: Sprite2D, foot: Vector2) -> bool:
+	var guide := slime.get_node_or_null("CollisionGuide") as Node2D
+	var collision_rect := Rect2(foot - Vector2(4.5, 2.2), Vector2(9, 4))
+	if guide != null:
+		var guide_position: Vector2 = guide.get("rect_position"); var guide_size: Vector2 = guide.get("rect_size"); var actor_position := foot - ACTOR_FOOT_OFFSET; var origin := actor_position + guide.position + guide_position + Vector2(minf(guide_size.x, 0.0), minf(guide_size.y, 0.0)); collision_rect = Rect2(origin, guide_size.abs())
+	var samples := [collision_rect.position, collision_rect.position + Vector2(collision_rect.size.x, 0), collision_rect.position + collision_rect.size, collision_rect.position + Vector2(0, collision_rect.size.y), collision_rect.get_center(), collision_rect.position + Vector2(collision_rect.size.x * 0.5, 0), collision_rect.position + Vector2(collision_rect.size.x, collision_rect.size.y * 0.5), collision_rect.position + Vector2(collision_rect.size.x * 0.5, collision_rect.size.y), collision_rect.position + Vector2(0, collision_rect.size.y * 0.5)]
+	for sample in samples:
+		if not _is_slime_walkable_point(sample): return false
+	return true
 func _is_point_near_other_slime(point: Vector2, ignored_slime: Sprite2D = null) -> bool:
 	for slime in slimes: if slime != ignored_slime and not _is_slime_dead(slime) and _collision_rect(slime).grow(4.0).has_point(point): return true
 	return false

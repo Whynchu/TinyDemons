@@ -85,7 +85,7 @@ func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, i
 	if not slimes.has(actor):
 		return bool(is_walkable.call(foot.call(actor)))
 	var rect: Rect2 = collision_rect.call(actor)
-	var samples := [foot.call(actor), Vector2(rect.position.x, rect.end.y), Vector2(rect.get_center().x, rect.end.y), Vector2(rect.end.x, rect.end.y)]
+	var samples := [rect.position, rect.position + Vector2(rect.size.x, 0), rect.position + rect.size, rect.position + Vector2(0, rect.size.y), rect.get_center(), rect.position + Vector2(rect.size.x * 0.5, 0), rect.position + Vector2(rect.size.x, rect.size.y * 0.5), rect.position + Vector2(rect.size.x * 0.5, rect.size.y), rect.position + Vector2(0, rect.size.y * 0.5)]
 	for sample in samples:
 		if not bool(is_slime_walkable.call(sample)):
 			return false

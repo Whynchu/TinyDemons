@@ -12,6 +12,7 @@ var room_states: Dictionary = {}
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
+const ENEMY_MIN_SOCKET_DISTANCE := 16.0
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
@@ -323,9 +324,19 @@ func _valid_enemy_spawn_foot(root: Object, slime: Sprite2D, candidate_foot: Vect
 	if not _is_collision_rect_walkable(root, collision_rect): return false
 	if candidate_foot.distance_to(player_foot) < ENEMY_MIN_PLAYER_DISTANCE: return false
 	if chest_rect.grow(4.0).intersects(collision_rect, false): return false
+	if _is_enemy_spawn_near_socket(candidate_foot): return false
 	for occupied_foot in occupied:
 		if candidate_foot.distance_to(occupied_foot) < ENEMY_MIN_SPAWN_DISTANCE: return false
 	return true
+
+
+func _is_enemy_spawn_near_socket(candidate_foot: Vector2) -> bool:
+	for socket_group in [active_door_sockets, active_entrance_sockets]:
+		for socket_value in socket_group.values():
+			var socket := socket_value as DungeonSocket
+			var marker := socket.spawn_marker() if socket != null else null
+			if marker != null and candidate_foot.distance_to(marker.global_position) < ENEMY_MIN_SOCKET_DISTANCE: return true
+	return false
 
 
 func _enemy_collision_rect_at(slime: Sprite2D, foot: Vector2) -> Rect2:
