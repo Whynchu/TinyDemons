@@ -76,7 +76,11 @@ func tick_knockback(delta: float, actor: Sprite2D, move_actor: Callable, reset_s
 		return false
 	var step_time := minf(delta, knockback_timer)
 	knockback_timer = maxf(knockback_timer - delta, 0.0)
-	move_actor.call(actor, knockback_velocity * step_time)
+	var did_move := bool(move_actor.call(actor, knockback_velocity * step_time))
+	# A blocked knockback is complete. Continuing to push against the boundary
+	# every frame makes the actor vibrate and delays its return to navigation.
+	if not did_move:
+		knockback_timer = 0.0
 	if knockback_timer <= 0.0:
 		knockback_velocity = Vector2.ZERO
 		reset_scoot.call(actor)
