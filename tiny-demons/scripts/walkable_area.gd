@@ -9,7 +9,7 @@ var outline := PackedVector2Array()
 var points: Array[Vector2] = []
 var entrance_block_polygons: Array[PackedVector2Array] = []
 var edge_margin := 0.35
-var slime_edge_padding := 3.0
+var slime_edge_padding := 0.0
 
 
 func set_geometry(new_polygons: Array[PackedVector2Array], new_outline: PackedVector2Array) -> void:

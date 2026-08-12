@@ -59,6 +59,7 @@ class RoomRecord extends RefCounted:
 	var room_type: StringName
 	var outgoing_connections: Dictionary = {}
 	var incoming_connections: Dictionary = {}
+	var milestone_dead_end := false
 
 
 	func _init(new_id: StringName, new_coordinate: Vector2i, new_seed: int, new_room_type: StringName) -> void:
@@ -99,6 +100,7 @@ class RoomRecord extends RefCounted:
 			"room_type": room_type,
 			"outgoing_connections": outgoing_data,
 			"incoming_connections": incoming_data,
+			"milestone_dead_end": milestone_dead_end,
 		}
 
 
@@ -107,6 +109,7 @@ var start_room_id: StringName = START_ROOM_ID
 
 var _rooms: Dictionary = {}
 var _connections: Dictionary = {}
+var _milestone_rooms: Dictionary = {}
 
 
 ## Clears any previous graph and creates the root room.
@@ -115,6 +118,7 @@ func initialize(new_seed: int) -> RoomRecord:
 	start_room_id = START_ROOM_ID
 	_rooms.clear()
 	_connections.clear()
+	_milestone_rooms.clear()
 	return _ensure_room(Vector2i.ZERO, ROOM_START)
 
 
@@ -197,8 +201,13 @@ func _ensure_room(room_coordinate: Vector2i, room_type: StringName = ROOM_COMBAT
 	var existing_room := get_room(room_id)
 	if existing_room != null:
 		return existing_room
-	if room_coordinate.y == 6 or room_coordinate.y == 11:
-		room_type = ROOM_NPC
+	var is_milestone := room_coordinate.y == 6 or room_coordinate.y == 11
+	if is_milestone:
+		if not _milestone_rooms.has(room_coordinate.y):
+			_milestone_rooms[room_coordinate.y] = room_id
+			room_type = ROOM_NPC
+		else:
+			room_type = ROOM_COMBAT
 
 	var room := RoomRecord.new(
 		room_id,
@@ -206,6 +215,7 @@ func _ensure_room(room_coordinate: Vector2i, room_type: StringName = ROOM_COMBAT
 		_room_seed_for_coordinate(room_coordinate),
 		room_type
 	)
+	room.milestone_dead_end = is_milestone and _milestone_rooms[room_coordinate.y] != room_id
 	_rooms[room_id] = room
 	return room
 

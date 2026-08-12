@@ -6,6 +6,8 @@ var damage_number_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
+var fire_spark_timer := 0.0
+var fire_noise := FastNoiseLite.new()
 
 
 func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
@@ -25,6 +27,33 @@ func spawn_chest_evaporation_from_root(root: Object) -> void:
 
 func update_pixel_particles_from_root(root: Object, delta: float) -> void:
 	update_pixel_particles(delta, Callable(root, "_snap_half_pixel"), (root.get("effects_tuning") as EffectsTuning).slime_death_particle_lifetime)
+	update_fire_sparks_from_root(root, delta)
+
+
+func update_fire_sparks_from_root(root: Object, delta: float) -> void:
+	var fire := root.get("rest_fire") as Sprite2D
+	if fire == null or not fire.visible:
+		fire_spark_timer = 0.0
+		return
+	fire_spark_timer -= delta
+	if fire_spark_timer > 0.0:
+		return
+	fire_spark_timer = root.get("rng").randf_range(0.45, 1.05)
+	fire_noise.seed = int(root.get("rng").randi())
+	var noise_speed: float = fire_noise.get_noise_1d(float(Time.get_ticks_msec()) * 0.01)
+	var origin := fire.global_position + Vector2(root.get("rng").randf_range(-4.0, 4.0), 1.0)
+	var particle := Sprite2D.new()
+	particle.name = "FireSpark"
+	particle.texture = root.call("_pixel_particle_texture", Color.WHITE) as Texture2D
+	particle.centered = false
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = false
+	particle.z_index = fire.z_index + 2
+	particle.position = origin
+	particle.modulate = Color8(214, 54, 42)
+	root.add_child(particle)
+	var lifetime: float = float(root.get("rng").randf_range(0.28, 0.5))
+	pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_speed * 5.0, root.get("rng").randf_range(-18.0, -11.0)), "timer": lifetime, "lifetime": lifetime, "gravity": -3.0, "fire_spark": true})
 
 
 func begin_player_death(root: Object, depth_scale: float) -> void:
@@ -102,7 +131,7 @@ func name_texture(text: String, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable) -> void:
+func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable, flip_h: bool = false) -> void:
 	if texture == null:
 		return
 	var image := texture.get_image()
@@ -126,7 +155,8 @@ func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vect
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = z_index
-		particle.position = origin + offset + Vector2(source_pixel) * scale
+		var pixel_x := image.get_width() - 1 - source_pixel.x if flip_h else source_pixel.x
+		particle.position = origin + offset + Vector2(pixel_x, source_pixel.y) * scale
 		parent.add_child(particle)
 		var lifetime := randf_range(1.2, lifetime_max)
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
@@ -173,10 +203,16 @@ func spawn_chest_evaporation_particles(parent: Node, texture: Texture2D, positio
 		var lifetime := random_source.randf_range(lifetime_min, lifetime_max); pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, random_source.randf_range(-24.0, -12.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 
 
+
 func spawn_damage_number(parent: Node, world_position: Vector2, value: int, velocity: Vector2, was_critical: bool, pixel_number: Callable, snap_position: Callable, lifetime: float, pop_time: float) -> void:
-	var color := Color8(255, 226, 92) if was_critical else Color.WHITE
+	spawn_health_number(parent, world_position, value, velocity, was_critical, false, Color.WHITE, pixel_number, snap_position, lifetime, pop_time)
+
+
+func spawn_health_number(parent: Node, world_position: Vector2, value: int, velocity: Vector2, was_critical: bool, is_healing: bool, healing_color: Color, pixel_number: Callable, snap_position: Callable, lifetime: float, pop_time: float) -> void:
+	var number_text := "+%d" % maxi(value, 0) if is_healing else str(maxi(value, 0))
+	var color := healing_color if is_healing else Color8(255, 226, 92) if was_critical else Color.WHITE
 	var shadow := Sprite2D.new()
-	shadow.texture = pixel_number.call(str(maxi(value, 0)), Color8(0, 0, 0, 76)) as Texture2D
+	shadow.texture = pixel_number.call(number_text, Color8(0, 0, 0, 76)) as Texture2D
 	shadow.centered = false
 	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	shadow.z_as_relative = false
@@ -184,7 +220,7 @@ func spawn_damage_number(parent: Node, world_position: Vector2, value: int, velo
 	shadow.position = snap_position.call(world_position + Vector2(0.0, 0.5))
 	parent.add_child(shadow)
 	var sprite := Sprite2D.new()
-	sprite.texture = pixel_number.call(str(maxi(value, 0)), color) as Texture2D
+	sprite.texture = pixel_number.call(number_text, color) as Texture2D
 	sprite.centered = false
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false
@@ -221,6 +257,10 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 		var color := particle.modulate
 		var lifetime := float(particle_data.get("lifetime", default_lifetime))
 		color.a = clampf(timer / lifetime, 0.0, 1.0)
+		if bool(particle_data.get("fire_spark", false)):
+			var progress := 1.0 - clampf(timer / lifetime, 0.0, 1.0)
+			var fire_color := Color(1.0, 0.12, 0.05).lerp(Color(1.0, 0.86, 0.18), clampf(progress / 0.35, 0.0, 1.0))
+			color = Color(fire_color.r, fire_color.g, fire_color.b, clampf(1.0 - progress, 0.0, 1.0))
 		particle.modulate = color
 		particle_data["velocity"] = velocity
 		particle_data["timer"] = timer

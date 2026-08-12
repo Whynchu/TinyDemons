@@ -36,6 +36,8 @@
 [ext_resource type="Texture2D" uid="uid://c2pko5socmgq1" path="res://assets/artwork/TinyDemon-attack1.png" id="35_attack1"]
 [ext_resource type="Texture2D" uid="uid://bihe7fbxbqepy" path="res://assets/artwork/TinyDemon-attack2.png" id="36_attack2"]
 [ext_resource type="Script" uid="uid://cp0oej4aup068" path="res://scripts/attack_hitbox_guide.gd" id="37_attack_hitbox_guide"]
+[ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="38_aggro_dot"]
+[ext_resource type="Texture2D" uid="uid://bvwy8po4byina" path="res://assets/artwork/firepit.png" id="39_firepit"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -88,6 +90,19 @@ tile_shape = 1
 tile_layout = 5
 tile_size = Vector2i(16, 8)
 sources/0 = SubResource("TileSetAtlasSource_fv21b")
+
+[sub_resource type="Gradient" id="Gradient_fire_light"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.32, 0.58, 0.78, 1)
+colors = PackedColorArray(1, 0.803922, 0.458824, 0.78, 0.937255, 0.490196, 0.341176, 0.62, 0.670588, 0.321569, 0.211765, 0.4, 0.670588, 0.321569, 0.211765, 0.18, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fire_light"]
+gradient = SubResource("Gradient_fire_light")
+width = 96
+height = 48
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
 
 [node name="Main" type="Node2D" unique_id=422795878]
 texture_filter = 1
@@ -212,48 +227,52 @@ polygon = PackedVector2Array(12, 24, 0, 30, 0, 33, 12, 27)
 script = ExtResource("32_dungeon_socket")
 socket_kind = 0
 paired_socket_id = &"BOTTOM_RIGHT"
+arrival_offset = Vector2(-6, -10.5)
 visual_path = NodePath("../../Walls/DoorLeft")
 trigger_path = NodePath("../../Walls/DoorLeft/DoorExitGuide")
 spawn_marker_path = NodePath("SpawnMarker")
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_LEFT" unique_id=779057270]
-position = Vector2(112, 56.5)
+position = Vector2(98, 53)
 
 [node name="WALL_RIGHT" type="Node2D" parent="Map/Sockets" unique_id=247771686]
 script = ExtResource("32_dungeon_socket")
 inward_facing = Vector2(-1, 0)
+arrival_offset = Vector2(-10, -10.5)
 visual_path = NodePath("../../Walls/DoorRight")
 trigger_path = NodePath("../../Walls/DoorRight/DoorExitGuide")
 spawn_marker_path = NodePath("SpawnMarker")
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_RIGHT" unique_id=222120380]
-position = Vector2(112, 56.5)
+position = Vector2(126, 53)
 
 [node name="BOTTOM_LEFT" type="Node2D" parent="Map/Sockets" unique_id=304692599]
 script = ExtResource("32_dungeon_socket")
 socket_kind = 2
 paired_socket_id = &"WALL_RIGHT"
 inward_facing = Vector2(1, -0.5)
+arrival_offset = Vector2(-2.2, -15.6)
 visual_path = NodePath("../../FloorTiles/Entrance")
 trigger_path = NodePath("../../FloorTiles/Entrance/EntranceReturnGuide")
 spawn_marker_path = NodePath("SpawnMarker")
 block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/Entrance"), NodePath("../../FloorTiles/Entrance/Tile 2")])
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_LEFT" unique_id=1858850565]
-position = Vector2(76, 75)
+position = Vector2(63, 85)
 
 [node name="BOTTOM_RIGHT" type="Node2D" parent="Map/Sockets" unique_id=1797975729]
 script = ExtResource("32_dungeon_socket")
 socket_kind = 3
 paired_socket_id = &"WALL_LEFT"
 inward_facing = Vector2(-1, -0.5)
+arrival_offset = Vector2(-14.8, -15.6)
 visual_path = NodePath("../../FloorTiles/EntranceRight")
 trigger_path = NodePath("../../FloorTiles/EntranceRight/EntranceReturnGuide")
 spawn_marker_path = NodePath("SpawnMarker")
 block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/EntranceRight"), NodePath("../../FloorTiles/EntranceRight/Tile 2")])
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_RIGHT" unique_id=429081338]
-position = Vector2(148, 75)
+position = Vector2(160, 85)
 
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
 
@@ -280,6 +299,22 @@ position = Vector2(8, 34)
 position = Vector2(120, 79.025)
 texture = ExtResource("33_fire")
 hframes = 6
+
+[node name="Firepit" type="Sprite2D" parent="Actors/RestFire" unique_id=438523957]
+show_behind_parent = true
+position = Vector2(0, 2)
+texture = ExtResource("39_firepit")
+
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/RestFire/Firepit" unique_id=1320656307]
+color = Color(1, 1, 1, 0.40784314)
+polygon = PackedVector2Array(-8, 0.9749985, -3, -2.0250015, -1, -3.0250015, 1, -3.0250015, 3, -2.0250015, 8, 0.9749985, 8, 3.9749985, 3, 6.9749985, 1, 7.9749985, -1, 7.9749985, -3, 6.9749985, -8, 3.9749985)
+
+[node name="FireLight" type="PointLight2D" parent="Actors/RestFire" unique_id=739137859]
+color = Color(1, 0.803922, 0.458824, 1)
+energy = 0.12
+texture = SubResource("GradientTexture2D_fire_light")
+offset = Vector2(0, 4)
+texture_scale = 0.7
 
 [node name="DepthMarker" type="Marker2D" parent="Actors/RestFire" unique_id=377784978]
 position = Vector2(0, 8)
@@ -347,6 +382,7 @@ attack_sheet = ExtResource("36_attack2")
 show_preview = false
 
 [node name="Preview" type="Sprite2D" parent="Actors/TinyDemon/Attack2HitboxShape" unique_id=119548490]
+visible = false
 z_index = 20
 texture = ExtResource("36_attack2")
 centered = false
@@ -354,6 +390,7 @@ hframes = 4
 frame = 2
 
 [node name="Hitbox" type="Polygon2D" parent="Actors/TinyDemon/Attack2HitboxShape" unique_id=1856988149]
+visible = false
 z_index = 21
 color = Color(1, 0.35, 0.15, 0.28)
 polygon = PackedVector2Array(20, 2, 25, 2, 33, 8, 35, 12, 36, 18, 36, 22, 31, 31, 25, 34, 12, 34, 18, 30, 23, 25, 24, 12, 17, 10)
@@ -385,14 +422,9 @@ script = ExtResource("19_collision_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
 
-[node name="AttackGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=147484808]
-position = Vector2(-6, -8)
-script = ExtResource("19_collision_guide")
-rect_position = Vector2(5, 8)
-rect_size = Vector2(18, 16)
-fill_color = Color(1, 0.85, 0.1, 0.18)
-outline_color = Color(1, 0.7, 0.05, 0.9)
-draw_in_game = true
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/SlimeBlue" unique_id=2006075781]
+color = Color(0.1, 1, 0.35, 0.22)
+polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
 [node name="AttackGuideL" type="Node2D" parent="Actors/SlimeBlue" unique_id=850140732]
 position = Vector2(-6, -8)
@@ -405,7 +437,7 @@ outline_color = Color(1, 0.7, 0.05, 0.9)
 [node name="AttackGuideR" type="Node2D" parent="Actors/SlimeBlue" unique_id=966756253]
 position = Vector2(-6, -8)
 script = ExtResource("19_collision_guide")
-rect_position = Vector2(13.5, 8)
+rect_position = Vector2(14.5, 8)
 rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)
@@ -425,6 +457,10 @@ script = ExtResource("19_collision_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
 
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/SlimeGreen" unique_id=39329856]
+color = Color(0.1, 1, 0.35, 0.22)
+polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+
 [node name="AttackGuideL" type="Node2D" parent="Actors/SlimeGreen" unique_id=968253540]
 position = Vector2(-6, -8)
 script = ExtResource("19_collision_guide")
@@ -436,20 +472,25 @@ outline_color = Color(1, 0.31764707, 0.050980393, 0.9019608)
 [node name="AttackGuideR" type="Node2D" parent="Actors/SlimeGreen" unique_id=29236929]
 position = Vector2(-6, -8)
 script = ExtResource("19_collision_guide")
-rect_position = Vector2(13.5, 8)
+rect_position = Vector2(14.5, 8)
 rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)
 
 [node name="HpOverhead" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=332032270]
-position = Vector2(2, 0)
+position = Vector2(3, 0)
 texture = ExtResource("15_hp_overhead")
 centered = false
 
 [node name="HpOverheadFill" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=313971386]
 z_index = 1
-position = Vector2(2, 0)
+position = Vector2(3, 0)
 texture = ExtResource("25_hp_overhead_green")
+centered = false
+
+[node name="AggroMarker" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=1649614281]
+z_index = 3
+texture = ExtResource("38_aggro_dot")
 centered = false
 
 [node name="SlimeRed" type="Sprite2D" parent="Actors" unique_id=1653609669]
@@ -468,14 +509,9 @@ script = ExtResource("19_collision_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
 
-[node name="AttackGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=30032113]
-position = Vector2(-6, -8)
-script = ExtResource("19_collision_guide")
-rect_position = Vector2(5, 8)
-rect_size = Vector2(18, 16)
-fill_color = Color(1, 0.85, 0.1, 0.18)
-outline_color = Color(1, 0.7, 0.05, 0.9)
-draw_in_game = true
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/SlimeRed" unique_id=1923709733]
+color = Color(0.1, 1, 0.35, 0.22)
+polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
 [node name="AttackGuideL" type="Node2D" parent="Actors/SlimeRed" unique_id=1536968880]
 position = Vector2(-6, -8)
@@ -488,7 +524,7 @@ outline_color = Color(1, 0.7, 0.05, 0.9)
 [node name="AttackGuideR" type="Node2D" parent="Actors/SlimeRed" unique_id=742802159]
 position = Vector2(-6, -8)
 script = ExtResource("19_collision_guide")
-rect_position = Vector2(13.5, 8)
+rect_position = Vector2(14.5, 8)
 rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)

@@ -96,9 +96,17 @@ func try_move_swept(actor: Sprite2D, movement: Vector2, max_step: float, can_sta
 	return actor.position.distance_squared_to(original) > 0.0001
 
 
-func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, is_walkable: Callable, is_slime_walkable: Callable, collision_rect: Callable) -> bool:
+func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, is_walkable: Callable, is_slime_walkable: Callable, collision_rect: Callable, collision_polygon: Callable) -> bool:
 	if not slimes.has(actor):
 		return bool(is_walkable.call(foot.call(actor)))
+	var polygon: PackedVector2Array = collision_polygon.call(actor)
+	if polygon.size() >= 3:
+		for index in polygon.size():
+			var point := polygon[index]
+			var next_point := polygon[(index + 1) % polygon.size()]
+			if not bool(is_slime_walkable.call(point)) or not bool(is_slime_walkable.call((point + next_point) * 0.5)):
+				return false
+		return bool(is_slime_walkable.call(_polygon_center(polygon)))
 	var rect: Rect2 = collision_rect.call(actor)
 	var samples := [rect.position, rect.position + Vector2(rect.size.x, 0), rect.position + rect.size, rect.position + Vector2(0, rect.size.y), rect.get_center(), rect.position + Vector2(rect.size.x * 0.5, 0), rect.position + Vector2(rect.size.x, rect.size.y * 0.5), rect.position + Vector2(rect.size.x * 0.5, rect.size.y), rect.position + Vector2(0, rect.size.y * 0.5)]
 	for sample in samples:
@@ -107,10 +115,21 @@ func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, i
 	return true
 
 
+func _polygon_center(polygon: PackedVector2Array) -> Vector2:
+	var center := Vector2.ZERO
+	for point in polygon:
+		center += point
+	return center / float(polygon.size())
+
+
 func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, root: Object) -> void:
 	if other == actor or not actors_are_in_contact(root, actor, other): return
 	var chest := root.get("chest") as Sprite2D
+	var rest_fire := root.get("rest_fire") as Sprite2D
+	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
 	if other == chest:
+		separate_actor(root, actor, other)
+	elif other == firepit:
 		separate_actor(root, actor, other)
 	elif other == root.get("cloaked_demon"):
 		separate_actor(root, actor, other)
@@ -128,7 +147,7 @@ func push_actor(root: Object, actor: Sprite2D, other: Sprite2D, movement: Vector
 	var total_weight := actor_weight + other_weight
 	var actor_share := other_weight / total_weight
 	var other_share := actor_weight / total_weight
-	actor.position += push * actor_share
+	try_move_swept(actor, push * actor_share, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 	try_move_swept(other, -push * other_share + movement * other_share * 0.45, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 
 
@@ -138,7 +157,9 @@ func separate_actor(root: Object, actor: Sprite2D, other: Sprite2D) -> void:
 
 func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
 	var chest := root.get("chest") as Sprite2D
-	if other != chest and actor != chest: return actor_contact_push_vector(root, actor, other)
+	var rest_fire := root.get("rest_fire") as Sprite2D
+	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
+	if other != chest and actor != chest and other != firepit and actor != firepit: return actor_contact_push_vector(root, actor, other)
 	var rect: Rect2 = root.call("_collision_rect", actor)
 	var other_rect: Rect2 = root.call("_collision_rect", other)
 	var overlap := rect.intersection(other_rect)
@@ -150,7 +171,9 @@ func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vect
 
 func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bool:
 	var chest := root.get("chest") as Sprite2D
-	if actor == chest or other == chest: return (root.call("_collision_rect", actor) as Rect2).intersects(root.call("_collision_rect", other) as Rect2, false)
+	var rest_fire := root.get("rest_fire") as Sprite2D
+	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
+	if actor == chest or other == chest or actor == firepit or other == firepit: return (root.call("_collision_rect", actor) as Rect2).intersects(root.call("_collision_rect", other) as Rect2, false)
 	return actor_contact_push_vector(root, actor, other) != Vector2.ZERO
 
 

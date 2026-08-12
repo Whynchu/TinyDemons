@@ -61,6 +61,8 @@ func _initialize_player(root: Object, player: Sprite2D) -> void:
 	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed")); root.set("player_health_component", health)
 	var motor := root.call("_ensure_player_component", ActorMotor, "Motor") as ActorMotor; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.set("player_motor", motor)
 	root.set("player_controller", root.call("_ensure_player_component", PlayerController, "Controller")); root.set("player_roll_component", root.call("_ensure_player_component", PlayerRollComponent, "Roll")); root.set("player_attack_component", root.call("_ensure_player_component", PlayerAttackComponent, "Attack")); root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
+	var equipment_visual := root.call("_ensure_player_component", PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
+	equipment_visual.initialize(root); root.set("player_equipment_visual_component", equipment_visual)
 	root.call("_set_target_ui_visible", false)
 	var player_health := float(root.call("_player_max_health")); root.set("player_health", player_health); health.maximum_health = player_health; health.reset(player_health); root.set("player_display_health", player_health); root.call("_update_player_health_ui")
 

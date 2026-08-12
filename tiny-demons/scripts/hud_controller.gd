@@ -14,7 +14,9 @@ var target_overhead_fills: Dictionary = {}
 var target_overhead_offsets: Dictionary = {}
 var target_overhead_fill_sizes: Dictionary = {}
 var target_overhead_aggro_markers: Dictionary = {}
+var target_overhead_aggro_offsets: Dictionary = {}
 var bright_bar_cache: Dictionary = {}
+var aggro_marker_texture_cache: Dictionary = {}
 
 
 func set_target(target: Node) -> void:
@@ -107,7 +109,10 @@ func update_overhead_bars(
 		aggro_marker.visible = is_aggroed
 		if not should_show:
 			continue
-		var overhead_position := slime.global_position + (target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2)
+		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
+		if not is_aggroed:
+			overhead_offset.x -= 2.0
+		var overhead_position := slime.global_position + overhead_offset
 		frame.global_position = overhead_position
 		frame.global_scale = Vector2.ONE
 		frame.z_index = overwold_ui_z
@@ -117,7 +122,8 @@ func update_overhead_bars(
 		fill.global_position = overhead_position
 		fill.global_scale = Vector2.ONE
 		fill.z_index = overwold_ui_z + 2
-		aggro_marker.global_position = overhead_position
+		aggro_marker.top_level = true
+		aggro_marker.global_position = slime.global_position + (target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
@@ -215,13 +221,36 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	return {"room": room_number, "gold": gold, "gold_amount": gold_amount, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "player_text": player_text}
 
 
-func update_aggro_markers(markers: Dictionary, palette_name: String, pixel_particle: Callable) -> void:
-	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
-	var color: Color = colors.get(palette_name, colors["blue"])
+func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
+	var marker_texture := _aggro_marker_texture(_palette_name)
 	for marker in markers.values():
 		var aggro_marker := marker as Sprite2D
-		if aggro_marker != null:
-			aggro_marker.texture = pixel_particle.call(color) as Texture2D
+		if aggro_marker != null and marker_texture != null:
+			aggro_marker.texture = marker_texture
+
+
+func _aggro_marker_texture(palette_name: String) -> Texture2D:
+	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
+	var color: Color = colors.get(palette_name, colors["blue"])
+	var key := "%s:%s" % [palette_name, color.to_html(false)]
+	if aggro_marker_texture_cache.has(key):
+		return aggro_marker_texture_cache[key] as Texture2D
+	var source := load("res://assets/artwork/aggrodot(blue).png") as Texture2D
+	if source == null:
+		return null
+	var source_image := source.get_image()
+	var image := Image.create(source_image.get_width(), source_image.get_height(), false, Image.FORMAT_RGBA8)
+	var center := Vector2i(source_image.get_width() / 2, source_image.get_height() / 2)
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			var source_pixel := source_image.get_pixel(x, y)
+			if source_pixel.a <= 0.0:
+				continue
+			var output_color := color if Vector2i(x, y) == center else Color.BLACK
+			image.set_pixel(x, y, Color(output_color.r, output_color.g, output_color.b, source_pixel.a))
+	var texture := ImageTexture.create_from_image(image)
+	aggro_marker_texture_cache[key] = texture
+	return texture
 
 
 func build_enemy_health_ui(
@@ -248,7 +277,7 @@ func build_enemy_health_ui(
 	for slime in slimes:
 		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_fill_textures.get(slime) as Texture2D)
 		target_overhead_damage_fill_textures[slime] = bright_texture.call(target_overhead_fill_textures.get(slime) as Texture2D)
-	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear()
+	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear()
 	var target_damage_fill := duplicate_fill.call(target_health_fill, "EnemyHpDamageFill") as Sprite2D
 	target_health_bar.z_index = 0; target_health_bar.z_as_relative = true; target_damage_fill.z_index = 1; target_health_fill.z_index = 2; target_damage_fill.z_as_relative = true; target_health_fill.z_as_relative = true; target_damage_fill.get_parent().move_child(target_damage_fill, target_health_fill.get_index())
 	var player_damage_fill := duplicate_fill.call(player_health_fill, "HpBarDamageFill") as Sprite2D
@@ -276,7 +305,7 @@ func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Calla
 		if overhead_damage != null: overhead_damage.texture = target_overhead_damage_fill_textures[slime]
 
 
-func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, offset: Vector2, duplicate_fill: Callable, pixel_particle: Callable) -> void:
+func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, offset: Vector2, duplicate_fill: Callable, _pixel_particle: Callable) -> void:
 	var fill_texture := target_overhead_fill_textures.get(slime, fill.texture) as Texture2D
 	if fill_texture != null: fill.texture = fill_texture
 	var damage_fill := fill.get_parent().get_node_or_null("HpOverheadDamageFill") as Sprite2D
@@ -286,8 +315,10 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 	if damage_fill_texture != null: damage_fill.texture = damage_fill_texture
 	var aggro_marker := fill.get_parent().get_node_or_null("AggroMarker") as Sprite2D
 	if aggro_marker == null:
-		aggro_marker = Sprite2D.new(); aggro_marker.name = "AggroMarker"; aggro_marker.texture = pixel_particle.call(Color8(59, 93, 201)); aggro_marker.centered = false; aggro_marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; aggro_marker.position = fill.position + Vector2((fill.texture.get_size().x if fill.texture != null else 0.0) + 1.0, 2.0); aggro_marker.z_index = 3; aggro_marker.z_as_relative = false; fill.get_parent().add_child(aggro_marker)
-	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker
+		aggro_marker = Sprite2D.new(); aggro_marker.name = "AggroMarker"; aggro_marker.texture = load("res://assets/artwork/aggrodot(blue).png") as Texture2D; aggro_marker.centered = false; aggro_marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; aggro_marker.position = Vector2.ZERO; aggro_marker.z_index = 3; aggro_marker.z_as_relative = false; fill.get_parent().add_child(aggro_marker)
+	var aggro_offset := aggro_marker.position
+	aggro_marker.top_level = true
+	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset
 	frame.visible = false; damage_fill.visible = false; fill.visible = false; aggro_marker.visible = false
 
 

@@ -25,6 +25,7 @@ func ensure_components() -> void:
 	_ensure_component("Health", HealthComponent)
 	_ensure_component("Brain", SlimeBrain)
 	_ensure_component("Combat", SlimeCombatComponent)
+	_ensure_component("Tactics", EnemyTacticsComponent)
 	_ensure_component("Animation", SlimeAnimationComponent)
 	_ensure_component("Visual", SlimeVisualComponent)
 	_ensure_component("HealthPresenter", SlimeHealthPresenter)
@@ -50,6 +51,9 @@ func tick_components(delta: float) -> void:
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
 	if combat != null:
 		combat.tick(delta)
+	var tactics := get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		tactics.tick(delta)
 
 
 func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable) -> void:
@@ -180,6 +184,9 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		combat.face_left = false
 		combat.cooldown = attack_cooldown_delay
 		combat.dead = false
+	var tactics := get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		tactics.reset()
 
 
 func _ensure_component(node_name: String, component_type: Variant) -> Node:

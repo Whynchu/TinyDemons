@@ -40,7 +40,7 @@ func tick(root: Object, delta: float) -> void:
 		if motor == null or not motor.is_in_knockback(): root.call("_start_player_death")
 		return
 	if bool(root.get("player_dead")):
-		(root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); root.call("_update_player_death", delta); root.call("_update_damage_numbers", delta)
+		(root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); root.call("_update_player_death", delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick_death(root); root.call("_update_damage_numbers", delta)
 		var tuning := root.get("player_tuning") as PlayerTuning
 		if bool(root.get("player_death_particles_started")) and float(root.get("player_death_timer")) >= tuning.death_particle_delay + tuning.death_particle_lifetime: root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta)
 		root.call("_update_depth_sorting"); root.call("_update_actor_occlusion", delta); _stabilize(root); root.call("_update_overworld_ui"); root.call("_update_game_over_input"); return
@@ -60,7 +60,7 @@ func tick(root: Object, delta: float) -> void:
 	if root.get("player_roll_component") != null: (root.get("player_roll_component") as PlayerRollComponent).update_from_root(root, delta)
 	root.call("_update_roll_dust", delta); (root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta)
 	if not player_input_locked and root.get("player_motor") != null: (root.get("player_motor") as ActorMotor).move_player(root, delta)
-	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta)
+	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
 	if not dialogue_was_active:
 		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
 	var now_attacking: bool = root.get("player_is_attacking")
@@ -73,7 +73,11 @@ func tick(root: Object, delta: float) -> void:
 	var between_timer: float = root.get("player_between_timer")
 	if between_timer > 0.0:
 		between_timer = maxf(between_timer - delta, 0.0); root.set("player_between_timer", between_timer)
-		if between_timer <= 0.0 and not (root.get("player_idle_frames") as Array[Texture2D]).is_empty(): root.call("_set_actor_base_texture", root.get("player"), (root.get("player_idle_frames") as Array[Texture2D])[0])
+		if between_timer <= 0.0:
+			if player_attack != null and player_attack.combo_buffered and player_attack.can_start_attack2():
+				player_attack.start_player_attack(root, 2); player_attack.consume_combo()
+			elif not (root.get("player_idle_frames") as Array[Texture2D]).is_empty():
+				root.call("_set_actor_base_texture", root.get("player"), (root.get("player_idle_frames") as Array[Texture2D])[0])
 	root.call("_update_player_shadow"); root.call("_update_cloaked_demon_shadow"); root.call("_update_overworld_ui")
 
 

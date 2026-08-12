@@ -53,21 +53,32 @@ func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]
 	white_actor_textures.clear()
 	sprite_images.clear()
 	for actor in actors:
-		actor_default_textures[actor] = actor.texture
-		actor_default_materials[actor] = actor.material
-		original_actor_textures[actor] = actor.texture
-		original_actor_scales[actor] = actor.scale
-		actor_visual_scales[actor] = Vector2.ONE
-		var image := cached_texture_image(actor.texture)
-		original_actor_images[actor] = image
-		sprite_images[actor] = image
-		occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(actor.texture, image), image.get_size())
-		actor_occlusion_grace[actor] = 0.0
-		highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(actor.texture, image), image.get_size())
-		white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(actor.texture, image))
+		_register_sprite(actor)
 	for occluder in occluder_sprites:
 		if not sprite_images.has(occluder):
 			sprite_images[occluder] = cached_texture_image(occluder.texture)
+
+
+func register_additional_sprites(actors: Array[Sprite2D]) -> void:
+	for actor in actors:
+		_register_sprite(actor)
+
+
+func _register_sprite(actor: Sprite2D) -> void:
+	if actor == null or actor.texture == null:
+		return
+	actor_default_textures[actor] = actor.texture
+	actor_default_materials[actor] = actor.material
+	original_actor_textures[actor] = actor.texture
+	original_actor_scales[actor] = actor.scale
+	actor_visual_scales[actor] = Vector2.ONE
+	var image := cached_texture_image(actor.texture)
+	original_actor_images[actor] = image
+	sprite_images[actor] = image
+	occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(actor.texture, image), image.get_size())
+	actor_occlusion_grace[actor] = 0.0
+	highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(actor.texture, image), image.get_size())
+	white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(actor.texture, image))
 
 
 func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:

@@ -19,7 +19,9 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 	var state := room_states.get(room_id, {}) as Dictionary
 	if not state.has("generated_exits"):
 		var exits: Array[StringName] = []
-		if room_type == DungeonGraph.ROOM_REST or room_type == DungeonGraph.ROOM_TRADER:
+		if room.milestone_dead_end:
+			pass
+		elif room_type == DungeonGraph.ROOM_REST or room_type == DungeonGraph.ROOM_TRADER:
 			pass
 		elif room_type == DungeonGraph.ROOM_NPC:
 			var npc_exit := DungeonGraph.WALL_LEFT if room.generation_seed % 2 == 0 else DungeonGraph.WALL_RIGHT; exits.append(npc_exit); graph.ensure_connection(room_id, npc_exit, DungeonGraph.ROOM_COMBAT)
@@ -136,11 +138,16 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.call("_ensure_current_room_layout")
 	root.call("_update_room_number_indicator")
 	var arrival_socket := dungeon_sockets.get(destination_socket_id) as DungeonSocket
-	var spawn_marker: Marker2D = arrival_socket.spawn_marker() if arrival_socket != null else null
 	var player := root.get("player") as Sprite2D
-	player.global_position = spawn_marker.global_position if spawn_marker != null else root.get("player_start_position")
+	player.global_position = _arrival_player_position(root, arrival_socket)
+	if not bool(root.call("_can_actor_stand_at_current_position", player)):
+		var requested_foot: Vector2 = root.call("_actor_foot", player)
+		var nearest_foot: Vector2 = root.call("_nearest_slime_walkable_point", requested_foot)
+		player.global_position = nearest_foot - root.get("ACTOR_FOOT_OFFSET")
 	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
 	root.set("player_is_attacking", false)
+	root.set("player_is_rolling", false)
+	root.call("_clear_roll_dust")
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	root.set("current_target", null)
 	root.set("target_input_was_down", false)
@@ -149,6 +156,20 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.call("_apply_room_state")
 	root.call("_build_depth_lists")
 	root.call_deferred("_release_room_transition_lock")
+
+
+func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
+	if socket == null:
+		return root.get("player_start_position")
+	var trigger := socket.trigger()
+	if trigger != null and trigger.polygon.size() >= 3:
+		var center := Vector2.ZERO
+		for point in trigger.polygon:
+			center += trigger.to_global(point)
+		center /= float(trigger.polygon.size())
+		return center + socket.arrival_offset
+	var marker := socket.spawn_marker()
+	return marker.global_position if marker != null else root.get("player_start_position")
 
 
 func apply_state(root: Object) -> void:
@@ -231,7 +252,7 @@ func apply_rest_state(root: Object) -> void:
 	var collision := root.get("collision_sprites") as Array[Sprite2D]
 	chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest)
 	(root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); root.call("_set_door_active", true); root.call("_set_entrance_open", true)
-	var fire := root.get("rest_fire") as Sprite2D; fire.visible = true
+	var fire := root.get("rest_fire") as Sprite2D; fire.visible = true; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = true; if firepit != null and not collision.has(firepit): collision.append(firepit)
 	var demon := root.get("cloaked_demon") as Sprite2D
 	demon.visible = root.get("current_room_type") == DungeonGraph.ROOM_START
 	if demon.visible:
@@ -244,13 +265,13 @@ func apply_rest_state(root: Object) -> void:
 func apply_npc_state(root: Object) -> void:
 	reset_slimes_for_room(root)
 	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
-	var chest := root.get("chest") as Sprite2D; var collision := root.get("collision_sprites") as Array[Sprite2D]; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); (root.get("rest_fire") as Sprite2D).visible = false
+	var chest := root.get("chest") as Sprite2D; var collision := root.get("collision_sprites") as Array[Sprite2D]; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; collision.erase(firepit)
 	var demon := root.get("cloaked_demon") as Sprite2D; demon.visible = true; demon.position = root.get("cloaked_demon_start_position"); root.set("cloaked_demon_wander_origin", demon.position); root.set("cloaked_demon_wander_timer", 0.0); root.set("cloaked_demon_patrol_direction", -1.0); root.set("cloaked_demon_patrol_paused", false); root.set("cloaked_demon_patrol_pause_timer", 0.0); root.set("cloaked_demon_patrol_position_x", demon.position.x); root.call("_configure_cloaked_demon_patrol_route"); if not collision.has(demon): collision.append(demon)
 	root.call("_set_door_active", true); root.call("_set_entrance_open", true); _mark_finished(root)
 
 
 func apply_finished_state(root: Object) -> void:
-	(root.get("rest_fire") as Sprite2D).visible = false; (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_slimes_for_room(root)
+	var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_slimes_for_room(root)
 	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", true); root.call("_set_entrance_open", true); (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
 	for key in [&"chest_unlock_overlay", &"chest_flash_overlay"]:
@@ -271,7 +292,7 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 
 func reset_chest_for_room(root: Object) -> void:
 	var rest_fire := root.get("rest_fire") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var chest := root.get("chest") as Sprite2D
-	rest_fire.visible = false; demon.visible = false; chest.position = root.get("chest_start_position"); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = true; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false); root.call("_set_entrance_open", false)
+	rest_fire.visible = false; var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); demon.visible = false; chest.position = root.get("chest_start_position"); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = true; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false); root.call("_set_entrance_open", false)
 	var unlock_overlay := root.get("chest_unlock_overlay") as Sprite2D; if unlock_overlay != null: unlock_overlay.queue_free(); root.set("chest_unlock_overlay", null)
 	var flash_overlay := root.get("chest_flash_overlay") as Sprite2D; if flash_overlay != null: flash_overlay.queue_free(); root.set("chest_flash_overlay", null)
 	var collision := root.get("collision_sprites") as Array[Sprite2D]; if not collision.has(chest): collision.append(chest)
@@ -295,7 +316,14 @@ func reset_slimes_for_room(root: Object) -> void:
 		var slime := slimes[slime_index]; var spawn_position: Vector2 = spawn_positions.get(slime_index, Vector2.ZERO)
 		if not spawn_positions.has(slime_index) or not _valid_enemy_spawn_foot(root, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
 			spawn_position = _choose_enemy_spawn_position(root, slime, layout_rng, occupied); spawn_positions[slime_index] = spawn_position
-		occupied.append(spawn_position + ACTOR_FOOT_OFFSET)
+		var spawn_foot := spawn_position + ACTOR_FOOT_OFFSET
+		if not _valid_enemy_spawn_foot(root, slime, spawn_foot, player_foot, chest_rect, occupied):
+			spawn_positions.erase(slime_index)
+			(slime as Sprite2D).visible = false
+			(actor_sprites as Array[Sprite2D]).erase(slime)
+			(collision as Array[Sprite2D]).erase(slime)
+			continue
+		occupied.append(spawn_foot)
 		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; brain.start_position = spawn_position; slime.position = spawn_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
 		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
 		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); root.call("_set_actor_visual_scale", slime, Vector2.ONE)
@@ -323,10 +351,11 @@ func _choose_enemy_spawn_position(root: Object, slime: Sprite2D, layout_rng: Ran
 		for direction_index in 16:
 			var candidate_foot: Vector2 = nearest_foot + Vector2.RIGHT.rotated(TAU * float(direction_index) / 16.0) * radius
 			if _valid_enemy_spawn_foot(root, slime, candidate_foot, player_foot, chest_rect, occupied): return candidate_foot - ACTOR_FOOT_OFFSET
-	return nearest_foot - ACTOR_FOOT_OFFSET
+	return Vector2(INF, INF)
 
 
 func _valid_enemy_spawn_foot(root: Object, slime: Sprite2D, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
+	if not bool(root.call("_is_slime_collision_rect_walkable_at", slime, candidate_foot)): return false
 	var collision_rect := _enemy_collision_rect_at(slime, candidate_foot)
 	if not _is_collision_rect_walkable(root, collision_rect): return false
 	if candidate_foot.distance_to(player_foot) < ENEMY_MIN_PLAYER_DISTANCE: return false

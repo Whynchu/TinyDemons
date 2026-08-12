@@ -103,14 +103,15 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			root.call("_restore_actor_base_visual_scale", root.get("player"))
 			(root.get("player") as Sprite2D).visible = true
 			(root.get("player_attack_visual") as Sprite2D).visible = false
-			attack_name = "walk" if bool(root.get("player_is_moving")) else "idle"
-			root.set("player_anim_name", attack_name)
 			root.set("player_anim_frame", 0)
 			root.set("player_anim_timer", 0.0)
-			apply_frame(root)
 			if combo:
+				root.set("player_anim_name", "between")
 				root.set("player_between_timer", attack_tuning.between_attack_time)
 				root.call("_set_actor_base_texture", root.get("player"), root.get("player_between_attack_texture"))
+			else:
+				root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+				apply_frame(root)
 			return
 		root.set("player_anim_timer", attack_timer)
 		root.set("player_anim_frame", animation_frame)
@@ -118,6 +119,8 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		if animation_frame == hit_frame and not bool(root.get("player_attack_hit_done")):
 			root.call("_apply_player_attack_hitbox")
 			root.set("player_attack_hit_done", true)
+		return
+	if float(root.get("player_between_timer")) > 0.0:
 		return
 	var idle_name := "walk" if bool(root.get("player_is_moving")) else "idle"
 	if String(root.get("player_anim_name")) != idle_name:

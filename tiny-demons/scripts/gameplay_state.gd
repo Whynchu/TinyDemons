@@ -3,11 +3,12 @@ class_name GameplayState
 
 const SLIME_ATTACK_FRAME_SIZE := Vector2i(16, 16)
 const EDGE_MARGIN := 0.35
-const SLIME_EDGE_PADDING := 3.0
+const SLIME_EDGE_PADDING := 0.0
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const DEPTH_Z_SCALE := 10.0
 const OVERWORLD_UI_Z := 4090
 const VERTICAL_MOVEMENT_SCALE := 0.5
+const MAX_ACTIVE_ENEMY_ATTACKERS := 2
 const PLAYER_FRAME_SIZE := Vector2i(36, 36)
 const PLAYER_ATTACK_FRAME_SIZE := Vector2i(36, 36)
 const ROLL_DUST_FRAME_SIZE := Vector2i(16, 16)
@@ -70,6 +71,7 @@ var player_controller: PlayerController = null
 var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
 var player_animation_component: PlayerAnimationComponent = null
+var player_equipment_visual_component: PlayerEquipmentVisualComponent = null
 var walkable_area: WalkableArea = null
 var actor_collision_system: ActorCollisionSystem = null
 var depth_sorter: DepthSorter = null

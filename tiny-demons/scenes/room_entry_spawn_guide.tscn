@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://fuh67biyp05u"]
+
+[ext_resource type="PackedScene" uid="uid://cqglsgesc12h7" path="res://scenes/main.tscn" id="1_main"]
+[ext_resource type="Texture2D" uid="uid://dy7ra3eprvwy6" path="res://assets/artwork/TinyDemon.png" id="2_demon"]
+
+[node name="RoomEntrySpawnGuide" type="Node2D" unique_id=152290417]
+
+[node name="Room" parent="." unique_id=317743903 instance=ExtResource("1_main")]
+
+[node name="SpawnPreviews" type="Node2D" parent="." unique_id=1403376909]
+
+[node name="WALL_LEFT_PlayerPreview" type="Sprite2D" parent="SpawnPreviews" unique_id=1951795024]
+position = Vector2(106, 61)
+texture = ExtResource("2_demon")
+flip_h = true
+
+[node name="WALL_RIGHT_PlayerPreview" type="Sprite2D" parent="SpawnPreviews" unique_id=959054297]
+position = Vector2(134, 61)
+texture = ExtResource("2_demon")
+
+[node name="BOTTOM_LEFT_PlayerPreview" type="Sprite2D" parent="SpawnPreviews" unique_id=1025476854]
+position = Vector2(71, 93)
+texture = ExtResource("2_demon")
+flip_h = true
+
+[node name="BOTTOM_RIGHT_PlayerPreview" type="Sprite2D" parent="SpawnPreviews" unique_id=2052909028]
+position = Vector2(168, 93)
+texture = ExtResource("2_demon")

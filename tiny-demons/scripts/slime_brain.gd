@@ -15,11 +15,16 @@ var scoot_target := Vector2.ZERO
 var scoot_timer := 0.0
 var persistent_aggro := false
 var blocked_repath_cooldown := 0.0
+var detour_target := Vector2.ZERO
+var detour_timer := 0.0
 
 
 static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
 	var slime_foot: Vector2 = root.call("_actor_foot", slime); var player_foot: Vector2 = root.call("_actor_foot", root.get("player")); var approach := slime_foot - player_foot; if approach.length_squared() < 0.01: approach = Vector2.RIGHT
-	var tuning := root.get("slime_tuning") as SlimeTuning; var desired := player_foot + approach.normalized() * (tuning.attack_range * 0.72); var buddy_avoidance := Vector2.ZERO
+	var tuning := root.get("slime_tuning") as SlimeTuning; var desired := player_foot + approach.normalized() * (tuning.attack_range * 0.72); var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		desired += tactics.approach_offset(approach)
+	var buddy_avoidance := Vector2.ZERO
 	var collision := root.get("actor_collision_system") as ActorCollisionSystem
 	for buddy in root.get("slimes") as Array[Sprite2D]:
 		if buddy == slime or bool(root.call("_is_slime_dead", buddy)): continue
@@ -36,6 +41,7 @@ func tick(delta: float) -> void:
 	hold_timer = maxf(hold_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
 	blocked_repath_cooldown = maxf(blocked_repath_cooldown - delta, 0.0)
+	detour_timer = maxf(detour_timer - delta, 0.0)
 
 
 func set_aggro(value: bool) -> void:
@@ -74,8 +80,12 @@ func idle_breath_scale(delta: float, breath_time: float) -> Vector2:
 
 
 func start_random_hold(tuning: SlimeTuning, random_source: RandomNumberGenerator) -> void:
+	if aggroed:
+		hold_timer = random_source.randf_range(tuning.aggro_hold_min, tuning.aggro_hold_max)
+		idle_breath_timer = 0.0
+		return
 	var hold_time := random_source.randf_range(tuning.hold_min, tuning.hold_max)
-	if not aggroed and random_source.randf() < tuning.chill_chance:
+	if random_source.randf() < tuning.chill_chance:
 		hold_time = random_source.randf_range(tuning.chill_min, tuning.chill_max)
 	hold_timer = hold_time
 	idle_breath_timer = 0.0
@@ -86,7 +96,11 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 	var foot: Vector2 = actor_foot.call(actor)
 	var is_aggroed := aggroed
 	if is_aggroed:
-		target_position = aggro_target_callable.call(actor)
+		if detour_timer > 0.0 and foot.distance_to(detour_target) > 2.0:
+			target_position = detour_target
+		else:
+			detour_timer = 0.0
+			target_position = aggro_target_callable.call(actor)
 		target = target_position
 		repath_timer = 0.08
 	elif foot.distance_to(target_position) < 2.0 or repath_timer <= 0.0:
@@ -96,7 +110,7 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 	var direction := target_position - foot
 	if direction.length_squared() < 0.01:
 		if is_aggroed:
-			target = aggro_target.call(actor)
+			target = aggro_target_callable.call(actor)
 			repath_timer = 0.0
 		else:
 			start_random_hold(tuning, random_source)

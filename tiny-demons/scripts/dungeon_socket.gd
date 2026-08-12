@@ -12,6 +12,7 @@ enum SocketKind {
 @export var socket_kind: SocketKind = SocketKind.WALL_RIGHT
 @export var paired_socket_id: StringName = &"BOTTOM_LEFT"
 @export var inward_facing := Vector2.RIGHT
+@export var arrival_offset := Vector2.ZERO
 @export_node_path("CanvasItem") var visual_path: NodePath
 @export_node_path("Polygon2D") var trigger_path: NodePath
 @export_node_path("Marker2D") var spawn_marker_path: NodePath
