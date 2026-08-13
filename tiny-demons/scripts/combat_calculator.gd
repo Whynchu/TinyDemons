@@ -47,4 +47,4 @@ static func max_health_for_stats(stats: StatsComponent, equipment_health_bonus: 
 	var config := tuning if tuning != null else CombatTuning.new()
 	if stats == null:
 		return config.target_health_max
-	return config.health_base + float(stats.vit) * config.health_per_vit + equipment_health_bonus
+	return config.health_base + float(stats.vit) * config.health_per_vit + float(maxi(stats.level - 1, 0)) * config.health_per_level + equipment_health_bonus

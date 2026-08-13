@@ -10,9 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://c0krlv2p2r8hp" path="res://assets/artwork/SlimeBlue.png" id="8_slime_blue"]
 [ext_resource type="Texture2D" uid="uid://by84hoph461ir" path="res://assets/artwork/SlimeGreen.png" id="9_slime_green"]
 [ext_resource type="Texture2D" uid="uid://8fgx5pr7dffa" path="res://assets/artwork/SlimeRed.png" id="10_slime_red"]
-[ext_resource type="Texture2D" uid="uid://bmhr71mqr5v2r" path="res://assets/artwork/HpBar.png" id="11_hp_bar"]
 [ext_resource type="Script" uid="uid://b0l1a5vjib0fe" path="res://scripts/slime_actor.gd" id="11_slime_actor"]
-[ext_resource type="Texture2D" uid="uid://c6bdtykoa0vpn" path="res://assets/artwork/HpText.png" id="12_hp_text"]
 [ext_resource type="Texture2D" uid="uid://p1ikyaelccda" path="res://assets/artwork/EnemyHp.png" id="13_enemy_hp"]
 [ext_resource type="Texture2D" uid="uid://buwfuu48fkska" path="res://assets/artwork/SlimeText.png" id="14_slime_text"]
 [ext_resource type="Texture2D" uid="uid://ub5dtvrx1hsa" path="res://assets/artwork/HpOverhead.png" id="15_hp_overhead"]
@@ -21,11 +19,9 @@
 [ext_resource type="Texture2D" uid="uid://cqc78kjjt5xk8" path="res://assets/artwork/TinyDemonShadow.png" id="18_demon_shadow"]
 [ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor_collision_guide.gd" id="19_collision_guide"]
 [ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/stats_component.gd" id="20_stats_component"]
-[ext_resource type="Texture2D" uid="uid://e2bcakb34ad0" path="res://assets/artwork/HpBarBlueBar.png" id="21_hp_bar_blue"]
 [ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
 [ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
 [ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
-[ext_resource type="Script" uid="uid://uu0fgifhsaen" path="res://scripts/ui_layout_guide.gd" id="27_ui_layout_guide"]
 [ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="28_isometric_room_layer"]
 [ext_resource type="Texture2D" uid="uid://l17ya4sh8lu4" path="res://assets/artwork/TileFloor.png" id="29_tile_floor"]
 [ext_resource type="Texture2D" uid="uid://brd1e4d23tsph" path="res://assets/artwork/TileLface.png" id="30_tile_lface"]
@@ -38,6 +34,7 @@
 [ext_resource type="Script" uid="uid://cp0oej4aup068" path="res://scripts/attack_hitbox_guide.gd" id="37_attack_hitbox_guide"]
 [ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="38_aggro_dot"]
 [ext_resource type="Texture2D" uid="uid://bvwy8po4byina" path="res://assets/artwork/firepit.png" id="39_firepit"]
+[ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/player_hud.tscn" id="40_player_hud"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -532,7 +529,10 @@ outline_color = Color(1, 0.7, 0.05, 0.9)
 [node name="UI" type="Node2D" parent="." unique_id=272886269]
 z_index = 4096
 
+[node name="PlayerHud" parent="UI" unique_id=897373093 instance=ExtResource("40_player_hud")]
+
 [node name="BlackBars" type="Sprite2D" parent="UI" unique_id=688445834]
+z_index = -10
 texture = ExtResource("16_black_bars")
 centered = false
 
@@ -551,22 +551,3 @@ z_index = 1
 position = Vector2(81, 147)
 texture = ExtResource("22_enemy_hp_green")
 centered = false
-
-[node name="HpBar" type="Sprite2D" parent="UI" unique_id=1912636597]
-position = Vector2(14, 0)
-texture = ExtResource("11_hp_bar")
-centered = false
-
-[node name="HpText" type="Sprite2D" parent="UI/HpBar" unique_id=1935652195]
-position = Vector2(-10, 3)
-texture = ExtResource("12_hp_text")
-centered = false
-
-[node name="HpBarFill" type="Sprite2D" parent="UI" unique_id=925410818]
-z_index = 1
-position = Vector2(14, 0)
-texture = ExtResource("21_hp_bar_blue")
-centered = false
-
-[node name="EditorLayoutGuide" type="Node2D" parent="UI" unique_id=696458322]
-script = ExtResource("27_ui_layout_guide")

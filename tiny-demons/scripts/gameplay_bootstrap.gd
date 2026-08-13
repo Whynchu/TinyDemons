@@ -39,6 +39,9 @@ func initialize(root: Object) -> void:
 	var attack_visual := root.get("player_attack_visual") as Sprite2D; attack_visual.z_as_relative = false; attack_visual.visible = false
 	root.call("_hide_editor_only_guides")
 	(root.get("hp_overhead") as Sprite2D).z_as_relative = false; (root.get("hp_overhead_fill") as Sprite2D).z_as_relative = false
+	var ui := root.get("ui") as Node
+	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
+	if player_hud != null: player_hud.visible = true
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
 	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
 	root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))

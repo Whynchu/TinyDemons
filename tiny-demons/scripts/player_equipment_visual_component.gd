@@ -324,13 +324,48 @@ func tick(root: Object, delta: float) -> void:
 
 
 func begin_death(root: Object) -> void:
-	if not active:
-		return
+	# Death supersedes every equipment lifecycle. In particular, an inactivity or
+	# roll fizzle may have active overlays while `active` is already false.
+	active = false
+	was_attacking = false
+	inactivity_timer = 0.0
+	fade_timer = 0.0
+	transition_hold_timer = 0.0
+	roll_fizzle_active = false
+	roll_fizzle_positions.clear()
+	breakup_pending = false
+	breakup_started = false
+	draw_white_timer = 0.0
+	draw_color_fade_timer = 0.0
 	_hide_equipment_shadows()
 	_clear_fade_overlays()
+	_clear_draw_overlays()
+	var player := root.get("player") as Sprite2D
+	for layer in layers.values():
+		var equipment_layer := layer as Sprite2D
+		if equipment_layer.visible:
+			if player != null:
+				equipment_layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
+			_set_layer_opacity(equipment_layer, 1.0)
 	_create_fade_overlays(root)
 	death_active = true
 	death_breakup_started = false
+
+
+func tick_death_pending(root: Object) -> void:
+	# The player may still be completing fatal-hit knockback before the death
+	# effect starts. Keep equipment attached and cancel attack/draw artifacts.
+	var player := root.get("player") as Sprite2D
+	if player == null:
+		return
+	draw_white_timer = 0.0
+	draw_color_fade_timer = 0.0
+	_clear_draw_overlays()
+	for layer in layers.values():
+		var equipment_layer := layer as Sprite2D
+		if equipment_layer.visible:
+			equipment_layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
+	_update_equipment_shadows()
 
 
 func tick_death(root: Object) -> void:
@@ -355,6 +390,9 @@ func tick_death(root: Object) -> void:
 	if bool(root.get("player_death_particles_started")) and not death_breakup_started:
 		_spawn_breakup(root)
 		death_breakup_started = true
+		_clear_fade_overlays()
+		_clear_draw_overlays()
+		death_active = false
 
 
 func _clear_fade_overlays() -> void:
@@ -562,9 +600,19 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 		layer.visible = false
 		return
 	layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
-	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if String(gameplay_root.get("player_anim_name")).begins_with("attack") else player.flip_h
+	var animation_name := String(gameplay_root.get("player_anim_name"))
+	var facing_left := player.flip_h
+	if not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
+		var target := gameplay_root.get("current_target") as Sprite2D
+		if target != null and not bool(gameplay_root.get("player_is_attacking")):
+			facing_left = root_actor_foot_x(gameplay_root, target) < root_actor_foot_x(gameplay_root, player)
+	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if animation_name.begins_with("attack") else facing_left
 	_set_layer_opacity(layer, opacity)
 	layer.visible = true
+
+
+func root_actor_foot_x(root: Object, actor: Sprite2D) -> float:
+	return (root.call("_actor_foot", actor) as Vector2).x
 
 
 func _set_layer_opacity(layer: Sprite2D, opacity: float) -> void:

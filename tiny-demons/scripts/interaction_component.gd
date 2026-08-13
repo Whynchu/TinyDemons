@@ -36,7 +36,9 @@ func update_targeting(root: Object) -> void:
 
 
 func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int) -> void:
-	update_prompt(delta, root.get("interact_prompt"), bool((root.get("npc_dialogue_box") as ColorRect) != null and (root.get("npc_dialogue_box") as ColorRect).visible), bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), (root.get("chest") as Sprite2D).global_position, root.call("_cloaked_demon_head_position"), root.get("interact_prompt_base_position"), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
+	var chest := root.get("chest") as Sprite2D
+	var chest_anchor := (root.call("_collision_rect", chest) as Rect2).get_center()
+	update_prompt(delta, root.get("interact_prompt"), bool((root.get("npc_dialogue_box") as ColorRect) != null and (root.get("npc_dialogue_box") as ColorRect).visible), bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), chest_anchor, root.call("_cloaked_demon_head_position"), Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
 
 
 func set_available(value: bool) -> void:
@@ -55,14 +57,41 @@ func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:
 	var prompt := Sprite2D.new()
 	prompt.name = "InteractPrompt"
 	prompt.texture = texture
-	prompt.scale = Vector2(1.5, 1.5)
-	prompt.centered = false
+	prompt.scale = Vector2.ONE
+	prompt.centered = true
 	prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	prompt.z_as_relative = false
 	prompt.z_index = ui_z
 	prompt.visible = false
 	parent.add_child(prompt)
+	var highlight := Sprite2D.new()
+	highlight.name = "InteractPromptHighlight"
+	highlight.texture = _highlight_button_texture(texture)
+	highlight.centered = true
+	highlight.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	highlight.z_as_relative = false
+	highlight.z_index = ui_z - 1
+	highlight.visible = false
+	parent.add_child(highlight)
 	return prompt
+
+
+func _highlight_button_texture(source: Texture2D) -> Texture2D:
+	if source == null:
+		return null
+	var source_image := source.get_image()
+	var image := Image.create(source_image.get_width() + 2, source_image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			var color := source_image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			for offset in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+				var sample_x: int = x + offset.x
+				var sample_y: int = y + offset.y
+				if sample_x < 0 or sample_y < 0 or sample_x >= source_image.get_width() or sample_y >= source_image.get_height() or source_image.get_pixel(sample_x, sample_y).a <= 0.0:
+					image.set_pixel(x + 1 + offset.x, y + 1 + offset.y, Color.WHITE)
+	return ImageTexture.create_from_image(image)
 
 
 func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, chest_position: Vector2, npc_head_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
@@ -70,16 +99,25 @@ func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_
 		return
 	if dialogue_visible:
 		prompt.visible = false
+		var dialogue_highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
+		if dialogue_highlight != null: dialogue_highlight.visible = false
 		return
 	var should_show := near_chest or near_npc
 	prompt.visible = should_show
+	var highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
+	if highlight != null: highlight.visible = should_show
 	if not should_show:
 		return
+	if highlight != null: highlight.global_position = prompt.global_position
 	prompt_timer = fmod(prompt_timer + delta, bob_time)
-	var bob := snappedf(sin((prompt_timer / bob_time) * TAU) * 1.0, 0.5)
+	var bob := snappedf(sin((prompt_timer / bob_time) * TAU) * 0.5, 0.5)
 	if near_npc and not near_chest:
 		var prompt_size := prompt.texture.get_size() * prompt.scale
-		prompt.global_position = snap_position.call(npc_head_position + Vector2(-prompt_size.x * 0.5, -prompt_size.y - 2 + bob))
+		prompt.global_position = snap_position.call(npc_head_position + Vector2(1, -prompt_size.y * 0.5 - 2 + bob))
 	else:
-		prompt.global_position = snap_position.call(chest_position + base_position + Vector2(0, bob))
+		var prompt_size := prompt.texture.get_size() * prompt.scale
+		prompt.global_position = snap_position.call(chest_position + base_position + Vector2(0, -prompt_size.y * 0.5) + Vector2(0, bob))
 	prompt.z_index = ui_z
+	if highlight != null:
+		highlight.global_position = prompt.global_position
+		highlight.z_index = ui_z - 1

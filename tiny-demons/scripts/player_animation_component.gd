@@ -93,9 +93,12 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		if animation_frame >= attack_frames.size():
 			var attack_component := root.get("player_attack_component") as PlayerAttackComponent
 			var combo := attack_name == "attack1" and attack_component != null and attack_component.combo_buffered and root.get("player_between_attack_texture") != null
+			var attack2_finished := attack_name == "attack2"
+			var transition_texture: Texture2D = root.get("player_after_attack2_texture") if attack2_finished else root.get("player_between_attack_texture")
+			var transition_time := attack_tuning.attack2_cooldown if attack2_finished else attack_tuning.between_attack_time
 			if attack_name == "attack2" and attack_component != null:
 				attack_component.start_attack2_cooldown(attack_tuning.attack2_cooldown)
-			root.set("player_just_finished_attack2", attack_name == "attack2")
+			root.set("player_just_finished_attack2", attack2_finished)
 			root.set("player_is_attacking", false)
 			if attack_component != null: attack_component.finish()
 			root.set("player_attack_hit_done", false)
@@ -105,7 +108,11 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			(root.get("player_attack_visual") as Sprite2D).visible = false
 			root.set("player_anim_frame", 0)
 			root.set("player_anim_timer", 0.0)
-			if combo:
+			if (attack2_finished or combo) and transition_texture != null:
+				root.set("player_between_timer", transition_time)
+				root.set("player_anim_name", "after" if attack2_finished else "between")
+				root.call("_set_actor_base_texture", root.get("player"), transition_texture)
+			elif combo:
 				root.set("player_anim_name", "between")
 				root.set("player_between_timer", attack_tuning.between_attack_time)
 				root.call("_set_actor_base_texture", root.get("player"), root.get("player_between_attack_texture"))

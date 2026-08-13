@@ -8,6 +8,7 @@ var polygons: Array[PackedVector2Array] = []
 var outline := PackedVector2Array()
 var points: Array[Vector2] = []
 var entrance_block_polygons: Array[PackedVector2Array] = []
+const ENTRANCE_BLOCK_EDGE_MARGIN := 0.5
 var edge_margin := 0.35
 var slime_edge_padding := 0.0
 
@@ -114,7 +115,7 @@ func is_slime_walkable(point: Vector2) -> bool:
 
 func is_in_entrance_block(point: Vector2) -> bool:
 	for polygon in entrance_block_polygons:
-		if Geometry2D.is_point_in_polygon(point, polygon):
+		if Geometry2D.is_point_in_polygon(point, polygon) or distance_to_polygon_edge(point, polygon) <= ENTRANCE_BLOCK_EDGE_MARGIN:
 			return true
 	return false
 

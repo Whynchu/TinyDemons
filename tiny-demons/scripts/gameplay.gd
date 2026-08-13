@@ -52,6 +52,10 @@ func _update_loading_screen(delta: float) -> void: var result := screen_state_co
 func _apply_player_palette_async(palette_name: String) -> void:
 	if player_animation_component != null: await player_animation_component.apply_palette_async(self, palette_name)
 	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(self)
+	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
+	if player_hud != null:
+		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name))
+	_update_player_progression_ui()
 func _update_player_aggro_marker_colors() -> void: hud_controller.update_aggro_markers(hud_controller.target_overhead_aggro_markers, player_palette_name, Callable(self, "_pixel_particle_texture"))
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	if title_particle_layer == null:
@@ -100,6 +104,7 @@ func _knockback_slime(slime: Sprite2D) -> void:
 	var brain := _slime_brain(slime); brain.scoot_start = slime.position; brain.scoot_target = slime.position; brain.scoot_timer = 0.0; brain.hold_timer = slime_tuning.hitstun_time
 func _kill_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
+	_award_slime_xp(slime)
 	effects_spawner.spawn_slime_death_from_root(self, slime); room_controller.kill_slime_without_effects(self, slime)
 	if current_target == slime:
 		if _is_target_input_held(): _set_current_target(_closest_target())
@@ -112,11 +117,18 @@ func _are_all_slimes_dead() -> bool:
 func _unlock_chest() -> void:
 	if chest_unlocked: return
 	chest_unlocked = true; if chest_normal_texture != null: chest_controller.start_unlock_fade(self)
-func _build_interact_prompt() -> void: interact_prompt = interaction_component.build_prompt(self, _pixel_number_texture("!", Color8(255, 205, 117)), OVERWORLD_UI_Z + 1); interact_prompt_base_position = Vector2(6, -7)
+func _build_interact_prompt() -> void:
+	var interaction_marker := _load_texture_or_null("res://assets/artwork/circle55.png")
+	interact_prompt = interaction_component.build_prompt(self, interaction_marker, OVERWORLD_UI_Z + 1); interact_prompt_base_position = Vector2(6, -7)
 func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_dialogue_layer = dialogue["layer"] as CanvasLayer; npc_dialogue_box = dialogue["box"] as ColorRect; npc_dialogue_text = dialogue["text"] as Sprite2D; npc_dialogue_button = dialogue["button"] as Sprite2D; npc_dialogue_button_shadow = dialogue["shadow"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
 	room_number_indicator = hud["room"] as Sprite2D; gold_indicator = hud["gold"] as Sprite2D; gold_amount_indicator = hud["gold_amount"] as Sprite2D; gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator()
+	var hud_root := ui.get_node("PlayerHud") as Node2D
+	var player_hud_color := _health_feedback_color(player_palette_name)
+	hud_root.call("set_static_text", "lv. 1", player_hud_color)
+	hud_root.call("apply_bar_colors", player_hud_color)
+	_update_player_progression_ui()
 func _update_gold_indicator() -> void: if gold_indicator != null: gold_amount_indicator.texture = _pixel_number_texture(str(gold), Color8(255, 205, 117))
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _set_entrance_open(is_open: bool) -> void:
@@ -142,7 +154,7 @@ func _move_cloaked_demon(movement: Vector2, max_step: float) -> bool: return act
 func _cache_npc_texture(_actor: Sprite2D, texture: Texture2D) -> void: occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(texture)
 func _can_interact_with_chest() -> bool: return chest_unlocked and not chest_claimed and _actor_foot(player).distance_to(_collision_rect(chest).get_center()) <= CHEST_INTERACT_DISTANCE
 func _can_interact_with_npc() -> bool: return cloaked_demon != null and cloaked_demon.visible and _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
-func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, INTERACT_PROMPT_BOB_TIME, OVERWORLD_UI_Z + 1)
+func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
 	door_active = is_active
 	for socket_value in room_controller.active_door_sockets.values():
@@ -180,9 +192,34 @@ func _white_texture(source: Texture2D) -> Texture2D: return occlusion_renderer.w
 func _try_knockback_slime(slime: Sprite2D, movement: Vector2) -> bool:
 	# Axis movement lets an angled impact glide along a wall instead of repeatedly
 	# driving the slime into it for the remainder of the knockback timer.
+	var original := slime.position
+	if _slime_position_is_valid(slime):
+		slime_last_valid_positions[slime] = original
 	var moved := _try_move_actor_axes(slime, movement)
 	_separate_slime_from_player(slime)
-	return moved
+	# Contact resolution happens after swept movement and can push an actor. Never
+	# allow that secondary push to commit a footprint outside the floor polygon.
+	if not _can_actor_stand_at_current_position(slime) or _collides_with_static(slime):
+		slime.position = original
+		moved = false
+	var actual_movement := slime.position - original
+	var moved_distance := slime.position.distance_to(original)
+	var x_clipped := absf(movement.x) > 0.01 and absf(actual_movement.x) < absf(movement.x) * 0.92
+	var y_clipped := absf(movement.y) > 0.01 and absf(actual_movement.y) < absf(movement.y) * 0.92
+	var blocked := not moved or moved_distance < movement.length() * 0.92 or x_clipped or y_clipped
+	if blocked:
+		# Do not leave the slime parked on the exact boundary reached by a partial
+		# knockback. Roll back, then take a tiny step opposite the impact so its
+		# next pathfinding move starts with usable clearance from the wall.
+		slime.position = original
+		if movement.length_squared() > 0.001:
+			actor_collision_system.try_move_swept(slime, -movement.normalized() * 2.5, 0.5, Callable(self, "_can_actor_stand_at_current_position"), Callable(self, "_collides_with_static"))
+		_recover_slime_position(slime)
+		var combat := _slime_combat(slime)
+		combat.knockback_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		_repath_slime_after_block(slime)
+	return slime.position.distance_squared_to(original) > 0.0001 if blocked else moved
 func _separate_slime_from_player(slime: Sprite2D) -> void:
 	var overlap_push := actor_collision_system.overlap_push_vector(self, slime, player); if overlap_push != Vector2.ZERO: actor_collision_system.try_move_swept(slime, overlap_push, 0.75, Callable(self, "_can_actor_stand_at_current_position"), Callable(self, "_collides_with_static"))
 func _slime_brain(slime: Sprite2D) -> SlimeBrain: return SlimeActor.component(slime, "Brain", SlimeBrain) as SlimeBrain
@@ -194,11 +231,32 @@ func _slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter: return Sl
 func _slime_health(slime: Sprite2D) -> HealthComponent: return slime.get_node_or_null("Health") as HealthComponent
 func _move_slimes(delta: float) -> void:
 	for slime in slimes:
+		if not _is_slime_dead(slime):
+			_recover_slime_position(slime)
 		var slime_actor := slime as SlimeActor
 		if slime_actor != null:
 			slime_actor.tick_components(delta); slime_actor.tick_runtime(delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot")); continue
 		SlimeActor.tick_legacy_runtime(slime, delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot"))
 	actor_collision_system.resolve_slime_contacts(slimes, self)
+	for slime in slimes:
+		if not _is_slime_dead(slime):
+			_recover_slime_position(slime)
+func _slime_position_is_valid(slime: Sprite2D) -> bool:
+	return _can_actor_stand_at_current_position(slime) and not _collides_with_static(slime)
+func _recover_slime_position(slime: Sprite2D) -> void:
+	if _slime_position_is_valid(slime):
+		slime_last_valid_positions[slime] = slime.position
+		return
+	if slime_last_valid_positions.has(slime):
+		slime.position = slime_last_valid_positions[slime] as Vector2
+	if not _slime_position_is_valid(slime):
+		var recovery_foot := _nearest_valid_slime_walkable_point(_actor_foot(slime), slime)
+		slime.position += recovery_foot - _actor_foot(slime)
+	if _slime_position_is_valid(slime):
+		slime_last_valid_positions[slime] = slime.position
+	var combat := _slime_combat(slime)
+	combat.knockback_timer = 0.0
+	combat.knockback_velocity = Vector2.ZERO
 func _update_slime_attack(slime: Sprite2D, delta: float) -> bool:
 	var combat := _slime_combat(slime)
 	var was_active := combat.active
@@ -253,7 +311,7 @@ func _on_player_health_damaged(_amount: float) -> void: player_damage_fill_hold_
 func _on_player_health_changed(current: float, _maximum: float) -> void: player_health = current; if is_instance_valid(player_health_fill): _update_player_health_ui()
 func _on_player_health_healed(amount: float) -> void:
 	player_display_health = minf(player_display_health, player_health_component.current_health if player_health_component != null else player_health)
-	_spawn_player_healing_number(amount, _health_feedback_color(player_palette_name))
+	_spawn_player_healing_number(amount, Color8(177, 62, 83))
 func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void: _slime_health_presenter(slime).damage_fill_hold_timer = slime_tuning.health_damage_hang_time
 func _on_slime_health_changed(_current: float, _maximum: float, slime: Sprite2D) -> void:
 	if slime == current_target and is_instance_valid(target_health_fill): _update_target_ui()
@@ -304,11 +362,64 @@ func _player_floating_number_origin(text: String, color: Color) -> Vector2:
 	return _actor_foot(player) + Vector2(-float(number_width) * 0.5, 2)
 func _spawn_slime_healing_number(slime: Sprite2D, amount: float, color: Color) -> void:
 	_spawn_floating_number(slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -effects_tuning.damage_number_float_speed), false, true, color)
-func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vector2, was_critical: bool = false, is_healing: bool = false, healing_color: Color = Color.WHITE) -> void:
-	effects_spawner.spawn_health_number(self, world_position, value, velocity, was_critical, is_healing, healing_color, Callable(self, "_pixel_number_texture"), Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime, effects_tuning.damage_number_pop_time)
+func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vector2, was_critical: bool = false, is_healing: bool = false, healing_color: Color = Color.WHITE, display_text := "") -> void:
+	effects_spawner.spawn_health_number(self, world_position, value, velocity, was_critical, is_healing, healing_color, Callable(self, "_pixel_number_texture"), Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime, effects_tuning.damage_number_pop_time, display_text)
 func _health_feedback_color(palette_name: String) -> Color:
 	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
 	return colors.get(palette_name, colors["blue"])
+func _xp_required_for_level(level: int) -> int:
+	# Per-level JRPG curve: early levels arrive steadily, while each later level
+	# asks for meaningfully more fights without using enormous reward numbers.
+	return maxi(1, roundi(20.0 + 12.0 * pow(float(maxi(level, 1)), 1.6)))
+func _xp_reward_for_slime(slime: Sprite2D) -> int:
+	var stats := _slime_stats(slime)
+	var enemy_level := maxi(stats.level if stats != null else 1, 1)
+	var base_reward := 2.0 + 2.0 * pow(float(enemy_level), 0.85)
+	var level_difference := enemy_level - player_level
+	var difficulty_modifier := pow(1.15, float(level_difference)) if level_difference >= 0 else pow(0.72, float(-level_difference))
+	return maxi(1, roundi(base_reward * clampf(difficulty_modifier, 0.2, 2.0)))
+func _award_slime_xp(slime: Sprite2D) -> void:
+	var reward := _xp_reward_for_slime(slime)
+	player_xp += reward
+	_spawn_player_xp_number(reward)
+	var leveled_up := false
+	while player_level < 99:
+		var required := _xp_required_for_level(player_level)
+		if player_xp < required:
+			break
+		player_xp -= required
+		player_level += 1
+		leveled_up = true
+	if leveled_up:
+		_spawn_player_level_number(player_level)
+		_apply_player_level()
+	_update_player_progression_ui()
+func _apply_player_level() -> void:
+	player_stats.level = player_level
+	var new_max_health := _player_max_health()
+	if player_health_component != null:
+		player_health_component.set_maximum_health(new_max_health, false)
+		player_health_component.apply_healing(new_max_health - player_health_component.current_health)
+		player_health = player_health_component.current_health
+		player_display_health = player_health
+	_update_player_health_ui()
+func _update_player_progression_ui() -> void:
+	if not is_instance_valid(player_level_text) or not is_instance_valid(player_xp_fill) or not is_instance_valid(player_xp_text):
+		return
+	var required := _xp_required_for_level(player_level)
+	var hud_root := ui.get_node_or_null("PlayerHud") as Node2D
+	if hud_root != null:
+		hud_root.call("set_static_text", "lv. %d" % player_level, _health_feedback_color(player_palette_name))
+	player_xp_text.texture = _pixel_number_texture("%d/%d" % [player_xp, required], Color.WHITE)
+	var fill_size := player_xp_fill.texture.get_size() if player_xp_fill.texture != null else Vector2(48, 16)
+	hud_controller.set_fill_ratio(player_xp_fill, fill_size, float(player_xp) / float(required))
+func _spawn_player_xp_number(amount: int) -> void:
+	var color := _health_feedback_color(player_palette_name)
+	var text := "+%d xp" % maxi(amount, 0)
+	_spawn_floating_number(_player_floating_number_origin(text, color), amount, Vector2(0.0, effects_tuning.damage_number_float_speed), false, true, color, text)
+func _spawn_player_level_number(level: int) -> void:
+	var text := "+%d lv!" % maxi(level, 1)
+	_spawn_floating_number(_player_floating_number_origin(text, Color.WHITE), level, Vector2(0.0, effects_tuning.damage_number_float_speed), false, false, Color.WHITE, text)
 func _update_damage_numbers(delta: float) -> void: effects_spawner.update_damage_numbers(delta, Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime)
 func _pixel_text_texture(text: String, color: Color) -> Texture2D: return effects_spawner.number_texture(text, color)
 func _pixel_name_texture(text: String, color: Color) -> Texture2D: return effects_spawner.name_texture(text, color)
@@ -374,7 +485,12 @@ func _try_move_actor_axes(actor: Sprite2D, movement: Vector2) -> bool:
 	else: _resolve_actor_contacts(actor, Vector2(0.0, movement.y))
 	return actor.position.distance_squared_to(original) > 0.0001
 func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void:
-	if actor_collision_system != null: actor_collision_system.resolve_motion_contacts(actor, movement, collision_sprites, self)
+	if actor_collision_system == null:
+		return
+	var valid_position := actor.position
+	actor_collision_system.resolve_motion_contacts(actor, movement, collision_sprites, self)
+	if not _can_actor_stand_at_current_position(actor) or _collides_with_static(actor):
+		actor.position = valid_position
 func _is_enemy_control_locked(actor: Sprite2D) -> bool: return _slime_combat(actor).hitstun_timer > 0.0 or _slime_combat(actor).knockback_timer > 0.0
 func _collides_with_static(actor: Sprite2D) -> bool:
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
@@ -433,7 +549,11 @@ func _assign_slime_attack_frames() -> void: SlimeVisualComponent.assign_attack_f
 func _build_enemy_health_ui() -> void:
 	player_base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
 	target_health_damage_fill = target_health_fill.get_parent().get_node_or_null("EnemyHpDamageFill") as Sprite2D; player_health_damage_fill = player_health_fill.get_parent().get_node_or_null("HpBarDamageFill") as Sprite2D
-	var player_base_texture := _load_health_bar_texture("res://assets/artwork/HpBarBlueBar.png"); if player_base_texture != null: player_base_health_fill_texture = player_base_texture; player_health_fill.texture = player_base_texture; if player_health_damage_fill != null: player_health_damage_fill.texture = hud_controller.brighter_bar_texture(player_base_texture)
+	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
+	if player_hud != null:
+		player_base_health_fill_texture = player_health_fill.texture
+		if player_health_damage_fill != null:
+			player_health_damage_fill.texture = player_hud.call("hp_highlight_texture") as Texture2D
 func _refresh_enemy_palette_textures() -> void: hud_controller.refresh_enemy_palette_textures(slimes, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"))
 func _load_texture_or_null(path: String) -> Texture2D: return load(path) as Texture2D if ResourceLoader.exists(path) else null
 func _load_health_bar_texture(path: String) -> Texture2D:
@@ -488,7 +608,7 @@ func _update_target_ui() -> void:
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values"))
 func _set_target_ui_visible(target_visible: bool) -> void: hud_controller.set_visible(target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_visible)
 func _slime_display_name(slime: Sprite2D) -> String:
-	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Green Slime"; var stats := _slime_stats(slime); return "LV.%d %s" % [stats.level if stats != null else 1, display_name]
+	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Green Slime"; var stats := _slime_stats(slime); return "lv.%d %s" % [stats.level if stats != null else 1, display_name]
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
 func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _slime_current_health(slime: Sprite2D) -> float: var max_health := _enemy_max_health(slime); var health_component := _slime_health(slime); return health_component.current_health if health_component != null else max_health

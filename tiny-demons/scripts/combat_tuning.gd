@@ -3,6 +3,7 @@ class_name CombatTuning
 
 @export var health_base := 8.0
 @export var health_per_vit := 2.0
+@export var health_per_level := 10.0
 @export var target_health_max := 10.0
 @export var damage_base := 2.0
 @export var defense_scale := 12.0

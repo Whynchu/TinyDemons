@@ -42,10 +42,12 @@ func update_target_ui(target: Sprite2D, target_name: Sprite2D, _target_bar: Spri
 	var fill_texture := target_health_fill_textures.get(target, target_fill.texture) as Texture2D
 	if fill_texture != null:
 		target_fill.texture = fill_texture
+		target_fill.self_modulate = Color.WHITE
 		bar_size = fill_texture.get_size()
 	var damage_fill_texture := target_health_damage_fill_textures.get(target, target_fill.texture) as Texture2D
 	if target_damage_fill != null and damage_fill_texture != null:
 		target_damage_fill.texture = damage_fill_texture
+		target_damage_fill.self_modulate = Color.WHITE
 	var max_health := float(max_health_for.call(target)); var health := float(health_for.call(target)); var display_health := float(display_health_for.call(target))
 	target_health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
 	set_values.call(target_fill, target_damage_fill, bar_size, health, display_health, max_health)
@@ -106,13 +108,15 @@ func update_overhead_bars(
 		frame.visible = should_show
 		damage_fill.visible = should_show
 		fill.visible = should_show
+		fill.self_modulate = Color.WHITE
+		damage_fill.self_modulate = Color.WHITE
 		aggro_marker.visible = is_aggroed
 		if not should_show:
 			continue
 		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
 		if not is_aggroed:
 			overhead_offset.x -= 2.0
-		var overhead_position := slime.global_position + overhead_offset
+		var overhead_position := slime.global_position + overhead_offset + Vector2(0, -2)
 		frame.global_position = overhead_position
 		frame.global_scale = Vector2.ONE
 		frame.z_index = overwold_ui_z
@@ -123,7 +127,7 @@ func update_overhead_bars(
 		fill.global_scale = Vector2.ONE
 		fill.z_index = overwold_ui_z + 2
 		aggro_marker.top_level = true
-		aggro_marker.global_position = slime.global_position + (target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2)
+		aggro_marker.global_position = slime.global_position + (target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2) + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
@@ -170,28 +174,35 @@ func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta:
 
 
 func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable, target_bar: Sprite2D, _target_fill: Sprite2D, player_fill: Sprite2D) -> Dictionary:
-	var room_number := Sprite2D.new()
+	var layout := parent.get_node_or_null("PlayerHud") as Node2D
+	var room_number := layout.get_node("RoomNumber") as Sprite2D if layout != null else Sprite2D.new()
 	room_number.name = "RoomNumber"
 	room_number.centered = false
 	room_number.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	room_number.z_index = 2
-	room_number.position = Vector2(208, 4)
-	parent.add_child(room_number)
-	var gold := Sprite2D.new()
+	if layout == null:
+		room_number.position = Vector2(208, 4)
+		parent.add_child(room_number)
+	var gold := layout.get_node("GoldDisplay/Gold") as Sprite2D if layout != null else Sprite2D.new()
 	gold.name = "GoldIndicator"
 	gold.centered = false
 	gold.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	gold.z_index = 2
-	gold.position = Vector2(64, 4)
-	parent.add_child(gold)
-	var gold_amount := Sprite2D.new()
+	if layout == null:
+		gold.position = Vector2(64, 4)
+		parent.add_child(gold)
+	var gold_amount := layout.get_node("GoldDisplay/GoldAmount") as Sprite2D if layout != null else Sprite2D.new()
 	gold_amount.name = "GoldAmount"
 	gold_amount.centered = false
 	gold_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	gold_amount.z_index = 2
-	gold_amount.position = Vector2(72, 4)
-	parent.add_child(gold_amount)
+	if layout == null:
+		gold_amount.position = Vector2(72, 4)
+		parent.add_child(gold_amount)
 	var gold_frames := library.slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
+	gold.hframes = 1
+	gold.vframes = 1
+	gold.frame = 0
 	gold.texture = gold_frames[0] if not gold_frames.is_empty() else null
 	var buttons: Array[Sprite2D] = []
 	for data in [{"texture": "triangle55.png", "position": Vector2(224, 64)}, {"texture": "square55.png", "position": Vector2(219, 69)}, {"texture": "x55.png", "position": Vector2(224, 74)}, {"texture": "circle55.png", "position": Vector2(229, 69)}]:
@@ -211,13 +222,13 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	target_text.position = target_bar.position + target_bar.texture.get_size() * 0.5
 	target_text.visible = false
 	parent.add_child(target_text)
-	var player_text := Sprite2D.new()
+	var player_text := layout.get_node("PlayerStatus/Health/HpText") as Sprite2D if layout != null else Sprite2D.new()
 	player_text.name = "PlayerHealthText"
 	player_text.centered = true
 	player_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
-	parent.add_child(player_text)
+	if layout == null: parent.add_child(player_text)
 	return {"room": room_number, "gold": gold, "gold_amount": gold_amount, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "player_text": player_text}
 
 
@@ -230,9 +241,11 @@ func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_par
 
 
 func _aggro_marker_texture(palette_name: String) -> Texture2D:
-	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
-	var color: Color = colors.get(palette_name, colors["blue"])
-	var key := "%s:%s" % [palette_name, color.to_html(false)]
+	var shadow_colors := {"blue": Color8(41, 54, 111), "orange": Color8(171, 82, 54), "green": Color8(37, 113, 121), "red": Color8(93, 39, 93), "yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82), "purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116)}
+	var normal_colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
+	var shadow_color: Color = shadow_colors.get(palette_name, shadow_colors["blue"])
+	var normal_color: Color = normal_colors.get(palette_name, normal_colors["blue"])
+	var key := "%s:%s:%s" % [palette_name, shadow_color.to_html(false), normal_color.to_html(false)]
 	if aggro_marker_texture_cache.has(key):
 		return aggro_marker_texture_cache[key] as Texture2D
 	var source := load("res://assets/artwork/aggrodot(blue).png") as Texture2D
@@ -246,7 +259,7 @@ func _aggro_marker_texture(palette_name: String) -> Texture2D:
 			var source_pixel := source_image.get_pixel(x, y)
 			if source_pixel.a <= 0.0:
 				continue
-			var output_color := color if Vector2i(x, y) == center else Color.BLACK
+			var output_color := normal_color if Vector2i(x, y) == center else shadow_color
 			image.set_pixel(x, y, Color(output_color.r, output_color.g, output_color.b, source_pixel.a))
 	var texture := ImageTexture.create_from_image(image)
 	aggro_marker_texture_cache[key] = texture
@@ -268,7 +281,7 @@ func build_enemy_health_ui(
 	register_overhead: Callable,
 	pixel_particle: Callable
 ) -> Texture2D:
-	var target_bar_paths := {"blue": "EnemyHpBlueBar.png", "green": "EnemyHpGreenBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadBlueBar.png", "green": "HpOverheadGreenBar.png", "red": "HpOverheadRedBar.png"}
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png"}
 	target_health_fill_textures.clear(); target_overhead_fill_textures.clear()
 	for slime in slimes:
 		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
@@ -294,7 +307,7 @@ func build_enemy_health_ui(
 
 
 func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Callable, bright_texture: Callable) -> void:
-	var target_bar_paths := {"blue": "EnemyHpBlueBar.png", "green": "EnemyHpGreenBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadBlueBar.png", "green": "HpOverheadGreenBar.png", "red": "HpOverheadRedBar.png"}
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png"}
 	for slime in slimes:
 		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
 		var target_texture := load_texture.call("res://assets/artwork/" + target_bar_paths[palette]) as Texture2D; var overhead_texture := load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette]) as Texture2D

@@ -35,7 +35,7 @@ func tick(root: Object, delta: float) -> void:
 	var hitstop: float = root.get("hitstop_timer")
 	if hitstop > 0.0: root.set("hitstop_timer", maxf(hitstop - delta, 0.0)); return
 	if bool(root.get("player_death_pending")) and not bool(root.get("player_dead")):
-		(root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta); root.call("_update_damage_numbers", delta)
+		(root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick_death_pending(root); root.call("_update_damage_numbers", delta)
 		var motor := root.get("player_motor") as ActorMotor
 		if motor == null or not motor.is_in_knockback(): root.call("_start_player_death")
 		return

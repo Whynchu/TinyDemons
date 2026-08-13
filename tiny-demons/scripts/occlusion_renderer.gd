@@ -227,7 +227,7 @@ func make_effect_image(source_image: Image) -> Image:
 
 func make_highlighted_effect_image(source_image: Image) -> Image:
 	var image := make_effect_image(source_image)
-	apply_half_pixel_outline(image)
+	apply_pixel_outline(image, resolution_scale)
 	return image
 
 
@@ -240,25 +240,24 @@ func make_white_image(source_image: Image) -> Image:
 	return image
 
 
-func apply_half_pixel_outline(image: Image) -> void:
+func apply_pixel_outline(image: Image, pixel_size: int = 1) -> void:
 	var outline_points: Array[Vector2i] = []
 	for y in range(image.get_height()):
 		for x in range(image.get_width()):
-			if image.get_pixel(x, y).a <= 0.05 and has_opaque_neighbor(image, x, y):
+			if image.get_pixel(x, y).a <= 0.05 and has_opaque_cardinal_neighbor(image, x, y, pixel_size):
 				outline_points.append(Vector2i(x, y))
 	for point in outline_points:
 		image.set_pixel(point.x, point.y, Color.WHITE)
 
 
-func has_opaque_neighbor(image: Image, x: int, y: int) -> bool:
-	for offset_y in range(-1, 2):
-		for offset_x in range(-1, 2):
-			if offset_x == 0 and offset_y == 0:
-				continue
-			var sample_x := x + offset_x
-			var sample_y := y + offset_y
-			if sample_x >= 0 and sample_y >= 0 and sample_x < image.get_width() and sample_y < image.get_height() and image.get_pixel(sample_x, sample_y).a > 0.05:
-				return true
+
+func has_opaque_cardinal_neighbor(image: Image, x: int, y: int, pixel_size: int) -> bool:
+	var offsets := [Vector2i(-pixel_size, 0), Vector2i(pixel_size, 0), Vector2i(0, -pixel_size), Vector2i(0, pixel_size)]
+	for offset in offsets:
+		var sample_x: int = x + offset.x
+		var sample_y: int = y + offset.y
+		if sample_x >= 0 and sample_y >= 0 and sample_x < image.get_width() and sample_y < image.get_height() and image.get_pixel(sample_x, sample_y).a > 0.05:
+			return true
 	return false
 
 
@@ -322,7 +321,7 @@ func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array
 	if not any_occluded_pixel and not include_outline:
 		return null
 	if include_outline:
-		apply_half_pixel_outline(result_image)
+		apply_pixel_outline(result_image, resolution_scale)
 	var texture := occluded_actor_textures[actor] as ImageTexture
 	texture.set_image(result_image)
 	texture.set_size_override(source_image.get_size())

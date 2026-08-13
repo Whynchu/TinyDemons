@@ -172,7 +172,9 @@ func _growth_seed() -> int:
 		path_hash = String(name).hash()
 	else:
 		path_hash = str(get_path()).hash()
-	return int(level * 92821 + points_per_level * 313 + base_points * 733 + allocation_profile * 197 + path_hash)
+	# Keep one stable growth sequence per actor/profile. Leveling extends that
+	# sequence instead of rerolling every previously allocated stat point.
+	return int(points_per_level * 313 + base_points * 733 + allocation_profile * 197 + path_hash)
 
 
 func _stat_priority(stat: Stat) -> int:
