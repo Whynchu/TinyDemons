@@ -4,13 +4,13 @@ class_name GameplayFrameController
 
 func update_player_input(root: Object) -> void:
 	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
-	if attack_down and not bool(root.get("player_attack_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and (attack == null or attack.can_start_attack2()):
+	if attack_down and not bool(root.get("player_attack_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
 		if float(root.get("player_between_timer")) > 0.0:
 			if attack != null: attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input"))
 		elif attack != null: attack.start_player_attack(root, 1)
 	root.set("player_attack_input_was_down", attack_down)
 	var roll_down: bool = root.call("_is_roll_input_pressed")
-	if roll_down and not bool(root.get("player_roll_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
+	if roll_down and not bool(root.get("player_roll_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
 		var roll := root.get("player_roll_component") as PlayerRollComponent; if roll != null: roll.start_from_root(root)
 	root.set("player_roll_input_was_down", roll_down)
 
@@ -47,6 +47,8 @@ func tick(root: Object, delta: float) -> void:
 	var player_input_locked: bool = dialogue_was_active
 	var player_tuning := root.get("player_tuning") as PlayerTuning
 	var previous_attack_input: bool = root.get("player_attack_input_was_down"); var previous_attacking: bool = root.get("player_is_attacking")
+	var guard := root.get("player_guard_component") as PlayerGuardComponent
+	if guard != null: guard.tick(root, delta, not player_input_locked and bool(root.call("_is_guard_input_held")))
 	if not player_input_locked: update_player_input(root)
 	var attack_input_down: bool = root.call("_is_attack_input_pressed")
 	var player_attack := root.get("player_attack_component") as PlayerAttackComponent

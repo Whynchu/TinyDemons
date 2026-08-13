@@ -12,18 +12,18 @@ var coordinator_root: Object = null
 func build_frames(root: Object) -> void:
 	coordinator_root = root
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary; var size := Vector2i(36, 36)
-	root.set("player_idle_frames", library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size)); root.set("player_walk_frames", library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size)); root.set("player_roll_frames", library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size))
+	root.set("player_idle_frames", library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size)); root.set("player_walk_frames", library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size)); root.set("player_defend_frames", library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size)); root.set("player_roll_frames", library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size))
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
 	for index in raw_dust.size(): dust.append(library.dither_roll_dust_frame(raw_dust[index], float(index) / float(maxi(raw_dust.size(), 1))))
 	root.set("roll_dust_frames", dust); root.set("roll_dust_flipped_frames", library.flip_effect_frames(dust, Vector2i(16, 16)))
 	var attack_size: Vector2i = root.get("PLAYER_ATTACK_FRAME_SIZE") if root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(32, 32); root.set("player_attack_frames", library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size)); root.set("player_attack2_frames", library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size)); if (root.get("player_attack2_frames") as Array).is_empty(): root.set("player_attack2_frames", (root.get("player_attack_frames") as Array).duplicate())
 	root.set("player_attack_left_frames", library.flip_frames(root.get("player_attack_frames"))); root.set("player_attack2_left_frames", library.flip_frames(root.get("player_attack2_frames"))); root.set("player_between_attack_texture", root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png")); root.set("player_after_attack2_texture", root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png"))
-	for key in ["idle", "walk", "roll", "attack", "attack2", "attack_left", "attack2_left"]: root.set("player_base_%s_frames" % key, (root.get("player_%s_frames" % key) as Array).duplicate())
+	for key in ["idle", "walk", "defend", "roll", "attack", "attack2", "attack_left", "attack2_left"]: root.set("player_base_%s_frames" % key, (root.get("player_%s_frames" % key) as Array).duplicate())
 	root.set("player_base_between_attack_texture", root.get("player_between_attack_texture")); root.set("player_base_after_attack2_texture", root.get("player_after_attack2_texture")); apply_palette(root, "blue"); warm_player_caches(root)
 
 
 func apply_frame(root: Object) -> void:
-	var player := root.get("player") as Sprite2D; animation_name = StringName(root.get("player_anim_name")); frame = int(root.get("player_anim_frame")); timer = float(root.get("player_anim_timer")); var animation_key: String = root.get("player_anim_name"); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if animation_key == "attack2" else root.get("player_attack_frames") if animation_key == "attack1" else root.get("player_walk_frames") if animation_key == "walk" else root.get("player_idle_frames")
+	var player := root.get("player") as Sprite2D; animation_name = StringName(root.get("player_anim_name")); frame = int(root.get("player_anim_frame")); timer = float(root.get("player_anim_timer")); var animation_key: String = root.get("player_anim_name"); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if animation_key == "attack2" else root.get("player_attack_frames") if animation_key == "attack1" else root.get("player_defend_frames") if animation_key == "defend" else root.get("player_walk_frames") if animation_key == "walk" else root.get("player_idle_frames")
 	if frames.is_empty(): return
 	if bool(root.get("player_is_rolling")): root.call("_set_actor_base_texture", player, frames[int(root.get("player_roll_component").frame)]); return
 	if animation_key == "attack1" or animation_key == "attack2":
@@ -34,7 +34,7 @@ func apply_frame(root: Object) -> void:
 
 
 func apply_palette(root: Object, palette_name: String) -> void:
-	for key in ["idle", "walk", "roll", "attack", "attack2", "attack_left", "attack2_left"]: root.set("player_%s_frames" % key, recolor_frames(root.get("player_base_%s_frames" % key), palette_name))
+	for key in ["idle", "walk", "defend", "roll", "attack", "attack2", "attack_left", "attack2_left"]: root.set("player_%s_frames" % key, recolor_frames(root.get("player_base_%s_frames" % key), palette_name))
 	root.set("player_between_attack_texture", recolor_texture(root.get("player_base_between_attack_texture"), palette_name)); root.set("player_after_attack2_texture", recolor_texture(root.get("player_base_after_attack2_texture"), palette_name)); warm_player_caches(root)
 
 
@@ -42,13 +42,14 @@ func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Tex
 func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D: return (coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary).recolor_texture(source, palette_name)
 func warm_texture_cache(texture: Texture2D) -> void: var renderer := coordinator_root.get("occlusion_renderer") as OcclusionRenderer; var image := renderer.cached_texture_image(texture); renderer.cached_effect_image(texture, image); renderer.cached_highlighted_image(texture, image); renderer.cached_white_image(texture, image)
 func warm_player_caches(root: Object) -> void:
-	for key in ["player_idle_frames", "player_walk_frames", "player_roll_frames", "roll_dust_frames", "roll_dust_flipped_frames", "player_attack_frames", "player_attack2_frames", "player_attack2_left_frames", "player_attack_left_frames"]:
+	for key in ["player_idle_frames", "player_walk_frames", "player_defend_frames", "player_roll_frames", "roll_dust_frames", "roll_dust_flipped_frames", "player_attack_frames", "player_attack2_frames", "player_attack2_left_frames", "player_attack_left_frames"]:
 		for texture in root.get(key) as Array[Texture2D]: warm_texture_cache(texture)
 
 
 func apply_palette_async(root: Object, palette_name: String) -> void:
 	root.set("player_idle_frames", recolor_frames(root.get("player_base_idle_frames"), palette_name)); await root.get_tree().process_frame
 	root.set("player_walk_frames", recolor_frames(root.get("player_base_walk_frames"), palette_name)); await root.get_tree().process_frame
+	root.set("player_defend_frames", recolor_frames(root.get("player_base_defend_frames"), palette_name)); await root.get_tree().process_frame
 	root.set("player_roll_frames", recolor_frames(root.get("player_base_roll_frames"), palette_name)); await root.get_tree().process_frame
 	root.set("player_attack_frames", recolor_frames(root.get("player_base_attack_frames"), palette_name)); root.set("player_attack2_frames", recolor_frames(root.get("player_base_attack2_frames"), palette_name)); await root.get_tree().process_frame
 	root.set("player_attack_left_frames", recolor_frames(root.get("player_base_attack_left_frames"), palette_name)); root.set("player_attack2_left_frames", recolor_frames(root.get("player_base_attack2_left_frames"), palette_name)); root.set("player_between_attack_texture", recolor_texture(root.get("player_base_between_attack_texture"), palette_name)); root.set("player_after_attack2_texture", recolor_texture(root.get("player_base_after_attack2_texture"), palette_name)); await root.get_tree().process_frame
@@ -129,7 +130,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		return
 	if float(root.get("player_between_timer")) > 0.0:
 		return
-	var idle_name := "walk" if bool(root.get("player_is_moving")) else "idle"
+	var idle_name := "defend" if bool(root.get("player_is_defending")) else "walk" if bool(root.get("player_is_moving")) else "idle"
 	if String(root.get("player_anim_name")) != idle_name:
 		root.set("player_anim_name", idle_name)
 		root.set("player_anim_frame", 0)
@@ -138,12 +139,12 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		return
 	var idle_tuning := root.get("player_tuning") as PlayerTuning
 	var idle_timer := float(root.get("player_anim_timer")) + delta
-	var idle_frame_time := idle_tuning.walk_frame_time if idle_name == "walk" else idle_tuning.idle_frame_time
+	var idle_frame_time := idle_tuning.walk_frame_time if idle_name == "walk" or idle_name == "defend" else idle_tuning.idle_frame_time
 	if idle_timer < idle_frame_time:
 		root.set("player_anim_timer", idle_timer)
 		return
 	root.set("player_anim_timer", fmod(idle_timer, idle_frame_time))
-	var idle_frames := (root.get("player_walk_frames") as Array[Texture2D]) if idle_name == "walk" else (root.get("player_idle_frames") as Array[Texture2D])
+	var idle_frames := (root.get("player_defend_frames") as Array[Texture2D]) if idle_name == "defend" else (root.get("player_walk_frames") as Array[Texture2D]) if idle_name == "walk" else (root.get("player_idle_frames") as Array[Texture2D])
 	if idle_frames.is_empty(): return
 	root.set("player_anim_frame", (int(root.get("player_anim_frame")) + 1) % idle_frames.size())
 	apply_frame(root)

@@ -212,7 +212,9 @@ func spawn_damage_number(parent: Node, world_position: Vector2, value: int, velo
 
 func spawn_health_number(parent: Node, world_position: Vector2, value: int, velocity: Vector2, was_critical: bool, is_healing: bool, healing_color: Color, pixel_number: Callable, snap_position: Callable, lifetime: float, pop_time: float, display_text := "") -> void:
 	var number_text := String(display_text) if not String(display_text).is_empty() else "+%d" % maxi(value, 0) if is_healing else str(maxi(value, 0))
-	var color := healing_color if is_healing else Color8(255, 226, 92) if was_critical else Color.WHITE
+	# `healing_color` also carries the requested color for non-healing special
+	# numbers, such as the light-blue damage absorbed by the shield.
+	var color := healing_color if is_healing or not healing_color.is_equal_approx(Color.WHITE) else Color8(255, 226, 92) if was_critical else Color.WHITE
 	var shadow := Sprite2D.new()
 	shadow.texture = pixel_number.call(number_text, Color8(0, 0, 0, 76)) as Texture2D
 	shadow.centered = false

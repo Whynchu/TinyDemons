@@ -62,7 +62,9 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 	var variants: Array[String] = []
 	var levels: Array[int] = []
 	var available_variants: Array[String] = ["blue", "green", "red"]
-	var base_level := maxi(room_depth, 1)
+	# Enemy progression advances once for every two dungeon depths:
+	# depths 1-2 are level 1, 3-4 are level 2, and so on.
+	var base_level := maxi(1, ceili(float(room_depth) / 2.0))
 	var level_spread := maxi(1, roundi(float(base_level) * 0.20))
 	for enemy_index in count:
 		variants.append(available_variants[encounter_rng.randi_range(0, available_variants.size() - 1)])
@@ -282,7 +284,9 @@ func apply_finished_state(root: Object) -> void:
 
 
 func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
-	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent; combat.dead = true; slime.visible = false; combat.timer = 0.0; combat.frame = 0; combat.hit_done = false
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent; combat.dead = true; combat.active = false; slime.visible = false; combat.timer = 0.0; combat.frame = 0; combat.hit_done = false
+	var brain := root.call("_slime_brain", slime) as SlimeBrain; if brain != null: brain.attack_cooldown = 0.0; brain.aggroed = false
+	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent; if tactics != null: tactics.reset()
 	(root.get("collision_sprites") as Array[Sprite2D]).erase(slime); (root.get("depth_sprites") as Array[Sprite2D]).erase(slime); (root.get("occluder_sprites") as Array[Sprite2D]).erase(slime); (root.get("actor_sprites") as Array[Sprite2D]).erase(slime)
 	var health := root.call("_slime_health", slime) as HealthComponent; if health != null: health.reset(0.0)
 	(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).display_health = 0.0

@@ -20,10 +20,12 @@ func move_player(root: Object, delta: float) -> void:
 	var input: Vector2 = root.call("_movement_input"); var moving := input.length_squared() > 0.0; root.set("player_is_moving", moving)
 	if not moving: return
 	var player := root.get("player") as Sprite2D
-	if input.x < 0.0: player.flip_h = true
-	elif input.x > 0.0: player.flip_h = false
+	if not bool(root.get("player_is_defending")):
+		if input.x < 0.0: player.flip_h = true
+		elif input.x > 0.0: player.flip_h = false
 	var tuning := root.get("player_tuning") as PlayerTuning
-	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * delta))
+	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0
+	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * guard_speed_scale * delta))
 
 
 func request_motion(motion: Vector2) -> void:

@@ -50,6 +50,14 @@ func action_pressed(key_codes: Array[int], devices: Array[int], button: int) -> 
 func target_held(devices: Array[int], trigger_deadzone: float) -> bool:
 	if Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_TAB): return true
 	for device in devices:
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_LEFT_SHOULDER) or Input.is_joy_button_pressed(device, JOY_BUTTON_RIGHT_SHOULDER): return true
-		if Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT) > trigger_deadzone or Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT) > trigger_deadzone: return true
+		if Input.is_joy_button_pressed(device, JOY_BUTTON_RIGHT_SHOULDER): return true
+		if Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT) > trigger_deadzone: return true
+	return false
+
+
+func guard_held(devices: Array[int], trigger_deadzone: float) -> bool:
+	if Input.is_key_pressed(KEY_L) or Input.is_key_pressed(KEY_SHIFT): return true
+	for device in devices:
+		if Input.is_joy_button_pressed(device, JOY_BUTTON_LEFT_SHOULDER): return true
+		if Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT) > trigger_deadzone: return true
 	return false

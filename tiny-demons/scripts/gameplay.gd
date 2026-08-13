@@ -90,7 +90,7 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 func _max_health_for_stats(stats: StatsComponent) -> float: return CombatCalculator.max_health_for_stats(stats, player_equipment.health_bonus if stats == player_stats and player_equipment != null else 0.0, combat_tuning)
 func _player_max_health() -> float: return _max_health_for_stats(player_stats)
 func _enemy_max_health(slime: Sprite2D) -> float: return _max_health_for_stats(_slime_stats(slime))
-func _enemy_level_for_room() -> int: return maxi(1, current_room_depth)
+func _enemy_level_for_room() -> int: return maxi(1, ceili(float(current_room_depth) / 2.0))
 func _apply_enemy_room_level(slime: Sprite2D, level_override: int = 0) -> void: var stats := _slime_stats(slime); if stats != null: stats.level = maxi(1, level_override if level_override > 0 else _enemy_level_for_room())
 func _configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 	var palette := variant if variant == "blue" or variant == "green" or variant == "red" else "green"
@@ -353,6 +353,11 @@ func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = f
 func _spawn_player_damage_number(amount: float) -> void:
 	var value := int(round(amount))
 	_spawn_floating_number(_player_floating_number_origin(str(maxi(value, 0)), Color.WHITE), value, Vector2(0.0, effects_tuning.damage_number_float_speed))
+func _spawn_player_shield_damage_number(amount: float) -> void:
+	var value := int(round(amount))
+	var color := Color8(148, 220, 255)
+	var origin := _player_floating_number_origin(str(maxi(value, 0)), color) + Vector2(8, 0)
+	_spawn_floating_number(origin, value, Vector2(0.0, effects_tuning.damage_number_float_speed), false, false, color, str(maxi(value, 0)))
 func _spawn_player_healing_number(amount: float, color: Color) -> void:
 	var value := int(round(amount))
 	_spawn_floating_number(_player_floating_number_origin("+%d" % maxi(value, 0), color), value, Vector2(0.0, effects_tuning.damage_number_float_speed), false, true, color)
@@ -363,6 +368,16 @@ func _player_floating_number_origin(text: String, color: Color) -> Vector2:
 func _spawn_slime_healing_number(slime: Sprite2D, amount: float, color: Color) -> void:
 	_spawn_floating_number(slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -effects_tuning.damage_number_float_speed), false, true, color)
 func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vector2, was_critical: bool = false, is_healing: bool = false, healing_color: Color = Color.WHITE, display_text := "") -> void:
+	# Keep simultaneous progression feedback readable: level-up first, health
+	# second, XP third. The offsets also make the priority visible in the world.
+	var priority_offset := Vector2.ZERO
+	if display_text.contains("lv!"):
+		priority_offset = Vector2(0.0, -6.0)
+	elif display_text.contains("xp"):
+		priority_offset = Vector2(0.0, 6.0)
+	elif is_healing:
+		priority_offset = Vector2(0.0, 0.0)
+	world_position += priority_offset
 	effects_spawner.spawn_health_number(self, world_position, value, velocity, was_critical, is_healing, healing_color, Callable(self, "_pixel_number_texture"), Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime, effects_tuning.damage_number_pop_time, display_text)
 func _health_feedback_color(palette_name: String) -> Color:
 	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
@@ -381,7 +396,6 @@ func _xp_reward_for_slime(slime: Sprite2D) -> int:
 func _award_slime_xp(slime: Sprite2D) -> void:
 	var reward := _xp_reward_for_slime(slime)
 	player_xp += reward
-	_spawn_player_xp_number(reward)
 	var leveled_up := false
 	while player_level < 99:
 		var required := _xp_required_for_level(player_level)
@@ -393,6 +407,7 @@ func _award_slime_xp(slime: Sprite2D) -> void:
 	if leveled_up:
 		_spawn_player_level_number(player_level)
 		_apply_player_level()
+	_spawn_player_xp_number(reward)
 	_update_player_progression_ui()
 func _apply_player_level() -> void:
 	player_stats.level = player_level
@@ -597,6 +612,7 @@ func _build_cloaked_demon_sprite_shadow() -> void: cloaked_demon_sprite_shadow =
 func _update_targeting() -> void: interaction_component.update_targeting(self)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
+func _is_guard_input_held() -> bool: return player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _is_attack_input_pressed() -> bool: return player_controller.action_pressed([KEY_J, KEY_SPACE], _controller_devices(), JOY_BUTTON_X)
 func _is_interact_input_pressed() -> bool: return player_controller.action_pressed([KEY_E, KEY_ENTER], _controller_devices(), JOY_BUTTON_B)
 func _is_roll_input_pressed() -> bool: return player_controller.action_pressed([KEY_K], _controller_devices(), JOY_BUTTON_A)

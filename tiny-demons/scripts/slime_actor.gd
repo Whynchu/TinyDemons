@@ -142,11 +142,19 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / slime_config.attack_hit_range, delta.y / slime_config.attack_vertical_hit_range)
 	if ellipse.length_squared() > 1.0: return
 	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
+	var guard := root.get("player_guard_component") as PlayerGuardComponent
+	var blocked := false
+	if guard != null:
+		var guard_result := guard.absorb_damage(root, damage, root.call("_actor_foot", slime))
+		blocked = bool(guard_result["blocked"])
+		var shield_damage := float(guard_result["shield_damage"])
+		if shield_damage > 0.0: root.call("_spawn_player_shield_damage_number", shield_damage)
+		damage = float(guard_result["health_damage"])
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null: health.apply_damage(damage); root.set("player_health", health.current_health)
 	else: root.set("player_health", maxf(float(root.get("player_health")) - damage, 0.0))
 	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
-	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); root.call("_spawn_player_damage_number", damage); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
+	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); if damage > 0.0: root.call("_spawn_player_damage_number", damage); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
 	if float(root.get("player_health")) <= 0.0: root.set("player_death_pending", true); root.call("_interrupt_player_attack"); root.set("player_is_rolling", false)
 
 
@@ -171,9 +179,12 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		brain.hold_timer = hold_delay
 		brain.idle_breath_timer = idle_breath_delay
 		brain.persistent_aggro = false
+		brain.aggroed = false
+		brain.attack_cooldown = 0.0
 		brain.blocked_repath_cooldown = 0.0
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
 	if combat != null:
+		combat.active = false
 		combat.flash_timer = 0.0
 		combat.hitstun_timer = 0.0
 		combat.knockback_velocity = Vector2.ZERO

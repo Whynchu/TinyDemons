@@ -39,10 +39,16 @@ var death_active := false
 var death_breakup_started := false
 var draw_white_timer := 0.0
 var draw_color_fade_timer := 0.0
+var guard_flash_timer := 0.0
+var guard_flash_overlay: Sprite2D = null
+var was_defending := false
+var shield_is_out := false
 var frame_paths := {
 	"sword_back_idle": "res://assets/artwork/TinyDemon_sword(back)_idle.png",
 	"sword_back_walk": "res://assets/artwork/TinyDemon_sword(back)_walk.png",
 	"sword_back_attack": "res://assets/artwork/TinyDemon_sword(back)_attack.png",
+	"sword_back_defend": "res://assets/artwork/TinyDemon-Defend-sword(behind).png",
+	"shield_front_defend": "res://assets/artwork/TinyDemon-Defend-Shield(front).png",
 	"shield_back_attack1": "res://assets/artwork/TinyDemon_shield(back)_attack1.png",
 	"shield_back_attack2": "res://assets/artwork/TinyDemon_shield(back)_attack2.png",
 	"shield_back_between": "res://assets/artwork/TinyDemon_shield(back)_betweenattacks.png",
@@ -277,6 +283,7 @@ func tick(root: Object, delta: float) -> void:
 	if bool(root.get("player_is_rolling")) and active and fade_timer <= 0.0:
 		fade_timer = FLASH_TIME
 		active = false
+		shield_is_out = false
 		roll_fizzle_active = true
 		roll_fizzle_positions.clear()
 		for layer in layers.values():
@@ -286,18 +293,37 @@ func tick(root: Object, delta: float) -> void:
 		_create_fade_overlays(root)
 		breakup_pending = true
 		breakup_started = false
+	guard_flash_timer = maxf(guard_flash_timer - delta, 0.0)
+	_update_guard_flash(root)
 	var attacking := bool(root.get("player_is_attacking"))
+	var defending := bool(root.get("player_is_defending"))
+	if defending and not shield_is_out:
+		# Guard deployment uses the same white draw flash as the sword.
+		_clear_fade_overlays()
+		_clear_draw_overlays()
+		draw_white_timer = DRAW_WHITE_TIME
+		draw_color_fade_timer = DRAW_COLOR_FADE_TIME
+		active = true
+		fade_timer = 0.0
+		inactivity_timer = 0.0
+		shield_is_out = true
+	was_defending = defending
+	if defending:
+		active = true
+		fade_timer = 0.0
+		inactivity_timer = 0.0
 	if attacking:
 		_clear_fade_overlays()
 		if not active:
 			draw_white_timer = DRAW_WHITE_TIME
 			draw_color_fade_timer = DRAW_COLOR_FADE_TIME
+			shield_is_out = true
 		last_attack_name = String(root.get("player_anim_name")) if String(root.get("player_anim_name")).begins_with("attack") else last_attack_name
 		active = true
 		inactivity_timer = 0.0
 		fade_timer = 0.0
 		was_attacking = true
-	else:
+	elif not defending:
 		if was_attacking:
 			transition_hold_timer = ATTACK_TRANSITION_HOLD
 		was_attacking = false
@@ -307,6 +333,7 @@ func tick(root: Object, delta: float) -> void:
 				fade_timer = maxf(fade_timer, FADE_TIME)
 				inactivity_timer = 0.0
 				active = false
+				shield_is_out = false
 				roll_fizzle_active = false
 				roll_fizzle_positions.clear()
 				_create_fade_overlays(root)
@@ -327,6 +354,7 @@ func begin_death(root: Object) -> void:
 	# Death supersedes every equipment lifecycle. In particular, an inactivity or
 	# roll fizzle may have active overlays while `active` is already false.
 	active = false
+	shield_is_out = false
 	was_attacking = false
 	inactivity_timer = 0.0
 	fade_timer = 0.0
@@ -435,8 +463,17 @@ func _update_draw_overlays() -> void:
 		_clear_draw_overlays()
 		return
 	var normal_opacity := 0.0 if draw_white_timer > 0.0 else 1.0 - draw_color_fade_timer / DRAW_COLOR_FADE_TIME
+	# Guard deployment uses the same draw effect, but a blocked hit should read as
+	# shield impact. Keep the sword layers completely out of this white overlay.
+	var defending := gameplay_root != null and bool(gameplay_root.get("player_is_defending"))
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
+		if defending and equipment_layer.name.begins_with("EquipmentSword"):
+			var sword_overlay := draw_overlays.get(equipment_layer) as Sprite2D
+			if sword_overlay != null:
+				sword_overlay.visible = false
+			_set_layer_opacity(equipment_layer, 1.0)
+			continue
 		if not equipment_layer.visible or equipment_layer.texture == null:
 			continue
 		var overlay := draw_overlays.get(equipment_layer) as Sprite2D
@@ -555,7 +592,8 @@ func _update_layers(root: Object) -> void:
 		return
 	var currently_attacking := bool(root.get("player_is_attacking"))
 	var state := "idle"
-	if currently_attacking and animation_name == "attack1": state = "attack1"
+	if bool(root.get("player_is_defending")): state = "defend"
+	elif currently_attacking and animation_name == "attack1": state = "attack1"
 	elif currently_attacking and animation_name == "attack2": state = "attack2"
 	elif transition_hold_timer > 0.0 and last_attack_name == "attack2": state = "after"
 	elif transition_hold_timer > 0.0: state = "between"
@@ -563,10 +601,12 @@ func _update_layers(root: Object) -> void:
 	elif float(root.get("player_between_timer")) > 0.0: state = "between"
 	elif animation_name == "walk": state = "walk"
 	elif animation_name == "between": state = "between"
+	var guard := root.get("player_guard_component") as PlayerGuardComponent
+	var shield_available := guard == null or guard.cooldown_timer <= 0.0
 	var sword_back_visible := state != "attack2"
 	_set_layer("EquipmentSwordBack", frames.get("sword_back_%s" % ("attack" if state == "attack1" else state)), frame_index, opacity, sword_back_visible)
-	_set_layer("EquipmentShieldBack", frames.get("shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")), frame_index, opacity, state.begins_with("attack") or state == "between")
-	_set_layer("EquipmentShieldFront", frames.get("shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)), frame_index, opacity)
+	_set_layer("EquipmentShieldBack", frames.get("shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"))
+	_set_layer("EquipmentShieldFront", frames.get("shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)), frame_index, opacity, shield_available)
 	_set_layer("EquipmentSwordFront", frames.get("sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")), frame_index, opacity, state.begins_with("attack") or state == "between" or state == "after")
 	_update_draw_overlays()
 	if fade_timer > 0.0:
@@ -583,6 +623,55 @@ func _update_layers(root: Object) -> void:
 				overlay.flip_h = fading_layer.flip_h
 				overlay.modulate.a = white_fade_progress
 	_update_equipment_shadows()
+
+
+func flash_guard(root: Object) -> void:
+	guard_flash_timer = 0.12
+	_update_guard_flash(root)
+
+
+func break_guard(root: Object) -> void:
+	shield_is_out = false
+	var shield := layers.get("EquipmentShieldFront") as Sprite2D
+	if shield == null or not shield.visible or shield.texture == null:
+		shield = layers.get("EquipmentShieldBack") as Sprite2D
+	if shield != null and shield.texture != null:
+		var effects := root.get("effects_spawner") as EffectsSpawner
+		var random_source := root.get("rng") as RandomNumberGenerator
+		if effects != null and random_source != null:
+			effects.spawn_player_death_particles(root, _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), shield.flip_h)
+	for name in ["EquipmentShieldFront", "EquipmentShieldBack"]:
+		var layer := layers.get(name) as Sprite2D
+		if layer != null:
+			layer.visible = false
+	guard_flash_timer = 0.0
+	if guard_flash_overlay != null:
+		guard_flash_overlay.queue_free()
+		guard_flash_overlay = null
+	_hide_equipment_shadows()
+
+
+func _update_guard_flash(root: Object) -> void:
+	if guard_flash_timer <= 0.0:
+		if guard_flash_overlay != null:
+			guard_flash_overlay.queue_free()
+			guard_flash_overlay = null
+		return
+	var shield := layers.get("EquipmentShieldFront") as Sprite2D
+	if shield == null or not shield.visible or shield.texture == null:
+		return
+	if guard_flash_overlay == null:
+		guard_flash_overlay = Sprite2D.new()
+		guard_flash_overlay.name = "GuardHitWhite"
+		guard_flash_overlay.centered = shield.centered
+		guard_flash_overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		guard_flash_overlay.z_as_relative = false
+		root.add_child(guard_flash_overlay)
+	guard_flash_overlay.texture = _white_copy(shield.texture)
+	guard_flash_overlay.global_position = shield.global_position
+	guard_flash_overlay.flip_h = shield.flip_h
+	guard_flash_overlay.z_index = shield.z_index + 2
+	guard_flash_overlay.modulate = Color.WHITE
 
 
 func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: float, should_show := true) -> void:
@@ -602,7 +691,10 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 	layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
 	var animation_name := String(gameplay_root.get("player_anim_name"))
 	var facing_left := player.flip_h
-	if not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
+	var guard := gameplay_root.get("player_guard_component") as PlayerGuardComponent
+	if guard != null and bool(gameplay_root.get("player_is_defending")):
+		facing_left = guard.facing_left
+	elif not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
 		var target := gameplay_root.get("current_target") as Sprite2D
 		if target != null and not bool(gameplay_root.get("player_is_attacking")):
 			facing_left = root_actor_foot_x(gameplay_root, target) < root_actor_foot_x(gameplay_root, player)
