@@ -105,7 +105,10 @@ fill_to = Vector2(1, 0.5)
 texture_filter = 1
 script = ExtResource("17_gameplay")
 
-[node name="Background" type="Sprite2D" parent="." unique_id=1363256938]
+[node name="BackgroundCanvas" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="Background" type="Sprite2D" parent="BackgroundCanvas" unique_id=1363256938]
 texture = ExtResource("1_bg")
 centered = false
 
@@ -338,10 +341,10 @@ script = ExtResource("20_stats_component")
 
 [node name="Equipment" type="Node" parent="Actors/TinyDemon" unique_id=1798955296]
 script = ExtResource("26_equipment_component")
-health_bonus = 14.0
-damage_bonus = 1.0
 weapon_name = "Basic Sword"
 armor_name = "Basic Tunic"
+shield_name = "Basic Shield"
+accessory_name = "Bangle"
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
 script = ExtResource("19_collision_guide")
@@ -526,27 +529,30 @@ rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)
 
-[node name="UI" type="Node2D" parent="." unique_id=272886269]
+[node name="InterfaceCanvas" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="UI" type="Node2D" parent="InterfaceCanvas" unique_id=272886269]
 z_index = 4096
 
-[node name="PlayerHud" parent="UI" unique_id=897373093 instance=ExtResource("40_player_hud")]
+[node name="PlayerHud" parent="InterfaceCanvas/UI" unique_id=897373093 instance=ExtResource("40_player_hud")]
 
-[node name="BlackBars" type="Sprite2D" parent="UI" unique_id=688445834]
+[node name="BlackBars" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=688445834]
 z_index = -10
 texture = ExtResource("16_black_bars")
 centered = false
 
-[node name="SlimeText" type="Sprite2D" parent="UI" unique_id=1660814645]
+[node name="SlimeText" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=1660814645]
 position = Vector2(112, 144)
 texture = ExtResource("14_slime_text")
 centered = false
 
-[node name="EnemyHp" type="Sprite2D" parent="UI" unique_id=912346691]
+[node name="EnemyHp" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=912346691]
 position = Vector2(81, 147)
 texture = ExtResource("13_enemy_hp")
 centered = false
 
-[node name="EnemyHpFill" type="Sprite2D" parent="UI" unique_id=195377949]
+[node name="EnemyHpFill" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=195377949]
 z_index = 1
 position = Vector2(81, 147)
 texture = ExtResource("22_enemy_hp_green")

@@ -160,6 +160,11 @@ func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vect
 	var rest_fire := root.get("rest_fire") as Sprite2D
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
 	if other != chest and actor != chest and other != firepit and actor != firepit: return actor_contact_push_vector(root, actor, other)
+	if other == firepit or actor == firepit:
+		var moving_actor := actor if other == firepit else other
+		var fire_actor := firepit if other == firepit else actor
+		if fire_actor == null or not bool(root.call("_collision_polygon_intersects_actor", moving_actor, fire_actor)):
+			return Vector2.ZERO
 	var rect: Rect2 = root.call("_collision_rect", actor)
 	var other_rect: Rect2 = root.call("_collision_rect", other)
 	var overlap := rect.intersection(other_rect)
@@ -173,7 +178,11 @@ func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bo
 	var chest := root.get("chest") as Sprite2D
 	var rest_fire := root.get("rest_fire") as Sprite2D
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
-	if actor == chest or other == chest or actor == firepit or other == firepit: return (root.call("_collision_rect", actor) as Rect2).intersects(root.call("_collision_rect", other) as Rect2, false)
+	if actor == firepit or other == firepit:
+		var moving_actor := actor if other == firepit else other
+		var fire_actor := firepit if other == firepit else actor
+		return fire_actor != null and bool(root.call("_collision_polygon_intersects_actor", moving_actor, fire_actor))
+	if actor == chest or other == chest: return (root.call("_collision_rect", actor) as Rect2).intersects(root.call("_collision_rect", other) as Rect2, false)
 	return actor_contact_push_vector(root, actor, other) != Vector2.ZERO
 
 
@@ -189,4 +198,5 @@ func actor_contact_radius(root: Object, actor: Sprite2D) -> float:
 	var chest := root.get("chest") as Sprite2D
 	if actor == chest: return 5.5
 	var guide: Rect2 = root.call("_collision_guide_rect_by_name", actor, "CollisionGuide")
-	return maxf(minf(guide.size.x, guide.size.y) * 0.5, 2.0) if guide.has_area() else 3.6
+	var encounter_scale := float(actor.get_meta("encounter_scale", 1.0))
+	return (maxf(minf(guide.size.x, guide.size.y) * 0.5, 2.0) if guide.has_area() else 3.6) * encounter_scale

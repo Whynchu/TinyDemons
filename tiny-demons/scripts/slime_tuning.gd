@@ -21,6 +21,12 @@ class_name SlimeTuning
 @export var idle_breath_time := 1.4
 @export var repath_min := 0.7
 @export var repath_max := 1.8
+@export var steering_direction_count := 8
+@export var steering_approach_weight := 1.0
+@export var steering_orbit_weight := 0.42
+@export var steering_ally_danger_weight := 1.25
+@export var steering_blocked_danger_weight := 4.0
+@export var steering_clearance := 7.0
 @export var regen_delay := 5.0
 @export var regen_interval := 0.75
 @export var regen_amount := 1.0

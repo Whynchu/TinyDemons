@@ -1,6 +1,9 @@
 extends Node2D
 class_name GameplayState
 
+@export_category("Debug")
+@export var debug_start_in_boss_room := false
+
 const SLIME_ATTACK_FRAME_SIZE := Vector2i(16, 16)
 const EDGE_MARGIN := 0.35
 const SLIME_EDGE_PADDING := 1.25
@@ -43,7 +46,8 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 	^"Actors/Chest",
 ]
 @onready var floor_tiles: Node2D = $Map/FloorTiles
-@onready var ui: Node2D = $UI
+@onready var map_root: Node2D = $Map
+@onready var ui: Node2D = $InterfaceCanvas/UI
 @onready var player: Sprite2D = $Actors/TinyDemon
 @onready var player_attack_visual: Sprite2D = $Actors/TinyDemonAttack
 @onready var player_shadow: Sprite2D = $Actors/TinyDemonShadow
@@ -59,17 +63,17 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var rest_fire_depth_marker: Marker2D = $Actors/RestFire/DepthMarker
 @onready var cloaked_demon: Sprite2D = $Actors/CloakedDemon
 @onready var cloaked_demon_depth_marker: Marker2D = $Actors/CloakedDemon/DepthMarker
-@onready var target_name_text: Sprite2D = $UI/SlimeText
-@onready var target_health_bar: Sprite2D = $UI/EnemyHp
-@onready var target_health_fill: Sprite2D = $UI/EnemyHpFill
-@onready var player_health_fill: Sprite2D = $UI/PlayerHud/PlayerStatus/Health/HpBarFill
-@onready var player_health_bar: Sprite2D = $UI/PlayerHud/PlayerStatus/Health/HpBar
-@onready var player_health_text: Sprite2D = $UI/PlayerHud/PlayerStatus/Health/HpText
-@onready var player_level_text: Sprite2D = $UI/PlayerHud/PlayerStatus/LevelXp/LevelTextAnchor/LevelText
-@onready var player_xp_fill: Sprite2D = $UI/PlayerHud/PlayerStatus/LevelXp/XpBarFill
-@onready var player_xp_text: Sprite2D = $UI/PlayerHud/PlayerStatus/LevelXp/XpText
-@onready var player_mp_fill: Sprite2D = $UI/PlayerHud/PlayerStatus/Mana/MpBarFill
-@onready var player_mp_text: Sprite2D = $UI/PlayerHud/PlayerStatus/Mana/MpText
+@onready var target_name_text: Sprite2D = $InterfaceCanvas/UI/SlimeText
+@onready var target_health_bar: Sprite2D = $InterfaceCanvas/UI/EnemyHp
+@onready var target_health_fill: Sprite2D = $InterfaceCanvas/UI/EnemyHpFill
+@onready var player_health_fill: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/Health/HpBarFill
+@onready var player_health_bar: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/Health/HpBar
+@onready var player_health_text: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/Health/HpText
+@onready var player_level_text: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/LevelXp/LevelTextAnchor/LevelText
+@onready var player_xp_fill: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/LevelXp/XpBarFill
+@onready var player_xp_text: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/LevelXp/XpText
+@onready var player_mp_fill: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/Mana/MpBarFill
+@onready var player_mp_text: Sprite2D = $InterfaceCanvas/UI/PlayerHud/PlayerStatus/Mana/MpText
 @onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
 var player_equipment: EquipmentComponent = null
 var player_health_component: HealthComponent = null
@@ -222,6 +226,7 @@ var current_room_depth := 0
 var current_room_display_number := 1
 var current_room_type: StringName = DungeonGraph.ROOM_START
 var room_transition_locked := false
+var normal_room_geometry: Dictionary = {}
 var chest_normal_texture: Texture2D = null
 var chest_gray_texture: Texture2D = null
 var chest_unlock_overlay: Sprite2D = null

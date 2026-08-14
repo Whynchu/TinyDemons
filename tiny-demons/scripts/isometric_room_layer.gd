@@ -5,6 +5,8 @@ enum LayoutKind {
 	FLOOR,
 	LEFT_WALL,
 	RIGHT_WALL,
+	LEFT_FACE,
+	RIGHT_FACE,
 }
 
 @export var tile_texture: Texture2D:
@@ -45,6 +47,14 @@ func _rebuild_if_ready() -> void:
 	_build_default_layout()
 
 
+func rebuild_layout(width: int, height: int, kind: LayoutKind = layout_kind) -> void:
+	layout_width = clampi(width, 1, 64)
+	layout_height = clampi(height, 1, 64)
+	layout_kind = kind
+	_build_tile_set()
+	_build_default_layout()
+
+
 func _build_tile_set() -> void:
 	var generated_tile_set := TileSet.new()
 	generated_tile_set.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC
@@ -65,11 +75,17 @@ func _build_default_layout() -> void:
 		LayoutKind.FLOOR:
 			for row in layout_height:
 				for column in layout_width:
-					set_cell(Vector2i(column, row), 0, Vector2i.ZERO)
+					set_cell(Vector2i(column - 1, row), 0, Vector2i.ZERO)
 		LayoutKind.LEFT_WALL:
 			for index in layout_width:
-				set_cell(Vector2i(0, -index), 0, Vector2i.ZERO)
+				set_cell(Vector2i(-1, -index), 0, Vector2i.ZERO)
 		LayoutKind.RIGHT_WALL:
 			for index in layout_width:
-				set_cell(Vector2i(index, 0), 0, Vector2i.ZERO)
+				set_cell(Vector2i(index - 1, 0), 0, Vector2i.ZERO)
+		LayoutKind.LEFT_FACE:
+			for index in layout_width:
+				set_cell(Vector2i(index - 1, layout_height - 1), 0, Vector2i.ZERO)
+		LayoutKind.RIGHT_FACE:
+			for index in layout_height:
+				set_cell(Vector2i(layout_width - 2, index), 0, Vector2i.ZERO)
 	update_internals()

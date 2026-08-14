@@ -18,6 +18,7 @@ const ROOM_COMBAT: StringName = &"COMBAT"
 const ROOM_REST: StringName = &"REST"
 const ROOM_TRADER: StringName = &"TRADER"
 const ROOM_NPC: StringName = &"NPC"
+const ROOM_DOWNSTAIRS: StringName = &"DOWNSTAIRS"
 
 const START_ROOM_ID: StringName = &"room_0_0"
 
@@ -146,7 +147,9 @@ func ensure_connection(
 
 	var destination_coordinate := source_room.coordinate + _exit_offset(exit_socket)
 	var destination_room := _ensure_room(destination_coordinate, destination_room_type)
-	var destination_entry := _entry_for_exit(exit_socket)
+	# Stair rooms connect wall-to-wall so stair/door art is never rendered on
+	# the bottom floor entrance sockets.
+	var destination_entry := exit_socket if destination_room_type == ROOM_DOWNSTAIRS else _entry_for_exit(exit_socket)
 	var connection := ConnectionRecord.new(
 		room_id,
 		exit_socket,

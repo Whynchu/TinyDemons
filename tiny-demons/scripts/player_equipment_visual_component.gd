@@ -199,12 +199,13 @@ func _sync_depth_order(root: Object) -> void:
 
 func _equipment_occluders(root: Object) -> Array[Sprite2D]:
 	var result: Array[Sprite2D] = []
+	var actors := root.get("actor_sprites") as Array[Sprite2D]
 	for value in root.get("occluder_sprites") as Array:
 		var sprite := value as Sprite2D
 		# The fire is a light source, not a solid cover plane. Let its light
 		# remain visible without making the equipment dither as the player walks
 		# through the fire's depth range.
-		if sprite != null and sprite != root.get("rest_fire") and sprite.visible:
+		if sprite != null and sprite != root.get("rest_fire") and not actors.has(sprite) and sprite.visible:
 			result.append(sprite)
 	var cloaked_demon := root.get("cloaked_demon") as Sprite2D
 	if cloaked_demon != null and cloaked_demon.visible and not result.has(cloaked_demon):
@@ -380,6 +381,42 @@ func begin_death(root: Object) -> void:
 	death_breakup_started = false
 
 
+func reset_for_room(root: Object) -> void:
+	# Room transitions keep this component alive, so cancel every transient
+	# equipment effect before the player is repositioned in the next room.
+	active = false
+	shield_is_out = false
+	was_attacking = false
+	was_defending = false
+	inactivity_timer = 0.0
+	fade_timer = 0.0
+	transition_hold_timer = 0.0
+	roll_fizzle_active = false
+	roll_fizzle_positions.clear()
+	breakup_pending = false
+	breakup_started = false
+	death_active = false
+	death_breakup_started = false
+	draw_white_timer = 0.0
+	draw_color_fade_timer = 0.0
+	guard_flash_timer = 0.0
+	if guard_flash_overlay != null:
+		guard_flash_overlay.queue_free()
+		guard_flash_overlay = null
+	_clear_fade_overlays()
+	_clear_draw_overlays()
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	if effects != null:
+		effects.clear_effect_particles(&"equipment_fizzle")
+	for layer in layers.values():
+		var equipment_layer := layer as Sprite2D
+		if equipment_layer == null:
+			continue
+		_set_layer_opacity(equipment_layer, 1.0)
+		equipment_layer.visible = false
+	_hide_equipment_shadows()
+
+
 func tick_death_pending(root: Object) -> void:
 	# The player may still be completing fatal-hit knockback before the death
 	# effect starts. Keep equipment attached and cancel attack/draw artifacts.
@@ -539,7 +576,7 @@ func _spawn_breakup(root: Object) -> void:
 		var equipment_layer := layer as Sprite2D
 		if not equipment_layer.visible or equipment_layer.texture == null:
 			continue
-		effects.spawn_player_death_particles(root, equipment_layer.texture, equipment_layer.global_position, Vector2.ZERO, Vector2.ONE, equipment_layer.z_index + 1, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), equipment_layer.flip_h)
+		effects.spawn_player_death_particles(root, equipment_layer.texture, equipment_layer.global_position, Vector2.ZERO, Vector2.ONE, equipment_layer.z_index + 1, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), equipment_layer.flip_h, &"equipment_fizzle")
 		equipment_layer.visible = false
 		var overlay := fade_overlays.get(equipment_layer) as Sprite2D
 		if overlay != null:
@@ -639,7 +676,7 @@ func break_guard(root: Object) -> void:
 		var effects := root.get("effects_spawner") as EffectsSpawner
 		var random_source := root.get("rng") as RandomNumberGenerator
 		if effects != null and random_source != null:
-			effects.spawn_player_death_particles(root, _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), shield.flip_h)
+			effects.spawn_player_death_particles(root, _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), shield.flip_h, &"equipment_fizzle")
 	for name in ["EquipmentShieldFront", "EquipmentShieldBack"]:
 		var layer := layers.get(name) as Sprite2D
 		if layer != null:

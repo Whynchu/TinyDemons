@@ -114,6 +114,8 @@ func update_overhead_bars(
 		if not should_show:
 			continue
 		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
+		var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
+		overhead_offset.y -= 15.0 * (encounter_scale - 1.0)
 		if not is_aggroed:
 			overhead_offset.x -= 2.0
 		var overhead_position := slime.global_position + overhead_offset + Vector2(0, -2)
@@ -127,7 +129,9 @@ func update_overhead_bars(
 		fill.global_scale = Vector2.ONE
 		fill.z_index = overwold_ui_z + 2
 		aggro_marker.top_level = true
-		aggro_marker.global_position = slime.global_position + (target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2) + Vector2(0, -2)
+		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
+		aggro_offset.y -= 15.0 * (encounter_scale - 1.0)
+		aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
@@ -161,6 +165,7 @@ func update_room_number(root: Object) -> void:
 	elif room_type == DungeonGraph.ROOM_REST: room_label = "REST"
 	elif room_type == DungeonGraph.ROOM_TRADER: room_label = "TRADER"
 	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
+	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS: room_label = "BOSS"
 	indicator.texture = root.call("_pixel_number_texture", room_label, Color8(244, 244, 244))
 
 

@@ -24,10 +24,15 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		elif room_type == DungeonGraph.ROOM_REST or room_type == DungeonGraph.ROOM_TRADER:
 			pass
 		elif room_type == DungeonGraph.ROOM_NPC:
-			var npc_exit := DungeonGraph.WALL_LEFT if room.generation_seed % 2 == 0 else DungeonGraph.WALL_RIGHT; exits.append(npc_exit); graph.ensure_connection(room_id, npc_exit, DungeonGraph.ROOM_COMBAT)
+			var npc_exit := DungeonGraph.WALL_LEFT if room.generation_seed % 2 == 0 else DungeonGraph.WALL_RIGHT
+			exits.append(npc_exit)
+			var next_room_type := DungeonGraph.ROOM_DOWNSTAIRS if room_depth >= 11 else DungeonGraph.ROOM_COMBAT
+			graph.ensure_connection(room_id, npc_exit, next_room_type)
 		elif room_depth == 0:
 			exits.assign([DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT])
 			for exit_socket in exits: graph.ensure_connection(room_id, exit_socket, DungeonGraph.ROOM_COMBAT)
+		elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
+			pass
 		else:
 			var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = room.generation_seed; var primary := DungeonGraph.WALL_LEFT if layout_rng.randi_range(0, 1) == 0 else DungeonGraph.WALL_RIGHT; exits.append(primary); graph.ensure_connection(room_id, primary, DungeonGraph.ROOM_COMBAT)
 			if room_depth + 1 != 6 and room_depth + 1 != 11 and layout_rng.randf() < 0.45:
@@ -40,6 +45,15 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_levels"] = encounter["levels"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
+		room_states[room_id] = state
+	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
+		if not state.has("enemy_variants"):
+			state["enemy_variants"] = ["red", "blue", "green", "red", "blue", "green", "red"]
+			var boss_level := maxi(1, ceili(float(room_depth) / 2.0))
+			state["enemy_levels"] = [boss_level + 1, boss_level, boss_level, boss_level, boss_level, boss_level, boss_level]
+			state["enemy_scales"] = [2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+		if not state.has("enemy_spawn_seed"):
+			state["enemy_spawn_seed"] = room.generation_seed + 909
 		room_states[room_id] = state
 	return state
 
@@ -150,6 +164,9 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.set("player_is_attacking", false)
 	root.set("player_is_rolling", false)
 	root.call("_clear_roll_dust")
+	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	if equipment_visual != null:
+		equipment_visual.reset_for_room(root)
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	root.set("current_target", null)
 	root.set("target_input_was_down", false)
@@ -306,7 +323,7 @@ func reset_chest_for_room(root: Object) -> void:
 func reset_slimes_for_room(root: Object) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]; var tuning := root.get("slime_tuning") as SlimeTuning; var rng := root.get("rng") as RandomNumberGenerator; var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]; var collision := root.get("collision_sprites") as Array[Sprite2D]; var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
 	for slime in slimes: kill_slime_without_effects(root, slime)
-	var room_id: StringName = root.get("current_room_id"); var state: Dictionary = room_states.get(room_id, {}) as Dictionary; var active_variants := state.get("enemy_variants", []) as Array; var active_levels := state.get("enemy_levels", []) as Array; var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary; var spawn_seed := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303)); var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = spawn_seed
+	var room_id: StringName = root.get("current_room_id"); var state: Dictionary = room_states.get(room_id, {}) as Dictionary; var active_variants := state.get("enemy_variants", []) as Array; var active_levels := state.get("enemy_levels", []) as Array; var active_scales := state.get("enemy_scales", []) as Array; var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary; var spawn_seed := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303)); var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = spawn_seed
 	for slot in active_variants.size():
 		if slot >= slimes.size(): break
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
@@ -330,7 +347,7 @@ func reset_slimes_for_room(root: Object) -> void:
 		occupied.append(spawn_foot)
 		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; brain.start_position = spawn_position; slime.position = spawn_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
 		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
-		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0; slime.set_meta("encounter_scale", encounter_scale); root.call("_set_actor_visual_scale", slime, Vector2.ONE); root.call("_apply_actor_scale", slime, false)
 		if not actor_sprites.has(slime): actor_sprites.append(slime)
 		if not collision.has(slime): collision.append(slime)
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state

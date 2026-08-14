@@ -109,6 +109,14 @@ func build_dialogue(parent: Node, continue_texture: Texture2D) -> Dictionary:
 	button.z_index = 3
 	button.visible = false
 	layer.add_child(button)
+	var button_outline := Sprite2D.new()
+	button_outline.name = "NpcDialogueContinueOutline"
+	button_outline.texture = _highlight_button_texture(continue_texture)
+	button_outline.position = Vector2(-1, -1)
+	button_outline.centered = false
+	button_outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	button_outline.z_index = -1
+	button.add_child(button_outline)
 	var shadow := Sprite2D.new()
 	shadow.name = "NpcDialogueContinueShadow"
 	shadow.texture = continue_texture
@@ -121,6 +129,25 @@ func build_dialogue(parent: Node, continue_texture: Texture2D) -> Dictionary:
 	layer.move_child(shadow, -1)
 	layer.move_child(button, -1)
 	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow}
+
+
+func _highlight_button_texture(source: Texture2D) -> Texture2D:
+	if source == null:
+		return null
+	var source_image := source.get_image()
+	var image := Image.create(source_image.get_width() + 2, source_image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			if source_image.get_pixel(x, y).a <= 0.0:
+				continue
+			for offset in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+				var sample_x: int = x + offset.x
+				var sample_y: int = y + offset.y
+				if sample_x < 0 or sample_y < 0 or sample_x >= source_image.get_width() or sample_y >= source_image.get_height() or source_image.get_pixel(sample_x, sample_y).a <= 0.0:
+					image.set_pixel(x + 1 + offset.x, y + 1 + offset.y, Color.WHITE)
+	return ImageTexture.create_from_image(image)
+
+
 func begin_dialogue(message: String) -> void:
 	full_message = message
 	character_index = 0

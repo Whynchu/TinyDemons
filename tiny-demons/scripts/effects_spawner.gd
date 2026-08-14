@@ -133,7 +133,7 @@ func name_texture(text: String, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable, flip_h: bool = false) -> void:
+func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable, flip_h: bool = false, effect_tag: StringName = &"") -> void:
 	if texture == null:
 		return
 	var image := texture.get_image()
@@ -161,7 +161,7 @@ func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vect
 		particle.position = origin + offset + Vector2(pixel_x, source_pixel.y) * scale
 		parent.add_child(particle)
 		var lifetime := randf_range(1.2, lifetime_max)
-		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": effect_tag})
 
 
 func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, speed_min: float, speed_max: float, lifetime: float, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:
@@ -240,6 +240,17 @@ func _rgb_key(color: Color) -> String:
 
 func request_effect(kind: StringName, position: Vector2) -> void:
 	effect_requested.emit(kind, position)
+
+
+func clear_effect_particles(effect_tag: StringName) -> void:
+	for index in range(pixel_particles.size() - 1, -1, -1):
+		var particle_data := pixel_particles[index]
+		if particle_data.get("effect_tag", &"") != effect_tag:
+			continue
+		var particle := particle_data.get("sprite") as Sprite2D
+		if particle != null:
+			particle.queue_free()
+		pixel_particles.remove_at(index)
 
 
 func update_pixel_particles(delta: float, snap_position: Callable, default_lifetime: float) -> void:

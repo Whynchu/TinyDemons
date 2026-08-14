@@ -7,7 +7,9 @@ func _ensure_player_component(script: Script, node_name: StringName) -> Node:
 	return component
 func _ready() -> void:
 	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self)
-func _physics_process(delta: float) -> void: gameplay_frame_controller.tick(self, delta)
+func _physics_process(delta: float) -> void:
+	gameplay_frame_controller.tick(self, delta)
+	_update_large_room_camera()
 func _start_player_death() -> void:
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
@@ -83,7 +85,7 @@ func _apply_player_attack_hitbox() -> void: if player_attack_component != null: 
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void: SlimeActor.damage_actor(self, slime, amount, was_critical)
 func _player_attack_damage_against(slime: Sprite2D) -> float: return _combat_damage(player_stats, _slime_stats(slime))
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
-	var attacker_equipment_damage := player_equipment.damage_bonus if attacker_stats == player_stats and player_equipment != null else 0.0
+	var attacker_equipment_damage := (player_equipment.damage_bonus + player_equipment.strength_bonus) if attacker_stats == player_stats and player_equipment != null else 0.0
 	var defender_equipment_defense := player_equipment.defense_bonus if defender_stats == player_stats and player_equipment != null else 0.0
 	var result := CombatCalculator.calculate_damage(attacker_stats, defender_stats, attacker_equipment_damage, defender_equipment_defense, attacker_stats == player_stats, rng, combat_tuning)
 	last_damage_was_critical = result.critical; return result.amount
@@ -132,7 +134,7 @@ func _build_room_number_indicator() -> void:
 func _update_gold_indicator() -> void: if gold_indicator != null: gold_amount_indicator.texture = _pixel_number_texture(str(gold), Color8(255, 205, 117))
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _set_entrance_open(is_open: bool) -> void:
-	entrance_open = is_open; for socket_value in room_controller.active_entrance_sockets.values(): var visual := (socket_value as DungeonSocket).visual(); if visual != null: visual.visible = true
+	entrance_open = is_open; _refresh_room_socket_visuals(is_open)
 func _update_rest_fire_animation(delta: float) -> void:
 	rest_fire_controller.update_animation(rest_fire, rest_fire_frames, delta, FIRE_FRAME_TIME, Callable(self, "_refresh_rest_fire_image"))
 	var light_step := posmod(floori(rest_fire_controller.frame_index * 0.65), 6)
@@ -156,9 +158,7 @@ func _can_interact_with_chest() -> bool: return chest_unlocked and not chest_cla
 func _can_interact_with_npc() -> bool: return cloaked_demon != null and cloaked_demon.visible and _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
 func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
-	door_active = is_active
-	for socket_value in room_controller.active_door_sockets.values():
-		var visual := (socket_value as DungeonSocket).visual(); if visual != null: visual.visible = is_active
+	door_active = is_active; _refresh_room_socket_visuals(is_active)
 func _collect_dungeon_sockets() -> void:
 	room_controller.dungeon_sockets.clear()
 	if sockets_root == null: return
@@ -168,8 +168,146 @@ func _sync_current_room_metadata() -> void:
 func _ensure_current_room_layout() -> void:
 	var room := dungeon_graph.get_room(current_room_id)
 	if room == null: return
-	var state := room_controller.ensure_layout(dungeon_graph, current_room_id, room, current_room_type, current_room_depth); _configure_room_sockets(bool(state.get("finished", false)))
-func _configure_room_sockets(is_unlocked: bool) -> void: room_controller.configure_sockets(dungeon_graph, current_room_id, is_unlocked, Callable(self, "_build_entrance_block_polygons")); door_active = is_unlocked; entrance_open = is_unlocked; _set_door_active(is_unlocked)
+	_apply_room_geometry()
+	_collect_walkable_tiles(floor_tiles)
+	_build_entrance_block_polygons()
+	_build_walkable_outline()
+	var state := room_controller.ensure_layout(dungeon_graph, current_room_id, room, current_room_type, current_room_depth)
+	_configure_room_sockets(bool(state.get("finished", false)))
+func _configure_room_sockets(is_unlocked: bool) -> void:
+	room_controller.configure_sockets(dungeon_graph, current_room_id, is_unlocked, Callable(self, "_build_entrance_block_polygons")); door_active = is_unlocked; entrance_open = is_unlocked; _refresh_room_socket_visuals(is_unlocked)
+func _refresh_room_socket_visuals(is_unlocked: bool) -> void:
+	var shut_texture := _load_texture_or_null("res://assets/artwork/DoorRightenemyshut.png")
+	var open_texture := _load_texture_or_null("res://assets/artwork/DoorRight.png")
+	var stairs_down_texture := _load_texture_or_null("res://assets/artwork/DoorStairsRight.png")
+	var stairs_up_texture := _load_texture_or_null("res://assets/artwork/DoorStairsUPRight.png")
+	for socket_value in room_controller.active_door_sockets.values():
+		var socket := socket_value as DungeonSocket; var visual := socket.visual() as Sprite2D
+		if visual == null: continue
+		var connection: DungeonGraph.ConnectionRecord = dungeon_graph.get_connection(current_room_id, socket.socket_id())
+		var destination_room: DungeonGraph.RoomRecord = dungeon_graph.get_room(connection.destination_room_id) if connection != null else null
+		var leads_downstairs := destination_room != null and destination_room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
+		visual.visible = true if current_room_type == DungeonGraph.ROOM_COMBAT and not is_unlocked else is_unlocked
+		visual.texture = stairs_up_texture if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs else open_texture if is_unlocked else shut_texture
+		visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
+	for socket_value in room_controller.active_entrance_sockets.values():
+		var socket := socket_value as DungeonSocket; var visual := socket.visual() as Sprite2D
+		if visual == null: continue
+		if socket.socket_id() == DungeonGraph.BOTTOM_LEFT or socket.socket_id() == DungeonGraph.BOTTOM_RIGHT:
+			# Bottom sockets are floor extensions, never door/stair renderers.
+			visual.visible = true
+			continue
+		visual.visible = true
+		visual.texture = stairs_up_texture if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else open_texture
+		visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
+func _apply_room_geometry() -> void:
+	if floor_tiles == null: return
+	_capture_normal_room_geometry()
+	if current_room_type != DungeonGraph.ROOM_DOWNSTAIRS:
+		_restore_normal_room_geometry()
+		var underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+		if underlay != null: underlay.visible = false
+		_configure_large_room_camera(false)
+		return
+	_apply_authored_boss_room_geometry()
+	_configure_large_room_camera(true)
+func _apply_authored_boss_room_geometry() -> void:
+	# The dedicated debug scene already contains the authored geometry. Avoid
+	# instantiating a second full gameplay scene when testing it directly.
+	if scene_file_path == "res://scenes/boss_room_debug.tscn":
+		var existing_underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+		if existing_underlay != null: existing_underlay.visible = true
+		return
+	var packed_scene := load("res://scenes/boss_room_debug.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Could not load the authored boss room scene.")
+		return
+	var template := packed_scene.instantiate()
+	for path in ["Map/FloorTiles/FloorLayer", "Map/FloorTiles/FloorLFaceLayer", "Map/FloorTiles/FloorRFaceLayer", "Map/Walls/WallLeftLayer", "Map/Walls/WallRightLayer"]:
+		_copy_authored_tile_layer(template.get_node_or_null(path) as TileMapLayer, get_node_or_null(path) as TileMapLayer)
+	_copy_authored_polygon(template, "Map/FloorTiles/FloorCollisionGuide")
+	_copy_boss_floor_underlay(template)
+	for path in ["Map/FloorTiles/Entrance", "Map/FloorTiles/EntranceRight", "Map/Walls/DoorLeft", "Map/Walls/DoorRight"]:
+		var source := template.get_node_or_null(path) as Node2D
+		var destination := get_node_or_null(path) as Node2D
+		if source != null and destination != null: destination.position = source.position
+	template.free()
+func _copy_boss_floor_underlay(template: Node) -> void:
+	var source := template.get_node_or_null("Map/FloorTiles/BossFloorUnderlay") as Polygon2D
+	if source == null: return
+	var underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+	if underlay == null:
+		underlay = Polygon2D.new()
+		underlay.name = "BossFloorUnderlay"
+		floor_tiles.add_child(underlay)
+	underlay.position = source.position
+	underlay.polygon = source.polygon.duplicate()
+	underlay.color = source.color
+	underlay.z_index = -1
+	underlay.visible = true
+func _copy_authored_tile_layer(source: TileMapLayer, destination: TileMapLayer) -> void:
+	if source == null or destination == null: return
+	destination.clear()
+	for cell in source.get_used_cells():
+		destination.set_cell(cell, source.get_cell_source_id(cell), source.get_cell_atlas_coords(cell), source.get_cell_alternative_tile(cell))
+	destination.update_internals()
+func _copy_authored_polygon(template: Node, path: NodePath) -> void:
+	var source := template.get_node_or_null(path) as Polygon2D
+	var destination := get_node_or_null(path) as Polygon2D
+	if source == null or destination == null: return
+	destination.position = source.position
+	destination.polygon = source.polygon.duplicate()
+func _capture_normal_room_geometry() -> void:
+	if not normal_room_geometry.is_empty(): return
+	for path in ["FloorTiles/FloorLayer", "FloorTiles/FloorLFaceLayer", "FloorTiles/FloorRFaceLayer", "Walls/WallLeftLayer", "Walls/WallRightLayer"]:
+		var layer := map_root.get_node_or_null(path) as TileMapLayer
+		if layer != null: normal_room_geometry[path] = layer.get_used_cells()
+	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Polygon2D
+	if guide != null:
+		normal_room_geometry["guide_position"] = guide.position
+		normal_room_geometry["guide_polygon"] = guide.polygon.duplicate()
+	for path in ["FloorTiles/Entrance", "FloorTiles/EntranceRight", "Walls/DoorLeft", "Walls/DoorRight"]:
+		var node := map_root.get_node_or_null(path) as Node2D
+		if node != null: normal_room_geometry["position:%s" % path] = node.position
+func _restore_normal_room_geometry() -> void:
+	if normal_room_geometry.is_empty(): return
+	for path in ["FloorTiles/FloorLayer", "FloorTiles/FloorLFaceLayer", "FloorTiles/FloorRFaceLayer", "Walls/WallLeftLayer", "Walls/WallRightLayer"]:
+		var layer := map_root.get_node_or_null(path) as TileMapLayer
+		if layer == null: continue
+		layer.clear()
+		var saved_cells: Array = normal_room_geometry.get(path, []) as Array
+		for cell_value in saved_cells:
+			var cell: Vector2i = cell_value
+			layer.set_cell(cell, 0, Vector2i.ZERO)
+		layer.update_internals()
+	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Polygon2D
+	if guide != null:
+		var saved_guide_position: Vector2 = normal_room_geometry.get("guide_position", guide.position)
+		var saved_guide_polygon: PackedVector2Array = normal_room_geometry.get("guide_polygon", guide.polygon)
+		guide.position = saved_guide_position
+		guide.polygon = saved_guide_polygon
+	for path in ["FloorTiles/Entrance", "FloorTiles/EntranceRight", "Walls/DoorLeft", "Walls/DoorRight"]:
+		var node := map_root.get_node_or_null(path) as Node2D
+		if node != null:
+			var saved_position: Vector2 = normal_room_geometry.get("position:%s" % path, node.position)
+			node.position = saved_position
+func _configure_large_room_camera(enabled: bool) -> void:
+	var camera := player.get_node_or_null("LargeRoomCamera") as Camera2D
+	if camera == null:
+		camera = Camera2D.new()
+		camera.name = "LargeRoomCamera"
+		camera.position_smoothing_enabled = true
+		camera.position_smoothing_speed = 5.5
+		camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+		player.add_child(camera)
+		camera.top_level = true
+	camera.enabled = enabled
+	if enabled: _update_large_room_camera()
+func _update_large_room_camera() -> void:
+	var camera := player.get_node_or_null("LargeRoomCamera") as Camera2D
+	if camera == null or not camera.enabled: return
+	var actor_center := _actor_foot(player) + Vector2(0.0, -7.0)
+	camera.global_position = actor_center
 func _update_door_transition() -> void: if not room_transition_locked: room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _try_enter_any_active_socket() -> bool: return room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: StringName) -> void: room_controller.enter_connected_room(self, destination_room_id, arrival_socket_id)
@@ -230,16 +368,23 @@ func _slime_animation(slime: Sprite2D) -> SlimeAnimationComponent: return SlimeA
 func _slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter: return SlimeActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter
 func _slime_health(slime: Sprite2D) -> HealthComponent: return slime.get_node_or_null("Health") as HealthComponent
 func _move_slimes(delta: float) -> void:
-	for slime in slimes:
+	var stagger_boss_ai := current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and slimes.size() > 3
+	var physics_phase := int(Engine.get_physics_frames() % 2)
+	for slime_index in slimes.size():
+		var slime := slimes[slime_index]
 		if not _is_slime_dead(slime):
+			if stagger_boss_ai and slime_index % 2 != physics_phase:
+				continue
 			_recover_slime_position(slime)
-		var slime_actor := slime as SlimeActor
-		if slime_actor != null:
-			slime_actor.tick_components(delta); slime_actor.tick_runtime(delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot")); continue
-		SlimeActor.tick_legacy_runtime(slime, delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot"))
+			var slime_delta := delta * 2.0 if stagger_boss_ai else delta
+			var slime_actor := slime as SlimeActor
+			if slime_actor != null:
+				slime_actor.tick_components(slime_delta); slime_actor.tick_runtime(slime_delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot")); continue
+			SlimeActor.tick_legacy_runtime(slime, slime_delta, Callable(self, "_is_slime_dead"), Callable(self, "_update_slime_knockback"), Callable(self, "_update_slime_attack"), Callable(self, "_is_slime_aggroed"), Callable(self, "_aggro_slime_target"), Callable(self, "_update_slime_scoot"))
 	actor_collision_system.resolve_slime_contacts(slimes, self)
-	for slime in slimes:
-		if not _is_slime_dead(slime):
+	for slime_index in slimes.size():
+		var slime := slimes[slime_index]
+		if not _is_slime_dead(slime) and (not stagger_boss_ai or slime_index % 2 == physics_phase):
 			_recover_slime_position(slime)
 func _slime_position_is_valid(slime: Sprite2D) -> bool:
 	return _can_actor_stand_at_current_position(slime) and not _collides_with_static(slime)
@@ -276,7 +421,7 @@ func _slime_attack_frames(slime: Sprite2D) -> Array[Texture2D]:
 	var visual := _slime_visual(slime); return [] if visual == null else visual.attack_left_frames if _slime_combat(slime).face_left else visual.attack_right_frames
 func _restore_slime_idle_texture(slime: Sprite2D) -> void: _set_slime_facing(slime, -1.0 if _slime_combat(slime).face_left else 1.0)
 func _can_slime_attack_player(slime: Sprite2D) -> bool:
-	var attack_distance := slime_tuning.attack_range + 5.0
+	var attack_distance := (slime_tuning.attack_range + 5.0) * _slime_encounter_scale(slime)
 	if player_dead or _actor_foot(player).distance_to(_actor_foot(slime)) > attack_distance:
 		return false
 	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
@@ -413,8 +558,8 @@ func _apply_player_level() -> void:
 	player_stats.level = player_level
 	var new_max_health := _player_max_health()
 	if player_health_component != null:
-		player_health_component.set_maximum_health(new_max_health, false)
-		player_health_component.apply_healing(new_max_health - player_health_component.current_health)
+		# Preserve the player's health percentage when the maximum increases.
+		player_health_component.set_maximum_health(new_max_health, true)
 		player_health = player_health_component.current_health
 		player_display_health = player_health
 	_update_player_health_ui()
@@ -433,7 +578,7 @@ func _spawn_player_xp_number(amount: int) -> void:
 	var text := "+%d xp" % maxi(amount, 0)
 	_spawn_floating_number(_player_floating_number_origin(text, color), amount, Vector2(0.0, effects_tuning.damage_number_float_speed), false, true, color, text)
 func _spawn_player_level_number(level: int) -> void:
-	var text := "+%d lv!" % maxi(level, 1)
+	var text := "lv up!"
 	_spawn_floating_number(_player_floating_number_origin(text, Color.WHITE), level, Vector2(0.0, effects_tuning.damage_number_float_speed), false, false, Color.WHITE, text)
 func _update_damage_numbers(delta: float) -> void: effects_spawner.update_damage_numbers(delta, Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime)
 func _pixel_text_texture(text: String, color: Color) -> Texture2D: return effects_spawner.number_texture(text, color)
@@ -476,7 +621,9 @@ func _slime_wall_detour_target(slime: Sprite2D) -> Vector2:
 			if score < best_score: best = candidate; best_score = score
 	return best if best_score < INF else _aggro_slime_target(slime)
 func _start_slime_hold(slime: Sprite2D) -> void: _slime_brain(slime).start_random_hold(slime_tuning, rng)
-func _set_actor_visual_scale(actor: Sprite2D, visual_scale: Vector2) -> void: occlusion_renderer.actor_visual_scales[actor] = visual_scale
+func _set_actor_visual_scale(actor: Sprite2D, visual_scale: Vector2) -> void:
+	var encounter_scale := float(actor.get_meta("encounter_scale", 1.0)) if slimes.has(actor) else 1.0
+	occlusion_renderer.actor_visual_scales[actor] = visual_scale * encounter_scale
 func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool:
 	var original := actor.position
 	var moved := _try_move_actor_axes(actor, movement)
@@ -639,12 +786,18 @@ func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2:
 func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], include_outline: bool) -> Texture2D: return occlusion_renderer.build_exact_occluded_actor_texture(actor, active_occluders, include_outline, Callable(self, "_is_pixel_covered_by_occluder"), Callable(self, "_actor_visual_offset"))
 func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D]) -> bool: return occlusion_renderer.is_pixel_covered_by_occluder(world_pixel, active_occluders, Callable(self, "_actor_screen_scale"), Callable(self, "_actor_visual_offset"))
 func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void: actor.scale = _actor_screen_scale(actor); actor.offset = _actor_visual_offset(actor)
-func _restore_actor_base_visual_scale(actor: Sprite2D) -> void: if occlusion_renderer.original_actor_scales.has(actor): actor.scale = occlusion_renderer.original_actor_scales[actor] as Vector2; actor.offset = _actor_visual_offset(actor)
+func _restore_actor_base_visual_scale(actor: Sprite2D) -> void: if occlusion_renderer.original_actor_scales.has(actor): actor.scale = _actor_screen_scale(actor); actor.offset = _actor_visual_offset(actor)
 func _actor_screen_scale(actor: Sprite2D) -> Vector2:
 	var original_scale: Vector2 = occlusion_renderer.original_actor_scales.get(actor, Vector2.ONE)
 	var visual_scale: Vector2 = occlusion_renderer.actor_visual_scales.get(actor, Vector2.ONE)
 	return original_scale * visual_scale
-func _actor_visual_offset(actor: Sprite2D) -> Vector2: return PLAYER_TEXTURE_OFFSET if actor == player else Vector2.ZERO
+func _slime_encounter_scale(slime: Sprite2D) -> float: return float(slime.get_meta("encounter_scale", 1.0))
+func _actor_visual_offset(actor: Sprite2D) -> Vector2:
+	if actor == player: return PLAYER_TEXTURE_OFFSET
+	if slimes.has(actor):
+		var encounter_scale := _slime_encounter_scale(actor)
+		if encounter_scale > 1.0: return ACTOR_FOOT_OFFSET * (1.0 / encounter_scale - 1.0)
+	return Vector2.ZERO
 func _collect_walkable_tiles(node: Node) -> void: if walkable_area != null: walkable_area.collect_geometry(node, Callable(self, "_tile_top_polygon")); walkable_points = walkable_area.points.duplicate(); walkable_polygons = walkable_area.polygons.duplicate()
 func _build_walkable_outline() -> void: if walkable_area != null: walkable_area.build_outline(use_walkable_polygon_direct); walkable_outline = walkable_area.outline
 func _build_entrance_block_polygons() -> void: room_controller.build_entrance_blocks(self); if walkable_area != null: walkable_area.set_entrance_blocks(entrance_block_polygons)

@@ -139,7 +139,7 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	if bool(root.get("player_is_rolling")): return
 	var player := root.get("player") as Sprite2D; var slime_config := root.get("slime_tuning") as SlimeTuning
-	var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / slime_config.attack_hit_range, delta.y / slime_config.attack_vertical_hit_range)
+	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0)); var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / (slime_config.attack_hit_range * encounter_scale), delta.y / (slime_config.attack_vertical_hit_range * encounter_scale))
 	if ellipse.length_squared() > 1.0: return
 	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
@@ -180,6 +180,7 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		brain.idle_breath_timer = idle_breath_delay
 		brain.persistent_aggro = false
 		brain.aggroed = false
+		brain.orbit_direction = 0.0
 		brain.attack_cooldown = 0.0
 		brain.blocked_repath_cooldown = 0.0
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent

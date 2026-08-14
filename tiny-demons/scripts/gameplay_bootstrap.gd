@@ -22,7 +22,16 @@ func initialize(root: Object) -> void:
 	var rng := root.get("rng") as RandomNumberGenerator
 	rng.randomize()
 	var dungeon_graph := root.get("dungeon_graph") as DungeonGraph
-	dungeon_graph.initialize(rng.randi()); root.set("current_room_id", dungeon_graph.start_room_id)
+	dungeon_graph.initialize(rng.randi())
+	var initial_room_id := dungeon_graph.start_room_id
+	if bool(root.get("debug_start_in_boss_room")):
+		var boss_connection: DungeonGraph.ConnectionRecord = dungeon_graph.ensure_connection(
+			dungeon_graph.start_room_id,
+			DungeonGraph.WALL_RIGHT,
+			DungeonGraph.ROOM_DOWNSTAIRS
+		)
+		initial_room_id = boss_connection.destination_room_id
+	root.set("current_room_id", initial_room_id)
 	root.call("_sync_current_room_metadata")
 	(root.get("room_controller") as RoomController).set_current_room(root.get("current_room_id"), root.get("current_room_type"))
 	root.call("_collect_dungeon_sockets"); (root.get("room_controller") as RoomController).validate_socket_setup(); root.call("_ensure_current_room_layout")
@@ -51,6 +60,20 @@ func initialize(root: Object) -> void:
 	_initialize_walkable_area(root, root.get("EDGE_MARGIN") if root.get("EDGE_MARGIN") != null else 0.35, root.get("SLIME_EDGE_PADDING") if root.get("SLIME_EDGE_PADDING") != null else 3.0)
 	_initialize_slimes(root, slimes)
 	root.call("_apply_room_state"); root.call("_build_depth_lists")
+	if bool(root.get("debug_start_in_boss_room")):
+		_enter_debug_gameplay(root)
+
+
+func _enter_debug_gameplay(root: Object) -> void:
+	var title_overlay := root.get("title_overlay") as CanvasItem
+	var archetype_overlay := root.get("archetype_overlay") as CanvasItem
+	var loading_overlay := root.get("loading_screen_overlay") as CanvasItem
+	if title_overlay != null: title_overlay.visible = false
+	if archetype_overlay != null: archetype_overlay.visible = false
+	if loading_overlay != null: loading_overlay.visible = false
+	var ui := root.get("ui") as CanvasItem
+	if ui != null: ui.visible = true
+	(root.get("screen_state_controller") as ScreenStateController).set_state(&"gameplay")
 
 
 func _initialize_player(root: Object, player: Sprite2D) -> void:
@@ -97,7 +120,7 @@ func _expand_slime_roster(root: Object, slimes: Array[Sprite2D]) -> void:
 	if template == null:
 		return
 	var parent := template.get_parent()
-	for slot in range(slimes.size(), 6):
+	for slot in range(slimes.size(), 7):
 		var clone := template.duplicate() as Sprite2D
 		clone.name = "SlimeSlot%d" % (slot + 1)
 		clone.position = template.position

@@ -117,7 +117,7 @@ func absorb_damage(root: Object, incoming_damage: float, source_position: Vector
 	durability -= shield_damage
 	regen_delay_timer = REGEN_DELAY
 	damage_hold_timer = DAMAGE_HANG_TIME
-	var visuals := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	var visuals: PlayerEquipmentVisualComponent = root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if durability <= 0.001:
 		durability = 0.0
 		display_durability = 0.0
@@ -128,9 +128,8 @@ func absorb_damage(root: Object, incoming_damage: float, source_position: Vector
 		if visuals != null:
 			visuals.break_guard(root)
 	else:
-		# The shield's white flash is reserved for its initial deployment. Do not
-		# retrigger it every time the already-active shield absorbs a hit.
-		pass
+		if visuals != null:
+			visuals.flash_guard(root)
 	_update_meter(root)
 	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true}
 
