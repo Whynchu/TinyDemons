@@ -14,23 +14,23 @@ const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
 
 const DEFINITIONS := {
-	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "bonuses": {"damage": 1.0}, "price": 45},
-	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "bonuses": {"damage": 2.0, "strength": 1.0}, "price": 90},
-	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "bonuses": {"damage": 1.0, "defense": 1.0}, "price": 95},
-	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "bonuses": {"damage": 2.0, "vitality": 1.0}, "price": 115},
-	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"armor", "bonuses": {"health": 9.0}, "price": 45},
-	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "bonuses": {"health": 7.0, "vitality": 1.0}, "price": 110},
-	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "bonuses": {"defense": 1.0}, "price": 45},
-	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "bonuses": {"defense": 2.0, "health": 3.0}, "price": 110},
-	&"bangle": {"name": "BANGLE", "slot": &"accessory", "bonuses": {"strength": 1.0, "health": 5.0}, "price": 45},
-	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "bonuses": {"strength": 2.0}, "price": 105},
+	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "bonuses": {"damage_rate": 5.0, "strength": 1.0}, "price": 45},
+	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "bonuses": {"damage_rate": 10.0, "strength": 3.0}, "price": 90},
+	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "bonuses": {"damage_rate": 10.0, "defense": 3.0}, "price": 95},
+	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "bonuses": {"damage_rate": 10.0, "vitality": 3.0}, "price": 115},
+	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"armor", "bonuses": {"health_rate": 5.0, "strength": 1.0, "vitality": 1.0, "defense": 1.0}, "price": 45},
+	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "bonuses": {"health_rate": 10.0, "vitality": 3.0}, "price": 110},
+	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "bonuses": {"health_rate": 5.0, "defense": 1.0}, "price": 45},
+	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "bonuses": {"health_rate": 10.0, "defense": 3.0}, "price": 110},
+	&"bangle": {"name": "BANGLE", "slot": &"accessory", "bonuses": {"strength": 1.0, "health_rate": 5.0}, "price": 45},
+	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "bonuses": {"damage_rate": 10.0, "strength": 3.0}, "price": 105},
 }
 
 const AFFIXES := {
-	&"keen": {"name": "KEEN", "slots": [&"weapon"], "stat": "damage", "min": 1, "max": 2},
-	&"savage": {"name": "SAVAGE", "slots": [&"weapon"], "stat": "damage", "min": 1, "max": 3},
+	&"keen": {"name": "KEEN", "slots": [&"weapon"], "stat": "damage_rate", "min": 1, "max": 2},
+	&"savage": {"name": "SAVAGE", "slots": [&"weapon"], "stat": "damage_rate", "min": 1, "max": 3},
 	&"mighty": {"name": "MIGHTY", "slots": [&"weapon", &"accessory"], "stat": "strength", "min": 1, "max": 2},
-	&"sturdy": {"name": "STURDY", "slots": [&"armor", &"shield", &"accessory"], "stat": "health", "min": 2, "max": 5},
+	&"sturdy": {"name": "STURDY", "slots": [&"armor", &"shield", &"accessory"], "stat": "health_rate", "min": 2, "max": 5},
 	&"warded": {"name": "WARDED", "slots": [&"armor", &"shield"], "stat": "defense", "min": 1, "max": 2},
 	&"vital": {"name": "VITAL", "slots": [&"armor", &"accessory"], "stat": "vitality", "min": 1, "max": 2},
 }
@@ -139,13 +139,19 @@ func display_name(item: ItemInstance) -> String:
 func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var definition: Dictionary = DEFINITIONS.get(item.definition_id, {})
 	var result: Dictionary = {}
-	var base_multiplier := 1.0 + clampi(item.enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT) * MASTERY_BONUS_PER_LEVEL
+	var enhancement_level := clampi(item.enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
 	var base_bonuses: Dictionary = definition.get("bonuses", {})
 	for stat: String in base_bonuses:
-		result[stat] = float(base_bonuses[stat]) * base_multiplier
+		var base_value := float(base_bonuses[stat])
+		var normalized_stat: String = str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat))
+		# Health and damage are percentage points. Every enhancement has a real
+		# minimum +1 percentage-point effect, even on basic gear.
+		var per_level_increase := maxf(1.0, roundf(base_value * MASTERY_BONUS_PER_LEVEL))
+		result[normalized_stat] = base_value + per_level_increase * float(enhancement_level)
 	for affix_key: String in item.affixes:
 		var affix: Dictionary = AFFIXES.get(StringName(affix_key), {})
 		var stat := str(affix.get("stat", ""))
+		stat = {"health": "health_rate", "damage": "damage_rate"}.get(stat, stat)
 		if not stat.is_empty():
 			result[stat] = float(result.get(stat, 0.0)) + float(item.affixes[affix_key])
 	return result

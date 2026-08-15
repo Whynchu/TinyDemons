@@ -85,6 +85,12 @@ static func save_profile(profile: PlayerProfile) -> bool:
 	DirAccess.remove_absolute(temp_absolute)
 	return false
 
+static func clear_slot(slot: int) -> void:
+	var safe_slot := clampi(slot, 0, SLOT_COUNT - 1)
+	for path in [_save_path(safe_slot), _backup_path(safe_slot), _temp_path(safe_slot)]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
 static func _save_path(slot: int) -> String:
 	return SAVE_PATH if slot == 0 else "user://tiny_demons_profile_%d.json" % (slot + 1)
 

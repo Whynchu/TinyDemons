@@ -5,6 +5,8 @@ const CURRENT_SCHEMA_VERSION := 5
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
+const FUSION_BASE_COST := 20
+const FUSION_COST_PER_ENHANCEMENT := 15
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
@@ -101,12 +103,20 @@ func can_fuse_duplicate(instance_id: String, catalog: ItemCatalog = null) -> boo
 	return has_upgrade_target
 
 
+func fusion_cost(item: ItemInstance) -> int:
+	if item == null:
+		return 0
+	return FUSION_BASE_COST + maxi(item.enhancement_level, 0) * FUSION_COST_PER_ENHANCEMENT
+
+
 func fuse_duplicate(instance_id: String, catalog: ItemCatalog = null) -> bool:
-	if not can_fuse_duplicate(instance_id, catalog):
-		return false
 	var duplicate := find_item(instance_id)
-	if duplicate == null:
+	if duplicate == null or not can_fuse_duplicate(instance_id, catalog):
 		return false
+	var cost := fusion_cost(duplicate)
+	if gold < cost:
+		return false
+	var items := catalog if catalog != null else ItemCatalog.new()
 	var remove_index := -1
 	for index in inventory.size():
 		if str(inventory[index].get("instance_id", "")) == instance_id:
@@ -115,7 +125,7 @@ func fuse_duplicate(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	if remove_index < 0:
 		return false
 	var target_index := -1
-	var equipped_id := str(equipped_instance_ids.get(String(catalog.definition_slot(duplicate.definition_id) if catalog != null else ItemCatalog.new().definition_slot(duplicate.definition_id)), ""))
+	var equipped_id := str(equipped_instance_ids.get(String(items.definition_slot(duplicate.definition_id)), ""))
 	for index in inventory.size():
 		var candidate := ItemInstance.from_dictionary(inventory[index])
 		if candidate.instance_id != duplicate.instance_id and candidate.definition_id == duplicate.definition_id and candidate.rarity == duplicate.rarity and (candidate.enhancement_level < MAX_ITEM_ENHANCEMENT or ItemCatalog.next_rarity(candidate.rarity) != &"") and candidate.instance_id == equipped_id:
@@ -139,6 +149,7 @@ func fuse_duplicate(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	if remove_index < target_index:
 		target_index -= 1
 	inventory[target_index] = target.to_dictionary()
+	gold -= cost
 	changed.emit()
 	return true
 

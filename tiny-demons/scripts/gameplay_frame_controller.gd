@@ -39,7 +39,34 @@ func tick(root: Object, delta: float) -> void:
 	var save_select := root.get("save_select_overlay") as ColorRect
 	if save_select != null and save_select.visible:
 		if bool(root.call("_is_menu_cancel_input_pressed")):
-			root.call("_close_save_select")
+			if bool(root.get("save_overwrite_prompt_active")): root.call("_cancel_overwrite")
+			else: root.call("_close_save_select")
+			return
+		if bool(root.get("menu_input_release_lock")):
+			if not bool(root.call("_is_interact_input_pressed")) and not Input.is_action_pressed("ui_accept"):
+				root.set("menu_input_release_lock", false)
+			else:
+				return
+		if bool(root.get("save_overwrite_prompt_active")):
+			var choice := int(root.get("save_overwrite_choice"))
+			if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+				root.set("save_overwrite_choice", 1 - choice); root.call("_update_overwrite_cursor")
+			elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
+				if choice == 0: (save_select.get_node("OverwriteYes") as Button).pressed.emit()
+				else: (save_select.get_node("OverwriteNo") as Button).pressed.emit()
+			return
+		var slot := int(root.get("save_select_index"))
+		if Input.is_action_just_pressed("ui_up"): slot -= 1
+		elif Input.is_action_just_pressed("ui_down"): slot += 1
+		if slot != int(root.get("save_select_index")):
+			root.set("save_select_index", posmod(slot, ProfileSaveService.SLOT_COUNT))
+			root.call("_update_save_select_cursor")
+		elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
+			var selected := save_select.get_node_or_null("SaveSelectCursor")
+			for child in save_select.get_children():
+				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == int(root.get("save_select_index")):
+					(child as Button).pressed.emit()
+					break
 		return
 	var title_overlay := root.get("title_overlay") as ColorRect; var archetype_overlay := root.get("archetype_overlay") as ColorRect
 	if bool(root.get("title_transition_active")) or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
@@ -53,6 +80,9 @@ func tick(root: Object, delta: float) -> void:
 			root.call("_close_hub_to_run")
 			return
 		root.call("_update_hub_input")
+		# The HUD remains alive above the nested hub panel. Continue ticking it so
+		# the coin animation and gold display do not freeze while shopping.
+		root.call("_update_overworld_ui")
 		return
 	var run_complete_overlay := root.get("run_complete_overlay") as ColorRect
 	if run_complete_overlay != null and run_complete_overlay.visible:

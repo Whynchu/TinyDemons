@@ -41,12 +41,22 @@ func update_title_flow(root: Object, delta: float) -> void:
 		var overlay := root.get("title_overlay") as ColorRect
 		var fade_start := 0.72
 		var fade_duration := 0.42
-		overlay.modulate.a = 1.0 if timer < fade_start else clampf(1.0 - (timer - fade_start) / fade_duration, 0.0, 1.0)
+		# Save selection is still a title-screen state. Keep the black cover
+		# opaque while the fizzle runs; fading it out here exposes the live game
+		# scene before the save menu has been opened.
+		var opening_save_select := str(root.get("pending_title_destination")) == "save_select"
+		overlay.modulate.a = 1.0 if opening_save_select or timer < fade_start else clampf(1.0 - (timer - fade_start) / fade_duration, 0.0, 1.0)
 		if timer >= fade_start + fade_duration:
 			root.set("title_transition_active", false)
-			overlay.visible = false
-			root.set("archetype_transition_timer", -0.35)
-			root.call("_select_archetype_menu_row", 0)
+			if str(root.get("pending_title_destination")) == "save_select":
+				root.set("pending_title_destination", "")
+				overlay.visible = true
+				overlay.modulate.a = 1.0
+				root.call("_open_save_select_after_title_transition")
+			else:
+				overlay.visible = false
+				root.set("archetype_transition_timer", -0.35)
+				root.call("_select_archetype_menu_row", 0)
 		return
 	var frame_timer := float(root.get("title_frame_timer")) + delta
 	root.set("title_frame_timer", frame_timer)
@@ -81,6 +91,13 @@ func update_archetype_input(root: Object, delta: float) -> void:
 			root.set("archetype_transition_active", false)
 			if bool(root.get("archetype_fade_out")):
 				(root.get("archetype_overlay") as ColorRect).visible = false
+		return
+	if bool(root.get("menu_input_release_lock")):
+		var released := not bool(root.call("_is_interact_input_pressed")) and not Input.is_action_pressed("ui_accept") and not bool(root.call("_is_menu_cancel_input_pressed"))
+		if released: root.set("menu_input_release_lock", false)
+		else: return
+	if root.call("_is_menu_cancel_input_pressed"):
+		root.call("_cancel_character_creation")
 		return
 	root.set("archetype_frame_timer", float(root.get("archetype_frame_timer")) + delta)
 	root.set("archetype_arrow_anim_timer", maxf(float(root.get("archetype_arrow_anim_timer")) - delta, 0.0))
@@ -153,6 +170,50 @@ func start_new_game(root: Object) -> void:
 	archetype_overlay.modulate.a = 1.0
 	(root.get("archetype_hold_cover") as ColorRect).visible = true
 	root.set("archetype_transition_active", true); root.set("archetype_transition_timer", -1.0); root.set("archetype_fade_out", false)
+
+
+func start_save_select(root: Object, mode: String) -> void:
+	var title_overlay := root.get("title_overlay") as ColorRect
+	if title_overlay == null or not title_overlay.visible:
+		return
+	root.set("save_select_mode", mode)
+	root.set("pending_title_destination", "save_select")
+	root.call("_spawn_title_pixel_breakup", root.get("title_screen_text"))
+	root.call("_spawn_title_pixel_breakup", root.get("title_start_text"))
+	root.call("_spawn_title_button_frame_breakup")
+	title_overlay.visible = true
+	title_overlay.modulate.a = 1.0
+	root.set("title_transition_active", true)
+	root.set("title_transition_timer", 0.0)
+	var title_text := root.get("title_screen_text") as Sprite2D
+	var start_text := root.get("title_start_text") as Sprite2D
+	var start_button := root.get("title_start_button") as Button
+	var continue_button := root.get("title_continue_button") as Button
+	if title_text != null: title_text.visible = false
+	if start_text != null: start_text.visible = false
+	if start_button != null: start_button.visible = false; start_button.release_focus()
+	if continue_button != null: continue_button.visible = false; continue_button.release_focus()
+	var title_cursor := root.get("title_cursor_text") as Sprite2D
+	if title_cursor != null: title_cursor.visible = false
+
+
+func show_character_creation(root: Object) -> void:
+	var title_overlay := root.get("title_overlay") as ColorRect
+	var archetype_overlay := root.get("archetype_overlay") as ColorRect
+	if title_overlay == null or archetype_overlay == null:
+		return
+	title_overlay.visible = false
+	root.set("title_transition_active", false)
+	root.set("pending_title_destination", "")
+	archetype_overlay.visible = true
+	archetype_overlay.modulate.a = 1.0
+	archetype_overlay.z_index = 3
+	set_state(&"archetype")
+	var hold_cover := root.get("archetype_hold_cover") as ColorRect
+	if hold_cover != null: hold_cover.visible = false
+	root.set("archetype_transition_active", false)
+	root.set("menu_input_release_lock", true)
+	root.call("_select_archetype_menu_row", 0)
 
 
 func update_player_death(root: Object, delta: float, game_over_fade_time: float) -> void:
@@ -428,6 +489,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var item_list: Array[Sprite2D] = []
 	for list_index in 5:
 		item_list.append(create_sprite(overlay, "HubItemList%d" % list_index, null, Vector2(7, 32 + list_index * 10), false))
+	var shop_prices: Array[Sprite2D] = []
+	for list_index in 5:
+		shop_prices.append(create_sprite(overlay, "HubShopPrice%d" % list_index, null, Vector2(125, 32 + list_index * 10), false))
 	var gear_slot_buttons: Array[Button] = []
 	for slot_index in 4:
 		var slot_button := Button.new()
@@ -452,7 +516,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); overlay.add_child(item_action_button)
 	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
 	cursor.visible = false
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "gear_choices": gear_choices, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "cursor": cursor}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "cursor": cursor}
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
@@ -486,12 +550,14 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		if node != null: node.visible = page == 0
 	var item_name := root.get("hub_item_name_text") as Sprite2D
 	var item_list := root.get("hub_item_list_texts") as Array[Sprite2D]
+	var shop_prices := root.get("hub_shop_price_texts") as Array[Sprite2D]
 	var gear_choices := root.get("hub_gear_choice_texts") as Array[Sprite2D]
 	var gear_stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
 	var item_details := root.get("hub_item_detail_texts") as Array[Sprite2D]
 	var item_action := root.get("hub_item_action_button") as Button
 	if item_name != null: item_name.visible = false
 	for node in item_list: node.visible = page != 0
+	for node in shop_prices: node.visible = page == 2
 	for node in gear_choices: node.visible = page == 1 and bool(root.get("hub_gear_browsing"))
 	for button in root.get("hub_gear_slot_buttons") as Array[Button]: button.visible = page == 1 and not bool(root.get("hub_gear_browsing"))
 	for node in gear_stats: node.visible = page == 1
@@ -522,7 +588,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]
 		var combat_tuning := root.get("combat_tuning") as CombatTuning
 		var derived_texts := root.get("hub_derived_texts") as Array[Sprite2D]
-		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "PWR %d" % roundi(combat_tuning.damage_base + snapshot.strength + snapshot.gear_damage), "DEF %d" % snapshot.def]
+		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "PWR %d" % roundi((combat_tuning.damage_base + snapshot.strength) * (1.0 + snapshot.gear_damage_rate)), "DEF %d" % snapshot.def]
 		for index in mini(derived_texts.size(), derived_values.size()): derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D
 	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2])
 	var apply_button := root.get("hub_apply_button") as Button
@@ -550,6 +616,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 
 func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, page: int, item_list: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
 	var catalog := ItemCatalog.new()
+	var shop_prices := root.get("hub_shop_price_texts") as Array[Sprite2D]
 	if page == 1:
 		_update_hub_gear_slots(root, pixel_texture, profile, catalog, item_list, root.get("hub_gear_choice_texts") as Array[Sprite2D], details, action, highlight_color)
 		return
@@ -579,7 +646,9 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	for row in item_list.size():
 		var source_index := window_start + row
 		if source_index >= count:
-			item_list[row].texture = null; continue
+			item_list[row].texture = null
+			if row < shop_prices.size(): shop_prices[row].texture = null
+			continue
 		var row_item: ItemInstance
 		var row_sold := false
 		var row_price := 0
@@ -600,10 +669,12 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		var row_label := "%s%s %s" % [prefix, rarity_mark, str(definition.get("name", "ITEM"))]
 		var row_mastery := row_item.enhancement_level
 		if row_mastery > 0 and page != 3: row_label += " +%d" % row_mastery
-		if page == 2: row_label += " SOLD" if row_sold else " %dG" % row_price
+		if page == 2 and row_sold: row_label += " SOLD"
 		elif page == 3: row_label += "  +%d" % row_mastery
 		var row_color := Color8(120, 120, 130) if row_sold else catalog.rarity_color(row_item.rarity)
 		item_list[row].texture = pixel_texture.call(row_label, row_color) as Texture2D
+		if page == 2 and row < shop_prices.size():
+			shop_prices[row].texture = pixel_texture.call("SOLD" if row_sold else "%dG" % row_price, Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
 	if item == null:
 		if not item_list.is_empty():
 			var empty_text := str(root.get("hub_fusion_message")) if page == 3 and not str(root.get("hub_fusion_message")).is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
@@ -611,7 +682,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		details[0].texture = null; details[1].texture = null; action.disabled = true; return
 	var mastery := item.enhancement_level
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
-	for stat: String in bonuses: bonus_parts.append("%s +%d" % [stat.to_upper(), roundi(float(bonuses[stat]))])
+	for stat: String in bonuses:
+		var is_rate := stat in ["health_rate", "damage_rate"]
+		var label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
+		bonus_parts.append("%s +%d%s" % [label, roundi(float(bonuses[stat])), "%" if is_rate else ""])
 	details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
 	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
 	if page == 3 and not selected_transmutation_name.is_empty():
@@ -619,14 +693,17 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var slot := catalog.definition_slot(item.definition_id)
 	var equipped := str(profile.equipped_instance_ids.get(String(slot), "")) == item.instance_id
 	var overflow := profile.can_salvage_overflow(item.instance_id, catalog)
+	var can_fuse := profile.can_fuse_duplicate(item.instance_id, catalog)
 	if page == 3 and overflow:
 		details[1].texture = pixel_texture.call("MYTHIC +10  SALVAGE %dG" % catalog.overflow_salvage_value(item), Color8(255, 205, 117)) as Texture2D
 	elif page == 3:
 		var next_text := "%s -> %s +0" % [String(item.rarity).to_upper(), String(ItemCatalog.next_rarity(item.rarity)).to_upper()] if mastery >= PlayerProfile.MAX_ITEM_ENHANCEMENT else "+%d -> +%d" % [mastery, mastery + 1]
-		details[1].texture = pixel_texture.call("SAME %s GEAR  %s" % [catalog.rarity_letter_grade(item.rarity), next_text], Color8(255, 205, 117)) as Texture2D
+		var fusion_cost := profile.fusion_cost(item)
+		var fusion_color := Color8(255, 205, 117) if profile.gold >= fusion_cost else Color8(255, 105, 105)
+		details[1].texture = pixel_texture.call("FUSE %dG  SAME %s GEAR  %s" % [fusion_cost, catalog.rarity_letter_grade(item.rarity), next_text], fusion_color) as Texture2D
 	else:
 		details[1].texture = pixel_texture.call(selected_transmutation_name, Color8(148, 220, 255)) as Texture2D if not selected_transmutation_name.is_empty() else null
-	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and not profile.can_fuse_duplicate(item.instance_id, catalog) and not overflow)
+	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.gold < profile.fusion_cost(item))))
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE" if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)
@@ -702,7 +779,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 		if snapshot != null:
 			var tuning := root.get("combat_tuning") as CombatTuning
-			var values := [roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)), roundi(tuning.damage_base + snapshot.strength + snapshot.gear_damage), snapshot.vit, snapshot.strength, snapshot.def]
+			var values := [roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)), roundi((tuning.damage_base + snapshot.strength) * (1.0 + snapshot.gear_damage_rate)), snapshot.vit, snapshot.strength, snapshot.def]
 			for index in mini(stats.size(), values.size()):
 				stats[index].texture = pixel_texture.call("%s %d" % [["HP", "DMG", "VIT", "STR", "DEF"][index], values[index]], Color8(167, 240, 112)) as Texture2D
 		return
@@ -710,7 +787,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 	var equipped := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
 	var candidate_bonuses := catalog.bonuses(candidate, profile.mastery_level(candidate.definition_id))
 	var equipped_bonuses := catalog.bonuses(equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
-	var fields := [{"key": "health", "label": "HP"}, {"key": "damage", "label": "DMG"}, {"key": "vitality", "label": "VIT"}, {"key": "strength", "label": "STR"}, {"key": "defense", "label": "DEF"}]
+	var fields := [{"key": "health_rate", "label": "HP", "rate": true}, {"key": "damage_rate", "label": "DMG", "rate": true}, {"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}]
 	for index in mini(stats.size(), fields.size()):
 		var field: Dictionary = fields[index]
 		var key := str(field["key"])
@@ -718,7 +795,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		var rounded := roundi(value)
 		var prefix := "+" if rounded > 0 else "-" if rounded < 0 else ""
 		var color := Color8(148, 220, 255) if rounded > 0 else Color8(239, 125, 87) if rounded < 0 else Color8(150, 156, 170)
-		stats[index].texture = pixel_texture.call("%s %s%d" % [str(field["label"]), prefix, absi(rounded)], color) as Texture2D
+		stats[index].texture = pixel_texture.call("%s %s%d%s" % [str(field["label"]), prefix, absi(rounded), "%" if bool(field["rate"]) else ""], color) as Texture2D
 
 
 func _item_comparison_text(profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot: StringName) -> String:
@@ -726,9 +803,9 @@ func _item_comparison_text(profile: PlayerProfile, catalog: ItemCatalog, candida
 	var old_bonuses := catalog.bonuses(current) if current != null else {}
 	var new_bonuses := catalog.bonuses(candidate)
 	var parts: Array[String] = []
-	for stat in ["health", "damage", "strength", "defense", "vitality"]:
+	for stat in ["health_rate", "damage_rate", "strength", "defense", "vitality"]:
 		var difference := roundi(float(new_bonuses.get(stat, 0.0)) - float(old_bonuses.get(stat, 0.0)))
-		if difference != 0: parts.append("%s %s%d" % [{"health": "HP", "damage": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT"}[stat], "+" if difference > 0 else "", difference])
+		if difference != 0: parts.append("%s %s%d%s" % [{"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT"}[stat], "+" if difference > 0 else "", difference, "%" if stat in ["health_rate", "damage_rate"] else ""])
 	return "VS EQUIPPED  %s" % ("SAME" if parts.is_empty() else " ".join(parts))
 
 
@@ -823,19 +900,34 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	(continue_button if has_profile else new_game_button).grab_focus()
 	return {"overlay": overlay, "text": title_text, "new_game": new_game_button, "continue": continue_button, "start_text": new_game_button.get_child(0) as Sprite2D, "cursor": cursor}
 
-func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable) -> ColorRect:
+func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), preview_texture: Callable = Callable()) -> ColorRect:
 	var overlay := create_overlay(parent, "SaveSelectOverlay", Vector2(240, 160), Color.BLACK, 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	var title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2(88, 42), false)
+	var cursor := create_sprite(overlay, "SaveSelectCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(55, 70), false)
+	var prompt := create_sprite(overlay, "OverwritePrompt", pixel_texture.call("OVERWRITE?  YES / NO", Color.WHITE) as Texture2D, Vector2(70, 126), false)
+	prompt.visible = false
+	var prompt_cursor := create_sprite(overlay, "OverwriteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(99, 140), false); prompt_cursor.visible = false
+	var yes := make_retro_button("YES", Vector2(105, 137), Vector2(24, 12), pixel_texture); yes.name = "OverwriteYes"; yes.visible = false; yes.pressed.connect(overwrite_yes); overlay.add_child(yes)
+	var no := make_retro_button("NO", Vector2(135, 137), Vector2(20, 12), pixel_texture); no.name = "OverwriteNo"; no.visible = false; no.pressed.connect(overwrite_no); overlay.add_child(no)
 	for slot in ProfileSaveService.SLOT_COUNT:
 		var profile := ProfileSaveService.load_profile_for_slot(slot)
 		var label := "SAVE %d  EMPTY" % (slot + 1)
 		if profile != null and profile.has_started:
 			label = "SAVE %d  LV %d  G %d" % [slot + 1, profile.level, profile.gold]
 		var button := make_retro_button(label, Vector2(64, 66 + slot * 20), Vector2(112, 14), pixel_texture)
-		button.disabled = profile == null or not profile.has_started
+		button.disabled = false
+		button.set_meta("save_slot", slot)
 		button.pressed.connect(select_callback.bind(slot))
 		overlay.add_child(button)
+		if profile != null and profile.has_started and preview_texture.is_valid():
+			var demon := Sprite2D.new()
+			demon.name = "Save%dPreview" % slot
+			demon.texture = preview_texture.call(profile.palette_name) as Texture2D
+			demon.position = Vector2(58, 73 + slot * 20)
+			demon.scale = Vector2.ONE * 0.55
+			demon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			overlay.add_child(demon)
 	return overlay
 
 

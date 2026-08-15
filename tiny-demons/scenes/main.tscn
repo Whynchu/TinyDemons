@@ -105,7 +105,7 @@ fill_to = Vector2(1, 0.5)
 texture_filter = 1
 script = ExtResource("17_gameplay")
 
-[node name="BackgroundCanvas" type="CanvasLayer" parent="."]
+[node name="BackgroundCanvas" type="CanvasLayer" parent="." unique_id=1409530408]
 layer = -10
 
 [node name="Background" type="Sprite2D" parent="BackgroundCanvas" unique_id=1363256938]
@@ -320,7 +320,7 @@ texture_scale = 0.7
 position = Vector2(0, 8)
 
 [node name="Chest" type="Sprite2D" parent="Actors" unique_id=382431945]
-position = Vector2(132, 57)
+position = Vector2(157, 69)
 texture = ExtResource("6_chest")
 centered = false
 
@@ -341,10 +341,6 @@ script = ExtResource("20_stats_component")
 
 [node name="Equipment" type="Node" parent="Actors/TinyDemon" unique_id=1798955296]
 script = ExtResource("26_equipment_component")
-weapon_name = "Basic Sword"
-armor_name = "Basic Tunic"
-shield_name = "Basic Shield"
-accessory_name = "Bangle"
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
 script = ExtResource("19_collision_guide")
@@ -529,7 +525,7 @@ rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.9)
 
-[node name="InterfaceCanvas" type="CanvasLayer" parent="."]
+[node name="InterfaceCanvas" type="CanvasLayer" parent="." unique_id=1212943215]
 layer = 10
 
 [node name="UI" type="Node2D" parent="InterfaceCanvas" unique_id=272886269]

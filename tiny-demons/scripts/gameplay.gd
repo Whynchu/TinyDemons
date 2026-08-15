@@ -235,6 +235,7 @@ func _build_hub_ui() -> void:
 	hub_page_buttons = controls["pages"] as Array[Button]
 	hub_item_name_text = controls["item_name"] as Sprite2D
 	hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
+	hub_shop_price_texts = controls["shop_prices"] as Array[Sprite2D]
 	hub_gear_choice_texts = controls["gear_choices"] as Array[Sprite2D]
 	hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
 	hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
@@ -362,12 +363,14 @@ func _hub_fusion_candidates() -> Array[ItemInstance]:
 	_refresh_hub_fusion_candidates()
 	return hub_fusion_candidates
 func _fuse_profile_duplicate(instance_id: String) -> bool:
-	if player_profile == null or not player_profile.fuse_duplicate(instance_id):
+	if player_profile == null or not player_profile.fuse_duplicate(instance_id, ItemCatalog.new()):
 		return false
+	gold = player_profile.gold
 	player_equipment.configure_from_profile(player_profile)
 	_configure_equipment_transmutations()
 	_apply_player_level()
 	_save_player_profile()
+	_update_gold_indicator()
 	return true
 func _salvage_profile_overflow(instance_id: String) -> int:
 	if player_profile == null: return 0
@@ -409,9 +412,13 @@ func _hub_item_action() -> void:
 			var index := clampi(hub_item_index, 0, hub_fusion_candidates.size() - 1)
 			var consumed := hub_fusion_candidates[index]
 			if player_profile.can_fuse_duplicate(consumed.instance_id):
-				var family_name := str(ItemCatalog.DEFINITIONS.get(consumed.definition_id, {}).get("name", "ITEM"))
-				if _fuse_profile_duplicate(consumed.instance_id):
-					hub_fusion_message = "%s ENHANCED" % family_name
+				var fusion_cost := player_profile.fusion_cost(consumed)
+				if player_profile.gold < fusion_cost:
+					hub_fusion_message = "NEED %dG" % fusion_cost
+				else:
+					var family_name := str(ItemCatalog.DEFINITIONS.get(consumed.definition_id, {}).get("name", "ITEM"))
+					if _fuse_profile_duplicate(consumed.instance_id):
+						hub_fusion_message = "%s ENHANCED" % family_name
 			elif player_profile.can_salvage_overflow(consumed.instance_id):
 				var salvage_value := _salvage_profile_overflow(consumed.instance_id)
 				if salvage_value > 0: hub_fusion_message = "SALVAGED %dG" % salvage_value
@@ -638,34 +645,117 @@ func _build_archetype_screen() -> void: var controls := screen_state_controller.
 func _style_archetype_button(button: Button) -> void: screen_state_controller.style_archetype_button(button)
 func _update_title_screen(delta: float) -> void: screen_state_controller.update_title_flow(self, delta)
 func _start_new_game() -> void:
-	for slot in ProfileSaveService.SLOT_COUNT:
-		if not ProfileSaveService.slot_has_profile(slot):
-			ProfileSaveService.select_slot(slot)
-			break
+	screen_state_controller.start_save_select(self, "new")
+func _continue_game() -> void:
+	screen_state_controller.start_save_select(self, "continue")
+
+func _open_save_select_after_title_transition() -> void:
+	if save_select_overlay == null:
+		save_select_overlay = screen_state_controller.build_save_select(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_select_save_slot"), Callable(self, "_confirm_overwrite"), Callable(self, "_cancel_overwrite"), Callable(self, "_save_preview_texture"))
+	save_select_index = 0
+	menu_input_release_lock = true
+	# Keep the opaque title cover behind the save menu. The gameplay scene must
+	# never be exposed between the title transition and save selection.
+	if title_overlay != null:
+		title_overlay.visible = true
+		title_overlay.modulate.a = 1.0
+	save_select_overlay.visible = true
+	_update_save_select_cursor()
+
+func _update_save_select_cursor() -> void:
+	if save_select_overlay == null: return
+	for child in save_select_overlay.get_children():
+		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == save_select_index:
+			(child as Button).grab_focus()
+	var cursor := save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
+	if cursor != null: cursor.position = Vector2(55, 70 + save_select_index * 20)
+
+func _save_preview_texture(palette_name: String) -> Texture2D:
+	var base_frames := player_base_idle_frames as Array[Texture2D]
+	if base_frames.is_empty() or player_animation_component == null:
+		return null
+	return player_animation_component.recolor_texture(base_frames[0], palette_name)
+
+func _select_save_slot(slot: int) -> void:
+	save_select_index = clampi(slot, 0, ProfileSaveService.SLOT_COUNT - 1)
+	_update_save_select_cursor()
+	if save_select_mode == "continue":
+		_select_continue_slot(slot)
+		return
+	if ProfileSaveService.slot_has_profile(slot):
+		save_overwrite_slot = slot
+		_set_overwrite_prompt(true)
+		return
+	save_overwrite_slot = slot
+	_confirm_overwrite()
+
+func _set_overwrite_prompt(active: bool) -> void:
+	save_overwrite_prompt_active = active
+	save_overwrite_choice = 0
+	menu_input_release_lock = active
+	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
+		var node := save_select_overlay.get_node_or_null(node_name)
+		if node != null: node.visible = active
+	var cursor := save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	if cursor != null: cursor.visible = active; cursor.position = Vector2(99, 140)
+
+func _cancel_overwrite() -> void:
+	save_overwrite_prompt_active = false
+	_set_overwrite_prompt(false)
+	_update_save_select_cursor()
+
+func _confirm_overwrite() -> void:
+	save_overwrite_prompt_active = false
+	_set_overwrite_prompt(false)
+	var selected_slot := save_overwrite_slot if ProfileSaveService.slot_has_profile(save_overwrite_slot) else save_select_index
+	ProfileSaveService.select_slot(selected_slot)
+	ProfileSaveService.clear_slot(selected_slot)
+	if save_select_overlay != null: save_select_overlay.visible = false
 	player_profile = PlayerProfile.new()
 	player_profile.gold = 0
 	gold = 0
 	has_persistent_profile = false
 	_apply_profile_to_runtime()
 	_update_gold_indicator()
-	screen_state_controller.start_new_game(self)
-func _continue_game() -> void:
-	if save_select_overlay == null:
-		save_select_overlay = screen_state_controller.build_save_select(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_select_continue_slot"))
-	save_select_overlay.visible = true
-	if title_overlay != null: title_overlay.visible = false
-	for child in save_select_overlay.get_children():
-		if child is Button and not (child as Button).disabled:
-			(child as Button).grab_focus()
-			break
+	screen_state_controller.show_character_creation(self)
+
+func _update_overwrite_cursor() -> void:
+	var cursor := save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	if cursor != null:
+		cursor.position = Vector2(99 if save_overwrite_choice == 0 else 129, 140)
 
 func _close_save_select() -> void:
 	if save_select_overlay != null:
 		save_select_overlay.visible = false
+	menu_input_release_lock = false
 	if title_overlay != null:
 		title_overlay.visible = true
+		title_overlay.modulate.a = 1.0
+	if title_screen_text != null: title_screen_text.visible = true
+	if title_start_text != null: title_start_text.visible = true
+	if title_start_button != null: title_start_button.visible = true
+	if title_continue_button != null: title_continue_button.visible = title_continue_button.disabled == false
+	if title_cursor_text != null: title_cursor_text.visible = true
+	title_transition_active = false
+	pending_title_destination = ""
+	screen_state_controller.set_state(&"title")
 	if title_continue_button != null:
-		title_continue_button.grab_focus()
+		(title_continue_button if not title_continue_button.disabled else title_start_button).grab_focus()
+
+func _cancel_character_creation() -> void:
+	if archetype_overlay != null: archetype_overlay.visible = false
+	if title_overlay != null:
+		title_overlay.visible = true
+		title_overlay.modulate.a = 1.0
+	if title_screen_text != null: title_screen_text.visible = true
+	if title_start_text != null: title_start_text.visible = true
+	if title_start_button != null: title_start_button.visible = true
+	if title_continue_button != null: title_continue_button.visible = not title_continue_button.disabled
+	if title_cursor_text != null: title_cursor_text.visible = true
+	title_transition_active = false
+	pending_title_destination = ""
+	screen_state_controller.set_state(&"title")
+	if title_start_button != null: title_start_button.grab_focus()
 
 func _select_continue_slot(slot: int) -> void:
 	if not ProfileSaveService.slot_has_profile(slot):
@@ -683,6 +773,13 @@ func _enter_starting_room_from_menu() -> void:
 	if title_overlay != null: title_overlay.visible = false
 	if archetype_overlay != null: archetype_overlay.visible = false
 	if hub_overlay != null: hub_overlay.visible = false
+	# Keep the player and both shadow layers covered while the starting position,
+	# palette, and depth transforms are initialized. Otherwise the shadow can
+	# visibly slide in from the scene's editor position during a new game.
+	player.visible = false
+	if player_shadow != null: player_shadow.visible = false
+	if player_sprite_shadow != null: player_sprite_shadow.visible = false
+	if player_attack_visual != null: player_attack_visual.visible = false
 	loading_screen_active = true
 	loading_screen_fading = false
 	loading_screen_timer = 0.0
@@ -699,8 +796,12 @@ func _enter_starting_room_from_menu() -> void:
 		player_health_component.reset(maximum_health)
 	player_health = maximum_health
 	player_display_health = maximum_health
-	player.visible = true
 	player_animation_component.apply_frame(self)
+	_update_player_shadow()
+	_build_depth_lists()
+	player.visible = true
+	_update_player_shadow()
+	_build_depth_lists()
 	_begin_new_run()
 	loading_screen_fading = true
 	loading_screen_timer = 0.0
