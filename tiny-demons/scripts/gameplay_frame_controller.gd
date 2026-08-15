@@ -4,14 +4,26 @@ class_name GameplayFrameController
 
 func update_player_input(root: Object) -> void:
 	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
-	if attack_down and not bool(root.get("player_attack_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
-		if float(root.get("player_between_timer")) > 0.0:
-			if attack != null: attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input"))
-		elif attack != null: attack.start_player_attack(root, 1)
+	if attack_down and not bool(root.get("player_attack_input_was_down")):
+		var accepted_attack := false
+		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
+			if float(root.get("player_between_timer")) > 0.0:
+				if attack != null and not attack.combo_buffered:
+					attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input")); accepted_attack = true
+			elif attack != null:
+				attack.start_player_attack(root, 1); accepted_attack = true
+		elif bool(root.get("player_is_attacking")) and root.get("player_anim_name") == "attack1" and attack != null and not attack.combo_buffered:
+			attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input")); accepted_attack = true
+		root.call("_record_run_action_input", &"attack", accepted_attack)
 	root.set("player_attack_input_was_down", attack_down)
 	var roll_down: bool = root.call("_is_roll_input_pressed")
-	if roll_down and not bool(root.get("player_roll_input_was_down")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
-		var roll := root.get("player_roll_component") as PlayerRollComponent; if roll != null: roll.start_from_root(root)
+	if roll_down and not bool(root.get("player_roll_input_was_down")):
+		var accepted_roll := false
+		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
+			var roll := root.get("player_roll_component") as PlayerRollComponent
+			if roll != null:
+				roll.start_from_root(root); accepted_roll = true
+		root.call("_record_run_action_input", &"roll", accepted_roll)
 	root.set("player_roll_input_was_down", roll_down)
 
 
@@ -24,12 +36,33 @@ func tick(root: Object, delta: float) -> void:
 		(root.get("scene_transition_overlay") as ColorRect).modulate.a = clampf(transition_timer / 0.28, 0.0, 1.0)
 		if transition_timer >= 0.34: root.get_tree().reload_current_scene()
 		return
+	var save_select := root.get("save_select_overlay") as ColorRect
+	if save_select != null and save_select.visible:
+		if bool(root.call("_is_menu_cancel_input_pressed")):
+			root.call("_close_save_select")
+		return
 	var title_overlay := root.get("title_overlay") as ColorRect; var archetype_overlay := root.get("archetype_overlay") as ColorRect
 	if bool(root.get("title_transition_active")) or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
 		root.call("_update_title_screen", delta)
 		if bool(root.get("title_transition_active")) and float(root.get("title_transition_timer")) < 0.72: return
 		if not bool(root.get("title_transition_active")): return
 	if bool(root.get("loading_screen_active")): root.call("_update_loading_screen", delta); return
+	var hub_overlay := root.get("hub_overlay") as ColorRect
+	if hub_overlay != null and hub_overlay.visible:
+		if bool(root.get("hub_pause_mode")) and bool(root.call("_is_pause_input_just_pressed")):
+			root.call("_close_hub_to_run")
+			return
+		root.call("_update_hub_input")
+		return
+	var run_complete_overlay := root.get("run_complete_overlay") as ColorRect
+	if run_complete_overlay != null and run_complete_overlay.visible:
+		root.call("_update_run_complete_input")
+		return
+	if bool(root.get("menu_input_release_lock")):
+		if not bool(root.call("_is_menu_cancel_input_pressed")):
+			root.set("menu_input_release_lock", false)
+		else:
+			return
 	var dialogue_box := root.get("npc_dialogue_box") as ColorRect; var dialogue_was_active: bool = dialogue_box != null and dialogue_box.visible
 	if dialogue_was_active: (root.get("npc_controller") as NpcController).update_dialogue_from_root(root, delta); (root.get("npc_controller") as NpcController).update_dialogue_input(root); root.call("_update_cloaked_demon_animation", delta)
 	var hitstop: float = root.get("hitstop_timer")
@@ -44,16 +77,16 @@ func tick(root: Object, delta: float) -> void:
 		var tuning := root.get("player_tuning") as PlayerTuning
 		if bool(root.get("player_death_particles_started")) and float(root.get("player_death_timer")) >= tuning.death_particle_delay + tuning.death_particle_lifetime: root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta)
 		root.call("_update_depth_sorting"); root.call("_update_actor_occlusion", delta); _stabilize(root); root.call("_update_overworld_ui"); root.call("_update_game_over_input"); return
+	if bool(root.call("_is_pause_input_just_pressed")):
+		root.call("_open_pause_menu")
+		return
 	var player_input_locked: bool = dialogue_was_active
 	var player_tuning := root.get("player_tuning") as PlayerTuning
-	var previous_attack_input: bool = root.get("player_attack_input_was_down"); var previous_attacking: bool = root.get("player_is_attacking")
+	var previous_attacking: bool = root.get("player_is_attacking")
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null: guard.tick(root, delta, not player_input_locked and bool(root.call("_is_guard_input_held")))
 	if not player_input_locked: update_player_input(root)
-	var attack_input_down: bool = root.call("_is_attack_input_pressed")
 	var player_attack := root.get("player_attack_component") as PlayerAttackComponent
-	if not player_input_locked and attack_input_down and not previous_attack_input and previous_attacking and root.get("player_anim_name") == "attack1":
-		if player_attack != null: player_attack.buffer_combo(player_tuning.combo_window); player_attack.set_combo_movement(root.call("_movement_input"))
 	if player_attack != null and player_attack.combo_buffered and bool(root.get("player_is_attacking")) and root.get("player_anim_name") == "attack1":
 		var movement: Vector2 = root.call("_movement_input"); var combo_direction_changed := movement.length() > 0.25 and (player_attack.combo_movement.length() <= 0.25 or movement.normalized().dot(player_attack.combo_movement.normalized()) < 0.99)
 		if combo_direction_changed: player_attack.consume_combo()
@@ -62,9 +95,9 @@ func tick(root: Object, delta: float) -> void:
 	if root.get("player_roll_component") != null: (root.get("player_roll_component") as PlayerRollComponent).update_from_root(root, delta)
 	root.call("_update_roll_dust", delta); (root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta)
 	if not player_input_locked and root.get("player_motor") != null: (root.get("player_motor") as ActorMotor).move_player(root, delta)
-	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
+	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_tick_run_telemetry", delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
 	if not dialogue_was_active:
-		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
+		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drop", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
 	var now_attacking: bool = root.get("player_is_attacking")
 	if previous_attacking and not now_attacking:
 		if bool(root.get("player_just_finished_attack2")) and root.get("player_after_attack2_texture") != null:

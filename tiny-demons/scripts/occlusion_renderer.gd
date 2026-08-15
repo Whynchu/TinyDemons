@@ -95,7 +95,10 @@ func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
 
 func white_texture(source: Texture2D) -> Texture2D:
 	if source == null: return null
-	var key := "%s:white_texture" % source.resource_path
+	# Runtime animation frames have no resource path, so resource_path made every
+	# generated texture share one cache entry (and could show a slime during the
+	# player's death flash). The RID remains unique for each texture instance.
+	var key := "%s:white_texture" % source.get_rid()
 	if white_image_cache.has(key): return white_image_cache[key]
 	var image := cached_texture_image(source).duplicate()
 	for y in image.get_height():

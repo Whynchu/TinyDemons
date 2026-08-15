@@ -16,13 +16,19 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			root.set("chest_claimed", true)
 			var room_controller := root.get("room_controller") as RoomController
 			var state := room_controller.room_states.get(root.get("current_room_id"), {}) as Dictionary
-			state["finished"] = true; room_controller.room_states[root.get("current_room_id")] = state
+			state["finished"] = true
+			if not bool(state.get("item_rewarded", false)):
+				state["item_rewarded"] = bool(root.call("_grant_chest_item_reward"))
+			room_controller.room_states[root.get("current_room_id")] = state
 			root.set("chest_collect_flash_timer", flash_time); start_flash(root)
-			root.set("gold", int(root.get("gold")) + reward_gold); root.call("_update_gold_indicator")
-			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), reward_gold)
+			var scaled_gold := int(root.call("_chest_gold_reward", reward_gold))
+			root.call("_set_gold_value", int(root.get("gold")) + scaled_gold)
+			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), scaled_gold)
 			print("Gold: %d" % int(root.get("gold")))
 		elif bool(root.call("_can_interact_with_npc")):
 			(root.get("npc_controller") as NpcController).show_dialogue(root)
+		elif bool(root.call("_can_interact_with_world_item")):
+			root.call("_collect_world_item_drop")
 	root.set("interact_input_was_down", interact_input_down)
 
 
@@ -66,6 +72,8 @@ func start_evaporation(root: Object) -> void:
 	root.set("chest_evaporated", true); (root.get("effects_spawner") as EffectsSpawner).spawn_chest_evaporation_from_root(root); (root.get("chest") as Sprite2D).visible = false; root.call("_set_door_active", true); root.call("_set_entrance_open", true)
 	var overlay := root.get("chest_flash_overlay") as Sprite2D; if overlay != null: overlay.queue_free(); root.set("chest_flash_overlay", null)
 	var chest := root.get("chest") as Sprite2D; (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var prompt := root.get("interact_prompt") as Sprite2D; if prompt != null: prompt.visible = false
+	if root.has_method("_on_chest_collected"):
+		root.call("_on_chest_collected")
 
 
 func begin_unlock_fade(duration: float) -> void:

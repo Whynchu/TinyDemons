@@ -16,7 +16,9 @@ func set_archetype_button_state(button: Button, active: bool, color: Color) -> v
 		button.modulate = color if active else Color.WHITE
 		return
 	var normal := StyleBoxFlat.new(); normal.bg_color = Color(0, 0, 0, 0); normal.border_color = Color(color if active else Color.WHITE, 0.95 if active else 0.0); normal.set_border_width_all(1 if active else 0); var focus := StyleBoxFlat.new(); focus.bg_color = Color(color, 0.18 if active else 0.0); focus.border_color = color if active else Color.WHITE; focus.set_border_width_all(1 if active else 0)
-	button.add_theme_color_override("font_color", color if active else Color.WHITE); button.add_theme_color_override("font_hover_color", color if active else Color.WHITE); button.add_theme_color_override("font_focus_color", color if active else Color.WHITE); button.add_theme_stylebox_override("normal", normal); button.add_theme_stylebox_override("hover", focus); button.add_theme_stylebox_override("focus", focus)
+	button.add_theme_color_override("font_color", color if active else Color.WHITE); button.add_theme_color_override("font_hover_color", color if active else Color.WHITE); button.add_theme_color_override("font_focus_color", color if active else Color.WHITE); button.add_theme_color_override("font_disabled_color", color if active else Color(0.65, 0.65, 0.65)); button.add_theme_stylebox_override("normal", normal); button.add_theme_stylebox_override("hover", focus); button.add_theme_stylebox_override("focus", focus); button.add_theme_stylebox_override("pressed", focus); button.add_theme_stylebox_override("disabled", focus if active else normal)
+	for child in button.get_children():
+		if child is Sprite2D: (child as Sprite2D).modulate = color if active else Color(0.65, 0.65, 0.65) if button.disabled else Color.WHITE
 
 
 func set_state(new_state: StringName) -> void:
@@ -48,12 +50,20 @@ func update_title_flow(root: Object, delta: float) -> void:
 		return
 	var frame_timer := float(root.get("title_frame_timer")) + delta
 	root.set("title_frame_timer", frame_timer)
-	var button := root.get("title_start_button") as Button
-	if button != null:
-		button.modulate.a = retro_button_alpha(frame_timer)
-		button.position.y = 103.0 + retro_button_bob(frame_timer)
-	if Input.is_action_just_pressed("ui_accept") or root.call("_is_interact_input_pressed"):
-		root.call("_start_from_title")
+	var new_game := root.get("title_start_button") as Button
+	var continue_button := root.get("title_continue_button") as Button
+	if new_game != null: new_game.modulate.a = retro_button_alpha(frame_timer); new_game.position.y = 102.0 + retro_button_bob(frame_timer)
+	if continue_button != null: continue_button.modulate.a = retro_button_alpha(frame_timer + 0.4); continue_button.position.y = 120.0 + retro_button_bob(frame_timer + 0.4)
+	var cursor := root.get("title_cursor_text") as Sprite2D
+	var focused := root.get_viewport().gui_get_focus_owner() as Button
+	var selected := continue_button if focused == continue_button and not continue_button.disabled else new_game
+	if cursor != null and selected != null:
+		cursor.visible = true
+		cursor.position = Vector2(selected.position.x - 8, selected.position.y + 4)
+		cursor.texture = root.call("_pixel_text_texture", ">", Color.WHITE) as Texture2D
+	if root.call("_is_interact_input_pressed"):
+		var interact_focused := root.get_viewport().gui_get_focus_owner() as Button
+		if interact_focused != null and not interact_focused.disabled: interact_focused.pressed.emit()
 
 
 func update_archetype_input(root: Object, delta: float) -> void:
@@ -98,35 +108,28 @@ func start_selected_archetype(root: Object) -> void:
 	var overlay := root.get("archetype_overlay") as ColorRect
 	if overlay == null or not overlay.visible or bool(root.get("loading_screen_active")):
 		return
-	(root.get("player_stats") as StatsComponent).allocation_profile = root.get("selected_archetype")
-	var palette_name: String = ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"][int(root.get("archetype_color_index"))]
-	root.set("player_palette_name", palette_name)
-	root.set("loading_screen_active", true)
-	set_state(&"loading")
-	root.set("loading_screen_fading", false)
-	root.set("loading_screen_timer", 0.0)
-	var loading_overlay := root.get("loading_screen_overlay") as ColorRect
-	loading_overlay.visible = true; loading_overlay.modulate.a = 1.0
+	var profile := root.get("player_profile") as PlayerProfile
+	var stats := root.get("player_stats") as StatsComponent
+	if profile != null and not profile.has_started:
+		stats.manual_allocation_enabled = false
+		stats.allocation_profile = root.get("selected_archetype")
+		var initial_stats := stats.get_stats()
+		profile.base_vit = int(initial_stats["VIT"])
+		profile.base_str = int(initial_stats["STR"])
+		profile.base_def = int(initial_stats["DEF"])
+		profile.allocation_profile = int(root.get("selected_archetype"))
+		profile.palette_name = ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"][int(root.get("archetype_color_index"))]
+		profile.has_started = true
+		profile.ensure_starter_items()
+		root.call("_apply_profile_to_runtime")
+		root.call("_save_player_profile")
 	overlay.visible = false
 	(root.get("archetype_hold_cover") as ColorRect).visible = false
-	var title_overlay := root.get("title_overlay") as ColorRect
-	if title_overlay != null: title_overlay.visible = false
-	await root.get_tree().process_frame
-	await root.call("_apply_player_palette_async", palette_name)
-	root.call("_update_player_aggro_marker_colors")
-	var player_health := float(root.call("_player_max_health"))
-	root.set("player_health", player_health)
-	var health := root.get("player_health_component") as HealthComponent
-	if health != null: health.maximum_health = player_health; health.reset(player_health)
-	root.set("player_display_health", player_health)
-	root.set("player_damage_fill_hold_timer", 0.0)
-	root.call("_update_player_health_ui")
-	(root.get("player") as Sprite2D).visible = true
-	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
-	root.set("loading_screen_fading", true); root.set("loading_screen_timer", 0.0)
+	root.set("has_persistent_profile", true)
+	root.call("_enter_starting_room_from_menu")
 
 
-func start_from_title(root: Object) -> void:
+func start_new_game(root: Object) -> void:
 	var title_overlay := root.get("title_overlay") as ColorRect
 	if title_overlay == null or not title_overlay.visible:
 		return
@@ -138,9 +141,13 @@ func start_from_title(root: Object) -> void:
 	var title_text := root.get("title_screen_text") as Sprite2D
 	var start_text := root.get("title_start_text") as Sprite2D
 	var start_button := root.get("title_start_button") as Button
+	var continue_button := root.get("title_continue_button") as Button
 	if title_text != null: title_text.visible = false
 	if start_text != null: start_text.visible = false
 	if start_button != null: start_button.visible = false; start_button.release_focus()
+	if continue_button != null: continue_button.visible = false; continue_button.release_focus()
+	var title_cursor := root.get("title_cursor_text") as Sprite2D
+	if title_cursor != null: title_cursor.visible = false
 	var archetype_overlay := root.get("archetype_overlay") as ColorRect
 	archetype_overlay.visible = true; set_state(&"archetype")
 	archetype_overlay.modulate.a = 1.0
@@ -169,6 +176,13 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 		var title := root.get("game_over_title_button") as Button
 		if restart != null: restart.modulate.a = retro_button_alpha(fade_timer); restart.position.y = 105.0 + retro_button_bob(fade_timer)
 		if title != null: title.modulate.a = retro_button_alpha(fade_timer + 0.6); title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
+		var cursor := root.get("game_over_cursor_text") as Sprite2D
+		var focused := root.get_viewport().gui_get_focus_owner() as Button
+		var selected := title if focused == title and not title.disabled else restart
+		if cursor != null:
+			cursor.visible = true
+			cursor.position = Vector2(selected.position.x - 8, selected.position.y + 3)
+			cursor.texture = root.call("_pixel_text_texture", ">", Color.WHITE) as Texture2D
 	elif death_timer >= death_effect_end + float(root.get("player_tuning").death_observe_time):
 		root.call("_show_game_over")
 
@@ -317,6 +331,8 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 	overlay.modulate.a = 0.0
 	var title_texture := pixel_texture.call("GAME OVER", Color.WHITE) as Texture2D
 	create_sprite(overlay, "GameOverTitle", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))
+	var saved_texture := pixel_texture.call("PROGRESS SAVED", Color8(167, 240, 112)) as Texture2D
+	create_sprite(overlay, "GameOverSaved", saved_texture, Vector2((240.0 - saved_texture.get_width()) * 0.5, 88), false)
 	var normal_style := StyleBoxFlat.new()
 	normal_style.bg_color = Color(0, 0, 0, 0)
 	normal_style.border_color = Color(0.72, 0.72, 0.72, 0.9)
@@ -325,22 +341,502 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 	focus_style.bg_color = Color(1, 1, 1, 0.12)
 	focus_style.border_color = Color.WHITE
 	focus_style.set_border_width_all(1)
-	var restart_button := _make_text_button("RESTART", Vector2(99, 105), normal_style, focus_style, pixel_texture, restart)
+	var restart_button := _make_text_button("HUB", Vector2(99, 105), normal_style, focus_style, pixel_texture, restart)
 	var title_button := _make_text_button("TITLE", Vector2(99, 121), normal_style, focus_style, pixel_texture, return_title)
 	overlay.add_child(restart_button)
 	overlay.add_child(title_button)
-	return {"overlay": overlay, "restart": restart_button, "title": title_button}
+	var cursor := create_sprite(overlay, "GameOverCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(91, 108), false)
+	return {"overlay": overlay, "restart": restart_button, "title": title_button, "cursor": cursor}
 
 
-func build_title(parent: Node, pixel_texture: Callable, start_callback: Callable) -> Dictionary:
+func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Callable) -> Dictionary:
+	var panel_size := Vector2(216, 152)
+	var overlay := create_overlay(parent, "RunCompleteOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.96), 6, false)
+	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = overlay.color
+	panel_style.border_color = Color8(255, 205, 117)
+	panel_style.set_border_width_all(1)
+	overlay.add_theme_stylebox_override("panel", panel_style)
+	var title_texture := pixel_texture.call("RUN COMPLETE", Color8(255, 205, 117)) as Texture2D
+	create_sprite(overlay, "RunCompleteTitle", title_texture, Vector2((panel_size.x - title_texture.get_width()) * 0.5, 5), false)
+	var lines: Array[Sprite2D] = []
+	for index in 11:
+		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, Vector2(10, 20 + index * 10), false))
+	var return_button := make_retro_button("RETURN TO HUB", Vector2(65, 136), Vector2(86, 12), pixel_texture)
+	return_button.focus_mode = Control.FOCUS_NONE
+	return_button.pressed.connect(return_to_hub)
+	overlay.add_child(return_button)
+	var cursor := create_sprite(overlay, "RunCompleteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(56, 139), false)
+	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor}
+
+
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable) -> Dictionary:
+	var panel_size := Vector2(156, 116)
+	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.94), 3, false)
+	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = overlay.color
+	panel_style.border_color = Color(0.75, 0.78, 0.86, 0.9)
+	panel_style.set_border_width_all(1)
+	overlay.add_theme_stylebox_override("panel", panel_style)
+	var title_texture := pixel_texture.call("DEMON HUB", Color.WHITE) as Texture2D
+	create_sprite(overlay, "HubTitle", title_texture, Vector2((panel_size.x - title_texture.get_width()) * 0.5, 4), false)
+	var pages: Array[Button] = []
+	for page_index in 4:
+		var page_button := make_retro_button(["STATS", "GEAR", "SHOP", "FUSE"][page_index], Vector2(4 + page_index * 38, 15), Vector2(36, 12), pixel_texture)
+		page_button.focus_mode = Control.FOCUS_NONE
+		page_button.pressed.connect(set_page.bind(page_index))
+		overlay.add_child(page_button); pages.append(page_button)
+	var summary := create_sprite(overlay, "HubSummary", null, Vector2.ZERO, false)
+	summary.visible = false
+	var points := create_sprite(overlay, "HubPoints", null, Vector2(7, 32), false)
+	var stats: Array[Sprite2D] = []
+	var stat_buttons: Array[Button] = []
+	var stat_left: Array[Button] = []
+	var stat_right: Array[Button] = []
+	var derived: Array[Sprite2D] = []
+	var stat_names := [&"VIT", &"STR", &"DEF"]
+	for index in stat_names.size():
+		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(18, 45 + index * 15), false)
+		stats.append(stat_text)
+		var left := make_archetype_arrow(overlay, -1, Vector2(4, 43 + index * 15), adjust_stat.bind(stat_names[index], -1), pixel_texture)
+		var right := make_archetype_arrow(overlay, 1, Vector2(84, 43 + index * 15), adjust_stat.bind(stat_names[index], 1), pixel_texture)
+		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
+		left.set_meta("hub_stat_index", index); right.set_meta("hub_stat_index", index)
+		stat_left.append(left); stat_right.append(right); stat_buttons.append(left); stat_buttons.append(right)
+	for index in 3:
+		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(100, 45 + index * 12), false))
+	var apply_button := make_retro_button("APPLY", Vector2(3, 88), Vector2(34, 11), pixel_texture)
+	apply_button.focus_mode = Control.FOCUS_NONE
+	apply_button.pressed.connect(apply_stats)
+	overlay.add_child(apply_button)
+	var cancel_button := make_retro_button("CANCEL", Vector2(39, 88), Vector2(38, 11), pixel_texture)
+	cancel_button.focus_mode = Control.FOCUS_NONE
+	cancel_button.pressed.connect(cancel_stats)
+	overlay.add_child(cancel_button)
+	var auto_button := make_retro_button("AUTO", Vector2(79, 88), Vector2(29, 11), pixel_texture)
+	auto_button.focus_mode = Control.FOCUS_NONE
+	auto_button.pressed.connect(auto_allocate)
+	overlay.add_child(auto_button)
+	var respec_button := make_retro_button("RESPEC", Vector2(110, 88), Vector2(43, 11), pixel_texture)
+	respec_button.focus_mode = Control.FOCUS_NONE
+	respec_button.pressed.connect(respec)
+	overlay.add_child(respec_button)
+	var item_name := create_sprite(overlay, "HubItemName", null, Vector2(8, 38), false)
+	item_name.visible = false
+	var item_list: Array[Sprite2D] = []
+	for list_index in 5:
+		item_list.append(create_sprite(overlay, "HubItemList%d" % list_index, null, Vector2(7, 32 + list_index * 10), false))
+	var gear_slot_buttons: Array[Button] = []
+	for slot_index in 4:
+		var slot_button := Button.new()
+		slot_button.position = Vector2(2, 30 + slot_index * 10); slot_button.size = Vector2(100, 10); slot_button.focus_mode = Control.FOCUS_NONE; slot_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var transparent := StyleBoxFlat.new(); transparent.bg_color = Color(0, 0, 0, 0); transparent.set_border_width_all(0)
+		slot_button.add_theme_stylebox_override("normal", transparent); slot_button.add_theme_stylebox_override("hover", transparent); slot_button.add_theme_stylebox_override("pressed", transparent)
+		slot_button.pressed.connect(select_gear_slot.bind(slot_index)); overlay.add_child(slot_button); gear_slot_buttons.append(slot_button)
+	var gear_choices: Array[Sprite2D] = []
+	for choice_index in 4:
+		gear_choices.append(create_sprite(overlay, "HubGearChoice%d" % choice_index, null, Vector2(6, 85 + choice_index * 7), false))
+		gear_choices[choice_index].visible = false
+	var gear_stat_panel := Panel.new()
+	gear_stat_panel.name = "HubGearStatPanel"; gear_stat_panel.position = Vector2(101, 29); gear_stat_panel.size = Vector2(51, 53); gear_stat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var gear_stat_style := StyleBoxFlat.new(); gear_stat_style.bg_color = Color(0.04, 0.06, 0.10, 0.85); gear_stat_style.border_color = Color(0.42, 0.48, 0.62, 0.9); gear_stat_style.set_border_width_all(1)
+	gear_stat_panel.add_theme_stylebox_override("panel", gear_stat_style); overlay.add_child(gear_stat_panel)
+	var gear_stats: Array[Sprite2D] = []
+	for stat_index in 5:
+		gear_stats.append(create_sprite(overlay, "HubGearStat%d" % stat_index, null, Vector2(105, 32 + stat_index * 9), false))
+	var item_details: Array[Sprite2D] = [create_sprite(overlay, "HubItemDetail0", null, Vector2(7, 83), false), create_sprite(overlay, "HubItemDetail1", null, Vector2(7, 103), false)]
+	item_details[1].visible = false
+	var item_action_button := make_retro_button("EQUIP", Vector2(52, 89), Vector2(52, 10), pixel_texture)
+	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); overlay.add_child(item_action_button)
+	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
+	cursor.visible = false
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "gear_choices": gear_choices, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "cursor": cursor}
+
+
+func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
+	var profile := root.get("player_profile") as PlayerProfile
+	if profile == null: return
+	var summary := root.get("hub_summary_text") as Sprite2D
+	var points := root.get("hub_points_text") as Sprite2D
+	var progression := root.get("progression_tuning") as ProgressionTuning
+	if summary != null: summary.texture = pixel_texture.call("LV %d   XP %d/%d   GOLD %d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression), profile.gold], Color.WHITE) as Texture2D
+	var page := int(root.get("hub_page"))
+	var pause_mode := bool(root.get("hub_pause_mode"))
+	var page_buttons := root.get("hub_page_buttons") as Array[Button]
+	var highlight_color: Color = root.call("_health_feedback_color", root.get("player_palette_name"))
+	var cursor := root.get("hub_cursor_text") as Sprite2D
+	if cursor != null:
+		cursor.visible = false
+	for page_index in page_buttons.size():
+		page_buttons[page_index].visible = not pause_mode
+		set_archetype_button_state(page_buttons[page_index], page == page_index, highlight_color)
+	if summary != null:
+		summary.visible = pause_mode
+		summary.position = Vector2(7, 18)
+	var title := (root.get("hub_overlay") as ColorRect).get_node_or_null("HubTitle") as Sprite2D
+	if title != null:
+		var title_texture := pixel_texture.call("PAUSE" if pause_mode else "DEMON HUB", Color.WHITE) as Texture2D
+		title.texture = title_texture
+		title.position.x = (156.0 - title_texture.get_width()) * 0.5
+	var stat_nodes: Array[CanvasItem] = []
+	stat_nodes.append(root.get("hub_points_text") as Sprite2D); stat_nodes.append_array(root.get("hub_stat_texts") as Array[Sprite2D]); stat_nodes.append_array(root.get("hub_stat_buttons") as Array[Button]); stat_nodes.append_array(root.get("hub_derived_texts") as Array[Sprite2D]); stat_nodes.append(root.get("hub_apply_button") as Button); stat_nodes.append(root.get("hub_cancel_button") as Button); stat_nodes.append(root.get("hub_auto_button") as Button); stat_nodes.append(root.get("hub_respec_button") as Button)
+	for node in stat_nodes:
+		if node != null: node.visible = page == 0
+	var item_name := root.get("hub_item_name_text") as Sprite2D
+	var item_list := root.get("hub_item_list_texts") as Array[Sprite2D]
+	var gear_choices := root.get("hub_gear_choice_texts") as Array[Sprite2D]
+	var gear_stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
+	var item_details := root.get("hub_item_detail_texts") as Array[Sprite2D]
+	var item_action := root.get("hub_item_action_button") as Button
+	if item_name != null: item_name.visible = false
+	for node in item_list: node.visible = page != 0
+	for node in gear_choices: node.visible = page == 1 and bool(root.get("hub_gear_browsing"))
+	for button in root.get("hub_gear_slot_buttons") as Array[Button]: button.visible = page == 1 and not bool(root.get("hub_gear_browsing"))
+	for node in gear_stats: node.visible = page == 1
+	var gear_stat_panel := root.get("hub_gear_stat_panel") as Panel
+	if gear_stat_panel != null: gear_stat_panel.visible = page == 1
+	for node in item_details: node.visible = page != 0
+	if item_action != null: item_action.visible = page != 0
+	if page != 0:
+		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
+		return
+	var pending := [int(root.get("hub_pending_vit")), int(root.get("hub_pending_str")), int(root.get("hub_pending_def"))]
+	var remaining := int(root.call("_hub_points_remaining"))
+	if points != null: points.texture = pixel_texture.call("POINTS TO SPEND: %d" % remaining, Color8(255, 205, 117)) as Texture2D
+	var values := [profile.base_vit + profile.allocated_vit + pending[0], profile.base_str + profile.allocated_str + pending[1], profile.base_def + profile.allocated_def + pending[2]]
+	var allocations := [profile.allocated_vit + pending[0], profile.allocated_str + pending[1], profile.allocated_def + pending[2]]
+	var stat_texts := root.get("hub_stat_texts") as Array[Sprite2D]
+	var selected_row := int(root.get("hub_menu_row"))
+	for index in stat_texts.size():
+		stat_texts[index].texture = pixel_texture.call("%s %d  A+%d" % [["VIT", "STR", "DEF"][index], values[index], allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
+	var stat_buttons := root.get("hub_stat_buttons") as Array[Button]
+	for button in stat_buttons:
+		var direction := int(button.get_meta("hub_stat_direction", 1))
+		var stat_index := int(button.get_meta("hub_stat_index", 0))
+		button.disabled = remaining <= 0 if direction > 0 else int(pending[stat_index]) <= 0
+		set_archetype_button_state(button, selected_row == stat_index, highlight_color)
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
+	if snapshot != null:
+		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]
+		var combat_tuning := root.get("combat_tuning") as CombatTuning
+		var derived_texts := root.get("hub_derived_texts") as Array[Sprite2D]
+		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "PWR %d" % roundi(combat_tuning.damage_base + snapshot.strength + snapshot.gear_damage), "DEF %d" % snapshot.def]
+		for index in mini(derived_texts.size(), derived_values.size()): derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D
+	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2])
+	var apply_button := root.get("hub_apply_button") as Button
+	var cancel_button := root.get("hub_cancel_button") as Button
+	if apply_button != null: apply_button.disabled = pending_total <= 0
+	if cancel_button != null: cancel_button.disabled = pending_total <= 0
+	var auto_button := root.get("hub_auto_button") as Button
+	if auto_button != null: auto_button.disabled = remaining <= 0
+	var respec_button := root.get("hub_respec_button") as Button
+	if respec_button != null:
+		var cost := profile.respec_cost()
+		respec_button.disabled = profile.allocated_vit + profile.allocated_str + profile.allocated_def <= 0 or profile.gold < cost
+		var label := respec_button.get_child(0) as Sprite2D
+		if label != null: label.texture = pixel_texture.call("RESPEC" if cost <= 0 else "RESPEC %d" % cost, Color.WHITE) as Texture2D
+	var utility_buttons: Array[Button] = [apply_button, cancel_button, auto_button, respec_button]
+	var exit_buttons: Array[Button] = [root.get("hub_start_button") as Button, root.get("hub_title_button") as Button]
+	var selected_column := int(root.get("hub_action_column"))
+	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], selected_row == 3 and selected_column == index, highlight_color)
+	for index in exit_buttons.size(): set_archetype_button_state(exit_buttons[index], selected_row == 4 and selected_column == index, highlight_color)
+	var start_button := root.get("hub_start_button") as Button
+	if start_button != null:
+		var start_label := start_button.get_child(0) as Sprite2D
+		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if bool(root.get("hub_opened_from_npc")) else "START RUN", Color.WHITE) as Texture2D
+
+
+func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, page: int, item_list: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
+	var catalog := ItemCatalog.new()
+	if page == 1:
+		_update_hub_gear_slots(root, pixel_texture, profile, catalog, item_list, root.get("hub_gear_choice_texts") as Array[Sprite2D], details, action, highlight_color)
+		return
+	details[0].position = Vector2(7, 83); details[1].position = Vector2(7, 103); action.position = Vector2(52, 89)
+	var item: ItemInstance = null
+	var price := 0
+	var sold := false
+	var index := int(root.get("hub_item_index"))
+	var count := 0
+	if page == 1:
+		count = profile.inventory.size()
+		if count > 0: item = ItemInstance.from_dictionary(profile.inventory[clampi(index, 0, count - 1)])
+	elif page == 2:
+		var run_state := root.get("run_state") as RunState
+		if run_state != null:
+			run_state.ensure_shop_stock(profile.level); count = run_state.shop_stock.size()
+			if count > 0:
+				var entry: Dictionary = run_state.shop_stock[clampi(index, 0, count - 1)]
+				item = ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary); price = int(entry.get("price", 0)); sold = bool(entry.get("sold", false))
+	else:
+		var fusion_items := root.call("_hub_fusion_candidates") as Array[ItemInstance]
+		count = fusion_items.size()
+		if count > 0:
+			item = fusion_items[clampi(index, 0, count - 1)]
+	var selected := clampi(index, 0, maxi(count - 1, 0))
+	var window_start := clampi(selected - 2, 0, maxi(count - item_list.size(), 0))
+	for row in item_list.size():
+		var source_index := window_start + row
+		if source_index >= count:
+			item_list[row].texture = null; continue
+		var row_item: ItemInstance
+		var row_sold := false
+		var row_price := 0
+		if page == 1:
+			row_item = ItemInstance.from_dictionary(profile.inventory[source_index])
+		elif page == 2:
+			var row_state := root.get("run_state") as RunState
+			var row_entry: Dictionary = row_state.shop_stock[source_index]
+			row_item = ItemInstance.from_dictionary(row_entry.get("item", {}) as Dictionary); row_sold = bool(row_entry.get("sold", false)); row_price = int(row_entry.get("price", 0))
+		else:
+			var fusion_items := root.call("_hub_fusion_candidates") as Array[ItemInstance]
+			if source_index >= fusion_items.size():
+				item_list[row].texture = null; continue
+			row_item = fusion_items[source_index]
+		var definition: Dictionary = ItemCatalog.DEFINITIONS.get(row_item.definition_id, {})
+		var prefix := ">" if source_index == selected else " "
+		var rarity_mark := catalog.rarity_letter_grade(row_item.rarity)
+		var row_label := "%s%s %s" % [prefix, rarity_mark, str(definition.get("name", "ITEM"))]
+		var row_mastery := row_item.enhancement_level
+		if row_mastery > 0 and page != 3: row_label += " +%d" % row_mastery
+		if page == 2: row_label += " SOLD" if row_sold else " %dG" % row_price
+		elif page == 3: row_label += "  +%d" % row_mastery
+		var row_color := Color8(120, 120, 130) if row_sold else catalog.rarity_color(row_item.rarity)
+		item_list[row].texture = pixel_texture.call(row_label, row_color) as Texture2D
+	if item == null:
+		if not item_list.is_empty():
+			var empty_text := str(root.get("hub_fusion_message")) if page == 3 and not str(root.get("hub_fusion_message")).is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
+			item_list[0].texture = pixel_texture.call(empty_text, Color8(255, 205, 117) if page == 3 else Color.WHITE) as Texture2D
+		details[0].texture = null; details[1].texture = null; action.disabled = true; return
+	var mastery := item.enhancement_level
+	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
+	for stat: String in bonuses: bonus_parts.append("%s +%d" % [stat.to_upper(), roundi(float(bonuses[stat]))])
+	details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
+	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
+	if page == 3 and not selected_transmutation_name.is_empty():
+		details[0].texture = pixel_texture.call("SPECIAL: %s" % selected_transmutation_name, Color8(148, 220, 255)) as Texture2D
+	var slot := catalog.definition_slot(item.definition_id)
+	var equipped := str(profile.equipped_instance_ids.get(String(slot), "")) == item.instance_id
+	var overflow := profile.can_salvage_overflow(item.instance_id, catalog)
+	if page == 3 and overflow:
+		details[1].texture = pixel_texture.call("MYTHIC +10  SALVAGE %dG" % catalog.overflow_salvage_value(item), Color8(255, 205, 117)) as Texture2D
+	elif page == 3:
+		var next_text := "%s -> %s +0" % [String(item.rarity).to_upper(), String(ItemCatalog.next_rarity(item.rarity)).to_upper()] if mastery >= PlayerProfile.MAX_ITEM_ENHANCEMENT else "+%d -> +%d" % [mastery, mastery + 1]
+		details[1].texture = pixel_texture.call("SAME %s GEAR  %s" % [catalog.rarity_letter_grade(item.rarity), next_text], Color8(255, 205, 117)) as Texture2D
+	else:
+		details[1].texture = pixel_texture.call(selected_transmutation_name, Color8(148, 220, 255)) as Texture2D if not selected_transmutation_name.is_empty() else null
+	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and not profile.can_fuse_duplicate(item.instance_id, catalog) and not overflow)
+	var label := action.get_child(0) as Sprite2D
+	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE" if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
+	set_archetype_button_state(action, true, highlight_color)
+
+
+func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, item_list: Array[Sprite2D], choices: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
+	var selected_slot_index := clampi(int(root.get("hub_item_index")), 0, ItemCatalog.SLOTS.size() - 1)
+	var candidate_indices := root.get("hub_gear_candidate_indices") as Dictionary
+	var browsing := bool(root.get("hub_gear_browsing"))
+	var selected_candidate: ItemInstance = null
+	for row in item_list.size():
+		if row >= ItemCatalog.SLOTS.size():
+			item_list[row].texture = null
+			continue
+		var slot := ItemCatalog.SLOTS[row]
+		var shown_item := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
+		if row == selected_slot_index:
+			selected_candidate = shown_item
+		var slot_name: String = ["WPN", "ARM", "SHD", "ACC"][row]
+		var shown_name := "EMPTY"
+		var shown_color := Color8(140, 145, 160)
+		if shown_item != null:
+			shown_name = str(ItemCatalog.DEFINITIONS.get(shown_item.definition_id, {}).get("name", "ITEM"))
+			var shown_mastery := shown_item.enhancement_level
+			if shown_mastery > 0: shown_name += " +%d" % shown_mastery
+			shown_color = catalog.rarity_color(shown_item.rarity)
+		var prefix := ">" if row == selected_slot_index else " "
+		item_list[row].texture = pixel_texture.call("%s%s: %s" % [prefix, slot_name, shown_name], shown_color) as Texture2D
+	for choice in choices: choice.texture = null
+	if browsing:
+		var selected_slot := ItemCatalog.SLOTS[selected_slot_index]
+		var slot_candidates := root.call("_hub_gear_candidates", selected_slot) as Array[ItemInstance]
+		var current_index := posmod(int(candidate_indices.get(String(selected_slot), 0)), maxi(slot_candidates.size(), 1))
+		if not slot_candidates.is_empty(): selected_candidate = slot_candidates[current_index]
+		var window_start := clampi(current_index - 1, 0, maxi(slot_candidates.size() - choices.size(), 0))
+		for choice_row in choices.size():
+			var choice_index := window_start + choice_row
+			if choice_index >= slot_candidates.size(): break
+			var choice_item := slot_candidates[choice_index]
+			var choice_prefix := ">" if choice_index == current_index else " "
+			var choice_label := "%s%s %s" % [choice_prefix, String(choice_item.rarity).substr(0, 1).to_upper(), str(ItemCatalog.DEFINITIONS.get(choice_item.definition_id, {}).get("name", "ITEM"))]
+			var choice_mastery := choice_item.enhancement_level
+			if choice_mastery > 0: choice_label += " +%d" % choice_mastery
+			choices[choice_row].texture = pixel_texture.call(choice_label, catalog.rarity_color(choice_item.rarity)) as Texture2D
+			details[0].texture = null; details[1].texture = null
+		details[0].visible = false; details[1].visible = false
+		action.visible = false
+		if selected_candidate != null:
+			_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, true)
+		return
+	else:
+		for choice in choices: choice.visible = false
+	details[0].visible = true; details[1].visible = true
+	details[0].position = Vector2(6, 75); details[1].position = Vector2(6, 80); action.position = Vector2(26, 101)
+	if selected_candidate == null:
+		details[0].texture = pixel_texture.call("NO GEAR FOR THIS SLOT", Color8(255, 205, 117)) as Texture2D
+		action.disabled = true
+		return
+	_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, browsing)
+	details[0].texture = null
+	var transmutation_name := catalog.transmutation_name(selected_candidate.transmutation_id)
+	details[1].texture = pixel_texture.call(transmutation_name, Color8(148, 220, 255)) as Texture2D if not transmutation_name.is_empty() else null
+	action.disabled = false
+	action.visible = not browsing
+	var label := action.get_child(0) as Sprite2D
+	if label != null: label.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
+	set_archetype_button_state(action, true, highlight_color)
+
+
+func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot_index: int, comparing: bool) -> void:
+	var stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
+	if bool(root.get("hub_pause_mode")) and not comparing:
+		var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
+		if snapshot != null:
+			var tuning := root.get("combat_tuning") as CombatTuning
+			var values := [roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)), roundi(tuning.damage_base + snapshot.strength + snapshot.gear_damage), snapshot.vit, snapshot.strength, snapshot.def]
+			for index in mini(stats.size(), values.size()):
+				stats[index].texture = pixel_texture.call("%s %d" % [["HP", "DMG", "VIT", "STR", "DEF"][index], values[index]], Color8(167, 240, 112)) as Texture2D
+		return
+	var slot := ItemCatalog.SLOTS[clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)]
+	var equipped := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
+	var candidate_bonuses := catalog.bonuses(candidate, profile.mastery_level(candidate.definition_id))
+	var equipped_bonuses := catalog.bonuses(equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
+	var fields := [{"key": "health", "label": "HP"}, {"key": "damage", "label": "DMG"}, {"key": "vitality", "label": "VIT"}, {"key": "strength", "label": "STR"}, {"key": "defense", "label": "DEF"}]
+	for index in mini(stats.size(), fields.size()):
+		var field: Dictionary = fields[index]
+		var key := str(field["key"])
+		var value := float(candidate_bonuses.get(key, 0.0)) - float(equipped_bonuses.get(key, 0.0)) if comparing else float(candidate_bonuses.get(key, 0.0))
+		var rounded := roundi(value)
+		var prefix := "+" if rounded > 0 else "-" if rounded < 0 else ""
+		var color := Color8(148, 220, 255) if rounded > 0 else Color8(239, 125, 87) if rounded < 0 else Color8(150, 156, 170)
+		stats[index].texture = pixel_texture.call("%s %s%d" % [str(field["label"]), prefix, absi(rounded)], color) as Texture2D
+
+
+func _item_comparison_text(profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot: StringName) -> String:
+	var current := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
+	var old_bonuses := catalog.bonuses(current) if current != null else {}
+	var new_bonuses := catalog.bonuses(candidate)
+	var parts: Array[String] = []
+	for stat in ["health", "damage", "strength", "defense", "vitality"]:
+		var difference := roundi(float(new_bonuses.get(stat, 0.0)) - float(old_bonuses.get(stat, 0.0)))
+		if difference != 0: parts.append("%s %s%d" % [{"health": "HP", "damage": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT"}[stat], "+" if difference > 0 else "", difference])
+	return "VS EQUIPPED  %s" % ("SAME" if parts.is_empty() else " ".join(parts))
+
+
+func update_hub_input(root: Object) -> void:
+	var row := int(root.get("hub_menu_row"))
+	var page := int(root.get("hub_page"))
+	var interact_down := bool(root.call("_is_interact_input_pressed"))
+	var interact_pressed := interact_down and not bool(root.get("hub_interact_input_was_down"))
+	root.set("hub_interact_input_was_down", interact_down)
+	var previous_page_down := bool(root.call("_is_hub_previous_page_input_pressed"))
+	var next_page_down := bool(root.call("_is_hub_next_page_input_pressed"))
+	var previous_page_pressed := previous_page_down and not bool(root.get("hub_page_previous_input_was_down"))
+	var next_page_pressed := next_page_down and not bool(root.get("hub_page_next_input_was_down"))
+	root.set("hub_page_previous_input_was_down", previous_page_down)
+	root.set("hub_page_next_input_was_down", next_page_down)
+	var cancel_down := bool(root.call("_is_menu_cancel_input_pressed"))
+	var cancel_pressed := cancel_down and not bool(root.get("hub_cancel_input_was_down"))
+	root.set("hub_cancel_input_was_down", cancel_down)
+	if cancel_pressed:
+		if page == 1 and bool(root.get("hub_gear_browsing")): root.call("_close_hub_gear_browse")
+		else: root.call("_close_hub_to_run")
+		return
+	if bool(root.get("hub_pause_mode")):
+		if bool(root.get("hub_gear_browsing")):
+			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1)
+			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1)
+			elif Input.is_action_just_pressed("ui_accept") or interact_pressed: root.call("_hub_item_action")
+			return
+		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1)
+		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1)
+		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+			var pause_action := root.get("hub_item_action_button") as Button
+			if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
+		return
+	if previous_page_pressed:
+		root.call("_set_hub_page", page - 1); return
+	if next_page_pressed:
+		root.call("_set_hub_page", page + 1); return
+	if page != 0:
+		if page == 1 and bool(root.get("hub_gear_browsing")):
+			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1)
+			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1)
+			elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+				root.call("_hub_item_action")
+			elif Input.is_action_just_pressed("ui_cancel"): root.call("_close_hub_gear_browse")
+			return
+		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1)
+		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1)
+		elif page == 1 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_gear_candidate", -1)
+		elif page == 1 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_gear_candidate", 1)
+		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+			var action := root.get("hub_item_action_button") as Button
+			if action != null and not action.disabled: action.pressed.emit()
+		elif Input.is_action_just_pressed("ui_cancel"): root.call("_set_hub_page", 0)
+		return
+	if Input.is_action_just_pressed("ui_up"):
+		root.call("_select_hub_menu_row", row - 1)
+	elif Input.is_action_just_pressed("ui_down"):
+		root.call("_select_hub_menu_row", row + 1)
+	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
+		if row < 3:
+			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF"][row], direction)
+		else:
+			root.call("_shift_hub_action_column", direction)
+	elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+		if row < 3:
+			root.call("_select_hub_menu_row", row + 1)
+		elif row == 3:
+			var utility_button := [root.get("hub_apply_button"), root.get("hub_cancel_button"), root.get("hub_auto_button"), root.get("hub_respec_button")][int(root.get("hub_action_column"))] as Button
+			if utility_button != null and not utility_button.disabled: utility_button.pressed.emit()
+		else:
+			var exit_button := [root.get("hub_start_button"), root.get("hub_title_button")][int(root.get("hub_action_column"))] as Button
+			if exit_button != null and not exit_button.disabled: exit_button.pressed.emit()
+	elif Input.is_action_just_pressed("ui_cancel"):
+		if bool(root.get("hub_opened_from_npc")): root.call("_close_hub_to_run")
+		else: root.call("_return_to_title")
+
+
+func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool) -> Dictionary:
 	var overlay := create_overlay(parent, "TitleOverlay", Vector2(240, 160), Color.BLACK, 2)
 	var title_texture := pixel_texture.call("TINY DEMONS", Color.WHITE) as Texture2D
 	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
-	var button := make_retro_button("START", Vector2(99, 103), Vector2(42, 14), pixel_texture)
-	button.pressed.connect(start_callback)
-	overlay.add_child(button)
-	button.grab_focus()
-	return {"overlay": overlay, "text": title_text, "button": button, "start_text": button.get_child(0) as Sprite2D}
+	var new_game_button := make_retro_button("NEW GAME", Vector2(88, 102), Vector2(64, 14), pixel_texture)
+	new_game_button.pressed.connect(new_game_callback)
+	overlay.add_child(new_game_button)
+	var continue_button := make_retro_button("CONTINUE", Vector2(88, 120), Vector2(64, 14), pixel_texture)
+	continue_button.pressed.connect(continue_callback)
+	continue_button.disabled = not has_profile
+	overlay.add_child(continue_button)
+	var cursor := create_sprite(overlay, "TitleCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(80, 106 if not has_profile else 124), false)
+	(continue_button if has_profile else new_game_button).grab_focus()
+	return {"overlay": overlay, "text": title_text, "new_game": new_game_button, "continue": continue_button, "start_text": new_game_button.get_child(0) as Sprite2D, "cursor": cursor}
+
+func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable) -> ColorRect:
+	var overlay := create_overlay(parent, "SaveSelectOverlay", Vector2(240, 160), Color.BLACK, 4, false)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	var title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2(88, 42), false)
+	for slot in ProfileSaveService.SLOT_COUNT:
+		var profile := ProfileSaveService.load_profile_for_slot(slot)
+		var label := "SAVE %d  EMPTY" % (slot + 1)
+		if profile != null and profile.has_started:
+			label = "SAVE %d  LV %d  G %d" % [slot + 1, profile.level, profile.gold]
+		var button := make_retro_button(label, Vector2(64, 66 + slot * 20), Vector2(112, 14), pixel_texture)
+		button.disabled = profile == null or not profile.has_started
+		button.pressed.connect(select_callback.bind(slot))
+		overlay.add_child(button)
+	return overlay
 
 
 func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:

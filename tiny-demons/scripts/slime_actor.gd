@@ -114,6 +114,7 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	if health != null: health.regen_delay_timer = slime_config.regen_delay; health.regen_accumulator = 0.0
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat != null: combat.flash_timer = slime_config.hit_flash_time; combat.hitstun_timer = slime_config.hitstun_time
+	root.call("_show_slime_hit_flash", slime)
 	root.call("_spawn_damage_number", slime, amount, was_critical); root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
 	if health != null and health.is_dead(): root.call("_kill_slime", slime)
 
@@ -137,10 +138,35 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 
 
 static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
-	if bool(root.get("player_is_rolling")): return
-	var player := root.get("player") as Sprite2D; var slime_config := root.get("slime_tuning") as SlimeTuning
-	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0)); var delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime); var ellipse := Vector2(delta.x / (slime_config.attack_hit_range * encounter_scale), delta.y / (slime_config.attack_vertical_hit_range * encounter_scale))
-	if ellipse.length_squared() > 1.0: return
+	var player := root.get("player") as Sprite2D
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	# The guides are authored around the visible lunge.  Testing against them
+	# keeps left/right reach and vertical reach in the same isometric space as
+	# the artwork.  A boss expands the lane from its feet rather than stretching
+	# a world-axis rectangle, which previously let it hit far below itself.
+	var guide_name := "AttackGuideL" if combat != null and combat.face_left else "AttackGuideR"
+	var guide := slime.get_node_or_null(guide_name) as Node2D
+	if guide == null: return
+	var guide_position: Vector2 = guide.get("rect_position")
+	var guide_size: Vector2 = guide.get("rect_size")
+	var base_rect := Rect2(slime.global_position + guide.position + guide_position + Vector2(minf(guide_size.x, 0.0), minf(guide_size.y, 0.0)), guide_size.abs())
+	var foot := root.call("_actor_foot", slime) as Vector2
+	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
+	var hit_rect := Rect2(foot + (base_rect.position - foot) * encounter_scale, base_rect.size * encounter_scale).grow(0.75)
+	# The lunge remains left/right authored, but isometric movement compresses
+	# vertical travel.  Give that lane a symmetric vertical allowance so a slime
+	# can reliably threaten players directly above or below its body.
+	var vertical_reach := 7.0 * encounter_scale
+	hit_rect.position.y = foot.y - vertical_reach
+	hit_rect.size.y = vertical_reach * 2.0
+	if not hit_rect.has_point(root.call("_actor_foot", player) as Vector2): return
+	var run_state := root.get("run_state") as RunState
+	if run_state != null:
+		run_state.record_enemy_attack_attempt()
+	if bool(root.get("player_is_rolling")):
+		if run_state != null:
+			run_state.record_dodge()
+		return
 	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var blocked := false
@@ -180,6 +206,10 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		brain.idle_breath_timer = idle_breath_delay
 		brain.persistent_aggro = false
 		brain.aggroed = false
+		brain.notice_timer = 0.0
+		brain.notice_duration = 0.0
+		brain.notice_started = false
+		brain.notice_animation_finished = false
 		brain.orbit_direction = 0.0
 		brain.attack_cooldown = 0.0
 		brain.blocked_repath_cooldown = 0.0
@@ -189,13 +219,16 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		combat.flash_timer = 0.0
 		combat.hitstun_timer = 0.0
 		combat.knockback_velocity = Vector2.ZERO
-		combat.knockback_timer = 0.0
-		combat.timer = 0.0
-		combat.frame = 0
-		combat.hit_done = false
-		combat.face_left = false
-		combat.cooldown = attack_cooldown_delay
-		combat.dead = false
+	combat.knockback_timer = 0.0
+	combat.timer = 0.0
+	combat.frame = 0
+	combat.hit_done = false
+	combat.face_left = false
+	combat.cooldown = attack_cooldown_delay
+	combat.dead = false
+	var flash_overlay := get_node_or_null("HitFlashOverlay") as Sprite2D
+	if flash_overlay != null:
+		flash_overlay.visible = false
 	var tactics := get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics != null:
 		tactics.reset()

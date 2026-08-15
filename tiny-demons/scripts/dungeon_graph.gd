@@ -21,6 +21,7 @@ const ROOM_NPC: StringName = &"NPC"
 const ROOM_DOWNSTAIRS: StringName = &"DOWNSTAIRS"
 
 const START_ROOM_ID: StringName = &"room_0_0"
+const DUNGEON_NAME := "SLIMEY DEPTHS"
 
 
 class ConnectionRecord extends RefCounted:
@@ -107,6 +108,8 @@ class RoomRecord extends RefCounted:
 
 var dungeon_seed: int = 0
 var start_room_id: StringName = START_ROOM_ID
+var completed_run_count := 0
+var target_boss_depth := 12
 
 var _rooms: Dictionary = {}
 var _connections: Dictionary = {}
@@ -121,6 +124,24 @@ func initialize(new_seed: int) -> RoomRecord:
 	_connections.clear()
 	_milestone_rooms.clear()
 	return _ensure_room(Vector2i.ZERO, ROOM_START)
+
+
+func configure_progression(completed_runs: int) -> void:
+	completed_run_count = maxi(completed_runs, 0)
+	# Each clear adds a depth, up to a compact but meaningfully broader late run.
+	target_boss_depth = 12 + mini(completed_run_count, 8)
+
+
+func final_npc_depth() -> int:
+	return target_boss_depth - 1
+
+
+func side_route_chance() -> float:
+	return clampf(0.55 + float(completed_run_count) * 0.025, 0.55, 0.72)
+
+
+func side_dead_end_chance() -> float:
+	return clampf(0.28 + float(completed_run_count) * 0.045, 0.28, 0.60)
 
 
 func get_room(room_id: StringName) -> RoomRecord:
@@ -147,9 +168,8 @@ func ensure_connection(
 
 	var destination_coordinate := source_room.coordinate + _exit_offset(exit_socket)
 	var destination_room := _ensure_room(destination_coordinate, destination_room_type)
-	# Stair rooms connect wall-to-wall so stair/door art is never rendered on
-	# the bottom floor entrance sockets.
-	var destination_entry := exit_socket if destination_room_type == ROOM_DOWNSTAIRS else _entry_for_exit(exit_socket)
+	# Keep arrival on the paired lower entrance, matching normal room travel.
+	var destination_entry := _entry_for_exit(exit_socket)
 	var connection := ConnectionRecord.new(
 		room_id,
 		exit_socket,
@@ -204,7 +224,7 @@ func _ensure_room(room_coordinate: Vector2i, room_type: StringName = ROOM_COMBAT
 	var existing_room := get_room(room_id)
 	if existing_room != null:
 		return existing_room
-	var is_milestone := room_coordinate.y == 6 or room_coordinate.y == 11
+	var is_milestone := room_coordinate.y == 6 or room_coordinate.y == final_npc_depth()
 	if is_milestone:
 		if not _milestone_rooms.has(room_coordinate.y):
 			_milestone_rooms[room_coordinate.y] = room_id

@@ -12,7 +12,7 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 		if absf(actor_scale.x) < 0.001 or absf(actor_scale.y) < 0.001:
 			continue
 		for child in actor.get_children():
-			if child is Node2D and (child.name.ends_with("Guide") or child.name.begins_with("AttackGuide")):
+			if child is Node2D and (child.name.ends_with("Guide") or child.name.begins_with("AttackGuide") or child.name == "CollisionPolygon"):
 				(child as Node2D).scale = Vector2(1.0 / actor_scale.x, 1.0 / actor_scale.y)
 		if actor.name.begins_with("Slime"):
 			update_attack_guides.call(actor)
@@ -133,8 +133,17 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 		separate_actor(root, actor, other)
 	elif other == root.get("cloaked_demon"):
 		separate_actor(root, actor, other)
-	elif actor != root.get("player") and other == root.get("player") and bool(root.call("_is_enemy_control_locked", actor)):
-		separate_actor(root, actor, other)
+	elif actor == root.get("player") or other == root.get("player"):
+		# Player and enemy may never trade displacement.  Shared pushes made
+		# lock-on movement feel like the player and slime could occupy one spot.
+		# The moving body is pushed back by its own overlap instead. If a wall
+		# prevents that correction, push the other body as a last resort rather
+		# than allowing the pair to remain stacked.
+		var push := overlap_push_vector(root, actor, other)
+		if push != Vector2.ZERO:
+			var separated := try_move_swept(actor, push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+			if not separated:
+				try_move_swept(other, -push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 	else:
 		push_actor(root, actor, other, movement)
 

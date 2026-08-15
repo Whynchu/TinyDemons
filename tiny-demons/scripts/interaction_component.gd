@@ -38,7 +38,9 @@ func update_targeting(root: Object) -> void:
 func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int) -> void:
 	var chest := root.get("chest") as Sprite2D
 	var chest_anchor := (root.call("_collision_rect", chest) as Rect2).get_center()
-	update_prompt(delta, root.get("interact_prompt"), bool((root.get("npc_dialogue_box") as ColorRect) != null and (root.get("npc_dialogue_box") as ColorRect).visible), bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), chest_anchor, root.call("_cloaked_demon_head_position"), Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
+	var item := root.get("world_item_drop") as Sprite2D
+	var near_item := bool(root.call("_can_interact_with_world_item"))
+	update_prompt(delta, root.get("interact_prompt"), bool((root.get("npc_dialogue_box") as ColorRect) != null and (root.get("npc_dialogue_box") as ColorRect).visible), bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, chest_anchor, root.call("_cloaked_demon_head_position"), item.global_position if item != null else Vector2.ZERO, Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
 
 
 func set_available(value: bool) -> void:
@@ -94,7 +96,7 @@ func _highlight_button_texture(source: Texture2D) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, chest_position: Vector2, npc_head_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
+func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, near_item: bool, chest_position: Vector2, npc_head_position: Vector2, item_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
 	if prompt == null:
 		return
 	if dialogue_visible:
@@ -102,7 +104,7 @@ func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_
 		var dialogue_highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
 		if dialogue_highlight != null: dialogue_highlight.visible = false
 		return
-	var should_show := near_chest or near_npc
+	var should_show := near_chest or near_npc or near_item
 	prompt.visible = should_show
 	var highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
 	if highlight != null: highlight.visible = should_show
@@ -111,7 +113,10 @@ func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_
 	if highlight != null: highlight.global_position = prompt.global_position
 	prompt_timer = fmod(prompt_timer + delta, bob_time)
 	var bob := snappedf(sin((prompt_timer / bob_time) * TAU) * 0.5, 0.5)
-	if near_npc and not near_chest:
+	if near_item:
+		var prompt_size := prompt.texture.get_size() * prompt.scale
+		prompt.global_position = snap_position.call(item_position + Vector2(0, -15 - prompt_size.y * 0.5 + bob))
+	elif near_npc and not near_chest:
 		var prompt_size := prompt.texture.get_size() * prompt.scale
 		prompt.global_position = snap_position.call(npc_head_position + Vector2(1, -prompt_size.y * 0.5 - 2 + bob))
 	else:

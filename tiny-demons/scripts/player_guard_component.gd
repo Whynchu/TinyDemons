@@ -1,6 +1,8 @@
 extends Node
 class_name PlayerGuardComponent
 
+signal successful_block(shield_damage: float, health_damage: float)
+
 const MAX_DURABILITY := 8.0
 const DAMAGE_REDUCTION := 0.80
 const REGEN_DELAY := 4.0
@@ -13,6 +15,7 @@ const BAR_HIDE_DELAY := 1.0
 const BAR_FADE_TIME := 0.24
 
 var durability := MAX_DURABILITY
+var maximum_durability := MAX_DURABILITY
 var regen_delay_timer := 0.0
 var cooldown_timer := 0.0
 var facing_left := false
@@ -61,11 +64,11 @@ func tick(root: Object, delta: float, guard_held: bool) -> void:
 		# A broken shield rebuilds over the full lockout. It stays unusable until
 		# this recovery reaches 100%, rather than becoming available early while
 		# the presentation bar is still catching up.
-		durability = MAX_DURABILITY * (1.0 - cooldown_timer / BREAK_COOLDOWN)
+		durability = maximum_durability * (1.0 - cooldown_timer / BREAK_COOLDOWN)
 		display_durability = durability
 		if cooldown_timer <= 0.0:
-			durability = MAX_DURABILITY
-			display_durability = MAX_DURABILITY
+			durability = maximum_durability
+			display_durability = maximum_durability
 	else:
 		var can_guard := not bool(root.get("player_dead")) and not bool(root.get("player_death_pending")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and float(root.get("player_hitstun_timer")) <= 0.0
 		var should_defend := guard_held and can_guard and durability > 0.0
@@ -79,15 +82,15 @@ func tick(root: Object, delta: float, guard_held: bool) -> void:
 			(root.get("player") as Sprite2D).flip_h = facing_left
 		if regen_delay_timer > 0.0:
 			regen_delay_timer = maxf(regen_delay_timer - delta, 0.0)
-		elif durability < MAX_DURABILITY:
-			durability = minf(durability + REGEN_RATE * delta, MAX_DURABILITY)
+		elif durability < maximum_durability:
+			durability = minf(durability + maximum_durability / 5.0 * delta, maximum_durability)
 	if damage_hold_timer > 0.0:
 		damage_hold_timer = maxf(damage_hold_timer - delta, 0.0)
 	elif not shield_broken_recovery and display_durability > durability:
 		display_durability = move_toward(display_durability, durability, DAMAGE_DRAIN_RATE * delta)
 	elif not shield_broken_recovery and display_durability < durability:
-		display_durability = move_toward(display_durability, durability, REGEN_RATE * delta)
-	var bar_should_stay_visible := bool(root.get("player_is_defending")) or durability < MAX_DURABILITY or cooldown_timer > 0.0 or not is_equal_approx(display_durability, durability)
+		display_durability = move_toward(display_durability, durability, maximum_durability / 5.0 * delta)
+	var bar_should_stay_visible := bool(root.get("player_is_defending")) or durability < maximum_durability or cooldown_timer > 0.0 or not is_equal_approx(display_durability, durability)
 	if bar_should_stay_visible:
 		bar_hide_timer = BAR_HIDE_DELAY
 		bar_alpha = 1.0
@@ -131,7 +134,17 @@ func absorb_damage(root: Object, incoming_damage: float, source_position: Vector
 		if visuals != null:
 			visuals.flash_guard(root)
 	_update_meter(root)
+	successful_block.emit(shield_damage, health_damage)
 	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true}
+
+
+func set_maximum_durability(value: float, preserve_ratio := true) -> void:
+	var old_maximum := maxf(maximum_durability, 0.001)
+	var durability_ratio := clampf(durability / old_maximum, 0.0, 1.0)
+	var display_ratio := clampf(display_durability / old_maximum, 0.0, 1.0)
+	maximum_durability = maxf(value, 1.0)
+	durability = maximum_durability * durability_ratio if preserve_ratio else maximum_durability
+	display_durability = maximum_durability * display_ratio if preserve_ratio else maximum_durability
 
 
 func _update_meter(root: Object) -> void:
@@ -145,7 +158,7 @@ func _update_meter(root: Object) -> void:
 	fill.visible = show
 	damage_fill.visible = show
 	frame.modulate.a = bar_alpha
-	var fully_restored := is_equal_approx(display_durability, MAX_DURABILITY)
+	var fully_restored := is_equal_approx(display_durability, maximum_durability)
 	if shield_broken_recovery and cooldown_timer <= 0.0 and fully_restored:
 		shield_broken_recovery = false
 	# Normal shield damage uses only the regular shield fill. The light-blue
@@ -160,9 +173,9 @@ func _update_meter(root: Object) -> void:
 	fill.z_index = int(root.get("OVERWORLD_UI_Z")) + 1
 	damage_fill.z_index = int(root.get("OVERWORLD_UI_Z")) + 2
 	fill.region_enabled = true
-	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(durability / MAX_DURABILITY, 0.0, 1.0), fill_size.y))
+	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(durability / maximum_durability, 0.0, 1.0), fill_size.y))
 	damage_fill.region_enabled = true
-	damage_fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(display_durability / MAX_DURABILITY, 0.0, 1.0), fill_size.y))
+	damage_fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(display_durability / maximum_durability, 0.0, 1.0), fill_size.y))
 
 
 func _colored_texture(source: Texture2D, color: Color) -> Texture2D:

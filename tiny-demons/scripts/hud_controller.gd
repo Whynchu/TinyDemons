@@ -17,6 +17,7 @@ var target_overhead_aggro_markers: Dictionary = {}
 var target_overhead_aggro_offsets: Dictionary = {}
 var bright_bar_cache: Dictionary = {}
 var aggro_marker_texture_cache: Dictionary = {}
+var last_run_timer_text := ""
 
 
 func set_target(target: Node) -> void:
@@ -154,7 +155,21 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int]) -> void:
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_button_hud(root.get("button_hud_sprites"), root.call("_controller_devices"))
 	var timer := fmod(float(root.get("gold_animation_timer")) + delta, 0.48); root.set("gold_animation_timer", timer); update_gold_indicator(root.get("gold_indicator"), root.get("gold_animation_frames"), timer)
+	update_run_timer(root)
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z)
+
+
+func update_run_timer(root: Object) -> void:
+	var indicator := root.get("run_timer_indicator") as Sprite2D
+	if indicator == null:
+		return
+	var run_state := root.get("run_state") as RunState
+	var elapsed := floori(run_state.elapsed_time) if run_state != null and run_state.timer_started else 0
+	var label := "TIME %02d:%02d" % [floori(float(elapsed) / 60.0), elapsed % 60]
+	if label == last_run_timer_text:
+		return
+	last_run_timer_text = label
+	indicator.texture = root.call("_pixel_number_texture", label, Color8(244, 244, 244)) as Texture2D
 
 
 func update_room_number(root: Object) -> void:
@@ -167,6 +182,21 @@ func update_room_number(root: Object) -> void:
 	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS: room_label = "BOSS"
 	indicator.texture = root.call("_pixel_number_texture", room_label, Color8(244, 244, 244))
+	var run_indicator := root.get("dungeon_run_indicator") as Sprite2D
+	if run_indicator != null:
+		var profile := root.get("player_profile") as PlayerProfile
+		var run_number := profile.difficulty_rank if profile != null else 1
+		var grade := profile.last_run_grade if profile != null else "D"
+		run_indicator.texture = root.call("_pixel_number_texture", "%s R%d" % [DungeonGraph.DUNGEON_NAME, run_number], _run_grade_color(grade))
+
+func _run_grade_color(grade: String) -> Color:
+	match grade:
+		"S": return Color8(177, 62, 83)
+		"A": return Color8(255, 205, 117)
+		"B": return Color8(118, 66, 138)
+		"C": return Color8(65, 166, 246)
+		"F": return Color8(150, 156, 170)
+		_: return Color.WHITE
 
 
 func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta: float) -> float:
@@ -186,7 +216,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	room_number.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	room_number.z_index = 2
 	if layout == null:
-		room_number.position = Vector2(208, 4)
+		room_number.position = Vector2(5, 141)
 		parent.add_child(room_number)
 	var gold := layout.get_node("GoldDisplay/Gold") as Sprite2D if layout != null else Sprite2D.new()
 	gold.name = "GoldIndicator"
@@ -204,6 +234,22 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		gold_amount.position = Vector2(72, 4)
 		parent.add_child(gold_amount)
+	var run_timer := layout.get_node_or_null("RunTimer") as Sprite2D if layout != null else Sprite2D.new()
+	run_timer.name = "RunTimer"
+	run_timer.centered = false
+	run_timer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	run_timer.z_index = 2
+	if layout == null:
+		run_timer.position = Vector2(174, 149)
+		parent.add_child(run_timer)
+	var dungeon_run := layout.get_node_or_null("DungeonRun") as Sprite2D if layout != null else Sprite2D.new()
+	dungeon_run.name = "DungeonRun"
+	dungeon_run.centered = false
+	dungeon_run.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	dungeon_run.z_index = 2
+	if layout == null:
+		dungeon_run.position = Vector2(5, 149)
+		parent.add_child(dungeon_run)
 	var gold_frames := library.slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
 	gold.hframes = 1
 	gold.vframes = 1
@@ -234,7 +280,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "gold": gold, "gold_amount": gold_amount, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "player_text": player_text}
 
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
@@ -258,7 +304,7 @@ func _aggro_marker_texture(palette_name: String) -> Texture2D:
 		return null
 	var source_image := source.get_image()
 	var image := Image.create(source_image.get_width(), source_image.get_height(), false, Image.FORMAT_RGBA8)
-	var center := Vector2i(source_image.get_width() / 2, source_image.get_height() / 2)
+	var center := Vector2i(floori(float(source_image.get_width()) * 0.5), floori(float(source_image.get_height()) * 0.5))
 	for y in source_image.get_height():
 		for x in source_image.get_width():
 			var source_pixel := source_image.get_pixel(x, y)

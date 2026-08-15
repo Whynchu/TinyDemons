@@ -15,6 +15,9 @@ var velocity := Vector2.ZERO
 func start_from_root(root: Object) -> void:
 	var frames := root.get("player_roll_frames") as Array[Texture2D]
 	if frames.is_empty(): return
+	var run_state := root.get("run_state") as RunState
+	if run_state != null:
+		run_state.record_roll(bool(root.call("_is_run_combat_active")))
 	var movement_direction: Vector2 = root.call("_movement_input")
 	if movement_direction.length_squared() <= 0.0: movement_direction = root.call("_player_facing_vector")
 	else: movement_direction = movement_direction.normalized()

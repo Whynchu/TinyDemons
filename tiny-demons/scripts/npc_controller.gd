@@ -6,6 +6,8 @@ var character_index := 0
 var type_timer := 0.0
 var button_timer := 0.0
 var dialogue_complete := false
+var allocation_prompt_active := false
+var allocation_choice := 0
 
 
 func build_cloaked_demon_frames(library: SpriteFrameLibrary, actor: Sprite2D, frame_size: Vector2i, cached_image: Callable) -> Dictionary:
@@ -48,13 +50,21 @@ func update_dialogue_from_root(root: Object, delta: float) -> void:
 	var box := root.get("npc_dialogue_box") as ColorRect
 	if box == null or not box.visible: return
 	if not (root.get("cloaked_demon") as Sprite2D).visible: hide_dialogue(root); return
+	box.set_meta("dialogue_choice_active", allocation_prompt_active)
 	update_dialogue(delta, box, root.get("npc_dialogue_text"), root.get("npc_dialogue_button"), root.get("npc_dialogue_button_shadow"), root.call("_cloaked_demon_head_position"), Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), 0.045, root.get("NPC_DIALOGUE_BUTTON_BOB_TIME"))
+	_update_allocation_choices(root)
 
 
 func show_dialogue(root: Object) -> void:
 	var demon := root.get("cloaked_demon") as Sprite2D
 	if root.get("npc_dialogue_box") == null or not demon.visible: return
-	var message := (root.get("npc_dialogue_messages") as Array)[int(root.get("npc_dialogue_index")) % (root.get("npc_dialogue_messages") as Array).size()] as String; root.set("npc_dialogue_index", int(root.get("npc_dialogue_index")) + 1); begin_dialogue(message)
+	var profile := root.get("player_profile") as PlayerProfile
+	var message := "YOUR PATH AWAITS."
+	if profile != null:
+		message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
+	allocation_prompt_active = false
+	allocation_choice = 0
+	begin_dialogue(message)
 	var player_was_idle := String(root.get("player_anim_name")) == "idle"
 	(root.get("npc_dialogue_text") as Sprite2D).texture = root.call("_pixel_text_texture", "", Color.WHITE); (root.get("npc_dialogue_text") as Sprite2D).visible = true; (root.get("npc_dialogue_button") as Sprite2D).visible = false; root.set("npc_dialogue_input_was_down", root.call("_is_interact_input_pressed")); (root.get("npc_dialogue_box") as ColorRect).visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	if not player_was_idle:
@@ -65,16 +75,40 @@ func show_dialogue(root: Object) -> void:
 
 func hide_dialogue(root: Object) -> void:
 	end_dialogue()
+	allocation_prompt_active = false
+	allocation_choice = 0
 	var box := root.get("npc_dialogue_box") as ColorRect; if box != null: box.visible = false
 	var text := root.get("npc_dialogue_text") as Sprite2D; if text != null: text.visible = false
 	var button := root.get("npc_dialogue_button") as Sprite2D; if button != null: button.visible = false
 	var shadow := root.get("npc_dialogue_button_shadow") as Sprite2D; if shadow != null: shadow.visible = false
+	var yes_text := root.get("npc_dialogue_yes_text") as Sprite2D; if yes_text != null: yes_text.visible = false
+	var no_text := root.get("npc_dialogue_no_text") as Sprite2D; if no_text != null: no_text.visible = false
 	root.set("npc_dialogue_input_was_down", false)
 
 
 func update_dialogue_input(root: Object) -> void:
 	var input_down: bool = root.call("_is_interact_input_pressed")
-	if dialogue_complete and input_down and not bool(root.get("npc_dialogue_input_was_down")): hide_dialogue(root)
+	var input_pressed := input_down and not bool(root.get("npc_dialogue_input_was_down"))
+	if allocation_prompt_active and dialogue_complete:
+		if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+			allocation_choice = 1 - allocation_choice
+			_update_allocation_choices(root)
+		elif Input.is_action_just_pressed("ui_cancel"):
+			hide_dialogue(root)
+		elif input_pressed or Input.is_action_just_pressed("ui_accept"):
+			if allocation_choice == 0:
+				hide_dialogue(root)
+				root.call("_open_hub_from_cloaked_demon")
+			else:
+				hide_dialogue(root)
+	elif dialogue_complete and (input_pressed or Input.is_action_just_pressed("ui_accept")):
+		allocation_prompt_active = true
+		allocation_choice = 0
+		begin_dialogue("OPEN STATS AND SHOP?")
+		(root.get("npc_dialogue_text") as Sprite2D).texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
+		(root.get("npc_dialogue_button") as Sprite2D).visible = false
+		(root.get("npc_dialogue_button_shadow") as Sprite2D).visible = false
+		update_dialogue_from_root(root, 0.0)
 	root.set("npc_dialogue_input_was_down", input_down)
 
 
@@ -128,7 +162,44 @@ func build_dialogue(parent: Node, continue_texture: Texture2D) -> Dictionary:
 	layer.add_child(shadow)
 	layer.move_child(shadow, -1)
 	layer.move_child(button, -1)
-	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow}
+	var yes_text := Sprite2D.new()
+	yes_text.name = "NpcDialogueYes"
+	yes_text.centered = false
+	yes_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	yes_text.z_index = 2
+	yes_text.visible = false
+	layer.add_child(yes_text)
+	var no_text := Sprite2D.new()
+	no_text.name = "NpcDialogueNo"
+	no_text.centered = false
+	no_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	no_text.z_index = 2
+	no_text.visible = false
+	layer.add_child(no_text)
+	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow, "yes": yes_text, "no": no_text}
+
+
+func _update_allocation_choices(root: Object) -> void:
+	var yes_text := root.get("npc_dialogue_yes_text") as Sprite2D
+	var no_text := root.get("npc_dialogue_no_text") as Sprite2D
+	var box := root.get("npc_dialogue_box") as ColorRect
+	if yes_text == null or no_text == null or box == null:
+		return
+	var show_choices := allocation_prompt_active and dialogue_complete and box.visible
+	yes_text.visible = show_choices
+	no_text.visible = show_choices
+	if not show_choices:
+		return
+	var selected_color := Color8(255, 205, 117)
+	yes_text.texture = root.call("_pixel_text_texture", "YES", selected_color if allocation_choice == 0 else Color.WHITE)
+	no_text.texture = root.call("_pixel_text_texture", "NO", selected_color if allocation_choice == 1 else Color.WHITE)
+	if not bool(box.get_meta("choice_extension_applied", false)):
+		box.size.y += 12.0
+		box.set_meta("choice_extension_applied", true)
+	var choice_y := box.size.y - 9.0
+	var choice_group_x := maxf(box.size.x - 54.0, 7.0)
+	yes_text.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x, choice_y))
+	no_text.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x + 30.0, choice_y))
 
 
 func _highlight_button_texture(source: Texture2D) -> Texture2D:
@@ -177,10 +248,15 @@ func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprit
 			dialogue_complete = true
 			button.visible = true
 	var full_text_texture := pixel_texture.call(full_message, Color.WHITE) as Texture2D
-	var box_size := full_text_texture.get_size() + Vector2(10, 10)
+	var choice_height := 12.0 if bool(box.get_meta("dialogue_choice_active", false)) else 0.0
+	# All standard demon lines are authored for this one-line budget. Keep the
+	# box absolute rather than allowing a longer message to resize the UI.
+	var minimum_text_texture := pixel_texture.call("OPEN STATS AND SHOP?", Color.WHITE) as Texture2D
+	var box_size := Vector2(minimum_text_texture.get_width() + 10.0, full_text_texture.get_height() + 10.0 + choice_height)
 	var box_position := snap_position.call(head_position + Vector2(-box_size.x * 0.5, -box_size.y - 6)) as Vector2
 	box.position = box_position
 	box.size = box_size
+	box.set_meta("choice_extension_applied", choice_height > 0.0)
 	text.position = snap_position.call(box_position + Vector2(5, 5))
 	if button.visible:
 		button_timer = fmod(button_timer + delta, button_bob_time)

@@ -383,7 +383,9 @@ func begin_death(root: Object) -> void:
 
 func reset_for_room(root: Object) -> void:
 	# Room transitions keep this component alive, so cancel every transient
-	# equipment effect before the player is repositioned in the next room.
+	# equipment effect before the player is repositioned in the next room. Keep
+	# the normal equipped presentation if it was active before the transition.
+	var restore_equipment := active
 	active = false
 	shield_is_out = false
 	was_attacking = false
@@ -415,6 +417,10 @@ func reset_for_room(root: Object) -> void:
 		_set_layer_opacity(equipment_layer, 1.0)
 		equipment_layer.visible = false
 	_hide_equipment_shadows()
+	if restore_equipment:
+		active = true
+		inactivity_timer = 0.0
+		_update_layers(root)
 
 
 func tick_death_pending(root: Object) -> void:
@@ -677,8 +683,8 @@ func break_guard(root: Object) -> void:
 		var random_source := root.get("rng") as RandomNumberGenerator
 		if effects != null and random_source != null:
 			effects.spawn_player_death_particles(root, _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), shield.flip_h, &"equipment_fizzle")
-	for name in ["EquipmentShieldFront", "EquipmentShieldBack"]:
-		var layer := layers.get(name) as Sprite2D
+	for layer_name in ["EquipmentShieldFront", "EquipmentShieldBack"]:
+		var layer := layers.get(layer_name) as Sprite2D
 		if layer != null:
 			layer.visible = false
 	guard_flash_timer = 0.0

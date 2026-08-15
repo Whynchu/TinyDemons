@@ -5,6 +5,7 @@ var left_texture: Texture2D = null
 var right_texture: Texture2D = null
 var attack_left_frames: Array[Texture2D] = []
 var attack_right_frames: Array[Texture2D] = []
+var shocked_frames: Array[Texture2D] = []
 
 
 static func build_direction_textures(slimes: Array[Sprite2D], paths: Dictionary, load_texture: Callable) -> void:
@@ -55,6 +56,32 @@ static func assign_attack_frames(slimes: Array[Sprite2D], frames_by_palette: Dic
 		var palette_frames := frames_by_palette[palette] as Dictionary
 		visual.attack_left_frames = palette_frames["left"] as Array[Texture2D]
 		visual.attack_right_frames = palette_frames["right"] as Array[Texture2D]
+
+
+static func build_shocked_frame_library(frame_library: SpriteFrameLibrary, frame_size: Vector2i, cache: Dictionary, warm_texture: Callable) -> Dictionary:
+	var green_frames := frame_library.slice_frames("res://assets/artwork/SlimeGreenshocked.png", frame_size)
+	var frames_by_palette := {
+		"green": green_frames,
+		"blue": recolor_attack_frame_set(green_frames, "blue", cache),
+		"red": recolor_attack_frame_set(green_frames, "red", cache),
+	}
+	for palette_frames in frames_by_palette.values():
+		for texture in palette_frames as Array[Texture2D]:
+			warm_texture.call(texture)
+	return frames_by_palette
+
+
+static func assign_shocked_frames(slimes: Array[Sprite2D], frames_by_palette: Dictionary) -> void:
+	for slime in slimes:
+		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			visual = SlimeVisualComponent.new()
+			visual.name = "Visual"
+			slime.add_child(visual)
+		var palette := String(slime.get("variant"))
+		if not frames_by_palette.has(palette):
+			palette = "green"
+		visual.shocked_frames = frames_by_palette[palette] as Array[Texture2D]
 
 
 static func recolor_attack_frame_set(source_frames: Array[Texture2D], palette: String, texture_cache: Dictionary) -> Array[Texture2D]:

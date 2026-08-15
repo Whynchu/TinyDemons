@@ -18,6 +18,10 @@ var blocked_repath_cooldown := 0.0
 var detour_target := Vector2.ZERO
 var detour_timer := 0.0
 var orbit_direction := 0.0
+var notice_timer := 0.0
+var notice_duration := 0.0
+var notice_started := false
+var notice_animation_finished := false
 
 
 static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
@@ -43,6 +47,30 @@ func tick(delta: float) -> void:
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
 	blocked_repath_cooldown = maxf(blocked_repath_cooldown - delta, 0.0)
 	detour_timer = maxf(detour_timer - delta, 0.0)
+	notice_timer = maxf(notice_timer - delta, 0.0)
+
+
+func begin_notice(duration: float) -> void:
+	notice_duration = maxf(duration, 0.01)
+	notice_timer = notice_duration
+	notice_started = true
+	notice_animation_finished = false
+	hold_timer = 0.0
+	scoot_timer = 0.0
+	scoot_start = Vector2.ZERO
+	scoot_target = Vector2.ZERO
+
+
+func is_noticing() -> bool:
+	return notice_timer > 0.0
+
+
+func notice_wiggle_scale() -> Vector2:
+	if notice_duration <= 0.0:
+		return Vector2.ONE
+	var progress := 1.0 - clampf(notice_timer / notice_duration, 0.0, 1.0)
+	var wobble := sin(progress * TAU) * 0.14
+	return Vector2(1.0 + wobble, 1.0 - absf(wobble) * 0.42)
 
 
 func set_aggro(value: bool) -> void:

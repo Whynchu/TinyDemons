@@ -25,6 +25,9 @@ class_name PlayerTuning
 @export var attack_lunge_distance := 6.0
 @export var attack_lunge_duration := 0.18
 @export var attack_knockback := 16.0
+@export var attack1_knockback_multiplier := 0.60
+@export var attack2_damage_multiplier := 1.25
+@export var attack2_multi_target_damage_multiplier := 1.10
 @export var regen_delay := 2.0
 @export var regen_interval := 1.0
 @export var regen_amount := 1.0

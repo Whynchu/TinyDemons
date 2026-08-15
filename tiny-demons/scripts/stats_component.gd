@@ -40,6 +40,13 @@ enum AllocationProfile {
 var vit := 0
 var strength := 0
 var def := 0
+var manual_allocation_enabled := false
+var manual_base_vit := 4
+var manual_base_str := 3
+var manual_base_def := 3
+var manual_vit := 0
+var manual_str := 0
+var manual_def := 0
 
 
 func _ready() -> void:
@@ -69,15 +76,38 @@ func get_stats() -> Dictionary:
 	}
 
 
+func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, vit_points: int, str_points: int, def_points: int) -> void:
+	manual_allocation_enabled = true
+	manual_base_vit = maxi(base_vit_value, 0)
+	manual_base_str = maxi(base_str_value, 0)
+	manual_base_def = maxi(base_def_value, 0)
+	manual_vit = maxi(vit_points, 0)
+	manual_str = maxi(str_points, 0)
+	manual_def = maxi(def_points, 0)
+	_recalculate()
+
+
+func manual_allocation() -> Dictionary:
+	return {"VIT": manual_vit, "STR": manual_str, "DEF": manual_def}
+
+
 func _recalculate() -> void:
-	var values: Dictionary = _base_profile_values()
-	var allocated := int(values[Stat.VIT]) + int(values[Stat.STR]) + int(values[Stat.DEF])
-	var extra_points := maxi(total_stat_points() - allocated, 0)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = _growth_seed()
-	for point_index in extra_points:
-		var stat := _roll_growth_stat(rng, point_index, values)
-		values[stat] += 1
+	var values: Dictionary
+	if manual_allocation_enabled:
+		values = {
+			Stat.VIT: manual_base_vit + manual_vit,
+			Stat.STR: manual_base_str + manual_str,
+			Stat.DEF: manual_base_def + manual_def,
+		}
+	else:
+		values = _base_profile_values()
+		var allocated := int(values[Stat.VIT]) + int(values[Stat.STR]) + int(values[Stat.DEF])
+		var extra_points := maxi(total_stat_points() - allocated, 0)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = _growth_seed()
+		for point_index in extra_points:
+			var stat := _roll_growth_stat(rng, point_index, values)
+			values[stat] += 1
 
 	vit = values[Stat.VIT]
 	strength = values[Stat.STR]

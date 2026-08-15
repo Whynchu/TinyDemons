@@ -10,7 +10,7 @@ class_name SlimeTuning
 @export var attack_vertical_hit_range := 10.0
 @export var aggro_range := 28.0
 @export var attack_cooldown := 1.0
-@export var attack_lunge_distance := 4.0
+@export var attack_lunge_distance := 10.0
 @export var hold_min := 0.22
 @export var hold_max := 0.48
 @export var aggro_hold_min := 0.08

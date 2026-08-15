@@ -3,6 +3,7 @@ class_name PlayerAttackComponent
 
 signal attack_started(variant: int)
 signal attack_finished
+signal attack_hit_resolved(variant: int, targets: Array)
 
 var active := false
 var variant := 1
@@ -18,6 +19,9 @@ var lunge_remaining := 0.0
 func start_player_attack(root: Object, new_variant: int) -> void:
 	var frames: Array = root.get("player_attack_frames") if new_variant == 1 else root.get("player_attack2_frames")
 	if frames.is_empty(): return
+	var run_state := root.get("run_state") as RunState
+	if run_state != null:
+		run_state.record_attack(new_variant, bool(root.call("_is_run_combat_active")))
 	root.set("player_is_attacking", true); begin(new_variant); root.set("player_just_finished_attack2", false); root.set("player_attack_hit_done", false); hit_targets.clear()
 	var player := root.get("player") as Sprite2D; root.set("player_attack_flip_h", player.flip_h)
 	var tuning := root.get("player_tuning") as PlayerTuning
@@ -39,10 +43,27 @@ func apply_hitbox(root: Object) -> void:
 		eligible_targets.append(slime)
 	if eligible_targets.is_empty(): return
 	var target_count := eligible_targets.size()
+	var tuning := root.get("player_tuning") as PlayerTuning
 	for slime in eligible_targets:
 		(root.get("player_attack_hit_targets") as Array[Sprite2D]).append(slime); register_hit(slime)
-		var damage := float(root.call("_player_attack_damage_against", slime)); var divided_damage := floorf(damage / float(target_count))
+		var base_damage := float(root.call("_player_attack_damage_against", slime))
+		var damage := base_damage
+		var divisor := float(root.call("_player_attack_damage_share_divisor", slime, target_count))
+		if variant == 2 and tuning != null:
+			damage = maxf(base_damage * tuning.attack2_damage_multiplier, base_damage + 1.0)
+			if target_count > 1:
+				damage = maxf(damage * tuning.attack2_multi_target_damage_multiplier, damage + 1.0)
+		var divided_damage := floorf(damage / maxf(divisor, 1.0))
+		if variant == 2:
+			# A combo finisher must always beat the equivalent first-swing share,
+			# including at tiny damage values after defensive mitigation.
+			var first_swing_share := floorf(base_damage / maxf(divisor, 1.0))
+			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		root.call("_damage_slime", slime, maxf(divided_damage, 1.0), bool(root.get("last_damage_was_critical"))); root.call("_knockback_slime", slime)
+	var run_state := root.get("run_state") as RunState
+	if run_state != null:
+		run_state.record_attack_hits(variant, eligible_targets.size())
+	attack_hit_resolved.emit(variant, eligible_targets)
 
 
 func attack_polygon(root: Object) -> PackedVector2Array:

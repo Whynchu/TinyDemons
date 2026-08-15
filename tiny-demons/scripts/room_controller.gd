@@ -8,6 +8,7 @@ var current_room_id: StringName = &""
 var arrival_socket_id: StringName = &""
 var transition_locked := false
 var room_states: Dictionary = {}
+var progression_run_rank := 1
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
@@ -26,7 +27,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		elif room_type == DungeonGraph.ROOM_NPC:
 			var npc_exit := DungeonGraph.WALL_LEFT if room.generation_seed % 2 == 0 else DungeonGraph.WALL_RIGHT
 			exits.append(npc_exit)
-			var next_room_type := DungeonGraph.ROOM_DOWNSTAIRS if room_depth >= 11 else DungeonGraph.ROOM_COMBAT
+			var next_room_type := DungeonGraph.ROOM_DOWNSTAIRS if room_depth >= graph.final_npc_depth() else DungeonGraph.ROOM_COMBAT
 			graph.ensure_connection(room_id, npc_exit, next_room_type)
 		elif room_depth == 0:
 			exits.assign([DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT])
@@ -35,8 +36,8 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			pass
 		else:
 			var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = room.generation_seed; var primary := DungeonGraph.WALL_LEFT if layout_rng.randi_range(0, 1) == 0 else DungeonGraph.WALL_RIGHT; exits.append(primary); graph.ensure_connection(room_id, primary, DungeonGraph.ROOM_COMBAT)
-			if room_depth + 1 != 6 and room_depth + 1 != 11 and layout_rng.randf() < 0.45:
-				var secondary := DungeonGraph.WALL_RIGHT if primary == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT; var secondary_type := DungeonGraph.ROOM_REST if layout_rng.randf() < 0.40 else DungeonGraph.ROOM_COMBAT; exits.append(secondary); graph.ensure_connection(room_id, secondary, secondary_type)
+			if room_depth + 1 != 6 and room_depth + 1 != graph.final_npc_depth() and layout_rng.randf() < graph.side_route_chance():
+				var secondary := DungeonGraph.WALL_RIGHT if primary == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT; var secondary_type := DungeonGraph.ROOM_REST if layout_rng.randf() < graph.side_dead_end_chance() else DungeonGraph.ROOM_COMBAT; exits.append(secondary); graph.ensure_connection(room_id, secondary, secondary_type)
 		state["generated_exits"] = exits; state["room_type"] = room_type; state["finished"] = bool(state.get("finished", false)); room_states[room_id] = state
 	if room_type == DungeonGraph.ROOM_COMBAT:
 		if not state.has("enemy_variants"):
@@ -48,10 +49,11 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		if not state.has("enemy_variants"):
-			state["enemy_variants"] = ["red", "blue", "green", "red", "blue", "green", "red"]
+			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)
+			state["enemy_variants"] = boss_encounter["variants"]
 			var boss_level := maxi(1, ceili(float(room_depth) / 2.0))
-			state["enemy_levels"] = [boss_level + 1, boss_level, boss_level, boss_level, boss_level, boss_level, boss_level]
-			state["enemy_scales"] = [2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+			state["enemy_levels"] = boss_encounter["levels"]
+			state["enemy_scales"] = boss_encounter["scales"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 909
 		room_states[room_id] = state
@@ -73,6 +75,12 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 					count = 5
 					if encounter_rng.randf() < clampf(float(depth - 8) * 0.03, 0.0, 0.08):
 						count = 6
+	var count_cap := _normal_enemy_cap()
+	count = mini(count, count_cap)
+	# Late ranks may exceed the former six-slime ceiling, but only after the
+	# player has had time to learn crowd control and defense.
+	while count < count_cap and encounter_rng.randf() < _late_enemy_add_chance():
+		count += 1
 	var variants: Array[String] = []
 	var levels: Array[int] = []
 	var available_variants: Array[String] = ["blue", "green", "red"]
@@ -84,6 +92,43 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 		variants.append(available_variants[encounter_rng.randi_range(0, available_variants.size() - 1)])
 		levels.append(maxi(1, encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)))
 	return {"variants": variants, "levels": levels}
+
+func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
+	var boss_level := maxi(1, ceili(float(room_depth) / 2.0))
+	var minor_count := 2 if progression_run_rank <= 2 else 3 if progression_run_rank <= 4 else 4 if progression_run_rank <= 5 else 6 if progression_run_rank <= 10 else 6
+	var variants: Array[String] = ["red"]
+	var levels: Array[int] = [boss_level + 1]
+	var scales: Array[float] = [2.0]
+	var palette := ["blue", "green", "red"]
+	var encounter_rng := RandomNumberGenerator.new()
+	encounter_rng.seed = generation_seed + 707
+	for index in minor_count:
+		variants.append(palette[encounter_rng.randi_range(0, palette.size() - 1)])
+		levels.append(boss_level)
+		scales.append(1.0)
+	return {"variants": variants, "levels": levels, "scales": scales}
+
+func _normal_enemy_cap() -> int:
+	if progression_run_rank <= 2: return 2
+	if progression_run_rank <= 4: return 3
+	if progression_run_rank <= 6: return 5
+	if progression_run_rank <= 10: return 6
+	return 7
+
+func _late_enemy_add_chance() -> float:
+	if progression_run_rank <= 10:
+		return 0.0
+	return clampf(0.18 + float(progression_run_rank - 11) * 0.07, 0.18, 0.60)
+
+
+func enemy_count_for_room(room: DungeonGraph.RoomRecord) -> int:
+	if room == null:
+		return 0
+	if room.room_type == DungeonGraph.ROOM_DOWNSTAIRS:
+		return (_generate_boss_encounter(room.generation_seed, room.depth).get("variants", []) as Array).size()
+	if room.room_type != DungeonGraph.ROOM_COMBAT:
+		return 0
+	return ( _generate_enemy_encounter(room.generation_seed, room.depth).get("variants", []) as Array).size()
 
 
 func configure_sockets(graph: DungeonGraph, room_id: StringName, _unlocked: bool, set_blocks: Callable) -> void:
@@ -194,12 +239,30 @@ func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 func apply_state(root: Object) -> void:
 	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
 	var state := room_states.get(room_id, {}) as Dictionary
+	_clear_active_world_drop(root)
 	if is_cleared(room_id): state["finished"] = true
 	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST: root.call("_apply_rest_room_state")
 	elif room_type == DungeonGraph.ROOM_NPC: root.call("_apply_npc_room_state")
 	elif bool(state.get("finished", false)): root.call("_apply_finished_room_state")
 	else:
 		(root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_chest_for_room(root); reset_slimes_for_room(root)
+	_restore_world_drop(root, state)
+
+func _clear_active_world_drop(root: Object) -> void:
+	var item_drop := root.get("world_item_drop") as Sprite2D
+	if item_drop != null: item_drop.queue_free()
+	var item_label := root.get("world_item_drop_label") as Sprite2D
+	if item_label != null: item_label.queue_free()
+	root.set("world_item_drop", null); root.set("world_item_drop_label", null); root.set("world_item_drop_instance", null); root.set("world_item_drop_air_time", 0.0)
+
+func _restore_world_drop(root: Object, state: Dictionary) -> void:
+	var saved_drop: Variant = state.get("world_item_drop", {})
+	if not (saved_drop is Dictionary):
+		return
+	var item := ItemInstance.from_dictionary(saved_drop.get("item", {}) as Dictionary)
+	if item.instance_id.is_empty():
+		return
+	root.call("_restore_chest_item_drop", item, saved_drop.get("position", root.get("chest_start_position")) as Vector2)
 
 
 func build_entrance_blocks(root: Object) -> void:
@@ -322,6 +385,7 @@ func reset_chest_for_room(root: Object) -> void:
 
 func reset_slimes_for_room(root: Object) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]; var tuning := root.get("slime_tuning") as SlimeTuning; var rng := root.get("rng") as RandomNumberGenerator; var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]; var collision := root.get("collision_sprites") as Array[Sprite2D]; var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
+	(root.get("effects_spawner") as EffectsSpawner).clear_slime_notices()
 	for slime in slimes: kill_slime_without_effects(root, slime)
 	var room_id: StringName = root.get("current_room_id"); var state: Dictionary = room_states.get(room_id, {}) as Dictionary; var active_variants := state.get("enemy_variants", []) as Array; var active_levels := state.get("enemy_levels", []) as Array; var active_scales := state.get("enemy_scales", []) as Array; var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary; var spawn_seed := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303)); var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = spawn_seed
 	for slot in active_variants.size():
@@ -329,6 +393,7 @@ func reset_slimes_for_room(root: Object) -> void:
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
 	root.call("_build_slime_direction_textures")
 	root.call("_assign_slime_attack_frames")
+	root.call("_assign_slime_shocked_frames")
 	root.call("_refresh_enemy_palette_textures")
 	var player := root.get("player") as Sprite2D; var player_foot: Vector2 = root.call("_actor_foot", player); var chest := root.get("chest") as Sprite2D; var chest_rect: Rect2 = root.call("_collision_rect", chest)
 	var occupied: Array[Vector2] = []
@@ -351,6 +416,13 @@ func reset_slimes_for_room(root: Object) -> void:
 		if not actor_sprites.has(slime): actor_sprites.append(slime)
 		if not collision.has(slime): collision.append(slime)
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state
+	var run_state := root.get("run_state") as RunState
+	if run_state != null and run_state.active:
+		run_state.register_room_enemies(room_id, active_variants.size())
+	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
+		for slime in slimes:
+			if slime.visible:
+				root.call("_trigger_slime_notice", slime)
 
 
 func _choose_enemy_spawn_position(root: Object, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:

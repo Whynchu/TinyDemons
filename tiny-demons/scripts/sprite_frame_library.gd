@@ -7,6 +7,7 @@ class_name SpriteFrameLibrary
 const EFFECT_RESOLUTION_SCALE := 2
 
 var image_cache: Dictionary = {}
+var recolor_cache: Dictionary = {}
 
 
 func slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
@@ -74,6 +75,9 @@ func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Tex
 func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	if source == null:
 		return null
+	var cache_key := "%d:%s" % [source.get_instance_id(), palette_name]
+	if recolor_cache.has(cache_key):
+		return recolor_cache[cache_key] as Texture2D
 	var palette := {
 		"blue": [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)],
 		"orange": [Color8(171, 82, 54), Color8(239, 125, 87), Color8(244, 244, 244)],
@@ -95,7 +99,9 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 					var replacement: Color = target[color_index]
 					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
 					break
-	return ImageTexture.create_from_image(image)
+	var texture := ImageTexture.create_from_image(image)
+	recolor_cache[cache_key] = texture
+	return texture
 
 
 func _cached_image(texture: Texture2D) -> Image:

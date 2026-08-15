@@ -19,7 +19,9 @@ func _ready() -> void:
 	set_static_text("lv. 1")
 	if Engine.is_editor_hint():
 		_set_text($PlayerStatus/Health/HpText, "10/10", Color.WHITE)
-		_set_text($RoomNumber, "START", Color.WHITE)
+		_set_text($RoomNumber, "D1", Color.WHITE)
+		_set_text($DungeonRun, "SLIMEY DEPTHS R1", Color.WHITE)
+		_set_text($RunTimer, "TIME 00:00", Color.WHITE)
 	else:
 		_set_text($PlayerStatus/Health/HpText, "0/0", Color.WHITE)
 	_set_text($PlayerStatus/LevelXp/XpText, "0/100", Color.WHITE)
@@ -40,7 +42,7 @@ func _configure_sprites() -> void:
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
-func set_static_text(level_text: String, player_color: Color = XP_COLOR) -> void:
+func set_static_text(level_text: String, _player_color: Color = XP_COLOR) -> void:
 	var level_sprite := $PlayerStatus/LevelXp/LevelTextAnchor/LevelText as Sprite2D
 	_set_text(level_sprite, level_text, Color.WHITE)
 	level_sprite.position.x = -float(level_sprite.texture.get_width())
@@ -94,7 +96,7 @@ func glyph_texture(value: String, color: Color) -> Texture2D:
 		"4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
 		"6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
 		"8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
-		".": ["0", "0", "0", "0", "1"], "/": ["001", "001", "010", "100", "100"],
+		".": ["0", "0", "0", "0", "1"], "-": ["000", "000", "111", "000", "000"], ":": ["0", "1", "0", "1", "0"], "/": ["001", "001", "010", "100", "100"],
 		"L": ["100", "100", "100", "100", "111"], "v": ["000", "000", "101", "101", "010"],
 		"l": ["10", "10", "10", "10", "11"], "h": ["100", "100", "110", "101", "101"],
 		"p": ["000", "110", "101", "110", "100"], "m": ["00000", "11011", "10101", "10101", "10101"],
