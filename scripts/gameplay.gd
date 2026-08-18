@@ -269,7 +269,7 @@ func _open_pause_menu() -> void:
 	_show_hub(false, true)
 func _open_hub_from_cloaked_demon() -> void:
 	if player_dead or hub_overlay == null: return
-	if npc_dialogue_box != null and npc_dialogue_box.visible: npc_controller.hide_dialogue(self)
+	if npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: npc_controller.hide_dialogue(self)
 	player_is_moving = false
 	player_is_attacking = false
 	player_is_rolling = false
@@ -993,7 +993,7 @@ func _unlock_chest() -> void:
 func _build_interact_prompt() -> void:
 	var interaction_marker := _load_texture_or_null("res://assets/artwork/circle55.png")
 	interact_prompt = interaction_component.build_prompt(self, interaction_marker, OVERWORLD_UI_Z + 1); interact_prompt_base_position = Vector2(6, -7)
-func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_dialogue_layer = dialogue["layer"] as CanvasLayer; npc_dialogue_box = dialogue["box"] as ColorRect; npc_dialogue_text = dialogue["text"] as Sprite2D; npc_dialogue_button = dialogue["button"] as Sprite2D; npc_dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_dialogue_no_text = dialogue["no"] as Sprite2D
+func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
 	room_number_indicator = hud["room"] as Sprite2D; dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; gold_indicator = hud["gold"] as Sprite2D; gold_amount_indicator = hud["gold_amount"] as Sprite2D; run_timer_indicator = hud["timer"] as Sprite2D; gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
@@ -1020,9 +1020,9 @@ func _set_rest_fire_frame(frame_index: int) -> void:
 	if rest_fire_frames.is_empty(): return
 	rest_fire_controller.frame_index = posmod(frame_index, rest_fire_frames.size()); rest_fire.texture = rest_fire_frames[rest_fire_controller.frame_index]; rest_fire.hframes = 1; rest_fire.frame = 0; occlusion_renderer.sprite_images[rest_fire] = occlusion_renderer.cached_texture_image(rest_fire.texture)
 func _update_cloaked_demon_animation(delta: float) -> void:
-	var near_player := _can_interact_with_npc(); var patrolling := (current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC) and not near_player and (npc_dialogue_box == null or not npc_dialogue_box.visible)
-	var result := npc_controller.update_patrol_animation(cloaked_demon, cloaked_demon_idle_frames, cloaked_demon_walk_frames, delta, near_player, patrolling, cloaked_demon_patrol_paused, cloaked_demon_wander_target, cloaked_demon_wander_has_target, cloaked_demon_patrol_pause_timer, cloaked_demon_patrol_direction, player.global_position.x, rng, Callable(self, "_cloaked_demon_foot_position"), Callable(self, "_random_npc_walkable_point_near"), Callable(self, "_move_cloaked_demon"), Callable(self, "_perspective_movement"), Callable(self, "_cache_npc_texture"), cloaked_demon_animation_timer, cloaked_demon_animation_frame)
-	cloaked_demon_wander_target = result["wander_target"]; cloaked_demon_wander_has_target = result["has_target"]; cloaked_demon_patrol_paused = result["paused"]; cloaked_demon_patrol_pause_timer = result["pause_timer"]; cloaked_demon_patrol_direction = result["direction"]; cloaked_demon_animation_timer = result["timer"]; cloaked_demon_animation_frame = result["frame"]
+	var near_player := _can_interact_with_npc(); var patrolling := (current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC) and not near_player and (npc_controller.dialogue_box == null or not npc_controller.dialogue_box.visible)
+	var result := npc_controller.update_patrol_animation(cloaked_demon, npc_controller.demon_idle_frames, npc_controller.demon_walk_frames, delta, near_player, patrolling, npc_controller.demon_patrol_paused, npc_controller.demon_wander_target, npc_controller.demon_wander_has_target, npc_controller.demon_patrol_pause_timer, npc_controller.demon_patrol_direction, player.global_position.x, rng, Callable(self, "_cloaked_demon_foot_position"), Callable(self, "_random_npc_walkable_point_near"), Callable(self, "_move_cloaked_demon"), Callable(self, "_perspective_movement"), Callable(self, "_cache_npc_texture"), npc_controller.demon_animation_timer, npc_controller.demon_animation_frame)
+	npc_controller.demon_wander_target = result["wander_target"]; npc_controller.demon_wander_has_target = result["has_target"]; npc_controller.demon_patrol_paused = result["paused"]; npc_controller.demon_patrol_pause_timer = result["pause_timer"]; npc_controller.demon_patrol_direction = result["direction"]; npc_controller.demon_animation_timer = result["timer"]; npc_controller.demon_animation_frame = result["frame"]
 func _move_cloaked_demon(movement: Vector2, max_step: float) -> bool: return actor_collision_system.try_move_swept(cloaked_demon, movement, max_step, Callable(self, "_can_actor_stand_at_current_position"), Callable(self, "_collides_with_static"))
 func _cache_npc_texture(_actor: Sprite2D, texture: Texture2D) -> void: occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(texture)
 func _can_interact_with_chest() -> bool: return chest_unlocked and not chest_claimed and _actor_foot(player).distance_to(_collision_rect(chest).get_center()) <= CHEST_INTERACT_DISTANCE
@@ -1862,14 +1862,14 @@ func _load_health_bar_texture(path: String) -> Texture2D:
 	if health_bar_texture_cache.has(path): return health_bar_texture_cache[path] as Texture2D
 	var texture := load(path) as Texture2D if ResourceLoader.exists(path) else null; health_bar_texture_cache[path] = texture; return texture
 func _build_rest_fire_frames() -> void: rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE); if not rest_fire_frames.is_empty(): _set_rest_fire_frame(0)
-func _build_cloaked_demon_frames() -> void: var frames := npc_controller.build_cloaked_demon_frames(sprite_frame_library, cloaked_demon, CLOAKED_DEMON_FRAME_SIZE, Callable(occlusion_renderer, "cached_texture_image")); cloaked_demon_idle_frames = frames["idle"]; cloaked_demon_walk_frames = frames["walk"]; cloaked_demon_visual_bounds = frames["bounds"]
-func _cloaked_demon_head_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.position.y)
-func _cloaked_demon_visual_center() -> Vector2: return _cloaked_demon_texture_origin() + cloaked_demon_visual_bounds.get_center()
-func _cloaked_demon_foot_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(cloaked_demon_visual_bounds.get_center().x, cloaked_demon_visual_bounds.end.y - 1.0)
+func _build_cloaked_demon_frames() -> void: var frames := npc_controller.build_cloaked_demon_frames(sprite_frame_library, cloaked_demon, CLOAKED_DEMON_FRAME_SIZE, Callable(occlusion_renderer, "cached_texture_image")); npc_controller.demon_idle_frames = frames["idle"]; npc_controller.demon_walk_frames = frames["walk"]; npc_controller.demon_visual_bounds = frames["bounds"]
+func _cloaked_demon_head_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(npc_controller.demon_visual_bounds.get_center().x, npc_controller.demon_visual_bounds.position.y)
+func _cloaked_demon_visual_center() -> Vector2: return _cloaked_demon_texture_origin() + npc_controller.demon_visual_bounds.get_center()
+func _cloaked_demon_foot_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(npc_controller.demon_visual_bounds.get_center().x, npc_controller.demon_visual_bounds.end.y - 1.0)
 func _configure_cloaked_demon_patrol_route() -> void:
 	var route := npc_controller.configure_patrol_route(cloaked_demon, walkable_outline, Callable(self, "_cloaked_demon_foot_position"), Callable(self, "_is_walkable"))
 	if route.is_empty(): return
-	cloaked_demon_patrol_min_x = route["min_x"]; cloaked_demon_patrol_max_x = route["max_x"]; cloaked_demon_wander_origin = route["origin"]; cloaked_demon_patrol_position_x = route["position_x"]; cloaked_demon_wander_target = route["target"]; cloaked_demon_wander_has_target = route["has_target"]
+	npc_controller.demon_patrol_min_x = route["min_x"]; npc_controller.demon_patrol_max_x = route["max_x"]; npc_controller.demon_wander_origin = route["origin"]; npc_controller.demon_patrol_position_x = route["position_x"]; npc_controller.demon_wander_target = route["target"]; npc_controller.demon_wander_has_target = route["has_target"]
 func _random_npc_walkable_point_near(point: Vector2, radius: float) -> Vector2:
 	var candidates: Array[Vector2] = []
 	for index in 32: var angle := rng.randf_range(0.0, TAU); var distance := rng.randf_range(3.0, radius); var candidate := point + _perspective_movement(Vector2(cos(angle), sin(angle)) * distance); if _is_walkable(candidate): candidates.append(candidate)

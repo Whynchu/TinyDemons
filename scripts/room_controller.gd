@@ -361,7 +361,7 @@ func apply_rest_state(root: Object) -> void:
 	var demon := root.get("cloaked_demon") as Sprite2D
 	demon.visible = root.get("current_room_type") == DungeonGraph.ROOM_START
 	if demon.visible:
-		demon.position = root.get("cloaked_demon_start_position"); root.set("cloaked_demon_wander_origin", root.get("cloaked_demon_start_position")); root.set("cloaked_demon_wander_timer", 0.0); root.set("cloaked_demon_patrol_direction", -1.0); root.set("cloaked_demon_patrol_paused", false); root.set("cloaked_demon_patrol_pause_timer", 0.0); root.set("cloaked_demon_patrol_position_x", demon.position.x); root.call("_configure_cloaked_demon_patrol_route")
+		demon.position = root.get("cloaked_demon_start_position"); var npc := root.get("npc_controller") as NpcController; npc.demon_wander_origin = root.get("cloaked_demon_start_position"); npc.demon_wander_timer = 0.0; npc.demon_patrol_direction = -1.0; npc.demon_patrol_paused = false; npc.demon_patrol_pause_timer = 0.0; npc.demon_patrol_position_x = demon.position.x; root.call("_configure_cloaked_demon_patrol_route")
 		if not collision.has(demon): collision.append(demon)
 	else: collision.erase(demon)
 	root.call("_set_rest_fire_frame", 0); (root.get("rest_fire_controller") as RestFireController).reset_animation(); _mark_finished(root)
@@ -371,7 +371,7 @@ func apply_npc_state(root: Object) -> void:
 	reset_slimes_for_room(root)
 	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D; var collision := root.get("collision_sprites") as Array[Sprite2D]; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; collision.erase(firepit)
-	var demon := root.get("cloaked_demon") as Sprite2D; demon.visible = true; demon.position = root.get("cloaked_demon_start_position"); root.set("cloaked_demon_wander_origin", demon.position); root.set("cloaked_demon_wander_timer", 0.0); root.set("cloaked_demon_patrol_direction", -1.0); root.set("cloaked_demon_patrol_paused", false); root.set("cloaked_demon_patrol_pause_timer", 0.0); root.set("cloaked_demon_patrol_position_x", demon.position.x); root.call("_configure_cloaked_demon_patrol_route"); if not collision.has(demon): collision.append(demon)
+	var demon := root.get("cloaked_demon") as Sprite2D; demon.visible = true; demon.position = root.get("cloaked_demon_start_position"); var npc := root.get("npc_controller") as NpcController; npc.demon_wander_origin = demon.position; npc.demon_wander_timer = 0.0; npc.demon_patrol_direction = -1.0; npc.demon_patrol_paused = false; npc.demon_patrol_pause_timer = 0.0; npc.demon_patrol_position_x = demon.position.x; root.call("_configure_cloaked_demon_patrol_route"); if not collision.has(demon): collision.append(demon)
 	root.call("_set_door_active", true); root.call("_set_entrance_open", true); _mark_finished(root)
 
 
