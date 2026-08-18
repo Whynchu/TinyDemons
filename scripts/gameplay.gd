@@ -574,19 +574,8 @@ func _clear_reward_rarity(score: int, roll: float) -> StringName:
 	return _roll_run_loot_rarity(roll, clampf(float(score) / 100.0, 0.0, 1.0))
 
 func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0) -> StringName:
-	var rank_bonus := float(_run_rank() - 1)
 	var performance_bonus := score_quality * 3.0 if score_quality >= 0.0 else _loot_grade_bonus()
-	# Every item-drop source has a real legendary/mythic chance at R1. Rank and
-	# performance improve the odds rather than acting as hard rarity gates.
-	var mythic_chance := clampf(0.0005 + rank_bonus * 0.0005 + performance_bonus * 0.0005, 0.0005, 0.010)
-	var legendary_chance := clampf(0.003 + rank_bonus * 0.0015 + performance_bonus * 0.0015, 0.003, 0.025)
-	var epic_chance := clampf(0.015 + rank_bonus * 0.004 + performance_bonus * 0.004, 0.015, 0.070)
-	var rare_chance := clampf(0.120 + rank_bonus * 0.012 + performance_bonus * 0.010, 0.120, 0.280)
-	if roll < mythic_chance: return &"mythic"
-	if roll < mythic_chance + legendary_chance: return &"legendary"
-	if roll < mythic_chance + legendary_chance + epic_chance: return &"epic"
-	if roll < mythic_chance + legendary_chance + epic_chance + rare_chance: return &"rare"
-	return &"common"
+	return ItemCatalog.new().roll_run_rarity(roll, _run_rank(), performance_bonus)
 
 func _complete_run() -> void:
 	if run_state == null or run_state.settled or run_complete_overlay == null or run_complete_overlay.visible:

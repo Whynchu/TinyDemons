@@ -112,7 +112,7 @@ func generate_item(slot: StringName, generation_seed: int, level: int = 1, minim
 		weights.append(BASIC_GEAR_DROP_WEIGHT if _is_basic_gear(definition_id) else 1.0)
 	var item := ItemInstance.new()
 	item.definition_id = _pick_weighted_definition(candidates, weights, rng)
-	item.rarity = minimum_rarity if not minimum_rarity.is_empty() else _roll_rarity(rng, level)
+	item.rarity = minimum_rarity if not minimum_rarity.is_empty() else roll_run_rarity(rng.randf(), level)
 	item.quality = snappedf(rng.randf_range(0.9, 1.1), 0.01)
 	var available: Array[StringName] = []
 	for affix_id: StringName in AFFIXES:
@@ -246,20 +246,18 @@ func overflow_salvage_value(item: ItemInstance) -> int:
 	return maxi(1, roundi(price(item) * OVERFLOW_SALVAGE_RATE))
 
 
-func _roll_rarity(rng: RandomNumberGenerator, level: int) -> StringName:
-	var roll := rng.randf()
-	var mythic_chance := minf(0.0005 + level * 0.00001, 0.002)
-	var legendary_chance := minf(0.003 + level * 0.00004, 0.01)
-	var epic_chance := minf(0.015 + level * 0.0006, 0.04)
-	var rare_chance := minf(0.12 + level * 0.0015, 0.22)
-	if roll < mythic_chance:
-		return &"mythic"
-	if roll < mythic_chance + legendary_chance:
-		return &"legendary"
-	if roll < mythic_chance + legendary_chance + epic_chance:
-		return &"epic"
-	if roll < mythic_chance + legendary_chance + epic_chance + rare_chance:
-		return &"rare"
+func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:
+	var rank_bonus := float(maxi(rank, 1) - 1)
+	# Every item-drop source has a real legendary/mythic chance at R1. Rank and
+	# performance improve the odds rather than acting as hard rarity gates.
+	var mythic_chance := clampf(0.0005 + rank_bonus * 0.0005 + performance_bonus * 0.0005, 0.0005, 0.010)
+	var legendary_chance := clampf(0.003 + rank_bonus * 0.0015 + performance_bonus * 0.0015, 0.003, 0.025)
+	var epic_chance := clampf(0.015 + rank_bonus * 0.004 + performance_bonus * 0.004, 0.015, 0.070)
+	var rare_chance := clampf(0.120 + rank_bonus * 0.012 + performance_bonus * 0.010, 0.120, 0.280)
+	if roll < mythic_chance: return &"mythic"
+	if roll < mythic_chance + legendary_chance: return &"legendary"
+	if roll < mythic_chance + legendary_chance + epic_chance: return &"epic"
+	if roll < mythic_chance + legendary_chance + epic_chance + rare_chance: return &"rare"
 	return &"common"
 
 

@@ -254,8 +254,10 @@ Near-duplicate functions (verified):
 - 7 health/XP-number spawner wrappers (`gameplay.gd:1634-1742`) differing only
   in origin/color; slime numbers float up while player numbers float **down**
   (sign bug, same knob).
-- Two rarity ladders that will drift: `item_catalog.gd:_roll_rarity` vs
-  `gameplay.gd:_roll_run_loot_rarity` — same structure, different constants.
+- Two rarity ladders that can drift: `ItemCatalog.roll_run_rarity` (canonical)
+  is the single source since the palette-style refactor; the dead level-based
+  `_roll_rarity` was removed. Rarity names/colors/multipliers all live in
+  `item_catalog.gd`.
 - `player_profile.gd:143` `fusion_cost()` is dead and its formula is
   re-implemented inline in `fusion_batch_cost` (:149-162).
 - Palette data was triplicated with **divergent values** across 6 files
@@ -390,13 +392,18 @@ README, test runner, and this doc updated.
   delegate funcs, the dead `PlayerAnimationComponent` API, the unused
   `attack_priority` export, dead `fusion_cost`, dead `MP_HIGHLIGHT` const.
   Commit `3b5810e` (23 files, net −185 lines).
-- **Deferred (needs playtest)**: unify the two rarity ladders; make the
+- **Deferred (needs playtest)**: make the
   coordinator read-only for `player_health`, `gold/level/xp`,
   `current_target`, `player_attack_hit_targets` (13 write sites across
   death/heal/equip/level flows — no smoke coverage); reconcile
   `player_profile` vs `profile_save_service` persistence split; thin
   `gameplay_state.gd` single-owner state. Each changes behavior that headless
   smoke can't validate.
+- **Unified the rarity ladders (done, commit pending)**: the level-based
+  `item_catalog._roll_rarity` was dead code (every `generate_item` caller
+  passes `minimum_rarity`); the live rank/performance ladder moved into
+  `ItemCatalog.roll_run_rarity()` as the single source. Guarded by
+  `item_economy_smoke.gd` monotonicity checks.
 - **Single-sourced the palette data (done)**: canonical table moved to
   `scripts/palette_library.gd`; all 6 divergent consumer sites now call it.
   Guarded by `palette_smoke.gd`. Commits `d8136c9`-`7883386` (incl. the

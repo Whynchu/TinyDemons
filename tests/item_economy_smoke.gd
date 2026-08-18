@@ -32,6 +32,17 @@ func _initialize() -> void:
 		base_item.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
 		prev_plus_ten = float(catalog.bonuses(base_item, 0)["damage_rate"])
 	_expect(catalog.rarity_color(&"common") == Color.WHITE and catalog.rarity_color(&"rare") != catalog.rarity_color(&"epic") and catalog.rarity_color(&"legendary") != catalog.rarity_color(&"mythic"), "rarity colors are distinct", failures)
+	var low_rank_rare_roll := catalog.roll_run_rarity(0.35, 1, 0.0)
+	var high_rank_rare_roll := catalog.roll_run_rarity(0.35, 12, 3.0)
+	var rarity_rank_order := {&"common": 0, &"rare": 1, &"epic": 2, &"legendary": 3, &"mythic": 4}
+	_expect(rarity_rank_order[high_rank_rare_roll] > rarity_rank_order[low_rank_rare_roll], "higher rank/performance rolls strictly higher rarity", failures)
+	_expect(high_rank_rare_roll == &"rare", "rank 12 + S-grade at roll 0.35 is rare", failures)
+	_expect(low_rank_rare_roll == &"common", "rank 1 at roll 0.35 is common", failures)
+	_expect(catalog.roll_run_rarity(0.0, 1, 0.0) != &"common", "roll near zero is never common at any rank", failures)
+	_expect(catalog.roll_run_rarity(1.0, 1, 0.0) == &"common", "roll of one is always common", failures)
+	var consistent_tiers := [&"mythic", &"legendary", &"epic", &"rare", &"common"]
+	for tier in consistent_tiers:
+		_expect(catalog.roll_run_rarity(0.0, 12, 3.0) == &"mythic", "top rank guarantees %s is reachable" % String(tier), failures)
 	first.instance_id = profile.create_item_id("test")
 	_expect(profile.grant_item(first), "new item granted", failures)
 	_expect(not profile.grant_item(first), "duplicate item rejected", failures)

@@ -641,7 +641,9 @@ update-order regressions.
     `current_target`, `player_attack_hit_targets`) — deferred: 13 write sites
     across death/heal/equip/level flows with no headless combat coverage;
     playtest-gated.
-  - [x] Rarity ladder — deferred: changes drop balance; playtest-gated.
+  - [x] Rarity ladder — done: single `ItemCatalog.roll_run_rarity()`; the dead
+    level-based `_roll_rarity` was removed; guarded by monotonicity checks in
+    `item_economy_smoke.gd`.
   - [x] Palette single-sourcing — done: canonical table in
     `scripts/palette_library.gd`, all 6 consumer sites call it, guarded by
     `palette_smoke.gd`. The one real divergence (slime purple accent vs
