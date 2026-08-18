@@ -80,8 +80,9 @@ Three problems were confirmed during the repo audit (see
   (`gameplay.gd:972-976`).
 
 ### Item economy
-- Rarity power multipliers: common 1.0, rare 1.5, epic 2.25, legendary
-  3.375, mythic 5.0625 (`item_catalog.gd:16-22`).
+- Rarity power multipliers: common 1.0, rare 2.2, epic 4.84, legendary
+  10.648, mythic 23.4256 (`item_catalog.gd:16-22`). Each tier is 2.2x the
+  previous so a +10 item (2.0x) always stays below the next tier's +0.
 - `MASTERY_BONUS_PER_LEVEL = 0.05`; enhancement raises implicit by 5% per
   level up to `MAX_ITEM_ENHANCEMENT = 10` (`item_catalog.gd:14`,
   `player_profile.gd:7`).

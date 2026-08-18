@@ -21,6 +21,16 @@ func _initialize() -> void:
 	var common_price_item := ItemInstance.new(); common_price_item.definition_id = &"basic_sword"; common_price_item.rarity = &"common"
 	legendary.definition_id = &"basic_sword"; legendary.quality = 1.0; mythic.definition_id = &"basic_sword"; mythic.quality = 1.0
 	_expect(catalog.price(mythic) > catalog.price(legendary) and catalog.price(legendary) > catalog.price(common_price_item), "higher rarity has higher shop value", failures)
+	var rarity_order := [&"common", &"rare", &"epic", &"legendary", &"mythic"]
+	var prev_plus_ten := -INF
+	for rarity_index in rarity_order.size():
+		var rarity: StringName = rarity_order[rarity_index]
+		var base_item := ItemInstance.new(); base_item.definition_id = &"basic_sword"; base_item.rarity = rarity; base_item.quality = 1.0
+		var tier_zero := float(catalog.bonuses(base_item, 0)["damage_rate"])
+		if rarity_index > 0:
+			_expect(tier_zero > prev_plus_ten, "%s +0 (%f) beats %s +10 (%f)" % [String(rarity), tier_zero, String(rarity_order[rarity_index - 1]), prev_plus_ten], failures)
+		base_item.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+		prev_plus_ten = float(catalog.bonuses(base_item, 0)["damage_rate"])
 	_expect(catalog.rarity_color(&"common") == Color.WHITE and catalog.rarity_color(&"rare") != catalog.rarity_color(&"epic") and catalog.rarity_color(&"legendary") != catalog.rarity_color(&"mythic"), "rarity colors are distinct", failures)
 	first.instance_id = profile.create_item_id("test")
 	_expect(profile.grant_item(first), "new item granted", failures)

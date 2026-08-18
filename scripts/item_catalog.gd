@@ -15,10 +15,10 @@ const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
 const RARITY_POWER_MULTIPLIERS := {
 	&"common": 1.0,
-	&"rare": 1.5,
-	&"epic": 2.25,
-	&"legendary": 3.375,
-	&"mythic": 5.0625,
+	&"rare": 2.2,
+	&"epic": 4.84,
+	&"legendary": 10.648,
+	&"mythic": 23.4256,
 }
 
 const BASIC_GEAR_DROP_WEIGHT := 5.0
@@ -207,8 +207,10 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	for stat: String in base_bonuses:
 		var base_value := float(base_bonuses[stat])
 		var normalized_stat: String = str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat))
-		# Every tier doubles the implicit package. Enhancement then adds 10% of
-		# that tier's package per level, keeping +10 below the next tier's +0.
+		# Each tier is 2.2x the previous (RARITY_POWER_MULTIPLIERS). Enhancement
+		# then adds 10% of that tier's package per level, capping at +10 = 2.0x.
+		# Because 2.0 < 2.2, a +10 item always stays below the next tier's +0,
+		# so higher rarity is always worth more than more enhancement.
 		var tier_base := base_value * rarity_multiplier
 		result[normalized_stat] = tier_base * enhancement_factor
 	for affix_key: String in item.affixes:

@@ -82,7 +82,7 @@ These are code constants (not inspector-exposed) that drive gear value:
 | Health/damage rate % per point | 0.01 | `equipment_component.gd` (×0.01) |
 | Enhancement % per level | 0.10 | `item_catalog.gd:MASTERY_BONUS_PER_LEVEL` |
 | Max enhancement | +10 | `player_profile.gd` |
-| Rarity power multipliers | 1.0 / 1.5 / 2.25 / 3.375 / 5.0625 | `item_catalog.gd` |
+| Rarity power multipliers | 1.0 / 2.2 / 4.84 / 10.648 / 23.4256 (2.2x/tier) | `item_catalog.gd` |
 | Fusion base cost | 20G | `player_profile.gd:FUSION_BASE_COST` |
 | Fusion cost per enhancement | 15G | `player_profile.gd:FUSION_COST_PER_ENHANCEMENT` |
 | Base stats (archetype) | VIT/STR/DEF sum to 7 | `stats_component.gd:_base_profile_values` |
