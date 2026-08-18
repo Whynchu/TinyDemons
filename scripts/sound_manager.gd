@@ -8,7 +8,7 @@ class_name SoundManager
 const SOUNDS_PATH := "res://assets/sounds/"
 const BATTLE_PATH := SOUNDS_PATH + "10_Free_RPG_Battle_SFX/"
 const UI_PATH := SOUNDS_PATH + "10_ui_sfx_free_samples/"
-const MUSIC_PATH := SOUNDS_PATH + "Soundtrack/TINY_DEMONS_Main_Theme_Demo.wav"
+const MUSIC_PATH := SOUNDS_PATH + "Soundtrack/Tiny Demons- MAIN THEME.wav"
 
 const CLIPS := {
 	"slash": BATTLE_PATH + "22_Slash_04.wav",
