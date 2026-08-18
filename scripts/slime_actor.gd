@@ -169,9 +169,9 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var vertical_reach := 7.0 * encounter_scale
 	hit_rect.position.y = foot.y - vertical_reach
 	hit_rect.size.y = vertical_reach * 2.0
-	if not hit_rect.has_point(root.call("_actor_foot", player) as Vector2): return
 	if root.has_method("_play_sound"):
-		root.call("_play_sound", "bite", 0.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.06, 0.06))
+		root.call("_play_sound", "bite", -8.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
+	if not hit_rect.has_point(root.call("_actor_foot", player) as Vector2): return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_enemy_attack_attempt()

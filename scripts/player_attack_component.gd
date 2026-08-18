@@ -36,6 +36,8 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 func apply_hitbox(root: Object) -> void:
 	var hitbox := attack_polygon(root)
 	if hitbox.size() < 3: return
+	if root.has_method("_play_sound"):
+		root.call("_play_sound", "miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var attack_component := root.get("player_attack_component") as PlayerAttackComponent
 	var eligible_targets: Array[Sprite2D] = []
@@ -44,8 +46,6 @@ func apply_hitbox(root: Object) -> void:
 		if not polygon_intersects_rect(hitbox, root.call("_collision_rect", slime)): continue
 		eligible_targets.append(slime)
 	if eligible_targets.is_empty():
-		if root.has_method("_play_sound"):
-			root.call("_play_sound", "miss", 0.0, 1.0)
 		return
 	var target_count := eligible_targets.size()
 	var tuning := root.get("player_tuning") as PlayerTuning

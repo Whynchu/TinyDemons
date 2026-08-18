@@ -4,6 +4,7 @@ class_name ScreenStateController
 signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
+var _last_title_focus: Button = null
 var hub_overlay: ColorRect = null
 var hub_summary_text: Sprite2D = null
 var hub_points_text: Sprite2D = null
@@ -154,6 +155,9 @@ func update_title_flow(root: Object, delta: float) -> void:
 	var cursor := title_cursor_text
 	var focused := root.get_viewport().gui_get_focus_owner() as Button
 	var selected := continue_button if focused == continue_button and not continue_button.disabled else new_game
+	if focused != _last_title_focus and focused != null:
+		_last_title_focus = focused
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	if cursor != null and selected != null:
 		cursor.visible = true
 		cursor.position = Vector2(selected.position.x - 8, selected.position.y + 4)
