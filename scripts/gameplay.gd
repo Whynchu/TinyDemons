@@ -296,6 +296,8 @@ func _close_hub_to_run() -> void:
 	screen_state_controller.set_state(&"gameplay")
 	if was_pause:
 		_play_sound("ui_unpause", 0.0, 1.0)
+	else:
+		_play_sound("ui_decline", 0.0, 1.0)
 func _update_hub_input() -> void: screen_state_controller.update_hub_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
@@ -316,6 +318,7 @@ func _set_hub_page(page: int) -> void:
 	if screen_state_controller.hub_page == 3:
 		_refresh_hub_fusion_candidates()
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_hover", -6.0, 1.0)
 func _shift_hub_item(direction: int) -> void:
 	var count := 0
 	if screen_state_controller.hub_page == 1:
@@ -508,7 +511,6 @@ func _hub_confirm_stats() -> void:
 func _hub_cancel_stats() -> void:
 	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
 	if screen_state_controller != null and screen_state_controller.hub_overlay != null: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_decline", 0.0, 1.0)
 func _hub_auto_allocate() -> void:
 	if player_profile == null: return
 	var patterns := [[&"VIT", &"STR", &"DEF", &"SPD"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"SPD"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"SPD"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"SPD"], [&"STR", &"DEF", &"STR", &"DEF", &"SPD"]]

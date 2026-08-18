@@ -165,7 +165,7 @@ func update_title_flow(root: Object, delta: float) -> void:
 	if root.call("_is_interact_input_pressed"):
 		var interact_focused := root.get_viewport().gui_get_focus_owner() as Button
 		if interact_focused != null and not interact_focused.disabled:
-			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+			root.call("_play_sound", "enemy_death", -6.0, 0.95)
 			interact_focused.pressed.emit()
 
 
