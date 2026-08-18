@@ -58,6 +58,29 @@ func _initialize() -> void:
 		_expect(has_pixel, "FOCUS texture is not blank (all letters have glyphs)", failures)
 	spawner.free()
 
+	var renderer := OcclusionRenderer.new()
+	renderer.resolution_scale = 1
+	var src := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	src.fill(Color(0, 0, 0, 0))
+	for y in [1, 2]:
+		for x in [1, 2]:
+			src.set_pixel(x, y, Color(1, 1, 1, 1))
+	var white_img := renderer.make_highlighted_effect_image(src)
+	var grey_img := renderer.make_grey_highlighted_effect_image(src)
+	var white_outline_found := false
+	var grey_outline_found := false
+	for y in 4:
+		for x in 4:
+			var wp: Color = white_img.get_pixel(x, y)
+			var gp: Color = grey_img.get_pixel(x, y)
+			if wp.a > 0.0 and wp.r > 0.9 and wp.g > 0.9 and wp.b > 0.9:
+				white_outline_found = true
+			if gp.a > 0.0 and gp.r < 0.7 and gp.g < 0.7 and gp.b < 0.7:
+				grey_outline_found = true
+	_expect(white_outline_found, "white highlight outline is white", failures)
+	_expect(grey_outline_found, "focus-lost highlight outline is grey", failures)
+	renderer.free()
+
 	_finished = true
 	call_deferred("_finish", failures)
 

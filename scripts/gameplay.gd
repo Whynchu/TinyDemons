@@ -971,6 +971,7 @@ func _tick_focus_combo(delta: float) -> void:
 	momentum.tick(delta, current_target != null)
 	if was_focus_active and not momentum.focus_active and current_target != null:
 		_play_sound("ui_decline", -10.0, 1.0)
+		focus_flash_timer = FOCUS_FLASH_TIME
 func _reset_combo() -> void: _combat_momentum().reset_combo()
 func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> float:
 	return equipment_transmutation_component.damage_share_divisor(slime, target_count) if equipment_transmutation_component != null else maxf(float(target_count), 1.0)
@@ -1046,7 +1047,7 @@ func _build_interact_prompt() -> void:
 func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
-	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; 	hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
+	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; 	hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
@@ -1946,7 +1947,8 @@ func _update_actor_occlusion(delta: float) -> void:
 	var occlusion_actors: Array[Sprite2D] = [player]
 	if current_target != null and current_target != player and not _is_slime_dead(current_target):
 		occlusion_actors.append(current_target)
-	occlusion_renderer.update_actor_occlusion(occlusion_actors, occluder_sprites, player, current_target, delta, OCCLUSION_RELEASE_GRACE, Callable(self, "_is_actor_occlusion_flashing"), Callable(self, "_depth_key"), Callable(self, "_sprite_source_global_rect"), Callable(self, "_build_exact_occluded_actor_texture"), Callable(self, "_apply_actor_scale"), Callable(self, "_restore_actor_base_visual_scale"))
+	var target_focus_lost := current_target != null and not _combat_momentum().focus_active
+	occlusion_renderer.update_actor_occlusion(occlusion_actors, occluder_sprites, player, current_target, target_focus_lost, delta, OCCLUSION_RELEASE_GRACE, Callable(self, "_is_actor_occlusion_flashing"), Callable(self, "_depth_key"), Callable(self, "_sprite_source_global_rect"), Callable(self, "_build_exact_occluded_actor_texture"), Callable(self, "_apply_actor_scale"), Callable(self, "_restore_actor_base_visual_scale"))
 	if player_equipment_visual_component != null:
 		player_equipment_visual_component.update_occlusion(self, delta)
 func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool: return actor == player and player_hit_flash_timer > 0.0
@@ -1976,24 +1978,45 @@ func _closest_target() -> Sprite2D: return interaction_component.closest_target(
 func _set_current_target(target: Sprite2D) -> void:
 	if current_target != target:
 		current_target = target
+		focus_flash_timer = 0.0
 		_combat_momentum().on_target_changed(target != null)
 		_update_focus_indicator()
 func _update_target_ui() -> void:
 	if current_target == null: _set_target_ui_visible(false); return
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values"))
 func _set_target_ui_visible(target_visible: bool) -> void: hud_controller.set_visible(target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_visible)
-func _update_focus_indicator() -> void:
-	if focus_label == null:
+func _update_focus_indicator(delta: float = 0.0) -> void:
+	if focus_label == null or focus_label_base == null:
 		return
 	if current_target == null:
 		focus_label.visible = false
+		focus_label_base.visible = false
+		focus_flash_timer = 0.0
 		return
-	focus_label.visible = true
 	var momentum := _combat_momentum()
-	var focus_color := Color8(255, 220, 120) if momentum.focus_active else Color8(200, 80, 80)
-	focus_label.texture = _pixel_text_texture("FOCUS", focus_color)
-	var name_width := (target_name_text.texture.get_size().x * 0.5 + 5.0) if target_name_text.texture != null else 16.0
-	focus_label.position = target_name_text.position + Vector2(name_width, 0.0)
+	if focus_flash_timer > 0.0:
+		focus_flash_timer = maxf(focus_flash_timer - delta, 0.0)
+	var active := momentum.focus_active and momentum.focus_timer > 0.0
+	var name_half := (target_name_text.texture.get_size().x * 0.5) if target_name_text.texture != null else 0.0
+	var top_left := target_name_text.position + Vector2(name_half + 12.0, -FOCUS_TEXT_HEIGHT * 0.5 - 1.0)
+	focus_label.position = top_left
+	focus_label_base.position = top_left
+	focus_label.visible = true
+	focus_label_base.visible = true
+	focus_label_base.texture = _pixel_text_texture("FOCUS", Color8(150, 150, 150))
+	var fill_ratio := 0.0
+	var fill_color := _health_feedback_color(screen_state_controller.player_palette_name)
+	if focus_flash_timer > 0.0:
+		fill_ratio = 1.0
+		fill_color = Color.WHITE
+	elif active:
+		fill_ratio = clampf(momentum.focus_timer / momentum.focus_window, 0.0, 1.0)
+	focus_label.texture = _pixel_text_texture("FOCUS", fill_color)
+	if fill_ratio >= 1.0:
+		focus_label.region_enabled = false
+	else:
+		focus_label.region_enabled = true
+		focus_label.region_rect = Rect2(Vector2.ZERO, Vector2(FOCUS_TEXT_WIDTH * fill_ratio, FOCUS_TEXT_HEIGHT))
 func _slime_display_name(slime: Sprite2D) -> String:
 	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Rogue Slime" if palette == "purple" else "Green Slime"; var stats := _slime_stats(slime); return "lv.%d %s" % [stats.level if stats != null else 1, display_name]
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health_component.current_health if player_health_component != null else 0.0, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
@@ -2007,7 +2030,7 @@ func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2:
 	if texture == null: return Rect2(sprite.global_position, Vector2.ZERO)
 	var sprite_scale := sprite.scale.abs(); if occlusion_renderer.original_actor_scales.has(sprite): sprite_scale = _actor_screen_scale(sprite).abs()
 	var size: Vector2 = texture.get_size() * sprite_scale; var source_offset := _actor_visual_offset(sprite) if occlusion_renderer.original_actor_scales.has(sprite) else sprite.offset; var origin := sprite.global_position + source_offset * sprite_scale - size * 0.5 if sprite.centered else sprite.global_position + source_offset * sprite_scale; return Rect2(origin, size)
-func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], include_outline: bool) -> Texture2D: return occlusion_renderer.build_exact_occluded_actor_texture(actor, active_occluders, include_outline, Callable(self, "_is_pixel_covered_by_occluder"), Callable(self, "_actor_visual_offset"))
+func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], is_target: bool, use_grey_highlight: bool) -> Texture2D: return occlusion_renderer.build_exact_occluded_actor_texture(actor, active_occluders, is_target, use_grey_highlight, Callable(self, "_is_pixel_covered_by_occluder"), Callable(self, "_actor_visual_offset"))
 func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D]) -> bool: return occlusion_renderer.is_pixel_covered_by_occluder(world_pixel, active_occluders, Callable(self, "_actor_screen_scale"), Callable(self, "_actor_visual_offset"))
 func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void: actor.scale = _actor_screen_scale(actor); actor.offset = _actor_visual_offset(actor)
 func _restore_actor_base_visual_scale(actor: Sprite2D) -> void: if occlusion_renderer.original_actor_scales.has(actor): actor.scale = _actor_screen_scale(actor); actor.offset = _actor_visual_offset(actor)

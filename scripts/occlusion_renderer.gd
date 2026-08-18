@@ -6,9 +6,11 @@ var cached_images: Dictionary = {}
 var texture_image_cache: Dictionary = {}
 var effect_image_cache: Dictionary = {}
 var highlighted_image_cache: Dictionary = {}
+var grey_highlighted_image_cache: Dictionary = {}
 var white_image_cache: Dictionary = {}
 var occluded_actor_textures: Dictionary = {}
 var highlighted_actor_textures: Dictionary = {}
+var grey_highlighted_actor_textures: Dictionary = {}
 var white_actor_textures: Dictionary = {}
 var actor_default_textures: Dictionary = {}
 var actor_default_materials: Dictionary = {}
@@ -35,6 +37,7 @@ func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]
 	occluded_actor_textures.clear()
 	actor_occlusion_grace.clear()
 	highlighted_actor_textures.clear()
+	grey_highlighted_actor_textures.clear()
 	white_actor_textures.clear()
 	sprite_images.clear()
 	for actor in actors:
@@ -58,6 +61,7 @@ func _register_sprite(actor: Sprite2D) -> void:
 	occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(actor.texture, image), image.get_size())
 	actor_occlusion_grace[actor] = 0.0
 	highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(actor.texture, image), image.get_size())
+	grey_highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_grey_highlighted_image(actor.texture, image), image.get_size())
 	white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(actor.texture, image))
 
 
@@ -70,6 +74,7 @@ func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
 	original_actor_images[actor] = image; sprite_images[actor] = image
 	occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(texture, image), image.get_size())
 	highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(texture, image), image.get_size())
+	grey_highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_grey_highlighted_image(texture, image), image.get_size())
 	white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(texture, image)); actor.texture = texture
 
 
@@ -88,14 +93,14 @@ func white_texture(source: Texture2D) -> Texture2D:
 	var texture := ImageTexture.create_from_image(image); white_image_cache[key] = texture; return texture
 
 
-func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, delta: float, apply_actor_scale: Callable, _grace_duration: float) -> void:
+func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, use_grey_highlight: bool, delta: float, apply_actor_scale: Callable, _grace_duration: float) -> void:
 	var grace := maxf(float(actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
 	actor_occlusion_grace[actor] = grace
 	if grace > 0.0 and actor.texture == occluded_actor_textures.get(actor):
 		apply_actor_scale.call(actor, true)
 		return
 	if is_target:
-		actor.texture = highlighted_actor_textures[actor]
+		actor.texture = grey_highlighted_actor_textures[actor] if use_grey_highlight else highlighted_actor_textures[actor]
 		apply_actor_scale.call(actor, true)
 	else:
 		actor.texture = original_actor_textures[actor]
@@ -122,6 +127,7 @@ func update_actor_occlusion(
 	occluder_sprites: Array[Sprite2D],
 	player: Sprite2D,
 	current_target: Sprite2D,
+	target_focus_lost: bool,
 	delta: float,
 	release_grace: float,
 	is_flashing: Callable,
@@ -141,17 +147,18 @@ func update_actor_occlusion(
 			apply_actor_scale.call(actor, false)
 			continue
 		var is_target := actor == current_target
+		var use_grey_highlight := is_target and target_focus_lost
 		var actor_depth := float(depth_key.call(actor))
 		var actor_rect := source_rect.call(actor) as Rect2
 		var occlusion_candidates := active_occluders_for(actor, occluder_sprites, actor_depth, actor_rect, depth_key, source_rect)
 		var active_occluders := occlusion_candidates["occluders"] as Array[Sprite2D]
 		var highest_occluder_z := int(occlusion_candidates["highest_z"])
 		if active_occluders.is_empty():
-			apply_unoccluded_actor_texture(actor, is_target, delta, apply_actor_scale, release_grace)
+			apply_unoccluded_actor_texture(actor, is_target, use_grey_highlight, delta, apply_actor_scale, release_grace)
 			continue
-		var texture := build_exact_texture.call(actor, active_occluders, is_target) as Texture2D
+		var texture := build_exact_texture.call(actor, active_occluders, is_target, use_grey_highlight) as Texture2D
 		if texture == null:
-			apply_unoccluded_actor_texture(actor, is_target, delta, apply_actor_scale, release_grace)
+			apply_unoccluded_actor_texture(actor, is_target, use_grey_highlight, delta, apply_actor_scale, release_grace)
 			continue
 		actor_occlusion_grace[actor] = release_grace
 		actor.texture = texture
@@ -186,6 +193,14 @@ func cached_highlighted_image(texture: Texture2D, source_image: Image) -> Image:
 	return image
 
 
+func cached_grey_highlighted_image(texture: Texture2D, source_image: Image) -> Image:
+	if grey_highlighted_image_cache.has(texture):
+		return grey_highlighted_image_cache[texture]
+	var image := make_grey_highlighted_effect_image(source_image)
+	grey_highlighted_image_cache[texture] = image
+	return image
+
+
 func cached_white_image(texture: Texture2D, source_image: Image) -> Image:
 	if white_image_cache.has(texture):
 		return white_image_cache[texture]
@@ -213,6 +228,12 @@ func make_highlighted_effect_image(source_image: Image) -> Image:
 	return image
 
 
+func make_grey_highlighted_effect_image(source_image: Image) -> Image:
+	var image := make_effect_image(source_image)
+	apply_pixel_outline(image, resolution_scale, Color8(150, 150, 150))
+	return image
+
+
 func make_white_image(source_image: Image) -> Image:
 	var image := Image.create_empty(source_image.get_width(), source_image.get_height(), false, source_image.get_format())
 	for y in range(source_image.get_height()):
@@ -222,14 +243,14 @@ func make_white_image(source_image: Image) -> Image:
 	return image
 
 
-func apply_pixel_outline(image: Image, pixel_size: int = 1) -> void:
+func apply_pixel_outline(image: Image, pixel_size: int = 1, outline_color: Color = Color.WHITE) -> void:
 	var outline_points: Array[Vector2i] = []
 	for y in range(image.get_height()):
 		for x in range(image.get_width()):
 			if image.get_pixel(x, y).a <= 0.05 and has_opaque_cardinal_neighbor(image, x, y, pixel_size):
 				outline_points.append(Vector2i(x, y))
 	for point in outline_points:
-		image.set_pixel(point.x, point.y, Color.WHITE)
+		image.set_pixel(point.x, point.y, outline_color)
 
 
 
@@ -278,7 +299,7 @@ func source_pixel_position(sprite: Sprite2D, world_pixel: Vector2, actor_screen_
 	return source_pixel
 
 
-func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], include_outline: bool, is_pixel_covered: Callable, actor_visual_offset: Callable) -> Texture2D:
+func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], is_target: bool, use_grey_highlight: bool, is_pixel_covered: Callable, actor_visual_offset: Callable) -> Texture2D:
 	var source_image := original_actor_images[actor] as Image
 	var result_image := make_effect_image(source_image)
 	var original_scale := original_actor_scales[actor] as Vector2
@@ -300,10 +321,10 @@ func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array
 			if (x + y) % 2 == 0:
 				color.a = 0.0
 				result_image.set_pixel(x, y, color)
-	if not any_occluded_pixel and not include_outline:
+	if not any_occluded_pixel and not is_target:
 		return null
-	if include_outline:
-		apply_pixel_outline(result_image, resolution_scale)
+	if is_target:
+		apply_pixel_outline(result_image, resolution_scale, Color8(150, 150, 150) if use_grey_highlight else Color.WHITE)
 	var texture := occluded_actor_textures[actor] as ImageTexture
 	texture.set_image(result_image)
 	texture.set_size_override(source_image.get_size())

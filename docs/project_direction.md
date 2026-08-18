@@ -250,10 +250,13 @@ Build in this order. Each phase is independently shippable and verifiable.
 > **Status: implemented 2026-08-18.** FOCUS (+30% bonus / 2.5s window / −20%
 > penalty) and the hit-streak combo (+5%/hit, +25% cap, 1.5s window, reset on
 > hit) shipped as `CombatMomentumComponent` and slot into
-> `_player_attack_damage_against`. A "FOCUS" HUD label next to the target name
-> shows warm gold while the window is open and shifts to dull red when it
-> expires, plus a soft `ui_decline` cue on expiry. Verified by
-> `combat_momentum_smoke.gd` (which also guards the FOCUS glyph set).
+> `_player_attack_damage_against`. The "FOCUS" HUD label next to the target
+> name is a backfill gauge: it renders in the player's main color and drains
+> from the right as the window expires; on draining out it flashes white once,
+> then settles grey. The locked enemy's highlight outline also turns grey when
+> focus is lost. A soft `ui_decline` cue plays on expiry. Verified by
+> `combat_momentum_smoke.gd` (which guards the FOCUS glyph set and the
+> grey-outline path).
 
 **Phase 2 — Elemental aspects (the identity)**
 - Replace `aquamarine` with `ice` palette; lock the 8 aspects.

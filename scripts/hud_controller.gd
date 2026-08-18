@@ -273,9 +273,17 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	target_text.position = target_bar.position + target_bar.texture.get_size() * 0.5
 	target_text.visible = false
 	parent.add_child(target_text)
+	var focus_label_base := Sprite2D.new()
+	focus_label_base.name = "FocusLabelBase"
+	focus_label_base.centered = false
+	focus_label_base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	focus_label_base.z_index = 2
+	focus_label_base.position = Vector2(120, 148)
+	focus_label_base.visible = false
+	parent.add_child(focus_label_base)
 	var focus_label := Sprite2D.new()
 	focus_label.name = "FocusLabel"
-	focus_label.centered = true
+	focus_label.centered = false
 	focus_label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	focus_label.z_index = 3
 	focus_label.position = Vector2(120, 148)
@@ -288,7 +296,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "focus_label": focus_label, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
