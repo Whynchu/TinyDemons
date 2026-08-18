@@ -467,8 +467,8 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
 		left.set_meta("hub_stat_index", index); right.set_meta("hub_stat_index", index)
 		stat_left.append(left); stat_right.append(right); stat_buttons.append(left); stat_buttons.append(right)
-	for index in 3:
-		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(100, 42 + index * 16), false))
+	for index in 4:
+		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(100, 42 + index * 12), false))
 	var apply_button := make_retro_button("APPLY", Vector2(3, 88), Vector2(34, 11), pixel_texture)
 	apply_button.focus_mode = Control.FOCUS_NONE
 	apply_button.pressed.connect(apply_stats)
@@ -591,7 +591,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]; snapshot.speed += pending[3]
 		var combat_tuning := root.get("combat_tuning") as CombatTuning
 		var derived_texts := root.get("hub_derived_texts") as Array[Sprite2D]
-		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "DEF %d" % snapshot.def, "SPD %d" % snapshot.speed]
+		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "ATK %d" % roundi((combat_tuning.damage_base + float(snapshot.strength)) * (1.0 + maxf(snapshot.gear_damage_rate, 0.0))), "DEF %d" % snapshot.def, "SPD %d" % snapshot.speed]
 		for index in derived_texts.size():
 			derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D if index < derived_values.size() else null
 	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3])
