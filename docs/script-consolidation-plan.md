@@ -14,7 +14,7 @@ Audit date: 2026-08-09
 
 ## Purpose
 
-`tiny-demons/scripts/gameplay.gd` currently owns most runtime behavior for the
+`scripts/gameplay.gd` currently owns most runtime behavior for the
 game. This plan moves that behavior into composed, testable components while
 keeping the game playable after every milestone.
 
@@ -701,7 +701,7 @@ Run the relevant subset for every milestone and the full list for M7.
 Use the same patterns when recording progress so comparisons remain meaningful:
 
 ```powershell
-$path = 'tiny-demons/scripts/gameplay.gd'
+$path = 'scripts/gameplay.gd'
 $lines = Get-Content $path
 [pscustomobject]@{
     PhysicalLines = $lines.Count

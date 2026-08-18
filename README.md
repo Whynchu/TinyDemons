@@ -27,15 +27,22 @@ enhancement level. See
 
 ## Project Layout
 
-- `tiny-demons/` - the Godot project
-- `Artwork/` - exported and source art files
+- `project.godot` - the Godot project root (this folder is the project)
+- `assets/` `scenes/` `scripts/` `shaders/` `tests/` - the Godot project
+- `Artwork/` - exported and source art files (source, not imported by Godot)
 - `Mockups/` - reference mockups
-- `docs/` - overhaul plan, consolidation plan, and gameplay smoke checklist
+- `screenshots/` - game screenshots
+- `docs/` - audit, plans, tuning index, feature designs, and smoke checklist
 - `docs/game-screenshot.png` - first-room gameplay screenshot used in this README
 
 ## Running The Project
 
-Open `tiny-demons/project.godot` in Godot 4.7 and run the main scene. The project is configured for a small nearest-neighbor pixel-art presentation, so keep texture filtering and integer-like scaling intact when changing the display settings.
+Open `project.godot` in Godot 4.7 and run the main scene. The project is configured for a small nearest-neighbor pixel-art presentation, so keep texture filtering and integer-like scaling intact when changing the display settings.
+
+Run the headless smoke suite before committing:
+```powershell
+pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
+```
 
 ## Controls
 

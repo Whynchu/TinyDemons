@@ -147,7 +147,7 @@ Three problems were confirmed during the repo audit (see
 
 Godot console build (available):
 ```
-& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons\tiny-demons"
+& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons"
 ```
 - Main scene 120-frame run: zero errors/warnings.
 - Smoke tests (exit 0):
@@ -241,4 +241,4 @@ cost scales with target enhancement.
 
 - `docs/script-consolidation-plan.md` - architecture consolidation (M0-M9).
 - `docs/gameplay-smoke-checklist.md` - manual behavior baseline.
-- `tiny-demons/docs/meta_progression_design.md` - hub/progression design.
+- `docs/meta_progression_design.md` - hub/progression design.

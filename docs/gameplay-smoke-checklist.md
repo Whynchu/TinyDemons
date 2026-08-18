@@ -178,7 +178,7 @@ new effect appears above the intended UI/world layer.
 - `git diff --check`: available and required for each change.
 - Godot headless validation: available (v4.7.1 console build). Command:
   ```
-  & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons\tiny-demons"
+  & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons"
   ```
 - Headless main-scene load (`--quit-after 30`): passes with no script/runtime errors.
 - Automated smoke tests (all exit 0):
@@ -186,7 +186,7 @@ new effect appears above the intended UI/world layer.
   - `-s res://tests/progression_smoke.gd` -> `PROGRESSION_SMOKE_OK`
   - `-s res://tests/item_economy_smoke.gd` -> `ITEM_ECONOMY_SMOKE_OK`
 - One-shot runner (all three + main-scene headless check):
-  `pwsh -ExecutionPolicy Bypass -File tiny-demons/tests/run_all_smoke.ps1`
+  `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
 - Smoke tests use a watchdog: if any assertion fails mid-script the process
   aborts with a `TEST_ABORTED` error and exit code 1 instead of hanging.
 - Post-overhaul expectations: player base 3/2/2 (archetypes sum to 7), gear

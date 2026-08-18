@@ -17,10 +17,10 @@ Every change should be checked headless before commit:
 
 ```powershell
 # Main scene boots (30 frames, no errors)
-& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons\tiny-demons" --quit-after 30
+& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons" --quit-after 30
 
 # Full smoke suite (5 tests + main scene)
-pwsh -ExecutionPolicy Bypass -File tiny-demons/tests/run_all_smoke.ps1
+pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 ```
 
 All 5 smoke tests (`run_grade`, `progression`, `item_economy`,
@@ -42,23 +42,21 @@ C:\Development\Tiny-Demons\                 <- workspace root (NOT git)
 │   └── Godot_v4.7.1-stable_win64_console.exe
 ├── Screenshot 2026-08-09 230211.png        <- loose file
 ├── previous session.txt
-└── TinyDemons\                             <- the actual git repo (git root)
-    ├── Artwork\                            <- source .aseprite/.png exports
-    ├── Mockups\
-    ├── screenshots\
-    ├── docs\                               <- game docs (this file, plans, checklists)
-    └── tiny-demons\                        <- the Godot project (project root)
-        ├── assets\artwork\                 <- project copies + .import files
-        ├── scenes\  scripts\  shaders\  tests\
-        └── docs\                           <- feature design docs (separate folder!)
+└── TinyDemons\                             <- git repo root == Godot project root
+    ├── project.godot                       <- open this in Godot
+    ├── assets\  scenes\  scripts\  shaders\  tests\    <- the Godot project
+    ├── Artwork\  Mockups\  screenshots\  docs\          <- .gdignore'd (not imported)
+    └── (Artwork also copied into assets\artwork\ as project sprites)
 ```
 
-Deliberate (documented in README). The friction points are:
+Flattened 2026-08-18: `project.godot` sits at the git root. `Artwork/`,
+`Mockups/`, `screenshots/`, and `docs/` carry `.gdignore` markers so Godot
+does not import the loose source art or README images. Friction points that
+remain (all workspace-level, not repo-level):
 
-- Git root and Godot project root do not coincide (project is one level deep).
-- Two `docs/` folders (`TinyDemons/docs/` and `TinyDemons/tiny-demons/docs/`).
 - Artwork exists both as source (`Artwork/`) and as project copies
-  (`assets/artwork/`).
+  (`assets/artwork/`); 3 files have drifted and 7 project sprites have no
+  source export (see §3.4).
 - The Godot executable folder is named like a `.exe`, which confused earlier
   audits into reporting Godot as "undiscoverable".
 
@@ -181,10 +179,10 @@ docs/                          <- ONE docs folder at git root
 └── combat-economy-overhaul.md
 ```
 
-`tiny-demons/docs/` content (feature designs: meta progression, dialogue shop,
-rogue slime, speed stat) either moves up to `docs/` or is cross-linked at the
-top of `docs/` so a contributor finds one entry point. No new feature design
-doc should be created in `tiny-demons/docs/`.
+Feature design docs (meta progression, dialogue shop, rogue slime, speed
+stat) are consolidated here at `docs/` alongside the audit/plan/checklist
+docs — one entry point for the whole repo. No new feature design doc should
+be created outside `docs/`.
 
 ### 2.3 Workflow friction removed
 
@@ -193,8 +191,8 @@ doc should be created in `tiny-demons/docs/`.
   identically.
 - **Editor reload note** added to feature docs (class cache) so playtesters
   do not hit stale-script errors.
-- **Repo root** either flattens (project.godot at git root) or gets an
-  explicit, documented reason not to. See decision below.
+- **Repo root is flattened** (project.godot at git root) — done 2026-08-18;
+  loose art folders carry `.gdignore` markers so Godot does not import them.
 
 ---
 
@@ -317,8 +315,6 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
 
 ### 3.5 Workflow friction
 
-- Two `docs/` folders; feature docs land in `tiny-demons/docs/` while audit
-  docs land in `TinyDemons/docs/`.
 - One logical change touches 2+ files every time: adding a screen state
   touches 5 files (`gameplay_state` + `gameplay` + `gameplay_frame_controller`
   + `screen_state_controller` + `gameplay_bootstrap`); changing a palette
@@ -327,8 +323,8 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
   and only 49 blank lines across 2,051 lines — merge/agent diff friction.
 - Three different "just-pressed" input idioms coexist (attack/roll state vars,
   pause local, interact member).
-- Test runner exists but is not yet referenced from the README; nothing runs
-  the smoke tests from the editor workflow.
+- Test runner is now referenced from the README; nothing runs the smoke tests
+  from the editor workflow.
 - Godot binary folder name ("..._win64.exe\") caused the earlier
   "undiscoverable" misreport; worth a README note or rename.
 - No CI; the runner is manual (`pwsh -File ...`). Fine for now.
@@ -337,10 +333,19 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
 
 ## 4. Proposed refactor plan (priority order)
 
-### P0 — Commit the WIP checkpoint (do first, unchanged behavior)
+### P0 — Commit the WIP checkpoint (do first, unchanged behavior) ✅ DONE
 
-The current tree is a large, tested but uncommitted feature bundle. Creating a
-checkpoint isolates later refactors from feature changes.
+Committed as `af3e1d2` ("Feature overhaul: gear value, fusion redesign, rogue
+slime, speed stat + repo audit") on 2026-08-18. The repo now has a clean
+checkpoint before refactor work.
+
+### P0.5 — Flatten the repo ✅ DONE
+
+Flattened 2026-08-18: `project.godot` moved to the git root; feature design
+docs consolidated into `docs/`; `Artwork/`, `Mockups/`, `screenshots/`,
+`docs/` carry `.gdignore` markers; `.gitignore` expanded
+(`.godot-user/`, export artifacts, platform junk). Path references in the
+README, test runner, and this doc updated.
 
 ### P1 — Delegate-new-feature gate (stop the coordinator growth)
 
@@ -388,16 +393,7 @@ checkpoint isolates later refactors from feature changes.
 - Reconcile `Artwork/` vs `assets/artwork/` duplication (3 drifted, 7 orphaned
   project sprites) — either single-source or document the sync step.
 - Write `docs/ARCHITECTURE.md` (component map + extension guide, M10 item).
-- Cross-link or move `tiny-demons/docs/` feature designs.
 - README: document the test runner + Godot binary folder note + input reality.
-
-### Decision needed (P1)
-
-**Repo root:** flatten the Godot project to the git root (project.godot at
-`TinyDemons/project.godot`), or keep the current nesting and document it?
-Flattening is cleaner for opening the project but requires Godot to ignore the
-loose `Artwork/`, `Mockups/`, `screenshots/` images at the root or moving them
-outside the project scope. No files move until this is decided.
 
 ---
 
