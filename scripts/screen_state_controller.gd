@@ -160,7 +160,9 @@ func update_title_flow(root: Object, delta: float) -> void:
 		cursor.texture = root.call("_pixel_text_texture", ">", Color.WHITE) as Texture2D
 	if root.call("_is_interact_input_pressed"):
 		var interact_focused := root.get_viewport().gui_get_focus_owner() as Button
-		if interact_focused != null and not interact_focused.disabled: interact_focused.pressed.emit()
+		if interact_focused != null and not interact_focused.disabled:
+			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+			interact_focused.pressed.emit()
 
 
 func update_archetype_input(root: Object, delta: float) -> void:
@@ -196,14 +198,18 @@ func update_archetype_input(root: Object, delta: float) -> void:
 	var row := archetype_menu_row
 	if Input.is_action_just_pressed("ui_up"):
 		root.call("_select_archetype_menu_row", row - 1)
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif Input.is_action_just_pressed("ui_down"):
 		root.call("_select_archetype_menu_row", row + 1)
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
 		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
 		if row == 0: root.call("_shift_archetype", direction)
 		elif row == 1: root.call("_shift_archetype_color", direction)
 		else: root.call("_select_archetype_menu_row", 2)
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	if Input.is_action_just_pressed("ui_accept") or root.call("_is_interact_input_pressed"):
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		if row == 2: root.call("_start_selected_archetype")
 		else: root.call("_select_archetype_menu_row", row + 1)
 

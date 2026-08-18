@@ -43,7 +43,10 @@ func apply_hitbox(root: Object) -> void:
 		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
 		if not polygon_intersects_rect(hitbox, root.call("_collision_rect", slime)): continue
 		eligible_targets.append(slime)
-	if eligible_targets.is_empty(): return
+	if eligible_targets.is_empty():
+		if root.has_method("_play_sound"):
+			root.call("_play_sound", "miss", 0.0, 1.0)
+		return
 	var target_count := eligible_targets.size()
 	var tuning := root.get("player_tuning") as PlayerTuning
 	for slime in eligible_targets:

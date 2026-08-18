@@ -50,8 +50,9 @@ func tick(root: Object, delta: float) -> void:
 		if ssc.save_overwrite_prompt_active:
 			var choice := ssc.save_overwrite_choice
 			if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
-				ssc.save_overwrite_choice = 1 - choice; root.call("_update_overwrite_cursor")
+				ssc.save_overwrite_choice = 1 - choice; root.call("_update_overwrite_cursor"); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 			elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
+				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 				if choice == 0: (ssc.save_select_overlay.get_node("OverwriteYes") as Button).pressed.emit()
 				else: (ssc.save_select_overlay.get_node("OverwriteNo") as Button).pressed.emit()
 			return
@@ -61,7 +62,9 @@ func tick(root: Object, delta: float) -> void:
 		if slot != ssc.save_select_index:
 			ssc.save_select_index = posmod(slot, ProfileSaveService.SLOT_COUNT)
 			root.call("_update_save_select_cursor")
+			root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
+			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 			for child in ssc.save_select_overlay.get_children():
 				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == ssc.save_select_index:
 					(child as Button).pressed.emit()

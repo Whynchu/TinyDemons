@@ -26,7 +26,6 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			var current_gold := profile.gold if profile != null else 0
 			root.call("_set_gold_value", current_gold + scaled_gold)
 			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), scaled_gold)
-			root.call("_play_sound", "coin", 0.0, 0.95 + (RandomNumberGenerator.new()).randf_range(-0.05, 0.05))
 			print("Gold: %d" % (current_gold + scaled_gold))
 		elif bool(root.call("_can_interact_with_npc")):
 			(root.get("npc_controller") as NpcController).show_dialogue(root)

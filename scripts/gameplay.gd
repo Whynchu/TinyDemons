@@ -43,12 +43,14 @@ func _equip_profile_item(instance_id: String) -> bool:
 	if player_profile == null or not player_profile.equip_item(instance_id):
 		return false
 	_reapply_equipment_preserving_health()
+	_play_sound("ui_equip", 0.0, 1.0)
 	return true
 
 func _unequip_profile_slot(slot: StringName) -> bool:
 	if player_profile == null or not player_profile.unequip_slot(slot):
 		return false
 	_reapply_equipment_preserving_health()
+	_play_sound("ui_unequip", 0.0, 1.0)
 	return true
 
 func _grant_chest_item_reward() -> bool:
@@ -68,7 +70,7 @@ func _grant_chest_item_reward() -> bool:
 	var item := ItemCatalog.new().generate_item(slot, generation_seed, player_profile.level, rarity)
 	item.instance_id = reward_id
 	_spawn_chest_item_drop(item)
-	_play_sound("item_drop")
+	_play_sound("ui_use_item")
 	return true
 
 func _placeholder_item_texture() -> Texture2D:
@@ -262,6 +264,7 @@ func _show_hub(from_npc: bool = false, pause_mode: bool = false) -> void:
 	screen_state_controller.hub_page = 1 if pause_mode else 0
 	screen_state_controller.hub_item_index = 0
 	_hub_cancel_stats()
+	_play_sound("ui_pause" if pause_mode else "ui_confirm", 0.0, 1.0)
 	screen_state_controller.set_state(&"hub")
 	_select_hub_menu_row(0)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
@@ -282,6 +285,7 @@ func _open_hub_from_cloaked_demon() -> void:
 	_show_hub(true)
 func _close_hub_to_run() -> void:
 	if screen_state_controller.hub_overlay == null: return
+	var was_pause := screen_state_controller.hub_pause_mode
 	_hub_cancel_stats()
 	screen_state_controller.hub_gear_browsing = false
 	screen_state_controller.menu_input_release_lock = _is_menu_cancel_input_pressed()
@@ -290,6 +294,8 @@ func _close_hub_to_run() -> void:
 	screen_state_controller.hub_pause_mode = false
 	interact_input_was_down = _is_interact_input_pressed()
 	screen_state_controller.set_state(&"gameplay")
+	if was_pause:
+		_play_sound("ui_unpause", 0.0, 1.0)
 func _update_hub_input() -> void: screen_state_controller.update_hub_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
@@ -322,6 +328,7 @@ func _shift_hub_item(direction: int) -> void:
 		screen_state_controller.hub_fusion_count = 1
 	if count > 0: screen_state_controller.hub_item_index = posmod(screen_state_controller.hub_item_index + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_hover", -6.0, 1.0)
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 	var candidates: Array[ItemInstance] = []
 	if player_profile == null: return candidates
@@ -342,6 +349,7 @@ func _shift_hub_gear_candidate(direction: int) -> void:
 	var key := String(slot)
 	screen_state_controller.hub_gear_candidate_indices[key] = posmod(int(screen_state_controller.hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_hover", -6.0, 1.0)
 func _select_hub_gear_slot(slot_index: int) -> void:
 	if screen_state_controller.hub_page != 1: return
 	screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
@@ -389,6 +397,7 @@ func _shift_hub_fusion_count(direction: int) -> void:
 	if material_count <= 0: return
 	screen_state_controller.hub_fusion_count = clampi(int(screen_state_controller.hub_fusion_count) + direction, 1, material_count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_hover", -6.0, 1.0)
 func _salvage_profile_overflow(instance_id: String) -> int:
 	if player_profile == null: return 0
 	var value := player_profile.salvage_overflow(instance_id)
@@ -428,7 +437,9 @@ func _hub_item_action() -> void:
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			if player_profile.purchase_item(item, int(entry.get("price", 0))):
-				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator()
+				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_buy_sell", 0.0, 1.0)
+			else:
+				_play_sound("ui_denied", 0.0, 1.0)
 	elif screen_state_controller.hub_page == 3:
 		_refresh_hub_fusion_candidates()
 		if not screen_state_controller.hub_fusion_candidates.is_empty():
@@ -440,13 +451,17 @@ func _hub_item_action() -> void:
 				var batch_cost := player_profile.fusion_batch_cost(target, count)
 				if player_profile.gold < batch_cost:
 					screen_state_controller.hub_fusion_message = "NEED %dG" % batch_cost
+					_play_sound("ui_denied", 0.0, 1.0)
 				else:
 					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))
 					if _fuse_profile_target(target.instance_id, count):
 						screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
+						_play_sound("ui_confirm", 0.0, 1.0)
 			elif player_profile.can_salvage_overflow(target.instance_id):
 				var salvage_value := _salvage_profile_overflow(target.instance_id)
-				if salvage_value > 0: screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
+				if salvage_value > 0:
+					screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
+					_play_sound("ui_buy_sell", 0.0, 1.0)
 			if not screen_state_controller.hub_fusion_message.is_empty():
 				_refresh_hub_fusion_candidates()
 				screen_state_controller.hub_item_index = clampi(screen_state_controller.hub_item_index, 0, maxi(screen_state_controller.hub_fusion_candidates.size() - 1, 0))
@@ -455,10 +470,12 @@ func _select_hub_menu_row(row: int) -> void:
 	screen_state_controller.hub_menu_row = posmod(row, 5)
 	if screen_state_controller.hub_menu_row < 4: screen_state_controller.hub_action_column = 0
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_hover", -6.0, 1.0)
 func _shift_hub_action_column(direction: int) -> void:
 	var count := 4 if screen_state_controller.hub_menu_row == 4 else 2
 	screen_state_controller.hub_action_column = posmod(screen_state_controller.hub_action_column + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_hover", -6.0, 1.0)
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
 	if direction > 0:
 		_hub_allocate_stat(stat_name)
@@ -480,6 +497,7 @@ func _hub_allocate_stat(stat_name: StringName) -> void:
 func _hub_points_remaining() -> int: return maxi(player_profile.unspent_stat_points - screen_state_controller.hub_pending_vit - screen_state_controller.hub_pending_str - screen_state_controller.hub_pending_def - screen_state_controller.hub_pending_spd, 0) if player_profile != null else 0
 func _hub_confirm_stats() -> void:
 	if player_profile == null: return
+	_play_sound("ui_confirm", 0.0, 1.0)
 	player_profile.allocate_stat(&"VIT", screen_state_controller.hub_pending_vit)
 	player_profile.allocate_stat(&"STR", screen_state_controller.hub_pending_str)
 	player_profile.allocate_stat(&"DEF", screen_state_controller.hub_pending_def)
@@ -490,6 +508,7 @@ func _hub_confirm_stats() -> void:
 func _hub_cancel_stats() -> void:
 	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
 	if screen_state_controller != null and screen_state_controller.hub_overlay != null: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	_play_sound("ui_decline", 0.0, 1.0)
 func _hub_auto_allocate() -> void:
 	if player_profile == null: return
 	var patterns := [[&"VIT", &"STR", &"DEF", &"SPD"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"SPD"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"SPD"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"SPD"], [&"STR", &"DEF", &"STR", &"DEF", &"SPD"]]
@@ -515,6 +534,7 @@ func _start_from_hub() -> void:
 		player_profile.open_hub_on_load = false
 		player_profile.pending_route = "run"
 		_save_player_profile()
+	_play_sound("ui_confirm", 0.0, 1.0)
 	_begin_scene_transition()
 
 func _run_difficulty_bonus() -> int:
@@ -785,8 +805,10 @@ func _close_save_select() -> void:
 	screen_state_controller.set_state(&"title")
 	if screen_state_controller.title_continue_button != null:
 		(screen_state_controller.title_continue_button if not screen_state_controller.title_continue_button.disabled else screen_state_controller.title_start_button).grab_focus()
+	_play_sound("ui_decline", 0.0, 1.0)
 
 func _cancel_character_creation() -> void:
+	_play_sound("ui_decline", 0.0, 1.0)
 	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
 	if screen_state_controller.title_overlay != null:
 		screen_state_controller.title_overlay.visible = true
@@ -924,7 +946,8 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	if ambush != null:
 		ambush.extend_rehide(slime, slime_tuning.ambush_hit_extension)
 	SlimeActor.damage_actor(self, slime, amount, was_critical)
-	_play_sound("hit", 0.0, 0.95 + rng.randf_range(-0.08, 0.08) if was_critical else 1.0)
+	_play_sound("slash", -3.0, 0.95 + rng.randf_range(-0.08, 0.08))
+	_play_sound("flesh", 0.0, 0.95 + rng.randf_range(-0.08, 0.08))
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	var damage := _combat_damage(player_stats, _slime_stats(slime))
 	if equipment_transmutation_component == null:
@@ -982,6 +1005,7 @@ func _kill_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
 	if run_state != null and run_state.active:
 		run_state.record_enemy_kill()
+	_play_sound("enemy_death", 0.0, 0.95 + rng.randf_range(-0.08, 0.08))
 	_award_slime_xp(slime)
 	effects_spawner.spawn_slime_death_from_root(self, slime); room_controller.kill_slime_without_effects(self, slime)
 	if current_target == slime:
@@ -1517,7 +1541,7 @@ func _on_player_health_damaged(amount: float) -> void:
 	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 	if run_state != null:
 		run_state.record_damage(amount)
-	_play_sound("hurt", 0.0, 0.95 + rng.randf_range(-0.06, 0.06))
+	_play_sound("impact_flesh", 0.0, 0.95 + rng.randf_range(-0.06, 0.06))
 func _on_player_health_changed(current: float, _maximum: float) -> void: if is_instance_valid(player_health_fill): _update_player_health_ui()
 func _on_player_health_healed(amount: float) -> void:
 	player_display_health = minf(player_display_health, player_health_component.current_health if player_health_component != null else player_display_health)
@@ -1672,7 +1696,6 @@ func _award_slime_xp(slime: Sprite2D) -> void:
 	if levels_gained > 0:
 		_spawn_player_level_number(player_profile.level if player_profile != null else 1)
 		_apply_player_level()
-		_play_sound("level_up")
 	_spawn_player_xp_number(reward)
 	_update_player_progression_ui()
 	_sync_runtime_progression_to_profile()

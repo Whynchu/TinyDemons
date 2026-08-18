@@ -26,6 +26,8 @@ func start_from_root(root: Object) -> void:
 	if movement_direction.x < 0.0: player.flip_h = true
 	elif movement_direction.x > 0.0: player.flip_h = false
 	root.set("player_is_rolling", true); begin(movement_direction)
+	if root.has_method("_play_sound"):
+		root.call("_play_sound", "flee", 0.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.06, 0.06))
 	var motor := root.get("player_motor") as ActorMotor
 	if motor != null: motor.begin_roll()
 	root.set("roll_dust_spawned_this_roll", false); (root.get("player_attack_visual") as Sprite2D).visible = false
