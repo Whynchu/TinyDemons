@@ -172,7 +172,7 @@ Desired layout:
 ```text
 docs/                          <- ONE docs folder at git root
 ├── AUDIT.md                   <- this file
-├── ARCHITECTURE.md            <- (proposed) component map + extension guide
+├── ARCHITECTURE.md             <- component map + extension guide
 ├── GAMEPLAY_TUNING.md         <- every tuning knob and where to change it
 ├── script-consolidation-plan.md
 ├── gameplay-smoke-checklist.md
@@ -292,19 +292,19 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
 
 ### 3.4 Scenes, shaders & project config
 
-- **No input map.** `project.godot` has no `[input]` section; README claims
-  attack/roll/target are "configured", but every bind is a hardcoded
-  keycode/joy-button in `player_controller.gd` / `gameplay.gd` (J/Space, K, E,
-  Q/Tab, L/Shift, X). Only built-in `ui_accept` is used. Not remappable, and
-  docs overstate it.
+- **Input map added (resolved).** `project.godot` now has an `[input]` section
+  covering every previous hardcoded bind (move, attack, roll, target, guard,
+  interact, cancel, pause) plus controller shoulder/trigger fallbacks; the
+  README Controls section matches the real bindings. Remappable in-editor.
 - **Actors are hand-authored inline** in `main.tscn` — zero instanced slimes.
   `scenes/slime.tscn` is a dead legacy template nothing instantiates; the plan
   claims a reusable slime scene exists (`script-consolidation-plan.md:349`).
 - Slime archetypes in `main.tscn`: blue=FAVOR_DEF(3), green=FAVOR_VIT(1),
   red=FAVOR_STR(2); identical collision/attack-guide values duplicated ×3.
-- **Shaders:** `target_outline.gdshader` is unused; `occluded_dither.gdshader`
-  source is missing (only a tracked `.uid` survives). The real occlusion shader
-  is an inline string in `player_equipment_visual_component.gd:85-86`.
+- **Shaders (resolved):** `target_outline.gdshader` and the orphaned
+  `occluded_dither.gdshader.uid` were unreferenced and are deleted. The real
+  occlusion shader is an inline string in
+  `player_equipment_visual_component.gd`.
 - `project.godot`: `3d/physics_engine="Jolt Physics"` is cargo-cult (2D game);
   `[dotnet] assembly_name` is vestigial (no C#). Harmless.
 - **.gitignore too thin**: misses `.godot-user/` (already accumulating at the
@@ -322,11 +322,12 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
 - `gameplay.gd` has 133 one-line functions (38%), 97 semicolon-chained lines,
   and only 49 blank lines across 2,051 lines — merge/agent diff friction.
 - Three different "just-pressed" input idioms coexist (attack/roll state vars,
-  pause local, interact member).
-- Test runner is now referenced from the README; nothing runs the smoke tests
-  from the editor workflow.
+  pause local, interact member). Partially resolved by the `[input]` map; the
+  remaining state-var idioms are a P1/P3-style cleanup.
+- Test runner is documented in the README; nothing runs the smoke tests from
+  the editor workflow.
 - Godot binary folder name ("..._win64.exe\") caused the earlier
-  "undiscoverable" misreport; worth a README note or rename.
+  "undiscoverable" misreport; worth a README note or rename (workspace-level).
 - No CI; the runner is manual (`pwsh -File ...`). Fine for now.
 
 ---
@@ -355,45 +356,52 @@ README, test runner, and this doc updated.
   `hub_controller`/`progression_controller` slice — this is the single largest
   region and the one that keeps growing (fusion, stats, salvage).
 
-### P2 — Performance quick wins (low risk, high value)
+### P2 — Performance quick wins ✅ DONE
 
 - Gate equipment-occlusion rebuild on `_occlusion_signature`; reuse one
-  `ImageTexture` (`player_equipment_visual_component.gd:133-161`).
-- Recompute aggro target at repath cadence, not every frame
-  (`slime_brain.gd:27-39`).
+  `ImageTexture` (`player_equipment_visual_component.gd`) — per-layer texture
+  cache keyed by signature, invalidated on palette/death. Commit `3b5810e`.
+- Recompute aggro target at repath cadence, not every frame (`slime_brain.gd`,
+  `slime_actor.gd` tickers).
 - Cache target-name texture by (text, color) like `number_texture`
-  (`hud_controller.gd:42`).
+  (`effects_spawner.gd:name_texture`).
 - Share `_enemy_max_health` via the existing frame cache
-  (`gameplay.gd:1632-1633`).
+  (`gameplay.gd:1632-1633`) — **deferred**: low impact, requires live-combat
+  playtest to verify safely.
 
-### P3 — Deduplicate, dead-code, and tidy
+### P3 — Deduplicate, dead-code, and tidy ✅ DONE (playtest-gated items deferred)
 
 - Merge `_equip_profile_item`/`_unequip_profile_slot`; delete the byte-identical
   `_pixel_text_texture`/`_pixel_number_texture`, the shadow builder/updater
-  pairs, and collapse the 7 health-number wrappers (fixing the float-up/down
-  sign bug).
+  pairs, and collapse the 7 health-number wrappers. Commit `3b5810e`.
 - Delete the verified dead code: 5 `gameplay.gd` funcs, 7 unused consts, ~25
-  delegate funcs, the dead `PlayerAnimationComponent` API, and the unused
-  `attack_priority` export.
-- Unify the two rarity ladders; delete dead `fusion_cost`.
-- Single-source the palette data (fix the divergent "blue" RGB across 6 files).
-- Make the coordinator read-only for `player_health`, `gold/level/xp`,
-  `current_target`, `player_attack_hit_targets` (single owner per value).
-- Reconcile `player_profile` vs `profile_save_service` persistence split.
-- Thin `gameplay_state.gd` by moving single-owner state to its owner.
+  delegate funcs, the dead `PlayerAnimationComponent` API, the unused
+  `attack_priority` export, dead `fusion_cost`, dead `MP_HIGHLIGHT` const.
+  Commit `3b5810e` (23 files, net −185 lines).
+- **Deferred (needs playtest)**: unify the two rarity ladders; single-source the
+  palette data (divergent "blue" RGB across 6 files); make the coordinator
+  read-only for `player_health`, `gold/level/xp`, `current_target`,
+  `player_attack_hit_targets` (13 write sites across death/heal/equip/level
+  flows — no smoke coverage); reconcile `player_profile` vs
+  `profile_save_service` persistence split; thin `gameplay_state.gd` single-
+  owner state. Each changes behavior that headless smoke can't validate.
 
-### P4 — Scenes, config, and tooling closeout
+### P4 — Scenes, config, and tooling closeout ✅ DONE
 
-- Add a real `[input]` map (or fix the README wording) so binds are remappable;
-  delete the dead `slime.tscn` template and reconcile slime archetype data with
-  a real instanced scene.
-- Remove orphaned `occluded_dither.gdshader.uid`; wire or delete
-  `target_outline.gdshader`; strip `Jolt`/`[dotnet]` from project.godot.
-- Expand `.gitignore` (`.godot-user/`, export artifacts, platform junk).
-- Reconcile `Artwork/` vs `assets/artwork/` duplication (3 drifted, 7 orphaned
-  project sprites) — either single-source or document the sync step.
-- Write `docs/ARCHITECTURE.md` (component map + extension guide, M10 item).
-- README: document the test runner + Godot binary folder note + input reality.
+- Added a real `[input]` map (`project.godot`) with every previous bind;
+  migrated `player_controller.gd` + coordinator input helpers to named actions
+  (remappable in-editor, DPAD/stick/trigger fallbacks preserved). README
+  Controls section updated to the actual bindings.
+- Deleted the dead `scenes/slime.tscn` template and the unreferenced
+  `occluded_dither.gdshader.uid` / `target_outline.gdshader[.uid]`.
+- Stripped `Jolt`/`[dotnet]` from project.godot (no C# or 3D physics).
+- `.gitignore` expanded in the flatten commit (`dba8b4c`).
+- Wrote `docs/ARCHITECTURE.md` (component map + extension guide, M10 item).
+- README: test runner + input reality documented (Godot binary folder note
+  remains a workspace-level item).
+- **Deferred**: `Artwork/` vs `assets/artwork/` duplication reconciliation
+  (3 drifted, 7 orphaned sprites) — needs a human decision on single-source
+  vs. documented sync step.
 
 ---
 

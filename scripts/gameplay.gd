@@ -295,11 +295,9 @@ func _close_hub_to_run() -> void:
 func _update_hub_input() -> void: screen_state_controller.update_hub_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
-func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed([KEY_X], _controller_devices(), JOY_BUTTON_A)
+func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
 func _is_pause_input_just_pressed() -> bool:
-	var is_down := Input.is_key_pressed(KEY_ESCAPE)
-	for device in _controller_devices():
-		is_down = is_down or Input.is_joy_button_pressed(device, JOY_BUTTON_START)
+	var is_down := Input.is_action_pressed(&"pause")
 	var just_pressed := is_down and not pause_input_was_down
 	pause_input_was_down = is_down
 	return just_pressed
@@ -1941,9 +1939,9 @@ func _update_targeting() -> void: interaction_component.update_targeting(self)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _is_guard_input_held() -> bool: return player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
-func _is_attack_input_pressed() -> bool: return player_controller.action_pressed([KEY_J, KEY_SPACE], _controller_devices(), JOY_BUTTON_X)
-func _is_interact_input_pressed() -> bool: return player_controller.action_pressed([KEY_E, KEY_ENTER], _controller_devices(), JOY_BUTTON_B)
-func _is_roll_input_pressed() -> bool: return player_controller.action_pressed([KEY_K], _controller_devices(), JOY_BUTTON_A)
+func _is_attack_input_pressed() -> bool: return player_controller.action_pressed(&"attack", _controller_devices(), JOY_BUTTON_X)
+func _is_interact_input_pressed() -> bool: return player_controller.action_pressed(&"interact", _controller_devices(), JOY_BUTTON_B)
+func _is_roll_input_pressed() -> bool: return player_controller.action_pressed(&"roll", _controller_devices(), JOY_BUTTON_A)
 func _controller_devices() -> Array[int]: return player_controller.connected_devices()
 func _closest_target() -> Sprite2D: return interaction_component.closest_target(player, slimes, TARGET_LOCK_MAX_DISTANCE, Callable(self, "_actor_foot"), Callable(self, "_is_slime_dead"), Callable(self, "_is_slime_targetable"))
 func _set_current_target(target: Sprite2D) -> void: if current_target != target: current_target = target; if hud_controller != null: hud_controller.set_target(target)

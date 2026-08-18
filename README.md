@@ -46,8 +46,14 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 
 ## Controls
 
-- Move: Arrow keys or WASD
-- Attack: configured attack input / controller attack button
-- Roll: `K` / controller roll button
-- Target: configured target input / controller target button
-- Interact or restart: `E` / Enter / controller interact button
+Bindings are defined in the **Input Map** (Project Settings > Input Map) and
+remappable in-editor. Defaults:
+
+- Move: Arrow keys / WASD / left stick / D-pad
+- Attack: `J` / Space / controller X
+- Roll: `K` / controller A
+- Target lock: `Q` / Tab / controller right shoulder or right trigger
+- Guard: `L` / Shift / controller left shoulder or left trigger
+- Interact / confirm: `E` / Enter / controller B
+- Cancel: `X` / controller A
+- Pause: Escape / controller Start
