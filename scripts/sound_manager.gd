@@ -33,6 +33,7 @@ const CLIPS := {
 }
 
 var _players: Dictionary = {}
+var _chatter_player: AudioStreamPlayer = null
 
 
 func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
@@ -44,10 +45,45 @@ func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) 
 	player.play()
 
 
+func chatter(volume_db: float = -12.0) -> void:
+	if _chatter_player == null:
+		_chatter_player = AudioStreamPlayer.new()
+		_chatter_player.name = "SFX_Chatter"
+		_chatter_player.bus = "Master"
+		_chatter_player.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(_chatter_player)
+	if not _chatter_player.playing:
+		_chatter_player.stream = _chatter_blip()
+		_chatter_player.volume_db = volume_db
+		_chatter_player.pitch_scale = 0.85 + randf_range(0.0, 0.35)
+		_chatter_player.play()
+
+
 func stop(sound_name: String) -> void:
 	var player := _player(sound_name)
 	if player != null:
 		player.stop()
+
+
+func _chatter_blip() -> AudioStreamWAV:
+	var sample_rate := 11025
+	var frames := 150
+	var data := PackedByteArray()
+	data.resize(frames * 2)
+	var base_freq := 220.0 + randf_range(-40.0, 40.0)
+	var phase := 0.0
+	for i in frames:
+		phase += base_freq / float(sample_rate)
+		var square := 0.35 if fmod(phase, 1.0) < 0.5 else -0.35
+		var fade := 1.0 - float(i) / float(frames)
+		var sample := int(clampf(square * fade, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, sample)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
 
 
 func _player(sound_name: String) -> AudioStreamPlayer:

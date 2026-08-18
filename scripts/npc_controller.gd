@@ -74,7 +74,7 @@ func update_dialogue_from_root(root: Object, delta: float) -> void:
 	if box == null or not box.visible: return
 	if not (root.get("cloaked_demon") as Sprite2D).visible: hide_dialogue(root); return
 	box.set_meta("dialogue_choice_active", allocation_prompt_active)
-	update_dialogue(delta, box, dialogue_text, dialogue_button, dialogue_button_shadow, root.call("_cloaked_demon_head_position"), Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), 0.045, root.get("NPC_DIALOGUE_BUTTON_BOB_TIME"))
+	update_dialogue(delta, box, dialogue_text, dialogue_button, dialogue_button_shadow, root.call("_cloaked_demon_head_position"), Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), 0.045, root.get("NPC_DIALOGUE_BUTTON_BOB_TIME"), Callable(root.get("sound_manager"), "chatter") if root.get("sound_manager") != null else Callable())
 	_update_allocation_choices(root)
 
 
@@ -116,15 +116,19 @@ func update_dialogue_input(root: Object) -> void:
 		if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
 			allocation_choice = 1 - allocation_choice
 			_update_allocation_choices(root)
+			root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif Input.is_action_just_pressed("ui_cancel"):
+			root.call("_play_sound", "ui_decline", 0.0, 1.0)
 			hide_dialogue(root)
 		elif input_pressed or Input.is_action_just_pressed("ui_accept"):
+			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 			if allocation_choice == 0:
 				hide_dialogue(root)
 				root.call("_open_hub_from_cloaked_demon")
 			else:
 				hide_dialogue(root)
 	elif dialogue_complete and (input_pressed or Input.is_action_just_pressed("ui_accept")):
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		allocation_prompt_active = true
 		allocation_choice = 0
 		begin_dialogue("OPEN STATS AND SHOP?")
@@ -258,7 +262,7 @@ func end_dialogue() -> void:
 	dialogue_complete = false
 
 
-func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprite2D, button_shadow: Sprite2D, head_position: Vector2, pixel_texture: Callable, snap_position: Callable, type_interval: float, button_bob_time: float) -> void:
+func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprite2D, button_shadow: Sprite2D, head_position: Vector2, pixel_texture: Callable, snap_position: Callable, type_interval: float, button_bob_time: float, chatter: Callable = Callable()) -> void:
 	if box == null or not box.visible:
 		return
 	if not dialogue_complete:
@@ -267,6 +271,8 @@ func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprit
 			type_timer -= type_interval
 			character_index += 1
 			text.texture = pixel_texture.call(full_message.substr(0, character_index), Color.WHITE) as Texture2D
+			if chatter.is_valid():
+				chatter.call()
 		if character_index >= full_message.length():
 			dialogue_complete = true
 			button.visible = true

@@ -307,6 +307,7 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 			overlay.modulate.a = clampf(death_timer / tuning.death_fade_time, 0.0, 1.0)
 		elif not bool(root.get("player_death_particles_started")):
 			root.set("player_death_particles_started", true); root.call("_spawn_player_death_pixels"); overlay.queue_free(); root.set("player_death_overlay", null)
+			root.call("_play_sound", "enemy_death", -4.0, 0.90 + RandomNumberGenerator.new().randf_range(-0.06, 0.06))
 	if not bool(root.get("player_death_particles_started")):
 		return
 	var death_effect_end := tuning.death_particle_delay + tuning.death_particle_lifetime
