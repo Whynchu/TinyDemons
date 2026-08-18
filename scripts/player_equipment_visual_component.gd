@@ -116,14 +116,18 @@ func update_occlusion(root: Object, delta: float) -> void:
 		if active_occluders.is_empty():
 			continue
 		var signature := _occlusion_signature(layer, active_occluders)
-		var cached := occlusion_texture_cache.get(layer) as Dictionary
+		var layer_key := layer.get_instance_id()
+		var cached_value: Variant = occlusion_texture_cache.get(layer_key)
+		var cached: Dictionary = {}
+		if cached_value is Dictionary:
+			cached = cached_value
 		var occluded_texture: Texture2D = null
 		if cached != null and int(cached.get("signature", 0)) == signature and cached.has("texture"):
 			occluded_texture = cached["texture"] as Texture2D
 		else:
 			occluded_texture = _build_occluded_texture(root, renderer, layer, active_occluders)
 			if occluded_texture != null:
-				occlusion_texture_cache[layer] = {"signature": signature, "texture": occluded_texture}
+				occlusion_texture_cache[layer_key] = {"signature": signature, "texture": occluded_texture}
 		if occluded_texture != null:
 			layer.texture = occluded_texture
 			any_occluded = true
@@ -378,6 +382,7 @@ func begin_death(root: Object) -> void:
 	_hide_equipment_shadows()
 	_clear_fade_overlays()
 	_clear_draw_overlays()
+	occlusion_texture_cache.clear()
 	var player := root.get("player") as Sprite2D
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
