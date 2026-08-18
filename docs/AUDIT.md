@@ -19,13 +19,23 @@ Every change should be checked headless before commit:
 # Main scene boots (30 frames, no errors)
 & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons" --quit-after 30
 
-# Full smoke suite (7 tests + main scene)
+# Full smoke suite (8 tests + main scene)
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 ```
 
-All 7 smoke tests (`run_grade`, `progression`, `item_economy`,
-`rogue_slime`, `speed_scale`, `fusion_tooltip`, `palette`) plus the headless
-main-scene check pass at the current working tree.
+All 8 smoke tests (`run_grade`, `progression`, `item_economy`,
+`rogue_slime`, `speed_scale`, `fusion_tooltip`, `palette`,
+`combat_momentum`) plus the headless main-scene check pass at the current
+working tree.
+
+> **2026-08-18 — Phase 1 (FOCUS + combo)**: added `CombatMomentumComponent`
+> (`scripts/combat_momentum_component.gd`, RefCounted) driving the FOCUS
+> targeting multiplier (+30% bonus in the 2.5s window, −20% penalty after it
+> lapses) and the hit-streak combo multiplier (+5%/hit, capped at +25%, 1.5s
+> window, reset on taking damage). Both slot into
+> `_player_attack_damage_against` (gameplay.gd:950) alongside transmutation.
+> Tuning lives in `player_tuning.gd`; reset on new run via `_begin_new_run`.
+> Covered by `tests/combat_momentum_smoke.gd`.
 
 ---
 

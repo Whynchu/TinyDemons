@@ -552,6 +552,7 @@ func _apply_run_rank_grade(grade: String) -> void:
 	player_profile.last_run_grade = normalized_grade
 
 func _begin_new_run() -> void:
+	_combat_momentum().reset_all()
 	if run_state != null:
 		run_state.begin(current_dungeon_seed, _run_difficulty_bonus(), _player_max_health())
 func _return_to_hub() -> void:
@@ -940,6 +941,7 @@ func _interrupt_player_attack() -> void:
 func _player_facing_vector() -> Vector2: return Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT if player_is_attacking else Vector2.LEFT if player.flip_h else Vector2.RIGHT
 func _apply_player_attack_hitbox() -> void: if player_attack_component != null: player_attack_component.apply_hitbox(self)
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
+	_register_combo_hit()
 	var ambush := _slime_ambush(slime)
 	if ambush != null:
 		ambush.extend_rehide(slime, slime_tuning.ambush_hit_extension)
@@ -948,13 +950,23 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	_play_sound("flesh", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	var damage := _combat_damage(player_stats, _slime_stats(slime))
-	if equipment_transmutation_component == null:
-		return damage
-	var snapshot := _player_stat_snapshot()
-	var multiplier := equipment_transmutation_component.duelist_damage_multiplier(slime, current_target, snapshot.strength)
-	if not is_equal_approx(multiplier, 1.0):
-		equipment_transmutation_component.consume_duelist_feedback(slime == current_target, snapshot.strength)
+	var momentum := _combat_momentum()
+	var multiplier := momentum.focus_multiplier(slime == current_target) * momentum.combo_multiplier()
+	if equipment_transmutation_component != null:
+		var snapshot := _player_stat_snapshot()
+		var transmutation_multiplier := equipment_transmutation_component.duelist_damage_multiplier(slime, current_target, snapshot.strength)
+		if not is_equal_approx(transmutation_multiplier, 1.0):
+			equipment_transmutation_component.consume_duelist_feedback(slime == current_target, snapshot.strength)
+		multiplier *= transmutation_multiplier
 	return damage * multiplier
+func _combat_momentum() -> CombatMomentumComponent:
+	if combat_momentum == null:
+		combat_momentum = CombatMomentumComponent.new()
+		combat_momentum.configure(player_tuning)
+	return combat_momentum
+func _register_combo_hit() -> void: _combat_momentum().register_hit()
+func _tick_focus_combo(delta: float) -> void: _combat_momentum().tick(delta, current_target != null)
+func _reset_combo() -> void: _combat_momentum().reset_combo()
 func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> float:
 	return equipment_transmutation_component.damage_share_divisor(slime, target_count) if equipment_transmutation_component != null else maxf(float(target_count), 1.0)
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
@@ -1542,6 +1554,7 @@ func _apply_slime_attack_hit(slime: Sprite2D) -> void:
 func _slime_attack_damage(slime: Sprite2D) -> float: return _combat_damage(_slime_stats(slime), player_stats)
 func _mark_player_in_combat() -> void: if player_health_component != null: player_health_component.regen_delay_timer = player_tuning.regen_delay; player_health_component.regen_accumulator = 0.0
 func _on_player_health_damaged(amount: float) -> void:
+	_reset_combo()
 	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 	if run_state != null:
 		run_state.record_damage(amount)
@@ -1955,7 +1968,10 @@ func _is_interact_input_pressed() -> bool: return player_controller.action_press
 func _is_roll_input_pressed() -> bool: return player_controller.action_pressed(&"roll", _controller_devices(), JOY_BUTTON_A)
 func _controller_devices() -> Array[int]: return player_controller.connected_devices()
 func _closest_target() -> Sprite2D: return interaction_component.closest_target(player, slimes, TARGET_LOCK_MAX_DISTANCE, Callable(self, "_actor_foot"), Callable(self, "_is_slime_dead"), Callable(self, "_is_slime_targetable"))
-func _set_current_target(target: Sprite2D) -> void: if current_target != target: current_target = target
+func _set_current_target(target: Sprite2D) -> void:
+	if current_target != target:
+		current_target = target
+		_combat_momentum().on_target_changed(target != null)
 func _update_target_ui() -> void:
 	if current_target == null: _set_target_ui_visible(false); return
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values"))

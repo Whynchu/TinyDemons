@@ -147,7 +147,7 @@ func tick(root: Object, delta: float) -> void:
 				player_attack.start_player_attack(root, 2); player_attack.consume_combo()
 			elif not (anim.idle_frames as Array[Texture2D]).is_empty():
 				root.call("_set_actor_base_texture", root.get("player"), (anim.idle_frames as Array[Texture2D])[0])
-	root.call("_update_player_shadow"); root.call("_update_cloaked_demon_shadow"); root.call("_update_overworld_ui")
+	root.call("_update_player_shadow"); root.call("_update_cloaked_demon_shadow"); root.call("_update_overworld_ui"); root.call("_tick_focus_combo", delta)
 
 
 func _stabilize(root: Object) -> void:

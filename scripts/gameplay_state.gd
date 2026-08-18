@@ -136,6 +136,7 @@ var player_sprite_shadow: Sprite2D = null
 var cloaked_demon_sprite_shadow: Sprite2D = null
 var current_target: Sprite2D = null
 var target_input_was_down := false
+var combat_momentum: CombatMomentumComponent = null
 var player_death_pending := false
 var player_dead := false
 var player_death_timer := 0.0

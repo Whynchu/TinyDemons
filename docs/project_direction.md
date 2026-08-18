@@ -38,8 +38,7 @@ one of them, or it's scope creep.
    with starter gear should *feel* better than a lazy player with good gear.
 3. **Every run asks a different question.** Rooms vary: combat, puzzles, traps,
    choice. You should never be on autopilot.
-4. **The rest fire is a gamble.** Choosing to rest can change your aspect — a
-   mid-run pivot with a real tradeoff.
+4. **The rest fire changes aspects** Choosing to rest can change your aspect. so now the hub is the players color choice, but walking up to a fire now brings up a circle icon to interact. This flashes the player white and changes them to the new aspect.
 
 ---
 
@@ -248,6 +247,13 @@ Build in this order. Each phase is independently shippable and verifiable.
 - Combo timer (window, count, small damage bonus, reset on hit)
 - Playtest: FOCUS and combo alone should make combat feel meaningfully better.
 
+> **Status: implemented 2026-08-18.** FOCUS (+30% bonus / 2.5s window / −20%
+> penalty) and the hit-streak combo (+5%/hit, +25% cap, 1.5s window, reset on
+> hit) shipped as `CombatMomentumComponent` and slot into
+> `_player_attack_damage_against`. Verified by `combat_momentum_smoke.gd`.
+> Remaining from this phase: the visual/audio FOCUS indicator (a clear
+> in-game cue when the window is open vs. expired).
+
 **Phase 2 — Elemental aspects (the identity)**
 - Replace `aquamarine` with `ice` palette; lock the 8 aspects.
 - The matchup wheel as a single data table; apply to damage.
@@ -295,8 +301,9 @@ Build in this order. Each phase is independently shippable and verifiable.
 
 Like the combat-economy overhaul, every system gets a headless smoke test:
 - `aspect_wheel_smoke.gd` — every matchup returns the right multiplier.
-- `focus_smoke.gd` — FOCUS timer starts, decays, and applies the multipliers.
-- `combo_smoke.gd` — combo builds within window, resets on lapse/hit.
+- `combat_momentum_smoke.gd` — FOCUS timer starts, decays, applies the
+  multipliers; combo builds within window, resets on lapse/hit. *(Phase 1,
+  implemented.)*
 - Existing suite stays green; every balance change re-runs the full runner.
 
 The design doc's job is to give us a **shared projection** so that every feature

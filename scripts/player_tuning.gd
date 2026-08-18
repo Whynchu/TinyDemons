@@ -49,3 +49,10 @@ func attack_multiplier(spd: int) -> float:
 @export var regen_interval := 1.0
 @export var regen_amount := 1.0
 @export var health_damage_hang_time := 0.14
+@export var focus_window := 2.5
+@export var focus_bonus := 0.30
+@export var focus_penalty := -0.20
+@export var combo_hit_window := 1.5
+@export var combo_damage_per_hit := 0.05
+@export var combo_damage_cap := 0.25
+@export var combo_max_steps := 5
