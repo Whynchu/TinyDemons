@@ -883,8 +883,7 @@ func _update_archetype_arrow_animation() -> void:
 func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(row, 3); _update_archetype_screen(); if archetype_menu_row == 2: archetype_start_button.grab_focus()
 func _update_archetype_screen() -> void:
 	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"]
-	var highlight_colors := [Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112), Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194), Color8(118, 78, 142), Color8(58, 138, 151)]
-	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], highlight_colors[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 36)
+	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], PaletteLibrary.ARCHETYPE_HIGHLIGHTS[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 36)
 	if not player_idle_frames.is_empty():
 		if archetype_preview_palette != colors[archetype_color_index] or archetype_preview_frames.size() != player_idle_frames.size():
 			archetype_preview_frames.clear(); archetype_preview_palette = colors[archetype_color_index]
@@ -1654,8 +1653,7 @@ func _spawn_floating_number(world_position: Vector2, value: int, velocity: Vecto
 	world_position += priority_offset
 	effects_spawner.spawn_health_number(self, world_position, value, velocity, was_critical, is_healing, healing_color, Callable(self, "_pixel_text_texture"), Callable(self, "_snap_half_pixel"), effects_tuning.damage_number_lifetime, effects_tuning.damage_number_pop_time, display_text)
 func _health_feedback_color(palette_name: String) -> Color:
-	var colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
-	return colors.get(palette_name, colors["blue"])
+	return PaletteLibrary.normal(palette_name)
 func _configure_equipment_transmutations() -> void:
 	if equipment_transmutation_component == null or player_equipment == null: return
 	equipment_transmutation_component.configure(player_equipment)

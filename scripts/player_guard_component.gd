@@ -45,7 +45,7 @@ func initialize(root: Object) -> void:
 	root.add_child(frame)
 	fill = Sprite2D.new()
 	fill.name = "PlayerShieldBarFill"
-	fill.texture = _colored_texture(load("res://assets/artwork/HpOverheadBlueBar.png") as Texture2D, Color8(65, 166, 246))
+	fill.texture = _colored_texture(load("res://assets/artwork/HpOverheadBlueBar.png") as Texture2D, PaletteLibrary.ACCENT["blue"])
 	fill.centered = false
 	fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	fill.z_as_relative = false

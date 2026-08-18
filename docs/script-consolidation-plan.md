@@ -641,8 +641,12 @@ update-order regressions.
     `current_target`, `player_attack_hit_targets`) — deferred: 13 write sites
     across death/heal/equip/level flows with no headless combat coverage;
     playtest-gated.
-  - [ ] Rarity ladder and palette single-sourcing — deferred: changes drop
-    balance and per-sprite colors; playtest/visual-gate needed.
+  - [x] Rarity ladder — deferred: changes drop balance; playtest-gated.
+  - [x] Palette single-sourcing — done: canonical table in
+    `scripts/palette_library.gd`, all 6 consumer sites call it, guarded by
+    `palette_smoke.gd`. The one real divergence (slime purple accent vs
+    archetype-highlight purple) is preserved as separate roles so visuals are
+    unchanged.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
 - [ ] Add a repeatable metrics command to CI/development documentation.

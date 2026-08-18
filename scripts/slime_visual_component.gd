@@ -147,9 +147,9 @@ func squish_scale(progress: float, movement: Vector2) -> Vector2:
 
 
 static func _palette_color(original: Color, key: String, palette: String) -> Color:
+	if not PaletteLibrary.ACCENT.has(palette):
+		return original
 	var mapping := {
-		"red": {"257179": Color8(93, 39, 93), "38B764": Color8(177, 62, 83), "A7F070": Color8(239, 125, 87)},
-		"blue": {"257179": Color8(41, 54, 111), "38B764": Color8(59, 93, 201), "A7F070": Color8(65, 166, 246)},
-		"purple": {"257179": Color8(67, 47, 102), "38B764": Color8(118, 78, 142), "A7F070": Color8(200, 184, 210)},
+		"257179": PaletteLibrary.shadow(palette), "38B764": PaletteLibrary.normal(palette), "A7F070": PaletteLibrary.accent(palette),
 	}
-	return (mapping.get(palette, {}) as Dictionary).get(key, original)
+	return mapping.get(key, original)

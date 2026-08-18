@@ -78,19 +78,9 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	var cache_key := "%d:%s" % [source.get_instance_id(), palette_name]
 	if recolor_cache.has(cache_key):
 		return recolor_cache[cache_key] as Texture2D
-	var palette := {
-		"blue": [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)],
-		"orange": [Color8(171, 82, 54), Color8(239, 125, 87), Color8(244, 244, 244)],
-		"green": [Color8(37, 113, 121), Color8(56, 183, 100), Color8(244, 244, 244)],
-		"red": [Color8(93, 39, 93), Color8(177, 62, 83), Color8(244, 244, 244)],
-		"yellow": [Color8(181, 97, 55), Color8(255, 205, 117), Color8(244, 244, 244)],
-		"grey": [Color8(59, 63, 82), Color8(86, 108, 134), Color8(244, 244, 244)],
-		"purple": [Color8(67, 47, 102), Color8(118, 78, 142), Color8(244, 244, 244)],
-		"aquamarine": [Color8(39, 84, 116), Color8(58, 138, 151), Color8(244, 244, 244)],
-	}
-	var target: Array = palette.get(palette_name, palette["blue"])
+	var target: Array[Color] = PaletteLibrary.triple(palette_name)
 	var image := _cached_image(source).duplicate()
-	var source_colors: Array[Color] = [Color8(41, 54, 111), Color8(59, 93, 201), Color8(244, 244, 244)]
+	var source_colors: Array[Color] = PaletteLibrary.triple("blue")
 	for y in image.get_height():
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)

@@ -2,11 +2,11 @@
 extends Node2D
 
 const BAR_SIZE := Vector2(48, 16)
-const XP_COLOR := Color8(59, 93, 201)
+const XP_COLOR := PaletteLibrary.NORMAL["blue"]
 const HP_COLOR := Color8(190, 55, 65)
 const HP_HIGHLIGHT := Color8(239, 125, 87)
-const MP_COLOR := Color8(65, 166, 246)
-const GOLD_COLOR := Color8(255, 205, 117)
+const MP_COLOR := PaletteLibrary.ACCENT["blue"]
+const GOLD_COLOR := PaletteLibrary.NORMAL["yellow"]
 
 var _source_fill: Texture2D
 

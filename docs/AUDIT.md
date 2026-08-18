@@ -19,13 +19,13 @@ Every change should be checked headless before commit:
 # Main scene boots (30 frames, no errors)
 & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons" --quit-after 30
 
-# Full smoke suite (5 tests + main scene)
+# Full smoke suite (7 tests + main scene)
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 ```
 
-All 5 smoke tests (`run_grade`, `progression`, `item_economy`,
-`rogue_slime`, `speed_scale`) plus the headless main-scene check pass at the
-current working tree.
+All 7 smoke tests (`run_grade`, `progression`, `item_economy`,
+`rogue_slime`, `speed_scale`, `fusion_tooltip`, `palette`) plus the headless
+main-scene check pass at the current working tree.
 
 ---
 
@@ -117,10 +117,16 @@ move. The cleanup effort is now finding its next home.
 
 ### 1.4 Stability & tests
 
-- **Green:** all 5 smoke tests + headless main-scene run pass
+- **Green:** all 7 smoke tests + headless main-scene run pass
   (`tests/run_all_smoke.ps1`).
 - **Safety net works:** the earlier stale-test bugs (`damage_bonus`,
   `gear_health`) were fixed; a watchdog prevents hangs.
+- **Fusion tooltip regression:** `fusion_tooltip_smoke.gd` guards the
+  GEAR→FUSE / SHOP→FUSE transitions so a stale page's detail text cannot leak
+  into the FUSE menu (fix committed `e7ba379`).
+- **Palette regression:** `palette_smoke.gd` asserts every consumer
+  (sprite recolor, slime mapping, archetype highlights) matches the canonical
+  table in `scripts/palette_library.gd` (single source, commit pending).
 - **Schema:** save schema is now v6 (`player_profile.gd`), with default
   migration for older fields (`data.get(...)` fallbacks).
 - **Editor cache:** new classes (`SlimeAmbushComponent`) require a project
@@ -252,9 +258,15 @@ Near-duplicate functions (verified):
   `gameplay.gd:_roll_run_loot_rarity` — same structure, different constants.
 - `player_profile.gd:143` `fusion_cost()` is dead and its formula is
   re-implemented inline in `fusion_batch_cost` (:149-162).
-- Palette data triplicated with **divergent values**: archetype colors
-  (`gameplay.gd:905-906`), `_health_feedback_color` (`:1677`), and
-  `sprite_frame_library.gd:81-90` all list "blue" with different RGB.
+- Palette data was triplicated with **divergent values** across 6 files
+  (shadow/normal/accent listed inline in `sprite_frame_library.gd`,
+  `player_equipment_visual_component.gd`, `hud_controller.gd`,
+  `gameplay.gd`, `screen_state_controller.gd`, `slime_visual_component.gd`).
+  **Resolved:** single-sourced into `scripts/palette_library.gd`; consumers
+  now call `PaletteLibrary.shadow/normal/accent/pair/triple`. The one real
+  divergence found was the slime purple accent (`200,184,210`) vs the
+  archetype-highlight purple (`118,78,142`); both are preserved as separate
+  roles (`ACCENT` vs `ARCHETYPE_HIGHLIGHTS`) so visuals are unchanged.
 
 Duplicated state mirrors (coordinator holds a copy of component state):
 
@@ -317,8 +329,8 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
 
 - One logical change touches 2+ files every time: adding a screen state
   touches 5 files (`gameplay_state` + `gameplay` + `gameplay_frame_controller`
-  + `screen_state_controller` + `gameplay_bootstrap`); changing a palette
-  touches 6 files.
+  + `screen_state_controller` + `gameplay_bootstrap`); changing a palette now
+  touches 1 file (`scripts/palette_library.gd`).
 - `gameplay.gd` has 133 one-line functions (38%), 97 semicolon-chained lines,
   and only 49 blank lines across 2,051 lines — merge/agent diff friction.
 - Three different "just-pressed" input idioms coexist (attack/roll state vars,
@@ -378,13 +390,16 @@ README, test runner, and this doc updated.
   delegate funcs, the dead `PlayerAnimationComponent` API, the unused
   `attack_priority` export, dead `fusion_cost`, dead `MP_HIGHLIGHT` const.
   Commit `3b5810e` (23 files, net −185 lines).
-- **Deferred (needs playtest)**: unify the two rarity ladders; single-source the
-  palette data (divergent "blue" RGB across 6 files); make the coordinator
-  read-only for `player_health`, `gold/level/xp`, `current_target`,
-  `player_attack_hit_targets` (13 write sites across death/heal/equip/level
-  flows — no smoke coverage); reconcile `player_profile` vs
-  `profile_save_service` persistence split; thin `gameplay_state.gd` single-
-  owner state. Each changes behavior that headless smoke can't validate.
+- **Deferred (needs playtest)**: unify the two rarity ladders; make the
+  coordinator read-only for `player_health`, `gold/level/xp`,
+  `current_target`, `player_attack_hit_targets` (13 write sites across
+  death/heal/equip/level flows — no smoke coverage); reconcile
+  `player_profile` vs `profile_save_service` persistence split; thin
+  `gameplay_state.gd` single-owner state. Each changes behavior that headless
+  smoke can't validate.
+- **Single-sourced the palette data (done, commit pending)**: canonical table
+  moved to `scripts/palette_library.gd`; all 6 divergent consumer sites now
+  call it. Guarded by `palette_smoke.gd`.
 
 ### P4 — Scenes, config, and tooling closeout ✅ DONE
 

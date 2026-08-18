@@ -234,13 +234,7 @@ func apply_palette(root: Object) -> void:
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	if library == null:
 		return
-	var palettes := {
-		"blue": [Color8(41, 54, 111), Color8(59, 93, 201)], "orange": [Color8(171, 82, 54), Color8(239, 125, 87)],
-		"green": [Color8(37, 113, 121), Color8(56, 183, 100)], "red": [Color8(93, 39, 93), Color8(177, 62, 83)],
-		"yellow": [Color8(181, 97, 55), Color8(255, 205, 117)], "grey": [Color8(59, 63, 82), Color8(86, 108, 134)],
-		"purple": [Color8(67, 47, 102), Color8(118, 78, 142)], "aquamarine": [Color8(39, 84, 116), Color8(58, 138, 151)]
-	}
-	var palette: Array = palettes.get(String(root.get("player_palette_name")), palettes["blue"])
+	var palette: Array[Color] = PaletteLibrary.pair(String(root.get("player_palette_name")))
 	frames.clear()
 	white_copy_cache.clear()
 	occlusion_texture_cache.clear()
@@ -258,12 +252,12 @@ func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)
 			var rgb := Color8(int(color.r * 255.0), int(color.g * 255.0), int(color.b * 255.0))
-			if rgb == Color8(59, 93, 201):
+			if rgb == PaletteLibrary.normal("blue"):
 				image.set_pixel(x, y, Color(highlight_color.r, highlight_color.g, highlight_color.b, color.a))
-			elif rgb == Color8(86, 108, 134):
+			elif rgb == PaletteLibrary.normal("grey"):
 				var dark_tinted := color.lerp(main_color, 0.45)
 				image.set_pixel(x, y, Color(dark_tinted.r, dark_tinted.g, dark_tinted.b, color.a))
-			elif rgb == Color8(148, 176, 194):
+			elif rgb == PaletteLibrary.accent("grey"):
 				var darkened := color.lerp(Color.BLACK, 0.1)
 				var tinted := darkened.lerp(highlight_color, 0.25)
 				image.set_pixel(x, y, Color(tinted.r, tinted.g, tinted.b, color.a))

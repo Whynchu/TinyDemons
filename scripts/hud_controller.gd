@@ -294,10 +294,8 @@ func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_par
 
 
 func _aggro_marker_texture(palette_name: String) -> Texture2D:
-	var shadow_colors := {"blue": Color8(41, 54, 111), "orange": Color8(171, 82, 54), "green": Color8(37, 113, 121), "red": Color8(93, 39, 93), "yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82), "purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116)}
-	var normal_colors := {"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83), "yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151)}
-	var shadow_color: Color = shadow_colors.get(palette_name, shadow_colors["blue"])
-	var normal_color: Color = normal_colors.get(palette_name, normal_colors["blue"])
+	var shadow_color: Color = PaletteLibrary.shadow(palette_name)
+	var normal_color: Color = PaletteLibrary.normal(palette_name)
 	var key := "%s:%s:%s" % [palette_name, shadow_color.to_html(false), normal_color.to_html(false)]
 	if aggro_marker_texture_cache.has(key):
 		return aggro_marker_texture_cache[key] as Texture2D
