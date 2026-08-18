@@ -19,7 +19,7 @@ const NORMAL := {
 
 const ACCENT := {
 	"blue": Color8(65, 166, 246), "red": Color8(239, 125, 87),
-	"purple": Color8(200, 184, 210),
+	"purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194),
 }
 
 const ARCHETYPE_HIGHLIGHTS := [

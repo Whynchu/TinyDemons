@@ -32,6 +32,26 @@ func _initialize() -> void:
 	var source := ImageTexture.create_from_image(Image.create(4, 4, false, Image.FORMAT_RGBA8))
 	var recolored := sprite_library.recolor_texture(source, "red")
 	_expect(recolored != null, "sprite library recolors from the canonical palette", failures)
+	var equip := PlayerEquipmentVisualComponent.new()
+	var art := Image.create(1, 4, false, Image.FORMAT_RGBA8)
+	art.set_pixel(0, 0, Color8(255, 205, 117))
+	art.set_pixel(0, 1, Color8(59, 93, 201))
+	art.set_pixel(0, 2, Color8(148, 176, 194))
+	art.set_pixel(0, 3, Color8(86, 108, 134))
+	var art_texture := ImageTexture.create_from_image(art)
+	var recolored_equip := equip._recolor_frame(art_texture, library.shadow("red"), library.normal("red"), "red")
+	var result_image := recolored_equip.get_image()
+	_expect(result_image.get_pixel(0, 0) == library.normal("red"), "sword gem gold maps to player normal", failures)
+	_expect(result_image.get_pixel(0, 1) == library.shadow("red"), "sword gem blue shading maps to player shadow", failures)
+	var light_result: Color = result_image.get_pixel(0, 2)
+	var light_original := Color8(148, 176, 194)
+	_expect(light_result.r + light_result.g + light_result.b > light_original.r + light_original.g + light_original.b, "sword light grey highlight brightens", failures)
+	var mid_result: Color = result_image.get_pixel(0, 3)
+	var mid_original := Color8(86, 108, 134)
+	_expect(mid_result != mid_original, "sword mid grey is tinted toward the player color", failures)
+	equip.queue_free()
+	art_texture = null
+	recolored_equip = null
 	_finished = true
 	call_deferred("_finish", failures)
 
