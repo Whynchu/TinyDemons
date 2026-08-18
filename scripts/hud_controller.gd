@@ -15,6 +15,14 @@ var target_overhead_aggro_offsets: Dictionary = {}
 var bright_bar_cache: Dictionary = {}
 var aggro_marker_texture_cache: Dictionary = {}
 var last_run_timer_text := ""
+var room_number_indicator: Sprite2D = null
+var dungeon_run_indicator: Sprite2D = null
+var gold_indicator: Sprite2D = null
+var gold_amount_indicator: Sprite2D = null
+var run_timer_indicator: Sprite2D = null
+var gold_animation_frames: Array[Texture2D] = []
+var gold_animation_timer := 0.0
+var button_hud_sprites: Array[Sprite2D] = []
 
 
 func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_fill: CanvasItem, target_fill: CanvasItem, target_health_text: CanvasItem, visible: bool) -> void:
@@ -145,14 +153,14 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int]) -> void:
 
 
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
-	update_button_hud(root.get("button_hud_sprites"), root.call("_controller_devices"))
-	var timer := fmod(float(root.get("gold_animation_timer")) + delta, 0.48); root.set("gold_animation_timer", timer); update_gold_indicator(root.get("gold_indicator"), root.get("gold_animation_frames"), timer)
+	update_button_hud(button_hud_sprites, root.call("_controller_devices"))
+	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))
 
 
 func update_run_timer(root: Object) -> void:
-	var indicator := root.get("run_timer_indicator") as Sprite2D
+	var indicator := run_timer_indicator
 	if indicator == null:
 		return
 	var run_state := root.get("run_state") as RunState
@@ -165,7 +173,7 @@ func update_run_timer(root: Object) -> void:
 
 
 func update_room_number(root: Object) -> void:
-	var indicator := root.get("room_number_indicator") as Sprite2D
+	var indicator := room_number_indicator
 	if indicator == null: return
 	var room_label := "D%d" % int(root.get("current_room_display_number")); var room_type: StringName = root.get("current_room_type")
 	if room_type == DungeonGraph.ROOM_START: room_label = "START"
@@ -174,7 +182,7 @@ func update_room_number(root: Object) -> void:
 	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS: room_label = "BOSS"
 	indicator.texture = root.call("_pixel_text_texture", room_label, Color8(244, 244, 244))
-	var run_indicator := root.get("dungeon_run_indicator") as Sprite2D
+	var run_indicator := dungeon_run_indicator
 	if run_indicator != null:
 		var profile := root.get("player_profile") as PlayerProfile
 		var run_number := profile.difficulty_rank if profile != null else 1
