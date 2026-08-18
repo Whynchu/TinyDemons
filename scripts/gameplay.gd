@@ -971,7 +971,12 @@ func _recompute_player_speed_multiplier() -> void:
 	player_spd = snapshot.speed
 	player_speed_multiplier = player_tuning.speed_multiplier(snapshot.speed)
 func _player_max_health() -> float: return _max_health_for_stats(player_stats)
-func _enemy_max_health(slime: Sprite2D) -> float: return _max_health_for_stats(_slime_stats(slime))
+func _enemy_max_health(slime: Sprite2D) -> float:
+	var health := _max_health_for_stats(_slime_stats(slime))
+	var scale := _slime_encounter_scale(slime)
+	if scale > 1.0:
+		health *= scale * 1.25
+	return health
 func _enemy_level_for_room() -> int: return maxi(1, ceili(float(current_room_depth) / 4.0))
 func _enemy_level_cap_for_run() -> int:
 	# Early ranks keep a low level ceiling so runs feel readable and fair; once
