@@ -11,7 +11,7 @@ func _ready() -> void:
 func _apply_profile_to_runtime() -> void:
 	if player_profile == null:
 		return
-	player_palette_name = player_profile.palette_name
+	screen_state_controller.player_palette_name = player_profile.palette_name
 	player_profile.ensure_starter_items()
 	if player_equipment != null:
 		player_equipment.configure_from_profile(player_profile)
@@ -208,67 +208,67 @@ func _start_player_death() -> void:
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
-func _build_game_over_ui() -> void: var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; game_over_cursor_text = controls["cursor"] as Sprite2D
+func _build_game_over_ui() -> void: var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D
 func _build_run_complete_ui() -> void:
 	var controls := screen_state_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
-	run_complete_overlay = controls["overlay"] as ColorRect
-	run_complete_texts = controls["lines"] as Array[Sprite2D]
-	run_complete_button = controls["return"] as Button
-	run_complete_cursor = controls["cursor"] as Sprite2D
+	screen_state_controller.run_complete_overlay = controls["overlay"] as ColorRect
+	screen_state_controller.run_complete_texts = controls["lines"] as Array[Sprite2D]
+	screen_state_controller.run_complete_button = controls["return"] as Button
+	screen_state_controller.run_complete_cursor = controls["cursor"] as Sprite2D
 func _build_hub_ui() -> void:
 	var controls := screen_state_controller.build_hub(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_hub_adjust_stat"), Callable(self, "_hub_confirm_stats"), Callable(self, "_hub_cancel_stats"), Callable(self, "_hub_auto_allocate"), Callable(self, "_hub_respec"), Callable(self, "_start_from_hub"), Callable(self, "_return_to_title"), Callable(self, "_set_hub_page"), Callable(self, "_hub_item_action"), Callable(self, "_select_hub_gear_slot"))
-	hub_overlay = controls["overlay"] as ColorRect
-	hub_summary_text = controls["summary"] as Sprite2D
-	hub_points_text = controls["points"] as Sprite2D
-	hub_stat_texts = controls["stats"] as Array[Sprite2D]
-	hub_stat_buttons = controls["stat_buttons"] as Array[Button]
-	hub_stat_left_buttons = controls["stat_left"] as Array[Button]
-	hub_stat_right_buttons = controls["stat_right"] as Array[Button]
-	hub_respec_button = controls["respec"] as Button
-	hub_start_button = controls["start"] as Button
-	hub_title_button = controls["title"] as Button
-	hub_derived_texts = controls["derived"] as Array[Sprite2D]
-	hub_apply_button = controls["apply"] as Button
-	hub_cancel_button = controls["cancel"] as Button
-	hub_auto_button = controls["auto"] as Button
-	hub_page_buttons = controls["pages"] as Array[Button]
-	hub_item_name_text = controls["item_name"] as Sprite2D
-	hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
-	hub_shop_price_texts = controls["shop_prices"] as Array[Sprite2D]
-	hub_gear_choice_texts = controls["gear_choices"] as Array[Sprite2D]
-	hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
-	hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
-	hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
-	hub_cursor_text = controls["cursor"] as Sprite2D
-	hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
-	hub_item_action_button = controls["item_action"] as Button
+	screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
+	screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
+	screen_state_controller.hub_points_text = controls["points"] as Sprite2D
+	screen_state_controller.hub_stat_texts = controls["stats"] as Array[Sprite2D]
+	screen_state_controller.hub_stat_buttons = controls["stat_buttons"] as Array[Button]
+	screen_state_controller.hub_stat_left_buttons = controls["stat_left"] as Array[Button]
+	screen_state_controller.hub_stat_right_buttons = controls["stat_right"] as Array[Button]
+	screen_state_controller.hub_respec_button = controls["respec"] as Button
+	screen_state_controller.hub_start_button = controls["start"] as Button
+	screen_state_controller.hub_title_button = controls["title"] as Button
+	screen_state_controller.hub_derived_texts = controls["derived"] as Array[Sprite2D]
+	screen_state_controller.hub_apply_button = controls["apply"] as Button
+	screen_state_controller.hub_cancel_button = controls["cancel"] as Button
+	screen_state_controller.hub_auto_button = controls["auto"] as Button
+	screen_state_controller.hub_page_buttons = controls["pages"] as Array[Button]
+	screen_state_controller.hub_item_name_text = controls["item_name"] as Sprite2D
+	screen_state_controller.hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
+	screen_state_controller.hub_shop_price_texts = controls["shop_prices"] as Array[Sprite2D]
+	screen_state_controller.hub_gear_choice_texts = controls["gear_choices"] as Array[Sprite2D]
+	screen_state_controller.hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
+	screen_state_controller.hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
+	screen_state_controller.hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
+	screen_state_controller.hub_cursor_text = controls["cursor"] as Sprite2D
+	screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
+	screen_state_controller.hub_item_action_button = controls["item_action"] as Button
 func _show_hub(from_npc: bool = false, pause_mode: bool = false) -> void:
-	if hub_overlay == null: return
-	hub_opened_from_npc = from_npc
-	hub_pause_mode = pause_mode
-	hub_interact_input_was_down = _is_interact_input_pressed()
-	hub_cancel_input_was_down = _is_menu_cancel_input_pressed()
-	hub_page_previous_input_was_down = _is_hub_previous_page_input_pressed()
-	hub_page_next_input_was_down = _is_hub_next_page_input_pressed()
-	if title_overlay != null: title_overlay.visible = false
-	if archetype_overlay != null: archetype_overlay.visible = false
+	if screen_state_controller.hub_overlay == null: return
+	screen_state_controller.hub_opened_from_npc = from_npc
+	screen_state_controller.hub_pause_mode = pause_mode
+	screen_state_controller.hub_interact_input_was_down = _is_interact_input_pressed()
+	screen_state_controller.hub_cancel_input_was_down = _is_menu_cancel_input_pressed()
+	screen_state_controller.hub_page_previous_input_was_down = _is_hub_previous_page_input_pressed()
+	screen_state_controller.hub_page_next_input_was_down = _is_hub_next_page_input_pressed()
+	if screen_state_controller.title_overlay != null: screen_state_controller.title_overlay.visible = false
+	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
 	if loading_screen_overlay != null: loading_screen_overlay.visible = false
 	if game_over_overlay != null: game_over_overlay.visible = false
-	hub_overlay.visible = true
-	hub_page = 1 if pause_mode else 0
-	hub_item_index = 0
+	screen_state_controller.hub_overlay.visible = true
+	screen_state_controller.hub_page = 1 if pause_mode else 0
+	screen_state_controller.hub_item_index = 0
 	_hub_cancel_stats()
 	screen_state_controller.set_state(&"hub")
 	_select_hub_menu_row(0)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 
 func _open_pause_menu() -> void:
-	if player_dead or player_death_pending or hub_overlay == null or hub_overlay.visible:
+	if player_dead or player_death_pending or screen_state_controller.hub_overlay == null or screen_state_controller.hub_overlay.visible:
 		return
-	pause_input_was_down = true
+	screen_state_controller.pause_input_was_down = true
 	_show_hub(false, true)
 func _open_hub_from_cloaked_demon() -> void:
-	if player_dead or hub_overlay == null: return
+	if player_dead or screen_state_controller.hub_overlay == null: return
 	if npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: npc_controller.hide_dialogue(self)
 	player_is_moving = false
 	player_is_attacking = false
@@ -277,13 +277,13 @@ func _open_hub_from_cloaked_demon() -> void:
 	interact_prompt.visible = false
 	_show_hub(true)
 func _close_hub_to_run() -> void:
-	if hub_overlay == null: return
+	if screen_state_controller.hub_overlay == null: return
 	_hub_cancel_stats()
-	hub_gear_browsing = false
-	menu_input_release_lock = _is_menu_cancel_input_pressed()
-	hub_overlay.visible = false
-	hub_opened_from_npc = false
-	hub_pause_mode = false
+	screen_state_controller.hub_gear_browsing = false
+	screen_state_controller.menu_input_release_lock = _is_menu_cancel_input_pressed()
+	screen_state_controller.hub_overlay.visible = false
+	screen_state_controller.hub_opened_from_npc = false
+	screen_state_controller.hub_pause_mode = false
 	interact_input_was_down = _is_interact_input_pressed()
 	screen_state_controller.set_state(&"gameplay")
 func _update_hub_input() -> void: screen_state_controller.update_hub_input(self)
@@ -292,31 +292,31 @@ func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_
 func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
 func _is_pause_input_just_pressed() -> bool:
 	var is_down := Input.is_action_pressed(&"pause")
-	var just_pressed := is_down and not pause_input_was_down
-	pause_input_was_down = is_down
+	var just_pressed := is_down and not screen_state_controller.pause_input_was_down
+	screen_state_controller.pause_input_was_down = is_down
 	return just_pressed
 func _set_hub_page(page: int) -> void:
-	hub_page = posmod(page, 4)
-	hub_item_index = 0
-	hub_gear_browsing = false
-	hub_fusion_message = ""
-	hub_fusion_count = 1
-	if run_state != null and hub_page == 2:
+	screen_state_controller.hub_page = posmod(page, 4)
+	screen_state_controller.hub_item_index = 0
+	screen_state_controller.hub_gear_browsing = false
+	screen_state_controller.hub_fusion_message = ""
+	screen_state_controller.hub_fusion_count = 1
+	if run_state != null and screen_state_controller.hub_page == 2:
 		run_state.ensure_shop_stock(player_profile.level)
-	if hub_page == 3:
+	if screen_state_controller.hub_page == 3:
 		_refresh_hub_fusion_candidates()
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _shift_hub_item(direction: int) -> void:
 	var count := 0
-	if hub_page == 1:
+	if screen_state_controller.hub_page == 1:
 		count = ItemCatalog.SLOTS.size()
-	elif hub_page == 2:
+	elif screen_state_controller.hub_page == 2:
 		count = run_state.shop_stock.size() if run_state != null else 0
-	elif hub_page == 3:
+	elif screen_state_controller.hub_page == 3:
 		_refresh_hub_fusion_candidates()
-		count = hub_fusion_candidates.size()
-		hub_fusion_count = 1
-	if count > 0: hub_item_index = posmod(hub_item_index + direction, count)
+		count = screen_state_controller.hub_fusion_candidates.size()
+		screen_state_controller.hub_fusion_count = 1
+	if count > 0: screen_state_controller.hub_item_index = posmod(screen_state_controller.hub_item_index + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 	var candidates: Array[ItemInstance] = []
@@ -331,40 +331,40 @@ func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 		if catalog.definition_slot(item.definition_id) == slot: candidates.append(item)
 	return candidates
 func _shift_hub_gear_candidate(direction: int) -> void:
-	if hub_page != 1 or not hub_gear_browsing: return
-	var slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
+	if screen_state_controller.hub_page != 1 or not screen_state_controller.hub_gear_browsing: return
+	var slot := ItemCatalog.SLOTS[clampi(screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 	var candidates := _hub_gear_candidates(slot)
 	if candidates.is_empty(): return
 	var key := String(slot)
-	hub_gear_candidate_indices[key] = posmod(int(hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
+	screen_state_controller.hub_gear_candidate_indices[key] = posmod(int(screen_state_controller.hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _select_hub_gear_slot(slot_index: int) -> void:
-	if hub_page != 1: return
-	hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
-	var slot := ItemCatalog.SLOTS[hub_item_index]
+	if screen_state_controller.hub_page != 1: return
+	screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
+	var slot := ItemCatalog.SLOTS[screen_state_controller.hub_item_index]
 	var candidates := _hub_gear_candidates(slot)
 	if not candidates.is_empty():
 		var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
 		for index in candidates.size():
 			if candidates[index].instance_id == equipped_id:
-				hub_gear_candidate_indices[String(slot)] = index
+				screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
 				break
-		hub_gear_browsing = true
+		screen_state_controller.hub_gear_browsing = true
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _close_hub_gear_browse() -> void:
-	hub_gear_browsing = false
+	screen_state_controller.hub_gear_browsing = false
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _refresh_hub_fusion_candidates() -> void:
-	hub_fusion_candidates.clear()
+	screen_state_controller.hub_fusion_candidates.clear()
 	if player_profile == null: return
 	var catalog := ItemCatalog.new()
 	for data: Dictionary in player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
 		if player_profile.fusion_material_count(item.instance_id, catalog) > 0 or player_profile.can_salvage_overflow(item.instance_id, catalog):
-			hub_fusion_candidates.append(item)
+			screen_state_controller.hub_fusion_candidates.append(item)
 func _hub_fusion_candidates() -> Array[ItemInstance]:
 	_refresh_hub_fusion_candidates()
-	return hub_fusion_candidates
+	return screen_state_controller.hub_fusion_candidates
 func _fuse_profile_target(instance_id: String, count: int) -> bool:
 	if player_profile == null or count <= 0 or not player_profile.fuse_duplicates(instance_id, count, ItemCatalog.new()):
 		return false
@@ -375,15 +375,15 @@ func _fuse_profile_target(instance_id: String, count: int) -> bool:
 	_update_gold_indicator()
 	return true
 func _shift_hub_fusion_count(direction: int) -> void:
-	if hub_page != 3: return
+	if screen_state_controller.hub_page != 3: return
 	_refresh_hub_fusion_candidates()
-	if hub_fusion_candidates.is_empty(): return
-	var index := clampi(hub_item_index, 0, hub_fusion_candidates.size() - 1)
-	var target := hub_fusion_candidates[index]
+	if screen_state_controller.hub_fusion_candidates.is_empty(): return
+	var index := clampi(screen_state_controller.hub_item_index, 0, screen_state_controller.hub_fusion_candidates.size() - 1)
+	var target := screen_state_controller.hub_fusion_candidates[index]
 	if player_profile.can_salvage_overflow(target.instance_id): return
 	var material_count := player_profile.fusion_material_count(target.instance_id)
 	if material_count <= 0: return
-	hub_fusion_count = clampi(int(hub_fusion_count) + direction, 1, material_count)
+	screen_state_controller.hub_fusion_count = clampi(int(screen_state_controller.hub_fusion_count) + direction, 1, material_count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _salvage_profile_overflow(instance_id: String) -> int:
 	if player_profile == null: return 0
@@ -394,18 +394,18 @@ func _salvage_profile_overflow(instance_id: String) -> int:
 	return value
 func _hub_item_action() -> void:
 	if player_profile == null: return
-	if hub_page == 1:
-		var slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
+	if screen_state_controller.hub_page == 1:
+		var slot := ItemCatalog.SLOTS[clampi(screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var candidates := _hub_gear_candidates(slot)
 		if not candidates.is_empty():
-			var candidate_index := posmod(int(hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
-			if not hub_gear_browsing:
+			var candidate_index := posmod(int(screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
+			if not screen_state_controller.hub_gear_browsing:
 				var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
 				for index in candidates.size():
 					if candidates[index].instance_id == equipped_id:
-						hub_gear_candidate_indices[String(slot)] = index
+						screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
 						break
-				hub_gear_browsing = true
+				screen_state_controller.hub_gear_browsing = true
 			else:
 				var selected := candidates[candidate_index]
 				var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
@@ -415,77 +415,77 @@ func _hub_item_action() -> void:
 					_unequip_profile_slot(slot)
 				else:
 					_equip_profile_item(selected.instance_id)
-				hub_gear_browsing = false
+				screen_state_controller.hub_gear_browsing = false
 			screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 		return
-	elif hub_page == 2 and run_state != null and not run_state.shop_stock.is_empty():
-		var index := clampi(hub_item_index, 0, run_state.shop_stock.size() - 1)
+	elif screen_state_controller.hub_page == 2 and run_state != null and not run_state.shop_stock.is_empty():
+		var index := clampi(screen_state_controller.hub_item_index, 0, run_state.shop_stock.size() - 1)
 		var entry: Dictionary = run_state.shop_stock[index]
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			if player_profile.purchase_item(item, int(entry.get("price", 0))):
 				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator()
-	elif hub_page == 3:
+	elif screen_state_controller.hub_page == 3:
 		_refresh_hub_fusion_candidates()
-		if not hub_fusion_candidates.is_empty():
-			var index := clampi(hub_item_index, 0, hub_fusion_candidates.size() - 1)
-			var target := hub_fusion_candidates[index]
+		if not screen_state_controller.hub_fusion_candidates.is_empty():
+			var index := clampi(screen_state_controller.hub_item_index, 0, screen_state_controller.hub_fusion_candidates.size() - 1)
+			var target := screen_state_controller.hub_fusion_candidates[index]
 			if player_profile.fusion_material_count(target.instance_id) > 0:
 				var material_count := player_profile.fusion_material_count(target.instance_id)
-				var count := clampi(int(hub_fusion_count), 1, material_count)
+				var count := clampi(int(screen_state_controller.hub_fusion_count), 1, material_count)
 				var batch_cost := player_profile.fusion_batch_cost(target, count)
 				if player_profile.gold < batch_cost:
-					hub_fusion_message = "NEED %dG" % batch_cost
+					screen_state_controller.hub_fusion_message = "NEED %dG" % batch_cost
 				else:
 					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))
 					if _fuse_profile_target(target.instance_id, count):
-						hub_fusion_message = "%s ENHANCED" % family_name
+						screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
 			elif player_profile.can_salvage_overflow(target.instance_id):
 				var salvage_value := _salvage_profile_overflow(target.instance_id)
-				if salvage_value > 0: hub_fusion_message = "SALVAGED %dG" % salvage_value
-			if not hub_fusion_message.is_empty():
+				if salvage_value > 0: screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
+			if not screen_state_controller.hub_fusion_message.is_empty():
 				_refresh_hub_fusion_candidates()
-				hub_item_index = clampi(hub_item_index, 0, maxi(hub_fusion_candidates.size() - 1, 0))
+				screen_state_controller.hub_item_index = clampi(screen_state_controller.hub_item_index, 0, maxi(screen_state_controller.hub_fusion_candidates.size() - 1, 0))
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _select_hub_menu_row(row: int) -> void:
-	hub_menu_row = posmod(row, 5)
-	if hub_menu_row < 4: hub_action_column = 0
+	screen_state_controller.hub_menu_row = posmod(row, 5)
+	if screen_state_controller.hub_menu_row < 4: screen_state_controller.hub_action_column = 0
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _shift_hub_action_column(direction: int) -> void:
-	var count := 4 if hub_menu_row == 4 else 2
-	hub_action_column = posmod(hub_action_column + direction, count)
+	var count := 4 if screen_state_controller.hub_menu_row == 4 else 2
+	screen_state_controller.hub_action_column = posmod(screen_state_controller.hub_action_column + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
 	if direction > 0:
 		_hub_allocate_stat(stat_name)
 		return
 	match stat_name:
-		&"VIT": hub_pending_vit = maxi(hub_pending_vit - 1, 0)
-		&"STR": hub_pending_str = maxi(hub_pending_str - 1, 0)
-		&"DEF": hub_pending_def = maxi(hub_pending_def - 1, 0)
-		&"SPD": hub_pending_spd = maxi(hub_pending_spd - 1, 0)
+		&"VIT": screen_state_controller.hub_pending_vit = maxi(screen_state_controller.hub_pending_vit - 1, 0)
+		&"STR": screen_state_controller.hub_pending_str = maxi(screen_state_controller.hub_pending_str - 1, 0)
+		&"DEF": screen_state_controller.hub_pending_def = maxi(screen_state_controller.hub_pending_def - 1, 0)
+		&"SPD": screen_state_controller.hub_pending_spd = maxi(screen_state_controller.hub_pending_spd - 1, 0)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_allocate_stat(stat_name: StringName) -> void:
 	if player_profile == null or _hub_points_remaining() <= 0: return
 	match stat_name:
-		&"VIT": hub_pending_vit += 1
-		&"STR": hub_pending_str += 1
-		&"DEF": hub_pending_def += 1
-		&"SPD": hub_pending_spd += 1
+		&"VIT": screen_state_controller.hub_pending_vit += 1
+		&"STR": screen_state_controller.hub_pending_str += 1
+		&"DEF": screen_state_controller.hub_pending_def += 1
+		&"SPD": screen_state_controller.hub_pending_spd += 1
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-func _hub_points_remaining() -> int: return maxi(player_profile.unspent_stat_points - hub_pending_vit - hub_pending_str - hub_pending_def - hub_pending_spd, 0) if player_profile != null else 0
+func _hub_points_remaining() -> int: return maxi(player_profile.unspent_stat_points - screen_state_controller.hub_pending_vit - screen_state_controller.hub_pending_str - screen_state_controller.hub_pending_def - screen_state_controller.hub_pending_spd, 0) if player_profile != null else 0
 func _hub_confirm_stats() -> void:
 	if player_profile == null: return
-	player_profile.allocate_stat(&"VIT", hub_pending_vit)
-	player_profile.allocate_stat(&"STR", hub_pending_str)
-	player_profile.allocate_stat(&"DEF", hub_pending_def)
-	player_profile.allocate_stat(&"SPD", hub_pending_spd)
-	hub_pending_vit = 0; hub_pending_str = 0; hub_pending_def = 0; hub_pending_spd = 0
+	player_profile.allocate_stat(&"VIT", screen_state_controller.hub_pending_vit)
+	player_profile.allocate_stat(&"STR", screen_state_controller.hub_pending_str)
+	player_profile.allocate_stat(&"DEF", screen_state_controller.hub_pending_def)
+	player_profile.allocate_stat(&"SPD", screen_state_controller.hub_pending_spd)
+	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
 	_apply_profile_to_runtime(); _apply_player_level(); _sync_runtime_progression_to_profile()
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_cancel_stats() -> void:
-	hub_pending_vit = 0; hub_pending_str = 0; hub_pending_def = 0; hub_pending_spd = 0
-	if screen_state_controller != null and hub_overlay != null: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
+	if screen_state_controller != null and screen_state_controller.hub_overlay != null: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_auto_allocate() -> void:
 	if player_profile == null: return
 	var patterns := [[&"VIT", &"STR", &"DEF", &"SPD"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"SPD"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"SPD"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"SPD"], [&"STR", &"DEF", &"STR", &"DEF", &"SPD"]]
@@ -493,20 +493,20 @@ func _hub_auto_allocate() -> void:
 	var index := 0
 	while _hub_points_remaining() > 0:
 		match pattern[index % pattern.size()]:
-			&"VIT": hub_pending_vit += 1
-			&"STR": hub_pending_str += 1
-			&"DEF": hub_pending_def += 1
-			&"SPD": hub_pending_spd += 1
+			&"VIT": screen_state_controller.hub_pending_vit += 1
+			&"STR": screen_state_controller.hub_pending_str += 1
+			&"DEF": screen_state_controller.hub_pending_def += 1
+			&"SPD": screen_state_controller.hub_pending_spd += 1
 		index += 1
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_respec() -> void:
 	_hub_cancel_stats()
 	if _respec_player_stats() > 0: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _start_from_hub() -> void:
-	if hub_opened_from_npc:
+	if screen_state_controller.hub_opened_from_npc:
 		_close_hub_to_run()
 		return
-	if hub_overlay != null: hub_overlay.visible = false
+	if screen_state_controller.hub_overlay != null: screen_state_controller.hub_overlay.visible = false
 	if player_profile != null:
 		player_profile.open_hub_on_load = false
 		player_profile.pending_route = "run"
@@ -570,7 +570,7 @@ func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0) -> StringNa
 	return ItemCatalog.new().roll_run_rarity(roll, _run_rank(), performance_bonus)
 
 func _complete_run() -> void:
-	if run_state == null or run_state.settled or run_complete_overlay == null or run_complete_overlay.visible:
+	if run_state == null or run_state.settled or screen_state_controller.run_complete_overlay == null or screen_state_controller.run_complete_overlay.visible:
 		return
 	_finalize_run_exploration()
 	_finalize_run_enemy_total()
@@ -605,7 +605,7 @@ func _complete_run() -> void:
 	_show_run_complete(drop_color)
 
 func _show_run_complete(drop_color: Color) -> void:
-	if run_complete_overlay == null or run_state == null:
+	if screen_state_controller.run_complete_overlay == null or run_state == null:
 		return
 	var summary := run_state.clear_summary
 	var elapsed := int(round(float(summary.get("time", 0.0))))
@@ -617,9 +617,9 @@ func _show_run_complete(drop_color: Color) -> void:
 	var style_quality := float(summary.get("variety", 0)) / float(maxi(int(summary.get("variety_max", 0)), 1))
 	var lines := ["GRADE %s    SCORE %03d" % [str(summary.get("grade", "D")), int(summary.get("score", 0))], "TIME %02d:%02d  DMG %d" % [floori(float(elapsed) / 60.0), elapsed % 60, roundi(float(summary.get("damage", 0.0)))], "EXPLORE %d/%d" % [int(summary.get("explored_rooms", 0)), int(summary.get("explorable_rooms", 0))], "KILLS %d/%d  BLOCKS %d  DODGES %d" % [kills, total_enemies, int(summary.get("blocks", 0)), int(summary.get("dodges", 0))], "ATTACKS %d  HITS %d" % [int(summary.get("attacks", 0)), int(summary.get("attack_hits", 0))], "ACCURACY %d%%" % roundi(accuracy_quality * 100.0), "MISINPUTS %d" % int(summary.get("wasted_inputs", 0)), "STYLE %d/%d" % [int(summary.get("variety", 0)), int(summary.get("variety_max", 3))], "SPOILS", "+%d GOLD" % int(summary.get("gold", 0)), str(summary.get("drop", "NO GEAR DROP"))]
 	var line_colors := [Color8(255, 205, 117), _run_metric_color((float(summary.get("time_quality", 0.0)) + float(summary.get("survival_quality", 0.0))) * 0.5), _run_metric_color(exploration_quality), _run_metric_color(kill_quality), _run_metric_color(accuracy_quality), _run_metric_color(accuracy_quality), _run_metric_color(float(summary.get("control_quality", 0.0))), _run_metric_color(style_quality), Color8(255, 205, 117), Color8(255, 205, 117), drop_color]
-	for index in mini(run_complete_texts.size(), lines.size()):
-		run_complete_texts[index].texture = _pixel_text_texture(lines[index], line_colors[index])
-	run_complete_overlay.visible = true
+	for index in mini(screen_state_controller.run_complete_texts.size(), lines.size()):
+		screen_state_controller.run_complete_texts[index].texture = _pixel_text_texture(lines[index], line_colors[index])
+	screen_state_controller.run_complete_overlay.visible = true
 	screen_state_controller.set_state(&"run_complete")
 
 func _run_metric_color(quality: float) -> Color:
@@ -635,14 +635,14 @@ func _run_metric_color(quality: float) -> Color:
 	return Color.WHITE # Common
 
 func _update_run_complete_input() -> void:
-	if run_complete_button == null:
+	if screen_state_controller.run_complete_button == null:
 		return
 	if Input.is_action_just_pressed("ui_accept") or _is_interact_input_pressed() or _is_menu_cancel_input_pressed():
-		run_complete_button.pressed.emit()
+		screen_state_controller.run_complete_button.pressed.emit()
 
 func _return_from_run_complete() -> void:
-	if run_complete_overlay != null:
-		run_complete_overlay.visible = false
+	if screen_state_controller.run_complete_overlay != null:
+		screen_state_controller.run_complete_overlay.visible = false
 	if player_profile != null:
 		player_profile.open_hub_on_load = false
 		player_profile.pending_route = "run"
@@ -653,8 +653,8 @@ func _show_game_over() -> void:
 	_apply_run_rank_grade("F")
 	_settle_current_run(&"defeat")
 	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; game_over_button.grab_focus()
-func _build_title_screen() -> void: var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_new_game"), Callable(self, "_continue_game"), has_persistent_profile); title_overlay = controls["overlay"] as ColorRect; title_screen_text = controls["text"] as Sprite2D; title_start_button = controls["new_game"] as Button; title_continue_button = controls["continue"] as Button; title_start_text = controls["start_text"] as Sprite2D; title_cursor_text = controls["cursor"] as Sprite2D; _build_archetype_screen()
-func _build_archetype_screen() -> void: var controls := screen_state_controller.build_archetype(ui, Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); archetype_overlay = controls["overlay"] as ColorRect; archetype_preview = controls["preview"] as Sprite2D; archetype_name_text = controls["name"] as Sprite2D; archetype_left_buttons = controls["left"] as Array[Button]; archetype_right_buttons = controls["right"] as Array[Button]; archetype_type_left_button = controls["type_left"] as Button; archetype_type_right_button = controls["type_right"] as Button; archetype_start_button = controls["start"] as Button; archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
+func _build_title_screen() -> void: var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_new_game"), Callable(self, "_continue_game"), has_persistent_profile); screen_state_controller.title_overlay = controls["overlay"] as ColorRect; screen_state_controller.title_screen_text = controls["text"] as Sprite2D; screen_state_controller.title_start_button = controls["new_game"] as Button; screen_state_controller.title_continue_button = controls["continue"] as Button; screen_state_controller.title_start_text = controls["start_text"] as Sprite2D; screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D; _build_archetype_screen()
+func _build_archetype_screen() -> void: var controls := screen_state_controller.build_archetype(ui, Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); screen_state_controller.archetype_overlay = controls["overlay"] as ColorRect; screen_state_controller.archetype_preview = controls["preview"] as Sprite2D; screen_state_controller.archetype_name_text = controls["name"] as Sprite2D; screen_state_controller.archetype_left_buttons = controls["left"] as Array[Button]; screen_state_controller.archetype_right_buttons = controls["right"] as Array[Button]; screen_state_controller.archetype_type_left_button = controls["type_left"] as Button; screen_state_controller.archetype_type_right_button = controls["type_right"] as Button; screen_state_controller.archetype_start_button = controls["start"] as Button; screen_state_controller.archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
 func _update_title_screen(delta: float) -> void: screen_state_controller.update_title_flow(self, delta)
 func _start_new_game() -> void:
 	screen_state_controller.start_save_select(self, "new")
@@ -662,25 +662,25 @@ func _continue_game() -> void:
 	screen_state_controller.start_save_select(self, "continue")
 
 func _open_save_select_after_title_transition() -> void:
-	if save_select_overlay == null:
-		save_select_overlay = screen_state_controller.build_save_select(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_select_save_slot"), Callable(self, "_confirm_overwrite"), Callable(self, "_cancel_overwrite"), Callable(self, "_save_preview_texture"))
-	save_select_index = 0
-	menu_input_release_lock = true
+	if screen_state_controller.save_select_overlay == null:
+		screen_state_controller.save_select_overlay = screen_state_controller.build_save_select(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_select_save_slot"), Callable(self, "_confirm_overwrite"), Callable(self, "_cancel_overwrite"), Callable(self, "_save_preview_texture"))
+	screen_state_controller.save_select_index = 0
+	screen_state_controller.menu_input_release_lock = true
 	# Keep the opaque title cover behind the save menu. The gameplay scene must
 	# never be exposed between the title transition and save selection.
-	if title_overlay != null:
-		title_overlay.visible = true
-		title_overlay.modulate.a = 1.0
-	save_select_overlay.visible = true
+	if screen_state_controller.title_overlay != null:
+		screen_state_controller.title_overlay.visible = true
+		screen_state_controller.title_overlay.modulate.a = 1.0
+	screen_state_controller.save_select_overlay.visible = true
 	_update_save_select_cursor()
 
 func _update_save_select_cursor() -> void:
-	if save_select_overlay == null: return
-	for child in save_select_overlay.get_children():
-		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == save_select_index:
+	if screen_state_controller.save_select_overlay == null: return
+	for child in screen_state_controller.save_select_overlay.get_children():
+		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == screen_state_controller.save_select_index:
 			(child as Button).grab_focus()
-	var cursor := save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
-	if cursor != null: cursor.position = Vector2(55, 70 + save_select_index * 20)
+	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
+	if cursor != null: cursor.position = Vector2(55, 70 + screen_state_controller.save_select_index * 20)
 
 func _save_preview_texture(palette_name: String) -> Texture2D:
 	if player_animation_component == null:
@@ -691,40 +691,40 @@ func _save_preview_texture(palette_name: String) -> Texture2D:
 	return player_animation_component.recolor_texture(base_frames[0], palette_name)
 
 func _select_save_slot(slot: int) -> void:
-	save_select_index = clampi(slot, 0, ProfileSaveService.SLOT_COUNT - 1)
+	screen_state_controller.save_select_index = clampi(slot, 0, ProfileSaveService.SLOT_COUNT - 1)
 	_update_save_select_cursor()
-	if save_select_mode == "continue":
+	if screen_state_controller.save_select_mode == "continue":
 		_select_continue_slot(slot)
 		return
 	if ProfileSaveService.slot_has_profile(slot):
-		save_overwrite_slot = slot
+		screen_state_controller.save_overwrite_slot = slot
 		_set_overwrite_prompt(true)
 		return
-	save_overwrite_slot = slot
+	screen_state_controller.save_overwrite_slot = slot
 	_confirm_overwrite()
 
 func _set_overwrite_prompt(active: bool) -> void:
-	save_overwrite_prompt_active = active
-	save_overwrite_choice = 0
-	menu_input_release_lock = active
+	screen_state_controller.save_overwrite_prompt_active = active
+	screen_state_controller.save_overwrite_choice = 0
+	screen_state_controller.menu_input_release_lock = active
 	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
-		var node := save_select_overlay.get_node_or_null(node_name)
+		var node := screen_state_controller.save_select_overlay.get_node_or_null(node_name)
 		if node != null: node.visible = active
-	var cursor := save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null: cursor.visible = active; cursor.position = Vector2(99, 140)
 
 func _cancel_overwrite() -> void:
-	save_overwrite_prompt_active = false
+	screen_state_controller.save_overwrite_prompt_active = false
 	_set_overwrite_prompt(false)
 	_update_save_select_cursor()
 
 func _confirm_overwrite() -> void:
-	save_overwrite_prompt_active = false
+	screen_state_controller.save_overwrite_prompt_active = false
 	_set_overwrite_prompt(false)
-	var selected_slot := save_overwrite_slot if ProfileSaveService.slot_has_profile(save_overwrite_slot) else save_select_index
+	var selected_slot := screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(screen_state_controller.save_overwrite_slot) else screen_state_controller.save_select_index
 	ProfileSaveService.select_slot(selected_slot)
 	ProfileSaveService.clear_slot(selected_slot)
-	if save_select_overlay != null: save_select_overlay.visible = false
+	if screen_state_controller.save_select_overlay != null: screen_state_controller.save_select_overlay.visible = false
 	player_profile = PlayerProfile.new()
 	_reset_runtime_for_new_save()
 	has_persistent_profile = false
@@ -759,42 +759,42 @@ func _reset_runtime_for_new_save() -> void:
 	_update_room_number_indicator()
 
 func _update_overwrite_cursor() -> void:
-	var cursor := save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null:
-		cursor.position = Vector2(99 if save_overwrite_choice == 0 else 129, 140)
+		cursor.position = Vector2(99 if screen_state_controller.save_overwrite_choice == 0 else 129, 140)
 
 func _close_save_select() -> void:
-	if save_select_overlay != null:
-		save_select_overlay.visible = false
-	menu_input_release_lock = false
-	if title_overlay != null:
-		title_overlay.visible = true
-		title_overlay.modulate.a = 1.0
-	if title_screen_text != null: title_screen_text.visible = true
-	if title_start_text != null: title_start_text.visible = true
-	if title_start_button != null: title_start_button.visible = true
-	if title_continue_button != null: title_continue_button.visible = title_continue_button.disabled == false
-	if title_cursor_text != null: title_cursor_text.visible = true
-	title_transition_active = false
-	pending_title_destination = ""
+	if screen_state_controller.save_select_overlay != null:
+		screen_state_controller.save_select_overlay.visible = false
+	screen_state_controller.menu_input_release_lock = false
+	if screen_state_controller.title_overlay != null:
+		screen_state_controller.title_overlay.visible = true
+		screen_state_controller.title_overlay.modulate.a = 1.0
+	if screen_state_controller.title_screen_text != null: screen_state_controller.title_screen_text.visible = true
+	if screen_state_controller.title_start_text != null: screen_state_controller.title_start_text.visible = true
+	if screen_state_controller.title_start_button != null: screen_state_controller.title_start_button.visible = true
+	if screen_state_controller.title_continue_button != null: screen_state_controller.title_continue_button.visible = screen_state_controller.title_continue_button.disabled == false
+	if screen_state_controller.title_cursor_text != null: screen_state_controller.title_cursor_text.visible = true
+	screen_state_controller.title_transition_active = false
+	screen_state_controller.pending_title_destination = ""
 	screen_state_controller.set_state(&"title")
-	if title_continue_button != null:
-		(title_continue_button if not title_continue_button.disabled else title_start_button).grab_focus()
+	if screen_state_controller.title_continue_button != null:
+		(screen_state_controller.title_continue_button if not screen_state_controller.title_continue_button.disabled else screen_state_controller.title_start_button).grab_focus()
 
 func _cancel_character_creation() -> void:
-	if archetype_overlay != null: archetype_overlay.visible = false
-	if title_overlay != null:
-		title_overlay.visible = true
-		title_overlay.modulate.a = 1.0
-	if title_screen_text != null: title_screen_text.visible = true
-	if title_start_text != null: title_start_text.visible = true
-	if title_start_button != null: title_start_button.visible = true
-	if title_continue_button != null: title_continue_button.visible = not title_continue_button.disabled
-	if title_cursor_text != null: title_cursor_text.visible = true
-	title_transition_active = false
-	pending_title_destination = ""
+	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
+	if screen_state_controller.title_overlay != null:
+		screen_state_controller.title_overlay.visible = true
+		screen_state_controller.title_overlay.modulate.a = 1.0
+	if screen_state_controller.title_screen_text != null: screen_state_controller.title_screen_text.visible = true
+	if screen_state_controller.title_start_text != null: screen_state_controller.title_start_text.visible = true
+	if screen_state_controller.title_start_button != null: screen_state_controller.title_start_button.visible = true
+	if screen_state_controller.title_continue_button != null: screen_state_controller.title_continue_button.visible = not screen_state_controller.title_continue_button.disabled
+	if screen_state_controller.title_cursor_text != null: screen_state_controller.title_cursor_text.visible = true
+	screen_state_controller.title_transition_active = false
+	screen_state_controller.pending_title_destination = ""
 	screen_state_controller.set_state(&"title")
-	if title_start_button != null: title_start_button.grab_focus()
+	if screen_state_controller.title_start_button != null: screen_state_controller.title_start_button.grab_focus()
 
 func _select_continue_slot(slot: int) -> void:
 	if not ProfileSaveService.slot_has_profile(slot):
@@ -805,13 +805,13 @@ func _select_continue_slot(slot: int) -> void:
 		return
 	player_profile.pending_route = "run"
 	ProfileSaveService.save_profile(player_profile)
-	if save_select_overlay != null:
-		save_select_overlay.visible = false
+	if screen_state_controller.save_select_overlay != null:
+		screen_state_controller.save_select_overlay.visible = false
 	_begin_scene_transition()
 func _enter_starting_room_from_menu() -> void:
-	if title_overlay != null: title_overlay.visible = false
-	if archetype_overlay != null: archetype_overlay.visible = false
-	if hub_overlay != null: hub_overlay.visible = false
+	if screen_state_controller.title_overlay != null: screen_state_controller.title_overlay.visible = false
+	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
+	if screen_state_controller.hub_overlay != null: screen_state_controller.hub_overlay.visible = false
 	# Keep the player and both shadow layers covered while the starting position,
 	# palette, and depth transforms are initialized. Otherwise the shadow can
 	# visibly slide in from the scene's editor position during a new game.
@@ -827,7 +827,7 @@ func _enter_starting_room_from_menu() -> void:
 	screen_state_controller.set_state(&"loading")
 	await get_tree().process_frame
 	_place_player_at_hub_fire()
-	await _apply_player_palette_async(player_palette_name)
+	await _apply_player_palette_async(screen_state_controller.player_palette_name)
 	_update_player_aggro_marker_colors()
 	var maximum_health := _player_max_health()
 	if player_health_component != null:
@@ -853,27 +853,27 @@ func _place_player_at_hub_fire() -> void:
 	var valid_foot := _nearest_slime_walkable_point(requested_foot)
 	player.global_position = valid_foot - ACTOR_FOOT_OFFSET
 func _update_archetype_input(delta: float) -> void: screen_state_controller.update_archetype_input(self, delta)
-func _shift_archetype(direction: int) -> void: archetype_index = posmod(archetype_index + direction, 4); selected_archetype = archetype_index as StatsComponent.AllocationProfile; _archetype_arrow_pulse(direction); _update_archetype_screen()
-func _shift_archetype_color(direction: int) -> void: archetype_color_index = posmod(archetype_color_index + direction, 8); _archetype_arrow_pulse(direction); _update_archetype_screen()
-func _archetype_arrow_pulse(direction: int) -> void: archetype_arrow_anim_direction = direction; archetype_arrow_anim_timer = 0.18
+func _shift_archetype(direction: int) -> void: screen_state_controller.archetype_index = posmod(screen_state_controller.archetype_index + direction, 4); screen_state_controller.selected_archetype = screen_state_controller.archetype_index as StatsComponent.AllocationProfile; _archetype_arrow_pulse(direction); _update_archetype_screen()
+func _shift_archetype_color(direction: int) -> void: screen_state_controller.archetype_color_index = posmod(screen_state_controller.archetype_color_index + direction, 8); _archetype_arrow_pulse(direction); _update_archetype_screen()
+func _archetype_arrow_pulse(direction: int) -> void: screen_state_controller.archetype_arrow_anim_direction = direction; screen_state_controller.archetype_arrow_anim_timer = 0.18
 func _update_archetype_arrow_animation() -> void:
-	var amount := clampf(archetype_arrow_anim_timer / 0.18, 0.0, 1.0); var pulse := 1.0 + amount * 0.22
-	archetype_type_left_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 0 else 1.0); archetype_type_right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 0 else 1.0)
-	for button in archetype_left_buttons: button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 1 else 1.0); for right_button in archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 1 else 1.0)
-func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(row, 3); _update_archetype_screen(); if archetype_menu_row == 2: archetype_start_button.grab_focus()
+	var amount := clampf(screen_state_controller.archetype_arrow_anim_timer / 0.18, 0.0, 1.0); var pulse := 1.0 + amount * 0.22
+	screen_state_controller.archetype_type_left_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction < 0 and screen_state_controller.archetype_menu_row == 0 else 1.0); screen_state_controller.archetype_type_right_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction > 0 and screen_state_controller.archetype_menu_row == 0 else 1.0)
+	for button in screen_state_controller.archetype_left_buttons: button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction < 0 and screen_state_controller.archetype_menu_row == 1 else 1.0); for right_button in screen_state_controller.archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction > 0 and screen_state_controller.archetype_menu_row == 1 else 1.0)
+func _select_archetype_menu_row(row: int) -> void: screen_state_controller.archetype_menu_row = posmod(row, 3); _update_archetype_screen(); if screen_state_controller.archetype_menu_row == 2: screen_state_controller.archetype_start_button.grab_focus()
 func _update_archetype_screen() -> void:
 	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"]
-	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], PaletteLibrary.ARCHETYPE_HIGHLIGHTS[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 36)
+	screen_state_controller.archetype_name_text.texture = _pixel_text_texture(names[screen_state_controller.archetype_index], PaletteLibrary.ARCHETYPE_HIGHLIGHTS[screen_state_controller.archetype_color_index] if screen_state_controller.archetype_menu_row == 0 else Color.WHITE); screen_state_controller.archetype_name_text.position = Vector2((240.0 - screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
 	if not player_animation_component.idle_frames.is_empty():
-		if archetype_preview_palette != colors[archetype_color_index] or archetype_preview_frames.size() != player_animation_component.idle_frames.size():
-			archetype_preview_frames.clear(); archetype_preview_palette = colors[archetype_color_index]
-			for frame in player_animation_component.idle_frames: archetype_preview_frames.append(player_animation_component.recolor_texture(frame, archetype_preview_palette))
+		if screen_state_controller.archetype_preview_palette != colors[screen_state_controller.archetype_color_index] or screen_state_controller.archetype_preview_frames.size() != player_animation_component.idle_frames.size():
+			screen_state_controller.archetype_preview_frames.clear(); screen_state_controller.archetype_preview_palette = colors[screen_state_controller.archetype_color_index]
+			for frame in player_animation_component.idle_frames: screen_state_controller.archetype_preview_frames.append(player_animation_component.recolor_texture(frame, screen_state_controller.archetype_preview_palette))
 		_update_archetype_preview_animation()
 	_update_archetype_button_styles()
 func _update_archetype_preview_animation() -> void:
-	if archetype_preview == null or archetype_preview_frames.is_empty(): return
-	var frame_time := maxf(player_tuning.idle_frame_time, 0.01); var frame_index := posmod(int(archetype_frame_timer / frame_time), archetype_preview_frames.size())
-	archetype_preview.texture = archetype_preview_frames[frame_index]; archetype_preview.position = Vector2((240.0 - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5, 48)
+	if screen_state_controller.archetype_preview == null or screen_state_controller.archetype_preview_frames.is_empty(): return
+	var frame_time := maxf(player_tuning.idle_frame_time, 0.01); var frame_index := posmod(int(screen_state_controller.archetype_frame_timer / frame_time), screen_state_controller.archetype_preview_frames.size())
+	screen_state_controller.archetype_preview.texture = screen_state_controller.archetype_preview_frames[frame_index]; screen_state_controller.archetype_preview.position = Vector2((240.0 - screen_state_controller.archetype_preview.texture.get_width() * screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
 func _update_archetype_button_styles() -> void: screen_state_controller.update_archetype_button_styles(self)
 func _start_selected_archetype() -> void: screen_state_controller.start_selected_archetype(self)
 func _build_loading_screen() -> void: var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
@@ -885,12 +885,12 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	if player_hud != null:
 		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name))
 	_update_player_progression_ui()
-func _update_player_aggro_marker_colors() -> void: hud_controller.update_aggro_markers(hud_controller.target_overhead_aggro_markers, player_palette_name, Callable(self, "_pixel_particle_texture"))
+func _update_player_aggro_marker_colors() -> void: hud_controller.update_aggro_markers(hud_controller.target_overhead_aggro_markers, screen_state_controller.player_palette_name, Callable(self, "_pixel_particle_texture"))
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
-	if title_particle_layer == null:
-		title_particle_layer = Node2D.new(); title_particle_layer.name = "TitleParticleLayer"; title_particle_layer.z_index = 10; ui.add_child(title_particle_layer)
-	screen_state_controller.spawn_pixel_breakup(source_sprite, title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
-func _spawn_title_button_frame_breakup() -> void: screen_state_controller.spawn_button_frame_breakup(title_start_button, title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
+	if screen_state_controller.title_particle_layer == null:
+		screen_state_controller.title_particle_layer = Node2D.new(); screen_state_controller.title_particle_layer.name = "TitleParticleLayer"; screen_state_controller.title_particle_layer.z_index = 10; ui.add_child(screen_state_controller.title_particle_layer)
+	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
+func _spawn_title_button_frame_breakup() -> void: screen_state_controller.spawn_button_frame_breakup(screen_state_controller.title_start_button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _update_game_over_input() -> void:
 	if game_over_overlay == null or not game_over_overlay.visible: return
 	if _is_interact_input_pressed(): _return_to_hub()
@@ -998,7 +998,7 @@ func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
 	room_number_indicator = hud["room"] as Sprite2D; dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; gold_indicator = hud["gold"] as Sprite2D; gold_amount_indicator = hud["gold_amount"] as Sprite2D; run_timer_indicator = hud["timer"] as Sprite2D; gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
-	var player_hud_color := _health_feedback_color(player_palette_name)
+	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
 	hud_root.call("apply_bar_colors", player_hud_color)
 	_update_player_progression_ui()
@@ -1684,12 +1684,12 @@ func _update_player_progression_ui() -> void:
 	var required := _xp_required_for_level(level)
 	var hud_root := ui.get_node_or_null("PlayerHud") as Node2D
 	if hud_root != null:
-		hud_root.call("set_static_text", "lv. %d" % level, _health_feedback_color(player_palette_name))
+		hud_root.call("set_static_text", "lv. %d" % level, _health_feedback_color(screen_state_controller.player_palette_name))
 	player_xp_text.texture = _pixel_text_texture("%d/%d" % [xp, required], Color.WHITE)
 	var fill_size := player_xp_fill.texture.get_size() if player_xp_fill.texture != null else Vector2(48, 16)
 	hud_controller.set_fill_ratio(player_xp_fill, fill_size, float(xp) / float(required))
 func _spawn_player_xp_number(amount: int) -> void:
-	var color := _health_feedback_color(player_palette_name)
+	var color := _health_feedback_color(screen_state_controller.player_palette_name)
 	var text := "+%d xp" % maxi(amount, 0)
 	_spawn_player_number(text, amount, color, true, text)
 func _spawn_player_level_number(level: int) -> void:

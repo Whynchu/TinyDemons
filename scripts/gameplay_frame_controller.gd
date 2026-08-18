@@ -36,47 +36,46 @@ func tick(root: Object, delta: float) -> void:
 		(root.get("scene_transition_overlay") as ColorRect).modulate.a = clampf(transition_timer / 0.28, 0.0, 1.0)
 		if transition_timer >= 0.34: root.get_tree().reload_current_scene()
 		return
-	var save_select := root.get("save_select_overlay") as ColorRect
-	if save_select != null and save_select.visible:
+	var ssc := root.get("screen_state_controller") as ScreenStateController
+	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
 		if bool(root.call("_is_menu_cancel_input_pressed")):
-			if bool(root.get("save_overwrite_prompt_active")): root.call("_cancel_overwrite")
+			if ssc.save_overwrite_prompt_active: root.call("_cancel_overwrite")
 			else: root.call("_close_save_select")
 			return
-		if bool(root.get("menu_input_release_lock")):
+		if ssc.menu_input_release_lock:
 			if not bool(root.call("_is_interact_input_pressed")) and not Input.is_action_pressed("ui_accept"):
-				root.set("menu_input_release_lock", false)
+				ssc.menu_input_release_lock = false
 			else:
 				return
-		if bool(root.get("save_overwrite_prompt_active")):
-			var choice := int(root.get("save_overwrite_choice"))
+		if ssc.save_overwrite_prompt_active:
+			var choice := ssc.save_overwrite_choice
 			if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
-				root.set("save_overwrite_choice", 1 - choice); root.call("_update_overwrite_cursor")
+				ssc.save_overwrite_choice = 1 - choice; root.call("_update_overwrite_cursor")
 			elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
-				if choice == 0: (save_select.get_node("OverwriteYes") as Button).pressed.emit()
-				else: (save_select.get_node("OverwriteNo") as Button).pressed.emit()
+				if choice == 0: (ssc.save_select_overlay.get_node("OverwriteYes") as Button).pressed.emit()
+				else: (ssc.save_select_overlay.get_node("OverwriteNo") as Button).pressed.emit()
 			return
-		var slot := int(root.get("save_select_index"))
+		var slot := ssc.save_select_index
 		if Input.is_action_just_pressed("ui_up"): slot -= 1
 		elif Input.is_action_just_pressed("ui_down"): slot += 1
-		if slot != int(root.get("save_select_index")):
-			root.set("save_select_index", posmod(slot, ProfileSaveService.SLOT_COUNT))
+		if slot != ssc.save_select_index:
+			ssc.save_select_index = posmod(slot, ProfileSaveService.SLOT_COUNT)
 			root.call("_update_save_select_cursor")
 		elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
-			var selected := save_select.get_node_or_null("SaveSelectCursor")
-			for child in save_select.get_children():
-				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == int(root.get("save_select_index")):
+			for child in ssc.save_select_overlay.get_children():
+				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == ssc.save_select_index:
 					(child as Button).pressed.emit()
 					break
 		return
-	var title_overlay := root.get("title_overlay") as ColorRect; var archetype_overlay := root.get("archetype_overlay") as ColorRect
-	if bool(root.get("title_transition_active")) or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
+	var title_overlay := ssc.title_overlay; var archetype_overlay := ssc.archetype_overlay
+	if ssc.title_transition_active or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
 		root.call("_update_title_screen", delta)
-		if bool(root.get("title_transition_active")) and float(root.get("title_transition_timer")) < 0.72: return
-		if not bool(root.get("title_transition_active")): return
+		if ssc.title_transition_active and ssc.title_transition_timer < 0.72: return
+		if not ssc.title_transition_active: return
 	if bool(root.get("loading_screen_active")): root.call("_update_loading_screen", delta); return
-	var hub_overlay := root.get("hub_overlay") as ColorRect
+	var hub_overlay := ssc.hub_overlay
 	if hub_overlay != null and hub_overlay.visible:
-		if bool(root.get("hub_pause_mode")) and bool(root.call("_is_pause_input_just_pressed")):
+		if ssc.hub_pause_mode and bool(root.call("_is_pause_input_just_pressed")):
 			root.call("_close_hub_to_run")
 			return
 		root.call("_update_hub_input")
@@ -84,13 +83,13 @@ func tick(root: Object, delta: float) -> void:
 		# the coin animation and gold display do not freeze while shopping.
 		root.call("_update_overworld_ui")
 		return
-	var run_complete_overlay := root.get("run_complete_overlay") as ColorRect
+	var run_complete_overlay := ssc.run_complete_overlay
 	if run_complete_overlay != null and run_complete_overlay.visible:
 		root.call("_update_run_complete_input")
 		return
-	if bool(root.get("menu_input_release_lock")):
+	if ssc.menu_input_release_lock:
 		if not bool(root.call("_is_menu_cancel_input_pressed")):
-			root.set("menu_input_release_lock", false)
+			ssc.menu_input_release_lock = false
 		else:
 			return
 	var npc := root.get("npc_controller") as NpcController; var dialogue_was_active: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible

@@ -4,6 +4,96 @@ class_name ScreenStateController
 signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
+var hub_overlay: ColorRect = null
+var hub_summary_text: Sprite2D = null
+var hub_points_text: Sprite2D = null
+var hub_stat_texts: Array[Sprite2D] = []
+var hub_stat_buttons: Array[Button] = []
+var hub_stat_left_buttons: Array[Button] = []
+var hub_stat_right_buttons: Array[Button] = []
+var hub_respec_button: Button = null
+var hub_start_button: Button = null
+var hub_title_button: Button = null
+var hub_derived_texts: Array[Sprite2D] = []
+var hub_apply_button: Button = null
+var hub_cancel_button: Button = null
+var hub_auto_button: Button = null
+var hub_pending_vit := 0
+var hub_pending_str := 0
+var hub_pending_def := 0
+var hub_pending_spd := 0
+var hub_opened_from_npc := false
+var hub_pause_mode := false
+var hub_menu_row := 0
+var hub_action_column := 0
+var hub_interact_input_was_down := false
+var hub_cancel_input_was_down := false
+var menu_input_release_lock := false
+var hub_page_previous_input_was_down := false
+var hub_page_next_input_was_down := false
+var pause_input_was_down := false
+var hub_page := 0
+var hub_item_index := 0
+var hub_gear_candidate_indices := {"weapon": 0, "armor": 0, "shield": 0, "accessory": 0}
+var hub_gear_browsing := false
+var hub_fusion_candidates: Array[ItemInstance] = []
+var hub_fusion_count := 1
+var hub_fusion_message := ""
+var hub_gear_choice_texts: Array[Sprite2D] = []
+var hub_gear_slot_buttons: Array[Button] = []
+var hub_gear_stat_texts: Array[Sprite2D] = []
+var hub_gear_stat_panel: Panel = null
+var hub_cursor_text: Sprite2D = null
+var hub_page_buttons: Array[Button] = []
+var hub_item_name_text: Sprite2D = null
+var hub_item_list_texts: Array[Sprite2D] = []
+var hub_shop_price_texts: Array[Sprite2D] = []
+var hub_item_detail_texts: Array[Sprite2D] = []
+var hub_item_action_button: Button = null
+var title_overlay: ColorRect = null
+var title_start_button: Button = null
+var title_continue_button: Button = null
+var title_frame_timer := 0.0
+var title_screen_text: Sprite2D = null
+var title_start_text: Sprite2D = null
+var title_cursor_text: Sprite2D = null
+var title_transition_active := false
+var title_transition_timer := 0.0
+var title_particle_layer: Node2D = null
+var pending_title_destination := ""
+var archetype_overlay: ColorRect = null
+var archetype_hold_cover: ColorRect = null
+var archetype_preview: Sprite2D = null
+var archetype_name_text: Sprite2D = null
+var archetype_preview_frames: Array[Texture2D] = []
+var archetype_preview_palette := ""
+var archetype_start_button: Button = null
+var archetype_left_buttons: Array[Button] = []
+var archetype_right_buttons: Array[Button] = []
+var archetype_type_left_button: Button = null
+var archetype_type_right_button: Button = null
+var archetype_frame_timer := 0.0
+var archetype_index := 0
+var archetype_color_index := 0
+var archetype_menu_row := 0
+var archetype_transition_active := false
+var archetype_transition_timer := 0.0
+var archetype_fade_out := false
+var archetype_arrow_anim_timer := 0.0
+var archetype_arrow_anim_direction := 0
+var selected_archetype := StatsComponent.AllocationProfile.BALANCED
+var save_select_overlay: ColorRect = null
+var save_select_mode := "continue"
+var save_select_index := 0
+var save_overwrite_slot := 0
+var save_overwrite_prompt_active := false
+var save_overwrite_choice := 0
+var run_complete_overlay: ColorRect = null
+var run_complete_texts: Array[Sprite2D] = []
+var run_complete_button: Button = null
+var run_complete_cursor: Sprite2D = null
+var game_over_cursor_text: Sprite2D = null
+var player_palette_name := "blue"
 
 func retro_button_alpha(timer: float) -> float:
 	var phase := fmod(timer, 2.4); var pulse := lerpf(1.0, 0.45, (phase - 0.6) / 0.9) if phase >= 0.6 and phase < 1.5 else lerpf(0.45, 1.0, (phase - 1.5) / 0.6) if phase >= 1.5 and phase < 2.1 else 1.0; return snappedf(snappedf(pulse, 0.08), 0.125)
@@ -29,42 +119,39 @@ func set_state(new_state: StringName) -> void:
 
 
 func update_title_flow(root: Object, delta: float) -> void:
-	var archetype := root.get("archetype_overlay") as ColorRect
-	var title_transition := bool(root.get("title_transition_active"))
-	if archetype != null and archetype.visible and not title_transition:
+	if archetype_overlay != null and archetype_overlay.visible and not title_transition_active:
 		root.call("_update_archetype_input", delta)
 		return
-	if title_transition:
+	if title_transition_active:
 		update_particles(delta, Callable(root, "_snap_half_pixel"))
-		var timer := float(root.get("title_transition_timer")) + delta
-		root.set("title_transition_timer", timer)
-		var overlay := root.get("title_overlay") as ColorRect
+		title_transition_timer += delta
+		var overlay := title_overlay
 		var fade_start := 0.72
 		var fade_duration := 0.42
 		# Save selection is still a title-screen state. Keep the black cover
 		# opaque while the fizzle runs; fading it out here exposes the live game
 		# scene before the save menu has been opened.
-		var opening_save_select := str(root.get("pending_title_destination")) == "save_select"
-		overlay.modulate.a = 1.0 if opening_save_select or timer < fade_start else clampf(1.0 - (timer - fade_start) / fade_duration, 0.0, 1.0)
-		if timer >= fade_start + fade_duration:
-			root.set("title_transition_active", false)
-			if str(root.get("pending_title_destination")) == "save_select":
-				root.set("pending_title_destination", "")
+		var opening_save_select := pending_title_destination == "save_select"
+		overlay.modulate.a = 1.0 if opening_save_select or title_transition_timer < fade_start else clampf(1.0 - (title_transition_timer - fade_start) / fade_duration, 0.0, 1.0)
+		if title_transition_timer >= fade_start + fade_duration:
+			title_transition_active = false
+			if pending_title_destination == "save_select":
+				pending_title_destination = ""
 				overlay.visible = true
 				overlay.modulate.a = 1.0
 				root.call("_open_save_select_after_title_transition")
 			else:
 				overlay.visible = false
-				root.set("archetype_transition_timer", -0.35)
+				archetype_transition_timer = -0.35
 				root.call("_select_archetype_menu_row", 0)
 		return
-	var frame_timer := float(root.get("title_frame_timer")) + delta
-	root.set("title_frame_timer", frame_timer)
-	var new_game := root.get("title_start_button") as Button
-	var continue_button := root.get("title_continue_button") as Button
+	title_frame_timer += delta
+	var frame_timer := title_frame_timer
+	var new_game := title_start_button
+	var continue_button := title_continue_button
 	if new_game != null: new_game.modulate.a = retro_button_alpha(frame_timer); new_game.position.y = 102.0 + retro_button_bob(frame_timer)
 	if continue_button != null: continue_button.modulate.a = retro_button_alpha(frame_timer + 0.4); continue_button.position.y = 120.0 + retro_button_bob(frame_timer + 0.4)
-	var cursor := root.get("title_cursor_text") as Sprite2D
+	var cursor := title_cursor_text
 	var focused := root.get_viewport().gui_get_focus_owner() as Button
 	var selected := continue_button if focused == continue_button and not continue_button.disabled else new_game
 	if cursor != null and selected != null:
@@ -77,36 +164,36 @@ func update_title_flow(root: Object, delta: float) -> void:
 
 
 func update_archetype_input(root: Object, delta: float) -> void:
-	if bool(root.get("archetype_transition_active")):
-		var transition_timer := float(root.get("archetype_transition_timer")) + delta
-		root.set("archetype_transition_timer", transition_timer)
+	if archetype_transition_active:
+		archetype_transition_timer += delta
+		var transition_timer := archetype_transition_timer
 		if transition_timer < 0.0:
 			return
-		if not bool(root.get("archetype_fade_out")):
-			(root.get("archetype_hold_cover") as ColorRect).visible = false
-			root.set("archetype_transition_active", false)
+		if not archetype_fade_out:
+			archetype_hold_cover.visible = false
+			archetype_transition_active = false
 			return
-		(root.get("archetype_overlay") as ColorRect).modulate.a = clampf(1.0 - transition_timer / 0.42, 0.0, 1.0)
+		archetype_overlay.modulate.a = clampf(1.0 - transition_timer / 0.42, 0.0, 1.0)
 		if transition_timer >= 0.42:
-			root.set("archetype_transition_active", false)
-			if bool(root.get("archetype_fade_out")):
-				(root.get("archetype_overlay") as ColorRect).visible = false
+			archetype_transition_active = false
+			if archetype_fade_out:
+				archetype_overlay.visible = false
 		return
-	if bool(root.get("menu_input_release_lock")):
+	if menu_input_release_lock:
 		var released := not bool(root.call("_is_interact_input_pressed")) and not Input.is_action_pressed("ui_accept") and not bool(root.call("_is_menu_cancel_input_pressed"))
-		if released: root.set("menu_input_release_lock", false)
+		if released: menu_input_release_lock = false
 		else: return
 	if root.call("_is_menu_cancel_input_pressed"):
 		root.call("_cancel_character_creation")
 		return
-	root.set("archetype_frame_timer", float(root.get("archetype_frame_timer")) + delta)
-	root.set("archetype_arrow_anim_timer", maxf(float(root.get("archetype_arrow_anim_timer")) - delta, 0.0))
+	archetype_frame_timer += delta
+	archetype_arrow_anim_timer = maxf(archetype_arrow_anim_timer - delta, 0.0)
 	root.call("_update_archetype_preview_animation")
 	root.call("_update_archetype_arrow_animation")
-	var button := root.get("archetype_start_button") as Button
-	button.modulate.a = retro_button_alpha(root.get("archetype_frame_timer"))
-	button.position.y = 104.0 + retro_button_bob(root.get("archetype_frame_timer"))
-	var row := int(root.get("archetype_menu_row"))
+	var button := archetype_start_button
+	button.modulate.a = retro_button_alpha(archetype_frame_timer)
+	button.position.y = 104.0 + retro_button_bob(archetype_frame_timer)
+	var row := archetype_menu_row
 	if Input.is_action_just_pressed("ui_up"):
 		root.call("_select_archetype_menu_row", row - 1)
 	elif Input.is_action_just_pressed("ui_down"):
@@ -122,98 +209,81 @@ func update_archetype_input(root: Object, delta: float) -> void:
 
 
 func start_selected_archetype(root: Object) -> void:
-	var overlay := root.get("archetype_overlay") as ColorRect
-	if overlay == null or not overlay.visible or bool(root.get("loading_screen_active")):
+	if archetype_overlay == null or not archetype_overlay.visible or bool(root.get("loading_screen_active")):
 		return
 	var profile := root.get("player_profile") as PlayerProfile
 	var stats := root.get("player_stats") as StatsComponent
 	if profile != null and not profile.has_started:
 		stats.manual_allocation_enabled = false
-		stats.allocation_profile = root.get("selected_archetype")
+		stats.allocation_profile = selected_archetype
 		var initial_stats := stats.get_stats()
 		profile.base_vit = int(initial_stats["VIT"])
 		profile.base_str = int(initial_stats["STR"])
 		profile.base_def = int(initial_stats["DEF"])
 		profile.base_spd = int(initial_stats["SPD"])
-		profile.allocation_profile = int(root.get("selected_archetype"))
-		profile.palette_name = ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"][int(root.get("archetype_color_index"))]
+		profile.allocation_profile = int(selected_archetype)
+		profile.palette_name = ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"][archetype_color_index]
 		profile.has_started = true
 		profile.ensure_starter_items()
 		root.call("_apply_profile_to_runtime")
 		root.call("_save_player_profile")
-	overlay.visible = false
-	(root.get("archetype_hold_cover") as ColorRect).visible = false
+	archetype_overlay.visible = false
+	archetype_hold_cover.visible = false
 	root.set("has_persistent_profile", true)
 	root.call("_enter_starting_room_from_menu")
 
 
 func start_new_game(root: Object) -> void:
-	var title_overlay := root.get("title_overlay") as ColorRect
 	if title_overlay == null or not title_overlay.visible:
 		return
-	root.call("_spawn_title_pixel_breakup", root.get("title_screen_text"))
-	root.call("_spawn_title_pixel_breakup", root.get("title_start_text"))
+	root.call("_spawn_title_pixel_breakup", title_screen_text)
+	root.call("_spawn_title_pixel_breakup", title_start_text)
 	root.call("_spawn_title_button_frame_breakup")
 	title_overlay.visible = true; title_overlay.modulate.a = 1.0
-	root.set("title_transition_active", true); root.set("title_transition_timer", 0.0)
-	var title_text := root.get("title_screen_text") as Sprite2D
-	var start_text := root.get("title_start_text") as Sprite2D
-	var start_button := root.get("title_start_button") as Button
-	var continue_button := root.get("title_continue_button") as Button
-	if title_text != null: title_text.visible = false
-	if start_text != null: start_text.visible = false
-	if start_button != null: start_button.visible = false; start_button.release_focus()
-	if continue_button != null: continue_button.visible = false; continue_button.release_focus()
-	var title_cursor := root.get("title_cursor_text") as Sprite2D
-	if title_cursor != null: title_cursor.visible = false
-	var archetype_overlay := root.get("archetype_overlay") as ColorRect
+	title_transition_active = true; title_transition_timer = 0.0
+	if title_screen_text != null: title_screen_text.visible = false
+	if title_start_text != null: title_start_text.visible = false
+	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
+	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
+	if title_cursor_text != null: title_cursor_text.visible = false
 	archetype_overlay.visible = true; set_state(&"archetype")
 	archetype_overlay.modulate.a = 1.0
-	(root.get("archetype_hold_cover") as ColorRect).visible = true
-	root.set("archetype_transition_active", true); root.set("archetype_transition_timer", -1.0); root.set("archetype_fade_out", false)
+	archetype_hold_cover.visible = true
+	archetype_transition_active = true; archetype_transition_timer = -1.0; archetype_fade_out = false
 
 
 func start_save_select(root: Object, mode: String) -> void:
-	var title_overlay := root.get("title_overlay") as ColorRect
 	if title_overlay == null or not title_overlay.visible:
 		return
-	root.set("save_select_mode", mode)
-	root.set("pending_title_destination", "save_select")
-	root.call("_spawn_title_pixel_breakup", root.get("title_screen_text"))
-	root.call("_spawn_title_pixel_breakup", root.get("title_start_text"))
+	save_select_mode = mode
+	pending_title_destination = "save_select"
+	root.call("_spawn_title_pixel_breakup", title_screen_text)
+	root.call("_spawn_title_pixel_breakup", title_start_text)
 	root.call("_spawn_title_button_frame_breakup")
 	title_overlay.visible = true
 	title_overlay.modulate.a = 1.0
-	root.set("title_transition_active", true)
-	root.set("title_transition_timer", 0.0)
-	var title_text := root.get("title_screen_text") as Sprite2D
-	var start_text := root.get("title_start_text") as Sprite2D
-	var start_button := root.get("title_start_button") as Button
-	var continue_button := root.get("title_continue_button") as Button
-	if title_text != null: title_text.visible = false
-	if start_text != null: start_text.visible = false
-	if start_button != null: start_button.visible = false; start_button.release_focus()
-	if continue_button != null: continue_button.visible = false; continue_button.release_focus()
-	var title_cursor := root.get("title_cursor_text") as Sprite2D
-	if title_cursor != null: title_cursor.visible = false
+	title_transition_active = true
+	title_transition_timer = 0.0
+	if title_screen_text != null: title_screen_text.visible = false
+	if title_start_text != null: title_start_text.visible = false
+	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
+	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
+	if title_cursor_text != null: title_cursor_text.visible = false
 
 
 func show_character_creation(root: Object) -> void:
-	var title_overlay := root.get("title_overlay") as ColorRect
-	var archetype_overlay := root.get("archetype_overlay") as ColorRect
 	if title_overlay == null or archetype_overlay == null:
 		return
 	title_overlay.visible = false
-	root.set("title_transition_active", false)
-	root.set("pending_title_destination", "")
+	title_transition_active = false
+	pending_title_destination = ""
 	archetype_overlay.visible = true
 	archetype_overlay.modulate.a = 1.0
 	archetype_overlay.z_index = 3
 	set_state(&"archetype")
-	var hold_cover := root.get("archetype_hold_cover") as ColorRect
-	if hold_cover != null: hold_cover.visible = false
-	root.set("archetype_transition_active", false)
-	root.set("menu_input_release_lock", true)
+	if archetype_hold_cover != null: archetype_hold_cover.visible = false
+	archetype_transition_active = false
+	menu_input_release_lock = true
 	root.call("_select_archetype_menu_row", 0)
 
 
@@ -238,7 +308,7 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 		var title := root.get("game_over_title_button") as Button
 		if restart != null: restart.modulate.a = retro_button_alpha(fade_timer); restart.position.y = 105.0 + retro_button_bob(fade_timer)
 		if title != null: title.modulate.a = retro_button_alpha(fade_timer + 0.6); title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
-		var cursor := root.get("game_over_cursor_text") as Sprite2D
+		var cursor := game_over_cursor_text
 		var focused := root.get_viewport().gui_get_focus_owner() as Button
 		var selected := title if focused == title and not title.disabled else restart
 		if cursor != null:
@@ -250,12 +320,12 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 
 
 func update_archetype_button_styles(root: Object) -> void:
-	var color: Color = PaletteLibrary.ARCHETYPE_HIGHLIGHTS[int(root.get("archetype_color_index"))]; var row := int(root.get("archetype_menu_row"))
+	var color: Color = PaletteLibrary.ARCHETYPE_HIGHLIGHTS[archetype_color_index]; var row := archetype_menu_row
 	var type_active := row == 0; var sprite_active := row == 1; var start_active := row == 2
-	var type_left := root.get("archetype_type_left_button") as Button; var type_right := root.get("archetype_type_right_button") as Button; var start := root.get("archetype_start_button") as Button
+	var type_left := archetype_type_left_button; var type_right := archetype_type_right_button; var start := archetype_start_button
 	set_archetype_button_state(type_left, type_active, color); set_archetype_button_state(type_right, type_active, color)
-	for button in root.get("archetype_left_buttons") as Array[Button]: set_archetype_button_state(button, sprite_active, color)
-	for button in root.get("archetype_right_buttons") as Array[Button]: set_archetype_button_state(button, sprite_active, color)
+	for button in archetype_left_buttons: set_archetype_button_state(button, sprite_active, color)
+	for button in archetype_right_buttons: set_archetype_button_state(button, sprite_active, color)
 	set_archetype_button_state(start, start_active, color)
 
 
@@ -524,15 +594,15 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile == null: return
-	var summary := root.get("hub_summary_text") as Sprite2D
-	var points := root.get("hub_points_text") as Sprite2D
+	var summary := hub_summary_text
+	var points := hub_points_text
 	var progression := root.get("progression_tuning") as ProgressionTuning
 	if summary != null: summary.texture = pixel_texture.call("LV %d   XP %d/%d   GOLD %d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression), profile.gold], Color.WHITE) as Texture2D
-	var page := int(root.get("hub_page"))
-	var pause_mode := bool(root.get("hub_pause_mode"))
-	var page_buttons := root.get("hub_page_buttons") as Array[Button]
-	var highlight_color: Color = root.call("_health_feedback_color", root.get("player_palette_name"))
-	var cursor := root.get("hub_cursor_text") as Sprite2D
+	var page := hub_page
+	var pause_mode := hub_pause_mode
+	var page_buttons := hub_page_buttons
+	var highlight_color: Color = root.call("_health_feedback_color", player_palette_name)
+	var cursor := hub_cursor_text
 	if cursor != null:
 		cursor.visible = false
 	for page_index in page_buttons.size():
@@ -541,45 +611,45 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if summary != null:
 		summary.visible = pause_mode
 		summary.position = Vector2(7, 18)
-	var title := (root.get("hub_overlay") as ColorRect).get_node_or_null("HubTitle") as Sprite2D
+	var title := hub_overlay.get_node_or_null("HubTitle") as Sprite2D
 	if title != null:
 		var title_texture := pixel_texture.call("PAUSE" if pause_mode else "DEMON HUB", Color.WHITE) as Texture2D
 		title.texture = title_texture
 		title.position.x = (156.0 - title_texture.get_width()) * 0.5
 	var stat_nodes: Array[CanvasItem] = []
-	stat_nodes.append(root.get("hub_points_text") as Sprite2D); stat_nodes.append_array(root.get("hub_stat_texts") as Array[Sprite2D]); stat_nodes.append_array(root.get("hub_stat_buttons") as Array[Button]); stat_nodes.append_array(root.get("hub_derived_texts") as Array[Sprite2D]); stat_nodes.append(root.get("hub_apply_button") as Button); stat_nodes.append(root.get("hub_cancel_button") as Button); stat_nodes.append(root.get("hub_auto_button") as Button); stat_nodes.append(root.get("hub_respec_button") as Button)
+	stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
 	for node in stat_nodes:
 		if node != null: node.visible = page == 0
-	var item_name := root.get("hub_item_name_text") as Sprite2D
-	var item_list := root.get("hub_item_list_texts") as Array[Sprite2D]
-	var shop_prices := root.get("hub_shop_price_texts") as Array[Sprite2D]
-	var gear_choices := root.get("hub_gear_choice_texts") as Array[Sprite2D]
-	var gear_stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
-	var item_details := root.get("hub_item_detail_texts") as Array[Sprite2D]
-	var item_action := root.get("hub_item_action_button") as Button
+	var item_name := hub_item_name_text
+	var item_list := hub_item_list_texts
+	var shop_prices := hub_shop_price_texts
+	var gear_choices := hub_gear_choice_texts
+	var gear_stats := hub_gear_stat_texts
+	var item_details := hub_item_detail_texts
+	var item_action := hub_item_action_button
 	if item_name != null: item_name.visible = false
 	for node in item_list: node.visible = page != 0
 	for node in shop_prices: node.visible = page == 2
-	for node in gear_choices: node.visible = page == 1 and bool(root.get("hub_gear_browsing"))
-	for button in root.get("hub_gear_slot_buttons") as Array[Button]: button.visible = page == 1 and not bool(root.get("hub_gear_browsing"))
+	for node in gear_choices: node.visible = page == 1 and hub_gear_browsing
+	for button in hub_gear_slot_buttons: button.visible = page == 1 and not hub_gear_browsing
 	for node in gear_stats: node.visible = page == 1 or page == 3
-	var gear_stat_panel := root.get("hub_gear_stat_panel") as Panel
+	var gear_stat_panel := hub_gear_stat_panel
 	if gear_stat_panel != null: gear_stat_panel.visible = page == 1 or page == 3
 	for node in item_details: node.visible = page != 0
 	if item_action != null: item_action.visible = page != 0
 	if page != 0:
 		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
 		return
-	var pending := [int(root.get("hub_pending_vit")), int(root.get("hub_pending_str")), int(root.get("hub_pending_def")), int(root.get("hub_pending_spd"))]
+	var pending := [hub_pending_vit, hub_pending_str, hub_pending_def, hub_pending_spd]
 	var remaining := int(root.call("_hub_points_remaining"))
 	if points != null: points.texture = pixel_texture.call("POINTS TO SPEND: %d" % remaining, Color8(255, 205, 117)) as Texture2D
 	var values := [profile.base_vit + profile.allocated_vit + pending[0], profile.base_str + profile.allocated_str + pending[1], profile.base_def + profile.allocated_def + pending[2], profile.base_spd + profile.allocated_spd + pending[3]]
 	var allocations := [profile.allocated_vit + pending[0], profile.allocated_str + pending[1], profile.allocated_def + pending[2], profile.allocated_spd + pending[3]]
-	var stat_texts := root.get("hub_stat_texts") as Array[Sprite2D]
-	var selected_row := int(root.get("hub_menu_row"))
+	var stat_texts := hub_stat_texts
+	var selected_row := hub_menu_row
 	for index in stat_texts.size():
 		stat_texts[index].texture = pixel_texture.call("%s %d  A+%d" % [["VIT", "STR", "DEF", "SPD"][index], values[index], allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
-	var stat_buttons := root.get("hub_stat_buttons") as Array[Button]
+	var stat_buttons := hub_stat_buttons
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
 		var stat_index := int(button.get_meta("hub_stat_index", 0))
@@ -589,39 +659,39 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if snapshot != null:
 		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]; snapshot.speed += pending[3]
 		var combat_tuning := root.get("combat_tuning") as CombatTuning
-		var derived_texts := root.get("hub_derived_texts") as Array[Sprite2D]
+		var derived_texts := hub_derived_texts
 		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "ATK %d" % roundi((combat_tuning.damage_base + float(snapshot.strength)) * (1.0 + maxf(snapshot.gear_damage_rate, 0.0))), "DEF %d" % snapshot.def, "SPD %d" % snapshot.speed]
 		for index in derived_texts.size():
 			derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D if index < derived_values.size() else null
 	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3])
-	var apply_button := root.get("hub_apply_button") as Button
-	var cancel_button := root.get("hub_cancel_button") as Button
+	var apply_button := hub_apply_button
+	var cancel_button := hub_cancel_button
 	if apply_button != null: apply_button.disabled = pending_total <= 0
 	if cancel_button != null: cancel_button.disabled = pending_total <= 0
-	var auto_button := root.get("hub_auto_button") as Button
+	var auto_button := hub_auto_button
 	if auto_button != null: auto_button.disabled = remaining <= 0
-	var respec_button := root.get("hub_respec_button") as Button
+	var respec_button := hub_respec_button
 	if respec_button != null:
 		var cost := profile.respec_cost()
 		respec_button.disabled = profile.allocated_vit + profile.allocated_str + profile.allocated_def <= 0 or profile.gold < cost
 		var label := respec_button.get_child(0) as Sprite2D
 		if label != null: label.texture = pixel_texture.call("RESPEC" if cost <= 0 else "RESPEC %d" % cost, Color.WHITE) as Texture2D
 	var utility_buttons: Array[Button] = [apply_button, cancel_button, auto_button, respec_button]
-	var exit_buttons: Array[Button] = [root.get("hub_start_button") as Button, root.get("hub_title_button") as Button]
-	var selected_column := int(root.get("hub_action_column"))
+	var exit_buttons: Array[Button] = [hub_start_button, hub_title_button]
+	var selected_column := hub_action_column
 	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], selected_row == 4 and selected_column == index, highlight_color)
 	for index in exit_buttons.size(): set_archetype_button_state(exit_buttons[index], selected_row == 5 and selected_column == index, highlight_color)
-	var start_button := root.get("hub_start_button") as Button
+	var start_button := hub_start_button
 	if start_button != null:
 		var start_label := start_button.get_child(0) as Sprite2D
-		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if bool(root.get("hub_opened_from_npc")) else "START RUN", Color.WHITE) as Texture2D
+		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if hub_opened_from_npc else "START RUN", Color.WHITE) as Texture2D
 
 
 func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, page: int, item_list: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
 	var catalog := ItemCatalog.new()
-	var shop_prices := root.get("hub_shop_price_texts") as Array[Sprite2D]
+	var shop_prices := hub_shop_price_texts
 	if page == 1:
-		_update_hub_gear_slots(root, pixel_texture, profile, catalog, item_list, root.get("hub_gear_choice_texts") as Array[Sprite2D], details, action, highlight_color)
+		_update_hub_gear_slots(root, pixel_texture, profile, catalog, item_list, hub_gear_choice_texts, details, action, highlight_color)
 		return
 	for detail_index in range(2, details.size()):
 		details[detail_index].visible = false
@@ -629,7 +699,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var item: ItemInstance = null
 	var price := 0
 	var sold := false
-	var index := int(root.get("hub_item_index"))
+	var index := hub_item_index
 	var count := 0
 	if page == 1:
 		count = profile.inventory.size()
@@ -686,10 +756,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			shop_prices[row].texture = pixel_texture.call("SOLD" if row_sold else "%dG" % row_price, Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
 	if item == null:
 		if not item_list.is_empty():
-			var empty_text := str(root.get("hub_fusion_message")) if page == 3 and not str(root.get("hub_fusion_message")).is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
+			var empty_text := hub_fusion_message if page == 3 and not hub_fusion_message.is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
 			item_list[0].texture = pixel_texture.call(empty_text, Color8(255, 205, 117) if page == 3 else Color.WHITE) as Texture2D
 		for detail in details: detail.texture = null
-		for stale_stat in root.get("hub_gear_stat_texts") as Array[Sprite2D]: stale_stat.texture = null
+		for stale_stat in hub_gear_stat_texts: stale_stat.texture = null
 		action.disabled = true; return
 	var mastery := item.enhancement_level
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
@@ -710,10 +780,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var overflow := profile.can_salvage_overflow(item.instance_id, catalog)
 	var material_count := profile.fusion_material_count(item.instance_id, catalog)
 	var can_fuse := material_count > 0
-	var fusion_count := clampi(int(root.get("hub_fusion_count")), 1, maxi(material_count, 1))
+	var fusion_count := clampi(hub_fusion_count, 1, maxi(material_count, 1))
 	if page == 3 and overflow:
 		details[1].texture = pixel_texture.call("MYTHIC +10  SALVAGE %dG" % catalog.overflow_salvage_value(item), Color8(255, 205, 117)) as Texture2D
-		for stale_stat in root.get("hub_gear_stat_texts") as Array[Sprite2D]: stale_stat.texture = null
+		for stale_stat in hub_gear_stat_texts: stale_stat.texture = null
 	elif page == 3:
 		var batch_cost := profile.fusion_batch_cost(item, fusion_count)
 		var fusion_color := Color8(255, 205, 117) if profile.gold >= batch_cost else Color8(255, 105, 105)
@@ -731,7 +801,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		projected.enhancement_level = final_enhancement
 		projected.rarity = final_rarity
 		var next_bonuses := catalog.bonuses(projected, 0)
-		var preview_stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
+		var preview_stats := hub_gear_stat_texts
 		var preview_rows: Array[String] = []
 		var preview_order := ["health_rate", "damage_rate", "strength", "defense", "vitality", "speed"]
 		for stat: String in preview_order:
@@ -758,9 +828,9 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 
 
 func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, item_list: Array[Sprite2D], choices: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
-	var selected_slot_index := clampi(int(root.get("hub_item_index")), 0, ItemCatalog.SLOTS.size() - 1)
-	var candidate_indices := root.get("hub_gear_candidate_indices") as Dictionary
-	var browsing := bool(root.get("hub_gear_browsing"))
+	var selected_slot_index := clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
+	var candidate_indices := hub_gear_candidate_indices
+	var browsing := hub_gear_browsing
 	var selected_candidate: ItemInstance = null
 	for detail in details:
 		detail.visible = false
@@ -868,8 +938,8 @@ func _set_transmutation_description(details: Array[Sprite2D], pixel_texture: Cal
 
 
 func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot_index: int, comparing: bool) -> void:
-	var stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
-	if bool(root.get("hub_pause_mode")) and not comparing:
+	var stats := hub_gear_stat_texts
+	if hub_pause_mode and not comparing:
 		var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 		if snapshot != null:
 			var tuning := root.get("combat_tuning") as CombatTuning
@@ -903,26 +973,26 @@ func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_l
 	return result
 
 func update_hub_input(root: Object) -> void:
-	var row := int(root.get("hub_menu_row"))
-	var page := int(root.get("hub_page"))
+	var row := hub_menu_row
+	var page := hub_page
 	var interact_down := bool(root.call("_is_interact_input_pressed"))
-	var interact_pressed := interact_down and not bool(root.get("hub_interact_input_was_down"))
-	root.set("hub_interact_input_was_down", interact_down)
+	var interact_pressed := interact_down and not hub_interact_input_was_down
+	hub_interact_input_was_down = interact_down
 	var previous_page_down := bool(root.call("_is_hub_previous_page_input_pressed"))
 	var next_page_down := bool(root.call("_is_hub_next_page_input_pressed"))
-	var previous_page_pressed := previous_page_down and not bool(root.get("hub_page_previous_input_was_down"))
-	var next_page_pressed := next_page_down and not bool(root.get("hub_page_next_input_was_down"))
-	root.set("hub_page_previous_input_was_down", previous_page_down)
-	root.set("hub_page_next_input_was_down", next_page_down)
+	var previous_page_pressed := previous_page_down and not hub_page_previous_input_was_down
+	var next_page_pressed := next_page_down and not hub_page_next_input_was_down
+	hub_page_previous_input_was_down = previous_page_down
+	hub_page_next_input_was_down = next_page_down
 	var cancel_down := bool(root.call("_is_menu_cancel_input_pressed"))
-	var cancel_pressed := cancel_down and not bool(root.get("hub_cancel_input_was_down"))
-	root.set("hub_cancel_input_was_down", cancel_down)
+	var cancel_pressed := cancel_down and not hub_cancel_input_was_down
+	hub_cancel_input_was_down = cancel_down
 	if cancel_pressed:
-		if page == 1 and bool(root.get("hub_gear_browsing")): root.call("_close_hub_gear_browse")
+		if page == 1 and hub_gear_browsing: root.call("_close_hub_gear_browse")
 		else: root.call("_close_hub_to_run")
 		return
-	if bool(root.get("hub_pause_mode")):
-		if bool(root.get("hub_gear_browsing")):
+	if hub_pause_mode:
+		if hub_gear_browsing:
 			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1)
 			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1)
 			elif Input.is_action_just_pressed("ui_accept") or interact_pressed: root.call("_hub_item_action")
@@ -930,7 +1000,7 @@ func update_hub_input(root: Object) -> void:
 		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1)
 		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1)
 		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
-			var pause_action := root.get("hub_item_action_button") as Button
+			var pause_action := hub_item_action_button
 			if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
 		return
 	if previous_page_pressed:
@@ -938,7 +1008,7 @@ func update_hub_input(root: Object) -> void:
 	if next_page_pressed:
 		root.call("_set_hub_page", page + 1); return
 	if page != 0:
-		if page == 1 and bool(root.get("hub_gear_browsing")):
+		if page == 1 and hub_gear_browsing:
 			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1)
 			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1)
 			elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
@@ -952,7 +1022,7 @@ func update_hub_input(root: Object) -> void:
 		elif page == 3 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_fusion_count", -1)
 		elif page == 3 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_fusion_count", 1)
 		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
-			var action := root.get("hub_item_action_button") as Button
+			var action := hub_item_action_button
 			if action != null and not action.disabled: action.pressed.emit()
 		elif Input.is_action_just_pressed("ui_cancel"): root.call("_set_hub_page", 0)
 		return
@@ -970,13 +1040,13 @@ func update_hub_input(root: Object) -> void:
 		if row < 4:
 			root.call("_select_hub_menu_row", row + 1)
 		elif row == 4:
-			var utility_button := [root.get("hub_apply_button"), root.get("hub_cancel_button"), root.get("hub_auto_button"), root.get("hub_respec_button")][int(root.get("hub_action_column"))] as Button
+			var utility_button := [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button][hub_action_column] as Button
 			if utility_button != null and not utility_button.disabled: utility_button.pressed.emit()
 		else:
-			var exit_button := [root.get("hub_start_button"), root.get("hub_title_button")][int(root.get("hub_action_column"))] as Button
+			var exit_button := [hub_start_button, hub_title_button][hub_action_column] as Button
 			if exit_button != null and not exit_button.disabled: exit_button.pressed.emit()
 	elif Input.is_action_just_pressed("ui_cancel"):
-		if bool(root.get("hub_opened_from_npc")): root.call("_close_hub_to_run")
+		if hub_opened_from_npc: root.call("_close_hub_to_run")
 		else: root.call("_return_to_title")
 
 

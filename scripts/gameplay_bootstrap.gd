@@ -8,6 +8,7 @@ func initialize(root: Object) -> void:
 	var profile := ProfileSaveService.load_profile()
 	root.set("player_profile", profile)
 	root.set("has_persistent_profile", has_profile)
+	root.set("screen_state_controller", root.call("_add_runtime_node", ScreenStateController, "ScreenStateController"))
 	root.call("_apply_profile_to_runtime")
 	root.set("gameplay_frame_controller", root.call("_add_runtime_node", GameplayFrameController, "GameplayFrameController"))
 	var effects_tuning := root.get("effects_tuning") as EffectsTuning
@@ -24,7 +25,6 @@ func initialize(root: Object) -> void:
 	root.set("rest_fire_controller", root.call("_add_runtime_node", RestFireController, "RestFireController", root.get("rest_fire")))
 	root.set("hud_controller", root.call("_add_runtime_node", HudController, "HudController", root.get("ui")))
 	root.set("effects_spawner", root.call("_add_runtime_node", EffectsSpawner, "EffectsSpawner"))
-	root.set("screen_state_controller", root.call("_add_runtime_node", ScreenStateController, "ScreenStateController"))
 	var rng := root.get("rng") as RandomNumberGenerator
 	rng.randomize()
 	var run_state := RunState.new()
@@ -84,8 +84,9 @@ func initialize(root: Object) -> void:
 
 
 func _enter_debug_gameplay(root: Object) -> void:
-	var title_overlay := root.get("title_overlay") as CanvasItem
-	var archetype_overlay := root.get("archetype_overlay") as CanvasItem
+	var ssc := root.get("screen_state_controller") as ScreenStateController
+	var title_overlay := ssc.title_overlay as CanvasItem
+	var archetype_overlay := ssc.archetype_overlay as CanvasItem
 	var loading_overlay := root.get("loading_screen_overlay") as CanvasItem
 	if title_overlay != null: title_overlay.visible = false
 	if archetype_overlay != null: archetype_overlay.visible = false

@@ -23,16 +23,17 @@ func _initialize() -> void:
 		"item_action": "hub_item_action_button", "cursor": "hub_cursor_text",
 	}
 	for key: String in built:
-		root.set(str(key_map.get(key, key)), built[key])
-	root.hub_overlay = ColorRect.new()
-	root.hub_page = 1
-	root.hub_pause_mode = false
-	root.hub_menu_row = 0
-	root.hub_item_index = 0
-	root.hub_gear_browsing = false
-	root.hub_gear_candidate_indices = {}
-	root.hub_fusion_message = ""
-	root.hub_fusion_count = 1
+		controller_instance.set(str(key_map.get(key, key)), built[key])
+	controller_instance.hub_overlay = ColorRect.new()
+	controller_instance.hub_page = 1
+	controller_instance.hub_pause_mode = false
+	controller_instance.hub_menu_row = 0
+	controller_instance.hub_item_index = 0
+	controller_instance.hub_gear_browsing = false
+	controller_instance.hub_gear_candidate_indices = {}
+	controller_instance.hub_fusion_message = ""
+	controller_instance.hub_fusion_count = 1
+	controller_instance.player_palette_name = "blue"
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(ItemCatalog.new())
 	var duplicate := ItemInstance.new()
@@ -48,25 +49,32 @@ func _initialize() -> void:
 	root.player_profile = profile
 	root.progression_tuning = ProgressionTuning.new()
 	root.run_state = RunState.new()
-	var gear_stats := root.hub_gear_stat_texts as Array[Sprite2D]
-	var details := root.hub_item_detail_texts as Array[Sprite2D]
-	root.hub_gear_browsing = true
-	root.hub_item_index = 0
+	var gear_stats := controller_instance.hub_gear_stat_texts as Array[Sprite2D]
+	var details := controller_instance.hub_item_detail_texts as Array[Sprite2D]
+	controller_instance.hub_gear_browsing = true
+	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(gear_stats.all(func(s: Sprite2D) -> bool: return s.texture != null), "gear browse shows comparison tooltip", failures)
 	root._set_page(3)
+	controller_instance.hub_page = 3
+	controller_instance.hub_item_index = 0
+	controller_instance.hub_gear_browsing = false
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(gear_stats[0].texture != null, "fusion preview populates gear stat panel on FUSE page", failures)
 	_expect(details[0].texture == null, "gear tooltip not retained in details[0] when FUSE item has no transmutation", failures)
 	root._set_page(2)
+	controller_instance.hub_page = 2
+	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(details[0].texture != null, "shop page shows item bonus text in details[0]", failures)
 	root._set_page(3)
+	controller_instance.hub_page = 3
+	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(details[0].texture == null, "shop bonus text cleared from details[0] on FUSE page", failures)
 	_expect(gear_stats[0].texture != null, "fusion preview repopulates gear stat panel after shop visit", failures)
+	controller_instance.hub_overlay.free()
 	host.free()
-	root.hub_overlay.free()
 	_finished = true
 	call_deferred("_finish", failures)
 

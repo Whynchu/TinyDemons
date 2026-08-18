@@ -234,7 +234,7 @@ func apply_palette(root: Object) -> void:
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	if library == null:
 		return
-	var palette: Array[Color] = PaletteLibrary.pair(String(root.get("player_palette_name")))
+	var palette: Array[Color] = PaletteLibrary.pair(String((root.get("screen_state_controller") as ScreenStateController).player_palette_name))
 	frames.clear()
 	white_copy_cache.clear()
 	occlusion_texture_cache.clear()
