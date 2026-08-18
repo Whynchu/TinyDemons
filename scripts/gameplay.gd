@@ -965,7 +965,12 @@ func _combat_momentum() -> CombatMomentumComponent:
 		combat_momentum.configure(player_tuning)
 	return combat_momentum
 func _register_combo_hit() -> void: _combat_momentum().register_hit()
-func _tick_focus_combo(delta: float) -> void: _combat_momentum().tick(delta, current_target != null)
+func _tick_focus_combo(delta: float) -> void:
+	var momentum := _combat_momentum()
+	var was_focus_active := momentum.focus_active
+	momentum.tick(delta, current_target != null)
+	if was_focus_active and not momentum.focus_active and current_target != null:
+		_play_sound("ui_decline", -10.0, 1.0)
 func _reset_combo() -> void: _combat_momentum().reset_combo()
 func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> float:
 	return equipment_transmutation_component.damage_share_divisor(slime, target_count) if equipment_transmutation_component != null else maxf(float(target_count), 1.0)
@@ -1041,7 +1046,7 @@ func _build_interact_prompt() -> void:
 func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
-	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
+	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; 	hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
@@ -1972,10 +1977,23 @@ func _set_current_target(target: Sprite2D) -> void:
 	if current_target != target:
 		current_target = target
 		_combat_momentum().on_target_changed(target != null)
+		_update_focus_indicator()
 func _update_target_ui() -> void:
 	if current_target == null: _set_target_ui_visible(false); return
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values"))
 func _set_target_ui_visible(target_visible: bool) -> void: hud_controller.set_visible(target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_visible)
+func _update_focus_indicator() -> void:
+	if focus_label == null:
+		return
+	if current_target == null:
+		focus_label.visible = false
+		return
+	focus_label.visible = true
+	var momentum := _combat_momentum()
+	var focus_color := Color8(255, 220, 120) if momentum.focus_active else Color8(200, 80, 80)
+	focus_label.texture = _pixel_text_texture("FOCUS", focus_color)
+	var name_width := (target_name_text.texture.get_size().x * 0.5 + 5.0) if target_name_text.texture != null else 16.0
+	focus_label.position = target_name_text.position + Vector2(name_width, 0.0)
 func _slime_display_name(slime: Sprite2D) -> String:
 	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Rogue Slime" if palette == "purple" else "Green Slime"; var stats := _slime_stats(slime); return "lv.%d %s" % [stats.level if stats != null else 1, display_name]
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health_component.current_health if player_health_component != null else 0.0, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]

@@ -42,6 +42,22 @@ func _initialize() -> void:
 	m.reset_combo()
 	_expect(is_equal_approx(m.combo_multiplier(), 1.0), "reset clears the combo", failures)
 
+	var spawner := EffectsSpawner.new()
+	var focus_texture := spawner.number_texture("FOCUS", Color.WHITE)
+	_expect(focus_texture != null, "FOCUS renders through the pixel text glyph set", failures)
+	if focus_texture != null:
+		var focus_image := focus_texture.get_image()
+		var has_pixel := false
+		for y in focus_image.get_height():
+			for x in focus_image.get_width():
+				if focus_image.get_pixel(x, y).a > 0.0:
+					has_pixel = true
+					break
+			if has_pixel:
+				break
+		_expect(has_pixel, "FOCUS texture is not blank (all letters have glyphs)", failures)
+	spawner.free()
+
 	_finished = true
 	call_deferred("_finish", failures)
 

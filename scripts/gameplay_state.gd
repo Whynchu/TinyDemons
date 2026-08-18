@@ -189,6 +189,7 @@ var world_item_drop_instance: ItemInstance = null
 var world_item_drop_velocity := Vector2.ZERO
 var world_item_drop_air_time := 0.0
 var target_health_text: Sprite2D = null
+var focus_label: Sprite2D = null
 var player_start_position := Vector2.ZERO
 var chest_start_position := Vector2.ZERO
 var cloaked_demon_start_position := Vector2.ZERO
