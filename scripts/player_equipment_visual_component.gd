@@ -258,7 +258,7 @@ func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color
 				var tinted := color.lerp(main_color, 0.35)
 				image.set_pixel(x, y, Color(tinted.r, tinted.g, tinted.b, color.a))
 			elif rgb == PaletteLibrary.accent("grey"):
-				var brightened := color.lerp(Color.WHITE, 0.2)
+				var brightened := color.lerp(Color.WHITE, 0.3)
 				image.set_pixel(x, y, Color(brightened.r, brightened.g, brightened.b, color.a))
 	return ImageTexture.create_from_image(image)
 
