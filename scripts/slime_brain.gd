@@ -77,25 +77,12 @@ func set_aggro(value: bool) -> void:
 	aggroed = value
 
 
-func begin_hold(duration: float) -> void:
-	holding = true
-	hold_timer = maxf(duration, 0.0)
-
-
 func can_attack() -> bool:
 	return aggroed and not holding and attack_cooldown <= 0.0
 
 
 func start_attack(cooldown: float) -> void:
 	attack_cooldown = maxf(cooldown, 0.0)
-
-
-func needs_repath() -> bool:
-	return repath_timer <= 0.0
-
-
-func schedule_repath(delay: float) -> void:
-	repath_timer = maxf(delay, 0.0)
 
 
 func scoot_ease(progress: float) -> float:

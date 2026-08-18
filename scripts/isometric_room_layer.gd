@@ -47,14 +47,6 @@ func _rebuild_if_ready() -> void:
 	_build_default_layout()
 
 
-func rebuild_layout(width: int, height: int, kind: LayoutKind = layout_kind) -> void:
-	layout_width = clampi(width, 1, 64)
-	layout_height = clampi(height, 1, 64)
-	layout_kind = kind
-	_build_tile_set()
-	_build_default_layout()
-
-
 func _build_tile_set() -> void:
 	var generated_tile_set := TileSet.new()
 	generated_tile_set.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC

@@ -1,10 +1,6 @@
 extends Node
 class_name InteractionComponent
 
-signal availability_changed(available: bool)
-signal interacted
-
-var available := false
 var prompt_timer := 0.0
 
 
@@ -43,18 +39,6 @@ func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int)
 	var item := root.get("world_item_drop") as Sprite2D
 	var near_item := bool(root.call("_can_interact_with_world_item"))
 	update_prompt(delta, root.get("interact_prompt"), bool((root.get("npc_dialogue_box") as ColorRect) != null and (root.get("npc_dialogue_box") as ColorRect).visible), bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, chest_anchor, root.call("_cloaked_demon_head_position"), item.global_position if item != null else Vector2.ZERO, Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
-
-
-func set_available(value: bool) -> void:
-	if available == value:
-		return
-	available = value
-	availability_changed.emit(available)
-
-
-func interact() -> void:
-	if available:
-		interacted.emit()
 
 
 func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:

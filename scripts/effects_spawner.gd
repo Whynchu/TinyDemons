@@ -3,6 +3,7 @@ class_name EffectsSpawner
 
 signal effect_requested(kind: StringName, position: Vector2)
 var damage_number_texture_cache: Dictionary = {}
+var name_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
@@ -19,7 +20,7 @@ func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
-	var tuning := root.get("effects_tuning") as EffectsTuning; var sprite := Sprite2D.new(); sprite.texture = root.call("_pixel_number_texture", "+%d" % amount, Color8(255, 205, 117)); sprite.centered = false; sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; sprite.z_as_relative = false; sprite.z_index = int(root.get("OVERWORLD_UI_Z")) + 2; sprite.position = world_position; root.add_child(sprite); damage_numbers.append({"sprite": sprite, "timer": tuning.damage_number_lifetime})
+	var tuning := root.get("effects_tuning") as EffectsTuning; var sprite := Sprite2D.new(); sprite.texture = root.call("_pixel_text_texture", "+%d" % amount, Color8(255, 205, 117)); sprite.centered = false; sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; sprite.z_as_relative = false; sprite.z_index = int(root.get("OVERWORLD_UI_Z")) + 2; sprite.position = world_position; root.add_child(sprite); damage_numbers.append({"sprite": sprite, "timer": tuning.damage_number_lifetime})
 
 
 func spawn_chest_evaporation_from_root(root: Object) -> void:
@@ -35,7 +36,7 @@ func update_pixel_particles_from_root(root: Object, delta: float) -> void:
 func spawn_slime_notice(root: Object, slime: Sprite2D, duration: float) -> void:
 	var marker := Sprite2D.new()
 	marker.name = "SlimeNotice"
-	marker.texture = root.call("_pixel_number_texture", "!", Color8(255, 205, 117)) as Texture2D
+	marker.texture = root.call("_pixel_text_texture", "!", Color8(255, 205, 117)) as Texture2D
 	marker.centered = true
 	marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	marker.z_as_relative = false
@@ -157,6 +158,9 @@ func number_texture(text: String, color: Color) -> Texture2D:
 
 
 func name_texture(text: String, color: Color) -> Texture2D:
+	var cache_key := "%s:%s" % [text, _rgb_key(color)]
+	if name_texture_cache.has(cache_key):
+		return name_texture_cache[cache_key]
 	var glyphs := {"B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"], "G": ["01110", "10001", "10000", "10111", "10001", "10001", "01110"], "R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"], "S": ["01111", "10000", "10000", "01110", "00001", "00001", "11110"], "L": ["10000", "10000", "10000", "10000", "10000", "10000", "11111"], "V": ["10001", "10001", "10001", "10001", "01010", "01010", "00100"], "X": ["10001", "01010", "00100", "00100", "01010", "10001", "10001"], "?": ["01110", "10001", "00010", "00100", "00100", "00000", "00100"], "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"], "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"], "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"], "3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"], "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"], "5": ["11111", "10000", "10000", "11110", "00001", "00001", "11110"], "6": ["01110", "10000", "10000", "11110", "10001", "10001", "01110"], "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"], "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"], "9": ["01110", "10001", "10001", "01111", "00001", "00001", "01110"], ".": ["0", "0", "0", "0", "0", "0", "1"], "d": ["00001", "00001", "01101", "10011", "10001", "10011", "01101"], "i": ["010", "000", "110", "010", "010", "010", "111"], "l": ["110", "010", "010", "010", "010", "010", "111"], "r": ["000", "000", "101", "110", "100", "100", "100"], "u": ["000", "000", "101", "101", "101", "111", "101"], "e": ["000", "000", "010", "101", "111", "100", "011"], "n": ["000", "000", "110", "101", "101", "101", "101"], "m": ["00000", "00000", "11011", "10101", "10101", "10101", "10101"], " ": ["0", "0", "0", "0", "0", "0", "0"]}
 	glyphs["v"] = ["00000", "00000", "10001", "10001", "01010", "01010", "00100"]
 	glyphs[":"] = ["0", "1", "0", "0", "0", "1", "0"]
@@ -176,7 +180,9 @@ func name_texture(text: String, color: Color) -> Texture2D:
 				if row[x] == "1":
 					image.set_pixel(x_offset + x, y, color)
 		x_offset += (pattern[0] as String).length() + 1
-	return ImageTexture.create_from_image(image)
+	var texture := ImageTexture.create_from_image(image)
+	name_texture_cache[cache_key] = texture
+	return texture
 
 
 func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable, flip_h: bool = false, effect_tag: StringName = &"") -> void:

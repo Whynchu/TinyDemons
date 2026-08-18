@@ -239,16 +239,3 @@ func _growth_seed() -> int:
 	# Keep one stable growth sequence per actor/profile. Leveling extends that
 	# sequence instead of rerolling every previously allocated stat point.
 	return int(points_per_level * 313 + base_points * 733 + allocation_profile * 197 + path_hash)
-
-
-func _stat_priority(stat: Stat) -> int:
-	match stat:
-		Stat.VIT:
-			return 0
-		Stat.STR:
-			return 1
-		Stat.DEF:
-			return 2
-		Stat.SPD:
-			return 3
-	return 99

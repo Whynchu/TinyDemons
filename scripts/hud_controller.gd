@@ -171,7 +171,7 @@ func update_run_timer(root: Object) -> void:
 	if label == last_run_timer_text:
 		return
 	last_run_timer_text = label
-	indicator.texture = root.call("_pixel_number_texture", label, Color8(244, 244, 244)) as Texture2D
+	indicator.texture = root.call("_pixel_text_texture", label, Color8(244, 244, 244)) as Texture2D
 
 
 func update_room_number(root: Object) -> void:
@@ -183,13 +183,13 @@ func update_room_number(root: Object) -> void:
 	elif room_type == DungeonGraph.ROOM_TRADER: room_label = "TRADER"
 	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS: room_label = "BOSS"
-	indicator.texture = root.call("_pixel_number_texture", room_label, Color8(244, 244, 244))
+	indicator.texture = root.call("_pixel_text_texture", room_label, Color8(244, 244, 244))
 	var run_indicator := root.get("dungeon_run_indicator") as Sprite2D
 	if run_indicator != null:
 		var profile := root.get("player_profile") as PlayerProfile
 		var run_number := profile.difficulty_rank if profile != null else 1
 		var grade := profile.last_run_grade if profile != null else "D"
-		run_indicator.texture = root.call("_pixel_number_texture", "%s R%d" % [DungeonGraph.DUNGEON_NAME, run_number], _run_grade_color(grade))
+		run_indicator.texture = root.call("_pixel_text_texture", "%s R%d" % [DungeonGraph.DUNGEON_NAME, run_number], _run_grade_color(grade))
 
 func _run_grade_color(grade: String) -> Color:
 	match grade:

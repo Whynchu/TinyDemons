@@ -6,7 +6,6 @@ const XP_COLOR := Color8(59, 93, 201)
 const HP_COLOR := Color8(190, 55, 65)
 const HP_HIGHLIGHT := Color8(239, 125, 87)
 const MP_COLOR := Color8(65, 166, 246)
-const MP_HIGHLIGHT := Color8(148, 220, 255)
 const GOLD_COLOR := Color8(255, 205, 117)
 
 var _source_fill: Texture2D
@@ -62,10 +61,6 @@ func apply_bar_colors(player_color: Color = XP_COLOR) -> void:
 
 func hp_highlight_texture() -> Texture2D:
 	return _solid_texture(_source_fill, HP_HIGHLIGHT)
-
-
-func mp_highlight_texture() -> Texture2D:
-	return _solid_texture(_source_fill, MP_HIGHLIGHT)
 
 
 func _solid_texture(source: Texture2D, color: Color) -> Texture2D:

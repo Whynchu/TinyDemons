@@ -183,14 +183,6 @@ func ensure_connection(
 	return connection
 
 
-## Returns the connected room, creating its deterministic connection if needed.
-func get_destination(room_id: StringName, exit_socket: StringName) -> RoomRecord:
-	var connection := ensure_connection(room_id, exit_socket)
-	if connection == null:
-		return null
-	return get_room(connection.destination_room_id)
-
-
 func get_connection(room_id: StringName, exit_socket: StringName) -> ConnectionRecord:
 	return _connections.get(_connection_key(room_id, exit_socket)) as ConnectionRecord
 
@@ -200,16 +192,6 @@ func get_connection_for_entry(room_id: StringName, entry_socket: StringName) -> 
 	if room == null:
 		return null
 	return room.get_incoming_connection(entry_socket)
-
-
-func get_room_depth(room_id: StringName) -> int:
-	var room := get_room(room_id)
-	return room.depth if room != null else -1
-
-
-func get_room_display_number(room_id: StringName) -> int:
-	var room := get_room(room_id)
-	return room.display_number if room != null else 0
 
 
 func get_room_ids() -> Array[StringName]:

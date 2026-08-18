@@ -18,26 +18,11 @@ var original_actor_scales: Dictionary = {}
 var actor_visual_scales: Dictionary = {}
 var sprite_images: Dictionary = {}
 var actor_occlusion_grace: Dictionary = {}
-var update_count := 0
-var update_time := 0.0
 var resolution_scale := 2
 
 
 func set_occluders(new_occluders: Array[Sprite2D]) -> void:
 	occluders = new_occluders.duplicate()
-
-
-func clear_cache() -> void:
-	cached_images.clear()
-
-
-func record_update(elapsed: float) -> void:
-	update_count += 1
-	update_time += maxf(elapsed, 0.0)
-
-
-func average_update_time() -> float:
-	return update_time / float(update_count) if update_count > 0 else 0.0
 
 
 func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]) -> void:
@@ -57,11 +42,6 @@ func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]
 	for occluder in occluder_sprites:
 		if not sprite_images.has(occluder):
 			sprite_images[occluder] = cached_texture_image(occluder.texture)
-
-
-func register_additional_sprites(actors: Array[Sprite2D]) -> void:
-	for actor in actors:
-		_register_sprite(actor)
 
 
 func _register_sprite(actor: Sprite2D) -> void:
@@ -151,7 +131,6 @@ func update_actor_occlusion(
 	apply_actor_scale: Callable,
 	restore_actor_scale: Callable
 ) -> void:
-	record_update(delta)
 	for actor in actors:
 		if not actor.visible:
 			if actor == player:

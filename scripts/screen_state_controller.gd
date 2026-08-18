@@ -901,18 +901,6 @@ func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_l
 		result["speed"] = float(result.get("speed", 0.0)) - float(shield_values.get("speed_penalty", 0.0))
 	return result
 
-
-func _item_comparison_text(profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot: StringName) -> String:
-	var current := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
-	var old_bonuses := _effective_item_bonuses(catalog, current) if current != null else {}
-	var new_bonuses := _effective_item_bonuses(catalog, candidate)
-	var parts: Array[String] = []
-	for stat in ["health_rate", "damage_rate", "strength", "defense", "vitality", "speed"]:
-		var difference := float(new_bonuses.get(stat, 0.0)) - float(old_bonuses.get(stat, 0.0))
-		if not is_equal_approx(difference, 0.0): parts.append("%s %s%.1f%s" % [{"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}[stat], "+" if difference > 0 else "", difference, "%" if stat in ["health_rate", "damage_rate", "speed"] else ""])
-	return "VS EQUIPPED  %s" % ("SAME" if parts.is_empty() else " ".join(parts))
-
-
 func update_hub_input(root: Object) -> void:
 	var row := int(root.get("hub_menu_row"))
 	var page := int(root.get("hub_page"))

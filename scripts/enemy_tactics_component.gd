@@ -3,7 +3,6 @@ class_name EnemyTacticsComponent
 
 ## Generic per-enemy tactical state. Encounter rules stay outside the actor.
 
-@export var attack_priority := 0
 @export var approach_spacing := 9.0
 var attack_reserved := false
 var recent_attack_timer := 0.0

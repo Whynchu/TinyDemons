@@ -1,11 +1,6 @@
 extends Node
 class_name PlayerAnimationComponent
 
-signal animation_changed(name: StringName)
-
-var animation_name: StringName = &"idle"
-var frame := 0
-var timer := 0.0
 var coordinator_root: Object = null
 
 
@@ -23,7 +18,7 @@ func build_frames(root: Object) -> void:
 
 
 func apply_frame(root: Object) -> void:
-	var player := root.get("player") as Sprite2D; animation_name = StringName(root.get("player_anim_name")); frame = int(root.get("player_anim_frame")); timer = float(root.get("player_anim_timer")); var animation_key: String = root.get("player_anim_name"); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if animation_key == "attack2" else root.get("player_attack_frames") if animation_key == "attack1" else root.get("player_defend_frames") if animation_key == "defend" else root.get("player_walk_frames") if animation_key == "walk" else root.get("player_idle_frames")
+	var player := root.get("player") as Sprite2D; var animation_key: String = root.get("player_anim_name"); var frame := int(root.get("player_anim_frame")); var frames: Array[Texture2D] = root.get("player_roll_frames") if bool(root.get("player_is_rolling")) else root.get("player_attack2_frames") if animation_key == "attack2" else root.get("player_attack_frames") if animation_key == "attack1" else root.get("player_defend_frames") if animation_key == "defend" else root.get("player_walk_frames") if animation_key == "walk" else root.get("player_idle_frames")
 	if frames.is_empty(): return
 	if bool(root.get("player_is_rolling")): root.call("_set_actor_base_texture", player, frames[int(root.get("player_roll_component").frame)]); return
 	if animation_key == "attack1" or animation_key == "attack2":
@@ -58,20 +53,6 @@ func apply_palette_async(root: Object, palette_name: String) -> void:
 		var fill := root.get("player_health_fill") as Sprite2D; fill.texture = recolor_texture(health_texture, palette_name); var damage_fill := root.get("player_health_damage_fill") as Sprite2D
 		if damage_fill != null: damage_fill.texture = (root.get("hud_controller") as HudController).brighter_bar_texture(fill.texture)
 	warm_player_caches(root)
-
-
-func play(new_name: StringName, restart := true) -> void:
-	if animation_name != new_name:
-		animation_name = new_name
-		animation_changed.emit(animation_name)
-	if restart:
-		frame = 0
-		timer = 0.0
-
-
-func reset() -> void:
-	frame = 0
-	timer = 0.0
 
 
 func tick_coordinator_animation(root: Object, delta: float) -> void:

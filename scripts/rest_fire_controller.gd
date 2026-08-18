@@ -1,13 +1,8 @@
 extends Node
 class_name RestFireController
 
-signal rest_requested
 var animation_timer := 0.0
 var frame_index := 0
-
-
-func request_rest() -> void:
-	rest_requested.emit()
 
 
 func reset_animation() -> void:

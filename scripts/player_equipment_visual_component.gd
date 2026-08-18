@@ -22,6 +22,7 @@ var layer_opacities: Dictionary = {}
 var occlusion_mask_texture: Texture2D = null
 var occlusion_signature: int = 0
 var occlusion_mask_refresh_timer := 0.0
+var occlusion_texture_cache: Dictionary = {}
 var occlusion_active := false
 var frames: Dictionary = {}
 var active := false
@@ -108,14 +109,21 @@ func update_occlusion(root: Object, delta: float) -> void:
 		_set_occlusion_enabled(false)
 		return
 	var occluders := _equipment_occluders(root)
-	occlusion_mask_refresh_timer = maxf(occlusion_mask_refresh_timer - delta, 0.0)
 	var any_occluded := false
 	for layer in visible_layers:
 		var candidates := renderer.active_occluders_for(layer, occluders, float(root.call("_equipment_occlusion_depth_key", layer)), root.call("_sprite_source_global_rect", layer) as Rect2, Callable(root, "_equipment_occlusion_depth_key"), Callable(root, "_sprite_source_global_rect"))
 		var active_occluders := candidates["occluders"] as Array[Sprite2D]
 		if active_occluders.is_empty():
 			continue
-		var occluded_texture := _build_occluded_texture(root, renderer, layer, active_occluders)
+		var signature := _occlusion_signature(layer, active_occluders)
+		var cached := occlusion_texture_cache.get(layer) as Dictionary
+		var occluded_texture: Texture2D = null
+		if cached != null and int(cached.get("signature", 0)) == signature and cached.has("texture"):
+			occluded_texture = cached["texture"] as Texture2D
+		else:
+			occluded_texture = _build_occluded_texture(root, renderer, layer, active_occluders)
+			if occluded_texture != null:
+				occlusion_texture_cache[layer] = {"signature": signature, "texture": occluded_texture}
 		if occluded_texture != null:
 			layer.texture = occluded_texture
 			any_occluded = true
@@ -175,7 +183,7 @@ func _set_occlusion_enabled(enabled: bool) -> void:
 
 
 func _occlusion_signature(layer: Sprite2D, occluders: Array[Sprite2D]) -> int:
-	var state: Array = [layer.flip_h, _occlusion_position_cell(layer.global_position)]
+	var state: Array = [layer.texture, layer.flip_h, _occlusion_position_cell(layer.global_position)]
 	for occluder in occluders:
 		state.append(occluder)
 		state.append(occluder.get_instance_id())
@@ -231,6 +239,7 @@ func apply_palette(root: Object) -> void:
 	var palette: Array = palettes.get(String(root.get("player_palette_name")), palettes["blue"])
 	frames.clear()
 	white_copy_cache.clear()
+	occlusion_texture_cache.clear()
 	for key in frame_paths:
 		var source_frames := library.slice_frames(frame_paths[key], FRAME_SIZE)
 		var recolored: Array[Texture2D] = []

@@ -140,12 +140,6 @@ func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = nu
 	return mini(matches, max_steps)
 
 
-func fusion_cost(item: ItemInstance) -> int:
-	if item == null:
-		return 0
-	return FUSION_BASE_COST + maxi(item.enhancement_level, 0) * FUSION_COST_PER_ENHANCEMENT
-
-
 func fusion_batch_cost(item: ItemInstance, count: int) -> int:
 	if item == null or count <= 0:
 		return 0

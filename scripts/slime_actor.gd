@@ -73,7 +73,11 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		return
 	var brain := get_node_or_null("Brain") as SlimeBrain
 	if is_aggroed.call(self):
-		if brain != null: brain.target = aggro_target.call(self)
+		if brain != null:
+			if brain.repath_timer <= 0.0:
+				brain.target = aggro_target.call(self)
+				brain.repath_timer = 0.08
+			brain.repath_timer = maxf(brain.repath_timer - delta, 0.0)
 		update_scoot.call(self, delta)
 		return
 	if brain != null: brain.repath_timer = float(brain.repath_timer) - delta
@@ -95,7 +99,10 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	var brain := actor.get_node_or_null("Brain") as SlimeBrain
 	if bool(is_aggroed.call(actor)):
 		if brain != null:
-			brain.target = aggro_target.call(actor)
+			if brain.repath_timer <= 0.0:
+				brain.target = aggro_target.call(actor)
+				brain.repath_timer = 0.08
+			brain.repath_timer = maxf(brain.repath_timer - delta, 0.0)
 		update_scoot.call(actor, delta)
 		return
 	if brain != null:
@@ -204,15 +211,6 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 			combat.hitstun_timer = maxf(combat.hitstun_timer, ambush.block_stun)
 			combat.cooldown = maxf(combat.cooldown, ambush.block_stun)
 	if float(root.get("player_health")) <= 0.0: root.set("player_death_pending", true); root.call("_interrupt_player_attack"); root.set("player_is_rolling", false)
-
-
-func tick_health(delta: float) -> float:
-	var health := get_node_or_null("Health") as HealthComponent
-	if health == null:
-		return 0.0
-	var previous_health := health.current_health
-	health.tick_regeneration(delta)
-	return previous_health
 
 
 func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_delay: float, hold_delay: float, idle_breath_delay: float, attack_cooldown_delay: float) -> void:

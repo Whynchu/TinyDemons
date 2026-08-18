@@ -87,7 +87,3 @@ func configure_from_profile(profile: PlayerProfile, catalog: ItemCatalog = null)
 			&"armor": armor_name = shown_name
 			&"shield": shield_name = shown_name
 			&"accessory": accessory_name = shown_name
-
-
-func has_transmutation(transmutation_id: StringName) -> bool:
-	return String(transmutation_id) in equipped_transmutations.values()
