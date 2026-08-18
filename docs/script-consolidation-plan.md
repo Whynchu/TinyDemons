@@ -631,6 +631,18 @@ update-order regressions.
   - [x] Reach the M9 3,000-line coordinator checkpoint: `gameplay.gd` is 2,999 physical lines after moving HUD, input, walkability, and texture ownership outward.
   - [x] Reach the M9 2,500-line checkpoint: `gameplay.gd` is 2,499 physical lines after moving room layout, NPC patrol, evaporation effects, and player/room update slices outward.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
+  - [x] Document the new-feature gate: `docs/ARCHITECTURE.md` "Rules of the
+    road" states new feature wiring goes in a component or controller and
+    `gameplay.gd` only gains orchestrator calls.
+  - [ ] Hub/settlement flow extraction (`hub_controller`/`progression_controller`
+    slice) — deferred: the largest remaining region and the largest behavior
+    surface; requires the full interactive smoke pass before merging.
+  - [ ] Coordinator read-only mirrors (`player_health`, `gold/level/xp`,
+    `current_target`, `player_attack_hit_targets`) — deferred: 13 write sites
+    across death/heal/equip/level flows with no headless combat coverage;
+    playtest-gated.
+  - [ ] Rarity ladder and palette single-sourcing — deferred: changes drop
+    balance and per-sprite colors; playtest/visual-gate needed.
 - [ ] Replace broad scene-tree references with typed controller dependencies.
 - [ ] Remove root dictionaries that are only registries or presentation caches.
 - [ ] Add a repeatable metrics command to CI/development documentation.
