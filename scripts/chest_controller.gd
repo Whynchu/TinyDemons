@@ -22,9 +22,11 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			room_controller.room_states[root.get("current_room_id")] = state
 			root.set("chest_collect_flash_timer", flash_time); start_flash(root)
 			var scaled_gold := int(root.call("_chest_gold_reward", reward_gold))
-			root.call("_set_gold_value", int(root.get("gold")) + scaled_gold)
+			var profile := root.get("player_profile") as PlayerProfile
+			var current_gold := profile.gold if profile != null else 0
+			root.call("_set_gold_value", current_gold + scaled_gold)
 			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), scaled_gold)
-			print("Gold: %d" % int(root.get("gold")))
+			print("Gold: %d" % (current_gold + scaled_gold))
 		elif bool(root.call("_can_interact_with_npc")):
 			(root.get("npc_controller") as NpcController).show_dialogue(root)
 		elif bool(root.call("_can_interact_with_world_item")):

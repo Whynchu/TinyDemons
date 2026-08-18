@@ -270,14 +270,17 @@ Near-duplicate functions (verified):
   archetype-highlight purple (`118,78,142`); both are preserved as separate
   roles (`ACCENT` vs `ARCHETYPE_HIGHLIGHTS`) so visuals are unchanged.
 
-Duplicated state mirrors (coordinator holds a copy of component state):
+Duplicated state mirrors (coordinator held a copy of component state):
 
 - `player_health` (`gameplay_state.gd:156`) vs `HealthComponent.current_health`
-  — 6+ write sites; a change must remember to update both or they drift.
+  — 6+ write sites; **removed**, reads now go to the owning component.
 - `gold` / `player_level` / `player_xp` (`gameplay_state.gd:157-158,286`) vs
-  `PlayerProfile` — 6 write sites for `gold` alone.
-- `current_target` vs `HudController.current_target`; `player_attack_hit_targets`
-  vs `PlayerAttackComponent.hit_targets` (written in both places).
+  `PlayerProfile` — 6 write sites for `gold` alone; **removed**, reads now go
+  to the owning profile.
+- `player_attack_hit_targets` vs `PlayerAttackComponent.hit_targets` — written
+  in both places, never read; **removed** (dead mirror).
+- `hud_controller.current_target` vs coordinator `current_target` — written,
+  never read, `target_changed` never connected; **removed** (dead mirror).
 - `player_anim_*` mirrors (`gameplay_state.gd:120-122`) — the component fields
   are written from the root every frame and never read (dead mirror).
 
@@ -392,10 +395,7 @@ README, test runner, and this doc updated.
   delegate funcs, the dead `PlayerAnimationComponent` API, the unused
   `attack_priority` export, dead `fusion_cost`, dead `MP_HIGHLIGHT` const.
   Commit `3b5810e` (23 files, net −185 lines).
-- **Deferred (needs playtest)**: make the
-  coordinator read-only for `player_health`, `gold/level/xp`,
-  `current_target`, `player_attack_hit_targets` (13 write sites across
-  death/heal/equip/level flows — no smoke coverage); reconcile
+- **Deferred (needs playtest)**: reconcile
   `player_profile` vs `profile_save_service` persistence split; thin
   `gameplay_state.gd` single-owner state. Each changes behavior that headless
   smoke can't validate.
@@ -404,6 +404,12 @@ README, test runner, and this doc updated.
   passes `minimum_rarity`); the live rank/performance ladder moved into
   `ItemCatalog.roll_run_rarity()` as the single source. Guarded by
   `item_economy_smoke.gd` monotonicity checks.
+- **Made the coordinator read-only for the state mirrors (done)**: removed the
+  dead `player_attack_hit_targets` and `hud_controller.current_target` mirrors
+  (authoritative owners: `PlayerAttackComponent.hit_targets` and the
+  coordinator's `_closest_target` targeting). `gold`/`player_level`/`player_xp`
+  now read from the owning `PlayerProfile`; `player_health` reads from the
+  owning `HealthComponent`. Guarded by the full smoke suite + headless boot.
 - **Single-sourced the palette data (done)**: canonical table moved to
   `scripts/palette_library.gd`; all 6 divergent consumer sites now call it.
   Guarded by `palette_smoke.gd`. Commits `d8136c9`-`7883386` (incl. the

@@ -231,7 +231,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	if equipment_visual != null:
 		equipment_visual.reset_for_room(root)
 	(root.get("player_attack_visual") as Sprite2D).visible = false
-	root.set("current_target", null)
+	root.call("_set_current_target", null)
 	root.set("target_input_was_down", false)
 	(root.get("npc_controller") as NpcController).hide_dialogue(root)
 	root.call("_set_target_ui_visible", false)

@@ -1,9 +1,6 @@
 extends Node
 class_name HudController
 
-signal target_changed(target: Node)
-
-var current_target: Node = null
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
 var target_overhead_fill_textures: Dictionary = {}
@@ -18,13 +15,6 @@ var target_overhead_aggro_offsets: Dictionary = {}
 var bright_bar_cache: Dictionary = {}
 var aggro_marker_texture_cache: Dictionary = {}
 var last_run_timer_text := ""
-
-
-func set_target(target: Node) -> void:
-	if current_target == target:
-		return
-	current_target = target
-	target_changed.emit(target)
 
 
 func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_fill: CanvasItem, target_fill: CanvasItem, target_health_text: CanvasItem, visible: bool) -> void:

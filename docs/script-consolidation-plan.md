@@ -637,10 +637,10 @@ update-order regressions.
   - [ ] Hub/settlement flow extraction (`hub_controller`/`progression_controller`
     slice) — deferred: the largest remaining region and the largest behavior
     surface; requires the full interactive smoke pass before merging.
-  - [ ] Coordinator read-only mirrors (`player_health`, `gold/level/xp`,
-    `current_target`, `player_attack_hit_targets`) — deferred: 13 write sites
-    across death/heal/equip/level flows with no headless combat coverage;
-    playtest-gated.
+  - [x] Coordinator read-only mirrors — done: removed the dead
+    `player_attack_hit_targets` and `hud_controller.current_target` mirrors;
+    `gold/level/xp` read from `PlayerProfile`, `player_health` reads from
+    `HealthComponent`.
   - [x] Rarity ladder — done: single `ItemCatalog.roll_run_rarity()`; the dead
     level-based `_roll_rarity` was removed; guarded by monotonicity checks in
     `item_economy_smoke.gd`.

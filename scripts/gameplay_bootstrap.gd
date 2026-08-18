@@ -119,7 +119,7 @@ func _initialize_player(root: Object, player: Sprite2D) -> void:
 	var equipment_visual := root.call("_ensure_player_component", PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
 	equipment_visual.initialize(root); root.set("player_equipment_visual_component", equipment_visual)
 	root.call("_set_target_ui_visible", false)
-	var player_health := float(root.call("_player_max_health")); root.set("player_health", player_health); health.maximum_health = player_health; health.reset(player_health); root.set("player_display_health", player_health); root.call("_update_player_health_ui")
+	var player_health := float(root.call("_player_max_health")); health.maximum_health = player_health; health.reset(player_health); root.set("player_display_health", player_health); root.call("_update_player_health_ui")
 
 
 func _initialize_walkable_area(root: Object, edge_margin: float, slime_edge_padding: float) -> void:

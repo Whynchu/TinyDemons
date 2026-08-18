@@ -46,7 +46,7 @@ func apply_hitbox(root: Object) -> void:
 	var target_count := eligible_targets.size()
 	var tuning := root.get("player_tuning") as PlayerTuning
 	for slime in eligible_targets:
-		(root.get("player_attack_hit_targets") as Array[Sprite2D]).append(slime); register_hit(slime)
+		register_hit(slime)
 		var base_damage := float(root.call("_player_attack_damage_against", slime))
 		var damage := base_damage
 		var divisor := float(root.call("_player_attack_damage_share_divisor", slime, target_count))

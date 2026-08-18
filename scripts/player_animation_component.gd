@@ -86,7 +86,6 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			root.set("player_is_attacking", false)
 			if attack_component != null: attack_component.finish()
 			root.set("player_attack_hit_done", false)
-			(root.get("player_attack_hit_targets") as Array[Sprite2D]).clear()
 			root.call("_restore_actor_base_visual_scale", root.get("player"))
 			(root.get("player") as Sprite2D).visible = true
 			(root.get("player_attack_visual") as Sprite2D).visible = false
