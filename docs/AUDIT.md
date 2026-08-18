@@ -125,8 +125,8 @@ move. The cleanup effort is now finding its next home.
   GEAR→FUSE / SHOP→FUSE transitions so a stale page's detail text cannot leak
   into the FUSE menu (fix committed `e7ba379`).
 - **Palette regression:** `palette_smoke.gd` asserts every consumer
-  (sprite recolor, slime mapping, archetype highlights) matches the canonical
-  table in `scripts/palette_library.gd` (single source, commit pending).
+  (sprite recolor, slime mapping, archetype highlights, sword/shield recolor)
+  matches the canonical table in `scripts/palette_library.gd`.
 - **Schema:** save schema is now v6 (`player_profile.gd`), with default
   migration for older fields (`data.get(...)` fallbacks).
 - **Editor cache:** new classes (`SlimeAmbushComponent`) require a project
@@ -397,9 +397,10 @@ README, test runner, and this doc updated.
   `player_profile` vs `profile_save_service` persistence split; thin
   `gameplay_state.gd` single-owner state. Each changes behavior that headless
   smoke can't validate.
-- **Single-sourced the palette data (done, commit pending)**: canonical table
-  moved to `scripts/palette_library.gd`; all 6 divergent consumer sites now
-  call it. Guarded by `palette_smoke.gd`.
+- **Single-sourced the palette data (done)**: canonical table moved to
+  `scripts/palette_library.gd`; all 6 divergent consumer sites now call it.
+  Guarded by `palette_smoke.gd`. Commits `d8136c9`-`7883386` (incl. the
+  sword/shield recolor restore + tweaks).
 
 ### P4 — Scenes, config, and tooling closeout ✅ DONE
 
