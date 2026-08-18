@@ -683,8 +683,10 @@ func _update_save_select_cursor() -> void:
 	if cursor != null: cursor.position = Vector2(55, 70 + save_select_index * 20)
 
 func _save_preview_texture(palette_name: String) -> Texture2D:
-	var base_frames := player_base_idle_frames as Array[Texture2D]
-	if base_frames.is_empty() or player_animation_component == null:
+	if player_animation_component == null:
+		return null
+	var base_frames := player_animation_component.base_idle_frames as Array[Texture2D]
+	if base_frames.is_empty():
 		return null
 	return player_animation_component.recolor_texture(base_frames[0], palette_name)
 
@@ -862,10 +864,10 @@ func _select_archetype_menu_row(row: int) -> void: archetype_menu_row = posmod(r
 func _update_archetype_screen() -> void:
 	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"]
 	archetype_name_text.texture = _pixel_text_texture(names[archetype_index], PaletteLibrary.ARCHETYPE_HIGHLIGHTS[archetype_color_index] if archetype_menu_row == 0 else Color.WHITE); archetype_name_text.position = Vector2((240.0 - archetype_name_text.texture.get_width()) * 0.5, 36)
-	if not player_idle_frames.is_empty():
-		if archetype_preview_palette != colors[archetype_color_index] or archetype_preview_frames.size() != player_idle_frames.size():
+	if not player_animation_component.idle_frames.is_empty():
+		if archetype_preview_palette != colors[archetype_color_index] or archetype_preview_frames.size() != player_animation_component.idle_frames.size():
 			archetype_preview_frames.clear(); archetype_preview_palette = colors[archetype_color_index]
-			for frame in player_idle_frames: archetype_preview_frames.append(player_animation_component.recolor_texture(frame, archetype_preview_palette))
+			for frame in player_animation_component.idle_frames: archetype_preview_frames.append(player_animation_component.recolor_texture(frame, archetype_preview_palette))
 		_update_archetype_preview_animation()
 	_update_archetype_button_styles()
 func _update_archetype_preview_animation() -> void:
@@ -1847,11 +1849,11 @@ func _assign_slime_attack_frames() -> void: SlimeVisualComponent.assign_attack_f
 func _build_slime_shocked_frames() -> void: slime_shocked_frames_by_palette = SlimeVisualComponent.build_shocked_frame_library(sprite_frame_library, SLIME_ATTACK_FRAME_SIZE, occlusion_renderer.texture_image_cache, Callable(player_animation_component, "warm_texture_cache")); SlimeVisualComponent.assign_shocked_frames(slimes, slime_shocked_frames_by_palette)
 func _assign_slime_shocked_frames() -> void: SlimeVisualComponent.assign_shocked_frames(slimes, slime_shocked_frames_by_palette)
 func _build_enemy_health_ui() -> void:
-	player_base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
+	player_animation_component.base_health_fill_texture = hud_controller.build_enemy_health_ui(slimes, target_health_fill, target_health_bar, player_health_fill, player_health_damage_fill, hp_overhead, hp_overhead_fill, slime_green, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"), Callable(hud_controller, "duplicate_fill_sprite"), Callable(hud_controller, "register_overhead_bar"), Callable(self, "_pixel_particle_texture"))
 	target_health_damage_fill = target_health_fill.get_parent().get_node_or_null("EnemyHpDamageFill") as Sprite2D; player_health_damage_fill = player_health_fill.get_parent().get_node_or_null("HpBarDamageFill") as Sprite2D
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
-		player_base_health_fill_texture = player_health_fill.texture
+		player_animation_component.base_health_fill_texture = player_health_fill.texture
 		if player_health_damage_fill != null:
 			player_health_damage_fill.texture = player_hud.call("hp_highlight_texture") as Texture2D
 func _refresh_enemy_palette_textures() -> void: hud_controller.refresh_enemy_palette_textures(slimes, Callable(self, "_load_health_bar_texture"), Callable(hud_controller, "brighter_bar_texture"))

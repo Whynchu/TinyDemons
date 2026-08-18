@@ -17,7 +17,8 @@ var lunge_remaining := 0.0
 
 
 func start_player_attack(root: Object, new_variant: int) -> void:
-	var frames: Array = root.get("player_attack_frames") if new_variant == 1 else root.get("player_attack2_frames")
+	var anim := root.get("player_animation_component") as PlayerAnimationComponent
+	var frames: Array = anim.attack_frames if new_variant == 1 else anim.attack2_frames
 	if frames.is_empty(): return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
@@ -29,7 +30,7 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
 	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
 	if new_variant == 2: root.set("player_between_timer", 0.0)
-	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
+	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; anim.apply_frame(root)
 
 
 func apply_hitbox(root: Object) -> void:

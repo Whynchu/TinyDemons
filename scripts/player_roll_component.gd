@@ -13,7 +13,8 @@ var velocity := Vector2.ZERO
 
 
 func start_from_root(root: Object) -> void:
-	var frames := root.get("player_roll_frames") as Array[Texture2D]
+	var anim := root.get("player_animation_component") as PlayerAnimationComponent
+	var frames := anim.roll_frames as Array[Texture2D]
 	if frames.is_empty(): return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
@@ -31,14 +32,15 @@ func start_from_root(root: Object) -> void:
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var roll_multiplier := tuning.roll_multiplier(int(root.get("player_spd")))
 	start_motion(root.call("_perspective_movement", movement_direction * (tuning.roll_distance * roll_multiplier / tuning.roll_duration))); player.visible = true
-	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
+	anim.apply_frame(root)
 
 
 func update_from_root(root: Object, delta: float) -> void:
 	if not bool(root.get("player_is_rolling")): return
+	var anim := root.get("player_animation_component") as PlayerAnimationComponent
 	var tuning := root.get("player_tuning") as PlayerTuning; var player := root.get("player") as Sprite2D; var before := player.global_position
 	var roll_multiplier := tuning.roll_multiplier(int(root.get("player_spd")))
-	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time / roll_multiplier, (root.get("player_roll_frames") as Array[Texture2D]).size(), Callable(self, "move_swept").bind(root))
+	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time / roll_multiplier, (anim.roll_frames as Array[Texture2D]).size(), Callable(self, "move_swept").bind(root))
 	if not bool(root.get("roll_dust_spawned_this_roll")):
 		var movement_direction := player.global_position - before
 		if movement_direction.length_squared() <= 0.0001: movement_direction = root.call("_perspective_movement", self.direction)
@@ -48,7 +50,7 @@ func update_from_root(root: Object, delta: float) -> void:
 		var motor := root.get("player_motor") as ActorMotor
 		if motor != null: motor.end_roll()
 		root.set("player_anim_name", "idle")
-	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
+	anim.apply_frame(root)
 
 
 func move_swept(movement: Vector2, root: Object) -> bool:
