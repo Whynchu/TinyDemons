@@ -944,7 +944,7 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	if ambush != null:
 		ambush.extend_rehide(slime, slime_tuning.ambush_hit_extension)
 	SlimeActor.damage_actor(self, slime, amount, was_critical)
-	_play_sound("slash", -10.0, 0.95 + rng.randf_range(-0.10, 0.10))
+	_play_sound("slash", -15.0, 0.95 + rng.randf_range(-0.10, 0.10))
 	_play_sound("flesh", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	var damage := _combat_damage(player_stats, _slime_stats(slime))
