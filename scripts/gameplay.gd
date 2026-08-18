@@ -437,7 +437,7 @@ func _hub_item_action() -> void:
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			if player_profile.purchase_item(item, int(entry.get("price", 0))):
-				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_confirm", 0.0, 1.0); _play_sound("ui_buy_sell", 0.0, 1.0)
+				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_confirm", 0.0, 1.0); _play_sound("ui_buy_sell", -8.0, 1.0)
 			else:
 				_play_sound("ui_denied", 0.0, 1.0)
 	elif screen_state_controller.hub_page == 3:
@@ -457,12 +457,12 @@ func _hub_item_action() -> void:
 					if _fuse_profile_target(target.instance_id, count):
 						screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
 						_play_sound("ui_confirm", 0.0, 1.0)
-						_play_sound("ui_buy_sell", 0.0, 1.0)
+						_play_sound("ui_buy_sell", -8.0, 1.0)
 			elif player_profile.can_salvage_overflow(target.instance_id):
 				var salvage_value := _salvage_profile_overflow(target.instance_id)
 				if salvage_value > 0:
 					screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
-					_play_sound("ui_buy_sell", 0.0, 1.0)
+					_play_sound("ui_buy_sell", -8.0, 1.0)
 			if not screen_state_controller.hub_fusion_message.is_empty():
 				_refresh_hub_fusion_candidates()
 				screen_state_controller.hub_item_index = clampi(screen_state_controller.hub_item_index, 0, maxi(screen_state_controller.hub_fusion_candidates.size() - 1, 0))
