@@ -254,10 +254,8 @@ func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)
 			var rgb := Color8(int(color.r * 255.0), int(color.g * 255.0), int(color.b * 255.0))
-			if rgb == PaletteLibrary.normal("yellow"):
+			if rgb == PaletteLibrary.normal("blue"):
 				image.set_pixel(x, y, Color(highlight_color.r, highlight_color.g, highlight_color.b, color.a))
-			elif rgb == PaletteLibrary.normal("blue"):
-				image.set_pixel(x, y, Color(main_color.r, main_color.g, main_color.b, color.a))
 			elif rgb == PaletteLibrary.normal("grey"):
 				var tinted := color.lerp(main_color, 0.35)
 				image.set_pixel(x, y, Color(tinted.r, tinted.g, tinted.b, color.a))
