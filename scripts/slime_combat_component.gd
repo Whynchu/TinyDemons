@@ -51,6 +51,7 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 		return false
 	var is_boss := float(actor.get_meta("encounter_scale", 1.0)) > 1.0
 	var frame_time := tuning.attack_frame_time * (tuning.boss_attack_frame_time_multiplier if is_boss else 1.0)
+	frame_time *= float(actor.get_meta("attack_speed_multiplier", 1.0))
 	var cooldown_after := tuning.attack_cooldown * (tuning.boss_attack_cooldown_multiplier if is_boss else 1.0)
 	if timer > 0.0:
 		timer += delta
