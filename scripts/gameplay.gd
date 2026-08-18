@@ -1433,7 +1433,7 @@ func _trigger_slime_notice(slime: Sprite2D) -> void:
 	if run_state != null and run_state.active:
 		run_state.record_enemy_encounter()
 	effects_spawner.spawn_slime_notice(self, slime, notice_duration)
-	_play_sound("encounter", -8.0, 0.90 + rng.randf_range(-0.06, 0.06))
+	_play_sound("ui_confirm", -10.0, 1.0)
 func _slime_position_is_valid(slime: Sprite2D) -> bool:
 	return _can_actor_stand_at_current_position(slime) and not _collides_with_static(slime)
 func _recover_slime_position(slime: Sprite2D) -> void:
