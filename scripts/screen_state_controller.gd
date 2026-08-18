@@ -704,6 +704,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
 	if page == 3 and not selected_transmutation_name.is_empty():
 		details[0].texture = pixel_texture.call("SPECIAL: %s" % selected_transmutation_name, Color8(148, 220, 255)) as Texture2D
+	elif page == 3:
+		details[0].texture = null
 	var slot := catalog.definition_slot(item.definition_id)
 	var equipped := str(profile.equipped_instance_ids.get(String(slot), "")) == item.instance_id
 	var overflow := profile.can_salvage_overflow(item.instance_id, catalog)

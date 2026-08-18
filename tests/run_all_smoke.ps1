@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 $root = "C:\Development\Tiny-Demons\TinyDemons"
 $godot = "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe"
-$tests = @("run_grade_smoke", "progression_smoke", "item_economy_smoke", "rogue_slime_smoke", "speed_scale_smoke")
+$tests = @("run_grade_smoke", "progression_smoke", "item_economy_smoke", "rogue_slime_smoke", "speed_scale_smoke", "fusion_tooltip_smoke")
 $failed = $false
 foreach ($test in $tests) {
 	Write-Host "=== $test ==="
