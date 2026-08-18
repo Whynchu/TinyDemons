@@ -8,6 +8,7 @@ class_name SoundManager
 const SOUNDS_PATH := "res://assets/sounds/"
 const BATTLE_PATH := SOUNDS_PATH + "10_Free_RPG_Battle_SFX/"
 const UI_PATH := SOUNDS_PATH + "10_ui_sfx_free_samples/"
+const MUSIC_PATH := SOUNDS_PATH + "Soundtrack/TINY_DEMONS_Main_Theme_Demo.wav"
 
 const CLIPS := {
 	"slash": BATTLE_PATH + "22_Slash_04.wav",
@@ -34,6 +35,43 @@ const CLIPS := {
 
 var _players: Dictionary = {}
 var _chatter_player: AudioStreamPlayer = null
+var _music_player: AudioStreamPlayer = null
+
+
+func _ready() -> void:
+	start_music()
+
+
+func _exit_tree() -> void:
+	if _music_player != null:
+		_music_player.stop()
+		_music_player.stream = null
+
+
+func start_music(volume_linear: float = 0.6) -> void:
+	if _music_player == null:
+		_music_player = AudioStreamPlayer.new()
+		_music_player.name = "Music_Theme"
+		_music_player.bus = "Master"
+		_music_player.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(_music_player)
+	if _music_player.stream == null and ResourceLoader.exists(MUSIC_PATH):
+		_music_player.stream = load(MUSIC_PATH) as AudioStream
+		if not _music_player.finished.is_connected(_replay_music):
+			_music_player.finished.connect(_replay_music)
+	_music_player.volume_db = linear_to_db(volume_linear)
+	if _music_player.stream != null and not _music_player.playing:
+		_music_player.play()
+
+
+func _replay_music() -> void:
+	if _music_player != null and _music_player.stream != null:
+		_music_player.play()
+
+
+func stop_music() -> void:
+	if _music_player != null:
+		_music_player.stop()
 
 
 func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
