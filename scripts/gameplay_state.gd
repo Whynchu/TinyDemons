@@ -94,6 +94,7 @@ var chest_controller: ChestController = null
 var npc_controller: NpcController = null
 var rest_fire_controller: RestFireController = null
 var hud_controller: HudController = null
+var sound_manager: SoundManager = null
 var effects_spawner: EffectsSpawner = null
 var screen_state_controller: ScreenStateController = null
 var gameplay_frame_controller: GameplayFrameController = null

@@ -68,6 +68,7 @@ func _grant_chest_item_reward() -> bool:
 	var item := ItemCatalog.new().generate_item(slot, generation_seed, player_profile.level, rarity)
 	item.instance_id = reward_id
 	_spawn_chest_item_drop(item)
+	_play_sound("item_drop")
 	return true
 
 func _placeholder_item_texture() -> Texture2D:
@@ -176,6 +177,9 @@ func _chest_gold_reward(base_gold: int) -> int:
 func _save_player_profile() -> void:
 	if player_profile != null:
 		ProfileSaveService.save_profile(player_profile)
+func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
+	if sound_manager != null:
+		sound_manager.play(sound_name, volume_db, pitch_scale)
 func _set_gold_value(value: int) -> void:
 	if player_profile == null:
 		return
@@ -557,6 +561,7 @@ func _is_run_combat_active() -> bool:
 func _on_player_successful_block(_shield_damage: float, _health_damage: float) -> void:
 	if run_state != null and _is_run_combat_active():
 		run_state.record_block()
+	_play_sound("block", 0.0, 0.97 + rng.randf_range(-0.05, 0.05))
 
 func _record_run_action_input(action: StringName, accepted: bool) -> void:
 	if run_state != null and run_state.active:
@@ -919,6 +924,7 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -
 	if ambush != null:
 		ambush.extend_rehide(slime, slime_tuning.ambush_hit_extension)
 	SlimeActor.damage_actor(self, slime, amount, was_critical)
+	_play_sound("hit", 0.0, 0.95 + rng.randf_range(-0.08, 0.08) if was_critical else 1.0)
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	var damage := _combat_damage(player_stats, _slime_stats(slime))
 	if equipment_transmutation_component == null:
@@ -1511,6 +1517,7 @@ func _on_player_health_damaged(amount: float) -> void:
 	player_damage_fill_hold_timer = player_tuning.health_damage_hang_time
 	if run_state != null:
 		run_state.record_damage(amount)
+	_play_sound("hurt", 0.0, 0.95 + rng.randf_range(-0.06, 0.06))
 func _on_player_health_changed(current: float, _maximum: float) -> void: if is_instance_valid(player_health_fill): _update_player_health_ui()
 func _on_player_health_healed(amount: float) -> void:
 	player_display_health = minf(player_display_health, player_health_component.current_health if player_health_component != null else player_display_health)
@@ -1665,6 +1672,7 @@ func _award_slime_xp(slime: Sprite2D) -> void:
 	if levels_gained > 0:
 		_spawn_player_level_number(player_profile.level if player_profile != null else 1)
 		_apply_player_level()
+		_play_sound("level_up")
 	_spawn_player_xp_number(reward)
 	_update_player_progression_ui()
 	_sync_runtime_progression_to_profile()

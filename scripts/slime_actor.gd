@@ -210,7 +210,7 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 			combat.hitstun_timer = maxf(combat.hitstun_timer, ambush.block_stun)
 			combat.cooldown = maxf(combat.cooldown, ambush.block_stun)
 	var player_health := root.get("player_health_component") as HealthComponent
-	if player_health != null and player_health.current_health <= 0.0: root.set("player_death_pending", true); root.call("_interrupt_player_attack"); root.set("player_is_rolling", false)
+	if player_health != null and player_health.current_health <= 0.0: root.set("player_death_pending", true); root.call("_interrupt_player_attack"); root.set("player_is_rolling", false); if root.has_method("_play_sound"): root.call("_play_sound", "death", 0.0, 1.0)
 
 
 func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_delay: float, hold_delay: float, idle_breath_delay: float, attack_cooldown_delay: float) -> void:

@@ -24,6 +24,7 @@ func initialize(root: Object) -> void:
 	root.set("npc_controller", root.call("_add_runtime_node", NpcController, "NpcController", root.get("cloaked_demon")))
 	root.set("rest_fire_controller", root.call("_add_runtime_node", RestFireController, "RestFireController", root.get("rest_fire")))
 	root.set("hud_controller", root.call("_add_runtime_node", HudController, "HudController", root.get("ui")))
+	root.set("sound_manager", root.call("_add_runtime_node", SoundManager, "SoundManager"))
 	root.set("effects_spawner", root.call("_add_runtime_node", EffectsSpawner, "EffectsSpawner"))
 	var rng := root.get("rng") as RandomNumberGenerator
 	rng.randomize()
