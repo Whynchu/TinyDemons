@@ -397,15 +397,24 @@ README, test runner, and this doc updated.
   delegate funcs, the dead `PlayerAnimationComponent` API, the unused
   `attack_priority` export, dead `fusion_cost`, dead `MP_HIGHLIGHT` const.
   Commit `3b5810e` (23 files, net −185 lines).
-- **Deferred (needs playtest)**: thin
-  `gameplay_state.gd` single-owner state. Each changes behavior that headless
-  smoke can't validate.
+- **Deferred (needs playtest)**: none outstanding in the audit plan — see the
+  completed items below. `Artwork/` vs `assets/artwork/` duplication
+  reconciliation still needs a human decision (P4).
 - **Reconciled `player_profile` vs `profile_save_service` (done)**: the split
   was already clean — `PlayerProfile` is the serialization model
   (`to_dictionary`/`load_dictionary`), `ProfileSaveService` owns all file/slot
   I/O (atomic writes, backups, 3 slots). No bypass callers. Removed the dead
   `PlayerProfile.changed` signal (11 emits, 0 connections) and its `notify`
   parameter on `grant_item`.
+- **Thinned `gameplay_state.gd` (done)**: the shared state blob dropped from
+  ~256 plain vars to ~112 (56% reduction). Single-owner state moved into its
+  owning components: player frame arrays → `PlayerAnimationComponent`; NPC
+  dialogue + cloaked-demon patrol/animation → `NpcController`; hub/title/
+  archetype/save/run-complete UI + `player_palette_name` →
+  `ScreenStateController`; HUD indicators → `HudController`. Removed dead vars
+  (`npc_dialogue_index`, `npc_dialogue_messages`). The remaining ~112 vars are
+  genuinely shared cross-cutting state (player combat/animation flags accessed
+  across 10+ scripts, world/room, chest, tunings, slime frame cache).
 - **Unified the rarity ladders (done, commit pending)**: the level-based
   `item_catalog._roll_rarity` was dead code (every `generate_item` caller
   passes `minimum_rarity`); the live rank/performance ladder moved into

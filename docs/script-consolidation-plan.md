@@ -631,6 +631,13 @@ update-order regressions.
   - [x] Reach the M9 3,000-line coordinator checkpoint: `gameplay.gd` is 2,999 physical lines after moving HUD, input, walkability, and texture ownership outward.
   - [x] Reach the M9 2,500-line checkpoint: `gameplay.gd` is 2,499 physical lines after moving room layout, NPC patrol, evaporation effects, and player/room update slices outward.
   - [ ] Remove remaining compatibility delegates and duplicate state mirrors.
+  - [x] Thin `gameplay_state.gd` shared blob — single-owner state moved to its
+    owning components: player frame arrays → `PlayerAnimationComponent`; NPC
+    dialogue + cloaked-demon patrol/animation → `NpcController`; hub/title/
+    archetype/save/run-complete UI + `player_palette_name` →
+    `ScreenStateController`; HUD indicators → `HudController`. Blob dropped
+    from ~256 to ~112 plain vars (56% reduction); remaining vars are genuinely
+    shared cross-cutting state.
   - [x] Document the new-feature gate: `docs/ARCHITECTURE.md` "Rules of the
     road" states new feature wiring goes in a component or controller and
     `gameplay.gd` only gains orchestrator calls.
