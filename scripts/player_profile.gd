@@ -41,18 +41,15 @@ func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 	var is_new_inventory := inventory.is_empty()
 	for slot: StringName in ItemCatalog.SLOTS:
 		var starter := items.starter_item(slot)
-		grant_item(starter, false)
+		grant_item(starter)
 		if is_new_inventory and str(equipped_instance_ids.get(String(slot), "")).is_empty():
 			equipped_instance_ids[String(slot)] = starter.instance_id
-	changed.emit()
 
 
-func grant_item(item: ItemInstance, notify := true) -> bool:
+func grant_item(item: ItemInstance) -> bool:
 	if item == null or item.instance_id.is_empty() or find_item(item.instance_id) != null:
 		return false
 	inventory.append(item.to_dictionary())
-	if notify:
-		changed.emit()
 	return true
 
 
@@ -72,7 +69,6 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	if slot not in ItemCatalog.SLOTS:
 		return false
 	equipped_instance_ids[String(slot)] = instance_id
-	changed.emit()
 	return true
 
 
@@ -80,7 +76,6 @@ func unequip_slot(slot: StringName, catalog: ItemCatalog = null) -> bool:
 	if slot not in ItemCatalog.SLOTS or str(equipped_instance_ids.get(String(slot), "")).is_empty():
 		return false
 	equipped_instance_ids[String(slot)] = ""
-	changed.emit()
 	return true
 
 
@@ -89,7 +84,6 @@ func purchase_item(item: ItemInstance, cost: int) -> bool:
 		return false
 	gold -= cost
 	inventory.append(item.to_dictionary())
-	changed.emit()
 	return true
 
 
@@ -200,7 +194,6 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 		return false
 	inventory[target_index] = working.to_dictionary()
 	gold -= cost
-	changed.emit()
 	return true
 
 
@@ -224,7 +217,6 @@ func salvage_overflow(instance_id: String, catalog: ItemCatalog = null) -> int:
 			inventory.remove_at(index)
 			var value := items.overflow_salvage_value(item)
 			gold += value
-			changed.emit()
 			return value
 	return 0
 
@@ -258,7 +250,6 @@ func award_xp(amount: int, tuning: ProgressionTuning = null) -> Dictionary:
 		unspent_stat_points += level_points
 		points_gained += level_points
 		levels_gained += 1
-	changed.emit()
 	return {"xp": gained, "levels": levels_gained, "points": points_gained, "level": level}
 
 
@@ -274,7 +265,6 @@ func allocate_stat(stat_name: StringName, amount: int = 1) -> bool:
 		_:
 			return false
 	unspent_stat_points -= points
-	changed.emit()
 	return true
 
 
@@ -293,7 +283,6 @@ func reset_allocated_stats() -> int:
 	allocated_def = 0
 	allocated_spd = 0
 	unspent_stat_points += refunded
-	changed.emit()
 	return refunded
 
 
@@ -370,7 +359,3 @@ func load_dictionary(data: Dictionary) -> void:
 	if last_run_grade not in ["S", "A", "B", "C", "D", "F"]:
 		last_run_grade = "D"
 	ensure_starter_items()
-	changed.emit()
-
-
-signal changed

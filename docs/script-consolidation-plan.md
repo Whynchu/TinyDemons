@@ -641,6 +641,9 @@ update-order regressions.
     `player_attack_hit_targets` and `hud_controller.current_target` mirrors;
     `gold/level/xp` read from `PlayerProfile`, `player_health` reads from
     `HealthComponent`.
+  - [x] `player_profile` vs `profile_save_service` — done: split verified
+    clean (model serialization vs service file/slot I/O, no bypass callers);
+    removed dead `PlayerProfile.changed` signal and `grant_item` `notify`.
   - [x] Rarity ladder — done: single `ItemCatalog.roll_run_rarity()`; the dead
     level-based `_roll_rarity` was removed; guarded by monotonicity checks in
     `item_economy_smoke.gd`.

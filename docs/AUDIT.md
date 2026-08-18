@@ -301,8 +301,10 @@ Dead / nearly-dead code (verified by call-count across all 59 scripts):
 - `PlayerAnimationComponent`: `animation_changed` signal, `play()`, `reset()`
   never connected/called — the animation state machine runs off root fields.
 - Unused `@export`: `enemy_tactics_component.gd:6` `attack_priority`.
-- `player_profile.gd` (382) and `profile_save_service.gd` (120) overlap on
-  persistence responsibilities.
+- `player_profile.gd` (model: serialization) and `profile_save_service.gd`
+  (service: file/slot I/O) are a clean split — **verified**, no overlapping
+  persistence. Removed the dead `PlayerProfile.changed` signal and the
+  `grant_item` `notify` param.
 - `gameplay_state.gd` is a 291-var shared blob; most of it is single-owner
   state that has a better home (hub UI refs → `screen_state_controller`,
   player runtime mirrors → player components).
@@ -395,10 +397,15 @@ README, test runner, and this doc updated.
   delegate funcs, the dead `PlayerAnimationComponent` API, the unused
   `attack_priority` export, dead `fusion_cost`, dead `MP_HIGHLIGHT` const.
   Commit `3b5810e` (23 files, net −185 lines).
-- **Deferred (needs playtest)**: reconcile
-  `player_profile` vs `profile_save_service` persistence split; thin
+- **Deferred (needs playtest)**: thin
   `gameplay_state.gd` single-owner state. Each changes behavior that headless
   smoke can't validate.
+- **Reconciled `player_profile` vs `profile_save_service` (done)**: the split
+  was already clean — `PlayerProfile` is the serialization model
+  (`to_dictionary`/`load_dictionary`), `ProfileSaveService` owns all file/slot
+  I/O (atomic writes, backups, 3 slots). No bypass callers. Removed the dead
+  `PlayerProfile.changed` signal (11 emits, 0 connections) and its `notify`
+  parameter on `grant_item`.
 - **Unified the rarity ladders (done, commit pending)**: the level-based
   `item_catalog._roll_rarity` was dead code (every `generate_item` caller
   passes `minimum_rarity`); the live rank/performance ladder moved into
