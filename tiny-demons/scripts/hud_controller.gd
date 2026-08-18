@@ -87,7 +87,8 @@ func update_overhead_bars(
 	is_dead_for: Callable,
 	is_aggroed_for: Callable,
 	set_values: Callable,
-	overwold_ui_z: int
+	overwold_ui_z: int,
+	is_hidden_for: Callable = Callable()
 ) -> void:
 	for slime in slimes:
 		var frame := target_overhead_frames.get(slime) as Sprite2D
@@ -96,7 +97,8 @@ func update_overhead_bars(
 		var aggro_marker := target_overhead_aggro_markers.get(slime) as Sprite2D
 		if frame == null or damage_fill == null or fill == null or aggro_marker == null:
 			continue
-		if is_dead_for.call(slime):
+		var hidden := is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))
+		if is_dead_for.call(slime) or hidden:
 			frame.visible = false
 			damage_fill.visible = false
 			fill.visible = false
@@ -156,7 +158,7 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_button_hud(root.get("button_hud_sprites"), root.call("_controller_devices"))
 	var timer := fmod(float(root.get("gold_animation_timer")) + delta, 0.48); root.set("gold_animation_timer", timer); update_gold_indicator(root.get("gold_indicator"), root.get("gold_animation_frames"), timer)
 	update_run_timer(root)
-	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z)
+	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))
 
 
 func update_run_timer(root: Object) -> void:

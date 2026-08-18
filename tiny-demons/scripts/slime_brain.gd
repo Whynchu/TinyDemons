@@ -149,6 +149,8 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 	if is_aggroed:
 		steering_direction = context_steering_direction(actor, tuning, random_source, actor_foot, perspective)
 	var movement_distance := tuning.scoot_distance if is_aggroed else minf(tuning.scoot_distance, direction.length())
+	if float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
+		movement_distance *= tuning.boss_movement_speed_multiplier
 	var movement: Vector2 = perspective.call(steering_direction * movement_distance)
 	set_facing.call(actor, movement.x)
 	scoot_start = actor.position

@@ -134,6 +134,7 @@ func start_selected_archetype(root: Object) -> void:
 		profile.base_vit = int(initial_stats["VIT"])
 		profile.base_str = int(initial_stats["STR"])
 		profile.base_def = int(initial_stats["DEF"])
+		profile.base_spd = int(initial_stats["SPD"])
 		profile.allocation_profile = int(root.get("selected_archetype"))
 		profile.palette_name = ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"][int(root.get("archetype_color_index"))]
 		profile.has_started = true
@@ -457,17 +458,17 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var stat_left: Array[Button] = []
 	var stat_right: Array[Button] = []
 	var derived: Array[Sprite2D] = []
-	var stat_names := [&"VIT", &"STR", &"DEF"]
+	var stat_names := [&"VIT", &"STR", &"DEF", &"SPD"]
 	for index in stat_names.size():
-		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(18, 45 + index * 15), false)
+		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(18, 42 + index * 12), false)
 		stats.append(stat_text)
-		var left := make_archetype_arrow(overlay, -1, Vector2(4, 43 + index * 15), adjust_stat.bind(stat_names[index], -1), pixel_texture)
-		var right := make_archetype_arrow(overlay, 1, Vector2(84, 43 + index * 15), adjust_stat.bind(stat_names[index], 1), pixel_texture)
+		var left := make_archetype_arrow(overlay, -1, Vector2(4, 40 + index * 12), adjust_stat.bind(stat_names[index], -1), pixel_texture)
+		var right := make_archetype_arrow(overlay, 1, Vector2(84, 40 + index * 12), adjust_stat.bind(stat_names[index], 1), pixel_texture)
 		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
 		left.set_meta("hub_stat_index", index); right.set_meta("hub_stat_index", index)
 		stat_left.append(left); stat_right.append(right); stat_buttons.append(left); stat_buttons.append(right)
 	for index in 3:
-		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(100, 45 + index * 12), false))
+		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(100, 42 + index * 16), false))
 	var apply_button := make_retro_button("APPLY", Vector2(3, 88), Vector2(34, 11), pixel_texture)
 	apply_button.focus_mode = Control.FOCUS_NONE
 	apply_button.pressed.connect(apply_stats)
@@ -509,9 +510,11 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	gear_stat_panel.add_theme_stylebox_override("panel", gear_stat_style); overlay.add_child(gear_stat_panel)
 	var gear_stats: Array[Sprite2D] = []
 	for stat_index in 5:
-		gear_stats.append(create_sprite(overlay, "HubGearStat%d" % stat_index, null, Vector2(105, 32 + stat_index * 9), false))
-	var item_details: Array[Sprite2D] = [create_sprite(overlay, "HubItemDetail0", null, Vector2(7, 83), false), create_sprite(overlay, "HubItemDetail1", null, Vector2(7, 103), false)]
-	item_details[1].visible = false
+		gear_stats.append(create_sprite(overlay, "HubGearStat%d" % stat_index, null, Vector2(105, 32 + stat_index * 10), false))
+	var item_details: Array[Sprite2D] = []
+	for detail_index in 4:
+		item_details.append(create_sprite(overlay, "HubItemDetail%d" % detail_index, null, Vector2(7, 83 + detail_index * 7), false))
+		item_details[detail_index].visible = false
 	var item_action_button := make_retro_button("EQUIP", Vector2(52, 89), Vector2(52, 10), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); overlay.add_child(item_action_button)
 	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
@@ -560,23 +563,23 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	for node in shop_prices: node.visible = page == 2
 	for node in gear_choices: node.visible = page == 1 and bool(root.get("hub_gear_browsing"))
 	for button in root.get("hub_gear_slot_buttons") as Array[Button]: button.visible = page == 1 and not bool(root.get("hub_gear_browsing"))
-	for node in gear_stats: node.visible = page == 1
+	for node in gear_stats: node.visible = page == 1 or page == 3
 	var gear_stat_panel := root.get("hub_gear_stat_panel") as Panel
-	if gear_stat_panel != null: gear_stat_panel.visible = page == 1
+	if gear_stat_panel != null: gear_stat_panel.visible = page == 1 or page == 3
 	for node in item_details: node.visible = page != 0
 	if item_action != null: item_action.visible = page != 0
 	if page != 0:
 		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
 		return
-	var pending := [int(root.get("hub_pending_vit")), int(root.get("hub_pending_str")), int(root.get("hub_pending_def"))]
+	var pending := [int(root.get("hub_pending_vit")), int(root.get("hub_pending_str")), int(root.get("hub_pending_def")), int(root.get("hub_pending_spd"))]
 	var remaining := int(root.call("_hub_points_remaining"))
 	if points != null: points.texture = pixel_texture.call("POINTS TO SPEND: %d" % remaining, Color8(255, 205, 117)) as Texture2D
-	var values := [profile.base_vit + profile.allocated_vit + pending[0], profile.base_str + profile.allocated_str + pending[1], profile.base_def + profile.allocated_def + pending[2]]
-	var allocations := [profile.allocated_vit + pending[0], profile.allocated_str + pending[1], profile.allocated_def + pending[2]]
+	var values := [profile.base_vit + profile.allocated_vit + pending[0], profile.base_str + profile.allocated_str + pending[1], profile.base_def + profile.allocated_def + pending[2], profile.base_spd + profile.allocated_spd + pending[3]]
+	var allocations := [profile.allocated_vit + pending[0], profile.allocated_str + pending[1], profile.allocated_def + pending[2], profile.allocated_spd + pending[3]]
 	var stat_texts := root.get("hub_stat_texts") as Array[Sprite2D]
 	var selected_row := int(root.get("hub_menu_row"))
 	for index in stat_texts.size():
-		stat_texts[index].texture = pixel_texture.call("%s %d  A+%d" % [["VIT", "STR", "DEF"][index], values[index], allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
+		stat_texts[index].texture = pixel_texture.call("%s %d  A+%d" % [["VIT", "STR", "DEF", "SPD"][index], values[index], allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
 	var stat_buttons := root.get("hub_stat_buttons") as Array[Button]
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
@@ -585,12 +588,13 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		set_archetype_button_state(button, selected_row == stat_index, highlight_color)
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 	if snapshot != null:
-		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]
+		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]; snapshot.speed += pending[3]
 		var combat_tuning := root.get("combat_tuning") as CombatTuning
 		var derived_texts := root.get("hub_derived_texts") as Array[Sprite2D]
-		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "PWR %d" % roundi((combat_tuning.damage_base + snapshot.strength) * (1.0 + snapshot.gear_damage_rate)), "DEF %d" % snapshot.def]
-		for index in mini(derived_texts.size(), derived_values.size()): derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D
-	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2])
+		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "DEF %d" % snapshot.def, "SPD %d" % snapshot.speed]
+		for index in derived_texts.size():
+			derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D if index < derived_values.size() else null
+	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3])
 	var apply_button := root.get("hub_apply_button") as Button
 	var cancel_button := root.get("hub_cancel_button") as Button
 	if apply_button != null: apply_button.disabled = pending_total <= 0
@@ -606,8 +610,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var utility_buttons: Array[Button] = [apply_button, cancel_button, auto_button, respec_button]
 	var exit_buttons: Array[Button] = [root.get("hub_start_button") as Button, root.get("hub_title_button") as Button]
 	var selected_column := int(root.get("hub_action_column"))
-	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], selected_row == 3 and selected_column == index, highlight_color)
-	for index in exit_buttons.size(): set_archetype_button_state(exit_buttons[index], selected_row == 4 and selected_column == index, highlight_color)
+	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], selected_row == 4 and selected_column == index, highlight_color)
+	for index in exit_buttons.size(): set_archetype_button_state(exit_buttons[index], selected_row == 5 and selected_column == index, highlight_color)
 	var start_button := root.get("hub_start_button") as Button
 	if start_button != null:
 		var start_label := start_button.get_child(0) as Sprite2D
@@ -620,6 +624,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	if page == 1:
 		_update_hub_gear_slots(root, pixel_texture, profile, catalog, item_list, root.get("hub_gear_choice_texts") as Array[Sprite2D], details, action, highlight_color)
 		return
+	for detail_index in range(2, details.size()):
+		details[detail_index].visible = false
 	details[0].position = Vector2(7, 83); details[1].position = Vector2(7, 103); action.position = Vector2(52, 89)
 	var item: ItemInstance = null
 	var price := 0
@@ -671,6 +677,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if row_mastery > 0 and page != 3: row_label += " +%d" % row_mastery
 		if page == 2 and row_sold: row_label += " SOLD"
 		elif page == 3: row_label += "  +%d" % row_mastery
+		if page == 3:
+			var row_slot := catalog.definition_slot(row_item.definition_id)
+			if str(profile.equipped_instance_ids.get(String(row_slot), "")) == row_item.instance_id:
+				row_label += " E"
 		var row_color := Color8(120, 120, 130) if row_sold else catalog.rarity_color(row_item.rarity)
 		item_list[row].texture = pixel_texture.call(row_label, row_color) as Texture2D
 		if page == 2 and row < shop_prices.size():
@@ -679,33 +689,70 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if not item_list.is_empty():
 			var empty_text := str(root.get("hub_fusion_message")) if page == 3 and not str(root.get("hub_fusion_message")).is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
 			item_list[0].texture = pixel_texture.call(empty_text, Color8(255, 205, 117) if page == 3 else Color.WHITE) as Texture2D
-		details[0].texture = null; details[1].texture = null; action.disabled = true; return
+		for detail in details: detail.texture = null
+		for stale_stat in root.get("hub_gear_stat_texts") as Array[Sprite2D]: stale_stat.texture = null
+		action.disabled = true; return
 	var mastery := item.enhancement_level
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
-	for stat: String in bonuses:
-		var is_rate := stat in ["health_rate", "damage_rate"]
-		var label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
-		bonus_parts.append("%s +%d%s" % [label, roundi(float(bonuses[stat])), "%" if is_rate else ""])
-	details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
+	if page != 3:
+		for stat: String in bonuses:
+			var rate := stat in ["health_rate", "damage_rate", "speed"]
+			var label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
+			var value := float(bonuses[stat])
+			bonus_parts.append("%s %s%.1f%s" % [label, "+" if value > 0 else "", value, "%" if rate else ""])
+		details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
 	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
 	if page == 3 and not selected_transmutation_name.is_empty():
 		details[0].texture = pixel_texture.call("SPECIAL: %s" % selected_transmutation_name, Color8(148, 220, 255)) as Texture2D
 	var slot := catalog.definition_slot(item.definition_id)
 	var equipped := str(profile.equipped_instance_ids.get(String(slot), "")) == item.instance_id
 	var overflow := profile.can_salvage_overflow(item.instance_id, catalog)
-	var can_fuse := profile.can_fuse_duplicate(item.instance_id, catalog)
+	var material_count := profile.fusion_material_count(item.instance_id, catalog)
+	var can_fuse := material_count > 0
+	var fusion_count := clampi(int(root.get("hub_fusion_count")), 1, maxi(material_count, 1))
 	if page == 3 and overflow:
 		details[1].texture = pixel_texture.call("MYTHIC +10  SALVAGE %dG" % catalog.overflow_salvage_value(item), Color8(255, 205, 117)) as Texture2D
+		for stale_stat in root.get("hub_gear_stat_texts") as Array[Sprite2D]: stale_stat.texture = null
 	elif page == 3:
-		var next_text := "%s -> %s +0" % [String(item.rarity).to_upper(), String(ItemCatalog.next_rarity(item.rarity)).to_upper()] if mastery >= PlayerProfile.MAX_ITEM_ENHANCEMENT else "+%d -> +%d" % [mastery, mastery + 1]
-		var fusion_cost := profile.fusion_cost(item)
-		var fusion_color := Color8(255, 205, 117) if profile.gold >= fusion_cost else Color8(255, 105, 105)
-		details[1].texture = pixel_texture.call("FUSE %dG  SAME %s GEAR  %s" % [fusion_cost, catalog.rarity_letter_grade(item.rarity), next_text], fusion_color) as Texture2D
+		var batch_cost := profile.fusion_batch_cost(item, fusion_count)
+		var fusion_color := Color8(255, 205, 117) if profile.gold >= batch_cost else Color8(255, 105, 105)
+		var final_rarity := item.rarity
+		var final_enhancement := mastery
+		for step in fusion_count:
+			if final_enhancement >= PlayerProfile.MAX_ITEM_ENHANCEMENT:
+				final_rarity = ItemCatalog.next_rarity(final_rarity)
+				final_enhancement = 0
+			else:
+				final_enhancement += 1
+		var next_text := "%s -> %s +0" % [String(final_rarity).to_upper(), String(ItemCatalog.next_rarity(final_rarity)).to_upper()] if final_rarity != item.rarity else "+%d -> +%d" % [mastery, final_enhancement]
+		details[1].texture = pixel_texture.call("FUSE x%d  %dG  HAVE %d  %s" % [fusion_count, batch_cost, material_count, next_text], fusion_color) as Texture2D
+		var projected := ItemInstance.from_dictionary(item.to_dictionary())
+		projected.enhancement_level = final_enhancement
+		projected.rarity = final_rarity
+		var next_bonuses := catalog.bonuses(projected, 0)
+		var preview_stats := root.get("hub_gear_stat_texts") as Array[Sprite2D]
+		var preview_rows: Array[String] = []
+		var preview_order := ["health_rate", "damage_rate", "strength", "defense", "vitality", "speed"]
+		for stat: String in preview_order:
+			var before := float(bonuses.get(stat, 0.0))
+			var after := float(next_bonuses.get(stat, 0.0))
+			if is_equal_approx(before, 0.0) and is_equal_approx(after, 0.0):
+				continue
+			var rate := stat in ["health_rate", "damage_rate", "speed"]
+			var label: String = str({"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}.get(stat, stat.to_upper()))
+			preview_rows.append("%s %.1f>%.1f%s" % [label, before, after, "%" if rate else ""])
+		for row_index in preview_stats.size():
+			if row_index < preview_rows.size():
+				preview_stats[row_index].texture = pixel_texture.call(preview_rows[row_index], Color8(167, 240, 112)) as Texture2D
+				preview_stats[row_index].visible = true
+			else:
+				preview_stats[row_index].texture = null
+				preview_stats[row_index].visible = false
 	else:
 		details[1].texture = pixel_texture.call(selected_transmutation_name, Color8(148, 220, 255)) as Texture2D if not selected_transmutation_name.is_empty() else null
-	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.gold < profile.fusion_cost(item))))
+	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.gold < profile.fusion_batch_cost(item, fusion_count))))
 	var label := action.get_child(0) as Sprite2D
-	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE" if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
+	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)
 
 
@@ -714,6 +761,8 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	var candidate_indices := root.get("hub_gear_candidate_indices") as Dictionary
 	var browsing := bool(root.get("hub_gear_browsing"))
 	var selected_candidate: ItemInstance = null
+	for detail in details:
+		detail.visible = false
 	for row in item_list.size():
 		if row >= ItemCatalog.SLOTS.size():
 			item_list[row].texture = null
@@ -744,12 +793,12 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			if choice_index >= slot_candidates.size(): break
 			var choice_item := slot_candidates[choice_index]
 			var choice_prefix := ">" if choice_index == current_index else " "
-			var choice_label := "%s%s %s" % [choice_prefix, String(choice_item.rarity).substr(0, 1).to_upper(), str(ItemCatalog.DEFINITIONS.get(choice_item.definition_id, {}).get("name", "ITEM"))]
+			var is_unequip := choice_item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID
+			var choice_label := "%s%s" % [choice_prefix, "UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), str(ItemCatalog.DEFINITIONS.get(choice_item.definition_id, {}).get("name", "ITEM"))]]
 			var choice_mastery := choice_item.enhancement_level
 			if choice_mastery > 0: choice_label += " +%d" % choice_mastery
-			choices[choice_row].texture = pixel_texture.call(choice_label, catalog.rarity_color(choice_item.rarity)) as Texture2D
+			choices[choice_row].texture = pixel_texture.call(choice_label, Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)) as Texture2D
 			details[0].texture = null; details[1].texture = null
-		details[0].visible = false; details[1].visible = false
 		action.visible = false
 		if selected_candidate != null:
 			_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, true)
@@ -757,20 +806,64 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	else:
 		for choice in choices: choice.visible = false
 	details[0].visible = true; details[1].visible = true
-	details[0].position = Vector2(6, 75); details[1].position = Vector2(6, 80); action.position = Vector2(26, 101)
+	details[0].position = Vector2(6, 75); details[1].position = Vector2(6, 80)
+	if details.size() > 2: details[2].position = Vector2(6, 87)
+	if details.size() > 3: details[3].position = Vector2(6, 94)
+	action.position = Vector2(26, 101)
 	if selected_candidate == null:
-		details[0].texture = pixel_texture.call("NO GEAR FOR THIS SLOT", Color8(255, 205, 117)) as Texture2D
-		action.disabled = true
+		var available_candidates := root.call("_hub_gear_candidates", ItemCatalog.SLOTS[selected_slot_index]) as Array[ItemInstance]
+		if selected_slot_index == ItemCatalog.SLOTS.find(&"shield") and not available_candidates.is_empty():
+			details[0].texture = pixel_texture.call("NO SHIELD EQUIPPED", Color8(255, 205, 117)) as Texture2D
+			details[1].texture = pixel_texture.call("SELECT FROM INVENTORY", Color8(148, 220, 255)) as Texture2D
+			action.disabled = false
+			action.visible = true
+		else:
+			details[0].texture = pixel_texture.call("NO GEAR FOR THIS SLOT", Color8(255, 205, 117)) as Texture2D
+			action.disabled = true
+			action.visible = false
+		var empty_label := action.get_child(0) as Sprite2D
+		if empty_label != null: empty_label.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
 		return
 	_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, browsing)
 	details[0].texture = null
 	var transmutation_name := catalog.transmutation_name(selected_candidate.transmutation_id)
-	details[1].texture = pixel_texture.call(transmutation_name, Color8(148, 220, 255)) as Texture2D if not transmutation_name.is_empty() else null
+	details[1].texture = pixel_texture.call("SPECIAL: %s" % transmutation_name, Color8(148, 220, 255)) as Texture2D if not transmutation_name.is_empty() else null
+	_set_transmutation_description(details, pixel_texture, catalog.transmutation_description(selected_candidate.transmutation_id))
+	if selected_slot_index == ItemCatalog.SLOTS.find(&"shield"):
+		var shield_values := catalog.shield_bonuses(selected_candidate)
+		if details.size() > 2:
+			details[2].texture = pixel_texture.call("BLOCK +%d  ARM +%d%%" % [roundi(float(shield_values.get("guard_durability", 0.0))), roundi(float(shield_values.get("guard_reduction", 0.0)))], Color8(148, 220, 255)) as Texture2D
+			details[2].visible = true
+		if details.size() > 3:
+			details[3].texture = pixel_texture.call("ATK -%d%%  DMG -%d%%" % [roundi(float(shield_values.get("strength_penalty", 0.0))), roundi(float(shield_values.get("damage_penalty", 0.0)))], Color8(239, 125, 87)) as Texture2D
+			details[3].visible = true
 	action.disabled = false
 	action.visible = not browsing
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)
+
+
+func _set_transmutation_description(details: Array[Sprite2D], pixel_texture: Callable, description: String) -> void:
+	for detail_index in range(2, details.size()):
+		details[detail_index].texture = null
+		details[detail_index].visible = false
+	if description.is_empty():
+		return
+	var words := description.split(" ")
+	var lines: Array[String] = []
+	var line := ""
+	for word in words:
+		var candidate := word if line.is_empty() else "%s %s" % [line, word]
+		if candidate.length() > 34 and not line.is_empty():
+			lines.append(line)
+			line = word
+		else:
+			line = candidate
+	if not line.is_empty(): lines.append(line)
+	for line_index in mini(lines.size(), details.size() - 2):
+		details[line_index + 2].texture = pixel_texture.call(lines[line_index], Color8(210, 220, 235)) as Texture2D
+		details[line_index + 2].visible = true
 
 
 func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot_index: int, comparing: bool) -> void:
@@ -779,33 +872,44 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 		if snapshot != null:
 			var tuning := root.get("combat_tuning") as CombatTuning
-			var values := [roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)), roundi((tuning.damage_base + snapshot.strength) * (1.0 + snapshot.gear_damage_rate)), snapshot.vit, snapshot.strength, snapshot.def]
+			var values := [roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)), snapshot.vit, snapshot.strength, snapshot.def, snapshot.speed]
 			for index in mini(stats.size(), values.size()):
-				stats[index].texture = pixel_texture.call("%s %d" % [["HP", "DMG", "VIT", "STR", "DEF"][index], values[index]], Color8(167, 240, 112)) as Texture2D
+				stats[index].texture = pixel_texture.call("%s %d" % [["HP", "VIT", "STR", "DEF", "SPD"][index], values[index]], Color8(167, 240, 112)) as Texture2D
 		return
 	var slot := ItemCatalog.SLOTS[clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)]
 	var equipped := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
-	var candidate_bonuses := catalog.bonuses(candidate, profile.mastery_level(candidate.definition_id))
-	var equipped_bonuses := catalog.bonuses(equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
-	var fields := [{"key": "health_rate", "label": "HP", "rate": true}, {"key": "damage_rate", "label": "DMG", "rate": true}, {"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}]
+	var candidate_bonuses := _effective_item_bonuses(catalog, candidate, profile.mastery_level(candidate.definition_id))
+	var equipped_bonuses := _effective_item_bonuses(catalog, equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
+	var fields := [{"key": "health_rate", "label": "HP", "rate": true}, {"key": "vitality", "label": "VIT", "rate": true}, {"key": "strength", "label": "STR", "rate": true}, {"key": "defense", "label": "DEF", "rate": true}, {"key": "speed", "label": "SPD", "rate": true}]
 	for index in mini(stats.size(), fields.size()):
 		var field: Dictionary = fields[index]
 		var key := str(field["key"])
 		var value := float(candidate_bonuses.get(key, 0.0)) - float(equipped_bonuses.get(key, 0.0)) if comparing else float(candidate_bonuses.get(key, 0.0))
-		var rounded := roundi(value)
-		var prefix := "+" if rounded > 0 else "-" if rounded < 0 else ""
-		var color := Color8(148, 220, 255) if rounded > 0 else Color8(239, 125, 87) if rounded < 0 else Color8(150, 156, 170)
-		stats[index].texture = pixel_texture.call("%s %s%d%s" % [str(field["label"]), prefix, absi(rounded), "%" if bool(field["rate"]) else ""], color) as Texture2D
+		var prefix := "+" if value > 0 else "-" if value < 0 else ""
+		var color := Color8(148, 220, 255) if value > 0 else Color8(239, 125, 87) if value < 0 else Color8(150, 156, 170)
+		stats[index].texture = pixel_texture.call("%s %s%.1f%s" % [str(field["label"]), prefix, absf(value), "%" if bool(field["rate"]) else ""], color) as Texture2D
+
+
+func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_level: int = 0) -> Dictionary:
+	if item == null:
+		return {}
+	var result := catalog.bonuses(item, mastery_level)
+	if catalog.definition_slot(item.definition_id) == &"shield":
+		var shield_values := catalog.shield_bonuses(item)
+		result["strength"] = float(result.get("strength", 0.0)) - float(shield_values.get("strength_penalty", 0.0))
+		result["damage_rate"] = float(result.get("damage_rate", 0.0)) - float(shield_values.get("damage_penalty", 0.0))
+		result["speed"] = float(result.get("speed", 0.0)) - float(shield_values.get("speed_penalty", 0.0))
+	return result
 
 
 func _item_comparison_text(profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot: StringName) -> String:
 	var current := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
-	var old_bonuses := catalog.bonuses(current) if current != null else {}
-	var new_bonuses := catalog.bonuses(candidate)
+	var old_bonuses := _effective_item_bonuses(catalog, current) if current != null else {}
+	var new_bonuses := _effective_item_bonuses(catalog, candidate)
 	var parts: Array[String] = []
-	for stat in ["health_rate", "damage_rate", "strength", "defense", "vitality"]:
-		var difference := roundi(float(new_bonuses.get(stat, 0.0)) - float(old_bonuses.get(stat, 0.0)))
-		if difference != 0: parts.append("%s %s%d%s" % [{"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT"}[stat], "+" if difference > 0 else "", difference, "%" if stat in ["health_rate", "damage_rate"] else ""])
+	for stat in ["health_rate", "damage_rate", "strength", "defense", "vitality", "speed"]:
+		var difference := float(new_bonuses.get(stat, 0.0)) - float(old_bonuses.get(stat, 0.0))
+		if not is_equal_approx(difference, 0.0): parts.append("%s %s%.1f%s" % [{"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}[stat], "+" if difference > 0 else "", difference, "%" if stat in ["health_rate", "damage_rate", "speed"] else ""])
 	return "VS EQUIPPED  %s" % ("SAME" if parts.is_empty() else " ".join(parts))
 
 
@@ -856,6 +960,8 @@ func update_hub_input(root: Object) -> void:
 		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1)
 		elif page == 1 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_gear_candidate", -1)
 		elif page == 1 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_gear_candidate", 1)
+		elif page == 3 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_fusion_count", -1)
+		elif page == 3 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_fusion_count", 1)
 		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
 			var action := root.get("hub_item_action_button") as Button
 			if action != null and not action.disabled: action.pressed.emit()
@@ -867,14 +973,14 @@ func update_hub_input(root: Object) -> void:
 		root.call("_select_hub_menu_row", row + 1)
 	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
 		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
-		if row < 3:
-			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF"][row], direction)
+		if row < 4:
+			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF", &"SPD"][row], direction)
 		else:
 			root.call("_shift_hub_action_column", direction)
 	elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
-		if row < 3:
+		if row < 4:
 			root.call("_select_hub_menu_row", row + 1)
-		elif row == 3:
+		elif row == 4:
 			var utility_button := [root.get("hub_apply_button"), root.get("hub_cancel_button"), root.get("hub_auto_button"), root.get("hub_respec_button")][int(root.get("hub_action_column"))] as Button
 			if utility_button != null and not utility_button.disabled: utility_button.pressed.emit()
 		else:

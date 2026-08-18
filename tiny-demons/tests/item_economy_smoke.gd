@@ -1,7 +1,10 @@
 extends SceneTree
 
+var _finished := false
+
 
 func _initialize() -> void:
+	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var catalog := ItemCatalog.new()
 	var profile := PlayerProfile.new()
@@ -25,7 +28,7 @@ func _initialize() -> void:
 	_expect(profile.equip_item(first.instance_id, catalog), "weapon equips", failures)
 	var equipment := EquipmentComponent.new()
 	equipment.configure_from_profile(profile, catalog)
-	_expect(equipment.damage_bonus >= 1.0, "equipped bonuses reach combat component", failures)
+	_expect(equipment.damage_rate_bonus > 0.0, "equipped bonuses reach combat component", failures)
 	var restored := PlayerProfile.new()
 	restored.load_dictionary(profile.to_dictionary())
 	_expect(restored.find_item(first.instance_id) != null, "inventory persists", failures)
@@ -37,36 +40,47 @@ func _initialize() -> void:
 	restored.gold = int(entry["price"])
 	_expect(restored.purchase_item(shop_item, int(entry["price"])), "purchase succeeds atomically", failures)
 	_expect(restored.gold == 0 and restored.find_item(shop_item.instance_id) != null, "purchase spends and grants", failures)
-	var fusion_base := ItemInstance.new(); fusion_base.instance_id = "fusion-equipped"; fusion_base.definition_id = &"soldier_sword"
-	var fusion_duplicate := ItemInstance.new(); fusion_duplicate.instance_id = "fusion-consume"; fusion_duplicate.definition_id = &"soldier_sword"; fusion_duplicate.affixes = {"keen": 2}
+	var fusion_base := ItemInstance.new(); fusion_base.instance_id = "fusion-equipped"; fusion_base.definition_id = &"soldier_sword"; fusion_base.rarity = &"rare"
+	var fusion_duplicate := ItemInstance.new(); fusion_duplicate.instance_id = "fusion-consume"; fusion_duplicate.definition_id = &"soldier_sword"; fusion_duplicate.rarity = &"rare"; fusion_duplicate.affixes = {"keen": 2}
 	_expect(restored.grant_item(fusion_base), "fusion base granted", failures)
 	_expect(restored.grant_item(fusion_duplicate), "fusion duplicate granted", failures)
 	_expect(restored.equip_item(fusion_base.instance_id, catalog), "fusion base equips", failures)
 	var inventory_before_fusion := restored.inventory.size()
-	_expect(not restored.fuse_duplicate(fusion_base.instance_id, catalog), "equipped item cannot be consumed", failures)
-	_expect(restored.fuse_duplicate(fusion_duplicate.instance_id, catalog), "selected duplicate fuses", failures)
-	_expect(restored.inventory.size() == inventory_before_fusion - 1, "fusion consumes exactly one item", failures)
-	_expect(restored.mastery_level(&"soldier_sword") == 1, "family mastery increases", failures)
-	_expect(not restored.fuse_duplicate(fusion_duplicate.instance_id, catalog), "consumed duplicate cannot fuse twice", failures)
-	var overflow_item := ItemInstance.new(); overflow_item.instance_id = "overflow-salvage"; overflow_item.definition_id = &"soldier_sword"
-	restored.family_mastery["soldier_sword"] = PlayerProfile.MAX_FAMILY_MASTERY
+	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 1, "one duplicate is available as material", failures)
+	_expect(restored.fusion_material_count(fusion_duplicate.instance_id, catalog) <= 1, "equipped base is not a material", failures)
+	_expect(restored.fusion_batch_cost(fusion_base, 1) == PlayerProfile.FUSION_BASE_COST, "single-step fusion costs the base rate", failures)
+	restored.gold = 50
+	_expect(restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "target fuses its available duplicate", failures)
+	_expect(restored.inventory.size() == inventory_before_fusion - 1, "fusion consumes exactly one material", failures)
+	_expect(restored.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhances the target", failures)
+	_expect(restored.gold == 50 - PlayerProfile.FUSION_BASE_COST, "fusion charges the target-scaled cost", failures)
+	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 0, "no materials remain after fusion", failures)
+	_expect(not restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "fusion fails without materials", failures)
+	_expect(restored.fusion_batch_cost(restored.find_item(fusion_base.instance_id), 1) == PlayerProfile.FUSION_BASE_COST + PlayerProfile.FUSION_COST_PER_ENHANCEMENT, "fusion cost scales with target enhancement", failures)
+	var overflow_item := ItemInstance.new(); overflow_item.instance_id = "overflow-salvage"; overflow_item.definition_id = &"soldier_sword"; overflow_item.rarity = &"mythic"; overflow_item.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
 	_expect(restored.grant_item(overflow_item), "overflow item granted", failures)
 	var gold_before_salvage := restored.gold
 	_expect(not restored.can_salvage_overflow(fusion_base.instance_id, catalog), "equipped overflow item cannot salvage", failures)
-	_expect(restored.can_salvage_overflow(overflow_item.instance_id, catalog), "maxed family duplicate can salvage", failures)
+	_expect(restored.can_salvage_overflow(overflow_item.instance_id, catalog), "maxed mythic duplicate can salvage", failures)
 	var salvage_value := restored.salvage_overflow(overflow_item.instance_id, catalog)
 	_expect(salvage_value == catalog.overflow_salvage_value(overflow_item) and restored.gold == gold_before_salvage + salvage_value, "overflow salvage grants deterministic gold", failures)
 	_expect(restored.find_item(overflow_item.instance_id) == null, "salvage consumes overflow once", failures)
-	var plain_bonuses := catalog.bonuses(fusion_base, 0)
-	var mastered_bonuses := catalog.bonuses(fusion_base, restored.mastery_level(&"soldier_sword"))
-	_expect(float(mastered_bonuses["damage"]) > float(plain_bonuses["damage"]), "mastery improves base implicit", failures)
+	var plain_source := ItemInstance.new(); plain_source.definition_id = &"soldier_sword"
+	var plain_bonuses := catalog.bonuses(plain_source, 0)
+	var enhanced_item := restored.find_item(fusion_base.instance_id)
+	var enhanced_bonuses := catalog.bonuses(enhanced_item, 0)
+	_expect(float(enhanced_bonuses["damage_rate"]) > float(plain_bonuses["damage_rate"]), "enhancement improves base implicit", failures)
 	equipment.configure_from_profile(restored, catalog)
-	_expect(is_equal_approx(equipment.damage_bonus, float(mastered_bonuses["damage"])), "family mastery reaches combat equipment", failures)
+	var equipped_shield := restored.find_item(restored.equipped_instance_ids["shield"])
+	var shield_damage_penalty := float(catalog.shield_bonuses(equipped_shield).get("damage_penalty", 0.0)) * 0.01
+	_expect(is_equal_approx(equipment.damage_rate_bonus, float(enhanced_bonuses["damage_rate"]) * 0.01 - shield_damage_penalty), "enhanced weapon bonus reaches combat equipment", failures)
 	var affixed := ItemInstance.new(); affixed.definition_id = &"soldier_sword"; affixed.affixes = {"keen": 2}
-	var affixed_plain := catalog.bonuses(affixed, 0); var affixed_mastered := catalog.bonuses(affixed, 1)
-	_expect(is_equal_approx(float(affixed_mastered["damage"]) - float(plain_bonuses["damage"]) * 1.1, 2.0), "mastery does not multiply affixes", failures)
+	var affixed_plain := catalog.bonuses(affixed, 0)
+	affixed.enhancement_level = 1
+	var affixed_enhanced := catalog.bonuses(affixed, 0)
+	_expect(is_equal_approx(float(affixed_enhanced["damage_rate"]) - float(affixed_plain["damage_rate"]), (float(plain_bonuses["damage_rate"]) + 2.0) * ItemCatalog.MASTERY_BONUS_PER_LEVEL), "enhancement scales implicit and affixes together", failures)
 	var fusion_round_trip := PlayerProfile.new(); fusion_round_trip.load_dictionary(restored.to_dictionary())
-	_expect(fusion_round_trip.mastery_level(&"soldier_sword") == PlayerProfile.MAX_FAMILY_MASTERY, "family mastery persists", failures)
+	_expect(fusion_round_trip.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhancement persists", failures)
 	var bastion_shield := ItemInstance.new(); bastion_shield.instance_id = "bastion-test"; bastion_shield.definition_id = &"living_bulwark"; bastion_shield.rarity = &"epic"; bastion_shield.transmutation_id = &"bastion_core"
 	var bastion_round_trip := ItemInstance.from_dictionary(bastion_shield.to_dictionary())
 	_expect(bastion_round_trip.transmutation_id == &"bastion_core", "transmutation persists on item", failures)
@@ -100,16 +114,27 @@ func _initialize() -> void:
 	gathered_a.free(); gathered_b.free(); outside_target.free()
 	transmutations.free()
 	equipment.free()
+	_finished = true
 	call_deferred("_finish", failures)
+
+
+func _watchdog() -> void:
+	if _finished:
+		return
+	push_error("TEST_ABORTED: item economy smoke failed before completion")
+	quit(1)
 
 
 func _finish(failures: Array[String]) -> void:
 	if failures.is_empty():
-		print("ITEM_ECONOMY_SMOKE_OK"); quit(0)
+		print("ITEM_ECONOMY_SMOKE_OK")
+		quit(0)
 	else:
-		for failure in failures: push_error(failure)
+		for failure: String in failures:
+			push_error(failure)
 		quit(1)
 
 
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
-	if not condition: failures.append("FAILED: %s" % label)
+	if not condition:
+		failures.append("FAILED: %s" % label)

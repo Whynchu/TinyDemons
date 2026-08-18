@@ -8,6 +8,10 @@ Baseline commit: `15a2832`
 
 Audit date: 2026-08-09
 
+> Related: the active gameplay **feature** overhaul (gear value, base stats,
+> enemy/boss difficulty) lives in [`combat-economy-overhaul.md`](combat-economy-overhaul.md).
+> This plan is the architecture companion to that balance work.
+
 ## Purpose
 
 `tiny-demons/scripts/gameplay.gd` currently owns most runtime behavior for the
@@ -258,12 +262,13 @@ designed harness, and GPT-5.4 at medium effort for baseline diagnosis.
   [`gameplay-smoke-checklist.md`](gameplay-smoke-checklist.md).
 - [x] Capture expected room, combat, interaction, and death behavior in the
   smoke-test checklist.
-- [ ] Add a headless scene-load/parser check when a Godot executable is
-  available in development and CI environments.
+- [x] Add a headless scene-load/parser check. Godot v4.7.1 console build is
+  now available in the development environment; headless main-scene load and
+  all three smoke tests pass with exit 0.
 
 Exit criteria: behavior checks are documented and can be repeated after every
-milestone. M0 documentation is complete; the automated parser check remains
-environment-blocked.
+milestone. M0 documentation is complete and the automated headless parser/smoke
+check is now unblocked (Godot v4.7.1 available).
 
 ### M1 - Pure utilities and tuning data
 
@@ -272,7 +277,7 @@ resource schemas and move lists are approved. Use Terra for boundary conflicts.
 
 - [x] Extract `CombatCalculator` without changing damage results. Integration
   preserves the existing RNG, equipment context, critical flag, and formulas;
-  runtime parser verification remains pending Godot availability.
+  confirmed via the headless Godot smoke pass.
 - [x] Extract sprite slicing/flipping/recoloring into `SpriteFrameLibrary`.
   Gameplay retains temporary one-line delegates while callers migrate safely.
 - [x] Introduce typed player, slime, combat, and effects tuning resources.
@@ -329,8 +334,8 @@ are fixed. Reserve Sol for an unresolved ordering problem.
 - [x] Introduce `PlayerAnimationComponent` as the animation state boundary;
   frame construction and palette application remain in the coordinator.
 - [x] Verify dialogue locks, hit-stop, combo timing, collision, and death
-  through the current Godot smoke pass; parser/runtime confirmation remains
-  environment-owned.
+  through the current Godot smoke pass; the headless smoke tests pass with
+  exit 0.
 
 Exit criteria: the root starts/stops player control but owns no player action
 timers or animation frames.
@@ -659,8 +664,8 @@ Update this table in every consolidation pull request.
 
 | Milestone | Status | Default model | Owner | PR/commit | Notes |
 | --- | --- | --- | --- | --- | --- |
-| M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot parser unavailable |
-| M1 Utilities/tuning | Complete | GPT-5.4, medium | - | - | Calculator, frame library, typed tuning resources, and runtime call-site migration complete; parser verification pending |
+| M0 Baseline | Complete | Luna, low | - | - | Manual baseline documented; Godot v4.7.1 now available, headless smoke pass green |
+| M1 Utilities/tuning | Complete | GPT-5.4, medium | - | - | Calculator, frame library, typed tuning resources, and runtime call-site migration complete; headless parser verification passed |
 | M2 Health | Complete | Terra, high | - | - | HealthComponent owns actor lifecycle; signal-driven HUD refresh verified |
 | M3 Player | Complete | GPT-5.5, high | - | - | Motor, controller, roll, attack, combo, lunge, and animation boundaries established |
 | M4 Enemies | Complete | Terra, high | - | - | Component state migration, live variant metadata, and smoke verification complete |
@@ -668,7 +673,7 @@ Update this table in every consolidation pull request.
 | M6 Interactions/presentation | Complete | GPT-5.4, medium | - | - | Controller boundaries and end-to-end interaction/presentation verification complete |
 | M7 Cleanup | Complete | Terra, medium | - | - | Coordinator cleanup, cache ownership migration, metrics, and full-loop verification complete |
 | M8 Deep extraction | Complete | GPT-5.5, high | - | - | Deep extraction and construction/ownership cleanup complete; headless Godot validation passed, with the full interactive smoke pass remaining tester-owned |
-| M9 Coordinator reduction | In progress | Terra, high | - | - | Attack state and slime component registries now live behind component/node ownership; ready/physics reduction remains |
+| M9 Coordinator reduction | In progress | Terra, high | - | - | Attack state and slime component registries now live behind component/node ownership; ready/physics reduction remains. Run grade, progression, and item-economy smoke tests rewritten against the enhancement-based economy model and passing headless |
 | M10 Architecture hardening | Not started | GPT-5.5, high | - | - | Final review, metrics, documentation, and release verification |
 
 Allowed statuses: `Not started`, `In progress`, `Blocked`, `Complete`.

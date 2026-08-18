@@ -412,6 +412,8 @@ variant = "blue"
 [node name="Stats" type="Node" parent="Actors/SlimeBlue" unique_id=1328484161]
 script = ExtResource("20_stats_component")
 allocation_profile = 3
+base_points = 8
+points_per_level = 2
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=302225224]
 script = ExtResource("19_collision_guide")
@@ -447,6 +449,8 @@ script = ExtResource("11_slime_actor")
 [node name="Stats" type="Node" parent="Actors/SlimeGreen" unique_id=586404895]
 script = ExtResource("20_stats_component")
 allocation_profile = 1
+base_points = 8
+points_per_level = 2
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeGreen" unique_id=1632574546]
 script = ExtResource("19_collision_guide")
@@ -499,6 +503,8 @@ variant = "red"
 [node name="Stats" type="Node" parent="Actors/SlimeRed" unique_id=2039895840]
 script = ExtResource("20_stats_component")
 allocation_profile = 2
+base_points = 8
+points_per_level = 2
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=573711278]
 script = ExtResource("19_collision_guide")

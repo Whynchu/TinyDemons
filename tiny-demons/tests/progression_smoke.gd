@@ -1,7 +1,10 @@
 extends SceneTree
 
+var _finished := false
+
 
 func _initialize() -> void:
+	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var tuning := ProgressionTuning.new()
 	_expect(tuning.stat_points_for_level(5) == 1, "level 5 point band", failures)
@@ -25,14 +28,26 @@ func _initialize() -> void:
 	_expect(restored.level == profile.level and restored.allocated_vit == 1, "profile serialization round trip", failures)
 
 	var stats := StatsComponent.new()
-	stats.configure_manual_growth(4, 3, 3, 1, 0, 0)
+	stats.configure_manual_growth(4, 3, 3, 1, 1, 0, 0, 0)
 	var equipment := EquipmentComponent.new()
 	equipment.equip_default_loadout()
 	var snapshot := CombatStatSnapshot.from_components(stats, equipment)
-	_expect(snapshot.vit == 5, "effective VIT snapshot", failures)
-	_expect(snapshot.strength == 4, "equipment STR enters effective snapshot", failures)
-	_expect(snapshot.def == 4, "shield DEF enters effective snapshot", failures)
-	_expect(is_equal_approx(snapshot.gear_health, 14.0), "equipment HP snapshot", failures)
+	_expect(snapshot.vit == 6, "starter gear grants 1 VIT at low base", failures)
+	_expect(snapshot.strength == 5, "starter gear grants 2 STR at low base", failures)
+	_expect(snapshot.def == 5, "starter gear grants 2 DEF at low base", failures)
+	_expect(snapshot.speed == 2, "starter gear floor grants +1 SPD at low base", failures)
+	_expect(is_equal_approx(snapshot.gear_health_rate, 0.15), "starter gear HP rate snapshot", failures)
+	_expect(is_equal_approx(snapshot.gear_damage_rate, 0.03), "starter gear DMG rate snapshot", failures)
+	var tall_stats := StatsComponent.new()
+	tall_stats.configure_manual_growth(50, 50, 50, 50, 0, 0, 0, 0)
+	var tall_snapshot := CombatStatSnapshot.from_components(tall_stats, equipment)
+	_expect(tall_snapshot.gear_vit == 13, "gear VIT rounds at scale", failures)
+	_expect(tall_snapshot.gear_strength == 25, "gear STR rounds at scale", failures)
+	_expect(tall_snapshot.gear_def == 25, "gear DEF rounds at scale", failures)
+	_expect(tall_snapshot.gear_speed == 1, "gear SPD rounds at scale", failures)
+	_expect(tall_snapshot.strength == 75, "equipment STR enters effective snapshot", failures)
+	_expect(tall_snapshot.def == 75, "shield DEF enters effective snapshot", failures)
+	_expect(tall_snapshot.speed == 51, "equipment SPD enters effective snapshot", failures)
 	var bloodwoven := ItemInstance.new(); bloodwoven.instance_id = "bloodwoven-test"; bloodwoven.definition_id = &"bloodwoven_tunic"; bloodwoven.rarity = &"epic"; bloodwoven.transmutation_id = &"bloodwoven_core"
 	var bloodwoven_profile := PlayerProfile.new(); bloodwoven_profile.ensure_starter_items(); bloodwoven_profile.grant_item(bloodwoven); bloodwoven_profile.equip_item(bloodwoven.instance_id)
 	var bloodwoven_equipment := EquipmentComponent.new(); bloodwoven_equipment.configure_from_profile(bloodwoven_profile)
@@ -43,9 +58,11 @@ func _initialize() -> void:
 	var plain_health := CombatCalculator.max_health_for_snapshot(plain_snapshot)
 	var bloodwoven_health := CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot)
 	_expect(bloodwoven_health > plain_health, "bloodwoven raises real maximum health", failures)
-	var health_before_extra_flat := bloodwoven_health
-	bloodwoven_snapshot.gear_health += 100.0
-	_expect(is_equal_approx(CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot) - health_before_extra_flat, 100.0), "bloodwoven does not multiply flat gear health", failures)
+	var health_before_rate := bloodwoven_health
+	var rate_before := bloodwoven_snapshot.gear_health_rate
+	bloodwoven_snapshot.gear_health_rate = rate_before + 0.5
+	var health_after_rate := CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot)
+	_expect(is_equal_approx(health_after_rate, health_before_rate * (1.0 + rate_before + 0.5) / (1.0 + rate_before)), "gear HP rate scales calculated health multiplicatively", failures)
 	var generated_bloodwoven_found := false
 	var catalog := ItemCatalog.new()
 	for seed in 256:
@@ -72,20 +89,30 @@ func _initialize() -> void:
 			break
 	_expect(generated_gathering_found, "seed sample reaches Soldier Sword definition", failures)
 	stats.free()
+	tall_stats.free()
 	equipment.free()
 	bloodwoven_equipment.free()
+	_finished = true
 	call_deferred("_finish", failures)
 
 
-func _finish(failures: Array[String]) -> void:
+func _watchdog() -> void:
+	if _finished:
+		return
+	push_error("TEST_ABORTED: progression smoke failed before completion")
+	quit(1)
 
+
+func _finish(failures: Array[String]) -> void:
 	if failures.is_empty():
 		print("PROGRESSION_SMOKE_OK")
 		quit(0)
 	else:
-		for failure in failures: push_error(failure)
+		for failure in failures:
+			push_error(failure)
 		quit(1)
 
 
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
-	if not condition: failures.append("FAILED: %s" % label)
+	if not condition:
+		failures.append("FAILED: %s" % label)

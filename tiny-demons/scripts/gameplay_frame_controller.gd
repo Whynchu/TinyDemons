@@ -130,10 +130,11 @@ func tick(root: Object, delta: float) -> void:
 		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drop", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
 	var now_attacking: bool = root.get("player_is_attacking")
 	if previous_attacking and not now_attacking:
+		var attack_multiplier := player_tuning.attack_multiplier(int(root.get("player_spd")))
 		if bool(root.get("player_just_finished_attack2")) and root.get("player_after_attack2_texture") != null:
-			root.set("player_between_timer", player_tuning.attack2_cooldown); root.call("_set_actor_base_texture", root.get("player"), root.get("player_after_attack2_texture"))
+			root.set("player_between_timer", player_tuning.attack2_cooldown / attack_multiplier); root.call("_set_actor_base_texture", root.get("player"), root.get("player_after_attack2_texture"))
 		elif (player_attack == null or not player_attack.combo_buffered) and root.get("player_between_attack_texture") != null:
-			root.set("player_between_timer", player_tuning.between_attack_time); root.call("_set_actor_base_texture", root.get("player"), root.get("player_between_attack_texture"))
+			root.set("player_between_timer", player_tuning.between_attack_time / attack_multiplier); root.call("_set_actor_base_texture", root.get("player"), root.get("player_between_attack_texture"))
 		root.set("player_just_finished_attack2", false)
 	var between_timer: float = root.get("player_between_timer")
 	if between_timer > 0.0:

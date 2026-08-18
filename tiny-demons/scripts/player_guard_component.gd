@@ -13,6 +13,9 @@ const DAMAGE_DRAIN_RATE := 18.0
 const BAR_OFFSET := Vector2(1, 19)
 const BAR_HIDE_DELAY := 1.0
 const BAR_FADE_TIME := 0.24
+const NORMAL_BLOCK_STUN := 0.12
+const PERFECT_BLOCK_STUN := 0.45
+const PERFECT_WINDOW := 0.14
 
 var durability := MAX_DURABILITY
 var maximum_durability := MAX_DURABILITY
@@ -20,6 +23,7 @@ var regen_delay_timer := 0.0
 var cooldown_timer := 0.0
 var facing_left := false
 var facing_locked := false
+var guard_active_timer := 0.0
 var display_durability := MAX_DURABILITY
 var damage_hold_timer := 0.0
 var bar_hide_timer := 0.0
@@ -58,9 +62,19 @@ func initialize(root: Object) -> void:
 
 
 func tick(root: Object, delta: float, guard_held: bool) -> void:
+	var equipment := root.get("player_equipment") as EquipmentComponent
+	var shield_equipped := equipment != null and equipment.has_shield
+	if not shield_equipped:
+		root.set("player_is_defending", false)
+		facing_locked = false
+		guard_active_timer = 0.0
+		bar_alpha = 0.0
+		_update_meter(root)
+		return
 	if cooldown_timer > 0.0:
 		cooldown_timer = maxf(cooldown_timer - delta, 0.0)
 		root.set("player_is_defending", false)
+		guard_active_timer = 0.0
 		# A broken shield rebuilds over the full lockout. It stays unusable until
 		# this recovery reaches 100%, rather than becoming available early while
 		# the presentation bar is still catching up.
@@ -78,6 +92,7 @@ func tick(root: Object, delta: float, guard_held: bool) -> void:
 		if not should_defend:
 			facing_locked = false
 		root.set("player_is_defending", should_defend)
+		guard_active_timer = guard_active_timer + delta if should_defend else 0.0
 		if should_defend:
 			(root.get("player") as Sprite2D).flip_h = facing_left
 		if regen_delay_timer > 0.0:
@@ -105,16 +120,19 @@ func tick(root: Object, delta: float, guard_held: bool) -> void:
 
 func absorb_damage(root: Object, incoming_damage: float, source_position: Vector2) -> Dictionary:
 	if not bool(root.get("player_is_defending")) or cooldown_timer > 0.0 or durability <= 0.0:
-		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false}
+		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false, "perfect": false, "stun": 0.0}
 	var player := root.get("player") as Sprite2D
 	if player == null:
-		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false}
+		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false, "perfect": false, "stun": 0.0}
 	var player_position: Vector2 = root.call("_actor_foot", player)
 	var source_offset_x := source_position.x - player_position.x
 	var source_is_in_front := source_offset_x <= 0.0 if facing_left else source_offset_x >= 0.0
 	if not source_is_in_front:
-		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false}
-	var prevented := incoming_damage * DAMAGE_REDUCTION
+		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false, "perfect": false, "stun": 0.0}
+	var equipment := root.get("player_equipment") as EquipmentComponent
+	var reduction := clampf(DAMAGE_REDUCTION + (equipment.guard_damage_reduction_bonus if equipment != null else 0.0), 0.0, 0.95)
+	var perfect := guard_active_timer <= PERFECT_WINDOW
+	var prevented := incoming_damage * reduction
 	var shield_damage := minf(prevented, durability)
 	var health_damage := incoming_damage - shield_damage
 	durability -= shield_damage
@@ -135,7 +153,7 @@ func absorb_damage(root: Object, incoming_damage: float, source_position: Vector
 			visuals.flash_guard(root)
 	_update_meter(root)
 	successful_block.emit(shield_damage, health_damage)
-	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true}
+	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true, "perfect": perfect, "stun": PERFECT_BLOCK_STUN if perfect else NORMAL_BLOCK_STUN}
 
 
 func set_maximum_durability(value: float, preserve_ratio := true) -> void:

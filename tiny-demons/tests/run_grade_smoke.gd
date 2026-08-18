@@ -1,7 +1,11 @@
 extends SceneTree
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 
-func _init() -> void:
+var _finished := false
+
+
+func _initialize() -> void:
+	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var full_style := RunState.new()
 	full_style.begin(123, 0, 40.0)
@@ -35,6 +39,18 @@ func _init() -> void:
 	basic_style.set_explorable_room_count(4)
 	var basic_grade: Dictionary = RunGradeEvaluator.evaluate(basic_style, basic_style.starting_health)
 	_expect(int(basic_grade["score"]) < int(full_grade["score"]), "slow one-note run scores lower", failures)
+	_finished = true
+	call_deferred("_finish", failures)
+
+
+func _watchdog() -> void:
+	if _finished:
+		return
+	push_error("TEST_ABORTED: run_grade smoke failed before completion")
+	quit(1)
+
+
+func _finish(failures: Array[String]) -> void:
 	if failures.is_empty():
 		print("RUN_GRADE_SMOKE_OK")
 		quit(0)
@@ -42,6 +58,7 @@ func _init() -> void:
 		for failure in failures:
 			push_error(failure)
 		quit(1)
+
 
 func _expect(condition: bool, message: String, failures: Array[String]) -> void:
 	if not condition:

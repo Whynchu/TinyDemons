@@ -25,7 +25,8 @@ func move_player(root: Object, delta: float) -> void:
 		elif input.x > 0.0: player.flip_h = false
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0
-	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * guard_speed_scale * delta))
+	var speed_multiplier := float(root.get("player_speed_multiplier"))
+	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * guard_speed_scale * speed_multiplier * delta))
 
 
 func request_motion(motion: Vector2) -> void:

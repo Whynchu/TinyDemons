@@ -11,6 +11,9 @@ class_name SlimeTuning
 @export var aggro_range := 28.0
 @export var attack_cooldown := 1.0
 @export var attack_lunge_distance := 10.0
+@export var boss_attack_cooldown_multiplier := 1.6
+@export var boss_attack_frame_time_multiplier := 1.5
+@export var boss_movement_speed_multiplier := 0.7
 @export var hold_min := 0.22
 @export var hold_max := 0.48
 @export var aggro_hold_min := 0.08
@@ -36,3 +39,6 @@ class_name SlimeTuning
 @export var hit_flash_time := 0.12
 @export var hitstun_time := 1.0 / 30.0
 @export var knockback_duration := 0.14
+@export var ambush_reveal_window := 0.5
+@export var ambush_block_stun := 1.0
+@export var ambush_hit_extension := 0.5

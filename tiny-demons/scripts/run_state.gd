@@ -22,6 +22,7 @@ var attack2_hit_count := 0
 var attack_swing_hit_count := 0
 var roll_count := 0
 var block_count := 0
+var chests_opened := 0
 var encountered_enemy_count := 0
 var enemies_killed := 0
 var total_enemies := 0
@@ -59,6 +60,7 @@ func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: 
 	attack_swing_hit_count = 0
 	roll_count = 0
 	block_count = 0
+	chests_opened = 0
 	encountered_enemy_count = 0
 	enemies_killed = 0
 	total_enemies = 0
@@ -121,6 +123,10 @@ func record_roll(in_combat: bool) -> void:
 
 func record_block() -> void:
 	block_count += 1
+
+
+func record_chest_open() -> void:
+	chests_opened += 1
 
 
 func record_enemy_encounter() -> void:
@@ -188,7 +194,7 @@ func ensure_shop_stock(level: int) -> void:
 		item.instance_id = "shop-%s-basic-%s" % [run_id, String(slot)]
 		shop_stock.append({"item": item.to_dictionary(), "price": roundi(catalog.price(item) * 2.5), "sold": false})
 	var premium_slot := ItemCatalog.SLOTS[posmod(dungeon_seed, ItemCatalog.SLOTS.size())]
-	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare")
+	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true)
 	premium.instance_id = "shop-%s-premium" % run_id
 	shop_stock.append({"item": premium.to_dictionary(), "price": roundi(catalog.price(premium) * 2.5), "sold": false})
 

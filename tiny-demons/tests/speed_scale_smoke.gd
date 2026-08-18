@@ -1,0 +1,112 @@
+extends SceneTree
+
+var _finished := false
+
+
+func _initialize() -> void:
+	call_deferred("_watchdog")
+	var failures: Array[String] = []
+	var tuning := PlayerTuning.new()
+	_expect(is_equal_approx(tuning.speed_multiplier(0), 1.0), "zero SPD is neutral move speed", failures)
+	_expect(is_equal_approx(tuning.roll_multiplier(0), 1.0), "zero SPD is neutral roll", failures)
+	_expect(is_equal_approx(tuning.attack_multiplier(0), 1.0), "zero SPD is neutral attack", failures)
+	_expect(tuning.speed_multiplier(10) > 1.0, "positive SPD raises move speed", failures)
+	_expect(tuning.roll_multiplier(10) > 1.0, "positive SPD raises roll", failures)
+	_expect(tuning.attack_multiplier(10) > 1.0, "positive SPD raises attack", failures)
+	_expect(tuning.attack_multiplier(-10) < 1.0, "negative SPD lowers attack", failures)
+	_expect(is_equal_approx(tuning.attack_multiplier(200), 1.0 + tuning.attack_scale * 100.0), "attack multiplier clamps at max", failures)
+	_expect(is_equal_approx(tuning.speed_multiplier(-200), 0.5), "move multiplier clamps at min", failures)
+
+	var profile := PlayerProfile.new()
+	profile.ensure_starter_items()
+	var catalog := ItemCatalog.new()
+	var gear := EquipmentComponent.new()
+	gear.configure_from_profile(profile, catalog)
+	_expect(is_equal_approx(gear.speed_bonus, 0.01), "starter gear nets +1% of base SPD", failures)
+
+	var dagger := ItemInstance.new(); dagger.instance_id = "dagger-test"; dagger.definition_id = &"quick_dagger"; dagger.rarity = &"common"
+	var cloak := ItemInstance.new(); cloak.instance_id = "cloak-test"; cloak.definition_id = &"feather_cloak"; cloak.rarity = &"common"
+	var boots := ItemInstance.new(); boots.instance_id = "boots-test"; boots.definition_id = &"swift_boots"; boots.rarity = &"common"
+	var buckler := ItemInstance.new(); buckler.instance_id = "buckler-test"; buckler.definition_id = &"parry_buckler"; buckler.rarity = &"common"
+	var speed_profile := PlayerProfile.new(); speed_profile.ensure_starter_items()
+	speed_profile.grant_item(dagger); speed_profile.equip_item(dagger.instance_id)
+	speed_profile.grant_item(cloak); speed_profile.equip_item(cloak.instance_id)
+	speed_profile.grant_item(boots); speed_profile.equip_item(boots.instance_id)
+	speed_profile.grant_item(buckler); speed_profile.equip_item(buckler.instance_id)
+	var speed_gear := EquipmentComponent.new(); speed_gear.configure_from_profile(speed_profile, catalog)
+	_expect(is_equal_approx(speed_gear.speed_bonus, (5.0 + 5.0 + 8.0) * 0.01), "speed set stacks enhanced percentage bonuses", failures)
+
+	var base_stats := StatsComponent.new()
+	base_stats.configure_manual_growth(4, 3, 3, 2, 1, 0, 0, 0)
+	var base_snapshot := CombatStatSnapshot.from_components(base_stats, gear)
+	_expect(base_snapshot.speed == 3, "small percent floor still raises low base SPD by one", failures)
+	var tall_stats := StatsComponent.new()
+	tall_stats.configure_manual_growth(4, 3, 3, 40, 1, 0, 0, 0)
+	var tall_snapshot := CombatStatSnapshot.from_components(tall_stats, gear)
+	var tall_speed_snapshot := CombatStatSnapshot.from_components(tall_stats, speed_gear)
+	_expect(tall_speed_snapshot.speed > tall_snapshot.speed, "speed gear raises effective SPD at scale", failures)
+	_expect(tall_speed_snapshot.speed - tall_snapshot.speed == 6, "18% speed set bonus grants +6 SPD over starter at base 40", failures)
+
+	var heavy_sword := ItemInstance.new(); heavy_sword.instance_id = "heavy-test"; heavy_sword.definition_id = &"soldier_sword"; heavy_sword.rarity = &"common"
+	var cuirass := ItemInstance.new(); cuirass.instance_id = "cuirass-test"; cuirass.definition_id = &"iron_cuirass"; cuirass.rarity = &"common"
+	var bulwark := ItemInstance.new(); bulwark.instance_id = "bulwark-test"; bulwark.definition_id = &"living_bulwark"; bulwark.rarity = &"common"
+	var heavy_profile := PlayerProfile.new(); heavy_profile.ensure_starter_items()
+	heavy_profile.grant_item(heavy_sword); heavy_profile.equip_item(heavy_sword.instance_id)
+	heavy_profile.grant_item(cuirass); heavy_profile.equip_item(cuirass.instance_id)
+	heavy_profile.grant_item(bulwark); heavy_profile.equip_item(bulwark.instance_id)
+	var heavy_gear := EquipmentComponent.new(); heavy_gear.configure_from_profile(heavy_profile, catalog)
+	_expect(heavy_gear.speed_bonus < 0.0, "high STR gear and heavy armor penalize speed", failures)
+	var heavy_snapshot := CombatStatSnapshot.from_components(base_stats, heavy_gear)
+	_expect(heavy_snapshot.speed < base_snapshot.speed, "STR gear penalty lowers effective SPD below base", failures)
+
+	var dagger_found := false
+	var cloak_found := false
+	var boots_found := false
+	var buckler_found := false
+	for seed in 512:
+		var generated_weapon := catalog.generate_item(&"weapon", seed, 20, &"epic")
+		if generated_weapon.definition_id == &"quick_dagger":
+			dagger_found = true
+		var generated_armor := catalog.generate_item(&"armor", seed, 20, &"epic")
+		if generated_armor.definition_id == &"feather_cloak":
+			cloak_found = true
+		var generated_accessory := catalog.generate_item(&"accessory", seed, 20, &"epic")
+		if generated_accessory.definition_id == &"swift_boots":
+			boots_found = true
+		var generated_shield := catalog.generate_item(&"shield", seed, 20, &"epic")
+		if generated_shield.definition_id == &"parry_buckler":
+			buckler_found = true
+	_expect(dagger_found, "seed sample reaches Quick Dagger", failures)
+	_expect(cloak_found, "seed sample reaches Feather Cloak", failures)
+	_expect(boots_found, "seed sample reaches Swift Boots", failures)
+	_expect(buckler_found, "seed sample reaches Parry Buckler", failures)
+
+	base_stats.free()
+	tall_stats.free()
+	gear.free()
+	speed_gear.free()
+	heavy_gear.free()
+	_finished = true
+	call_deferred("_finish", failures)
+
+
+func _watchdog() -> void:
+	if _finished:
+		return
+	push_error("TEST_ABORTED: speed scale smoke failed before completion")
+	quit(1)
+
+
+func _finish(failures: Array[String]) -> void:
+	if failures.is_empty():
+		print("SPEED_SCALE_SMOKE_OK")
+		quit(0)
+	else:
+		for failure in failures:
+			push_error(failure)
+		quit(1)
+
+
+func _expect(condition: bool, label: String, failures: Array[String]) -> void:
+	if not condition:
+		failures.append("FAILED: %s" % label)

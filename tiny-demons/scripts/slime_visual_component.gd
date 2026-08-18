@@ -24,6 +24,30 @@ static func build_direction_textures(slimes: Array[Sprite2D], paths: Dictionary,
 		visual.right_texture = load_texture.call(slime_paths[1])
 
 
+static func recolor_direction_textures(slimes: Array[Sprite2D], palette: String, texture_cache: Dictionary) -> void:
+	for slime in slimes:
+		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			continue
+		if visual.left_texture != null:
+			visual.left_texture = recolor_direction_texture(visual.left_texture, palette, texture_cache)
+		if visual.right_texture != null:
+			visual.right_texture = recolor_direction_texture(visual.right_texture, palette, texture_cache)
+
+
+static func recolor_direction_texture(source: Texture2D, palette: String, texture_cache: Dictionary) -> Texture2D:
+	var image: Image = texture_cache.get(source, source.get_image()).duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			if color.a <= 0.0:
+				continue
+			var key := "%02X%02X%02X" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0)]
+			var mapped := _palette_color(color, key, palette)
+			image.set_pixel(x, y, Color(mapped.r, mapped.g, mapped.b, color.a))
+	return ImageTexture.create_from_image(image)
+
+
 static func build_attack_frames(slimes: Array[Sprite2D], frame_library: SpriteFrameLibrary, frame_size: Vector2i, cache: Dictionary, warm_texture: Callable) -> void:
 	var frames_by_palette := build_attack_frame_library(frame_library, frame_size, cache, warm_texture)
 	assign_attack_frames(slimes, frames_by_palette)
@@ -36,6 +60,7 @@ static func build_attack_frame_library(frame_library: SpriteFrameLibrary, frame_
 		"green": {"left": left_frames, "right": right_frames},
 		"blue": {"left": recolor_attack_frame_set(left_frames, "blue", cache), "right": recolor_attack_frame_set(right_frames, "blue", cache)},
 		"red": {"left": recolor_attack_frame_set(left_frames, "red", cache), "right": recolor_attack_frame_set(right_frames, "red", cache)},
+		"purple": {"left": recolor_attack_frame_set(left_frames, "purple", cache), "right": recolor_attack_frame_set(right_frames, "purple", cache)},
 	}
 	for palette_frames in frames_by_palette.values():
 		var left_palette_frames := palette_frames["left"] as Array[Texture2D]
@@ -64,6 +89,7 @@ static func build_shocked_frame_library(frame_library: SpriteFrameLibrary, frame
 		"green": green_frames,
 		"blue": recolor_attack_frame_set(green_frames, "blue", cache),
 		"red": recolor_attack_frame_set(green_frames, "red", cache),
+		"purple": recolor_attack_frame_set(green_frames, "purple", cache),
 	}
 	for palette_frames in frames_by_palette.values():
 		for texture in palette_frames as Array[Texture2D]:
@@ -140,5 +166,6 @@ static func _palette_color(original: Color, key: String, palette: String) -> Col
 	var mapping := {
 		"red": {"257179": Color8(93, 39, 93), "38B764": Color8(177, 62, 83), "A7F070": Color8(239, 125, 87)},
 		"blue": {"257179": Color8(41, 54, 111), "38B764": Color8(59, 93, 201), "A7F070": Color8(65, 166, 246)},
+		"purple": {"257179": Color8(67, 47, 102), "38B764": Color8(118, 78, 142), "A7F070": Color8(200, 184, 210)},
 	}
 	return (mapping.get(palette, {}) as Dictionary).get(key, original)

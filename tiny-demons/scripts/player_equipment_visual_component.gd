@@ -645,7 +645,8 @@ func _update_layers(root: Object) -> void:
 	elif animation_name == "walk": state = "walk"
 	elif animation_name == "between": state = "between"
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
-	var shield_available := guard == null or guard.cooldown_timer <= 0.0
+	var equipment := root.get("player_equipment") as EquipmentComponent
+	var shield_available := equipment != null and equipment.has_shield and (guard == null or guard.cooldown_timer <= 0.0)
 	var sword_back_visible := state != "attack2"
 	_set_layer("EquipmentSwordBack", frames.get("sword_back_%s" % ("attack" if state == "attack1" else state)), frame_index, opacity, sword_back_visible)
 	_set_layer("EquipmentShieldBack", frames.get("shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"))

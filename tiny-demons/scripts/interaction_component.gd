@@ -8,12 +8,14 @@ var available := false
 var prompt_timer := 0.0
 
 
-func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: float, actor_foot: Callable, is_dead: Callable) -> Sprite2D:
+func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: float, actor_foot: Callable, is_dead: Callable, is_targetable: Callable = Callable()) -> Sprite2D:
 	var closest: Sprite2D = null
 	var closest_distance := max_distance
 	var player_foot: Vector2 = actor_foot.call(player)
 	for slime in slimes:
 		if bool(is_dead.call(slime)):
+			continue
+		if is_targetable.is_valid() and not bool(is_targetable.call(slime)):
 			continue
 		var distance := player_foot.distance_squared_to(actor_foot.call(slime))
 		if distance < closest_distance:
@@ -29,7 +31,7 @@ func update_targeting(root: Object) -> void:
 	if not bool(root.get("target_input_was_down")):
 		root.call("_set_current_target", root.call("_closest_target")); root.set("target_input_was_down", true)
 	var target := root.get("current_target") as Sprite2D
-	if target != null and bool(root.call("_is_slime_dead", target)): root.call("_set_current_target", null); target = null
+	if target != null and not bool(root.call("_is_slime_targetable", target)): root.call("_set_current_target", null); target = null
 	var player := root.get("player") as Sprite2D
 	if target != null and not bool(root.get("player_is_attacking")): player.flip_h = root.call("_actor_foot", target).x < root.call("_actor_foot", player).x
 	root.call("_update_target_ui")

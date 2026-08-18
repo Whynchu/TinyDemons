@@ -25,7 +25,8 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	root.set("player_is_attacking", true); begin(new_variant); root.set("player_just_finished_attack2", false); root.set("player_attack_hit_done", false); hit_targets.clear()
 	var player := root.get("player") as Sprite2D; root.set("player_attack_flip_h", player.flip_h)
 	var tuning := root.get("player_tuning") as PlayerTuning
-	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance / tuning.attack_lunge_duration)), tuning.attack_lunge_duration)
+	var attack_multiplier := tuning.attack_multiplier(int(root.get("player_spd")))
+	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
 	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
 	if new_variant == 2: root.set("player_between_timer", 0.0)
 	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
@@ -38,7 +39,7 @@ func apply_hitbox(root: Object) -> void:
 	var attack_component := root.get("player_attack_component") as PlayerAttackComponent
 	var eligible_targets: Array[Sprite2D] = []
 	for slime in slimes:
-		if bool(root.call("_is_slime_dead", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
+		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
 		if not polygon_intersects_rect(hitbox, root.call("_collision_rect", slime)): continue
 		eligible_targets.append(slime)
 	if eligible_targets.is_empty(): return
@@ -60,6 +61,8 @@ func apply_hitbox(root: Object) -> void:
 			var first_swing_share := floorf(base_damage / maxf(divisor, 1.0))
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		root.call("_damage_slime", slime, maxf(divided_damage, 1.0), bool(root.get("last_damage_was_critical"))); root.call("_knockback_slime", slime)
+		if root.has_method("_apply_player_lifesteal"):
+			root.call("_apply_player_lifesteal", maxf(divided_damage, 1.0))
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_attack_hits(variant, eligible_targets.size())

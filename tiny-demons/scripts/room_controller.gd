@@ -51,7 +51,6 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		if not state.has("enemy_variants"):
 			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)
 			state["enemy_variants"] = boss_encounter["variants"]
-			var boss_level := maxi(1, ceili(float(room_depth) / 2.0))
 			state["enemy_levels"] = boss_encounter["levels"]
 			state["enemy_scales"] = boss_encounter["scales"]
 		if not state.has("enemy_spawn_seed"):
@@ -83,27 +82,46 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 		count += 1
 	var variants: Array[String] = []
 	var levels: Array[int] = []
-	var available_variants: Array[String] = ["blue", "green", "red"]
-	# Enemy progression advances once for every two dungeon depths:
-	# depths 1-2 are level 1, 3-4 are level 2, and so on.
-	var base_level := maxi(1, ceili(float(room_depth) / 2.0))
+	var variant_pool: Array[Dictionary] = [
+		{"variant": "blue", "weight": 1.0},
+		{"variant": "green", "weight": 1.0},
+		{"variant": "red", "weight": 1.0},
+	]
+	if room_depth >= 3:
+		variant_pool.append({"variant": "purple", "weight": 0.6})
+	# Enemy progression advances once for every four dungeon depths:
+	# depths 1-4 are level 1, 5-8 are level 2, 9-12 are level 3, and so on.
+	var base_level := maxi(1, ceili(float(room_depth) / 4.0))
 	var level_spread := maxi(1, roundi(float(base_level) * 0.20))
 	for enemy_index in count:
-		variants.append(available_variants[encounter_rng.randi_range(0, available_variants.size() - 1)])
+		var total_weight := 0.0
+		for entry in variant_pool:
+			total_weight += float(entry["weight"])
+		var roll := encounter_rng.randf_range(0.0, total_weight)
+		var selected: String = "green"
+		for entry in variant_pool:
+			roll -= float(entry["weight"])
+			if roll <= 0.0:
+				selected = entry["variant"] as String
+				break
+		variants.append(selected)
 		levels.append(maxi(1, encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)))
 	return {"variants": variants, "levels": levels}
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
-	var boss_level := maxi(1, ceili(float(room_depth) / 2.0))
+	var boss_level := maxi(1, ceili(float(room_depth) / 4.0))
 	var minor_count := 2 if progression_run_rank <= 2 else 3 if progression_run_rank <= 4 else 4 if progression_run_rank <= 5 else 6 if progression_run_rank <= 10 else 6
 	var variants: Array[String] = ["red"]
 	var levels: Array[int] = [boss_level + 1]
 	var scales: Array[float] = [2.0]
-	var palette := ["blue", "green", "red"]
+	var palette := ["blue", "green", "red", "purple"]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
-		variants.append(palette[encounter_rng.randi_range(0, palette.size() - 1)])
+		if index == 0:
+			variants.append("purple")
+		else:
+			variants.append(palette[encounter_rng.randi_range(0, palette.size() - 1)])
 		levels.append(boss_level)
 		scales.append(1.0)
 	return {"variants": variants, "levels": levels, "scales": scales}
@@ -280,6 +298,11 @@ func try_enter_active_socket(root: Object, door_active: bool, entrance_open: boo
 	var feet: Rect2 = root.call("_collision_guide_rect_by_name", root.get("player"), "DoorFeetGuide")
 	if not feet.has_area():
 		var foot: Vector2 = root.call("_actor_foot", root.get("player")); var size: Vector2 = root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") if root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") != null else Vector2(4, 2); feet = Rect2(foot - size * 0.5, size)
+	if bool(root.get("final_exit_open")) and root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
+		var final_socket := dungeon_sockets.get(DungeonGraph.WALL_RIGHT) as DungeonSocket
+		if final_socket != null and _rect_touches_polygon(feet, _socket_trigger_polygon(final_socket)):
+			root.call("_enter_final_settlement_room")
+			return true
 	if door_active and _try_enter_socket_set(root, active_door_sockets, feet, false): return true
 	return entrance_open and _try_enter_socket_set(root, active_entrance_sockets, feet, true)
 

@@ -5,6 +5,7 @@ signal effect_triggered(effect_id: StringName, message: String)
 
 const BASTION_CORE := &"bastion_core"
 const BLOODWOVEN_CORE := &"bloodwoven_core"
+const BLOOD_FEED := &"blood_feed"
 const DUELIST_FOCUS := &"duelist_focus"
 const GATHERING_EDGE := &"gathering_edge"
 const BASTION_MAX_CHARGES := 3
@@ -12,6 +13,7 @@ const BASTION_KNOCKBACK_PER_CHARGE := 0.35
 const BASTION_DURABILITY_PER_DEF := 0.50
 const DUELIST_LOCKED_DAMAGE_PER_STR := 0.03
 const DUELIST_OTHER_TARGET_MULTIPLIER := 0.80
+const BLOOD_FEED_LIFE_STEAL_RATE := 0.20
 
 var active_transmutations: Dictionary = {}
 var bastion_charges := 0
@@ -99,6 +101,12 @@ func duelist_damage_multiplier(target: Sprite2D, locked_target: Sprite2D, effect
 	if not has(DUELIST_FOCUS) or locked_target == null:
 		return 1.0
 	return 1.0 + maxf(float(effective_strength), 0.0) * DUELIST_LOCKED_DAMAGE_PER_STR if target == locked_target else DUELIST_OTHER_TARGET_MULTIPLIER
+
+
+func life_steal_amount(damage: float) -> float:
+	if not has(BLOOD_FEED):
+		return 0.0
+	return maxf(damage, 0.0) * BLOOD_FEED_LIFE_STEAL_RATE
 
 
 func consume_duelist_feedback(target_is_locked: bool, effective_strength: int) -> void:

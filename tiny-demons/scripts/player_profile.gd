@@ -1,7 +1,7 @@
 extends RefCounted
 class_name PlayerProfile
 
-const CURRENT_SCHEMA_VERSION := 5
+const CURRENT_SCHEMA_VERSION := 6
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
@@ -17,12 +17,14 @@ var allocation_profile := 0
 var level := 1
 var xp := 0
 var unspent_stat_points := 0
-var base_vit := 4
-var base_str := 3
-var base_def := 3
+var base_vit := 3
+var base_str := 2
+var base_def := 2
+var base_spd := 1
 var allocated_vit := 0
 var allocated_str := 0
 var allocated_def := 0
+var allocated_spd := 0
 var gold := 0
 var inventory: Array[Dictionary] = []
 var equipped_instance_ids := {"weapon": "", "armor": "", "shield": "", "accessory": ""}
@@ -36,10 +38,11 @@ var last_run_grade := "D"
 
 func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 	var items := catalog if catalog != null else ItemCatalog.new()
+	var is_new_inventory := inventory.is_empty()
 	for slot: StringName in ItemCatalog.SLOTS:
 		var starter := items.starter_item(slot)
 		grant_item(starter, false)
-		if str(equipped_instance_ids.get(String(slot), "")).is_empty():
+		if is_new_inventory and str(equipped_instance_ids.get(String(slot), "")).is_empty():
 			equipped_instance_ids[String(slot)] = starter.instance_id
 	changed.emit()
 
@@ -73,6 +76,14 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	return true
 
 
+func unequip_slot(slot: StringName, catalog: ItemCatalog = null) -> bool:
+	if slot not in ItemCatalog.SLOTS or str(equipped_instance_ids.get(String(slot), "")).is_empty():
+		return false
+	equipped_instance_ids[String(slot)] = ""
+	changed.emit()
+	return true
+
+
 func purchase_item(item: ItemInstance, cost: int) -> bool:
 	if item == null or cost < 0 or gold < cost or find_item(item.instance_id) != null:
 		return false
@@ -86,21 +97,47 @@ func mastery_level(definition_id: StringName) -> int:
 	return clampi(int(family_mastery.get(String(definition_id), 0)), 0, MAX_FAMILY_MASTERY)
 
 
-func can_fuse_duplicate(instance_id: String, catalog: ItemCatalog = null) -> bool:
-	var duplicate := find_item(instance_id)
-	if duplicate == null:
-		return false
-	if instance_id in equipped_instance_ids.values():
-		return false
+func max_fusion_steps(item: ItemInstance) -> int:
+	if item == null:
+		return 0
+	var rarity := item.rarity
+	var enhancement := item.enhancement_level
+	var steps := 0
+	while true:
+		if enhancement < MAX_ITEM_ENHANCEMENT:
+			enhancement += 1
+			steps += 1
+		else:
+			var next_rarity := ItemCatalog.next_rarity(rarity)
+			if next_rarity == &"":
+				break
+			rarity = next_rarity
+			enhancement = 0
+			steps += 1
+	return steps
+
+
+func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = null) -> int:
+	var target := find_item(target_instance_id)
+	if target == null:
+		return 0
 	var items := catalog if catalog != null else ItemCatalog.new()
-	if items.definition_slot(duplicate.definition_id) not in ItemCatalog.SLOTS:
-		return false
-	var has_upgrade_target := false
+	if items.definition_slot(target.definition_id) not in ItemCatalog.SLOTS:
+		return 0
+	var max_steps := max_fusion_steps(target)
+	if max_steps <= 0:
+		return 0
+	var matches := 0
 	for data: Dictionary in inventory:
 		var candidate := ItemInstance.from_dictionary(data)
-		if candidate.instance_id != duplicate.instance_id and candidate.definition_id == duplicate.definition_id and candidate.rarity == duplicate.rarity and (candidate.enhancement_level < MAX_ITEM_ENHANCEMENT or ItemCatalog.next_rarity(candidate.rarity) != &""):
-			has_upgrade_target = true
-	return has_upgrade_target
+		if candidate.instance_id == target_instance_id:
+			continue
+		if candidate.definition_id != target.definition_id or candidate.rarity != target.rarity:
+			continue
+		if candidate.instance_id in equipped_instance_ids.values():
+			continue
+		matches += 1
+	return mini(matches, max_steps)
 
 
 func fusion_cost(item: ItemInstance) -> int:
@@ -109,46 +146,65 @@ func fusion_cost(item: ItemInstance) -> int:
 	return FUSION_BASE_COST + maxi(item.enhancement_level, 0) * FUSION_COST_PER_ENHANCEMENT
 
 
-func fuse_duplicate(instance_id: String, catalog: ItemCatalog = null) -> bool:
-	var duplicate := find_item(instance_id)
-	if duplicate == null or not can_fuse_duplicate(instance_id, catalog):
-		return false
-	var cost := fusion_cost(duplicate)
-	if gold < cost:
+func fusion_batch_cost(item: ItemInstance, count: int) -> int:
+	if item == null or count <= 0:
+		return 0
+	var total := 0
+	var rarity := item.rarity
+	var enhancement := item.enhancement_level
+	for step in count:
+		total += FUSION_BASE_COST + maxi(enhancement, 0) * FUSION_COST_PER_ENHANCEMENT
+		if enhancement >= MAX_ITEM_ENHANCEMENT:
+			rarity = ItemCatalog.next_rarity(rarity)
+			enhancement = 0
+		else:
+			enhancement += 1
+	return total
+
+
+func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalog = null) -> bool:
+	var target := find_item(target_instance_id)
+	if target == null or count <= 0:
 		return false
 	var items := catalog if catalog != null else ItemCatalog.new()
-	var remove_index := -1
-	for index in inventory.size():
-		if str(inventory[index].get("instance_id", "")) == instance_id:
-			remove_index = index
-			break
-	if remove_index < 0:
+	var amount := mini(count, fusion_material_count(target_instance_id, items))
+	if amount <= 0:
 		return false
-	var target_index := -1
-	var equipped_id := str(equipped_instance_ids.get(String(items.definition_slot(duplicate.definition_id)), ""))
+	var cost := fusion_batch_cost(target, amount)
+	if gold < cost:
+		return false
+	var material_indices: Array[int] = []
 	for index in inventory.size():
 		var candidate := ItemInstance.from_dictionary(inventory[index])
-		if candidate.instance_id != duplicate.instance_id and candidate.definition_id == duplicate.definition_id and candidate.rarity == duplicate.rarity and (candidate.enhancement_level < MAX_ITEM_ENHANCEMENT or ItemCatalog.next_rarity(candidate.rarity) != &"") and candidate.instance_id == equipped_id:
+		if candidate.instance_id == target_instance_id:
+			continue
+		if candidate.definition_id != target.definition_id or candidate.rarity != target.rarity:
+			continue
+		if candidate.instance_id in equipped_instance_ids.values():
+			continue
+		material_indices.append(index)
+		if material_indices.size() >= amount:
+			break
+	if material_indices.size() < amount:
+		return false
+	var working := target
+	for step in amount:
+		if working.enhancement_level >= MAX_ITEM_ENHANCEMENT:
+			working.rarity = ItemCatalog.next_rarity(working.rarity)
+			working.enhancement_level = 0
+		else:
+			working.enhancement_level += 1
+	material_indices.sort()
+	for index in range(material_indices.size() - 1, -1, -1):
+		inventory.remove_at(material_indices[index])
+	var target_index := -1
+	for index in inventory.size():
+		if str(inventory[index].get("instance_id", "")) == target_instance_id:
 			target_index = index
 			break
 	if target_index < 0:
-		for index in inventory.size():
-			var candidate := ItemInstance.from_dictionary(inventory[index])
-			if candidate.instance_id != duplicate.instance_id and candidate.definition_id == duplicate.definition_id and candidate.rarity == duplicate.rarity and (candidate.enhancement_level < MAX_ITEM_ENHANCEMENT or ItemCatalog.next_rarity(candidate.rarity) != &""):
-				target_index = index
-				break
-	if target_index < 0:
 		return false
-	var target := ItemInstance.from_dictionary(inventory[target_index])
-	if target.enhancement_level >= MAX_ITEM_ENHANCEMENT:
-		target.rarity = ItemCatalog.next_rarity(target.rarity)
-		target.enhancement_level = 0
-	else:
-		target.enhancement_level += 1
-	inventory.remove_at(remove_index)
-	if remove_index < target_index:
-		target_index -= 1
-	inventory[target_index] = target.to_dictionary()
+	inventory[target_index] = working.to_dictionary()
 	gold -= cost
 	changed.emit()
 	return true
@@ -220,6 +276,7 @@ func allocate_stat(stat_name: StringName, amount: int = 1) -> bool:
 		&"VIT": allocated_vit += points
 		&"STR": allocated_str += points
 		&"DEF": allocated_def += points
+		&"SPD": allocated_spd += points
 		_:
 			return false
 	unspent_stat_points -= points
@@ -232,7 +289,7 @@ func respec_cost() -> int:
 
 
 func reset_allocated_stats() -> int:
-	var refunded := allocated_vit + allocated_str + allocated_def
+	var refunded := allocated_vit + allocated_str + allocated_def + allocated_spd
 	var cost := respec_cost()
 	if refunded <= 0 or gold < cost:
 		return 0
@@ -240,6 +297,7 @@ func reset_allocated_stats() -> int:
 	allocated_vit = 0
 	allocated_str = 0
 	allocated_def = 0
+	allocated_spd = 0
 	unspent_stat_points += refunded
 	changed.emit()
 	return refunded
@@ -259,9 +317,11 @@ func to_dictionary() -> Dictionary:
 		"base_vit": base_vit,
 		"base_str": base_str,
 		"base_def": base_def,
+		"base_spd": base_spd,
 		"allocated_vit": allocated_vit,
 		"allocated_str": allocated_str,
 		"allocated_def": allocated_def,
+		"allocated_spd": allocated_spd,
 		"gold": gold,
 		"inventory": inventory.duplicate(true),
 		"equipped_instance_ids": equipped_instance_ids.duplicate(true),
@@ -286,12 +346,14 @@ func load_dictionary(data: Dictionary) -> void:
 	level = clampi(int(data.get("level", 1)), 1, MAX_LEVEL)
 	xp = maxi(int(data.get("xp", 0)), 0)
 	unspent_stat_points = maxi(int(data.get("unspent_stat_points", 0)), 0)
-	base_vit = maxi(int(data.get("base_vit", 4)), 0)
-	base_str = maxi(int(data.get("base_str", 3)), 0)
-	base_def = maxi(int(data.get("base_def", 3)), 0)
+	base_vit = maxi(int(data.get("base_vit", 3)), 0)
+	base_str = maxi(int(data.get("base_str", 2)), 0)
+	base_def = maxi(int(data.get("base_def", 2)), 0)
+	base_spd = maxi(int(data.get("base_spd", 1)), 0)
 	allocated_vit = maxi(int(data.get("allocated_vit", 0)), 0)
 	allocated_str = maxi(int(data.get("allocated_str", 0)), 0)
 	allocated_def = maxi(int(data.get("allocated_def", 0)), 0)
+	allocated_spd = maxi(int(data.get("allocated_spd", 0)), 0)
 	gold = maxi(int(data.get("gold", 0)), 0)
 	var saved_inventory: Variant = data.get("inventory", [])
 	inventory.assign(saved_inventory if saved_inventory is Array else [])

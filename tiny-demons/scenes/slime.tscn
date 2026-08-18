@@ -10,6 +10,8 @@ script = ExtResource("4_actor")
 
 [node name="Stats" type="Node" parent="."]
 script = ExtResource("1_stats")
+base_points = 8
+points_per_level = 2
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("2_health")

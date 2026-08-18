@@ -4,6 +4,12 @@ Purpose: establish a repeatable behavior baseline before extracting gameplay
 components. Run this checklist against the current branch before and after each
 consolidation milestone.
 
+> Active gameplay balance changes (gear value, base stats 3/2/2, enemy/boss
+> difficulty) are tracked in
+> [`combat-economy-overhaul.md`](combat-economy-overhaul.md). Update the
+> expected results below whenever that overhaul changes a stat or difficulty
+> knob.
+
 Baseline reference: `main` at `15a2832`
 
 Consolidation branch: `agent/script-consolidation`
@@ -170,7 +176,27 @@ new effect appears above the intended UI/world layer.
 ## Automated checks
 
 - `git diff --check`: available and required for each change.
-- Godot headless parse/scene load: currently unavailable because no Godot
-  executable was discoverable in the development environment.
-
-When Godot becomes available, add the exact command and record its result here.
+- Godot headless validation: available (v4.7.1 console build). Command:
+  ```
+  & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons\tiny-demons"
+  ```
+- Headless main-scene load (`--quit-after 30`): passes with no script/runtime errors.
+- Automated smoke tests (all exit 0):
+  - `-s res://tests/run_grade_smoke.gd` -> `RUN_GRADE_SMOKE_OK`
+  - `-s res://tests/progression_smoke.gd` -> `PROGRESSION_SMOKE_OK`
+  - `-s res://tests/item_economy_smoke.gd` -> `ITEM_ECONOMY_SMOKE_OK`
+- One-shot runner (all three + main-scene headless check):
+  `pwsh -ExecutionPolicy Bypass -File tiny-demons/tests/run_all_smoke.ps1`
+- Smoke tests use a watchdog: if any assertion fails mid-script the process
+  aborts with a `TEST_ABORTED` error and exit code 1 instead of hanging.
+- Post-overhaul expectations: player base 3/2/2 (archetypes sum to 7), gear
+  primary stats 25%/point with a 1-point floor, enhancement +10%/level, and
+  enemies `max(1, ceil(depth/4))` (cap `999 if rank>10 else 2+rank`, +rank-8
+bonus from R9+).
+- Fusion (target-centric) expectations: FUSE tab lists upgrade targets (any
+  item with capacity + an eligible unequipped material, plus mythic +10
+  overflow), targets may be equipped, materials must be unequipped and share
+  definition + rarity, batch count is set with left/right, cost is
+  `FUSION_BASE_COST` for +0->+1 and grows `+FUSION_COST_PER_ENHANCEMENT` per
+  further step (resetting on rarity bumps), and insufficient gold shows
+  `NEED nG` with the action disabled.

@@ -22,10 +22,11 @@ func _apply_profile_to_runtime() -> void:
 		return
 	player_stats.level = player_profile.level
 	if player_profile.has_started:
-		player_stats.configure_manual_growth(player_profile.base_vit, player_profile.base_str, player_profile.base_def, player_profile.allocated_vit, player_profile.allocated_str, player_profile.allocated_def)
+		player_stats.configure_manual_growth(player_profile.base_vit, player_profile.base_str, player_profile.base_def, player_profile.base_spd, player_profile.allocated_vit, player_profile.allocated_str, player_profile.allocated_def, player_profile.allocated_spd)
 	else:
 		player_stats.manual_allocation_enabled = false
 	_configure_equipment_transmutations()
+	_recompute_player_speed_multiplier()
 
 func _equip_profile_item(instance_id: String) -> bool:
 	if player_profile == null or not player_profile.equip_item(instance_id):
@@ -41,6 +42,24 @@ func _equip_profile_item(instance_id: String) -> bool:
 		player_health_component.reset(player_health)
 	_save_player_profile()
 	_update_player_health_ui()
+	_recompute_player_speed_multiplier()
+	return true
+
+func _unequip_profile_slot(slot: StringName) -> bool:
+	if player_profile == null or not player_profile.unequip_slot(slot):
+		return false
+	var old_max := _player_max_health() if player_stats != null and player_equipment != null else 1.0
+	var health_ratio := clampf(player_health / old_max, 0.0, 1.0) if old_max > 0.0 else 1.0
+	player_equipment.configure_from_profile(player_profile)
+	_configure_equipment_transmutations()
+	var new_max := _player_max_health()
+	player_health = minf(new_max, maxf(1.0, new_max * health_ratio))
+	if player_health_component != null:
+		player_health_component.maximum_health = new_max
+		player_health_component.reset(player_health)
+	_save_player_profile()
+	_update_player_health_ui()
+	_recompute_player_speed_multiplier()
 	return true
 
 func _grant_chest_item_reward() -> bool:
@@ -49,6 +68,7 @@ func _grant_chest_item_reward() -> bool:
 	var reward_id := "drop-%s-%s" % [run_state.run_id, String(current_room_id)]
 	if player_profile.find_item(reward_id) != null:
 		return true
+	run_state.record_chest_open()
 	var generation_seed := int(current_dungeon_seed) ^ String(current_room_id).hash()
 	var reward_rng := RandomNumberGenerator.new()
 	reward_rng.seed = generation_seed ^ 0x4C4F4F54
@@ -154,7 +174,8 @@ func _loot_grade_bonus(grade: String = "") -> float:
 	return 3.0 if value == "S" else 2.0 if value == "A" else 1.0 if value == "B" else 0.5 if value == "C" else -0.5 if value == "F" else 0.0
 
 func _chest_item_drop_chance() -> float:
-	return clampf(0.34 + float(_run_rank() - 1) * 0.035 + _loot_grade_bonus() * 0.025, 0.30, 0.88)
+	var exploration_bonus := minf(float(run_state.chests_opened) * 0.025, 0.20) if run_state != null else 0.0
+	return clampf(0.34 + exploration_bonus + float(_run_rank() - 1) * 0.035 + _loot_grade_bonus() * 0.025, 0.30, 0.88)
 
 func _chest_gold_reward(base_gold: int) -> int:
 	var reward_rng := RandomNumberGenerator.new()
@@ -183,6 +204,7 @@ func _sync_runtime_progression_to_profile() -> void:
 		player_profile.allocated_vit = int(allocation["VIT"])
 		player_profile.allocated_str = int(allocation["STR"])
 		player_profile.allocated_def = int(allocation["DEF"])
+		player_profile.allocated_spd = int(allocation["SPD"])
 	_save_player_profile()
 func _allocate_player_stat(stat_name: StringName, amount: int = 1) -> bool:
 	if player_profile == null or not player_profile.has_started:
@@ -303,6 +325,7 @@ func _set_hub_page(page: int) -> void:
 	hub_item_index = 0
 	hub_gear_browsing = false
 	hub_fusion_message = ""
+	hub_fusion_count = 1
 	if run_state != null and hub_page == 2:
 		run_state.ensure_shop_stock(player_profile.level)
 	if hub_page == 3:
@@ -317,12 +340,17 @@ func _shift_hub_item(direction: int) -> void:
 	elif hub_page == 3:
 		_refresh_hub_fusion_candidates()
 		count = hub_fusion_candidates.size()
+		hub_fusion_count = 1
 	if count > 0: hub_item_index = posmod(hub_item_index + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 	var candidates: Array[ItemInstance] = []
 	if player_profile == null: return candidates
 	var catalog := ItemCatalog.new()
+	if slot == &"shield":
+		var unequip := ItemInstance.new()
+		unequip.instance_id = ItemCatalog.UNEQUIP_SHIELD_ID
+		candidates.append(unequip)
 	for data: Dictionary in player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
 		if catalog.definition_slot(item.definition_id) == slot: candidates.append(item)
@@ -357,13 +385,13 @@ func _refresh_hub_fusion_candidates() -> void:
 	var catalog := ItemCatalog.new()
 	for data: Dictionary in player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
-		if player_profile.can_fuse_duplicate(item.instance_id, catalog) or player_profile.can_salvage_overflow(item.instance_id, catalog):
+		if player_profile.fusion_material_count(item.instance_id, catalog) > 0 or player_profile.can_salvage_overflow(item.instance_id, catalog):
 			hub_fusion_candidates.append(item)
 func _hub_fusion_candidates() -> Array[ItemInstance]:
 	_refresh_hub_fusion_candidates()
 	return hub_fusion_candidates
-func _fuse_profile_duplicate(instance_id: String) -> bool:
-	if player_profile == null or not player_profile.fuse_duplicate(instance_id, ItemCatalog.new()):
+func _fuse_profile_target(instance_id: String, count: int) -> bool:
+	if player_profile == null or count <= 0 or not player_profile.fuse_duplicates(instance_id, count, ItemCatalog.new()):
 		return false
 	gold = player_profile.gold
 	player_equipment.configure_from_profile(player_profile)
@@ -372,6 +400,17 @@ func _fuse_profile_duplicate(instance_id: String) -> bool:
 	_save_player_profile()
 	_update_gold_indicator()
 	return true
+func _shift_hub_fusion_count(direction: int) -> void:
+	if hub_page != 3: return
+	_refresh_hub_fusion_candidates()
+	if hub_fusion_candidates.is_empty(): return
+	var index := clampi(hub_item_index, 0, hub_fusion_candidates.size() - 1)
+	var target := hub_fusion_candidates[index]
+	if player_profile.can_salvage_overflow(target.instance_id): return
+	var material_count := player_profile.fusion_material_count(target.instance_id)
+	if material_count <= 0: return
+	hub_fusion_count = clampi(int(hub_fusion_count) + direction, 1, material_count)
+	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _salvage_profile_overflow(instance_id: String) -> int:
 	if player_profile == null: return 0
 	var value := player_profile.salvage_overflow(instance_id)
@@ -395,7 +434,14 @@ func _hub_item_action() -> void:
 						break
 				hub_gear_browsing = true
 			else:
-				_equip_profile_item(candidates[candidate_index].instance_id)
+				var selected := candidates[candidate_index]
+				var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
+				if selected.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
+					_unequip_profile_slot(slot)
+				elif slot == &"shield" and selected.instance_id == equipped_id:
+					_unequip_profile_slot(slot)
+				else:
+					_equip_profile_item(selected.instance_id)
 				hub_gear_browsing = false
 			screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 		return
@@ -410,28 +456,30 @@ func _hub_item_action() -> void:
 		_refresh_hub_fusion_candidates()
 		if not hub_fusion_candidates.is_empty():
 			var index := clampi(hub_item_index, 0, hub_fusion_candidates.size() - 1)
-			var consumed := hub_fusion_candidates[index]
-			if player_profile.can_fuse_duplicate(consumed.instance_id):
-				var fusion_cost := player_profile.fusion_cost(consumed)
-				if player_profile.gold < fusion_cost:
-					hub_fusion_message = "NEED %dG" % fusion_cost
+			var target := hub_fusion_candidates[index]
+			if player_profile.fusion_material_count(target.instance_id) > 0:
+				var material_count := player_profile.fusion_material_count(target.instance_id)
+				var count := clampi(int(hub_fusion_count), 1, material_count)
+				var batch_cost := player_profile.fusion_batch_cost(target, count)
+				if player_profile.gold < batch_cost:
+					hub_fusion_message = "NEED %dG" % batch_cost
 				else:
-					var family_name := str(ItemCatalog.DEFINITIONS.get(consumed.definition_id, {}).get("name", "ITEM"))
-					if _fuse_profile_duplicate(consumed.instance_id):
+					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))
+					if _fuse_profile_target(target.instance_id, count):
 						hub_fusion_message = "%s ENHANCED" % family_name
-			elif player_profile.can_salvage_overflow(consumed.instance_id):
-				var salvage_value := _salvage_profile_overflow(consumed.instance_id)
+			elif player_profile.can_salvage_overflow(target.instance_id):
+				var salvage_value := _salvage_profile_overflow(target.instance_id)
 				if salvage_value > 0: hub_fusion_message = "SALVAGED %dG" % salvage_value
 			if not hub_fusion_message.is_empty():
 				_refresh_hub_fusion_candidates()
 				hub_item_index = clampi(hub_item_index, 0, maxi(hub_fusion_candidates.size() - 1, 0))
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _select_hub_menu_row(row: int) -> void:
-	hub_menu_row = posmod(row, 4)
-	if hub_menu_row < 3: hub_action_column = 0
+	hub_menu_row = posmod(row, 5)
+	if hub_menu_row < 4: hub_action_column = 0
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _shift_hub_action_column(direction: int) -> void:
-	var count := 4 if hub_menu_row == 3 else 2
+	var count := 4 if hub_menu_row == 4 else 2
 	hub_action_column = posmod(hub_action_column + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
@@ -442,6 +490,7 @@ func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
 		&"VIT": hub_pending_vit = maxi(hub_pending_vit - 1, 0)
 		&"STR": hub_pending_str = maxi(hub_pending_str - 1, 0)
 		&"DEF": hub_pending_def = maxi(hub_pending_def - 1, 0)
+		&"SPD": hub_pending_spd = maxi(hub_pending_spd - 1, 0)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_allocate_stat(stat_name: StringName) -> void:
 	if player_profile == null or _hub_points_remaining() <= 0: return
@@ -449,22 +498,24 @@ func _hub_allocate_stat(stat_name: StringName) -> void:
 		&"VIT": hub_pending_vit += 1
 		&"STR": hub_pending_str += 1
 		&"DEF": hub_pending_def += 1
+		&"SPD": hub_pending_spd += 1
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-func _hub_points_remaining() -> int: return maxi(player_profile.unspent_stat_points - hub_pending_vit - hub_pending_str - hub_pending_def, 0) if player_profile != null else 0
+func _hub_points_remaining() -> int: return maxi(player_profile.unspent_stat_points - hub_pending_vit - hub_pending_str - hub_pending_def - hub_pending_spd, 0) if player_profile != null else 0
 func _hub_confirm_stats() -> void:
 	if player_profile == null: return
 	player_profile.allocate_stat(&"VIT", hub_pending_vit)
 	player_profile.allocate_stat(&"STR", hub_pending_str)
 	player_profile.allocate_stat(&"DEF", hub_pending_def)
-	hub_pending_vit = 0; hub_pending_str = 0; hub_pending_def = 0
+	player_profile.allocate_stat(&"SPD", hub_pending_spd)
+	hub_pending_vit = 0; hub_pending_str = 0; hub_pending_def = 0; hub_pending_spd = 0
 	_apply_profile_to_runtime(); _apply_player_level(); _sync_runtime_progression_to_profile()
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_cancel_stats() -> void:
-	hub_pending_vit = 0; hub_pending_str = 0; hub_pending_def = 0
+	hub_pending_vit = 0; hub_pending_str = 0; hub_pending_def = 0; hub_pending_spd = 0
 	if screen_state_controller != null and hub_overlay != null: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_auto_allocate() -> void:
 	if player_profile == null: return
-	var patterns := [[&"VIT", &"STR", &"DEF"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF"], [&"STR", &"STR", &"VIT", &"STR", &"DEF"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR"]]
+	var patterns := [[&"VIT", &"STR", &"DEF", &"SPD"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"SPD"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"SPD"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"SPD"], [&"STR", &"DEF", &"STR", &"DEF", &"SPD"]]
 	var pattern: Array = patterns[clampi(player_profile.allocation_profile, 0, patterns.size() - 1)]
 	var index := 0
 	while _hub_points_remaining() > 0:
@@ -472,6 +523,7 @@ func _hub_auto_allocate() -> void:
 			&"VIT": hub_pending_vit += 1
 			&"STR": hub_pending_str += 1
 			&"DEF": hub_pending_def += 1
+			&"SPD": hub_pending_spd += 1
 		index += 1
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _hub_respec() -> void:
@@ -545,10 +597,10 @@ func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0) -> StringNa
 	var performance_bonus := score_quality * 3.0 if score_quality >= 0.0 else _loot_grade_bonus()
 	# Every item-drop source has a real legendary/mythic chance at R1. Rank and
 	# performance improve the odds rather than acting as hard rarity gates.
-	var mythic_chance := clampf(0.002 + rank_bonus * 0.0015 + performance_bonus * 0.0015, 0.002, 0.050)
-	var legendary_chance := clampf(0.012 + rank_bonus * 0.005 + performance_bonus * 0.004, 0.012, 0.160)
-	var epic_chance := clampf(0.070 + rank_bonus * 0.012 + performance_bonus * 0.010, 0.070, 0.300)
-	var rare_chance := clampf(0.250 + rank_bonus * 0.018 + performance_bonus * 0.014, 0.250, 0.480)
+	var mythic_chance := clampf(0.0005 + rank_bonus * 0.0005 + performance_bonus * 0.0005, 0.0005, 0.010)
+	var legendary_chance := clampf(0.003 + rank_bonus * 0.0015 + performance_bonus * 0.0015, 0.003, 0.025)
+	var epic_chance := clampf(0.015 + rank_bonus * 0.004 + performance_bonus * 0.004, 0.015, 0.070)
+	var rare_chance := clampf(0.120 + rank_bonus * 0.012 + performance_bonus * 0.010, 0.120, 0.280)
 	if roll < mythic_chance: return &"mythic"
 	if roll < mythic_chance + legendary_chance: return &"legendary"
 	if roll < mythic_chance + legendary_chance + epic_chance: return &"epic"
@@ -712,12 +764,38 @@ func _confirm_overwrite() -> void:
 	ProfileSaveService.clear_slot(selected_slot)
 	if save_select_overlay != null: save_select_overlay.visible = false
 	player_profile = PlayerProfile.new()
-	player_profile.gold = 0
+	_reset_runtime_for_new_save()
 	gold = 0
 	has_persistent_profile = false
 	_apply_profile_to_runtime()
 	_update_gold_indicator()
 	screen_state_controller.show_character_creation(self)
+
+func _reset_runtime_for_new_save() -> void:
+	# New slots must not inherit the previous profile's run rank, grade-weighted
+	# loot state, dungeon topology, or in-progress telemetry.
+	player_profile.completed_runs = 0
+	player_profile.last_clear_score = 0
+	player_profile.difficulty_rank = 1
+	player_profile.last_run_grade = "D"
+	player_profile.pending_route = "title"
+	player_profile.open_hub_on_load = false
+	if run_state != null:
+		run_state = RunState.new()
+	var random_source := rng if rng != null else RandomNumberGenerator.new()
+	if rng == null:
+		random_source.randomize()
+	current_dungeon_seed = random_source.randi()
+	dungeon_graph.configure_progression(0)
+	dungeon_graph.initialize(current_dungeon_seed)
+	room_controller.room_states.clear()
+	room_controller.progression_run_rank = 1
+	current_room_id = dungeon_graph.start_room_id
+	_sync_current_room_metadata()
+	room_controller.set_current_room(current_room_id, current_room_type)
+	_ensure_current_room_layout()
+	_apply_room_state()
+	_update_room_number_indicator()
 
 func _update_overwrite_cursor() -> void:
 	var cursor := save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
@@ -881,7 +959,11 @@ func _interrupt_player_attack() -> void:
 	player_attack_hit_done = false; player_attack_hit_targets.clear(); player_attack_visual.visible = false; player.visible = true; _restore_actor_base_visual_scale(player); player_anim_name = "walk" if player_is_moving else "idle"; player_anim_frame = 0; player_anim_timer = 0.0; player_animation_component.apply_frame(self)
 func _player_facing_vector() -> Vector2: return Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT if player_is_attacking else Vector2.LEFT if player.flip_h else Vector2.RIGHT
 func _apply_player_attack_hitbox() -> void: if player_attack_component != null: player_attack_component.apply_hitbox(self)
-func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void: SlimeActor.damage_actor(self, slime, amount, was_critical)
+func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
+	var ambush := _slime_ambush(slime)
+	if ambush != null:
+		ambush.extend_rehide(slime, slime_tuning.ambush_hit_extension)
+	SlimeActor.damage_actor(self, slime, amount, was_critical)
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	var damage := _combat_damage(player_stats, _slime_stats(slime))
 	if equipment_transmutation_component == null:
@@ -900,14 +982,20 @@ func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsCompone
 	last_damage_was_critical = result.critical; return result.amount
 func _max_health_for_stats(stats: StatsComponent) -> float: return CombatCalculator.max_health_for_snapshot(CombatStatSnapshot.from_components(stats, player_equipment if stats == player_stats else null), combat_tuning)
 func _player_stat_snapshot() -> CombatStatSnapshot: return CombatStatSnapshot.from_components(player_stats, player_equipment)
+func _recompute_player_speed_multiplier() -> void:
+	if player_stats == null or player_tuning == null:
+		return
+	var snapshot := _player_stat_snapshot()
+	player_spd = snapshot.speed
+	player_speed_multiplier = player_tuning.speed_multiplier(snapshot.speed)
 func _player_max_health() -> float: return _max_health_for_stats(player_stats)
 func _enemy_max_health(slime: Sprite2D) -> float: return _max_health_for_stats(_slime_stats(slime))
-func _enemy_level_for_room() -> int: return maxi(1, ceili(float(current_room_depth) / 2.0))
+func _enemy_level_for_room() -> int: return maxi(1, ceili(float(current_room_depth) / 4.0))
 func _enemy_level_cap_for_run() -> int:
-	# Keep early and mid progression readable even when a player takes a long
-	# branch. Once they reach R11, depth is allowed to scale without a ceiling.
-	return 999 if _run_rank() > 10 else 7
-func _run_enemy_level_bonus() -> int: return 0
+	# Early ranks keep a low level ceiling so runs feel readable and fair; once
+	# the player reaches R11, depth is allowed to scale without a ceiling.
+	return 999 if _run_rank() > 10 else 2 + _run_rank()
+func _run_enemy_level_bonus() -> int: return maxi(0, _run_rank() - 8)
 func _apply_enemy_room_level(slime: Sprite2D, level_override: int = 0) -> void:
 	var stats := _slime_stats(slime)
 	if stats == null:
@@ -915,10 +1003,12 @@ func _apply_enemy_room_level(slime: Sprite2D, level_override: int = 0) -> void:
 	var requested_level := (level_override if level_override > 0 else _enemy_level_for_room()) + _run_enemy_level_bonus() + (run_state.difficulty_bonus if run_state != null else 0)
 	stats.level = clampi(requested_level, 1, _enemy_level_cap_for_run())
 func _configure_slime_variant(slime: Sprite2D, variant: String) -> void:
-	var palette := variant if variant == "blue" or variant == "green" or variant == "red" else "green"
+	var palette := variant if variant == "blue" or variant == "green" or variant == "red" or variant == "purple" else "green"
 	slime.set("variant", palette)
 	var stats := _slime_stats(slime)
-	if stats != null: stats.allocation_profile = StatsComponent.AllocationProfile.FAVOR_DEF if palette == "blue" else StatsComponent.AllocationProfile.FAVOR_STR if palette == "red" else StatsComponent.AllocationProfile.FAVOR_VIT
+	if stats != null:
+		stats.allocation_profile = StatsComponent.AllocationProfile.FAVOR_DEF if palette == "blue" else StatsComponent.AllocationProfile.FAVOR_STR if palette == "red" else StatsComponent.AllocationProfile.FAVOR_STR_DEF if palette == "purple" else StatsComponent.AllocationProfile.FAVOR_VIT
+	_configure_slime_ambush(slime, palette)
 func _knockback_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
 	var direction := _actor_foot(slime) - _actor_foot(player); if direction.length_squared() < 0.01: direction = Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
@@ -983,7 +1073,41 @@ func _cache_npc_texture(_actor: Sprite2D, texture: Texture2D) -> void: occlusion
 func _can_interact_with_chest() -> bool: return chest_unlocked and not chest_claimed and _actor_foot(player).distance_to(_collision_rect(chest).get_center()) <= CHEST_INTERACT_DISTANCE
 func _on_chest_collected() -> void:
 	if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and _are_all_slimes_dead():
-		_complete_run()
+		_open_final_exit()
+
+func _open_final_exit() -> void:
+	if final_exit_open or settlement_room_active:
+		return
+	final_exit_open = true
+	var exit_socket := room_controller.dungeon_sockets.get(DungeonGraph.WALL_RIGHT) as DungeonSocket
+	if exit_socket != null:
+		room_controller.active_door_sockets[DungeonGraph.WALL_RIGHT] = exit_socket
+	door_active = true
+	entrance_open = false
+	_refresh_room_socket_visuals(true)
+	_build_entrance_block_polygons()
+
+func _enter_final_settlement_room() -> void:
+	if not final_exit_open or settlement_room_active:
+		return
+	final_exit_open = false
+	settlement_room_active = true
+	room_transition_locked = true
+	player_is_attacking = false
+	player_is_rolling = false
+	player_is_defending = false
+	player.global_position = Vector2(120, 80)
+	player.flip_h = false
+	map_root.visible = false
+	player_shadow.visible = false
+	player_attack_visual.visible = false
+	for slime in slimes:
+		slime.visible = false
+	cloaked_demon.visible = false
+	chest.visible = false
+	_set_target_ui_visible(false)
+	_update_depth_sorting()
+	_complete_run()
 func _can_interact_with_npc() -> bool: return cloaked_demon != null and cloaked_demon.visible and _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
 func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
@@ -1250,6 +1374,24 @@ func _slime_visual(slime: Sprite2D) -> SlimeVisualComponent: return SlimeActor.c
 func _slime_animation(slime: Sprite2D) -> SlimeAnimationComponent: return SlimeActor.component(slime, "Animation", SlimeAnimationComponent) as SlimeAnimationComponent
 func _slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter: return SlimeActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter
 func _slime_health(slime: Sprite2D) -> HealthComponent: return slime.get_node_or_null("Health") as HealthComponent
+func _configure_slime_ambush(slime: Sprite2D, palette: String) -> void:
+	var ambush := slime.get_node_or_null("Ambush") as SlimeAmbushComponent
+	if palette == "purple":
+		if ambush == null:
+			ambush = SlimeAmbushComponent.new()
+			ambush.name = "Ambush"
+			slime.add_child(ambush)
+		ambush.configure(true, slime_tuning.ambush_reveal_window, slime_tuning.ambush_block_stun, slime_tuning.ambush_hit_extension)
+		ambush.apply_hidden(slime)
+	elif ambush != null:
+		ambush.configure(false, 0.0, 0.0, 0.0)
+		slime.self_modulate = Color.WHITE
+func _slime_ambush(slime: Sprite2D) -> SlimeAmbushComponent: return slime.get_node_or_null("Ambush") as SlimeAmbushComponent
+func _is_slime_hidden(slime: Sprite2D) -> bool:
+	var ambush := _slime_ambush(slime)
+	return ambush != null and ambush.is_hidden()
+func _is_slime_targetable(slime: Sprite2D) -> bool:
+	return not _is_slime_dead(slime) and not _is_slime_hidden(slime)
 func _move_slimes(delta: float) -> void:
 	_prepare_slime_frame_cache()
 	for slime in slimes:
@@ -1286,7 +1428,7 @@ func _prepare_slime_frame_cache() -> void:
 		slime_frame_slots[slime] = index
 		var brain := _slime_brain(slime)
 		var is_aggroed := not player_dead and (brain.persistent_aggro or _actor_foot(slime).distance_squared_to(player_foot) <= slime_tuning.aggro_range * slime_tuning.aggro_range)
-		if is_aggroed and not brain.aggroed and not brain.notice_started:
+		if is_aggroed and not brain.aggroed and not brain.notice_started and not _is_slime_hidden(slime):
 			_trigger_slime_notice(slime)
 			slime_frame_aggro[slime] = true
 		else:
@@ -1402,7 +1544,12 @@ func _aggro_slime_target(slime: Sprite2D) -> Vector2:
 		var slot_index := int(slime_frame_slots.get(slime, slimes.find(slime)))
 		tactics.set_formation_slot(-1 if slot_index % 3 == 1 else 1 if slot_index % 3 == 2 else 0)
 	return SlimeBrain.aggro_target(self, slime)
-func _apply_slime_attack_hit(slime: Sprite2D) -> void: SlimeActor.apply_attack_hit(self, slime)
+func _apply_slime_attack_hit(slime: Sprite2D) -> void:
+	var ambush := _slime_ambush(slime)
+	if ambush != null:
+		ambush.reveal(slime)
+		ambush.begin_rehide(slime, slime_tuning.ambush_reveal_window)
+	SlimeActor.apply_attack_hit(self, slime)
 func _slime_attack_damage(slime: Sprite2D) -> float: return _combat_damage(_slime_stats(slime), player_stats)
 func _mark_player_in_combat() -> void: if player_health_component != null: player_health_component.regen_delay_timer = player_tuning.regen_delay; player_health_component.regen_accumulator = 0.0
 func _on_player_health_damaged(amount: float) -> void:
@@ -1497,6 +1644,18 @@ func _spawn_player_shield_damage_number(amount: float) -> void:
 func _spawn_player_healing_number(amount: float, color: Color) -> void:
 	var value := int(round(amount))
 	_spawn_floating_number(_player_floating_number_origin("+%d" % maxi(value, 0), color), value, Vector2(0.0, effects_tuning.damage_number_float_speed), false, true, color)
+func _apply_player_lifesteal(damage: float) -> void:
+	if equipment_transmutation_component == null or player_health_component == null:
+		return
+	var heal := equipment_transmutation_component.life_steal_amount(damage)
+	if heal <= 0.0:
+		return
+	var applied := player_health_component.apply_healing(heal)
+	if applied <= 0.0:
+		return
+	player_health = player_health_component.current_health
+	_update_player_health_ui()
+	_spawn_player_healing_number(applied, Color8(177, 62, 83))
 func _player_floating_number_origin(text: String, color: Color) -> Vector2:
 	var number_texture := _pixel_number_texture(text, color) as Texture2D
 	var number_width := number_texture.get_width() if number_texture != null else 0
@@ -1523,8 +1682,11 @@ func _configure_equipment_transmutations() -> void:
 	equipment_transmutation_component.configure(player_equipment)
 	if player_guard_component != null:
 		var snapshot := _player_stat_snapshot()
-		player_guard_component.set_maximum_durability(equipment_transmutation_component.guard_maximum_durability(PlayerGuardComponent.MAX_DURABILITY, snapshot.def), true)
+		var shield_maximum := PlayerGuardComponent.MAX_DURABILITY + player_equipment.guard_durability_bonus
+		player_guard_component.set_maximum_durability(equipment_transmutation_component.guard_maximum_durability(shield_maximum, snapshot.def), true)
 func _on_transmutation_effect_triggered(_effect_id: StringName, message: String) -> void:
+	if _effect_id == &"duelist_focus":
+		return
 	if player == null or message.is_empty(): return
 	var color := Color8(148, 220, 255)
 	_spawn_floating_number(_actor_foot(player) + Vector2(0, -14), 0, Vector2(0, -10), false, false, color, message)
@@ -1719,8 +1881,16 @@ func _hide_editor_only_guides() -> void:
 func _build_slime_direction_textures() -> void:
 	var paths := {}
 	for slime in slimes:
-		var palette := String(slime.get("variant")); paths[slime] = ["res://assets/artwork/Slime%sLeft.png" % palette.capitalize(), "res://assets/artwork/Slime%sRight.png" % palette.capitalize()]
+		var palette := String(slime.get("variant"))
+		var source := "SlimeGreen" if palette == "purple" else "Slime%s" % palette.capitalize()
+		paths[slime] = ["res://assets/artwork/%sLeft.png" % source, "res://assets/artwork/%sRight.png" % source]
 	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(self, "_load_texture_or_null"))
+	var purple_slimes: Array[Sprite2D] = []
+	for slime in slimes:
+		if String(slime.get("variant")) == "purple":
+			purple_slimes.append(slime)
+	if not purple_slimes.is_empty():
+		SlimeVisualComponent.recolor_direction_textures(purple_slimes, "purple", occlusion_renderer.texture_image_cache)
 func _build_slime_attack_frames() -> void: slime_attack_frames_by_palette = SlimeVisualComponent.build_attack_frame_library(sprite_frame_library, SLIME_ATTACK_FRAME_SIZE, occlusion_renderer.texture_image_cache, Callable(player_animation_component, "warm_texture_cache")); SlimeVisualComponent.assign_attack_frames(slimes, slime_attack_frames_by_palette)
 func _assign_slime_attack_frames() -> void: SlimeVisualComponent.assign_attack_frames(slimes, slime_attack_frames_by_palette)
 func _build_slime_shocked_frames() -> void: slime_shocked_frames_by_palette = SlimeVisualComponent.build_shocked_frame_library(sprite_frame_library, SLIME_ATTACK_FRAME_SIZE, occlusion_renderer.texture_image_cache, Callable(player_animation_component, "warm_texture_cache")); SlimeVisualComponent.assign_shocked_frames(slimes, slime_shocked_frames_by_palette)
@@ -1786,14 +1956,14 @@ func _is_attack_input_pressed() -> bool: return player_controller.action_pressed
 func _is_interact_input_pressed() -> bool: return player_controller.action_pressed([KEY_E, KEY_ENTER], _controller_devices(), JOY_BUTTON_B)
 func _is_roll_input_pressed() -> bool: return player_controller.action_pressed([KEY_K], _controller_devices(), JOY_BUTTON_A)
 func _controller_devices() -> Array[int]: return player_controller.connected_devices()
-func _closest_target() -> Sprite2D: return interaction_component.closest_target(player, slimes, TARGET_LOCK_MAX_DISTANCE, Callable(self, "_actor_foot"), Callable(self, "_is_slime_dead"))
+func _closest_target() -> Sprite2D: return interaction_component.closest_target(player, slimes, TARGET_LOCK_MAX_DISTANCE, Callable(self, "_actor_foot"), Callable(self, "_is_slime_dead"), Callable(self, "_is_slime_targetable"))
 func _set_current_target(target: Sprite2D) -> void: if current_target != target: current_target = target; if hud_controller != null: hud_controller.set_target(target)
 func _update_target_ui() -> void:
 	if current_target == null: _set_target_ui_visible(false); return
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values"))
 func _set_target_ui_visible(target_visible: bool) -> void: hud_controller.set_visible(target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_visible)
 func _slime_display_name(slime: Sprite2D) -> String:
-	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Green Slime"; var stats := _slime_stats(slime); return "lv.%d %s" % [stats.level if stats != null else 1, display_name]
+	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Rogue Slime" if palette == "purple" else "Green Slime"; var stats := _slime_stats(slime); return "lv.%d %s" % [stats.level if stats != null else 1, display_name]
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_number_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
 func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _slime_current_health(slime: Sprite2D) -> float: var max_health := _enemy_max_health(slime); var health_component := _slime_health(slime); return health_component.current_health if health_component != null else max_health

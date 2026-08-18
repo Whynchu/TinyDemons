@@ -1,7 +1,7 @@
 extends Sprite2D
 class_name SlimeActor
 
-@export_enum("blue", "green", "red") var variant := "green"
+@export_enum("blue", "green", "red", "purple") var variant := "green"
 @export var tuning: SlimeTuning
 
 
@@ -54,6 +54,9 @@ func tick_components(delta: float) -> void:
 	var tactics := get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics != null:
 		tactics.tick(delta)
+	var ambush := get_node_or_null("Ambush") as SlimeAmbushComponent
+	if ambush != null:
+		ambush.tick(self, delta)
 
 
 func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable) -> void:
@@ -170,9 +173,11 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var blocked := false
+	var block_stun := 0.0
 	if guard != null:
 		var guard_result := guard.absorb_damage(root, damage, root.call("_actor_foot", slime))
 		blocked = bool(guard_result["blocked"])
+		block_stun = float(guard_result.get("stun", 0.0))
 		var shield_damage := float(guard_result["shield_damage"])
 		if shield_damage > 0.0: root.call("_spawn_player_shield_damage_number", shield_damage)
 		damage = float(guard_result["health_damage"])
@@ -181,6 +186,23 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	else: root.set("player_health", maxf(float(root.get("player_health")) - damage, 0.0))
 	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
 	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); if damage > 0.0: root.call("_spawn_player_damage_number", damage); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
+	if blocked and combat != null:
+		combat.active = false
+		combat.timer = 0.0
+		combat.hit_done = true
+		# Blocking interrupts the swing, but it still consumes the enemy's normal
+		# attack recovery. Without this, the interrupted attack can restart on the
+		# very next frame and turn a successful block into a punishment.
+		var slime_tuning := root.get("slime_tuning") as SlimeTuning
+		combat.cooldown = slime_tuning.attack_cooldown if slime_tuning != null else 1.0
+		combat.hitstun_timer = maxf(combat.hitstun_timer, block_stun)
+		# A rogue blocked mid-swing is stunned for a full second before it can
+		# resume its routine, and it stays revealed (hittable) during the stun.
+		var ambush := slime.get_node_or_null("Ambush") as SlimeAmbushComponent
+		if ambush != null:
+			ambush.begin_block_stun(slime)
+			combat.hitstun_timer = maxf(combat.hitstun_timer, ambush.block_stun)
+			combat.cooldown = maxf(combat.cooldown, ambush.block_stun)
 	if float(root.get("player_health")) <= 0.0: root.set("player_death_pending", true); root.call("_interrupt_player_attack"); root.set("player_is_rolling", false)
 
 

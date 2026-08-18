@@ -2,6 +2,23 @@ extends Resource
 class_name PlayerTuning
 
 @export var speed := 36.0
+@export var speed_scale := 0.012
+@export var roll_scale := 0.015
+@export var attack_scale := 0.010
+@export var speed_effect_min := -0.5
+@export var speed_effect_max := 1.0
+
+
+func speed_multiplier(spd: int) -> float:
+	return 1.0 + clampf(float(spd) * speed_scale, speed_effect_min, speed_effect_max)
+
+
+func roll_multiplier(spd: int) -> float:
+	return 1.0 + clampf(float(spd) * roll_scale, speed_effect_min, speed_effect_max)
+
+
+func attack_multiplier(spd: int) -> float:
+	return 1.0 + clampf(float(spd) * attack_scale, speed_effect_min, speed_effect_max)
 @export var hit_flash_time := 0.12
 @export var hitstun_time := 1.0 / 30.0
 @export var hit_knockback := 10.0

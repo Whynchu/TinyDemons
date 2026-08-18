@@ -49,20 +49,23 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 	if player_dead:
 		timer = 0.0
 		return false
+	var is_boss := float(actor.get_meta("encounter_scale", 1.0)) > 1.0
+	var frame_time := tuning.attack_frame_time * (tuning.boss_attack_frame_time_multiplier if is_boss else 1.0)
+	var cooldown_after := tuning.attack_cooldown * (tuning.boss_attack_cooldown_multiplier if is_boss else 1.0)
 	if timer > 0.0:
 		timer += delta
 		if frames.is_empty():
 			timer = 0.0
 			return false
-		var frame_index := mini(int(floor(timer / tuning.attack_frame_time)), frames.size() - 1)
+		var frame_index := mini(int(floor(timer / frame_time)), frames.size() - 1)
 		frame = frame_index
 		set_frame.call(actor, frame_index)
 		set_texture.call(actor, frames[frame_index])
 		if frame_index == tuning.attack_hit_frame and not hit_done and confirm_hit():
 			apply_lunge.call(actor)
 			apply_hit.call(actor)
-		if timer >= tuning.attack_frame_time * float(frames.size()):
-			finish(tuning.attack_cooldown)
+		if timer >= frame_time * float(frames.size()):
+			finish(cooldown_after)
 			restore_idle.call(actor)
 		return true
 	if cooldown > 0.0 or not can_attack.call(actor):

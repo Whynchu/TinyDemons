@@ -8,6 +8,7 @@ enum Stat {
 	VIT,
 	STR,
 	DEF,
+	SPD,
 }
 
 enum AllocationProfile {
@@ -15,6 +16,7 @@ enum AllocationProfile {
 	FAVOR_VIT,
 	FAVOR_STR,
 	FAVOR_DEF,
+	FAVOR_STR_DEF,
 }
 
 @export_range(1, 99, 1) var level := 1:
@@ -22,7 +24,7 @@ enum AllocationProfile {
 		level = maxi(value, 1)
 		_recalculate()
 
-@export_range(1, 99, 1) var base_points := 10:
+@export_range(1, 99, 1) var base_points := 7:
 	set(value):
 		base_points = maxi(value, 1)
 		_recalculate()
@@ -40,13 +42,16 @@ enum AllocationProfile {
 var vit := 0
 var strength := 0
 var def := 0
+var speed := 0
 var manual_allocation_enabled := false
-var manual_base_vit := 4
-var manual_base_str := 3
-var manual_base_def := 3
+var manual_base_vit := 3
+var manual_base_str := 2
+var manual_base_def := 2
+var manual_base_spd := 1
 var manual_vit := 0
 var manual_str := 0
 var manual_def := 0
+var manual_spd := 0
 
 
 func _ready() -> void:
@@ -65,6 +70,8 @@ func get_stat(stat: Stat) -> int:
 			return strength
 		Stat.DEF:
 			return def
+		Stat.SPD:
+			return speed
 	return 0
 
 
@@ -73,22 +80,25 @@ func get_stats() -> Dictionary:
 		"VIT": vit,
 		"STR": strength,
 		"DEF": def,
+		"SPD": speed,
 	}
 
 
-func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, vit_points: int, str_points: int, def_points: int) -> void:
+func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, base_spd_value: int, vit_points: int, str_points: int, def_points: int, spd_points: int) -> void:
 	manual_allocation_enabled = true
 	manual_base_vit = maxi(base_vit_value, 0)
 	manual_base_str = maxi(base_str_value, 0)
 	manual_base_def = maxi(base_def_value, 0)
+	manual_base_spd = maxi(base_spd_value, 0)
 	manual_vit = maxi(vit_points, 0)
 	manual_str = maxi(str_points, 0)
 	manual_def = maxi(def_points, 0)
+	manual_spd = maxi(spd_points, 0)
 	_recalculate()
 
 
 func manual_allocation() -> Dictionary:
-	return {"VIT": manual_vit, "STR": manual_str, "DEF": manual_def}
+	return {"VIT": manual_vit, "STR": manual_str, "DEF": manual_def, "SPD": manual_spd}
 
 
 func _recalculate() -> void:
@@ -98,10 +108,11 @@ func _recalculate() -> void:
 			Stat.VIT: manual_base_vit + manual_vit,
 			Stat.STR: manual_base_str + manual_str,
 			Stat.DEF: manual_base_def + manual_def,
+			Stat.SPD: manual_base_spd + manual_spd,
 		}
 	else:
 		values = _base_profile_values()
-		var allocated := int(values[Stat.VIT]) + int(values[Stat.STR]) + int(values[Stat.DEF])
+		var allocated := int(values[Stat.VIT]) + int(values[Stat.STR]) + int(values[Stat.DEF]) + int(values[Stat.SPD])
 		var extra_points := maxi(total_stat_points() - allocated, 0)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _growth_seed()
@@ -112,6 +123,7 @@ func _recalculate() -> void:
 	vit = values[Stat.VIT]
 	strength = values[Stat.STR]
 	def = values[Stat.DEF]
+	speed = values[Stat.SPD]
 	stats_changed.emit(self)
 
 
@@ -119,27 +131,38 @@ func _base_profile_values() -> Dictionary:
 	match allocation_profile:
 		AllocationProfile.FAVOR_VIT:
 			return {
-				Stat.VIT: 6,
-				Stat.STR: 3,
+				Stat.VIT: 4,
+				Stat.STR: 2,
 				Stat.DEF: 1,
+				Stat.SPD: 3,
 			}
 		AllocationProfile.FAVOR_STR:
 			return {
-				Stat.VIT: 3,
-				Stat.STR: 6,
+				Stat.VIT: 2,
+				Stat.STR: 4,
 				Stat.DEF: 1,
+				Stat.SPD: 1,
 			}
 		AllocationProfile.FAVOR_DEF:
 			return {
-				Stat.VIT: 4,
+				Stat.VIT: 3,
 				Stat.STR: 1,
-				Stat.DEF: 5,
+				Stat.DEF: 3,
+				Stat.SPD: 1,
+			}
+		AllocationProfile.FAVOR_STR_DEF:
+			return {
+				Stat.VIT: 1,
+				Stat.STR: 3,
+				Stat.DEF: 3,
+				Stat.SPD: 1,
 			}
 		_:
 			return {
-				Stat.VIT: 4,
-				Stat.STR: 3,
-				Stat.DEF: 3,
+				Stat.VIT: 3,
+				Stat.STR: 2,
+				Stat.DEF: 2,
+				Stat.SPD: 2,
 			}
 
 
@@ -147,27 +170,38 @@ func _growth_weights() -> Dictionary:
 	match allocation_profile:
 		AllocationProfile.FAVOR_VIT:
 			return {
-				Stat.VIT: 0.64,
-				Stat.STR: 0.24,
-				Stat.DEF: 0.12,
+				Stat.VIT: 0.58,
+				Stat.STR: 0.22,
+				Stat.DEF: 0.10,
+				Stat.SPD: 0.10,
 			}
 		AllocationProfile.FAVOR_STR:
 			return {
-				Stat.VIT: 0.24,
-				Stat.STR: 0.64,
-				Stat.DEF: 0.12,
+				Stat.VIT: 0.22,
+				Stat.STR: 0.60,
+				Stat.DEF: 0.10,
+				Stat.SPD: 0.08,
 			}
 		AllocationProfile.FAVOR_DEF:
 			return {
-				Stat.VIT: 0.24,
-				Stat.STR: 0.12,
-				Stat.DEF: 0.64,
+				Stat.VIT: 0.22,
+				Stat.STR: 0.10,
+				Stat.DEF: 0.60,
+				Stat.SPD: 0.08,
+			}
+		AllocationProfile.FAVOR_STR_DEF:
+			return {
+				Stat.VIT: 0.10,
+				Stat.STR: 0.42,
+				Stat.DEF: 0.42,
+				Stat.SPD: 0.06,
 			}
 		_:
 			return {
-				Stat.VIT: 0.34,
-				Stat.STR: 0.33,
-				Stat.DEF: 0.33,
+				Stat.VIT: 0.30,
+				Stat.STR: 0.28,
+				Stat.DEF: 0.28,
+				Stat.SPD: 0.14,
 			}
 
 
@@ -175,7 +209,7 @@ func _roll_growth_stat(rng: RandomNumberGenerator, point_index: int, current_val
 	var weights := _growth_weights()
 	var weighted_stats: Array[Dictionary] = []
 	var total_weight := 0.0
-	for stat in [Stat.VIT, Stat.STR, Stat.DEF]:
+	for stat in [Stat.VIT, Stat.STR, Stat.DEF, Stat.SPD]:
 		var base_weight := float(weights[stat])
 		var current_value := int(current_values[stat])
 		var variance := rng.randf_range(-0.06, 0.06)
@@ -215,4 +249,6 @@ func _stat_priority(stat: Stat) -> int:
 			return 1
 		Stat.DEF:
 			return 2
+		Stat.SPD:
+			return 3
 	return 99

@@ -29,14 +29,16 @@ func start_from_root(root: Object) -> void:
 	if motor != null: motor.begin_roll()
 	root.set("roll_dust_spawned_this_roll", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	var tuning := root.get("player_tuning") as PlayerTuning
-	start_motion(root.call("_perspective_movement", movement_direction * (tuning.roll_distance / tuning.roll_duration))); player.visible = true
+	var roll_multiplier := tuning.roll_multiplier(int(root.get("player_spd")))
+	start_motion(root.call("_perspective_movement", movement_direction * (tuning.roll_distance * roll_multiplier / tuning.roll_duration))); player.visible = true
 	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
 
 
 func update_from_root(root: Object, delta: float) -> void:
 	if not bool(root.get("player_is_rolling")): return
 	var tuning := root.get("player_tuning") as PlayerTuning; var player := root.get("player") as Sprite2D; var before := player.global_position
-	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time, (root.get("player_roll_frames") as Array[Texture2D]).size(), Callable(self, "move_swept").bind(root))
+	var roll_multiplier := tuning.roll_multiplier(int(root.get("player_spd")))
+	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time / roll_multiplier, (root.get("player_roll_frames") as Array[Texture2D]).size(), Callable(self, "move_swept").bind(root))
 	if not bool(root.get("roll_dust_spawned_this_roll")):
 		var movement_direction := player.global_position - before
 		if movement_direction.length_squared() <= 0.0001: movement_direction = root.call("_perspective_movement", self.direction)
