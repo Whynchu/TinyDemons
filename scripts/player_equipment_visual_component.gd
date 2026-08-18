@@ -235,7 +235,6 @@ func apply_palette(root: Object) -> void:
 	if library == null:
 		return
 	var palette: Array[Color] = PaletteLibrary.pair(String(root.get("player_palette_name")))
-	var palette_name := String(root.get("player_palette_name"))
 	frames.clear()
 	white_copy_cache.clear()
 	occlusion_texture_cache.clear()
@@ -243,12 +242,11 @@ func apply_palette(root: Object) -> void:
 		var source_frames := library.slice_frames(frame_paths[key], FRAME_SIZE)
 		var recolored: Array[Texture2D] = []
 		for source in source_frames:
-			recolored.append(_recolor_frame(source, palette[0], palette[1], palette_name))
+			recolored.append(_recolor_frame(source, palette[0], palette[1]))
 		frames[key] = recolored
 
 
-func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color, palette_name: String) -> Texture2D:
-	var accent_color: Color = PaletteLibrary.accent(palette_name)
+func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color) -> Texture2D:
 	var image := source.get_image()
 	for y in image.get_height():
 		for x in image.get_width():
@@ -260,9 +258,8 @@ func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color
 				var tinted := color.lerp(main_color, 0.35)
 				image.set_pixel(x, y, Color(tinted.r, tinted.g, tinted.b, color.a))
 			elif rgb == PaletteLibrary.accent("grey"):
-				var brightened := color.lerp(Color.WHITE, 0.3)
-				var tinted := brightened.lerp(accent_color, 0.35)
-				image.set_pixel(x, y, Color(tinted.r, tinted.g, tinted.b, color.a))
+				var brightened := color.lerp(Color.WHITE, 0.2)
+				image.set_pixel(x, y, Color(brightened.r, brightened.g, brightened.b, color.a))
 	return ImageTexture.create_from_image(image)
 
 
