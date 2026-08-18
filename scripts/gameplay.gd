@@ -331,7 +331,6 @@ func _shift_hub_item(direction: int) -> void:
 		screen_state_controller.hub_fusion_count = 1
 	if count > 0: screen_state_controller.hub_item_index = posmod(screen_state_controller.hub_item_index + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_hover", -6.0, 1.0)
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 	var candidates: Array[ItemInstance] = []
 	if player_profile == null: return candidates
@@ -352,7 +351,6 @@ func _shift_hub_gear_candidate(direction: int) -> void:
 	var key := String(slot)
 	screen_state_controller.hub_gear_candidate_indices[key] = posmod(int(screen_state_controller.hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_hover", -6.0, 1.0)
 func _select_hub_gear_slot(slot_index: int) -> void:
 	if screen_state_controller.hub_page != 1: return
 	screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
@@ -400,7 +398,6 @@ func _shift_hub_fusion_count(direction: int) -> void:
 	if material_count <= 0: return
 	screen_state_controller.hub_fusion_count = clampi(int(screen_state_controller.hub_fusion_count) + direction, 1, material_count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_hover", -6.0, 1.0)
 func _salvage_profile_overflow(instance_id: String) -> int:
 	if player_profile == null: return 0
 	var value := player_profile.salvage_overflow(instance_id)
@@ -440,7 +437,7 @@ func _hub_item_action() -> void:
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			if player_profile.purchase_item(item, int(entry.get("price", 0))):
-				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_buy_sell", 0.0, 1.0)
+				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_confirm", 0.0, 1.0); _play_sound("ui_buy_sell", 0.0, 1.0)
 			else:
 				_play_sound("ui_denied", 0.0, 1.0)
 	elif screen_state_controller.hub_page == 3:
@@ -460,6 +457,7 @@ func _hub_item_action() -> void:
 					if _fuse_profile_target(target.instance_id, count):
 						screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
 						_play_sound("ui_confirm", 0.0, 1.0)
+						_play_sound("ui_buy_sell", 0.0, 1.0)
 			elif player_profile.can_salvage_overflow(target.instance_id):
 				var salvage_value := _salvage_profile_overflow(target.instance_id)
 				if salvage_value > 0:
@@ -473,12 +471,10 @@ func _select_hub_menu_row(row: int) -> void:
 	screen_state_controller.hub_menu_row = posmod(row, 5)
 	if screen_state_controller.hub_menu_row < 4: screen_state_controller.hub_action_column = 0
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_hover", -6.0, 1.0)
 func _shift_hub_action_column(direction: int) -> void:
 	var count := 4 if screen_state_controller.hub_menu_row == 4 else 2
 	screen_state_controller.hub_action_column = posmod(screen_state_controller.hub_action_column + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_hover", -6.0, 1.0)
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
 	if direction > 0:
 		_hub_allocate_stat(stat_name)

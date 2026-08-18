@@ -155,9 +155,11 @@ func update_title_flow(root: Object, delta: float) -> void:
 	var cursor := title_cursor_text
 	var focused := root.get_viewport().gui_get_focus_owner() as Button
 	var selected := continue_button if focused == continue_button and not continue_button.disabled else new_game
-	if focused != _last_title_focus and focused != null:
+	if focused != _last_title_focus:
+		var changed_from_existing := _last_title_focus != null
 		_last_title_focus = focused
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		if changed_from_existing and focused != null:
+			root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	if cursor != null and selected != null:
 		cursor.visible = true
 		cursor.position = Vector2(selected.position.x - 8, selected.position.y + 4)
@@ -1004,12 +1006,12 @@ func update_hub_input(root: Object) -> void:
 		return
 	if hub_pause_mode:
 		if hub_gear_browsing:
-			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1)
-			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1)
+			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 			elif Input.is_action_just_pressed("ui_accept") or interact_pressed: root.call("_hub_item_action")
 			return
-		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1)
-		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1)
+		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
 			var pause_action := hub_item_action_button
 			if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
@@ -1020,33 +1022,33 @@ func update_hub_input(root: Object) -> void:
 		root.call("_set_hub_page", page + 1); return
 	if page != 0:
 		if page == 1 and hub_gear_browsing:
-			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1)
-			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1)
+			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 			elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
 				root.call("_hub_item_action")
 			elif Input.is_action_just_pressed("ui_cancel"): root.call("_close_hub_gear_browse")
 			return
-		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1)
-		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1)
-		elif page == 1 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_gear_candidate", -1)
-		elif page == 1 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_gear_candidate", 1)
-		elif page == 3 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_fusion_count", -1)
-		elif page == 3 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_fusion_count", 1)
+		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 1 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 1 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 3 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 3 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
 			var action := hub_item_action_button
 			if action != null and not action.disabled: action.pressed.emit()
 		elif Input.is_action_just_pressed("ui_cancel"): root.call("_set_hub_page", 0)
 		return
 	if Input.is_action_just_pressed("ui_up"):
-		root.call("_select_hub_menu_row", row - 1)
+		root.call("_select_hub_menu_row", row - 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif Input.is_action_just_pressed("ui_down"):
-		root.call("_select_hub_menu_row", row + 1)
+		root.call("_select_hub_menu_row", row + 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
 		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
 		if row < 4:
-			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF", &"SPD"][row], direction)
+			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF", &"SPD"][row], direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		else:
-			root.call("_shift_hub_action_column", direction)
+			root.call("_shift_hub_action_column", direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
 		if row < 4:
 			root.call("_select_hub_menu_row", row + 1)
