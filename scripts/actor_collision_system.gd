@@ -201,11 +201,30 @@ func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bo
 
 
 func actor_contact_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+	if _uses_body_contact(actor) or _uses_body_contact(other):
+		return _rect_overlap_push_vector(root, actor, other)
 	var delta: Vector2 = root.call("_actor_foot", actor) - root.call("_actor_foot", other)
 	var distance := delta.length(); var min_distance := actor_contact_radius(root, actor) + actor_contact_radius(root, other)
 	if distance >= min_distance: return Vector2.ZERO
 	if distance <= 0.001: delta = Vector2.RIGHT; distance = 1.0
 	return delta.normalized() * (min_distance - distance)
+
+
+func _uses_body_contact(actor: Sprite2D) -> bool:
+	return actor != null and float(actor.get_meta("encounter_scale", 1.0)) > 1.0
+
+
+func _rect_overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+	var rect := root.call("_collision_rect", actor) as Rect2
+	var other_rect := root.call("_collision_rect", other) as Rect2
+	var overlap := rect.intersection(other_rect)
+	if not overlap.has_area():
+		return Vector2.ZERO
+	var actor_center := rect.get_center()
+	var other_center := other_rect.get_center()
+	if overlap.size.x < overlap.size.y:
+		return Vector2(-overlap.size.x if actor_center.x < other_center.x else overlap.size.x, 0.0)
+	return Vector2(0.0, -overlap.size.y if actor_center.y < other_center.y else overlap.size.y)
 
 
 func actor_contact_radius(root: Object, actor: Sprite2D) -> float:
