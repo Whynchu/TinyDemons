@@ -260,11 +260,15 @@ and its listed evidence; line movement alone does not advance status.
   templates; all resolve locally and are present in the Git index.
 - Current metrics: `gameplay.gd` 2,830 lines / 420 functions;
   `gameplay_state.gd` 172 `var` declarations; repository-wide `root.call/get/set`
-  counts are 510 / 537 / 183. These are compared with the baseline above as
+  counts are 510 / 539 / 183. These are compared with the baseline above as
   migration indicators, not acceptance criteria.
-- Remaining closeout decisions are release-facing provenance/licensing review for
-  existing sound libraries and reconstructed UI audio, plus an observed frame-time
-  sample on the supported runtime target.
+- The supported Godot 4.7.1 headless frame sample measured 6.894 ms average and
+  7.925 ms worst over 180 post-warmup frames (60-frame warmup). This is the first
+  recorded runtime sample; Phase A0 did not capture a numeric frame-time value,
+  so it is a reference baseline rather than a delta against an older measurement.
+- A disposable fresh clone at `9f1b5e9` completed the editor import scan, all 15
+  smoke scripts, and the main-scene headless boot. The scan's certificate-store
+  and editor-settings warnings are environment-only.
 
 ### Phase C regression fix — 2026-08-22
 
@@ -274,6 +278,23 @@ and its listed evidence; line movement alone does not advance status.
 - Added the visibility invariant to the scene-backed characterization test:
   attacking hides `TinyDemon`, while idle hides `TinyDemonAttack`.
 - Full 15-script smoke suite and main-scene headless run pass after the fix.
+
+### Phase C closeout — 2026-08-22
+
+- Checkpoint: `9f1b5e9` contains the attack-layer regression fix and the closeout
+  evidence updates.
+- Runtime assets: 87 literal runtime `res://` references resolve to tracked files;
+  generated palette outputs and reconstructed audio rules are documented in
+  [`asset-provenance.md`](asset-provenance.md).
+- Fresh-clone gate: passed after editor import on Godot 4.7.1; 15/15 smoke tests
+  and the main scene exited 0 without local-only generated files.
+- Frame-time gate: passed for the recorded reference sample at 6.894 ms average /
+  7.925 ms worst across 180 frames after a 60-frame warmup. A numeric Phase A0
+  baseline was not captured, so a future target-runtime comparison should use
+  this measurement as its reference.
+- Remaining release gate: confirm third-party sound-library and reconstructed
+  audio provenance/licensing before distribution. This is explicitly scheduled
+  as release/compliance work, not treated as runtime-verified.
 
 ---
 
