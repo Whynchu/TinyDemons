@@ -41,6 +41,19 @@ func _initialize() -> void:
 			player_rect = gameplay.call("_collision_rect", player) as Rect2
 			player.global_position += body_rect.get_center() - player_rect.get_center()
 			_expect(collision_system.overlap_push_vector(gameplay, boss, player) != Vector2.ZERO, "boss contact begins inside authored body", failures)
+		var regular_slime: Sprite2D = null
+		for slime in slimes:
+			if slime != boss and float(slime.get_meta("encounter_scale", 1.0)) <= 1.0:
+				regular_slime = slime
+				break
+		_expect(regular_slime != null, "boss room includes a regular slime for displacement checks", failures)
+		if regular_slime != null and collision_system != null:
+			var boss_start := boss.position
+			regular_slime.global_position = body_rect.get_center()
+			var regular_start := regular_slime.position
+			collision_system.resolve_slime_contacts([boss, regular_slime], gameplay, 1)
+			_expect(boss.position.is_equal_approx(boss_start), "regular slime cannot displace the boss", failures)
+			_expect(not regular_slime.position.is_equal_approx(regular_start), "boss pushes an overlapping regular slime aside", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

@@ -31,8 +31,10 @@ static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
 		desired += tactics.approach_offset(approach)
 	var buddy_avoidance := Vector2.ZERO
 	var collision := root.get("actor_collision_system") as ActorCollisionSystem
+	var is_boss := _is_boss(slime)
 	for buddy in root.get("slimes") as Array[Sprite2D]:
 		if buddy == slime or bool(root.call("_is_slime_dead", buddy)): continue
+		if is_boss and not _is_boss(buddy): continue
 		var buddy_delta: Vector2 = slime_foot - root.call("_actor_foot", buddy); var buddy_distance: float = buddy_delta.length(); var clear_distance: float = collision.actor_contact_radius(root, slime) + collision.actor_contact_radius(root, buddy) + 4.0
 		if buddy_distance > 0.01 and buddy_distance < clear_distance: buddy_avoidance += buddy_delta.normalized() * (clear_distance - buddy_distance) / clear_distance
 	if buddy_avoidance.length_squared() > 0.001: desired += buddy_avoidance.normalized() * 7.0
@@ -187,6 +189,8 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		for buddy in root.get("slimes") as Array[Sprite2D]:
 			if buddy == actor or bool(root.call("_is_slime_dead", buddy)):
 				continue
+			if _is_boss(actor) and not _is_boss(buddy):
+				continue
 			var buddy_delta: Vector2 = slime_foot - actor_foot.call(buddy)
 			var buddy_distance := buddy_delta.length()
 			if buddy_distance > 0.01 and buddy_distance < tuning.steering_clearance:
@@ -210,6 +214,10 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		best_direction.y *= 2.0
 		best_direction = best_direction.normalized()
 	return best_direction
+
+
+static func _is_boss(actor: Sprite2D) -> bool:
+	return actor != null and float(actor.get_meta("encounter_scale", 1.0)) > 1.0
 
 
 func tick_scoot(actor: Sprite2D, delta: float, tuning: SlimeTuning, is_aggroed: Callable, try_move: Callable, set_scale: Callable, repath: Callable, start_hold: Callable, start_next: Callable) -> void:

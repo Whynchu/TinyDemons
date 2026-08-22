@@ -62,6 +62,14 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:
 	var actor_start := actor.position
 	var other_start := other.position
+	var actor_is_boss := _uses_body_contact(actor)
+	var other_is_boss := _uses_body_contact(other)
+	# Bosses own their movement lane. A regular slime caught in that lane takes
+	# the entire separation displacement; it can never stop or shove the boss.
+	if actor_is_boss != other_is_boss:
+		if actor_is_boss:
+			return try_move_swept(other, -push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+		return try_move_swept(actor, push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 	actor.position += push * 0.5
 	other.position -= push * 0.5
 	var actor_valid := _position_is_valid(root, actor)
