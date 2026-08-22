@@ -59,9 +59,9 @@ func initialize(root: GameplayState) -> void:
 		)
 		initial_room_id = boss_connection.destination_room_id
 	root.current_room_id = initial_room_id
-	root.call("_sync_current_room_metadata")
-	(root.get("room_controller") as RoomController).set_current_room(root.get("current_room_id"), root.get("current_room_type"))
-	root.call("_collect_dungeon_sockets"); (root.get("room_controller") as RoomController).validate_socket_setup(); root.call("_ensure_current_room_layout")
+	root._sync_current_room_metadata()
+	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
+	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
 	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
@@ -99,9 +99,9 @@ func initialize(root: GameplayState) -> void:
 	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_hub_ui"); root.call("_build_scene_transition")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
-	_initialize_walkable_area(root, root.get("EDGE_MARGIN") if root.get("EDGE_MARGIN") != null else 0.35, root.get("SLIME_EDGE_PADDING") if root.get("SLIME_EDGE_PADDING") != null else 3.0)
+	_initialize_walkable_area(root, root.EDGE_MARGIN, root.SLIME_EDGE_PADDING)
 	_initialize_slimes(root, slimes)
-	root.call("_apply_room_state"); root.call("_build_depth_lists")
+	root._apply_room_state(); root._build_depth_lists()
 	if bool(root.get("debug_start_in_boss_room")):
 		root.call("_begin_new_run")
 		_enter_debug_gameplay(root)
@@ -198,12 +198,12 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root._update_player_mp_ui()
 
 
-func _initialize_walkable_area(root: Object, edge_margin: float, slime_edge_padding: float) -> void:
-	root.set("use_walkable_polygon_direct", true); root.call("_collect_walkable_tiles", root.get("floor_tiles")); root.call("_build_entrance_block_polygons"); root.call("_build_walkable_outline")
-	var area := root.get("walkable_area") as WalkableArea
+func _initialize_walkable_area(root: GameplayState, edge_margin: float, slime_edge_padding: float) -> void:
+	root.use_walkable_polygon_direct = true; root._collect_walkable_tiles(root.floor_tiles); root._build_entrance_block_polygons(); root._build_walkable_outline()
+	var area := root.walkable_area
 	if area != null:
-		area.set_geometry(root.get("walkable_polygons"), root.get("walkable_outline")); area.edge_margin = edge_margin; area.slime_edge_padding = slime_edge_padding; area.set_entrance_blocks(root.get("entrance_block_polygons"))
-	if (root.get("walkable_outline") as PackedVector2Array).is_empty(): push_warning("No floor tiles found. Actor movement will be disabled.")
+		area.set_geometry(root.walkable_polygons, root.walkable_outline); area.edge_margin = edge_margin; area.slime_edge_padding = slime_edge_padding; area.set_entrance_blocks(root.entrance_block_polygons)
+	if root.walkable_outline.is_empty(): push_warning("No floor tiles found. Actor movement will be disabled.")
 
 
 func _initialize_slimes(root: Object, slimes: Array[Sprite2D]) -> void:
