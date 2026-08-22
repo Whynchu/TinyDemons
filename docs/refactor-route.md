@@ -320,6 +320,16 @@ they can be split without duplicating UI ownership.
 **Exit gate:** the success definition in §1 is met without gameplay or frame-time
 regression.
 
+Initial closeout inventory completed 2026-08-22: runtime references resolve to
+tracked files, baked/reconstructed output provenance is documented in
+`docs/asset-provenance.md`, and checkpoint `107f1cc` is pushed. Release provenance
+approval and an observed target-runtime frame-time sample remain before the final
+closeout gate.
+
+The Phase C playtest regression found during closeout—attack-1 stale-frame
+ghosting—was fixed by centralizing player/attack-layer visibility and is covered by
+the scene-backed smoke test.
+
 ---
 
 ## 6. Per-slice quality gate

@@ -53,8 +53,16 @@ func apply_frame(root: Object) -> void:
 		if active_attack_frames.is_empty(): return
 		var grey_attack := grey_set.get("attack2_left" if animation_key == "attack2" and flip else "attack_left" if flip else "attack2" if animation_key == "attack2" else "attack", []) as Array[Texture2D]
 		root.call("_set_mp_grey_texture", grey_attack[frame])
-		var visual := root.get("player_attack_visual") as Sprite2D; visual.texture = active_attack_frames[frame]; update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index); return
+		var visual := root.get("player_attack_visual") as Sprite2D
+		# Assign the new frame while the attack layer is hidden. Exposing it first
+		# can render the previous attack frame for one frame as a delayed ghost.
+		visual.visible = false
+		visual.texture = active_attack_frames[frame]
+		_set_render_visibility(player, visual, bool(root.get("player_is_attacking")))
+		update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index)
+		return
 	player.offset = Vector2(-10, -10)
+	_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
 	var grey_frames := grey_set.get(animation_key, []) as Array[Texture2D]
 	root.call("_set_mp_grey_texture", grey_frames[frame])
 	root.call("_set_actor_base_texture", player, frames[frame])
@@ -273,10 +281,17 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 
 func update_attack_visual(player: Sprite2D, attack_visual: Sprite2D, active: bool, texture_offset: Vector2, z_index_value: int) -> void:
 	if not active:
-		attack_visual.visible = false
+		_set_render_visibility(player, attack_visual, false)
 		return
-	attack_visual.visible = true
+	_set_render_visibility(player, attack_visual, true)
 	attack_visual.flip_h = false
 	attack_visual.global_position = player.global_position + texture_offset
 	attack_visual.global_scale = Vector2.ONE
 	attack_visual.z_index = z_index_value
+
+
+func _set_render_visibility(player: Sprite2D, attack_visual: Sprite2D, attacking: bool) -> void:
+	if player != null:
+		player.visible = not attacking
+	if attack_visual != null:
+		attack_visual.visible = attacking

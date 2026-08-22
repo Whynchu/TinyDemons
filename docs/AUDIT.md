@@ -251,6 +251,30 @@ and its listed evidence; line movement alone does not advance status.
 - The editor import scan exits 0. The known certificate-store/editor-settings
   warnings and scene-backed resource-leak warnings remain environment-only.
 
+### Phase C inventory — 2026-08-22
+
+- Pushed closeout checkpoint: `107f1cc` on `refactor/2026-08-18`.
+- Added [`asset-provenance.md`](asset-provenance.md), documenting authored,
+  generated, reconstructed, and reference-sensitive asset groups.
+- Checked 87 literal runtime `res://` references after excluding dynamic path
+  templates; all resolve locally and are present in the Git index.
+- Current metrics: `gameplay.gd` 2,830 lines / 420 functions;
+  `gameplay_state.gd` 172 `var` declarations; repository-wide `root.call/get/set`
+  counts are 510 / 537 / 183. These are compared with the baseline above as
+  migration indicators, not acceptance criteria.
+- Remaining closeout decisions are release-facing provenance/licensing review for
+  existing sound libraries and reconstructed UI audio, plus an observed frame-time
+  sample on the supported runtime target.
+
+### Phase C regression fix — 2026-08-22
+
+- Fixed attack-1 ghosting by making `PlayerAnimationComponent` the single owner of
+  base-versus-attack sprite visibility and assigning the new attack texture before
+  exposing the attack layer.
+- Added the visibility invariant to the scene-backed characterization test:
+  attacking hides `TinyDemon`, while idle hides `TinyDemonAttack`.
+- Full 15-script smoke suite and main-scene headless run pass after the fix.
+
 ---
 
 ## 7. Per-slice audit record

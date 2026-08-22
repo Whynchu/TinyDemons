@@ -20,6 +20,14 @@ func _initialize() -> void:
 		_expect((drawer.get("collision_rect_callable") as Callable).is_valid(), "geometry drawer receives shared collision callable", failures)
 		_expect((drawer.get("body_polygon_callable") as Callable).is_valid(), "geometry drawer receives shared body callable", failures)
 		_expect((drawer.get("actors") as Array[Sprite2D]).size() >= 1, "geometry drawer tracks runtime actors", failures)
+	var player := gameplay.get_node_or_null("Actors/TinyDemon") as Sprite2D
+	var attack_visual := gameplay.get_node_or_null("Actors/TinyDemonAttack") as Sprite2D
+	var animation := gameplay.get_node_or_null("Actors/TinyDemon/Animation") as Node
+	if player != null and attack_visual != null and animation != null:
+		animation.call("_set_render_visibility", player, attack_visual, true)
+		_expect(not player.visible and attack_visual.visible, "attack render hides stale base sprite", failures)
+		animation.call("_set_render_visibility", player, attack_visual, false)
+		_expect(player.visible and not attack_visual.visible, "idle render hides attack layer", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
