@@ -37,14 +37,19 @@ static func visual_offset(actor: Sprite2D, player: Sprite2D, slimes: Array[Sprit
 	return Vector2.ZERO
 
 
-static func guide_rect(actor: Sprite2D, guide_name: String) -> Rect2:
+static func guide_rect(actor: Sprite2D, guide_name: String, extra_world_offset := Vector2.ZERO) -> Rect2:
 	var guide := actor.get_node_or_null(guide_name) as Node2D
 	if guide == null:
 		return Rect2()
-	var scaled_position: Vector2 = guide.get("rect_position")
-	var scaled_size: Vector2 = guide.get("rect_size")
-	var origin := actor.global_position + guide.position + scaled_position + Vector2(minf(scaled_size.x, 0.0), minf(scaled_size.y, 0.0))
-	return Rect2(origin, scaled_size.abs())
+	var rect_position: Vector2 = guide.get("rect_position")
+	var rect_size: Vector2 = guide.get("rect_size")
+	var corners := PackedVector2Array([
+		guide.to_global(rect_position) + extra_world_offset,
+		guide.to_global(rect_position + Vector2(rect_size.x, 0.0)) + extra_world_offset,
+		guide.to_global(rect_position + rect_size) + extra_world_offset,
+		guide.to_global(rect_position + Vector2(0.0, rect_size.y)) + extra_world_offset,
+	])
+	return global_points_bounds(corners)
 
 
 static func collision_rect(actor: Sprite2D, chest: Sprite2D, firepit: Sprite2D, slimes: Array[Sprite2D], actor_foot_offset: Vector2, actor_collision_size: Vector2, chest_collision_size: Vector2, encounter_scale: float) -> Rect2:
@@ -52,7 +57,10 @@ static func collision_rect(actor: Sprite2D, chest: Sprite2D, firepit: Sprite2D, 
 		var polygon := actor.get_node_or_null("CollisionPolygon") as Polygon2D
 		if polygon != null and polygon.polygon.size() >= 3:
 			return global_polygon_bounds(polygon)
-	var guide_rect := guide_rect(actor, "CollisionGuide")
+	var guide_offset := Vector2.ZERO
+	if actor != chest and slimes.has(actor):
+		guide_offset = encounter_visual_offset(encounter_scale, actor_foot_offset) * actor.scale
+	var guide_rect := guide_rect(actor, "CollisionGuide", guide_offset)
 	var foot_position := foot(actor, actor_foot_offset)
 	var size := actor_collision_size
 	if actor != chest and slimes.has(actor) and not guide_rect.has_area():
@@ -114,7 +122,16 @@ static func combat_target_point(collision_rect: Rect2) -> Vector2:
 
 
 static func global_polygon_bounds(polygon_owner: Polygon2D) -> Rect2:
-	var bounds := Rect2(polygon_owner.to_global(polygon_owner.polygon[0]), Vector2.ZERO)
+	var points := PackedVector2Array()
 	for point in polygon_owner.polygon:
-		bounds = bounds.expand(polygon_owner.to_global(point))
+		points.append(polygon_owner.to_global(point))
+	return global_points_bounds(points)
+
+
+static func global_points_bounds(points: PackedVector2Array) -> Rect2:
+	if points.is_empty():
+		return Rect2()
+	var bounds := Rect2(points[0], Vector2.ZERO)
+	for point in points:
+		bounds = bounds.expand(point)
 	return bounds
