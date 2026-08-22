@@ -2336,8 +2336,8 @@ func _perspective_movement(movement: Vector2) -> Vector2: return Vector2(movemen
 func _collision_rect(actor: Sprite2D) -> Rect2:
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
 	return ActorGeometry.collision_rect(actor, chest, firepit, slimes, ACTOR_FOOT_OFFSET, Vector2(ACTOR_COLLISION_WIDTH, ACTOR_COLLISION_HEIGHT), CHEST_COLLISION_SIZE, _slime_encounter_scale(actor))
-func _collision_guide_rect(actor: Sprite2D) -> Rect2: return ActorGeometry.guide_rect(actor, "CollisionGuide", _actor_guide_visual_offset(actor))
-func _collision_guide_rect_by_name(actor: Sprite2D, guide_name: String) -> Rect2: return ActorGeometry.guide_rect(actor, guide_name, _actor_guide_visual_offset(actor))
+func _collision_guide_rect(actor: Sprite2D) -> Rect2: return ActorGeometry.guide_rect(actor, "CollisionGuide")
+func _collision_guide_rect_by_name(actor: Sprite2D, guide_name: String) -> Rect2: return ActorGeometry.guide_rect(actor, guide_name)
 func _build_depth_lists() -> void:
 	var lists := depth_sorter.visible_lists(player, slimes, chest, rest_fire, cloaked_demon, Callable(self, "_is_slime_dead"))
 	depth_sprites = lists["depth"] as Array[Sprite2D]; occluder_sprites = lists["occluders"] as Array[Sprite2D]
@@ -2766,19 +2766,29 @@ func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2:
 	var size: Vector2 = texture.get_size() * sprite_scale; var source_offset := _actor_visual_offset(sprite) if occlusion_renderer.original_actor_scales.has(sprite) else sprite.offset; var origin := sprite.global_position + source_offset * sprite_scale - size * 0.5 if sprite.centered else sprite.global_position + source_offset * sprite_scale; return Rect2(origin, size)
 func _build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], is_target: bool, use_grey_highlight: bool) -> Texture2D: return occlusion_renderer.build_exact_occluded_actor_texture(actor, active_occluders, is_target, use_grey_highlight, Callable(self, "_is_pixel_covered_by_occluder"), Callable(self, "_actor_visual_offset"))
 func _is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D]) -> bool: return occlusion_renderer.is_pixel_covered_by_occluder(world_pixel, active_occluders, Callable(self, "_actor_screen_scale"), Callable(self, "_actor_visual_offset"))
-func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void: actor.scale = _actor_screen_scale(actor); actor.offset = _actor_visual_offset(actor)
+func _apply_actor_scale(actor: Sprite2D, _use_effect_texture: bool) -> void:
+	actor.scale = _actor_screen_scale(actor)
+	actor.offset = _actor_visual_offset(actor)
+	_sync_actor_geometry_offset(actor)
 func _restore_actor_base_visual_scale(actor: Sprite2D) -> void: if occlusion_renderer.original_actor_scales.has(actor): actor.scale = _actor_screen_scale(actor); actor.offset = _actor_visual_offset(actor)
 func _actor_screen_scale(actor: Sprite2D) -> Vector2:
 	var original_scale: Vector2 = occlusion_renderer.original_actor_scales.get(actor, Vector2.ONE)
 	var visual_scale: Vector2 = occlusion_renderer.actor_visual_scales.get(actor, Vector2.ONE)
 	return original_scale * visual_scale
 func _slime_encounter_scale(slime: Sprite2D) -> float: return float(slime.get_meta("encounter_scale", 1.0))
-func _actor_guide_visual_offset(actor: Sprite2D) -> Vector2:
-	if not slimes.has(actor):
-		return Vector2.ZERO
-	return ActorGeometry.encounter_visual_offset(_slime_encounter_scale(actor), ACTOR_FOOT_OFFSET) * actor.scale
 func _actor_visual_offset(actor: Sprite2D) -> Vector2:
 	return ActorGeometry.visual_offset(actor, player, slimes, ACTOR_FOOT_OFFSET)
+func _sync_actor_geometry_offset(actor: Sprite2D) -> void:
+	if not slimes.has(actor):
+		return
+	for node_name in [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]:
+		var geometry := actor.get_node_or_null(NodePath(node_name)) as Node2D
+		if geometry == null:
+			continue
+		if not geometry.has_meta("authored_position"):
+			geometry.set_meta("authored_position", geometry.position)
+		var authored_position := geometry.get_meta("authored_position") as Vector2
+		geometry.position = authored_position + actor.offset
 func _collect_walkable_tiles(node: Node) -> void: if walkable_area != null: walkable_area.collect_geometry(node, Callable(self, "_tile_top_polygon")); walkable_points = walkable_area.points.duplicate(); walkable_polygons = walkable_area.polygons.duplicate()
 func _build_walkable_outline() -> void: if walkable_area != null: walkable_area.build_outline(use_walkable_polygon_direct); walkable_outline = walkable_area.outline
 func _build_entrance_block_polygons() -> void: room_controller.build_entrance_blocks(self); if walkable_area != null: walkable_area.set_entrance_blocks(entrance_block_polygons)

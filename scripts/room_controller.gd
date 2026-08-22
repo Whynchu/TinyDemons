@@ -526,6 +526,8 @@ func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
 		if clone == null:
 			continue
 		slime.add_child(clone)
+		if clone is Node2D:
+			clone.set_meta("authored_position", (clone as Node2D).position)
 	authored.free()
 
 

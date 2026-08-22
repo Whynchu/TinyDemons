@@ -61,10 +61,7 @@ static func collision_rect(actor: Sprite2D, chest: Sprite2D, firepit: Sprite2D, 
 		var boss_body := body_polygon(actor, actor_foot_offset)
 		if boss_body.size() >= 3:
 			return global_points_bounds(boss_body)
-	var guide_offset := Vector2.ZERO
-	if actor != chest and slimes.has(actor):
-		guide_offset = encounter_visual_offset(encounter_scale, actor_foot_offset) * actor.scale
-	var guide_rect := guide_rect(actor, "CollisionGuide", guide_offset)
+	var guide_rect := guide_rect(actor, "CollisionGuide")
 	var foot_position := foot(actor, actor_foot_offset)
 	var size := actor_collision_size
 	if actor != chest and slimes.has(actor) and not guide_rect.has_area():
@@ -91,10 +88,9 @@ static func body_polygon(slime: Sprite2D, actor_foot_offset: Vector2) -> PackedV
 	var hitbox := slime.get_node_or_null("BodyHitbox") as Polygon2D
 	if hitbox == null or hitbox.polygon.size() < 3:
 		return collision_polygon(slime, actor_foot_offset)
-	var visual_offset := Vector2(slime.offset.x * slime.scale.x, slime.offset.y * slime.scale.y)
 	var polygon := PackedVector2Array()
 	for point in hitbox.polygon:
-		polygon.append(hitbox.to_global(point) + visual_offset)
+		polygon.append(hitbox.to_global(point))
 	return polygon
 
 

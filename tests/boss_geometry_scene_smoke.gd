@@ -24,11 +24,11 @@ func _initialize() -> void:
 		var collision_rect: Rect2 = gameplay.call("_collision_rect", boss)
 		var body := gameplay.call("_slime_body_polygon", boss) as PackedVector2Array
 		var body_rect := _bounds(body)
-		var raw_guide := ActorGeometry.guide_rect(boss, "CollisionGuide")
 		_expect(sprite_rect.intersects(body_rect), "boss body overlaps rendered sprite", failures)
 		_expect(sprite_rect.encloses(collision_rect), "boss collision guide stays inside rendered sprite", failures)
 		_expect(collision_rect.position.is_equal_approx(body_rect.position) and collision_rect.size.is_equal_approx(body_rect.size), "boss runtime collision rect matches authored body", failures)
-		_expect(collision_rect.get_center().distance_to(raw_guide.get_center()) > 5.0, "boss guide receives foot compensation", failures)
+		var body_node := boss.get_node_or_null("BodyHitbox") as Node2D
+		_expect(body_node != null and body_node.position.is_equal_approx(boss.offset), "boss body node receives the same visual offset as its sprite", failures)
 		var combat_target: Vector2 = gameplay.call("_magic_target_point", boss)
 		_expect(Geometry2D.is_point_in_polygon(combat_target, body), "boss combat target stays inside authored body", failures)
 	gameplay.queue_free()
