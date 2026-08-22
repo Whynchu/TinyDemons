@@ -117,6 +117,15 @@ static func directional_reach(polygon: PackedVector2Array, origin: Vector2, dire
 	return reach
 
 
+static func polygon_center(polygon: PackedVector2Array) -> Vector2:
+	if polygon.is_empty():
+		return Vector2.ZERO
+	var center := Vector2.ZERO
+	for point in polygon:
+		center += point
+	return center / float(polygon.size())
+
+
 static func combat_target_point(collision_rect: Rect2) -> Vector2:
 	return collision_rect.get_center()
 

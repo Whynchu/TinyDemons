@@ -28,6 +28,8 @@ func _initialize() -> void:
 		_expect(sprite_rect.intersects(body_rect), "boss body overlaps rendered sprite", failures)
 		_expect(sprite_rect.encloses(collision_rect), "boss collision guide stays inside rendered sprite", failures)
 		_expect(collision_rect.get_center().distance_to(raw_guide.get_center()) > 5.0, "boss guide receives foot compensation", failures)
+		var combat_target: Vector2 = gameplay.call("_magic_target_point", boss)
+		_expect(Geometry2D.is_point_in_polygon(combat_target, body), "boss combat target stays inside authored body", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
