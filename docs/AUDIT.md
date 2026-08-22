@@ -1,6 +1,6 @@
 # Tiny Demons — Current Codebase Audit and Refactor Plan
 
-Status: active
+Status: engineering closeout complete; release compliance pending
 
 Audit date: 2026-08-22
 
@@ -172,8 +172,8 @@ as proof for a changed working tree.
 | B6 | Presentation delegates and shared state | Complete | Hub pending edits now have a typed draft owner; durable profile state remains separate |
 | C | Verification, metrics, fresh-clone closeout | Complete | 17/17 smoke checks, main boot, fresh-clone gate, and frame-time evidence pass |
 
-Implementation work has begun under B2. Updating a row requires both the code change
-and its listed evidence; line movement alone does not advance status.
+All registered refactor phases are complete. Updating a row requires both the code
+change and its listed evidence; line movement alone does not advance status.
 
 ### B1 progress — 2026-08-22
 
@@ -306,6 +306,33 @@ and its listed evidence; line movement alone does not advance status.
 - Remaining release gate: confirm third-party sound-library and reconstructed
   audio provenance/licensing before distribution. This is explicitly scheduled
   as release/compliance work, not treated as runtime-verified.
+
+### Post-closeout gameplay regression pass — 2026-08-22
+
+- Checkpoints: `5a6d181` through `83826d0` on `refactor/2026-08-18`.
+- Added the editable boss-slime authoring scene as the source for scaled boss
+  body, collision, and attack geometry.
+- Corrected runtime sprite/collider transforms, boss damage targeting, physical
+  boss contact bounds, and boss-versus-add displacement priority.
+- Corrected boss attack range and lunge calculations to use combat-body centers
+  and directional polygon reach. Vertical attacks now retain their intended
+  movement instead of applying perspective compression a second time.
+- Added scene-backed regressions for authored body bounds, empty-space contact,
+  boss/add displacement, and vertical attack reach.
+- Verification: the complete 17-test smoke suite and main-scene headless boot pass.
+
+### Next active route — Elemental Chroma product work
+
+The refactor audit is complete. New feature work resumes against the Elemental
+Chroma documents, with [`elemental-chroma-handoff.md`](elemental-chroma-handoff.md)
+as the decision log and [`elemental-chroma-implementation-plan.md`](elemental-chroma-implementation-plan.md)
+as the execution plan.
+
+The next bounded slice is design completion for the Triangle ability contract:
+approve the Gray action, the Fire/Water/Electric actions, their animation-facing
+interfaces, and the small flame-bound stat effects before adding more ability code.
+Binding, blending, Primordial swapping, and broader elemental room expansion remain
+later slices.
 
 ---
 
