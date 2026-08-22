@@ -1982,7 +1982,7 @@ func _can_slime_attack_player(slime: Sprite2D) -> bool:
 	if brain != null and brain.is_noticing():
 		return false
 	var attack_distance := _slime_attack_reach(slime)
-	if player_dead or _actor_foot(player).distance_to(_actor_foot(slime)) > attack_distance:
+	if player_dead or _slime_attack_offset(slime).length() > attack_distance:
 		return false
 	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics == null:
@@ -2011,16 +2011,29 @@ func _is_any_slime_aggroed() -> bool:
 	for slime in slimes: if _is_slime_aggroed(slime): return true
 	return false
 func _slime_attack_reach(slime: Sprite2D) -> float:
-	var foot := _actor_foot(slime)
-	var to_player := _actor_foot(player) - foot
+	var to_player := _slime_attack_offset(slime)
 	var direction := to_player.normalized() if to_player.length_squared() > 0.001 else Vector2.RIGHT
-	var body_reach := ActorGeometry.directional_reach(_slime_body_polygon(slime), foot, direction)
-	var player_reach := actor_collision_system.actor_contact_radius(self, player)
 	var encounter_scale := _slime_encounter_scale(slime)
 	# Attack availability is derived from the same body polygon used by the bite
 	# test. This keeps enlarged bosses from stopping short because an old
 	# rectangular guide underestimated their actual body reach.
-	return maxf(slime_tuning.attack_hit_range, body_reach + player_reach) + slime_tuning.attack_lunge_distance * encounter_scale + 0.75
+	return maxf(slime_tuning.attack_hit_range, _slime_attack_contact_gap(slime, direction)) + slime_tuning.attack_lunge_distance * encounter_scale + 0.75
+
+
+func _slime_attack_contact_gap(slime: Sprite2D, direction: Vector2) -> float:
+	var slime_body := _slime_body_polygon(slime)
+	var slime_center := ActorGeometry.polygon_center(slime_body)
+	var body_reach := ActorGeometry.directional_reach(slime_body, slime_center, direction)
+	var player_rect := _collision_rect(player)
+	var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
+	var player_reach := ActorGeometry.directional_reach(player_body, player_rect.get_center(), -direction)
+	return maxf(body_reach + player_reach - 0.5, 0.0)
+
+
+func _slime_attack_offset(slime: Sprite2D) -> Vector2:
+	var slime_body := _slime_body_polygon(slime)
+	var slime_center := ActorGeometry.polygon_center(slime_body) if slime_body.size() >= 3 else _collision_rect(slime).get_center()
+	return _collision_rect(player).get_center() - slime_center
 func _aggro_slime_target(slime: Sprite2D) -> Vector2:
 	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics != null:
@@ -2061,17 +2074,22 @@ func _update_player_health_regen(delta: float) -> void:
 		player_health_component.tick_regeneration(delta)
 	_update_player_health_ui()
 func _apply_slime_attack_lunge(slime: Sprite2D) -> void:
-	var to_player := _actor_foot(player) - _actor_foot(slime)
+	var movement := _slime_attack_lunge_vector(slime)
+	if movement.length_squared() <= 0.0001:
+		return
+	actor_collision_system.try_move_swept(slime, movement, 0.75, Callable(self, "_can_actor_stand_at_current_position"), Callable(self, "_collides_with_static"))
+
+
+func _slime_attack_lunge_vector(slime: Sprite2D) -> Vector2:
+	var to_player := _slime_attack_offset(slime)
 	var direction := Vector2.LEFT if to_player.length_squared() < 0.01 and _slime_combat(slime).face_left else Vector2.RIGHT if to_player.length_squared() < 0.01 else to_player.normalized()
-	direction = Vector2(direction.x, direction.y * 1.5).normalized()
-	# Stop just inside the contact-radius estimate so the enlarged body polygon
-	# can actually overlap the player's collision rectangle on the bite frame.
-	var contact_gap := maxf(actor_collision_system.actor_contact_radius(self, slime) + actor_collision_system.actor_contact_radius(self, player) - 0.5, 0.0)
+	# The vector between combat-body centers is already in world coordinates.
+	# Running it through perspective movement flattened vertical lunges. Directional
+	# polygon reach also avoids using the boss's wide horizontal radius vertically.
+	var contact_gap := _slime_attack_contact_gap(slime, direction)
 	var max_lunge := slime_tuning.attack_lunge_distance * _slime_encounter_scale(slime)
 	var lunge_distance := minf(max_lunge, maxf(to_player.length() - contact_gap, 0.0))
-	if lunge_distance <= 0.01:
-		return
-	actor_collision_system.try_move_swept(slime, _perspective_movement(direction * lunge_distance), 0.75, Callable(self, "_can_actor_stand_at_current_position"), Callable(self, "_collides_with_static"))
+	return direction * lunge_distance
 func _apply_player_hit_knockback(slime: Sprite2D) -> void:
 	var direction := _actor_foot(player) - _actor_foot(slime)
 	if direction.length_squared() < 0.01:

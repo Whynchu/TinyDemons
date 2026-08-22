@@ -41,6 +41,18 @@ func _initialize() -> void:
 			player_rect = gameplay.call("_collision_rect", player) as Rect2
 			player.global_position += body_rect.get_center() - player_rect.get_center()
 			_expect(collision_system.overlap_push_vector(gameplay, boss, player) != Vector2.ZERO, "boss contact begins inside authored body", failures)
+			player_rect = gameplay.call("_collision_rect", player) as Rect2
+			var vertical_target_center := Vector2(ActorGeometry.polygon_center(body).x, body_rect.end.y + player_rect.size.y * 0.5 + 8.0)
+			player.global_position += vertical_target_center - player_rect.get_center()
+			var vertical_lunge := gameplay.call("_slime_attack_lunge_vector", boss) as Vector2
+			_expect(absf(vertical_lunge.y) > 4.0, "boss attack lunges substantially toward a vertical target", failures)
+			_expect(absf(vertical_lunge.x) < 0.1, "vertical boss attack does not drift horizontally", failures)
+			var lunged_body := PackedVector2Array()
+			for point in body:
+				lunged_body.append(point + vertical_lunge)
+			player_rect = gameplay.call("_collision_rect", player) as Rect2
+			var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
+			_expect(not Geometry2D.intersect_polygons(lunged_body, player_body).is_empty(), "vertical boss lunge reaches the player body", failures)
 		var regular_slime: Sprite2D = null
 		for slime in slimes:
 			if slime != boss and float(slime.get_meta("encounter_scale", 1.0)) <= 1.0:
