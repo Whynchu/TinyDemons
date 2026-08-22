@@ -63,10 +63,10 @@ color = Color(0.1, 1, 0.35, 0.16)
 polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
 [node name="BodyHitbox" type="Polygon2D" parent="." unique_id=1189786596]
-position = Vector2(2.6969697, 1.8181818)
-scale = Vector2(0.6515151, 0.72727275)
+position = Vector2(0, 0)
+scale = Vector2(1, 1)
 color = Color(1, 0.25, 0.2, 0.32)
-polygon = PackedVector2Array(5, 3, 11, 3, 14.279071, 5.749999, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 2, 5.749999)
+polygon = PackedVector2Array(5, 4, 11, 4, 13, 6, 13, 9, 11, 11, 9, 12, 6, 12, 4, 10, 3, 8, 3, 6)
 
 [node name="AttackGuideL" type="Node2D" parent="." unique_id=130032370]
 position = Vector2(0, 0)
