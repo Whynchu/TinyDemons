@@ -170,7 +170,7 @@ as proof for a changed working tree.
 | B4 | Progression, settlement, and hub | Complete | Progression commands, settlement guard, and domain characterization are in place |
 | B5 | Combat, room, and frame seams | Complete | Frame phase order is named, documented, and characterized; existing central schedule remains intact |
 | B6 | Presentation delegates and shared state | Complete | Hub pending edits now have a typed draft owner; durable profile state remains separate |
-| C | Verification, metrics, fresh-clone closeout | Pending | Full gates green with no measured regression |
+| C | Verification, metrics, fresh-clone closeout | Complete | 17/17 smoke checks, main boot, fresh-clone gate, and frame-time evidence pass |
 
 Implementation work has begun under B2. Updating a row requires both the code change
 and its listed evidence; line movement alone does not advance status.
@@ -246,7 +246,7 @@ and its listed evidence; line movement alone does not advance status.
   damage/progression, presentation, and transitions. The single scheduler remains
   the runtime owner.
 - Expanded `progression_smoke` to cover the domain APIs, hub draft lifecycle,
-  settlement idempotence, and frame ordering. The full 15-script suite and main
+  settlement idempotence, and frame ordering. The full 17-script suite and main
   scene headless run pass.
 - The editor import scan exits 0. The known certificate-store/editor-settings
   warnings and scene-backed resource-leak warnings remain environment-only.
@@ -277,7 +277,8 @@ and its listed evidence; line movement alone does not advance status.
   exposing the attack layer.
 - Added the visibility invariant to the scene-backed characterization test:
   attacking hides `TinyDemon`, while idle hides `TinyDemonAttack`.
-- Full 15-script smoke suite and main-scene headless run pass after the fix.
+- Full 17-script smoke suite and main-scene headless run pass after the fix;
+  the runner now includes the boss geometry regression and frame-time sampler.
 
 ### Phase C closeout — 2026-08-22
 
@@ -286,8 +287,18 @@ and its listed evidence; line movement alone does not advance status.
 - Runtime assets: 87 literal runtime `res://` references resolve to tracked files;
   generated palette outputs and reconstructed audio rules are documented in
   [`asset-provenance.md`](asset-provenance.md).
-- Fresh-clone gate: passed after editor import on Godot 4.7.1; 15/15 smoke tests
+- Fresh-clone gate: passed after editor import on Godot 4.7.1; the original
+  15/15 smoke tests
   and the main scene exited 0 without local-only generated files.
+- Post-fix local gate: the complete runner passes 17/17, including
+  `boss_geometry_scene_smoke` and `frame_time_smoke`.
+- Boss geometry regression: scaled boss collision guides now use transformed
+  world corners plus foot compensation; the regression test verifies the guide
+  remains inside the rendered boss sprite.
+- Latest frame-time sample: 7.944 ms average / 17.888 ms worst over 180 frames
+  after a 60-frame warmup. The earlier 6.894 / 7.925 ms sample remains the
+  cleaner warm-cache reference; both are recorded because headless scheduling
+  can produce occasional outliers.
 - Frame-time gate: passed for the recorded reference sample at 6.894 ms average /
   7.925 ms worst across 180 frames after a 60-frame warmup. A numeric Phase A0
   baseline was not captured, so a future target-runtime comparison should use
