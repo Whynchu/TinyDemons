@@ -38,9 +38,6 @@ func _grant_chest_item_reward() -> bool:
 	_play_sound("ui_use_item")
 	return true
 
-func _placeholder_item_texture() -> Texture2D:
-	return pickup_runtime_controller.call("placeholder_item_texture") as Texture2D
-
 func _spawn_chest_item_drop(item: ItemInstance) -> void:
 	pickup_runtime_controller.call("spawn_chest_item_drop", self, item)
 
@@ -78,19 +75,13 @@ func _clear_chroma_pickups() -> void:
 	pickup_runtime_controller.call("clear_chroma_pickups", self)
 
 func _loot_grade_bonus(grade: String = "") -> float:
-	var value := grade.to_upper() if not grade.is_empty() else (player_profile.last_run_grade if player_profile != null else "D")
-	return 3.0 if value == "S" else 2.0 if value == "A" else 1.0 if value == "B" else 0.5 if value == "C" else -0.5 if value == "F" else 0.0
+	return float(run_flow_controller.call("loot_grade_bonus", self, grade))
 
 func _chest_item_drop_chance() -> float:
-	var exploration_bonus := minf(float(run_state.chests_opened) * 0.025, 0.20) if run_state != null else 0.0
-	return clampf(0.34 + exploration_bonus + float(_run_rank() - 1) * 0.035 + _loot_grade_bonus() * 0.025, 0.30, 0.88)
+	return float(run_flow_controller.call("chest_item_drop_chance", self))
 
 func _chest_gold_reward(base_gold: int) -> int:
-	var reward_rng := RandomNumberGenerator.new()
-	reward_rng.seed = int(current_dungeon_seed) ^ String(current_room_id).hash() ^ 0x474F4C44
-	var rolled_gold := reward_rng.randi_range(roundi(base_gold * 0.55), roundi(base_gold * 1.15))
-	var multiplier := 1.0 + float(_run_rank() - 1) * 0.06 + _loot_grade_bonus() * 0.04
-	return maxi(1, roundi(float(rolled_gold) * clampf(multiplier, 0.80, 1.90)))
+	return int(run_flow_controller.call("chest_gold_reward", self, base_gold))
 
 func _save_player_profile() -> void:
 	if player_profile != null:
@@ -158,83 +149,17 @@ func _build_run_complete_ui() -> void:
 	screen_state_controller.run_complete_button = controls["return"] as Button
 	screen_state_controller.run_complete_cursor = controls["cursor"] as Sprite2D
 func _build_hub_ui() -> void:
-	var controls: Dictionary = screen_state_controller.build_hub(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_hub_adjust_stat"), Callable(self, "_hub_confirm_stats"), Callable(self, "_hub_cancel_stats"), Callable(self, "_hub_auto_allocate"), Callable(self, "_hub_respec"), Callable(self, "_start_from_hub"), Callable(self, "_return_to_title"), Callable(self, "_set_hub_page"), Callable(self, "_hub_item_action"), Callable(self, "_select_hub_gear_slot"))
-	screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
-	screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
-	screen_state_controller.hub_points_text = controls["points"] as Sprite2D
-	screen_state_controller.hub_stat_texts = controls["stats"] as Array[Sprite2D]
-	screen_state_controller.hub_stat_buttons = controls["stat_buttons"] as Array[Button]
-	screen_state_controller.hub_stat_left_buttons = controls["stat_left"] as Array[Button]
-	screen_state_controller.hub_stat_right_buttons = controls["stat_right"] as Array[Button]
-	screen_state_controller.hub_respec_button = controls["respec"] as Button
-	screen_state_controller.hub_start_button = controls["start"] as Button
-	screen_state_controller.hub_title_button = controls["title"] as Button
-	screen_state_controller.hub_derived_texts = controls["derived"] as Array[Sprite2D]
-	screen_state_controller.hub_apply_button = controls["apply"] as Button
-	screen_state_controller.hub_cancel_button = controls["cancel"] as Button
-	screen_state_controller.hub_auto_button = controls["auto"] as Button
-	screen_state_controller.hub_page_buttons = controls["pages"] as Array[Button]
-	screen_state_controller.hub_item_name_text = controls["item_name"] as Sprite2D
-	screen_state_controller.hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
-	screen_state_controller.hub_shop_price_texts = controls["shop_prices"] as Array[Sprite2D]
-	screen_state_controller.hub_gear_choice_texts = controls["gear_choices"] as Array[Sprite2D]
-	screen_state_controller.hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
-	screen_state_controller.hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
-	screen_state_controller.hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
-	screen_state_controller.hub_cursor_text = controls["cursor"] as Sprite2D
-	screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
-	screen_state_controller.hub_item_action_button = controls["item_action"] as Button
+	hub_flow_controller.call("build_hub_ui", self)
 func _show_hub(from_npc: bool = false, pause_mode: bool = false) -> void:
-	if screen_state_controller.hub_overlay == null: return
-	screen_state_controller.hub_opened_from_npc = from_npc
-	screen_state_controller.hub_pause_mode = pause_mode
-	screen_state_controller.hub_interact_input_was_down = _is_interact_input_pressed()
-	screen_state_controller.hub_cancel_input_was_down = _is_menu_cancel_input_pressed()
-	screen_state_controller.hub_page_previous_input_was_down = _is_hub_previous_page_input_pressed()
-	screen_state_controller.hub_page_next_input_was_down = _is_hub_next_page_input_pressed()
-	if screen_state_controller.title_overlay != null: screen_state_controller.title_overlay.visible = false
-	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
-	if loading_screen_overlay != null: loading_screen_overlay.visible = false
-	if game_over_overlay != null: game_over_overlay.visible = false
-	screen_state_controller.hub_overlay.visible = true
-	screen_state_controller.hub_page = 1 if pause_mode else 0
-	screen_state_controller.hub_item_index = 0
-	_hub_cancel_stats()
-	_play_sound("ui_pause" if pause_mode else "ui_confirm", 0.0, 1.0)
-	screen_state_controller.set_state(&"hub")
-	_select_hub_menu_row(0)
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("show_hub", self, from_npc, pause_mode)
 
 func _open_pause_menu() -> void:
-	if player_dead or player_death_pending or screen_state_controller.hub_overlay == null or screen_state_controller.hub_overlay.visible:
-		return
-	screen_state_controller.pause_input_was_down = true
-	_show_hub(false, true)
+	hub_flow_controller.call("open_pause_menu", self)
 func _open_hub_from_cloaked_demon() -> void:
-	if player_dead or screen_state_controller.hub_overlay == null: return
-	if npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: npc_controller.hide_dialogue(self)
-	player_is_moving = false
-	player_is_attacking = false
-	player_is_rolling = false
-	player_attack_visual.visible = false
-	interact_prompt.visible = false
-	_show_hub(true)
+	hub_flow_controller.call("open_hub_from_cloaked_demon", self)
 func _close_hub_to_run() -> void:
-	if screen_state_controller.hub_overlay == null: return
-	var was_pause: bool = bool(screen_state_controller.hub_pause_mode)
-	_hub_cancel_stats()
-	screen_state_controller.hub_gear_browsing = false
-	screen_state_controller.menu_input_release_lock = _is_menu_cancel_input_pressed()
-	screen_state_controller.hub_overlay.visible = false
-	screen_state_controller.hub_opened_from_npc = false
-	screen_state_controller.hub_pause_mode = false
-	interact_input_was_down = _is_interact_input_pressed()
-	screen_state_controller.set_state(&"gameplay")
-	if was_pause:
-		_play_sound("ui_unpause", 0.0, 1.0)
-	else:
-		_play_sound("ui_unpause", 0.0, 1.0)
-func _update_hub_input() -> void: screen_state_controller.update_hub_input(self)
+	hub_flow_controller.call("close_hub_to_run", self)
+func _update_hub_input() -> void: hub_flow_controller.call("update_hub_input", self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
 func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
@@ -257,230 +182,50 @@ func _input_context() -> int:
 	if npc_controller != null and npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: return InputRouter.Context.DIALOGUE
 	return InputRouter.Context.GAMEPLAY
 func _set_hub_page(page: int) -> void:
-	screen_state_controller.hub_page = posmod(page, 4)
-	screen_state_controller.hub_item_index = 0
-	screen_state_controller.hub_gear_browsing = false
-	screen_state_controller.hub_fusion_message = ""
-	screen_state_controller.hub_fusion_count = 1
-	if run_state != null and screen_state_controller.hub_page == 2:
-		run_state.ensure_shop_stock(player_profile.level)
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-	_play_sound("ui_hover", -6.0, 1.0)
+	hub_flow_controller.call("set_hub_page", self, page)
 func _shift_hub_item(direction: int) -> void:
-	var count := 0
-	if screen_state_controller.hub_page == 1:
-		count = ItemCatalog.SLOTS.size()
-	elif screen_state_controller.hub_page == 2:
-		count = run_state.shop_stock.size() if run_state != null else 0
-	elif screen_state_controller.hub_page == 3:
-		count = _hub_fusion_candidates().size()
-		screen_state_controller.hub_fusion_count = 1
-	if count > 0: screen_state_controller.hub_item_index = posmod(screen_state_controller.hub_item_index + direction, count)
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("shift_hub_item", self, direction)
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
-	var candidates: Array[ItemInstance] = []
-	if player_profile == null: return candidates
-	var catalog := ItemCatalog.new()
-	if slot == &"shield":
-		var unequip := ItemInstance.new()
-		unequip.instance_id = ItemCatalog.UNEQUIP_SHIELD_ID
-		candidates.append(unequip)
-	for data: Dictionary in player_profile.inventory:
-		var item := ItemInstance.from_dictionary(data)
-		if catalog.definition_slot(item.definition_id) == slot: candidates.append(item)
-	return candidates
+	return hub_flow_controller.call("hub_gear_candidates", self, slot) as Array[ItemInstance]
 func _shift_hub_gear_candidate(direction: int) -> void:
-	if screen_state_controller.hub_page != 1 or not screen_state_controller.hub_gear_browsing: return
-	var slot := ItemCatalog.SLOTS[clampi(screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
-	var candidates := _hub_gear_candidates(slot)
-	if candidates.is_empty(): return
-	var key := String(slot)
-	screen_state_controller.hub_gear_candidate_indices[key] = posmod(int(screen_state_controller.hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("shift_hub_gear_candidate", self, direction)
 func _select_hub_gear_slot(slot_index: int) -> void:
-	if screen_state_controller.hub_page != 1: return
-	screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
-	var slot := ItemCatalog.SLOTS[screen_state_controller.hub_item_index]
-	var candidates := _hub_gear_candidates(slot)
-	if not candidates.is_empty():
-		var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
-		for index in candidates.size():
-			if candidates[index].instance_id == equipped_id:
-				screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
-				break
-		screen_state_controller.hub_gear_browsing = true
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("select_hub_gear_slot", self, slot_index)
 func _close_hub_gear_browse() -> void:
-	screen_state_controller.hub_gear_browsing = false
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("close_hub_gear_browse", self)
 func _refresh_hub_fusion_candidates() -> void:
-	screen_state_controller.hub_fusion_candidates.clear()
-	screen_state_controller.hub_fusion_candidates_dirty = false
-	if player_profile == null: return
-	var catalog := ItemCatalog.new()
-	for data: Dictionary in player_profile.inventory:
-		var item := ItemInstance.from_dictionary(data)
-		if player_profile.fusion_material_count(item.instance_id, catalog) > 0 or player_profile.can_salvage_overflow(item.instance_id, catalog):
-			screen_state_controller.hub_fusion_candidates.append(item)
+	hub_flow_controller.call("refresh_hub_fusion_candidates", self)
 func _invalidate_hub_fusion_candidates() -> void:
-	screen_state_controller.hub_fusion_candidates_dirty = true
+	hub_flow_controller.call("invalidate_hub_fusion_candidates", self)
 func _hub_fusion_candidates() -> Array[ItemInstance]:
-	if screen_state_controller.hub_fusion_candidates_dirty:
-		_refresh_hub_fusion_candidates()
-	return screen_state_controller.hub_fusion_candidates
+	return hub_flow_controller.call("hub_fusion_candidates", self) as Array[ItemInstance]
 func _fuse_profile_target(instance_id: String, count: int) -> bool:
-	if player_profile == null or count <= 0 or not player_profile.fuse_duplicates(instance_id, count, ItemCatalog.new()):
-		return false
-	player_equipment.configure_from_profile(player_profile)
-	_configure_equipment_transmutations()
-	_apply_player_level()
-	_save_player_profile()
-	_update_gold_indicator()
-	return true
+	return bool(hub_flow_controller.call("fuse_profile_target", self, instance_id, count))
 func _shift_hub_fusion_count(direction: int) -> void:
-	if screen_state_controller.hub_page != 3: return
-	var candidates := _hub_fusion_candidates()
-	if candidates.is_empty(): return
-	var index := clampi(screen_state_controller.hub_item_index, 0, candidates.size() - 1)
-	var target := candidates[index]
-	if player_profile.can_salvage_overflow(target.instance_id): return
-	var material_count := player_profile.fusion_material_count(target.instance_id)
-	if material_count <= 0: return
-	screen_state_controller.hub_fusion_count = clampi(int(screen_state_controller.hub_fusion_count) + direction, 1, material_count)
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("shift_hub_fusion_count", self, direction)
 func _salvage_profile_overflow(instance_id: String) -> int:
-	if player_profile == null: return 0
-	var value := player_profile.salvage_overflow(instance_id)
-	if value <= 0: return 0
-	_save_player_profile()
-	_update_gold_indicator()
-	return value
+	return int(hub_flow_controller.call("salvage_profile_overflow", self, instance_id))
 func _hub_item_action() -> void:
-	if player_profile == null: return
-	if screen_state_controller.hub_page == 1:
-		var slot := ItemCatalog.SLOTS[clampi(screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
-		var candidates := _hub_gear_candidates(slot)
-		if not candidates.is_empty():
-			var candidate_index := posmod(int(screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
-			if not screen_state_controller.hub_gear_browsing:
-				var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
-				for index in candidates.size():
-					if candidates[index].instance_id == equipped_id:
-						screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
-						break
-				screen_state_controller.hub_gear_browsing = true
-			else:
-				var selected := candidates[candidate_index]
-				var equipped_id := str(player_profile.equipped_instance_ids.get(String(slot), ""))
-				if selected.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
-					_unequip_profile_slot(slot)
-				elif slot == &"shield" and selected.instance_id == equipped_id:
-					_unequip_profile_slot(slot)
-				else:
-					_equip_profile_item(selected.instance_id)
-				screen_state_controller.hub_gear_browsing = false
-			screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-		return
-	elif screen_state_controller.hub_page == 2 and run_state != null and not run_state.shop_stock.is_empty():
-		var index := clampi(screen_state_controller.hub_item_index, 0, run_state.shop_stock.size() - 1)
-		var entry: Dictionary = run_state.shop_stock[index]
-		if not bool(entry.get("sold", false)):
-			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
-			if player_profile.purchase_item(item, int(entry.get("price", 0))):
-				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_confirm", 0.0, 1.0); _play_sound("ui_buy_sell", -16.0, 1.0)
-			else:
-				_play_sound("ui_denied", 0.0, 1.0)
-	elif screen_state_controller.hub_page == 3:
-		var fusion_candidates := _hub_fusion_candidates()
-		if not fusion_candidates.is_empty():
-			var index := clampi(screen_state_controller.hub_item_index, 0, fusion_candidates.size() - 1)
-			var target := fusion_candidates[index]
-			if player_profile.fusion_material_count(target.instance_id) > 0:
-				var material_count := player_profile.fusion_material_count(target.instance_id)
-				var count := clampi(int(screen_state_controller.hub_fusion_count), 1, material_count)
-				var batch_cost := player_profile.fusion_batch_cost(target, count)
-				if player_profile.gold < batch_cost:
-					screen_state_controller.hub_fusion_message = "NEED %dG" % batch_cost
-					_play_sound("ui_denied", 0.0, 1.0)
-				else:
-					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))
-					if _fuse_profile_target(target.instance_id, count):
-						screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
-						_play_sound("ui_confirm", 0.0, 1.0)
-						_play_sound("ui_buy_sell", -16.0, 1.0)
-			elif player_profile.can_salvage_overflow(target.instance_id):
-				var salvage_value := _salvage_profile_overflow(target.instance_id)
-				if salvage_value > 0:
-					screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
-					_play_sound("ui_buy_sell", -16.0, 1.0)
-			if not screen_state_controller.hub_fusion_message.is_empty():
-				_invalidate_hub_fusion_candidates()
-				screen_state_controller.hub_item_index = clampi(screen_state_controller.hub_item_index, 0, maxi(_hub_fusion_candidates().size() - 1, 0))
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("hub_item_action", self)
 func _select_hub_menu_row(row: int) -> void:
-	screen_state_controller.hub_menu_row = posmod(row, 5)
-	if screen_state_controller.hub_menu_row < 4: screen_state_controller.hub_action_column = 0
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("select_hub_menu_row", self, row)
 func _shift_hub_action_column(direction: int) -> void:
-	var count := 4 if screen_state_controller.hub_menu_row == 4 else 2
-	screen_state_controller.hub_action_column = posmod(screen_state_controller.hub_action_column + direction, count)
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("shift_hub_action_column", self, direction)
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
-	if direction > 0:
-		_hub_allocate_stat(stat_name)
-		return
-	match stat_name:
-		&"VIT": screen_state_controller.hub_pending_vit = maxi(screen_state_controller.hub_pending_vit - 1, 0)
-		&"STR": screen_state_controller.hub_pending_str = maxi(screen_state_controller.hub_pending_str - 1, 0)
-		&"DEF": screen_state_controller.hub_pending_def = maxi(screen_state_controller.hub_pending_def - 1, 0)
-		&"SPD": screen_state_controller.hub_pending_spd = maxi(screen_state_controller.hub_pending_spd - 1, 0)
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("hub_adjust_stat", self, stat_name, direction)
 func _hub_allocate_stat(stat_name: StringName) -> void:
-	if player_profile == null or _hub_points_remaining() <= 0: return
-	match stat_name:
-		&"VIT": screen_state_controller.hub_pending_vit += 1
-		&"STR": screen_state_controller.hub_pending_str += 1
-		&"DEF": screen_state_controller.hub_pending_def += 1
-		&"SPD": screen_state_controller.hub_pending_spd += 1
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-func _hub_points_remaining() -> int: return ProgressionControllerScript.points_remaining(player_profile, {"VIT": screen_state_controller.hub_pending_vit, "STR": screen_state_controller.hub_pending_str, "DEF": screen_state_controller.hub_pending_def, "SPD": screen_state_controller.hub_pending_spd})
+	hub_flow_controller.call("hub_allocate_stat", self, stat_name)
+func _hub_points_remaining() -> int: return int(hub_flow_controller.call("hub_points_remaining", self))
 func _hub_confirm_stats() -> void:
-	if player_profile == null: return
-	_play_sound("ui_confirm", 0.0, 1.0)
-	ProgressionControllerScript.allocate_stats(player_profile, {"VIT": screen_state_controller.hub_pending_vit, "STR": screen_state_controller.hub_pending_str, "DEF": screen_state_controller.hub_pending_def, "SPD": screen_state_controller.hub_pending_spd})
-	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
-	_apply_profile_to_runtime(); _apply_player_level(); _sync_runtime_progression_to_profile()
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("hub_confirm_stats", self)
 func _hub_cancel_stats() -> void:
-	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
-	if screen_state_controller != null and screen_state_controller.hub_overlay != null: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("hub_cancel_stats", self)
 func _hub_auto_allocate() -> void:
-	if player_profile == null: return
-	var patterns := [[&"VIT", &"STR", &"DEF", &"SPD"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"SPD"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"SPD"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"SPD"], [&"STR", &"DEF", &"STR", &"DEF", &"SPD"]]
-	var pattern: Array = patterns[clampi(player_profile.allocation_profile, 0, patterns.size() - 1)]
-	var index := 0
-	while _hub_points_remaining() > 0:
-		match pattern[index % pattern.size()]:
-			&"VIT": screen_state_controller.hub_pending_vit += 1
-			&"STR": screen_state_controller.hub_pending_str += 1
-			&"DEF": screen_state_controller.hub_pending_def += 1
-			&"SPD": screen_state_controller.hub_pending_spd += 1
-		index += 1
-	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("hub_auto_allocate", self)
 func _hub_respec() -> void:
-	_hub_cancel_stats()
-	if _respec_player_stats() > 0: screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
+	hub_flow_controller.call("hub_respec", self)
 func _start_from_hub() -> void:
-	if screen_state_controller.hub_opened_from_npc:
-		_close_hub_to_run()
-		return
-	if screen_state_controller.hub_overlay != null: screen_state_controller.hub_overlay.visible = false
-	if player_profile != null:
-		player_profile.open_hub_on_load = false
-		player_profile.pending_route = "run"
-		_save_player_profile()
-	_play_sound("ui_confirm", 0.0, 1.0)
-	_begin_scene_transition()
+	hub_flow_controller.call("start_from_hub", self)
 
 func _run_difficulty_bonus() -> int:
 	return int(run_flow_controller.call("run_difficulty_bonus", self))
@@ -535,235 +280,64 @@ func _show_game_over() -> void:
 	_apply_run_rank_grade("F")
 	_settle_current_run(&"defeat")
 	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; last_game_over_focus = null; game_over_button.grab_focus()
-func _build_title_screen() -> void: var controls: Dictionary = screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_new_game"), Callable(self, "_continue_game"), has_persistent_profile); screen_state_controller.title_overlay = controls["overlay"] as ColorRect; screen_state_controller.title_screen_text = controls["text"] as Sprite2D; screen_state_controller.title_start_button = controls["new_game"] as Button; screen_state_controller.title_continue_button = controls["continue"] as Button; screen_state_controller.title_start_text = controls["start_text"] as Sprite2D; screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D; _build_archetype_screen()
-func _build_archetype_screen() -> void: var controls: Dictionary = screen_state_controller.build_archetype(ui, Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); screen_state_controller.archetype_overlay = controls["overlay"] as ColorRect; screen_state_controller.archetype_preview = controls["preview"] as Sprite2D; screen_state_controller.archetype_name_text = controls["name"] as Sprite2D; screen_state_controller.archetype_left_buttons = controls["left"] as Array[Button]; screen_state_controller.archetype_right_buttons = controls["right"] as Array[Button]; screen_state_controller.archetype_type_left_button = controls["type_left"] as Button; screen_state_controller.archetype_type_right_button = controls["type_right"] as Button; screen_state_controller.archetype_start_button = controls["start"] as Button; screen_state_controller.archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
-func _update_title_screen(delta: float) -> void: screen_state_controller.update_title_flow(self, delta)
-func _start_new_game() -> void:
-	screen_state_controller.start_save_select(self, "new")
-func _continue_game() -> void:
-	screen_state_controller.start_save_select(self, "continue")
+func _build_title_screen() -> void: save_flow_controller.call("build_title_screen", self)
+func _build_archetype_screen() -> void: save_flow_controller.call("build_archetype_screen", self)
+func _update_title_screen(delta: float) -> void: save_flow_controller.call("update_title_screen", self, delta)
+func _start_new_game() -> void: save_flow_controller.call("start_new_game", self)
+func _continue_game() -> void: save_flow_controller.call("continue_game", self)
 
 func _open_save_select_after_title_transition() -> void:
-	if screen_state_controller.save_select_overlay == null:
-		screen_state_controller.save_select_overlay = screen_state_controller.build_save_select(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_select_save_slot"), Callable(self, "_confirm_overwrite"), Callable(self, "_cancel_overwrite"), Callable(self, "_save_preview_texture"))
-	screen_state_controller.save_select_index = 0
-	screen_state_controller.menu_input_release_lock = true
-	# Keep the opaque title cover behind the save menu. The gameplay scene must
-	# never be exposed between the title transition and save selection.
-	if screen_state_controller.title_overlay != null:
-		screen_state_controller.title_overlay.visible = true
-		screen_state_controller.title_overlay.modulate.a = 1.0
-	screen_state_controller.save_select_overlay.visible = true
-	_update_save_select_cursor()
+	save_flow_controller.call("open_save_select_after_title_transition", self)
 
 func _update_save_select_cursor() -> void:
-	if screen_state_controller.save_select_overlay == null: return
-	for child in screen_state_controller.save_select_overlay.get_children():
-		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == screen_state_controller.save_select_index:
-			(child as Button).grab_focus()
-	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
-	if cursor != null: cursor.position = Vector2(55, 70 + screen_state_controller.save_select_index * 20)
+	save_flow_controller.call("update_save_select_cursor", self)
 
 func _save_preview_texture(palette_name: String) -> Texture2D:
-	if player_animation_component == null:
-		return null
-	var base_frames := player_animation_component.base_idle_frames as Array[Texture2D]
-	if base_frames.is_empty():
-		return null
-	return player_animation_component.recolor_texture(base_frames[0], palette_name)
+	return save_flow_controller.call("save_preview_texture", self, palette_name) as Texture2D
 
 func _select_save_slot(slot: int) -> void:
-	screen_state_controller.save_select_index = clampi(slot, 0, ProfileSaveService.SLOT_COUNT - 1)
-	_update_save_select_cursor()
-	if screen_state_controller.save_select_mode == "continue":
-		_select_continue_slot(slot)
-		return
-	if ProfileSaveService.slot_has_profile(slot):
-		screen_state_controller.save_overwrite_slot = slot
-		_set_overwrite_prompt(true)
-		return
-	screen_state_controller.save_overwrite_slot = slot
-	_confirm_overwrite()
+	save_flow_controller.call("select_save_slot", self, slot)
 
 func _set_overwrite_prompt(active: bool) -> void:
-	screen_state_controller.save_overwrite_prompt_active = active
-	screen_state_controller.save_overwrite_choice = 0
-	screen_state_controller.menu_input_release_lock = active
-	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
-		var node: CanvasItem = screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
-		if node != null: node.visible = active
-	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
-	if cursor != null: cursor.visible = active; cursor.position = Vector2(99, 140)
+	save_flow_controller.call("set_overwrite_prompt", self, active)
 
 func _cancel_overwrite() -> void:
-	screen_state_controller.save_overwrite_prompt_active = false
-	_set_overwrite_prompt(false)
-	_update_save_select_cursor()
+	save_flow_controller.call("cancel_overwrite", self)
 
 func _confirm_overwrite() -> void:
-	screen_state_controller.save_overwrite_prompt_active = false
-	_set_overwrite_prompt(false)
-	var selected_slot: int = int(screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(screen_state_controller.save_overwrite_slot) else screen_state_controller.save_select_index)
-	ProfileSaveService.select_slot(selected_slot)
-	ProfileSaveService.clear_slot(selected_slot)
-	if screen_state_controller.save_select_overlay != null: screen_state_controller.save_select_overlay.visible = false
-	player_profile = PlayerProfile.new()
-	_reset_runtime_for_new_save()
-	has_persistent_profile = false
-	_apply_profile_to_runtime()
-	_update_gold_indicator()
-	screen_state_controller.show_character_creation(self)
+	save_flow_controller.call("confirm_overwrite", self)
 
 func _reset_runtime_for_new_save() -> void:
-	# New slots must not inherit the previous profile's run rank, grade-weighted
-	# loot state, dungeon topology, or in-progress telemetry.
-	player_profile.completed_runs = 0
-	player_profile.last_clear_score = 0
-	player_profile.difficulty_rank = 1
-	player_profile.last_run_grade = "D"
-	run_start_palette_name = player_profile.palette_name
-	player_profile.pending_route = "title"
-	player_profile.open_hub_on_load = false
-	if run_state != null:
-		run_state = RunState.new()
-	var random_source := rng if rng != null else RandomNumberGenerator.new()
-	if rng == null:
-		random_source.randomize()
-	current_dungeon_seed = random_source.randi()
-	dungeon_graph.configure_progression(0)
-	dungeon_graph.initialize(current_dungeon_seed)
-	room_controller.room_states.clear()
-	room_controller.progression_run_rank = 1
-	current_room_id = dungeon_graph.start_room_id
-	_sync_current_room_metadata()
-	room_controller.set_current_room(current_room_id, current_room_type)
-	_ensure_current_room_layout()
-	_apply_room_state()
-	_update_room_number_indicator()
+	save_flow_controller.call("reset_runtime_for_new_save", self)
 
 func _update_overwrite_cursor() -> void:
-	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
-	if cursor != null:
-		cursor.position = Vector2(99 if screen_state_controller.save_overwrite_choice == 0 else 129, 140)
+	save_flow_controller.call("update_overwrite_cursor", self)
 
 func _close_save_select() -> void:
-	if screen_state_controller.save_select_overlay != null:
-		screen_state_controller.save_select_overlay.visible = false
-	screen_state_controller.menu_input_release_lock = false
-	if screen_state_controller.title_overlay != null:
-		screen_state_controller.title_overlay.visible = true
-		screen_state_controller.title_overlay.modulate.a = 1.0
-	if screen_state_controller.title_screen_text != null: screen_state_controller.title_screen_text.visible = true
-	if screen_state_controller.title_start_text != null: screen_state_controller.title_start_text.visible = true
-	if screen_state_controller.title_start_button != null: screen_state_controller.title_start_button.visible = true
-	if screen_state_controller.title_continue_button != null: screen_state_controller.title_continue_button.visible = screen_state_controller.title_continue_button.disabled == false
-	if screen_state_controller.title_cursor_text != null: screen_state_controller.title_cursor_text.visible = true
-	screen_state_controller.title_transition_active = false
-	screen_state_controller.pending_title_destination = ""
-	screen_state_controller.set_state(&"title")
-	if screen_state_controller.title_continue_button != null:
-		(screen_state_controller.title_continue_button if not screen_state_controller.title_continue_button.disabled else screen_state_controller.title_start_button).grab_focus()
-	_play_sound("ui_decline", 0.0, 1.0)
+	save_flow_controller.call("close_save_select", self)
 
 func _cancel_character_creation() -> void:
-	_play_sound("ui_decline", 0.0, 1.0)
-	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
-	if screen_state_controller.title_overlay != null:
-		screen_state_controller.title_overlay.visible = true
-		screen_state_controller.title_overlay.modulate.a = 1.0
-	if screen_state_controller.title_screen_text != null: screen_state_controller.title_screen_text.visible = true
-	if screen_state_controller.title_start_text != null: screen_state_controller.title_start_text.visible = true
-	if screen_state_controller.title_start_button != null: screen_state_controller.title_start_button.visible = true
-	if screen_state_controller.title_continue_button != null: screen_state_controller.title_continue_button.visible = not screen_state_controller.title_continue_button.disabled
-	if screen_state_controller.title_cursor_text != null: screen_state_controller.title_cursor_text.visible = true
-	screen_state_controller.title_transition_active = false
-	screen_state_controller.pending_title_destination = ""
-	screen_state_controller.set_state(&"title")
-	if screen_state_controller.title_start_button != null: screen_state_controller.title_start_button.grab_focus()
+	save_flow_controller.call("cancel_character_creation", self)
 
 func _select_continue_slot(slot: int) -> void:
-	if not ProfileSaveService.slot_has_profile(slot):
-		return
-	ProfileSaveService.select_slot(slot)
-	player_profile = ProfileSaveService.load_profile()
-	if not player_profile.has_started:
-		return
-	player_profile.pending_route = "run"
-	ProfileSaveService.save_profile(player_profile)
-	if screen_state_controller.save_select_overlay != null:
-		screen_state_controller.save_select_overlay.visible = false
-	_begin_scene_transition()
+	save_flow_controller.call("select_continue_slot", self, slot)
 func _enter_starting_room_from_menu() -> void:
-	if screen_state_controller.title_overlay != null: screen_state_controller.title_overlay.visible = false
-	if screen_state_controller.archetype_overlay != null: screen_state_controller.archetype_overlay.visible = false
-	if screen_state_controller.hub_overlay != null: screen_state_controller.hub_overlay.visible = false
-	# Keep the player and both shadow layers covered while the starting position,
-	# palette, and depth transforms are initialized. Otherwise the shadow can
-	# visibly slide in from the scene's editor position during a new game.
-	player.visible = false
-	if player_shadow != null: player_shadow.visible = false
-	if player_sprite_shadow != null: player_sprite_shadow.visible = false
-	if player_attack_visual != null: player_attack_visual.visible = false
-	loading_screen_active = true
-	loading_screen_fading = false
-	loading_screen_timer = 0.0
-	loading_screen_overlay.visible = true
-	loading_screen_overlay.modulate.a = 1.0
-	screen_state_controller.set_state(&"loading")
-	await get_tree().process_frame
-	_place_player_at_hub_fire()
-	_apply_player_palette_async(screen_state_controller.player_palette_name)
-	_update_player_aggro_marker_colors()
-	var maximum_health := _player_max_health()
-	if player_health_component != null:
-		player_health_component.maximum_health = maximum_health
-		player_health_component.reset(maximum_health)
-	player_display_health = maximum_health
-	player_animation_component.apply_frame(self)
-	_update_player_shadow()
-	_build_depth_lists()
-	player.visible = true
-	_update_player_shadow()
-	_build_depth_lists()
-	_begin_new_run()
-	loading_screen_fading = true
-	loading_screen_timer = 0.0
+	save_flow_controller.call("enter_starting_room_from_menu", self)
 
 func _place_player_at_hub_fire() -> void:
-	if rest_fire == null:
-		return
-	# The hub always begins with the player just left of the fire, rather than
-	# reusing an editor-positioned start marker.
-	var requested_foot := rest_fire.global_position + Vector2(-14.0, 3.0)
-	var valid_foot := _nearest_slime_walkable_point(requested_foot)
-	player.global_position = valid_foot - ACTOR_FOOT_OFFSET
-func _update_archetype_input(delta: float) -> void: screen_state_controller.update_archetype_input(self, delta)
-func _shift_archetype(direction: int) -> void: screen_state_controller.starter_flame_index = posmod(screen_state_controller.starter_flame_index + direction, AspectCatalogScript.STARTER_FLAMES.size()); screen_state_controller.archetype_index = screen_state_controller.starter_flame_index; _archetype_arrow_pulse(direction); _update_archetype_screen()
-func _shift_archetype_color(direction: int) -> void: screen_state_controller.archetype_color_index = posmod(screen_state_controller.archetype_color_index + direction, PaletteLibrary.SELECTABLE_PALETTES.size()); _archetype_arrow_pulse(direction); _update_archetype_screen()
-func _archetype_arrow_pulse(direction: int) -> void: screen_state_controller.archetype_arrow_anim_direction = direction; screen_state_controller.archetype_arrow_anim_timer = 0.18
-func _update_archetype_arrow_animation() -> void:
-	var amount := clampf(screen_state_controller.archetype_arrow_anim_timer / 0.18, 0.0, 1.0); var pulse := 1.0 + amount * 0.22
-	screen_state_controller.archetype_type_left_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction < 0 and screen_state_controller.archetype_menu_row == 0 else 1.0); screen_state_controller.archetype_type_right_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction > 0 and screen_state_controller.archetype_menu_row == 0 else 1.0)
-	for button in screen_state_controller.archetype_left_buttons: button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction < 0 and screen_state_controller.archetype_menu_row == 1 else 1.0); for right_button in screen_state_controller.archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction > 0 and screen_state_controller.archetype_menu_row == 1 else 1.0)
-func _select_archetype_menu_row(row: int) -> void: screen_state_controller.archetype_menu_row = posmod(row, 2); _update_archetype_screen(); if screen_state_controller.archetype_menu_row == 1: screen_state_controller.archetype_start_button.grab_focus()
-func _update_archetype_screen() -> void:
-	var flame: StringName = AspectCatalogScript.STARTER_FLAMES[screen_state_controller.starter_flame_index]; var flame_name := AspectCatalogScript.display_name(flame); var flame_palette := AspectCatalogScript.palette_for_flame(flame)
-	screen_state_controller.archetype_name_text.texture = _pixel_text_texture(flame_name, PaletteLibrary.normal(flame_palette) if screen_state_controller.archetype_menu_row == 0 else Color.WHITE); screen_state_controller.archetype_name_text.position = Vector2((240.0 - screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
-	var colors := [flame_palette]
-	if not player_animation_component.idle_frames.is_empty():
-		if screen_state_controller.archetype_preview_palette != colors[0] or screen_state_controller.archetype_preview_frames.size() != player_animation_component.idle_frames.size():
-			screen_state_controller.archetype_preview_frames.clear(); screen_state_controller.archetype_preview_palette = colors[0]
-			for frame in player_animation_component.idle_frames: screen_state_controller.archetype_preview_frames.append(player_animation_component.recolor_texture(frame, screen_state_controller.archetype_preview_palette))
-		_update_archetype_preview_animation()
-	_update_archetype_button_styles()
-func _update_archetype_preview_animation() -> void:
-	if screen_state_controller.archetype_preview == null or screen_state_controller.archetype_preview_frames.is_empty(): return
-	var frame_time := maxf(player_tuning.idle_frame_time, 0.01); var frame_index := posmod(int(screen_state_controller.archetype_frame_timer / frame_time), screen_state_controller.archetype_preview_frames.size())
-	screen_state_controller.archetype_preview.texture = screen_state_controller.archetype_preview_frames[frame_index]; screen_state_controller.archetype_preview.position = Vector2((240.0 - screen_state_controller.archetype_preview.texture.get_width() * screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
-func _update_archetype_button_styles() -> void: screen_state_controller.update_archetype_button_styles(self)
-func _start_selected_archetype() -> void: screen_state_controller.start_selected_archetype(self)
-func _build_loading_screen() -> void: var controls: Dictionary = screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
-func _update_loading_screen(delta: float) -> void: var result: Dictionary = screen_state_controller.update_loading(loading_screen_overlay, loading_screen_text, loading_screen_fading, loading_screen_timer, delta, Callable(self, "_pixel_text_texture")); loading_screen_fading = result["fading"]; loading_screen_timer = result["timer"]; if result["finished"]: loading_screen_active = false
+	save_flow_controller.call("place_player_at_hub_fire", self)
+func _update_archetype_input(delta: float) -> void: save_flow_controller.call("update_archetype_input", self, delta)
+func _shift_archetype(direction: int) -> void: save_flow_controller.call("shift_archetype", self, direction)
+func _shift_archetype_color(direction: int) -> void: save_flow_controller.call("shift_archetype_color", self, direction)
+func _archetype_arrow_pulse(direction: int) -> void: save_flow_controller.call("archetype_arrow_pulse", self, direction)
+func _update_archetype_arrow_animation() -> void: save_flow_controller.call("update_archetype_arrow_animation", self)
+func _select_archetype_menu_row(row: int) -> void: save_flow_controller.call("select_archetype_menu_row", self, row)
+func _update_archetype_screen() -> void: save_flow_controller.call("update_archetype_screen", self)
+func _update_archetype_preview_animation() -> void: save_flow_controller.call("update_archetype_preview_animation", self)
+func _update_archetype_button_styles() -> void: save_flow_controller.call("update_archetype_button_styles", self)
+func _start_selected_archetype() -> void: save_flow_controller.call("start_selected_archetype", self)
+func _build_loading_screen() -> void: save_flow_controller.call("build_loading_screen", self)
+func _update_loading_screen(delta: float) -> void: save_flow_controller.call("update_loading_screen", self, delta)
 func _apply_player_palette_async(palette_name: String) -> void:
 	if player_animation_component != null: player_animation_component.apply_palette_async(self, palette_name)
 	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(self)
@@ -1134,37 +708,17 @@ func _update_player_palette_flash(delta: float) -> void:
 			else: player_palette_flash_timer = timer
 func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
-	door_active = is_active; _refresh_room_socket_visuals(is_active)
+	room_puzzle_controller.call("set_door_active", self, is_active)
 func _collect_dungeon_sockets() -> void:
 	room_controller.dungeon_sockets.clear()
 	if sockets_root == null: return
 	for child in sockets_root.get_children(): var socket := child as DungeonSocket; if socket != null: room_controller.dungeon_sockets[socket.socket_id()] = socket
 func _sync_current_room_metadata() -> void:
-	var room := dungeon_graph.get_room(current_room_id)
-	if room != null:
-		current_room_depth = room.depth
-		current_room_display_number = room.display_number
-		current_room_type = room.room_type
-		if current_room_depth >= 1 and run_state != null and run_state.active:
-			run_state.start_timer()
-			run_state.record_room_visited(current_room_id)
+	run_flow_controller.call("sync_current_room_metadata", self)
 func _finalize_run_exploration() -> void:
-	if run_state == null or dungeon_graph == null:
-		return
-	var explorable_rooms := 0
-	for room_id in dungeon_graph.get_room_ids():
-		var room := dungeon_graph.get_room(room_id)
-		if room != null and room.depth >= 1:
-			explorable_rooms += 1
-	run_state.set_explorable_room_count(explorable_rooms)
+	run_flow_controller.call("finalize_run_exploration", self)
 func _finalize_run_enemy_total() -> void:
-	if run_state == null or dungeon_graph == null or room_controller == null:
-		return
-	var total_enemies := 0
-	for room_id in dungeon_graph.get_room_ids():
-		var room := dungeon_graph.get_room(room_id)
-		total_enemies += room_controller.enemy_count_for_room(room)
-	run_state.set_total_enemies(total_enemies)
+	run_flow_controller.call("finalize_run_enemy_total", self)
 func _ensure_current_room_layout() -> void:
 	var room := dungeon_graph.get_room(current_room_id)
 	if room == null: return
@@ -1189,167 +743,42 @@ func _ensure_current_room_layout() -> void:
 	_configure_room_sockets(bool(state.get("finished", false)))
 	_update_puzzle_room_tint(room if current_room_type == DungeonGraph.ROOM_PUZZLE else null, required_aspect)
 func _configure_room_sockets(is_unlocked: bool) -> void:
-	room_controller.configure_sockets(dungeon_graph, current_room_id, is_unlocked, Callable(self, "_build_entrance_block_polygons")); door_active = is_unlocked; entrance_open = is_unlocked or current_room_type == DungeonGraph.ROOM_PUZZLE; _refresh_room_socket_visuals(is_unlocked)
+	room_puzzle_controller.call("configure_room_sockets", self, is_unlocked)
 
 func _current_run_puzzle_flame() -> StringName:
-	return player_profile.starter_flame if player_profile != null and AspectCatalogScript.is_starter_flame(player_profile.starter_flame) else &"fire"
+	return room_puzzle_controller.call("current_run_puzzle_flame", self) as StringName
 
 func _puzzle_required_aspect(room: DungeonGraph.RoomRecord) -> StringName:
-	return &"gray" if dungeon_graph != null and room != null and dungeon_graph.is_tutorial_gray_puzzle_depth(room.depth) else _current_run_puzzle_flame()
+	return room_puzzle_controller.call("puzzle_required_aspect", self, room) as StringName
 
 func _puzzle_palette_for_aspect(aspect: StringName) -> String:
-	return "grey" if aspect == &"gray" else AspectCatalogScript.palette_for_flame(aspect)
+	return str(room_puzzle_controller.call("puzzle_palette_for_aspect", aspect))
 
 func _update_puzzle_room_tint(room: DungeonGraph.RoomRecord, required_flame: StringName) -> void:
-	if room == null or room.room_type != DungeonGraph.ROOM_PUZZLE:
-		_apply_puzzle_environment_tint(Color.WHITE)
-		return
-	var palette := _puzzle_palette_for_aspect(required_flame)
-	if palette == "grey":
-		_apply_puzzle_environment_tint(Color.WHITE)
-		return
-	var environment_tint := Color.WHITE.lerp(PaletteLibrary.normal(palette), 0.38)
-	_apply_puzzle_environment_tint(environment_tint)
+	room_puzzle_controller.call("update_puzzle_room_tint", self, room, required_flame)
 
 func _apply_puzzle_environment_tint(tint: Color) -> void:
-	if background_environment != null:
-		background_environment.self_modulate = Color.WHITE
-	# Reset every authored surface first so an unused entrance cannot retain a
-	# tint from a previous room.
-	var surface_paths: Array[NodePath] = [
-		^"FloorTiles/FloorLayer",
-		^"FloorTiles/FloorLFaceLayer",
-		^"FloorTiles/FloorRFaceLayer",
-		^"FloorTiles/Entrance",
-		^"FloorTiles/EntranceRight",
-		^"Walls/WallLeftLayer",
-		^"Walls/WallRightLayer",
-		^"Walls/DoorLeft",
-		^"Walls/DoorRight",
-	]
-	for path in surface_paths:
-		var surface := map_root.get_node_or_null(path) if map_root != null else null
-		_set_puzzle_surface_tint(surface, Color.WHITE)
-	if tint == Color.WHITE:
-		return
-	for path in [^"FloorTiles/FloorLayer", ^"FloorTiles/FloorLFaceLayer", ^"FloorTiles/FloorRFaceLayer", ^"Walls/WallLeftLayer", ^"Walls/WallRightLayer"]:
-		_set_puzzle_surface_tint(map_root.get_node_or_null(path) if map_root != null else null, tint)
-	for socket_value in room_controller.active_door_sockets.values():
-		var door_socket := socket_value as DungeonSocket
-		_set_puzzle_surface_tint(door_socket.visual() if door_socket != null else null, tint)
-	for socket_value in room_controller.active_entrance_sockets.values():
-		var entrance_socket := socket_value as DungeonSocket
-		_set_puzzle_surface_tint(entrance_socket.visual() if entrance_socket != null else null, tint)
+	room_puzzle_controller.call("apply_puzzle_environment_tint", self, tint)
 
 func _set_puzzle_surface_tint(node: Node, tint: Color) -> void:
-	if node == null:
-		return
-	if node is CanvasItem:
-		(node as CanvasItem).self_modulate = tint
-	for child in node.get_children():
-		_set_puzzle_surface_tint(child, tint)
+	room_puzzle_controller.call("set_puzzle_surface_tint", node, tint)
 
 func _build_puzzle_torches(state: Dictionary) -> void:
-	_clear_puzzle_torches()
-	if walkable_outline.is_empty():
-		return
-	var bounds := Rect2(walkable_outline[0], Vector2.ZERO)
-	for point in walkable_outline:
-		bounds = bounds.expand(point)
-	var positions: Array[Vector2] = [
-		Vector2(bounds.position.x + 18.0, bounds.position.y + 14.0),
-		Vector2(bounds.end.x - 18.0, bounds.position.y + 14.0),
-	]
-	var saved_colors: Array = state.get("puzzle_torch_colors", ["grey", "grey"])
-	var colors: Array[String] = []
-	for index in positions.size():
-		var torch := Sprite2D.new()
-		torch.name = "PuzzleTorch%d" % (index + 1)
-		torch.texture = _pixel_particle_texture(Color.WHITE, 6)
-		torch.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		torch.z_as_relative = false
-		torch.global_position = _nearest_slime_walkable_point(positions[index])
-		torch.z_index = int(round(torch.global_position.y * DEPTH_Z_SCALE)) + 1
-		var palette := String(saved_colors[index]) if index < saved_colors.size() else "grey"
-		torch.set_meta("puzzle_torch_palette", palette)
-		torch.self_modulate = PaletteLibrary.normal(palette)
-		add_child(torch)
-		puzzle_torches.append(torch)
-		if not depth_sprites.has(torch): depth_sprites.append(torch)
-		colors.append(palette)
-	state["puzzle_torch_colors"] = colors
+	room_puzzle_controller.call("build_puzzle_torches", self, state)
 
 func _clear_puzzle_torches() -> void:
-	for torch in puzzle_torches:
-		if torch != null and is_instance_valid(torch):
-			depth_sprites.erase(torch)
-			torch.queue_free()
-	puzzle_torches.clear()
+	room_puzzle_controller.call("clear_puzzle_torches", self)
 
 func _puzzle_torches_solved(required_palette: String) -> bool:
-	if puzzle_torches.size() < 2 or required_palette.is_empty():
-		return false
-	for torch in puzzle_torches:
-		if String(torch.get_meta("puzzle_torch_palette", "grey")) != required_palette:
-			return false
-	return true
+	return bool(room_puzzle_controller.call("puzzle_torches_solved", self, required_palette))
 
 func _refresh_puzzle_torch_puzzle_state() -> void:
-	if current_room_type != DungeonGraph.ROOM_PUZZLE or room_controller == null:
-		return
-	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
-	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
-	var required_aspect := StringName(state.get("puzzle_required_flame", _puzzle_required_aspect(room)))
-	var required_palette := _puzzle_palette_for_aspect(required_aspect)
-	var solved := _puzzle_torches_solved(required_palette)
-	state["finished"] = solved
-	room_controller.room_states[current_room_id] = state
-	_set_door_active(solved)
-	_configure_room_sockets(solved)
+	room_puzzle_controller.call("refresh_puzzle_torch_puzzle_state", self)
 
 func _activate_puzzle_torch(torch: Sprite2D, world_position: Vector2, palette: String) -> void:
-	if torch == null or not is_instance_valid(torch):
-		return
-	torch.set_meta("puzzle_torch_palette", palette)
-	torch.self_modulate = PaletteLibrary.normal(palette)
-	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
-	var colors: Array = state.get("puzzle_torch_colors", [])
-	var torch_index := puzzle_torches.find(torch)
-	if torch_index >= 0:
-		while colors.size() < puzzle_torches.size():
-			colors.append("grey")
-		colors[torch_index] = palette
-		state["puzzle_torch_colors"] = colors
-		room_controller.room_states[current_room_id] = state
-	_play_sound("magic_hit", -8.0, 1.0)
-	_spawn_magic_impact(world_position, palette)
-	_refresh_puzzle_torch_puzzle_state()
+	room_puzzle_controller.call("activate_puzzle_torch", self, torch, world_position, palette)
 func _refresh_room_socket_visuals(is_unlocked: bool) -> void:
-	var shut_texture := _load_texture_or_null("res://assets/artwork/DoorRightenemyshut.png")
-	var open_texture := _load_texture_or_null("res://assets/artwork/DoorRight.png")
-	var stairs_down_texture := _load_texture_or_null("res://assets/artwork/DoorStairsRight.png")
-	var stairs_up_texture := _load_texture_or_null("res://assets/artwork/DoorStairsUPRight.png")
-	for socket_value in room_controller.active_door_sockets.values():
-		var socket := socket_value as DungeonSocket; var visual := socket.visual() as Sprite2D
-		if visual == null: continue
-		var connection: DungeonGraph.ConnectionRecord = dungeon_graph.get_connection(current_room_id, socket.socket_id())
-		var destination_room: DungeonGraph.RoomRecord = dungeon_graph.get_room(connection.destination_room_id) if connection != null else null
-		var leads_downstairs := destination_room != null and destination_room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
-		# Puzzle exits remain visibly closed until both torches are lit. Their
-		# entrance sockets are handled separately below and stay open for retreat.
-		visual.visible = true
-		visual.texture = stairs_up_texture if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs else open_texture if is_unlocked else shut_texture
-		visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
-	for socket_value in room_controller.active_entrance_sockets.values():
-		var socket := socket_value as DungeonSocket; var visual := socket.visual() as Sprite2D
-		if visual == null: continue
-		if socket.socket_id() == DungeonGraph.BOTTOM_LEFT or socket.socket_id() == DungeonGraph.BOTTOM_RIGHT:
-			# Lower entrances are floor extensions, never door or stair renderers.
-			visual.visible = true
-			continue
-		visual.visible = true
-		visual.texture = open_texture
-		visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
+	room_puzzle_controller.call("refresh_room_socket_visuals", self, is_unlocked)
 func _apply_room_geometry() -> void:
 	if floor_tiles == null: return
 	_capture_normal_room_geometry()

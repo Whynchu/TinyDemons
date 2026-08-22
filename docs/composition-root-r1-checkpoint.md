@@ -2,6 +2,8 @@
 
 Status: complete for typed runtime-owner construction and initial room setup
 
+Historical checkpoint. Superseded by [`composition-root-2000-milestone.md`](composition-root-2000-milestone.md).
+
 Date: 2026-08-22
 
 Commit: `239115e`

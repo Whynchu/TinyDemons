@@ -5,6 +5,53 @@ const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
 
+func loot_grade_bonus(root: Object, grade: String = "") -> float:
+	var value: String = grade.to_upper() if not grade.is_empty() else (root.player_profile.last_run_grade if root.player_profile != null else "D")
+	return 3.0 if value == "S" else 2.0 if value == "A" else 1.0 if value == "B" else 0.5 if value == "C" else -0.5 if value == "F" else 0.0
+
+
+func chest_item_drop_chance(root: Object) -> float:
+	var exploration_bonus: float = minf(float(root.run_state.chests_opened) * 0.025, 0.20) if root.run_state != null else 0.0
+	return clampf(0.34 + exploration_bonus + float(run_rank(root) - 1) * 0.035 + loot_grade_bonus(root) * 0.025, 0.30, 0.88)
+
+
+func chest_gold_reward(root: Object, base_gold: int) -> int:
+	var reward_rng := RandomNumberGenerator.new()
+	reward_rng.seed = int(root.current_dungeon_seed) ^ String(root.current_room_id).hash() ^ 0x474F4C44
+	var rolled_gold: int = reward_rng.randi_range(roundi(base_gold * 0.55), roundi(base_gold * 1.15))
+	var multiplier: float = 1.0 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04
+	return maxi(1, roundi(float(rolled_gold) * clampf(multiplier, 0.80, 1.90)))
+
+
+func sync_current_room_metadata(root: Object) -> void:
+	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(root.current_room_id)
+	if room != null:
+		root.current_room_depth = room.depth
+		root.current_room_display_number = room.display_number
+		root.current_room_type = room.room_type
+		if root.current_room_depth >= 1 and root.run_state != null and root.run_state.active:
+			root.run_state.start_timer()
+			root.run_state.record_room_visited(root.current_room_id)
+
+
+func finalize_run_exploration(root: Object) -> void:
+	if root.run_state == null or root.dungeon_graph == null: return
+	var explorable_rooms: int = 0
+	for room_id in root.dungeon_graph.get_room_ids():
+		var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
+		if room != null and room.depth >= 1: explorable_rooms += 1
+	root.run_state.set_explorable_room_count(explorable_rooms)
+
+
+func finalize_run_enemy_total(root: Object) -> void:
+	if root.run_state == null or root.dungeon_graph == null or root.room_controller == null: return
+	var total_enemies: int = 0
+	for room_id in root.dungeon_graph.get_room_ids():
+		var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
+		total_enemies += root.room_controller.enemy_count_for_room(room)
+	root.run_state.set_total_enemies(total_enemies)
+
+
 func run_difficulty_bonus(root: Object) -> int:
 	if root.player_profile == null:
 		return 0
