@@ -110,7 +110,7 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	update_scoot.call(actor, delta)
 
 
-static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool) -> void:
+static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number := true) -> void:
 	if bool(root.call("_is_slime_dead", slime)): return
 	root.call("_mark_player_in_combat")
 	var health := slime.get_node_or_null("Health") as HealthComponent
@@ -125,7 +125,9 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat != null: combat.flash_timer = slime_config.hit_flash_time; combat.hitstun_timer = slime_config.hitstun_time
 	root.call("_show_slime_hit_flash", slime)
-	root.call("_spawn_damage_number", slime, amount, was_critical); root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
+	if show_damage_number:
+		root.call("_spawn_damage_number", slime, amount, was_critical)
+	root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
 	if health != null and health.is_dead(): root.call("_kill_slime", slime)
 
 
@@ -150,28 +152,12 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var player := root.get("player") as Sprite2D
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
-	# The guides are authored around the visible lunge.  Testing against them
-	# keeps left/right reach and vertical reach in the same isometric space as
-	# the artwork.  A boss expands the lane from its feet rather than stretching
-	# a world-axis rectangle, which previously let it hit far below itself.
-	var guide_name := "AttackGuideL" if combat != null and combat.face_left else "AttackGuideR"
-	var guide := slime.get_node_or_null(guide_name) as Node2D
-	if guide == null: return
-	var guide_position: Vector2 = guide.get("rect_position")
-	var guide_size: Vector2 = guide.get("rect_size")
-	var base_rect := Rect2(slime.global_position + guide.position + guide_position + Vector2(minf(guide_size.x, 0.0), minf(guide_size.y, 0.0)), guide_size.abs())
-	var foot := root.call("_actor_foot", slime) as Vector2
-	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
-	var hit_rect := Rect2(foot + (base_rect.position - foot) * encounter_scale, base_rect.size * encounter_scale).grow(0.75)
-	# The lunge remains left/right authored, but isometric movement compresses
-	# vertical travel.  Give that lane a symmetric vertical allowance so a slime
-	# can reliably threaten players directly above or below its body.
-	var vertical_reach := 7.0 * encounter_scale
-	hit_rect.position.y = foot.y - vertical_reach
-	hit_rect.size.y = vertical_reach * 2.0
 	if root.has_method("_play_sound"):
 		root.call("_play_sound", "bite", -8.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
-	if not hit_rect.has_point(root.call("_actor_foot", player) as Vector2): return
+	var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
+	var player_rect := (root.call("_collision_rect", player) as Rect2).grow(0.75)
+	var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
+	if slime_body.size() < 3 or Geometry2D.intersect_polygons(slime_body, player_body).is_empty(): return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_enemy_attack_attempt()

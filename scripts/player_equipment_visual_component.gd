@@ -24,7 +24,9 @@ var occlusion_signature: int = 0
 var occlusion_mask_refresh_timer := 0.0
 var occlusion_texture_cache: Dictionary = {}
 var occlusion_active := false
+var palette_override := ""
 var frames: Dictionary = {}
+var frames_by_palette: Dictionary = {}
 var active := false
 var inactivity_timer := 0.0
 var fade_timer := 0.0
@@ -37,6 +39,7 @@ var transition_hold_timer := 0.0
 var roll_fizzle_active := false
 var roll_fizzle_positions: Dictionary = {}
 var death_active := false
+var mp_desaturation_material: ShaderMaterial = null
 var death_breakup_started := false
 var draw_white_timer := 0.0
 var draw_color_fade_timer := 0.0
@@ -80,6 +83,18 @@ func initialize(root: Object) -> void:
 	_create_layer(parent, "EquipmentShieldFront", 1)
 	_create_layer(parent, "EquipmentSwordFront", 1)
 	_create_occlusion_material()
+	precache_all_palettes(root)
+
+
+func set_mp_desaturation(saturation: float) -> void:
+	if mp_desaturation_material == null:
+		mp_desaturation_material = ShaderMaterial.new()
+		mp_desaturation_material.shader = preload("res://shaders/mp_desaturation.gdshader")
+	mp_desaturation_material.set_shader_parameter("saturation", clampf(saturation, 0.0, 1.0))
+	for layer in layers.values():
+		var sprite := layer as Sprite2D
+		if sprite != null and not occlusion_active:
+			sprite.material = mp_desaturation_material
 
 
 func _create_occlusion_material() -> void:
@@ -92,7 +107,7 @@ func _create_occlusion_material() -> void:
 		occlusion_materials[layer] = material
 
 
-func update_occlusion(root: Object, delta: float) -> void:
+func update_occlusion(root: Object, _delta: float) -> void:
 	var renderer := root.get("occlusion_renderer") as OcclusionRenderer
 	if renderer == null:
 		return
@@ -231,19 +246,41 @@ func _is_layer_occlusion_flashing(_layer: Sprite2D) -> bool:
 
 func apply_palette(root: Object) -> void:
 	gameplay_root = root
-	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
-	if library == null:
-		return
-	var palette: Array[Color] = PaletteLibrary.pair(String((root.get("screen_state_controller") as ScreenStateController).player_palette_name))
-	frames.clear()
-	white_copy_cache.clear()
-	occlusion_texture_cache.clear()
+	var screen_state_controller: Object = root.get("screen_state_controller")
+	var palette_name := palette_override if not palette_override.is_empty() else String(screen_state_controller.get("player_palette_name"))
+	if not frames_by_palette.has(palette_name):
+		var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+		if library == null:
+			return
+		white_copy_cache.clear(); occlusion_texture_cache.clear()
+		frames_by_palette[palette_name] = _build_palette_frames(library, palette_name)
+	frames = frames_by_palette[palette_name]
+
+
+func set_palette_override(palette_name: String) -> void:
+	palette_override = palette_name
+
+
+func _build_palette_frames(library: SpriteFrameLibrary, palette_name: String) -> Dictionary:
+	var palette: Array[Color] = PaletteLibrary.pair(palette_name)
+	var built: Dictionary = {}
 	for key in frame_paths:
 		var source_frames := library.slice_frames(frame_paths[key], FRAME_SIZE)
 		var recolored: Array[Texture2D] = []
 		for source in source_frames:
 			recolored.append(_recolor_frame(source, palette[0], palette[1]))
-		frames[key] = recolored
+		built[key] = recolored
+	return built
+
+
+func precache_all_palettes(root: Object) -> void:
+	gameplay_root = root
+	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	if library == null:
+		return
+	for palette_name in PaletteLibrary.PALETTE_NAMES:
+		if not frames_by_palette.has(palette_name):
+			frames_by_palette[palette_name] = _build_palette_frames(library, palette_name)
 
 
 func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color) -> Texture2D:

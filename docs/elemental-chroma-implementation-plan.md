@@ -1,6 +1,6 @@
 # Tiny Demons — Elemental Chroma Implementation Plan
 
-Status: reviewed draft, pre-implementation
+Status: reviewed draft, implementation in progress
 
 Source design: `docs/Tiny Demons — Elemental Chroma System Design.md`
 
@@ -239,10 +239,13 @@ Exit condition: Triangle resolves through aspect/Chroma/Binding state, and
 
 Exit condition: the full first-milestone loop works in the main scene.
 
-### Phase 4 — Run 1 authored curriculum
+### Phase 4 — Run 1 authored curriculum — starter gate and opening puzzle framework in place
 
 - Require hub attunement in the new-file opening flow.
 - Build the selected starter aspect's first-dungeon lesson.
+- Route Run 1 through two separated, seed-randomized required milestones: an
+  early tinted starter-color puzzle and a later untinted Gray puzzle.
+- Keep the puzzle entrance usable while unsolved so the player can retreat.
 - Author the exact four-use depletion sequence.
 - Suppress enemies and Chroma pickups that could invalidate the lesson.
 - Teach Gray fallback and re-attunement/refill.
@@ -250,10 +253,12 @@ Exit condition: the full first-milestone loop works in the main scene.
 Exit condition: Fire, Water, and Electric versions of Run 1 are solvable and
 communicate the same rules.
 
-### Phase 5 — Elemental room contract and Run 2
+### Phase 5 — Elemental room contract and Run 2 — neutral enemy pickups in place; room curriculum pending
 
 - Add room aspect/theme and requirement metadata.
-- Add flame placement and neutral Chroma pickup rules.
+- Add flame placement and neutral Chroma pickup rules. The current runtime has
+  neutral enemy drops with automatic proximity collection and room-state
+  persistence.
 - Add puzzle reset/recovery behavior.
 - Build authored Run 2 route templates for flame discovery, swapping, and
   backtracking.

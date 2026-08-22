@@ -18,6 +18,11 @@ func _initialize() -> void:
 		var triple: Array[Color] = library.triple(name)
 		_expect(pair[0] == library.SHADOW[name] and pair[1] == library.NORMAL[name], "pair() returns shadow/normal for %s" % name, failures)
 		_expect(triple[0] == library.SHADOW[name] and triple[1] == library.NORMAL[name] and triple[2] == PaletteLibrary.WHITE, "triple() returns shadow/normal/white for %s" % name, failures)
+		var fire: Array[Color] = library.fire_triple(name)
+		_expect(fire.size() == 3, "fire_triple() returns three tones for %s" % name, failures)
+		_expect(fire[0] == library.NORMAL[name], "fire_triple() uses NORMAL as the darkest flame tone for %s" % name, failures)
+		_expect(_luma(fire[0]) < _luma(fire[1]) and _luma(fire[1]) < _luma(fire[2]), "fire_triple() tones ascend in brightness for %s" % name, failures)
+		_expect(fire[2].r > fire[1].r or fire[2].g > fire[1].g or fire[2].b > fire[1].b, "fire_triple() brightens the tip for %s" % name, failures)
 	for palette_name in ["red", "blue", "purple"]:
 		var original := Color8(56, 183, 100)
 		var shadow_mapped := SlimeVisualComponent._palette_color(original, "257179", palette_name)
@@ -53,6 +58,20 @@ func _initialize() -> void:
 	equip.queue_free()
 	art_texture = null
 	recolored_equip = null
+	var glyphs := EffectsSpawner.new()
+	var o_texture := glyphs.number_texture("o", Color.WHITE) as Texture2D
+	var g_texture := glyphs.number_texture("g", Color.WHITE) as Texture2D
+	var O_texture := glyphs.number_texture("O", Color.WHITE) as Texture2D
+	_expect(o_texture != null and o_texture.get_width() > 0, "lowercase 'o' glyph renders non-empty", failures)
+	_expect(g_texture != null and g_texture.get_width() > 0, "lowercase 'g' glyph renders non-empty", failures)
+	_expect(o_texture != null and O_texture != null and o_texture.get_image().get_data() != O_texture.get_image().get_data(), "lowercase 'o' differs from uppercase 'O'", failures)
+	var name_o := glyphs.name_texture("o", Color.WHITE) as Texture2D
+	var name_g := glyphs.name_texture("g", Color.WHITE) as Texture2D
+	var name_o_caps := glyphs.name_texture("O", Color.WHITE) as Texture2D
+	_expect(name_o != null and name_o.get_width() > 0, "name texture lowercase 'o' renders non-empty", failures)
+	_expect(name_g != null and name_g.get_width() > 0, "name texture lowercase 'g' renders non-empty", failures)
+	_expect(name_o != null and name_o_caps != null and name_o.get_image().get_data() != name_o_caps.get_image().get_data(), "name texture lowercase 'o' differs from uppercase 'O'", failures)
+	glyphs.free()
 	_finished = true
 	call_deferred("_finish", failures)
 
@@ -77,3 +96,7 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append("FAILED: %s" % label)
+
+
+func _luma(color: Color) -> float:
+	return color.r * 0.299 + color.g * 0.587 + color.b * 0.114

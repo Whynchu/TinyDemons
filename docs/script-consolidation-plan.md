@@ -1,5 +1,9 @@
 # Gameplay Script Consolidation Plan
 
+> Historical plan. Its completed work remains useful context, but its remaining
+> route is superseded by [`AUDIT.md`](AUDIT.md) and
+> [`refactor-route.md`](refactor-route.md) as of 2026-08-22.
+
 Status: proposed
 
 Branch: `agent/script-consolidation`

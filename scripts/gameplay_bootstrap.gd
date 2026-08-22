@@ -1,10 +1,13 @@
 extends Node
 class_name GameplayBootstrap
 
+const PLAYER_CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.gd")
+const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/player_aspect_ability_component.gd")
 
 func initialize(root: Object) -> void:
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
+	root.set("input_router", root.call("_add_runtime_node", InputRouter, "InputRouter"))
 	var profile := ProfileSaveService.load_profile()
 	root.set("player_profile", profile)
 	root.set("has_persistent_profile", has_profile)
@@ -14,6 +17,8 @@ func initialize(root: Object) -> void:
 	var effects_tuning := root.get("effects_tuning") as EffectsTuning
 	root.set("walkable_area", root.call("_add_runtime_node", WalkableArea, "WalkableArea"))
 	root.set("actor_collision_system", root.call("_add_runtime_node", ActorCollisionSystem, "ActorCollisionSystem"))
+	var geometry_debug := root.call("_add_runtime_node", ActorGeometryDebugDrawer, "ActorGeometryDebugDrawer") as ActorGeometryDebugDrawer
+	geometry_debug.enabled = bool(root.get("debug_actor_geometry")); root.set("actor_geometry_debug_drawer", geometry_debug)
 	root.set("depth_sorter", root.call("_add_runtime_node", DepthSorter, "DepthSorter"))
 	var occlusion := root.call("_add_runtime_node", OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
 	occlusion.resolution_scale = effects_tuning.resolution_scale; root.set("occlusion_renderer", occlusion)
@@ -26,6 +31,8 @@ func initialize(root: Object) -> void:
 	root.set("hud_controller", root.call("_add_runtime_node", HudController, "HudController", root.get("ui")))
 	root.set("sound_manager", root.call("_add_runtime_node", SoundManager, "SoundManager"))
 	root.set("effects_spawner", root.call("_add_runtime_node", EffectsSpawner, "EffectsSpawner"))
+	root.set("magic_projectile_controller", root.call("_add_runtime_node", MagicProjectileController, "MagicProjectileController"))
+	root.set("chroma_pickup_controller", root.call("_add_runtime_node", ChromaPickupController, "ChromaPickupController"))
 	var rng := root.get("rng") as RandomNumberGenerator
 	rng.randomize()
 	var run_state := RunState.new()
@@ -52,6 +59,7 @@ func initialize(root: Object) -> void:
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
 	var slimes: Array[Sprite2D] = [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]; _expand_slime_roster(root, slimes); root.set("slimes", slimes)
 	var actors: Array[Sprite2D] = [player]; actors.append_array(slimes); root.set("actor_sprites", actors)
+	geometry_debug.configure(actors, Callable(root, "_actor_foot"), Callable(root, "_collision_rect"), Callable(root, "_slime_body_polygon"))
 	var collision: Array[Sprite2D] = [player]; collision.append_array(slimes); collision.append(chest); root.set("collision_sprites", collision)
 	(root.get("depth_sorter") as DepthSorter).set_sprites(actors); occlusion.set_occluders(root.get("occluder_sprites"))
 	var player_shadow := root.get("player_shadow") as Sprite2D; var demon_shadow := root.get("cloaked_demon_shadow") as Sprite2D
@@ -65,8 +73,22 @@ func initialize(root: Object) -> void:
 	if player_hud != null: player_hud.visible = true
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
 	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
+	# Build and show the loading screen BEFORE the heavy frame/reticle build work,
+	# then yield one frame so it actually renders (the first frame would otherwise
+	# be blocked by this synchronous boot).  The build chain below must NOT rebuild
+	# the loading screen.
+	root.call("_build_loading_screen")
+	root.set("loading_screen_active", true)
+	root.set("loading_screen_fading", false)
+	root.set("loading_screen_timer", 0.0)
+	var boot_loading := root.get("loading_screen_overlay") as ColorRect
+	if boot_loading != null:
+		boot_loading.visible = true
+		boot_loading.modulate.a = 1.0
+	root.set("boot_active", true)
+	await root.get_tree().process_frame
 	root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
-	(root.get("player_animation_component") as PlayerAnimationComponent).build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_build_loading_screen")
+	(root.get("player_animation_component") as PlayerAnimationComponent).build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_hub_ui"); root.call("_build_scene_transition")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
 	_initialize_walkable_area(root, root.get("EDGE_MARGIN") if root.get("EDGE_MARGIN") != null else 0.35, root.get("SLIME_EDGE_PADDING") if root.get("SLIME_EDGE_PADDING") != null else 3.0)
@@ -75,13 +97,22 @@ func initialize(root: Object) -> void:
 	if bool(root.get("debug_start_in_boss_room")):
 		root.call("_begin_new_run")
 		_enter_debug_gameplay(root)
+		root.set("loading_screen_active", false)
 	else:
 		var route := profile.pending_route
 		profile.pending_route = "title"
 		profile.open_hub_on_load = false
 		if has_active_profile: root.call("_save_player_profile")
 		if (route == "hub" or route == "run") and profile.has_started:
-			root.call_deferred("_enter_starting_room_from_menu")
+			# Enter the room directly (not deferred) so the title screen never
+			# flashes before the hub/run; _enter_starting_room_from_menu hides the
+			# title and fades the loading screen out.
+			root.call("_enter_starting_room_from_menu")
+		else:
+			root.set("loading_screen_active", false)
+			if boot_loading != null:
+				boot_loading.visible = false
+	root.set("boot_active", false)
 
 
 func _enter_debug_gameplay(root: Object) -> void:
@@ -111,17 +142,20 @@ func _initialize_player(root: Object, player: Sprite2D) -> void:
 	health.set_process(false); health.regen_delay = tuning.regen_delay; health.regen_interval = tuning.regen_interval; health.regen_amount = tuning.regen_amount
 	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed")); root.set("player_health_component", health)
 	var motor := root.call("_ensure_player_component", ActorMotor, "Motor") as ActorMotor; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.set("player_motor", motor)
-	root.set("player_controller", root.call("_ensure_player_component", PlayerController, "Controller")); root.set("player_roll_component", root.call("_ensure_player_component", PlayerRollComponent, "Roll")); root.set("player_attack_component", root.call("_ensure_player_component", PlayerAttackComponent, "Attack")); root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
+	root.set("player_controller", root.call("_ensure_player_component", PlayerController, "Controller")); (root.get("player_controller") as PlayerController).configure_input_router(root.get("input_router") as InputRouter); root.set("player_roll_component", root.call("_ensure_player_component", PlayerRollComponent, "Roll")); root.set("player_attack_component", root.call("_ensure_player_component", PlayerAttackComponent, "Attack")); root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
 	var guard := root.call("_ensure_player_component", PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(root); root.set("player_guard_component", guard)
 	var transmutations := root.call("_ensure_player_component", EquipmentTransmutationComponent, "Transmutations") as EquipmentTransmutationComponent
 	transmutations.configure(equipment); guard.successful_block.connect(Callable(transmutations, "record_successful_block")); guard.successful_block.connect(Callable(root, "_on_player_successful_block"))
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	attack.attack_started.connect(Callable(transmutations, "begin_attack")); attack.attack_finished.connect(Callable(transmutations, "finish_attack")); attack.attack_hit_resolved.connect(Callable(transmutations, "record_attack_hits"))
 	transmutations.effect_triggered.connect(Callable(root, "_on_transmutation_effect_triggered")); root.set("equipment_transmutation_component", transmutations); root.call("_configure_equipment_transmutations")
+	root.set("player_chroma_component", root.call("_ensure_player_component", PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma"))
+	root.set("player_aspect_ability_component", root.call("_ensure_player_component", PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility"))
 	var equipment_visual := root.call("_ensure_player_component", PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
 	equipment_visual.initialize(root); root.set("player_equipment_visual_component", equipment_visual)
 	root.call("_set_target_ui_visible", false)
 	var player_health := float(root.call("_player_max_health")); health.maximum_health = player_health; health.reset(player_health); root.set("player_display_health", player_health); root.call("_update_player_health_ui")
+	root.call("_update_player_mp_ui")
 
 
 func _initialize_walkable_area(root: Object, edge_margin: float, slime_edge_padding: float) -> void:

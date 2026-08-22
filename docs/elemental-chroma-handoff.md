@@ -1,6 +1,6 @@
 # Tiny Demons — Elemental Chroma System Handoff
 
-Status: active decision log / pre-implementation
+Status: active decision log / implementation in progress
 
 Source design: `docs/Tiny Demons — Elemental Chroma System Design.md`
 
@@ -124,8 +124,8 @@ The project already contains several useful seams:
 - `scripts/player_profile.gd` owns persistent profile data and will eventually
   need unlocked aspects/Binding data. Current Chroma itself should remain
   run-local.
-- Existing smoke coverage includes palette, fusion, progression, and combat
-  behavior, but there is no Chroma-specific test coverage yet.
+- Existing smoke coverage includes palette, fusion, progression, combat, and
+  Chroma state/pickup/ability behavior.
 
 ## 5. Recommended ownership model
 
@@ -170,21 +170,21 @@ source of truth.
 - Define the ability interface and animation contract.
 - Decide how the existing stat archetype data is replaced or reduced.
 
-### Phase 1 — Runtime Chroma slice
+### Phase 1 — Runtime Chroma slice — substantially implemented
 
 - Add canonical aspect/ability data.
 - Add the Chroma component.
 - Start runs as Gray at zero.
 - Add unit/smoke tests for all state transitions.
 
-### Phase 1B — Triangle execution boundary
+### Phase 1B — Triangle execution boundary — routing implemented; final abilities TBD
 
 - Add a dedicated aspect-ability component.
 - Move the current magic lifecycle behind it.
 - Route Triangle through resolved Chroma/aspect state.
 - Implement the approved Gray ability and only approved elemental behavior.
 
-### Phase 2 — Flame attunement and feedback
+### Phase 2 — Flame attunement and feedback — starter flow implemented; tutorial polish pending
 
 - Convert new-file selection to Fire/Water/Electric flame selection and remove
   independent user-facing stat-archetype selection.
@@ -195,14 +195,18 @@ source of truth.
 - Connect Chroma ratio to sprite desaturation.
 - Add clear attunement/depletion feedback.
 
-### Phase 3 — Tutorial curriculum
+### Phase 3 — Tutorial curriculum — starter gate and opening puzzle framework in place
 
-- Add the starter-flame pickup/puzzle flow.
+- Add the starter-flame pickup/puzzle flow. Run 1 now places two separated,
+  seed-randomized puzzle milestones on the required path: an early starter-color
+  puzzle and a later untinted Gray puzzle.
+- Keep puzzle-room entrances usable when the puzzle is unsolved, so a player can
+  back out and return to the hub rather than becoming trapped.
 - Author the exact 100/75/50/25/0 depletion lesson.
 - Prevent enemies or pickups from invalidating the forced sequence.
 - Verify Gray ability access after depletion.
 
-### Phase 4 — Elemental room framework
+### Phase 4 — Elemental room framework — neutral enemy pickups implemented; authored room rules pending
 
 - Add room aspect/theme metadata.
 - Add elemental requirements and interactions.

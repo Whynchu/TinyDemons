@@ -1,7 +1,9 @@
 extends RefCounted
 class_name PlayerProfile
 
-const CURRENT_SCHEMA_VERSION := 6
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+
+const CURRENT_SCHEMA_VERSION := 7
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
@@ -12,6 +14,7 @@ var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
 var open_hub_on_load := false
 var pending_route := "title"
+var starter_flame: StringName = &"fire"
 var palette_name := "blue"
 var allocation_profile := 0
 var level := 1
@@ -72,7 +75,7 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	return true
 
 
-func unequip_slot(slot: StringName, catalog: ItemCatalog = null) -> bool:
+func unequip_slot(slot: StringName, _catalog: ItemCatalog = null) -> bool:
 	if slot not in ItemCatalog.SLOTS or str(equipped_instance_ids.get(String(slot), "")).is_empty():
 		return false
 	equipped_instance_ids[String(slot)] = ""
@@ -292,6 +295,7 @@ func to_dictionary() -> Dictionary:
 		"has_started": has_started,
 		"open_hub_on_load": open_hub_on_load,
 		"pending_route": pending_route,
+		"starter_flame": String(starter_flame),
 		"palette_name": palette_name,
 		"allocation_profile": allocation_profile,
 		"level": level,
@@ -318,12 +322,20 @@ func to_dictionary() -> Dictionary:
 
 
 func load_dictionary(data: Dictionary) -> void:
-	schema_version = int(data.get("schema_version", CURRENT_SCHEMA_VERSION))
+	var saved_schema := int(data.get("schema_version", 0))
+	# Chroma changes the meaning of file identity. Older files are intentionally
+	# allowed to die out instead of being guessed into the new model.
+	if saved_schema != CURRENT_SCHEMA_VERSION:
+		schema_version = CURRENT_SCHEMA_VERSION
+		return
+	schema_version = saved_schema
 	has_started = bool(data.get("has_started", false))
 	open_hub_on_load = bool(data.get("open_hub_on_load", false))
 	pending_route = str(data.get("pending_route", "hub" if open_hub_on_load else "title"))
 	if pending_route not in ["title", "hub", "run"]:
 		pending_route = "title"
+	var saved_flame := StringName(str(data.get("starter_flame", "fire")))
+	starter_flame = saved_flame if AspectCatalogScript.is_starter_flame(saved_flame) else &"fire"
 	palette_name = str(data.get("palette_name", "blue"))
 	allocation_profile = int(data.get("allocation_profile", 0))
 	level = clampi(int(data.get("level", 1)), 1, MAX_LEVEL)

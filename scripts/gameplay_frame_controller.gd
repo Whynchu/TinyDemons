@@ -1,6 +1,17 @@
 extends Node
 class_name GameplayFrameController
 
+const PHASE_INPUT := &"input"
+const PHASE_SIMULATION := &"simulation"
+const PHASE_CONTACT := &"contact_resolution"
+const PHASE_DAMAGE := &"damage_and_progression"
+const PHASE_PRESENTATION := &"presentation"
+const PHASE_TRANSITIONS := &"transitions"
+const PHASE_ORDER: Array[StringName] = [PHASE_INPUT, PHASE_SIMULATION, PHASE_CONTACT, PHASE_DAMAGE, PHASE_PRESENTATION, PHASE_TRANSITIONS]
+
+static func phase_order() -> Array[StringName]:
+	return PHASE_ORDER.duplicate()
+
 
 func update_player_input(root: Object) -> void:
 	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
@@ -25,9 +36,19 @@ func update_player_input(root: Object) -> void:
 				roll.start_from_root(root); accepted_roll = true
 		root.call("_record_run_action_input", &"roll", accepted_roll)
 	root.set("player_roll_input_was_down", roll_down)
+	var magic_down: bool = root.call("_is_magic_input_pressed")
+	if magic_down and not bool(root.get("magic_input_was_down")):
+		var accepted_magic: bool = root.call("_try_cast_magic")
+		root.call("_record_run_action_input", &"magic", accepted_magic)
+	root.set("magic_input_was_down", magic_down)
 
 
 func tick(root: Object, delta: float) -> void:
+	root.call("_update_mp_desaturation")
+	root.call("_update_music_state")
+	if bool(root.get("boot_active")):
+		if bool(root.get("loading_screen_active")): root.call("_update_loading_screen", delta)
+		return
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta)
 	if (root.get("walkable_outline") as PackedVector2Array).is_empty(): return
@@ -43,27 +64,27 @@ func tick(root: Object, delta: float) -> void:
 			else: root.call("_close_save_select")
 			return
 		if ssc.menu_input_release_lock:
-			if not bool(root.call("_is_interact_input_pressed")) and not Input.is_action_pressed("ui_accept"):
+			if not bool(root.call("_is_interact_input_pressed")) and not bool(root.call("_is_ui_accept_pressed")):
 				ssc.menu_input_release_lock = false
 			else:
 				return
 		if ssc.save_overwrite_prompt_active:
 			var choice := ssc.save_overwrite_choice
-			if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+			if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
 				ssc.save_overwrite_choice = 1 - choice; root.call("_update_overwrite_cursor"); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
+			elif bool(root.call("_is_interact_input_pressed")) or bool(root.call("_is_ui_accept_just_pressed")):
 				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 				if choice == 0: (ssc.save_select_overlay.get_node("OverwriteYes") as Button).pressed.emit()
 				else: (ssc.save_select_overlay.get_node("OverwriteNo") as Button).pressed.emit()
 			return
 		var slot := ssc.save_select_index
-		if Input.is_action_just_pressed("ui_up"): slot -= 1
-		elif Input.is_action_just_pressed("ui_down"): slot += 1
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): slot -= 1
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): slot += 1
 		if slot != ssc.save_select_index:
 			ssc.save_select_index = posmod(slot, ProfileSaveService.SLOT_COUNT)
 			root.call("_update_save_select_cursor")
 			root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif bool(root.call("_is_interact_input_pressed")) or Input.is_action_just_pressed("ui_accept"):
+		elif bool(root.call("_is_interact_input_pressed")) or bool(root.call("_is_ui_accept_just_pressed")):
 			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 			for child in ssc.save_select_overlay.get_children():
 				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == ssc.save_select_index:
@@ -127,13 +148,15 @@ func tick(root: Object, delta: float) -> void:
 	if root.get("player_roll_component") != null: (root.get("player_roll_component") as PlayerRollComponent).update_from_root(root, delta)
 	root.call("_update_roll_dust", delta); (root.get("player_motor") as ActorMotor).update_player_hit_reaction(root, delta)
 	if not player_input_locked and root.get("player_motor") != null: (root.get("player_motor") as ActorMotor).move_player(root, delta)
-	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_tick_run_telemetry", delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
+	(root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_tick_run_telemetry", delta); root.call("_move_slimes", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_player_mp_ui", delta); root.call("_update_magic_projectiles", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
 	if not dialogue_was_active:
-		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drop", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
+		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drop", delta); root.call("_update_chroma_pickups", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); root.call("_update_player_palette_flash", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
+	else:
+		root.call("_update_player_palette_flash", delta)
 	var now_attacking: bool = root.get("player_is_attacking")
 	var anim := root.get("player_animation_component") as PlayerAnimationComponent
 	if previous_attacking and not now_attacking:
-		var attack_multiplier := player_tuning.attack_multiplier(int(root.get("player_spd")))
+		var attack_multiplier := player_tuning.attack_multiplier(float(root.get("player_spd")))
 		if bool(root.get("player_just_finished_attack2")) and anim.after_attack2_texture != null:
 			root.set("player_between_timer", player_tuning.attack2_cooldown / attack_multiplier); root.call("_set_actor_base_texture", root.get("player"), anim.after_attack2_texture)
 		elif (player_attack == null or not player_attack.combo_buffered) and anim.between_attack_texture != null:
@@ -152,3 +175,5 @@ func tick(root: Object, delta: float) -> void:
 
 func _stabilize(root: Object) -> void:
 	(root.get("actor_collision_system") as ActorCollisionSystem).stabilize_guides(root.get("actor_sprites"), Callable(root, "_update_slime_attack_guides"))
+	var geometry_debug := root.get("actor_geometry_debug_drawer") as ActorGeometryDebugDrawer
+	if geometry_debug != null: geometry_debug.refresh()

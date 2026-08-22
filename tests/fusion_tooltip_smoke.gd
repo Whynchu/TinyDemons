@@ -54,7 +54,7 @@ func _initialize() -> void:
 	controller_instance.hub_gear_browsing = true
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(gear_stats.all(func(s: Sprite2D) -> bool: return s.texture != null), "gear browse shows comparison tooltip", failures)
+	_expect(gear_stats.slice(0, 4).all(func(s: Sprite2D) -> bool: return s.texture != null) and gear_stats[4].texture == null, "gear browse shows four flat-stat rows without stale duplicate SPD", failures)
 	root._set_page(3)
 	controller_instance.hub_page = 3
 	controller_instance.hub_item_index = 0

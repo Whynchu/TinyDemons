@@ -1,6 +1,8 @@
 # Godot 4+ specific ignores
 .godot/
 .godot-user/
+.godot_user/
+.godot-test-user/
 /android/
 
 # Export artifacts
@@ -16,3 +18,11 @@ Desktop.ini
 
 # Workspace files
 previous session.txt
+
+# Tool caches and generated analysis
+**/__pycache__/
+**/.venv*/
+node_modules/
+analysis/
+sfx analysis/
+assets/sounds/generated_ui/

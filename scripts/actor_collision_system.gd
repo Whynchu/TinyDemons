@@ -205,7 +205,5 @@ func actor_contact_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -
 
 func actor_contact_radius(root: Object, actor: Sprite2D) -> float:
 	var chest := root.get("chest") as Sprite2D
-	if actor == chest: return 5.5
 	var guide: Rect2 = root.call("_collision_guide_rect_by_name", actor, "CollisionGuide")
-	var encounter_scale := float(actor.get_meta("encounter_scale", 1.0))
-	return (maxf(minf(guide.size.x, guide.size.y) * 0.5, 2.0) if guide.has_area() else 3.6) * encounter_scale
+	return ActorGeometry.contact_radius(actor, chest, guide, 3.6)

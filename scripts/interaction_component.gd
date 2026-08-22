@@ -2,6 +2,7 @@ extends Node
 class_name InteractionComponent
 
 var prompt_timer := 0.0
+var target_cycle_axis := 0
 
 
 func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: float, actor_foot: Callable, is_dead: Callable, is_targetable: Callable = Callable()) -> Sprite2D:
@@ -23,11 +24,16 @@ func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: flo
 func update_targeting(root: Object) -> void:
 	var should_target := bool(root.call("_is_target_input_held"))
 	if not should_target:
-		root.call("_set_current_target", null); root.call("_set_target_ui_visible", false); root.set("target_input_was_down", false); return
+		root.call("_set_current_target", null); root.call("_set_target_ui_visible", false); root.set("target_input_was_down", false); target_cycle_axis = 0; return
 	if not bool(root.get("target_input_was_down")):
 		root.call("_set_current_target", root.call("_closest_target")); root.set("target_input_was_down", true)
 	var target := root.get("current_target") as Sprite2D
 	if target != null and not bool(root.call("_is_slime_targetable", target)): root.call("_set_current_target", null); target = null
+	var cycle_direction := int(root.call("_target_cycle_direction"))
+	if cycle_direction != 0 and cycle_direction != target_cycle_axis:
+		root.call("_cycle_target", cycle_direction)
+	target_cycle_axis = cycle_direction
+	target = root.get("current_target") as Sprite2D
 	var player := root.get("player") as Sprite2D
 	if target != null and not bool(root.get("player_is_attacking")): player.flip_h = root.call("_actor_foot", target).x < root.call("_actor_foot", player).x
 	root.call("_update_target_ui")
@@ -40,7 +46,7 @@ func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int)
 	var near_item := bool(root.call("_can_interact_with_world_item"))
 	var npc := root.get("npc_controller") as NpcController
 	var dialogue_visible: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible
-	update_prompt(delta, root.get("interact_prompt"), dialogue_visible, bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, chest_anchor, root.call("_cloaked_demon_head_position"), item.global_position if item != null else Vector2.ZERO, Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
+	update_prompt(delta, root.get("interact_prompt"), dialogue_visible, bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, bool(root.call("_can_interact_with_fire")), chest_anchor, root.call("_cloaked_demon_head_position"), item.global_position if item != null else Vector2.ZERO, root.call("_fire_anchor"), Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
 
 
 func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:
@@ -84,7 +90,7 @@ func _highlight_button_texture(source: Texture2D) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, near_item: bool, chest_position: Vector2, npc_head_position: Vector2, item_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
+func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, near_item: bool, near_fire: bool, chest_position: Vector2, npc_head_position: Vector2, item_position: Vector2, fire_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
 	if prompt == null:
 		return
 	if dialogue_visible:
@@ -92,7 +98,7 @@ func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_
 		var dialogue_highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
 		if dialogue_highlight != null: dialogue_highlight.visible = false
 		return
-	var should_show := near_chest or near_npc or near_item
+	var should_show := near_chest or near_npc or near_item or near_fire
 	prompt.visible = should_show
 	var highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
 	if highlight != null: highlight.visible = should_show
@@ -104,9 +110,12 @@ func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_
 	if near_item:
 		var prompt_size := prompt.texture.get_size() * prompt.scale
 		prompt.global_position = snap_position.call(item_position + Vector2(0, -15 - prompt_size.y * 0.5 + bob))
-	elif near_npc and not near_chest:
+	elif near_npc and not near_chest and not near_fire:
 		var prompt_size := prompt.texture.get_size() * prompt.scale
 		prompt.global_position = snap_position.call(npc_head_position + Vector2(1, -prompt_size.y * 0.5 - 2 + bob))
+	elif near_fire and not near_chest:
+		var prompt_size := prompt.texture.get_size() * prompt.scale
+		prompt.global_position = snap_position.call(fire_position + Vector2(0, -prompt_size.y * 0.5 - 12 + bob))
 	else:
 		var prompt_size := prompt.texture.get_size() * prompt.scale
 		prompt.global_position = snap_position.call(chest_position + base_position + Vector2(0, -prompt_size.y * 0.5) + Vector2(0, bob))

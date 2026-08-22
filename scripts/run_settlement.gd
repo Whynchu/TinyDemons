@@ -10,3 +10,6 @@ static func settle(profile: PlayerProfile, run_state: RunState, result: StringNa
 	if not ProfileSaveService.save_profile(profile):
 		return false
 	return run_state.mark_settled(result)
+
+static func can_settle(run_state: RunState, result: StringName) -> bool:
+	return run_state != null and run_state.active and not run_state.settled and not result.is_empty()

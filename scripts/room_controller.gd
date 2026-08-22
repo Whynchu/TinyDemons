@@ -34,6 +34,10 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			for exit_socket in exits: graph.ensure_connection(room_id, exit_socket, DungeonGraph.ROOM_COMBAT)
 		elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 			pass
+		elif room_type == DungeonGraph.ROOM_PUZZLE:
+			var puzzle_exit := DungeonGraph.WALL_RIGHT if room.generation_seed % 2 == 0 else DungeonGraph.WALL_LEFT
+			exits.append(puzzle_exit)
+			graph.ensure_connection(room_id, puzzle_exit, DungeonGraph.ROOM_COMBAT)
 		else:
 			var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = room.generation_seed; var primary := DungeonGraph.WALL_LEFT if layout_rng.randi_range(0, 1) == 0 else DungeonGraph.WALL_RIGHT; exits.append(primary); graph.ensure_connection(room_id, primary, DungeonGraph.ROOM_COMBAT)
 			if room_depth + 1 != 6 and room_depth + 1 != graph.final_npc_depth() and layout_rng.randf() < graph.side_route_chance():
@@ -55,6 +59,8 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_scales"] = boss_encounter["scales"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 909
+		room_states[room_id] = state
+	elif room_type == DungeonGraph.ROOM_PUZZLE:
 		room_states[room_id] = state
 	return state
 
@@ -111,10 +117,15 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := maxi(1, ceili(float(room_depth) / 4.0))
 	var minor_count := 2 if progression_run_rank <= 2 else 3 if progression_run_rank <= 4 else 4 if progression_run_rank <= 5 else 6 if progression_run_rank <= 10 else 6
-	var variants: Array[String] = ["red"]
+	# Rogue/purple slimes can support the first boss encounter, but the scaled
+	# lead boss itself is reserved for R2 and later.
+	var boss_palette := ["blue", "green"] if progression_run_rank == 1 else ["blue", "green", "purple"]
+	var boss_rng := RandomNumberGenerator.new()
+	boss_rng.seed = generation_seed + 991
+	var variants: Array[String] = [boss_palette[boss_rng.randi_range(0, boss_palette.size() - 1)]]
 	var levels: Array[int] = [boss_level + 1]
-	var scales: Array[float] = [2.0]
-	var palette := ["blue", "green", "red", "purple"]
+	var scales: Array[float] = [3.0]
+	var palette := ["blue", "green", "purple"]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
@@ -258,13 +269,16 @@ func apply_state(root: Object) -> void:
 	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
 	var state := room_states.get(room_id, {}) as Dictionary
 	_clear_active_world_drop(root)
+	root.call("_clear_chroma_pickups")
 	if is_cleared(room_id): state["finished"] = true
 	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST: root.call("_apply_rest_room_state")
 	elif room_type == DungeonGraph.ROOM_NPC: root.call("_apply_npc_room_state")
+	elif room_type == DungeonGraph.ROOM_PUZZLE: apply_puzzle_state(root, bool(state.get("finished", false)))
 	elif bool(state.get("finished", false)): root.call("_apply_finished_room_state")
 	else:
 		(root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_chest_for_room(root); reset_slimes_for_room(root)
 	_restore_world_drop(root, state)
+	_restore_chroma_pickups(root, state)
 
 func _clear_active_world_drop(root: Object) -> void:
 	var item_drop := root.get("world_item_drop") as Sprite2D
@@ -272,6 +286,11 @@ func _clear_active_world_drop(root: Object) -> void:
 	var item_label := root.get("world_item_drop_label") as Sprite2D
 	if item_label != null: item_label.queue_free()
 	root.set("world_item_drop", null); root.set("world_item_drop_label", null); root.set("world_item_drop_instance", null); root.set("world_item_drop_air_time", 0.0)
+
+func _restore_chroma_pickups(root: Object, state: Dictionary) -> void:
+	var saved_pickups: Variant = state.get("chroma_pickups", [])
+	if saved_pickups is Array:
+		root.call("_restore_chroma_pickups", saved_pickups as Array)
 
 func _restore_world_drop(root: Object, state: Dictionary) -> void:
 	var saved_drop: Variant = state.get("world_item_drop", {})
@@ -358,6 +377,7 @@ func apply_rest_state(root: Object) -> void:
 	chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest)
 	(root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); root.call("_set_door_active", true); root.call("_set_entrance_open", true)
 	var fire := root.get("rest_fire") as Sprite2D; fire.visible = true; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = true; if firepit != null and not collision.has(firepit): collision.append(firepit)
+	_assign_rest_fire_palette(root)
 	var demon := root.get("cloaked_demon") as Sprite2D
 	demon.visible = root.get("current_room_type") == DungeonGraph.ROOM_START
 	if demon.visible:
@@ -367,12 +387,45 @@ func apply_rest_state(root: Object) -> void:
 	root.call("_set_rest_fire_frame", 0); (root.get("rest_fire_controller") as RestFireController).reset_animation(); _mark_finished(root)
 
 
+func _assign_rest_fire_palette(root: Object) -> void:
+	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
+	var fire_palette: String
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var tutorial_run := graph != null and graph.completed_run_count == 0
+	if room_type == DungeonGraph.ROOM_START or tutorial_run:
+		fire_palette = str(root.get("run_start_palette_name"))
+		if fire_palette.is_empty(): fire_palette = String((root.get("screen_state_controller") as Object).get("player_palette_name"))
+	else:
+		var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+		if not state.has("fire_palette"):
+			var rng := root.get("rng") as RandomNumberGenerator
+			state["fire_palette"] = PaletteLibrary.REST_FIRE_PALETTES[rng.randi_range(0, PaletteLibrary.REST_FIRE_PALETTES.size() - 1)]
+			room_states[room_id] = state
+		fire_palette = str(state.get("fire_palette"))
+	root.call("_apply_rest_fire_palette", fire_palette)
+
+
 func apply_npc_state(root: Object) -> void:
 	reset_slimes_for_room(root)
 	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D; var collision := root.get("collision_sprites") as Array[Sprite2D]; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; collision.erase(firepit)
 	var demon := root.get("cloaked_demon") as Sprite2D; demon.visible = true; demon.position = root.get("cloaked_demon_start_position"); var npc := root.get("npc_controller") as NpcController; npc.demon_wander_origin = demon.position; npc.demon_wander_timer = 0.0; npc.demon_patrol_direction = -1.0; npc.demon_patrol_paused = false; npc.demon_patrol_pause_timer = 0.0; npc.demon_patrol_position_x = demon.position.x; root.call("_configure_cloaked_demon_patrol_route"); if not collision.has(demon): collision.append(demon)
 	root.call("_set_door_active", true); root.call("_set_entrance_open", true); _mark_finished(root)
+
+
+func apply_puzzle_state(root: Object, solved: bool) -> void:
+	reset_chest_for_room(root)
+	var chest := root.get("chest") as Sprite2D
+	var collision := root.get("collision_sprites") as Array[Sprite2D]
+	chest.visible = false
+	root.set("chest_unlocked", solved)
+	root.set("chest_claimed", true)
+	root.set("chest_evaporated", true)
+	collision.erase(chest)
+	(root.get("depth_sprites") as Array[Sprite2D]).erase(chest)
+	(root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
+	root.call("_set_door_active", solved)
+	root.call("_set_entrance_open", true)
 
 
 func apply_finished_state(root: Object) -> void:
@@ -434,8 +487,9 @@ func reset_slimes_for_room(root: Object) -> void:
 			continue
 		occupied.append(spawn_foot)
 		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; brain.start_position = spawn_position; slime.position = spawn_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
+		var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0; slime.set_meta("encounter_scale", encounter_scale)
 		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
-		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); 		var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0; slime.set_meta("encounter_scale", encounter_scale); slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20)); slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20)); root.call("_set_actor_visual_scale", slime, Vector2.ONE); root.call("_apply_actor_scale", slime, false)
+		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); var is_boss := encounter_scale > 1.0; slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20) * (0.72 if is_boss else 1.0)); slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20) * (1.12 if is_boss else 1.0)); root.call("_set_actor_visual_scale", slime, Vector2.ONE); root.call("_apply_actor_scale", slime, false)
 		if not actor_sprites.has(slime): actor_sprites.append(slime)
 		if not collision.has(slime): collision.append(slime)
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state

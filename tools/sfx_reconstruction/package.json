@@ -1,0 +1,9 @@
+{
+  "name": "tiny-demons-sfx-spectral-backend",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@audio/stretch-sms": "latest",
+    "audio-decode": "latest"
+  }
+}

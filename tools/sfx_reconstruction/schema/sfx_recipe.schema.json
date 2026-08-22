@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tiny Demons procedural SFX recipe",
+  "type": "object",
+  "required": ["format", "version", "id", "source_role", "render", "events", "processing", "fit"],
+  "properties": {
+    "format": {"const": "tiny_demons_sfx_recipe"},
+    "version": {"type": "integer", "minimum": 1},
+    "id": {"type": "string", "minLength": 1},
+    "source_role": {"type": "string", "minLength": 1},
+    "render": {
+      "type": "object",
+      "required": ["sample_rate", "channels", "duration_seconds", "seed"],
+      "properties": {
+        "sample_rate": {"type": "integer", "minimum": 8000},
+        "channels": {"type": "integer", "enum": [1, 2]},
+        "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "seed": {"type": "integer"}
+      },
+      "additionalProperties": false
+    },
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}},
+    "processing": {"$ref": "#/$defs/processing"},
+    "fit": {"type": "object"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["start_seconds", "duration_seconds", "gain_db", "pan", "envelope", "transient", "modes", "residual", "processing"],
+      "properties": {
+        "start_seconds": {"type": "number", "minimum": 0},
+        "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "gain_db": {"type": "number"},
+        "pan": {"type": "number", "minimum": -1, "maximum": 1},
+        "envelope": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2}},
+        "transient": {"type": "object"},
+        "modes": {"type": "array", "items": {"type": "object"}},
+        "residual": {"type": "object"},
+        "processing": {"$ref": "#/$defs/processing"}
+      },
+      "additionalProperties": true
+    },
+    "processing": {
+      "type": "object",
+      "properties": {
+        "drive": {"type": "number", "minimum": 0},
+        "lowpass_hz": {"type": "number", "minimum": 0},
+        "highpass_hz": {"type": "number", "minimum": 0},
+        "quantization_bits": {"type": "integer", "minimum": 2, "maximum": 32}
+      },
+      "additionalProperties": true
+    }
+  }
+}

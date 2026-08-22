@@ -2,6 +2,8 @@ extends Node
 class_name NpcController
 
 var full_message := ""
+var dialogue_pages: Array[String] = []
+var dialogue_page_index := 0
 var character_index := 0
 var type_timer := 0.0
 var button_timer := 0.0
@@ -31,6 +33,9 @@ var demon_patrol_max_x := 0.0
 var demon_wander_target := Vector2.ZERO
 var demon_wander_has_target := false
 var demon_visual_bounds := Rect2(12, 10, 12, 16)
+
+const DIALOGUE_MAX_WIDTH := 150
+const DIALOGUE_MAX_LINES := 4
 
 
 func build_cloaked_demon_frames(library: SpriteFrameLibrary, actor: Sprite2D, frame_size: Vector2i, cached_image: Callable) -> Dictionary:
@@ -84,10 +89,14 @@ func show_dialogue(root: Object) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	var message := "YOUR PATH AWAITS."
 	if profile != null:
-		message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
+		var first_dive: bool = profile.completed_runs == 0 and not bool(root.get("starter_flame_attuned_this_run")) and root.get("current_room_type") == DungeonGraph.ROOM_START
+		if first_dive:
+			message = "TO DIVE, TOUCH THE %s FLAME IN THE HUB. IT WILL AWAKEN YOUR CHROMA." % String(profile.starter_flame).to_upper()
+		else:
+			message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
 	allocation_prompt_active = false
 	allocation_choice = 0
-	begin_dialogue(message)
+	begin_dialogue(message, Callable(root, "_pixel_text_texture"))
 	var player_was_idle := String(root.get("player_anim_name")) == "idle"
 	dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE); dialogue_text.visible = true; dialogue_button.visible = false; dialogue_input_was_down = root.call("_is_interact_input_pressed"); dialogue_box.visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	if not player_was_idle:
@@ -96,7 +105,7 @@ func show_dialogue(root: Object) -> void:
 	update_dialogue_from_root(root, 0.0)
 
 
-func hide_dialogue(root: Object) -> void:
+func hide_dialogue(_root: Object) -> void:
 	end_dialogue()
 	allocation_prompt_active = false
 	allocation_choice = 0
@@ -113,28 +122,39 @@ func update_dialogue_input(root: Object) -> void:
 	var input_down: bool = root.call("_is_interact_input_pressed")
 	var input_pressed := input_down and not dialogue_input_was_down
 	if allocation_prompt_active and dialogue_complete:
-		if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
 			allocation_choice = 1 - allocation_choice
 			_update_allocation_choices(root)
 			root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif Input.is_action_just_pressed("ui_cancel"):
+		elif bool(root.call("_is_ui_cancel_just_pressed")):
 			root.call("_play_sound", "ui_decline", 0.0, 1.0)
 			hide_dialogue(root)
-		elif input_pressed or Input.is_action_just_pressed("ui_accept"):
-			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+		elif input_pressed or bool(root.call("_is_ui_accept_just_pressed")):
 			if allocation_choice == 0:
+				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 				hide_dialogue(root)
 				root.call("_open_hub_from_cloaked_demon")
 			else:
+				root.call("_play_sound", "ui_decline", 0.0, 1.0)
 				hide_dialogue(root)
-	elif dialogue_complete and (input_pressed or Input.is_action_just_pressed("ui_accept")):
+	elif dialogue_complete and (input_pressed or bool(root.call("_is_ui_accept_just_pressed"))):
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-		allocation_prompt_active = true
-		allocation_choice = 0
-		begin_dialogue("OPEN STATS AND SHOP?")
-		dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
-		dialogue_button.visible = false
-		dialogue_button_shadow.visible = false
+		if dialogue_page_index + 1 < dialogue_pages.size():
+			dialogue_page_index += 1
+			full_message = dialogue_pages[dialogue_page_index]
+			character_index = 0
+			type_timer = 0.0
+			dialogue_complete = false
+			dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
+			dialogue_button.visible = false
+			dialogue_button_shadow.visible = false
+		else:
+			allocation_prompt_active = true
+			allocation_choice = 0
+			begin_dialogue("OPEN STATS AND SHOP?", Callable(root, "_pixel_text_texture"))
+			dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
+			dialogue_button.visible = false
+			dialogue_button_shadow.visible = false
 		update_dialogue_from_root(root, 0.0)
 	dialogue_input_was_down = input_down
 
@@ -246,8 +266,11 @@ func _highlight_button_texture(source: Texture2D) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func begin_dialogue(message: String) -> void:
+func begin_dialogue(message: String, pixel_texture: Callable = Callable()) -> void:
 	full_message = message
+	dialogue_pages = _paginate_message(message, pixel_texture) if pixel_texture.is_valid() else [message]
+	dialogue_page_index = 0
+	full_message = dialogue_pages[0] if not dialogue_pages.is_empty() else ""
 	character_index = 0
 	type_timer = 0.0
 	button_timer = 0.0
@@ -256,6 +279,8 @@ func begin_dialogue(message: String) -> void:
 
 func end_dialogue() -> void:
 	full_message = ""
+	dialogue_pages.clear()
+	dialogue_page_index = 0
 	character_index = 0
 	type_timer = 0.0
 	button_timer = 0.0
@@ -278,10 +303,9 @@ func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprit
 			button.visible = true
 	var full_text_texture := pixel_texture.call(full_message, Color.WHITE) as Texture2D
 	var choice_height := 12.0 if bool(box.get_meta("dialogue_choice_active", false)) else 0.0
-	# All standard demon lines are authored for this one-line budget. Keep the
-	# box absolute rather than allowing a longer message to resize the UI.
 	var minimum_text_texture := pixel_texture.call("OPEN STATS AND SHOP?", Color.WHITE) as Texture2D
-	var box_size := Vector2(minimum_text_texture.get_width() + 10.0, full_text_texture.get_height() + 10.0 + choice_height)
+	var content_width := mini(full_text_texture.get_width(), DIALOGUE_MAX_WIDTH)
+	var box_size := Vector2(maxf(minimum_text_texture.get_width() + 10.0, content_width + 10.0), full_text_texture.get_height() + 10.0 + choice_height)
 	var box_position := snap_position.call(head_position + Vector2(-box_size.x * 0.5, -box_size.y - 6)) as Vector2
 	box.position = box_position
 	box.size = box_size
@@ -297,6 +321,31 @@ func update_dialogue(delta: float, box: ColorRect, text: Sprite2D, button: Sprit
 		button_shadow.visible = true
 	else:
 		button_shadow.visible = false
+
+
+func _paginate_message(message: String, pixel_texture: Callable) -> Array[String]:
+	var lines: Array[String] = []
+	var current_line := ""
+	for word in message.split(" "):
+		var candidate := word if current_line.is_empty() else "%s %s" % [current_line, word]
+		var candidate_texture := pixel_texture.call(candidate, Color.WHITE) as Texture2D
+		if not current_line.is_empty() and candidate_texture.get_width() > DIALOGUE_MAX_WIDTH:
+			lines.append(current_line)
+			current_line = word
+		else:
+			current_line = candidate
+	if not current_line.is_empty():
+		lines.append(current_line)
+	var pages: Array[String] = []
+	var page_lines: Array[String] = []
+	for line in lines:
+		page_lines.append(line)
+		if page_lines.size() >= DIALOGUE_MAX_LINES:
+			pages.append("\n".join(page_lines))
+			page_lines.clear()
+	if not page_lines.is_empty():
+		pages.append("\n".join(page_lines))
+	return pages if not pages.is_empty() else [""]
 
 
 func update_patrol_animation(actor: Sprite2D, idle_frames: Array[Texture2D], walk_frames: Array[Texture2D], delta: float, near_player: bool, patrolling: bool, patrol_paused: bool, wander_target: Vector2, has_target: bool, pause_timer: float, patrol_direction: float, player_x: float, random_source: RandomNumberGenerator, foot_position: Callable, random_point: Callable, move_actor: Callable, perspective: Callable, cache_texture: Callable, animation_timer: float, animation_frame: int) -> Dictionary:
