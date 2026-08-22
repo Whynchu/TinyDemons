@@ -18,7 +18,7 @@ func initialize(root: Object) -> void:
 	root.set("walkable_area", root.call("_add_runtime_node", WalkableArea, "WalkableArea"))
 	root.set("actor_collision_system", root.call("_add_runtime_node", ActorCollisionSystem, "ActorCollisionSystem"))
 	var geometry_debug := root.call("_add_runtime_node", ActorGeometryDebugDrawer, "ActorGeometryDebugDrawer") as ActorGeometryDebugDrawer
-	geometry_debug.enabled = bool(root.get("debug_actor_geometry")); geometry_debug.z_as_relative = false; geometry_debug.z_index = 10000; root.set("actor_geometry_debug_drawer", geometry_debug)
+	geometry_debug.enabled = bool(root.get("debug_actor_geometry")); geometry_debug.z_as_relative = false; geometry_debug.z_index = 4096; root.set("actor_geometry_debug_drawer", geometry_debug)
 	root.set("depth_sorter", root.call("_add_runtime_node", DepthSorter, "DepthSorter"))
 	var occlusion := root.call("_add_runtime_node", OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
 	occlusion.resolution_scale = effects_tuning.resolution_scale; root.set("occlusion_renderer", occlusion)
