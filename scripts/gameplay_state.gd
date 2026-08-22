@@ -107,6 +107,7 @@ var player_animation_component: PlayerAnimationComponent = null
 var player_equipment_visual_component: PlayerEquipmentVisualComponent = null
 var walkable_area: WalkableArea = null
 var actor_collision_system: ActorCollisionSystem = null
+var actor_geometry_debug_drawer: ActorGeometryDebugDrawer = null
 var depth_sorter: DepthSorter = null
 var occlusion_renderer: OcclusionRenderer = null
 var room_controller: RoomController = null
