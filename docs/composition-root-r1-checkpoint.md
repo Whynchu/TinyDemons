@@ -49,11 +49,18 @@ has been removed globally.
 
 ## Verification
 
-- Composition baseline smoke: pass (`gameplay.gd` remains 2,863 lines / 424 functions).
+- Composition baseline smoke: pass (R0 ceiling remains 2,863 lines / 424 functions).
 - Full smoke suite: pass, 18 scripts.
 - Main-scene headless boot: pass.
 - Frame-time sample: 6.895 ms average / 11.440 ms worst over 180 post-warmup frames.
 - Known Godot certificate-store warning remains environment-only.
+
+After the player-assembly slice, the current counts are:
+
+- `gameplay.gd`: 2,859 lines / 423 functions (`-4` lines / `-1` function from R0).
+- `gameplay_state.gd`: 265 lines (`+1` typed composition field).
+- `gameplay_bootstrap.gd`: 210 lines, with 52 remaining dynamic-root call/get/set
+  lines (`-20` bootstrap seam lines from the prior checkpoint).
 
 ## Exit assessment
 
