@@ -117,10 +117,32 @@ func initialize(root: GameplayState) -> void:
 			# title and fades the loading screen out.
 			root.call("_enter_starting_room_from_menu")
 		else:
-			root.set("loading_screen_active", false)
-			if boot_loading != null:
-				boot_loading.visible = false
+			_show_title_after_boot(root, boot_loading)
 	root.set("boot_active", false)
+
+
+func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> void:
+	root.loading_screen_active = false
+	if boot_loading != null:
+		boot_loading.visible = false
+	var screens := root.screen_state_controller as ScreenStateController
+	if screens == null or screens.title_overlay == null:
+		push_error("Title screen was not constructed before bootstrap completed.")
+		return
+	root.ui.visible = true
+	screens.title_overlay.visible = true
+	screens.title_overlay.modulate.a = 1.0
+	if screens.title_screen_text != null: screens.title_screen_text.visible = true
+	if screens.title_start_text != null: screens.title_start_text.visible = true
+	if screens.title_start_button != null: screens.title_start_button.visible = true
+	if screens.title_continue_button != null: screens.title_continue_button.visible = not screens.title_continue_button.disabled
+	if screens.title_cursor_text != null: screens.title_cursor_text.visible = true
+	screens.title_transition_active = false
+	screens.pending_title_destination = ""
+	screens.set_state(&"title")
+	var focus_target := screens.title_continue_button if screens.title_continue_button != null and not screens.title_continue_button.disabled else screens.title_start_button
+	if focus_target != null:
+		focus_target.grab_focus()
 
 
 func _enter_debug_gameplay(root: Object) -> void:
