@@ -57,6 +57,10 @@ static func collision_rect(actor: Sprite2D, chest: Sprite2D, firepit: Sprite2D, 
 		var polygon := actor.get_node_or_null("CollisionPolygon") as Polygon2D
 		if polygon != null and polygon.polygon.size() >= 3:
 			return global_polygon_bounds(polygon)
+	if actor != chest and slimes.has(actor) and encounter_scale > 1.0:
+		var boss_body := body_polygon(actor, actor_foot_offset)
+		if boss_body.size() >= 3:
+			return global_points_bounds(boss_body)
 	var guide_offset := Vector2.ZERO
 	if actor != chest and slimes.has(actor):
 		guide_offset = encounter_visual_offset(encounter_scale, actor_foot_offset) * actor.scale
