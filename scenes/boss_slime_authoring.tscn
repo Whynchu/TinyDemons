@@ -1,107 +1,106 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene format=3 uid="uid://cu3pqqt5y700g"]
 
-[ext_resource type="Texture2D" path="res://assets/artwork/SlimeBlueRight.png" id="1_boss_texture"]
-[ext_resource type="Texture2D" path="res://assets/artwork/HpOverhead.png" id="2_hp_overhead"]
-[ext_resource type="Texture2D" path="res://assets/artwork/HpOverheadBlueBar.png" id="3_hp_fill"]
-[ext_resource type="Texture2D" path="res://assets/artwork/aggrodot(blue).png" id="4_aggro"]
-[ext_resource type="Script" path="res://scripts/slime_actor.gd" id="5_slime_actor"]
-[ext_resource type="Script" path="res://scripts/stats_component.gd" id="6_stats"]
-[ext_resource type="Script" path="res://scripts/editor_collision_guide.gd" id="7_guide"]
-[ext_resource type="Script" path="res://scripts/health_component.gd" id="8_health"]
-[ext_resource type="Script" path="res://scripts/slime_brain.gd" id="9_brain"]
-[ext_resource type="Script" path="res://scripts/slime_combat_component.gd" id="10_combat"]
-[ext_resource type="Script" path="res://scripts/enemy_tactics_component.gd" id="11_tactics"]
-[ext_resource type="Script" path="res://scripts/slime_animation_component.gd" id="12_animation"]
-[ext_resource type="Script" path="res://scripts/slime_visual_component.gd" id="13_visual"]
-[ext_resource type="Script" path="res://scripts/slime_health_presenter.gd" id="14_health_presenter"]
+[ext_resource type="Texture2D" uid="uid://cdoewhfovj1qi" path="res://assets/artwork/SlimeBlueRight.png" id="1_boss_texture"]
+[ext_resource type="Texture2D" uid="uid://ub5dtvrx1hsa" path="res://assets/artwork/HpOverhead.png" id="2_hp_overhead"]
+[ext_resource type="Texture2D" uid="uid://d1teh4nucgw4c" path="res://assets/artwork/HpOverheadBlueBar.png" id="3_hp_fill"]
+[ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="4_aggro"]
+[ext_resource type="Script" uid="uid://b0l1a5vjib0fe" path="res://scripts/slime_actor.gd" id="5_slime_actor"]
+[ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/stats_component.gd" id="6_stats"]
+[ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor_collision_guide.gd" id="7_guide"]
+[ext_resource type="Script" uid="uid://ca1syoucsu2bs" path="res://scripts/health_component.gd" id="8_health"]
+[ext_resource type="Script" uid="uid://c3quw2prk1p6f" path="res://scripts/slime_brain.gd" id="9_brain"]
+[ext_resource type="Script" uid="uid://cwtwnonqy30yq" path="res://scripts/slime_combat_component.gd" id="10_combat"]
+[ext_resource type="Script" uid="uid://cwo0vswwtxwjd" path="res://scripts/enemy_tactics_component.gd" id="11_tactics"]
+[ext_resource type="Script" uid="uid://bjsgs272wbqol" path="res://scripts/slime_animation_component.gd" id="12_animation"]
+[ext_resource type="Script" uid="uid://d3dn3iyfvfay0" path="res://scripts/slime_visual_component.gd" id="13_visual"]
+[ext_resource type="Script" uid="uid://ca4korii2mjec" path="res://scripts/slime_health_presenter.gd" id="14_health_presenter"]
 
-[node name="BossSlime" type="Sprite2D"]
+[node name="BossSlime" type="Sprite2D" unique_id=1209613364]
+scale = Vector2(2, 2)
 texture = ExtResource("1_boss_texture")
 centered = false
-scale = Vector2(2, 2)
 script = ExtResource("5_slime_actor")
 variant = "blue"
 metadata/_edit_group_ = true
 metadata/authoring_note = "Canonical editable boss slime. Adjust child geometry here; RoomController imports these authored geometry nodes for runtime bosses."
 
-[node name="Stats" type="Node" parent="."]
+[node name="Stats" type="Node" parent="." unique_id=1724242116]
 script = ExtResource("6_stats")
-allocation_profile = 3
 base_points = 8
 points_per_level = 2
+allocation_profile = 3
 
-[node name="Health" type="Node" parent="."]
+[node name="Health" type="Node" parent="." unique_id=1361227452]
 script = ExtResource("8_health")
 
-[node name="Brain" type="Node" parent="."]
+[node name="Brain" type="Node" parent="." unique_id=821069806]
 script = ExtResource("9_brain")
 
-[node name="Combat" type="Node" parent="."]
+[node name="Combat" type="Node" parent="." unique_id=1101152366]
 script = ExtResource("10_combat")
 
-[node name="Tactics" type="Node" parent="."]
+[node name="Tactics" type="Node" parent="." unique_id=1086160878]
 script = ExtResource("11_tactics")
 
-[node name="Animation" type="Node" parent="."]
+[node name="Animation" type="Node" parent="." unique_id=1345079521]
 script = ExtResource("12_animation")
 
-[node name="Visual" type="Node" parent="."]
+[node name="Visual" type="Node" parent="." unique_id=752817929]
 script = ExtResource("13_visual")
 
-[node name="HealthPresenter" type="Node" parent="."]
+[node name="HealthPresenter" type="Node" parent="." unique_id=1473046341]
 script = ExtResource("14_health_presenter")
 
-[node name="CollisionGuide" type="Node2D" parent="."]
+[node name="CollisionGuide" type="Node2D" parent="." unique_id=471084255]
 script = ExtResource("7_guide")
 rect_position = Vector2(3.5, 7.5)
 rect_size = Vector2(9, 4)
 fill_color = Color(0.1, 1, 0.35, 0.3)
 outline_color = Color(0.1, 1, 0.35, 1)
-draw_in_editor = true
 
-[node name="CollisionPolygon" type="Polygon2D" parent="."]
+[node name="CollisionPolygon" type="Polygon2D" parent="." unique_id=1449249226]
 color = Color(0.1, 1, 0.35, 0.16)
 polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
-[node name="BodyHitbox" type="Polygon2D" parent="."]
+[node name="BodyHitbox" type="Polygon2D" parent="." unique_id=1189786596]
+position = Vector2(2.6969697, 1.8181818)
+scale = Vector2(0.6515151, 0.72727275)
 color = Color(1, 0.25, 0.2, 0.32)
-polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
+polygon = PackedVector2Array(5, 3, 11, 3, 14.279071, 5.749999, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 2, 5.749999)
 
-[node name="AttackGuideL" type="Node2D" parent="."]
-position = Vector2(-6, -8)
+[node name="AttackGuideL" type="Node2D" parent="." unique_id=130032370]
+position = Vector2(0, 0)
 scale = Vector2(0.5, 0.5)
 script = ExtResource("7_guide")
 rect_position = Vector2(5, 8)
 rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.95)
-draw_in_editor = true
 
-[node name="AttackGuideR" type="Node2D" parent="."]
-position = Vector2(-6, -8)
+[node name="AttackGuideR" type="Node2D" parent="." unique_id=1763195607]
+position = Vector2(0, 0)
 scale = Vector2(0.5, 0.5)
 script = ExtResource("7_guide")
 rect_position = Vector2(14.5, 8)
 rect_size = Vector2(8.5, 16)
 fill_color = Color(1, 0.85, 0.1, 0.18)
 outline_color = Color(1, 0.7, 0.05, 0.95)
-draw_in_editor = true
 
-[node name="HpOverhead" type="Sprite2D" parent="."]
+[node name="HpOverhead" type="Sprite2D" parent="." unique_id=1131985209]
+visible = false
 position = Vector2(3, 0)
 texture = ExtResource("2_hp_overhead")
 centered = false
-visible = false
 
-[node name="HpOverheadFill" type="Sprite2D" parent="."]
+[node name="HpOverheadFill" type="Sprite2D" parent="." unique_id=520680202]
+visible = false
 z_index = 1
 position = Vector2(3, 0)
 texture = ExtResource("3_hp_fill")
 centered = false
-visible = false
 
-[node name="AggroMarker" type="Sprite2D" parent="."]
+[node name="AggroMarker" type="Sprite2D" parent="." unique_id=766321623]
+visible = false
 z_index = 3
 texture = ExtResource("4_aggro")
 centered = false
-visible = false
