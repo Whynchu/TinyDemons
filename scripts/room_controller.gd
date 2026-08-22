@@ -9,8 +9,10 @@ var arrival_socket_id: StringName = &""
 var transition_locked := false
 var room_states: Dictionary = {}
 var progression_run_rank := 1
+var boss_slime_authoring_scene: PackedScene = null
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
+const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/boss_slime_authoring.tscn"
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0
@@ -475,7 +477,10 @@ func reset_slimes_for_room(root: Object) -> void:
 	var occupied: Array[Vector2] = []
 	for slime_index in active_variants.size():
 		if slime_index >= slimes.size(): continue
-		var slime := slimes[slime_index]; var spawn_position: Vector2 = spawn_positions.get(slime_index, Vector2.ZERO)
+		var slime := slimes[slime_index]; var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
+		if encounter_scale > 1.0:
+			_apply_authored_boss_geometry(slime)
+		var spawn_position: Vector2 = spawn_positions.get(slime_index, Vector2.ZERO)
 		if not spawn_positions.has(slime_index) or not _valid_enemy_spawn_foot(root, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
 			spawn_position = _choose_enemy_spawn_position(root, slime, layout_rng, occupied); spawn_positions[slime_index] = spawn_position
 		var spawn_foot := spawn_position + ACTOR_FOOT_OFFSET
@@ -487,7 +492,7 @@ func reset_slimes_for_room(root: Object) -> void:
 			continue
 		occupied.append(spawn_foot)
 		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; brain.start_position = spawn_position; slime.position = spawn_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
-		var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0; slime.set_meta("encounter_scale", encounter_scale)
+		slime.set_meta("encounter_scale", encounter_scale)
 		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
 		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); var is_boss := encounter_scale > 1.0; slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20) * (0.72 if is_boss else 1.0)); slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20) * (1.12 if is_boss else 1.0)); root.call("_set_actor_visual_scale", slime, Vector2.ONE); root.call("_apply_actor_scale", slime, false)
 		if not actor_sprites.has(slime): actor_sprites.append(slime)
@@ -500,6 +505,28 @@ func reset_slimes_for_room(root: Object) -> void:
 		for slime in slimes:
 			if slime.visible:
 				root.call("_trigger_slime_notice", slime)
+
+
+func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
+	if boss_slime_authoring_scene == null:
+		boss_slime_authoring_scene = load(BOSS_SLIME_AUTHORING_SCENE) as PackedScene
+	if boss_slime_authoring_scene == null:
+		push_error("Boss slime authoring scene could not be loaded: %s" % BOSS_SLIME_AUTHORING_SCENE)
+		return
+	var authored := boss_slime_authoring_scene.instantiate()
+	var geometry_names := [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]
+	for geometry_name in geometry_names:
+		var source := authored.get_node_or_null(NodePath(geometry_name)) as Node
+		if source == null:
+			continue
+		var existing := slime.get_node_or_null(NodePath(geometry_name)) as Node
+		if existing != null:
+			existing.free()
+		var clone := source.duplicate() as Node
+		if clone == null:
+			continue
+		slime.add_child(clone)
+	authored.free()
 
 
 func _choose_enemy_spawn_position(root: Object, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
