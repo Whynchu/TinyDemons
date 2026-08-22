@@ -4,10 +4,6 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 func _add_runtime_node(script: Script, node_name: StringName, parent: Node = self) -> Node:
 	var node := script.new() as Node; node.name = node_name; parent.add_child(node); return node
-func _ensure_player_component(script: Script, node_name: StringName) -> Node:
-	var component := player.get_node_or_null(NodePath(node_name)) as Node
-	if component == null: component = _add_runtime_node(script, node_name, player)
-	return component
 func _ready() -> void:
 	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self)
 func _apply_profile_to_runtime() -> void:

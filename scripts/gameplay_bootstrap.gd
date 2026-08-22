@@ -95,8 +95,8 @@ func initialize(root: GameplayState) -> void:
 		boot_loading.modulate.a = 1.0
 	root.set("boot_active", true)
 	await root.get_tree().process_frame
-	root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
-	(root.get("player_animation_component") as PlayerAnimationComponent).build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_hub_ui"); root.call("_build_scene_transition")
+	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
+	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_hub_ui"); root.call("_build_scene_transition")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
 	_initialize_walkable_area(root, root.get("EDGE_MARGIN") if root.get("EDGE_MARGIN") != null else 0.35, root.get("SLIME_EDGE_PADDING") if root.get("SLIME_EDGE_PADDING") != null else 3.0)
@@ -136,34 +136,44 @@ func _enter_debug_gameplay(root: Object) -> void:
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"gameplay")
 
 
-func _initialize_player(root: Object, player: Sprite2D) -> void:
+func _ensure_player_component(player: Sprite2D, script: Script, node_name: StringName) -> Node:
+	var component := player.get_node_or_null(NodePath(node_name)) as Node
+	if component == null:
+		component = script.new() as Node
+		component.name = node_name
+		player.add_child(component)
+	return component
+
+
+func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	var equipment := player.get_node_or_null(^"Equipment") as EquipmentComponent
 	if equipment == null:
-		equipment = root.call("_ensure_player_component", EquipmentComponent, "Equipment") as EquipmentComponent; equipment.equip_default_loadout()
-	root.set("player_equipment", equipment)
-	var profile := root.get("player_profile") as PlayerProfile
+		equipment = _ensure_player_component(player, EquipmentComponent, "Equipment") as EquipmentComponent; equipment.equip_default_loadout()
+	root.player_equipment = equipment
+	var profile := root.player_profile
 	if profile != null:
 		profile.ensure_starter_items()
 		equipment.configure_from_profile(profile)
-	var tuning := root.get("player_tuning") as PlayerTuning
-	var health := root.call("_ensure_player_component", HealthComponent, "Health") as HealthComponent
+	var tuning := root.player_tuning
+	var health := _ensure_player_component(player, HealthComponent, "Health") as HealthComponent
 	health.set_process(false); health.regen_delay = tuning.regen_delay; health.regen_interval = tuning.regen_interval; health.regen_amount = tuning.regen_amount
-	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed")); root.set("player_health_component", health)
-	var motor := root.call("_ensure_player_component", ActorMotor, "Motor") as ActorMotor; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.set("player_motor", motor)
-	root.set("player_controller", root.call("_ensure_player_component", PlayerController, "Controller")); (root.get("player_controller") as PlayerController).configure_input_router(root.get("input_router") as InputRouter); root.set("player_roll_component", root.call("_ensure_player_component", PlayerRollComponent, "Roll")); root.set("player_attack_component", root.call("_ensure_player_component", PlayerAttackComponent, "Attack")); root.set("player_animation_component", root.call("_ensure_player_component", PlayerAnimationComponent, "Animation"))
-	var guard := root.call("_ensure_player_component", PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(root); root.set("player_guard_component", guard)
-	var transmutations := root.call("_ensure_player_component", EquipmentTransmutationComponent, "Transmutations") as EquipmentTransmutationComponent
+	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed"))
+	root.player_health_component = health
+	var motor := _ensure_player_component(player, ActorMotor, "Motor") as ActorMotor; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.player_motor = motor
+	root.player_controller = _ensure_player_component(player, PlayerController, "Controller") as PlayerController; root.player_controller.configure_input_router(root.input_router); root.player_roll_component = _ensure_player_component(player, PlayerRollComponent, "Roll") as PlayerRollComponent; root.player_attack_component = _ensure_player_component(player, PlayerAttackComponent, "Attack") as PlayerAttackComponent; root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
+	var guard := _ensure_player_component(player, PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(root); root.player_guard_component = guard
+	var transmutations := _ensure_player_component(player, EquipmentTransmutationComponent, "Transmutations") as EquipmentTransmutationComponent
 	transmutations.configure(equipment); guard.successful_block.connect(Callable(transmutations, "record_successful_block")); guard.successful_block.connect(Callable(root, "_on_player_successful_block"))
-	var attack := root.get("player_attack_component") as PlayerAttackComponent
+	var attack := root.player_attack_component
 	attack.attack_started.connect(Callable(transmutations, "begin_attack")); attack.attack_finished.connect(Callable(transmutations, "finish_attack")); attack.attack_hit_resolved.connect(Callable(transmutations, "record_attack_hits"))
-	transmutations.effect_triggered.connect(Callable(root, "_on_transmutation_effect_triggered")); root.set("equipment_transmutation_component", transmutations); root.call("_configure_equipment_transmutations")
-	root.set("player_chroma_component", root.call("_ensure_player_component", PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma"))
-	root.set("player_aspect_ability_component", root.call("_ensure_player_component", PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility"))
-	var equipment_visual := root.call("_ensure_player_component", PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
-	equipment_visual.initialize(root); root.set("player_equipment_visual_component", equipment_visual)
-	root.call("_set_target_ui_visible", false)
-	var player_health := float(root.call("_player_max_health")); health.maximum_health = player_health; health.reset(player_health); root.set("player_display_health", player_health); root.call("_update_player_health_ui")
-	root.call("_update_player_mp_ui")
+	transmutations.effect_triggered.connect(Callable(root, "_on_transmutation_effect_triggered")); root.equipment_transmutation_component = transmutations; root._configure_equipment_transmutations()
+	root.player_chroma_component = _ensure_player_component(player, PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma")
+	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
+	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
+	equipment_visual.initialize(root); root.player_equipment_visual_component = equipment_visual
+	root._set_target_ui_visible(false)
+	var player_health: float = root._player_max_health(); health.maximum_health = player_health; health.reset(player_health); root.player_display_health = player_health; root._update_player_health_ui()
+	root._update_player_mp_ui()
 
 
 func _initialize_walkable_area(root: Object, edge_margin: float, slime_edge_padding: float) -> void:
