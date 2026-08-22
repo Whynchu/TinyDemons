@@ -24,33 +24,30 @@ const RARITY_POWER_MULTIPLIERS := {
 const BASIC_GEAR_DROP_WEIGHT := 5.0
 
 const DEFINITIONS := {
-	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "bonuses": {"damage_rate": 5.0, "strength": 1.0}, "price": 45},
-	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "bonuses": {"damage_rate": 7.0, "strength": 2.0, "speed": -1.0}, "price": 90},
-	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "bonuses": {"damage_rate": 7.0, "defense": 2.0, "speed": -1.0}, "price": 95},
-	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "bonuses": {"damage_rate": 7.0, "vitality": 2.0, "speed": -1.0}, "price": 115},
-	&"iron_maul": {"name": "IRON MAUL", "slot": &"weapon", "bonuses": {"damage_rate": 8.0, "strength": 1.0, "speed": -1.0}, "price": 105},
-	&"quick_dagger": {"name": "QUICK DAGGER", "slot": &"weapon", "bonuses": {"damage_rate": 3.0, "speed": 5.0}, "price": 75},
-	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"armor", "bonuses": {"health_rate": 5.0, "strength": 1.0, "vitality": 1.0, "defense": 1.0, "speed": 1.0}, "price": 45},
-	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "bonuses": {"health_rate": 8.0, "vitality": 2.0, "speed": 1.0}, "price": 110},
-	&"iron_cuirass": {"name": "IRON CUIRASS", "slot": &"armor", "bonuses": {"health_rate": 6.0, "defense": 2.0, "vitality": 1.0, "speed": -2.0}, "price": 105},
-	&"feather_cloak": {"name": "FEATHER CLOAK", "slot": &"armor", "bonuses": {"health_rate": 4.0, "speed": 5.0}, "price": 80},
-	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "bonuses": {"health_rate": 5.0, "defense": 1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0, "strength_penalty": 1.0, "damage_penalty": 2.0, "speed_penalty": 1.0}, "price": 45},
-	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "bonuses": {"health_rate": 7.0, "defense": 2.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0, "strength_penalty": 2.0, "damage_penalty": 5.0, "speed_penalty": 2.0}, "price": 110},
-	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "bonuses": {"health_rate": 6.0, "defense": 2.0, "vitality": 1.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0, "strength_penalty": 2.0, "damage_penalty": 4.0, "speed_penalty": 2.0}, "price": 105},
-	&"parry_buckler": {"name": "PARRY BUCKLER", "slot": &"shield", "bonuses": {"health_rate": 3.0, "defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0, "strength_penalty": 0.0, "damage_penalty": 1.0, "speed_penalty": 0.0}, "price": 50},
-	&"bangle": {"name": "BANGLE", "slot": &"accessory", "bonuses": {"strength": 1.0, "health_rate": 5.0, "speed": 1.0}, "price": 45},
-	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "bonuses": {"damage_rate": 7.0, "strength": 2.0, "speed": -1.0}, "price": 105},
-	&"warrior_charm": {"name": "WARRIOR CHARM", "slot": &"accessory", "bonuses": {"strength": 2.0, "defense": 1.0, "health_rate": 4.0, "speed": -1.0}, "price": 100},
+	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "bonuses": {"strength": 1.0}, "price": 45},
+	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "bonuses": {"strength": 2.0, "speed": -1.0}, "price": 90},
+	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "bonuses": {"defense": 2.0, "speed": -1.0}, "price": 95},
+	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "bonuses": {"vitality": 2.0, "speed": -1.0}, "price": 115},
+	&"iron_maul": {"name": "IRON MAUL", "slot": &"weapon", "bonuses": {"strength": 1.0, "speed": -1.0}, "price": 105},
+	&"quick_dagger": {"name": "QUICK DAGGER", "slot": &"weapon", "bonuses": {"speed": 5.0}, "price": 75},
+	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"armor", "bonuses": {"vitality": 2.0, "defense": 2.0, "speed": 1.0}, "price": 45},
+	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "bonuses": {"vitality": 2.0, "speed": 1.0}, "price": 110},
+	&"iron_cuirass": {"name": "IRON CUIRASS", "slot": &"armor", "bonuses": {"defense": 2.0, "vitality": 1.0, "speed": -2.0}, "price": 105},
+	&"feather_cloak": {"name": "FEATHER CLOAK", "slot": &"armor", "bonuses": {"speed": 5.0}, "price": 80},
+	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "bonuses": {"defense": 1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0, "strength_penalty": 1.0, "speed_penalty": 1.0}, "price": 45},
+	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "bonuses": {"defense": 2.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0, "strength_penalty": 2.0, "speed_penalty": 2.0}, "price": 110},
+	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "bonuses": {"defense": 2.0, "vitality": 1.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0, "strength_penalty": 2.0, "speed_penalty": 2.0}, "price": 105},
+	&"parry_buckler": {"name": "PARRY BUCKLER", "slot": &"shield", "bonuses": {"defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0, "strength_penalty": 0.0, "speed_penalty": 0.0}, "price": 50},
+	&"bangle": {"name": "BANGLE", "slot": &"accessory", "bonuses": {"strength": 1.0, "speed": 1.0}, "price": 45},
+	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "bonuses": {"strength": 2.0, "speed": -1.0}, "price": 105},
+	&"warrior_charm": {"name": "WARRIOR CHARM", "slot": &"accessory", "bonuses": {"strength": 2.0, "defense": 1.0, "speed": -1.0}, "price": 100},
 	&"swift_boots": {"name": "SWIFT BOOTS", "slot": &"accessory", "bonuses": {"speed": 8.0}, "price": 85},
 }
 
 const AFFIXES := {
-	&"keen": {"name": "KEEN", "slots": [&"weapon"], "stat": "damage_rate", "min": 1, "max": 2},
-	&"savage": {"name": "SAVAGE", "slots": [&"weapon"], "stat": "damage_rate", "min": 1, "max": 3},
 	&"mighty": {"name": "MIGHTY", "slots": [&"weapon", &"accessory"], "stat": "strength", "min": 1, "max": 2},
-	&"sturdy": {"name": "STURDY", "slots": [&"armor", &"shield", &"accessory"], "stat": "health_rate", "min": 2, "max": 5},
 	&"warded": {"name": "WARDED", "slots": [&"armor", &"shield"], "stat": "defense", "min": 1, "max": 2},
-	&"vital": {"name": "VITAL", "slots": [&"armor", &"accessory"], "stat": "vitality", "min": 1, "max": 2},
+	&"vital": {"name": "VITAL", "slots": [&"weapon", &"armor", &"accessory"], "stat": "vitality", "min": 1, "max": 2},
 	&"swift": {"name": "SWIFT", "slots": [&"weapon", &"armor", &"accessory"], "stat": "speed", "min": 1, "max": 2},
 }
 
@@ -207,19 +204,31 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	for stat: String in base_bonuses:
 		var base_value := float(base_bonuses[stat])
 		var normalized_stat: String = str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat))
-		# Each tier is 2.2x the previous (RARITY_POWER_MULTIPLIERS). Enhancement
-		# then adds 10% of that tier's package per level, capping at +10 = 2.0x.
-		# Because 2.0 < 2.2, a +10 item always stays below the next tier's +0,
-		# so higher rarity is always worth more than more enhancement.
+		if normalized_stat in ["health_rate", "damage_rate"]:
+			continue
+		# This is the displayed item package. Rarity scales all implicit package
+		# values here; combat_primary_points() provides the separate controlled
+		# primary-stat contribution used by EquipmentComponent.
 		var tier_base := base_value * rarity_multiplier
 		result[normalized_stat] = tier_base * enhancement_factor
 	for affix_key: String in item.affixes:
 		var affix: Dictionary = AFFIXES.get(StringName(affix_key), {})
 		var stat := str(affix.get("stat", ""))
 		stat = {"health": "health_rate", "damage": "damage_rate"}.get(stat, stat)
+		if stat in ["health_rate", "damage_rate"]:
+			continue
 		if not stat.is_empty():
 			# Affixes scale with enhancement too, so every modified stat grows.
 			result[stat] = float(result.get(stat, 0.0)) + float(item.affixes[affix_key]) * enhancement_factor
+	return result
+
+
+func combat_primary_points(item: ItemInstance) -> Dictionary:
+	var result: Dictionary = {}
+	var displayed_bonuses := bonuses(item)
+	for stat in ["strength", "vitality", "defense", "speed"]:
+		if displayed_bonuses.has(stat):
+			result[stat] = float(displayed_bonuses[stat])
 	return result
 
 

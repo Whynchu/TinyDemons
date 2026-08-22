@@ -1,6 +1,9 @@
 extends Node
 class_name ScreenStateController
 
+const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
+const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
+
 signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
@@ -19,10 +22,19 @@ var hub_derived_texts: Array[Sprite2D] = []
 var hub_apply_button: Button = null
 var hub_cancel_button: Button = null
 var hub_auto_button: Button = null
-var hub_pending_vit := 0
-var hub_pending_str := 0
-var hub_pending_def := 0
-var hub_pending_spd := 0
+var hub_progression_draft = HubProgressionDraftScript.new()
+var hub_pending_vit: int:
+	get: return hub_progression_draft.vit
+	set(value): hub_progression_draft.vit = maxi(int(value), 0)
+var hub_pending_str: int:
+	get: return hub_progression_draft.str
+	set(value): hub_progression_draft.str = maxi(int(value), 0)
+var hub_pending_def: int:
+	get: return hub_progression_draft.def
+	set(value): hub_progression_draft.def = maxi(int(value), 0)
+var hub_pending_spd: int:
+	get: return hub_progression_draft.spd
+	set(value): hub_progression_draft.spd = maxi(int(value), 0)
 var hub_opened_from_npc := false
 var hub_pause_mode := false
 var hub_menu_row := 0
@@ -38,6 +50,7 @@ var hub_item_index := 0
 var hub_gear_candidate_indices := {"weapon": 0, "armor": 0, "shield": 0, "accessory": 0}
 var hub_gear_browsing := false
 var hub_fusion_candidates: Array[ItemInstance] = []
+var hub_fusion_candidates_dirty := true
 var hub_fusion_count := 1
 var hub_fusion_message := ""
 var hub_gear_choice_texts: Array[Sprite2D] = []
@@ -83,6 +96,7 @@ var archetype_fade_out := false
 var archetype_arrow_anim_timer := 0.0
 var archetype_arrow_anim_direction := 0
 var selected_archetype := StatsComponent.AllocationProfile.BALANCED
+var starter_flame_index := 0
 var save_select_overlay: ColorRect = null
 var save_select_mode := "continue"
 var save_select_index := 0
@@ -188,7 +202,7 @@ func update_archetype_input(root: Object, delta: float) -> void:
 				archetype_overlay.visible = false
 		return
 	if menu_input_release_lock:
-		var released := not bool(root.call("_is_interact_input_pressed")) and not Input.is_action_pressed("ui_accept") and not bool(root.call("_is_menu_cancel_input_pressed"))
+		var released := not bool(root.call("_is_interact_input_pressed")) and not bool(root.call("_is_ui_accept_pressed")) and not bool(root.call("_is_menu_cancel_input_pressed"))
 		if released: menu_input_release_lock = false
 		else: return
 	if root.call("_is_menu_cancel_input_pressed"):
@@ -202,39 +216,42 @@ func update_archetype_input(root: Object, delta: float) -> void:
 	button.modulate.a = retro_button_alpha(archetype_frame_timer)
 	button.position.y = 104.0 + retro_button_bob(archetype_frame_timer)
 	var row := archetype_menu_row
-	if Input.is_action_just_pressed("ui_up"):
+	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
 		root.call("_select_archetype_menu_row", row - 1)
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif Input.is_action_just_pressed("ui_down"):
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
 		root.call("_select_archetype_menu_row", row + 1)
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
-		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+		var direction := -1 if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) else 1
 		if row == 0: root.call("_shift_archetype", direction)
-		elif row == 1: root.call("_shift_archetype_color", direction)
-		else: root.call("_select_archetype_menu_row", 2)
+		else: root.call("_select_archetype_menu_row", 1)
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	if Input.is_action_just_pressed("ui_accept") or root.call("_is_interact_input_pressed"):
+	if bool(root.call("_is_ui_accept_just_pressed")) or root.call("_is_interact_input_pressed"):
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-		if row == 2: root.call("_start_selected_archetype")
-		else: root.call("_select_archetype_menu_row", row + 1)
+		if row == 1: root.call("_start_selected_archetype")
+		else: root.call("_select_archetype_menu_row", 1)
 
 
 func start_selected_archetype(root: Object) -> void:
 	if archetype_overlay == null or not archetype_overlay.visible or bool(root.get("loading_screen_active")):
 		return
 	var profile := root.get("player_profile") as PlayerProfile
-	var stats := root.get("player_stats") as StatsComponent
 	if profile != null and not profile.has_started:
+		var stats := root.get("player_stats") as StatsComponent
 		stats.manual_allocation_enabled = false
-		stats.allocation_profile = selected_archetype
+		# Flame owns the small class identity package. Exact flame bonuses are
+		# intentionally deferred; the initial profile uses the balanced baseline.
+		stats.allocation_profile = StatsComponent.AllocationProfile.BALANCED
 		var initial_stats := stats.get_stats()
 		profile.base_vit = int(initial_stats["VIT"])
 		profile.base_str = int(initial_stats["STR"])
 		profile.base_def = int(initial_stats["DEF"])
 		profile.base_spd = int(initial_stats["SPD"])
-		profile.allocation_profile = int(selected_archetype)
-		profile.palette_name = ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"][archetype_color_index]
+		var starter_flame: StringName = ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[starter_flame_index]
+		profile.starter_flame = starter_flame
+		profile.allocation_profile = int(StatsComponent.AllocationProfile.BALANCED)
+		profile.palette_name = ASPECT_CATALOG_SCRIPT.palette_for_flame(starter_flame)
 		profile.has_started = true
 		profile.ensure_starter_items()
 		root.call("_apply_profile_to_runtime")
@@ -332,9 +349,10 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 		root.call("_show_game_over")
 
 
-func update_archetype_button_styles(root: Object) -> void:
-	var color: Color = PaletteLibrary.ARCHETYPE_HIGHLIGHTS[archetype_color_index]; var row := archetype_menu_row
-	var type_active := row == 0; var sprite_active := row == 1; var start_active := row == 2
+func update_archetype_button_styles(_root: Object) -> void:
+	var flame: StringName = ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[starter_flame_index]
+	var color := PaletteLibrary.normal(ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)); var row := archetype_menu_row
+	var type_active := row == 0; var sprite_active := false; var start_active := row == 1
 	var type_left := archetype_type_left_button; var type_right := archetype_type_right_button; var start := archetype_start_button
 	set_archetype_button_state(type_left, type_active, color); set_archetype_button_state(type_right, type_active, color)
 	for button in archetype_left_buttons: set_archetype_button_state(button, sprite_active, color)
@@ -656,24 +674,30 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var pending := [hub_pending_vit, hub_pending_str, hub_pending_def, hub_pending_spd]
 	var remaining := int(root.call("_hub_points_remaining"))
 	if points != null: points.texture = pixel_texture.call("POINTS TO SPEND: %d" % remaining, Color8(255, 205, 117)) as Texture2D
-	var values := [profile.base_vit + profile.allocated_vit + pending[0], profile.base_str + profile.allocated_str + pending[1], profile.base_def + profile.allocated_def + pending[2], profile.base_spd + profile.allocated_spd + pending[3]]
 	var allocations := [profile.allocated_vit + pending[0], profile.allocated_str + pending[1], profile.allocated_def + pending[2], profile.allocated_spd + pending[3]]
 	var stat_texts := hub_stat_texts
 	var selected_row := hub_menu_row
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
+	var effective_values: Array[float] = []
+	var gear_values: Array[float] = []
+	if snapshot != null:
+		effective_values = [snapshot.vit + pending[0], snapshot.strength + pending[1], snapshot.def + pending[2], snapshot.speed + pending[3]]
+		gear_values = [snapshot.gear_vit, snapshot.gear_strength, snapshot.gear_def, snapshot.gear_speed]
 	for index in stat_texts.size():
-		stat_texts[index].texture = pixel_texture.call("%s %d  A+%d" % [["VIT", "STR", "DEF", "SPD"][index], values[index], allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
+		var effective := effective_values[index] if index < effective_values.size() else 0.0
+		var gear := gear_values[index] if index < gear_values.size() else 0.0
+		stat_texts[index].texture = pixel_texture.call("%s %.1f  G%+.1f A+%d" % [["VIT", "STR", "DEF", "SPD"][index], effective, gear, allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
 	var stat_buttons := hub_stat_buttons
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
 		var stat_index := int(button.get_meta("hub_stat_index", 0))
 		button.disabled = remaining <= 0 if direction > 0 else int(pending[stat_index]) <= 0
 		set_archetype_button_state(button, selected_row == stat_index, highlight_color)
-	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 	if snapshot != null:
 		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]; snapshot.speed += pending[3]
 		var combat_tuning := root.get("combat_tuning") as CombatTuning
 		var derived_texts := hub_derived_texts
-		var derived_values := ["HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning)), "ATK %d" % roundi((combat_tuning.damage_base + float(snapshot.strength)) * (1.0 + maxf(snapshot.gear_damage_rate, 0.0))), "DEF %d" % snapshot.def, "SPD %d" % snapshot.speed]
+		var derived_values := ["HP %.1f" % CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning), "ATK %.1f" % CombatCalculator.attack_power_for_snapshot(snapshot, combat_tuning), "DEF %.1f" % snapshot.def, "SPD %.1f" % snapshot.speed]
 		for index in derived_texts.size():
 			derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D if index < derived_values.size() else null
 	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3])
@@ -778,10 +802,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
 	if page != 3:
 		for stat: String in bonuses:
-			var rate := stat in ["health_rate", "damage_rate", "speed"]
-			var label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
+			var rate := stat in ["speed"]
+			var bonus_label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
 			var value := float(bonuses[stat])
-			bonus_parts.append("%s %s%.1f%s" % [label, "+" if value > 0 else "", value, "%" if rate else ""])
+			bonus_parts.append("%s %s%.1f%s" % [bonus_label, "+" if value > 0 else "", value, "%" if rate else ""])
 		details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
 	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
 	if page == 3 and not selected_transmutation_name.is_empty():
@@ -816,15 +840,15 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		var next_bonuses := catalog.bonuses(projected, 0)
 		var preview_stats := hub_gear_stat_texts
 		var preview_rows: Array[String] = []
-		var preview_order := ["health_rate", "damage_rate", "strength", "defense", "vitality", "speed"]
+		var preview_order := ["strength", "defense", "vitality", "speed"]
 		for stat: String in preview_order:
 			var before := float(bonuses.get(stat, 0.0))
 			var after := float(next_bonuses.get(stat, 0.0))
 			if is_equal_approx(before, 0.0) and is_equal_approx(after, 0.0):
 				continue
-			var rate := stat in ["health_rate", "damage_rate", "speed"]
-			var label: String = str({"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}.get(stat, stat.to_upper()))
-			preview_rows.append("%s %.1f>%.1f%s" % [label, before, after, "%" if rate else ""])
+			var rate := stat in ["speed"]
+			var preview_label: String = str({"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}.get(stat, stat.to_upper()))
+			preview_rows.append("%s %.1f>%.1f%s" % [preview_label, before, after, "%" if rate else ""])
 		for row_index in preview_stats.size():
 			if row_index < preview_rows.size():
 				preview_stats[row_index].texture = pixel_texture.call(preview_rows[row_index], Color8(167, 240, 112)) as Texture2D
@@ -919,7 +943,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			details[2].texture = pixel_texture.call("BLOCK +%d  ARM +%d%%" % [roundi(float(shield_values.get("guard_durability", 0.0))), roundi(float(shield_values.get("guard_reduction", 0.0)))], Color8(148, 220, 255)) as Texture2D
 			details[2].visible = true
 		if details.size() > 3:
-			details[3].texture = pixel_texture.call("ATK -%d%%  DMG -%d%%" % [roundi(float(shield_values.get("strength_penalty", 0.0))), roundi(float(shield_values.get("damage_penalty", 0.0)))], Color8(239, 125, 87)) as Texture2D
+			details[3].texture = null
 			details[3].visible = true
 	action.disabled = false
 	action.visible = not browsing
@@ -964,7 +988,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 	var equipped := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
 	var candidate_bonuses := _effective_item_bonuses(catalog, candidate, profile.mastery_level(candidate.definition_id))
 	var equipped_bonuses := _effective_item_bonuses(catalog, equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
-	var fields := [{"key": "health_rate", "label": "HP", "rate": true}, {"key": "vitality", "label": "VIT", "rate": true}, {"key": "strength", "label": "STR", "rate": true}, {"key": "defense", "label": "DEF", "rate": true}, {"key": "speed", "label": "SPD", "rate": true}]
+	var fields := [{"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}, {"key": "speed", "label": "SPD", "rate": false}]
 	for index in mini(stats.size(), fields.size()):
 		var field: Dictionary = fields[index]
 		var key := str(field["key"])
@@ -972,6 +996,9 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		var prefix := "+" if value > 0 else "-" if value < 0 else ""
 		var color := Color8(148, 220, 255) if value > 0 else Color8(239, 125, 87) if value < 0 else Color8(150, 156, 170)
 		stats[index].texture = pixel_texture.call("%s %s%.1f%s" % [str(field["label"]), prefix, absf(value), "%" if bool(field["rate"]) else ""], color) as Texture2D
+	for index in range(fields.size(), stats.size()):
+		stats[index].texture = null
+		stats[index].visible = false
 
 
 func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_level: int = 0) -> Dictionary:
@@ -981,7 +1008,6 @@ func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_l
 	if catalog.definition_slot(item.definition_id) == &"shield":
 		var shield_values := catalog.shield_bonuses(item)
 		result["strength"] = float(result.get("strength", 0.0)) - float(shield_values.get("strength_penalty", 0.0))
-		result["damage_rate"] = float(result.get("damage_rate", 0.0)) - float(shield_values.get("damage_penalty", 0.0))
 		result["speed"] = float(result.get("speed", 0.0)) - float(shield_values.get("speed_penalty", 0.0))
 	return result
 
@@ -1006,13 +1032,13 @@ func update_hub_input(root: Object) -> void:
 		return
 	if hub_pause_mode:
 		if hub_gear_browsing:
-			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif Input.is_action_just_pressed("ui_accept") or interact_pressed: root.call("_hub_item_action")
+			if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed: root.call("_hub_item_action")
 			return
-		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
 			var pause_action := hub_item_action_button
 			if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
 		return
@@ -1022,34 +1048,34 @@ func update_hub_input(root: Object) -> void:
 		root.call("_set_hub_page", page + 1); return
 	if page != 0:
 		if page == 1 and hub_gear_browsing:
-			if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+			if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
 				root.call("_hub_item_action")
-			elif Input.is_action_just_pressed("ui_cancel"): root.call("_close_hub_gear_browse")
+			elif bool(root.call("_is_ui_cancel_just_pressed")): root.call("_close_hub_gear_browse")
 			return
-		if Input.is_action_just_pressed("ui_up"): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif Input.is_action_just_pressed("ui_down"): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 1 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 1 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 3 and Input.is_action_just_pressed("ui_left"): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 3 and Input.is_action_just_pressed("ui_right"): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 1 and bool(root.call("_is_ui_direction_just_pressed", &"ui_left")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 1 and bool(root.call("_is_ui_direction_just_pressed", &"ui_right")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 3 and bool(root.call("_is_ui_direction_just_pressed", &"ui_left")): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif page == 3 and bool(root.call("_is_ui_direction_just_pressed", &"ui_right")): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
 			var action := hub_item_action_button
 			if action != null and not action.disabled: action.pressed.emit()
-		elif Input.is_action_just_pressed("ui_cancel"): root.call("_set_hub_page", 0)
+		elif bool(root.call("_is_ui_cancel_just_pressed")): root.call("_set_hub_page", 0)
 		return
-	if Input.is_action_just_pressed("ui_up"):
+	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
 		root.call("_select_hub_menu_row", row - 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif Input.is_action_just_pressed("ui_down"):
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
 		root.call("_select_hub_menu_row", row + 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
-		var direction := -1 if Input.is_action_just_pressed("ui_left") else 1
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+		var direction := -1 if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) else 1
 		if row < 4:
 			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF", &"SPD"][row], direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		else:
 			root.call("_shift_hub_action_column", direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif Input.is_action_just_pressed("ui_accept") or interact_pressed:
+	elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
 		if row < 4:
 			root.call("_select_hub_menu_row", row + 1)
 		elif row == 4:
@@ -1058,7 +1084,7 @@ func update_hub_input(root: Object) -> void:
 		else:
 			var exit_button := [hub_start_button, hub_title_button][hub_action_column] as Button
 			if exit_button != null and not exit_button.disabled: exit_button.pressed.emit()
-	elif Input.is_action_just_pressed("ui_cancel"):
+	elif bool(root.call("_is_ui_cancel_just_pressed")):
 		if hub_opened_from_npc: root.call("_close_hub_to_run")
 		else: root.call("_return_to_title")
 
@@ -1081,8 +1107,8 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), preview_texture: Callable = Callable()) -> ColorRect:
 	var overlay := create_overlay(parent, "SaveSelectOverlay", Vector2(240, 160), Color.BLACK, 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	var title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2(88, 42), false)
-	var cursor := create_sprite(overlay, "SaveSelectCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(55, 70), false)
+	var _title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2(88, 42), false)
+	var _cursor := create_sprite(overlay, "SaveSelectCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(55, 70), false)
 	var prompt := create_sprite(overlay, "OverwritePrompt", pixel_texture.call("OVERWRITE?  YES / NO", Color.WHITE) as Texture2D, Vector2(70, 126), false)
 	prompt.visible = false
 	var prompt_cursor := create_sprite(overlay, "OverwriteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(99, 140), false); prompt_cursor.visible = false
@@ -1118,6 +1144,11 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 	for side in [-1, 1]:
 		var button := make_archetype_arrow(overlay, side, Vector2(75 if side < 0 else 155, 69), shift_color.bind(side), pixel_texture)
 		(left_buttons if side < 0 else right_buttons).append(button)
+	# The old second row was independent palette selection. Flame now owns the
+	# identity choice, so retain the controls for scene/layout compatibility but
+	# keep that obsolete row hidden.
+	for button in left_buttons: button.visible = false
+	for button in right_buttons: button.visible = false
 	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 33), shift_type.bind(-1), pixel_texture)
 	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 33), shift_type.bind(1), pixel_texture)
 	var start_button := make_retro_button("START", Vector2(99, 104), Vector2(42, 14), pixel_texture)

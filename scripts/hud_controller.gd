@@ -54,9 +54,12 @@ func update_target_ui(target: Sprite2D, target_name: Sprite2D, _target_bar: Spri
 
 
 func update_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, regen_speed: float, drain_speed: float, max_health: float, fill: Sprite2D, damage_fill: Sprite2D, fill_size: Vector2, health_text: Sprite2D, pixel_number: Callable, set_values: Callable) -> Dictionary:
-	if health > display_health: display_health = move_toward(display_health, health, regen_speed * delta)
+	# Bar speeds are %-relative: they scale with max HP so the bar fills/drains at
+	# the same visual rate regardless of how large the pool is.
+	var scale := max_health / 100.0
+	if health > display_health: display_health = move_toward(display_health, health, regen_speed * scale * delta)
 	if damage_hold > 0.0: damage_hold = maxf(damage_hold - delta, 0.0)
-	elif display_health > health: display_health = move_toward(display_health, health, drain_speed * delta)
+	elif display_health > health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
 	set_values.call(fill, damage_fill, fill_size, health, display_health, max_health)
 	if health_text != null: health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
 	return {"display_health": display_health, "damage_hold": damage_hold}
@@ -139,21 +142,21 @@ func update_overhead_bars(
 		set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
 
-func update_button_hud(buttons: Array[Sprite2D], devices: Array[int]) -> void:
+func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: InputRouter = null) -> void:
 	if buttons.size() < 4:
 		return
 	var pressed := [false, false, false, false]
-	for device in devices:
-		pressed[0] = pressed[0] or Input.is_joy_button_pressed(device, JOY_BUTTON_Y)
-		pressed[1] = pressed[1] or Input.is_joy_button_pressed(device, JOY_BUTTON_X)
-		pressed[2] = pressed[2] or Input.is_joy_button_pressed(device, JOY_BUTTON_A)
-		pressed[3] = pressed[3] or Input.is_joy_button_pressed(device, JOY_BUTTON_B)
+	if router != null:
+		pressed[0] = router.button_pressed(JOY_BUTTON_Y)
+		pressed[1] = router.button_pressed(JOY_BUTTON_X)
+		pressed[2] = router.button_pressed(JOY_BUTTON_A)
+		pressed[3] = router.button_pressed(JOY_BUTTON_B)
 	for index in buttons.size():
 		buttons[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
 
 
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
-	update_button_hud(button_hud_sprites, root.call("_controller_devices"))
+	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))

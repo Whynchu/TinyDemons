@@ -72,6 +72,33 @@ func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Tex
 	return recolored
 
 
+## Recolors flame frames to a palette using the flame's own source colors:
+## the darkest (base red) becomes the palette NORMAL, the mid (orange) becomes
+## the palette ACCENT, and the brightest (yellow) becomes the lightened tip.
+func recolor_fire_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]:
+	var target: Array[Color] = PaletteLibrary.fire_triple(palette_name)
+	var source := [PaletteLibrary.NORMAL["red"], PaletteLibrary.NORMAL["orange"], PaletteLibrary.NORMAL["yellow"]]
+	var source_keys: Array[int] = []
+	for source_color: Color in source:
+		source_keys.append(_rgb_int(source_color))
+	var recolored: Array[Texture2D] = []
+	for texture in frames:
+		if texture == null:
+			continue
+		var image := _cached_image(texture).duplicate()
+		for y in image.get_height():
+			for x in image.get_width():
+				var color: Color = image.get_pixel(x, y)
+				var key := _rgb_int(color)
+				for color_index in source.size():
+					if key == source_keys[color_index]:
+						var replacement: Color = target[color_index]
+						image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
+						break
+		recolored.append(ImageTexture.create_from_image(image))
+	return recolored
+
+
 func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	if source == null:
 		return null
@@ -81,11 +108,15 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	var target: Array[Color] = PaletteLibrary.triple(palette_name)
 	var image := _cached_image(source).duplicate()
 	var source_colors: Array[Color] = PaletteLibrary.triple("blue")
+	var source_keys: Array[int] = []
+	for source_color: Color in source_colors:
+		source_keys.append(_rgb_int(source_color))
 	for y in image.get_height():
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)
+			var key := _rgb_int(color)
 			for color_index in source_colors.size():
-				if _rgb_key(color) == _rgb_key(source_colors[color_index]):
+				if key == source_keys[color_index]:
 					var replacement: Color = target[color_index]
 					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
 					break
@@ -112,3 +143,7 @@ func _effect_texture_with_display_size(image: Image, display_size: Vector2i) -> 
 
 func _rgb_key(color: Color) -> String:
 	return "%02X%02X%02X" % [int(round(color.r * 255.0)), int(round(color.g * 255.0)), int(round(color.b * 255.0))]
+
+
+func _rgb_int(color: Color) -> int:
+	return (int(round(color.r * 255.0)) << 16) | (int(round(color.g * 255.0)) << 8) | int(round(color.b * 255.0))

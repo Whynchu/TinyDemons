@@ -39,10 +39,10 @@ func has(transmutation_id: StringName) -> bool:
 	return String(transmutation_id) in active_transmutations.values()
 
 
-func guard_maximum_durability(base_durability: float, effective_defense: int) -> float:
+func guard_maximum_durability(base_durability: float, effective_defense: float) -> float:
 	if not has(BASTION_CORE):
 		return base_durability
-	return base_durability + maxi(effective_defense, 0) * BASTION_DURABILITY_PER_DEF
+	return base_durability + maxf(effective_defense, 0.0) * BASTION_DURABILITY_PER_DEF
 
 
 func record_successful_block(_shield_damage: float = 0.0, _health_damage: float = 0.0) -> void:
@@ -97,7 +97,7 @@ func damage_share_divisor(target: Sprite2D, target_count: int) -> float:
 	return maxf(float(target_count - 1), 1.0)
 
 
-func duelist_damage_multiplier(target: Sprite2D, locked_target: Sprite2D, effective_strength: int) -> float:
+func duelist_damage_multiplier(target: Sprite2D, locked_target: Sprite2D, effective_strength: float) -> float:
 	if not has(DUELIST_FOCUS) or locked_target == null:
 		return 1.0
 	return 1.0 + maxf(float(effective_strength), 0.0) * DUELIST_LOCKED_DAMAGE_PER_STR if target == locked_target else DUELIST_OTHER_TARGET_MULTIPLIER
@@ -109,7 +109,7 @@ func life_steal_amount(damage: float) -> float:
 	return maxf(damage, 0.0) * BLOOD_FEED_LIFE_STEAL_RATE
 
 
-func consume_duelist_feedback(target_is_locked: bool, effective_strength: int) -> void:
+func consume_duelist_feedback(target_is_locked: bool, effective_strength: float) -> void:
 	if not duelist_feedback_ready:
 		return
 	duelist_feedback_ready = false

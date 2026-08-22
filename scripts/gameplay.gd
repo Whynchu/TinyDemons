@@ -1,5 +1,7 @@
 extends "res://scripts/gameplay_state.gd"
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 func _add_runtime_node(script: Script, node_name: StringName, parent: Node = self) -> Node:
 	var node := script.new() as Node; node.name = node_name; parent.add_child(node); return node
 func _ensure_player_component(script: Script, node_name: StringName) -> Node:
@@ -11,7 +13,15 @@ func _ready() -> void:
 func _apply_profile_to_runtime() -> void:
 	if player_profile == null:
 		return
-	screen_state_controller.player_palette_name = player_profile.palette_name
+	var palette := player_profile.palette_name
+	# XP/stat refreshes happen during a run. They must not overwrite a palette
+	# selected at a fire with the profile's original saved palette.
+	if run_state != null and run_state.active and not current_player_palette_name.is_empty():
+		palette = current_player_palette_name
+	screen_state_controller.player_palette_name = palette
+	current_player_palette_name = palette
+	if run_state == null or not run_state.active:
+		run_start_palette_name = palette
 	player_profile.ensure_starter_items()
 	if player_equipment != null:
 		player_equipment.configure_from_profile(player_profile)
@@ -154,12 +164,82 @@ func _collect_world_item_drop() -> bool:
 		return false
 	_save_player_profile()
 	_spawn_floating_number(_actor_foot(player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, Color("ffd866"), "FOUND %s" % ItemCatalog.new().display_name(world_item_drop_instance))
+	_play_sound("item_pickup", -4.0, 1.0)
 	world_item_drop.queue_free()
 	if world_item_drop_label != null: world_item_drop_label.queue_free()
 	world_item_drop = null
 	world_item_drop_label = null
 	world_item_drop_instance = null
 	return true
+
+func _spawn_chroma_pickup(position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
+	var sprite := Sprite2D.new()
+	sprite.name = "ChromaPickup"
+	sprite.texture = _pixel_particle_texture(Color("9fe3b4"), 3)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_as_relative = false
+	sprite.modulate = Color("d8ffe8")
+	sprite.global_position = _nearest_slime_walkable_point(position)
+	add_child(sprite)
+	var launch_rng := RandomNumberGenerator.new()
+	launch_rng.seed = launch_seed if launch_seed != 0 else rng.randi()
+	var velocity := Vector2(launch_rng.randf_range(-chroma_tuning.pickup_launch_spread, chroma_tuning.pickup_launch_spread), -chroma_tuning.pickup_launch_speed)
+	if launch_direction.length_squared() > 0.001:
+		velocity = launch_direction.normalized() * chroma_tuning.pickup_launch_speed
+	chroma_pickup_controller.add_pickup(sprite, value, velocity, chroma_tuning.pickup_air_time)
+
+func _restore_chroma_pickups(saved_pickups: Array) -> void:
+	for saved_pickup_value in saved_pickups:
+		if not (saved_pickup_value is Dictionary):
+			continue
+		var saved_pickup := saved_pickup_value as Dictionary
+		_spawn_chroma_pickup(saved_pickup.get("position", player_start_position) as Vector2, int(saved_pickup.get("value", CHROMA_PICKUP_VALUE)), 1)
+		var index := chroma_pickup_controller.sprites.size() - 1
+		chroma_pickup_controller.air_times[index] = 0.0
+
+func _update_chroma_pickups(delta: float) -> void:
+	var index := chroma_pickup_controller.sprites.size() - 1
+	while index >= 0:
+		var pickup := chroma_pickup_controller.sprites[index]
+		if pickup == null or not is_instance_valid(pickup):
+			_remove_chroma_pickup(index)
+			index -= 1
+			continue
+		if chroma_pickup_controller.air_times[index] > 0.0:
+			chroma_pickup_controller.air_times[index] = maxf(chroma_pickup_controller.air_times[index] - delta, 0.0)
+			var velocity := chroma_pickup_controller.velocities[index]
+			velocity.y += 92.0 * delta
+			chroma_pickup_controller.velocities[index] = velocity
+			pickup.global_position += velocity * delta
+			pickup.global_position = _nearest_slime_walkable_point(pickup.global_position)
+		else:
+			var distance := _actor_foot(player).distance_to(pickup.global_position)
+			if distance <= chroma_tuning.pickup_collection_distance:
+				_collect_chroma_pickup(index)
+				index -= 1
+				continue
+		pickup.z_index = int(round(pickup.global_position.y * DEPTH_Z_SCALE)) + 2
+		pickup.scale = Vector2.ONE * (1.0 + sin(Time.get_ticks_msec() * 0.008 + float(index)) * 0.08)
+		index -= 1
+
+func _collect_chroma_pickup(index: int) -> void:
+	var value := chroma_pickup_controller.values[index]
+	var restored := false
+	if player_chroma_component != null and is_instance_valid(player_chroma_component):
+		restored = bool(player_chroma_component.call("restore_neutral_chroma", value))
+		_update_player_mp_ui()
+	if restored:
+		_spawn_floating_number(_actor_foot(player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, Color("9fe3b4"), "+%d CHROMA" % value)
+		_play_sound("item_pickup", -6.0, 1.15)
+	_remove_chroma_pickup(index)
+	# Gray and full Chroma intentionally consume the pickup without granting
+	# anything. This keeps pickups from becoming permanent room clutter.
+
+func _remove_chroma_pickup(index: int) -> void:
+	chroma_pickup_controller.remove(index)
+
+func _clear_chroma_pickups() -> void:
+	chroma_pickup_controller.clear()
 
 func _loot_grade_bonus(grade: String = "") -> float:
 	var value := grade.to_upper() if not grade.is_empty() else (player_profile.last_run_grade if player_profile != null else "D")
@@ -182,6 +262,38 @@ func _save_player_profile() -> void:
 func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
 	if sound_manager != null:
 		sound_manager.play(sound_name, volume_db, pitch_scale)
+func _on_player_walk_step(_step_frame: int) -> void:
+	if not player_is_moving or player_is_rolling or player_is_attacking or player_is_defending:
+		return
+	_play_sound("foot_left" if _step_frame == 1 else "foot_right", -8.0, 1.0 + rng.randf_range(-0.025, 0.025))
+func _fade_out_music() -> void:
+	if sound_manager != null:
+		sound_manager.fade_out_music()
+func _start_music() -> void:
+	if sound_manager != null:
+		sound_manager.start_music()
+func _is_on_title_menu() -> bool:
+	var ssc := screen_state_controller
+	if ssc == null or ssc.state != &"title" or ssc.title_transition_active:
+		return false
+	if ssc.title_overlay == null or not ssc.title_overlay.visible:
+		return false
+	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
+		return false
+	return true
+func _update_music_state() -> void:
+	if _is_on_title_menu():
+		title_menu_frames = mini(title_menu_frames + 1, 2)
+	else:
+		title_menu_frames = 0
+	var should_play := title_menu_frames >= 2
+	if should_play == music_wanted:
+		return
+	music_wanted = should_play
+	if should_play:
+		_start_music()
+	else:
+		_fade_out_music()
 func _set_gold_value(value: int) -> void:
 	if player_profile == null:
 		return
@@ -207,22 +319,28 @@ func _respec_player_stats() -> int:
 	_sync_runtime_progression_to_profile()
 	return refunded
 func _physics_process(delta: float) -> void:
+	if input_router != null: input_router.poll(_input_context())
 	gameplay_frame_controller.tick(self, delta)
+	# Bosses are much taller than normal slimes; refresh foot-based z-order every
+	# frame so the player can correctly pass in front of or behind them.
+	_update_depth_sorting()
+	_update_player_shadow()
+	_update_roll_dust(0.0)
 	_update_large_room_camera()
 func _start_player_death() -> void:
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
-func _build_game_over_ui() -> void: var controls := screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D
+func _build_game_over_ui() -> void: var controls: Dictionary = screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D
 func _build_run_complete_ui() -> void:
-	var controls := screen_state_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
+	var controls: Dictionary = screen_state_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
 	screen_state_controller.run_complete_overlay = controls["overlay"] as ColorRect
 	screen_state_controller.run_complete_texts = controls["lines"] as Array[Sprite2D]
 	screen_state_controller.run_complete_button = controls["return"] as Button
 	screen_state_controller.run_complete_cursor = controls["cursor"] as Sprite2D
 func _build_hub_ui() -> void:
-	var controls := screen_state_controller.build_hub(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_hub_adjust_stat"), Callable(self, "_hub_confirm_stats"), Callable(self, "_hub_cancel_stats"), Callable(self, "_hub_auto_allocate"), Callable(self, "_hub_respec"), Callable(self, "_start_from_hub"), Callable(self, "_return_to_title"), Callable(self, "_set_hub_page"), Callable(self, "_hub_item_action"), Callable(self, "_select_hub_gear_slot"))
+	var controls: Dictionary = screen_state_controller.build_hub(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_hub_adjust_stat"), Callable(self, "_hub_confirm_stats"), Callable(self, "_hub_cancel_stats"), Callable(self, "_hub_auto_allocate"), Callable(self, "_hub_respec"), Callable(self, "_start_from_hub"), Callable(self, "_return_to_title"), Callable(self, "_set_hub_page"), Callable(self, "_hub_item_action"), Callable(self, "_select_hub_gear_slot"))
 	screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -285,7 +403,7 @@ func _open_hub_from_cloaked_demon() -> void:
 	_show_hub(true)
 func _close_hub_to_run() -> void:
 	if screen_state_controller.hub_overlay == null: return
-	var was_pause := screen_state_controller.hub_pause_mode
+	var was_pause: bool = bool(screen_state_controller.hub_pause_mode)
 	_hub_cancel_stats()
 	screen_state_controller.hub_gear_browsing = false
 	screen_state_controller.menu_input_release_lock = _is_menu_cancel_input_pressed()
@@ -297,16 +415,29 @@ func _close_hub_to_run() -> void:
 	if was_pause:
 		_play_sound("ui_unpause", 0.0, 1.0)
 	else:
-		_play_sound("ui_decline", 0.0, 1.0)
+		_play_sound("ui_unpause", 0.0, 1.0)
 func _update_hub_input() -> void: screen_state_controller.update_hub_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
 func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
+func _is_ui_accept_pressed() -> bool: return input_router != null and input_router.ui_accept_pressed()
+func _is_ui_accept_just_pressed() -> bool: return input_router != null and input_router.ui_accept_just_pressed()
+func _is_ui_cancel_just_pressed() -> bool: return input_router != null and input_router.ui_cancel_just_pressed()
+func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)
 func _is_pause_input_just_pressed() -> bool:
-	var is_down := Input.is_action_pressed(&"pause")
-	var just_pressed := is_down and not screen_state_controller.pause_input_was_down
+	var is_down := input_router != null and input_router.pressed(&"pause")
+	var just_pressed: bool = is_down and not bool(screen_state_controller.pause_input_was_down)
 	screen_state_controller.pause_input_was_down = is_down
 	return just_pressed
+func _input_context() -> int:
+	if screen_state_controller == null: return InputRouter.Context.GAMEPLAY
+	var ssc := screen_state_controller as ScreenStateController
+	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible: return InputRouter.Context.MENU
+	if ssc.title_overlay != null and ssc.title_overlay.visible: return InputRouter.Context.MENU
+	if ssc.archetype_overlay != null and ssc.archetype_overlay.visible: return InputRouter.Context.MENU
+	if ssc.hub_overlay != null and ssc.hub_overlay.visible: return InputRouter.Context.HUB
+	if npc_controller != null and npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: return InputRouter.Context.DIALOGUE
+	return InputRouter.Context.GAMEPLAY
 func _set_hub_page(page: int) -> void:
 	screen_state_controller.hub_page = posmod(page, 4)
 	screen_state_controller.hub_item_index = 0
@@ -315,8 +446,6 @@ func _set_hub_page(page: int) -> void:
 	screen_state_controller.hub_fusion_count = 1
 	if run_state != null and screen_state_controller.hub_page == 2:
 		run_state.ensure_shop_stock(player_profile.level)
-	if screen_state_controller.hub_page == 3:
-		_refresh_hub_fusion_candidates()
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 	_play_sound("ui_hover", -6.0, 1.0)
 func _shift_hub_item(direction: int) -> void:
@@ -326,8 +455,7 @@ func _shift_hub_item(direction: int) -> void:
 	elif screen_state_controller.hub_page == 2:
 		count = run_state.shop_stock.size() if run_state != null else 0
 	elif screen_state_controller.hub_page == 3:
-		_refresh_hub_fusion_candidates()
-		count = screen_state_controller.hub_fusion_candidates.size()
+		count = _hub_fusion_candidates().size()
 		screen_state_controller.hub_fusion_count = 1
 	if count > 0: screen_state_controller.hub_item_index = posmod(screen_state_controller.hub_item_index + direction, count)
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
@@ -369,14 +497,18 @@ func _close_hub_gear_browse() -> void:
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _refresh_hub_fusion_candidates() -> void:
 	screen_state_controller.hub_fusion_candidates.clear()
+	screen_state_controller.hub_fusion_candidates_dirty = false
 	if player_profile == null: return
 	var catalog := ItemCatalog.new()
 	for data: Dictionary in player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
 		if player_profile.fusion_material_count(item.instance_id, catalog) > 0 or player_profile.can_salvage_overflow(item.instance_id, catalog):
 			screen_state_controller.hub_fusion_candidates.append(item)
+func _invalidate_hub_fusion_candidates() -> void:
+	screen_state_controller.hub_fusion_candidates_dirty = true
 func _hub_fusion_candidates() -> Array[ItemInstance]:
-	_refresh_hub_fusion_candidates()
+	if screen_state_controller.hub_fusion_candidates_dirty:
+		_refresh_hub_fusion_candidates()
 	return screen_state_controller.hub_fusion_candidates
 func _fuse_profile_target(instance_id: String, count: int) -> bool:
 	if player_profile == null or count <= 0 or not player_profile.fuse_duplicates(instance_id, count, ItemCatalog.new()):
@@ -389,10 +521,10 @@ func _fuse_profile_target(instance_id: String, count: int) -> bool:
 	return true
 func _shift_hub_fusion_count(direction: int) -> void:
 	if screen_state_controller.hub_page != 3: return
-	_refresh_hub_fusion_candidates()
-	if screen_state_controller.hub_fusion_candidates.is_empty(): return
-	var index := clampi(screen_state_controller.hub_item_index, 0, screen_state_controller.hub_fusion_candidates.size() - 1)
-	var target := screen_state_controller.hub_fusion_candidates[index]
+	var candidates := _hub_fusion_candidates()
+	if candidates.is_empty(): return
+	var index := clampi(screen_state_controller.hub_item_index, 0, candidates.size() - 1)
+	var target := candidates[index]
 	if player_profile.can_salvage_overflow(target.instance_id): return
 	var material_count := player_profile.fusion_material_count(target.instance_id)
 	if material_count <= 0: return
@@ -437,14 +569,14 @@ func _hub_item_action() -> void:
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			if player_profile.purchase_item(item, int(entry.get("price", 0))):
-				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_confirm", 0.0, 1.0); _play_sound("ui_buy_sell", -8.0, 1.0)
+				entry["sold"] = true; run_state.shop_stock[index] = entry; _save_player_profile(); _update_gold_indicator(); _play_sound("ui_confirm", 0.0, 1.0); _play_sound("ui_buy_sell", -16.0, 1.0)
 			else:
 				_play_sound("ui_denied", 0.0, 1.0)
 	elif screen_state_controller.hub_page == 3:
-		_refresh_hub_fusion_candidates()
-		if not screen_state_controller.hub_fusion_candidates.is_empty():
-			var index := clampi(screen_state_controller.hub_item_index, 0, screen_state_controller.hub_fusion_candidates.size() - 1)
-			var target := screen_state_controller.hub_fusion_candidates[index]
+		var fusion_candidates := _hub_fusion_candidates()
+		if not fusion_candidates.is_empty():
+			var index := clampi(screen_state_controller.hub_item_index, 0, fusion_candidates.size() - 1)
+			var target := fusion_candidates[index]
 			if player_profile.fusion_material_count(target.instance_id) > 0:
 				var material_count := player_profile.fusion_material_count(target.instance_id)
 				var count := clampi(int(screen_state_controller.hub_fusion_count), 1, material_count)
@@ -457,15 +589,15 @@ func _hub_item_action() -> void:
 					if _fuse_profile_target(target.instance_id, count):
 						screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
 						_play_sound("ui_confirm", 0.0, 1.0)
-						_play_sound("ui_buy_sell", -8.0, 1.0)
+						_play_sound("ui_buy_sell", -16.0, 1.0)
 			elif player_profile.can_salvage_overflow(target.instance_id):
 				var salvage_value := _salvage_profile_overflow(target.instance_id)
 				if salvage_value > 0:
 					screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
-					_play_sound("ui_buy_sell", -8.0, 1.0)
+					_play_sound("ui_buy_sell", -16.0, 1.0)
 			if not screen_state_controller.hub_fusion_message.is_empty():
-				_refresh_hub_fusion_candidates()
-				screen_state_controller.hub_item_index = clampi(screen_state_controller.hub_item_index, 0, maxi(screen_state_controller.hub_fusion_candidates.size() - 1, 0))
+				_invalidate_hub_fusion_candidates()
+				screen_state_controller.hub_item_index = clampi(screen_state_controller.hub_item_index, 0, maxi(_hub_fusion_candidates().size() - 1, 0))
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
 func _select_hub_menu_row(row: int) -> void:
 	screen_state_controller.hub_menu_row = posmod(row, 5)
@@ -493,14 +625,11 @@ func _hub_allocate_stat(stat_name: StringName) -> void:
 		&"DEF": screen_state_controller.hub_pending_def += 1
 		&"SPD": screen_state_controller.hub_pending_spd += 1
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
-func _hub_points_remaining() -> int: return maxi(player_profile.unspent_stat_points - screen_state_controller.hub_pending_vit - screen_state_controller.hub_pending_str - screen_state_controller.hub_pending_def - screen_state_controller.hub_pending_spd, 0) if player_profile != null else 0
+func _hub_points_remaining() -> int: return ProgressionControllerScript.points_remaining(player_profile, {"VIT": screen_state_controller.hub_pending_vit, "STR": screen_state_controller.hub_pending_str, "DEF": screen_state_controller.hub_pending_def, "SPD": screen_state_controller.hub_pending_spd})
 func _hub_confirm_stats() -> void:
 	if player_profile == null: return
 	_play_sound("ui_confirm", 0.0, 1.0)
-	player_profile.allocate_stat(&"VIT", screen_state_controller.hub_pending_vit)
-	player_profile.allocate_stat(&"STR", screen_state_controller.hub_pending_str)
-	player_profile.allocate_stat(&"DEF", screen_state_controller.hub_pending_def)
-	player_profile.allocate_stat(&"SPD", screen_state_controller.hub_pending_spd)
+	ProgressionControllerScript.allocate_stats(player_profile, {"VIT": screen_state_controller.hub_pending_vit, "STR": screen_state_controller.hub_pending_str, "DEF": screen_state_controller.hub_pending_def, "SPD": screen_state_controller.hub_pending_spd})
 	screen_state_controller.hub_pending_vit = 0; screen_state_controller.hub_pending_str = 0; screen_state_controller.hub_pending_def = 0; screen_state_controller.hub_pending_spd = 0
 	_apply_profile_to_runtime(); _apply_player_level(); _sync_runtime_progression_to_profile()
 	screen_state_controller.update_hub_ui(self, Callable(self, "_pixel_text_texture"))
@@ -544,15 +673,36 @@ func _run_rank() -> int:
 	return maxi(player_profile.difficulty_rank if player_profile != null else 1, 1)
 
 func _apply_run_rank_grade(grade: String) -> void:
-	if player_profile == null:
-		return
-	var normalized_grade := grade.to_upper()
-	var rank_change := 2 if normalized_grade == "S" else 1 if normalized_grade == "A" or normalized_grade == "B" else -1 if normalized_grade == "F" else 0
-	player_profile.difficulty_rank = clampi(player_profile.difficulty_rank + rank_change, 1, 20)
-	player_profile.last_run_grade = normalized_grade
+	ProgressionControllerScript.apply_run_grade(player_profile, grade)
 
 func _begin_new_run() -> void:
 	_combat_momentum().reset_all()
+	if player_chroma_component != null:
+		player_chroma_component.begin_new_run()
+	var starter_palette := "red"
+	if player_profile != null:
+		starter_palette = AspectCatalogScript.palette_for_flame(player_profile.starter_flame)
+	run_start_palette_name = starter_palette
+	var tutorial_run: bool = player_profile == null or player_profile.completed_runs == 0
+	starter_flame_attuned_this_run = not tutorial_run
+	# The initial room may have been laid out before new-file selection was
+	# confirmed. Reassign the hub flame here so its visual and interaction target
+	# always match the persisted starter flame for this run.
+	if current_room_type == DungeonGraph.ROOM_START and rest_fire != null:
+		_apply_rest_fire_palette(starter_palette)
+	# The selected flame is present in the hub, but every run opens Gray at zero.
+	# The existing presentation bridge follows that state until attunement is
+	# connected to the full ability/presentation pipeline.
+	screen_state_controller.player_palette_name = "grey"
+	current_player_palette_name = "grey"
+	_apply_player_palette_async("grey")
+	_update_player_mp_ui()
+	# The first room is the starter-flame lesson. The player must attune before
+	# the hub exit becomes usable, but this gate is opened permanently for the
+	# remainder of the run once the flame is touched.
+	if current_room_type == DungeonGraph.ROOM_START and tutorial_run:
+		_set_door_active(false)
+		_set_entrance_open(false)
 	if run_state != null:
 		run_state.begin(current_dungeon_seed, _run_difficulty_bonus(), _player_max_health())
 func _return_to_hub() -> void:
@@ -563,7 +713,7 @@ func _return_to_hub() -> void:
 		_save_player_profile()
 	_begin_scene_transition()
 func _settle_current_run(result: StringName) -> bool:
-	if run_state == null or not run_state.active:
+	if not RunSettlement.can_settle(run_state, result):
 		return false
 	_sync_runtime_progression_to_profile()
 	return RunSettlement.settle(player_profile, run_state, result)
@@ -626,6 +776,7 @@ func _complete_run() -> void:
 	run_state.clear_summary = {"score": score, "grade": str(grade["grade"]), "gold": gold_reward, "drop": drop_label, "difficulty": _run_difficulty_bonus(), "run_rank": _run_rank(), "time": run_state.elapsed_time, "damage": run_state.damage_taken, "variety": int(grade["variety_count"]), "variety_max": int(grade["variety_max"]), "kills": run_state.enemies_killed, "total_enemies": run_state.total_enemies, "blocks": run_state.block_count, "attacks": run_state.attack_count, "attack_hits": run_state.attack_swing_hit_count, "accuracy": float(grade["accuracy"]), "wasted_inputs": run_state.total_wasted_inputs(), "explored_rooms": int(grade["explored_rooms"]), "explorable_rooms": int(grade["explorable_rooms"]), "dodges": run_state.dodge_count, "time_quality": float(grade["time_score"]) / 28.0, "survival_quality": float(grade["survival_score"]) / 25.0, "control_quality": float(grade["control_score"]) / 2.0}
 	_sync_runtime_progression_to_profile()
 	_settle_current_run(&"complete")
+	_play_sound("run_clear", -6.0, 1.0)
 	_show_run_complete(drop_color)
 
 func _show_run_complete(drop_color: Color) -> void:
@@ -661,7 +812,7 @@ func _run_metric_color(quality: float) -> Color:
 func _update_run_complete_input() -> void:
 	if screen_state_controller.run_complete_button == null:
 		return
-	if Input.is_action_just_pressed("ui_accept") or _is_interact_input_pressed() or _is_menu_cancel_input_pressed():
+	if _is_ui_accept_just_pressed() or _is_interact_input_pressed() or _is_menu_cancel_input_pressed():
 		screen_state_controller.run_complete_button.pressed.emit()
 
 func _return_from_run_complete() -> void:
@@ -676,9 +827,9 @@ func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible: return
 	_apply_run_rank_grade("F")
 	_settle_current_run(&"defeat")
-	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; game_over_button.grab_focus()
-func _build_title_screen() -> void: var controls := screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_new_game"), Callable(self, "_continue_game"), has_persistent_profile); screen_state_controller.title_overlay = controls["overlay"] as ColorRect; screen_state_controller.title_screen_text = controls["text"] as Sprite2D; screen_state_controller.title_start_button = controls["new_game"] as Button; screen_state_controller.title_continue_button = controls["continue"] as Button; screen_state_controller.title_start_text = controls["start_text"] as Sprite2D; screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D; _build_archetype_screen()
-func _build_archetype_screen() -> void: var controls := screen_state_controller.build_archetype(ui, Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); screen_state_controller.archetype_overlay = controls["overlay"] as ColorRect; screen_state_controller.archetype_preview = controls["preview"] as Sprite2D; screen_state_controller.archetype_name_text = controls["name"] as Sprite2D; screen_state_controller.archetype_left_buttons = controls["left"] as Array[Button]; screen_state_controller.archetype_right_buttons = controls["right"] as Array[Button]; screen_state_controller.archetype_type_left_button = controls["type_left"] as Button; screen_state_controller.archetype_type_right_button = controls["type_right"] as Button; screen_state_controller.archetype_start_button = controls["start"] as Button; screen_state_controller.archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
+	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; last_game_over_focus = null; game_over_button.grab_focus()
+func _build_title_screen() -> void: var controls: Dictionary = screen_state_controller.build_title(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_start_new_game"), Callable(self, "_continue_game"), has_persistent_profile); screen_state_controller.title_overlay = controls["overlay"] as ColorRect; screen_state_controller.title_screen_text = controls["text"] as Sprite2D; screen_state_controller.title_start_button = controls["new_game"] as Button; screen_state_controller.title_continue_button = controls["continue"] as Button; screen_state_controller.title_start_text = controls["start_text"] as Sprite2D; screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D; _build_archetype_screen()
+func _build_archetype_screen() -> void: var controls: Dictionary = screen_state_controller.build_archetype(ui, Callable(self, "_shift_archetype"), Callable(self, "_shift_archetype_color"), Callable(self, "_start_selected_archetype"), Callable(self, "_pixel_text_texture")); screen_state_controller.archetype_overlay = controls["overlay"] as ColorRect; screen_state_controller.archetype_preview = controls["preview"] as Sprite2D; screen_state_controller.archetype_name_text = controls["name"] as Sprite2D; screen_state_controller.archetype_left_buttons = controls["left"] as Array[Button]; screen_state_controller.archetype_right_buttons = controls["right"] as Array[Button]; screen_state_controller.archetype_type_left_button = controls["type_left"] as Button; screen_state_controller.archetype_type_right_button = controls["type_right"] as Button; screen_state_controller.archetype_start_button = controls["start"] as Button; screen_state_controller.archetype_hold_cover = controls["cover"] as ColorRect; _update_archetype_screen()
 func _update_title_screen(delta: float) -> void: screen_state_controller.update_title_flow(self, delta)
 func _start_new_game() -> void:
 	screen_state_controller.start_save_select(self, "new")
@@ -732,7 +883,7 @@ func _set_overwrite_prompt(active: bool) -> void:
 	screen_state_controller.save_overwrite_choice = 0
 	screen_state_controller.menu_input_release_lock = active
 	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
-		var node := screen_state_controller.save_select_overlay.get_node_or_null(node_name)
+		var node: CanvasItem = screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
 		if node != null: node.visible = active
 	var cursor := screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null: cursor.visible = active; cursor.position = Vector2(99, 140)
@@ -745,7 +896,7 @@ func _cancel_overwrite() -> void:
 func _confirm_overwrite() -> void:
 	screen_state_controller.save_overwrite_prompt_active = false
 	_set_overwrite_prompt(false)
-	var selected_slot := screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(screen_state_controller.save_overwrite_slot) else screen_state_controller.save_select_index
+	var selected_slot: int = int(screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(screen_state_controller.save_overwrite_slot) else screen_state_controller.save_select_index)
 	ProfileSaveService.select_slot(selected_slot)
 	ProfileSaveService.clear_slot(selected_slot)
 	if screen_state_controller.save_select_overlay != null: screen_state_controller.save_select_overlay.visible = false
@@ -763,6 +914,7 @@ func _reset_runtime_for_new_save() -> void:
 	player_profile.last_clear_score = 0
 	player_profile.difficulty_rank = 1
 	player_profile.last_run_grade = "D"
+	run_start_palette_name = player_profile.palette_name
 	player_profile.pending_route = "title"
 	player_profile.open_hub_on_load = false
 	if run_state != null:
@@ -853,7 +1005,7 @@ func _enter_starting_room_from_menu() -> void:
 	screen_state_controller.set_state(&"loading")
 	await get_tree().process_frame
 	_place_player_at_hub_fire()
-	await _apply_player_palette_async(screen_state_controller.player_palette_name)
+	_apply_player_palette_async(screen_state_controller.player_palette_name)
 	_update_player_aggro_marker_colors()
 	var maximum_health := _player_max_health()
 	if player_health_component != null:
@@ -879,20 +1031,21 @@ func _place_player_at_hub_fire() -> void:
 	var valid_foot := _nearest_slime_walkable_point(requested_foot)
 	player.global_position = valid_foot - ACTOR_FOOT_OFFSET
 func _update_archetype_input(delta: float) -> void: screen_state_controller.update_archetype_input(self, delta)
-func _shift_archetype(direction: int) -> void: screen_state_controller.archetype_index = posmod(screen_state_controller.archetype_index + direction, 4); screen_state_controller.selected_archetype = screen_state_controller.archetype_index as StatsComponent.AllocationProfile; _archetype_arrow_pulse(direction); _update_archetype_screen()
-func _shift_archetype_color(direction: int) -> void: screen_state_controller.archetype_color_index = posmod(screen_state_controller.archetype_color_index + direction, 8); _archetype_arrow_pulse(direction); _update_archetype_screen()
+func _shift_archetype(direction: int) -> void: screen_state_controller.starter_flame_index = posmod(screen_state_controller.starter_flame_index + direction, AspectCatalogScript.STARTER_FLAMES.size()); screen_state_controller.archetype_index = screen_state_controller.starter_flame_index; _archetype_arrow_pulse(direction); _update_archetype_screen()
+func _shift_archetype_color(direction: int) -> void: screen_state_controller.archetype_color_index = posmod(screen_state_controller.archetype_color_index + direction, PaletteLibrary.SELECTABLE_PALETTES.size()); _archetype_arrow_pulse(direction); _update_archetype_screen()
 func _archetype_arrow_pulse(direction: int) -> void: screen_state_controller.archetype_arrow_anim_direction = direction; screen_state_controller.archetype_arrow_anim_timer = 0.18
 func _update_archetype_arrow_animation() -> void:
 	var amount := clampf(screen_state_controller.archetype_arrow_anim_timer / 0.18, 0.0, 1.0); var pulse := 1.0 + amount * 0.22
 	screen_state_controller.archetype_type_left_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction < 0 and screen_state_controller.archetype_menu_row == 0 else 1.0); screen_state_controller.archetype_type_right_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction > 0 and screen_state_controller.archetype_menu_row == 0 else 1.0)
 	for button in screen_state_controller.archetype_left_buttons: button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction < 0 and screen_state_controller.archetype_menu_row == 1 else 1.0); for right_button in screen_state_controller.archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if screen_state_controller.archetype_arrow_anim_direction > 0 and screen_state_controller.archetype_menu_row == 1 else 1.0)
-func _select_archetype_menu_row(row: int) -> void: screen_state_controller.archetype_menu_row = posmod(row, 3); _update_archetype_screen(); if screen_state_controller.archetype_menu_row == 2: screen_state_controller.archetype_start_button.grab_focus()
+func _select_archetype_menu_row(row: int) -> void: screen_state_controller.archetype_menu_row = posmod(row, 2); _update_archetype_screen(); if screen_state_controller.archetype_menu_row == 1: screen_state_controller.archetype_start_button.grab_focus()
 func _update_archetype_screen() -> void:
-	var names := ["BALANCED", "VIT", "STR", "DEF"]; var colors := ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"]
-	screen_state_controller.archetype_name_text.texture = _pixel_text_texture(names[screen_state_controller.archetype_index], PaletteLibrary.ARCHETYPE_HIGHLIGHTS[screen_state_controller.archetype_color_index] if screen_state_controller.archetype_menu_row == 0 else Color.WHITE); screen_state_controller.archetype_name_text.position = Vector2((240.0 - screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
+	var flame: StringName = AspectCatalogScript.STARTER_FLAMES[screen_state_controller.starter_flame_index]; var flame_name := AspectCatalogScript.display_name(flame); var flame_palette := AspectCatalogScript.palette_for_flame(flame)
+	screen_state_controller.archetype_name_text.texture = _pixel_text_texture(flame_name, PaletteLibrary.normal(flame_palette) if screen_state_controller.archetype_menu_row == 0 else Color.WHITE); screen_state_controller.archetype_name_text.position = Vector2((240.0 - screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
+	var colors := [flame_palette]
 	if not player_animation_component.idle_frames.is_empty():
-		if screen_state_controller.archetype_preview_palette != colors[screen_state_controller.archetype_color_index] or screen_state_controller.archetype_preview_frames.size() != player_animation_component.idle_frames.size():
-			screen_state_controller.archetype_preview_frames.clear(); screen_state_controller.archetype_preview_palette = colors[screen_state_controller.archetype_color_index]
+		if screen_state_controller.archetype_preview_palette != colors[0] or screen_state_controller.archetype_preview_frames.size() != player_animation_component.idle_frames.size():
+			screen_state_controller.archetype_preview_frames.clear(); screen_state_controller.archetype_preview_palette = colors[0]
 			for frame in player_animation_component.idle_frames: screen_state_controller.archetype_preview_frames.append(player_animation_component.recolor_texture(frame, screen_state_controller.archetype_preview_palette))
 		_update_archetype_preview_animation()
 	_update_archetype_button_styles()
@@ -902,15 +1055,51 @@ func _update_archetype_preview_animation() -> void:
 	screen_state_controller.archetype_preview.texture = screen_state_controller.archetype_preview_frames[frame_index]; screen_state_controller.archetype_preview.position = Vector2((240.0 - screen_state_controller.archetype_preview.texture.get_width() * screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
 func _update_archetype_button_styles() -> void: screen_state_controller.update_archetype_button_styles(self)
 func _start_selected_archetype() -> void: screen_state_controller.start_selected_archetype(self)
-func _build_loading_screen() -> void: var controls := screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
-func _update_loading_screen(delta: float) -> void: var result := screen_state_controller.update_loading(loading_screen_overlay, loading_screen_text, loading_screen_fading, loading_screen_timer, delta, Callable(self, "_pixel_text_texture")); loading_screen_fading = result["fading"]; loading_screen_timer = result["timer"]; if result["finished"]: loading_screen_active = false
+func _build_loading_screen() -> void: var controls: Dictionary = screen_state_controller.build_loading(ui, Callable(self, "_pixel_text_texture")); loading_screen_overlay = controls["overlay"] as ColorRect; loading_screen_text = controls["text"] as Sprite2D
+func _update_loading_screen(delta: float) -> void: var result: Dictionary = screen_state_controller.update_loading(loading_screen_overlay, loading_screen_text, loading_screen_fading, loading_screen_timer, delta, Callable(self, "_pixel_text_texture")); loading_screen_fading = result["fading"]; loading_screen_timer = result["timer"]; if result["finished"]: loading_screen_active = false
 func _apply_player_palette_async(palette_name: String) -> void:
-	if player_animation_component != null: await player_animation_component.apply_palette_async(self, palette_name)
+	if player_animation_component != null: player_animation_component.apply_palette_async(self, palette_name)
 	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(self)
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
 		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name))
 	_update_player_progression_ui()
+	_update_mp_desaturation()
+
+
+func _update_mp_desaturation() -> void:
+	var saturation := _chroma_visual_saturation()
+	var material_was_created := false
+	if mp_desaturation_material == null:
+		mp_desaturation_material = ShaderMaterial.new()
+		mp_desaturation_material.shader = preload("res://shaders/mp_desaturation.gdshader")
+		material_was_created = true
+	mp_desaturation_material.set_shader_parameter("grey_mix", 1.0 - saturation)
+	if player != null:
+		player.material = mp_desaturation_material
+	if player_attack_visual != null:
+		player_attack_visual.material = mp_desaturation_material
+	if material_was_created and player_animation_component != null:
+		# The first animation frame may have been assigned before the material
+		# existed, so initialize the sampler with its matching grey frame now.
+		player_animation_component.apply_frame(self)
+
+
+func _set_mp_grey_texture(texture: Texture2D) -> void:
+	if mp_desaturation_material != null:
+		mp_desaturation_material.set_shader_parameter("grey_texture", texture)
+		mp_desaturation_material.set_shader_parameter("grey_mix", 1.0 - _chroma_visual_saturation())
+
+func _chroma_visual_saturation() -> float:
+	var normalized := clampf(_current_player_chroma() / PLAYER_MAX_MP, 0.0, 1.0)
+	if normalized <= 0.0:
+		return 0.0
+	if normalized >= 1.0:
+		return 1.0
+	# Keep the character colorful through most of the bar, then let the final
+	# quarter fall toward Gray more sharply. With the current exponent, 75/50/25
+	# map approximately to 83/64/41 percent visual saturation.
+	return pow(normalized, CHROMA_SATURATION_CURVE_EXPONENT)
 func _update_player_aggro_marker_colors() -> void: hud_controller.update_aggro_markers(hud_controller.target_overhead_aggro_markers, screen_state_controller.player_palette_name, Callable(self, "_pixel_particle_texture"))
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	if screen_state_controller.title_particle_layer == null:
@@ -919,7 +1108,17 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 func _spawn_title_button_frame_breakup() -> void: screen_state_controller.spawn_button_frame_breakup(screen_state_controller.title_start_button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _update_game_over_input() -> void:
 	if game_over_overlay == null or not game_over_overlay.visible: return
-	if _is_interact_input_pressed(): _return_to_hub()
+	var focused := get_viewport().gui_get_focus_owner() as Button
+	if focused != last_game_over_focus:
+		var changed_from_existing := last_game_over_focus != null
+		last_game_over_focus = focused
+		if changed_from_existing and focused != null:
+			_play_sound("ui_hover", -6.0, 1.0)
+	if _is_interact_input_pressed():
+		var interact_focused := get_viewport().gui_get_focus_owner() as Button
+		if interact_focused != null and not interact_focused.disabled:
+			_play_sound("ui_confirm", 0.0, 1.0)
+			interact_focused.pressed.emit()
 func _return_to_title() -> void:
 	_settle_current_run(&"return_to_title")
 	if player_profile != null:
@@ -941,13 +1140,17 @@ func _interrupt_player_attack() -> void:
 func _player_facing_vector() -> Vector2: return Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT if player_is_attacking else Vector2.LEFT if player.flip_h else Vector2.RIGHT
 func _apply_player_attack_hitbox() -> void: if player_attack_component != null: player_attack_component.apply_hitbox(self)
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
+	_damage_slime_with_number(slime, amount, was_critical, true)
+
+
+func _damage_slime_with_number(slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool) -> void:
 	_register_combo_hit()
 	var ambush := _slime_ambush(slime)
 	if ambush != null:
 		ambush.extend_rehide(slime, slime_tuning.ambush_hit_extension)
-	SlimeActor.damage_actor(self, slime, amount, was_critical)
+	SlimeActor.damage_actor(self, slime, amount, was_critical, show_damage_number)
 	_play_sound("slash", -15.0, 0.95 + rng.randf_range(-0.10, 0.10))
-	_play_sound("flesh", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
+	_play_sound("enemy_hit", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
 func _player_attack_damage_against(slime: Sprite2D) -> float:
 	var damage := _combat_damage(player_stats, _slime_stats(slime))
 	var momentum := _combat_momentum()
@@ -978,7 +1181,8 @@ func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> 
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
 	var attacker_snapshot := CombatStatSnapshot.from_components(attacker_stats, player_equipment if attacker_stats == player_stats else null)
 	var defender_snapshot := CombatStatSnapshot.from_components(defender_stats, player_equipment if defender_stats == player_stats else null)
-	var result := CombatCalculator.calculate_snapshot_damage(attacker_snapshot, defender_snapshot, attacker_stats == player_stats, rng, combat_tuning)
+	var strength_damage_scale := combat_tuning.damage_per_strength if attacker_stats == player_stats else combat_tuning.enemy_damage_per_strength
+	var result := CombatCalculator.calculate_snapshot_damage(attacker_snapshot, defender_snapshot, attacker_stats == player_stats, rng, combat_tuning, strength_damage_scale)
 	last_damage_was_critical = result.critical; return result.amount
 func _max_health_for_stats(stats: StatsComponent) -> float: return CombatCalculator.max_health_for_snapshot(CombatStatSnapshot.from_components(stats, player_equipment if stats == player_stats else null), combat_tuning)
 func _player_stat_snapshot() -> CombatStatSnapshot: return CombatStatSnapshot.from_components(player_stats, player_equipment)
@@ -991,9 +1195,15 @@ func _recompute_player_speed_multiplier() -> void:
 func _player_max_health() -> float: return _max_health_for_stats(player_stats)
 func _enemy_max_health(slime: Sprite2D) -> float:
 	var health := _max_health_for_stats(_slime_stats(slime))
-	var scale := _slime_encounter_scale(slime)
-	if scale > 1.0:
-		health *= scale * 1.25
+	# The first run is onboarding: basic enemies should fall in roughly 2–3
+	# clean hits. Later runs use the normal progression curve.
+	var encounter_scale := _slime_encounter_scale(slime)
+	if player_profile != null and player_profile.completed_runs <= 0 and encounter_scale <= 1.0:
+		health *= 0.60
+	if encounter_scale > 1.0:
+		health *= encounter_scale * 0.90
+		if player_profile != null and player_profile.completed_runs <= 0:
+			health *= 0.50
 	return health
 func _enemy_level_for_room() -> int: return maxi(1, ceili(float(current_room_depth) / 4.0))
 func _enemy_level_cap_for_run() -> int:
@@ -1016,22 +1226,31 @@ func _configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 	_configure_slime_ambush(slime, palette)
 func _knockback_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
-	var direction := _actor_foot(slime) - _actor_foot(player); if direction.length_squared() < 0.01: direction = Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
+	var direction := _slime_knockback_direction(slime)
 	var knockback_multiplier := equipment_transmutation_component.attack_knockback_multiplier() if equipment_transmutation_component != null else 1.0
 	var attack_component := player_attack_component as PlayerAttackComponent
 	var combo_multiplier := 1.0 if attack_component != null and attack_component.variant == 2 else player_tuning.attack1_knockback_multiplier
 	var combat := _slime_combat(slime); combat.knockback_velocity = _perspective_movement(direction.normalized() * (player_tuning.attack_knockback * combo_multiplier * knockback_multiplier / slime_tuning.knockback_duration)); combat.knockback_timer = slime_tuning.knockback_duration
 	var brain := _slime_brain(slime); brain.scoot_start = slime.position; brain.scoot_target = slime.position; brain.scoot_timer = 0.0; brain.hold_timer = slime_tuning.hitstun_time
+func _slime_knockback_direction(slime: Sprite2D) -> Vector2:
+	var direction := _actor_foot(slime) - _actor_foot(player)
+	if direction.length_squared() < 0.01:
+		direction = Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
+	return direction.normalized()
 func _kill_slime(slime: Sprite2D) -> void:
 	if _is_slime_dead(slime): return
 	if run_state != null and run_state.active:
 		run_state.record_enemy_kill()
 	_play_sound("enemy_death", -6.0, 0.90 + rng.randf_range(-0.08, 0.08))
 	_award_slime_xp(slime)
+	var drop_seed := int(current_dungeon_seed) ^ String(current_room_id).hash() ^ slime.get_instance_id()
+	var drop_rng := RandomNumberGenerator.new(); drop_rng.seed = drop_seed
+	if drop_rng.randf() < chroma_tuning.enemy_drop_chance:
+		_spawn_chroma_pickup(_actor_foot(slime), chroma_tuning.pickup_value, drop_seed, _slime_knockback_direction(slime))
 	effects_spawner.spawn_slime_death_from_root(self, slime); room_controller.kill_slime_without_effects(self, slime)
 	if current_target == slime:
-		if _is_target_input_held(): _set_current_target(_closest_target())
-		else: _set_current_target(null); _set_target_ui_visible(false)
+		if _is_target_input_held(): _set_current_target(_closest_target(), false)
+		else: _set_current_target(null, false); _set_target_ui_visible(false)
 	if _are_all_slimes_dead():
 		_unlock_chest()
 func _is_slime_dead(slime: Sprite2D) -> bool: return _slime_combat(slime).dead
@@ -1041,6 +1260,7 @@ func _are_all_slimes_dead() -> bool:
 func _unlock_chest() -> void:
 	if chest_unlocked: return
 	chest_unlocked = true; if chest_normal_texture != null: chest_controller.start_unlock_fade(self)
+	_play_sound("chest_unlock", -6.0, 1.0)
 func _build_interact_prompt() -> void:
 	var interaction_marker := _load_texture_or_null("res://assets/artwork/circle55.png")
 	interact_prompt = interaction_component.build_prompt(self, interaction_marker, OVERWORLD_UI_Z + 1); interact_prompt_base_position = Vector2(6, -7)
@@ -1056,7 +1276,7 @@ func _build_room_number_indicator() -> void:
 func _update_gold_indicator() -> void: if hud_controller.gold_indicator != null: hud_controller.gold_amount_indicator.texture = _pixel_text_texture(str(player_profile.gold if player_profile != null else 0), Color8(255, 205, 117))
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _set_entrance_open(is_open: bool) -> void:
-	entrance_open = is_open; _refresh_room_socket_visuals(is_open)
+	entrance_open = is_open; _refresh_room_socket_visuals(door_active)
 func _update_rest_fire_animation(delta: float) -> void:
 	rest_fire_controller.update_animation(rest_fire, rest_fire_frames, delta, FIRE_FRAME_TIME, Callable(self, "_refresh_rest_fire_image"))
 	var light_step := posmod(floori(rest_fire_controller.frame_index * 0.65), 6)
@@ -1115,6 +1335,96 @@ func _enter_final_settlement_room() -> void:
 	_update_depth_sorting()
 	_complete_run()
 func _can_interact_with_npc() -> bool: return cloaked_demon != null and cloaked_demon.visible and _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
+func _fire_target_palette() -> String:
+	if current_fire_palette_name.is_empty():
+		return ""
+	# A fire assigned the starter palette must remain usable as a route back to
+	# that palette after the player changes away from it. Other fires retain
+	# their existing behavior and continue to offer their assigned color.
+	var starter_palette := run_start_palette_name
+	if starter_palette.is_empty() and screen_state_controller != null:
+		starter_palette = screen_state_controller.player_palette_name
+	# During the first Chroma slice, only the file's selected starter flame is
+	# an attunement source. Other legacy random rest-fire palettes stay inert
+	# until the later flame-swap curriculum is implemented.
+	if player_chroma_component != null and current_fire_palette_name != starter_palette:
+		return ""
+	if current_fire_palette_name == starter_palette and screen_state_controller != null and screen_state_controller.player_palette_name != starter_palette:
+		return starter_palette
+	return current_fire_palette_name
+
+
+func _can_interact_with_fire() -> bool:
+	var target_palette := _fire_target_palette()
+	if rest_fire == null or not rest_fire.visible or target_palette.is_empty() or screen_state_controller == null:
+		return false
+	var palette_change_available: bool = target_palette != String(screen_state_controller.player_palette_name)
+	var mp_restore_available := _current_player_chroma() < PLAYER_MAX_MP
+	return (palette_change_available or mp_restore_available) and _actor_foot(player).distance_to(_fire_anchor()) <= FIRE_INTERACT_DISTANCE
+func _fire_anchor() -> Vector2:
+	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
+	if firepit != null:
+		return _collision_rect(firepit).get_center()
+	return rest_fire.global_position
+func _interact_with_fire() -> void:
+	var new_palette := _fire_target_palette()
+	if new_palette.is_empty(): return
+	_play_sound("ui_confirm", 0.0, 1.0)
+	if new_palette != screen_state_controller.player_palette_name:
+		_start_player_palette_flash(new_palette)
+	var flame := AspectCatalogScript.flame_for_palette(new_palette)
+	if player_chroma_component != null and not flame.is_empty() and player_chroma_component.call("attune_flame", flame):
+		_update_player_mp_ui()
+		if current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run:
+			starter_flame_attuned_this_run = true
+			_set_door_active(true)
+			_set_entrance_open(true)
+	else:
+		_restore_player_mp()
+func _start_player_palette_flash(new_palette: String) -> void:
+	screen_state_controller.player_palette_name = new_palette
+	current_player_palette_name = new_palette
+	_apply_player_palette_async(new_palette)
+	_update_player_aggro_marker_colors()
+	var old_overlay := player_palette_flash_overlay
+	if old_overlay != null: old_overlay.queue_free()
+	var overlay := Sprite2D.new()
+	overlay.name = "PlayerPaletteFlash"
+	var source := occlusion_renderer.original_actor_textures.get(player, player.texture) as Texture2D
+	overlay.texture = _white_texture(source)
+	overlay.centered = player.centered
+	overlay.offset = player.offset
+	overlay.scale = player.scale
+	overlay.flip_h = player.flip_h
+	overlay.flip_v = player.flip_v
+	overlay.texture_filter = player.texture_filter
+	overlay.z_as_relative = false
+	overlay.z_index = player.z_index + 2
+	overlay.top_level = true
+	overlay.global_position = player.global_position
+	overlay.modulate = Color(1, 1, 1, 0.0)
+	player.add_child(overlay)
+	player_palette_flash_overlay = overlay
+	player_palette_flash_phase = 0
+	player_palette_flash_timer = 0.0
+func _update_player_palette_flash(delta: float) -> void:
+	var overlay := player_palette_flash_overlay
+	if overlay == null: return
+	var timer := player_palette_flash_timer + delta
+	overlay.global_position = player.global_position; overlay.scale = player.scale; overlay.offset = player.offset; overlay.flip_h = player.flip_h; overlay.flip_v = player.flip_v; overlay.z_index = player.z_index + 2
+	match player_palette_flash_phase:
+		0:
+			overlay.modulate.a = minf(timer / PLAYER_PALETTE_FADE_IN, 1.0)
+			if timer >= PLAYER_PALETTE_FADE_IN: player_palette_flash_phase = 1; player_palette_flash_timer = 0.0
+			else: player_palette_flash_timer = timer
+		1:
+			overlay.modulate.a = 1.0
+			if timer >= PLAYER_PALETTE_HOLD_TIME: player_palette_flash_phase = 2; player_palette_flash_timer = 0.0
+			else: player_palette_flash_timer = timer
+		_:
+			overlay.modulate.a = maxf(1.0 - timer / PLAYER_PALETTE_FADE_OUT, 0.0)
+			if timer >= PLAYER_PALETTE_FADE_OUT: overlay.queue_free(); player_palette_flash_overlay = null; player_palette_flash_phase = 0; player_palette_flash_timer = 0.0
+			else: player_palette_flash_timer = timer
 func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
 	door_active = is_active; _refresh_room_socket_visuals(is_active)
@@ -1157,9 +1467,156 @@ func _ensure_current_room_layout() -> void:
 	_build_entrance_block_polygons()
 	_build_walkable_outline()
 	var state := room_controller.ensure_layout(dungeon_graph, current_room_id, room, current_room_type, current_room_depth)
+	var required_aspect: StringName = &""
+	if current_room_type == DungeonGraph.ROOM_PUZZLE:
+		required_aspect = _puzzle_required_aspect(room)
+		state["puzzle_required_flame"] = String(required_aspect)
+		if not state.has("puzzle_torch_colors"):
+			var initial_palette := AspectCatalogScript.palette_for_flame(_current_run_puzzle_flame()) if required_aspect == &"gray" else "grey"
+			state["puzzle_torch_colors"] = [initial_palette, initial_palette]
+		_build_puzzle_torches(state)
+		state["finished"] = _puzzle_torches_solved(_puzzle_palette_for_aspect(required_aspect))
+		room_controller.room_states[current_room_id] = state
+	else:
+		_clear_puzzle_torches()
 	_configure_room_sockets(bool(state.get("finished", false)))
+	_update_puzzle_room_tint(room if current_room_type == DungeonGraph.ROOM_PUZZLE else null, required_aspect)
 func _configure_room_sockets(is_unlocked: bool) -> void:
-	room_controller.configure_sockets(dungeon_graph, current_room_id, is_unlocked, Callable(self, "_build_entrance_block_polygons")); door_active = is_unlocked; entrance_open = is_unlocked; _refresh_room_socket_visuals(is_unlocked)
+	room_controller.configure_sockets(dungeon_graph, current_room_id, is_unlocked, Callable(self, "_build_entrance_block_polygons")); door_active = is_unlocked; entrance_open = is_unlocked or current_room_type == DungeonGraph.ROOM_PUZZLE; _refresh_room_socket_visuals(is_unlocked)
+
+func _current_run_puzzle_flame() -> StringName:
+	return player_profile.starter_flame if player_profile != null and AspectCatalogScript.is_starter_flame(player_profile.starter_flame) else &"fire"
+
+func _puzzle_required_aspect(room: DungeonGraph.RoomRecord) -> StringName:
+	return &"gray" if dungeon_graph != null and room != null and dungeon_graph.is_tutorial_gray_puzzle_depth(room.depth) else _current_run_puzzle_flame()
+
+func _puzzle_palette_for_aspect(aspect: StringName) -> String:
+	return "grey" if aspect == &"gray" else AspectCatalogScript.palette_for_flame(aspect)
+
+func _update_puzzle_room_tint(room: DungeonGraph.RoomRecord, required_flame: StringName) -> void:
+	if room == null or room.room_type != DungeonGraph.ROOM_PUZZLE:
+		_apply_puzzle_environment_tint(Color.WHITE)
+		return
+	var palette := _puzzle_palette_for_aspect(required_flame)
+	if palette == "grey":
+		_apply_puzzle_environment_tint(Color.WHITE)
+		return
+	var environment_tint := Color.WHITE.lerp(PaletteLibrary.normal(palette), 0.38)
+	_apply_puzzle_environment_tint(environment_tint)
+
+func _apply_puzzle_environment_tint(tint: Color) -> void:
+	if background_environment != null:
+		background_environment.self_modulate = Color.WHITE
+	# Reset every authored surface first so an unused entrance cannot retain a
+	# tint from a previous room.
+	var surface_paths: Array[NodePath] = [
+		^"FloorTiles/FloorLayer",
+		^"FloorTiles/FloorLFaceLayer",
+		^"FloorTiles/FloorRFaceLayer",
+		^"FloorTiles/Entrance",
+		^"FloorTiles/EntranceRight",
+		^"Walls/WallLeftLayer",
+		^"Walls/WallRightLayer",
+		^"Walls/DoorLeft",
+		^"Walls/DoorRight",
+	]
+	for path in surface_paths:
+		var surface := map_root.get_node_or_null(path) if map_root != null else null
+		_set_puzzle_surface_tint(surface, Color.WHITE)
+	if tint == Color.WHITE:
+		return
+	for path in [^"FloorTiles/FloorLayer", ^"FloorTiles/FloorLFaceLayer", ^"FloorTiles/FloorRFaceLayer", ^"Walls/WallLeftLayer", ^"Walls/WallRightLayer"]:
+		_set_puzzle_surface_tint(map_root.get_node_or_null(path) if map_root != null else null, tint)
+	for socket_value in room_controller.active_door_sockets.values():
+		var door_socket := socket_value as DungeonSocket
+		_set_puzzle_surface_tint(door_socket.visual() if door_socket != null else null, tint)
+	for socket_value in room_controller.active_entrance_sockets.values():
+		var entrance_socket := socket_value as DungeonSocket
+		_set_puzzle_surface_tint(entrance_socket.visual() if entrance_socket != null else null, tint)
+
+func _set_puzzle_surface_tint(node: Node, tint: Color) -> void:
+	if node == null:
+		return
+	if node is CanvasItem:
+		(node as CanvasItem).self_modulate = tint
+	for child in node.get_children():
+		_set_puzzle_surface_tint(child, tint)
+
+func _build_puzzle_torches(state: Dictionary) -> void:
+	_clear_puzzle_torches()
+	if walkable_outline.is_empty():
+		return
+	var bounds := Rect2(walkable_outline[0], Vector2.ZERO)
+	for point in walkable_outline:
+		bounds = bounds.expand(point)
+	var positions: Array[Vector2] = [
+		Vector2(bounds.position.x + 18.0, bounds.position.y + 14.0),
+		Vector2(bounds.end.x - 18.0, bounds.position.y + 14.0),
+	]
+	var saved_colors: Array = state.get("puzzle_torch_colors", ["grey", "grey"])
+	var colors: Array[String] = []
+	for index in positions.size():
+		var torch := Sprite2D.new()
+		torch.name = "PuzzleTorch%d" % (index + 1)
+		torch.texture = _pixel_particle_texture(Color.WHITE, 6)
+		torch.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		torch.z_as_relative = false
+		torch.global_position = _nearest_slime_walkable_point(positions[index])
+		torch.z_index = int(round(torch.global_position.y * DEPTH_Z_SCALE)) + 1
+		var palette := String(saved_colors[index]) if index < saved_colors.size() else "grey"
+		torch.set_meta("puzzle_torch_palette", palette)
+		torch.self_modulate = PaletteLibrary.normal(palette)
+		add_child(torch)
+		puzzle_torches.append(torch)
+		if not depth_sprites.has(torch): depth_sprites.append(torch)
+		colors.append(palette)
+	state["puzzle_torch_colors"] = colors
+
+func _clear_puzzle_torches() -> void:
+	for torch in puzzle_torches:
+		if torch != null and is_instance_valid(torch):
+			depth_sprites.erase(torch)
+			torch.queue_free()
+	puzzle_torches.clear()
+
+func _puzzle_torches_solved(required_palette: String) -> bool:
+	if puzzle_torches.size() < 2 or required_palette.is_empty():
+		return false
+	for torch in puzzle_torches:
+		if String(torch.get_meta("puzzle_torch_palette", "grey")) != required_palette:
+			return false
+	return true
+
+func _refresh_puzzle_torch_puzzle_state() -> void:
+	if current_room_type != DungeonGraph.ROOM_PUZZLE or room_controller == null:
+		return
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
+	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
+	var required_aspect := StringName(state.get("puzzle_required_flame", _puzzle_required_aspect(room)))
+	var required_palette := _puzzle_palette_for_aspect(required_aspect)
+	var solved := _puzzle_torches_solved(required_palette)
+	state["finished"] = solved
+	room_controller.room_states[current_room_id] = state
+	_set_door_active(solved)
+	_configure_room_sockets(solved)
+
+func _activate_puzzle_torch(torch: Sprite2D, world_position: Vector2, palette: String) -> void:
+	if torch == null or not is_instance_valid(torch):
+		return
+	torch.set_meta("puzzle_torch_palette", palette)
+	torch.self_modulate = PaletteLibrary.normal(palette)
+	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
+	var colors: Array = state.get("puzzle_torch_colors", [])
+	var torch_index := puzzle_torches.find(torch)
+	if torch_index >= 0:
+		while colors.size() < puzzle_torches.size():
+			colors.append("grey")
+		colors[torch_index] = palette
+		state["puzzle_torch_colors"] = colors
+		room_controller.room_states[current_room_id] = state
+	_play_sound("magic_hit", -8.0, 1.0)
+	_spawn_magic_impact(world_position, palette)
+	_refresh_puzzle_torch_puzzle_state()
 func _refresh_room_socket_visuals(is_unlocked: bool) -> void:
 	var shut_texture := _load_texture_or_null("res://assets/artwork/DoorRightenemyshut.png")
 	var open_texture := _load_texture_or_null("res://assets/artwork/DoorRight.png")
@@ -1171,7 +1628,9 @@ func _refresh_room_socket_visuals(is_unlocked: bool) -> void:
 		var connection: DungeonGraph.ConnectionRecord = dungeon_graph.get_connection(current_room_id, socket.socket_id())
 		var destination_room: DungeonGraph.RoomRecord = dungeon_graph.get_room(connection.destination_room_id) if connection != null else null
 		var leads_downstairs := destination_room != null and destination_room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
-		visual.visible = true if current_room_type == DungeonGraph.ROOM_COMBAT and not is_unlocked else is_unlocked
+		# Puzzle exits remain visibly closed until both torches are lit. Their
+		# entrance sockets are handled separately below and stay open for retreat.
+		visual.visible = true
 		visual.texture = stairs_up_texture if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs else open_texture if is_unlocked else shut_texture
 		visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
 	for socket_value in room_controller.active_entrance_sockets.values():
@@ -1307,6 +1766,8 @@ func _configure_large_room_camera(enabled: bool) -> void:
 		camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 		player.add_child(camera)
 		camera.top_level = true
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = 5.5
 	camera.enabled = enabled
 	if enabled: _update_large_room_camera()
 func _update_large_room_camera() -> void:
@@ -1320,13 +1781,25 @@ func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: S
 func _release_room_transition_lock() -> void: room_transition_locked = false; if room_controller != null: room_controller.end_transition()
 func _save_current_room_state() -> void:
 	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
-	state["finished"] = chest_claimed
+	if current_room_type == DungeonGraph.ROOM_PUZZLE:
+		var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
+		var required_aspect := StringName(state.get("puzzle_required_flame", _puzzle_required_aspect(room)))
+		state["finished"] = _puzzle_torches_solved(_puzzle_palette_for_aspect(required_aspect))
+	else:
+		state["finished"] = chest_claimed
 	if world_item_drop != null and is_instance_valid(world_item_drop) and world_item_drop_instance != null:
 		state["world_item_drop"] = {"item": world_item_drop_instance.to_dictionary(), "position": world_item_drop.global_position}
 	else:
 		state.erase("world_item_drop")
+	var saved_pickups: Array = []
+	for index in chroma_pickup_controller.sprites.size():
+		var pickup := chroma_pickup_controller.sprites[index]
+		if pickup != null and is_instance_valid(pickup):
+			saved_pickups.append({"position": pickup.global_position, "value": chroma_pickup_controller.values[index]})
+	if saved_pickups.is_empty(): state.erase("chroma_pickups")
+	else: state["chroma_pickups"] = saved_pickups
 	room_controller.room_states[current_room_id] = state
-	if room_controller != null and chest_claimed: room_controller.mark_cleared(current_room_id)
+	if room_controller != null and bool(state.get("finished", false)): room_controller.mark_cleared(current_room_id)
 func _apply_room_state() -> void: room_controller.apply_state(self)
 func _apply_rest_room_state() -> void: room_controller.apply_rest_state(self)
 func _apply_npc_room_state() -> void: room_controller.apply_npc_state(self)
@@ -1397,7 +1870,12 @@ func _is_slime_hidden(slime: Sprite2D) -> bool:
 	var ambush := _slime_ambush(slime)
 	return ambush != null and ambush.is_hidden()
 func _is_slime_targetable(slime: Sprite2D) -> bool:
+	if puzzle_torches.has(slime):
+		return is_instance_valid(slime) and slime.visible
 	return not _is_slime_dead(slime) and not _is_slime_hidden(slime)
+
+func _is_target_actor_dead(target: Sprite2D) -> bool:
+	return false if puzzle_torches.has(target) else _is_slime_dead(target)
 func _move_slimes(delta: float) -> void:
 	_prepare_slime_frame_cache()
 	for slime in slimes:
@@ -1456,7 +1934,7 @@ func _trigger_slime_notice(slime: Sprite2D) -> void:
 	if run_state != null and run_state.active:
 		run_state.record_enemy_encounter()
 	effects_spawner.spawn_slime_notice(self, slime, notice_duration)
-	_play_sound("ui_confirm", -10.0, 1.0)
+	_play_sound("enemy_alert", -8.0, 0.96 + rng.randf_range(-0.04, 0.04))
 func _slime_position_is_valid(slime: Sprite2D) -> bool:
 	return _can_actor_stand_at_current_position(slime) and not _collides_with_static(slime)
 func _recover_slime_position(slime: Sprite2D) -> void:
@@ -1533,18 +2011,16 @@ func _is_any_slime_aggroed() -> bool:
 	for slime in slimes: if _is_slime_aggroed(slime): return true
 	return false
 func _slime_attack_reach(slime: Sprite2D) -> float:
-	var combat := _slime_combat(slime)
-	var guide_name := "AttackGuideL" if combat != null and combat.face_left else "AttackGuideR"
-	var guide := slime.get_node_or_null(guide_name) as Node2D
-	var guide_reach := slime_tuning.attack_hit_range
-	if guide != null:
-		var guide_position: Vector2 = guide.get("rect_position")
-		var guide_size: Vector2 = guide.get("rect_size")
-		var guide_rect := Rect2(slime.global_position + guide.position + guide_position + Vector2(minf(guide_size.x, 0.0), minf(guide_size.y, 0.0)), guide_size.abs())
-		var foot := _actor_foot(slime)
-		guide_reach = absf((guide_rect.position.x if combat != null and combat.face_left else guide_rect.end.x) - foot.x)
+	var foot := _actor_foot(slime)
+	var to_player := _actor_foot(player) - foot
+	var direction := to_player.normalized() if to_player.length_squared() > 0.001 else Vector2.RIGHT
+	var body_reach := ActorGeometry.directional_reach(_slime_body_polygon(slime), foot, direction)
+	var player_reach := actor_collision_system.actor_contact_radius(self, player)
 	var encounter_scale := _slime_encounter_scale(slime)
-	return (guide_reach + slime_tuning.attack_lunge_distance) * encounter_scale + 0.75
+	# Attack availability is derived from the same body polygon used by the bite
+	# test. This keeps enlarged bosses from stopping short because an old
+	# rectangular guide underestimated their actual body reach.
+	return maxf(slime_tuning.attack_hit_range, body_reach + player_reach) + slime_tuning.attack_lunge_distance * encounter_scale + 0.75
 func _aggro_slime_target(slime: Sprite2D) -> Vector2:
 	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics != null:
@@ -1565,7 +2041,7 @@ func _on_player_health_damaged(amount: float) -> void:
 	if run_state != null:
 		run_state.record_damage(amount)
 	_play_sound("impact_flesh", -6.0, 0.95 + rng.randf_range(-0.08, 0.08))
-func _on_player_health_changed(current: float, _maximum: float) -> void: if is_instance_valid(player_health_fill): _update_player_health_ui()
+func _on_player_health_changed(_current: float, _maximum: float) -> void: if is_instance_valid(player_health_fill): _update_player_health_ui()
 func _on_player_health_healed(amount: float) -> void:
 	player_display_health = minf(player_display_health, player_health_component.current_health if player_health_component != null else player_display_health)
 	_spawn_player_healing_number(amount, Color8(177, 62, 83))
@@ -1588,7 +2064,9 @@ func _apply_slime_attack_lunge(slime: Sprite2D) -> void:
 	var to_player := _actor_foot(player) - _actor_foot(slime)
 	var direction := Vector2.LEFT if to_player.length_squared() < 0.01 and _slime_combat(slime).face_left else Vector2.RIGHT if to_player.length_squared() < 0.01 else to_player.normalized()
 	direction = Vector2(direction.x, direction.y * 1.5).normalized()
-	var contact_gap := actor_collision_system.actor_contact_radius(self, slime) + actor_collision_system.actor_contact_radius(self, player) + 0.5
+	# Stop just inside the contact-radius estimate so the enlarged body polygon
+	# can actually overlap the player's collision rectangle on the bite frame.
+	var contact_gap := maxf(actor_collision_system.actor_contact_radius(self, slime) + actor_collision_system.actor_contact_radius(self, player) - 0.5, 0.0)
 	var max_lunge := slime_tuning.attack_lunge_distance * _slime_encounter_scale(slime)
 	var lunge_distance := minf(max_lunge, maxf(to_player.length() - contact_gap, 0.0))
 	if lunge_distance <= 0.01:
@@ -1617,13 +2095,13 @@ func _show_slime_hit_flash(slime: Sprite2D) -> void:
 		overlay.name = "HitFlashOverlay"
 		overlay.centered = slime.centered
 		overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		overlay.z_index = 1
 		slime.add_child(overlay)
 	var source := occlusion_renderer.original_actor_textures.get(slime, slime.texture) as Texture2D
 	if source != null:
 		overlay.texture = occlusion_renderer.white_texture(source)
-	overlay.offset = slime.offset
-	overlay.flip_h = slime.flip_h
+		ActorGeometry.sync_overlay(overlay, slime)
+	overlay.z_as_relative = true
+	overlay.z_index = 1
 	overlay.visible = overlay.texture != null
 
 func _update_enemy_hit_flashes(delta: float) -> void:
@@ -1713,11 +2191,12 @@ func _award_slime_xp(slime: Sprite2D) -> void:
 	var reward := _xp_reward_for_slime(slime)
 	var progression := {"levels": 0}
 	if player_profile != null:
-		progression = player_profile.award_xp(reward, progression_tuning)
+		progression = ProgressionControllerScript.award_xp(player_profile, reward, progression_tuning)
 		_apply_profile_to_runtime()
 	var levels_gained := int(progression.get("levels", 0))
 	if levels_gained > 0:
 		_spawn_player_level_number(player_profile.level if player_profile != null else 1)
+		_play_sound("level_up", -3.0, 1.0)
 		_apply_player_level()
 	_spawn_player_xp_number(reward)
 	_update_player_progression_ui()
@@ -1856,22 +2335,15 @@ func _collision_polygon_intersects_actor(actor: Sprite2D, polygon_owner: Sprite2
 func _perspective_movement(movement: Vector2) -> Vector2: return Vector2(movement.x, movement.y * VERTICAL_MOVEMENT_SCALE)
 func _collision_rect(actor: Sprite2D) -> Rect2:
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
-	if actor == firepit:
-		var polygon := actor.get_node_or_null("CollisionPolygon") as Polygon2D
-		if polygon != null and polygon.polygon.size() >= 3:
-			var bounds := Rect2(polygon.to_global(polygon.polygon[0]), Vector2.ZERO)
-			for point in polygon.polygon:
-				bounds = bounds.expand(polygon.to_global(point))
-			return bounds
-	var guide_rect := _collision_guide_rect(actor); var foot := _actor_foot(actor); var size := Vector2(ACTOR_COLLISION_WIDTH, ACTOR_COLLISION_HEIGHT); return guide_rect if guide_rect.has_area() else Rect2(actor.global_position + Vector2(8, 13) - CHEST_COLLISION_SIZE * 0.5, CHEST_COLLISION_SIZE) if actor == chest else Rect2(foot - Vector2(size.x * 0.5, size.y * 0.55), size)
-func _collision_guide_rect(actor: Sprite2D) -> Rect2: return _collision_guide_rect_by_name(actor, "CollisionGuide")
-func _collision_guide_rect_by_name(actor: Sprite2D, guide_name: String) -> Rect2:
-	var guide := actor.get_node_or_null(guide_name) as Node2D
-	if guide == null: return Rect2()
-	var scaled_position: Vector2 = guide.get("rect_position"); var scaled_size: Vector2 = guide.get("rect_size"); var origin := actor.global_position + guide.position + scaled_position + Vector2(minf(scaled_size.x, 0.0), minf(scaled_size.y, 0.0)); return Rect2(origin, scaled_size.abs())
+	return ActorGeometry.collision_rect(actor, chest, firepit, slimes, ACTOR_FOOT_OFFSET, Vector2(ACTOR_COLLISION_WIDTH, ACTOR_COLLISION_HEIGHT), CHEST_COLLISION_SIZE, _slime_encounter_scale(actor))
+func _collision_guide_rect(actor: Sprite2D) -> Rect2: return ActorGeometry.guide_rect(actor, "CollisionGuide")
+func _collision_guide_rect_by_name(actor: Sprite2D, guide_name: String) -> Rect2: return ActorGeometry.guide_rect(actor, guide_name)
 func _build_depth_lists() -> void:
 	var lists := depth_sorter.visible_lists(player, slimes, chest, rest_fire, cloaked_demon, Callable(self, "_is_slime_dead"))
 	depth_sprites = lists["depth"] as Array[Sprite2D]; occluder_sprites = lists["occluders"] as Array[Sprite2D]
+	for torch in puzzle_torches:
+		if is_instance_valid(torch) and torch.visible and not depth_sprites.has(torch):
+			depth_sprites.append(torch)
 	if cloaked_demon.visible: occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(cloaked_demon.texture)
 	if rest_fire.visible: occlusion_renderer.sprite_images[rest_fire] = occlusion_renderer.cached_texture_image(rest_fire.texture)
 	if chest.visible: for path in OCCLUDER_PATHS: _collect_occluders(get_node_or_null(path))
@@ -1885,6 +2357,9 @@ func _hide_editor_only_guides() -> void:
 		var collision_polygon := slime.get_node_or_null("CollisionPolygon") as Polygon2D
 		if collision_polygon != null:
 			collision_polygon.visible = false
+		var body_hitbox := slime.get_node_or_null("BodyHitbox") as Polygon2D
+		if body_hitbox != null:
+			body_hitbox.visible = false
 func _build_slime_direction_textures() -> void:
 	var paths := {}
 	for slime in slimes:
@@ -1915,7 +2390,11 @@ func _load_texture_or_null(path: String) -> Texture2D: return load(path) as Text
 func _load_health_bar_texture(path: String) -> Texture2D:
 	if health_bar_texture_cache.has(path): return health_bar_texture_cache[path] as Texture2D
 	var texture := load(path) as Texture2D if ResourceLoader.exists(path) else null; health_bar_texture_cache[path] = texture; return texture
-func _build_rest_fire_frames() -> void: rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE); if not rest_fire_frames.is_empty(): _set_rest_fire_frame(0)
+func _build_rest_fire_frames() -> void: rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE); rest_fire_base_frames = rest_fire_frames; if not rest_fire_frames.is_empty(): _set_rest_fire_frame(0)
+func _apply_rest_fire_palette(palette_name: String) -> void:
+	if palette_name.is_empty() or rest_fire_base_frames.is_empty(): return
+	if not rest_fire_frames_by_palette.has(palette_name): rest_fire_frames_by_palette[palette_name] = sprite_frame_library.recolor_fire_frames(rest_fire_base_frames, palette_name)
+	rest_fire_frames = rest_fire_frames_by_palette[palette_name] as Array[Texture2D]; current_fire_palette_name = palette_name; _set_rest_fire_frame(0)
 func _build_cloaked_demon_frames() -> void: var frames := npc_controller.build_cloaked_demon_frames(sprite_frame_library, cloaked_demon, CLOAKED_DEMON_FRAME_SIZE, Callable(occlusion_renderer, "cached_texture_image")); npc_controller.demon_idle_frames = frames["idle"]; npc_controller.demon_walk_frames = frames["walk"]; npc_controller.demon_visual_bounds = frames["bounds"]
 func _cloaked_demon_head_position() -> Vector2: return _cloaked_demon_texture_origin() + Vector2(npc_controller.demon_visual_bounds.get_center().x, npc_controller.demon_visual_bounds.position.y)
 func _cloaked_demon_visual_center() -> Vector2: return _cloaked_demon_texture_origin() + npc_controller.demon_visual_bounds.get_center()
@@ -1945,10 +2424,11 @@ func _update_actor_occlusion(delta: float) -> void:
 	# Slimes are depth-sorted combat actors, not per-pixel occludable props.
 	# Keep exact work to the player and target so targeting feedback remains intact.
 	var occlusion_actors: Array[Sprite2D] = [player]
-	if current_target != null and current_target != player and not _is_slime_dead(current_target):
+	if current_target != null and current_target != player and actor_sprites.has(current_target) and not _is_target_actor_dead(current_target):
 		occlusion_actors.append(current_target)
 	var target_focus_lost := current_target != null and not _combat_momentum().focus_active
-	occlusion_renderer.update_actor_occlusion(occlusion_actors, occluder_sprites, player, current_target, target_focus_lost, delta, OCCLUSION_RELEASE_GRACE, Callable(self, "_is_actor_occlusion_flashing"), Callable(self, "_depth_key"), Callable(self, "_sprite_source_global_rect"), Callable(self, "_build_exact_occluded_actor_texture"), Callable(self, "_apply_actor_scale"), Callable(self, "_restore_actor_base_visual_scale"))
+	var release_grace := OCCLUSION_RELEASE_GRACE if current_target != null else 0.0
+	occlusion_renderer.update_actor_occlusion(occlusion_actors, occluder_sprites, player, current_target, target_focus_lost, delta, release_grace, Callable(self, "_is_actor_occlusion_flashing"), Callable(self, "_depth_key"), Callable(self, "_sprite_source_global_rect"), Callable(self, "_build_exact_occluded_actor_texture"), Callable(self, "_apply_actor_scale"), Callable(self, "_restore_actor_base_visual_scale"))
 	if player_equipment_visual_component != null:
 		player_equipment_visual_component.update_occlusion(self, delta)
 func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool: return actor == player and player_hit_flash_timer > 0.0
@@ -1969,21 +2449,103 @@ func _build_cloaked_demon_sprite_shadow() -> void: cloaked_demon_sprite_shadow =
 func _update_targeting() -> void: interaction_component.update_targeting(self)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
+func _target_cycle_direction() -> int: return player_controller.target_cycle_direction(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_guard_input_held() -> bool: return player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _is_attack_input_pressed() -> bool: return player_controller.action_pressed(&"attack", _controller_devices(), JOY_BUTTON_X)
 func _is_interact_input_pressed() -> bool: return player_controller.action_pressed(&"interact", _controller_devices(), JOY_BUTTON_B)
 func _is_roll_input_pressed() -> bool: return player_controller.action_pressed(&"roll", _controller_devices(), JOY_BUTTON_A)
+func _is_magic_input_pressed() -> bool: return player_controller.action_pressed(&"magic", _controller_devices(), JOY_BUTTON_Y)
 func _controller_devices() -> Array[int]: return player_controller.connected_devices()
-func _closest_target() -> Sprite2D: return interaction_component.closest_target(player, slimes, TARGET_LOCK_MAX_DISTANCE, Callable(self, "_actor_foot"), Callable(self, "_is_slime_dead"), Callable(self, "_is_slime_targetable"))
-func _set_current_target(target: Sprite2D) -> void:
+func _closest_target() -> Sprite2D:
+	var candidates: Array[Sprite2D] = slimes.duplicate()
+	candidates.append_array(puzzle_torches)
+	return interaction_component.closest_target(player, candidates, TARGET_LOCK_MAX_DISTANCE, Callable(self, "_actor_foot"), Callable(self, "_is_target_actor_dead"), Callable(self, "_is_slime_targetable"))
+
+func _cycle_target(direction: int) -> void:
+	if direction == 0:
+		return
+	var candidates: Array[Sprite2D] = slimes.duplicate()
+	candidates.append_array(puzzle_torches)
+	var origin := current_target if current_target != null and _is_slime_targetable(current_target) else player
+	var origin_position := _actor_foot(origin)
+	var best: Sprite2D = null
+	var best_score := INF
+	for candidate in candidates:
+		if candidate == null or candidate == current_target or not _is_slime_targetable(candidate):
+			continue
+		var offset := _actor_foot(candidate) - origin_position
+		if origin != player and offset.x * float(direction) <= 0.5:
+			continue
+		var proximity_to_previous := offset.length()
+		var distance_from_player := _actor_foot(candidate).distance_to(_actor_foot(player))
+		var score := proximity_to_previous + distance_from_player * 0.25
+		if score < best_score:
+			best_score = score
+			best = candidate
+	if best == null:
+		# Wrap around when there is no target on the requested side.
+		for candidate in candidates:
+			if candidate == null or candidate == current_target or not _is_slime_targetable(candidate):
+				continue
+			var candidate_position := _actor_foot(candidate)
+			var wrap_score := candidate_position.x * -float(direction) + candidate_position.distance_to(_actor_foot(player)) * 0.01
+			if best == null or wrap_score < best_score:
+				best_score = wrap_score
+				best = candidate
+	if best != null:
+		_set_current_target(best)
+func _set_current_target(target: Sprite2D, play_feedback: bool = true) -> void:
 	if current_target != target:
+		if actor_sprites.has(current_target) and is_instance_valid(current_target):
+			# The occlusion pass only visits the active target. Restore the previous
+			# actor immediately so its highlight cannot persist after retargeting.
+			occlusion_renderer.apply_unoccluded_actor_texture(current_target, false, false, 0.0, Callable(self, "_apply_actor_scale"), 0.0)
+		if puzzle_torches.has(current_target):
+			_set_puzzle_torch_target_highlight(current_target, false)
+		if play_feedback and current_target != null and target == null:
+			_play_sound("target_release", -8.0, 1.0)
 		current_target = target
+		if puzzle_torches.has(current_target):
+			_set_puzzle_torch_target_highlight(current_target, true)
 		focus_flash_timer = 0.0
 		_combat_momentum().on_target_changed(target != null)
 		_update_focus_indicator()
+
+func _set_puzzle_torch_target_highlight(torch: Sprite2D, highlighted: bool) -> void:
+	if torch == null or not is_instance_valid(torch):
+		return
+	var highlight := torch.get_node_or_null("TargetHighlight") as Sprite2D
+	if highlighted and highlight == null:
+		highlight = Sprite2D.new()
+		highlight.name = "TargetHighlight"
+		highlight.texture = _pixel_particle_texture(Color(1.0, 1.0, 1.0, 0.65), 10)
+		highlight.centered = true
+		highlight.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		highlight.z_index = -1
+		torch.add_child(highlight)
+	if highlight != null:
+		highlight.visible = highlighted
 func _update_target_ui() -> void:
 	if current_target == null: _set_target_ui_visible(false); return
+	if puzzle_torches.has(current_target):
+		_update_puzzle_torch_target_ui(current_target)
+		return
 	_set_target_ui_visible(true); target_health_bar_size = hud_controller.update_target_ui(current_target, target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_health_bar_size, Callable(self, "_slime_display_name"), Callable(self, "_enemy_max_health"), Callable(self, "_slime_current_health"), Callable(self, "_slime_display_health"), Callable(self, "_pixel_name_texture"), Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values"))
+func _update_puzzle_torch_target_ui(torch: Sprite2D) -> void:
+	_set_target_ui_visible(true)
+	target_name_text.texture = _pixel_name_texture("ENTRY ORB", Color.WHITE)
+	target_name_text.centered = true
+	target_name_text.position = Vector2(120, 148)
+	target_health_text.visible = false
+	var palette := String(torch.get_meta("puzzle_torch_palette", "grey"))
+	var color := PaletteLibrary.normal(palette)
+	if target_health_bar_size == Vector2.ZERO:
+		target_health_bar_size = target_health_fill.texture.get_size() if target_health_fill.texture != null else Vector2(48, 16)
+	target_health_fill.self_modulate = color
+	if target_health_damage_fill != null:
+		target_health_damage_fill.self_modulate = color
+		hud_controller.set_fill_ratio(target_health_damage_fill, target_health_bar_size, 1.0)
+	hud_controller.set_fill_ratio(target_health_fill, target_health_bar_size, 1.0)
 func _set_target_ui_visible(target_visible: bool) -> void: hud_controller.set_visible(target_name_text, target_health_bar, target_health_damage_fill, target_health_fill, target_health_text, target_visible)
 func _update_focus_indicator(delta: float = 0.0) -> void:
 	if focus_label == null or focus_label_base == null:
@@ -2020,6 +2582,177 @@ func _update_focus_indicator(delta: float = 0.0) -> void:
 func _slime_display_name(slime: Sprite2D) -> String:
 	var palette := String(slime.get("variant")); var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Rogue Slime" if palette == "purple" else "Green Slime"; var stats := _slime_stats(slime); return "lv.%d %s" % [stats.level if stats != null else 1, display_name]
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health_component.current_health if player_health_component != null else 0.0, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
+func _update_player_mp_ui(_delta: float = 0.0) -> void:
+	# The visual state must update even while the MP HUD is not built or visible.
+	# In particular, a spell can consume MP before the HUD is ready.
+	_update_mp_desaturation()
+	if player_mp_fill == null:
+		return
+	if player_mp_fill_size == Vector2.ZERO and player_mp_fill.texture != null:
+		player_mp_fill_size = player_mp_fill.texture.get_size()
+	if player_mp_fill_size == Vector2.ZERO:
+		player_mp_fill_size = Vector2(48, 16)
+	var current_chroma := _current_player_chroma()
+	hud_controller.set_fill_ratio(player_mp_fill, player_mp_fill_size, clampf(current_chroma / PLAYER_MAX_MP, 0.0, 1.0))
+	if player_mp_text != null:
+		player_mp_text.texture = _pixel_text_texture("%d/%d" % [ceili(current_chroma), int(PLAYER_MAX_MP)], Color.WHITE)
+func _current_player_chroma() -> float:
+	return float(player_chroma_component.get("current_chroma")) if player_chroma_component != null and is_instance_valid(player_chroma_component) else 0.0
+func _restore_player_mp() -> void:
+	if player_chroma_component != null and is_instance_valid(player_chroma_component):
+		player_chroma_component.call("attune", player_chroma_component.get("current_aspect"))
+	_update_player_mp_ui()
+func _try_cast_magic() -> bool:
+	if player_is_attacking or player_is_rolling or player_is_defending or player_dead:
+		return false
+	if player_aspect_ability_component != null and player_chroma_component != null:
+		var accepted := bool(player_aspect_ability_component.call("try_activate", player_chroma_component, Callable(self, "_execute_current_aspect_ability")))
+		if accepted:
+			_sync_chroma_presentation()
+			_update_player_mp_ui()
+		return accepted
+	return false
+
+func _sync_chroma_presentation() -> void:
+	if player_chroma_component == null:
+		return
+	var flame := String(player_chroma_component.call("aspect_name"))
+	var palette := "grey" if flame == "gray" else AspectCatalogScript.palette_for_flame(StringName(flame))
+	if palette.is_empty() or palette == current_player_palette_name:
+		return
+	_start_player_palette_flash(palette)
+
+
+func _execute_current_aspect_ability(_mode: int) -> bool:
+	var target := current_target if current_target != null and _is_slime_targetable(current_target) else _closest_target()
+	var direction := Vector2.RIGHT
+	if target != null:
+		var to_target := _magic_target_point(target) - _player_visual_center()
+		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else Vector2.RIGHT
+	else:
+		direction = last_player_input_direction.normalized()
+	var origin := _player_visual_center() + Vector2(signf(direction.x) * 5.0, 1.0)
+	if target != null:
+		player.flip_h = direction.x < 0.0
+	_spawn_magic_projectile(origin, direction, target)
+	_play_sound("magic_cast", -8.0, 1.0)
+	return true
+func _player_visual_center() -> Vector2:
+	return player.global_position + Vector2(8, 7)
+func _slime_visual_center(slime: Sprite2D) -> Vector2:
+	return slime.global_position + Vector2(8, 2)
+
+
+func _magic_target_point(slime: Sprite2D) -> Vector2:
+	# Aim at the same world-space collision area used by projectile hit tests,
+	# rather than the sprite's decorative visual center.
+	if puzzle_torches.has(slime):
+		return slime.global_position
+	return ActorGeometry.combat_target_point(_collision_rect(slime))
+func _spawn_magic_projectile(origin: Vector2, direction: Vector2, homing_target: Sprite2D = null) -> void:
+	var palette := current_player_palette_name
+	var base_color := PaletteLibrary.normal(palette)
+	var accent_color := PaletteLibrary.accent(palette)
+	var projectile := Sprite2D.new()
+	projectile.name = "MagicProjectile"
+	projectile.texture = _pixel_particle_texture(base_color, MAGIC_PROJECTILE_SIZE)
+	projectile.centered = true
+	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	projectile.z_as_relative = false
+	projectile.z_index = player.z_index + 1
+	projectile.position = origin
+	add_child(projectile)
+	var outline := Sprite2D.new()
+	outline.name = "MagicProjectileOutline"
+	outline.texture = _magic_projectile_outline_texture(base_color, accent_color)
+	outline.centered = true
+	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	outline.z_as_relative = false
+	outline.z_index = player.z_index + 1
+	outline.position = origin
+	add_child(outline)
+	magic_projectile_controller.spawn(projectile, outline, direction, MAGIC_PROJECTILE_LIFETIME, palette, homing_target)
+func _magic_projectile_outline_texture(base_color: Color, accent_color: Color) -> Texture2D:
+	var key := "magic_outline:%s:%s" % [base_color.to_html(false), accent_color.to_html(false)]
+	if effects_spawner.pixel_particle_texture_cache.has(key):
+		return effects_spawner.pixel_particle_texture_cache[key]
+	var size := MAGIC_PROJECTILE_SIZE + 2
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in size:
+		for x in size:
+			var on_border := x == 0 or y == 0 or x == size - 1 or y == size - 1
+			if on_border:
+				image.set_pixel(x, y, accent_color)
+	var texture := ImageTexture.create_from_image(image)
+	effects_spawner.pixel_particle_texture_cache[key] = texture
+	return texture
+func _update_magic_projectiles(delta: float) -> void:
+	magic_projectile_controller.tick(delta, MAGIC_PROJECTILE_SPEED, Callable(self, "_snap_half_pixel"), Callable(self, "_magic_target_point"), Callable(self, "_is_slime_targetable"), Callable(self, "_magic_projectile_hit_target"), Callable(self, "_resolve_magic_projectile_hit"), Callable(self, "_spawn_magic_trail"))
+func _resolve_magic_projectile_hit(target: Sprite2D, world_position: Vector2, palette: String) -> void:
+	if puzzle_torches.has(target):
+		_activate_puzzle_torch(target, world_position, palette)
+	else:
+		_magic_hit_slime(target, world_position, palette)
+func _magic_projectile_hit_target(sprite: Sprite2D) -> Sprite2D:
+	var radius := MAGIC_PROJECTILE_SIZE * 0.5 + 2.0
+	for torch in puzzle_torches:
+		if not _is_slime_targetable(torch):
+			continue
+		var torch_rect := Rect2(torch.global_position - Vector2(3.0, 3.0), Vector2(6.0, 6.0))
+		if torch_rect.grow(radius).has_point(sprite.global_position):
+			return torch
+	for slime in slimes:
+		if not _is_slime_targetable(slime):
+			continue
+		var body := _slime_body_polygon(slime)
+		if _circle_intersects_polygon(sprite.global_position, radius, body):
+			return slime
+	return null
+func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool:
+	if polygon.size() < 3:
+		return false
+	if Geometry2D.is_point_in_polygon(center, polygon):
+		return true
+	for index in polygon.size():
+		var closest := Geometry2D.get_closest_point_to_segment(center, polygon[index], polygon[(index + 1) % polygon.size()])
+		if center.distance_squared_to(closest) <= radius * radius:
+			return true
+	return false
+func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String) -> void:
+	var base_damage := _player_attack_damage_against(slime)
+	var damage := maxf(floorf(base_damage * 1.1), 1.0)
+	_damage_slime_with_number(slime, damage, false, false)
+	_knockback_slime(slime)
+	_spawn_damage_number(slime, damage, false)
+	_play_sound("magic_hit", -8.0, 1.0)
+	_spawn_magic_impact(world_position, palette)
+func _spawn_magic_trail(world_position: Vector2, palette: String) -> void:
+	var particle := Sprite2D.new()
+	particle.texture = _pixel_particle_texture(PaletteLibrary.normal(palette), 1) as Texture2D
+	particle.centered = false
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = false
+	particle.z_index = player.z_index + 1
+	particle.position = world_position
+	add_child(particle)
+	var lifetime := 0.35
+	effects_spawner.pixel_particles.append({"sprite": particle, "velocity": Vector2(0, 0), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+func _spawn_magic_impact(world_position: Vector2, palette: String) -> void:
+	var color := PaletteLibrary.normal(palette)
+	for i in 8:
+		var particle := Sprite2D.new()
+		particle.texture = _pixel_particle_texture(color, 1) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = player.z_index + 1
+		particle.position = world_position
+		add_child(particle)
+		var angle := float(i) / 8.0 * TAU
+		var speed := float(rng.randf_range(14.0, 30.0))
+		var lifetime := float(rng.randf_range(0.3, 0.5))
+		effects_spawner.pixel_particles.append({"sprite": particle, "velocity": Vector2(cos(angle), sin(angle)) * speed, "timer": lifetime, "lifetime": lifetime, "gravity": 20.0})
 func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _slime_current_health(slime: Sprite2D) -> float: var max_health := _enemy_max_health(slime); var health_component := _slime_health(slime); return health_component.current_health if health_component != null else max_health
 func _slime_display_health(slime: Sprite2D) -> float: return _slime_health_presenter(slime).display_health
@@ -2040,11 +2773,7 @@ func _actor_screen_scale(actor: Sprite2D) -> Vector2:
 	return original_scale * visual_scale
 func _slime_encounter_scale(slime: Sprite2D) -> float: return float(slime.get_meta("encounter_scale", 1.0))
 func _actor_visual_offset(actor: Sprite2D) -> Vector2:
-	if actor == player: return PLAYER_TEXTURE_OFFSET
-	if slimes.has(actor):
-		var encounter_scale := _slime_encounter_scale(actor)
-		if encounter_scale > 1.0: return ACTOR_FOOT_OFFSET * (1.0 / encounter_scale - 1.0)
-	return Vector2.ZERO
+	return ActorGeometry.visual_offset(actor, player, slimes, ACTOR_FOOT_OFFSET)
 func _collect_walkable_tiles(node: Node) -> void: if walkable_area != null: walkable_area.collect_geometry(node, Callable(self, "_tile_top_polygon")); walkable_points = walkable_area.points.duplicate(); walkable_polygons = walkable_area.polygons.duplicate()
 func _build_walkable_outline() -> void: if walkable_area != null: walkable_area.build_outline(use_walkable_polygon_direct); walkable_outline = walkable_area.outline
 func _build_entrance_block_polygons() -> void: room_controller.build_entrance_blocks(self); if walkable_area != null: walkable_area.set_entrance_blocks(entrance_block_polygons)
@@ -2084,14 +2813,9 @@ func _is_slime_collision_rect_walkable_at(slime: Sprite2D, foot: Vector2) -> boo
 		if not _is_slime_walkable_point(sample): return false
 	return true
 func _slime_collision_polygon(slime: Sprite2D, foot: Vector2 = Vector2.INF) -> PackedVector2Array:
-	var guide := slime.get_node_or_null("CollisionPolygon") as Polygon2D
-	if guide == null or guide.polygon.size() < 3:
-		return PackedVector2Array()
-	var offset := Vector2.ZERO if foot == Vector2.INF else foot - _actor_foot(slime)
-	var polygon := PackedVector2Array()
-	for point in guide.polygon:
-		polygon.append(guide.to_global(point) + offset)
-	return polygon
+	return ActorGeometry.collision_polygon(slime, ACTOR_FOOT_OFFSET, foot)
+func _slime_body_polygon(slime: Sprite2D) -> PackedVector2Array:
+	return ActorGeometry.body_polygon(slime, ACTOR_FOOT_OFFSET)
 func _is_slime_collision_polygon_walkable(polygon: PackedVector2Array) -> bool:
 	var center := Vector2.ZERO
 	for index in polygon.size():
@@ -2103,4 +2827,4 @@ func _is_slime_collision_polygon_walkable(polygon: PackedVector2Array) -> bool:
 func _is_point_near_other_slime(point: Vector2, ignored_slime: Sprite2D = null) -> bool:
 	for slime in slimes: if slime != ignored_slime and not _is_slime_dead(slime) and _collision_rect(slime).grow(4.0).has_point(point): return true
 	return false
-func _actor_foot(actor: Sprite2D) -> Vector2: return _cloaked_demon_foot_position() if actor == cloaked_demon else actor.global_position + ACTOR_FOOT_OFFSET
+func _actor_foot(actor: Sprite2D) -> Vector2: return _cloaked_demon_foot_position() if actor == cloaked_demon else ActorGeometry.foot(actor, ACTOR_FOOT_OFFSET)

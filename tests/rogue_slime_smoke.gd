@@ -27,7 +27,11 @@ func _initialize() -> void:
 		for seed in 128:
 			var encounter := rooms._generate_boss_encounter(seed + rank * 1000, 12)
 			var variants := encounter["variants"] as Array
+			var scales := encounter["scales"] as Array
 			_expect("purple" in variants, "boss encounter includes a rogue at rank %d seed %d" % [rank, seed], failures)
+			if rank == 1:
+				_expect(String(variants[0]) != "purple", "R1 lead boss excludes the purple variant at seed %d" % seed, failures)
+			_expect(float(scales[0]) > 1.0, "boss encounter leads with a scaled boss at rank %d seed %d" % [rank, seed], failures)
 	rooms.free()
 
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D

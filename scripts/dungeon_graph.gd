@@ -15,6 +15,7 @@ const BOTTOM_RIGHT: StringName = &"BOTTOM_RIGHT"
 
 const ROOM_START: StringName = &"START"
 const ROOM_COMBAT: StringName = &"COMBAT"
+const ROOM_PUZZLE: StringName = &"PUZZLE"
 const ROOM_REST: StringName = &"REST"
 const ROOM_TRADER: StringName = &"TRADER"
 const ROOM_NPC: StringName = &"NPC"
@@ -110,6 +111,8 @@ var dungeon_seed: int = 0
 var start_room_id: StringName = START_ROOM_ID
 var completed_run_count := 0
 var target_boss_depth := 12
+var tutorial_starter_puzzle_depth := -1
+var tutorial_gray_puzzle_depth := -1
 
 var _rooms: Dictionary = {}
 var _connections: Dictionary = {}
@@ -119,6 +122,7 @@ var _milestone_rooms: Dictionary = {}
 ## Clears any previous graph and creates the root room.
 func initialize(new_seed: int) -> RoomRecord:
 	dungeon_seed = new_seed
+	_configure_tutorial_puzzle_depths()
 	start_room_id = START_ROOM_ID
 	_rooms.clear()
 	_connections.clear()
@@ -129,19 +133,40 @@ func initialize(new_seed: int) -> RoomRecord:
 func configure_progression(completed_runs: int) -> void:
 	completed_run_count = maxi(completed_runs, 0)
 	# Each clear adds a depth, up to a compact but meaningfully broader late run.
-	target_boss_depth = 12 + mini(completed_run_count, 8)
+	target_boss_depth = 12 + mini(completed_run_count, 4)
 
 
 func final_npc_depth() -> int:
 	return target_boss_depth - 1
 
 
+func is_tutorial_starter_puzzle_depth(depth: int) -> bool:
+	return completed_run_count == 0 and depth == tutorial_starter_puzzle_depth
+
+
+func is_tutorial_gray_puzzle_depth(depth: int) -> bool:
+	return completed_run_count == 0 and depth == tutorial_gray_puzzle_depth
+
+
+func _configure_tutorial_puzzle_depths() -> void:
+	if completed_run_count != 0:
+		tutorial_starter_puzzle_depth = -1
+		tutorial_gray_puzzle_depth = -1
+		return
+	var tutorial_rng := RandomNumberGenerator.new()
+	tutorial_rng.seed = dungeon_seed + 4409
+	# Keep the starter lesson before the depth-6 NPC milestone and the Gray
+	# lesson after it, guaranteeing separation and ordering on the required path.
+	tutorial_starter_puzzle_depth = tutorial_rng.randi_range(2, 4)
+	tutorial_gray_puzzle_depth = tutorial_rng.randi_range(7, 9)
+
+
 func side_route_chance() -> float:
-	return clampf(0.55 + float(completed_run_count) * 0.025, 0.55, 0.72)
+	return clampf(0.55 + float(completed_run_count) * 0.015, 0.55, 0.62)
 
 
 func side_dead_end_chance() -> float:
-	return clampf(0.28 + float(completed_run_count) * 0.045, 0.28, 0.60)
+	return clampf(0.28 + float(completed_run_count) * 0.025, 0.28, 0.40)
 
 
 func get_room(room_id: StringName) -> RoomRecord:
@@ -206,11 +231,12 @@ func _ensure_room(room_coordinate: Vector2i, room_type: StringName = ROOM_COMBAT
 	var existing_room := get_room(room_id)
 	if existing_room != null:
 		return existing_room
-	var is_milestone := room_coordinate.y == 6 or room_coordinate.y == final_npc_depth()
+	var is_tutorial_puzzle := is_tutorial_starter_puzzle_depth(room_coordinate.y) or is_tutorial_gray_puzzle_depth(room_coordinate.y)
+	var is_milestone := is_tutorial_puzzle or room_coordinate.y == 6 or room_coordinate.y == final_npc_depth()
 	if is_milestone:
 		if not _milestone_rooms.has(room_coordinate.y):
 			_milestone_rooms[room_coordinate.y] = room_id
-			room_type = ROOM_NPC
+			room_type = ROOM_PUZZLE if is_tutorial_puzzle else ROOM_NPC
 		else:
 			room_type = ROOM_COMBAT
 

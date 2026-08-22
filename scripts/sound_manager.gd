@@ -8,7 +8,8 @@ class_name SoundManager
 const SOUNDS_PATH := "res://assets/sounds/"
 const BATTLE_PATH := SOUNDS_PATH + "10_Free_RPG_Battle_SFX/"
 const UI_PATH := SOUNDS_PATH + "10_ui_sfx_free_samples/"
-const MUSIC_PATH := SOUNDS_PATH + "Soundtrack/Tiny Demons- MAIN THEME.wav"
+const KH_UI_PATH := SOUNDS_PATH + "reconstructed_ui/"
+const MUSIC_PATH := SOUNDS_PATH + "Soundtrack/TINY DEMONS - MAIN THEME.wav"
 
 const CLIPS := {
 	"slash": BATTLE_PATH + "22_Slash_04.wav",
@@ -21,28 +22,51 @@ const CLIPS := {
 	"impact_flesh": BATTLE_PATH + "15_Impact_flesh_02.wav",
 	"encounter": BATTLE_PATH + "55_Encounter_02.wav",
 	"claw": BATTLE_PATH + "03_Claw_03.wav",
-	"ui_hover": UI_PATH + "001_Hover_01.wav",
-	"ui_confirm": UI_PATH + "013_Confirm_03.wav",
-	"ui_decline": UI_PATH + "029_Decline_09.wav",
+	"magic_cast": BATTLE_PATH + "55_Encounter_02.wav",
+	"magic_hit": BATTLE_PATH + "15_Impact_flesh_02.wav",
+	"ui_hover": KH_UI_PATH + "sys-click.sms-real.wav",
+	"ui_confirm": KH_UI_PATH + "sys-click104b.sms-real.wav",
+	"ui_decline": KH_UI_PATH + "sys-cansel.sms-real.wav",
 	"ui_denied": UI_PATH + "033_Denied_03.wav",
 	"ui_use_item": UI_PATH + "051_use_item_01.wav",
 	"ui_equip": UI_PATH + "070_Equip_10.wav",
 	"ui_unequip": UI_PATH + "071_Unequip_01.wav",
 	"ui_buy_sell": UI_PATH + "079_Buy_sell_01.wav",
-	"ui_pause": UI_PATH + "092_Pause_04.wav",
-	"ui_unpause": UI_PATH + "098_Unpause_04.wav",
+	"ui_pause": KH_UI_PATH + "sys-saveload.sms-real.wav",
+	"ui_unpause": KH_UI_PATH + "sys-close.sms-real.wav",
+	"enemy_alert": KH_UI_PATH + "sys-chagef1.sms-real.wav",
+	"item_pickup": KH_UI_PATH + "sys-itemget.sms-real.wav",
+	"chest_unlock": KH_UI_PATH + "sys-tresure.sms-real.wav",
+	"chest_reward": KH_UI_PATH + "sys-money-get.sms-real.wav",
+	"run_clear": KH_UI_PATH + "sys-money-get.sms-real.wav",
+	"level_up": KH_UI_PATH + "ef-mon-up.sms-real.wav",
+	"enemy_hit_1": KH_UI_PATH + "BTL-MON-HIT01.sms-real.wav",
+	"enemy_hit_2": KH_UI_PATH + "BTL-MON-HIT02.sms-real.wav",
+	"enemy_hit_3": KH_UI_PATH + "BTL-MON-HIT03.sms-real.wav",
+	"enemy_hit_4": KH_UI_PATH + "BTL-MON-HIT04.sms-real.wav",
+	"enemy_hit_5": KH_UI_PATH + "BTL-MON-HIT05.sms-real.wav",
+	"enemy_hit_6": KH_UI_PATH + "BTL-MON-HIT06.sms-real.wav",
+	"target_release": KH_UI_PATH + "sys-cansel.sms-real.wav",
+	"foot_left": KH_UI_PATH + "sys-sr-footl.sms-real.wav",
+	"foot_right": KH_UI_PATH + "sys-sr-footr.sms-real.wav",
 }
 
 var _players: Dictionary = {}
 var _chatter_player: AudioStreamPlayer = null
 var _music_player: AudioStreamPlayer = null
-
+var _music_fade_tween: Tween = null
 
 func _ready() -> void:
-	start_music()
+	# Load frequently-used menu cues before the first menu transition. Loading
+	# an imported WAV on the exact frame a page opens causes a visible hitch.
+	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_unpause"]:
+		_player(sound_name)
 
 
 func _exit_tree() -> void:
+	if _music_fade_tween != null and _music_fade_tween.is_valid():
+		_music_fade_tween.kill()
+		_music_fade_tween = null
 	if _music_player != null:
 		_music_player.stop()
 		_music_player.stream = null
@@ -55,6 +79,9 @@ func start_music(volume_linear: float = 0.6) -> void:
 		_music_player.bus = "Master"
 		_music_player.process_mode = Node.PROCESS_MODE_ALWAYS
 		add_child(_music_player)
+	if _music_fade_tween != null and _music_fade_tween.is_valid():
+		_music_fade_tween.kill()
+		_music_fade_tween = null
 	if _music_player.stream == null and ResourceLoader.exists(MUSIC_PATH):
 		_music_player.stream = load(MUSIC_PATH) as AudioStream
 		if not _music_player.finished.is_connected(_replay_music):
@@ -62,6 +89,20 @@ func start_music(volume_linear: float = 0.6) -> void:
 	_music_player.volume_db = linear_to_db(volume_linear)
 	if _music_player.stream != null and not _music_player.playing:
 		_music_player.play()
+
+
+func fade_out_music(duration: float = 1.0) -> void:
+	if _music_player == null or not _music_player.playing:
+		return
+	if _music_fade_tween != null and _music_fade_tween.is_valid():
+		_music_fade_tween.kill()
+	_music_fade_tween = create_tween()
+	_music_fade_tween.tween_property(_music_player, "volume_db", -80.0, duration)
+	_music_fade_tween.tween_callback(func() -> void:
+		if _music_player != null:
+			_music_player.stop()
+		_music_fade_tween = null
+	)
 
 
 func _replay_music() -> void:
@@ -75,6 +116,8 @@ func stop_music() -> void:
 
 
 func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
+	if sound_name == "enemy_hit":
+		sound_name = "enemy_hit_%d" % randi_range(1, 6)
 	var player := _player(sound_name)
 	if player == null or player.stream == null:
 		return

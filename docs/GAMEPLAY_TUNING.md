@@ -73,13 +73,14 @@ game reads them at runtime with no code change.
 
 ## Item / stat economy
 
-These are code constants (not inspector-exposed) that drive gear value:
+These are code values (not inspector-exposed) that drive gear value:
 
 | Knob | Value | Location |
 | --- | --- | --- |
-| Gear primary-stat % per point | 0.25 | `equipment_component.gd` (×0.25) |
-| Gear % floor | 1 point | `combat_stat_snapshot.gd:_gear_points` |
-| Health/damage rate % per point | 0.01 | `equipment_component.gd` (×0.01) |
+| Gear primary-stat contribution | Flat points from the item package | `item_catalog.gd:combat_primary_points` |
+| Starter loadout totals | +2 VIT / +1 net STR / +3 DEF / +1 SPD | `item_catalog.gd` definitions + shield penalties |
+| Gear scaling floor | Not used by the current flat-point model | `combat_stat_snapshot.gd` |
+| Health/damage rate package | Not currently part of the primary gear snapshot | `combat_stat_snapshot.gd` |
 | Enhancement % per level | 0.10 | `item_catalog.gd:MASTERY_BONUS_PER_LEVEL` |
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity power multipliers | 1.0 / 2.2 / 4.84 / 10.648 / 23.4256 (2.2x/tier) | `item_catalog.gd` |

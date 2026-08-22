@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dky24k3o7scoh"
+path="res://.godot/imported/TINY DEMONS - MAIN THEME.wav-36a57bb65d9693c637c25ed9df5b0b84.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Soundtrack/TINY DEMONS - MAIN THEME.wav"
+dest_files=["res://.godot/imported/TINY DEMONS - MAIN THEME.wav-36a57bb65d9693c637c25ed9df5b0b84.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

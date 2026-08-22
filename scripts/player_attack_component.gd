@@ -26,7 +26,7 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	root.set("player_is_attacking", true); begin(new_variant); root.set("player_just_finished_attack2", false); root.set("player_attack_hit_done", false); hit_targets.clear()
 	var player := root.get("player") as Sprite2D; root.set("player_attack_flip_h", player.flip_h)
 	var tuning := root.get("player_tuning") as PlayerTuning
-	var attack_multiplier := tuning.attack_multiplier(int(root.get("player_spd")))
+	var attack_multiplier := tuning.attack_multiplier(float(root.get("player_spd")))
 	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
 	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
 	if new_variant == 2: root.set("player_between_timer", 0.0)
@@ -43,7 +43,8 @@ func apply_hitbox(root: Object) -> void:
 	var eligible_targets: Array[Sprite2D] = []
 	for slime in slimes:
 		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
-		if not polygon_intersects_rect(hitbox, root.call("_collision_rect", slime)): continue
+		var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
+		if slime_body.size() < 3 or Geometry2D.intersect_polygons(hitbox, slime_body).is_empty(): continue
 		eligible_targets.append(slime)
 	if eligible_targets.is_empty():
 		return

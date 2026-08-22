@@ -9,6 +9,7 @@ const MP_COLOR := PaletteLibrary.ACCENT["blue"]
 const GOLD_COLOR := PaletteLibrary.NORMAL["yellow"]
 
 var _source_fill: Texture2D
+var _solid_texture_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -66,6 +67,9 @@ func hp_highlight_texture() -> Texture2D:
 func _solid_texture(source: Texture2D, color: Color) -> Texture2D:
 	if source == null:
 		return null
+	var cache_key := "%s:%s" % [source.get_rid(), color.to_html(false)]
+	if _solid_texture_cache.has(cache_key):
+		return _solid_texture_cache[cache_key] as Texture2D
 	var image := source.get_image()
 	if image == null:
 		return source
@@ -74,7 +78,9 @@ func _solid_texture(source: Texture2D, color: Color) -> Texture2D:
 			var alpha := image.get_pixel(x, y).a
 			if alpha > 0.0:
 				image.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
-	return ImageTexture.create_from_image(image)
+	var texture := ImageTexture.create_from_image(image)
+	_solid_texture_cache[cache_key] = texture
+	return texture
 
 
 func _set_text(sprite: Sprite2D, value: String, color: Color) -> void:

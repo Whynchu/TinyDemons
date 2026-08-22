@@ -16,13 +16,15 @@ Current gameplay includes:
 
 ## Current Focus
 
-The active feature overhaul is the **Combat & Economy pass**: gear primary
-stats now give 25% of base per point with a 1-point floor, player base stats
-moved to 3/2/2 (archetypes sum to 7), enhancement adds 10%/level, and
-enemies/boss are rebalanced to scale honestly. The hub FUSE tab is now
-**target-centric**: pick the item you want to upgrade, choose how many
-duplicates to fuse into it, and the gold cost scales with the target's
-enhancement level. See
+The active gameplay work is the **Elemental Chroma system**: starter-flame
+attunement, Gray/elemental state, Chroma pickups and casting, and mandatory
+elemental puzzle rooms. In parallel, the codebase is entering a staged
+feature-oriented refactor so these systems have typed owners instead of
+continuing to grow inside the gameplay coordinator.
+
+Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
+status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
+execution plan. The completed Combat & Economy work remains documented in
 [`docs/combat-economy-overhaul.md`](docs/combat-economy-overhaul.md).
 
 ## Project Layout

@@ -10,52 +10,48 @@ const MOVE_ACTIONS := {
 	Vector2.DOWN: &"move_down",
 }
 
+var input_router: InputRouter = null
+
+
+func configure_input_router(router: InputRouter) -> void:
+	input_router = router
+
 
 func can_receive_input() -> bool:
 	return true
 
 
 func connected_devices() -> Array[int]:
-	var devices: Array[int] = []
-	for device in Input.get_connected_joypads():
-		devices.append(int(device))
-	if devices.is_empty():
-		devices.append(0)
-	return devices
+	if input_router != null:
+		return input_router.devices
+	return []
 
 
 func movement_input(devices: Array[int], deadzone: float) -> Vector2:
-	var input := Vector2.ZERO
-	for direction in MOVE_ACTIONS:
-		if Input.is_action_pressed(MOVE_ACTIONS[direction]):
-			input += direction
-	for device in devices:
-		var stick := Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y))
-		if stick.length() >= deadzone: input += stick
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_RIGHT): input.x += 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_LEFT): input.x -= 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN): input.y += 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_UP): input.y -= 1.0
-	return input.limit_length(1.0)
+	if input_router != null:
+		return input_router.movement(deadzone)
+	return Vector2.ZERO
 
 
-func action_pressed(action: StringName, devices: Array[int], _button: int) -> bool:
-	if Input.is_action_pressed(action):
-		return true
+func action_pressed(action: StringName, _devices: Array[int], _button: int) -> bool:
+	if input_router != null:
+		return input_router.action_pressed(action)
 	return false
 
 
 func target_held(devices: Array[int], trigger_deadzone: float) -> bool:
-	if Input.is_action_pressed(&"target"):
-		return true
-	for device in devices:
-		if Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT) > trigger_deadzone: return true
+	if input_router != null:
+		return input_router.target_held(trigger_deadzone)
 	return false
 
 
+func target_cycle_direction(devices: Array[int], deadzone: float) -> int:
+	if input_router != null:
+		return input_router.target_cycle_direction(deadzone)
+	return 0
+
+
 func guard_held(devices: Array[int], trigger_deadzone: float) -> bool:
-	if Input.is_action_pressed(&"guard"):
-		return true
-	for device in devices:
-		if Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT) > trigger_deadzone: return true
+	if input_router != null:
+		return input_router.guard_held(trigger_deadzone)
 	return false

@@ -27,6 +27,11 @@ together through the shared `gameplay_state.gd` state bag. Components are
 created at runtime by `gameplay_bootstrap.gd`; `gameplay_frame_controller.gd`
 orders the per-frame update.
 
+This describes the current implementation, not the desired endpoint. The active
+migration keeps one explicit frame schedule while replacing shared-state reach-ins
+and string dispatch one feature slice at a time. See
+[`refactor-route.md`](refactor-route.md).
+
 ## Scripts by responsibility
 
 - **Player**: `player_controller`, `actor_motor`, `player_roll_component`,
@@ -78,9 +83,9 @@ Remap freely in the editor without touching code.
 
 ### Add a player capability (e.g. a new action)
 
-1. Add the bind in the Input Map, then a `_is_*_input_pressed` helper in
-   `gameplay.gd` beside the existing ones (or poll the action directly in a
-   player component).
+1. Add the bind in the Input Map and route it through the existing input boundary.
+   Until the contextual input slice is complete, follow the established helper path
+   and do not add a new direct `Input` polling site.
 2. Own the new state in a new component (`player_*_component.gd`) attached by
    `gameplay_bootstrap.gd`; do **not** add fields to `gameplay_state.gd` unless
    two systems genuinely share them.
@@ -122,6 +127,10 @@ Remap freely in the editor without touching code.
   gains orchestrator calls, not new behavior blocks.
 - **One owner per value.** State that belongs to a component lives in that
   component; `gameplay_state.gd` holds only genuinely shared run state.
+- **Preserve explicit update order.** Controllers expose scheduled phase methods;
+  they do not acquire independent `_process()` methods just to avoid wiring.
+- **Prefer typed references and signals.** A string-created `Callable` remains a
+  transitional seam, not the target architecture.
 - **Balance through tuning resources**, not literals in `gameplay.gd`.
 - **Run the smoke suite before every commit**:
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
