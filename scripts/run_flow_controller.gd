@@ -1,0 +1,175 @@
+extends Node
+class_name RunFlowController
+
+const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+
+
+func run_difficulty_bonus(root: Object) -> int:
+	if root.player_profile == null:
+		return 0
+	return clampi(root.player_profile.difficulty_rank - 1, 0, 12)
+
+
+func run_rank(root: Object) -> int:
+	return maxi(root.player_profile.difficulty_rank if root.player_profile != null else 1, 1)
+
+
+func apply_run_rank_grade(root: Object, grade: String) -> void:
+	ProgressionController.apply_run_grade(root.player_profile, grade)
+
+
+func begin_new_run(root: Object) -> void:
+	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
+	if momentum != null:
+		momentum.reset_all()
+	if root.player_chroma_component != null:
+		root.player_chroma_component.call("begin_new_run")
+	var starter_palette: String = "red"
+	if root.player_profile != null:
+		starter_palette = AspectCatalogScript.palette_for_flame(root.player_profile.starter_flame)
+	root.run_start_palette_name = starter_palette
+	var tutorial_run: bool = root.player_profile == null or root.player_profile.completed_runs == 0
+	root.starter_flame_attuned_this_run = not tutorial_run
+	# The initial room may have been laid out before new-file selection was
+	# confirmed. Reassign the hub flame here so its visual and interaction target
+	# always match the persisted starter flame for this run.
+	if root.current_room_type == DungeonGraph.ROOM_START and root.rest_fire != null:
+		root.call("_apply_rest_fire_palette", starter_palette)
+	# The selected flame is present in the hub, but every run opens Gray at zero.
+	root.screen_state_controller.player_palette_name = "grey"
+	root.current_player_palette_name = "grey"
+	root.call("_apply_player_palette_async", "grey")
+	root.call("_update_player_mp_ui")
+	# The first room is the starter-flame lesson. The player must attune before
+	# the hub exit becomes usable, but this gate is opened permanently after touch.
+	if root.current_room_type == DungeonGraph.ROOM_START and tutorial_run:
+		root.call("_set_door_active", false)
+		root.call("_set_entrance_open", false)
+	if root.run_state != null:
+		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")))
+
+
+func return_to_hub(root: Object) -> void:
+	root.call("_settle_current_run", &"defeat" if root.player_dead else &"return_to_hub")
+	if root.player_profile != null:
+		root.player_profile.open_hub_on_load = false
+		root.player_profile.pending_route = "run"
+		root.call("_save_player_profile")
+	root.call("_begin_scene_transition")
+
+
+func settle_current_run(root: Object, result: StringName) -> bool:
+	if not RunSettlement.can_settle(root.run_state, result):
+		return false
+	root.call("_sync_runtime_progression_to_profile")
+	return RunSettlement.settle(root.player_profile, root.run_state, result)
+
+
+func tick_run_telemetry(root: Object, delta: float) -> void:
+	if root.run_state == null or not root.run_state.active:
+		return
+	root.run_state.tick(delta)
+	if is_run_combat_active(root):
+		root.run_state.record_combat_time(delta, root.player_is_moving)
+	if root.player_is_moving:
+		root.run_state.record_movement(delta)
+
+
+func is_run_combat_active(root: Object) -> bool:
+	return root.run_state != null and root.run_state.active and bool(root.call("_is_any_slime_aggroed"))
+
+
+func on_player_successful_block(root: Object, _shield_damage: float, _health_damage: float) -> void:
+	if root.run_state != null and is_run_combat_active(root):
+		root.run_state.record_block()
+	root.call("_play_sound", "block", -8.0, 0.95 + root.rng.randf_range(-0.08, 0.08))
+
+
+func record_run_action_input(root: Object, action: StringName, accepted: bool) -> void:
+	if root.run_state != null and root.run_state.active:
+		root.run_state.record_action_input(action, accepted)
+
+
+func clear_reward_rarity(root: Object, score: int, roll: float) -> StringName:
+	return roll_run_loot_rarity(root, roll, clampf(float(score) / 100.0, 0.0, 1.0))
+
+
+func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0) -> StringName:
+	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else float(root.call("_loot_grade_bonus"))
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank(root), performance_bonus)
+
+
+func complete_run(root: Object) -> void:
+	if root.run_state == null or root.run_state.settled or root.screen_state_controller.run_complete_overlay == null or root.screen_state_controller.run_complete_overlay.visible:
+		return
+	root.call("_finalize_run_exploration")
+	root.call("_finalize_run_enemy_total")
+	var grade: Dictionary = RunGradeEvaluator.evaluate(root.run_state, root.run_state.starting_health)
+	var score: int = int(grade["score"])
+	apply_run_rank_grade(root, str(grade["grade"]))
+	var gold_reward: int = 45 + score * 3 + int(grade["variety_count"]) * 8
+	var reward_rng := RandomNumberGenerator.new()
+	reward_rng.seed = root.current_dungeon_seed ^ root.run_state.run_id.hash() ^ score * 7919
+	var dropped_item: ItemInstance = null
+	if reward_rng.randf() < clampf(0.30 + float(score) * 0.0065, 0.30, 0.95):
+		var catalog := ItemCatalog.new()
+		var slot: StringName = ItemCatalog.SLOTS[reward_rng.randi_range(0, ItemCatalog.SLOTS.size() - 1)]
+		var rarity := clear_reward_rarity(root, score, reward_rng.randf())
+		dropped_item = catalog.generate_item(slot, reward_rng.randi(), root.player_profile.level, rarity)
+		dropped_item.instance_id = root.player_profile.create_item_id("clear")
+		root.player_profile.grant_item(dropped_item)
+	if root.player_profile != null:
+		root.player_profile.gold += gold_reward
+		root.player_profile.completed_runs += 1
+		root.player_profile.last_clear_score = score
+	root.call("_update_gold_indicator")
+	var drop_label: String = "NO GEAR DROP"
+	var drop_color := Color8(150, 156, 170)
+	if dropped_item != null:
+		var reward_catalog := ItemCatalog.new()
+		drop_label = reward_catalog.display_name(dropped_item)
+		drop_color = reward_catalog.rarity_color(dropped_item.rarity)
+	root.run_state.clear_summary = {"score": score, "grade": str(grade["grade"]), "gold": gold_reward, "drop": drop_label, "difficulty": run_difficulty_bonus(root), "run_rank": run_rank(root), "time": root.run_state.elapsed_time, "damage": root.run_state.damage_taken, "variety": int(grade["variety_count"]), "variety_max": int(grade["variety_max"]), "kills": root.run_state.enemies_killed, "total_enemies": root.run_state.total_enemies, "blocks": root.run_state.block_count, "attacks": root.run_state.attack_count, "attack_hits": root.run_state.attack_swing_hit_count, "accuracy": float(grade["accuracy"]), "wasted_inputs": root.run_state.total_wasted_inputs(), "explored_rooms": int(grade["explored_rooms"]), "explorable_rooms": int(grade["explorable_rooms"]), "dodges": root.run_state.dodge_count, "time_quality": float(grade["time_score"]) / 28.0, "survival_quality": float(grade["survival_score"]) / 25.0, "control_quality": float(grade["control_score"]) / 2.0}
+	root.call("_sync_runtime_progression_to_profile")
+	settle_current_run(root, &"complete")
+	root.call("_play_sound", "run_clear", -6.0, 1.0)
+	show_run_complete(root, drop_color)
+
+
+func show_run_complete(root: Object, drop_color: Color) -> void:
+	if root.screen_state_controller.run_complete_overlay == null or root.run_state == null:
+		return
+	var summary: Dictionary = root.run_state.clear_summary
+	var elapsed: int = int(round(float(summary.get("time", 0.0))))
+	var kills: int = int(summary.get("kills", 0))
+	var total_enemies: int = maxi(int(summary.get("total_enemies", 0)), kills)
+	var exploration_quality: float = float(summary.get("explored_rooms", 0)) / float(maxi(int(summary.get("explorable_rooms", 0)), 1))
+	var kill_quality: float = float(kills) / float(maxi(total_enemies, 1))
+	var accuracy_quality: float = float(summary.get("accuracy", 0.0))
+	var style_quality: float = float(summary.get("variety", 0)) / float(maxi(int(summary.get("variety_max", 0)), 1))
+	var lines: Array[String] = ["GRADE %s    SCORE %03d" % [str(summary.get("grade", "D")), int(summary.get("score", 0))], "TIME %02d:%02d  DMG %d" % [floori(float(elapsed) / 60.0), elapsed % 60, roundi(float(summary.get("damage", 0.0)))], "EXPLORE %d/%d" % [int(summary.get("explored_rooms", 0)), int(summary.get("explorable_rooms", 0))], "KILLS %d/%d  BLOCKS %d  DODGES %d" % [kills, total_enemies, int(summary.get("blocks", 0)), int(summary.get("dodges", 0))], "ATTACKS %d  HITS %d" % [int(summary.get("attacks", 0)), int(summary.get("attack_hits", 0))], "ACCURACY %d%%" % roundi(accuracy_quality * 100.0), "MISINPUTS %d" % int(summary.get("wasted_inputs", 0)), "STYLE %d/%d" % [int(summary.get("variety", 0)), int(summary.get("variety_max", 3))], "SPOILS", "+%d GOLD" % int(summary.get("gold", 0)), str(summary.get("drop", "NO GEAR DROP"))]
+	var line_colors: Array[Color] = [Color8(255, 205, 117), metric_color((float(summary.get("time_quality", 0.0)) + float(summary.get("survival_quality", 0.0))) * 0.5), metric_color(exploration_quality), metric_color(kill_quality), metric_color(accuracy_quality), metric_color(accuracy_quality), metric_color(float(summary.get("control_quality", 0.0))), metric_color(style_quality), Color8(255, 205, 117), Color8(255, 205, 117), drop_color]
+	for index in mini(root.screen_state_controller.run_complete_texts.size(), lines.size()):
+		root.screen_state_controller.run_complete_texts[index].texture = root.call("_pixel_text_texture", lines[index], line_colors[index])
+	root.screen_state_controller.run_complete_overlay.visible = true
+	root.screen_state_controller.set_state(&"run_complete")
+
+
+func metric_color(quality: float) -> Color:
+	var value := clampf(quality, 0.0, 1.0)
+	if value >= 0.95: return Color8(177, 62, 83)
+	if value >= 0.85: return Color8(255, 205, 117)
+	if value >= 0.70: return Color8(118, 66, 138)
+	if value >= 0.50: return Color8(65, 166, 246)
+	return Color.WHITE
+
+
+func return_from_run_complete(root: Object) -> void:
+	if root.screen_state_controller.run_complete_overlay != null:
+		root.screen_state_controller.run_complete_overlay.visible = false
+	if root.player_profile != null:
+		root.player_profile.open_hub_on_load = false
+		root.player_profile.pending_route = "run"
+		root.call("_save_player_profile")
+	root.call("_begin_scene_transition")

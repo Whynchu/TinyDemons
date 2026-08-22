@@ -7,57 +7,16 @@ func _add_runtime_node(script: Script, node_name: StringName, parent: Node = sel
 func _ready() -> void:
 	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self)
 func _apply_profile_to_runtime() -> void:
-	if player_profile == null:
-		return
-	var palette := player_profile.palette_name
-	# XP/stat refreshes happen during a run. They must not overwrite a palette
-	# selected at a fire with the profile's original saved palette.
-	if run_state != null and run_state.active and not current_player_palette_name.is_empty():
-		palette = current_player_palette_name
-	screen_state_controller.player_palette_name = palette
-	current_player_palette_name = palette
-	if run_state == null or not run_state.active:
-		run_start_palette_name = palette
-	player_profile.ensure_starter_items()
-	if player_equipment != null:
-		player_equipment.configure_from_profile(player_profile)
-	if player_stats == null:
-		return
-	player_stats.level = player_profile.level
-	if player_profile.has_started:
-		player_stats.configure_manual_growth(player_profile.base_vit, player_profile.base_str, player_profile.base_def, player_profile.base_spd, player_profile.allocated_vit, player_profile.allocated_str, player_profile.allocated_def, player_profile.allocated_spd)
-	else:
-		player_stats.manual_allocation_enabled = false
-	_configure_equipment_transmutations()
-	_recompute_player_speed_multiplier()
+	profile_runtime_controller.call("apply_profile_to_runtime", self)
 
 func _reapply_equipment_preserving_health() -> void:
-	var old_max := _player_max_health() if player_stats != null and player_equipment != null else 1.0
-	var current_health := player_health_component.current_health if player_health_component != null else 0.0
-	var health_ratio := clampf(current_health / old_max, 0.0, 1.0) if old_max > 0.0 else 1.0
-	player_equipment.configure_from_profile(player_profile)
-	_configure_equipment_transmutations()
-	var new_max := _player_max_health()
-	if player_health_component != null:
-		player_health_component.maximum_health = new_max
-		player_health_component.reset(minf(new_max, maxf(1.0, new_max * health_ratio)))
-	_save_player_profile()
-	_update_player_health_ui()
-	_recompute_player_speed_multiplier()
+	profile_runtime_controller.call("reapply_equipment_preserving_health", self)
 
 func _equip_profile_item(instance_id: String) -> bool:
-	if player_profile == null or not player_profile.equip_item(instance_id):
-		return false
-	_reapply_equipment_preserving_health()
-	_play_sound("ui_equip", 0.0, 1.0)
-	return true
+	return bool(profile_runtime_controller.call("equip_profile_item", self, instance_id))
 
 func _unequip_profile_slot(slot: StringName) -> bool:
-	if player_profile == null or not player_profile.unequip_slot(slot):
-		return false
-	_reapply_equipment_preserving_health()
-	_play_sound("ui_unequip", 0.0, 1.0)
-	return true
+	return bool(profile_runtime_controller.call("unequip_profile_slot", self, slot))
 
 func _grant_chest_item_reward() -> bool:
 	if player_profile == null or run_state == null:
@@ -80,162 +39,43 @@ func _grant_chest_item_reward() -> bool:
 	return true
 
 func _placeholder_item_texture() -> Texture2D:
-	var image := Image.create(6, 6, false, Image.FORMAT_RGBA8)
-	image.fill(Color.WHITE)
-	return ImageTexture.create_from_image(image)
+	return pickup_runtime_controller.call("placeholder_item_texture") as Texture2D
 
 func _spawn_chest_item_drop(item: ItemInstance) -> void:
-	if world_item_drop != null and is_instance_valid(world_item_drop):
-		world_item_drop.queue_free()
-	if world_item_drop_label != null and is_instance_valid(world_item_drop_label):
-		world_item_drop_label.queue_free()
-	var catalog := ItemCatalog.new()
-	var sprite := Sprite2D.new()
-	sprite.name = "ChestItemDrop"
-	sprite.texture = _placeholder_item_texture()
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.modulate = catalog.rarity_color(item.rarity)
-	sprite.global_position = chest.global_position + Vector2(0, -4)
-	sprite.z_as_relative = false
-	sprite.z_index = chest.z_index + 3
-	add_child(sprite)
-	var label := Sprite2D.new()
-	label.name = "ChestItemDropLabel"
-	var item_name := str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
-	label.texture = _pixel_text_texture("%s %s +%d" % [catalog.rarity_letter_grade(item.rarity), item_name, item.enhancement_level], catalog.rarity_color(item.rarity))
-	label.centered = true
-	label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	label.z_as_relative = false
-	label.z_index = sprite.z_index + 1
-	add_child(label)
-	world_item_drop = sprite
-	world_item_drop_label = label
-	world_item_drop_instance = item
-	var launch_rng := RandomNumberGenerator.new()
-	launch_rng.seed = item.instance_id.hash()
-	world_item_drop_velocity = Vector2(launch_rng.randf_range(-18.0, 18.0), -30.0)
-	world_item_drop_air_time = 0.38
-	_constrain_world_item_drop()
+	pickup_runtime_controller.call("spawn_chest_item_drop", self, item)
 
 func _restore_chest_item_drop(item: ItemInstance, saved_position: Vector2) -> void:
-	_spawn_chest_item_drop(item)
-	world_item_drop.global_position = _nearest_slime_walkable_point(saved_position)
-	world_item_drop_velocity = Vector2.ZERO
-	world_item_drop_air_time = 0.0
+	pickup_runtime_controller.call("restore_chest_item_drop", self, item, saved_position)
 
 func _constrain_world_item_drop() -> void:
-	if world_item_drop == null or not is_instance_valid(world_item_drop):
-		return
-	world_item_drop.global_position = _nearest_slime_walkable_point(world_item_drop.global_position)
+	pickup_runtime_controller.call("constrain_world_item_drop", self)
 
 func _update_world_item_drop(delta: float) -> void:
-	if world_item_drop == null or not is_instance_valid(world_item_drop):
-		return
-	if world_item_drop_air_time > 0.0:
-		world_item_drop_air_time = maxf(world_item_drop_air_time - delta, 0.0)
-		world_item_drop_velocity.y += 92.0 * delta
-		world_item_drop.global_position += world_item_drop_velocity * delta
-		_constrain_world_item_drop()
-		if world_item_drop_air_time <= 0.0:
-			world_item_drop_velocity = Vector2.ZERO
-	var distance := _actor_foot(player).distance_to(world_item_drop.global_position)
-	if distance < 10.0 and player_is_moving and world_item_drop_air_time <= 0.0:
-		var push := world_item_drop.global_position - _actor_foot(player)
-		if push.length_squared() < 0.01:
-			push = _player_facing_vector()
-		world_item_drop.global_position += push.normalized() * 18.0 * delta
-		_constrain_world_item_drop()
-	world_item_drop.z_index = int(round(world_item_drop.global_position.y * DEPTH_Z_SCALE)) + 2
-	if world_item_drop_label != null and is_instance_valid(world_item_drop_label):
-		world_item_drop_label.global_position = world_item_drop.global_position + Vector2(0, -10)
-		world_item_drop_label.z_index = world_item_drop.z_index + 1
+	pickup_runtime_controller.call("update_world_item_drop", self, delta)
 
 func _can_interact_with_world_item() -> bool:
-	return world_item_drop != null and is_instance_valid(world_item_drop) and world_item_drop_air_time <= 0.0 and _actor_foot(player).distance_to(world_item_drop.global_position) <= CHEST_INTERACT_DISTANCE
+	return bool(pickup_runtime_controller.call("can_interact_with_world_item", self))
 
 func _collect_world_item_drop() -> bool:
-	if not _can_interact_with_world_item() or world_item_drop_instance == null or player_profile == null:
-		return false
-	if not player_profile.grant_item(world_item_drop_instance):
-		return false
-	_save_player_profile()
-	_spawn_floating_number(_actor_foot(player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, Color("ffd866"), "FOUND %s" % ItemCatalog.new().display_name(world_item_drop_instance))
-	_play_sound("item_pickup", -4.0, 1.0)
-	world_item_drop.queue_free()
-	if world_item_drop_label != null: world_item_drop_label.queue_free()
-	world_item_drop = null
-	world_item_drop_label = null
-	world_item_drop_instance = null
-	return true
+	return bool(pickup_runtime_controller.call("collect_world_item_drop", self))
 
 func _spawn_chroma_pickup(position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
-	var sprite := Sprite2D.new()
-	sprite.name = "ChromaPickup"
-	sprite.texture = _pixel_particle_texture(Color("9fe3b4"), 3)
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.z_as_relative = false
-	sprite.modulate = Color("d8ffe8")
-	sprite.global_position = _nearest_slime_walkable_point(position)
-	add_child(sprite)
-	var launch_rng := RandomNumberGenerator.new()
-	launch_rng.seed = launch_seed if launch_seed != 0 else rng.randi()
-	var velocity := Vector2(launch_rng.randf_range(-chroma_tuning.pickup_launch_spread, chroma_tuning.pickup_launch_spread), -chroma_tuning.pickup_launch_speed)
-	if launch_direction.length_squared() > 0.001:
-		velocity = launch_direction.normalized() * chroma_tuning.pickup_launch_speed
-	chroma_pickup_controller.add_pickup(sprite, value, velocity, chroma_tuning.pickup_air_time)
+	pickup_runtime_controller.call("spawn_chroma_pickup", self, position, value, launch_seed, launch_direction)
 
 func _restore_chroma_pickups(saved_pickups: Array) -> void:
-	for saved_pickup_value in saved_pickups:
-		if not (saved_pickup_value is Dictionary):
-			continue
-		var saved_pickup := saved_pickup_value as Dictionary
-		_spawn_chroma_pickup(saved_pickup.get("position", player_start_position) as Vector2, int(saved_pickup.get("value", CHROMA_PICKUP_VALUE)), 1)
-		var index := chroma_pickup_controller.sprites.size() - 1
-		chroma_pickup_controller.air_times[index] = 0.0
+	pickup_runtime_controller.call("restore_chroma_pickups", self, saved_pickups)
 
 func _update_chroma_pickups(delta: float) -> void:
-	var index := chroma_pickup_controller.sprites.size() - 1
-	while index >= 0:
-		var pickup := chroma_pickup_controller.sprites[index]
-		if pickup == null or not is_instance_valid(pickup):
-			_remove_chroma_pickup(index)
-			index -= 1
-			continue
-		if chroma_pickup_controller.air_times[index] > 0.0:
-			chroma_pickup_controller.air_times[index] = maxf(chroma_pickup_controller.air_times[index] - delta, 0.0)
-			var velocity := chroma_pickup_controller.velocities[index]
-			velocity.y += 92.0 * delta
-			chroma_pickup_controller.velocities[index] = velocity
-			pickup.global_position += velocity * delta
-			pickup.global_position = _nearest_slime_walkable_point(pickup.global_position)
-		else:
-			var distance := _actor_foot(player).distance_to(pickup.global_position)
-			if distance <= chroma_tuning.pickup_collection_distance:
-				_collect_chroma_pickup(index)
-				index -= 1
-				continue
-		pickup.z_index = int(round(pickup.global_position.y * DEPTH_Z_SCALE)) + 2
-		pickup.scale = Vector2.ONE * (1.0 + sin(Time.get_ticks_msec() * 0.008 + float(index)) * 0.08)
-		index -= 1
+	pickup_runtime_controller.call("update_chroma_pickups", self, delta)
 
 func _collect_chroma_pickup(index: int) -> void:
-	var value := chroma_pickup_controller.values[index]
-	var restored := false
-	if player_chroma_component != null and is_instance_valid(player_chroma_component):
-		restored = bool(player_chroma_component.call("restore_neutral_chroma", value))
-		_update_player_mp_ui()
-	if restored:
-		_spawn_floating_number(_actor_foot(player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, Color("9fe3b4"), "+%d CHROMA" % value)
-		_play_sound("item_pickup", -6.0, 1.15)
-	_remove_chroma_pickup(index)
-	# Gray and full Chroma intentionally consume the pickup without granting
-	# anything. This keeps pickups from becoming permanent room clutter.
+	pickup_runtime_controller.call("collect_chroma_pickup", self, index)
 
 func _remove_chroma_pickup(index: int) -> void:
-	chroma_pickup_controller.remove(index)
+	pickup_runtime_controller.call("remove_chroma_pickup", self, index)
 
 func _clear_chroma_pickups() -> void:
-	chroma_pickup_controller.clear()
+	pickup_runtime_controller.call("clear_chroma_pickups", self)
 
 func _loot_grade_bonus(grade: String = "") -> float:
 	var value := grade.to_upper() if not grade.is_empty() else (player_profile.last_run_grade if player_profile != null else "D")
@@ -291,29 +131,11 @@ func _update_music_state() -> void:
 	else:
 		_fade_out_music()
 func _set_gold_value(value: int) -> void:
-	if player_profile == null:
-		return
-	player_profile.gold = maxi(value, 0)
-	_save_player_profile()
-	_update_gold_indicator()
+	profile_runtime_controller.call("set_gold_value", self, value)
 func _sync_runtime_progression_to_profile() -> void:
-	if player_profile == null:
-		return
-	if player_stats != null and player_stats.manual_allocation_enabled:
-		var allocation := player_stats.manual_allocation()
-		player_profile.allocated_vit = int(allocation["VIT"])
-		player_profile.allocated_str = int(allocation["STR"])
-		player_profile.allocated_def = int(allocation["DEF"])
-		player_profile.allocated_spd = int(allocation["SPD"])
-	_save_player_profile()
+	profile_runtime_controller.call("sync_runtime_progression_to_profile", self)
 func _respec_player_stats() -> int:
-	if player_profile == null or not player_profile.has_started:
-		return 0
-	var refunded := player_profile.reset_allocated_stats()
-	_apply_profile_to_runtime()
-	_apply_player_level()
-	_sync_runtime_progression_to_profile()
-	return refunded
+	return int(profile_runtime_controller.call("respec_player_stats", self))
 func _physics_process(delta: float) -> void:
 	if input_router != null: input_router.poll(_input_context())
 	gameplay_frame_controller.tick(self, delta)
@@ -661,149 +483,44 @@ func _start_from_hub() -> void:
 	_begin_scene_transition()
 
 func _run_difficulty_bonus() -> int:
-	if player_profile == null:
-		return 0
-	return clampi(player_profile.difficulty_rank - 1, 0, 12)
+	return int(run_flow_controller.call("run_difficulty_bonus", self))
 
 func _run_rank() -> int:
-	return maxi(player_profile.difficulty_rank if player_profile != null else 1, 1)
+	return int(run_flow_controller.call("run_rank", self))
 
 func _apply_run_rank_grade(grade: String) -> void:
-	ProgressionControllerScript.apply_run_grade(player_profile, grade)
+	run_flow_controller.call("apply_run_rank_grade", self, grade)
 
 func _begin_new_run() -> void:
-	_combat_momentum().reset_all()
-	if player_chroma_component != null:
-		player_chroma_component.begin_new_run()
-	var starter_palette := "red"
-	if player_profile != null:
-		starter_palette = AspectCatalogScript.palette_for_flame(player_profile.starter_flame)
-	run_start_palette_name = starter_palette
-	var tutorial_run: bool = player_profile == null or player_profile.completed_runs == 0
-	starter_flame_attuned_this_run = not tutorial_run
-	# The initial room may have been laid out before new-file selection was
-	# confirmed. Reassign the hub flame here so its visual and interaction target
-	# always match the persisted starter flame for this run.
-	if current_room_type == DungeonGraph.ROOM_START and rest_fire != null:
-		_apply_rest_fire_palette(starter_palette)
-	# The selected flame is present in the hub, but every run opens Gray at zero.
-	# The existing presentation bridge follows that state until attunement is
-	# connected to the full ability/presentation pipeline.
-	screen_state_controller.player_palette_name = "grey"
-	current_player_palette_name = "grey"
-	_apply_player_palette_async("grey")
-	_update_player_mp_ui()
-	# The first room is the starter-flame lesson. The player must attune before
-	# the hub exit becomes usable, but this gate is opened permanently for the
-	# remainder of the run once the flame is touched.
-	if current_room_type == DungeonGraph.ROOM_START and tutorial_run:
-		_set_door_active(false)
-		_set_entrance_open(false)
-	if run_state != null:
-		run_state.begin(current_dungeon_seed, _run_difficulty_bonus(), _player_max_health())
+	run_flow_controller.call("begin_new_run", self)
 func _return_to_hub() -> void:
-	_settle_current_run(&"defeat" if player_dead else &"return_to_hub")
-	if player_profile != null:
-		player_profile.open_hub_on_load = false
-		player_profile.pending_route = "run"
-		_save_player_profile()
-	_begin_scene_transition()
+	run_flow_controller.call("return_to_hub", self)
 func _settle_current_run(result: StringName) -> bool:
-	if not RunSettlement.can_settle(run_state, result):
-		return false
-	_sync_runtime_progression_to_profile()
-	return RunSettlement.settle(player_profile, run_state, result)
+	return bool(run_flow_controller.call("settle_current_run", self, result))
 func _tick_run_telemetry(delta: float) -> void:
-	if run_state == null or not run_state.active:
-		return
-	run_state.tick(delta)
-	if _is_run_combat_active():
-		run_state.record_combat_time(delta, player_is_moving)
-	if player_is_moving:
-		run_state.record_movement(delta)
+	run_flow_controller.call("tick_run_telemetry", self, delta)
 func _is_run_combat_active() -> bool:
-	return run_state != null and run_state.active and _is_any_slime_aggroed()
+	return bool(run_flow_controller.call("is_run_combat_active", self))
 func _on_player_successful_block(_shield_damage: float, _health_damage: float) -> void:
-	if run_state != null and _is_run_combat_active():
-		run_state.record_block()
-	_play_sound("block", -8.0, 0.95 + rng.randf_range(-0.08, 0.08))
+	run_flow_controller.call("on_player_successful_block", self, _shield_damage, _health_damage)
 
 func _record_run_action_input(action: StringName, accepted: bool) -> void:
-	if run_state != null and run_state.active:
-		run_state.record_action_input(action, accepted)
+	run_flow_controller.call("record_run_action_input", self, action, accepted)
 
 func _clear_reward_rarity(score: int, roll: float) -> StringName:
-	return _roll_run_loot_rarity(roll, clampf(float(score) / 100.0, 0.0, 1.0))
+	return run_flow_controller.call("clear_reward_rarity", self, score, roll) as StringName
 
 func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0) -> StringName:
-	var performance_bonus := score_quality * 3.0 if score_quality >= 0.0 else _loot_grade_bonus()
-	return ItemCatalog.new().roll_run_rarity(roll, _run_rank(), performance_bonus)
+	return run_flow_controller.call("roll_run_loot_rarity", self, roll, score_quality) as StringName
 
 func _complete_run() -> void:
-	if run_state == null or run_state.settled or screen_state_controller.run_complete_overlay == null or screen_state_controller.run_complete_overlay.visible:
-		return
-	_finalize_run_exploration()
-	_finalize_run_enemy_total()
-	var grade: Dictionary = RunGradeEvaluator.evaluate(run_state, run_state.starting_health)
-	var score := int(grade["score"])
-	_apply_run_rank_grade(str(grade["grade"]))
-	var gold_reward := 45 + score * 3 + int(grade["variety_count"]) * 8
-	var reward_rng := RandomNumberGenerator.new()
-	reward_rng.seed = current_dungeon_seed ^ run_state.run_id.hash() ^ score * 7919
-	var dropped_item: ItemInstance = null
-	if reward_rng.randf() < clampf(0.30 + float(score) * 0.0065, 0.30, 0.95):
-		var catalog := ItemCatalog.new()
-		var slot := ItemCatalog.SLOTS[reward_rng.randi_range(0, ItemCatalog.SLOTS.size() - 1)]
-		var rarity := _clear_reward_rarity(score, reward_rng.randf())
-		dropped_item = catalog.generate_item(slot, reward_rng.randi(), player_profile.level, rarity)
-		dropped_item.instance_id = player_profile.create_item_id("clear")
-		player_profile.grant_item(dropped_item)
-	if player_profile != null:
-		player_profile.gold += gold_reward
-		player_profile.completed_runs += 1
-		player_profile.last_clear_score = score
-	_update_gold_indicator()
-	var drop_label := "NO GEAR DROP"
-	var drop_color := Color8(150, 156, 170)
-	if dropped_item != null:
-		var reward_catalog := ItemCatalog.new()
-		drop_label = reward_catalog.display_name(dropped_item)
-		drop_color = reward_catalog.rarity_color(dropped_item.rarity)
-	run_state.clear_summary = {"score": score, "grade": str(grade["grade"]), "gold": gold_reward, "drop": drop_label, "difficulty": _run_difficulty_bonus(), "run_rank": _run_rank(), "time": run_state.elapsed_time, "damage": run_state.damage_taken, "variety": int(grade["variety_count"]), "variety_max": int(grade["variety_max"]), "kills": run_state.enemies_killed, "total_enemies": run_state.total_enemies, "blocks": run_state.block_count, "attacks": run_state.attack_count, "attack_hits": run_state.attack_swing_hit_count, "accuracy": float(grade["accuracy"]), "wasted_inputs": run_state.total_wasted_inputs(), "explored_rooms": int(grade["explored_rooms"]), "explorable_rooms": int(grade["explorable_rooms"]), "dodges": run_state.dodge_count, "time_quality": float(grade["time_score"]) / 28.0, "survival_quality": float(grade["survival_score"]) / 25.0, "control_quality": float(grade["control_score"]) / 2.0}
-	_sync_runtime_progression_to_profile()
-	_settle_current_run(&"complete")
-	_play_sound("run_clear", -6.0, 1.0)
-	_show_run_complete(drop_color)
+	run_flow_controller.call("complete_run", self)
 
 func _show_run_complete(drop_color: Color) -> void:
-	if screen_state_controller.run_complete_overlay == null or run_state == null:
-		return
-	var summary := run_state.clear_summary
-	var elapsed := int(round(float(summary.get("time", 0.0))))
-	var kills := int(summary.get("kills", 0))
-	var total_enemies := maxi(int(summary.get("total_enemies", 0)), kills)
-	var exploration_quality := float(summary.get("explored_rooms", 0)) / float(maxi(int(summary.get("explorable_rooms", 0)), 1))
-	var kill_quality := float(kills) / float(maxi(total_enemies, 1))
-	var accuracy_quality := float(summary.get("accuracy", 0.0))
-	var style_quality := float(summary.get("variety", 0)) / float(maxi(int(summary.get("variety_max", 0)), 1))
-	var lines := ["GRADE %s    SCORE %03d" % [str(summary.get("grade", "D")), int(summary.get("score", 0))], "TIME %02d:%02d  DMG %d" % [floori(float(elapsed) / 60.0), elapsed % 60, roundi(float(summary.get("damage", 0.0)))], "EXPLORE %d/%d" % [int(summary.get("explored_rooms", 0)), int(summary.get("explorable_rooms", 0))], "KILLS %d/%d  BLOCKS %d  DODGES %d" % [kills, total_enemies, int(summary.get("blocks", 0)), int(summary.get("dodges", 0))], "ATTACKS %d  HITS %d" % [int(summary.get("attacks", 0)), int(summary.get("attack_hits", 0))], "ACCURACY %d%%" % roundi(accuracy_quality * 100.0), "MISINPUTS %d" % int(summary.get("wasted_inputs", 0)), "STYLE %d/%d" % [int(summary.get("variety", 0)), int(summary.get("variety_max", 3))], "SPOILS", "+%d GOLD" % int(summary.get("gold", 0)), str(summary.get("drop", "NO GEAR DROP"))]
-	var line_colors := [Color8(255, 205, 117), _run_metric_color((float(summary.get("time_quality", 0.0)) + float(summary.get("survival_quality", 0.0))) * 0.5), _run_metric_color(exploration_quality), _run_metric_color(kill_quality), _run_metric_color(accuracy_quality), _run_metric_color(accuracy_quality), _run_metric_color(float(summary.get("control_quality", 0.0))), _run_metric_color(style_quality), Color8(255, 205, 117), Color8(255, 205, 117), drop_color]
-	for index in mini(screen_state_controller.run_complete_texts.size(), lines.size()):
-		screen_state_controller.run_complete_texts[index].texture = _pixel_text_texture(lines[index], line_colors[index])
-	screen_state_controller.run_complete_overlay.visible = true
-	screen_state_controller.set_state(&"run_complete")
+	run_flow_controller.call("show_run_complete", self, drop_color)
 
 func _run_metric_color(quality: float) -> Color:
-	var value := clampf(quality, 0.0, 1.0)
-	if value >= 0.95:
-		return Color8(177, 62, 83) # Mythic
-	if value >= 0.85:
-		return Color8(255, 205, 117) # Legendary
-	if value >= 0.70:
-		return Color8(118, 66, 138) # Epic
-	if value >= 0.50:
-		return Color8(65, 166, 246) # Rare
-	return Color.WHITE # Common
+	return run_flow_controller.call("metric_color", quality) as Color
 
 func _update_run_complete_input() -> void:
 	if screen_state_controller.run_complete_button == null:
@@ -812,13 +529,7 @@ func _update_run_complete_input() -> void:
 		screen_state_controller.run_complete_button.pressed.emit()
 
 func _return_from_run_complete() -> void:
-	if screen_state_controller.run_complete_overlay != null:
-		screen_state_controller.run_complete_overlay.visible = false
-	if player_profile != null:
-		player_profile.open_hub_on_load = false
-		player_profile.pending_route = "run"
-		_save_player_profile()
-	_begin_scene_transition()
+	run_flow_controller.call("return_from_run_complete", self)
 func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible: return
 	_apply_run_rank_grade("F")
