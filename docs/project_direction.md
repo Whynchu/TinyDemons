@@ -1,5 +1,17 @@
 # Tiny Demons — Project Direction & Feature Set
 
+> **Status notice — elemental direction partially superseded (2026-08-22).**
+> The eight-starting-aspect table, matchup wheel, Arcane/Gray rules, independent
+> palette selection, and random-rest-fire assumptions in this document are
+> legacy direction. The authoritative elemental design is now
+> `docs/Tiny Demons — Elemental Chroma System Design.md`, with technical
+> sequencing in `docs/elemental-chroma-implementation-plan.md`. Current base
+> aspects are Fire, Water, and Electric; Gray is the natural zero-Chroma state;
+> every run begins Gray at 0; and the file's permanently selected starter flame
+> appears in the hub for optional or curriculum-required attunement to 100.
+> Non-elemental sections of this document remain useful unless contradicted by
+> a newer feature document.
+
 > Status: **Design proposal — discussion first.** This is the "what makes Tiny
 > Demons *Tiny Demons*" document. It projects the mid-big picture direction and
 > defines the feature set that gives the game a distinct identity. Nothing here
@@ -47,7 +59,11 @@ one of them, or it's scope creep.
 This is the biggest lever. The 8 player palettes become 8 demon aspects with
 real combat meaning.
 
-### Aspect table (locked)
+### Legacy aspect table (superseded)
+
+This table is retained as historical design context only. It is not an
+implementation target; use the three-base-aspect Chroma documents linked in
+the status notice above.
 
 | Palette | Aspect | Role |
 | --- | --- | --- |
