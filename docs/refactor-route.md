@@ -323,8 +323,18 @@ regression.
 Initial closeout inventory completed 2026-08-22: runtime references resolve to
 tracked files, baked/reconstructed output provenance is documented in
 `docs/asset-provenance.md`, and checkpoint `107f1cc` is pushed. Release provenance
-approval and an observed target-runtime frame-time sample remain before the final
-closeout gate.
+approval remains a release/compliance gate. The first supported-runtime reference
+sample is now recorded at 6.894 ms average / 7.925 ms worst over 180 frames after
+a 60-frame warmup; Phase A0 did not record a numeric frame-time baseline.
+
+Fresh-clone verification completed on 2026-08-22 from checkpoint `9f1b5e9`:
+Godot 4.7.1 editor import passed, all 15 smoke scripts passed, and the main scene
+booted headlessly with exit code 0. The remaining certificate-store and editor-
+settings messages are host-environment warnings.
+
+Phase C closeout is complete for engineering verification. Third-party sound
+library and reconstructed-audio provenance/licensing approval remains explicitly
+scheduled for release review; see `docs/asset-provenance.md`.
 
 The Phase C playtest regression found during closeout—attack-1 stale-frame
 ghosting—was fixed by centralizing player/attack-layer visibility and is covered by
