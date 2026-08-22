@@ -1,6 +1,6 @@
 # Tiny Demons — Composition Root Reduction Plan
 
-Status: proposed for review; implementation not started
+Status: implementation active; 2,000-line milestone achieved
 
 Plan date: 2026-08-22
 
@@ -37,7 +37,7 @@ Repository measurements on 2026-08-22:
 
 | Surface | Current measurement | Desired end state |
 | --- | ---: | ---: |
-| `gameplay.gd` | 2,863 lines / 424 functions | 150–300 lines |
+| `gameplay.gd` | 1,999 lines / 422 functions | 150–300 lines |
 | `gameplay_state.gd` | 264 lines / 174 plain variables | Removed or limited to documented global session state |
 | `screen_state_controller.gd` | 1,235 lines | Split by screen/domain ownership |
 | `player_equipment_visual_component.gd` | 801 lines | Reviewed and split if it contains multiple lifecycles |
@@ -58,6 +58,12 @@ act as extensions of the old root object:
 This means the architecture is distributed physically but remains centrally
 coupled behaviorally. Reducing only `gameplay.gd` while preserving those dynamic
 root dependencies would move the god object rather than remove it.
+
+The first composition milestone is now complete: profile, pickup, run, hub,
+save/character-creation, and puzzle-room workflows have dedicated runtime
+owners. The remaining work is the deeper coupling cleanup described below,
+especially replacing compatibility delegates with typed owner commands and
+signals.
 
 ## 3. The one purpose of `gameplay.gd`
 

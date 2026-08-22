@@ -6,6 +6,9 @@ const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/player_asp
 const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/profile_runtime_controller.gd")
 const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/pickup_runtime_controller.gd")
 const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/run_flow_controller.gd")
+const HUB_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/hub_flow_controller.gd")
+const SAVE_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/save_flow_controller.gd")
+const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/room_puzzle_controller.gd")
 
 
 func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:
@@ -22,6 +25,9 @@ func initialize(root: GameplayState) -> void:
 	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
 	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController")
 	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController")
+	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
+	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")
+	root.room_puzzle_controller = _add_runtime_node(root, ROOM_PUZZLE_CONTROLLER_SCRIPT, "RoomPuzzleController")
 	var profile := ProfileSaveService.load_profile()
 	root.player_profile = profile
 	root.has_persistent_profile = has_profile

@@ -2,6 +2,7 @@ extends SceneTree
 
 const BASELINE_GAMEPLAY_LINES := 2863
 const BASELINE_GAMEPLAY_FUNCTIONS := 424
+const COMPOSITION_ROOT_TARGET_LINES := 2000
 
 
 func _initialize() -> void:
@@ -13,6 +14,7 @@ func _initialize() -> void:
 		if line.begins_with("func "):
 			gameplay_functions += 1
 	_expect(gameplay_lines <= BASELINE_GAMEPLAY_LINES, "gameplay.gd does not grow beyond the R0 baseline", failures)
+	_expect(gameplay_lines <= COMPOSITION_ROOT_TARGET_LINES, "gameplay.gd meets the 2,000-line composition milestone", failures)
 	_expect(gameplay_functions <= BASELINE_GAMEPLAY_FUNCTIONS, "gameplay.gd function count does not grow beyond the R0 baseline", failures)
 	_expect(load("res://scripts/gameplay_bootstrap.gd") != null, "bootstrap script remains loadable", failures)
 	_expect(load("res://scripts/gameplay_frame_controller.gd") != null, "frame controller remains loadable", failures)
