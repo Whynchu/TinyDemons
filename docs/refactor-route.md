@@ -328,9 +328,12 @@ sample is now recorded at 6.894 ms average / 7.925 ms worst over 180 frames afte
 a 60-frame warmup; Phase A0 did not record a numeric frame-time baseline.
 
 Fresh-clone verification completed on 2026-08-22 from checkpoint `9f1b5e9`:
-Godot 4.7.1 editor import passed, all 15 smoke scripts passed, and the main scene
+Godot 4.7.1 editor import passed, all 15 original smoke scripts passed, and the main scene
 booted headlessly with exit code 0. The remaining certificate-store and editor-
 settings messages are host-environment warnings.
+
+The standard runner now includes the boss geometry regression and frame-time
+sampler; the complete local gate is 17/17 smoke scripts plus main-scene boot.
 
 Phase C closeout is complete for engineering verification. Third-party sound
 library and reconstructed-audio provenance/licensing approval remains explicitly
