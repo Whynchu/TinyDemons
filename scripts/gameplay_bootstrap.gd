@@ -4,53 +4,61 @@ class_name GameplayBootstrap
 const PLAYER_CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/player_aspect_ability_component.gd")
 
-func initialize(root: Object) -> void:
+
+func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:
+	var node := script.new() as Node
+	node.name = node_name
+	(parent if parent != null else root).add_child(node)
+	return node
+
+
+func initialize(root: GameplayState) -> void:
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
-	root.set("input_router", root.call("_add_runtime_node", InputRouter, "InputRouter"))
+	root.input_router = _add_runtime_node(root, InputRouter, "InputRouter") as InputRouter
 	var profile := ProfileSaveService.load_profile()
-	root.set("player_profile", profile)
-	root.set("has_persistent_profile", has_profile)
-	root.set("screen_state_controller", root.call("_add_runtime_node", ScreenStateController, "ScreenStateController"))
+	root.player_profile = profile
+	root.has_persistent_profile = has_profile
+	root.screen_state_controller = _add_runtime_node(root, ScreenStateController, "ScreenStateController") as ScreenStateController
 	root.call("_apply_profile_to_runtime")
-	root.set("gameplay_frame_controller", root.call("_add_runtime_node", GameplayFrameController, "GameplayFrameController"))
-	var effects_tuning := root.get("effects_tuning") as EffectsTuning
-	root.set("walkable_area", root.call("_add_runtime_node", WalkableArea, "WalkableArea"))
-	root.set("actor_collision_system", root.call("_add_runtime_node", ActorCollisionSystem, "ActorCollisionSystem"))
-	var geometry_debug := root.call("_add_runtime_node", ActorGeometryDebugDrawer, "ActorGeometryDebugDrawer") as ActorGeometryDebugDrawer
-	geometry_debug.enabled = bool(root.get("debug_actor_geometry")); geometry_debug.z_as_relative = false; geometry_debug.z_index = 4096; root.set("actor_geometry_debug_drawer", geometry_debug)
-	root.set("depth_sorter", root.call("_add_runtime_node", DepthSorter, "DepthSorter"))
-	var occlusion := root.call("_add_runtime_node", OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
-	occlusion.resolution_scale = effects_tuning.resolution_scale; root.set("occlusion_renderer", occlusion)
-	root.set("room_controller", root.call("_add_runtime_node", RoomController, "RoomController"))
-	root.set("shadow_controller", root.call("_add_runtime_node", ShadowController, "ShadowController"))
-	root.set("interaction_component", root.call("_add_runtime_node", InteractionComponent, "InteractionComponent"))
-	root.set("chest_controller", root.call("_add_runtime_node", ChestController, "ChestController", root.get("chest")))
-	root.set("npc_controller", root.call("_add_runtime_node", NpcController, "NpcController", root.get("cloaked_demon")))
-	root.set("rest_fire_controller", root.call("_add_runtime_node", RestFireController, "RestFireController", root.get("rest_fire")))
-	root.set("hud_controller", root.call("_add_runtime_node", HudController, "HudController", root.get("ui")))
-	root.set("sound_manager", root.call("_add_runtime_node", SoundManager, "SoundManager"))
-	root.set("effects_spawner", root.call("_add_runtime_node", EffectsSpawner, "EffectsSpawner"))
-	root.set("magic_projectile_controller", root.call("_add_runtime_node", MagicProjectileController, "MagicProjectileController"))
-	root.set("chroma_pickup_controller", root.call("_add_runtime_node", ChromaPickupController, "ChromaPickupController"))
-	var rng := root.get("rng") as RandomNumberGenerator
+	root.gameplay_frame_controller = _add_runtime_node(root, GameplayFrameController, "GameplayFrameController") as GameplayFrameController
+	var effects_tuning := root.effects_tuning
+	root.walkable_area = _add_runtime_node(root, WalkableArea, "WalkableArea") as WalkableArea
+	root.actor_collision_system = _add_runtime_node(root, ActorCollisionSystem, "ActorCollisionSystem") as ActorCollisionSystem
+	var geometry_debug := _add_runtime_node(root, ActorGeometryDebugDrawer, "ActorGeometryDebugDrawer") as ActorGeometryDebugDrawer
+	geometry_debug.enabled = root.debug_actor_geometry; geometry_debug.z_as_relative = false; geometry_debug.z_index = 4096; root.actor_geometry_debug_drawer = geometry_debug
+	root.depth_sorter = _add_runtime_node(root, DepthSorter, "DepthSorter") as DepthSorter
+	var occlusion := _add_runtime_node(root, OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
+	occlusion.resolution_scale = effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
+	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
+	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
+	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
+	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
+	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
+	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
+	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
+	root.sound_manager = _add_runtime_node(root, SoundManager, "SoundManager") as SoundManager
+	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
+	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
+	root.chroma_pickup_controller = _add_runtime_node(root, ChromaPickupController, "ChromaPickupController") as ChromaPickupController
+	var rng := root.rng
 	rng.randomize()
 	var run_state := RunState.new()
-	root.set("run_state", run_state)
-	var dungeon_graph := root.get("dungeon_graph") as DungeonGraph
+	root.run_state = run_state
+	var dungeon_graph := root.dungeon_graph
 	dungeon_graph.configure_progression(profile.completed_runs)
 	var dungeon_seed := rng.randi()
-	root.set("current_dungeon_seed", dungeon_seed)
+	root.current_dungeon_seed = dungeon_seed
 	dungeon_graph.initialize(dungeon_seed)
 	var initial_room_id := dungeon_graph.start_room_id
-	if bool(root.get("debug_start_in_boss_room")):
+	if root.debug_start_in_boss_room:
 		var boss_connection: DungeonGraph.ConnectionRecord = dungeon_graph.ensure_connection(
 			dungeon_graph.start_room_id,
 			DungeonGraph.WALL_RIGHT,
 			DungeonGraph.ROOM_DOWNSTAIRS
 		)
 		initial_room_id = boss_connection.destination_room_id
-	root.set("current_room_id", initial_room_id)
+	root.current_room_id = initial_room_id
 	root.call("_sync_current_room_metadata")
 	(root.get("room_controller") as RoomController).set_current_room(root.get("current_room_id"), root.get("current_room_type"))
 	root.call("_collect_dungeon_sockets"); (root.get("room_controller") as RoomController).validate_socket_setup(); root.call("_ensure_current_room_layout")
