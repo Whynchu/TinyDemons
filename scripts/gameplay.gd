@@ -2644,11 +2644,12 @@ func _slime_visual_center(slime: Sprite2D) -> Vector2:
 
 
 func _magic_target_point(slime: Sprite2D) -> Vector2:
-	# Aim at the same world-space collision area used by projectile hit tests,
-	# rather than the sprite's decorative visual center.
+	# The floor CollisionGuide is for locomotion/contact, not combat aiming. Use
+	# the authored damage body so homing projectiles target the visible boss body.
 	if puzzle_torches.has(slime):
 		return slime.global_position
-	return ActorGeometry.combat_target_point(_collision_rect(slime))
+	var body := _slime_body_polygon(slime)
+	return ActorGeometry.polygon_center(body) if body.size() >= 3 else ActorGeometry.combat_target_point(_collision_rect(slime))
 func _spawn_magic_projectile(origin: Vector2, direction: Vector2, homing_target: Sprite2D = null) -> void:
 	var palette := current_player_palette_name
 	var base_color := PaletteLibrary.normal(palette)
