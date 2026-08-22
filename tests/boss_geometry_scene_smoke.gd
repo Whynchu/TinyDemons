@@ -31,6 +31,16 @@ func _initialize() -> void:
 		_expect(body_node != null and body_node.position.is_equal_approx(boss.offset), "boss body node receives the same visual offset as its sprite", failures)
 		var combat_target: Vector2 = gameplay.call("_magic_target_point", boss)
 		_expect(Geometry2D.is_point_in_polygon(combat_target, body), "boss combat target stays inside authored body", failures)
+		var player := gameplay.get("player") as Sprite2D
+		var collision_system := gameplay.get("actor_collision_system") as ActorCollisionSystem
+		if player != null and collision_system != null:
+			var player_rect := gameplay.call("_collision_rect", player) as Rect2
+			var below_center := Vector2(body_rect.get_center().x, body_rect.end.y + player_rect.size.y * 0.5 + 1.0)
+			player.global_position += below_center - player_rect.get_center()
+			_expect(collision_system.overlap_push_vector(gameplay, boss, player) == Vector2.ZERO, "boss has no contact wall below authored body", failures)
+			player_rect = gameplay.call("_collision_rect", player) as Rect2
+			player.global_position += body_rect.get_center() - player_rect.get_center()
+			_expect(collision_system.overlap_push_vector(gameplay, boss, player) != Vector2.ZERO, "boss contact begins inside authored body", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
