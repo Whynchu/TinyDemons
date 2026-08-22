@@ -13,6 +13,11 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 			continue
 		for child in actor.get_children():
 			if child is Node2D and (child.name.ends_with("Guide") or child.name.begins_with("AttackGuide") or child.name == "CollisionPolygon"):
+				# Boss collision guides describe the scaled visual body. Inverse-
+				# scaling them makes the runtime guide detach from the editor-authored
+				# position after the boss sprite is enlarged.
+				if child.name == "CollisionGuide" and actor.name.begins_with("Slime") and float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
+					continue
 				(child as Node2D).scale = Vector2(1.0 / actor_scale.x, 1.0 / actor_scale.y)
 		if actor.name.begins_with("Slime"):
 			update_attack_guides.call(actor)
