@@ -30,7 +30,7 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
 	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
 	if new_variant == 2: root.set("player_between_timer", 0.0)
-	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); player.visible = false; (root.get("player_attack_visual") as Sprite2D).visible = true; anim.apply_frame(root)
+	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); (root.get("player_attack_visual") as Sprite2D).visible = false; player.visible = false; anim.apply_frame(root)
 
 
 func apply_hitbox(root: Object) -> void:
