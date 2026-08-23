@@ -1,0 +1,254 @@
+extends RefCounted
+class_name DungeonLayoutDefinition
+
+## Immutable authored topology input for a run.
+##
+## The graph owns runtime room/connection records. This definition owns only
+## the authored contract: coordinates, room categories, door requirements, and
+## minimap placement.
+
+class RoomSpec extends RefCounted:
+	var id: StringName
+	var coordinate := Vector2i.ZERO
+	var minimap_coordinate := Vector2i.ZERO
+	var room_type: StringName = DungeonGraph.ROOM_COMBAT
+	var chest_count := 0
+	var special_respawn_required_color: StringName = &""
+	var fire_flame: StringName = &""
+	var seed_salt := 0
+
+	func _init(
+		new_id: StringName,
+		new_coordinate: Vector2i,
+		new_minimap_coordinate: Vector2i,
+		new_room_type: StringName,
+		new_chest_count: int = 0,
+		new_respawn_color: StringName = &"",
+		new_seed_salt: int = 0,
+		new_fire_flame: StringName = &""
+	) -> void:
+		id = new_id
+		coordinate = new_coordinate
+		minimap_coordinate = new_minimap_coordinate
+		room_type = new_room_type
+		chest_count = new_chest_count
+		special_respawn_required_color = new_respawn_color
+		seed_salt = new_seed_salt
+		fire_flame = new_fire_flame
+
+
+class ConnectionSpec extends RefCounted:
+	var source_room_id: StringName
+	var exit_socket: StringName
+	var destination_room_id: StringName
+	var destination_entry: StringName
+	var color_requirement: StringName = &""
+	var hidden_until_clear := false
+	var hidden_until_event: StringName = &""
+	var minimap_coordinate := Vector2i.ZERO
+	var requires_source_room_clear := true
+	# Rare branch exception: the destination room may enter the source room
+	# before that source enemy room is cleared, while the source's own exit
+	# remains clear-gated.
+	var allow_entry_before_source_clear := false
+	var locks_entry_on_destination_engagement := true
+	var route_role: StringName = &"main"
+
+	func _init(
+		new_source_room_id: StringName,
+		new_exit_socket: StringName,
+		new_destination_room_id: StringName,
+		new_destination_entry: StringName,
+		new_color_requirement: StringName = &"",
+		new_hidden_until_clear: bool = false,
+		new_hidden_until_event: StringName = &"",
+		new_minimap_coordinate: Vector2i = Vector2i.ZERO,
+		new_requires_source_room_clear: bool = true,
+		new_locks_entry_on_destination_engagement: bool = true,
+		new_route_role: StringName = &"main",
+		new_allow_entry_before_source_clear: bool = false
+	) -> void:
+		source_room_id = new_source_room_id
+		exit_socket = new_exit_socket
+		destination_room_id = new_destination_room_id
+		destination_entry = new_destination_entry
+		color_requirement = new_color_requirement
+		hidden_until_clear = new_hidden_until_clear
+		hidden_until_event = new_hidden_until_event
+		minimap_coordinate = new_minimap_coordinate
+		requires_source_room_clear = new_requires_source_room_clear
+		locks_entry_on_destination_engagement = new_locks_entry_on_destination_engagement
+		route_role = new_route_role
+		allow_entry_before_source_clear = new_allow_entry_before_source_clear
+
+
+var layout_id: StringName = &""
+var map_size := Vector2i(16, 23)
+var rooms: Array[RoomSpec] = []
+var connections: Array[ConnectionSpec] = []
+var decorative_door_pixels: Array[Dictionary] = []
+
+
+func _init(new_layout_id: StringName = &"", new_map_size: Vector2i = Vector2i(16, 23)) -> void:
+	layout_id = new_layout_id
+	map_size = new_map_size
+
+
+func add_room(spec: RoomSpec) -> RoomSpec:
+	rooms.append(spec)
+	return spec
+
+
+func make_room_spec(
+	new_id: StringName,
+	new_coordinate: Vector2i,
+	new_minimap_coordinate: Vector2i,
+	new_room_type: StringName,
+	new_chest_count: int = 0,
+	new_respawn_color: StringName = &"",
+	new_seed_salt: int = 0,
+	new_fire_flame: StringName = &""
+) -> RoomSpec:
+	return RoomSpec.new(new_id, new_coordinate, new_minimap_coordinate, new_room_type, new_chest_count, new_respawn_color, new_seed_salt, new_fire_flame)
+
+
+func add_connection(spec: ConnectionSpec) -> ConnectionSpec:
+	connections.append(spec)
+	return spec
+
+
+static func apply_rare_enemy_branch_entry_exceptions(layout) -> void:
+	if layout == null:
+		return
+	for connection in layout.connections:
+		if connection.allow_entry_before_source_clear:
+			continue
+		var source = layout.room_by_id(connection.source_room_id)
+		var destination = layout.room_by_id(connection.destination_room_id)
+		if source == null or destination == null:
+			continue
+		var source_delta: Vector2i = source.minimap_coordinate - destination.minimap_coordinate
+		var is_lower_left_branch: bool = connection.destination_entry == DungeonGraph.BOTTOM_LEFT and source_delta == Vector2i(-2, 2)
+		var is_lower_right_branch: bool = connection.destination_entry == DungeonGraph.BOTTOM_RIGHT and source_delta == Vector2i(2, 2)
+		if not is_lower_left_branch and not is_lower_right_branch:
+			continue
+		# These rare branch entries point down-left or down-right into a room
+		# whose red/puzzle-A exit is the actual progression gate. Open only the
+		# destination-side entrance before the branch room is cleared; the branch
+		# room's own upper exit remains governed by its normal clear gate.
+		if not _room_has_enemy_clear_gate(source.room_type):
+			continue
+		if not _room_has_enemy_clear_gate(destination.room_type):
+			continue
+		if not _room_has_puzzle_a_exit(layout, destination.id):
+			continue
+		connection.allow_entry_before_source_clear = true
+
+
+static func _room_has_enemy_clear_gate(room_type: StringName) -> bool:
+	return room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room_type == DungeonGraph.ROOM_TREASURE
+
+
+static func _room_has_puzzle_a_exit(layout, room_id: StringName) -> bool:
+	for connection in layout.connections:
+		if connection.source_room_id == room_id and connection.color_requirement == &"puzzle_a":
+			return true
+	return false
+
+
+func make_connection_spec(
+	new_source_room_id: StringName,
+	new_exit_socket: StringName,
+	new_destination_room_id: StringName,
+	new_destination_entry: StringName,
+	new_color_requirement: StringName = &"",
+	new_hidden_until_clear: bool = false,
+	new_hidden_until_event: StringName = &"",
+	new_minimap_coordinate: Vector2i = Vector2i.ZERO,
+	new_requires_source_room_clear: bool = true,
+	new_locks_entry_on_destination_engagement: bool = true,
+	new_route_role: StringName = &"main",
+	new_allow_entry_before_source_clear: bool = false
+) -> ConnectionSpec:
+	return ConnectionSpec.new(new_source_room_id, new_exit_socket, new_destination_room_id, new_destination_entry, new_color_requirement, new_hidden_until_clear, new_hidden_until_event, new_minimap_coordinate, new_requires_source_room_clear, new_locks_entry_on_destination_engagement, new_route_role, new_allow_entry_before_source_clear)
+
+
+func add_decorative_door(pixel: Vector2i, color_requirement: StringName = &"", source_room_id: StringName = &"") -> void:
+	decorative_door_pixels.append({
+		"coordinate": pixel,
+		"color_requirement": color_requirement,
+		"source_room_id": source_room_id,
+	})
+
+
+func room_by_id(room_id: StringName) -> RoomSpec:
+	for spec in rooms:
+		if spec.id == room_id:
+			return spec
+	return null
+
+
+func validate() -> Array[String]:
+	var errors: Array[String] = []
+	var room_ids: Dictionary = {}
+	var minimap_coordinates: Dictionary = {}
+	var start_count := 0
+	var boss_count := 0
+	var cloaked_count := 0
+	var orb_room_count := 0
+	var connection_sockets: Dictionary = {}
+	for spec in rooms:
+		if room_ids.has(spec.id):
+			errors.append("duplicate room id: %s" % spec.id)
+		room_ids[spec.id] = true
+		if minimap_coordinates.has(spec.minimap_coordinate):
+			errors.append("duplicate minimap coordinate: %s" % spec.minimap_coordinate)
+		minimap_coordinates[spec.minimap_coordinate] = true
+		if spec.room_type == DungeonGraph.ROOM_START:
+			start_count += 1
+		elif spec.room_type == DungeonGraph.ROOM_BOSS:
+			boss_count += 1
+		elif spec.room_type == DungeonGraph.ROOM_CLOAKED:
+			cloaked_count += 1
+		if spec.room_type == DungeonGraph.ROOM_ORB:
+			orb_room_count += 1
+		if spec.room_type == DungeonGraph.ROOM_FIRE and layout_id == &"RUN_GENERATED" and spec.fire_flame.is_empty():
+			errors.append("generated Fire Room is missing a flame: %s" % spec.id)
+		if spec.room_type == DungeonGraph.ROOM_FIRE and not spec.fire_flame.is_empty() and spec.fire_flame not in [&"fire", &"water", &"electric"]:
+			errors.append("unknown Fire Room flame: %s" % spec.fire_flame)
+	if start_count != 1:
+		errors.append("expected exactly one Hub room")
+	if boss_count != 1:
+		errors.append("expected exactly one Boss room")
+	if cloaked_count != 1:
+		errors.append("expected exactly one Cloaked room")
+	if layout_id == &"RUN1" and orb_room_count != 2:
+		errors.append("Run 1 expects exactly two identical Orb Rooms")
+	for spec in connections:
+		if not room_ids.has(spec.source_room_id):
+			errors.append("connection source is missing: %s" % spec.source_room_id)
+		if not spec.destination_room_id.is_empty() and not room_ids.has(spec.destination_room_id):
+			errors.append("connection destination is missing: %s" % spec.destination_room_id)
+		var socket_key := "%s:%s" % [spec.source_room_id, spec.exit_socket]
+		if connection_sockets.has(socket_key):
+			errors.append("duplicate authored exit socket: %s" % socket_key)
+		connection_sockets[socket_key] = true
+		if layout_id == &"RUN1" and room_ids.has(spec.source_room_id) and room_ids.has(spec.destination_room_id):
+			var source_spec := room_by_id(spec.source_room_id)
+			var destination_spec := room_by_id(spec.destination_room_id)
+			var map_delta: Vector2i = destination_spec.minimap_coordinate - source_spec.minimap_coordinate
+			var expected_delta := Vector2i(-2, -2) if spec.exit_socket == DungeonGraph.WALL_LEFT else Vector2i(2, -2)
+			if map_delta != expected_delta:
+				errors.append("Run 1 connector is not oriented from the lower map room to its upper destination: %s:%s -> %s" % [spec.source_room_id, spec.exit_socket, spec.destination_room_id])
+			var expected_entry := DungeonGraph.BOTTOM_RIGHT if spec.exit_socket == DungeonGraph.WALL_LEFT else DungeonGraph.BOTTOM_LEFT
+			if spec.destination_entry != expected_entry:
+				errors.append("Run 1 connector has the wrong paired lower entrance: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if not spec.color_requirement.is_empty() and spec.color_requirement not in [&"puzzle_a", &"puzzle_b", &"puzzle_c", &"puzzle_d"]:
+			errors.append("unknown puzzle-color door key: %s" % spec.color_requirement)
+		if spec.route_role.is_empty():
+			errors.append("connection route role is empty: %s:%s" % [spec.source_room_id, spec.exit_socket])
+	for decorative_door in decorative_door_pixels:
+		var decorative_requirement: StringName = decorative_door.get("color_requirement", &"")
+		if not decorative_requirement.is_empty() and decorative_requirement not in [&"puzzle_a", &"puzzle_b", &"puzzle_c", &"puzzle_d"]:
+			errors.append("unknown decorative puzzle-color door key: %s" % decorative_requirement)
+	return errors

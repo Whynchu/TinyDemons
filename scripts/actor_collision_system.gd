@@ -15,8 +15,9 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 			if child is Node2D and (child.name.ends_with("Guide") or child.name.begins_with("AttackGuide") or child.name == "CollisionPolygon"):
 				# Boss collision guides describe the scaled visual body. Inverse-
 				# scaling them makes the runtime guide detach from the editor-authored
-				# position after the boss sprite is enlarged.
-				if child.name == "CollisionGuide" and actor.name.begins_with("Slime") and float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
+				# position after the boss sprite is enlarged. CollisionPolygon is the
+				# boss's foot/walkability shape, so it must inherit that same scale too.
+				if child.name in [&"CollisionGuide", &"CollisionPolygon"] and actor.name.begins_with("Slime") and float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
 					continue
 				(child as Node2D).scale = Vector2(1.0 / actor_scale.x, 1.0 / actor_scale.y)
 		if actor.name.begins_with("Slime"):
@@ -68,8 +69,8 @@ func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: 
 	# the entire separation displacement; it can never stop or shove the boss.
 	if actor_is_boss != other_is_boss:
 		if actor_is_boss:
-			return try_move_swept(other, -push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
-		return try_move_swept(actor, push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+			return _move_regular_away_from_boss(root, other, -push)
+		return _move_regular_away_from_boss(root, actor, push)
 	actor.position += push * 0.5
 	other.position -= push * 0.5
 	var actor_valid := _position_is_valid(root, actor)
@@ -86,6 +87,19 @@ func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: 
 	if _position_is_valid(root, other):
 		return true
 	other.position = other_start
+	return false
+
+
+func _move_regular_away_from_boss(root: Object, regular: Sprite2D, preferred_direction: Vector2) -> bool:
+	if preferred_direction.length_squared() <= 0.0001:
+		return false
+	var directions := [preferred_direction, preferred_direction.rotated(PI * 0.5), preferred_direction.rotated(-PI * 0.5)]
+	for direction in directions:
+		var original := regular.position
+		regular.position += direction.normalized() * 0.75
+		if _position_is_valid(root, regular):
+			return true
+		regular.position = original
 	return false
 
 
@@ -114,7 +128,7 @@ func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, i
 		return bool(is_walkable.call(foot.call(actor)))
 	var polygon: PackedVector2Array = collision_polygon.call(actor)
 	if polygon.size() >= 3:
-		for index in polygon.size():
+		for index: int in polygon.size():
 			var point := polygon[index]
 			var next_point := polygon[(index + 1) % polygon.size()]
 			if not bool(is_slime_walkable.call(point)) or not bool(is_slime_walkable.call((point + next_point) * 0.5)):

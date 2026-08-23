@@ -39,7 +39,8 @@ var transition_hold_timer := 0.0
 var roll_fizzle_active := false
 var roll_fizzle_positions: Dictionary = {}
 var death_active := false
-var mp_desaturation_material: ShaderMaterial = null
+var mp_desaturation_materials: Dictionary = {}
+var mp_saturation := 1.0
 var death_breakup_started := false
 var draw_white_timer := 0.0
 var draw_color_fade_timer := 0.0
@@ -87,14 +88,38 @@ func initialize(root: Object) -> void:
 
 
 func set_mp_desaturation(saturation: float) -> void:
-	if mp_desaturation_material == null:
-		mp_desaturation_material = ShaderMaterial.new()
-		mp_desaturation_material.shader = preload("res://shaders/mp_desaturation.gdshader")
-	mp_desaturation_material.set_shader_parameter("saturation", clampf(saturation, 0.0, 1.0))
-	for layer in layers.values():
-		var sprite := layer as Sprite2D
-		if sprite != null and not occlusion_active:
-			sprite.material = mp_desaturation_material
+	mp_saturation = clampf(saturation, 0.0, 1.0)
+	_refresh_mp_materials()
+
+
+func _refresh_mp_materials() -> void:
+	for layer_value in layers.values():
+		var layer := layer_value as Sprite2D
+		if layer == null:
+			continue
+		_apply_mp_material(layer)
+
+
+func _apply_mp_material(layer: Sprite2D) -> void:
+	if layer == null or occlusion_active or mp_saturation >= 0.999:
+		if not occlusion_active and layer != null:
+			layer.material = null
+		return
+	var grey_key := String(layer.get_meta("mp_grey_key", ""))
+	var grey_frame := int(layer.get_meta("mp_grey_frame", 0))
+	var grey_set: Dictionary = frames_by_palette.get("grey", {}) as Dictionary
+	var grey_frames: Array = grey_set.get(grey_key, [])
+	if grey_frames.is_empty():
+		layer.material = null
+		return
+	var material := mp_desaturation_materials.get(layer) as ShaderMaterial
+	if material == null:
+		material = ShaderMaterial.new()
+		material.shader = preload("res://shaders/mp_desaturation.gdshader")
+		mp_desaturation_materials[layer] = material
+	material.set_shader_parameter("grey_texture", grey_frames[mini(grey_frame, grey_frames.size() - 1)])
+	material.set_shader_parameter("grey_mix", 1.0 - mp_saturation)
+	layer.material = material
 
 
 func _create_occlusion_material() -> void:
@@ -198,6 +223,7 @@ func _set_occlusion_enabled(enabled: bool) -> void:
 	if enabled:
 		_hide_equipment_shadows()
 	else:
+		_refresh_mp_materials()
 		_update_equipment_shadows()
 
 
@@ -392,6 +418,37 @@ func tick(root: Object, delta: float) -> void:
 	if breakup_pending and not breakup_started and fade_timer <= 0.0:
 		_spawn_breakup(root)
 	_update_layers(root)
+
+
+func begin_attack_visual(root: Object) -> void:
+	# Attack sprites are initialized immediately by PlayerAttackComponent. Keep
+	# equipment and shadow layers in lockstep instead of leaving the previous
+	# idle/attack frame visible until the next gameplay tick.
+	_clear_fade_overlays()
+	_clear_draw_overlays()
+	active = true
+	shield_is_out = true
+	was_attacking = true
+	inactivity_timer = 0.0
+	fade_timer = 0.0
+	last_attack_name = String(root.get("player_anim_name"))
+	_update_layers(root)
+
+
+func interrupt_attack(root: Object) -> void:
+	# Orb knockback cancels the attack instead of entering the normal between-
+	# attack presentation. Clear the component's own transition memory too, or
+	# its equipment layers can leave a delayed attack sprite behind the player.
+	was_attacking = false
+	last_attack_name = "attack1"
+	transition_hold_timer = 0.0
+	draw_white_timer = 0.0
+	draw_color_fade_timer = 0.0
+	_clear_fade_overlays()
+	_clear_draw_overlays()
+	if active:
+		inactivity_timer = 0.0
+		_update_layers(root)
 
 
 func begin_death(root: Object) -> void:
@@ -691,11 +748,15 @@ func _update_layers(root: Object) -> void:
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var equipment := root.get("player_equipment") as EquipmentComponent
 	var shield_available := equipment != null and equipment.has_shield and (guard == null or guard.cooldown_timer <= 0.0)
+	var sword_back_key := "sword_back_%s" % ("attack" if state == "attack1" else state)
+	var shield_back_key := "shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")
+	var shield_front_key := "shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)
+	var sword_front_key := "sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")
 	var sword_back_visible := state != "attack2"
-	_set_layer("EquipmentSwordBack", frames.get("sword_back_%s" % ("attack" if state == "attack1" else state)), frame_index, opacity, sword_back_visible)
-	_set_layer("EquipmentShieldBack", frames.get("shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"))
-	_set_layer("EquipmentShieldFront", frames.get("shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)), frame_index, opacity, shield_available)
-	_set_layer("EquipmentSwordFront", frames.get("sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")), frame_index, opacity, state.begins_with("attack") or state == "between" or state == "after")
+	_set_layer("EquipmentSwordBack", frames.get(sword_back_key), frame_index, opacity, sword_back_visible, sword_back_key)
+	_set_layer("EquipmentShieldBack", frames.get(shield_back_key), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"), shield_back_key)
+	_set_layer("EquipmentShieldFront", frames.get(shield_front_key), frame_index, opacity, shield_available, shield_front_key)
+	_set_layer("EquipmentSwordFront", frames.get(sword_front_key), frame_index, opacity, state.begins_with("attack") or state == "between" or state == "after", sword_front_key)
 	_update_draw_overlays()
 	if fade_timer > 0.0:
 		var white_fade_progress := pow(1.0 - opacity, 2.2)
@@ -762,7 +823,7 @@ func _update_guard_flash(root: Object) -> void:
 	guard_flash_overlay.modulate = Color.WHITE
 
 
-func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: float, should_show := true) -> void:
+func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: float, should_show := true, grey_key: String = "") -> void:
 	var layer := layers.get(layer_name) as Sprite2D
 	if layer == null or source == null or not should_show:
 		if layer != null: layer.visible = false
@@ -771,7 +832,11 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 	if texture_frames == null or texture_frames.is_empty():
 		layer.visible = false
 		return
-	layer.texture = texture_frames[mini(frame_index, texture_frames.size() - 1)]
+	var resolved_frame := mini(frame_index, texture_frames.size() - 1)
+	layer.texture = texture_frames[resolved_frame]
+	layer.set_meta("mp_grey_key", grey_key)
+	layer.set_meta("mp_grey_frame", resolved_frame)
+	_apply_mp_material(layer)
 	var player := gameplay_root.get("player") as Sprite2D
 	if player == null:
 		layer.visible = false
@@ -783,7 +848,7 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 	if guard != null and bool(gameplay_root.get("player_is_defending")):
 		facing_left = guard.facing_left
 	elif not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
-		var target := gameplay_root.get("current_target") as Sprite2D
+		var target := gameplay_root.call("_valid_current_target") as Sprite2D
 		if target != null and not bool(gameplay_root.get("player_is_attacking")):
 			facing_left = root_actor_foot_x(gameplay_root, target) < root_actor_foot_x(gameplay_root, player)
 	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if animation_name.begins_with("attack") else facing_left

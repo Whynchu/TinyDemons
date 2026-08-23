@@ -27,13 +27,13 @@ func update_targeting(root: Object) -> void:
 		root.call("_set_current_target", null); root.call("_set_target_ui_visible", false); root.set("target_input_was_down", false); target_cycle_axis = 0; return
 	if not bool(root.get("target_input_was_down")):
 		root.call("_set_current_target", root.call("_closest_target")); root.set("target_input_was_down", true)
-	var target := root.get("current_target") as Sprite2D
+	var target := root.call("_valid_current_target") as Sprite2D
 	if target != null and not bool(root.call("_is_slime_targetable", target)): root.call("_set_current_target", null); target = null
 	var cycle_direction := int(root.call("_target_cycle_direction"))
 	if cycle_direction != 0 and cycle_direction != target_cycle_axis:
 		root.call("_cycle_target", cycle_direction)
 	target_cycle_axis = cycle_direction
-	target = root.get("current_target") as Sprite2D
+	target = root.call("_valid_current_target") as Sprite2D
 	var player := root.get("player") as Sprite2D
 	if target != null and not bool(root.get("player_is_attacking")): player.flip_h = root.call("_actor_foot", target).x < root.call("_actor_foot", player).x
 	root.call("_update_target_ui")
@@ -42,11 +42,11 @@ func update_targeting(root: Object) -> void:
 func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int) -> void:
 	var chest := root.get("chest") as Sprite2D
 	var chest_anchor := (root.call("_collision_rect", chest) as Rect2).get_center()
-	var item := root.get("world_item_drop") as Sprite2D
 	var near_item := bool(root.call("_can_interact_with_world_item"))
+	var item_position: Vector2 = root.call("_world_item_drop_position")
 	var npc := root.get("npc_controller") as NpcController
 	var dialogue_visible: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible
-	update_prompt(delta, root.get("interact_prompt"), dialogue_visible, bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, bool(root.call("_can_interact_with_fire")), chest_anchor, root.call("_cloaked_demon_head_position"), item.global_position if item != null else Vector2.ZERO, root.call("_fire_anchor"), Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
+	update_prompt(delta, root.get("interact_prompt"), dialogue_visible, bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, bool(root.call("_can_interact_with_fire")), chest_anchor, root.call("_cloaked_demon_head_position"), item_position, root.call("_fire_anchor"), Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
 
 
 func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:

@@ -1,6 +1,6 @@
 # Tiny Demons — Composition Root Reduction Plan
 
-Status: implementation active; 2,000-line milestone achieved
+Status: implementation active; ~250-line composition-root size milestone achieved
 
 Plan date: 2026-08-22
 
@@ -37,14 +37,14 @@ Repository measurements on 2026-08-22:
 
 | Surface | Current measurement | Desired end state |
 | --- | ---: | ---: |
-| `gameplay.gd` | 1,999 lines / 422 functions | 150–300 lines |
-| `gameplay_state.gd` | 264 lines / 174 plain variables | Removed or limited to documented global session state |
+| `gameplay.gd` | 188 lines / 42 functions | 150–300 lines |
+| `gameplay_state.gd` | 983 lines / 184 plain variables / 380 functions | Removed or limited to documented global session state |
 | `screen_state_controller.gd` | 1,235 lines | Split by screen/domain ownership |
 | `player_equipment_visual_component.gd` | 801 lines | Reviewed and split if it contains multiple lifecycles |
-| `room_controller.gd` | 595 lines | Retained only if cohesive |
-| Repository `root.call(...)` seams | 512 | Zero in production feature code |
-| Repository `root.get(...)` seams | 539 | Zero in production feature code |
-| Repository `root.set(...)` seams | 183 | Zero in production feature code |
+| `room_controller.gd` | 766 lines | Retained only if cohesive |
+| Repository `root.call(...)` seams | 655 textual matches | Zero in production feature code |
+| Repository `root.get(...)` seams | 702 textual matches | Zero in production feature code |
+| Repository `root.set(...)` seams | 131 textual matches | Zero in production feature code |
 
 The existing controllers demonstrate useful extraction work, but two files still
 act as extensions of the old root object:
@@ -59,11 +59,15 @@ This means the architecture is distributed physically but remains centrally
 coupled behaviorally. Reducing only `gameplay.gd` while preserving those dynamic
 root dependencies would move the god object rather than remove it.
 
-The first composition milestone is now complete: profile, pickup, run, hub,
-save/character-creation, and puzzle-room workflows have dedicated runtime
-owners. The remaining work is the deeper coupling cleanup described below,
-especially replacing compatibility delegates with typed owner commands and
-signals.
+The first size milestone is now complete: the composition root is 188 lines,
+inside the 150–300 line target. Profile, pickup, run, hub,
+save/character-creation, puzzle-room workflows, combat, magic, targeting, slime
+runtime, actor presentation, and authored room geometry have dedicated owners.
+The forwarding surface that formerly occupied most of `gameplay.gd` now lives in
+the explicitly labeled `Legacy callback bridge` on `gameplay_state.gd`. This is
+a transitional compatibility seam, not the final architecture: the remaining
+work is to replace those callbacks with typed owner commands/signals and then
+remove the bridge without regrowing the root.
 
 ## 3. The one purpose of `gameplay.gd`
 
@@ -107,6 +111,10 @@ func _physics_process(delta: float) -> void:
 
 The exact API may differ, but any additional responsibility requires an explicit
 architecture review.
+
+During the current migration, the legacy callback bridge is a recorded exception
+to the no-forwarders rule. It exists only to preserve the existing runtime while
+typed composition boundaries are completed; new feature code must not add to it.
 
 ## 4. Ownership model
 

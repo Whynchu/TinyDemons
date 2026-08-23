@@ -31,6 +31,12 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	root.set("player_anim_name", "attack2" if new_variant == 2 else "attack1")
 	if new_variant == 2: root.set("player_between_timer", 0.0)
 	root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); root.call("_restore_actor_base_visual_scale", player); (root.get("player_attack_visual") as Sprite2D).visible = false; player.visible = false; anim.apply_frame(root)
+	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	if equipment_visual != null:
+		equipment_visual.begin_attack_visual(root)
+	var shadow_controller := root.get("shadow_controller") as ShadowController
+	if shadow_controller != null:
+		shadow_controller.sync_player_attack_shadow(root, float(root.get("DEPTH_Z_SCALE")))
 
 
 func apply_hitbox(root: Object) -> void:
@@ -39,18 +45,30 @@ func apply_hitbox(root: Object) -> void:
 	if root.has_method("_play_sound"):
 		root.call("_play_sound", "miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 	var slimes := root.get("slimes") as Array[Sprite2D]
+	var puzzle_torches := root.get("puzzle_torches") as Array[Sprite2D]
 	var attack_component := root.get("player_attack_component") as PlayerAttackComponent
 	var eligible_targets: Array[Sprite2D] = []
+	var slime_targets: Array[Sprite2D] = []
+	var orb_targets: Array[Sprite2D] = []
 	for slime in slimes:
 		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or (attack_component != null and attack_component.hit_targets.has(slime)): continue
 		var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
 		if slime_body.size() < 3 or Geometry2D.intersect_polygons(hitbox, slime_body).is_empty(): continue
 		eligible_targets.append(slime)
+		slime_targets.append(slime)
+	for orb in puzzle_torches:
+		if not bool(root.call("_is_slime_targetable", orb)) or eligible_targets.has(orb) or (attack_component != null and attack_component.hit_targets.has(orb)): continue
+		if not polygon_intersects_rect(hitbox, sprite_world_rect(orb)): continue
+		eligible_targets.append(orb)
+		orb_targets.append(orb)
 	if eligible_targets.is_empty():
 		return
-	var target_count := eligible_targets.size()
+	var target_count := slime_targets.size()
 	var tuning := root.get("player_tuning") as PlayerTuning
-	for slime in eligible_targets:
+	for orb in orb_targets:
+		register_hit(orb)
+		root.call("_activate_puzzle_torch", orb, orb.global_position, "grey")
+	for slime in slime_targets:
 		register_hit(slime)
 		var base_damage := float(root.call("_player_attack_damage_against", slime))
 		var damage := base_damage
@@ -87,6 +105,20 @@ func polygon_intersects_rect(polygon: PackedVector2Array, rect: Rect2) -> bool:
 
 func rect_polygon(rect: Rect2) -> PackedVector2Array:
 	return PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)])
+
+
+func sprite_world_rect(sprite: Sprite2D) -> Rect2:
+	var local_rect := sprite.get_rect()
+	var corners := PackedVector2Array([
+		sprite.to_global(local_rect.position),
+		sprite.to_global(Vector2(local_rect.end.x, local_rect.position.y)),
+		sprite.to_global(local_rect.end),
+		sprite.to_global(Vector2(local_rect.position.x, local_rect.end.y)),
+	])
+	var bounds := Rect2(corners[0], Vector2.ZERO)
+	for corner in corners:
+		bounds = bounds.expand(corner)
+	return bounds
 
 
 func begin(new_variant: int) -> void:
@@ -154,6 +186,11 @@ func start_attack2_cooldown(duration: float) -> void:
 func start_lunge(velocity: Vector2, duration: float) -> void:
 	lunge_velocity = velocity
 	lunge_remaining = maxf(duration, 0.0)
+
+
+func cancel_lunge() -> void:
+	lunge_velocity = Vector2.ZERO
+	lunge_remaining = 0.0
 
 
 func has_lunge() -> bool:

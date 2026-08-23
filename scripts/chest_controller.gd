@@ -16,7 +16,7 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			root.set("chest_claimed", true)
 			var room_controller := root.get("room_controller") as RoomController
 			var state := room_controller.room_states.get(root.get("current_room_id"), {}) as Dictionary
-			state["finished"] = true
+			room_controller.save_treasure_chest_state(root)
 			if not bool(state.get("item_rewarded", false)):
 				state["item_rewarded"] = bool(root.call("_grant_chest_item_reward"))
 			room_controller.room_states[root.get("current_room_id")] = state
@@ -57,7 +57,7 @@ func start_flash(root: Object) -> void:
 func start_unlock_fade(root: Object) -> void:
 	var old_overlay := root.get("chest_unlock_overlay") as Sprite2D; if old_overlay != null: old_overlay.queue_free()
 	var chest := root.get("chest") as Sprite2D; var normal_texture := root.get("chest_normal_texture") as Texture2D; chest.texture = root.get("chest_gray_texture"); chest.visible = true; begin_unlock_fade(float(root.get("CHEST_UNLOCK_FADE_TIME")))
-	var overlay := Sprite2D.new(); overlay.name = "ChestUnlockOverlay"; overlay.texture = normal_texture; overlay.centered = chest.centered; overlay.offset = chest.offset; overlay.scale = chest.scale; overlay.flip_h = chest.flip_h; overlay.texture_filter = chest.texture_filter; overlay.z_as_relative = false; overlay.z_index = chest.z_index + 1; overlay.global_position = chest.global_position; overlay.modulate = Color(1, 1, 1, 0); root.add_child(overlay); root.set("chest_unlock_overlay", overlay)
+	var overlay := Sprite2D.new(); overlay.name = "ChestUnlockOverlay"; overlay.texture = normal_texture; overlay.centered = chest.centered; overlay.offset = chest.offset; overlay.scale = chest.scale; overlay.flip_h = chest.flip_h; overlay.texture_filter = chest.texture_filter; overlay.z_as_relative = false; overlay.z_index = chest.z_index + 1; overlay.global_position = chest.global_position; overlay.self_modulate = Color.WHITE; overlay.modulate = Color(1, 1, 1, 0); root.add_child(overlay); root.set("chest_unlock_overlay", overlay)
 
 
 func update_visuals_from_root(root: Object, delta: float) -> void:
@@ -70,11 +70,11 @@ func update_visuals_from_root(root: Object, delta: float) -> void:
 		flash_timer = maxf(flash_timer - delta, 0.0); root.set("chest_collect_flash_timer", flash_timer); var flash := root.get("chest_flash_overlay") as Sprite2D; var chest := root.get("chest") as Sprite2D
 		if flash != null: flash.global_position = chest.global_position; flash.z_index = chest.z_index + 1; flash.modulate = Color(1, 1, 1, 1.0 - flash_timer / float(root.get("CHEST_COLLECT_FLASH_TIME")))
 		if flash_timer <= 0.0 and not bool(root.get("chest_evaporated")): start_evaporation(root)
-	elif not bool(root.get("chest_claimed")): (root.get("chest") as Sprite2D).self_modulate = Color.WHITE
+	elif not bool(root.get("chest_claimed")): root.call("_apply_chest_map_tint")
 
 
 func start_evaporation(root: Object) -> void:
-	root.set("chest_evaporated", true); (root.get("effects_spawner") as EffectsSpawner).spawn_chest_evaporation_from_root(root); (root.get("chest") as Sprite2D).visible = false; root.call("_set_door_active", true); root.call("_set_entrance_open", true)
+	root.set("chest_evaporated", true); var room_controller := root.get("room_controller") as RoomController; if room_controller != null: room_controller.save_treasure_chest_state(root); (root.get("effects_spawner") as EffectsSpawner).spawn_chest_evaporation_from_root(root); (root.get("chest") as Sprite2D).visible = false; root.call("_set_door_active", true); root.call("_set_entrance_open", true)
 	var overlay := root.get("chest_flash_overlay") as Sprite2D; if overlay != null: overlay.queue_free(); root.set("chest_flash_overlay", null)
 	var chest := root.get("chest") as Sprite2D; (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var prompt := root.get("interact_prompt") as Sprite2D; if prompt != null: prompt.visible = false
 	if root.has_method("_on_chest_collected"):

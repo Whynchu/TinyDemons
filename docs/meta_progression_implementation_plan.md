@@ -146,7 +146,7 @@ innate stats
   + flat stats from all equipped items
   = effective stats
 
-Core HP(level)
+Core HP (level-independent)
   -> VIT and additive equipment scaling
   -> flat equipment health
   = maximum health

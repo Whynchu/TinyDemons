@@ -72,19 +72,56 @@ func _initialize() -> void:
 	var snapshot := CombatStatSnapshot.from_components(stats, equipment)
 	_expect(snapshot.vit == 7, "starter gear grants 2 flat VIT", failures)
 	_expect(snapshot.strength == 4, "starter gear grants 1 net STR after shield penalty", failures)
-	_expect(snapshot.def == 6, "starter gear grants 3 DEF", failures)
+	_expect(snapshot.def == 7, "starter gear grants 4 DEF", failures)
 	_expect(snapshot.speed == 2, "starter gear grants 1 flat SPD", failures)
-	_expect(snapshot.gear_vit == 2 and snapshot.gear_strength == 1 and snapshot.gear_def == 3, "starter flat primary gear snapshot", failures)
+	_expect(snapshot.gear_vit == 2 and snapshot.gear_strength == 1 and snapshot.gear_def == 4, "starter flat primary gear snapshot", failures)
 	var tall_stats := StatsComponent.new()
 	tall_stats.configure_manual_growth(50, 50, 50, 50, 0, 0, 0, 0)
 	var tall_snapshot := CombatStatSnapshot.from_components(tall_stats, equipment)
 	_expect(tall_snapshot.gear_vit == 2, "gear VIT remains flat at scale", failures)
 	_expect(tall_snapshot.gear_strength == 1, "gear STR remains flat at scale", failures)
-	_expect(tall_snapshot.gear_def == 3, "gear DEF remains flat at scale", failures)
+	_expect(tall_snapshot.gear_def == 4, "gear DEF remains flat at scale", failures)
 	_expect(tall_snapshot.gear_speed == 1, "gear SPD remains flat at scale", failures)
 	_expect(tall_snapshot.strength == 51, "flat equipment STR enters effective snapshot", failures)
-	_expect(tall_snapshot.def == 53, "flat shield DEF enters effective snapshot", failures)
+	_expect(tall_snapshot.def == 54, "flat shield DEF enters effective snapshot", failures)
 	_expect(tall_snapshot.speed == 51, "equipment SPD enters effective snapshot", failures)
+
+	var health_tuning := CombatTuning.new()
+	var level_one_health_snapshot := CombatStatSnapshot.new()
+	level_one_health_snapshot.level = 1
+	level_one_health_snapshot.vit = 4
+	var level_ten_health_snapshot := CombatStatSnapshot.new()
+	level_ten_health_snapshot.level = 10
+	level_ten_health_snapshot.vit = 4
+	var level_one_health := CombatCalculator.max_health_for_snapshot(level_one_health_snapshot, health_tuning)
+	var level_ten_health := CombatCalculator.max_health_for_snapshot(level_ten_health_snapshot, health_tuning)
+	_expect(is_equal_approx(level_one_health, level_ten_health), "leveling alone does not increase maximum HP", failures)
+	var vit_health_snapshot := CombatStatSnapshot.new()
+	vit_health_snapshot.level = 10
+	vit_health_snapshot.vit = 5
+	_expect(CombatCalculator.max_health_for_snapshot(vit_health_snapshot, health_tuning) > level_ten_health, "allocated VIT increases maximum HP", failures)
+	var gear_health_snapshot := CombatStatSnapshot.new()
+	gear_health_snapshot.level = 10
+	gear_health_snapshot.vit = 4
+	gear_health_snapshot.core_health_rate_bonus = 0.10
+	_expect(CombatCalculator.max_health_for_snapshot(gear_health_snapshot, health_tuning) > level_ten_health, "HP-specific gear increases maximum HP", failures)
+	_expect(is_equal_approx(health_tuning.health_per_level, 0.0), "default combat tuning has no level-only HP", failures)
+	_expect(is_equal_approx(CombatRuntimeController.enemy_health_factor(0), 0.50), "R1 regular enemy health factor is softened", failures)
+	_expect(is_equal_approx(CombatRuntimeController.enemy_health_factor(1), 0.65), "R2 regular enemy health factor is softened", failures)
+	_expect(CombatRuntimeController.enemy_health_factor(0) < CombatRuntimeController.enemy_health_factor(1), "enemy health still progresses between runs", failures)
+
+	var shield_catalog := ItemCatalog.new()
+	var base_bulwark := ItemInstance.new()
+	base_bulwark.definition_id = &"living_bulwark"
+	base_bulwark.rarity = &"rare"
+	var enhanced_bulwark := ItemInstance.from_dictionary(base_bulwark.to_dictionary())
+	enhanced_bulwark.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+	var base_shield_values := shield_catalog.shield_bonuses(base_bulwark)
+	var enhanced_shield_values := shield_catalog.shield_bonuses(enhanced_bulwark)
+	_expect(is_equal_approx(base_shield_values["strength_penalty"], enhanced_shield_values["strength_penalty"]), "shield STR penalty stays at its rarity baseline", failures)
+	_expect(is_equal_approx(base_shield_values["speed_penalty"], enhanced_shield_values["speed_penalty"]), "shield SPD penalty stays at its rarity baseline", failures)
+	_expect(enhanced_shield_values["guard_durability"] > base_shield_values["guard_durability"], "shield guard durability still improves with enhancement", failures)
+	_expect(shield_catalog.combat_primary_points(enhanced_bulwark)["defense"] > shield_catalog.combat_primary_points(base_bulwark)["defense"], "shield DEF still improves with enhancement", failures)
 	var bloodwoven := ItemInstance.new(); bloodwoven.instance_id = "bloodwoven-test"; bloodwoven.definition_id = &"bloodwoven_tunic"; bloodwoven.rarity = &"epic"; bloodwoven.transmutation_id = &"bloodwoven_core"
 	var bloodwoven_profile := PlayerProfile.new(); bloodwoven_profile.ensure_starter_items(); bloodwoven_profile.grant_item(bloodwoven); bloodwoven_profile.equip_item(bloodwoven.instance_id)
 	var bloodwoven_equipment := EquipmentComponent.new(); bloodwoven_equipment.configure_from_profile(bloodwoven_profile)

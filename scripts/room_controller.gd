@@ -1,6 +1,8 @@
 extends Node
 class_name RoomController
 
+const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
+
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
 
@@ -16,13 +18,22 @@ const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/boss_slime_authoring.tscn"
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0
+const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
+const PURPLE_ENEMY_WEIGHT: float = 0.12
+const PURPLE_BOSS_CHANCE: float = 0.04
+const RUN2_POPCORN_CHANCE: float = 0.40
+const LATER_POPCORN_CHANCE: float = 0.16
+const POPCORN_LEVEL_RUN_INTERVAL: int = 3
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
 	var state := room_states.get(room_id, {}) as Dictionary
 	if not state.has("generated_exits"):
 		var exits: Array[StringName] = []
-		if room.milestone_dead_end:
+		if room.authored:
+			for exit_socket in room.outgoing_connections.keys():
+				exits.append(StringName(exit_socket))
+		elif room.milestone_dead_end:
 			pass
 		elif room_type == DungeonGraph.ROOM_REST or room_type == DungeonGraph.ROOM_TRADER:
 			pass
@@ -45,9 +56,13 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			if room_depth + 1 != 6 and room_depth + 1 != graph.final_npc_depth() and layout_rng.randf() < graph.side_route_chance():
 				var secondary := DungeonGraph.WALL_RIGHT if primary == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT; var secondary_type := DungeonGraph.ROOM_REST if layout_rng.randf() < graph.side_dead_end_chance() else DungeonGraph.ROOM_COMBAT; exits.append(secondary); graph.ensure_connection(room_id, secondary, secondary_type)
 		state["generated_exits"] = exits; state["room_type"] = room_type; state["finished"] = bool(state.get("finished", false)); room_states[room_id] = state
-	if room_type == DungeonGraph.ROOM_COMBAT:
+	if room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room_type == DungeonGraph.ROOM_TREASURE:
 		if not state.has("enemy_variants"):
-			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth)
+			# Special rooms are color-gated route rooms, not elite encounters. Their
+			# difficulty comes from the color state and delayed respawns instead of
+			# an automatic level, count, or rogue-slime bonus.
+			var is_special_room := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth, false, not is_special_room)
 			state["enemy_variants"] = encounter["variants"]
 			state["enemy_levels"] = encounter["levels"]
 		if not state.has("enemy_spawn_seed"):
@@ -62,12 +77,12 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 909
 		room_states[room_id] = state
-	elif room_type == DungeonGraph.ROOM_PUZZLE:
+	elif room_type == DungeonGraph.ROOM_PUZZLE or room_type == DungeonGraph.ROOM_ORB:
 		room_states[room_id] = state
 	return state
 
 
-func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Dictionary:
+func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_room: bool = false, allow_rogue: bool = true) -> Dictionary:
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 101
 	var count := 1
@@ -95,11 +110,16 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 		{"variant": "green", "weight": 1.0},
 		{"variant": "red", "weight": 1.0},
 	]
-	if room_depth >= 3:
-		variant_pool.append({"variant": "purple", "weight": 0.6})
-	# Enemy progression advances once for every four dungeon depths:
-	# depths 1-4 are level 1, 5-8 are level 2, 9-12 are level 3, and so on.
-	var base_level := maxi(1, ceili(float(room_depth) / 4.0))
+	if special_room:
+		count = maxi(count + 1, 2)
+	if allow_rogue and room_depth >= 3:
+		# Purple is a rare pressure spike, not a normal member of the enemy
+		# rotation. A small weight keeps it available without making most later
+		# rooms contain one.
+		variant_pool.append({"variant": "purple", "weight": PURPLE_ENEMY_WEIGHT})
+	# Run 1 teaches levels 1-3. Later runs add one level of pressure each run,
+	# while popcorn stays below the main curve and scales up gradually.
+	var base_level := _generated_enemy_base_level(room_depth) + (1 if special_room else 0)
 	var level_spread := maxi(1, roundi(float(base_level) * 0.20))
 	for enemy_index in count:
 		var total_weight := 0.0
@@ -113,31 +133,55 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int) -> Diction
 				selected = entry["variant"] as String
 				break
 		variants.append(selected)
-		levels.append(maxi(1, encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)))
+		var enemy_level := _popcorn_enemy_level() if encounter_rng.randf() < _popcorn_enemy_chance() else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
+		levels.append(clampi(enemy_level, 1, _enemy_level_cap()))
 	return {"variants": variants, "levels": levels}
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
-	var boss_level := maxi(1, ceili(float(room_depth) / 4.0))
+	var boss_level := _generated_enemy_base_level(room_depth)
 	var minor_count := 2 if progression_run_rank <= 2 else 3 if progression_run_rank <= 4 else 4 if progression_run_rank <= 5 else 6 if progression_run_rank <= 10 else 6
-	# Rogue/purple slimes can support the first boss encounter, but the scaled
-	# lead boss itself is reserved for R2 and later.
-	var boss_palette := ["blue", "green"] if progression_run_rank == 1 else ["blue", "green", "purple"]
+	# Purple is a rare supporting encounter. It is never the scaled lead boss,
+	# and it is not guaranteed as a minor, because its pressure is much higher
+	# than the ordinary slime variants.
+	var boss_palette := ["blue", "green"]
 	var boss_rng := RandomNumberGenerator.new()
 	boss_rng.seed = generation_seed + 991
 	var variants: Array[String] = [boss_palette[boss_rng.randi_range(0, boss_palette.size() - 1)]]
-	var levels: Array[int] = [boss_level + 1]
+	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
 	var scales: Array[float] = [3.0]
-	var palette := ["blue", "green", "purple"]
+	var palette := ["blue", "green", "red"]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
-		if index == 0:
-			variants.append("purple")
-		else:
-			variants.append(palette[encounter_rng.randi_range(0, palette.size() - 1)])
-		levels.append(boss_level)
+		var selected_variant: String = palette[encounter_rng.randi_range(0, palette.size() - 1)]
+		if encounter_rng.randf() < PURPLE_BOSS_CHANCE:
+			selected_variant = "purple"
+		variants.append(selected_variant)
+		levels.append(mini(boss_level, _enemy_level_cap()))
 		scales.append(1.0)
 	return {"variants": variants, "levels": levels, "scales": scales}
+
+
+func _enemy_level_cap() -> int:
+	return 3 if progression_run_rank <= 1 else progression_run_rank + 3
+
+
+func _generated_enemy_base_level(room_depth: int) -> int:
+	var depth_level := maxi(1, ceili(float(room_depth) / 4.0))
+	return mini(depth_level + maxi(progression_run_rank - 1, 0), _enemy_level_cap())
+
+
+func _popcorn_enemy_chance() -> float:
+	if progression_run_rank == 2:
+		return RUN2_POPCORN_CHANCE
+	if progression_run_rank > 2:
+		return LATER_POPCORN_CHANCE
+	return 0.0
+
+
+func _popcorn_enemy_level() -> int:
+	var runs_since_run2 := maxi(progression_run_rank - 2, 0)
+	return 1 + floori(float(runs_since_run2) / float(POPCORN_LEVEL_RUN_INTERVAL))
 
 func _normal_enemy_cap() -> int:
 	if progression_run_rank <= 2: return 2
@@ -157,9 +201,10 @@ func enemy_count_for_room(room: DungeonGraph.RoomRecord) -> int:
 		return 0
 	if room.room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		return (_generate_boss_encounter(room.generation_seed, room.depth).get("variants", []) as Array).size()
-	if room.room_type != DungeonGraph.ROOM_COMBAT:
+	if room.room_type != DungeonGraph.ROOM_COMBAT and room.room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and room.room_type != DungeonGraph.ROOM_TREASURE:
 		return 0
-	return ( _generate_enemy_encounter(room.generation_seed, room.depth).get("variants", []) as Array).size()
+	var is_special_room := room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+	return (_generate_enemy_encounter(room.generation_seed, room.depth, false, not is_special_room).get("variants", []) as Array).size()
 
 
 func configure_sockets(graph: DungeonGraph, room_id: StringName, _unlocked: bool, set_blocks: Callable) -> void:
@@ -239,6 +284,9 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
 	root.set("player_is_attacking", false)
 	root.set("player_is_rolling", false)
+	root.set("orb_knockback_animation_lock", false)
+	root.set("orb_knockback_animation_grace", false)
+	root.set("orb_knockback_attack_cancelled", false)
 	root.call("_clear_roll_dust")
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
@@ -270,24 +318,54 @@ func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 func apply_state(root: Object) -> void:
 	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
 	var state := room_states.get(room_id, {}) as Dictionary
+	var treasure_chest_claimed := _treasure_chest_claimed_from_state(state) if room_type == DungeonGraph.ROOM_TREASURE else false
+	if room_type == DungeonGraph.ROOM_TREASURE:
+		root.set("chest_unlocked", treasure_chest_claimed)
+		root.set("chest_claimed", treasure_chest_claimed)
+		root.set("chest_evaporated", bool(state.get("chest_evaporated", treasure_chest_claimed)))
+	# The scene's base Chest node is authored visible. Clear its presentation
+	# before any room-specific branch; treasure rooms explicitly re-add it later.
+	hide_chest_presentation(root)
 	_clear_active_world_drop(root)
 	root.call("_clear_chroma_pickups")
+	_apply_special_enemy_color_policy(root, state)
 	if is_cleared(room_id): state["finished"] = true
 	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST: root.call("_apply_rest_room_state")
 	elif room_type == DungeonGraph.ROOM_NPC: root.call("_apply_npc_room_state")
 	elif room_type == DungeonGraph.ROOM_PUZZLE: apply_puzzle_state(root, bool(state.get("finished", false)))
+	elif room_type == DungeonGraph.ROOM_ORB: apply_orb_state(root)
 	elif bool(state.get("finished", false)): root.call("_apply_finished_room_state")
 	else:
-		(root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_chest_for_room(root); reset_slimes_for_room(root)
+		(root.get("cloaked_demon") as Sprite2D).visible = false
+		(root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon"))
+		reset_chest_for_room(root, room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed)
+		if room_type == DungeonGraph.ROOM_TREASURE and treasure_chest_claimed:
+			root.set("chest_unlocked", true)
+			root.set("chest_claimed", true)
+			root.set("chest_evaporated", bool(state.get("chest_evaporated", true)))
+		reset_slimes_for_room(root)
 	_restore_world_drop(root, state)
 	_restore_chroma_pickups(root, state)
+	root.call("_apply_chest_map_tint")
+
+
+func _treasure_chest_claimed_from_state(state: Dictionary) -> bool:
+	if state.has("chest_claimed"):
+		return bool(state.get("chest_claimed", false))
+	# Older in-memory runs only stored item_rewarded when the chest was opened.
+	# Keep those runs from showing the authored chest again on a revisit.
+	return state.has("chest_evaporated") or state.has("item_rewarded")
+
+
+func save_treasure_chest_state(root: Object) -> void:
+	var room_id: StringName = root.get("current_room_id")
+	var state := room_states.get(room_id, {}) as Dictionary
+	state["chest_claimed"] = bool(root.get("chest_claimed"))
+	state["chest_evaporated"] = bool(root.get("chest_evaporated"))
+	room_states[room_id] = state
 
 func _clear_active_world_drop(root: Object) -> void:
-	var item_drop := root.get("world_item_drop") as Sprite2D
-	if item_drop != null: item_drop.queue_free()
-	var item_label := root.get("world_item_drop_label") as Sprite2D
-	if item_label != null: item_label.queue_free()
-	root.set("world_item_drop", null); root.set("world_item_drop_label", null); root.set("world_item_drop_instance", null); root.set("world_item_drop_air_time", 0.0)
+	root.call("_clear_world_item_drops")
 
 func _restore_chroma_pickups(root: Object, state: Dictionary) -> void:
 	var saved_pickups: Variant = state.get("chroma_pickups", [])
@@ -295,21 +373,32 @@ func _restore_chroma_pickups(root: Object, state: Dictionary) -> void:
 		root.call("_restore_chroma_pickups", saved_pickups as Array)
 
 func _restore_world_drop(root: Object, state: Dictionary) -> void:
+	var saved_drops: Variant = state.get("world_item_drops", [])
+	if saved_drops is Array:
+		root.call("_restore_chest_item_drops", saved_drops as Array)
+		return
+	# Keep the old singular state readable for runs created before chest drops
+	# became a collection, without making the runtime model singular again.
 	var saved_drop: Variant = state.get("world_item_drop", {})
-	if not (saved_drop is Dictionary):
-		return
-	var item := ItemInstance.from_dictionary(saved_drop.get("item", {}) as Dictionary)
-	if item.instance_id.is_empty():
-		return
-	root.call("_restore_chest_item_drop", item, saved_drop.get("position", root.get("chest_start_position")) as Vector2)
+	if saved_drop is Dictionary:
+		root.call("_restore_chest_item_drops", [saved_drop])
 
 
 func build_entrance_blocks(root: Object) -> void:
 	var blocks: Array[PackedVector2Array] = []
+	var graph := root.get("dungeon_graph") as DungeonGraph
 	for socket_id in dungeon_sockets.keys():
-		if active_door_sockets.has(socket_id) or active_entrance_sockets.has(socket_id): continue
 		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
 		if socket == null: continue
+		var is_entrance := active_entrance_sockets.has(socket_id)
+		var is_active := active_door_sockets.has(socket_id) or is_entrance
+		if is_active:
+			var room_id: StringName = root.get("current_room_id")
+			var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
+			var connection_available: bool = connection != null and bool(root.call("_map_connection_available", connection, is_entrance))
+			var boss_entrance_sealed: bool = is_entrance and root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS and not bool(root.get("entrance_open"))
+			if connection_available and not boss_entrance_sealed:
+				continue
 		for tile in socket.block_tiles(): blocks.append(root.call("_tile_top_polygon", tile))
 	root.set("entrance_block_polygons", blocks)
 
@@ -324,7 +413,17 @@ func try_enter_active_socket(root: Object, door_active: bool, entrance_open: boo
 		if final_socket != null and _rect_touches_polygon(feet, _socket_trigger_polygon(final_socket)):
 			root.call("_enter_final_settlement_room")
 			return true
-	if door_active and _try_enter_socket_set(root, active_door_sockets, feet, false): return true
+	# Authored Run 1 doors are independently gated by the map connection state.
+	# The legacy room-wide flag can be false while a color-matched socket is
+	# visibly open (notably after a special-room color change), so it must not
+	# suppress every authored exit. Keep the tutorial starter gate explicit.
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var authored_run1 := map_controller != null and bool(map_controller.call("is_authored_run1"))
+	var starter_gate_locked: bool = root.get("current_room_type") == DungeonGraph.ROOM_START and not bool(root.get("starter_flame_attuned_this_run"))
+	# A generated map can expose one color-matched connection while the legacy
+	# room-wide flag is still false. Let the connection-level map check decide
+	# whether that socket is traversable instead of blocking every exit first.
+	if (door_active or map_controller != null or (authored_run1 and not starter_gate_locked)) and _try_enter_socket_set(root, active_door_sockets, feet, false): return true
 	return entrance_open and _try_enter_socket_set(root, active_entrance_sockets, feet, true)
 
 
@@ -335,6 +434,7 @@ func _try_enter_socket_set(root: Object, sockets: Dictionary, feet: Rect2, is_en
 		var socket_id := socket.socket_id(); var graph := root.get("dungeon_graph") as DungeonGraph; var room_id: StringName = root.get("current_room_id")
 		var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
 		if connection == null: continue
+		if not bool(root.call("_map_connection_available", connection, is_entrance)): continue
 		var destination: StringName = connection.source_room_id if is_entrance else connection.destination_room_id; var arrival: StringName = connection.exit_socket if is_entrance else connection.destination_entry
 		root.call("_enter_connected_room", destination, arrival); return true
 	return false
@@ -362,6 +462,11 @@ func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
 func mark_cleared(room_id: StringName) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	state["finished"] = true
+	var graph: DungeonGraph = get_parent().get("dungeon_graph") as DungeonGraph if get_parent() != null else null
+	var room := graph.get_room(room_id) if graph != null else null
+	if room != null and room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
+		state["special_clear_earned"] = true
+		_ensure_special_enemy_respawn_timers(state)
 	room_states[room_id] = state
 	room_cleared.emit(room_id)
 
@@ -369,6 +474,41 @@ func mark_cleared(room_id: StringName) -> void:
 func is_cleared(room_id: StringName) -> bool:
 	var state: Variant = room_states.get(room_id, {})
 	return state is Dictionary and state.get("finished", false) == true
+
+
+func _apply_special_enemy_color_policy(root: Object, state: Dictionary) -> void:
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var room := graph.get_room(root.get("current_room_id")) if graph != null else null
+	if room == null or room.room_type != DungeonGraph.ROOM_SPECIAL_ENEMY or room.special_respawn_required_color.is_empty():
+		return
+	if not bool(state.get("special_clear_earned", false)):
+		return
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var active_color: StringName = StringName(map_controller.call("current_color")) if map_controller != null else &"neutral"
+	state["finished"] = active_color == room.special_respawn_required_color
+	room_states[root.get("current_room_id")] = state
+
+
+func refresh_special_enemy_color_policy(root: Object) -> void:
+	var state: Dictionary = room_states.get(root.get("current_room_id"), {}) as Dictionary
+	var previous_finished := bool(state.get("finished", false))
+	_apply_special_enemy_color_policy(root, state)
+	var now_finished := bool(state.get("finished", false))
+	if previous_finished == now_finished:
+		return
+	if now_finished:
+		# Entering the required map color suppresses the room's current enemies,
+		# but their respawn clocks remain anchored to when each slot disappeared.
+		schedule_special_enemy_respawns(root)
+		for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
+		root.call("_set_door_active", true)
+		root.call("_set_entrance_open", true)
+	else:
+		# Leaving the required color does not instantly repopulate the room. The
+		# per-slot timers are allowed to finish and respawn enemies independently.
+		schedule_special_enemy_respawns(root)
+		root.call("_set_door_active", false)
+		root.call("_set_entrance_open", true)
 
 
 func apply_rest_state(root: Object) -> void:
@@ -398,12 +538,16 @@ func _assign_rest_fire_palette(root: Object) -> void:
 		fire_palette = str(root.get("run_start_palette_name"))
 		if fire_palette.is_empty(): fire_palette = String((root.get("screen_state_controller") as Object).get("player_palette_name"))
 	else:
-		var state: Dictionary = room_states.get(room_id, {}) as Dictionary
-		if not state.has("fire_palette"):
-			var rng := root.get("rng") as RandomNumberGenerator
-			state["fire_palette"] = PaletteLibrary.REST_FIRE_PALETTES[rng.randi_range(0, PaletteLibrary.REST_FIRE_PALETTES.size() - 1)]
-			room_states[room_id] = state
-		fire_palette = str(state.get("fire_palette"))
+		var room := graph.get_room(room_id) if graph != null else null
+		if room != null and room.fire_flame != &"":
+			fire_palette = ASPECT_CATALOG_SCRIPT.palette_for_flame(room.fire_flame)
+		else:
+			var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+			if not state.has("fire_palette"):
+				var rng := root.get("rng") as RandomNumberGenerator
+				state["fire_palette"] = PaletteLibrary.REST_FIRE_PALETTES[rng.randi_range(0, PaletteLibrary.REST_FIRE_PALETTES.size() - 1)]
+				room_states[room_id] = state
+			fire_palette = str(state.get("fire_palette"))
 	root.call("_apply_rest_fire_palette", fire_palette)
 
 
@@ -430,10 +574,35 @@ func apply_puzzle_state(root: Object, solved: bool) -> void:
 	root.call("_set_entrance_open", true)
 
 
+func apply_orb_state(root: Object) -> void:
+	reset_chest_for_room(root, false)
+	reset_slimes_for_room(root)
+	root.call("_set_door_active", true)
+	root.call("_set_entrance_open", true)
+
+
 func apply_finished_state(root: Object) -> void:
 	var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_slimes_for_room(root)
 	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
-	var chest := root.get("chest") as Sprite2D; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", true); root.call("_set_entrance_open", true); (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
+	var room: DungeonGraph.RoomRecord = (root.get("dungeon_graph") as DungeonGraph).get_room(root.get("current_room_id"))
+	var is_treasure := room != null and room.room_type == DungeonGraph.ROOM_TREASURE
+	var is_boss := room != null and room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
+	var chest := root.get("chest") as Sprite2D
+	if is_treasure and not bool(root.get("chest_claimed")) and not bool(root.get("chest_evaporated")):
+		var normal_texture := root.get("chest_normal_texture") as Texture2D
+		if normal_texture != null:
+			chest.texture = normal_texture
+		chest.visible = true; root.set("chest_unlocked", true); root.set("chest_evaporated", false)
+		if not (root.get("collision_sprites") as Array[Sprite2D]).has(chest): (root.get("collision_sprites") as Array[Sprite2D]).append(chest)
+		if not (root.get("depth_sprites") as Array[Sprite2D]).has(chest): (root.get("depth_sprites") as Array[Sprite2D]).append(chest)
+		if not (root.get("occluder_sprites") as Array[Sprite2D]).has(chest): (root.get("occluder_sprites") as Array[Sprite2D]).append(chest)
+	else:
+		chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true if not is_treasure else root.get("chest_claimed")); root.set("chest_evaporated", true if not is_treasure else root.get("chest_evaporated")); (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
+	if is_boss:
+		root.call("_open_final_exit")
+	else:
+		root.call("_set_door_active", true); root.call("_set_entrance_open", true)
+	root.set("chest_collect_flash_timer", 0.0)
 	for key in [&"chest_unlock_overlay", &"chest_flash_overlay"]:
 		var overlay := root.get(key) as Sprite2D
 		if overlay != null: overlay.queue_free(); root.set(key, null)
@@ -452,51 +621,264 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 	for item in [hud.target_overhead_frames.get(slime), hud.target_overhead_damage_fills.get(slime), hud.target_overhead_fills.get(slime)]: if item != null: (item as Sprite2D).visible = false
 
 
-func reset_chest_for_room(root: Object) -> void:
+func record_special_enemy_death(root: Object, slime: Sprite2D) -> void:
+	if root.get("current_room_type") != DungeonGraph.ROOM_SPECIAL_ENEMY:
+		return
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	var slot := slimes.find(slime)
+	if slot < 0:
+		return
+	var state: Dictionary = room_states.get(root.get("current_room_id"), {}) as Dictionary
+	var timers := state.get("special_respawn_timers", {}) as Dictionary
+	var timer_key := str(slot)
+	if not timers.has(timer_key) or float(timers[timer_key]) <= 0.0:
+		timers[timer_key] = SPECIAL_ROOM_RESPAWN_DELAY
+	state["special_respawn_timers"] = timers
+	room_states[root.get("current_room_id")] = state
+
+
+func _ensure_special_enemy_respawn_timers(state: Dictionary) -> void:
+	var timers := state.get("special_respawn_timers", {}) as Dictionary
+	var active_variants := state.get("enemy_variants", []) as Array
+	for slot in active_variants.size():
+		var timer_key := str(slot)
+		if not timers.has(timer_key):
+			timers[timer_key] = SPECIAL_ROOM_RESPAWN_DELAY
+	state["special_respawn_timers"] = timers
+
+
+func schedule_special_enemy_respawns(root: Object) -> void:
+	if root.get("current_room_type") != DungeonGraph.ROOM_SPECIAL_ENEMY:
+		return
+	var state: Dictionary = room_states.get(root.get("current_room_id"), {}) as Dictionary
+	_ensure_special_enemy_respawn_timers(state)
+	room_states[root.get("current_room_id")] = state
+
+
+func _is_special_room_state(root: Object, room_id: StringName, state: Dictionary) -> bool:
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var room := graph.get_room(room_id) if graph != null else null
+	if room != null:
+		return room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+	return StringName(state.get("room_type", &"")) == DungeonGraph.ROOM_SPECIAL_ENEMY
+
+
+func update_special_enemy_respawns(root: Object, delta: float) -> void:
+	var current_room_id: StringName = StringName(root.get("current_room_id"))
+	var current_state: Dictionary = {}
+	var ready_slots: Array[int] = []
+	for room_key in room_states.keys():
+		var room_id: StringName = StringName(room_key)
+		var state := room_states.get(room_key, {}) as Dictionary
+		if not _is_special_room_state(root, room_id, state) or not bool(state.get("special_clear_earned", false)):
+			continue
+		var timers := state.get("special_respawn_timers", {}) as Dictionary
+		if timers.is_empty() and bool(state.get("finished", false)):
+			_ensure_special_enemy_respawn_timers(state)
+			timers = state.get("special_respawn_timers", {}) as Dictionary
+		if timers.is_empty():
+			room_states[room_key] = state
+			continue
+		var room_is_current: bool = room_id == current_room_id and root.get("current_room_type") == DungeonGraph.ROOM_SPECIAL_ENEMY
+		for timer_key in timers.keys():
+			var remaining := maxf(0.0, float(timers[timer_key]) - maxf(delta, 0.0))
+			timers[timer_key] = remaining
+			if room_is_current and remaining <= 0.0 and not _special_room_hides_enemies(root, state, room_id):
+				ready_slots.append(int(timer_key))
+		state["special_respawn_timers"] = timers
+		room_states[room_key] = state
+		if room_is_current:
+			current_state = state
+	if ready_slots.is_empty():
+		return
+	var state: Dictionary = current_state
+	var timers: Dictionary = state.get("special_respawn_timers", {}) as Dictionary
+	_prepare_enemy_slot_visuals(root, state)
+	var player := root.get("player") as Sprite2D
+	var player_foot: Vector2 = root.call("_actor_foot", player)
+	var chest := root.get("chest") as Sprite2D
+	var chest_rect: Rect2 = root.call("_collision_rect", chest)
+	var occupied: Array[Vector2] = []
+	for slime in root.get("slimes") as Array[Sprite2D]:
+		if slime.visible and not bool(root.call("_is_slime_dead", slime)):
+			occupied.append(root.call("_actor_foot", slime))
+	var layout_rng := RandomNumberGenerator.new()
+	layout_rng.seed = int(state.get("enemy_spawn_seed", String(root.get("current_room_id")).hash() + 303)) + 1771
+	var did_respawn := false
+	for slot in ready_slots:
+		var timer_key := str(slot)
+		if _spawn_enemy_slot(root, state, slot, occupied, layout_rng, player_foot, chest_rect):
+			timers.erase(timer_key)
+			did_respawn = true
+		else:
+			# Keep retrying if a temporary actor/wall arrangement prevents a valid
+			# spawn. This does not reset the original staggered schedule.
+			timers[timer_key] = 0.25
+	state["special_respawn_timers"] = timers
+	if did_respawn:
+		state["finished"] = false
+		root.call("_set_door_active", false)
+		root.call("_set_entrance_open", true)
+		root.call("_build_depth_lists")
+	room_states[root.get("current_room_id")] = state
+
+
+func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 	var rest_fire := root.get("rest_fire") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var chest := root.get("chest") as Sprite2D
-	rest_fire.visible = false; var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); demon.visible = false; chest.position = root.get("chest_start_position"); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = true; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false); root.call("_set_entrance_open", false)
+	rest_fire.visible = false; var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); demon.visible = false; chest.position = root.get("chest_start_position"); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = show_chest; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false)
 	var unlock_overlay := root.get("chest_unlock_overlay") as Sprite2D; if unlock_overlay != null: unlock_overlay.queue_free(); root.set("chest_unlock_overlay", null)
 	var flash_overlay := root.get("chest_flash_overlay") as Sprite2D; if flash_overlay != null: flash_overlay.queue_free(); root.set("chest_flash_overlay", null)
-	var collision := root.get("collision_sprites") as Array[Sprite2D]; if not collision.has(chest): collision.append(chest)
+	var collision := root.get("collision_sprites") as Array[Sprite2D]
+	if show_chest:
+		if not collision.has(chest): collision.append(chest)
+		if not (root.get("depth_sprites") as Array[Sprite2D]).has(chest): (root.get("depth_sprites") as Array[Sprite2D]).append(chest)
+		if not (root.get("occluder_sprites") as Array[Sprite2D]).has(chest): (root.get("occluder_sprites") as Array[Sprite2D]).append(chest)
+	else:
+		collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
 	(root.get("occlusion_renderer") as OcclusionRenderer).sprite_images[chest] = (root.get("occlusion_renderer") as OcclusionRenderer).cached_texture_image(chest.texture)
 
 
-func reset_slimes_for_room(root: Object) -> void:
-	var slimes := root.get("slimes") as Array[Sprite2D]; var tuning := root.get("slime_tuning") as SlimeTuning; var rng := root.get("rng") as RandomNumberGenerator; var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]; var collision := root.get("collision_sprites") as Array[Sprite2D]; var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
-	(root.get("effects_spawner") as EffectsSpawner).clear_slime_notices()
-	for slime in slimes: kill_slime_without_effects(root, slime)
-	var room_id: StringName = root.get("current_room_id"); var state: Dictionary = room_states.get(room_id, {}) as Dictionary; var active_variants := state.get("enemy_variants", []) as Array; var active_levels := state.get("enemy_levels", []) as Array; var active_scales := state.get("enemy_scales", []) as Array; var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary; var spawn_seed := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303)); var layout_rng := RandomNumberGenerator.new(); layout_rng.seed = spawn_seed
+func hide_chest_presentation(root: Object) -> void:
+	var chest := root.get("chest") as Sprite2D
+	if chest == null:
+		return
+	chest.visible = false
+	(root.get("collision_sprites") as Array[Sprite2D]).erase(chest)
+	(root.get("depth_sprites") as Array[Sprite2D]).erase(chest)
+	(root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
+
+
+func _special_room_hides_enemies(root: Object, state: Dictionary, room_id: StringName = &"") -> bool:
+	if not bool(state.get("special_clear_earned", false)):
+		return false
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var target_room_id: StringName = room_id if not room_id.is_empty() else StringName(root.get("current_room_id"))
+	var room := graph.get_room(target_room_id) if graph != null else null
+	if room == null or room.special_respawn_required_color.is_empty():
+		return false
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var active_color: StringName = StringName(map_controller.call("current_color")) if map_controller != null else &"neutral"
+	return active_color == room.special_respawn_required_color
+
+
+func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	var active_variants := state.get("enemy_variants", []) as Array
 	for slot in active_variants.size():
-		if slot >= slimes.size(): break
+		if slot >= slimes.size():
+			break
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
 	root.call("_build_slime_direction_textures")
 	root.call("_assign_slime_attack_frames")
 	root.call("_assign_slime_shocked_frames")
 	root.call("_refresh_enemy_palette_textures")
+
+
+func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2) -> bool:
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	if slime_index < 0 or slime_index >= slimes.size():
+		return false
+	var active_variants := state.get("enemy_variants", []) as Array
+	var active_levels := state.get("enemy_levels", []) as Array
+	if slime_index >= active_variants.size() or slime_index >= active_levels.size():
+		return false
+	var active_scales := state.get("enemy_scales", []) as Array
+	var spawn_positions: Dictionary
+	if state.has("enemy_spawn_positions"):
+		spawn_positions = state["enemy_spawn_positions"] as Dictionary
+	else:
+		spawn_positions = {}
+		state["enemy_spawn_positions"] = spawn_positions
+	var slime := slimes[slime_index]
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	var rng := root.get("rng") as RandomNumberGenerator
+	var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]
+	var collision := root.get("collision_sprites") as Array[Sprite2D]
+	var depth_sprites := root.get("depth_sprites") as Array[Sprite2D]
+	var occluder_sprites := root.get("occluder_sprites") as Array[Sprite2D]
+	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
+	var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
+	if encounter_scale > 1.0:
+		_apply_authored_boss_geometry(slime)
+	slime.set_meta("encounter_scale", encounter_scale)
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+	root.call("_apply_actor_scale", slime, false)
+	var has_saved_position := spawn_positions.has(slime_index) or spawn_positions.has(str(slime_index))
+	var spawn_position: Vector2 = spawn_positions.get(slime_index, spawn_positions.get(str(slime_index), Vector2.ZERO))
+	if not has_saved_position or not _valid_enemy_spawn_foot(root, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
+		spawn_position = _choose_enemy_spawn_position(root, slime, layout_rng, occupied)
+		spawn_positions[slime_index] = spawn_position
+	var spawn_foot := spawn_position + ACTOR_FOOT_OFFSET
+	if not _valid_enemy_spawn_foot(root, slime, spawn_foot, player_foot, chest_rect, occupied):
+		spawn_positions.erase(slime_index)
+		spawn_positions.erase(str(slime_index))
+		slime.visible = false
+		actor_sprites.erase(slime)
+		collision.erase(slime)
+		depth_sprites.erase(slime)
+		occluder_sprites.erase(slime)
+		return false
+	occupied.append(spawn_foot)
+	var actor := slime as SlimeActor
+	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	if brain != null:
+		brain.start_position = spawn_position
+	slime.position = spawn_position
+	slime.visible = true
+	slime.flip_h = false
+	root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
+	var max_health := float(root.call("_enemy_max_health", slime))
+	if actor != null:
+		actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
+		actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
+	var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter
+	presenter.display_health = max_health
+	presenter.damage_fill_hold_timer = 0.0
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime])
+	var is_boss := encounter_scale > 1.0
+	slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20) * (0.72 if is_boss else 1.0))
+	slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20) * (1.12 if is_boss else 1.0))
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+	root.call("_apply_actor_scale", slime, false)
+	if not actor_sprites.has(slime):
+		actor_sprites.append(slime)
+	if not collision.has(slime):
+		collision.append(slime)
+	if not depth_sprites.has(slime):
+		depth_sprites.append(slime)
+	if not occluder_sprites.has(slime):
+		occluder_sprites.append(slime)
+	return true
+
+
+func reset_slimes_for_room(root: Object) -> void:
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	(root.get("effects_spawner") as EffectsSpawner).clear_slime_notices()
+	for slime in slimes: kill_slime_without_effects(root, slime)
+	var room_id: StringName = root.get("current_room_id")
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var active_variants := state.get("enemy_variants", []) as Array
+	var spawn_positions: Dictionary
+	if state.has("enemy_spawn_positions"):
+		spawn_positions = state["enemy_spawn_positions"] as Dictionary
+	else:
+		spawn_positions = {}
+		state["enemy_spawn_positions"] = spawn_positions
+	var spawn_seed := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303))
+	var layout_rng := RandomNumberGenerator.new()
+	layout_rng.seed = spawn_seed
+	_prepare_enemy_slot_visuals(root, state)
 	var player := root.get("player") as Sprite2D; var player_foot: Vector2 = root.call("_actor_foot", player); var chest := root.get("chest") as Sprite2D; var chest_rect: Rect2 = root.call("_collision_rect", chest)
 	var occupied: Array[Vector2] = []
+	var special_timers := state.get("special_respawn_timers", {}) as Dictionary
+	var hide_special_enemies := _special_room_hides_enemies(root, state)
 	for slime_index in active_variants.size():
 		if slime_index >= slimes.size(): continue
-		var slime := slimes[slime_index]; var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
-		if encounter_scale > 1.0:
-			_apply_authored_boss_geometry(slime)
-		var spawn_position: Vector2 = spawn_positions.get(slime_index, Vector2.ZERO)
-		if not spawn_positions.has(slime_index) or not _valid_enemy_spawn_foot(root, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
-			spawn_position = _choose_enemy_spawn_position(root, slime, layout_rng, occupied); spawn_positions[slime_index] = spawn_position
-		var spawn_foot := spawn_position + ACTOR_FOOT_OFFSET
-		if not _valid_enemy_spawn_foot(root, slime, spawn_foot, player_foot, chest_rect, occupied):
-			spawn_positions.erase(slime_index)
-			(slime as Sprite2D).visible = false
-			(actor_sprites as Array[Sprite2D]).erase(slime)
-			(collision as Array[Sprite2D]).erase(slime)
+		var timer_key := str(slime_index)
+		if hide_special_enemies or (root.get("current_room_type") == DungeonGraph.ROOM_SPECIAL_ENEMY and special_timers.has(timer_key) and float(special_timers[timer_key]) > 0.0):
 			continue
-		occupied.append(spawn_foot)
-		var actor := slime as SlimeActor; var brain := root.call("_slime_brain", slime) as SlimeBrain; brain.start_position = spawn_position; slime.position = spawn_position; slime.visible = true; slime.flip_h = false; root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
-		slime.set_meta("encounter_scale", encounter_scale)
-		var max_health := float(root.call("_enemy_max_health", slime)); if actor != null: actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount); actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
-		var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = max_health; presenter.damage_fill_hold_timer = 0.0; var visual := root.call("_slime_visual", slime) as SlimeVisualComponent; root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime]); var is_boss := encounter_scale > 1.0; slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20) * (0.72 if is_boss else 1.0)); slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20) * (1.12 if is_boss else 1.0)); root.call("_set_actor_visual_scale", slime, Vector2.ONE); root.call("_apply_actor_scale", slime, false)
-		if not actor_sprites.has(slime): actor_sprites.append(slime)
-		if not collision.has(slime): collision.append(slime)
+		_spawn_enemy_slot(root, state, slime_index, occupied, layout_rng, player_foot, chest_rect)
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state
 	var run_state := root.get("run_state") as RunState
 	if run_state != null and run_state.active:
@@ -526,6 +908,11 @@ func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
 		if clone == null:
 			continue
 		slime.add_child(clone)
+		# The authoring scene intentionally keeps these geometry overlays visible
+		# for level-design work. They are collision data at runtime, not gameplay
+		# UI, so cloned boss guides must start hidden as well.
+		if clone is CanvasItem:
+			(clone as CanvasItem).visible = false
 		if clone is Node2D:
 			clone.set_meta("authored_position", (clone as Node2D).position)
 	authored.free()
@@ -586,6 +973,183 @@ func _is_collision_rect_walkable(root: Object, collision_rect: Rect2) -> bool:
 	for sample in samples:
 		if not bool(root.call("_is_slime_walkable_point", sample)): return false
 	return true
+
+
+func apply_room_geometry(root: Object) -> void:
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	if floor_tiles == null:
+		return
+	root.call("_capture_normal_room_geometry")
+	if root.get("current_room_type") != DungeonGraph.ROOM_DOWNSTAIRS:
+		root.call("_restore_normal_room_geometry")
+		var underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+		if underlay != null:
+			underlay.visible = false
+		root.call("_configure_large_room_camera", false)
+		return
+	apply_authored_boss_room_geometry(root)
+	root.call("_configure_large_room_camera", true)
+
+
+func apply_authored_boss_room_geometry(root: Object) -> void:
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	if String(root.get("scene_file_path")) == "res://scenes/boss_room_debug.tscn":
+		var existing_underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+		if existing_underlay != null:
+			existing_underlay.visible = true
+		return
+	var packed_scene := load("res://scenes/boss_room_debug.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Could not load the authored boss room scene.")
+		return
+	var template := packed_scene.instantiate()
+	for path in ["Map/FloorTiles/FloorLayer", "Map/FloorTiles/FloorLFaceLayer", "Map/FloorTiles/FloorRFaceLayer", "Map/Walls/WallLeftLayer", "Map/Walls/WallRightLayer"]:
+		copy_authored_tile_layer(template.get_node_or_null(path) as TileMapLayer, root.call("get_node_or_null", path) as TileMapLayer)
+	copy_authored_polygon(root, template, "Map/FloorTiles/FloorCollisionGuide")
+	copy_boss_floor_underlay(root, template)
+	for path in ["Map/FloorTiles/Entrance", "Map/FloorTiles/EntranceRight", "Map/Walls/DoorLeft", "Map/Walls/DoorRight"]:
+		copy_authored_room_sprite(root, template, path)
+	for path in ["Map/Sockets/WALL_LEFT/SpawnMarker", "Map/Sockets/WALL_RIGHT/SpawnMarker", "Map/Sockets/BOTTOM_LEFT/SpawnMarker", "Map/Sockets/BOTTOM_RIGHT/SpawnMarker"]:
+		copy_authored_marker(root, template, path)
+	template.free()
+
+
+func copy_authored_room_sprite(root: Object, template: Node, path: NodePath) -> void:
+	var source := template.get_node_or_null(path) as Sprite2D
+	var destination := root.call("get_node_or_null", path) as Sprite2D
+	if source == null or destination == null:
+		return
+	destination.position = source.position
+	destination.texture = source.texture
+	destination.flip_h = source.flip_h
+	destination.flip_v = source.flip_v
+	destination.offset = source.offset
+	destination.scale = source.scale
+
+
+func copy_authored_marker(root: Object, template: Node, path: NodePath) -> void:
+	var source := template.get_node_or_null(path) as Marker2D
+	var destination := root.call("get_node_or_null", path) as Marker2D
+	if source == null or destination == null:
+		return
+	destination.position = source.position
+
+
+func copy_boss_floor_underlay(root: Object, template: Node) -> void:
+	var source := template.get_node_or_null("Map/FloorTiles/BossFloorUnderlay") as Polygon2D
+	if source == null:
+		return
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	var underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+	if underlay == null:
+		underlay = Polygon2D.new()
+		underlay.name = "BossFloorUnderlay"
+		floor_tiles.add_child(underlay)
+	underlay.position = source.position
+	underlay.polygon = source.polygon.duplicate()
+	underlay.color = source.color
+	underlay.z_index = -1
+	underlay.visible = true
+
+
+func copy_authored_tile_layer(source: TileMapLayer, destination: TileMapLayer) -> void:
+	if source == null or destination == null:
+		return
+	destination.clear()
+	for cell in source.get_used_cells():
+		destination.set_cell(cell, source.get_cell_source_id(cell), source.get_cell_atlas_coords(cell), source.get_cell_alternative_tile(cell))
+	destination.update_internals()
+
+
+func copy_authored_polygon(root: Object, template: Node, path: NodePath) -> void:
+	var source := template.get_node_or_null(path) as Polygon2D
+	var destination := root.call("get_node_or_null", path) as Polygon2D
+	if source == null or destination == null:
+		return
+	destination.position = source.position
+	destination.polygon = source.polygon.duplicate()
+
+
+func capture_normal_room_geometry(root: Object) -> void:
+	var saved := root.get("normal_room_geometry") as Dictionary
+	if not saved.is_empty():
+		return
+	var map_root := root.get("map_root") as Node2D
+	for path in ["FloorTiles/FloorLayer", "FloorTiles/FloorLFaceLayer", "FloorTiles/FloorRFaceLayer", "Walls/WallLeftLayer", "Walls/WallRightLayer"]:
+		var layer := map_root.get_node_or_null(path) as TileMapLayer
+		if layer != null:
+			saved[path] = layer.get_used_cells()
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Polygon2D
+	if guide != null:
+		saved["guide_position"] = guide.position
+		saved["guide_polygon"] = guide.polygon.duplicate()
+	for path in ["FloorTiles/Entrance", "FloorTiles/EntranceRight", "Walls/DoorLeft", "Walls/DoorRight"]:
+		var node := map_root.get_node_or_null(path) as Sprite2D
+		if node != null:
+			saved["position:%s" % path] = node.position
+			saved["texture:%s" % path] = node.texture
+			saved["flip_h:%s" % path] = node.flip_h
+			saved["flip_v:%s" % path] = node.flip_v
+			saved["offset:%s" % path] = node.offset
+			saved["scale:%s" % path] = node.scale
+
+
+func restore_normal_room_geometry(root: Object) -> void:
+	var saved := root.get("normal_room_geometry") as Dictionary
+	if saved.is_empty():
+		return
+	var map_root := root.get("map_root") as Node2D
+	for path in ["FloorTiles/FloorLayer", "FloorTiles/FloorLFaceLayer", "FloorTiles/FloorRFaceLayer", "Walls/WallLeftLayer", "Walls/WallRightLayer"]:
+		var layer := map_root.get_node_or_null(path) as TileMapLayer
+		if layer == null:
+			continue
+		layer.clear()
+		var saved_cells: Array = saved.get(path, []) as Array
+		for cell_value in saved_cells:
+			var cell: Vector2i = cell_value
+			layer.set_cell(cell, 0, Vector2i.ZERO)
+		layer.update_internals()
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Polygon2D
+	if guide != null:
+		guide.position = saved.get("guide_position", guide.position)
+		guide.polygon = saved.get("guide_polygon", guide.polygon)
+	for path in ["FloorTiles/Entrance", "FloorTiles/EntranceRight", "Walls/DoorLeft", "Walls/DoorRight"]:
+		var node := map_root.get_node_or_null(path) as Sprite2D
+		if node != null:
+			node.position = saved.get("position:%s" % path, node.position)
+			node.texture = saved.get("texture:%s" % path, node.texture)
+			node.flip_h = bool(saved.get("flip_h:%s" % path, node.flip_h))
+			node.flip_v = bool(saved.get("flip_v:%s" % path, node.flip_v))
+		node.offset = saved.get("offset:%s" % path, node.offset)
+		node.scale = saved.get("scale:%s" % path, node.scale)
+
+
+func configure_large_room_camera(root: Object, enabled: bool) -> void:
+	var player := root.get("player") as Sprite2D
+	var camera := player.get_node_or_null("LargeRoomCamera") as Camera2D
+	if camera == null:
+		camera = Camera2D.new()
+		camera.name = "LargeRoomCamera"
+		camera.position_smoothing_enabled = true
+		camera.position_smoothing_speed = 5.5
+		camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+		player.add_child(camera)
+		camera.top_level = true
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = 5.5
+	camera.enabled = enabled
+	if enabled:
+		update_large_room_camera(root)
+
+
+func update_large_room_camera(root: Object) -> void:
+	var player := root.get("player") as Sprite2D
+	var camera := player.get_node_or_null("LargeRoomCamera") as Camera2D
+	if camera == null or not camera.enabled:
+		return
+	camera.global_position = (root.call("_actor_foot", player) as Vector2) + Vector2(0.0, -7.0)
 
 
 func _mark_finished(root: Object) -> void:

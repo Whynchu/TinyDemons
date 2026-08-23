@@ -11,6 +11,14 @@ const UI_PATH := SOUNDS_PATH + "10_ui_sfx_free_samples/"
 const KH_UI_PATH := SOUNDS_PATH + "reconstructed_ui/"
 const MUSIC_PATH := SOUNDS_PATH + "Soundtrack/TINY DEMONS - MAIN THEME.wav"
 
+# A few reconstructed UI samples were mastered much hotter than the rest of
+# the menu set. Keep their call sites at the shared UI level and trim only the
+# cues that need it, so other quiet effects keep their existing balance.
+const CLIP_VOLUME_TRIMS_DB := {
+	"ui_pause": -8.0,
+	"ui_unpause": -6.0,
+}
+
 const CLIPS := {
 	"slash": BATTLE_PATH + "22_Slash_04.wav",
 	"miss": BATTLE_PATH + "35_Miss_Evade_02.wav",
@@ -44,6 +52,7 @@ const CLIPS := {
 	"enemy_hit_2": KH_UI_PATH + "BTL-MON-HIT02.sms-real.wav",
 	"enemy_hit_3": KH_UI_PATH + "BTL-MON-HIT03.sms-real.wav",
 	"enemy_hit_4": KH_UI_PATH + "BTL-MON-HIT04.sms-real.wav",
+	"orb_hit": KH_UI_PATH + "BTL-MON-HIT04.sms-real.wav",
 	"enemy_hit_5": KH_UI_PATH + "BTL-MON-HIT05.sms-real.wav",
 	"enemy_hit_6": KH_UI_PATH + "BTL-MON-HIT06.sms-real.wav",
 	"target_release": KH_UI_PATH + "sys-cansel.sms-real.wav",
@@ -121,7 +130,7 @@ func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) 
 	var player := _player(sound_name)
 	if player == null or player.stream == null:
 		return
-	player.volume_db = volume_db
+	player.volume_db = volume_db + float(CLIP_VOLUME_TRIMS_DB.get(sound_name, 0.0))
 	player.pitch_scale = pitch_scale
 	player.play()
 

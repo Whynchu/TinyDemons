@@ -27,6 +27,41 @@ func spawn_chest_evaporation_from_root(root: Object) -> void:
 	var chest := root.get("chest") as Sprite2D; spawn_chest_evaporation_particles(root, chest.texture, chest.global_position, int(round(root.call("_depth_key", chest) * root.get("DEPTH_Z_SCALE"))) + 1, int(root.get("CHEST_EVAPORATE_PARTICLE_COUNT")), float(root.get("CHEST_EVAPORATE_LIFETIME_MIN")), float(root.get("CHEST_EVAPORATE_LIFETIME_MAX")), root.get("rng"), Callable(root, "_pixel_particle_texture"))
 
 
+func spawn_chroma_pickup_burst_from_root(root: Object, world_position: Vector2) -> void:
+	var random_source := RandomNumberGenerator.new()
+	var seed_value := int(round(world_position.x * 100.0)) ^ int(round(world_position.y * 101.0)) ^ Time.get_ticks_msec()
+	random_source.seed = seed_value
+	var origin: Vector2 = root.call("_snap_half_pixel", world_position) as Vector2
+	var z_index := int(round(world_position.y * float(root.get("DEPTH_Z_SCALE")))) + 4
+	var chroma_color: Color = PaletteLibrary.ACCENT["blue"]
+	var flash := Sprite2D.new()
+	flash.name = "ChromaPickupFlash"
+	flash.texture = root.call("_pixel_particle_texture", chroma_color.lerp(Color.WHITE, 0.7), 3) as Texture2D
+	flash.centered = true
+	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	flash.z_as_relative = false
+	flash.z_index = z_index + 1
+	flash.position = origin
+	root.add_child(flash)
+	pixel_particles.append({"sprite": flash, "velocity": Vector2.ZERO, "timer": 0.16, "lifetime": 0.16, "gravity": 0.0, "effect_tag": &"chroma_pickup", "logical_position": origin})
+	for index in 18:
+		var particle := Sprite2D.new()
+		particle.name = "ChromaPickupSplash%d" % index
+		var particle_color := chroma_color.lerp(Color.WHITE, random_source.randf_range(0.05, 0.55))
+		particle.texture = root.call("_pixel_particle_texture", particle_color, 1 if index % 3 else 2) as Texture2D
+		particle.centered = true
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = z_index
+		particle.position = origin
+		root.add_child(particle)
+		var angle := TAU * float(index) / 18.0 + random_source.randf_range(-0.16, 0.16)
+		var speed := random_source.randf_range(18.0, 38.0)
+		var lifetime := random_source.randf_range(0.28, 0.48)
+		var velocity := Vector2.from_angle(angle) * speed + Vector2(0.0, -random_source.randf_range(2.0, 9.0))
+		pixel_particles.append({"sprite": particle, "velocity": velocity, "timer": lifetime, "lifetime": lifetime, "gravity": 30.0, "effect_tag": &"chroma_pickup", "logical_position": origin})
+
+
 func update_pixel_particles_from_root(root: Object, delta: float) -> void:
 	update_pixel_particles(delta, Callable(root, "_snap_half_pixel"), (root.get("effects_tuning") as EffectsTuning).slime_death_particle_lifetime)
 	update_slime_notices(root, delta)

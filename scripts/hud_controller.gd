@@ -188,7 +188,10 @@ func update_room_number(root: Object) -> void:
 	var run_indicator := dungeon_run_indicator
 	if run_indicator != null:
 		var profile := root.get("player_profile") as PlayerProfile
-		var run_number := profile.difficulty_rank if profile != null else 1
+		# The HUD's R-number is the successful-run progression. Difficulty rank is
+		# performance-sensitive and can fall after an F, but a failed R2 must still
+		# restart as R2 rather than appearing to roll back to R1.
+		var run_number := profile.completed_runs + 1 if profile != null else 1
 		var grade := profile.last_run_grade if profile != null else "D"
 		run_indicator.texture = root.call("_pixel_text_texture", "%s R%d" % [DungeonGraph.DUNGEON_NAME, run_number], _run_grade_color(grade))
 

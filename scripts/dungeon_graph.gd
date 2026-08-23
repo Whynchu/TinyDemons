@@ -1,6 +1,8 @@
 extends RefCounted
 class_name DungeonGraph
 
+const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
+
 ## Deterministic, in-memory dungeon topology.
 ##
 ## Rooms occupy a branching lattice. A left-wall exit leads down-left into the
@@ -20,6 +22,14 @@ const ROOM_REST: StringName = &"REST"
 const ROOM_TRADER: StringName = &"TRADER"
 const ROOM_NPC: StringName = &"NPC"
 const ROOM_DOWNSTAIRS: StringName = &"DOWNSTAIRS"
+const ROOM_SPECIAL_ENEMY: StringName = &"SPECIAL_ENEMY"
+const ROOM_TREASURE: StringName = &"TREASURE"
+# These authored names intentionally reuse the existing runtime room handlers
+# until their content policies are split into dedicated components.
+const ROOM_FIRE: StringName = ROOM_REST
+const ROOM_CLOAKED: StringName = ROOM_NPC
+const ROOM_BOSS: StringName = ROOM_DOWNSTAIRS
+const ROOM_ORB: StringName = &"ORB"
 
 const START_ROOM_ID: StringName = &"room_0_0"
 const DUNGEON_NAME := "SLIMEY DEPTHS"
@@ -30,6 +40,14 @@ class ConnectionRecord extends RefCounted:
 	var exit_socket: StringName
 	var destination_room_id: StringName
 	var destination_entry: StringName
+	var color_requirement: StringName = &""
+	var hidden_until_clear := false
+	var hidden_until_event: StringName = &""
+	var minimap_coordinate := Vector2i.ZERO
+	var requires_source_room_clear := true
+	var allow_entry_before_source_clear := false
+	var locks_entry_on_destination_engagement := true
+	var route_role: StringName = &"main"
 
 
 	func _init(
@@ -50,6 +68,14 @@ class ConnectionRecord extends RefCounted:
 			"exit_socket": exit_socket,
 			"destination_room_id": destination_room_id,
 			"destination_entry": destination_entry,
+			"color_requirement": color_requirement,
+			"hidden_until_clear": hidden_until_clear,
+			"hidden_until_event": hidden_until_event,
+			"minimap_coordinate": minimap_coordinate,
+			"requires_source_room_clear": requires_source_room_clear,
+			"allow_entry_before_source_clear": allow_entry_before_source_clear,
+			"locks_entry_on_destination_engagement": locks_entry_on_destination_engagement,
+			"route_role": route_role,
 		}
 
 
@@ -63,6 +89,11 @@ class RoomRecord extends RefCounted:
 	var outgoing_connections: Dictionary = {}
 	var incoming_connections: Dictionary = {}
 	var milestone_dead_end := false
+	var minimap_coordinate := Vector2i.ZERO
+	var chest_count := 0
+	var special_respawn_required_color: StringName = &""
+	var fire_flame: StringName = &""
+	var authored := false
 
 
 	func _init(new_id: StringName, new_coordinate: Vector2i, new_seed: int, new_room_type: StringName) -> void:
@@ -104,6 +135,11 @@ class RoomRecord extends RefCounted:
 			"outgoing_connections": outgoing_data,
 			"incoming_connections": incoming_data,
 			"milestone_dead_end": milestone_dead_end,
+			"minimap_coordinate": minimap_coordinate,
+			"chest_count": chest_count,
+			"special_respawn_required_color": special_respawn_required_color,
+			"fire_flame": fire_flame,
+			"authored": authored,
 		}
 
 
@@ -113,6 +149,7 @@ var completed_run_count := 0
 var target_boss_depth := 12
 var tutorial_starter_puzzle_depth := -1
 var tutorial_gray_puzzle_depth := -1
+var authored_run1 := false
 
 var _rooms: Dictionary = {}
 var _connections: Dictionary = {}
@@ -122,12 +159,62 @@ var _milestone_rooms: Dictionary = {}
 ## Clears any previous graph and creates the root room.
 func initialize(new_seed: int) -> RoomRecord:
 	dungeon_seed = new_seed
+	authored_run1 = false
 	_configure_tutorial_puzzle_depths()
 	start_room_id = START_ROOM_ID
 	_rooms.clear()
 	_connections.clear()
 	_milestone_rooms.clear()
 	return _ensure_room(Vector2i.ZERO, ROOM_START)
+
+
+func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
+	if layout == null:
+		return initialize(new_seed)
+	dungeon_seed = new_seed
+	authored_run1 = layout.layout_id == &"RUN1"
+	tutorial_starter_puzzle_depth = -1
+	tutorial_gray_puzzle_depth = -1
+	_rooms.clear()
+	_connections.clear()
+	_milestone_rooms.clear()
+	for spec in layout.rooms:
+		var room := RoomRecord.new(spec.id, spec.coordinate, _room_seed_for_spec(spec.id, spec.seed_salt), spec.room_type)
+		room.depth = maxi(spec.coordinate.y, 0)
+		room.display_number = room.depth
+		room.minimap_coordinate = spec.minimap_coordinate
+		room.chest_count = spec.chest_count
+		room.special_respawn_required_color = spec.special_respawn_required_color
+		room.fire_flame = spec.fire_flame
+		room.authored = true
+		_rooms[room.id] = room
+		if room.room_type == ROOM_START:
+			start_room_id = room.id
+	for spec in layout.connections:
+		if spec.destination_room_id.is_empty():
+			continue
+		var source_room := get_room(spec.source_room_id)
+		var destination_room := get_room(spec.destination_room_id)
+		if source_room == null or destination_room == null:
+			push_error("DungeonGraph: authored connection references a missing room.")
+			continue
+		var connection := ConnectionRecord.new(spec.source_room_id, spec.exit_socket, spec.destination_room_id, spec.destination_entry)
+		connection.color_requirement = spec.color_requirement
+		connection.hidden_until_clear = spec.hidden_until_clear
+		connection.hidden_until_event = spec.hidden_until_event
+		connection.minimap_coordinate = spec.minimap_coordinate
+		connection.requires_source_room_clear = spec.requires_source_room_clear
+		connection.allow_entry_before_source_clear = spec.allow_entry_before_source_clear
+		connection.locks_entry_on_destination_engagement = spec.locks_entry_on_destination_engagement
+		connection.route_role = spec.route_role
+		source_room.outgoing_connections[connection.exit_socket] = connection
+		destination_room.incoming_connections[connection.destination_entry] = connection
+		_connections[_connection_key(connection.source_room_id, connection.exit_socket)] = connection
+	return get_room(start_room_id)
+
+
+func is_authored_run1() -> bool:
+	return authored_run1
 
 
 func configure_progression(completed_runs: int) -> void:
@@ -258,6 +345,10 @@ func _room_id_for_coordinate(room_coordinate: Vector2i) -> StringName:
 func _room_seed_for_coordinate(room_coordinate: Vector2i) -> int:
 	var seed_key := "%d:%d:%d" % [dungeon_seed, room_coordinate.x, room_coordinate.y]
 	return seed_key.hash()
+
+
+func _room_seed_for_spec(room_id: StringName, seed_salt: int) -> int:
+	return int(dungeon_seed) ^ String(room_id).hash() ^ seed_salt
 
 
 func _connection_key(room_id: StringName, exit_socket: StringName) -> String:

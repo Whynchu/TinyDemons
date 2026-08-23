@@ -17,6 +17,13 @@ func update_player_shadow(root: Object, depth_scale: float) -> void:
 		_sync_sprite_shadow(sprite_shadow, source, Vector2(-0.5, 0.0))
 
 
+func sync_player_attack_shadow(root: Object, depth_scale: float) -> void:
+	# Attack1 swaps from the base player sprite to a separate render layer in
+	# the middle of input processing. Refresh both shadow layers immediately so
+	# a grey/empty-MP attack cannot render the previous idle or attack frame.
+	update_player_shadow(root, depth_scale)
+
+
 func update_cloaked_demon_shadow(root: Object, depth_scale: float) -> void:
 	var demon := root.get("cloaked_demon") as Sprite2D; var shadow := root.get("cloaked_demon_shadow") as Sprite2D
 	if shadow == null: return
@@ -29,4 +36,4 @@ func update_cloaked_demon_shadow(root: Object, depth_scale: float) -> void:
 
 
 func _sync_sprite_shadow(sprite_shadow: Sprite2D, source: Sprite2D, offset: Vector2) -> void:
-	sprite_shadow.texture = source.texture; sprite_shadow.global_position = source.global_position + offset; sprite_shadow.offset = source.offset; sprite_shadow.scale = source.scale; sprite_shadow.flip_h = source.flip_h; sprite_shadow.visible = source.visible and source.texture != null; sprite_shadow.z_index = source.z_index - 1
+	sprite_shadow.texture = source.texture; sprite_shadow.material = source.material; sprite_shadow.global_position = source.global_position + offset; sprite_shadow.offset = source.offset; sprite_shadow.scale = source.scale; sprite_shadow.flip_h = source.flip_h; sprite_shadow.visible = source.visible and source.texture != null; sprite_shadow.z_index = source.z_index - 1

@@ -34,10 +34,10 @@ const DEFINITIONS := {
 	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "bonuses": {"vitality": 2.0, "speed": 1.0}, "price": 110},
 	&"iron_cuirass": {"name": "IRON CUIRASS", "slot": &"armor", "bonuses": {"defense": 2.0, "vitality": 1.0, "speed": -2.0}, "price": 105},
 	&"feather_cloak": {"name": "FEATHER CLOAK", "slot": &"armor", "bonuses": {"speed": 5.0}, "price": 80},
-	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "bonuses": {"defense": 1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0, "strength_penalty": 1.0, "speed_penalty": 1.0}, "price": 45},
-	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "bonuses": {"defense": 2.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0, "strength_penalty": 2.0, "speed_penalty": 2.0}, "price": 110},
-	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "bonuses": {"defense": 2.0, "vitality": 1.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0, "strength_penalty": 2.0, "speed_penalty": 2.0}, "price": 105},
-	&"parry_buckler": {"name": "PARRY BUCKLER", "slot": &"shield", "bonuses": {"defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0, "strength_penalty": 0.0, "speed_penalty": 0.0}, "price": 50},
+	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "bonuses": {"defense": 2.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0, "strength_penalty": 1.0, "speed_penalty": 1.0}, "price": 45},
+	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "bonuses": {"defense": 3.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0, "strength_penalty": 2.0, "speed_penalty": 2.0}, "price": 110},
+	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "bonuses": {"defense": 3.0, "vitality": 1.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0, "strength_penalty": 2.0, "speed_penalty": 2.0}, "price": 105},
+	&"parry_buckler": {"name": "PARRY BUCKLER", "slot": &"shield", "bonuses": {"defense": 2.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0, "strength_penalty": 0.0, "speed_penalty": 0.0}, "price": 50},
 	&"bangle": {"name": "BANGLE", "slot": &"accessory", "bonuses": {"strength": 1.0, "speed": 1.0}, "price": 45},
 	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "bonuses": {"strength": 2.0, "speed": -1.0}, "price": 105},
 	&"warrior_charm": {"name": "WARRIOR CHARM", "slot": &"accessory", "bonuses": {"strength": 2.0, "defense": 1.0, "speed": -1.0}, "price": 100},
@@ -241,7 +241,10 @@ func shield_bonuses(item: ItemInstance) -> Dictionary:
 	var enhancement_factor := 1.0 + MASTERY_BONUS_PER_LEVEL * float(clampi(item.enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT))
 	var result: Dictionary = {}
 	for stat: String in shield_values:
-		result[stat] = float(shield_values[stat]) * rarity_multiplier * enhancement_factor
+		# Guard strength improves with enhancement. The movement/attack trade-off
+		# is the item's entry cost at its rarity and must not grow with mastery.
+		var mastery_multiplier := enhancement_factor if stat in ["guard_durability", "guard_reduction"] else 1.0
+		result[stat] = float(shield_values[stat]) * rarity_multiplier * mastery_multiplier
 	return result
 
 
