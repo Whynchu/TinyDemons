@@ -23,11 +23,27 @@ func _initialize() -> void:
 		var sprite := drop.get("sprite") as Sprite2D
 		var label := drop.get("label") as Sprite2D
 		_expect(sprite != null and is_instance_valid(sprite), "item drop sprite is present", failures)
-		_expect(sprite != null and bool(gameplay.call("_is_slime_walkable_point", sprite.global_position)), "item drop starts in walkable space", failures)
+		if sprite != null:
+			var chest_rect: Rect2 = gameplay.call("_collision_rect", gameplay.get("chest")) as Rect2
+			var landing_position: Vector2 = drop.get("landing_position", Vector2.ZERO) as Vector2
+			_expect(sprite.global_position.distance_to(chest_rect.get_center()) < 6.0, "item drop launches from the chest opening", failures)
+			_expect(StringName(drop.get("trajectory_mode", &"")) == &"chest_arc", "chest drop uses its chest-relative arc", failures)
+			_expect(bool(gameplay.call("_is_slime_walkable_point", landing_position)), "item drop landing is walkable", failures)
+			_expect(landing_position.distance_to(chest_rect.get_center()) < 24.0, "item drop landing stays beside the chest", failures)
+			var previous_launch_position := sprite.global_position
+			var launch_largest_step := 0.0
+			for _flight_frame in 10:
+				gameplay.call("_update_world_item_drops", 0.05)
+				if is_instance_valid(sprite):
+					launch_largest_step = maxf(launch_largest_step, sprite.global_position.distance_to(previous_launch_position))
+					previous_launch_position = sprite.global_position
+			_expect(launch_largest_step <= 8.0, "chest item follows a smooth launch arc", failures)
+			_expect(sprite != null and sprite.global_position.is_equal_approx(landing_position), "chest item settles at its nearby landing point", failures)
 		var outline := gameplay.get("walkable_outline") as PackedVector2Array
 		if sprite != null and not outline.is_empty():
 			var edge_position: Vector2 = gameplay.call("_nearest_slime_walkable_point", outline[0]) as Vector2
 			if bool(gameplay.call("_is_slime_walkable_point", edge_position)):
+				drop["trajectory_mode"] = &"physics"
 				sprite.global_position = edge_position
 				drop["last_valid_position"] = edge_position
 				drop["velocity"] = Vector2(-30, -30)

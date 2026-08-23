@@ -586,17 +586,15 @@ func refresh_room_socket_visuals(root: Object, is_unlocked: bool) -> void:
 		var connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection_for_entry(root.current_room_id, socket.socket_id())
 		var visual_state: StringName = root.call("_map_connection_visual_state", connection, true) as StringName
 		visual.visible = true
-		var entrance_is_open := visual_state == &"open" and bool(root.get("entrance_open"))
 		if is_boss_room:
-			# The normal entrance artwork is a floor walkway, which still reads as
-			# open after the boss seals the room. Use the dark enemy-shut doorway
-			# while the fight is active, then restore the walkway when the player can
-			# actually return to the dungeon.
-			visual.texture = entrance_walkway_texture if entrance_is_open else shut_texture
-			visual.self_modulate = Color.WHITE if visual_state == &"open" else _entrance_lock_modulate(root, connection, visual_state)
+			# Boss arrivals use the same lower-room entrance treatment as every other
+			# room. The fight closes the route with a gray walkway, not a back-wall
+			# DoorRight* asset; victory then restores the same walkway at full color.
+			visual.texture = entrance_walkway_texture
+			visual.self_modulate = _entrance_lock_modulate(root, connection, visual_state)
 			var extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
 			if extra_tile != null:
-				extra_tile.visible = entrance_is_open
+				extra_tile.visible = true
 			continue
 		# DoorRight* art is authored for the back wall. Entrance sockets instead
 		# use the authored walkway tile; its existing orientation is preserved.
@@ -628,8 +626,11 @@ func _color_locked_door_texture(root: Object, base_texture: Texture2D, connectio
 
 
 func _entrance_lock_modulate(root: Object, connection: DungeonGraph.ConnectionRecord, visual_state: StringName) -> Color:
-	if visual_state == &"open":
+	var boss_entrance_closed: bool = root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and not bool(root.get("entrance_open"))
+	if visual_state == &"open" and not boss_entrance_closed:
 		return Color.WHITE
+	if boss_entrance_closed:
+		return Color(0.5, 0.5, 0.5, 1.0)
 	if visual_state != &"orb_locked":
 		return Color(0.5, 0.5, 0.5, 1.0)
 	var palette_name := "grey"

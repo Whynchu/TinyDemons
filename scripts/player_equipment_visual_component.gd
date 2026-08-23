@@ -850,14 +850,10 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 	elif not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
 		var target := gameplay_root.call("_valid_current_target") as Sprite2D
 		if target != null and not bool(gameplay_root.get("player_is_attacking")):
-			facing_left = root_actor_foot_x(gameplay_root, target) < root_actor_foot_x(gameplay_root, player)
+			facing_left = bool(gameplay_root.call("_target_facing_left", target))
 	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if animation_name.begins_with("attack") else facing_left
 	_set_layer_opacity(layer, opacity)
 	layer.visible = true
-
-
-func root_actor_foot_x(root: Object, actor: Sprite2D) -> float:
-	return (root.call("_actor_foot", actor) as Vector2).x
 
 
 func _set_layer_opacity(layer: Sprite2D, opacity: float) -> void:

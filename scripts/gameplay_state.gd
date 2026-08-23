@@ -136,6 +136,7 @@ var rest_fire_controller: RestFireController = null
 var hud_controller: HudController = null
 var sound_manager: SoundManager = null
 var music_wanted := false
+var music_track_wanted: StringName = &""
 var title_menu_frames := 0
 var effects_spawner: EffectsSpawner = null
 var screen_state_controller: Node = null
@@ -885,7 +886,10 @@ func _save_current_room_state() -> void:
 		var sprite := drop.get("sprite") as Sprite2D
 		var item := drop.get("item") as ItemInstance
 		if sprite != null and is_instance_valid(sprite) and item != null:
-			saved_drops.append({"item": item.to_dictionary(), "position": sprite.global_position})
+			var saved_position := sprite.global_position
+			if float(drop.get("air_time", 0.0)) > 0.0 and drop.has("landing_position"):
+				saved_position = drop.get("landing_position") as Vector2
+			saved_drops.append({"item": item.to_dictionary(), "position": saved_position})
 	if saved_drops.is_empty():
 		state.erase("world_item_drops")
 	else:
@@ -1021,6 +1025,7 @@ func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool: return bool(actor_pr
 func _update_player_shadow() -> void: shadow_controller.update_player_shadow(self, DEPTH_Z_SCALE)
 func _update_cloaked_demon_shadow() -> void: shadow_controller.update_cloaked_demon_shadow(self, DEPTH_Z_SCALE)
 func _update_targeting() -> void: interaction_component.update_targeting(self)
+func _target_facing_left(target: Sprite2D) -> bool: return interaction_component.target_facing_left(self, target)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _target_cycle_direction() -> int: return player_controller.target_cycle_direction(_controller_devices(), CONTROLLER_DEADZONE)

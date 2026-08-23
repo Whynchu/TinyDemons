@@ -7,6 +7,12 @@ class_name ActorGeometry
 ## but the transform math lives here so hitboxes, attacks, and flashes agree.
 
 static func foot(actor: Sprite2D, actor_foot_offset: Vector2) -> Vector2:
+	# Runtime puzzle targets are centered on their walkable point, unlike the
+	# non-centered actor sprites whose authored feet use the shared offset. Using
+	# the actor offset for a centered target shifts its perceived side by eight
+	# pixels, which is enough to reverse lock-on facing at close range.
+	if actor != null and actor.centered:
+		return actor.global_position
 	return foot_position(actor.global_position, actor_foot_offset)
 
 

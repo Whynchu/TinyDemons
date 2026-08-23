@@ -21,6 +21,15 @@ func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: flo
 	return closest
 
 
+func target_facing_left(root: Object, target: Sprite2D) -> bool:
+	var player := root.get("player") as Sprite2D
+	if player == null or target == null:
+		return false
+	var player_foot: Vector2 = root.call("_actor_foot", player)
+	var target_foot: Vector2 = root.call("_actor_foot", target)
+	return target_foot.x < player_foot.x
+
+
 func update_targeting(root: Object) -> void:
 	var should_target := bool(root.call("_is_target_input_held"))
 	if not should_target:
@@ -35,7 +44,8 @@ func update_targeting(root: Object) -> void:
 	target_cycle_axis = cycle_direction
 	target = root.call("_valid_current_target") as Sprite2D
 	var player := root.get("player") as Sprite2D
-	if target != null and not bool(root.get("player_is_attacking")): player.flip_h = root.call("_actor_foot", target).x < root.call("_actor_foot", player).x
+	if target != null and not bool(root.get("player_is_attacking")):
+		player.flip_h = target_facing_left(root, target)
 	root.call("_update_target_ui")
 
 

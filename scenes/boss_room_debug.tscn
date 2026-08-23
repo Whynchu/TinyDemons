@@ -63,7 +63,7 @@ position = Vector2(58, 73)
 position = Vector2(169, 74)
 
 [node name="SpawnMarker" parent="Map/Sockets/BOTTOM_LEFT" parent_id_path=PackedInt32Array(304692599) unique_id=1858850565]
-position = Vector2(39, 137)
+position = Vector2(51, 130)
 
 [node name="SpawnMarker" parent="Map/Sockets/BOTTOM_RIGHT" parent_id_path=PackedInt32Array(1797975729) unique_id=429081338]
-position = Vector2(185, 136)
+position = Vector2(177, 128)

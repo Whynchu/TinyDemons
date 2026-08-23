@@ -411,9 +411,9 @@ variant = "blue"
 
 [node name="Stats" type="Node" parent="Actors/SlimeBlue" unique_id=1328484161]
 script = ExtResource("20_stats_component")
-allocation_profile = 3
 base_points = 8
 points_per_level = 2
+allocation_profile = 3
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=302225224]
 script = ExtResource("19_collision_guide")
@@ -424,7 +424,7 @@ rect_size = Vector2(9, 4)
 color = Color(0.1, 1, 0.35, 0.22)
 polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
-[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeBlue"]
+[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeBlue" unique_id=1620382380]
 color = Color(1, 0.25, 0.2, 0.24)
 polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
@@ -452,9 +452,9 @@ script = ExtResource("11_slime_actor")
 
 [node name="Stats" type="Node" parent="Actors/SlimeGreen" unique_id=586404895]
 script = ExtResource("20_stats_component")
-allocation_profile = 1
 base_points = 8
 points_per_level = 2
+allocation_profile = 1
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeGreen" unique_id=1632574546]
 script = ExtResource("19_collision_guide")
@@ -465,7 +465,7 @@ rect_size = Vector2(9, 4)
 color = Color(0.1, 1, 0.35, 0.22)
 polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
-[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeGreen"]
+[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeGreen" unique_id=1117557686]
 color = Color(1, 0.25, 0.2, 0.24)
 polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
@@ -510,9 +510,9 @@ variant = "red"
 
 [node name="Stats" type="Node" parent="Actors/SlimeRed" unique_id=2039895840]
 script = ExtResource("20_stats_component")
-allocation_profile = 2
 base_points = 8
 points_per_level = 2
+allocation_profile = 2
 
 [node name="CollisionGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=573711278]
 script = ExtResource("19_collision_guide")
@@ -523,7 +523,7 @@ rect_size = Vector2(9, 4)
 color = Color(0.1, 1, 0.35, 0.22)
 polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 
-[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeRed"]
+[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeRed" unique_id=480441022]
 color = Color(1, 0.25, 0.2, 0.24)
 polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
