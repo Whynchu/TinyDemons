@@ -141,8 +141,8 @@ func nearest_walkable_point(point: Vector2) -> Vector2:
 func nearest_slime_walkable_point(point: Vector2) -> Vector2:
 	if is_slime_walkable(point):
 		return point
-	var best := nearest_walkable_point(point)
-	var best_distance := point.distance_squared_to(best)
+	var best := point
+	var best_distance := INF
 	for candidate in points:
 		if not is_slime_walkable(candidate):
 			continue
@@ -150,7 +150,19 @@ func nearest_slime_walkable_point(point: Vector2) -> Vector2:
 		if distance < best_distance:
 			best = candidate
 			best_distance = distance
-	return best
+	if best_distance < INF:
+		return best
+	var nearest := nearest_walkable_point(point)
+	if is_slime_walkable(nearest):
+		return nearest
+	var center := Vector2.ZERO
+	for outline_point in outline:
+		center += outline_point
+	if not outline.is_empty():
+		center /= float(outline.size())
+	if is_slime_walkable(center):
+		return center
+	return nearest
 
 
 func random_slime_walkable_point_near(point: Vector2, sample_count: int, ignored_slime: Sprite2D, random_source: RandomNumberGenerator, near_other: Callable) -> Vector2:

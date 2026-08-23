@@ -9,6 +9,13 @@ const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/run_flow_controller.gd
 const HUB_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/hub_flow_controller.gd")
 const SAVE_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/save_flow_controller.gd")
 const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/room_puzzle_controller.gd")
+const MAGIC_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/magic_runtime_controller.gd")
+const TARGETING_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/targeting_runtime_controller.gd")
+const COMBAT_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/combat_runtime_controller.gd")
+const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/slime_runtime_controller.gd")
+const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/actor_presentation_runtime_controller.gd")
+const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
+const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
 
 
 func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:
@@ -25,9 +32,15 @@ func initialize(root: GameplayState) -> void:
 	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
 	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController")
 	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController")
+	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as Node
 	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
 	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")
 	root.room_puzzle_controller = _add_runtime_node(root, ROOM_PUZZLE_CONTROLLER_SCRIPT, "RoomPuzzleController")
+	root.magic_runtime_controller = _add_runtime_node(root, MAGIC_RUNTIME_CONTROLLER_SCRIPT, "MagicRuntimeController")
+	root.targeting_runtime_controller = _add_runtime_node(root, TARGETING_RUNTIME_CONTROLLER_SCRIPT, "TargetingRuntimeController")
+	root.combat_runtime_controller = _add_runtime_node(root, COMBAT_RUNTIME_CONTROLLER_SCRIPT, "CombatRuntimeController")
+	root.slime_runtime_controller = _add_runtime_node(root, SLIME_RUNTIME_CONTROLLER_SCRIPT, "SlimeRuntimeController")
+	root.actor_presentation_runtime_controller = _add_runtime_node(root, ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT, "ActorPresentationRuntimeController")
 	var profile := ProfileSaveService.load_profile()
 	root.player_profile = profile
 	root.has_persistent_profile = has_profile
@@ -43,12 +56,15 @@ func initialize(root: GameplayState) -> void:
 	var occlusion := _add_runtime_node(root, OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
 	occlusion.resolution_scale = effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
 	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
+	root.room_controller.room_cleared.connect(Callable(root.dungeon_map_controller, "on_room_completed"))
+	root.dungeon_map_controller.connect(&"map_state_changed", Callable(root, "_on_dungeon_map_state_changed"))
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
 	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
 	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
 	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
+	root.dungeon_minimap_controller = _add_runtime_node(root, DUNGEON_MINIMAP_CONTROLLER_SCRIPT, "DungeonMinimapController", root.ui) as Node
 	root.sound_manager = _add_runtime_node(root, SoundManager, "SoundManager") as SoundManager
 	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
 	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
@@ -61,20 +77,28 @@ func initialize(root: GameplayState) -> void:
 	dungeon_graph.configure_progression(profile.completed_runs)
 	var dungeon_seed := rng.randi()
 	root.current_dungeon_seed = dungeon_seed
-	dungeon_graph.initialize(dungeon_seed)
-	var initial_room_id := dungeon_graph.start_room_id
+	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame)
+	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
 	if root.debug_start_in_boss_room:
-		var boss_connection: DungeonGraph.ConnectionRecord = dungeon_graph.ensure_connection(
-			dungeon_graph.start_room_id,
-			DungeonGraph.WALL_RIGHT,
-			DungeonGraph.ROOM_DOWNSTAIRS
-		)
-		initial_room_id = boss_connection.destination_room_id
+		if root.dungeon_map_controller.has_complete_layout():
+			for candidate_id in dungeon_graph.get_room_ids():
+				var candidate := dungeon_graph.get_room(candidate_id)
+				if candidate != null and candidate.room_type == DungeonGraph.ROOM_BOSS:
+					initial_room_id = candidate.id
+					break
+		else:
+			var boss_connection: DungeonGraph.ConnectionRecord = dungeon_graph.ensure_connection(
+				dungeon_graph.start_room_id,
+				DungeonGraph.WALL_RIGHT,
+				DungeonGraph.ROOM_DOWNSTAIRS
+			)
+			initial_room_id = boss_connection.destination_room_id
 	root.current_room_id = initial_room_id
 	root._sync_current_room_metadata()
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
+	_place_debug_player_at_boss_entry(root, player)
 	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
 	var slimes: Array[Sprite2D] = [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]; _expand_slime_roster(root, slimes); root.set("slimes", slimes)
@@ -131,6 +155,25 @@ func initialize(root: GameplayState) -> void:
 		else:
 			_show_title_after_boot(root, boot_loading)
 	root.set("boot_active", false)
+
+
+func _place_debug_player_at_boss_entry(root: GameplayState, player: Sprite2D) -> void:
+	if not bool(root.get("debug_start_in_boss_room")) or root.get("current_room_type") != DungeonGraph.ROOM_DOWNSTAIRS:
+		return
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var rooms := root.get("room_controller") as RoomController
+	if graph == null or rooms == null:
+		return
+	for socket_value in rooms.active_entrance_sockets.values():
+		var socket := socket_value as DungeonSocket
+		if socket == null:
+			continue
+		var connection := graph.get_connection_for_entry(root.get("current_room_id"), socket.socket_id())
+		if connection == null:
+			continue
+		player.global_position = rooms.call("_arrival_player_position", root, socket)
+		player.flip_h = socket.inward_facing.x < 0.0
+		return
 
 
 func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> void:
@@ -203,6 +246,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	transmutations.effect_triggered.connect(Callable(root, "_on_transmutation_effect_triggered")); root.equipment_transmutation_component = transmutations; root._configure_equipment_transmutations()
 	root.player_chroma_component = _ensure_player_component(player, PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma")
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
+	root.player_aspect_ability_component.call("configure_mode_cooldowns", root.MAGIC_COOLDOWN, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
 	equipment_visual.initialize(root); root.player_equipment_visual_component = equipment_visual
 	root._set_target_ui_visible(false)

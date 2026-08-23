@@ -8,6 +8,8 @@ var effect_image_cache: Dictionary = {}
 var highlighted_image_cache: Dictionary = {}
 var grey_highlighted_image_cache: Dictionary = {}
 var white_image_cache: Dictionary = {}
+var highlighted_texture_cache: Dictionary = {}
+var orb_highlighted_texture_cache: Dictionary = {}
 var occluded_actor_textures: Dictionary = {}
 var highlighted_actor_textures: Dictionary = {}
 var grey_highlighted_actor_textures: Dictionary = {}
@@ -91,6 +93,28 @@ func white_texture(source: Texture2D) -> Texture2D:
 			var color: Color = image.get_pixel(x, y)
 			if color.a > 0.0: image.set_pixel(x, y, Color(1, 1, 1, color.a))
 	var texture := ImageTexture.create_from_image(image); white_image_cache[key] = texture; return texture
+
+
+func highlighted_texture(source: Texture2D) -> Texture2D:
+	if source == null:
+		return null
+	if highlighted_texture_cache.has(source):
+		return highlighted_texture_cache[source] as Texture2D
+	var image := cached_texture_image(source)
+	var texture := effect_texture_with_display_size(cached_highlighted_image(source, image), image.get_size())
+	highlighted_texture_cache[source] = texture
+	return texture
+
+
+func orb_highlighted_texture(source: Texture2D) -> Texture2D:
+	if source == null:
+		return null
+	if orb_highlighted_texture_cache.has(source):
+		return orb_highlighted_texture_cache[source] as Texture2D
+	var image := cached_texture_image(source)
+	var texture := effect_texture_with_display_size(make_orb_highlighted_effect_image(image), image.get_size() + Vector2i(2, 2))
+	orb_highlighted_texture_cache[source] = texture
+	return texture
 
 
 func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, use_grey_highlight: bool, delta: float, apply_actor_scale: Callable, _grace_duration: float) -> void:
@@ -228,6 +252,29 @@ func make_highlighted_effect_image(source_image: Image) -> Image:
 	return image
 
 
+func make_full_highlighted_effect_image(source_image: Image) -> Image:
+	var image := make_effect_image(source_image)
+	apply_pixel_outline(image, resolution_scale, Color.WHITE, true)
+	return image
+
+
+func make_orb_highlighted_effect_image(source_image: Image) -> Image:
+	# Build the stepped outline at the art's native resolution first.  Expanding
+	# the already-upscaled image causes diagonal samples to smear into sideways
+	# bars instead of reading as individual pixel steps.
+	# The authored orb touches the edge of its 9x9 frame, so it needs a one-pixel
+	# transparent border before the outline pass or the left/right silhouette
+	# cannot be drawn at all.
+	var outlined := Image.create_empty(source_image.get_width() + 2, source_image.get_height() + 2, false, source_image.get_format())
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			outlined.set_pixel(x + 1, y + 1, source_image.get_pixel(x, y))
+	# Match the slime highlight exactly: cardinal neighbors produce the clean
+	# stepped pixel edge, while diagonal neighbors make the corners fill in.
+	apply_pixel_outline(outlined, 1, Color.WHITE)
+	return make_effect_image(outlined)
+
+
 func make_grey_highlighted_effect_image(source_image: Image) -> Image:
 	var image := make_effect_image(source_image)
 	apply_pixel_outline(image, resolution_scale, Color8(150, 150, 150))
@@ -243,11 +290,11 @@ func make_white_image(source_image: Image) -> Image:
 	return image
 
 
-func apply_pixel_outline(image: Image, pixel_size: int = 1, outline_color: Color = Color.WHITE) -> void:
+func apply_pixel_outline(image: Image, pixel_size: int = 1, outline_color: Color = Color.WHITE, include_diagonals: bool = false) -> void:
 	var outline_points: Array[Vector2i] = []
 	for y in range(image.get_height()):
 		for x in range(image.get_width()):
-			if image.get_pixel(x, y).a <= 0.05 and has_opaque_cardinal_neighbor(image, x, y, pixel_size):
+			if image.get_pixel(x, y).a <= 0.05 and has_opaque_neighbor(image, x, y, pixel_size, include_diagonals):
 				outline_points.append(Vector2i(x, y))
 	for point in outline_points:
 		image.set_pixel(point.x, point.y, outline_color)
@@ -289,8 +336,10 @@ func warm_actor_texture(texture: Texture2D) -> void:
 
 
 
-func has_opaque_cardinal_neighbor(image: Image, x: int, y: int, pixel_size: int) -> bool:
+func has_opaque_neighbor(image: Image, x: int, y: int, pixel_size: int, include_diagonals: bool = false) -> bool:
 	var offsets := [Vector2i(-pixel_size, 0), Vector2i(pixel_size, 0), Vector2i(0, -pixel_size), Vector2i(0, pixel_size)]
+	if include_diagonals:
+		offsets.append_array([Vector2i(-pixel_size, -pixel_size), Vector2i(pixel_size, -pixel_size), Vector2i(-pixel_size, pixel_size), Vector2i(pixel_size, pixel_size)])
 	for offset in offsets:
 		var sample_x: int = x + offset.x
 		var sample_y: int = y + offset.y

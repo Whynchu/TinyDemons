@@ -1,0 +1,266 @@
+extends Node
+class_name MagicRuntimeController
+
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
+
+const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
+const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
+const MAGIC_KNOCKBACK_MULTIPLIER := 0.25
+
+
+func update_player_mp_ui(root: Object) -> void:
+	# The visual state must update even while the MP HUD is not built or visible.
+	# In particular, a spell can consume MP before the HUD is ready.
+	root.call("_update_mp_desaturation")
+	var fill := root.get("player_mp_fill") as Sprite2D
+	if fill == null:
+		return
+	var fill_size: Vector2 = root.get("player_mp_fill_size")
+	if fill_size == Vector2.ZERO and fill.texture != null:
+		fill_size = fill.texture.get_size()
+	if fill_size == Vector2.ZERO:
+		fill_size = Vector2(48, 16)
+	root.set("player_mp_fill_size", fill_size)
+	var max_mp := float(root.get("PLAYER_MAX_MP")) if root.get("PLAYER_MAX_MP") != null else 100.0
+	var chroma := current_player_chroma(root)
+	var hud := root.get("hud_controller") as HudController
+	if hud != null:
+		hud.set_fill_ratio(fill, fill_size, clampf(chroma / max_mp, 0.0, 1.0))
+	var text := root.get("player_mp_text") as Sprite2D
+	if text != null:
+		text.texture = root.call("_pixel_text_texture", "%d/%d" % [ceili(chroma), int(max_mp)], Color.WHITE)
+
+
+func current_player_chroma(root: Object) -> float:
+	var component := root.get("player_chroma_component") as Node
+	return float(component.get("current_chroma")) if component != null and is_instance_valid(component) else 0.0
+
+
+func restore_player_mp(root: Object) -> void:
+	var component := root.get("player_chroma_component") as Node
+	if component != null and is_instance_valid(component):
+		component.call("attune", component.get("current_aspect"))
+	root.call("_update_player_mp_ui")
+
+
+func try_cast_magic(root: Object) -> bool:
+	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+		return false
+	var ability := root.get("player_aspect_ability_component") as Node
+	var chroma := root.get("player_chroma_component") as Node
+	if ability == null or chroma == null:
+		return false
+	var accepted := bool(ability.call("try_activate", chroma, Callable(root, "_execute_current_aspect_ability")))
+	if accepted:
+		root.call("_sync_chroma_presentation")
+		root.call("_update_player_mp_ui")
+	return accepted
+
+
+func sync_chroma_presentation(root: Object) -> void:
+	var component := root.get("player_chroma_component") as Node
+	if component == null:
+		return
+	var flame := String(component.call("aspect_name"))
+	var palette := "grey" if flame == "gray" else AspectCatalogScript.palette_for_flame(StringName(flame))
+	if palette.is_empty() or palette == String(root.get("current_player_palette_name")):
+		return
+	root.call("_start_player_palette_flash", palette)
+
+
+func execute_current_aspect_ability(root: Object, mode: int) -> bool:
+	var current := root.call("_valid_current_target") as Sprite2D
+	var target := current if current != null and bool(root.call("_is_slime_targetable", current)) else root.call("_closest_target") as Sprite2D
+	var player := root.get("player") as Sprite2D
+	var direction := Vector2.RIGHT
+	if target != null:
+		var to_target: Vector2 = magic_target_point(root, target) - player_visual_center(root)
+		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else Vector2.RIGHT
+	else:
+		var last_input: Vector2 = root.get("last_player_input_direction")
+		direction = last_input.normalized()
+	var origin := player_visual_center(root) + Vector2(signf(direction.x) * 5.0, 1.0)
+	if target != null and player != null:
+		player.flip_h = direction.x < 0.0
+	spawn_magic_projectile(root, origin, direction, target, mode)
+	root.call("_play_sound", "magic_cast", -8.0, 1.0)
+	return true
+
+
+func player_visual_center(root: Object) -> Vector2:
+	var player := root.get("player") as Sprite2D
+	return player.global_position + Vector2(8, 7)
+
+
+func slime_visual_center(root: Object, slime: Sprite2D) -> Vector2:
+	return slime.global_position + Vector2(8, 2)
+
+
+func magic_target_point(root: Object, slime: Sprite2D) -> Vector2:
+	var torches := root.get("puzzle_torches") as Array[Sprite2D]
+	if torches.has(slime):
+		return slime.global_position
+	var body := root.call("_slime_body_polygon", slime) as PackedVector2Array
+	if body.size() >= 3:
+		return ActorGeometry.polygon_center(body)
+	return ActorGeometry.combat_target_point(root.call("_collision_rect", slime) as Rect2)
+
+
+func spawn_magic_projectile(root: Object, origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
+	var palette := String(root.get("current_player_palette_name"))
+	var base_color := PaletteLibrary.normal(palette)
+	var accent_color := PaletteLibrary.accent(palette)
+	var player := root.get("player") as Sprite2D
+	var projectile := Sprite2D.new()
+	projectile.name = "MagicProjectile"
+	projectile.texture = root.call("_pixel_particle_texture", base_color, int(root.get("MAGIC_PROJECTILE_SIZE"))) as Texture2D
+	projectile.centered = true
+	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	projectile.z_as_relative = false
+	projectile.z_index = player.z_index + 1
+	projectile.position = origin
+	(root as Node).add_child(projectile)
+	var outline := Sprite2D.new()
+	outline.name = "MagicProjectileOutline"
+	outline.texture = magic_projectile_outline_texture(root, base_color, accent_color)
+	outline.centered = true
+	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	outline.z_as_relative = false
+	outline.z_index = player.z_index + 1
+	outline.position = origin
+	(root as Node).add_child(outline)
+	var controller := root.get("magic_projectile_controller") as MagicProjectileController
+	controller.spawn(projectile, outline, direction, float(root.get("MAGIC_PROJECTILE_LIFETIME")), palette, homing_target, ability_mode)
+
+
+func magic_projectile_outline_texture(root: Object, base_color: Color, accent_color: Color) -> Texture2D:
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	var key := "magic_outline:%s:%s" % [base_color.to_html(false), accent_color.to_html(false)]
+	if effects.pixel_particle_texture_cache.has(key):
+		return effects.pixel_particle_texture_cache[key]
+	var size := int(root.get("MAGIC_PROJECTILE_SIZE")) + 2
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in size:
+		for x in size:
+			if x == 0 or y == 0 or x == size - 1 or y == size - 1:
+				image.set_pixel(x, y, accent_color)
+	var texture := ImageTexture.create_from_image(image)
+	effects.pixel_particle_texture_cache[key] = texture
+	return texture
+
+
+func update_magic_projectiles(root: Object, delta: float) -> void:
+	var controller := root.get("magic_projectile_controller") as MagicProjectileController
+	controller.tick(delta, 70.0, Callable(root, "_snap_half_pixel"), Callable(self, "_magic_target_point_callback").bind(root), Callable(root, "_is_slime_targetable"), Callable(self, "_magic_projectile_hit_target_callback").bind(root), Callable(self, "_resolve_magic_projectile_hit_callback").bind(root), Callable(self, "_spawn_magic_trail_callback").bind(root))
+
+
+func _magic_target_point_callback(slime: Sprite2D, root: Object) -> Vector2:
+	return magic_target_point(root, slime)
+
+
+func _magic_projectile_hit_target_callback(sprite: Sprite2D, root: Object) -> Sprite2D:
+	return magic_projectile_hit_target(root, sprite)
+
+
+func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int, root: Object) -> void:
+	resolve_magic_projectile_hit(root, target, world_position, palette, ability_mode)
+
+
+func _spawn_magic_trail_callback(world_position: Vector2, palette: String, root: Object) -> void:
+	spawn_magic_trail(root, world_position, palette)
+
+
+func resolve_magic_projectile_hit(root: Object, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
+	var torches := root.get("puzzle_torches") as Array[Sprite2D]
+	if torches.has(target):
+		root.call("_activate_puzzle_torch", target, world_position, palette, false)
+	else:
+		root.call("_magic_hit_slime", target, world_position, palette, ability_mode)
+
+
+func magic_projectile_hit_target(root: Object, sprite: Sprite2D) -> Sprite2D:
+	var radius := int(root.get("MAGIC_PROJECTILE_SIZE")) * 0.5 + 2.0
+	var torches := root.get("puzzle_torches") as Array[Sprite2D]
+	for torch in torches:
+		if not bool(root.call("_is_slime_targetable", torch)):
+			continue
+		var torch_rect := Rect2(torch.global_position - Vector2(3.0, 3.0), Vector2(6.0, 6.0))
+		if torch_rect.grow(radius).has_point(sprite.global_position):
+			return torch
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	for slime in slimes:
+		if not bool(root.call("_is_slime_targetable", slime)):
+			continue
+		if _circle_intersects_polygon(sprite.global_position, radius, root.call("_slime_body_polygon", slime) as PackedVector2Array):
+			return slime
+	return null
+
+
+func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool:
+	if polygon.size() < 3:
+		return false
+	if Geometry2D.is_point_in_polygon(center, polygon):
+		return true
+	for index in polygon.size():
+		var closest := Geometry2D.get_closest_point_to_segment(center, polygon[index], polygon[(index + 1) % polygon.size()])
+		if center.distance_squared_to(closest) <= radius * radius:
+			return true
+	return false
+
+
+func magic_damage_for_mode(base_damage: float, ability_mode: int) -> float:
+	var grey_damage := maxf(floorf(base_damage * GREY_MAGIC_DAMAGE_MULTIPLIER), 1.0)
+	if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL:
+		var elemental_damage := floorf(base_damage * ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER)
+		return maxf(elemental_damage, grey_damage + 1.0)
+	return grey_damage
+
+
+func magic_knockback_multiplier() -> float:
+	return MAGIC_KNOCKBACK_MULTIPLIER
+
+
+func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
+	var base_damage := float(root.call("_player_attack_damage_against", slime))
+	var damage := magic_damage_for_mode(base_damage, ability_mode)
+	root.call("_damage_slime_with_number", slime, damage, false, false)
+	root.call("_knockback_slime", slime, MAGIC_KNOCKBACK_MULTIPLIER)
+	root.call("_spawn_damage_number", slime, damage, false)
+	root.call("_play_sound", "magic_hit", -8.0, 1.0)
+	spawn_magic_impact(root, world_position, palette)
+
+
+func spawn_magic_trail(root: Object, world_position: Vector2, palette: String) -> void:
+	var player := root.get("player") as Sprite2D
+	var particle := Sprite2D.new()
+	particle.texture = root.call("_pixel_particle_texture", PaletteLibrary.normal(palette), 1) as Texture2D
+	particle.centered = false
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = false
+	particle.z_index = player.z_index + 1
+	particle.position = world_position
+	(root as Node).add_child(particle)
+	var lifetime := 0.35
+	(root.get("effects_spawner") as EffectsSpawner).pixel_particles.append({"sprite": particle, "velocity": Vector2.ZERO, "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+
+
+func spawn_magic_impact(root: Object, world_position: Vector2, palette: String) -> void:
+	var player := root.get("player") as Sprite2D
+	var rng := root.get("rng") as RandomNumberGenerator
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	var color := PaletteLibrary.normal(palette)
+	for i in 8:
+		var particle := Sprite2D.new()
+		particle.texture = root.call("_pixel_particle_texture", color, 1) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = player.z_index + 1
+		particle.position = world_position
+		(root as Node).add_child(particle)
+		var angle := float(i) / 8.0 * TAU
+		var speed := float(rng.randf_range(14.0, 30.0))
+		var lifetime := float(rng.randf_range(0.3, 0.5))
+		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(cos(angle), sin(angle)) * speed, "timer": lifetime, "lifetime": lifetime, "gravity": 20.0})

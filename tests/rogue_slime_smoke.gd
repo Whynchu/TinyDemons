@@ -22,16 +22,56 @@ func _initialize() -> void:
 	_expect(float(level_high.vit) / float(level_high.strength) < float(level_balanced.vit) / float(level_balanced.strength), "rogue growth keeps VIT relatively lower than balanced profile", failures)
 
 	var rooms := RoomController.new()
+	var boss_purple_count := 0
+	var boss_minor_slot_count := 0
 	for rank in [1, 3, 5, 8, 12]:
 		rooms.progression_run_rank = rank
 		for seed in 128:
 			var encounter := rooms._generate_boss_encounter(seed + rank * 1000, 12)
 			var variants := encounter["variants"] as Array
 			var scales := encounter["scales"] as Array
-			_expect("purple" in variants, "boss encounter includes a rogue at rank %d seed %d" % [rank, seed], failures)
-			if rank == 1:
-				_expect(String(variants[0]) != "purple", "R1 lead boss excludes the purple variant at seed %d" % seed, failures)
+			_expect(String(variants[0]) != "purple", "scaled lead boss excludes the purple variant at rank %d seed %d" % [rank, seed], failures)
+			boss_minor_slot_count += variants.size() - 1
+			for variant_index in range(1, variants.size()):
+				if String(variants[variant_index]) == "purple":
+					boss_purple_count += 1
 			_expect(float(scales[0]) > 1.0, "boss encounter leads with a scaled boss at rank %d seed %d" % [rank, seed], failures)
+	_expect(boss_purple_count > 0, "rare boss sampling still permits an occasional purple minor", failures)
+	_expect(float(boss_purple_count) / float(boss_minor_slot_count) < 0.12, "purple minors stay rare in boss encounters", failures)
+	var expected_caps := {1: 3, 2: 5, 3: 6, 4: 7}
+	var expected_popcorn_levels := {2: 1, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 3}
+	for rank in expected_popcorn_levels:
+		rooms.progression_run_rank = rank
+		_expect(rooms._popcorn_enemy_level() == int(expected_popcorn_levels[rank]), "Run %d popcorn enemies use the gradual level %d curve" % [rank, int(expected_popcorn_levels[rank])], failures)
+	for rank in [1, 2, 3, 4]:
+		rooms.progression_run_rank = rank
+		var maximum_seen := 0
+		var level_one_count := 0
+		var level_count := 0
+		for seed in 256:
+			var encounter := rooms._generate_enemy_encounter(seed + rank * 3000, 12, false, false)
+			for level_value in encounter["levels"] as Array:
+				var level := int(level_value)
+				maximum_seen = maxi(maximum_seen, level)
+				level_one_count += 1 if level == 1 else 0
+				level_count += 1
+		_expect(maximum_seen <= int(expected_caps[rank]), "Run %d enemy levels stay at or below cap %d" % [rank, int(expected_caps[rank])], failures)
+		if rank > 1:
+			_expect(maximum_seen == int(expected_caps[rank]), "Run %d encounter generation reaches level cap %d" % [rank, int(expected_caps[rank])], failures)
+		if rank == 2:
+			_expect(float(level_one_count) / float(maxi(level_count, 1)) >= 0.30, "Run 2 keeps a substantial level 1 popcorn population", failures)
+	rooms.progression_run_rank = 8
+	var regular_purple_count := 0
+	var regular_slot_count := 0
+	for seed in 256:
+		var encounter := rooms._generate_enemy_encounter(seed + 4000, 8, false, true)
+		var variants := encounter["variants"] as Array
+		regular_slot_count += variants.size()
+		for variant in variants:
+			if String(variant) == "purple":
+				regular_purple_count += 1
+	_expect(regular_purple_count > 0, "regular encounter sampling still permits an occasional purple", failures)
+	_expect(float(regular_purple_count) / float(regular_slot_count) < 0.12, "purple variants stay rare in regular encounters", failures)
 	rooms.free()
 
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D

@@ -47,7 +47,7 @@ func set_static_text(level_text: String, _player_color: Color = XP_COLOR) -> voi
 	_set_text(level_sprite, level_text, Color.WHITE)
 	level_sprite.position.x = -float(level_sprite.texture.get_width())
 	_set_text($PlayerStatus/Health/HpLabel, "hp", Color.WHITE)
-	_set_text($PlayerStatus/Mana/MpLabel, "mp", Color.WHITE)
+	_set_text($PlayerStatus/Mana/MpLabel, "ch", Color.WHITE)
 
 
 func apply_bar_colors(player_color: Color = XP_COLOR) -> void:
@@ -100,6 +100,7 @@ func glyph_texture(value: String, color: Color) -> Texture2D:
 		".": ["0", "0", "0", "0", "1"], "-": ["000", "000", "111", "000", "000"], ":": ["0", "1", "0", "1", "0"], "/": ["001", "001", "010", "100", "100"],
 		"L": ["100", "100", "100", "100", "111"], "v": ["000", "000", "101", "101", "010"],
 		"l": ["10", "10", "10", "10", "11"], "h": ["100", "100", "110", "101", "101"],
+		"c": ["000", "000", "111", "100", "111"],
 		"p": ["000", "110", "101", "110", "100"], "m": ["00000", "11011", "10101", "10101", "10101"],
 		"S": ["011", "100", "010", "001", "110"], "T": ["111", "010", "010", "010", "010"],
 		"A": ["010", "101", "111", "101", "101"], "R": ["110", "101", "110", "101", "101"],

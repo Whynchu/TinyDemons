@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://bxt6set6lnd6"]
+
+[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/basic_room.tscn" id="1_basic_room"]
+[ext_resource type="Texture2D" uid="uid://ccm6qag41wj6a" path="res://assets/artwork/entrance_orb.png" id="2_entry_orb"]
+
+[node name="OrbRoom" unique_id=167251533 instance=ExtResource("1_basic_room")]
+metadata/prefab_role = "orb_room_authoring_template"
+metadata/map_marker = "light_blue_orb_room"
+
+[node name="OrbCenterGuide" type="Marker2D" parent="Map" parent_id_path=PackedInt32Array(155061281) index="3" unique_id=922947198]
+position = Vector2(120, 80)
+metadata/authoring_note = "Adjust this marker and EntryOrb together if the room art changes."
+
+[node name="EntryOrb" type="Sprite2D" parent="Map" parent_id_path=PackedInt32Array(155061281) index="4" unique_id=252135726]
+z_index = 8
+position = Vector2(120, 80)
+texture = ExtResource("2_entry_orb")
+hframes = 6
+metadata/prefab_role = "shared_map_color_orb"
+metadata/initial_palette = "grey"
+metadata/map_marker = "light_blue_orb_room"

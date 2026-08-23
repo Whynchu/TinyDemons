@@ -15,10 +15,18 @@ func chest_item_drop_chance(root: Object) -> float:
 	return clampf(0.34 + exploration_bonus + float(run_rank(root) - 1) * 0.035 + loot_grade_bonus(root) * 0.025, 0.30, 0.88)
 
 
+func chest_item_drop_count(root: Object, roll: float) -> int:
+	# Treasure rooms are less frequent now, so a successful gear reward can
+	# occasionally pay out as a two-item burst. Keep the second item uncommon
+	# enough that a chest still has a readable primary reward.
+	var double_drop_chance := clampf(0.35 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04, 0.25, 0.75)
+	return 2 if roll < double_drop_chance else 1
+
+
 func chest_gold_reward(root: Object, base_gold: int) -> int:
 	var reward_rng := RandomNumberGenerator.new()
 	reward_rng.seed = int(root.current_dungeon_seed) ^ String(root.current_room_id).hash() ^ 0x474F4C44
-	var rolled_gold: int = reward_rng.randi_range(roundi(base_gold * 0.55), roundi(base_gold * 1.15))
+	var rolled_gold: int = reward_rng.randi_range(roundi(base_gold * 0.75), roundi(base_gold * 1.30))
 	var multiplier: float = 1.0 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04
 	return maxi(1, roundi(float(rolled_gold) * clampf(multiplier, 0.80, 1.90)))
 
@@ -55,7 +63,11 @@ func finalize_run_enemy_total(root: Object) -> void:
 func run_difficulty_bonus(root: Object) -> int:
 	if root.player_profile == null:
 		return 0
-	return clampi(root.player_profile.difficulty_rank - 1, 0, 12)
+	# Difficulty rank also records performance-based progression. Only the part
+	# that is ahead of the completed-run baseline should affect enemy levels;
+	# otherwise a high Run 1 grade makes the opening of Run 2 jump too sharply.
+	var completed_run_baseline: int = root.player_profile.completed_runs + 1
+	return clampi(root.player_profile.difficulty_rank - completed_run_baseline, 0, 12)
 
 
 func run_rank(root: Object) -> int:
@@ -67,6 +79,11 @@ func apply_run_rank_grade(root: Object, grade: String) -> void:
 
 
 func begin_new_run(root: Object) -> void:
+	# Every run begins at the hub in Gray. The selected starter flame is present
+	# at the fire, but the hub exits stay a real gate until the player attunes to
+	# it, just like the first run's tutorial gate.
+	root.starter_flame_attuned_this_run = false
+	_reset_dungeon_for_new_run(root)
 	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
 	if momentum != null:
 		momentum.reset_all()
@@ -76,8 +93,6 @@ func begin_new_run(root: Object) -> void:
 	if root.player_profile != null:
 		starter_palette = AspectCatalogScript.palette_for_flame(root.player_profile.starter_flame)
 	root.run_start_palette_name = starter_palette
-	var tutorial_run: bool = root.player_profile == null or root.player_profile.completed_runs == 0
-	root.starter_flame_attuned_this_run = not tutorial_run
 	# The initial room may have been laid out before new-file selection was
 	# confirmed. Reassign the hub flame here so its visual and interaction target
 	# always match the persisted starter flame for this run.
@@ -88,13 +103,45 @@ func begin_new_run(root: Object) -> void:
 	root.current_player_palette_name = "grey"
 	root.call("_apply_player_palette_async", "grey")
 	root.call("_update_player_mp_ui")
-	# The first room is the starter-flame lesson. The player must attune before
-	# the hub exit becomes usable, but this gate is opened permanently after touch.
-	if root.current_room_type == DungeonGraph.ROOM_START and tutorial_run:
+	# The first room is the starter-flame lesson on every run. The player must
+	# attune before the hub exit becomes usable, but this gate is opened
+	# permanently after touch.
+	if root.current_room_type == DungeonGraph.ROOM_START and not root.starter_flame_attuned_this_run:
 		root.call("_set_door_active", false)
 		root.call("_set_entrance_open", false)
 	if root.run_state != null:
 		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")))
+
+
+func _reset_dungeon_for_new_run(root: Object) -> void:
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var room_controller := root.get("room_controller") as RoomController
+	if map_controller == null or graph == null or room_controller == null:
+		return
+	var new_seed: int = (root.get("rng") as RandomNumberGenerator).randi()
+	root.set("current_dungeon_seed", new_seed)
+	var start_room_id: StringName = StringName(map_controller.call("begin_run", graph, new_seed, root.player_profile.completed_runs if root.player_profile != null else 0, root.player_profile.starter_flame if root.player_profile != null else &"fire"))
+	room_controller.room_states.clear()
+	var next_room_id := start_room_id
+	if bool(root.get("debug_start_in_boss_room")):
+		for candidate_id in graph.get_room_ids():
+			var candidate := graph.get_room(candidate_id)
+			if candidate != null and candidate.room_type == DungeonGraph.ROOM_BOSS:
+				next_room_id = candidate.id
+				break
+		if next_room_id == start_room_id and not bool(map_controller.call("has_complete_layout")):
+			var boss_connection := graph.ensure_connection(start_room_id, DungeonGraph.WALL_RIGHT, DungeonGraph.ROOM_DOWNSTAIRS)
+			if boss_connection != null:
+				next_room_id = boss_connection.destination_room_id
+	root.set("current_room_id", next_room_id)
+	root.call("_sync_current_room_metadata")
+	room_controller.set_current_room(next_room_id, root.get("current_room_type"))
+	root.call("_ensure_current_room_layout")
+	root.call("_apply_room_state")
+	var minimap := root.get("dungeon_minimap_controller") as Node
+	if minimap != null:
+		minimap.call("configure", map_controller)
 
 
 func return_to_hub(root: Object) -> void:
@@ -187,6 +234,10 @@ func complete_run(root: Object) -> void:
 func show_run_complete(root: Object, drop_color: Color) -> void:
 	if root.screen_state_controller.run_complete_overlay == null or root.run_state == null:
 		return
+	# The player can reach the final exit while still holding the same input used
+	# to move through the room. Require a release before the completion action is
+	# allowed, otherwise the result screen is accepted and skipped next frame.
+	root.screen_state_controller.menu_input_release_lock = true
 	var summary: Dictionary = root.run_state.clear_summary
 	var elapsed: int = int(round(float(summary.get("time", 0.0))))
 	var kills: int = int(summary.get("kills", 0))

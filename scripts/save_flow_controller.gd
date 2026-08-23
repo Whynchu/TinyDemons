@@ -137,11 +137,16 @@ func reset_runtime_for_new_save(root: Object) -> void:
 	if root.rng == null:
 		random_source.randomize()
 	root.current_dungeon_seed = random_source.randi()
-	root.dungeon_graph.configure_progression(0)
-	root.dungeon_graph.initialize(root.current_dungeon_seed)
 	root.room_controller.room_states.clear()
+	if root.dungeon_map_controller != null:
+		var start_room_id: StringName = StringName(root.dungeon_map_controller.call("begin_run", root.dungeon_graph, root.current_dungeon_seed, 0, root.player_profile.starter_flame))
+		root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
+		root.current_room_id = start_room_id
+	else:
+		root.dungeon_graph.configure_progression(0)
+		root.dungeon_graph.initialize(root.current_dungeon_seed)
+		root.current_room_id = root.dungeon_graph.start_room_id
 	root.room_controller.progression_run_rank = 1
-	root.current_room_id = root.dungeon_graph.start_room_id
 	root.call("_sync_current_room_metadata")
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root.call("_ensure_current_room_layout")

@@ -13,6 +13,7 @@ func _initialize() -> void:
 	_expect(AspectCatalogScript.palette_for_flame(&"fire") == "red", "Fire maps to red", failures)
 	_expect(AspectCatalogScript.palette_for_flame(&"water") == "blue", "Water maps to blue", failures)
 	_expect(AspectCatalogScript.palette_for_flame(&"electric") == "yellow", "Electric maps to yellow", failures)
+	_expect(load("res://assets/artwork/DoorRightFlameshut.png") != null, "hub starter gate art is imported", failures)
 
 	var profile := Profile.new()
 	profile.has_started = true

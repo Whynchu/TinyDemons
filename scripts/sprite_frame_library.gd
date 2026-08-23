@@ -99,6 +99,52 @@ func recolor_fire_frames(frames: Array[Texture2D], palette_name: String) -> Arra
 	return recolored
 
 
+## Recolors the Entry Orb art while preserving its white highlight.
+## The grey state uses the authored artwork directly. Colored states use the
+## grayscale sheet as a luminance ramp for the selected puzzle palette.
+func recolor_orb_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]:
+	if palette_name == "grey":
+		return frames
+	var target: Array[Color] = []
+	target = [PaletteLibrary.shadow(palette_name), PaletteLibrary.normal(palette_name), PaletteLibrary.accent(palette_name)]
+	var recolored: Array[Texture2D] = []
+	for texture in frames:
+		if texture == null:
+			continue
+		var image := _cached_image(texture).duplicate()
+		var minimum_luminance := 1.0
+		var maximum_luminance := 0.0
+		for y in image.get_height():
+			for x in image.get_width():
+				var sample: Color = image.get_pixel(x, y)
+				if sample.a <= 0.0 or _is_orb_white(sample):
+					continue
+				var sample_luminance := sample.r * 0.299 + sample.g * 0.587 + sample.b * 0.114
+				minimum_luminance = minf(minimum_luminance, sample_luminance)
+				maximum_luminance = maxf(maximum_luminance, sample_luminance)
+		var luminance_span := maxf(maximum_luminance - minimum_luminance, 0.001)
+		for y in image.get_height():
+			for x in image.get_width():
+				var color: Color = image.get_pixel(x, y)
+				if color.a <= 0.0:
+					continue
+				if _is_orb_white(color):
+					image.set_pixel(x, y, Color.WHITE * Color(1.0, 1.0, 1.0, color.a))
+					continue
+				var luminance := color.r * 0.299 + color.g * 0.587 + color.b * 0.114
+				var tone := clampf((luminance - minimum_luminance) / luminance_span, 0.0, 1.0)
+				var replacement: Color = target[0].lerp(target[1], tone * 2.0) if tone < 0.5 else target[1].lerp(target[2], (tone - 0.5) * 2.0)
+				image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
+		recolored.append(ImageTexture.create_from_image(image))
+	return recolored
+
+
+func _is_orb_white(color: Color) -> bool:
+	# The authored white is the game's 244/255 white, not literal 1.0 white.
+	# Keep it out of the palette ramp so the orb's glint stays pure white.
+	return color.r >= 0.94 and color.g >= 0.94 and color.b >= 0.94
+
+
 func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	if source == null:
 		return null
@@ -123,6 +169,41 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	var texture := ImageTexture.create_from_image(image)
 	recolor_cache[cache_key] = texture
 	return texture
+
+
+## Recolors the neutral closed Orb-door art into the semantic map-door color.
+## The source asset uses the grey normal/highlight pair, so this intentionally
+## does not use recolor_texture(), whose source contract is the blue actor pair.
+func recolor_door_texture(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null:
+		return null
+	var cache_key := "door:%d:%s" % [source.get_instance_id(), palette_name]
+	if recolor_cache.has(cache_key):
+		return recolor_cache[cache_key] as Texture2D
+	var source_colors: Array[Color] = [PaletteLibrary.normal("grey"), PaletteLibrary.accent("grey")]
+	var target_colors: Array[Color] = [PaletteLibrary.normal(palette_name), _door_highlight(palette_name)]
+	var source_keys: Array[int] = []
+	for source_color: Color in source_colors:
+		source_keys.append(_rgb_int(source_color))
+	var image := _cached_image(source).duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			var key := _rgb_int(color)
+			for color_index in source_keys.size():
+				if key == source_keys[color_index]:
+					var replacement: Color = target_colors[color_index]
+					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
+					break
+	var texture := ImageTexture.create_from_image(image)
+	recolor_cache[cache_key] = texture
+	return texture
+
+
+func _door_highlight(palette_name: String) -> Color:
+	if palette_name == "green":
+		return Color8(167, 240, 112)
+	return PaletteLibrary.accent(palette_name)
 
 
 func _cached_image(texture: Texture2D) -> Image:

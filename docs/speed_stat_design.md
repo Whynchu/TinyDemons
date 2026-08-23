@@ -204,7 +204,7 @@ Follow the existing shield-penalty pattern and the HP/DMG gear convention
 - **Low-attack items grant a speed benefit.** Items with no/weak `damage_rate`
   or `strength` (basic_tunic, bangle, new light gear) get a positive `speed`.
 - **Shields** reduce speed slightly: add `speed_penalty` to every shield's
-  `shield` sub-dict (scaled with shield tier).
+  `shield` sub-dict (scaled with rarity, but fixed while the item is enhanced).
 - **Heavy armor with high DEF** reduces speed: `iron_cuirass` becomes heavy
   (speed penalty); `basic_tunic` stays light (speed neutral/benefit).
 

@@ -115,8 +115,9 @@ level cap. Later levels should require proportionally more XP; progression is
 balanced around stat points earned per hour rather than levels per hour.
 
 Unspent points never expire and have no storage cap. If a player levels during
-combat, level and Core HP apply immediately, current health percentage is
-preserved, and the points are banked. Allocation is presented after the room is
+combat, the level and newly banked stat points are recorded, current health
+percentage is preserved, and no Core HP is added until the player spends points
+on VIT or equips HP-specific gear. Allocation is presented after the room is
 safe, at a rest point, or in the hub so a level-up never interrupts combat.
 
 Full respec is available in the hub for ordinary gold. Early respecs should be
@@ -124,7 +125,7 @@ free or inexpensive so an exciting equipment drop can inspire a new build.
 
 ### Stat identity
 
-- **VIT** scales maximum health from the character's level-based Core HP, plus
+- **VIT** scales maximum health from the character's flat Core HP, plus
   healing, regeneration, health-cost effects, and selected shield recovery.
 - **STR** scales weapon output, attack knockback, lunging, combo finishers, and
   offensive transmutations.
@@ -142,7 +143,7 @@ Stats are calculated once through an explicit, non-recursive pipeline:
 Innate stats + allocated points + flat equipment stats
   = Effective VIT / STR / DEF
 
-Core HP(level)
+Core HP (level-independent)
   × (1 + Effective VIT × VIT rate + additive Core-HP equipment bonuses)
   + flat equipment HP
   = Maximum HP
@@ -158,8 +159,8 @@ Bonuses in the same percentage category are added before being applied. No item
 may repeatedly multiply a total that already contains its own bonus. This keeps
 scaling understandable and prevents recursive power growth.
 
-Level-based Core HP is intentional: every level makes the character sturdier,
-while VIT becomes increasingly valuable because it scales that growing base.
+Leveling is intentionally not a direct HP source: every level grants agency
+through stat points, and VIT becomes the deliberate health investment.
 Equipment can then favor Core HP, VIT effectiveness, or flat early-game health
 without making those bonuses interchangeable.
 

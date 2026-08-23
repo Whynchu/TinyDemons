@@ -7,8 +7,8 @@ class_name MagicProjectileController
 var projectiles: Array[Dictionary] = []
 
 
-func spawn(sprite: Sprite2D, outline: Sprite2D, direction: Vector2, lifetime: float, palette: String, target: Sprite2D = null) -> void:
-	projectiles.append({"sprite": sprite, "outline": outline, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": target})
+func spawn(sprite: Sprite2D, outline: Sprite2D, direction: Vector2, lifetime: float, palette: String, target: Sprite2D = null, ability_mode: int = 0) -> void:
+	projectiles.append({"sprite": sprite, "outline": outline, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": target, "ability_mode": ability_mode})
 
 
 func remove(index: int) -> void:
@@ -51,7 +51,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 		if not bool(data.get("hit", false)):
 			var target := hit_query.call(sprite) as Sprite2D
 			if target != null:
-				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")))
+				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)))
 				if sprite != null and is_instance_valid(sprite): sprite.queue_free()
 				if outline != null and is_instance_valid(outline): outline.queue_free()
 				remove(index)

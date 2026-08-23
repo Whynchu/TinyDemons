@@ -11,11 +11,18 @@ signal ability_rejected
 const CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.gd")
 
 var cooldown_duration := 0.0
+var grey_cooldown_duration := 0.0
 var cooldown_remaining := 0.0
 
 
 func configure_cooldown(duration: float) -> void:
 	cooldown_duration = maxf(duration, 0.0)
+	grey_cooldown_duration = cooldown_duration
+
+
+func configure_mode_cooldowns(elemental_duration: float, grey_duration: float) -> void:
+	cooldown_duration = maxf(elemental_duration, 0.0)
+	grey_cooldown_duration = maxf(grey_duration, 0.0)
 
 
 func tick(delta: float) -> void:
@@ -44,6 +51,6 @@ func try_activate(chroma: Node, execute: Callable, blocked: bool = false) -> boo
 		if not bool(chroma.call("spend_elemental_ability")):
 			ability_rejected.emit()
 			return false
-	cooldown_remaining = cooldown_duration
+	cooldown_remaining = grey_cooldown_duration if mode != CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL else cooldown_duration
 	emit_signal(&"ability_started", mode)
 	return true

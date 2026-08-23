@@ -62,18 +62,19 @@ Three problems were confirmed during the repo audit (see
 
 ### Combat math
 - `combat_tuning.gd`: `health_base 8`, `health_per_vit 4`,
-  `health_per_level 5`, `health_vit_core_rate 0.03`, `damage_base 2`,
+  `health_per_level 0`, `health_vit_core_rate 0.03`, `damage_base 2`,
   `defense_scale 12`, roll `0.85-1.15`, crit `10% / 1.5x`.
-- Health = `(base + (lvl-1)*5) + vit*4 + (vit-based)`, scaled by
+- Health = `base + vit*4 + (vit-based)`, scaled by
   `(1 + gear_health_rate)`.
 - Damage = `(2 + attacker STR) * (1 + gear_damage_rate) * def_factor * roll`.
 
 ### Enemy scaling
-- `_enemy_level_for_room()` = `max(1, ceil(room_depth / 2))`
-  (`gameplay.gd:960`).
-- `_enemy_level_cap_for_run()` = `7` until run rank 10, then unlimited
-  (`gameplay.gd:961-964`).
-- `_run_enemy_level_bonus()` = `0` (`gameplay.gd:965`).
+- Generated enemy levels use `max(1, ceil(room_depth / 4)) + run progression`,
+  then clamp to the run cap; Run 2 keeps a level-1 popcorn roll.
+- `_enemy_level_cap_for_run()` = `3` on Run 1, `5` on Run 2, then +1 per run
+  (`combat_runtime_controller.gd:enemy_level_cap_for_rank`).
+- `_run_enemy_level_bonus()` adds only late-run pressure after the early cap
+  curve has established itself (`combat_runtime_controller.gd`).
 - Boss depth: `target_boss_depth = 12 + min(completed_runs, 8)`
   (`dungeon_graph.gd:132`).
 - Slime archetypes: blue = FAVOR_DEF, red = FAVOR_STR, green = FAVOR_VIT
@@ -83,9 +84,10 @@ Three problems were confirmed during the repo audit (see
 - Rarity power multipliers: common 1.0, rare 2.2, epic 4.84, legendary
   10.648, mythic 23.4256 (`item_catalog.gd:16-22`). Each tier is 2.2x the
   previous so a +10 item (2.0x) always stays below the next tier's +0.
-- `MASTERY_BONUS_PER_LEVEL = 0.05`; enhancement raises implicit by 5% per
-  level up to `MAX_ITEM_ENHANCEMENT = 10` (`item_catalog.gd:14`,
-  `player_profile.gd:7`).
+- `MASTERY_BONUS_PER_LEVEL = 0.10`; enhancement raises positive implicit stats
+  by 10% per level up to `MAX_ITEM_ENHANCEMENT = 10`. Shield STR/SPD penalties
+  use their base value at the item's rarity and do not grow with enhancement
+  (`item_catalog.gd:14`, `player_profile.gd:7`).
 
 ---
 
@@ -113,12 +115,13 @@ Three problems were confirmed during the repo audit (see
 - Example (base STR 3, +1 STR sword): `3 * 0.25 = 0.75` -> floor to **1**
   point. Base STR 36, +3 sword: `36 * 0.75 = 27` -> **27** points.
 - Starter loadout now yields real stats at a 3/2/2 base: +1 VIT / +2 STR /
-  +2 DEF, plus HP/DMG rates unchanged (0.15 / 0.03).
+  +4 DEF, plus HP/DMG rates unchanged (0.15 / 0.03).
 
 ### 3. Enhancement feels impactful (done)
 - `MASTERY_BONUS_PER_LEVEL` raised `0.05 -> 0.10`: each fusion level adds 10%
-  of the item's implicit package (matches the pre-existing `bonuses()`
-  comment). Both `item_catalog.bonuses()` and `shield_bonuses()` scale.
+  of the item's positive implicit package (matches the pre-existing
+  `bonuses()` comment). Shield guard and DEF scale; shield STR/SPD penalties
+  remain fixed at their rarity baseline.
 
 ### 4. Enemy & boss difficulty (done)
 - `_enemy_level_for_room()`: `ceil(depth / 2)` -> **`max(1, ceil(depth / 4))`**

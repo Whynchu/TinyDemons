@@ -36,6 +36,10 @@ func build_hub_ui(root: Object) -> void:
 func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) -> void:
 	if root.screen_state_controller.hub_overlay == null:
 		return
+	# Inventory and equipped-slot state can change while the hub is closed. The
+	# fusion page is intentionally cached for UI reads, so refresh its eligibility
+	# whenever the hub is opened instead of showing a stale duplicate list.
+	invalidate_hub_fusion_candidates(root)
 	root.screen_state_controller.hub_opened_from_npc = from_npc
 	root.screen_state_controller.hub_pause_mode = pause_mode
 	root.screen_state_controller.hub_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
@@ -103,6 +107,8 @@ func set_hub_page(root: Object, page: int) -> void:
 	root.screen_state_controller.hub_gear_browsing = false
 	root.screen_state_controller.hub_fusion_message = ""
 	root.screen_state_controller.hub_fusion_count = 1
+	if root.screen_state_controller.hub_page == 3:
+		invalidate_hub_fusion_candidates(root)
 	if root.run_state != null and root.screen_state_controller.hub_page == 2:
 		root.run_state.ensure_shop_stock(root.player_profile.level)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
@@ -196,6 +202,7 @@ func fuse_profile_target(root: Object, instance_id: String, count: int) -> bool:
 	root.call("_apply_player_level")
 	root.call("_save_player_profile")
 	root.call("_update_gold_indicator")
+	invalidate_hub_fusion_candidates(root)
 	return true
 
 
@@ -216,6 +223,7 @@ func salvage_profile_overflow(root: Object, instance_id: String) -> int:
 	if root.player_profile == null: return 0
 	var value: int = root.player_profile.salvage_overflow(instance_id)
 	if value <= 0: return 0
+	invalidate_hub_fusion_candidates(root)
 	root.call("_save_player_profile")
 	root.call("_update_gold_indicator")
 	return value
@@ -242,6 +250,9 @@ func hub_item_action(root: Object) -> void:
 					root.call("_unequip_profile_slot", slot)
 				else:
 					root.call("_equip_profile_item", selected.instance_id)
+				# Equipping or unequipping changes which copies may be used as
+				# materials, so the cached target list must be rebuilt.
+				invalidate_hub_fusion_candidates(root)
 				root.screen_state_controller.hub_gear_browsing = false
 			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		return
@@ -251,7 +262,7 @@ func hub_item_action(root: Object) -> void:
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			if root.player_profile.purchase_item(item, int(entry.get("price", 0))):
-				entry["sold"] = true; root.run_state.shop_stock[index] = entry; root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+				entry["sold"] = true; root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
 			else:
 				root.call("_play_sound", "ui_denied", 0.0, 1.0)
 	elif root.screen_state_controller.hub_page == 3:

@@ -75,6 +75,17 @@ func _set_transition_grey(root: Object, transition_name: String) -> void:
 		root.call("_set_mp_grey_texture", grey_texture)
 
 
+func begin_transition(root: Object, transition_name: String, texture: Texture2D, duration: float) -> void:
+	if texture == null:
+		return
+	root.set("player_between_timer", maxf(duration, 0.0))
+	root.set("player_anim_name", transition_name)
+	root.set("player_anim_frame", 0)
+	root.set("player_anim_timer", 0.0)
+	_set_transition_grey(root, transition_name)
+	root.call("_set_actor_base_texture", root.get("player"), texture)
+
+
 func apply_palette(root: Object, palette_name: String) -> void:
 	_load_palette(palette_name)
 	warm_player_caches(root)
@@ -202,6 +213,19 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		if rolling:
 			apply_frame(root)
 			return
+		if bool(root.get("orb_knockback_animation_lock")):
+			if bool(root.get("orb_knockback_animation_grace")):
+				# The hit callback has just displayed the attack frame. Leave it
+				# visible for one animation tick before rewinding to frame 1.
+				root.set("orb_knockback_animation_grace", false)
+				return
+			# Keep the first attack frame visible while the orb reaction owns the
+			# player motion. The reaction releases this lock when knockback ends.
+			root.set("player_anim_name", "attack1")
+			root.set("player_anim_frame", 0)
+			root.set("player_anim_timer", 0.0)
+			apply_frame(root)
+			return
 		var attack_timer := float(root.get("player_anim_timer")) + delta
 		var attack_tuning := root.get("player_tuning") as PlayerTuning
 		var attack_multiplier := attack_tuning.attack_multiplier(float(root.get("player_spd")))
@@ -232,15 +256,9 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			root.set("player_anim_frame", 0)
 			root.set("player_anim_timer", 0.0)
 			if (attack2_finished or combo) and transition_texture != null:
-				root.set("player_between_timer", transition_time)
-				root.set("player_anim_name", "after" if attack2_finished else "between")
-				_set_transition_grey(root, "after" if attack2_finished else "between")
-				root.call("_set_actor_base_texture", root.get("player"), transition_texture)
+				begin_transition(root, "after" if attack2_finished else "between", transition_texture, transition_time)
 			elif combo:
-				root.set("player_anim_name", "between")
-				root.set("player_between_timer", attack_tuning.between_attack_time / attack_multiplier)
-				_set_transition_grey(root, "between")
-				root.call("_set_actor_base_texture", root.get("player"), between_attack_texture)
+				begin_transition(root, "between", between_attack_texture, attack_tuning.between_attack_time / attack_multiplier)
 			else:
 				root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 				apply_frame(root)

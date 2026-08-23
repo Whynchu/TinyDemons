@@ -45,7 +45,7 @@ game reads them at runtime with no code change.
 | --- | ---: | --- |
 | `health_base` | 8.0 | Flat HP before stats |
 | `health_per_vit` | 4.0 | HP per VIT point |
-| `health_per_level` | 5.0 | HP gained per player level |
+| `health_per_level` | 0.0 | Leveling grants no Core HP; HP comes from VIT and HP-specific gear |
 | `health_vit_core_rate` | 0.03 | Extra HP from VIT-based gear multiplier |
 | `damage_base` | 2.0 | Flat damage before STR |
 | `defense_scale` | 12.0 | Higher = DEF matters less |
@@ -78,7 +78,9 @@ These are code values (not inspector-exposed) that drive gear value:
 | Knob | Value | Location |
 | --- | --- | --- |
 | Gear primary-stat contribution | Flat points from the item package | `item_catalog.gd:combat_primary_points` |
-| Starter loadout totals | +2 VIT / +1 net STR / +3 DEF / +1 SPD | `item_catalog.gd` definitions + shield penalties |
+| Starter loadout totals | +2 VIT / +1 net STR / +4 DEF / +1 SPD | `item_catalog.gd` definitions + shield penalties |
+| Shield DEF package | +1 DEF over the previous shield definitions | `item_catalog.gd:DEFINITIONS` |
+| Shield STR/SPD penalty scaling | Base penalty × rarity only; enhancement does not increase it | `item_catalog.gd:shield_bonuses` |
 | Gear scaling floor | Not used by the current flat-point model | `combat_stat_snapshot.gd` |
 | Health/damage rate package | Not currently part of the primary gear snapshot | `combat_stat_snapshot.gd` |
 | Enhancement % per level | 0.10 | `item_catalog.gd:MASTERY_BONUS_PER_LEVEL` |
@@ -96,16 +98,26 @@ These affect dungeon generation and room behavior and are `const` in
 
 | Knob | Value | Location |
 | --- | ---: | --- |
-| Enemy level curve | `max(1, ceil(depth / 4))` | `gameplay.gd:_enemy_level_for_room` |
-| Pre-rank-10 enemy cap | `999 if rank > 10 else 2 + rank` | `gameplay.gd:_enemy_level_cap_for_run` |
-| Late-run difficulty bonus | `max(0, run_rank - 8)` | `gameplay.gd:_run_enemy_level_bonus` |
+| Enemy level curve | `max(1, ceil(depth / 4)) + run progression`, clamped by cap | `room_controller.gd:_generated_enemy_base_level` |
+| Generated enemy level caps | `3` on R1, `5` on R2, then +1/run | `room_controller.gd:_enemy_level_cap`, `combat_runtime_controller.gd:enemy_level_cap_for_rank` |
+| Run 2 popcorn chance | `0.40` level-1 roll; later runs `0.16` | `room_controller.gd:_popcorn_enemy_chance` |
+| Popcorn enemy level | Level 1 through R4, level 2 on R5, then +1 every 3 runs | `room_controller.gd:_popcorn_enemy_level` |
+| Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
+| Encounter progression rank | `completed_runs + 1` | `gameplay_state.gd:_ensure_current_room_layout`, `combat_runtime_controller.gd:encounter_run_rank` |
+| Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
+| Late-run difficulty bonus | `max(0, encounter_rank - 8)` | `combat_runtime_controller.gd:run_enemy_level_bonus` |
+| Performance-over-baseline bonus | `max(0, difficulty_rank - (completed_runs + 1))` | `run_flow_controller.gd:run_difficulty_bonus` |
 | Boss depth | `12 + min(runs, 8)` | `dungeon_graph.gd:target_boss_depth` |
 | Chest interact distance | 16.0 | `gameplay_state.gd:CHEST_INTERACT_DISTANCE` |
 | NPC interact distance | 24.0 | `gameplay_state.gd:NPC_INTERACT_DISTANCE` |
-| Chest gold base | 40 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
+| Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
+| Chest gold roll | `0.75x-1.30x` base before rank/grade multiplier | `run_flow_controller.gd:chest_gold_reward` |
 | Chest item drop chance | clamp to [0.30, 0.88], base 0.34 | `gameplay.gd:_chest_item_drop_chance` |
+| Chest second gear drop | 1 additional item, base 0.35 chance | `run_flow_controller.gd:chest_item_drop_count` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
+| Triangle spell cooldown | 2.0s elemental / 2.5s grey | `gameplay_state.gd:MAGIC_COOLDOWN`, `gameplay_state.gd:GREY_MAGIC_COOLDOWN` |
+| Triangle knockback | `0.25x` normal attack knockback | `magic_runtime_controller.gd:MAGIC_KNOCKBACK_MULTIPLIER` |
 
 ## Magic numbers still hardcoded (known gaps)
 
