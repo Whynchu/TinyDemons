@@ -31,6 +31,7 @@ func _initialize() -> void:
 					debug_spawn = marker.global_position
 					break
 		_expect(debug_player != null and debug_spawn != Vector2.INF and debug_player.global_position.is_equal_approx(debug_spawn), "boss debug player starts at its authored arrival socket", failures)
+		_expect(debug_player != null and bool(gameplay.call("_can_actor_stand_at_current_position", debug_player)), "boss debug arrival socket is inside the walkable floor", failures)
 		_expect(debug_player != null and debug_player.position.is_equal_approx(gameplay.get("player_start_position")), "boss debug start position is reusable for room reset", failures)
 		var boss_door_left := gameplay.get_node_or_null("Map/Walls/DoorLeft") as Sprite2D
 		var boss_door_right := gameplay.get_node_or_null("Map/Walls/DoorRight") as Sprite2D
@@ -116,7 +117,10 @@ func _initialize() -> void:
 		_expect(not bool(gameplay.get("entrance_open")), "boss arrival entrance is sealed during the fight", failures)
 		if boss_entry_socket != null:
 			var closed_entrance := boss_entry_socket.visual() as Sprite2D
-			_expect(closed_entrance != null and closed_entrance.texture != null and closed_entrance.texture.resource_path.ends_with("DoorRightenemyshut.png"), "boss arrival entrance uses closed dark doorway art", failures)
+			_expect(closed_entrance != null and closed_entrance.texture != null and closed_entrance.texture.resource_path.ends_with("Tile.png"), "boss arrival entrance keeps the regular walkway art during the fight", failures)
+			_expect(closed_entrance != null and closed_entrance.self_modulate.is_equal_approx(Color(0.5, 0.5, 0.5, 1.0)), "boss arrival entrance is gray while the fight is active", failures)
+			var closed_entrance_tile_2 := closed_entrance.get_node_or_null("Tile 2") as CanvasItem
+			_expect(closed_entrance_tile_2 != null and closed_entrance_tile_2.visible, "boss arrival entrance keeps its secondary walkway tile during the fight", failures)
 		if boss_entry_connection != null:
 			# The debug scene starts inside the boss room, so establish the same
 			# completed approach room that a real run has before testing the reverse
@@ -132,11 +136,19 @@ func _initialize() -> void:
 		gameplay.call("_on_room_enemies_cleared")
 		_expect(bool(gameplay.get("final_exit_open")), "boss victory opens the run-completion exit", failures)
 		_expect(bool(gameplay.get("entrance_open")), "boss victory reopens the dungeon arrival entrance", failures)
+		var boss_map_state := map.get("state") as DungeonMapState
+		_expect(boss_map_state != null and boss_map_state.is_room_completed(boss_room_id), "boss victory persists map completion", failures)
 		_expect(boss_door_right != null and boss_door_right.visible and boss_door_left != null and not boss_door_left.visible, "boss victory exposes only the authored final exit", failures)
 		if boss_entry_socket != null:
 			var open_entrance := boss_entry_socket.visual() as Sprite2D
 			_expect(open_entrance != null and open_entrance.texture != null and open_entrance.texture.resource_path.ends_with("Tile.png"), "boss arrival entrance restores its open walkway art", failures)
 		if boss_entry_socket != null and boss_entry_connection != null:
+			# The reverse route must remain usable even if the approach room's
+			# completion flag is stale in a generated or resumed map.
+			if boss_map_state != null:
+				boss_map_state.completed_rooms.erase(boss_entry_connection.source_room_id)
+				boss_map_state.changed.emit()
+			_expect(bool(gameplay.call("_map_connection_available", boss_entry_connection, true)), "completed boss room keeps its arrival connection available", failures)
 			var trigger := boss_entry_socket.trigger()
 			var trigger_center := Vector2.ZERO
 			for point in trigger.polygon:

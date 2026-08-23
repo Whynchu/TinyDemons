@@ -252,6 +252,13 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 	if connection == null:
 		return false
 	var source_room := graph.get_room(connection.source_room_id) if graph != null else null
+	var destination_room := graph.get_room(connection.destination_room_id) if graph != null else null
+	# Once the boss is defeated, its arrival route is a guaranteed way back out.
+	# Do not let a stale source-room gate or a changed map color trap the player in
+	# the completed boss room; forward entry into the boss still uses the normal
+	# connection rules because this exception applies only to the reverse entrance.
+	if is_entrance and state.current_room_id == connection.destination_room_id and destination_room != null and destination_room.room_type == DungeonGraph.ROOM_DOWNSTAIRS and state.is_room_completed(destination_room.id):
+		return true
 	if source_room != null and source_room.room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run:
 		return false
 	if is_connection_color_locked(connection):
@@ -274,7 +281,6 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		# prevents a merge from becoming a backdoor into an uncleared enemy branch.
 		# Once the source side is valid, the destination remains escapable until
 		# the player lands the first hit there.
-		var destination_room := graph.get_room(connection.destination_room_id)
 		return destination_room == null or not (connection.locks_entry_on_destination_engagement and requires_room_clear(destination_room) and state.is_room_engaged(destination_room.id) and not state.is_room_completed(destination_room.id))
 	return true
 

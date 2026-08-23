@@ -7,6 +7,11 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var foot_offset := Vector2(8, 15)
 	_expect(ActorGeometry.foot_position(Vector2(100, 100), foot_offset).is_equal_approx(Vector2(108, 115)), "normal actor foot uses shared anchor", failures)
+	var centered_actor := Sprite2D.new()
+	centered_actor.global_position = Vector2(104, 100)
+	centered_actor.centered = true
+	_expect(ActorGeometry.foot(centered_actor, foot_offset).is_equal_approx(centered_actor.global_position), "centered target keeps its authored visual anchor", failures)
+	centered_actor.free()
 	_expect(ActorGeometry.encounter_visual_offset(1.0, foot_offset).is_equal_approx(Vector2.ZERO), "normal actor has no encounter compensation", failures)
 
 	var boss_offset := ActorGeometry.encounter_visual_offset(2.0, foot_offset)

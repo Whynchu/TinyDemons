@@ -304,6 +304,16 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 	if socket == null:
 		return root.get("player_start_position")
+	# Boss arrival sockets are intentionally sealed as soon as the encounter
+	# begins. Their trigger polygon belongs to the doorway itself, so deriving a
+	# player position from that polygon places the player's foot inside the
+	# entrance block and the normal transition fallback snaps them to the room's
+	# nearest sampled point (the visual center). Use the authored inset marker
+	# instead; it is shared by normal transitions and the boss debug scene.
+	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
+		var boss_marker := socket.spawn_marker()
+		if boss_marker != null:
+			return boss_marker.global_position
 	var trigger := socket.trigger()
 	if trigger != null and trigger.polygon.size() >= 3:
 		var center := Vector2.ZERO
@@ -997,6 +1007,7 @@ func apply_authored_boss_room_geometry(root: Object) -> void:
 		var existing_underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
 		if existing_underlay != null:
 			existing_underlay.visible = true
+		_configure_boss_return_guides(root)
 		return
 	var packed_scene := load("res://scenes/boss_room_debug.tscn") as PackedScene
 	if packed_scene == null:
@@ -1011,7 +1022,24 @@ func apply_authored_boss_room_geometry(root: Object) -> void:
 		copy_authored_room_sprite(root, template, path)
 	for path in ["Map/Sockets/WALL_LEFT/SpawnMarker", "Map/Sockets/WALL_RIGHT/SpawnMarker", "Map/Sockets/BOTTOM_LEFT/SpawnMarker", "Map/Sockets/BOTTOM_RIGHT/SpawnMarker"]:
 		copy_authored_marker(root, template, path)
+	_configure_boss_return_guides(root)
 	template.free()
+
+
+func _configure_boss_return_guides(root: Object) -> void:
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	if floor_tiles == null:
+		return
+	var left_guide := floor_tiles.get_node_or_null("Entrance/EntranceReturnGuide") as Polygon2D
+	var right_guide := floor_tiles.get_node_or_null("EntranceRight/EntranceReturnGuide") as Polygon2D
+	# The normal room guides are authored against the compact floor diamond. The
+	# boss floor is larger and its lower edges sit farther out, so those guides
+	# land beyond the walkable polygon. Keep the entrance art where it is, but
+	# move only the return triggers inward to the reachable floor edge.
+	if left_guide != null:
+		left_guide.position = Vector2(11.0, -7.0)
+	if right_guide != null:
+		right_guide.position = Vector2(5.0, -7.0)
 
 
 func copy_authored_room_sprite(root: Object, template: Node, path: NodePath) -> void:

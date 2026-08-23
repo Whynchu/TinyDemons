@@ -41,7 +41,10 @@ func _fade_out_music() -> void:
 		sound_manager.fade_out_music()
 func _start_music() -> void:
 	if sound_manager != null:
-		sound_manager.start_music()
+		sound_manager.start_title_music()
+func _start_run_music() -> void:
+	if sound_manager != null:
+		sound_manager.start_run_music()
 func _is_on_title_menu() -> bool:
 	var ssc := screen_state_controller
 	if ssc == null or ssc.state != &"title" or ssc.title_transition_active:
@@ -56,12 +59,22 @@ func _update_music_state() -> void:
 		title_menu_frames = mini(title_menu_frames + 1, 2)
 	else:
 		title_menu_frames = 0
-	var should_play := title_menu_frames >= 2
-	if should_play == music_wanted:
+	var desired_track: StringName = &""
+	if title_menu_frames >= 2:
+		desired_track = &"title"
+	# A run becomes active in the hub before the starter flame is collected.
+	# Keep Dungeon-Crawl silent during that teaching beat; the flame interaction
+	# flips this flag and the next music-state tick starts the run soundtrack.
+	elif run_state != null and run_state.active and starter_flame_attuned_this_run:
+		desired_track = &"run"
+	if desired_track == music_track_wanted:
 		return
-	music_wanted = should_play
-	if should_play:
+	music_track_wanted = desired_track
+	music_wanted = not desired_track.is_empty()
+	if desired_track == &"title":
 		_start_music()
+	elif desired_track == &"run":
+		_start_run_music()
 	else:
 		_fade_out_music()
 func _physics_process(delta: float) -> void:

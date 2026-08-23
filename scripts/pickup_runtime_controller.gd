@@ -6,7 +6,8 @@ const DEPTH_Z_SCALE := 10.0
 const CHROMA_PICKUP_VALUE := 25
 const ITEM_DROP_GRAVITY := 92.0
 const ITEM_DROP_AIR_TIME := 0.38
-const ITEM_DROP_LAUNCH_SPEED := 30.0
+const ITEM_DROP_ARC_HEIGHT := 8.0
+const ITEM_DROP_FOOTPRINT_PADDING := Vector2(4.0, 2.0)
 const CHROMA_COLOR := PaletteLibrary.ACCENT["blue"]
 const CHROMA_BOB_SPEED := 4.5
 const CHROMA_BOB_AMPLITUDE := 1.5
@@ -97,6 +98,63 @@ func _advance_drop_position(root: Object, current_position: Vector2, velocity: V
 	return {"position": resolved_position, "velocity": resolved_velocity}
 
 
+func _chest_drop_rect(root: Object) -> Rect2:
+	var chest := root.get("chest") as Sprite2D
+	if chest != null and is_instance_valid(chest):
+		var chest_rect: Rect2 = root.call("_collision_rect", chest)
+		if chest_rect.has_area():
+			return chest_rect
+	return Rect2()
+
+
+func _chest_drop_launch_position(root: Object, chest_rect: Rect2) -> Vector2:
+	if chest_rect.has_area():
+		# The item starts at the top edge of the chest collision guide. This keeps
+		# the first visible frame attached to the chest instead of to a room-wide
+		# walkable-point fallback.
+		return Vector2(chest_rect.get_center().x, chest_rect.position.y + 1.0)
+	var chest := root.get("chest") as Sprite2D
+	return chest.global_position + Vector2(8.0, 7.0) if chest != null else root.get("chest_start_position") as Vector2
+
+
+func _item_drop_position_is_safe(root: Object, point: Vector2, chest_rect: Rect2, reserved: Array[Vector2]) -> bool:
+	if not _drop_position_is_walkable(root, point):
+		return false
+	if chest_rect.has_area() and chest_rect.grow(1.0).has_point(point):
+		return false
+	for occupied in reserved:
+		if point.distance_to(occupied) < 6.0:
+			return false
+	for sample in [
+		point + Vector2(-ITEM_DROP_FOOTPRINT_PADDING.x, 0.0),
+		point + Vector2(ITEM_DROP_FOOTPRINT_PADDING.x, 0.0),
+		point + Vector2(0.0, ITEM_DROP_FOOTPRINT_PADDING.y),
+	]:
+		if not _drop_position_is_walkable(root, sample):
+			return false
+	return true
+
+
+func _chest_drop_landing_position(root: Object, chest_rect: Rect2, index: int, count: int, reserved: Array[Vector2], launch_rng: RandomNumberGenerator) -> Vector2:
+	var anchor := chest_rect.get_center() if chest_rect.has_area() else _chest_drop_launch_position(root, chest_rect)
+	var fan_offset := 0.0 if count <= 1 else (float(index) - float(count - 1) * 0.5) * 0.28
+	fan_offset += launch_rng.randf_range(-0.06, 0.06)
+	var directions: Array[Vector2] = []
+	for direction_index in 24:
+		var angle := TAU * float(direction_index) / 24.0 + fan_offset
+		directions.append(Vector2.DOWN.rotated(angle))
+	for radius_value in [8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0]:
+		var radius: float = radius_value
+		for direction in directions:
+			var candidate: Vector2 = anchor + direction * radius
+			if _item_drop_position_is_safe(root, candidate, chest_rect, reserved):
+				return candidate
+	# This is only a last resort for malformed geometry. Normal authored and
+	# generated chests find a nearby point in the radial search above.
+	var fallback := _safe_drop_position(root, anchor + Vector2(0.0, 8.0))
+	return fallback
+
+
 func _chroma_light_texture() -> Texture2D:
 	if chroma_light_texture != null:
 		return chroma_light_texture
@@ -123,6 +181,8 @@ func spawn_chest_item_drops(root: Object, items: Array[ItemInstance]) -> void:
 		return
 	var catalog := ItemCatalog.new()
 	var count := items.size()
+	var chest_rect := _chest_drop_rect(root)
+	var reserved_landings: Array[Vector2] = []
 	for index in count:
 		var item := items[index]
 		if item == null:
@@ -134,8 +194,12 @@ func spawn_chest_item_drops(root: Object, items: Array[ItemInstance]) -> void:
 		sprite.centered = true
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		sprite.modulate = rarity_color
-		var drop_position := _safe_drop_position(root, root.chest.global_position + Vector2(0, -4))
-		sprite.global_position = drop_position
+		var launch_rng := RandomNumberGenerator.new()
+		launch_rng.seed = item.instance_id.hash()
+		var launch_position := _chest_drop_launch_position(root, chest_rect)
+		var landing_position := _chest_drop_landing_position(root, chest_rect, index, count, reserved_landings, launch_rng)
+		reserved_landings.append(landing_position)
+		sprite.global_position = launch_position
 		sprite.z_as_relative = false
 		sprite.z_index = root.chest.z_index + 3
 		root.add_child(sprite)
@@ -149,13 +213,18 @@ func spawn_chest_item_drops(root: Object, items: Array[ItemInstance]) -> void:
 		label.global_position = sprite.global_position + Vector2(0, -10)
 		label.z_index = sprite.z_index + 1
 		root.add_child(label)
-		var launch_rng := RandomNumberGenerator.new()
-		launch_rng.seed = item.instance_id.hash()
-		var fan_t := 0.5 if count <= 1 else float(index) / float(count - 1)
-		var launch_angle := -PI * 0.5 if count <= 1 else lerpf(-PI * 0.5 - 0.55, -PI * 0.5 + 0.55, fan_t)
-		launch_angle += launch_rng.randf_range(-0.08, 0.08)
-		var velocity := Vector2(cos(launch_angle), sin(launch_angle)) * launch_rng.randf_range(ITEM_DROP_LAUNCH_SPEED - 3.0, ITEM_DROP_LAUNCH_SPEED + 3.0)
-		root.world_item_drops.append({"sprite": sprite, "label": label, "item": item, "velocity": velocity, "air_time": ITEM_DROP_AIR_TIME, "last_valid_position": drop_position})
+		root.world_item_drops.append({
+			"sprite": sprite,
+			"label": label,
+			"item": item,
+			"velocity": Vector2.ZERO,
+			"air_time": ITEM_DROP_AIR_TIME,
+			"flight_elapsed": 0.0,
+			"launch_position": launch_position,
+			"landing_position": landing_position,
+			"trajectory_mode": &"chest_arc",
+			"last_valid_position": landing_position,
+		})
 	constrain_world_item_drops(root)
 
 
@@ -184,6 +253,10 @@ func restore_chest_item_drops(root: Object, saved_drops: Array) -> void:
 		sprite.global_position = _safe_drop_position(root, positions[index])
 		drop["velocity"] = Vector2.ZERO
 		drop["air_time"] = 0.0
+		drop["trajectory_mode"] = &"landed"
+		drop["launch_position"] = sprite.global_position
+		drop["landing_position"] = sprite.global_position
+		drop["flight_elapsed"] = 0.0
 		drop["last_valid_position"] = sprite.global_position
 	constrain_world_item_drops(root)
 
@@ -207,8 +280,12 @@ func constrain_world_item_drops(root: Object) -> void:
 	for drop in root.world_item_drops:
 		var sprite := drop.get("sprite") as Sprite2D
 		if sprite != null and is_instance_valid(sprite):
-			sprite.global_position = _safe_drop_position(root, sprite.global_position)
-			drop["last_valid_position"] = sprite.global_position
+			# Airborne chest loot intentionally lives above the floor polygon for a
+			# few frames. Constraining it here would immediately snap it to the
+			# nearest sampled floor point, which is often the room center.
+			if float(drop.get("air_time", 0.0)) <= 0.0:
+				sprite.global_position = _safe_drop_position(root, sprite.global_position)
+				drop["last_valid_position"] = sprite.global_position
 			var label := drop.get("label") as Sprite2D
 			if label != null and is_instance_valid(label):
 				label.global_position = sprite.global_position + Vector2(0, -10)
@@ -232,16 +309,31 @@ func update_world_item_drops(root: Object, delta: float) -> void:
 		var air_time := float(drop.get("air_time", 0.0))
 		var velocity := drop.get("velocity", Vector2.ZERO) as Vector2
 		var last_valid_position: Vector2 = drop.get("last_valid_position", sprite.global_position) as Vector2
-		if not _drop_position_is_walkable(root, last_valid_position):
+		var trajectory_mode := StringName(drop.get("trajectory_mode", &""))
+		if air_time <= 0.0 and not _drop_position_is_walkable(root, last_valid_position):
 			last_valid_position = _safe_drop_position(root, sprite.global_position)
 			sprite.global_position = last_valid_position
 		if air_time > 0.0:
 			air_time = maxf(air_time - delta, 0.0)
-			velocity.y += ITEM_DROP_GRAVITY * delta
-			var airborne_step := _advance_drop_position(root, last_valid_position, velocity, delta)
-			last_valid_position = airborne_step["position"] as Vector2
-			velocity = airborne_step["velocity"] as Vector2
-			sprite.global_position = last_valid_position
+			if trajectory_mode == &"chest_arc":
+				var flight_elapsed := minf(float(drop.get("flight_elapsed", 0.0)) + delta, ITEM_DROP_AIR_TIME)
+				var flight_t := clampf(flight_elapsed / ITEM_DROP_AIR_TIME, 0.0, 1.0)
+				var launch_position: Vector2 = drop.get("launch_position", sprite.global_position) as Vector2
+				var landing_position: Vector2 = drop.get("landing_position", last_valid_position) as Vector2
+				var arc_position := launch_position.lerp(landing_position, flight_t)
+				arc_position.y -= sin(flight_t * PI) * ITEM_DROP_ARC_HEIGHT
+				sprite.global_position = arc_position
+				drop["flight_elapsed"] = flight_elapsed
+				if air_time <= 0.0:
+					sprite.global_position = landing_position
+					last_valid_position = landing_position
+					velocity = Vector2.ZERO
+			else:
+				velocity.y += ITEM_DROP_GRAVITY * delta
+				var airborne_step := _advance_drop_position(root, last_valid_position, velocity, delta)
+				last_valid_position = airborne_step["position"] as Vector2
+				velocity = airborne_step["velocity"] as Vector2
+				sprite.global_position = last_valid_position
 			if air_time <= 0.0:
 				velocity = Vector2.ZERO
 		drop["air_time"] = air_time
@@ -419,7 +511,7 @@ func collect_chroma_pickup(root: Object, index: int) -> void:
 		if pickup != null and is_instance_valid(pickup):
 			root.call("_spawn_chroma_pickup_burst", pickup.global_position)
 		root.call("_spawn_floating_number", root.call("_actor_foot", root.player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, CHROMA_COLOR, "+%d CHROMA" % value)
-		root.call("_play_sound", "item_pickup", -6.0, 1.15)
+		root.call("_play_sound", "item_pickup", -12.0, 1.15)
 	remove_chroma_pickup(root, index)
 
 
