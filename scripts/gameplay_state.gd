@@ -154,6 +154,7 @@ var orb_knockback_attack_cancelled := false
 var player_footstep_cooldown := 0.0
 var player_is_moving := false
 var player_is_attacking := false
+var player_is_magic_casting := false
 var player_is_rolling := false
 var player_is_defending := false
 var last_player_input_direction := Vector2.RIGHT
@@ -164,6 +165,7 @@ var roll_dust_flipped_frames: Array[Texture2D] = []
 var player_attack_input_was_down := false
 var player_attack_hit_done := false
 var player_attack_flip_h := false
+var player_magic_flip_h := false
 var player_hit_flash_timer := 0.0
 var player_hitstun_timer := 0.0
 var walkable_points: Array[Vector2] = []
@@ -415,6 +417,7 @@ func _sync_runtime_progression_to_profile() -> void:
 func _respec_player_stats() -> int:
 	return int(profile_runtime_controller.call("respec_player_stats", self))
 func _start_player_death() -> void:
+	_cancel_magic_animation()
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
@@ -1059,6 +1062,7 @@ func _update_player_mp_ui(_delta: float = 0.0) -> void: magic_runtime_controller
 func _current_player_chroma() -> float: return float(magic_runtime_controller.call("current_player_chroma", self))
 func _restore_player_mp() -> void: magic_runtime_controller.call("restore_player_mp", self)
 func _try_cast_magic() -> bool: return bool(magic_runtime_controller.call("try_cast_magic", self))
+func _cancel_magic_animation() -> void: magic_runtime_controller.call("cancel_magic_animation", self)
 func _sync_chroma_presentation() -> void: magic_runtime_controller.call("sync_chroma_presentation", self)
 func _execute_current_aspect_ability(mode: int) -> bool: return bool(magic_runtime_controller.call("execute_current_aspect_ability", self, mode))
 func _player_visual_center() -> Vector2: return magic_runtime_controller.call("player_visual_center", self) as Vector2

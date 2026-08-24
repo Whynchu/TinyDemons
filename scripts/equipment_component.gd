@@ -6,6 +6,10 @@ var defense_bonus := 0.0
 var strength_bonus := 0.0
 var vitality_bonus := 0.0
 var speed_bonus := 0.0
+var defense_rate_bonus := 0.0
+var strength_rate_bonus := 0.0
+var vitality_rate_bonus := 0.0
+var speed_rate_bonus := 0.0
 var core_health_rate_bonus := 0.0
 var vit_health_multiplier_bonus := 0.0
 var guard_durability_bonus := 0.0
@@ -35,6 +39,10 @@ func configure_from_profile(profile: PlayerProfile, catalog: ItemCatalog = null)
 	strength_bonus = 0.0
 	vitality_bonus = 0.0
 	speed_bonus = 0.0
+	defense_rate_bonus = 0.0
+	strength_rate_bonus = 0.0
+	vitality_rate_bonus = 0.0
+	speed_rate_bonus = 0.0
 	core_health_rate_bonus = 0.0
 	vit_health_multiplier_bonus = 0.0
 	guard_durability_bonus = 0.0
@@ -53,16 +61,21 @@ func configure_from_profile(profile: PlayerProfile, catalog: ItemCatalog = null)
 		if instance == null:
 			continue
 		var primary_points := items.combat_primary_points(instance)
-		# Primary equipment stats are flat points and may contain decimals.
+		var player_stat_rates := items.player_stat_rates(instance)
+		# Primary equipment stats are deterministic flat points. Rarity rates are
+		# accumulated separately and applied to the affected player stats in the
+		# combat snapshot.
 		defense_bonus += float(primary_points.get("defense", 0.0))
 		strength_bonus += float(primary_points.get("strength", 0.0))
 		vitality_bonus += float(primary_points.get("vitality", 0.0))
 		speed_bonus += float(primary_points.get("speed", 0.0))
+		defense_rate_bonus += float(player_stat_rates.get("defense", 0.0))
+		strength_rate_bonus += float(player_stat_rates.get("strength", 0.0))
+		vitality_rate_bonus += float(player_stat_rates.get("vitality", 0.0))
+		speed_rate_bonus += float(player_stat_rates.get("speed", 0.0))
 		if slot == &"shield":
 			has_shield = true
 			var shield_bonuses := items.shield_bonuses(instance)
-			strength_bonus -= float(shield_bonuses.get("strength_penalty", 0.0))
-			speed_bonus -= float(shield_bonuses.get("speed_penalty", 0.0))
 			guard_durability_bonus += float(shield_bonuses.get("guard_durability", 0.0))
 			guard_damage_reduction_bonus += float(shield_bonuses.get("guard_reduction", 0.0)) * 0.01
 		if not instance.transmutation_id.is_empty():

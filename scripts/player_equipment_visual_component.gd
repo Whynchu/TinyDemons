@@ -67,6 +67,8 @@ var frame_paths := {
 	"sword_front_attack2": "res://assets/artwork/TinyDemon_sword(front)_attack2.png",
 	"sword_front_between": "res://assets/artwork/TinyDemon_sword(front)_betweenattack1.png",
 	"sword_front_after": "res://assets/artwork/TinyDemon_sword(front)_afterattack2.png",
+	"sword_magic": "res://assets/artwork/Sword-Magic.png",
+	"shield_magic": "res://assets/artwork/Shield-Magic.png",
 }
 
 
@@ -366,7 +368,15 @@ func tick(root: Object, delta: float) -> void:
 	guard_flash_timer = maxf(guard_flash_timer - delta, 0.0)
 	_update_guard_flash(root)
 	var attacking := bool(root.get("player_is_attacking"))
+	var magic_casting := bool(root.get("player_is_magic_casting"))
 	var defending := bool(root.get("player_is_defending"))
+	if magic_casting:
+		_clear_fade_overlays()
+		_clear_draw_overlays()
+		active = true
+		shield_is_out = true
+		inactivity_timer = 0.0
+		fade_timer = 0.0
 	if defending and not shield_is_out:
 		# Guard deployment uses the same white draw flash as the sword.
 		_clear_fade_overlays()
@@ -393,7 +403,7 @@ func tick(root: Object, delta: float) -> void:
 		inactivity_timer = 0.0
 		fade_timer = 0.0
 		was_attacking = true
-	elif not defending:
+	elif not defending and not magic_casting:
 		if was_attacking:
 			transition_hold_timer = ATTACK_TRANSITION_HOLD
 		was_attacking = false
@@ -735,8 +745,10 @@ func _update_layers(root: Object) -> void:
 		_update_equipment_shadows()
 		return
 	var currently_attacking := bool(root.get("player_is_attacking"))
+	var currently_magic_casting := bool(root.get("player_is_magic_casting"))
 	var state := "idle"
-	if bool(root.get("player_is_defending")): state = "defend"
+	if currently_magic_casting: state = "magic"
+	elif bool(root.get("player_is_defending")): state = "defend"
 	elif currently_attacking and animation_name == "attack1": state = "attack1"
 	elif currently_attacking and animation_name == "attack2": state = "attack2"
 	elif transition_hold_timer > 0.0 and last_attack_name == "attack2": state = "after"
@@ -753,10 +765,16 @@ func _update_layers(root: Object) -> void:
 	var shield_front_key := "shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)
 	var sword_front_key := "sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")
 	var sword_back_visible := state != "attack2"
-	_set_layer("EquipmentSwordBack", frames.get(sword_back_key), frame_index, opacity, sword_back_visible, sword_back_key)
-	_set_layer("EquipmentShieldBack", frames.get(shield_back_key), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"), shield_back_key)
-	_set_layer("EquipmentShieldFront", frames.get(shield_front_key), frame_index, opacity, shield_available, shield_front_key)
-	_set_layer("EquipmentSwordFront", frames.get(sword_front_key), frame_index, opacity, state.begins_with("attack") or state == "between" or state == "after", sword_front_key)
+	if state == "magic":
+		_set_layer("EquipmentSwordBack", frames.get("sword_magic"), frame_index, opacity, true, "sword_magic")
+		_set_layer("EquipmentShieldBack", null, frame_index, opacity, false)
+		_set_layer("EquipmentShieldFront", frames.get("shield_magic"), frame_index, opacity, shield_available, "shield_magic")
+		_set_layer("EquipmentSwordFront", null, frame_index, opacity, false)
+	else:
+		_set_layer("EquipmentSwordBack", frames.get(sword_back_key), frame_index, opacity, sword_back_visible, sword_back_key)
+		_set_layer("EquipmentShieldBack", frames.get(shield_back_key), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"), shield_back_key)
+		_set_layer("EquipmentShieldFront", frames.get(shield_front_key), frame_index, opacity, shield_available, shield_front_key)
+		_set_layer("EquipmentSwordFront", frames.get(sword_front_key), frame_index, opacity, state.begins_with("attack") or state == "between" or state == "after", sword_front_key)
 	_update_draw_overlays()
 	if fade_timer > 0.0:
 		var white_fade_progress := pow(1.0 - opacity, 2.2)
@@ -843,14 +861,15 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 		return
 	layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
 	var animation_name := String(gameplay_root.get("player_anim_name"))
-	var facing_left := player.flip_h
-	var guard := gameplay_root.get("player_guard_component") as PlayerGuardComponent
-	if guard != null and bool(gameplay_root.get("player_is_defending")):
-		facing_left = guard.facing_left
-	elif not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
-		var target := gameplay_root.call("_valid_current_target") as Sprite2D
-		if target != null and not bool(gameplay_root.get("player_is_attacking")):
-			facing_left = bool(gameplay_root.call("_target_facing_left", target))
+	var facing_left := bool(gameplay_root.get("player_magic_flip_h")) if animation_name == "magic" else player.flip_h
+	if animation_name != "magic":
+		var guard := gameplay_root.get("player_guard_component") as PlayerGuardComponent
+		if guard != null and bool(gameplay_root.get("player_is_defending")):
+			facing_left = guard.facing_left
+		elif not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
+			var target := gameplay_root.call("_valid_current_target") as Sprite2D
+			if target != null and not bool(gameplay_root.get("player_is_attacking")):
+				facing_left = bool(gameplay_root.call("_target_facing_left", target))
 	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if animation_name.begins_with("attack") else facing_left
 	_set_layer_opacity(layer, opacity)
 	layer.visible = true
