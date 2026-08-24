@@ -73,7 +73,7 @@ game reads them at runtime with no code change.
 
 ### `scripts/chroma_tuning.gd` — Chroma pickups (6 exports, all `inspector`)
 
-`pickup_value` 25, `enemy_drop_chance` 0.35, `pickup_collection_distance` 10,
+`pickup_value` 20, `enemy_drop_chance` 0.35, `pickup_collection_distance` 10,
 `pickup_air_time` 0.38, `pickup_launch_speed` 30, and `pickup_launch_spread`
 18.
 

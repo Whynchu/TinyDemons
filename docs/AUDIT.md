@@ -222,7 +222,7 @@ change and its listed evidence; line movement alone does not advance status.
 
 ### B3 completion — 2026-08-22
 
-- `PlayerChromaComponent` is the sole runtime owner of aspect, quantized Chroma,
+- `PlayerChromaComponent` is the sole runtime owner of aspect, integer Chroma,
   binding mode, attunement, and elemental payment. The coordinator no longer
   mirrors `player_mp`.
 - Added `ChromaPickupController` for pickup instances, values, launch state, and

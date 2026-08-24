@@ -48,10 +48,10 @@ const CONTROLLER_DEADZONE := 0.25
 const CONTROLLER_TRIGGER_DEADZONE := 0.35
 const PLAYER_MAX_MP := 100.0
 const CHROMA_SATURATION_CURVE_EXPONENT := 0.65
-const MAGIC_MP_COST := 25.0
+const MAGIC_MP_COST := 10.0
 const MAGIC_COOLDOWN := 2.0
 const GREY_MAGIC_COOLDOWN := 2.5
-const CHROMA_PICKUP_VALUE := 25
+const CHROMA_PICKUP_VALUE := 20
 const CHROMA_PICKUP_DROP_CHANCE := 0.35
 const CHROMA_PICKUP_COLLECTION_DISTANCE := 10.0
 const CHROMA_PICKUP_AIR_TIME := 0.38
@@ -331,9 +331,9 @@ func _chroma_visual_saturation() -> float:
 		return 0.0
 	if normalized >= 1.0:
 		return 1.0
-	# Keep the character colorful through most of the bar, then let the final
-	# quarter fall toward Gray more sharply. With the current exponent, 75/50/25
-	# map approximately to 83/64/41 percent visual saturation.
+	# Keep the character colorful through most of the bar, then let the low end
+	# fall toward Gray more sharply. With the current exponent, 80/50/20 map
+	# approximately to 86/64/31 percent visual saturation.
 	return pow(normalized, CHROMA_SATURATION_CURVE_EXPONENT)
 func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
 	if sound_manager != null:

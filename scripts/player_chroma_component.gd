@@ -1,7 +1,7 @@
 extends Node
 class_name PlayerChromaComponent
 
-## Runtime owner for the player's aspect identity and quantized Chroma state.
+## Runtime owner for the player's aspect identity and Chroma state.
 ## Triangle execution, HUD presentation, and visual desaturation are separate.
 
 signal aspect_changed(aspect: Aspect)
@@ -22,8 +22,8 @@ enum AbilityMode {
 }
 
 const MAX_CHROMA := 100
-const CHROMA_STEP := 25
-const ELEMENTAL_ABILITY_COST := 25
+const CHROMA_PICKUP_VALUE := 20
+const ELEMENTAL_ABILITY_COST := 10
 
 var current_aspect: Aspect = Aspect.NONE
 var current_chroma := 0
@@ -55,14 +55,14 @@ func attune_flame(flame: StringName) -> bool:
 	return false
 
 
-func restore_neutral_chroma(_value: int = CHROMA_STEP) -> bool:
+func restore_neutral_chroma(_value: int = CHROMA_PICKUP_VALUE) -> bool:
 	# Gray cannot store Chroma. The pickup is consumed by the caller, but this
 	# state owner reports that no restoration occurred.
 	if current_aspect == Aspect.NONE:
 		return false
 	if current_chroma >= MAX_CHROMA:
 		return false
-	_set_chroma(mini(current_chroma + CHROMA_STEP, MAX_CHROMA))
+	_set_chroma(mini(current_chroma + CHROMA_PICKUP_VALUE, MAX_CHROMA))
 	return true
 
 
@@ -120,9 +120,8 @@ func _set_aspect(next_aspect: Aspect) -> void:
 
 func _set_chroma(next_chroma: int) -> void:
 	var clamped := clampi(next_chroma, 0, MAX_CHROMA)
-	# All initial Chroma changes are charge-sized. Keeping the invariant here
-	# prevents future callers from accidentally creating a 1–24 state.
-	clamped = clamped - posmod(clamped, CHROMA_STEP)
+	# Triangle spends are 10-point actions while neutral pickups restore 20, so
+	# Chroma intentionally is not restricted to the old 25-point grid.
 	if current_chroma == clamped:
 		return
 	var previous_mode := ability_mode()

@@ -39,7 +39,7 @@ func _initialize() -> void:
 					mp_color_found = true
 		_expect(mp_color_found, "Chroma bar uses the light-blue MP accent", failures)
 	if pickup_controller != null:
-		gameplay.call("_spawn_chroma_pickup", Vector2(-10000.0, -10000.0), 25, 123, Vector2.ZERO)
+		gameplay.call("_spawn_chroma_pickup", Vector2(-10000.0, -10000.0), 20, 123, Vector2.ZERO)
 		var pickup_sprites: Array = pickup_controller.get("sprites") as Array
 		_expect(pickup_sprites.size() == 1, "Chroma pickup spawns in the scene", failures)
 		if pickup_sprites.size() == 1:
@@ -122,6 +122,12 @@ func _initialize() -> void:
 		_expect(int(gameplay.get("player_anim_frame")) == 2 and projectile_controller.projectiles.size() == 1, "triangle projectile fires on frame 3", failures)
 		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 2.01)
 		_expect(not bool(gameplay.get("player_is_magic_casting")), "triangle cast returns to the normal animation after frame 4", failures)
+		var equipment_fixture := gameplay.get("player_equipment") as EquipmentComponent
+		var shield_was_equipped := equipment_fixture != null and equipment_fixture.has_shield
+		# The smoke scene may load a saved profile without a shield. Force the
+		# visual fixture on for the facing assertion, then restore that state.
+		if equipment_fixture != null:
+			equipment_fixture.has_shield = true
 		magic_runtime.call("begin_magic_animation", gameplay, Vector2.LEFT, null, 0)
 		if equipment_visual != null:
 			equipment_visual.tick(gameplay, 0.0)
@@ -132,6 +138,8 @@ func _initialize() -> void:
 			_expect(left_player != null and left_player.flip_h and left_player.texture == player_animation.magic_frames[0], "left-facing triangle uses the normal body frame with one horizontal flip", failures)
 			_expect(left_sword_back != null and left_sword_back.flip_h, "left-facing triangle reverses the behind sword", failures)
 			_expect(left_shield_front != null and left_shield_front.flip_h, "left-facing triangle reverses the shield", failures)
+		if equipment_fixture != null:
+			equipment_fixture.has_shield = shield_was_equipped
 		magic_runtime.call("cancel_magic_animation", gameplay)
 	if chroma != null:
 		chroma.call("begin_new_run")

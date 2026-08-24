@@ -45,10 +45,11 @@ first dungeon then teaches the selected starter aspect.
 Initial values:
 
 - Maximum Chroma: 100.
-- Starter elemental action cost: 25.
-- Neutral Chroma pickup restoration: 25.
-- Valid initial Chroma values: 0, 25, 50, 75, 100.
-- Four full elemental uses from 100 to 0.
+- Starter elemental action cost: 10.
+- Neutral Chroma pickup restoration: 20.
+- Chroma is an integer value from 0 to 100; Triangle spending is not tied to
+  the 20-point pickup value.
+- Ten full elemental uses from 100 to 0.
 - Normal flame attunement replaces the current aspect and refills Chroma to
   100.
 - Neutral Chroma restoration preserves the current aspect.
@@ -202,7 +203,7 @@ source of truth.
   puzzle and a later untinted Gray puzzle.
 - Keep puzzle-room entrances usable when the puzzle is unsolved, so a player can
   back out and return to the hub rather than becoming trapped.
-- Author the exact 100/75/50/25/0 depletion lesson.
+- Author the exact 100/90/80/70/60/50/40/30/20/10/0 depletion lesson.
 - Prevent enemies or pickups from invalidating the forced sequence.
 - Verify Gray ability access after depletion.
 
@@ -248,9 +249,9 @@ source of truth.
 - Does each ability have a common cooldown, or does each aspect tune its own?
 - Does the ability cost Chroma on activation or only when it successfully
   affects a target/environment object?
-- The initial system cannot produce 1–24 Chroma because spending and neutral
-  restoration are quantized in 25-point charges. Any future non-25 costs must
-  define their own affordability behavior.
+- Triangle spending is 10 while neutral restoration is 20, so the state is no
+  longer quantized to pickup charges. Full elemental affordability is a
+  direct `current_chroma >= 10` check.
 - How much weaker should the bound-at-zero version be?
 - Which animation states are required for Gray, full elemental, and weakened
   bound variants?
@@ -283,12 +284,12 @@ Before the first slice is complete, add tests covering:
 
 - new run starts Gray at zero Chroma;
 - flame attunement sets the aspect and refills to 100;
-- elemental ability spends exactly 25 Chroma;
-- four uses produce 100 → 75 → 50 → 25 → 0;
+- elemental ability spends exactly 10 Chroma;
+- ten uses produce 100 → 90 → 80 → 70 → 60 → 50 → 40 → 30 → 20 → 10 → 0;
 - unbound zero Chroma resolves to Gray;
 - bound zero Chroma resolves to the weakened elemental ability;
 - neutral restoration preserves the current aspect;
-- neutral restoration adds exactly 25 and caps at 100;
+- neutral restoration adds exactly 20 and caps at 100;
 - Gray consumes a neutral pickup but stays at zero without an aspect;
 - flame replacement changes aspect and refills immediately;
 - stat, passive, and ability identity derive from the selected flame;
@@ -305,8 +306,8 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 
 The next design artifact should be an approved ability/class-package sheet for
 Gray, Fire, Water, and Electric. Implementation may begin with the pure Chroma
-state slice once the remaining state rule for 1–24 Chroma is resolved; ability
-execution should wait for the relevant behavior sheet rather than inventing
+state slice now supports the 10-point Triangle cost; ability execution should
+wait for the relevant behavior sheet rather than inventing
 status systems during implementation.
 
 The safest first milestone is:
