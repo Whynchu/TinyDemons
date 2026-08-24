@@ -206,15 +206,18 @@ func number_texture(text: String, color: Color) -> Texture2D:
 	patterns["x"] = ["000", "000", "101", "010", "101"]
 	patterns["y"] = ["000", "000", "101", "101", "011"]
 	patterns["z"] = ["000", "000", "111", "010", "111"]
+	var compact_patterns: Dictionary = {}
+	for character in patterns:
+		compact_patterns[character] = _compact_glyph_pattern(patterns[character] as Array)
 	var image_width := 0
 	for digit in text:
-		image_width += (patterns.get(digit, patterns[" "])[0] as String).length() + 1
+		image_width += (compact_patterns.get(digit, compact_patterns[" "])[0] as String).length() + 1
 	image_width = maxi(image_width - 1, 1)
 	var image := Image.create(image_width, 5, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
 	var x_offset := 0
 	for digit in text:
-		var pattern: Array = patterns.get(digit, patterns[" "])
+		var pattern: Array = compact_patterns.get(digit, compact_patterns[" "])
 		for y in 5:
 			var row := pattern[y] as String
 			for x in row.length():
@@ -315,15 +318,18 @@ func name_texture(text: String, color: Color) -> Texture2D:
 	glyphs["x"] = ["00000", "00000", "10001", "01010", "00100", "01010", "10001"]
 	glyphs["y"] = ["00000", "00000", "10001", "10001", "01111", "00001", "01110"]
 	glyphs["z"] = ["00000", "00000", "11111", "00010", "00100", "01000", "11111"]
+	var compact_glyphs: Dictionary = {}
+	for character in glyphs:
+		compact_glyphs[character] = _compact_glyph_pattern(glyphs[character] as Array)
 	var width := 0
 	for character in text:
-		width += (glyphs.get(character, glyphs[" "])[0] as String).length() + 1
+		width += (compact_glyphs.get(character, compact_glyphs[" "])[0] as String).length() + 1
 	width = maxi(width - 1, 1)
 	var image := Image.create(width, 7, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
 	var x_offset := 0
 	for character in text:
-		var pattern: Array = glyphs.get(character, glyphs[" "])
+		var pattern: Array = compact_glyphs.get(character, compact_glyphs[" "])
 		for y in 7:
 			var row := pattern[y] as String
 			for x in row.length():
@@ -333,6 +339,27 @@ func name_texture(text: String, color: Color) -> Texture2D:
 	var texture := ImageTexture.create_from_image(image)
 	name_texture_cache[cache_key] = texture
 	return texture
+
+
+func _compact_glyph_pattern(pattern: Array) -> Array:
+	var min_x := 999
+	var max_x := -1
+	for row_value in pattern:
+		var row := row_value as String
+		for x in row.length():
+			if row[x] == "1":
+				min_x = mini(min_x, x)
+				max_x = maxi(max_x, x)
+	if max_x < min_x:
+		var empty_pattern: Array = []
+		for _row in pattern.size():
+			empty_pattern.append("0")
+		return empty_pattern
+	var compacted: Array = []
+	for row_value in pattern:
+		var row := row_value as String
+		compacted.append(row.substr(min_x, max_x - min_x + 1))
+	return compacted
 
 
 func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vector2, offset: Vector2, scale: Vector2, z_index: int, lifetime_max: float, random_seed: int, pixel_texture: Callable, flip_h: bool = false, effect_tag: StringName = &"") -> void:

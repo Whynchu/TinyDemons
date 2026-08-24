@@ -68,9 +68,13 @@ func _initialize() -> void:
 	var name_o := glyphs.name_texture("o", Color.WHITE) as Texture2D
 	var name_g := glyphs.name_texture("g", Color.WHITE) as Texture2D
 	var name_o_caps := glyphs.name_texture("O", Color.WHITE) as Texture2D
+	var name_l := glyphs.name_texture("l", Color.WHITE) as Texture2D
+	var name_i := glyphs.name_texture("i", Color.WHITE) as Texture2D
 	_expect(name_o != null and name_o.get_width() > 0, "name texture lowercase 'o' renders non-empty", failures)
 	_expect(name_g != null and name_g.get_width() > 0, "name texture lowercase 'g' renders non-empty", failures)
 	_expect(name_o != null and name_o_caps != null and name_o.get_image().get_data() != name_o_caps.get_image().get_data(), "name texture lowercase 'o' differs from uppercase 'O'", failures)
+	_expect(name_l != null and name_l.get_width() <= 3, "name texture lowercase 'l' uses a narrow natural width", failures)
+	_expect(name_i != null and name_i.get_width() <= 3, "name texture lowercase 'i' uses a narrow natural width", failures)
 	for character in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz":
 		var damage_glyph := glyphs.number_texture(character, Color.WHITE) as Texture2D
 		var name_glyph := glyphs.name_texture(character, Color.WHITE) as Texture2D
