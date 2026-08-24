@@ -20,6 +20,12 @@ const ITEM_DROP_TEXTURE_PATHS := {
 	&"shield": "res://assets/artwork/shield_pickup.png",
 	&"accessory": "res://assets/artwork/acc_pickup.png",
 }
+const ITEM_TYPE_LABELS := {
+	&"weapon": "SWORD",
+	&"armor": "ARMOR",
+	&"shield": "SHIELD",
+	&"accessory": "ACCESSORY",
+}
 
 var chroma_light_texture: Texture2D = null
 
@@ -34,6 +40,17 @@ func item_drop_texture(item: ItemInstance) -> Texture2D:
 	var slot := ItemCatalog.new().definition_slot(item.definition_id)
 	var path := str(ITEM_DROP_TEXTURE_PATHS.get(slot, ""))
 	return load(path) as Texture2D if not path.is_empty() and ResourceLoader.exists(path) else placeholder_item_texture()
+
+
+func item_type_label(item: ItemInstance) -> String:
+	if item == null:
+		return "ITEM"
+	var slot := ItemCatalog.new().definition_slot(item.definition_id)
+	return str(ITEM_TYPE_LABELS.get(slot, "ITEM"))
+
+
+func item_acquired_text(item: ItemInstance) -> String:
+	return "%s ACQUIRED!" % item_type_label(item)
 
 
 func _safe_drop_position(root: Object, point: Vector2) -> Vector2:
@@ -207,9 +224,11 @@ func spawn_chest_item_drops(root: Object, items: Array[ItemInstance]) -> void:
 		label.name = "ChestItemDropLabel%d" % (index + 1)
 		var item_name := str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
 		label.texture = root.call("_pixel_text_texture", "%s %s +%d" % [catalog.rarity_letter_grade(item.rarity), item_name, item.enhancement_level], rarity_color)
+		label.set_meta("item_type", item_type_label(item))
 		label.centered = true
 		label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		label.z_as_relative = false
+		label.visible = false
 		label.global_position = sprite.global_position + Vector2(0, -10)
 		label.z_index = sprite.z_index + 1
 		root.add_child(label)
@@ -289,6 +308,7 @@ func constrain_world_item_drops(root: Object) -> void:
 			var label := drop.get("label") as Sprite2D
 			if label != null and is_instance_valid(label):
 				label.global_position = sprite.global_position + Vector2(0, -10)
+	_update_world_item_labels(root)
 
 
 func update_world_item_drop(root: Object, delta: float) -> void:
@@ -352,18 +372,27 @@ func update_world_item_drops(root: Object, delta: float) -> void:
 			label.global_position = sprite.global_position + Vector2(0, -10)
 			label.z_index = sprite.z_index + 1
 		index -= 1
+	_update_world_item_labels(root)
 
 
-func _nearest_world_item_drop(root: Object, landed_only: bool = false) -> Dictionary:
+func _world_item_drop_is_interactable(root: Object, drop: Dictionary) -> bool:
+	var sprite := drop.get("sprite") as Sprite2D
+	if sprite == null or not is_instance_valid(sprite) or float(drop.get("air_time", 0.0)) > 0.0:
+		return false
+	var player_foot: Vector2 = root.call("_actor_foot", root.player)
+	if player_foot.distance_to(sprite.global_position) > CHEST_INTERACT_DISTANCE:
+		return false
+	return not root.has_method("_is_interaction_target_in_front") or bool(root.call("_is_interaction_target_in_front", sprite.global_position))
+
+
+func _interactable_world_item_drop(root: Object) -> Dictionary:
 	var nearest: Dictionary = {}
 	var nearest_distance := INF
 	var player_foot: Vector2 = root.call("_actor_foot", root.player)
 	for drop in root.world_item_drops:
+		if not _world_item_drop_is_interactable(root, drop):
+			continue
 		var sprite := drop.get("sprite") as Sprite2D
-		if sprite == null or not is_instance_valid(sprite):
-			continue
-		if landed_only and float(drop.get("air_time", 0.0)) > 0.0:
-			continue
 		var distance := player_foot.distance_squared_to(sprite.global_position)
 		if distance < nearest_distance:
 			nearest = drop
@@ -371,30 +400,43 @@ func _nearest_world_item_drop(root: Object, landed_only: bool = false) -> Dictio
 	return nearest
 
 
+func _update_world_item_labels(root: Object) -> void:
+	var selected := _interactable_world_item_drop(root)
+	var selected_sprite := selected.get("sprite") as Sprite2D
+	for drop in root.world_item_drops:
+		var sprite := drop.get("sprite") as Sprite2D
+		var label := drop.get("label") as Sprite2D
+		if label == null or not is_instance_valid(label):
+			continue
+		var is_selected := selected_sprite != null and sprite == selected_sprite
+		label.visible = is_selected
+		if is_selected and sprite != null and is_instance_valid(sprite):
+			label.global_position = sprite.global_position + Vector2(0, -10)
+
+
 func world_item_drop_position(root: Object) -> Vector2:
-	var drop := _nearest_world_item_drop(root)
+	var drop := _interactable_world_item_drop(root)
 	var sprite := drop.get("sprite") as Sprite2D
 	return sprite.global_position if sprite != null and is_instance_valid(sprite) else Vector2.ZERO
 
 
 func can_interact_with_world_item(root: Object) -> bool:
-	var drop := _nearest_world_item_drop(root, true)
-	var sprite := drop.get("sprite") as Sprite2D
-	return sprite != null and is_instance_valid(sprite) and root.call("_actor_foot", root.player).distance_to(sprite.global_position) <= CHEST_INTERACT_DISTANCE
+	return not _interactable_world_item_drop(root).is_empty()
 
 
 func collect_world_item_drop(root: Object) -> bool:
-	var drop := _nearest_world_item_drop(root, true)
+	var drop := _interactable_world_item_drop(root)
 	var sprite := drop.get("sprite") as Sprite2D
 	var item := drop.get("item") as ItemInstance
 	if sprite == null or not is_instance_valid(sprite) or item == null or root.player_profile == null:
 		return false
-	if root.call("_actor_foot", root.player).distance_to(sprite.global_position) > CHEST_INTERACT_DISTANCE:
-		return false
 	if not root.player_profile.grant_item(item):
 		return false
 	root.call("_save_player_profile")
-	root.call("_spawn_floating_number", root.call("_actor_foot", root.player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, Color("ffd866"), "FOUND %s" % ItemCatalog.new().display_name(item))
+	var acquired_text := item_acquired_text(item)
+	var acquired_color := Color("ffd866")
+	var acquired_origin: Vector2 = root.call("_player_floating_number_origin", acquired_text, acquired_color) as Vector2
+	root.call("_spawn_floating_number", acquired_origin + Vector2(0, -20), 0, Vector2(0, -12), false, false, acquired_color, acquired_text)
 	root.call("_play_sound", "item_pickup", -4.0, 1.0)
 	var drop_index := -1
 	for index in root.world_item_drops.size():

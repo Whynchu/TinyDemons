@@ -30,6 +30,22 @@ func target_facing_left(root: Object, target: Sprite2D) -> bool:
 	return target_foot.x < player_foot.x
 
 
+func target_is_in_front(root: Object, target_position: Vector2) -> bool:
+	var player := root.get("player") as Sprite2D
+	if player == null:
+		return false
+	var player_foot: Vector2 = root.call("_actor_foot", player)
+	var offset := target_position - player_foot
+	if offset.length_squared() <= 0.0001:
+		return true
+	var facing := Vector2.LEFT if player.flip_h else Vector2.RIGHT
+	if root.has_method("_player_facing_vector"):
+		var facing_value: Variant = root.call("_player_facing_vector")
+		if facing_value is Vector2 and (facing_value as Vector2).length_squared() > 0.0001:
+			facing = facing_value as Vector2
+	return facing.normalized().dot(offset.normalized()) >= 0.0
+
+
 func update_targeting(root: Object) -> void:
 	var should_target := bool(root.call("_is_target_input_held"))
 	if not should_target:

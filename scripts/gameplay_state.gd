@@ -352,7 +352,13 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	_update_mp_desaturation()
 func _set_entrance_open(is_open: bool) -> void:
 	entrance_open = is_open; _refresh_room_socket_visuals(door_active)
-func _can_interact_with_npc() -> bool: return cloaked_demon != null and cloaked_demon.visible and _actor_foot(player).distance_to(_cloaked_demon_visual_center()) <= NPC_INTERACT_DISTANCE
+func _is_interaction_target_in_front(target_position: Vector2) -> bool:
+	return interaction_component == null or interaction_component.target_is_in_front(self, target_position)
+func _can_interact_with_npc() -> bool:
+	if cloaked_demon == null or not cloaked_demon.visible:
+		return false
+	var target_position := _cloaked_demon_visual_center()
+	return _actor_foot(player).distance_to(target_position) <= NPC_INTERACT_DISTANCE and _is_interaction_target_in_front(target_position)
 func _fire_anchor() -> Vector2:
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
 	if firepit != null:
@@ -691,7 +697,8 @@ func _can_interact_with_fire() -> bool:
 		return false
 	var palette_change_available: bool = target_palette != String(screen_state_controller.player_palette_name)
 	var mp_restore_available := _current_player_chroma() < PLAYER_MAX_MP
-	return (palette_change_available or mp_restore_available) and _actor_foot(player).distance_to(_fire_anchor()) <= FIRE_INTERACT_DISTANCE
+	var fire_position := _fire_anchor()
+	return (palette_change_available or mp_restore_available) and _actor_foot(player).distance_to(fire_position) <= FIRE_INTERACT_DISTANCE and _is_interaction_target_in_front(fire_position)
 func _interact_with_fire() -> void:
 	var new_palette := _fire_target_palette()
 	if new_palette.is_empty(): return
