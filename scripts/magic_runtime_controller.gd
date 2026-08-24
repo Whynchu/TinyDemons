@@ -320,8 +320,14 @@ func magic_knockback_multiplier() -> float:
 	return MAGIC_KNOCKBACK_MULTIPLIER
 
 
+func magic_attack_element(palette: String, ability_mode: int) -> int:
+	if ability_mode == ChromaComponentScript.AbilityMode.BOUND_WEAKENED:
+		return ElementCatalogScript.Element.NEUTRAL
+	return ElementCatalogScript.element_for_palette(palette)
+
+
 func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
-	var attack_element := ElementCatalogScript.element_for_palette(palette)
+	var attack_element := magic_attack_element(palette, ability_mode)
 	var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
 	var damage := 0.0 if damage_result == null or damage_result.immune else magic_damage_for_mode(damage_result.amount, ability_mode)
 	var was_critical := damage_result != null and damage_result.critical
