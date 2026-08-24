@@ -352,7 +352,7 @@ func build_enemy_health_ui(
 	register_overhead: Callable,
 	pixel_particle: Callable
 ) -> Texture2D:
-	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png"}
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png"}
 	target_health_fill_textures.clear(); target_overhead_fill_textures.clear()
 	for slime in slimes:
 		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
@@ -378,7 +378,7 @@ func build_enemy_health_ui(
 
 
 func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Callable, bright_texture: Callable) -> void:
-	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png"}
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png"}
 	for slime in slimes:
 		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
 		var target_texture := load_texture.call("res://assets/artwork/" + target_bar_paths[palette]) as Texture2D; var overhead_texture := load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette]) as Texture2D

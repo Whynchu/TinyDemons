@@ -52,6 +52,10 @@ var manual_vit := 0
 var manual_str := 0
 var manual_def := 0
 var manual_spd := 0
+var enemy_variant_profile_enabled := false
+var enemy_variant_base_values: Dictionary = {}
+var enemy_variant_growth_weights: Dictionary = {}
+var enemy_variant_seed_token := &""
 
 
 func _ready() -> void:
@@ -101,6 +105,35 @@ func manual_allocation() -> Dictionary:
 	return {"VIT": manual_vit, "STR": manual_str, "DEF": manual_def, "SPD": manual_spd}
 
 
+func apply_enemy_variant_profile(base_values: Dictionary, growth_weights: Dictionary, seed_token: StringName) -> void:
+	## Enemy variants use the same deterministic growth algorithm as player
+	## profiles, but keep their authored level-one values and weights separate
+	## from the player's allocation choices.
+	enemy_variant_profile_enabled = true
+	enemy_variant_base_values = {
+		Stat.VIT: maxi(int(base_values.get("VIT", 0)), 0),
+		Stat.STR: maxi(int(base_values.get("STR", 0)), 0),
+		Stat.DEF: maxi(int(base_values.get("DEF", 0)), 0),
+		Stat.SPD: maxi(int(base_values.get("SPD", 0)), 0),
+	}
+	enemy_variant_growth_weights = {
+		Stat.VIT: maxf(float(growth_weights.get("VIT", 0.25)), 0.0),
+		Stat.STR: maxf(float(growth_weights.get("STR", 0.25)), 0.0),
+		Stat.DEF: maxf(float(growth_weights.get("DEF", 0.25)), 0.0),
+		Stat.SPD: maxf(float(growth_weights.get("SPD", 0.25)), 0.0),
+	}
+	enemy_variant_seed_token = seed_token
+	_recalculate()
+
+
+func clear_enemy_variant_profile() -> void:
+	enemy_variant_profile_enabled = false
+	enemy_variant_base_values.clear()
+	enemy_variant_growth_weights.clear()
+	enemy_variant_seed_token = &""
+	_recalculate()
+
+
 func _recalculate() -> void:
 	var values: Dictionary
 	if manual_allocation_enabled:
@@ -111,7 +144,7 @@ func _recalculate() -> void:
 			Stat.SPD: manual_base_spd + manual_spd,
 		}
 	else:
-		values = _base_profile_values()
+		values = enemy_variant_base_values.duplicate() if enemy_variant_profile_enabled else _base_profile_values()
 		var allocated := int(values[Stat.VIT]) + int(values[Stat.STR]) + int(values[Stat.DEF]) + int(values[Stat.SPD])
 		var extra_points := maxi(total_stat_points() - allocated, 0)
 		var rng := RandomNumberGenerator.new()
@@ -167,6 +200,8 @@ func _base_profile_values() -> Dictionary:
 
 
 func _growth_weights() -> Dictionary:
+	if enemy_variant_profile_enabled:
+		return enemy_variant_growth_weights
 	match allocation_profile:
 		AllocationProfile.FAVOR_VIT:
 			return {
@@ -237,5 +272,8 @@ func _growth_seed() -> int:
 	else:
 		path_hash = str(get_path()).hash()
 	# Keep one stable growth sequence per actor/profile. Leveling extends that
-	# sequence instead of rerolling every previously allocated stat point.
-	return int(points_per_level * 313 + base_points * 733 + allocation_profile * 197 + path_hash)
+	# sequence instead of rerolling every previously allocated stat point. Enemy
+	# variants use their token instead of the player allocation enum so two
+	# variants on the same node path still receive different stable sequences.
+	var profile_seed := String(enemy_variant_seed_token).hash() if enemy_variant_profile_enabled else allocation_profile * 197
+	return int(points_per_level * 313 + base_points * 733 + profile_seed + path_hash)
