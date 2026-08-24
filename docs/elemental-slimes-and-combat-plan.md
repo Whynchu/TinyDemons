@@ -337,7 +337,8 @@ recolors the authored Green sheets for Purple
 
 Damage-number colors reuse `PaletteLibrary` — no second RGB table. Per
 element, use `PaletteLibrary.accent(palette_key)` with `normal(palette_key)`
-as fallback. Two verified color collisions make ACCENT the right default:
+as fallback, then boost HSV saturation and value by 10% for text readability.
+Two verified color collisions make ACCENT the right default:
 `NORMAL["yellow"]` is exactly the gold number color `Color8(255, 205, 117)`
 (`effects_spawner.gd:22-23`), and `NORMAL["red"]` is exactly the player
 healing color `Color8(177, 62, 83)` (`combat_runtime_controller.gd:276,436`).
@@ -395,7 +396,7 @@ commit, and register every new test file in the hard-coded list at
 
 - Add `scripts/element_catalog.gd`: `Element` enum, display names, palette
   keys, the six-by-six table from §4, `effectiveness(attacker, defender)`,
-  `damage_number_color(element)` (ACCENT with NORMAL fallback), and the
+  `damage_number_color(element)` (10%-boosted ACCENT with NORMAL fallback), and the
   `aspect → element` / `magic palette → element` adapters.
 - New `tests/element_catalog_smoke.gd`: every table cell, both immunity
   directions, Shadow-vs-Shadow weakness, adapter mappings, color fallback.
@@ -531,7 +532,7 @@ create an accidental early-game difficulty spike.
 
 - Basic player attacks are Neutral.
 - Gray Triangle is Neutral; active starter aspects use Fire/Water/Electric.
-- Damage numbers use the attack element's ACCENT color, not the target
+- Damage numbers use the attack element's boosted ACCENT color, not the target
   variant and not `NORMAL["yellow"]`/`NORMAL["red"]` (gold/healing clashes).
 - Enemy damage numbers are element-colored for all six variants.
 - Critical numbers keep the exact element color inside the glyph and add a
@@ -570,8 +571,8 @@ These settle the nine review questions from the draft, with code evidence:
 7. **Immune feedback**: a brief `immune` floater in the attack's element
    color through the existing `display_text` path, plus suppressed hit
    reactions. No new glyph pipeline needed.
-8. **Damage-number color source**: `PaletteLibrary.ACCENT` with `NORMAL`
-   fallback. Verified collisions rule out NORMAL-first: `NORMAL["yellow"]`
+8. **Damage-number color source**: a 10%-boosted `PaletteLibrary.ACCENT` with
+   `NORMAL` fallback. Verified collisions rule out NORMAL-first: `NORMAL["yellow"]`
    equals the gold number color and `NORMAL["red"]` equals the player healing
    color.
 9. **Shield numbers**: keep the existing light-blue `Color8(148, 220, 255)`

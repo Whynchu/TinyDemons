@@ -36,8 +36,15 @@ func _initialize() -> void:
 	_expect(ElementCatalogScript.element_for_palette("purple") == e.SHADOW, "purple palette maps to Shadow", failures)
 	_expect(ElementCatalogScript.palette_key(e.NEUTRAL) == "grey", "Neutral uses grey palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.SHADOW) == "purple", "Shadow uses purple palette", failures)
-	_expect(ElementCatalogScript.damage_number_color(e.FIRE).is_equal_approx(PaletteLibrary.accent("red")), "Fire uses the red accent color", failures)
-	_expect(ElementCatalogScript.damage_number_color(e.GRASS).is_equal_approx(PaletteLibrary.accent("green")), "Grass falls back to its readable palette color", failures)
+	var fire_damage_color := ElementCatalogScript.damage_number_color(e.FIRE)
+	var fire_accent := PaletteLibrary.accent("red")
+	_expect(fire_damage_color.s >= fire_accent.s and fire_damage_color.v >= fire_accent.v, "Fire damage text boosts accent saturation and brightness", failures)
+	var grey_damage_color := ElementCatalogScript.damage_number_color(e.NEUTRAL)
+	var grey_accent := PaletteLibrary.accent("grey")
+	_expect(grey_damage_color.s > grey_accent.s and grey_damage_color.v > grey_accent.v, "Gray damage text is lighter and more saturated", failures)
+	var grass_damage_color := ElementCatalogScript.damage_number_color(e.GRASS)
+	var grass_base := PaletteLibrary.accent("green")
+	_expect(grass_damage_color.s >= grass_base.s and grass_damage_color.v >= grass_base.v, "Grass damage text boosts its fallback palette color", failures)
 	_finished = true
 	call_deferred("_finish", failures)
 
