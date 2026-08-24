@@ -92,7 +92,7 @@ CombatStatSnapshot
 ItemCatalog.DEFINITIONS (item_catalog.gd:26-41)
    ├─ bonuses: {"health_rate", "damage_rate", "strength", "vitality", "defense"}
    └─ shield: {"guard_durability", "guard_reduction", "strength_penalty", "damage_penalty"}
-        │  ItemCatalog.bonuses(item, mastery) (line 195) — rarity × enhancement scaling
+        │  ItemCatalog.bonuses(item, mastery) (line 195) — rarity package + 0.1 tier-stat point/enhancement
         ▼
 EquipmentComponent.configure_from_profile (equipment_component.gd:33-85)
    ├─ health_rate_bonus / damage_rate_bonus    (÷100 → %)

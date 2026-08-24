@@ -190,7 +190,8 @@ new effect appears above the intended UI/world layer.
 - Smoke tests use a watchdog: if any assertion fails mid-script the process
   aborts with a `TEST_ABORTED` error and exit code 1 instead of hanging.
 - Post-overhaul expectations: player base 3/2/2 (archetypes sum to 7), gear
-  primary stats 25%/point with a 1-point floor, enhancement +10%/level, and
+  primary stats 25%/point with a 1-point floor, enhancement +0.1 tier-stat
+  point/level (+1.0 at +10), and
   enemies `max(1, ceil(depth/4))` (cap `999 if rank>10 else 2+rank`, +rank-8
 bonus from R9+).
 - Fusion (target-centric) expectations: FUSE tab lists upgrade targets (any

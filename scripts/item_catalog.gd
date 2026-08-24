@@ -23,7 +23,6 @@ const RARITY_PLAYER_STAT_RATES := {
 	&"legendary": 0.45,
 	&"mythic": 0.80,
 }
-const ENHANCEMENT_FLAT_POINT_INTERVAL := 10
 const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
 
@@ -173,9 +172,11 @@ func rarity_stat_rate(rarity: StringName) -> float:
 func rarity_flat_points(rarity: StringName) -> int:
 	return _rarity_rank(rarity) * RARITY_FLAT_POINTS_PER_RANK
 
-func enhancement_flat_points(enhancement_level: int) -> int:
+func enhancement_flat_points(enhancement_level: int) -> float:
 	var level := clampi(enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
-	return floori(float(level) / float(ENHANCEMENT_FLAT_POINT_INTERVAL))
+	# Enhancements advance the authored tier stat by 0.1 each. This keeps the
+	# existing +1.0 total at +10 while making every fusion step meaningful.
+	return float(level) * MASTERY_BONUS_PER_LEVEL
 
 func rarity_letter_grade(rarity: StringName) -> String:
 	return {&"common": "C", &"rare": "R", &"epic": "E", &"legendary": "L", &"mythic": "M"}.get(rarity, "C")
@@ -224,7 +225,7 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var definition: Dictionary = DEFINITIONS.get(item.definition_id, {})
 	var result: Dictionary = {}
 	var base_bonuses: Dictionary = definition.get("bonuses", {})
-	var flat_points := rarity_flat_points(item.rarity) + enhancement_flat_points(item.enhancement_level)
+	var flat_points := float(rarity_flat_points(item.rarity)) + enhancement_flat_points(item.enhancement_level)
 	var tier_stat := str(definition.get("tier_stat", ""))
 	for stat: String in base_bonuses:
 		var base_value := float(base_bonuses[stat])
