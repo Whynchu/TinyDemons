@@ -3,6 +3,7 @@ class_name MagicRuntimeController
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
 const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
 const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
@@ -320,11 +321,16 @@ func magic_knockback_multiplier() -> float:
 
 
 func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
-	var base_damage := float(root.call("_player_attack_damage_against", slime))
-	var damage := magic_damage_for_mode(base_damage, ability_mode)
-	root.call("_damage_slime_with_number", slime, damage, false, false)
-	root.call("_knockback_slime", slime, MAGIC_KNOCKBACK_MULTIPLIER)
-	root.call("_spawn_damage_number", slime, damage, false)
+	var attack_element := ElementCatalogScript.element_for_palette(palette)
+	var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
+	var damage := 0.0 if damage_result == null or damage_result.immune else magic_damage_for_mode(damage_result.amount, ability_mode)
+	var was_critical := damage_result != null and damage_result.critical
+	var immune := damage_result != null and damage_result.immune
+	var resolved_element := damage_result.element if damage_result != null else attack_element
+	root.call("_damage_slime_with_number", slime, damage, was_critical, false, resolved_element, immune)
+	if not immune:
+		root.call("_knockback_slime", slime, MAGIC_KNOCKBACK_MULTIPLIER)
+	root.call("_spawn_damage_number", slime, damage, was_critical, resolved_element, immune)
 	root.call("_play_sound", "magic_hit", -8.0, 1.0)
 	spawn_magic_impact(root, world_position, palette)
 

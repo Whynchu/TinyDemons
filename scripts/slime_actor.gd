@@ -113,9 +113,13 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	update_scoot.call(actor, delta)
 
 
-static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number := true) -> void:
+static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, show_damage_number := true) -> void:
 	if bool(root.call("_is_slime_dead", slime)): return
 	root.call("_mark_player_in_combat")
+	if immune:
+		if show_damage_number:
+			root.call("_spawn_damage_number", slime, 0.0, false, attack_element, true)
+		return
 	var health := slime.get_node_or_null("Health") as HealthComponent
 	var maximum := float(root.call("_enemy_max_health", slime))
 	var previous_health := health.current_health if health != null else maximum
@@ -129,7 +133,7 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	if combat != null: combat.flash_timer = slime_config.hit_flash_time; combat.hitstun_timer = slime_config.hitstun_time
 	root.call("_show_slime_hit_flash", slime)
 	if show_damage_number:
-		root.call("_spawn_damage_number", slime, amount, was_critical)
+		root.call("_spawn_damage_number", slime, amount, was_critical, attack_element, false)
 	root.set("hitstop_timer", (root.get("player_tuning") as PlayerTuning).hitstop_duration)
 	if health != null and health.is_dead(): root.call("_kill_slime", slime)
 
@@ -168,7 +172,12 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 		if run_state != null:
 			run_state.record_dodge()
 		return
-	var damage := float(root.call("_slime_attack_damage", slime)); root.call("_mark_player_in_combat")
+	var damage_result := root.call("_slime_attack_damage_result", slime) as CombatCalculator.DamageResult
+	root.call("_mark_player_in_combat")
+	if damage_result != null and damage_result.immune:
+		root.call("_spawn_player_damage_number", 0.0, damage_result.element, true)
+		return
+	var damage := damage_result.amount if damage_result != null else float(root.call("_slime_attack_damage", slime))
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var blocked := false
 	var block_stun := 0.0
@@ -182,7 +191,7 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null: health.apply_damage(damage)
 	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
-	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); if damage > 0.0: root.call("_spawn_player_damage_number", damage); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
+	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); if damage > 0.0: root.call("_spawn_player_damage_number", damage, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, false); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
 	if blocked and combat != null:
 		combat.active = false
 		combat.timer = 0.0
