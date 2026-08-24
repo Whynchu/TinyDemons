@@ -7,6 +7,17 @@ const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd"
 const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
 const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
 const MAGIC_KNOCKBACK_MULTIPLIER := 0.25
+const MAGIC_FRAME_COUNT := 4
+const MAGIC_CAST_FRAME_INDEX := 2
+const MAGIC_FRAME_TIME_SCALE := 1.20
+
+var magic_animation_active := false
+var magic_animation_timer := 0.0
+var magic_animation_frame := 0
+var pending_magic_direction := Vector2.RIGHT
+var pending_magic_target: Sprite2D = null
+var pending_magic_mode := ChromaComponentScript.AbilityMode.GRAY
+var pending_magic_projectile_spawned := false
 
 
 func update_player_mp_ui(root: Object) -> void:
@@ -45,7 +56,7 @@ func restore_player_mp(root: Object) -> void:
 
 
 func try_cast_magic(root: Object) -> bool:
-	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
 		return false
 	var ability := root.get("player_aspect_ability_component") as Node
 	var chroma := root.get("player_chroma_component") as Node
@@ -79,13 +90,99 @@ func execute_current_aspect_ability(root: Object, mode: int) -> bool:
 		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else Vector2.RIGHT
 	else:
 		var last_input: Vector2 = root.get("last_player_input_direction")
-		direction = last_input.normalized()
-	var origin := player_visual_center(root) + Vector2(signf(direction.x) * 5.0, 1.0)
-	if target != null and player != null:
-		player.flip_h = direction.x < 0.0
-	spawn_magic_projectile(root, origin, direction, target, mode)
-	root.call("_play_sound", "magic_cast", -8.0, 1.0)
+		direction = last_input.normalized() if last_input.length_squared() > 0.0001 else Vector2.RIGHT
+	return begin_magic_animation(root, direction, target, mode)
+
+
+func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, mode: int) -> bool:
+	if magic_animation_active:
+		return false
+	magic_animation_active = true
+	magic_animation_timer = 0.0
+	magic_animation_frame = 0
+	pending_magic_direction = direction.normalized() if direction.length_squared() > 0.0001 else Vector2.RIGHT
+	pending_magic_target = target if target != null and is_instance_valid(target) else null
+	pending_magic_mode = mode
+	pending_magic_projectile_spawned = false
+	root.set("player_is_magic_casting", true)
+	root.set("player_magic_flip_h", pending_magic_direction.x < 0.0)
+	root.set("player_anim_name", "magic")
+	root.set("player_anim_frame", 0)
+	root.set("player_anim_timer", 0.0)
+	var player := root.get("player") as Sprite2D
+	if player != null:
+		player.flip_h = pending_magic_direction.x < 0.0
+	var animation := root.get("player_animation_component") as PlayerAnimationComponent
+	if animation != null:
+		animation.apply_frame(root)
 	return true
+
+
+func magic_frame_time(root: Object) -> float:
+	var tuning := root.get("player_tuning") as PlayerTuning
+	if tuning == null:
+		return 0.108
+	var attack_multiplier := tuning.attack_multiplier(float(root.get("player_spd")))
+	return maxf(tuning.attack_frame_time * MAGIC_FRAME_TIME_SCALE / attack_multiplier, 0.001)
+
+
+func tick_magic_animation(root: Object, delta: float) -> void:
+	if not magic_animation_active:
+		return
+	magic_animation_timer += maxf(delta, 0.0)
+	var frame_time := magic_frame_time(root)
+	while magic_animation_active and magic_animation_timer >= frame_time:
+		magic_animation_timer -= frame_time
+		magic_animation_frame += 1
+		if magic_animation_frame >= MAGIC_FRAME_COUNT:
+			_finish_magic_animation(root)
+			break
+		root.set("player_anim_frame", magic_animation_frame)
+		var animation := root.get("player_animation_component") as PlayerAnimationComponent
+		if animation != null:
+			animation.apply_frame(root)
+		if magic_animation_frame == MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
+			_spawn_pending_magic_projectile(root)
+
+
+func _spawn_pending_magic_projectile(root: Object) -> void:
+	pending_magic_projectile_spawned = true
+	var target := pending_magic_target if pending_magic_target != null and is_instance_valid(pending_magic_target) else null
+	var origin := player_visual_center(root) + Vector2(signf(pending_magic_direction.x) * 5.0, 1.0)
+	spawn_magic_projectile(root, origin, pending_magic_direction, target, pending_magic_mode)
+	root.call("_play_sound", "magic_cast", -8.0, 1.0)
+
+
+func _finish_magic_animation(root: Object) -> void:
+	magic_animation_active = false
+	magic_animation_timer = 0.0
+	magic_animation_frame = 0
+	pending_magic_target = null
+	pending_magic_projectile_spawned = false
+	root.set("player_is_magic_casting", false)
+	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+	root.set("player_anim_frame", 0)
+	root.set("player_anim_timer", 0.0)
+	var animation := root.get("player_animation_component") as PlayerAnimationComponent
+	if animation != null:
+		animation.apply_frame(root)
+
+
+func cancel_magic_animation(root: Object) -> void:
+	if not magic_animation_active and not bool(root.get("player_is_magic_casting")):
+		return
+	magic_animation_active = false
+	magic_animation_timer = 0.0
+	magic_animation_frame = 0
+	pending_magic_target = null
+	pending_magic_projectile_spawned = false
+	root.set("player_is_magic_casting", false)
+	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+	root.set("player_anim_frame", 0)
+	root.set("player_anim_timer", 0.0)
+	var animation := root.get("player_animation_component") as PlayerAnimationComponent
+	if animation != null:
+		animation.apply_frame(root)
 
 
 func player_visual_center(root: Object) -> Vector2:

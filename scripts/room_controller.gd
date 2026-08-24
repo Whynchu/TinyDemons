@@ -283,6 +283,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 		player.global_position = nearest_foot - root.get("ACTOR_FOOT_OFFSET")
 	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
 	root.set("player_is_attacking", false)
+	root.call("_cancel_magic_animation")
 	root.set("player_is_rolling", false)
 	root.set("orb_knockback_animation_lock", false)
 	root.set("orb_knockback_animation_grace", false)

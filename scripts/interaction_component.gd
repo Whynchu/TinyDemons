@@ -44,7 +44,7 @@ func update_targeting(root: Object) -> void:
 	target_cycle_axis = cycle_direction
 	target = root.call("_valid_current_target") as Sprite2D
 	var player := root.get("player") as Sprite2D
-	if target != null and not bool(root.get("player_is_attacking")):
+	if target != null and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")):
 		player.flip_h = target_facing_left(root, target)
 	root.call("_update_target_ui")
 

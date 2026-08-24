@@ -95,6 +95,44 @@ func _initialize() -> void:
 	if ability != null:
 		_expect(is_equal_approx(float(ability.get("cooldown_duration")), 2.0), "elemental triangle spell uses a 2 second cooldown", failures)
 		_expect(is_equal_approx(float(ability.get("grey_cooldown_duration")), 2.5), "gray triangle spell uses a 2.5 second cooldown", failures)
+	var player_animation := gameplay.get("player_animation_component") as PlayerAnimationComponent
+	var equipment_visual := gameplay.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	var magic_runtime := gameplay.get("magic_runtime_controller") as MagicRuntimeController
+	_expect(player_animation != null and player_animation.magic_frames.size() == 4, "triangle cast loads four body magic frames", failures)
+	if equipment_visual != null:
+		var magic_equipment_frames: Dictionary = equipment_visual.get("frames") as Dictionary
+		_expect((magic_equipment_frames.get("sword_magic", []) as Array).size() == 4 and (magic_equipment_frames.get("shield_magic", []) as Array).size() == 4, "triangle cast loads four sword and shield magic frames", failures)
+	if magic_runtime != null and player_animation != null and projectile_controller != null:
+		var attack_tuning := gameplay.get("player_tuning") as PlayerTuning
+		var magic_frame_time := float(magic_runtime.call("magic_frame_time", gameplay))
+		var attack_multiplier := attack_tuning.attack_multiplier(float(gameplay.get("player_spd")))
+		_expect(magic_frame_time > attack_tuning.attack_frame_time / attack_multiplier, "triangle magic animation is slower than attack animation", failures)
+		_expect(bool(gameplay.call("_execute_current_aspect_ability", 0)), "triangle cast starts its visual animation", failures)
+		if equipment_visual != null:
+			equipment_visual.tick(gameplay, 0.0)
+			var equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
+			var sword_back := equipment_layers.get("EquipmentSwordBack") as Sprite2D
+			var sword_front := equipment_layers.get("EquipmentSwordFront") as Sprite2D
+			_expect(sword_back != null and sword_back.visible and String(sword_back.get_meta("mp_grey_key", "")) == "sword_magic", "triangle magic sword uses the behind layer", failures)
+			_expect(sword_front != null and not sword_front.visible, "triangle magic does not use the front sword layer", failures)
+		_expect(bool(gameplay.get("player_is_magic_casting")) and int(gameplay.get("player_anim_frame")) == 0 and projectile_controller.projectiles.is_empty(), "triangle cast begins on frame 1 without firing", failures)
+		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 1.01)
+		_expect(int(gameplay.get("player_anim_frame")) == 1 and projectile_controller.projectiles.is_empty(), "triangle cast advances to frame 2 without firing", failures)
+		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 1.01)
+		_expect(int(gameplay.get("player_anim_frame")) == 2 and projectile_controller.projectiles.size() == 1, "triangle projectile fires on frame 3", failures)
+		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 2.01)
+		_expect(not bool(gameplay.get("player_is_magic_casting")), "triangle cast returns to the normal animation after frame 4", failures)
+		magic_runtime.call("begin_magic_animation", gameplay, Vector2.LEFT, null, 0)
+		if equipment_visual != null:
+			equipment_visual.tick(gameplay, 0.0)
+			var left_equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
+			var left_sword_back := left_equipment_layers.get("EquipmentSwordBack") as Sprite2D
+			var left_shield_front := left_equipment_layers.get("EquipmentShieldFront") as Sprite2D
+			var left_player := gameplay.get("player") as Sprite2D
+			_expect(left_player != null and left_player.flip_h and left_player.texture == player_animation.magic_frames[0], "left-facing triangle uses the normal body frame with one horizontal flip", failures)
+			_expect(left_sword_back != null and left_sword_back.flip_h, "left-facing triangle reverses the behind sword", failures)
+			_expect(left_shield_front != null and left_shield_front.flip_h, "left-facing triangle reverses the shield", failures)
+		magic_runtime.call("cancel_magic_animation", gameplay)
 	if chroma != null:
 		chroma.call("begin_new_run")
 		_expect(int(chroma.get("current_chroma")) == 0, "new runtime starts at zero Chroma", failures)

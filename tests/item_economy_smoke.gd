@@ -14,10 +14,30 @@ func _initialize() -> void:
 	var first := catalog.generate_item(&"weapon", 12345, 10, &"epic")
 	var second := catalog.generate_item(&"weapon", 12345, 10, &"epic")
 	_expect(first.to_dictionary() == second.to_dictionary(), "seeded item generation is stable", failures)
-	_expect(first.affixes.size() == 2, "epic has two affixes", failures)
+	_expect(first.affixes.is_empty(), "generated gear uses the deterministic tier package", failures)
 	var legendary := catalog.generate_item(&"weapon", 90210, 20, &"legendary")
 	var mythic := catalog.generate_item(&"weapon", 90211, 20, &"mythic")
-	_expect(legendary.affixes.size() == 3 and mythic.affixes.size() == 3, "legendary and mythic have three affixes", failures)
+	_expect(legendary.affixes.is_empty() and mythic.affixes.is_empty(), "high-rarity gear has no hidden random stat points", failures)
+	var common_sword := ItemInstance.new(); common_sword.definition_id = &"basic_sword"; common_sword.rarity = &"common"
+	var common_sword_plus_ten := ItemInstance.from_dictionary(common_sword.to_dictionary()); common_sword_plus_ten.enhancement_level = 10
+	var rare_sword := ItemInstance.from_dictionary(common_sword.to_dictionary()); rare_sword.rarity = &"rare"
+	var rare_sword_plus_ten := ItemInstance.from_dictionary(rare_sword.to_dictionary()); rare_sword_plus_ten.enhancement_level = 10
+	var epic_sword := ItemInstance.from_dictionary(rare_sword.to_dictionary()); epic_sword.rarity = &"epic"
+	_expect(is_equal_approx(catalog.bonuses(common_sword)["strength"], 2.0), "common sword starts at STR 2", failures)
+	_expect(is_equal_approx(catalog.bonuses(common_sword_plus_ten)["strength"], 3.0), "common +10 sword reaches STR 3", failures)
+	_expect(is_equal_approx(catalog.bonuses(rare_sword)["strength"], 4.0), "rare sword starts at STR 4", failures)
+	_expect(is_equal_approx(catalog.bonuses(rare_sword_plus_ten)["strength"], 5.0), "rare +10 sword reaches STR 5", failures)
+	_expect(is_equal_approx(catalog.bonuses(epic_sword)["strength"], 6.0), "epic sword starts at STR 6", failures)
+	_expect(is_equal_approx(catalog.rarity_stat_rate(&"common"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"rare"), 0.05) and is_equal_approx(catalog.rarity_stat_rate(&"epic"), 0.15) and is_equal_approx(catalog.rarity_stat_rate(&"legendary"), 0.45) and is_equal_approx(catalog.rarity_stat_rate(&"mythic"), 0.80), "rarity player-stat rates are fixed", failures)
+	var basic_tunic := ItemInstance.new(); basic_tunic.definition_id = &"basic_tunic"
+	var basic_shield := ItemInstance.new(); basic_shield.definition_id = &"basic_shield"
+	var bangle := ItemInstance.new(); bangle.definition_id = &"bangle"
+	var tunic_bonuses := catalog.bonuses(basic_tunic)
+	var shield_bonuses := catalog.bonuses(basic_shield)
+	var bangle_bonuses := catalog.bonuses(bangle)
+	_expect(is_equal_approx(tunic_bonuses.get("vitality", 0.0), 1.0) and is_equal_approx(tunic_bonuses.get("defense", 0.0), 1.0), "basic tunic package is VIT 1 DEF 1", failures)
+	_expect(is_equal_approx(shield_bonuses.get("vitality", 0.0), 1.0) and is_equal_approx(shield_bonuses.get("speed", 0.0), -1.0) and is_equal_approx(shield_bonuses.get("defense", 0.0), 2.0), "basic shield package is VIT 1 SPD -1 DEF 2", failures)
+	_expect(is_equal_approx(bangle_bonuses.get("strength", 0.0), 1.0) and is_equal_approx(bangle_bonuses.get("vitality", 0.0), 1.0) and is_equal_approx(bangle_bonuses.get("speed", 0.0), 1.0), "bangle package is STR 1 VIT 1 SPD 1", failures)
 	var common_price_item := ItemInstance.new(); common_price_item.definition_id = &"basic_sword"; common_price_item.rarity = &"common"
 	legendary.definition_id = &"basic_sword"; legendary.quality = 1.0; mythic.definition_id = &"basic_sword"; mythic.quality = 1.0
 	_expect(catalog.price(mythic) > catalog.price(legendary) and catalog.price(legendary) > catalog.price(common_price_item), "higher rarity has higher shop value", failures)
@@ -42,6 +62,14 @@ func _initialize() -> void:
 	var equipment := EquipmentComponent.new()
 	equipment.configure_from_profile(profile, catalog)
 	_expect(equipment.strength_bonus >= 0.0, "equipped primary bonuses reach combat component", failures)
+	var rate_profile := PlayerProfile.new(); rate_profile.ensure_starter_items(catalog)
+	var rare_starter_sword := ItemInstance.new(); rare_starter_sword.instance_id = "rare-starter-sword"; rare_starter_sword.definition_id = &"basic_sword"; rare_starter_sword.rarity = &"rare"
+	_expect(rate_profile.grant_item(rare_starter_sword) and rate_profile.equip_item(rare_starter_sword.instance_id, catalog), "rare starter sword equips", failures)
+	var rate_equipment := EquipmentComponent.new(); rate_equipment.configure_from_profile(rate_profile, catalog)
+	_expect(is_equal_approx(rate_equipment.strength_rate_bonus, 0.05), "rare positive STR package grants a 5% player STR rate", failures)
+	var rate_stats := StatsComponent.new(); rate_stats.configure_manual_growth(3, 2, 2, 1, 0, 0, 0, 0)
+	var rate_snapshot := CombatStatSnapshot.from_components(rate_stats, rate_equipment)
+	_expect(is_equal_approx(rate_snapshot.gear_strength, 5.0) and is_equal_approx(rate_snapshot.strength, 7.35), "rarity rate buffs the affected player stat after flat gear", failures)
 	var restored := PlayerProfile.new()
 	restored.load_dictionary(profile.to_dictionary())
 	_expect(restored.find_item(first.instance_id) != null, "inventory persists", failures)
@@ -90,6 +118,7 @@ func _initialize() -> void:
 	var affixed_plain := catalog.bonuses(affixed, 0)
 	affixed.enhancement_level = 1
 	var affixed_enhanced := catalog.bonuses(affixed, 0)
+	_expect(is_equal_approx(affixed_plain.get("strength", 0.0), 3.0) and is_equal_approx(affixed_enhanced.get("strength", 0.0), 3.0), "legacy affixes do not bypass the tier package", failures)
 	_expect(not affixed_enhanced.has("damage_rate"), "damage affixes are not ordinary gear stats", failures)
 	var fusion_round_trip := PlayerProfile.new(); fusion_round_trip.load_dictionary(restored.to_dictionary())
 	_expect(fusion_round_trip.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhancement persists", failures)
@@ -125,6 +154,8 @@ func _initialize() -> void:
 	transmutations.finish_attack(); _expect(is_equal_approx(transmutations.damage_share_divisor(gathered_a, 3), 3.0), "gathering boost ends with attack", failures)
 	gathered_a.free(); gathered_b.free(); outside_target.free()
 	transmutations.free()
+	rate_stats.free()
+	rate_equipment.free()
 	equipment.free()
 	_finished = true
 	call_deferred("_finish", failures)

@@ -140,6 +140,11 @@ func initialize(root: GameplayState) -> void:
 	root._apply_room_state(); root._build_depth_lists()
 	if bool(root.get("debug_start_in_boss_room")):
 		root.call("_begin_new_run")
+		# begin_new_run regenerates the debug dungeon with a fresh seed. Reapply the
+		# authored boss arrival after that reset so the debug player and the active
+		# socket belong to the same room layout.
+		_place_debug_player_at_boss_entry(root, player)
+		root.set("player_start_position", player.position)
 		_enter_debug_gameplay(root)
 		root.set("loading_screen_active", false)
 	else:

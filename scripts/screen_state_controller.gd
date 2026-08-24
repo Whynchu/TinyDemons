@@ -802,10 +802,9 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
 	if page != 3:
 		for stat: String in bonuses:
-			var rate := stat in ["speed"]
 			var bonus_label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
 			var value := float(bonuses[stat])
-			bonus_parts.append("%s %s%.1f%s" % [bonus_label, "+" if value > 0 else "", value, "%" if rate else ""])
+			bonus_parts.append("%s %s%.1f" % [bonus_label, "+" if value > 0 else "", value])
 		details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
 	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
 	if page == 3 and not selected_transmutation_name.is_empty():
@@ -846,9 +845,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			var after := float(next_bonuses.get(stat, 0.0))
 			if is_equal_approx(before, 0.0) and is_equal_approx(after, 0.0):
 				continue
-			var rate := stat in ["speed"]
 			var preview_label: String = str({"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}.get(stat, stat.to_upper()))
-			preview_rows.append("%s %.1f>%.1f%s" % [preview_label, before, after, "%" if rate else ""])
+			preview_rows.append("%s %.1f>%.1f" % [preview_label, before, after])
 		for row_index in preview_stats.size():
 			if row_index < preview_rows.size():
 				preview_stats[row_index].texture = pixel_texture.call(preview_rows[row_index], Color8(167, 240, 112)) as Texture2D
@@ -857,7 +855,11 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 				preview_stats[row_index].texture = null
 				preview_stats[row_index].visible = false
 	else:
-		details[1].texture = pixel_texture.call(selected_transmutation_name, Color8(148, 220, 255)) as Texture2D if not selected_transmutation_name.is_empty() else null
+		var item_info: Array[String] = []
+		var player_rate_text := catalog.player_stat_rate_text(item)
+		if not player_rate_text.is_empty(): item_info.append(player_rate_text)
+		if not selected_transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % selected_transmutation_name)
+		details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D if not item_info.is_empty() else null
 	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.gold < profile.fusion_batch_cost(item, fusion_count))))
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
@@ -935,7 +937,11 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, browsing)
 	details[0].texture = null
 	var transmutation_name := catalog.transmutation_name(selected_candidate.transmutation_id)
-	details[1].texture = pixel_texture.call("SPECIAL: %s" % transmutation_name, Color8(148, 220, 255)) as Texture2D if not transmutation_name.is_empty() else null
+	var item_info: Array[String] = []
+	var player_rate_text := catalog.player_stat_rate_text(selected_candidate)
+	if not player_rate_text.is_empty(): item_info.append(player_rate_text)
+	if not transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % transmutation_name)
+	details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D if not item_info.is_empty() else null
 	_set_transmutation_description(details, pixel_texture, catalog.transmutation_description(selected_candidate.transmutation_id))
 	if selected_slot_index == ItemCatalog.SLOTS.find(&"shield"):
 		var shield_values := catalog.shield_bonuses(selected_candidate)
@@ -1004,12 +1010,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_level: int = 0) -> Dictionary:
 	if item == null:
 		return {}
-	var result := catalog.bonuses(item, mastery_level)
-	if catalog.definition_slot(item.definition_id) == &"shield":
-		var shield_values := catalog.shield_bonuses(item)
-		result["strength"] = float(result.get("strength", 0.0)) - float(shield_values.get("strength_penalty", 0.0))
-		result["speed"] = float(result.get("speed", 0.0)) - float(shield_values.get("speed_penalty", 0.0))
-	return result
+	return catalog.bonuses(item, mastery_level)
 
 func update_hub_input(root: Object) -> void:
 	var row := hub_menu_row
