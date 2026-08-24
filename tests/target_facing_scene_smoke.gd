@@ -24,6 +24,12 @@ func _initialize() -> void:
 	target.centered = false
 	root_node.add_child(target)
 	var interaction := INTERACTION_SCRIPT.new() as InteractionComponent
+	root_node.player.flip_h = false
+	_expect(interaction.target_is_in_front(root_node, Vector2(112, 115)), "right-facing player accepts a target in front", failures)
+	_expect(not interaction.target_is_in_front(root_node, Vector2(88, 115)), "right-facing player rejects a target behind", failures)
+	root_node.player.flip_h = true
+	_expect(interaction.target_is_in_front(root_node, Vector2(88, 115)), "left-facing player accepts a target in front", failures)
+	_expect(not interaction.target_is_in_front(root_node, Vector2(112, 115)), "left-facing player rejects a target behind", failures)
 
 	target.global_position = Vector2(96, 100)
 	_expect(interaction.target_facing_left(root_node, target), "non-centered target on the left faces the player left", failures)

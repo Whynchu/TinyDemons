@@ -130,7 +130,11 @@ func _set_rest_fire_frame(frame_index: int) -> void:
 	if rest_fire_frames.is_empty(): return
 	rest_fire_controller.frame_index = posmod(frame_index, rest_fire_frames.size()); rest_fire.texture = rest_fire_frames[rest_fire_controller.frame_index]; rest_fire.hframes = 1; rest_fire.frame = 0; occlusion_renderer.sprite_images[rest_fire] = occlusion_renderer.cached_texture_image(rest_fire.texture)
 func _cache_npc_texture(_actor: Sprite2D, texture: Texture2D) -> void: occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(texture)
-func _can_interact_with_chest() -> bool: return current_room_type == DungeonGraph.ROOM_TREASURE and chest_unlocked and not chest_claimed and _actor_foot(player).distance_to(_collision_rect(chest).get_center()) <= CHEST_INTERACT_DISTANCE
+func _can_interact_with_chest() -> bool:
+	if chest == null or player == null or current_room_type != DungeonGraph.ROOM_TREASURE or not chest_unlocked or chest_claimed:
+		return false
+	var chest_position := _collision_rect(chest).get_center()
+	return _actor_foot(player).distance_to(chest_position) <= CHEST_INTERACT_DISTANCE and _is_interaction_target_in_front(chest_position)
 func _on_chest_collected() -> void:
 	if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and _are_all_slimes_dead():
 		_open_final_exit()
