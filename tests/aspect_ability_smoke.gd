@@ -46,16 +46,16 @@ func _initialize() -> void:
 	)
 	_expect(accepted, "elemental activation succeeds when affordable", failures)
 	_expect(callback_modes[-1] == Chroma.AbilityMode.ELEMENTAL, "elemental mode reaches the execution callback", failures)
-	_expect(chroma.current_chroma == 75, "elemental payment occurs after accepted execution", failures)
+	_expect(chroma.current_chroma == 90, "elemental payment spends 10 Chroma after accepted execution", failures)
 	_expect(is_equal_approx(ability.cooldown_remaining, 2.0), "elemental activation starts the standard cooldown", failures)
 	ability.tick(2.0)
 
 	accepted = ability.try_activate(chroma, func(_mode: int) -> bool: return false)
 	_expect(not accepted, "failed execution is rejected", failures)
-	_expect(chroma.current_chroma == 75, "failed execution does not spend Chroma", failures)
+	_expect(chroma.current_chroma == 90, "failed execution does not spend Chroma", failures)
 
 	chroma.set_binding_active(true)
-	for _i in 3:
+	for _i in 9:
 		ability.tick(2.0)
 		ability.try_activate(chroma, func(_mode: int) -> bool: return true)
 	ability.tick(2.5)

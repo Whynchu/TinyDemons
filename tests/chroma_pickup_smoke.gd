@@ -10,7 +10,7 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var tuning := ChromaTuningScript.new()
-	_expect(tuning.pickup_value == 25, "neutral pickup is worth 25 Chroma", failures)
+	_expect(tuning.pickup_value == 20, "neutral pickup is worth 20 Chroma", failures)
 	_expect(is_equal_approx(tuning.enemy_drop_chance, 0.35), "enemy drop chance has the first-pass tuning", failures)
 
 	var chroma := Chroma.new()
@@ -20,9 +20,9 @@ func _initialize() -> void:
 	_expect(chroma.current_chroma == 0, "Gray remains at zero after pickup", failures)
 	chroma.attune(Chroma.Aspect.FIRE)
 	chroma.spend_elemental_ability()
-	_expect(chroma.current_chroma == 75, "pickup test starts from a partial bar", failures)
+	_expect(chroma.current_chroma == 90, "pickup test starts from a partial bar after a 10-point cast", failures)
 	_expect(chroma.restore_neutral_chroma(tuning.pickup_value), "charged aspect accepts neutral pickup", failures)
-	_expect(chroma.current_chroma == 100, "neutral pickup refills one 25-point step", failures)
+	_expect(chroma.current_chroma == 100, "neutral pickup adds 20 and caps at 100", failures)
 	_expect(not chroma.restore_neutral_chroma(tuning.pickup_value), "full bar rejects extra resource", failures)
 
 	chroma.free()

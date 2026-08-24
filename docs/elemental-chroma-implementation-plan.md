@@ -52,11 +52,12 @@ behavior is intentionally deferred to the Binding design phase.
 ### 1.3 Chroma rules
 
 - Maximum Chroma: 100.
-- Full elemental Triangle ability cost: 25 on an accepted activation.
-- Neutral Chroma pickups restore exactly 25.
-- The initial system only permits 0, 25, 50, 75, and 100 Chroma; there is no
-  partial 1–24 affordability state.
-- Four accepted full elemental uses produce 100 → 75 → 50 → 25 → 0.
+- Full elemental Triangle ability cost: 10 on an accepted activation.
+- Neutral Chroma pickups restore exactly 20.
+- Chroma is an integer value from 0 to 100; Triangle spending is not restricted
+  to the pickup value grid.
+- Ten accepted full elemental uses produce 100 → 90 → 80 → 70 → 60 → 50 →
+  40 → 30 → 20 → 10 → 0.
 - A rejected input must not spend Chroma.
 - Normal flame interaction replaces the current aspect and immediately refills
   Chroma to 100.
@@ -101,12 +102,10 @@ The runtime needs to distinguish these effective forms:
 | Dormant bound aspect | Fire/Water/Electric | 0 | Yes | Weakened non-elemental aspect ability |
 
 The final paid cast resolves before the depletion transition. A cast accepted
-at 25 Chroma therefore performs the full elemental behavior, spends the final
-25, and then transitions to Gray or dormant-bound state.
-
-The initial quantized model cannot produce an unbound aspect at 1–24 Chroma.
-If later abilities or effects use non-25 values, their affordability behavior
-must be designed explicitly rather than inherited accidentally.
+at 10 Chroma therefore performs the full elemental behavior, spends the final
+10, and then transitions to Gray or dormant-bound state. Values below 10 are
+not affordable for a full elemental Triangle cast and resolve to Gray unless
+the bound-zero rule applies.
 
 ## 3. Ownership boundaries
 
@@ -317,11 +316,12 @@ Validation must prove:
 - New run starts Gray at 0.
 - Flame attunement establishes the selected aspect and fills to 100.
 - Flame replacement changes aspect and fills to 100.
-- Neutral restoration adds exactly 25, caps at 100, and preserves an existing
+- Neutral restoration adds exactly 20, caps at 100, and preserves an existing
   aspect.
 - Gray consumes neutral pickups but remains Gray at 0.
 - Rejected activations do not spend Chroma.
-- Four accepted casts produce 100 → 75 → 50 → 25 → 0.
+- Ten accepted casts produce 100 → 90 → 80 → 70 → 60 → 50 → 40 → 30 →
+  20 → 10 → 0.
 - The final cast resolves at full strength before depletion.
 - Unbound zero becomes Gray.
 - Bound zero becomes dormant-bound and resolves the weakened ability.

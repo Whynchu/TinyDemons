@@ -22,11 +22,12 @@ func _initialize() -> void:
 	_expect(chroma.current_aspect == Chroma.Aspect.FIRE, "attunement stores Fire", failures)
 	_expect(chroma.current_chroma == 100, "attunement fills to 100", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.ELEMENTAL, "charged Fire resolves elemental ability", failures)
+	_expect(Chroma.ELEMENTAL_ABILITY_COST == 10, "Triangle costs 10 Chroma", failures)
 
-	for expected in [75, 50, 25, 0]:
-		_expect(chroma.spend_elemental_ability(), "elemental cast spends one Chroma charge", failures)
+	for expected in [90, 80, 70, 60, 50, 40, 30, 20, 10, 0]:
+		_expect(chroma.spend_elemental_ability(), "elemental cast spends 10 Chroma", failures)
 		_expect(chroma.current_chroma == expected, "Chroma reaches %d" % expected, failures)
-		_expect(chroma.current_chroma % Chroma.CHROMA_STEP == 0, "Chroma remains quantized at %d" % expected, failures)
+		_expect(chroma.current_chroma % Chroma.ELEMENTAL_ABILITY_COST == 0, "Chroma remains 10-point aligned at %d" % expected, failures)
 
 	_expect(chroma.current_aspect == Chroma.Aspect.NONE, "unbound depletion returns to Gray", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.GRAY, "unbound depletion resolves Gray ability", failures)
@@ -36,20 +37,20 @@ func _initialize() -> void:
 	_expect(chroma.current_chroma == 100, "neutral pickup caps at 100", failures)
 	chroma.spend_elemental_ability()
 	chroma.spend_elemental_ability()
-	_expect(chroma.current_chroma == 50, "two casts leave two charges", failures)
+	_expect(chroma.current_chroma == 80, "two casts leave 80 Chroma", failures)
 	_expect(chroma.restore_neutral_chroma(), "neutral pickup restores one charge", failures)
-	_expect(chroma.current_chroma == 75, "neutral pickup adds exactly 25", failures)
+	_expect(chroma.current_chroma == 100, "neutral pickup adds exactly 20", failures)
 
 	chroma.begin_new_run()
 	chroma.attune(Chroma.Aspect.ELECTRIC)
 	chroma.set_binding_active(true)
-	for _i in 4:
-		_expect(chroma.spend_elemental_ability(), "bound elemental cast spends one charge", failures)
+	for _i in 10:
+		_expect(chroma.spend_elemental_ability(), "bound elemental cast spends 10 Chroma", failures)
 	_expect(chroma.current_aspect == Chroma.Aspect.ELECTRIC, "Binding preserves Electric at zero", failures)
 	_expect(chroma.current_chroma == 0, "bound aspect reaches zero", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.BOUND_WEAKENED, "bound zero resolves weakened ability", failures)
 	_expect(chroma.restore_neutral_chroma(), "neutral pickup restores dormant bound aspect", failures)
-	_expect(chroma.current_chroma == 25, "dormant bound aspect regains one charge", failures)
+	_expect(chroma.current_chroma == 20, "dormant bound aspect regains 20 Chroma", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.ELEMENTAL, "restored bound aspect resolves full ability", failures)
 
 	chroma.free()

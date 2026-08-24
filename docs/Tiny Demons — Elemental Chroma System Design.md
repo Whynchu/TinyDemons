@@ -19,8 +19,8 @@
   aspect and immediately fills Chroma to **100 MP**.
 - Hub attunement may be optional during ordinary runs, although authored
   tutorial/progression sequences may force the player to use it.
-- Starting elemental action cost: **25 MP**.
-- This gives exactly **4 elemental uses** before depletion.
+- Starting elemental action cost: **10 MP**.
+- This gives exactly **10 elemental uses** before depletion.
 
 The starter flame also supplies a small class-identity package: a modest stat
 adjustment, a modest passive, and the aspect-specific Triangle ability. Exact
@@ -40,8 +40,9 @@ package behavior will be designed with the Binding system.
 - Reaching zero therefore changes the player’s class without disabling basic gameplay.
 
 ## MP Restoration
-- Neutral Chroma pickups restore exactly **25 Chroma** during normal gameplay.
-- Initial Chroma values are quantized to four charges: **0, 25, 50, 75, 100**.
+- Neutral Chroma pickups restore exactly **20 Chroma** during normal gameplay.
+- Chroma is an integer value from **0 to 100**; Triangle spending is separate
+  from the 20-point pickup value.
 - Neutral restoration preserves the player’s current aspect.
 - Gray cannot store or gain Chroma. If Gray touches a neutral Chroma pickup,
   the pickup is still consumed but grants no MP and causes no attunement.
@@ -61,9 +62,9 @@ package behavior will be designed with the Binding system.
 - The selected starter flame appears in the hub room. The opening flow requires
   the player to interact with it, demonstrating that flames create aspects and
   fill Chroma.
-- Early in Run 1, include a puzzle requiring exactly **4 elemental actions**.
+- Early in Run 1, include a puzzle requiring exactly **10 elemental actions**.
 - The sequence forces:
-  - 100 → 75 → 50 → 25 → 0 MP.
+  - 100 → 90 → 80 → 70 → 60 → 50 → 40 → 30 → 20 → 10 → 0 MP.
 - The player watches their demon progressively lose saturation and become Gray.
 - This explicitly teaches:
   - elemental abilities consume Chroma;

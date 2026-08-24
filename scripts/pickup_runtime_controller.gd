@@ -3,7 +3,7 @@ class_name PickupRuntimeController
 
 const CHEST_INTERACT_DISTANCE := 16.0
 const DEPTH_Z_SCALE := 10.0
-const CHROMA_PICKUP_VALUE := 25
+const CHROMA_PICKUP_VALUE := 20
 const ITEM_DROP_GRAVITY := 92.0
 const ITEM_DROP_AIR_TIME := 0.38
 const ITEM_DROP_ARC_HEIGHT := 8.0
