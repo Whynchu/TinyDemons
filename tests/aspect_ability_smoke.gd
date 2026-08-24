@@ -3,6 +3,7 @@ extends SceneTree
 const Chroma = preload("res://scripts/player_chroma_component.gd")
 const Ability = preload("res://scripts/player_aspect_ability_component.gd")
 const MagicRuntime = preload("res://scripts/magic_runtime_controller.gd")
+const Elements = preload("res://scripts/element_catalog.gd")
 
 var _finished := false
 
@@ -23,6 +24,8 @@ func _initialize() -> void:
 	_expect(elemental_damage > grey_damage, "elemental triangle is stronger than gray", failures)
 	_expect(magic.magic_damage_for_mode(5.0, Chroma.AbilityMode.ELEMENTAL) == 6.0, "elemental triangle stays visibly stronger at normal low damage", failures)
 	_expect(is_equal_approx(magic.magic_knockback_multiplier(), 0.25), "triangle attacks use quarter-strength knockback", failures)
+	_expect(magic.magic_attack_element("red", Chroma.AbilityMode.ELEMENTAL) == Elements.Element.FIRE, "elemental Triangle keeps its palette element", failures)
+	_expect(magic.magic_attack_element("red", Chroma.AbilityMode.BOUND_WEAKENED) == Elements.Element.NEUTRAL, "weakened bound Triangle becomes Neutral", failures)
 
 	var callback_modes: Array[int] = []
 	var accepted := ability.try_activate(chroma, func(mode: int) -> bool:
