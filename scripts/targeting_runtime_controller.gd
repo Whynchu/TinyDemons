@@ -5,6 +5,7 @@ const TARGET_LOCK_MAX_DISTANCE := 9999.0
 const FOCUS_TEXT_WIDTH := 19.0
 const FOCUS_TEXT_HEIGHT := 5.0
 const FOCUS_FLASH_TIME := 0.25
+const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 
 
 func valid_current_target(root: Object) -> Sprite2D:
@@ -176,6 +177,6 @@ func update_focus_indicator(root: Object, delta: float = 0.0) -> void:
 
 func slime_display_name(root: Object, slime: Sprite2D) -> String:
 	var palette := str(slime.get("variant"))
-	var display_name := "Blue Slime" if palette == "blue" else "Red Slime" if palette == "red" else "Rogue Slime" if palette == "purple" else "Green Slime"
+	var display_name := SLIME_VARIANT_CATALOG_SCRIPT.display_name_for_variant(StringName(palette))
 	var stats := root.call("_slime_stats", slime) as StatsComponent
 	return "lv.%d %s" % [stats.level if stats != null else 1, display_name]

@@ -66,15 +66,17 @@ func build_slime_direction_textures(root: Object) -> void:
 	var paths := {}
 	for slime in slimes:
 		var palette := String(slime.get("variant"))
-		var source := "SlimeGreen" if palette == "purple" else "Slime%s" % palette.capitalize()
+		var source := "SlimeGreen" if palette in ["purple", "grey", "yellow"] else "Slime%s" % palette.capitalize()
 		paths[slime] = ["res://assets/artwork/%sLeft.png" % source, "res://assets/artwork/%sRight.png" % source]
 	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(root, "_load_texture_or_null"))
-	var purple_slimes: Array[Sprite2D] = []
-	for slime in slimes:
-		if String(slime.get("variant")) == "purple":
-			purple_slimes.append(slime)
-	if not purple_slimes.is_empty():
-		SlimeVisualComponent.recolor_direction_textures(purple_slimes, "purple", (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache)
+	var texture_cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
+	for palette in ["grey", "yellow", "purple"]:
+		var palette_slimes: Array[Sprite2D] = []
+		for slime in slimes:
+			if String(slime.get("variant")) == palette:
+				palette_slimes.append(slime)
+		if not palette_slimes.is_empty():
+			SlimeVisualComponent.recolor_direction_textures(palette_slimes, palette, texture_cache)
 
 
 func build_slime_attack_frames(root: Object) -> void:

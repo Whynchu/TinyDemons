@@ -2,6 +2,7 @@ extends Node
 class_name CombatRuntimeController
 
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
+const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 
 const ENEMY_HEALTH_R1_FACTOR := 0.50
 const ENEMY_HEALTH_R2_FACTOR := 0.65
@@ -166,11 +167,17 @@ func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int =
 
 
 func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> void:
-	var palette := variant if variant == "blue" or variant == "green" or variant == "red" or variant == "purple" else "green"
+	var requested_variant := StringName(variant)
+	var definition := SlimeVariantCatalogScript.definition(requested_variant)
+	var palette := String(definition["variant"])
 	slime.set("variant", palette)
+	slime.set_meta("element", int(definition["element"]))
+	var actor := slime as SlimeActor
+	if actor != null:
+		actor.combat_element = int(definition["element"])
 	var stats := root.call("_slime_stats", slime) as StatsComponent
 	if stats != null:
-		stats.allocation_profile = StatsComponent.AllocationProfile.FAVOR_DEF if palette == "blue" else StatsComponent.AllocationProfile.FAVOR_STR if palette == "red" else StatsComponent.AllocationProfile.FAVOR_STR_DEF if palette == "purple" else StatsComponent.AllocationProfile.FAVOR_VIT
+		stats.apply_enemy_variant_profile(definition["base_stats"] as Dictionary, definition["growth_weights"] as Dictionary, StringName(palette))
 	root.call("_configure_slime_ambush", slime, palette)
 
 
