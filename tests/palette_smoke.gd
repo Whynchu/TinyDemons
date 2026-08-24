@@ -71,6 +71,14 @@ func _initialize() -> void:
 	_expect(name_o != null and name_o.get_width() > 0, "name texture lowercase 'o' renders non-empty", failures)
 	_expect(name_g != null and name_g.get_width() > 0, "name texture lowercase 'g' renders non-empty", failures)
 	_expect(name_o != null and name_o_caps != null and name_o.get_image().get_data() != name_o_caps.get_image().get_data(), "name texture lowercase 'o' differs from uppercase 'O'", failures)
+	for character in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz":
+		var damage_glyph := glyphs.number_texture(character, Color.WHITE) as Texture2D
+		var name_glyph := glyphs.name_texture(character, Color.WHITE) as Texture2D
+		_expect(_has_opaque_pixel(damage_glyph), "damage glyph '%s' renders" % character, failures)
+		_expect(_has_opaque_pixel(name_glyph), "name glyph '%s' renders" % character, failures)
+	_expect(_has_opaque_pixel(glyphs.number_texture("electric", Color.WHITE)), "lowercase electric text renders without fallback glyphs", failures)
+	_expect(_has_opaque_pixel(glyphs.name_texture("Electric Slime", Color.WHITE)), "Electric Slime name renders without fallback glyphs", failures)
+	_expect(_has_opaque_pixel(glyphs.name_texture("Water Slime", Color.WHITE)), "Water Slime name renders without fallback glyphs", failures)
 	glyphs.free()
 	_finished = true
 	call_deferred("_finish", failures)
@@ -100,3 +108,16 @@ func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 
 func _luma(color: Color) -> float:
 	return color.r * 0.299 + color.g * 0.587 + color.b * 0.114
+
+
+func _has_opaque_pixel(texture: Texture2D) -> bool:
+	if texture == null:
+		return false
+	var image := texture.get_image()
+	if image == null:
+		return false
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+	return false
