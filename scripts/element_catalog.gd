@@ -14,6 +14,7 @@ enum Element {
 
 const ELEMENT_COUNT := 6
 const DEFAULT_ELEMENT := Element.NEUTRAL
+const DAMAGE_NUMBER_COLOR_BOOST := 1.10
 
 const IDS := {
 	Element.NEUTRAL: &"neutral",
@@ -86,7 +87,9 @@ static func is_immune(attacker: int, defender: int) -> bool:
 
 
 static func damage_number_color(element: int) -> Color:
-	return PaletteLibrary.accent(palette_key(element))
+	var accent := PaletteLibrary.accent(palette_key(element))
+	var boosted := Color.from_hsv(accent.h, clampf(accent.s * DAMAGE_NUMBER_COLOR_BOOST, 0.0, 1.0), clampf(accent.v * DAMAGE_NUMBER_COLOR_BOOST, 0.0, 1.0), accent.a)
+	return Color8(roundi(boosted.r * 255.0), roundi(boosted.g * 255.0), roundi(boosted.b * 255.0), roundi(boosted.a * 255.0))
 
 
 ## PlayerChromaComponent.Aspect values are NONE=0, FIRE=1, WATER=2,
