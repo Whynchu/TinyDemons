@@ -1,6 +1,8 @@
 extends RefCounted
 class_name CombatCalculator
 
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+
 ## Stateless combat formulas shared by player and enemy attacks.
 ##
 ## Randomness is supplied by the caller so the gameplay coordinator retains
@@ -9,6 +11,9 @@ class_name CombatCalculator
 class DamageResult extends RefCounted:
 	var amount: float
 	var critical: bool
+	var element: int
+	var effectiveness: float
+	var immune: bool
 
 
 static func calculate_damage(
@@ -18,12 +23,13 @@ static func calculate_damage(
 	defender_defense_bonus: float,
 	can_critical: bool,
 	rng: RandomNumberGenerator,
-	tuning: CombatTuning = null
+	tuning: CombatTuning = null,
+	attack_element: int = ElementCatalogScript.Element.NEUTRAL,
+	defense_element: int = ElementCatalogScript.Element.NEUTRAL
 ) -> DamageResult:
 	var config := tuning if tuning != null else CombatTuning.new()
 	var result := DamageResult.new()
-	result.amount = 1.0
-	result.critical = false
+	_initialize_result(result, attack_element, defense_element)
 	if attacker_stats == null:
 		return result
 
@@ -39,7 +45,7 @@ static func calculate_damage(
 	if can_critical and rng.randf() < config.critical_hit_chance:
 		result.critical = true
 		damage *= config.critical_damage_multiplier
-	result.amount = maxf(1.0, floorf(damage))
+	_finalize_damage(result, damage)
 	return result
 
 
@@ -62,11 +68,19 @@ static func max_health_for_snapshot(snapshot: CombatStatSnapshot, tuning: Combat
 	return calculated_health
 
 
-static func calculate_snapshot_damage(attacker: CombatStatSnapshot, defender: CombatStatSnapshot, can_critical: bool, rng: RandomNumberGenerator, tuning: CombatTuning = null, strength_damage_scale: float = 1.0) -> DamageResult:
+static func calculate_snapshot_damage(
+	attacker: CombatStatSnapshot,
+	defender: CombatStatSnapshot,
+	can_critical: bool,
+	rng: RandomNumberGenerator,
+	tuning: CombatTuning = null,
+	strength_damage_scale: float = 1.0,
+	attack_element: int = ElementCatalogScript.Element.NEUTRAL,
+	defense_element: int = ElementCatalogScript.Element.NEUTRAL
+) -> DamageResult:
 	var config := tuning if tuning != null else CombatTuning.new()
 	var result := DamageResult.new()
-	result.amount = 1.0
-	result.critical = false
+	_initialize_result(result, attack_element, defense_element)
 	if attacker == null:
 		return result
 	var raw_damage := attack_power_for_snapshot(attacker, config, strength_damage_scale)
@@ -76,8 +90,23 @@ static func calculate_snapshot_damage(attacker: CombatStatSnapshot, defender: Co
 	if can_critical and rng.randf() < config.critical_hit_chance:
 		result.critical = true
 		damage *= config.critical_damage_multiplier
-	result.amount = maxf(1.0, floorf(damage))
+	_finalize_damage(result, damage)
 	return result
+
+
+static func _initialize_result(result: DamageResult, attack_element: int, defense_element: int) -> void:
+	result.amount = 1.0
+	result.critical = false
+	result.element = ElementCatalogScript.normalize(attack_element)
+	result.effectiveness = ElementCatalogScript.effectiveness(attack_element, defense_element)
+	result.immune = is_zero_approx(result.effectiveness)
+
+
+static func _finalize_damage(result: DamageResult, damage: float) -> void:
+	if result.immune:
+		result.amount = 0.0
+		return
+	result.amount = maxf(1.0, floorf(damage * result.effectiveness))
 
 
 static func attack_power_for_snapshot(snapshot: CombatStatSnapshot, tuning: CombatTuning = null, strength_damage_scale: float = -1.0) -> float:
