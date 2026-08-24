@@ -133,8 +133,14 @@ func _cache_npc_texture(_actor: Sprite2D, texture: Texture2D) -> void: occlusion
 func _can_interact_with_chest() -> bool:
 	if chest == null or player == null or current_room_type != DungeonGraph.ROOM_TREASURE or not chest_unlocked or chest_claimed:
 		return false
-	var chest_position := _collision_rect(chest).get_center()
-	return _actor_foot(player).distance_to(chest_position) <= CHEST_INTERACT_DISTANCE and _is_interaction_target_in_front(chest_position)
+	var chest_rect := _collision_rect(chest)
+	var chest_position := chest_rect.get_center()
+	var player_foot := _actor_foot(player)
+	var nearest_chest_point := Vector2(
+		clampf(player_foot.x, chest_rect.position.x, chest_rect.end.x),
+		clampf(player_foot.y, chest_rect.position.y, chest_rect.end.y)
+	)
+	return player_foot.distance_to(nearest_chest_point) <= CHEST_INTERACT_DISTANCE and _is_interaction_target_in_front(chest_position)
 func _on_chest_collected() -> void:
 	if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and _are_all_slimes_dead():
 		_open_final_exit()
