@@ -22,6 +22,11 @@ elemental puzzle rooms. In parallel, the codebase is entering a staged
 feature-oriented refactor so these systems have typed owners instead of
 continuing to grow inside the gameplay coordinator.
 
+The next combat design slice is documented in
+[`docs/elemental-slimes-and-combat-plan.md`](docs/elemental-slimes-and-combat-plan.md):
+elemental slime variants, the custom scaled Gen-III matchup table, and
+element-colored damage feedback.
+
 Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
 status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
 execution plan. The completed Combat & Economy work remains documented in
