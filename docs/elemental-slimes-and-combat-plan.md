@@ -1,6 +1,8 @@
 # Tiny Demons — Elemental Slimes and Combat Matchups
 
-Status: reviewed and approved with revisions; ready for implementation
+Status: implementation complete on `feature/elemental-slime-combat`
+
+Implementation commits: `37a86bf`, `c67ce5b`, `b4b6097`, `f349726`
 
 Date: 2026-08-24 (reviewed against the codebase and the Generation III source
 chart on the same day)
