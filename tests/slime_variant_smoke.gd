@@ -48,6 +48,22 @@ func _initialize() -> void:
 	_expect(purple.speed > purple.vit and purple.strength > purple.def, "Purple growth preserves SPD/STR pressure", failures)
 	_expect(purple.speed + purple.strength > purple.vit + purple.def, "Purple growth stays offensively weighted", failures)
 
+	var rooms := RoomController.new()
+	var gray_seen := false
+	var yellow_seen_at_depth_two := false
+	var yellow_seen_before_depth_two := false
+	for seed in 256:
+		for variant in rooms._generate_enemy_encounter(seed, 0, false, false)["variants"] as Array:
+			gray_seen = gray_seen or String(variant) == "grey"
+		for variant in rooms._generate_enemy_encounter(seed + 2000, 1, false, false)["variants"] as Array:
+			yellow_seen_before_depth_two = yellow_seen_before_depth_two or String(variant) == "yellow"
+		for variant in rooms._generate_enemy_encounter(seed + 4000, 2, false, false)["variants"] as Array:
+			yellow_seen_at_depth_two = yellow_seen_at_depth_two or String(variant) == "yellow"
+	_expect(gray_seen, "Gray can appear in base encounters", failures)
+	_expect(not yellow_seen_before_depth_two, "Yellow is gated below room depth two", failures)
+	_expect(yellow_seen_at_depth_two, "Yellow can appear from room depth two", failures)
+	rooms.free()
+
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D
 	_expect(source != null, "green direction texture loads for fallback recolors", failures)
 	if source != null:

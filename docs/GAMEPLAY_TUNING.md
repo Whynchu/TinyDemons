@@ -8,7 +8,7 @@
 
 ## Tuning resources
 
-The five typed tuning resources are attached to the gameplay root and are the
+The six typed tuning resources are attached to the gameplay root and are the
 primary editor surface. Open any one and edit values in the inspector; the
 game reads them at runtime with no code change.
 
@@ -70,6 +70,36 @@ game reads them at runtime with no code change.
 `damage_number_pop_time` 0.10, `damage_number_float_speed` 12.0,
 `slime_death_particle_count` 26, `slime_death_particle_lifetime` 0.7,
 `slime_death_particle_speed_min` 14, `slime_death_particle_speed_max` 38.
+
+### `scripts/chroma_tuning.gd` — Chroma pickups (6 exports, all `inspector`)
+
+`pickup_value` 25, `enemy_drop_chance` 0.35, `pickup_collection_distance` 10,
+`pickup_air_time` 0.38, `pickup_launch_speed` 30, and `pickup_launch_spread`
+18.
+
+## Elemental slime definitions
+
+The stateless catalogs are the source of truth for enemy identity and typed
+damage. `scripts/slime_variant_catalog.gd` owns the visual variant, display
+name, element, level-one base stats, and growth weights. `StatsComponent`
+replays its existing deterministic growth rolls with the variant token folded
+into the seed.
+
+| Variant | Element | VIT / STR / DEF / SPD | Growth weights (VIT / STR / DEF / SPD) |
+| --- | --- | --- | --- |
+| Gray | Neutral | 2 / 2 / 2 / 2 | 0.25 / 0.25 / 0.25 / 0.25 |
+| Red | Fire | 1 / 4 / 2 / 1 | 0.10 / 0.55 / 0.20 / 0.15 |
+| Blue | Water | 2 / 1 / 4 / 1 | 0.20 / 0.10 / 0.55 / 0.15 |
+| Yellow | Electric | 2 / 2 / 1 / 3 | 0.20 / 0.15 / 0.10 / 0.55 |
+| Green | Grass | 4 / 1 / 2 / 1 | 0.55 / 0.10 / 0.20 / 0.15 |
+| Purple | Shadow | 1 / 3 / 1 / 3 | 0.08 / 0.42 / 0.08 / 0.42 |
+
+`scripts/element_catalog.gd` owns the six-element matchup matrix. Neutral is
+the player defender in this slice. Weakness is `1.25x`, resistance is `0.8x`,
+and Neutral/Shadow are mutually immune; Shadow into Shadow is `1.25x`.
+Regular encounters include Gray at weight 1.0 immediately; Yellow joins at
+room depth 2 with weight 1.0. Purple remains the rare `0.12` regular-encounter
+variant and `0.04` boss-minor conversion.
 
 ## Item / stat economy
 

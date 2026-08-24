@@ -19,6 +19,9 @@ const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0
 const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
+const GREY_ENEMY_WEIGHT: float = 1.0
+const YELLOW_ENEMY_WEIGHT: float = 1.0
+const YELLOW_MIN_DEPTH := 2
 const PURPLE_ENEMY_WEIGHT: float = 0.12
 const PURPLE_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
@@ -109,9 +112,12 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		{"variant": "blue", "weight": 1.0},
 		{"variant": "green", "weight": 1.0},
 		{"variant": "red", "weight": 1.0},
+		{"variant": "grey", "weight": GREY_ENEMY_WEIGHT},
 	]
 	if special_room:
 		count = maxi(count + 1, 2)
+	if room_depth >= YELLOW_MIN_DEPTH:
+		variant_pool.append({"variant": "yellow", "weight": YELLOW_ENEMY_WEIGHT})
 	if allow_rogue and room_depth >= 3:
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
@@ -126,7 +132,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		for entry in variant_pool:
 			total_weight += float(entry["weight"])
 		var roll := encounter_rng.randf_range(0.0, total_weight)
-		var selected: String = "green"
+		var selected: String = "grey"
 		for entry in variant_pool:
 			roll -= float(entry["weight"])
 			if roll <= 0.0:
