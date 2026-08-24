@@ -19,11 +19,15 @@ func _initialize() -> void:
 	var mythic := catalog.generate_item(&"weapon", 90211, 20, &"mythic")
 	_expect(legendary.affixes.is_empty() and mythic.affixes.is_empty(), "high-rarity gear has no hidden random stat points", failures)
 	var common_sword := ItemInstance.new(); common_sword.definition_id = &"basic_sword"; common_sword.rarity = &"common"
+	var common_sword_plus_one := ItemInstance.from_dictionary(common_sword.to_dictionary()); common_sword_plus_one.enhancement_level = 1
+	var common_sword_plus_five := ItemInstance.from_dictionary(common_sword.to_dictionary()); common_sword_plus_five.enhancement_level = 5
 	var common_sword_plus_ten := ItemInstance.from_dictionary(common_sword.to_dictionary()); common_sword_plus_ten.enhancement_level = 10
 	var rare_sword := ItemInstance.from_dictionary(common_sword.to_dictionary()); rare_sword.rarity = &"rare"
 	var rare_sword_plus_ten := ItemInstance.from_dictionary(rare_sword.to_dictionary()); rare_sword_plus_ten.enhancement_level = 10
 	var epic_sword := ItemInstance.from_dictionary(rare_sword.to_dictionary()); epic_sword.rarity = &"epic"
 	_expect(is_equal_approx(catalog.bonuses(common_sword)["strength"], 2.0), "common sword starts at STR 2", failures)
+	_expect(is_equal_approx(catalog.bonuses(common_sword_plus_one)["strength"], 2.1), "common +1 sword gains 0.1 STR", failures)
+	_expect(is_equal_approx(catalog.bonuses(common_sword_plus_five)["strength"], 2.5), "common +5 sword gains 0.5 STR", failures)
 	_expect(is_equal_approx(catalog.bonuses(common_sword_plus_ten)["strength"], 3.0), "common +10 sword reaches STR 3", failures)
 	_expect(is_equal_approx(catalog.bonuses(rare_sword)["strength"], 4.0), "rare sword starts at STR 4", failures)
 	_expect(is_equal_approx(catalog.bonuses(rare_sword_plus_ten)["strength"], 5.0), "rare +10 sword reaches STR 5", failures)
@@ -118,7 +122,7 @@ func _initialize() -> void:
 	var affixed_plain := catalog.bonuses(affixed, 0)
 	affixed.enhancement_level = 1
 	var affixed_enhanced := catalog.bonuses(affixed, 0)
-	_expect(is_equal_approx(affixed_plain.get("strength", 0.0), 3.0) and is_equal_approx(affixed_enhanced.get("strength", 0.0), 3.0), "legacy affixes do not bypass the tier package", failures)
+	_expect(is_equal_approx(affixed_plain.get("strength", 0.0), 3.0) and is_equal_approx(affixed_enhanced.get("strength", 0.0), 3.1), "legacy affixes do not bypass the tier package", failures)
 	_expect(not affixed_enhanced.has("damage_rate"), "damage affixes are not ordinary gear stats", failures)
 	var fusion_round_trip := PlayerProfile.new(); fusion_round_trip.load_dictionary(restored.to_dictionary())
 	_expect(fusion_round_trip.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhancement persists", failures)

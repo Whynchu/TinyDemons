@@ -107,7 +107,7 @@ These are code values (not inspector-exposed) that drive gear value:
 
 | Knob | Value | Location |
 | --- | --- | --- |
-| Gear primary-stat contribution | Definition package + 2 flat points per rarity rank + 1 point at +10 | `item_catalog.gd:bonuses` |
+| Gear primary-stat contribution | Definition package + 2 flat points per rarity rank + 0.1 tier-stat point per enhancement level | `item_catalog.gd:bonuses` |
 | Rarity player-stat buff | Common 0% / Rare 5% / Epic 15% / Legendary 45% / Mythic 80%, per positive affected stat | `item_catalog.gd:RARITY_PLAYER_STAT_RATES`, `equipment_component.gd` |
 | Starter loadout totals | +3 VIT / +3 STR / +3 DEF / 0 SPD | `item_catalog.gd` definitions |
 | Non-basic package allowance | Each non-basic definition may carry at most one extra positive base point over its slot's basic package | `item_catalog.gd:DEFINITIONS` |
@@ -115,7 +115,7 @@ These are code values (not inspector-exposed) that drive gear value:
 | Shield guard package | Guard values use the rarity player-stat rate as their tier scalar; enhancement remains the guard-specific +10%/level | `item_catalog.gd:shield_bonuses` |
 | Gear scaling floor | Not used by the current flat-point model | `combat_stat_snapshot.gd` |
 | Health/damage rate package | Not currently part of the primary gear snapshot | `combat_stat_snapshot.gd` |
-| Enhancement flat point | 1 point at +10 (`floor(enhancement / 10)`) | `item_catalog.gd:enhancement_flat_points` |
+| Enhancement flat point | 0.1 tier-stat point per level; 1 point at +10 | `item_catalog.gd:enhancement_flat_points` |
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity flat points | 0 / 2 / 4 / 6 / 8 for common through mythic | `item_catalog.gd:RARITY_FLAT_POINTS_PER_RANK` |
 | Random primary affixes | Retired from effective/generated gear; legacy fields remain loadable | `item_catalog.gd:bonuses`, `item_instance.gd` |
@@ -124,10 +124,10 @@ These are code values (not inspector-exposed) that drive gear value:
 | Base stats (archetype) | VIT/STR/DEF sum to 7 | `stats_component.gd:_base_profile_values` |
 | SPD scale | 0.012 per point (see player_tuning) | `player_tuning.gd` |
 
-The flat ladder is `definition base + (rarity rank × 2) + floor(enhancement / 10)`
-on each item's authored tier stat. For the basic sword that is STR 2 at common
-`+0`, STR 3 at common `+10`, STR 4 at rare `+0`, STR 5 at rare `+10`, and STR
-6 at epic `+0`.
+The flat ladder is `definition base + (rarity rank × 2) + (enhancement × 0.1)`
+on each item's authored tier stat. For the basic sword that is STR 2.0 at
+common `+0`, STR 2.1 at common `+1`, STR 3.0 at common `+10`, STR 4.0 at rare
+`+0`, STR 5.0 at rare `+10`, and STR 6.0 at epic `+0`.
 
 ## World / scene constants (code, not exported)
 

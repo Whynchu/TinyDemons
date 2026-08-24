@@ -84,10 +84,10 @@ Three problems were confirmed during the repo audit (see
 - Rarity power multipliers: common 1.0, rare 2.2, epic 4.84, legendary
   10.648, mythic 23.4256 (`item_catalog.gd:16-22`). Each tier is 2.2x the
   previous so a +10 item (2.0x) always stays below the next tier's +0.
-- `MASTERY_BONUS_PER_LEVEL = 0.10`; enhancement raises positive implicit stats
-  by 10% per level up to `MAX_ITEM_ENHANCEMENT = 10`. Shield STR/SPD penalties
+- `MASTERY_BONUS_PER_LEVEL = 0.10`; enhancement adds 0.1 to the authored tier
+  stat per level up to `MAX_ITEM_ENHANCEMENT = 10`. Shield STR/SPD penalties
   use their base value at the item's rarity and do not grow with enhancement
-  (`item_catalog.gd:14`, `player_profile.gd:7`).
+  (`item_catalog.gd`, `player_profile.gd:7`).
 
 ---
 
@@ -118,10 +118,10 @@ Three problems were confirmed during the repo audit (see
   +4 DEF, plus HP/DMG rates unchanged (0.15 / 0.03).
 
 ### 3. Enhancement feels impactful (done)
-- `MASTERY_BONUS_PER_LEVEL` raised `0.05 -> 0.10`: each fusion level adds 10%
-  of the item's positive implicit package (matches the pre-existing
-  `bonuses()` comment). Shield guard and DEF scale; shield STR/SPD penalties
-  remain fixed at their rarity baseline.
+- `MASTERY_BONUS_PER_LEVEL` is `0.10`: each fusion level adds 0.1 to the
+  item's authored tier stat, reaching the same +1.0 at +10 as the prior
+  endpoint. Shield guard and DEF scale; shield STR/SPD penalties remain fixed
+  at their rarity baseline.
 
 ### 4. Enemy & boss difficulty (done)
 - `_enemy_level_for_room()`: `ceil(depth / 2)` -> **`max(1, ceil(depth / 4))`**
