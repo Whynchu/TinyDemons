@@ -15,7 +15,7 @@ const VARIANTS: Array[StringName] = [
 const DEFINITIONS := {
 	&"grey": {
 		"variant": &"grey",
-		"display_name": "Gray Slime",
+		"display_name": "Slime",
 		"element": ElementCatalogScript.Element.NEUTRAL,
 		"base_stats": {"VIT": 2, "STR": 2, "DEF": 2, "SPD": 2},
 		"growth_weights": {"VIT": 0.25, "STR": 0.25, "DEF": 0.25, "SPD": 0.25},

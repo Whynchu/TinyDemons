@@ -349,7 +349,7 @@ Remaining presentation call sites the draft missed (verified):
 
 - Target display names: `targeting_runtime_controller.gd:178-179` currently
   returns "Blue Slime" / "Red Slime" / "Rogue Slime" / "Green Slime". Add
-  "Gray Slime" and "Yellow Slime"; Purple keeps "Rogue Slime" (its ambush
+  "Slime" and "Yellow Slime"; Purple keeps "Rogue Slime" (its ambush
   identity) while its combat element is Shadow.
 - Target health-bar textures: `hud_controller.gd:358,383` select per palette
   with a green fallback; extend for `grey` and `yellow`.
