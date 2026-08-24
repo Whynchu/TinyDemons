@@ -3,6 +3,7 @@ class_name EffectsSpawner
 
 signal effect_requested(kind: StringName, position: Vector2)
 var damage_number_texture_cache: Dictionary = {}
+var critical_outline_texture_cache: Dictionary = {}
 var name_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
@@ -215,6 +216,28 @@ func _multiline_number_texture(text: String, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+func critical_outline_texture(text: String, pixel_number: Callable) -> Texture2D:
+	var cache_key := text
+	if critical_outline_texture_cache.has(cache_key):
+		return critical_outline_texture_cache[cache_key]
+	var source := pixel_number.call(text, Color.WHITE) as Texture2D
+	if source == null:
+		return null
+	var source_image := source.get_image()
+	var image := Image.create(source_image.get_width() + 2, source_image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			if source_image.get_pixel(x, y).a <= 0.0:
+				continue
+			for offset_y in range(-1, 2):
+				for offset_x in range(-1, 2):
+					image.set_pixel(x + 1 + offset_x, y + 1 + offset_y, Color.WHITE)
+	var texture := ImageTexture.create_from_image(image)
+	critical_outline_texture_cache[cache_key] = texture
+	return texture
+
+
 func name_texture(text: String, color: Color) -> Texture2D:
 	var cache_key := "%s:%s" % [text, _rgb_key(color)]
 	if name_texture_cache.has(cache_key):
@@ -324,7 +347,7 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	var number_text := String(display_text) if not String(display_text).is_empty() else "+%d" % maxi(value, 0) if is_healing else str(maxi(value, 0))
 	# `healing_color` also carries the requested color for non-healing special
 	# numbers, such as the light-blue damage absorbed by the shield.
-	var color := healing_color if is_healing or not healing_color.is_equal_approx(Color.WHITE) else Color8(255, 226, 92) if was_critical else Color.WHITE
+	var color := healing_color if is_healing or not healing_color.is_equal_approx(Color.WHITE) else Color.WHITE
 	var shadow := Sprite2D.new()
 	shadow.texture = pixel_number.call(number_text, Color8(0, 0, 0, 76)) as Texture2D
 	shadow.centered = false
@@ -333,6 +356,17 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	shadow.z_index = 4091
 	shadow.position = snap_position.call(world_position + Vector2(0.0, 0.5))
 	parent.add_child(shadow)
+	var outline: Sprite2D = null
+	if was_critical:
+		outline = Sprite2D.new()
+		outline.name = "CriticalDamageOutline"
+		outline.texture = critical_outline_texture(number_text, pixel_number)
+		outline.centered = false
+		outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		outline.z_as_relative = false
+		outline.z_index = 4091
+		outline.position = snap_position.call(world_position - Vector2.ONE)
+		parent.add_child(outline)
 	var sprite := Sprite2D.new()
 	sprite.texture = pixel_number.call(number_text, color) as Texture2D
 	sprite.centered = false
@@ -341,7 +375,7 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	sprite.z_index = 4092
 	sprite.position = world_position
 	parent.add_child(sprite)
-	damage_numbers.append({"sprite": sprite, "shadow": shadow, "timer": lifetime, "pop_timer": pop_time, "velocity": velocity})
+	damage_numbers.append({"sprite": sprite, "shadow": shadow, "outline": outline, "timer": lifetime, "pop_timer": pop_time, "velocity": velocity})
 
 
 func _rgb_key(color: Color) -> String:
@@ -396,9 +430,12 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 		var damage_number := damage_numbers[index]
 		var sprite := damage_number["sprite"] as Sprite2D
 		var shadow := damage_number.get("shadow") as Sprite2D
+		var outline := damage_number.get("outline") as Sprite2D
 		if sprite == null:
 			if shadow != null:
 				shadow.queue_free()
+			if outline != null:
+				outline.queue_free()
 			damage_numbers.remove_at(index)
 			continue
 		var pop_timer := float(damage_number.get("pop_timer", 0.0))
@@ -411,6 +448,8 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 			sprite.queue_free()
 			if shadow != null:
 				shadow.queue_free()
+			if outline != null:
+				outline.queue_free()
 			damage_numbers.remove_at(index)
 			continue
 		var logical_position := damage_number.get("logical_position", sprite.position) as Vector2
@@ -419,10 +458,14 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 		sprite.position = snap_position.call(logical_position)
 		if shadow != null:
 			shadow.position = snap_position.call(logical_position + Vector2(0.0, 0.5))
+		if outline != null:
+			outline.position = snap_position.call(logical_position - Vector2.ONE)
 		var alpha := clampf(timer / default_lifetime, 0.0, 1.0)
 		sprite.modulate.a = alpha
 		if shadow != null:
 			shadow.modulate.a = alpha
+		if outline != null:
+			outline.modulate.a = alpha
 		damage_number["timer"] = timer
 
 

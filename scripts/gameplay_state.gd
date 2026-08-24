@@ -283,7 +283,6 @@ var player_tuning := PlayerTuning.new()
 var slime_tuning := SlimeTuning.new()
 var effects_tuning := EffectsTuning.new()
 var chroma_tuning := ChromaTuning.new()
-var last_damage_was_critical := false
 
 ## Legacy callback bridge
 
@@ -610,15 +609,16 @@ func _begin_scene_transition() -> void:
 func _start_roll_dust(direction: Vector2) -> void: effects_spawner.start_roll_dust(self, player, direction, roll_dust_frames, roll_dust_flipped_frames, Callable(self, "_actor_foot"), Callable(self, "_snap_half_pixel"))
 func _update_roll_dust(delta: float) -> void: effects_spawner.update_roll_dust(delta, player.z_index, roll_dust_frames, roll_dust_flipped_frames, effects_tuning.roll_dust_frame_time, Callable(self, "_snap_half_pixel"))
 func _clear_roll_dust() -> void: effects_spawner.clear_roll_dust()
-func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false) -> void: combat_runtime_controller.call("damage_slime", self, slime, amount, was_critical)
-func _damage_slime_with_number(slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool) -> void: combat_runtime_controller.call("damage_slime_with_number", self, slime, amount, was_critical, show_damage_number)
+func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("damage_slime", self, slime, amount, was_critical, attack_element, immune)
+func _damage_slime_with_number(slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("damage_slime_with_number", self, slime, amount, was_critical, show_damage_number, attack_element, immune)
+func _player_attack_damage_result_against(slime: Sprite2D, attack_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_attack_damage_result_against", self, slime, attack_element) as CombatCalculator.DamageResult
 func _player_attack_damage_against(slime: Sprite2D) -> float: return float(combat_runtime_controller.call("player_attack_damage_against", self, slime))
 func _combat_momentum() -> CombatMomentumComponent: return combat_runtime_controller.call("combat_momentum", self) as CombatMomentumComponent
 func _register_combo_hit() -> void: combat_runtime_controller.call("register_combo_hit", self)
 func _tick_focus_combo(delta: float) -> void: combat_runtime_controller.call("tick_focus_combo", self, delta)
 func _reset_combo() -> void: combat_runtime_controller.call("reset_combo", self)
 func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> float: return float(combat_runtime_controller.call("player_attack_damage_share_divisor", self, slime, target_count))
-func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float: return float(combat_runtime_controller.call("combat_damage", self, attacker_stats, defender_stats))
+func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent, attack_element: int = 0, defense_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("combat_damage", self, attacker_stats, defender_stats, attack_element, defense_element) as CombatCalculator.DamageResult
 func _max_health_for_stats(stats: StatsComponent) -> float: return float(combat_runtime_controller.call("max_health_for_stats", self, stats))
 func _player_stat_snapshot() -> CombatStatSnapshot: return combat_runtime_controller.call("player_stat_snapshot", self) as CombatStatSnapshot
 func _recompute_player_speed_multiplier() -> void: combat_runtime_controller.call("recompute_player_speed_multiplier", self)
@@ -946,6 +946,7 @@ func _slime_attack_contact_gap(slime: Sprite2D, direction: Vector2) -> float: re
 func _slime_attack_offset(slime: Sprite2D) -> Vector2: return slime_runtime_controller.call("slime_attack_offset", self, slime) as Vector2
 func _aggro_slime_target(slime: Sprite2D) -> Vector2: return slime_runtime_controller.call("aggro_slime_target", self, slime) as Vector2
 func _apply_slime_attack_hit(slime: Sprite2D) -> void: slime_runtime_controller.call("apply_slime_attack_hit", self, slime)
+func _slime_attack_damage_result(slime: Sprite2D) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("slime_attack_damage_result", self, slime) as CombatCalculator.DamageResult
 func _slime_attack_damage(slime: Sprite2D) -> float: return float(combat_runtime_controller.call("slime_attack_damage", self, slime))
 func _mark_player_in_combat() -> void: combat_runtime_controller.call("mark_player_in_combat", self)
 func _on_player_health_damaged(amount: float) -> void: combat_runtime_controller.call("on_player_health_damaged", self, amount)
@@ -963,9 +964,9 @@ func _reset_slime_scoot(slime: Sprite2D) -> void: combat_runtime_controller.call
 func _show_slime_hit_flash(slime: Sprite2D) -> void: combat_runtime_controller.call("show_slime_hit_flash", self, slime)
 func _update_enemy_hit_flashes(delta: float) -> void: combat_runtime_controller.call("update_enemy_hit_flashes", self, delta)
 func _update_enemy_health(delta: float) -> void: combat_runtime_controller.call("update_enemy_health", self, delta)
-func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false) -> void: combat_runtime_controller.call("spawn_damage_number", self, slime, amount, was_critical)
+func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_damage_number", self, slime, amount, was_critical, attack_element, immune)
 func _spawn_player_number(text: String, value: int, color: Color, is_healing: bool, display_text: String) -> void: combat_runtime_controller.call("spawn_player_number", self, text, value, color, is_healing, display_text)
-func _spawn_player_damage_number(amount: float) -> void: combat_runtime_controller.call("spawn_player_damage_number", self, amount)
+func _spawn_player_damage_number(amount: float, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_player_damage_number", self, amount, attack_element, immune)
 func _spawn_player_shield_damage_number(amount: float) -> void: combat_runtime_controller.call("spawn_player_shield_damage_number", self, amount)
 func _spawn_player_healing_number(amount: float, color: Color) -> void: combat_runtime_controller.call("spawn_player_healing_number", self, amount, color)
 func _apply_player_lifesteal(damage: float) -> void: combat_runtime_controller.call("apply_player_lifesteal", self, damage)

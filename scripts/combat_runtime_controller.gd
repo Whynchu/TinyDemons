@@ -3,6 +3,7 @@ class_name CombatRuntimeController
 
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
 const ENEMY_HEALTH_R1_FACTOR := 0.50
 const ENEMY_HEALTH_R2_FACTOR := 0.65
@@ -25,11 +26,11 @@ static func enemy_level_cap_for_rank(run_rank: int) -> int:
 	return 3 if normalized_rank <= 1 else normalized_rank + 3
 
 
-func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
-	damage_slime_with_number(root, slime, amount, was_critical, true)
+func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
+	damage_slime_with_number(root, slime, amount, was_critical, true, attack_element, immune)
 
 
-func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool) -> void:
+func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
 	if slime != null and not bool(root.call("_is_slime_dead", slime)) and root.has_method("_mark_current_room_engaged"):
 		# A room locks only after a real player hit. Empty swings and passive
 		# enemy aggro deliberately leave the arrival entrance available.
@@ -39,14 +40,14 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 	if ambush != null:
 		var tuning := root.get("slime_tuning") as SlimeTuning
 		ambush.extend_rehide(slime, tuning.ambush_hit_extension)
-	SlimeActor.damage_actor(root, slime, amount, was_critical, show_damage_number)
+	SlimeActor.damage_actor(root, slime, amount, was_critical, attack_element, immune, show_damage_number)
 	var rng := root.get("rng") as RandomNumberGenerator
 	root.call("_play_sound", "slash", -15.0, 0.95 + rng.randf_range(-0.10, 0.10))
 	root.call("_play_sound", "enemy_hit", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
 
 
-func player_attack_damage_against(root: Object, slime: Sprite2D) -> float:
-	var damage := combat_damage(root, root.get("player_stats") as StatsComponent, root.call("_slime_stats", slime) as StatsComponent)
+func player_attack_damage_result_against(root: Object, slime: Sprite2D, attack_element: int = ElementCatalogScript.Element.NEUTRAL) -> CombatCalculator.DamageResult:
+	var result := combat_damage(root, root.get("player_stats") as StatsComponent, root.call("_slime_stats", slime) as StatsComponent, attack_element, slime_element(slime))
 	var momentum := combat_momentum(root)
 	var current_target := root.call("_valid_current_target") as Sprite2D
 	var multiplier := momentum.focus_multiplier(slime == current_target) * momentum.combo_multiplier()
@@ -57,7 +58,13 @@ func player_attack_damage_against(root: Object, slime: Sprite2D) -> float:
 		if not is_equal_approx(transmutation_multiplier, 1.0):
 			transmutation.consume_duelist_feedback(slime == current_target, snapshot.strength)
 		multiplier *= transmutation_multiplier
-	return damage * multiplier
+	if not result.immune:
+		result.amount *= multiplier
+	return result
+
+
+func player_attack_damage_against(root: Object, slime: Sprite2D) -> float:
+	return player_attack_damage_result_against(root, slime).amount
 
 
 func combat_momentum(root: Object) -> CombatMomentumComponent:
@@ -91,16 +98,14 @@ func player_attack_damage_share_divisor(root: Object, slime: Sprite2D, target_co
 	return transmutation.damage_share_divisor(slime, target_count) if transmutation != null else maxf(float(target_count), 1.0)
 
 
-func combat_damage(root: Object, attacker_stats: StatsComponent, defender_stats: StatsComponent) -> float:
+func combat_damage(root: Object, attacker_stats: StatsComponent, defender_stats: StatsComponent, attack_element: int = ElementCatalogScript.Element.NEUTRAL, defense_element: int = ElementCatalogScript.Element.NEUTRAL) -> CombatCalculator.DamageResult:
 	var player_stats := root.get("player_stats") as StatsComponent
 	var equipment := root.get("player_equipment") as EquipmentComponent
 	var tuning := root.get("combat_tuning") as CombatTuning
 	var attacker_snapshot := CombatStatSnapshot.from_components(attacker_stats, equipment if attacker_stats == player_stats else null)
 	var defender_snapshot := CombatStatSnapshot.from_components(defender_stats, equipment if defender_stats == player_stats else null)
 	var strength_scale := tuning.damage_per_strength if attacker_stats == player_stats else tuning.enemy_damage_per_strength
-	var result := CombatCalculator.calculate_snapshot_damage(attacker_snapshot, defender_snapshot, attacker_stats == player_stats, root.get("rng") as RandomNumberGenerator, tuning, strength_scale)
-	root.set("last_damage_was_critical", result.critical)
-	return result.amount
+	return CombatCalculator.calculate_snapshot_damage(attacker_snapshot, defender_snapshot, attacker_stats == player_stats, root.get("rng") as RandomNumberGenerator, tuning, strength_scale, attack_element, defense_element)
 
 
 func max_health_for_stats(root: Object, stats: StatsComponent) -> float:
@@ -248,8 +253,22 @@ func are_all_slimes_dead(root: Object) -> bool:
 	return true
 
 
+func slime_element(slime: Sprite2D) -> int:
+	if slime == null:
+		return ElementCatalogScript.Element.NEUTRAL
+	var actor := slime as SlimeActor
+	if actor != null:
+		return ElementCatalogScript.normalize(actor.combat_element)
+	var palette := String(slime.get("variant"))
+	return ElementCatalogScript.element_for_palette(palette if not palette.is_empty() else "grey")
+
+
+func slime_attack_damage_result(root: Object, slime: Sprite2D) -> CombatCalculator.DamageResult:
+	return combat_damage(root, root.call("_slime_stats", slime) as StatsComponent, root.get("player_stats") as StatsComponent, slime_element(slime), ElementCatalogScript.Element.NEUTRAL)
+
+
 func slime_attack_damage(root: Object, slime: Sprite2D) -> float:
-	return combat_damage(root, root.call("_slime_stats", slime) as StatsComponent, root.get("player_stats") as StatsComponent)
+	return slime_attack_damage_result(root, slime).amount
 
 
 func mark_player_in_combat(root: Object) -> void:
@@ -399,9 +418,12 @@ func update_enemy_health(root: Object, delta: float) -> void:
 			(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).update(delta, root.call("_slime_health", slime) as HealthComponent, float(root.call("_enemy_max_health", slime)), tuning)
 
 
-func spawn_damage_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false) -> void:
+func spawn_damage_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
 	var tuning := root.get("effects_tuning") as EffectsTuning
-	root.call("_spawn_floating_number", slime.global_position + Vector2(5, -9), int(round(amount)), Vector2(0.0, -tuning.damage_number_float_speed), was_critical)
+	var color := ElementCatalogScript.damage_number_color(attack_element)
+	var value := int(round(amount))
+	var display_text := "immune" if immune else str(maxi(value, 0))
+	root.call("_spawn_floating_number", slime.global_position + Vector2(5, -9), 0 if immune else maxi(value, 0), Vector2(0.0, -tuning.damage_number_float_speed), false if immune else was_critical, false, color, display_text)
 
 
 func spawn_player_number(root: Object, text: String, value: int, color: Color, is_healing: bool, display_text: String) -> void:
@@ -410,9 +432,10 @@ func spawn_player_number(root: Object, text: String, value: int, color: Color, i
 	root.call("_spawn_floating_number", origin, value, Vector2(0.0, speed), false, is_healing, color, display_text)
 
 
-func spawn_player_damage_number(root: Object, amount: float) -> void:
+func spawn_player_damage_number(root: Object, amount: float, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
 	var value := int(round(amount))
-	spawn_player_number(root, str(maxi(value, 0)), value, Color.WHITE, false, "")
+	var display_text := "immune" if immune else str(maxi(value, 0))
+	spawn_player_number(root, display_text, 0 if immune else value, ElementCatalogScript.damage_number_color(attack_element), false, display_text)
 
 
 func spawn_player_shield_damage_number(root: Object, amount: float) -> void:

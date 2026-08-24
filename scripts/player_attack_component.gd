@@ -1,6 +1,8 @@
 extends Node
 class_name PlayerAttackComponent
 
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+
 signal attack_started(variant: int)
 signal attack_finished
 signal attack_hit_resolved(variant: int, targets: Array)
@@ -70,21 +72,25 @@ func apply_hitbox(root: Object) -> void:
 		root.call("_activate_puzzle_torch", orb, orb.global_position, "grey")
 	for slime in slime_targets:
 		register_hit(slime)
-		var base_damage := float(root.call("_player_attack_damage_against", slime))
+		var damage_result := root.call("_player_attack_damage_result_against", slime, ElementCatalogScript.Element.NEUTRAL) as CombatCalculator.DamageResult
+		var base_damage := damage_result.amount
 		var damage := base_damage
 		var divisor := float(root.call("_player_attack_damage_share_divisor", slime, target_count))
-		if variant == 2 and tuning != null:
+		if variant == 2 and tuning != null and not damage_result.immune:
 			damage = maxf(base_damage * tuning.attack2_damage_multiplier, base_damage + 1.0)
 			if target_count > 1:
 				damage = maxf(damage * tuning.attack2_multi_target_damage_multiplier, damage + 1.0)
-		var divided_damage := floorf(damage / maxf(divisor, 1.0))
-		if variant == 2:
+		var divided_damage := 0.0 if damage_result.immune else floorf(damage / maxf(divisor, 1.0))
+		if variant == 2 and not damage_result.immune:
 			# A combo finisher must always beat the equivalent first-swing share,
 			# including at tiny damage values after defensive mitigation.
 			var first_swing_share := floorf(base_damage / maxf(divisor, 1.0))
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
-		root.call("_damage_slime", slime, maxf(divided_damage, 1.0), bool(root.get("last_damage_was_critical"))); root.call("_knockback_slime", slime)
-		if root.has_method("_apply_player_lifesteal"):
+		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
+		root.call("_damage_slime", slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
+		if not damage_result.immune:
+			root.call("_knockback_slime", slime)
+		if not damage_result.immune and root.has_method("_apply_player_lifesteal"):
 			root.call("_apply_player_lifesteal", maxf(divided_damage, 1.0))
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
