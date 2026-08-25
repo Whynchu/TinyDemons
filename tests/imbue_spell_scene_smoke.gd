@@ -114,6 +114,26 @@ func _initialize() -> void:
 	for _frame in 5:
 		runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
 	_expect(not bool(gameplay.get("player_is_magic_casting")), "IMBUE returns to normal animation after the held final frame", failures)
+	if equipment != null:
+		# Force both sword layers visible so the overlay depth follows each source
+		# layer, not one shared depth above the player.
+		gameplay.set("player_is_attacking", true)
+		gameplay.set("player_anim_name", "attack1")
+		gameplay.set("player_anim_frame", 0)
+		equipment.tick(gameplay, 0.0)
+		var equipment_layers: Dictionary = equipment.get("layers") as Dictionary
+		var outline_overlays: Dictionary = equipment.get("imbue_outline_overlays") as Dictionary
+		var player := gameplay.get("player") as Sprite2D
+		var sword_back := equipment_layers.get("EquipmentSwordBack") as Sprite2D
+		var sword_front := equipment_layers.get("EquipmentSwordFront") as Sprite2D
+		var back_outline := outline_overlays.get(sword_back) as Sprite2D
+		var front_outline := outline_overlays.get(sword_front) as Sprite2D
+		_expect(back_outline != null and back_outline.z_index == sword_back.z_index and back_outline.z_index < player.z_index, "back sword imbue outline stays behind the player", failures)
+		_expect(front_outline != null and front_outline.z_index == sword_front.z_index and front_outline.z_index > player.z_index, "front sword imbue outline follows the front sword", failures)
+		gameplay.set("player_is_attacking", false)
+		gameplay.set("player_anim_name", "idle")
+		gameplay.set("player_anim_frame", 0)
+		equipment.tick(gameplay, 0.0)
 	var imbue_before_room_reset := float(runtime.get("imbue_remaining"))
 	gameplay.call("_reset_magic_runtime")
 	if equipment != null:
