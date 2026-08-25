@@ -167,6 +167,9 @@ These affect dungeon generation and room behavior and are `const` in
 | Fire use | Full HP, full active Chroma, and earned element attunement for 10 Souls; first starter use is also paid | `gameplay_state.gd:FIRE_SOUL_COST` |
 | Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `combat_runtime_controller.gd:update_player_health_regen`, `gameplay_state.gd:_interact_with_fire` |
 | Starter Soul grant | One-time 10-Soul grant from the Cloaked Demon when the first-run player lacks the fire-use cost | `npc_controller.gd`, `player_profile.gd` |
+| Planned flame Swap | 5 Souls; changes current element without changing the persistent bound element | `docs/elemental-binding-and-fusion-design.md` |
+| Planned flame Fusion | 5 Souls; uses current element plus the contacted flame and produces an unbound recipe result | `docs/elemental-binding-and-fusion-design.md` |
+| Planned permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `docs/elemental-binding-and-fusion-design.md` |
 
 ## Magic numbers still hardcoded (known gaps)
 

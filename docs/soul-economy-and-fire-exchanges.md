@@ -1,7 +1,11 @@
 # Soul Economy and Fire Exchanges
 
 This document records the first implementation of Souls as the persistent
-currency for fire services and equipment fusion.
+currency for fire services and equipment fusion, plus the approved next-step
+elemental Binding/Fusion design. The planned elemental rules are canonical in
+[`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md);
+the current 10-Soul fire values below remain implementation-baseline notes
+until that plan is built.
 
 ## Enemy drops
 
@@ -32,6 +36,8 @@ pickup in the encounter without changing the broader Chroma economy.
 
 ## Fire services
 
+### Current implementation baseline
+
 Interacting with an earned fire is one atomic use costing **10 Souls**. The
 single use simultaneously:
 
@@ -44,6 +50,31 @@ attunement is not free. On the first run, if the player has fewer than 10
 Souls, the Cloaked Demon gives them a one-time 10-Soul starter grant during
 their tutorial dialogue. The player then spends those Souls at the starter
 fire to begin the run.
+
+### Approved elemental Binding/Fusion extension
+
+The next elemental flame design changes the action surface as follows:
+
+- Normal **Swap** at a flame costs **5 Souls** and changes the current element
+  without changing the persistent bound element.
+- **Fuse** at a flame costs **5 Souls** and uses the current element plus the
+  contacted flame's element.
+- Fusion does **not** require a bound element. Its result is current and usable
+  immediately, but remains unbound.
+- Permanent **Bind/Rebind** is available only through the Cloaked Demon and
+  costs a flat **50 Souls** for every new element.
+- Binding the element that is already bound is a free no-op.
+- Binding updates the save-file elemental identity and hub flame, and makes the
+  identity available for the approved zero-Chroma recovery behavior.
+- Required elemental doors check the current element, including an unbound
+  fusion result; they do not require the 50-Soul Binding payment and remain
+  unlocked after being solved.
+- The approved recipes are Fire + Water → Shadow, Fire + Electric → Ground,
+  Water + Electric → Grass, and Grass + Water → Ice. Pairs are unordered.
+
+This extension intentionally separates the 5-Soul route/puzzle actions from
+the 50-Soul persistent commitment. See the linked design and implementation
+plan for the state model, UI, save behavior, and verification gates.
 
 ## Equipment fusion
 
@@ -69,3 +100,6 @@ display.
 - `tests/fire_exchange_smoke.gd` covers the one-time starter grant and the
   fixed 10-Soul atomic fire service.
 - `tests/generated_run_scene_smoke.gd` covers a paid alternate fire attunement.
+- Planned Binding/Fusion coverage must additionally verify 5-Soul Swap/Fuse,
+  no-bound Fusion, flat 50-Soul Demon Binding, current/bound persistence, and
+  unbound elemental door access.

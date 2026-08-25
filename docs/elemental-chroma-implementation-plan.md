@@ -6,6 +6,11 @@ Source design: `docs/Tiny Demons — Elemental Chroma System Design.md`
 
 Decision history: `docs/elemental-chroma-handoff.md`
 
+The approved Binding and flame-fusion extension is specified in
+[`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
+and implemented through
+[`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md).
+
 This plan separates confirmed design rules from proposals that still require
 approval. It maps the first playable Chroma loop onto the current Godot project
 without committing the project to unapproved elemental abilities, status
@@ -44,10 +49,12 @@ The old enum may temporarily remain as an internal save-migration mechanism.
 Exact Fire, Water, and Electric stat/passive/ability packages are **not yet
 approved** and must remain data-driven proposals until reviewed.
 
-Before Binding, a mid-run flame swap replaces the entire active class package:
-stat adjustment, passive, Triangle ability, and aspect presentation. Binding
-later modifies this replacement rule by preserving identity for blending; that
-behavior is intentionally deferred to the Binding design phase.
+The active class package follows the current element. A mid-run Swap or Fusion
+changes current identity without mutating the persistent bound identity.
+Binding preserves the current element for zero-Chroma recovery and profile/hub
+identity; it does not create a second combat type or stack class packages.
+The exact class-package details remain subject to the separate ability/class
+sheet, but the current/bound state split is no longer deferred.
 
 ### 1.3 Chroma rules
 
@@ -70,6 +77,16 @@ behavior is intentionally deferred to the Binding design phase.
 - After Binding, reaching zero preserves the stored aspect and resolves
   Triangle to a weakened, non-elemental version of that aspect's ability.
 
+The flame Binding/Fusion extension adds these separate transaction rules:
+
+- Swap at a flame costs 5 Souls and changes current only.
+- Fuse at a flame costs 5 Souls, does not require a bound element, and uses
+  current plus the contacted flame.
+- Fusion results are immediately current but remain unbound.
+- Bind/Rebind occurs only at the Cloaked Demon and costs 50 Souls.
+- Required elemental doors check current active element, including unbound
+  fusion results, and latch open without requiring Binding.
+
 ### 1.4 Triangle and Gray
 
 - The Chroma ability uses the existing `magic` input mapped to Triangle/Y.
@@ -87,19 +104,24 @@ Do not use palette strings as gameplay identity. Introduce an aspect identity
 type with at least:
 
 ```text
-NONE / FIRE / WATER / ELECTRIC
+NONE / FIRE / WATER / ELECTRIC / GRASS / SHADOW / GROUND / ICE
 ```
 
-Later migrations may add blended aspects without changing the initial state
-contract.
+The initial runtime may stage the later IDs behind content unlocks, but the
+recipe catalog must use stable IDs from the beginning.
 
 The runtime needs to distinguish these effective forms:
 
-| Effective form | Stored aspect | Chroma | Binding | Triangle mode |
+| Effective form | Current element | Bound element | Chroma | Triangle mode |
 | --- | --- | ---: | --- | --- |
-| Gray | None | 0 | No | Gray ability |
-| Charged aspect | Fire/Water/Electric | Above 0 | Either | Full elemental ability when affordable |
-| Dormant bound aspect | Fire/Water/Electric | 0 | Yes | Weakened non-elemental aspect ability |
+| Gray | None | None or any | 0 | Gray ability |
+| Charged current element | Any released element | None or any | Above 0 | Full current-element ability when affordable |
+| Dormant bound element | Bound element or resolved fallback | Same persistent element | 0 | Weakened bound ability |
+| Unbound fusion current | Fusion result | None or different element | Above 0 | Full fusion-result ability |
+
+The implementation must not collapse current and bound into a single
+`binding_active` Boolean. A bound Water profile may temporarily use an
+unbound Grass or Ice fusion.
 
 The final paid cast resolves before the depletion transition. A cast accepted
 at 10 Chroma therefore performs the full elemental behavior, spends the final
@@ -268,17 +290,21 @@ own gate or permanently trap the player through Chroma expenditure.
 
 ### Phase 6 — Binding
 
-- Add the permanent Binding unlock only after its progression source is
-  approved.
-- Preserve stored aspect at zero.
-- Implement approved weakened non-elemental variants.
-- Prevent flame swapping from resetting cooldowns or creating stat/health
+- This phase is superseded by the dedicated
+  [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md).
+- Implement the approved current/bound state split, 5-Soul Swap, 5-Soul
+  Fusion, and 50-Soul Cloaked Demon Binding.
+- Allow Fusion without an existing bound element.
+- Keep fusion results unbound until a successful Demon Binding.
+- Let current unbound elements solve required doors without a Binding fee.
+- Preserve stored identity at zero Chroma and implement approved weakened
+  bound variants.
+- Prevent flame interactions from resetting cooldowns or creating stat/health
   exploits.
 - Add save migration and transition tests.
 
 ### Phase 7 — Later expansion
 
-- Intentional blending and hybrid aspect definitions.
 - Elemental enemy mechanics.
 - Aspect-aware equipment/transmutation hooks.
 - Broader constrained procedural curricula.
@@ -306,6 +332,9 @@ Validation must prove:
 - backtracking remains available;
 - mandatory depletion rooms cannot receive random Chroma or enemies;
 - spent Chroma cannot make the run permanently unsolvable;
+- current unbound fusion can reach and solve its required elemental door;
+- required doors never require a return to the Demon solely to pay Binding;
+- solved elemental doors latch and cannot re-lock after Chroma/element changes;
 - puzzles can reset safely;
 - an unexpected requirement creates rerouting rather than a dead run.
 
@@ -325,6 +354,12 @@ Validation must prove:
 - The final cast resolves at full strength before depletion.
 - Unbound zero becomes Gray.
 - Bound zero becomes dormant-bound and resolves the weakened ability.
+- Current/bound mismatch resolves deterministically without mutating profile
+  identity.
+- Flame Swap costs 5 and never changes bound identity.
+- Flame Fusion costs 5, works without Binding, and uses current as input.
+- Fusion results remain unbound until the Demon commits them.
+- Binding costs 50 and is atomic across Souls, current, profile, and hub state.
 
 ### Ability integration tests
 
@@ -345,6 +380,9 @@ Validation must prove:
 - All three Run 1 curriculum variants are solvable.
 - Forced depletion cannot be invalidated by random encounters or pickups.
 - Run 2 flame/gate ordering passes deterministic reachability validation.
+- A mandatory Ice door is solvable through current unbound fusion without a
+  prior permanent Bind.
+- A solved elemental door remains open after current/Chroma changes.
 
 Continue running the existing headless suite after every slice:
 
@@ -361,8 +399,9 @@ These remain proposals, not implementation authority:
 2. Exact stat adjustment and passive for each flame.
 3. Exact Gray ability damage, startup, recovery, stun, knockback, and cooldown.
 4. Exact penalty/effect removal for weakened bound abilities.
-5. Binding's permanent progression source, unlock timing, and class-package
-   preservation behavior.
+5. Binding menu unlock timing and the exact zero-Chroma behavior when current
+   and bound elements differ. The economy, location, and persistence contract
+   are approved in the Binding/Fusion design.
 
 ## 9. First milestone
 

@@ -1,5 +1,10 @@
 # Tiny Demons — Elemental Chroma System Design
 
+The finalized Binding and flame-fusion rules live in
+[`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md).
+This document remains the broader Chroma foundation; when the two documents
+overlap, the Binding/Fusion document is authoritative.
+
 ## Core Concept
 - Tiny Demons naturally exist in a **Gray / Unaspected** state.
 - Elemental color represents **Chroma**, the elemental energy currently stored in the demon.
@@ -9,10 +14,11 @@
 ## Starting State
 - Replace character-color selection and independent stat-archetype selection
   with **Flame Selection** when creating a new file.
-- The player chooses one permanent starter flame: **Fire**, **Water**, or
+- The player chooses one persistent file starter flame: **Fire**, **Water**, or
   **Electric**.
-- The chosen flame becomes the flame that appears in the hub's starting room
-  at the beginning of future runs.
+- The chosen starter flame becomes the default flame that appears in the hub's
+  starting room at the beginning of future runs until a later Binding replaces
+  the persistent elemental identity.
 - Every run begins **Gray with 0 MP/Chroma**. The starter aspect is selected for
   the file, but is not automatically active at run start.
 - Interacting with the hub flame attunes the player to the selected starter
@@ -27,11 +33,10 @@ adjustment, a modest passive, and the aspect-specific Triangle ability. Exact
 effects are tuning decisions; flame choice should express playstyle without
 locking the player's long-term build.
 
-Before Binding, the entire active class package follows the current flame.
-Attuning to another flame replaces the stat adjustment, passive, ability, and
-aspect presentation together. Binding changes this replacement rule later by
-allowing an existing identity to be preserved for blending; its exact class-
-package behavior will be designed with the Binding system.
+The active class package follows the current aspect. Swapping or fusing at a
+flame changes the current package without changing the saved bound identity.
+Binding does not create a second combat type or stack stat packages; it makes
+the current aspect persistent and available for zero-Chroma recovery.
 
 ## Chroma Depletion
 - Each elemental action consumes Chroma and visibly desaturates the demon.
@@ -134,21 +139,46 @@ Early progression should intentionally function like an elemental training curri
 
 ## Binding
 - Binding is unlocked later.
+- Binding happens at the Cloaked Demon, never directly at a flame.
+- A permanent Bind costs **50 Souls** every time a new element is committed.
+- Binding the element that is already bound is a free no-op.
 - A **Bound Aspect** remains associated with the demon even when Chroma reaches zero.
 - Example:
   - Unbound Fire + 0 MP → Gray.
   - Bound Fire + 0 MP → Fire remains stored.
 - A bound aspect can regain its elemental power through neutral Chroma restoration without requiring another matching flame.
-- Binding therefore becomes an important progression upgrade rather than only a fusion mechanic.
+- Binding updates the save-file elemental identity and the hub flame.
+- Binding is a persistence and recovery upgrade, not a prerequisite for
+  opening mandatory elemental doors.
 
-## Elemental Blending
-- Normal flame interaction replaces the current aspect.
-- **Binding enables intentional blending.**
-- Example:
-  - Fire → Blue Flame = Blue.
-  - Bound Fire + Blue Flame = Fire/Blue hybrid.
-- Hybrids should never happen accidentally.
-- The player must intentionally preserve an aspect before introducing another.
+## Flame Swapping and Fusion
+- A normal flame interaction is an explicit **Swap** costing **5 Souls**.
+- Swap changes the current aspect only; it does not change the bound aspect,
+  save-file color, or hub flame.
+- **Fusion** is a separate, confirmed flame action costing **5 Souls**.
+- Fusion does not require a bound element. It uses the current aspect and the
+  contacted flame as its two inputs.
+- The result becomes the current aspect immediately, but remains unbound until
+  the player confirms a 50-Soul Bind at the Cloaked Demon.
+- An unbound result may be used for combat, elemental doors, and another valid
+  fusion. Binding is not a fusion permission gate.
+- Fusion pairs are explicit and unordered:
+  - Fire + Water → Shadow.
+  - Fire + Electric → Ground.
+  - Water + Electric → Grass.
+  - Grass + Water → Ice.
+- Hybrids never happen accidentally. The player must select Fuse and confirm
+  the displayed recipe.
+
+## Current Aspect, Bound Aspect, and Elemental Doors
+- The **current aspect** is the active run-time color used by Triangle, combat
+  presentation, fusion input, and elemental door checks.
+- The **bound aspect** is the persistent identity used by zero-Chroma recovery,
+  save data, and the hub flame.
+- A current unbound fusion can open a required elemental door without first
+  paying the 50-Soul Binding cost.
+- Once an elemental door is solved, it remains unlocked and does not re-check
+  Binding or Chroma later.
 
 ## Color System
 Start with three named base aspects mapped to primary-color identities:
@@ -201,8 +231,8 @@ The game should eventually create several overlapping agendas:
 ## Core Loop
 **Choose Starter Flame When Creating a File → Begin Each Run Gray → Attune at
 the Hub Flame → Enter Dungeon → Use Aspect → Spend Chroma → Solve Elemental
-Problems → Find/Swap Flames → Manage Routing and Resources → Unlock Binding →
-Create Hybrids → Build Gear/Stats → Defeat Boss → Progress to More Complex
-Dungeons**
+Problems → Find/Swap/Fuse Flames → Manage Routing and Resources → Visit the
+Cloaked Demon to Bind a Chosen Aspect → Build Gear/Stats → Defeat Boss →
+Progress to More Complex Dungeons**
 
 The elemental system should gradually evolve from a guided **key-and-lock training system** into a flexible buildcraft system where experienced players deliberately manipulate Chroma, aspects, routes, and hybrids.

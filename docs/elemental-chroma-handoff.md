@@ -1,8 +1,12 @@
 # Tiny Demons — Elemental Chroma System Handoff
 
-Status: active decision log / implementation in progress
+Status: active decision log; Binding/Fusion design approved, implementation pending
 
 Source design: `docs/Tiny Demons — Elemental Chroma System Design.md`
+
+Binding and flame-fusion authority: [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
+
+Implementation route: [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
 
 This document records the decisions made so far, the current integration
 surface in the Godot project, and the questions that must be resolved before
@@ -19,10 +23,11 @@ The starter aspects are:
 - Water — blue visual identity.
 - Electric — yellow visual identity.
 
-The player chooses a permanent starter flame when creating a new file. That
-flame appears in the hub starting room on future runs and determines the
+The player chooses a persistent file starter flame when creating a new file.
+That flame appears in the hub starting room on future runs and determines the
 player's aspect after attunement, Triangle ability, and a small class identity
-package. The class package should
+package until a later Binding replaces the persistent elemental identity. The
+class package should
 include all three of the following, while remaining modest enough that the
 choice expresses playstyle rather than locking the player's build:
 
@@ -30,9 +35,9 @@ choice expresses playstyle rather than locking the player's build:
 2. A small passive modifier.
 3. An aspect-specific Triangle ability bonus or behavior.
 
-Blended aspects are a later unlock. Primordial base-aspect swapping is a
-possible late-game system, but is explicitly out of scope for the first
-implementation.
+Blended aspects are governed by the approved flame-fusion design. Primordial
+base-aspect swapping is a possible late-game system, but is explicitly out of
+scope for the first implementation.
 
 ## 2. Run and Chroma rules
 
@@ -62,6 +67,45 @@ the player to Gray. Gray remains fully playable.
 After Binding, reaching zero Chroma preserves the elemental ability identity,
 but without its elemental aspect. This is a weakened version of the ability,
 not the full-strength elemental version. Chroma restoration remains valuable.
+
+## 2A. Approved Binding, flame, and fusion extension
+
+The current and bound elements are separate values:
+
+- **Current element** is the active run-time identity used by Triangle,
+  combat presentation, fusion input, and elemental doors.
+- **Bound element** is the persistent profile identity written by the Cloaked
+  Demon. It controls zero-Chroma persistence, recovery identity, save color,
+  and hub-flame presentation.
+- A current element may be unbound. It can still be used for combat, doors,
+  and valid fusion during the run.
+
+The approved Soul costs are:
+
+- Flame Swap: **5 Souls**.
+- Flame Fusion: **5 Souls**.
+- Permanent Bind or Rebind at the Cloaked Demon: **50 Souls**.
+- Binding the already-bound element: free no-op.
+
+Flames can Swap or Fuse but cannot permanently Bind. Fusion does not require a
+bound element; it uses the current element and the contacted flame, produces an
+unbound result, and can be chained through valid recipes. The result becomes
+persistent only after a confirmed 50-Soul Binding at the Cloaked Demon.
+
+The approved recipes are:
+
+| Input A | Input B | Result |
+| --- | --- | --- |
+| Fire | Water | Shadow |
+| Fire | Electric | Ground |
+| Water | Electric | Grass |
+| Grass | Water | Ice |
+
+Elemental doors check the current active element, including an unbound fusion
+result. Required doors must not require Binding or the 50-Soul fee, and a
+solved door remains unlocked after later Chroma or element changes. The full
+state, interaction, persistence, and verification contract is in the linked
+Binding/Fusion design document.
 
 ## 3. Triangle ability rules
 
@@ -215,16 +259,21 @@ source of truth.
 - Add subtle room tinting.
 - Add deterministic Run 2 swapping/backtracking curriculum.
 
-### Phase 5 — Binding
+### Phase 5 — Binding and flame fusion — approved design, implementation pending
 
-- Add Binding unlock/progression state.
-- Preserve aspect identity at zero Chroma.
-- Implement weakened non-elemental ability variants.
-- Add profile/save migration only when the unlock is persistent.
+- Implement the current/bound state split.
+- Add 5-Soul Swap and 5-Soul Fusion flame transactions.
+- Add the 50-Soul Cloaked Demon Binding menu and profile persistence.
+- Add the four approved recipes and unbound fusion chaining.
+- Preserve bound aspect identity at zero Chroma.
+- Make required elemental doors accept current unbound elements and latch open.
+- Implement weakened non-elemental variants only where the ability contract
+  approves them.
+- Follow [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
+  for the ordered work and test gates.
 
 ### Phase 6 — Later expansion
 
-- Add intentional blending and hybrid aspects.
 - Add elemental enemy mechanics.
 - Add broader constrained procedural generation.
 - Evaluate Primordial base-aspect swapping.
@@ -273,7 +322,7 @@ source of truth.
 - Fire, Water, and Electric are the new-file starter choices. Whether the two
   unselected base aspects require progression unlocks as in-run flames remains
   undecided.
-- Is Binding a permanent profile unlock?
+- What exact story/run milestone unlocks the Cloaked Demon Binding menu?
 - The selected starter flame is saved as the file default and is not chosen
   anew each run. A possible late-game Primordial swap remains out of scope.
 - Existing pre-Chroma saves may die out; no compatibility migration is required.
@@ -292,6 +341,11 @@ Before the first slice is complete, add tests covering:
 - neutral restoration adds exactly 20 and caps at 100;
 - Gray consumes a neutral pickup but stays at zero without an aspect;
 - flame replacement changes aspect and refills immediately;
+- Swap never changes the bound element or profile identity;
+- Fusion works without a bound element and produces the approved result;
+- Fusion results remain unbound until the Cloaked Demon confirms Binding;
+- Binding costs exactly 50 Souls and updates save/hub identity atomically;
+- required doors accept unbound current elements and remain solved;
 - stat, passive, and ability identity derive from the selected flame;
 - HUD and visual saturation reflect the same Chroma value.
 
@@ -304,11 +358,12 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 
 ## 9. Handoff recommendation
 
-The next design artifact should be an approved ability/class-package sheet for
-Gray, Fire, Water, and Electric. Implementation may begin with the pure Chroma
-state slice now supports the 10-point Triangle cost; ability execution should
-wait for the relevant behavior sheet rather than inventing
-status systems during implementation.
+The next implementation artifact should follow
+[`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md),
+while the separate ability/class-package sheet for Gray, Fire, Water, and
+Electric continues to govern ability details. Ability execution should wait
+for the relevant behavior sheet rather than inventing status systems during
+Binding/Fusion implementation.
 
 The safest first milestone is:
 
@@ -317,5 +372,6 @@ new-file flame choice → Gray run start → selected hub flame → attunement �
 Triangle ability → Chroma depletion → Gray fallback → HUD/desaturation feedback
 ```
 
-No hybrid system or broad procedural rewrite should begin until that loop is
-playable and covered by automated tests.
+No broad procedural rewrite or unapproved elemental status system should begin
+until the Chroma loop and the Binding/Fusion state transitions are playable,
+readable, and covered by automated tests.
