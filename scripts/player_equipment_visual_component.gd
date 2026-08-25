@@ -122,9 +122,9 @@ func end_imbue(root: Object) -> void:
 	imbue_particle_timer = 0.0
 	imbue_element = ElementCatalogScript.Element.NEUTRAL
 	_clear_imbue_overlays()
-	var effects := root.get("effects_spawner") as EffectsSpawner
-	if effects != null:
-		effects.clear_effect_particles(&"imbue_weapon")
+	var imbue_effects := root.get("effects_spawner") as EffectsSpawner
+	if imbue_effects != null:
+		imbue_effects.clear_effect_particles(&"imbue_weapon")
 
 
 func set_mp_desaturation(saturation: float) -> void:
@@ -542,11 +542,17 @@ func begin_death(root: Object) -> void:
 
 
 func reset_for_room(root: Object) -> void:
-	# Room transitions keep this component alive, so cancel every transient
-	# equipment effect before the player is repositioned in the next room. Keep
-	# the normal equipped presentation if it was active before the transition.
-	end_imbue(root)
+	# Room transitions keep this component alive. Preserve an applied IMBUE while
+	# clearing only presentation artifacts that cannot safely cross the room
+	# rebuild. Death and new-run resets call end_imbue separately.
+	var restore_imbue := imbue_remaining > 0.0 and imbue_element != ElementCatalogScript.Element.NEUTRAL
+	var preserved_imbue_element := imbue_element
+	var preserved_imbue_remaining := imbue_remaining
 	var restore_equipment := active
+	_clear_imbue_overlays()
+	var imbue_effects := root.get("effects_spawner") as EffectsSpawner
+	if imbue_effects != null:
+		imbue_effects.clear_effect_particles(&"imbue_weapon")
 	active = false
 	shield_is_out = false
 	was_attacking = false
@@ -578,10 +584,21 @@ func reset_for_room(root: Object) -> void:
 		_set_layer_opacity(equipment_layer, 1.0)
 		equipment_layer.visible = false
 	_hide_equipment_shadows()
+	if restore_imbue:
+		imbue_element = preserved_imbue_element
+		imbue_remaining = preserved_imbue_remaining
+		imbue_flash_timer = 0.0
+		imbue_particle_timer = 0.0
+	else:
+		imbue_element = ElementCatalogScript.Element.NEUTRAL
+		imbue_remaining = 0.0
+		imbue_flash_timer = 0.0
+		imbue_particle_timer = 0.0
 	if restore_equipment:
 		active = true
 		inactivity_timer = 0.0
 		_update_layers(root)
+	_update_imbue_overlays(root)
 
 
 func tick_death_pending(root: Object) -> void:

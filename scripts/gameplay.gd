@@ -114,7 +114,10 @@ func _interrupt_player_attack() -> void:
 	player_attack_hit_done = false; player_attack_visual.visible = false; player.visible = true; _restore_actor_base_visual_scale(player); player_anim_name = "walk" if player_is_moving else "idle"; player_anim_frame = 0; player_anim_timer = 0.0; player_animation_component.apply_frame(self)
 	if player_equipment_visual_component != null: player_equipment_visual_component.interrupt_attack(self)
 	_update_player_shadow()
-func _player_facing_vector() -> Vector2: return Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT if player_is_attacking else Vector2.LEFT if player.flip_h else Vector2.RIGHT
+func _player_facing_vector() -> Vector2:
+	if player_is_attacking:
+		return Vector2.LEFT if player_attack_flip_h else Vector2.RIGHT
+	return Vector2.LEFT if player.flip_h else Vector2.RIGHT
 func _apply_player_attack_hitbox() -> void: if player_attack_component != null: player_attack_component.apply_hitbox(self)
 func _update_rest_fire_animation(delta: float) -> void:
 	rest_fire_controller.update_animation(rest_fire, rest_fire_frames, delta, FIRE_FRAME_TIME, Callable(self, "_refresh_rest_fire_image"))
@@ -134,13 +137,12 @@ func _can_interact_with_chest() -> bool:
 	if chest == null or player == null or current_room_type != DungeonGraph.ROOM_TREASURE or not chest_unlocked or chest_claimed:
 		return false
 	var chest_rect := _collision_rect(chest)
-	var chest_position := chest_rect.get_center()
 	var player_foot := _actor_foot(player)
 	var nearest_chest_point := Vector2(
 		clampf(player_foot.x, chest_rect.position.x, chest_rect.end.x),
 		clampf(player_foot.y, chest_rect.position.y, chest_rect.end.y)
 	)
-	return player_foot.distance_to(nearest_chest_point) <= CHEST_INTERACT_DISTANCE and _is_interaction_target_in_front(chest_position)
+	return player_foot.distance_to(nearest_chest_point) <= CHEST_INTERACT_DISTANCE and _is_interaction_target_in_front(nearest_chest_point)
 func _on_chest_collected() -> void:
 	if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and _are_all_slimes_dead():
 		_open_final_exit()

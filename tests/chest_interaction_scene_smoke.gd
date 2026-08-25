@@ -24,6 +24,10 @@ func _initialize() -> void:
 		var desired_foot := chest_anchor + Vector2(side * 20.0, 0.0)
 		player.global_position = desired_foot - Vector2(8.0, 15.0)
 		player.flip_h = side > 0.0
+		# The attack direction is intentionally stale here. Interaction must use
+		# the player's current idle facing, not the last swing's snapshot.
+		gameplay.set("player_is_attacking", false)
+		gameplay.set("player_attack_flip_h", side < 0.0)
 		_expect(bool(gameplay.call("_can_interact_with_chest")), "chest interaction works from %s side near its edge" % ("left" if side < 0.0 else "right"), failures)
 
 	player.global_position = chest_anchor - Vector2(20.0, 0.0) - Vector2(8.0, 15.0)
