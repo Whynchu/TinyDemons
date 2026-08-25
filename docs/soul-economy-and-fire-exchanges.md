@@ -16,9 +16,12 @@ currency for fire services and equipment fusion.
 
 The purple palette is displayed as **Shadow Slime**. The grey palette is
 displayed as **Normal Slime**. If a generated encounter contains a Shadow
-Slime, every popcorn slot in that encounter is forced to Normal Slime. Shadow
-itself is never selected as a popcorn roll, so the pressure enemy remains
-present while the low-level mana-recovery opportunity stays readable.
+Slime, it guarantees at least one low-level Normal Slime popcorn slot, and
+every additional popcorn slot is also forced to Normal Slime. Shadow itself
+is never selected as a popcorn roll, so the pressure enemy remains present
+while the low-level mana-recovery opportunity stays readable. Boss rooms also
+add one guaranteed Normal Slime popcorn slot beside the scaled boss and its
+minors.
 
 Normal Slimes continue to use the existing neutral Chroma drop chance. This
 means a player who is low on mana has a reliable chance to find a neutral

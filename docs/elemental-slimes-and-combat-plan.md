@@ -389,7 +389,7 @@ All rows verified against the current tree:
 | Slime element storage | None | `SlimeActor` field set by `configure_slime_variant`; also extend the `@export_enum` at `slime_actor.gd:4` with `grey`/`yellow` |
 | Health application | `SlimeActor.damage_actor` (`slime_actor.gd:113`), `HealthComponent.apply_damage` | Unchanged amount-only API; typed event flows to feedback in parallel |
 | Damage number color | `CombatRuntimeController.spawn_damage_number` (`combat_runtime_controller.gd:395`), `spawn_player_damage_number` (`:406`), `EffectsSpawner.spawn_health_number` (`effects_spawner.gd:323`) | Optional color parameter forwarded through the existing `healing_color` override channel; no `EffectsSpawner` signature change |
-| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare and popcorn slots in a Shadow encounter resolve to Normal Slime |
+| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare, Shadow encounters guarantee a Normal Slime popcorn slot, and boss rooms add one |
 | Visual source selection | `build_slime_direction_textures` (`actor_presentation_runtime_controller.gd:64-77`), `SlimeVisualComponent` frame libraries | Generalized fallback recoloring plus `grey`/`yellow` frame entries |
 
 The `ElementCatalog` must not become an alias for `PaletteLibrary`, and
@@ -499,13 +499,14 @@ feedback without reading a debug label.
   colors plus Gray. Add Ground at depth 3 and Ice at depth 4, both at weight
   `1.0`, so their interactions are introduced after the existing roster.
   Purple's constants are untouched.
-- Boss tables stay unchanged (lead never Purple; minors blue/green/red with
-  the 4% Purple conversion). Revisit only if Phase 5 metrics say otherwise.
+- Boss tables keep the lead/minor selection rules (lead never Purple; minors
+  blue/green/red with the 4% Purple conversion) and add one guaranteed
+  Normal Slime popcorn support slot.
 - Update `GAMEPLAY_TUNING.md`: final stat/matchup weights, the two new
   catalog scripts, and fix the verified stale claim that there are five
   tuning resources — `chroma_tuning.gd` exists and is unindexed.
 - Encounter tests: Normal Slime appears in generated pools; Shadow encounters
-  reserve popcorn slots for Normal Slimes; Yellow never appears
+  guarantee popcorn slots for Normal Slimes; boss rooms add one as well; Yellow never appears
   below depth 2; Purple rarity bounds from `rogue_slime_smoke.gd:24-40,63-74`
   still hold.
 - Run the full smoke suite and compare early-room time-to-kill and

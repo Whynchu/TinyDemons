@@ -17,6 +17,7 @@ const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/slime_runtime_con
 const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/actor_presentation_runtime_controller.gd")
 const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
+const SLIME_ROSTER_SIZE := 8
 
 
 func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:
@@ -287,7 +288,7 @@ func _expand_slime_roster(root: Object, slimes: Array[Sprite2D]) -> void:
 	if template == null:
 		return
 	var parent := template.get_parent()
-	for slot in range(slimes.size(), 7):
+	for slot in range(slimes.size(), SLIME_ROSTER_SIZE):
 		var clone := template.duplicate() as Sprite2D
 		clone.name = "SlimeSlot%d" % (slot + 1)
 		clone.position = template.position

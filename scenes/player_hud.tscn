@@ -277,7 +277,7 @@ position = Vector2(35, 7.5)
 texture = SubResource("ImageTexture_e3h3h")
 
 [node name="GoldDisplay" type="Node2D" parent="." unique_id=763344297]
-position = Vector2(205, 4)
+position = Vector2(205, 2)
 
 [node name="Gold" type="Sprite2D" parent="GoldDisplay" unique_id=757143922]
 texture_filter = 1

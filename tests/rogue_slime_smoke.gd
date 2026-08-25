@@ -30,7 +30,11 @@ func _initialize() -> void:
 			var encounter := rooms._generate_boss_encounter(seed + rank * 1000, 12)
 			var variants := encounter["variants"] as Array
 			var scales := encounter["scales"] as Array
+			var popcorn := encounter["popcorn"] as Array
 			_expect(String(variants[0]) != "purple", "scaled lead boss excludes the purple variant at rank %d seed %d" % [rank, seed], failures)
+			_expect(variants.size() == scales.size() and variants.size() == popcorn.size(), "boss support slots keep encounter arrays aligned at rank %d seed %d" % [rank, seed], failures)
+			var support_index := variants.size() - 1
+			_expect(support_index > 0 and String(variants[support_index]) == "grey" and bool(popcorn[support_index]) and int((encounter["levels"] as Array)[support_index]) == rooms._popcorn_enemy_level(), "boss encounter guarantees a Normal Slime popcorn slot at rank %d seed %d" % [rank, seed], failures)
 			boss_minor_slot_count += variants.size() - 1
 			for variant_index in range(1, variants.size()):
 				if String(variants[variant_index]) == "purple":
@@ -68,16 +72,20 @@ func _initialize() -> void:
 		var encounter := rooms._generate_enemy_encounter(seed + 4000, 8, false, true)
 		var variants := encounter["variants"] as Array
 		var levels := encounter["levels"] as Array
+		var popcorn := encounter["popcorn"] as Array
 		regular_slot_count += variants.size()
 		for variant in variants:
 			if String(variant) == "purple":
 				regular_purple_count += 1
 		if variants.has("purple"):
+			var has_shadow_popcorn := false
 			for index in variants.size():
-				if int(levels[index]) == rooms._popcorn_enemy_level():
-					_expect(String(variants[index]) == "grey" or String(variants[index]) == "purple", "Shadow encounters reserve popcorn slots for Normal Slimes", failures)
-					if String(variants[index]) == "grey":
-						shadow_popcorn_count += 1
+				if bool(popcorn[index]):
+					has_shadow_popcorn = true
+					_expect(String(variants[index]) == "grey", "Shadow encounters reserve popcorn slots for Normal Slimes", failures)
+					_expect(int(levels[index]) == rooms._popcorn_enemy_level(), "Shadow popcorn slots use the low-level recovery curve", failures)
+					shadow_popcorn_count += 1
+			_expect(has_shadow_popcorn, "every Shadow encounter guarantees a Normal Slime popcorn slot", failures)
 	_expect(regular_purple_count > 0, "regular encounter sampling still permits an occasional purple", failures)
 	_expect(float(regular_purple_count) / float(regular_slot_count) < 0.12, "purple variants stay rare in regular encounters", failures)
 	_expect(shadow_popcorn_count > 0, "shadow encounters produce a Normal Slime popcorn slot", failures)
