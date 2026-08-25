@@ -10,6 +10,8 @@ const VARIANTS: Array[StringName] = [
 	&"yellow",
 	&"green",
 	&"purple",
+	&"orange",
+	&"aquamarine",
 ]
 
 const DEFINITIONS := {
@@ -54,6 +56,20 @@ const DEFINITIONS := {
 		"element": ElementCatalogScript.Element.SHADOW,
 		"base_stats": {"VIT": 1, "STR": 3, "DEF": 1, "SPD": 3},
 		"growth_weights": {"VIT": 0.08, "STR": 0.42, "DEF": 0.08, "SPD": 0.42},
+	},
+	&"orange": {
+		"variant": &"orange",
+		"display_name": "Ground Slime",
+		"element": ElementCatalogScript.Element.GROUND,
+		"base_stats": {"VIT": 3, "STR": 1, "DEF": 3, "SPD": 1},
+		"growth_weights": {"VIT": 0.35, "STR": 0.10, "DEF": 0.45, "SPD": 0.10},
+	},
+	&"aquamarine": {
+		"variant": &"aquamarine",
+		"display_name": "Ice Slime",
+		"element": ElementCatalogScript.Element.ICE,
+		"base_stats": {"VIT": 2, "STR": 2, "DEF": 1, "SPD": 3},
+		"growth_weights": {"VIT": 0.15, "STR": 0.20, "DEF": 0.15, "SPD": 0.50},
 	},
 }
 

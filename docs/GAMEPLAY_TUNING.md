@@ -93,13 +93,17 @@ into the seed.
 | Yellow | Electric | 2 / 2 / 1 / 3 | 0.20 / 0.15 / 0.10 / 0.55 |
 | Green | Grass | 4 / 1 / 2 / 1 | 0.55 / 0.10 / 0.20 / 0.15 |
 | Purple | Shadow | 1 / 3 / 1 / 3 | 0.08 / 0.42 / 0.08 / 0.42 |
+| Orange | Ground | 3 / 1 / 3 / 1 | 0.35 / 0.10 / 0.45 / 0.10 |
+| Aquamarine | Ice | 2 / 2 / 1 / 3 | 0.15 / 0.20 / 0.15 / 0.50 |
 
-`scripts/element_catalog.gd` owns the six-element matchup matrix. Neutral is
+`scripts/element_catalog.gd` owns the eight-element matchup matrix. Neutral is
 the player defender in this slice. Weakness is `1.25x`, resistance is `0.8x`,
-and Neutral/Shadow are mutually immune; Shadow into Shadow is `1.25x`.
+and Neutral/Shadow are mutually immune; Shadow into Shadow is `1.25x`. Ground
+is immune to Electric, while Ice is strong against Ground and Grass.
 Regular encounters include Gray at weight 1.0 immediately; Yellow joins at
-room depth 2 with weight 1.0. Purple remains the rare `0.12` regular-encounter
-variant and `0.04` boss-minor conversion.
+room depth 2 with weight 1.0, Ground joins at depth 3, and Ice joins at depth 4.
+Purple remains the rare `0.12` regular-encounter variant and `0.04` boss-minor
+conversion.
 
 ## Item / stat economy
 

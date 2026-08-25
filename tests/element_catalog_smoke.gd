@@ -10,12 +10,14 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var e := ElementCatalogScript.Element
 	var expected := [
-		[1.0, 1.0, 1.0, 1.0, 1.0, 0.0],
-		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0],
-		[1.0, 1.25, 0.8, 1.0, 0.8, 1.0],
-		[1.0, 1.0, 1.25, 0.8, 0.8, 1.0],
-		[1.0, 0.8, 1.25, 1.0, 0.8, 1.0],
-		[0.0, 1.0, 1.0, 1.0, 1.0, 1.25],
+		[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0],
+		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.0, 1.25],
+		[1.0, 1.25, 0.8, 1.0, 0.8, 1.0, 1.25, 1.0],
+		[1.0, 1.0, 1.25, 0.8, 0.8, 1.0, 0.0, 1.0],
+		[1.0, 0.8, 1.25, 1.0, 0.8, 1.0, 1.25, 1.0],
+		[0.0, 1.0, 1.0, 1.0, 1.0, 1.25, 1.0, 1.0],
+		[1.0, 1.25, 1.0, 1.25, 0.8, 1.0, 0.8, 1.0],
+		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.25, 0.8],
 	]
 	for attacker in ElementCatalogScript.ELEMENT_COUNT:
 		for defender in ElementCatalogScript.ELEMENT_COUNT:
@@ -34,8 +36,14 @@ func _initialize() -> void:
 	_expect(ElementCatalogScript.element_for_palette("yellow") == e.ELECTRIC, "yellow palette maps to Electric", failures)
 	_expect(ElementCatalogScript.element_for_palette("green") == e.GRASS, "green palette maps to Grass", failures)
 	_expect(ElementCatalogScript.element_for_palette("purple") == e.SHADOW, "purple palette maps to Shadow", failures)
+	_expect(ElementCatalogScript.element_for_palette("orange") == e.GROUND, "orange palette maps to Ground", failures)
+	_expect(ElementCatalogScript.element_for_palette("aquamarine") == e.ICE, "aquamarine palette maps to Ice", failures)
 	_expect(ElementCatalogScript.palette_key(e.NEUTRAL) == "grey", "Neutral uses grey palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.SHADOW) == "purple", "Shadow uses purple palette", failures)
+	_expect(ElementCatalogScript.palette_key(e.GROUND) == "orange", "Ground uses orange palette", failures)
+	_expect(ElementCatalogScript.palette_key(e.ICE) == "aquamarine", "Ice uses aquamarine palette", failures)
+	_expect(ElementCatalogScript.effectiveness(e.ELECTRIC, e.GROUND) == 0.0, "Electric is immune into Ground", failures)
+	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.ICE, e.GROUND), 1.25), "Ice is strong into Ground", failures)
 	var fire_damage_color := ElementCatalogScript.damage_number_color(e.FIRE)
 	var fire_accent := PaletteLibrary.accent("red")
 	_expect(fire_damage_color.s >= fire_accent.s and fire_damage_color.v >= fire_accent.v, "Fire damage text boosts accent saturation and brightness", failures)

@@ -3,7 +3,7 @@ class_name SlimeActor
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
-@export_enum("blue", "green", "red", "purple", "grey", "yellow") var variant := "green"
+@export_enum("blue", "green", "red", "purple", "grey", "yellow", "orange", "aquamarine") var variant := "green"
 @export var tuning: SlimeTuning
 var combat_element: int = ElementCatalogScript.Element.GRASS
 

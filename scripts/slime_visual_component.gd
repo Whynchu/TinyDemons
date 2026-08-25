@@ -63,6 +63,8 @@ static func build_attack_frame_library(frame_library: SpriteFrameLibrary, frame_
 		"grey": {"left": recolor_attack_frame_set(left_frames, "grey", cache), "right": recolor_attack_frame_set(right_frames, "grey", cache)},
 		"yellow": {"left": recolor_attack_frame_set(left_frames, "yellow", cache), "right": recolor_attack_frame_set(right_frames, "yellow", cache)},
 		"purple": {"left": recolor_attack_frame_set(left_frames, "purple", cache), "right": recolor_attack_frame_set(right_frames, "purple", cache)},
+		"orange": {"left": recolor_attack_frame_set(left_frames, "orange", cache), "right": recolor_attack_frame_set(right_frames, "orange", cache)},
+		"aquamarine": {"left": recolor_attack_frame_set(left_frames, "aquamarine", cache), "right": recolor_attack_frame_set(right_frames, "aquamarine", cache)},
 	}
 	for palette_frames in frames_by_palette.values():
 		var left_palette_frames := palette_frames["left"] as Array[Texture2D]
@@ -94,6 +96,8 @@ static func build_shocked_frame_library(frame_library: SpriteFrameLibrary, frame
 		"grey": recolor_attack_frame_set(green_frames, "grey", cache),
 		"yellow": recolor_attack_frame_set(green_frames, "yellow", cache),
 		"purple": recolor_attack_frame_set(green_frames, "purple", cache),
+		"orange": recolor_attack_frame_set(green_frames, "orange", cache),
+		"aquamarine": recolor_attack_frame_set(green_frames, "aquamarine", cache),
 	}
 	for palette_frames in frames_by_palette.values():
 		for texture in palette_frames as Array[Texture2D]:
