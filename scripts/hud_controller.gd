@@ -174,12 +174,15 @@ func update_cooldown_hud(root: Object) -> void:
 	var imbue_ratio := 1.0 - clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
 	set_fill_ratio(cooldown_hud.get("triangle_fill") as Sprite2D, Vector2(24, 4), regular_ratio)
 	set_fill_ratio(cooldown_hud.get("imbue_fill") as Sprite2D, Vector2(24, 4), imbue_ratio)
-	var element := ElementCatalogScript.Element.NEUTRAL
-	if imbue_runtime != null:
-		element = int(imbue_runtime.get("pending_imbue_element")) if bool(imbue_runtime.get("magic_hold_active")) else int(imbue_runtime.get("imbued_element"))
 	var player_palette := String(root.get("current_player_palette_name"))
 	var regular_color := PaletteLibrary.accent(player_palette)
-	var imbue_color := ElementCatalogScript.damage_number_color(element) if element != ElementCatalogScript.Element.NEUTRAL else PaletteLibrary.accent("grey")
+	var imbue_active := imbue_runtime != null and float(imbue_runtime.get("imbue_remaining")) > 0.0
+	var imbue_color := PaletteLibrary.accent("grey")
+	if imbue_active:
+		var element := int(imbue_runtime.get("imbued_element"))
+		imbue_color = ElementCatalogScript.damage_number_color(element)
+	elif imbue_remaining > 0.0:
+		imbue_color = PaletteLibrary.shadow("grey")
 	(cooldown_hud.get("triangle_label") as Sprite2D).texture = root.call("_pixel_text_texture", "TRI", regular_color)
 	(cooldown_hud.get("imbue_label") as Sprite2D).texture = root.call("_pixel_text_texture", "IMB", imbue_color)
 	(cooldown_hud.get("triangle_fill") as Sprite2D).self_modulate = regular_color

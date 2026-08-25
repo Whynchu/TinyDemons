@@ -71,7 +71,7 @@ func apply_hitbox(root: Object) -> void:
 	var tuning := root.get("player_tuning") as PlayerTuning
 	for orb in orb_targets:
 		register_hit(orb)
-		root.call("_activate_puzzle_torch", orb, orb.global_position, "grey")
+		root.call("_activate_puzzle_torch", orb, orb.global_position, ElementCatalogScript.palette_key(attack_element))
 	for slime in slime_targets:
 		register_hit(slime)
 		var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult

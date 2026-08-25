@@ -28,6 +28,7 @@ var pending_magic_projectile_spawned := false
 var magic_animation_is_imbue := false
 var pending_imbue_element := ElementCatalogScript.Element.NEUTRAL
 var pending_imbue_activated := false
+var magic_cast_decided := false
 var magic_hold_timer := 0.0
 var magic_hold_active := false
 var magic_hold_triggered := false
@@ -75,7 +76,7 @@ func update_magic_input(root: Object, magic_down: bool, was_down: bool, delta: f
 	var hold_threshold := _hold_threshold(root)
 	if magic_down:
 		if not was_down:
-			magic_hold_active = true
+			magic_hold_active = _begin_magic_candidate(root)
 			magic_hold_triggered = false
 			magic_hold_timer = 0.0
 			return false
@@ -83,14 +84,47 @@ func update_magic_input(root: Object, magic_down: bool, was_down: bool, delta: f
 			magic_hold_timer += maxf(delta, 0.0)
 			if magic_hold_timer >= hold_threshold:
 				magic_hold_triggered = true
-				return try_cast_imbue(root)
+				return try_cast_imbue(root, true)
 		return false
 	if was_down and magic_hold_active:
-		var should_cast_regular := not magic_hold_triggered and magic_hold_timer < hold_threshold
+		var imbue_was_triggered := magic_hold_triggered
+		var accepted := false
+		if not imbue_was_triggered:
+			accepted = try_cast_magic(root, true)
 		magic_hold_active = false
 		magic_hold_triggered = false
 		magic_hold_timer = 0.0
-		return try_cast_magic(root) if should_cast_regular else false
+		if imbue_was_triggered:
+			# A failed IMBUE attempt must not fall through into a normal spell.
+			if magic_animation_active and not magic_animation_is_imbue:
+				cancel_magic_animation(root)
+		elif not accepted:
+			cancel_magic_animation(root)
+		return accepted
+	return false
+
+
+func _begin_magic_candidate(root: Object) -> bool:
+	if _magic_action_blocked(root):
+		return false
+	var current := root.call("_valid_current_target") as Sprite2D
+	var target := current if current != null and bool(root.call("_is_slime_targetable", current)) else root.call("_closest_target") as Sprite2D
+	var player := root.get("player") as Sprite2D
+	var direction := Vector2.RIGHT
+	if target != null:
+		var to_target: Vector2 = magic_target_point(root, target) - player_visual_center(root)
+		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else direction
+	else:
+		var last_input: Vector2 = root.get("last_player_input_direction")
+		direction = last_input.normalized() if last_input.length_squared() > 0.0001 else (Vector2.LEFT if player != null and player.flip_h else Vector2.RIGHT)
+	return begin_magic_animation(root, direction, target, ChromaComponentScript.AbilityMode.GRAY, false, true)
+
+
+func _magic_action_blocked(root: Object, allow_candidate := false) -> bool:
+	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+		return true
+	if bool(root.get("player_is_magic_casting")) and not (allow_candidate and magic_animation_active and magic_hold_active and not magic_animation_is_imbue):
+		return true
 	return false
 
 
@@ -99,8 +133,8 @@ func _hold_threshold(root: Object) -> float:
 	return maxf(float(configured), 0.01) if configured != null else IMBUE_HOLD_THRESHOLD
 
 
-func try_cast_magic(root: Object) -> bool:
-	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+func try_cast_magic(root: Object, allow_candidate := false) -> bool:
+	if _magic_action_blocked(root, allow_candidate):
 		return false
 	var ability := root.get("player_aspect_ability_component") as Node
 	var chroma := root.get("player_chroma_component") as Node
@@ -113,8 +147,8 @@ func try_cast_magic(root: Object) -> bool:
 	return accepted
 
 
-func try_cast_imbue(root: Object) -> bool:
-	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+func try_cast_imbue(root: Object, allow_candidate := false) -> bool:
+	if _magic_action_blocked(root, allow_candidate):
 		return false
 	if imbue_cooldown_remaining > 0.0:
 		return false
@@ -133,6 +167,21 @@ func try_cast_imbue(root: Object) -> bool:
 		var to_target: Vector2 = magic_target_point(root, target) - player_visual_center(root)
 		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else direction
 	pending_imbue_element = element
+	var candidate := allow_candidate and magic_animation_active and magic_hold_active and not magic_animation_is_imbue
+	if candidate:
+		magic_animation_is_imbue = true
+		magic_cast_decided = true
+		pending_magic_target = null
+		pending_magic_mode = ChromaComponentScript.AbilityMode.GRAY
+		pending_imbue_activated = false
+		if magic_animation_frame >= IMBUE_EFFECT_FRAME_INDEX:
+			magic_animation_frame = IMBUE_EFFECT_FRAME_INDEX
+			root.set("player_anim_frame", magic_animation_frame)
+			var animation := root.get("player_animation_component") as PlayerAnimationComponent
+			if animation != null:
+				animation.apply_frame(root)
+			_activate_pending_imbue(root)
+		return true
 	return begin_magic_animation(root, direction, null, ChromaComponentScript.AbilityMode.GRAY, true)
 
 
@@ -148,6 +197,12 @@ func sync_chroma_presentation(root: Object) -> void:
 
 
 func execute_current_aspect_ability(root: Object, mode: int) -> bool:
+	if magic_animation_active and magic_hold_active and not magic_animation_is_imbue:
+		pending_magic_mode = mode
+		magic_cast_decided = true
+		if magic_animation_frame >= MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
+			_spawn_pending_magic_projectile(root)
+		return true
 	var current := root.call("_valid_current_target") as Sprite2D
 	var target := current if current != null and bool(root.call("_is_slime_targetable", current)) else root.call("_closest_target") as Sprite2D
 	var player := root.get("player") as Sprite2D
@@ -161,7 +216,7 @@ func execute_current_aspect_ability(root: Object, mode: int) -> bool:
 	return begin_magic_animation(root, direction, target, mode)
 
 
-func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, mode: int, is_imbue := false) -> bool:
+func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, mode: int, is_imbue := false, is_candidate := false) -> bool:
 	if magic_animation_active:
 		return false
 	magic_animation_active = true
@@ -173,6 +228,7 @@ func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, m
 	pending_magic_projectile_spawned = false
 	magic_animation_is_imbue = is_imbue
 	pending_imbue_activated = false
+	magic_cast_decided = not is_candidate
 	root.set("player_is_magic_casting", true)
 	root.set("player_magic_flip_h", pending_magic_direction.x < 0.0)
 	root.set("player_anim_name", "magic")
@@ -214,7 +270,7 @@ func tick_magic_animation(root: Object, delta: float) -> void:
 			animation.apply_frame(root)
 		if magic_animation_is_imbue and magic_animation_frame == IMBUE_EFFECT_FRAME_INDEX and not pending_imbue_activated:
 			_activate_pending_imbue(root)
-		elif not magic_animation_is_imbue and magic_animation_frame == MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
+		elif not magic_animation_is_imbue and magic_cast_decided and magic_animation_frame == MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
 			_spawn_pending_magic_projectile(root)
 
 
@@ -263,6 +319,16 @@ func _spawn_pending_magic_projectile(root: Object) -> void:
 
 
 func _finish_magic_animation(root: Object) -> void:
+	if magic_hold_active and not magic_animation_is_imbue and not magic_cast_decided:
+		# The short-press path may not be known yet. Hold the last magic frame
+		# until release or until the hold threshold converts this into IMBUE.
+		magic_animation_frame = MAGIC_FRAME_COUNT - 1
+		magic_animation_timer = 0.0
+		root.set("player_anim_frame", magic_animation_frame)
+		var held_animation := root.get("player_animation_component") as PlayerAnimationComponent
+		if held_animation != null:
+			held_animation.apply_frame(root)
+		return
 	magic_animation_active = false
 	magic_animation_timer = 0.0
 	magic_animation_frame = 0
@@ -271,6 +337,7 @@ func _finish_magic_animation(root: Object) -> void:
 	magic_animation_is_imbue = false
 	pending_imbue_element = ElementCatalogScript.Element.NEUTRAL
 	pending_imbue_activated = false
+	magic_cast_decided = false
 	root.set("player_is_magic_casting", false)
 	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 	root.set("player_anim_frame", 0)
@@ -291,6 +358,10 @@ func cancel_magic_animation(root: Object) -> void:
 	magic_animation_is_imbue = false
 	pending_imbue_element = ElementCatalogScript.Element.NEUTRAL
 	pending_imbue_activated = false
+	magic_cast_decided = false
+	magic_hold_active = false
+	magic_hold_triggered = false
+	magic_hold_timer = 0.0
 	root.set("player_is_magic_casting", false)
 	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 	root.set("player_anim_frame", 0)

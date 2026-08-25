@@ -1,6 +1,7 @@
 extends SceneTree
 
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
+const Elements = preload("res://scripts/element_catalog.gd")
 
 
 func _initialize() -> void:
@@ -47,6 +48,19 @@ func _initialize() -> void:
 			motor.knockback_remaining = 0.0
 			puzzle.call("activate_puzzle_torch", gameplay, orb, orb.global_position, "grey", true)
 			_expect(motor.knockback_remaining > 0.0, "physical orb activation retains its close-range reaction", failures)
+			# A weapon carrying an element must pass that palette through the same
+			# physical-hit path instead of reverting the orb to grey.
+			var attack := gameplay.get("player_attack_component") as PlayerAttackComponent
+			var player := gameplay.get("player") as Sprite2D
+			if attack != null and player != null:
+				player.global_position = orb.global_position - Vector2(10.0, 10.0)
+				player.flip_h = false
+				gameplay.set("player_attack_flip_h", false)
+				attack.variant = 1
+				attack.attack_element = Elements.Element.FIRE
+				attack.hit_targets.clear()
+				attack.apply_hitbox(gameplay)
+				_expect(str(orb.get_meta("puzzle_torch_palette", "")) == "red", "imbued physical hit changes the Orb Room orb to its weapon element", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
