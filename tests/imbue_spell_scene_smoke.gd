@@ -95,7 +95,12 @@ func _initialize() -> void:
 	_expect(accepted and bool(runtime.get("magic_animation_is_imbue")) and projectiles.projectiles.is_empty(), "holding triangle commits IMBUE without a projectile", failures)
 	_expect(int(chroma.get("current_chroma")) == 100, "IMBUE waits to charge mana until its effect frame", failures)
 	var frame_time := float(runtime.call("magic_frame_time", gameplay))
-	for _frame in 4:
+	# Simulate an unrelated animation transition trying to restore an idle frame
+	# while the IMBUE animation is still active.
+	gameplay.set("player_anim_name", "idle")
+	runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
+	_expect(String(gameplay.get("player_anim_name")) == "magic", "IMBUE reasserts its animation after a stale state", failures)
+	for _frame in 3:
 		runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
 	_expect(int(gameplay.get("player_anim_frame")) == 4, "IMBUE reaches its fifth displayed frame", failures)
 	_expect(int(chroma.get("current_chroma")) == 60, "IMBUE spends exactly 40 mana on frame five", failures)

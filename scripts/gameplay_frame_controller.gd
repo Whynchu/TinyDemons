@@ -188,7 +188,7 @@ func tick(root: Object, delta: float) -> void:
 		if between_timer <= 0.0:
 			if player_attack != null and player_attack.combo_buffered and player_attack.can_start_attack2():
 				player_attack.start_player_attack(root, 2); player_attack.consume_combo()
-			elif not (anim.idle_frames as Array[Texture2D]).is_empty():
+			elif not bool(root.get("player_is_magic_casting")) and not (anim.idle_frames as Array[Texture2D]).is_empty():
 				root.set("player_anim_name", "defend" if bool(root.get("player_is_defending")) else "walk" if bool(root.get("player_is_moving")) else "idle")
 				root.set("player_anim_frame", 0)
 				root.set("player_anim_timer", 0.0)
