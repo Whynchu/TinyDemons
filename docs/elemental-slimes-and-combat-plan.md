@@ -18,6 +18,7 @@ verification log, including the corrections applied during review).
 Related design:
 
 - [`Tiny Demons — Elemental Chroma System Design.md`](Tiny%20Demons%20%E2%80%94%20Elemental%20Chroma%20System%20Design.md)
+- [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
 - [`elemental-chroma-implementation-plan.md`](elemental-chroma-implementation-plan.md)
 - [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md)
 - [`ARCHITECTURE.md`](ARCHITECTURE.md)

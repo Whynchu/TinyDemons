@@ -328,11 +328,13 @@ Chroma documents, with [`elemental-chroma-handoff.md`](elemental-chroma-handoff.
 as the decision log and [`elemental-chroma-implementation-plan.md`](elemental-chroma-implementation-plan.md)
 as the execution plan.
 
-The next bounded slice is design completion for the Triangle ability contract:
-approve the Gray action, the Fire/Water/Electric actions, their animation-facing
-interfaces, and the small flame-bound stat effects before adding more ability code.
-Binding, blending, Primordial swapping, and broader elemental room expansion remain
-later slices.
+The next bounded slice is implementation planning for the approved Binding and
+flame-fusion extension. See [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
+and [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
+for the current/bound state split, 5-Soul flame actions, 50-Soul Demon Binding,
+unbound fusion, and current-element door access. The exact Gray and
+Fire/Water/Electric ability contracts and broader elemental room expansion
+remain separately bounded work.
 
 ---
 
