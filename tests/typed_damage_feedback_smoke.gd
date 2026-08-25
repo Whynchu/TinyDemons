@@ -26,15 +26,23 @@ func _initialize() -> void:
 	_expect(critical_outline != null and _contains_color(critical_outline.texture, Color.WHITE), "critical number creates a white outline", failures)
 	_expect(critical_sprite != null and critical_outline != null and critical_sprite.texture.get_width() < critical_outline.texture.get_width(), "critical outline extends beyond the glyph", failures)
 
+	var normal_critical_color := ElementCatalogScript.damage_number_color(ElementCatalogScript.Element.NEUTRAL, true)
+	effects.spawn_health_number(parent, Vector2.ZERO, 7, Vector2.ZERO, true, false, normal_critical_color, pixel_number, snap_position, 1.0, 0.1)
+	var normal_critical_entry := effects.damage_numbers[1] as Dictionary
+	var normal_critical_sprite := normal_critical_entry["sprite"] as Sprite2D
+	var normal_critical_outline := normal_critical_entry["outline"] as Sprite2D
+	_expect(normal_critical_sprite != null and _contains_color(normal_critical_sprite.texture, Color.BLACK), "Normal critical interior is black", failures)
+	_expect(normal_critical_outline != null and _contains_color(normal_critical_outline.texture, Color.WHITE), "Normal critical keeps the white outline", failures)
+
 	effects.spawn_health_number(parent, Vector2.ZERO, 0, Vector2.ZERO, false, false, PaletteLibrary.accent("blue"), pixel_number, snap_position, 1.0, 0.1, "immune")
-	var immune_entry := effects.damage_numbers[1] as Dictionary
+	var immune_entry := effects.damage_numbers[2] as Dictionary
 	var immune_sprite := immune_entry["sprite"] as Sprite2D
 	_expect(immune_sprite != null and _contains_color(immune_sprite.texture, PaletteLibrary.accent("blue")), "immune floater uses the attack element color", failures)
 	_expect((immune_entry.get("outline") as Sprite2D) == null, "immune floater is not marked critical", failures)
 
 	var healing_color := Color8(177, 62, 83)
 	effects.spawn_health_number(parent, Vector2.ZERO, 3, Vector2.ZERO, false, true, healing_color, pixel_number, snap_position, 1.0, 0.1)
-	var healing_entry := effects.damage_numbers[2] as Dictionary
+	var healing_entry := effects.damage_numbers[3] as Dictionary
 	var healing_sprite := healing_entry["sprite"] as Sprite2D
 	_expect(healing_sprite != null and _contains_color(healing_sprite.texture, healing_color), "healing keeps its existing color channel", failures)
 

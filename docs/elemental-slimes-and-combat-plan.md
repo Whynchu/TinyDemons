@@ -53,11 +53,12 @@ difference must never become part of the combat API.
 
 Damage numbers are colored by the element on the damage event, not by the
 target's color. A Fire slime hitting the player produces a Fire-colored
-number; a neutral player sword hitting a Fire slime produces a neutral/Gray
-number. Critical hits keep the original element color inside the glyph and
-add a white outline around the number, alongside the existing pop timing (see
-§6, "Critical presentation"). This makes crits obvious without replacing the
-element identity with the current generic yellow crit color.
+number; a neutral player sword hitting a Fire slime produces a white
+neutral/Normal number. Neutral critical hits use a black glyph inside the
+white outline; other critical hits keep their element color inside the glyph
+and add the same white outline around the number, alongside the existing pop
+timing (see §6, "Critical presentation"). This makes crits obvious without
+replacing the element identity with the current generic yellow crit color.
 
 ## 2. Scope and non-goals
 
@@ -259,12 +260,14 @@ Verified boundary notes:
 Today `was_critical` only swaps the number color to yellow
 (`effects_spawner.gd:327`). Element colors occupy that channel, so critical
 hits should keep the original element color inside the glyph and add a white
-outline around the glyph. The outline is the critical channel; do not lerp the
-interior toward white and do not replace it with yellow. Keep the existing pop
-timing. `EffectsSpawner` can use the existing `was_critical` flag to build a
-white outline behind the element-colored main sprite; no new combat-state field
-is required. The existing `healing_color` override channel
-(`effects_spawner.gd:325-327`) continues to provide the interior color.
+outline around the glyph. Neutral/Normal damage is the one presentation
+exception: normal hits use a white glyph, while normal critical hits use a
+black glyph inside the white outline. The outline is the critical channel; do
+not lerp elemental interiors toward white and do not replace them with yellow.
+Keep the existing pop timing. `EffectsSpawner` can use the existing
+`was_critical` flag to build a white outline behind the requested main sprite;
+no new combat-state field is required. The existing `healing_color` override
+channel (`effects_spawner.gd:325-327`) continues to provide the interior color.
 
 ### Immunity presentation
 
@@ -353,6 +356,9 @@ recolors the authored Green sheets for Purple
 Damage-number colors reuse `PaletteLibrary` — no second RGB table. Per
 element, use `PaletteLibrary.accent(palette_key)` with `normal(palette_key)`
 as fallback, then boost HSV saturation and value by 10% for text readability.
+Neutral/Normal damage intentionally bypasses the grey accent: regular hits are
+white and neutral critical hits are black so the shared white critical outline
+reads clearly.
 Two verified color collisions make ACCENT the right default:
 `NORMAL["yellow"]` is exactly the gold number color `Color8(255, 205, 117)`
 (`effects_spawner.gd:22-23`), and `NORMAL["red"]` is exactly the player
