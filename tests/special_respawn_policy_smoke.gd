@@ -16,7 +16,7 @@ func _initialize() -> void:
 	for seed_value in range(64):
 		var encounter: Dictionary = controller._generate_enemy_encounter(seed_value, 8, false, false)
 		for variant in encounter.get("variants", []) as Array:
-			_expect(String(variant) != "purple", "special-room policy does not force rogue slimes", failures)
+			_expect(String(variant) != "purple", "special-room policy does not force Shadow Slimes", failures)
 	var fake := FakeRoot.new()
 	var room_id: StringName = &"special_test"
 	fake.current_room_type = GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY

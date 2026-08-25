@@ -91,7 +91,17 @@ func show_dialogue(root: Object) -> void:
 	if profile != null:
 		var first_dive: bool = profile.completed_runs == 0 and not bool(root.get("starter_flame_attuned_this_run")) and root.get("current_room_type") == DungeonGraph.ROOM_START
 		if first_dive:
-			message = "TO DIVE, TOUCH THE %s FLAME IN THE HUB. IT WILL AWAKEN YOUR CHROMA." % String(profile.starter_flame).to_upper()
+			var fire_soul_cost := int(root.get("FIRE_SOUL_COST"))
+			if fire_soul_cost <= 0:
+				fire_soul_cost = 10
+			if not profile.starter_soul_gift_claimed and profile.souls < fire_soul_cost:
+				profile.add_souls(fire_soul_cost)
+				profile.starter_soul_gift_claimed = true
+				root.call("_save_player_profile")
+				root.call("_update_soul_indicator")
+				message = "TAKE THESE %d SOULS. OFFER THEM AT THE %s FLAME TO BEGIN." % [fire_soul_cost, String(profile.starter_flame).to_upper()]
+			else:
+				message = "TO DIVE, OFFER %d SOULS AT THE %s FLAME. IT WILL AWAKEN YOUR CHROMA." % [fire_soul_cost, String(profile.starter_flame).to_upper()]
 		else:
 			message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
 	allocation_prompt_active = false

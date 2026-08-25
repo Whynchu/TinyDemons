@@ -11,6 +11,7 @@ const ENEMY_HEALTH_RUN_STEP := 0.15
 const ENEMY_HEALTH_MAX_FACTOR := 1.0
 const R1_BOSS_HEALTH_FACTOR := 0.50
 const BOSS_ENCOUNTER_HEALTH_FACTOR := 0.90
+const SOUL_DROP_VALUE := 1
 
 
 static func enemy_health_factor(completed_runs: int, encounter_scale: float = 1.0) -> float:
@@ -228,6 +229,9 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 	var chroma_tuning := root.get("chroma_tuning") as ChromaTuning
 	if chroma_tuning != null and drop_rng.randf() < chroma_tuning.enemy_drop_chance:
 		root.call("_spawn_chroma_pickup", root.call("_actor_foot", slime), chroma_tuning.pickup_value, seed_value, root.call("_slime_knockback_direction", slime))
+	# Souls are the persistent exchange currency. Every defeated enemy drops one
+	# so the fire and equipment-fusion economy does not depend on a lucky roll.
+	root.call("_spawn_soul_pickup", root.call("_actor_foot", slime), SOUL_DROP_VALUE, seed_value ^ 0x51A7, root.call("_slime_knockback_direction", slime))
 	(root.get("effects_spawner") as EffectsSpawner).spawn_slime_death_from_root(root, slime)
 	(root.get("room_controller") as RoomController).record_special_enemy_death(root, slime)
 	(root.get("room_controller") as RoomController).kill_slime_without_effects(root, slime)

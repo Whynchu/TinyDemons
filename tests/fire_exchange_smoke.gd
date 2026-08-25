@@ -1,0 +1,91 @@
+extends SceneTree
+
+var _finished := false
+
+
+func _initialize() -> void:
+	create_timer(15.0).timeout.connect(_watchdog)
+	var failures: Array[String] = []
+	var packed := load("res://scenes/main.tscn") as PackedScene
+	_expect(packed != null, "main scene loads for fire exchange coverage", failures)
+	if packed == null:
+		_finish(failures)
+		return
+	var gameplay := packed.instantiate()
+	root.add_child(gameplay)
+	for _frame in 120:
+		await process_frame
+	var profile := gameplay.get("player_profile") as PlayerProfile
+	var health := gameplay.get("player_health_component") as HealthComponent
+	var chroma := gameplay.get("player_chroma_component") as Node
+	var npc := gameplay.get("npc_controller") as NpcController
+	_expect(profile != null and health != null and chroma != null and npc != null, "fire exchange owners are composed", failures)
+	if profile != null and health != null and chroma != null and npc != null:
+		profile.has_started = true
+		profile.completed_runs = 0
+		profile.starter_flame = &"fire"
+		profile.palette_name = "red"
+		profile.souls = 0
+		profile.starter_soul_gift_claimed = false
+		gameplay.set("starter_flame_attuned_this_run", false)
+		gameplay.call("_begin_new_run")
+		npc.show_dialogue(gameplay)
+		_expect(profile.souls == 10 and profile.starter_soul_gift_claimed, "Cloaked Demon grants the 10-Soul starter gift", failures)
+		_expect(String(npc.full_message).contains("10 SOULS"), "starter gift is explained in Cloaked Demon dialogue", failures)
+		npc.hide_dialogue(gameplay)
+		var player := gameplay.get("player") as Sprite2D
+		player.global_position += (gameplay.call("_fire_anchor") as Vector2) - (gameplay.call("_actor_foot", player) as Vector2)
+		profile.souls = 0
+		_expect(bool(gameplay.call("_can_interact_with_fire")), "starter fire remains interactable without Souls", failures)
+		gameplay.call("_interact_with_fire")
+		_expect(not bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"gray", "starter fire refuses an unpaid use", failures)
+		profile.souls = 10
+		health.apply_damage(1.0)
+		gameplay.call("_interact_with_fire")
+		_expect(bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"fire", "first starter attunement costs 10 Souls", failures)
+		_expect(profile.souls == 0 and health.current_health == health.maximum_health and chroma.get("current_chroma") == 100, "one fire use restores HP and active Chroma", failures)
+
+		health.apply_damage(1.0)
+		chroma.call("spend_elemental_ability")
+		gameplay.call("_interact_with_fire")
+		_expect(health.current_health < health.maximum_health and chroma.get("current_chroma") < 100 and profile.souls == 0, "fire refuses a second use without Souls", failures)
+		profile.souls = 10
+		gameplay.call("_interact_with_fire")
+		_expect(health.current_health == health.maximum_health and chroma.get("current_chroma") == 100 and profile.souls == 0, "each fire use costs one fixed 10-Soul transaction", failures)
+
+		# Force an earned alternate palette through the legacy fallback path so the
+		# test isolates the same atomic transaction while changing elements.
+		gameplay.set("dungeon_map_controller", null)
+		gameplay.set("run_start_palette_name", "blue")
+		gameplay.set("current_fire_palette_name", "blue")
+		(gameplay.get("screen_state_controller") as Node).set("player_palette_name", "red")
+		profile.souls = 10
+		gameplay.call("_interact_with_fire")
+		_expect((gameplay.get("screen_state_controller") as Node).get("player_palette_name") == "blue", "fire exchanges 10 Souls for an earned element change", failures)
+		_expect(chroma.call("aspect_name") == &"water" and chroma.get("current_chroma") == 100 and profile.souls == 0, "the fixed fire cost also covers an element change", failures)
+	gameplay.queue_free()
+	await process_frame
+	_finish(failures)
+
+
+func _watchdog() -> void:
+	if _finished:
+		return
+	push_error("TEST_ABORTED: fire exchange smoke failed before completion")
+	quit(1)
+
+
+func _finish(failures: Array[String]) -> void:
+	_finished = true
+	if failures.is_empty():
+		print("FIRE_EXCHANGE_SMOKE_OK")
+		quit(0)
+	else:
+		for failure: String in failures:
+			push_error(failure)
+		quit(1)
+
+
+func _expect(condition: bool, label: String, failures: Array[String]) -> void:
+	if not condition:
+		failures.append("FAILED: %s" % label)

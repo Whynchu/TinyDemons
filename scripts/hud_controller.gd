@@ -21,6 +21,7 @@ var room_number_indicator: Sprite2D = null
 var dungeon_run_indicator: Sprite2D = null
 var gold_indicator: Sprite2D = null
 var gold_amount_indicator: Sprite2D = null
+var soul_amount_indicator: Sprite2D = null
 var run_timer_indicator: Sprite2D = null
 var gold_animation_frames: Array[Texture2D] = []
 var gold_animation_timer := 0.0
@@ -318,6 +319,21 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		gold_amount.position = Vector2(72, 4)
 		parent.add_child(gold_amount)
+	var soul_display := layout.get_node_or_null("SoulDisplay") as Node2D if layout != null else null
+	if soul_display == null:
+		soul_display = Node2D.new()
+		soul_display.name = "SoulDisplay"
+		soul_display.position = Vector2(205, 13) if layout != null else Vector2(64, 13)
+		(layout if layout != null else parent).add_child(soul_display)
+	var soul_amount := soul_display.get_node_or_null("SoulAmount") as Sprite2D
+	if soul_amount == null:
+		soul_amount = Sprite2D.new()
+		soul_amount.name = "SoulAmount"
+		soul_display.add_child(soul_amount)
+	soul_amount.position = Vector2(7, 0)
+	soul_amount.centered = false
+	soul_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	soul_amount.z_index = 2
 	var run_timer := layout.get_node_or_null("RunTimer") as Sprite2D if layout != null else Sprite2D.new()
 	run_timer.name = "RunTimer"
 	run_timer.centered = false
@@ -381,7 +397,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:

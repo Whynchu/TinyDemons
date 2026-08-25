@@ -29,6 +29,8 @@ var allocated_str := 0
 var allocated_def := 0
 var allocated_spd := 0
 var gold := 0
+var souls := 0
+var starter_soul_gift_claimed := false
 var inventory: Array[Dictionary] = []
 var equipped_instance_ids := {"weapon": "", "armor": "", "shield": "", "accessory": ""}
 var family_mastery: Dictionary = {}
@@ -87,6 +89,21 @@ func purchase_item(item: ItemInstance, cost: int) -> bool:
 		return false
 	gold -= cost
 	inventory.append(item.to_dictionary())
+	return true
+
+
+func add_souls(amount: int) -> void:
+	souls = maxi(souls + maxi(amount, 0), 0)
+
+
+func can_spend_souls(amount: int) -> bool:
+	return amount > 0 and souls >= amount
+
+
+func spend_souls(amount: int) -> bool:
+	if not can_spend_souls(amount):
+		return false
+	souls -= amount
 	return true
 
 
@@ -162,7 +179,7 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 	if amount <= 0:
 		return false
 	var cost := fusion_batch_cost(target, amount)
-	if gold < cost:
+	if souls < cost:
 		return false
 	var material_indices: Array[int] = []
 	for index in inventory.size():
@@ -196,7 +213,7 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 	if target_index < 0:
 		return false
 	inventory[target_index] = working.to_dictionary()
-	gold -= cost
+	souls -= cost
 	return true
 
 
@@ -310,6 +327,8 @@ func to_dictionary() -> Dictionary:
 		"allocated_def": allocated_def,
 		"allocated_spd": allocated_spd,
 		"gold": gold,
+		"souls": souls,
+		"starter_soul_gift_claimed": starter_soul_gift_claimed,
 		"inventory": inventory.duplicate(true),
 		"equipped_instance_ids": equipped_instance_ids.duplicate(true),
 		"family_mastery": family_mastery.duplicate(true),
@@ -350,6 +369,8 @@ func load_dictionary(data: Dictionary) -> void:
 	allocated_def = maxi(int(data.get("allocated_def", 0)), 0)
 	allocated_spd = maxi(int(data.get("allocated_spd", 0)), 0)
 	gold = maxi(int(data.get("gold", 0)), 0)
+	souls = maxi(int(data.get("souls", 0)), 0)
+	starter_soul_gift_claimed = bool(data.get("starter_soul_gift_claimed", false))
 	var saved_inventory: Variant = data.get("inventory", [])
 	inventory.assign(saved_inventory if saved_inventory is Array else [])
 	var saved_equipment: Variant = data.get("equipped_instance_ids", {})

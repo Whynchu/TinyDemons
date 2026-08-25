@@ -80,6 +80,7 @@ func _initialize() -> void:
 			gameplay.set("current_room_id", alternate_fire_room.id)
 			gameplay.set("run_start_palette_name", "blue")
 			gameplay.set("current_player_palette_name", "grey")
+			(gameplay.get("player_profile") as PlayerProfile).souls = 10
 			(gameplay.get("screen_state_controller") as Node).set("player_palette_name", "grey")
 			(gameplay.get("player_chroma_component") as Node).call("begin_new_run")
 			gameplay.call("_sync_current_room_metadata")

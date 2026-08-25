@@ -63,15 +63,24 @@ func _initialize() -> void:
 	rooms.progression_run_rank = 8
 	var regular_purple_count := 0
 	var regular_slot_count := 0
+	var shadow_popcorn_count := 0
 	for seed in 256:
 		var encounter := rooms._generate_enemy_encounter(seed + 4000, 8, false, true)
 		var variants := encounter["variants"] as Array
+		var levels := encounter["levels"] as Array
 		regular_slot_count += variants.size()
 		for variant in variants:
 			if String(variant) == "purple":
 				regular_purple_count += 1
+		if variants.has("purple"):
+			for index in variants.size():
+				if int(levels[index]) == rooms._popcorn_enemy_level():
+					_expect(String(variants[index]) == "grey" or String(variants[index]) == "purple", "Shadow encounters reserve popcorn slots for Normal Slimes", failures)
+					if String(variants[index]) == "grey":
+						shadow_popcorn_count += 1
 	_expect(regular_purple_count > 0, "regular encounter sampling still permits an occasional purple", failures)
 	_expect(float(regular_purple_count) / float(regular_slot_count) < 0.12, "purple variants stay rare in regular encounters", failures)
+	_expect(shadow_popcorn_count > 0, "shadow encounters produce a Normal Slime popcorn slot", failures)
 	rooms.free()
 
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D

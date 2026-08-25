@@ -1,8 +1,8 @@
-# Rogue Slime (Purple Variant) — Design & Implementation
+# Shadow Slime (Purple Variant) — Design & Implementation
 
 ## Objective
 
-Add a new enemy type, the **Rogue Slime** (purple palette), that uses the same
+The purple **Shadow Slime** uses the same
 purple colors the player can choose, and forces a change in combat habits via a
 sneak/ambush mechanic:
 
@@ -12,9 +12,9 @@ sneak/ambush mechanic:
 - The slime stays hidden through the attack windup and only reveals on the
   **strike frame** (the frame it can actually hit the player). This forces the
   player to dodge or block rather than hit it out of the swing with knockback.
-- Revealed rogues are **hittable for only 0.5s after the strike**, then they
+- Revealed Shadow Slimes are **hittable for only 0.5s after the strike**, then they
   re-hide and stalk again.
-- If the player **blocks** the rogue's attack, it is **stunned for 1 second**
+- If the player **blocks** the Shadow Slime's attack, it is **stunned for 1 second**
   (stays revealed/hittable, cannot act) before continuing its routine.
 - **Being hit extends the time until it re-hides** slightly.
 - Stats profile: **very strong STR and DEF, very low VIT** (a new
@@ -54,16 +54,16 @@ sneak/ambush mechanic:
 - Base profile: `{VIT:1, STR:3, DEF:3}`. Growth weights: `{VIT:0.12, STR:0.44, DEF:0.44}`.
 
 ### `scripts/slime_tuning.gd`
-- `ambush_reveal_window := 0.5` — seconds a revealed rogue stays hittable after
+- `ambush_reveal_window := 0.5` — seconds a revealed Shadow Slime stays hittable after
   its strike before re-hiding.
-- `ambush_block_stun := 1.0` — seconds a blocked rogue is stunned and stays
+- `ambush_block_stun := 1.0` — seconds a blocked Shadow Slime is stunned and stays
   revealed before continuing its routine.
 - `ambush_hit_extension := 0.5` — added to the reveal window on each player hit.
 
 ### `scripts/slime_actor.gd`
 - `@export_enum("blue","green","red","purple")` for `variant`.
 - `tick_components(delta)` now ticks the `Ambush` node if present.
-- `apply_attack_hit()`: on a blocked swing, a rogue (Ambush node present) gets
+- `apply_attack_hit()`: on a blocked swing, a Shadow Slime (Ambush node present) gets
   `begin_block_stun()` plus its hitstun/cooldown extended to `block_stun`, so it
   is stunned for the full second and cannot resume attacking immediately.
 
@@ -83,7 +83,7 @@ sneak/ambush mechanic:
 - `_prepare_slime_frame_cache()`: hidden slimes skip the notice "!" burst (they
   sneak silently) but still aggro/approach.
 - `_closest_target()`: passes `_is_slime_targetable` to target lock.
-- `_slime_display_name()`: `"Rogue Slime"` for purple.
+- `_slime_display_name()`: `"Shadow Slime"` for purple.
 - `_build_slime_direction_textures()`: purple sources the green idle textures then
   recolors them to purple.
 
@@ -106,16 +106,16 @@ sneak/ambush mechanic:
 
 ## Behavior Summary
 
-1. Room spawn: purple rogues start hidden (faint, dark purple, ~50% alpha).
+1. Room spawn: purple Shadow Slimes start hidden (faint, dark purple, ~50% alpha).
 2. Hidden slimes aggro by range and sneak toward the player — no notice burst.
-3. When within attack reach, the attack windup starts — the rogue is **still
+3. When within attack reach, the attack windup starts — the Shadow Slime is **still
    hidden** through the windup, so the player must dodge or block, not punish it
    with knockback.
-4. On the **strike frame** (the frame it can hit the player) the rogue reveals.
+4. On the **strike frame** (the frame it can hit the player) the Shadow Slime reveals.
 5. It stays revealed/hittable for 0.5s (`ambush_reveal_window`), then re-hides
    and the loop repeats.
 6. Player hits during the revealed window extend it (+0.5s each).
-7. If the player **blocks** the strike, the rogue is stunned for 1s
+7. If the player **blocks** the strike, the Shadow Slime is stunned for 1s
    (`ambush_block_stun`): it stays revealed (hittable) and cannot act, then
    re-hides and continues its routine.
 

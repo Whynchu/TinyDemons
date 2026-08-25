@@ -66,6 +66,14 @@ func set_gold_value(root: Object, value: int) -> void:
 	root.call("_update_gold_indicator")
 
 
+func set_soul_value(root: Object, value: int) -> void:
+	if root.player_profile == null:
+		return
+	root.player_profile.souls = maxi(value, 0)
+	root.call("_save_player_profile")
+	root.call("_update_soul_indicator")
+
+
 func sync_runtime_progression_to_profile(root: Object) -> void:
 	if root.player_profile == null:
 		return

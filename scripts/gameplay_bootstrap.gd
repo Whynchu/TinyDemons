@@ -2,6 +2,7 @@ extends Node
 class_name GameplayBootstrap
 
 const PLAYER_CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.gd")
+const SOUL_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/soul_pickup_controller.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/player_aspect_ability_component.gd")
 const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/profile_runtime_controller.gd")
 const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/pickup_runtime_controller.gd")
@@ -69,6 +70,7 @@ func initialize(root: GameplayState) -> void:
 	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
 	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
 	root.chroma_pickup_controller = _add_runtime_node(root, ChromaPickupController, "ChromaPickupController") as ChromaPickupController
+	root.soul_pickup_controller = _add_runtime_node(root, SOUL_PICKUP_CONTROLLER_SCRIPT, "SoulPickupController") as SoulPickupController
 	var rng := root.rng
 	rng.randomize()
 	var run_state := RunState.new()

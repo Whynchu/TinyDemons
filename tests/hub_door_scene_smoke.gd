@@ -23,6 +23,7 @@ func _initialize() -> void:
 		profile.set("completed_runs", 1)
 		profile.set("starter_flame", &"water")
 		profile.set("has_started", true)
+		profile.set("souls", 10)
 		gameplay.set("starter_flame_attuned_this_run", false)
 		gameplay.call("_begin_new_run")
 		_expect(bool(map.call("is_authored_run2")), "R2 hub uses the promoted authored map path", failures)

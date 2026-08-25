@@ -37,7 +37,7 @@ game reads them at runtime with no code change.
 | Regen | `regen_delay` 5.0, `regen_interval` 0.75, `regen_amount` 1.0 |
 | Health UI | `health_drain_fill_speed` 18, `health_regen_fill_speed` 4, `health_damage_hang_time` 0.14 |
 | Hit reaction | `hit_flash_time` 0.12, `hitstun_time` 1/30, `knockback_duration` 0.14 |
-| Rogue slime (ambush) | `ambush_reveal_window` 0.5, `ambush_block_stun` 1.0, `ambush_hit_extension` 0.5 |
+| Shadow slime (ambush) | `ambush_reveal_window` 0.5, `ambush_block_stun` 1.0, `ambush_hit_extension` 0.5 |
 
 ### `scripts/combat_tuning.gd` — combat formulas (11 exports, all `inspector`)
 
@@ -87,12 +87,12 @@ into the seed.
 
 | Variant | Element | VIT / STR / DEF / SPD | Growth weights (VIT / STR / DEF / SPD) |
 | --- | --- | --- | --- |
-| Gray | Neutral | 2 / 2 / 2 / 2 | 0.25 / 0.25 / 0.25 / 0.25 |
+| Normal | Neutral | 2 / 2 / 2 / 2 | 0.25 / 0.25 / 0.25 / 0.25 |
 | Red | Fire | 1 / 4 / 2 / 1 | 0.10 / 0.55 / 0.20 / 0.15 |
 | Blue | Water | 2 / 1 / 4 / 1 | 0.20 / 0.10 / 0.55 / 0.15 |
 | Yellow | Electric | 2 / 2 / 1 / 3 | 0.20 / 0.15 / 0.10 / 0.55 |
 | Green | Grass | 4 / 1 / 2 / 1 | 0.55 / 0.10 / 0.20 / 0.15 |
-| Purple | Shadow | 1 / 3 / 1 / 3 | 0.08 / 0.42 / 0.08 / 0.42 |
+| Shadow | Shadow | 1 / 3 / 1 / 3 | 0.08 / 0.42 / 0.08 / 0.42 |
 | Orange | Ground | 3 / 1 / 3 / 1 | 0.35 / 0.10 / 0.45 / 0.10 |
 | Aquamarine | Ice | 2 / 2 / 1 / 3 | 0.15 / 0.20 / 0.15 / 0.50 |
 
@@ -123,8 +123,8 @@ These are code values (not inspector-exposed) that drive gear value:
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity flat points | 0 / 2 / 4 / 6 / 8 for common through mythic | `item_catalog.gd:RARITY_FLAT_POINTS_PER_RANK` |
 | Random primary affixes | Retired from effective/generated gear; legacy fields remain loadable | `item_catalog.gd:bonuses`, `item_instance.gd` |
-| Fusion base cost | 20G | `player_profile.gd:FUSION_BASE_COST` |
-| Fusion cost per enhancement | 15G | `player_profile.gd:FUSION_COST_PER_ENHANCEMENT` |
+| Fusion base cost | 20 Souls | `player_profile.gd:FUSION_BASE_COST` |
+| Fusion cost per enhancement | 15 Souls | `player_profile.gd:FUSION_COST_PER_ENHANCEMENT` |
 | Base stats (archetype) | VIT/STR/DEF sum to 7 | `stats_component.gd:_base_profile_values` |
 | SPD scale | 0.012 per point (see player_tuning) | `player_tuning.gd` |
 
@@ -144,6 +144,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Generated enemy level caps | `3` on R1, `5` on R2, then +1/run | `room_controller.gd:_enemy_level_cap`, `combat_runtime_controller.gd:enemy_level_cap_for_rank` |
 | Run 2 popcorn chance | `0.40` level-1 roll; later runs `0.16` | `room_controller.gd:_popcorn_enemy_chance` |
 | Popcorn enemy level | Level 1 through R4, level 2 on R5, then +1 every 3 runs | `room_controller.gd:_popcorn_enemy_level` |
+| Shadow popcorn safety | Every popcorn slot in a Shadow encounter is a Normal Slime | `room_controller.gd:_generate_enemy_encounter` |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
 | Encounter progression rank | `completed_runs + 1` | `gameplay_state.gd:_ensure_current_room_layout`, `combat_runtime_controller.gd:encounter_run_rank` |
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
@@ -160,6 +161,10 @@ These affect dungeon generation and room behavior and are `const` in
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
 | Triangle spell cooldown | 2.0s elemental / 2.5s grey | `gameplay_state.gd:MAGIC_COOLDOWN`, `gameplay_state.gd:GREY_MAGIC_COOLDOWN` |
 | Triangle knockback | `0.25x` normal attack knockback | `magic_runtime_controller.gd:MAGIC_KNOCKBACK_MULTIPLIER` |
+| Enemy Soul drop | 1 Soul per defeated enemy | `combat_runtime_controller.gd:SOUL_DROP_VALUE` |
+| Soul pickup | 9x9 sprite, 10.0 collection distance, 0.38s launch arc | `pickup_runtime_controller.gd`, `gameplay_state.gd` |
+| Fire use | Full HP, full active Chroma, and earned element attunement for 10 Souls; first starter use is also paid | `gameplay_state.gd:FIRE_SOUL_COST` |
+| Starter Soul grant | One-time 10-Soul grant from the Cloaked Demon when the first-run player lacks the fire-use cost | `npc_controller.gd`, `player_profile.gd` |
 
 ## Magic numbers still hardcoded (known gaps)
 
