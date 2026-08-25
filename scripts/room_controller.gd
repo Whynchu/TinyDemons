@@ -31,6 +31,7 @@ const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.16
 const POPCORN_LEVEL_RUN_INTERVAL: int = 3
+const GUARANTEED_SUPPORT_POPCORN_COUNT: int = 1
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
@@ -156,12 +157,24 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
 		levels.append(clampi(enemy_level, 1, _enemy_level_cap()))
 	# Shadow encounters keep their low-level mana-recovery opportunity readable:
-	# every popcorn slot beside a Shadow Slime becomes a Normal Slime.
+	# every popcorn slot beside a Shadow Slime becomes a Normal Slime. If the
+	# normal popcorn roll produced no slot, add one so Shadow never removes the
+	# player's low-mana recovery option entirely.
 	if variants.has("purple"):
+		var has_shadow_popcorn := false
+		for is_popcorn in popcorn_flags:
+			if is_popcorn:
+				has_shadow_popcorn = true
+				break
+		if not has_shadow_popcorn:
+			for _support_index in GUARANTEED_SUPPORT_POPCORN_COUNT:
+				variants.append("grey")
+				levels.append(clampi(_popcorn_enemy_level(), 1, _enemy_level_cap()))
+				popcorn_flags.append(true)
 		for index in variants.size():
 			if popcorn_flags[index]:
 				variants[index] = "grey"
-	return {"variants": variants, "levels": levels}
+	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags}
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := _generated_enemy_base_level(room_depth)
@@ -185,7 +198,17 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))
 		scales.append(1.0)
-	return {"variants": variants, "levels": levels, "scales": scales}
+	# Boss rooms always include a low-level Normal Slime support slot. This is
+	# the boss counterpart to Shadow's guaranteed mana-recovery opportunity.
+	var popcorn_flags: Array[bool] = []
+	for index in variants.size():
+		popcorn_flags.append(false)
+	for _support_index in GUARANTEED_SUPPORT_POPCORN_COUNT:
+		variants.append("grey")
+		levels.append(clampi(_popcorn_enemy_level(), 1, _enemy_level_cap()))
+		scales.append(1.0)
+		popcorn_flags.append(true)
+	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags}
 
 
 func _enemy_level_cap() -> int:

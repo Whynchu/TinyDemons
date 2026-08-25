@@ -312,26 +312,26 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	gold.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	gold.z_index = 2
 	if layout == null:
-		gold.position = Vector2(64, 4)
+		gold.position = Vector2(64, 2)
 		parent.add_child(gold)
 	if gold_display != null:
-		gold_display.position.y = 4.0
+		gold_display.position.y = 2.0
 	var gold_amount := layout.get_node("GoldDisplay/GoldAmount") as Sprite2D if layout != null else Sprite2D.new()
 	gold_amount.name = "GoldAmount"
 	gold_amount.centered = false
 	gold_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	gold_amount.z_index = 2
 	if layout == null:
-		gold_amount.position = Vector2(72, 4)
+		gold_amount.position = Vector2(72, 2)
 		parent.add_child(gold_amount)
 	var soul_display := layout.get_node_or_null("SoulDisplay") as Node2D if layout != null else null
 	if soul_display == null:
 		soul_display = Node2D.new()
 		soul_display.name = "SoulDisplay"
-		soul_display.position = Vector2(205, 11) if layout != null else Vector2(64, 11)
+		soul_display.position = Vector2(205, 9) if layout != null else Vector2(64, 9)
 		(layout if layout != null else parent).add_child(soul_display)
 	else:
-		soul_display.position = Vector2(205, 11) if layout != null else Vector2(64, 11)
+		soul_display.position = Vector2(205, 9) if layout != null else Vector2(64, 9)
 	var soul_icon := soul_display.get_node_or_null("SoulIcon") as Sprite2D
 	if soul_icon == null:
 		soul_icon = Sprite2D.new()

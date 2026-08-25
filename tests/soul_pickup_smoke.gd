@@ -27,7 +27,7 @@ func _initialize() -> void:
 		var gold_display := player_hud.get_node("GoldDisplay") as Node2D
 		var soul_display := player_hud.get_node("SoulDisplay") as Node2D
 		var soul_icon := hud_controller.get("soul_icon_indicator") as Sprite2D
-		_expect(is_equal_approx(gold_display.position.y, 4.0) and is_equal_approx(soul_display.position.y, 11.0), "currency displays sit inside the top black bar", failures)
+		_expect(is_equal_approx(gold_display.position.y, 2.0) and is_equal_approx(soul_display.position.y, 9.0), "currency displays sit inside the top black bar", failures)
 		_expect(soul_icon != null and soul_icon.texture != null and soul_icon.texture.get_width() == 5 and soul_icon.texture.get_height() == 5, "Soul HUD uses a 5x5 coin icon", failures)
 		var soul_image := soul_icon.texture.get_image() if soul_icon != null and soul_icon.texture != null else null
 		var has_purple_pixel := false
