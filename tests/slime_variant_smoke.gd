@@ -38,7 +38,7 @@ func _initialize() -> void:
 		_expect([stats.vit, stats.strength, stats.def, stats.speed] == expected, "%s level-one stats are exact" % variant, failures)
 		_expect(CatalogScript.element_for_variant(variant) == expected_elements[variant], "%s element is exact" % variant, failures)
 		_expect(CatalogScript.display_name_for_variant(variant) != "", "%s has a display name" % variant, failures)
-	_expect(CatalogScript.display_name_for_variant(&"grey") == "Slime", "Gray variant displays as Slime", failures)
+	_expect(CatalogScript.display_name_for_variant(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
 
 	var yellow := StatsComponent.new()
 	var yellow_definition := CatalogScript.definition(&"yellow")

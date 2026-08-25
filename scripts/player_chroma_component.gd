@@ -55,6 +55,25 @@ func attune_flame(flame: StringName) -> bool:
 	return false
 
 
+func change_flame(flame: StringName) -> bool:
+	var next_aspect := Aspect.NONE
+	match flame:
+		&"fire": next_aspect = Aspect.FIRE
+		&"water": next_aspect = Aspect.WATER
+		&"electric": next_aspect = Aspect.ELECTRIC
+	if next_aspect == Aspect.NONE:
+		return false
+	_set_aspect(next_aspect)
+	return true
+
+
+func refill_chroma() -> bool:
+	if current_aspect == Aspect.NONE or current_chroma >= MAX_CHROMA:
+		return false
+	_set_chroma(MAX_CHROMA)
+	return true
+
+
 func restore_neutral_chroma(_value: int = CHROMA_PICKUP_VALUE) -> bool:
 	# Gray cannot store Chroma. The pickup is consumed by the caller, but this
 	# state owner reports that no restoration occurred.

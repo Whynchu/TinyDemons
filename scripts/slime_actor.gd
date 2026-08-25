@@ -202,7 +202,7 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 		var slime_tuning := root.get("slime_tuning") as SlimeTuning
 		combat.cooldown = slime_tuning.attack_cooldown if slime_tuning != null else 1.0
 		combat.hitstun_timer = maxf(combat.hitstun_timer, block_stun)
-		# A rogue blocked mid-swing is stunned for a full second before it can
+		# A Shadow Slime blocked mid-swing is stunned for a full second before it can
 		# resume its routine, and it stays revealed (hittable) during the stun.
 		var ambush := slime.get_node_or_null("Ambush") as SlimeAmbushComponent
 		if ambush != null:

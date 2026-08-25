@@ -75,9 +75,11 @@ func _initialize() -> void:
 	var rate_snapshot := CombatStatSnapshot.from_components(rate_stats, rate_equipment)
 	_expect(is_equal_approx(rate_snapshot.gear_strength, 5.0) and is_equal_approx(rate_snapshot.strength, 7.35), "rarity rate buffs the affected player stat after flat gear", failures)
 	var restored := PlayerProfile.new()
+	profile.souls = 7
 	restored.load_dictionary(profile.to_dictionary())
 	_expect(restored.find_item(first.instance_id) != null, "inventory persists", failures)
 	_expect(restored.equipped_instance_ids["weapon"] == first.instance_id, "equipped slot persists", failures)
+	_expect(restored.souls == 7, "souls persist with the profile", failures)
 	var run := RunState.new(); run.begin(424242); run.ensure_shop_stock(restored.level)
 	var stock_copy := run.shop_stock.duplicate(true); run.ensure_shop_stock(restored.level)
 	_expect(run.shop_stock == stock_copy and run.shop_stock.size() == 5, "shop stock stable within run", failures)
@@ -94,11 +96,11 @@ func _initialize() -> void:
 	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 1, "one duplicate is available as material", failures)
 	_expect(restored.fusion_material_count(fusion_duplicate.instance_id, catalog) <= 1, "equipped base is not a material", failures)
 	_expect(restored.fusion_batch_cost(fusion_base, 1) == PlayerProfile.FUSION_BASE_COST, "single-step fusion costs the base rate", failures)
-	restored.gold = 50
+	restored.souls = 50
 	_expect(restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "target fuses its available duplicate", failures)
 	_expect(restored.inventory.size() == inventory_before_fusion - 1, "fusion consumes exactly one material", failures)
 	_expect(restored.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhances the target", failures)
-	_expect(restored.gold == 50 - PlayerProfile.FUSION_BASE_COST, "fusion charges the target-scaled cost", failures)
+	_expect(restored.souls == 50 - PlayerProfile.FUSION_BASE_COST, "fusion charges Souls instead of gold", failures)
 	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 0, "no materials remain after fusion", failures)
 	_expect(not restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "fusion fails without materials", failures)
 	_expect(restored.fusion_batch_cost(restored.find_item(fusion_base.instance_id), 1) == PlayerProfile.FUSION_BASE_COST + PlayerProfile.FUSION_COST_PER_ENHANCEMENT, "fusion cost scales with target enhancement", failures)

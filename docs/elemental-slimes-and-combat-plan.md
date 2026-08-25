@@ -8,7 +8,7 @@ Date: 2026-08-24 (reviewed against the codebase and the Generation III source
 chart on the same day)
 
 This document is the design and implementation handoff for adding a neutral
-Gray slime, assigning an element to every slime color, and carrying elemental
+Normal Slime, assigning an element to every slime color, and carrying elemental
 matchups through damage calculation and feedback. It now also covers the
 orange Ground and aquamarine Ice variants. The rules in §5 and the decisions
 in §12 are settled; implementation follows the ordered plan in §10. All code
@@ -35,12 +35,12 @@ The canonical mapping is:
 
 | Visual variant | Display name | Gameplay element | Intended role |
 | --- | --- | --- | --- |
-| `grey` | Gray slime | Neutral | Even baseline enemy |
+| `grey` | Normal Slime | Neutral | Even baseline enemy and popcorn mana-recovery chance |
 | `red` | Fire slime | Fire | High STR, low VIT |
 | `blue` | Water slime | Water | High DEF, low SPD |
 | `yellow` | Electric slime | Electric | High SPD, low DEF |
 | `green` | Grass slime | Grass | High VIT, low STR |
-| `purple` | Shadow slime | Shadow | High SPD and STR, low DEF and VIT |
+| `purple` | Shadow Slime | Shadow | High SPD and STR, low DEF and VIT |
 | `orange` | Ground slime | Ground | Sturdy DEF/VIT, low SPD |
 | `aquamarine` | Ice slime | Ice | Fast SPD, low DEF |
 
@@ -180,7 +180,7 @@ The bold cells are the intentional weakness/immunity moments. This means:
 
 The Neutral ↔ Shadow immunities are approved. Rationale: Shadow slimes are
 already a rare, high-pressure ambush variant (`room_controller.gd:22-23`,
-`PURPLE_ENEMY_WEIGHT 0.12`, `PURPLE_BOSS_CHANCE 0.04`), so making them immune
+`SHADOW_ENEMY_WEIGHT 0.12`, `SHADOW_BOSS_CHANCE 0.04`), so making them immune
 to the neutral sword creates a deliberate "use an elemental Triangle" moment
 without affecting the common room curve. Shadow's own bite being unable to
 hurt a Neutral-aspect player would be a player-side immunity — but since the
@@ -283,12 +283,12 @@ approved first-pass definitions:
 
 | Variant | Element | VIT | STR | DEF | SPD | Read |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| Gray | Neutral | 2 | 2 | 2 | 2 | Even baseline |
+| Normal | Neutral | 2 | 2 | 2 | 2 | Even baseline |
 | Red | Fire | 1 | 4 | 2 | 1 | STR pressure, fragile health |
 | Blue | Water | 2 | 1 | 4 | 1 | Durable, slow |
 | Yellow | Electric | 2 | 2 | 1 | 3 | Fast, low DEF |
 | Green | Grass | 4 | 1 | 2 | 1 | High health, low damage |
-| Purple | Shadow | 1 | 3 | 1 | 3 | Fast ambush pressure, fragile |
+| Shadow | Shadow | 1 | 3 | 1 | 3 | Fast ambush pressure, fragile |
 | Orange | Ground | 3 | 1 | 3 | 1 | Sturdy and grounded, slow |
 | Aquamarine | Ice | 2 | 2 | 1 | 3 | Fast, low DEF |
 
@@ -296,12 +296,12 @@ Approved level-growth weights, in the same stat order:
 
 | Variant | VIT | STR | DEF | SPD |
 | --- | ---: | ---: | ---: | ---: |
-| Gray | 0.25 | 0.25 | 0.25 | 0.25 |
+| Normal | 0.25 | 0.25 | 0.25 | 0.25 |
 | Red | 0.10 | 0.55 | 0.20 | 0.15 |
 | Blue | 0.20 | 0.10 | 0.55 | 0.15 |
 | Yellow | 0.20 | 0.15 | 0.10 | 0.55 |
 | Green | 0.55 | 0.10 | 0.20 | 0.15 |
-| Purple | 0.08 | 0.42 | 0.08 | 0.42 |
+| Shadow | 0.08 | 0.42 | 0.08 | 0.42 |
 | Orange | 0.35 | 0.10 | 0.45 | 0.10 |
 | Aquamarine | 0.15 | 0.20 | 0.15 | 0.50 |
 
@@ -363,10 +363,8 @@ eye on it in playtesting.
 
 Remaining presentation call sites the draft missed (verified):
 
-- Target display names: `targeting_runtime_controller.gd:178-179` currently
-  returns "Blue Slime" / "Red Slime" / "Rogue Slime" / "Green Slime". Add
-  "Slime" and "Yellow Slime"; Purple keeps "Rogue Slime" (its ambush
-  identity) while its combat element is Shadow.
+- Target display names now come from `slime_variant_catalog.gd`: the neutral
+  variant is "Normal Slime" and the purple ambush variant is "Shadow Slime".
 - Target health-bar textures: `hud_controller.gd:358,383` select per palette
   with a green fallback; extend for `grey` and `yellow`.
 
@@ -385,7 +383,7 @@ All rows verified against the current tree:
 | Slime element storage | None | `SlimeActor` field set by `configure_slime_variant`; also extend the `@export_enum` at `slime_actor.gd:4` with `grey`/`yellow` |
 | Health application | `SlimeActor.damage_actor` (`slime_actor.gd:113`), `HealthComponent.apply_damage` | Unchanged amount-only API; typed event flows to feedback in parallel |
 | Damage number color | `CombatRuntimeController.spawn_damage_number` (`combat_runtime_controller.gd:395`), `spawn_player_damage_number` (`:406`), `EffectsSpawner.spawn_health_number` (`effects_spawner.gd:323`) | Optional color parameter forwarded through the existing `healing_color` override channel; no `EffectsSpawner` signature change |
-| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Add Gray to the base pool; Yellow gated by depth; Purple rarity constants unchanged this slice |
+| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare and popcorn slots in a Shadow encounter resolve to Normal Slime |
 | Visual source selection | `build_slime_direction_textures` (`actor_presentation_runtime_controller.gd:64-77`), `SlimeVisualComponent` frame libraries | Generalized fallback recoloring plus `grey`/`yellow` frame entries |
 
 The `ElementCatalog` must not become an alias for `PaletteLibrary`, and
@@ -446,7 +444,7 @@ Exit condition: the type system and formulas work without a main scene.
   `SlimeGreenLeft.png` output mirroring the existing purple test
   (`rogue_slime_smoke.gd:77-96`).
 
-Exit condition: a configured Gray slime renders, has even stats, and spawns
+Exit condition: a configured Normal Slime renders, has even stats, and spawns
 without missing-texture special cases.
 
 ### Phase 3 — Typed player and slime damage
@@ -500,7 +498,8 @@ feedback without reading a debug label.
 - Update `GAMEPLAY_TUNING.md`: final stat/matchup weights, the two new
   catalog scripts, and fix the verified stale claim that there are five
   tuning resources — `chroma_tuning.gd` exists and is unindexed.
-- Encounter tests: Gray appears in generated pools; Yellow never appears
+- Encounter tests: Normal Slime appears in generated pools; Shadow encounters
+  reserve popcorn slots for Normal Slimes; Yellow never appears
   below depth 2; Purple rarity bounds from `rogue_slime_smoke.gd:24-40,63-74`
   still hold.
 - Run the full smoke suite and compare early-room time-to-kill and
@@ -537,7 +536,7 @@ create an accidental early-game difficulty spike.
 
 ### Slime and encounter tests
 
-- Gray has `2/2/2/2` at level one; all eight variants match §6.
+- Normal Slime has `2/2/2/2` at level one; all eight variants match §6.
 - Each slime bite resolves to its own element.
 - Generated encounters can produce Gray immediately, Yellow at depth ≥ 2,
   Ground at depth ≥ 3, and Ice at depth ≥ 4.
@@ -580,7 +579,7 @@ These settle the nine review questions from the draft, with code evidence:
 4. **Stat profiles and growth weights**: approved as written in §6, with the
    explicit acknowledgment that they rebalance the four existing variants
    (separate balance commit, Phase 5 baseline comparison).
-5. **Gray availability**: common in the base pool immediately. It is the
+5. **Normal Slime availability**: common in the base pool immediately. It is the
    baseline enemy; gating it would add progression plumbing for no teaching
    value.
 6. **Yellow availability**: joins the pool at `room_depth >= 2`. Yellow is

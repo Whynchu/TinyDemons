@@ -201,7 +201,7 @@ func fuse_profile_target(root: Object, instance_id: String, count: int) -> bool:
 	root.call("_configure_equipment_transmutations")
 	root.call("_apply_player_level")
 	root.call("_save_player_profile")
-	root.call("_update_gold_indicator")
+	root.call("_update_soul_indicator")
 	invalidate_hub_fusion_candidates(root)
 	return true
 
@@ -274,8 +274,8 @@ func hub_item_action(root: Object) -> void:
 				var material_count: int = root.player_profile.fusion_material_count(target.instance_id)
 				var count: int = clampi(int(root.screen_state_controller.hub_fusion_count), 1, material_count)
 				var batch_cost: int = root.player_profile.fusion_batch_cost(target, count)
-				if root.player_profile.gold < batch_cost:
-					root.screen_state_controller.hub_fusion_message = "NEED %dG" % batch_cost
+				if root.player_profile.souls < batch_cost:
+					root.screen_state_controller.hub_fusion_message = "NEED %dS" % batch_cost
 					root.call("_play_sound", "ui_denied", 0.0, 1.0)
 				else:
 					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))

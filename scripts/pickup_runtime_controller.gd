@@ -14,6 +14,14 @@ const CHROMA_BOB_AMPLITUDE := 1.5
 const CHROMA_LIGHT_SIZE := 32
 const CHROMA_LIGHT_ENERGY := 0.12
 const CHROMA_LIGHT_TEXTURE_SCALE := 0.70
+const SOUL_COLOR := Color8(211, 167, 255)
+const SOUL_PICKUP_GRAVITY := 92.0
+const SOUL_BOB_SPEED := 4.5
+const SOUL_BOB_AMPLITUDE := 1.5
+const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
+const SOUL_PICKUP_AIR_TIME := 0.38
+const SOUL_PICKUP_LAUNCH_SPEED := 30.0
+const SOUL_PICKUP_LAUNCH_SPREAD := 18.0
 const ITEM_DROP_TEXTURE_PATHS := {
 	&"weapon": "res://assets/artwork/sword_pickup.png",
 	&"armor": "res://assets/artwork/armor_pickup.png",
@@ -28,12 +36,34 @@ const ITEM_TYPE_LABELS := {
 }
 
 var chroma_light_texture: Texture2D = null
+var soul_pickup_texture_cache: Texture2D = null
 
 
 func placeholder_item_texture() -> Texture2D:
 	var image := Image.create(6, 6, false, Image.FORMAT_RGBA8)
 	image.fill(Color.WHITE)
 	return ImageTexture.create_from_image(image)
+
+
+func soul_pickup_texture() -> Texture2D:
+	if soul_pickup_texture_cache != null:
+		return soul_pickup_texture_cache
+	# Temporary 9x9 stand-in: a small pixel diamond with a bright core. Keeping
+	# this generated and nearest-filtered makes the asset easy to replace later.
+	var image := Image.create(9, 9, false, Image.FORMAT_RGBA8)
+	for y in 9:
+		for x in 9:
+			var distance := absi(x - 4) + absi(y - 4)
+			if distance > 4:
+				image.set_pixel(x, y, Color(0, 0, 0, 0))
+			elif distance <= 1:
+				image.set_pixel(x, y, Color.WHITE)
+			elif distance <= 2:
+				image.set_pixel(x, y, SOUL_COLOR.lerp(Color.WHITE, 0.35))
+			else:
+				image.set_pixel(x, y, SOUL_COLOR.darkened(0.30))
+	soul_pickup_texture_cache = ImageTexture.create_from_image(image)
+	return soul_pickup_texture_cache
 
 
 func item_drop_texture(item: ItemInstance) -> Texture2D:
@@ -563,3 +593,102 @@ func remove_chroma_pickup(root: Object, index: int) -> void:
 
 func clear_chroma_pickups(root: Object) -> void:
 	root.chroma_pickup_controller.clear()
+
+
+func spawn_soul_pickup(root: Object, position: Vector2, value: int = 1, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
+	var launch_rng := RandomNumberGenerator.new()
+	var root_rng := root.get("rng") as RandomNumberGenerator
+	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
+	var sprite := Sprite2D.new()
+	sprite.name = "SoulPickup"
+	sprite.texture = soul_pickup_texture()
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_as_relative = false
+	sprite.modulate = Color.WHITE
+	var spawn_position := _safe_drop_position(root, position)
+	sprite.global_position = spawn_position
+	sprite.set_meta("soul_bob_phase", launch_rng.randf_range(0.0, TAU))
+	sprite.set_meta("soul_bob_time", 0.0)
+	sprite.set_meta("soul_base_position", spawn_position)
+	sprite.set_meta("soul_last_valid_position", spawn_position)
+	root.add_child(sprite)
+	var velocity := Vector2(launch_rng.randf_range(-SOUL_PICKUP_LAUNCH_SPREAD, SOUL_PICKUP_LAUNCH_SPREAD), -SOUL_PICKUP_LAUNCH_SPEED)
+	if launch_direction.length_squared() > 0.001:
+		velocity = launch_direction.normalized() * SOUL_PICKUP_LAUNCH_SPEED
+	root.soul_pickup_controller.add_pickup(sprite, value, velocity, SOUL_PICKUP_AIR_TIME)
+
+
+func update_soul_pickups(root: Object, delta: float) -> void:
+	var index: int = root.soul_pickup_controller.sprites.size() - 1
+	while index >= 0:
+		var pickup: Sprite2D = root.soul_pickup_controller.sprites[index]
+		if pickup == null or not is_instance_valid(pickup):
+			remove_soul_pickup(root, index)
+			index -= 1
+			continue
+		if root.soul_pickup_controller.air_times[index] > 0.0:
+			root.soul_pickup_controller.air_times[index] = maxf(root.soul_pickup_controller.air_times[index] - delta, 0.0)
+			var velocity: Vector2 = root.soul_pickup_controller.velocities[index]
+			velocity.y += SOUL_PICKUP_GRAVITY * delta
+			var last_valid_position: Vector2 = pickup.get_meta("soul_last_valid_position", pickup.global_position) as Vector2
+			if not _drop_position_is_walkable(root, last_valid_position):
+				last_valid_position = _safe_drop_position(root, pickup.global_position)
+			var airborne_step := _advance_drop_position(root, last_valid_position, velocity, delta)
+			last_valid_position = airborne_step["position"] as Vector2
+			velocity = airborne_step["velocity"] as Vector2
+			root.soul_pickup_controller.velocities[index] = velocity
+			pickup.global_position = last_valid_position
+			pickup.set_meta("soul_last_valid_position", last_valid_position)
+			if root.soul_pickup_controller.air_times[index] <= 0.0:
+				pickup.set_meta("soul_base_position", pickup.global_position)
+				pickup.set_meta("soul_last_valid_position", pickup.global_position)
+		else:
+			var base_position: Vector2 = pickup.get_meta("soul_base_position", pickup.global_position) as Vector2
+			if not _drop_position_is_walkable(root, base_position):
+				base_position = _safe_drop_position(root, pickup.global_position)
+			pickup.set_meta("soul_base_position", base_position)
+			pickup.set_meta("soul_last_valid_position", base_position)
+			var bob_time: float = float(pickup.get_meta("soul_bob_time", 0.0)) + delta
+			pickup.set_meta("soul_bob_time", bob_time)
+			var bob_phase: float = float(pickup.get_meta("soul_bob_phase", 0.0))
+			var bobbed_position := base_position + Vector2(0.0, sin(bob_time * SOUL_BOB_SPEED + bob_phase) * SOUL_BOB_AMPLITUDE)
+			pickup.global_position = bobbed_position if bool(root.call("_is_slime_walkable_point", bobbed_position)) else base_position
+			var distance: float = root.call("_actor_foot", root.player).distance_to(pickup.global_position)
+			var collection_distance := float(root.get("SOUL_PICKUP_COLLECTION_DISTANCE")) if root.get("SOUL_PICKUP_COLLECTION_DISTANCE") != null else SOUL_PICKUP_COLLECTION_DISTANCE
+			if distance <= collection_distance:
+				collect_soul_pickup(root, index)
+				index -= 1
+				continue
+		pickup.z_index = int(round(pickup.global_position.y * DEPTH_Z_SCALE)) + 2
+		var bob_time_for_scale: float = float(pickup.get_meta("soul_bob_time", 0.0))
+		var bob_phase_for_scale: float = float(pickup.get_meta("soul_bob_phase", 0.0))
+		pickup.scale = Vector2.ONE * (1.0 + sin(bob_time_for_scale * SOUL_BOB_SPEED + bob_phase_for_scale) * 0.08)
+		index -= 1
+
+
+func collect_soul_pickup(root: Object, index: int) -> void:
+	if index < 0 or index >= root.soul_pickup_controller.values.size():
+		return
+	var value: int = root.soul_pickup_controller.values[index]
+	var pickup: Sprite2D = root.soul_pickup_controller.sprites[index]
+	if root.player_profile == null:
+		remove_soul_pickup(root, index)
+		return
+	root.player_profile.add_souls(value)
+	root.call("_save_player_profile")
+	root.call("_update_soul_indicator")
+	var acquired_text := "+%d SOUL%s" % [value, "" if value == 1 else "S"]
+	var acquired_origin: Vector2 = root.call("_player_floating_number_origin", acquired_text, SOUL_COLOR) as Vector2
+	root.call("_spawn_floating_number", acquired_origin + Vector2(0, -18), 0, Vector2(0, -12), false, false, SOUL_COLOR, acquired_text)
+	root.call("_play_sound", "item_pickup", -10.0, 1.0)
+	remove_soul_pickup(root, index)
+
+
+func remove_soul_pickup(root: Object, index: int) -> void:
+	if index < 0 or index >= root.soul_pickup_controller.sprites.size():
+		return
+	root.soul_pickup_controller.remove(index)
+
+
+func clear_soul_pickups(root: Object) -> void:
+	root.soul_pickup_controller.clear()

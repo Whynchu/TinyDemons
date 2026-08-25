@@ -60,6 +60,13 @@ const CHROMA_PICKUP_VALUE := 20
 const CHROMA_PICKUP_DROP_CHANCE := 0.35
 const CHROMA_PICKUP_COLLECTION_DISTANCE := 10.0
 const CHROMA_PICKUP_AIR_TIME := 0.38
+const SOUL_PICKUP_VALUE := 1
+const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
+const SOUL_PICKUP_AIR_TIME := 0.38
+const SOUL_PICKUP_LAUNCH_SPEED := 30.0
+const SOUL_PICKUP_LAUNCH_SPREAD := 18.0
+const FIRE_SOUL_COST := 10
+const SOUL_COLOR := Color8(211, 167, 255)
 const MAGIC_PROJECTILE_SPEED := 70.0
 const MAGIC_PROJECTILE_LIFETIME := 2.2
 const MAGIC_PROJECTILE_SIZE := 3
@@ -245,6 +252,7 @@ var interact_prompt: Sprite2D = null
 var interact_prompt_base_position := Vector2.ZERO
 var world_item_drops: Array[Dictionary] = []
 var chroma_pickup_controller: ChromaPickupController = null
+var soul_pickup_controller: SoulPickupController = null
 var target_health_text: Sprite2D = null
 var focus_label: Sprite2D = null
 var focus_label_base: Sprite2D = null
@@ -413,6 +421,16 @@ func _remove_chroma_pickup(index: int) -> void:
 	pickup_runtime_controller.call("remove_chroma_pickup", self, index)
 func _clear_chroma_pickups() -> void:
 	pickup_runtime_controller.call("clear_chroma_pickups", self)
+func _spawn_soul_pickup(position: Vector2, value: int = SOUL_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
+	pickup_runtime_controller.call("spawn_soul_pickup", self, position, value, launch_seed, launch_direction)
+func _update_soul_pickups(delta: float) -> void:
+	pickup_runtime_controller.call("update_soul_pickups", self, delta)
+func _collect_soul_pickup(index: int) -> void:
+	pickup_runtime_controller.call("collect_soul_pickup", self, index)
+func _remove_soul_pickup(index: int) -> void:
+	pickup_runtime_controller.call("remove_soul_pickup", self, index)
+func _clear_soul_pickups() -> void:
+	pickup_runtime_controller.call("clear_soul_pickups", self)
 func _loot_grade_bonus(grade: String = "") -> float:
 	return float(run_flow_controller.call("loot_grade_bonus", self, grade))
 func _chest_item_drop_chance() -> float:
@@ -660,13 +678,14 @@ func _build_interact_prompt() -> void:
 func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
-	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; 	hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
+	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.soul_amount_indicator = hud["soul_amount"] as Sprite2D; 	hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator(); _update_soul_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
 	hud_root.call("apply_bar_colors", player_hud_color)
 	_update_player_progression_ui()
 func _update_gold_indicator() -> void: if hud_controller.gold_indicator != null: hud_controller.gold_amount_indicator.texture = _pixel_text_texture(str(player_profile.gold if player_profile != null else 0), Color8(255, 205, 117))
+func _update_soul_indicator() -> void: if hud_controller.soul_amount_indicator != null: hud_controller.soul_amount_indicator.texture = _pixel_text_texture("S%d" % (player_profile.souls if player_profile != null else 0), SOUL_COLOR)
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _update_cloaked_demon_animation(delta: float) -> void:
 	var near_player := _can_interact_with_npc(); var patrolling := (current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC) and not near_player and (npc_controller.dialogue_box == null or not npc_controller.dialogue_box.visible)
@@ -698,31 +717,57 @@ func _fire_target_palette() -> String:
 	if starter_palette.is_empty() and screen_state_controller != null:
 		starter_palette = screen_state_controller.player_palette_name
 	return current_fire_palette_name if current_fire_palette_name == starter_palette else ""
+
+
+func _show_fire_exchange_text(text: String, color: Color) -> void:
+	var origin: Vector2 = _player_floating_number_origin(text, color)
+	_spawn_floating_number(origin + Vector2(0, -18), 0, Vector2(0, -12), false, false, color, text)
+
+
 func _can_interact_with_fire() -> bool:
 	var target_palette := _fire_target_palette()
-	if rest_fire == null or not rest_fire.visible or target_palette.is_empty() or screen_state_controller == null:
+	if rest_fire == null or not rest_fire.visible or target_palette.is_empty() or AspectCatalogScript.flame_for_palette(target_palette).is_empty():
 		return false
-	var palette_change_available: bool = target_palette != String(screen_state_controller.player_palette_name)
-	var mp_restore_available := _current_player_chroma() < PLAYER_MAX_MP
 	var fire_position := _fire_anchor()
-	return (palette_change_available or mp_restore_available) and _actor_foot(player).distance_to(fire_position) <= FIRE_INTERACT_DISTANCE and _is_interaction_target_in_front(fire_position)
+	return _actor_foot(player).distance_to(fire_position) <= FIRE_INTERACT_DISTANCE and _is_interaction_target_in_front(fire_position)
+
+
 func _interact_with_fire() -> void:
-	var new_palette := _fire_target_palette()
-	if new_palette.is_empty(): return
+	var target_palette := _fire_target_palette()
+	var flame := AspectCatalogScript.flame_for_palette(target_palette)
+	if target_palette.is_empty() or flame.is_empty():
+		return
+	if player_profile == null or not player_profile.spend_souls(FIRE_SOUL_COST):
+		_show_fire_exchange_text("NEED %d SOULS" % FIRE_SOUL_COST, Color8(255, 105, 105))
+		_play_sound("ui_denied", 0.0, 1.0)
+		return
+	# A fire use is one atomic service: the full HP bar, the active Chroma bar,
+	# and the fire's element are restored in the same 10-Soul transaction.
+	if player_chroma_component == null or not bool(player_chroma_component.call("attune_flame", flame)):
+		player_profile.add_souls(FIRE_SOUL_COST)
+		call("_save_player_profile")
+		_update_soul_indicator()
+		return
+	var healed := 0.0
+	if player_health_component != null:
+		healed = player_health_component.apply_healing(player_health_component.maximum_health)
+		_update_player_health_ui()
+		if healed > 0.0:
+			combat_runtime_controller.call("spawn_player_healing_number", self, healed, _health_feedback_color(target_palette))
+	if screen_state_controller != null and target_palette != screen_state_controller.player_palette_name:
+		_start_player_palette_flash(target_palette)
+	_update_player_mp_ui()
+	var is_starter_attunement := current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run
+	if is_starter_attunement:
+		starter_flame_attuned_this_run = true
+		if dungeon_map_controller != null and dungeon_map_controller.has_method("set_starter_flame_attuned"):
+			dungeon_map_controller.call("set_starter_flame_attuned", true)
+		_set_door_active(true)
+		_set_entrance_open(true)
+	call("_save_player_profile")
+	_update_soul_indicator()
+	_show_fire_exchange_text("FIRE USED", _health_feedback_color(target_palette))
 	_play_sound("ui_confirm", 0.0, 1.0)
-	if new_palette != screen_state_controller.player_palette_name:
-		_start_player_palette_flash(new_palette)
-	var flame := AspectCatalogScript.flame_for_palette(new_palette)
-	if player_chroma_component != null and not flame.is_empty() and player_chroma_component.call("attune_flame", flame):
-		_update_player_mp_ui()
-		if current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run:
-			starter_flame_attuned_this_run = true
-			if dungeon_map_controller != null and dungeon_map_controller.has_method("set_starter_flame_attuned"):
-				dungeon_map_controller.call("set_starter_flame_attuned", true)
-			_set_door_active(true)
-			_set_entrance_open(true)
-	else:
-		_restore_player_mp()
 func _start_player_palette_flash(new_palette: String) -> void:
 	screen_state_controller.player_palette_name = new_palette
 	current_player_palette_name = new_palette

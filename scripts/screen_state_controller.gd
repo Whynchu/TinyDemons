@@ -628,7 +628,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var summary := hub_summary_text
 	var points := hub_points_text
 	var progression := root.get("progression_tuning") as ProgressionTuning
-	if summary != null: summary.texture = pixel_texture.call("LV %d   XP %d/%d   GOLD %d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression), profile.gold], Color.WHITE) as Texture2D
+	if summary != null: summary.texture = pixel_texture.call("LV %d XP %d/%d G%d S%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression), profile.gold, profile.souls], Color.WHITE) as Texture2D
 	var page := hub_page
 	var pause_mode := hub_pause_mode
 	var page_buttons := hub_page_buttons
@@ -822,7 +822,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		for stale_stat in hub_gear_stat_texts: stale_stat.texture = null
 	elif page == 3:
 		var batch_cost := profile.fusion_batch_cost(item, fusion_count)
-		var fusion_color := Color8(255, 205, 117) if profile.gold >= batch_cost else Color8(255, 105, 105)
+		var fusion_color := Color8(211, 167, 255) if profile.souls >= batch_cost else Color8(255, 105, 105)
 		var final_rarity := item.rarity
 		var final_enhancement := mastery
 		for step in fusion_count:
@@ -832,7 +832,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			else:
 				final_enhancement += 1
 		var next_text := "%s -> %s +0" % [String(final_rarity).to_upper(), String(ItemCatalog.next_rarity(final_rarity)).to_upper()] if final_rarity != item.rarity else "+%d -> +%d" % [mastery, final_enhancement]
-		details[1].texture = pixel_texture.call("FUSE x%d  %dG  HAVE %d  %s" % [fusion_count, batch_cost, material_count, next_text], fusion_color) as Texture2D
+		details[1].texture = pixel_texture.call("FUSE x%d  %dS  S%d  MAT%d  %s" % [fusion_count, batch_cost, profile.souls, material_count, next_text], fusion_color) as Texture2D
 		var projected := ItemInstance.from_dictionary(item.to_dictionary())
 		projected.enhancement_level = final_enhancement
 		projected.rarity = final_rarity
@@ -860,7 +860,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if not player_rate_text.is_empty(): item_info.append(player_rate_text)
 		if not selected_transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % selected_transmutation_name)
 		details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D if not item_info.is_empty() else null
-	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.gold < profile.fusion_batch_cost(item, fusion_count))))
+	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.souls < profile.fusion_batch_cost(item, fusion_count))))
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)

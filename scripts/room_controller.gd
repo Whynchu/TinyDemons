@@ -26,8 +26,8 @@ const GROUND_ENEMY_WEIGHT: float = 1.0
 const GROUND_MIN_DEPTH := 3
 const ICE_ENEMY_WEIGHT: float = 1.0
 const ICE_MIN_DEPTH := 4
-const PURPLE_ENEMY_WEIGHT: float = 0.12
-const PURPLE_BOSS_CHANCE: float = 0.04
+const SHADOW_ENEMY_WEIGHT: float = 0.12
+const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.16
 const POPCORN_LEVEL_RUN_INTERVAL: int = 3
@@ -67,7 +67,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		if not state.has("enemy_variants"):
 			# Special rooms are color-gated route rooms, not elite encounters. Their
 			# difficulty comes from the color state and delayed respawns instead of
-			# an automatic level, count, or rogue-slime bonus.
+			# an automatic level, count, or shadow-slime bonus.
 			var is_special_room := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
 			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth, false, not is_special_room)
 			state["enemy_variants"] = encounter["variants"]
@@ -89,7 +89,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 	return state
 
 
-func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_room: bool = false, allow_rogue: bool = true) -> Dictionary:
+func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_room: bool = false, allow_shadow: bool = true) -> Dictionary:
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 101
 	var count := 1
@@ -126,15 +126,16 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		variant_pool.append({"variant": "orange", "weight": GROUND_ENEMY_WEIGHT})
 	if room_depth >= ICE_MIN_DEPTH:
 		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
-	if allow_rogue and room_depth >= 3:
+	if allow_shadow and room_depth >= 3:
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
-		variant_pool.append({"variant": "purple", "weight": PURPLE_ENEMY_WEIGHT})
+		variant_pool.append({"variant": "purple", "weight": SHADOW_ENEMY_WEIGHT})
 	# Run 1 teaches levels 1-3. Later runs add one level of pressure each run,
 	# while popcorn stays below the main curve and scales up gradually.
 	var base_level := _generated_enemy_base_level(room_depth) + (1 if special_room else 0)
 	var level_spread := maxi(1, roundi(float(base_level) * 0.20))
+	var popcorn_flags: Array[bool] = []
 	for enemy_index in count:
 		var total_weight := 0.0
 		for entry in variant_pool:
@@ -147,8 +148,19 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				selected = entry["variant"] as String
 				break
 		variants.append(selected)
-		var enemy_level := _popcorn_enemy_level() if encounter_rng.randf() < _popcorn_enemy_chance() else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
+		# A Shadow Slime is never itself a popcorn roll. That keeps the shadow
+		# pressure spike intact while guaranteeing every actual popcorn slot in a
+		# shadow encounter is a Normal Slime.
+		var is_popcorn := selected != "purple" and encounter_rng.randf() < _popcorn_enemy_chance()
+		popcorn_flags.append(is_popcorn)
+		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
 		levels.append(clampi(enemy_level, 1, _enemy_level_cap()))
+	# Shadow encounters keep their low-level mana-recovery opportunity readable:
+	# every popcorn slot beside a Shadow Slime becomes a Normal Slime.
+	if variants.has("purple"):
+		for index in variants.size():
+			if popcorn_flags[index]:
+				variants[index] = "grey"
 	return {"variants": variants, "levels": levels}
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
@@ -168,7 +180,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
 		var selected_variant: String = palette[encounter_rng.randi_range(0, palette.size() - 1)]
-		if encounter_rng.randf() < PURPLE_BOSS_CHANCE:
+		if encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))
@@ -355,6 +367,7 @@ func apply_state(root: Object) -> void:
 	hide_chest_presentation(root)
 	_clear_active_world_drop(root)
 	root.call("_clear_chroma_pickups")
+	root.call("_clear_soul_pickups")
 	_apply_special_enemy_color_policy(root, state)
 	if is_cleared(room_id): state["finished"] = true
 	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST: root.call("_apply_rest_room_state")
