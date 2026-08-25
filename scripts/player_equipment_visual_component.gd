@@ -948,7 +948,9 @@ func _update_imbue_overlays(root: Object) -> void:
 		outline.global_position = layer.global_position
 		outline.offset = layer.offset + Vector2(-1.0, -1.0)
 		outline.flip_h = layer.flip_h
-		outline.z_index = layer.z_index + 2
+		# Match the sword layer's depth exactly. The back sword must remain behind
+		# the player instead of letting its outline render through the body.
+		outline.z_index = layer.z_index
 		outline.modulate = Color(1.0, 1.0, 1.0, outline_alpha)
 		outline.visible = outline_alpha > 0.0
 		var flash := imbue_flash_overlays.get(layer) as Sprite2D
@@ -964,7 +966,7 @@ func _update_imbue_overlays(root: Object) -> void:
 		flash.global_position = layer.global_position
 		flash.offset = layer.offset
 		flash.flip_h = layer.flip_h
-		flash.z_index = layer.z_index + 3
+		flash.z_index = layer.z_index
 		flash.modulate = Color(1.0, 1.0, 1.0, flash_alpha)
 		flash.visible = flash_alpha > 0.0
 	for layer in imbue_outline_overlays:
@@ -1065,7 +1067,8 @@ func _spawn_imbue_bleed(root: Object) -> void:
 		particle.centered = false
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
-		particle.z_index = layer.z_index + 3
+		# Keep bleed pixels on the same depth plane as the sword that spawned them.
+		particle.z_index = layer.z_index
 		var origin := layer.global_position + Vector2(pixel_x, source_pixel.y)
 		particle.position = origin
 		root.add_child(particle)
