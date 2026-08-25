@@ -145,6 +145,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Run 2 popcorn chance | `0.40` level-1 roll; later runs `0.16` | `room_controller.gd:_popcorn_enemy_chance` |
 | Popcorn enemy level | Level 1 through R4, level 2 on R5, then +1 every 3 runs | `room_controller.gd:_popcorn_enemy_level` |
 | Shadow/boss popcorn safety | Shadow encounters guarantee at least one Normal Slime popcorn slot; every boss room adds one; defeated popcorn slots respawn until the Shadow/scaled boss is gone | `room_controller.gd:_generate_enemy_encounter`, `_generate_boss_encounter`, `record_popcorn_enemy_death`, `update_popcorn_respawns` |
+| Popcorn respawn delay | 0.35 seconds before a defeated support slime returns; temporary blocked spawns retry after 0.25 seconds | `room_controller.gd:POPCORN_RESPAWN_DELAY`, `POPCORN_RESPAWN_RETRY_DELAY` |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
 | Encounter progression rank | `completed_runs + 1` | `gameplay_state.gd:_ensure_current_room_layout`, `combat_runtime_controller.gd:encounter_run_rank` |
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
@@ -164,6 +165,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Enemy Soul drop | 1 Soul per defeated enemy | `combat_runtime_controller.gd:SOUL_DROP_VALUE` |
 | Soul pickup | 9x9 sprite, 10.0 collection distance, 0.38s launch arc | `pickup_runtime_controller.gd`, `gameplay_state.gd` |
 | Fire use | Full HP, full active Chroma, and earned element attunement for 10 Souls; first starter use is also paid | `gameplay_state.gd:FIRE_SOUL_COST` |
+| Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `combat_runtime_controller.gd:update_player_health_regen`, `gameplay_state.gd:_interact_with_fire` |
 | Starter Soul grant | One-time 10-Soul grant from the Cloaked Demon when the first-run player lacks the fire-use cost | `npc_controller.gd`, `player_profile.gd` |
 
 ## Magic numbers still hardcoded (known gaps)

@@ -12,6 +12,8 @@ var knockback_velocity := Vector2.ZERO
 var knockback_remaining := 0.0
 var rolling := false
 
+const HORIZONTAL_FACING_DEADZONE := 0.1
+
 
 func move_player(root: Object, delta: float) -> void:
 	var controller := root.get("player_controller") as PlayerController
@@ -22,14 +24,28 @@ func move_player(root: Object, delta: float) -> void:
 		root.set("last_player_input_direction", input.normalized())
 	var moving := input.length_squared() > 0.0; root.set("player_is_moving", moving)
 	if not moving: return
-	var player := root.get("player") as Sprite2D
-	if not bool(root.get("player_is_defending")):
-		if input.x < 0.0: player.flip_h = true
-		elif input.x > 0.0: player.flip_h = false
+	update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0
 	var speed_multiplier := float(root.get("player_speed_multiplier"))
 	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * guard_speed_scale * speed_multiplier * delta))
+
+
+func update_horizontal_facing(root: Object, direction: Vector2, update_visual: bool = true) -> void:
+	var player := root.get("player") as Sprite2D
+	if player == null:
+		return
+	# Keep facing independent from the vertical component. A controller can
+	# report a tiny horizontal value while the stick is held straight up/down;
+	# treating that noise as a new facing direction makes the walk presentation
+	# visibly flicker. Only a meaningful horizontal input changes the remembered
+	# left/right direction, and vertical movement reapplies that stable choice.
+	if absf(direction.x) > HORIZONTAL_FACING_DEADZONE:
+		root.set("last_player_facing_left", direction.x < 0.0)
+	var remembered: Variant = root.get("last_player_facing_left")
+	var facing_left := bool(remembered) if remembered != null else player.flip_h
+	if update_visual:
+		player.flip_h = facing_left
 
 
 func request_motion(motion: Vector2) -> void:

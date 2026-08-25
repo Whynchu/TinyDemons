@@ -181,6 +181,7 @@ func _place_debug_player_at_boss_entry(root: GameplayState, player: Sprite2D) ->
 			continue
 		player.global_position = rooms.call("_arrival_player_position", root, socket)
 		player.flip_h = socket.inward_facing.x < 0.0
+		root.set("last_player_facing_left", player.flip_h)
 		return
 
 

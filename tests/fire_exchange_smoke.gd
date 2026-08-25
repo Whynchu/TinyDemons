@@ -35,12 +35,20 @@ func _initialize() -> void:
 		npc.hide_dialogue(gameplay)
 		var player := gameplay.get("player") as Sprite2D
 		player.global_position += (gameplay.call("_fire_anchor") as Vector2) - (gameplay.call("_actor_foot", player) as Vector2)
+		gameplay.call("_update_interact_prompt", 0.0)
+		var interact_prompt := gameplay.get("interact_prompt") as Sprite2D
+		var fire_cost := interact_prompt.get_node_or_null("FireCost") as Sprite2D if interact_prompt != null else null
+		_expect(fire_cost != null and fire_cost.visible and fire_cost.texture != null and fire_cost.position.y < 0.0, "fire interaction shows the Soul cost above the circle prompt", failures)
 		profile.souls = 0
 		_expect(bool(gameplay.call("_can_interact_with_fire")), "starter fire remains interactable without Souls", failures)
 		gameplay.call("_interact_with_fire")
 		_expect(not bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"gray", "starter fire refuses an unpaid use", failures)
 		profile.souls = 10
 		health.apply_damage(1.0)
+		var damaged_health := health.current_health
+		for _frame in 90:
+			await process_frame
+		_expect(is_equal_approx(health.current_health, damaged_health), "fire rooms do not passively heal without a fire use", failures)
 		gameplay.call("_interact_with_fire")
 		_expect(bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"fire", "first starter attunement costs 10 Souls", failures)
 		_expect(profile.souls == 0 and health.current_health == health.maximum_health and chroma.get("current_chroma") == 100, "one fire use restores HP and active Chroma", failures)

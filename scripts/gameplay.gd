@@ -157,6 +157,7 @@ func _enter_final_settlement_room() -> void:
 	player_is_defending = false
 	player.global_position = Vector2(120, 80)
 	player.flip_h = false
+	last_player_facing_left = false
 	map_root.visible = false
 	player_shadow.visible = false
 	player_attack_visual.visible = false

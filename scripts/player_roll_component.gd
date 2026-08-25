@@ -23,12 +23,15 @@ func start_from_root(root: Object) -> void:
 	if movement_direction.length_squared() <= 0.0: movement_direction = root.call("_player_facing_vector")
 	else: movement_direction = movement_direction.normalized()
 	var player := root.get("player") as Sprite2D
-	if movement_direction.x < 0.0: player.flip_h = true
-	elif movement_direction.x > 0.0: player.flip_h = false
+	var motor := root.get("player_motor") as ActorMotor
+	if motor != null:
+		motor.update_horizontal_facing(root, movement_direction)
+	elif absf(movement_direction.x) > 0.1:
+		root.set("last_player_facing_left", movement_direction.x < 0.0)
+		player.flip_h = movement_direction.x < 0.0
 	root.set("player_is_rolling", true); begin(movement_direction)
 	if root.has_method("_play_sound"):
 		root.call("_play_sound", "flee", -8.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
-	var motor := root.get("player_motor") as ActorMotor
 	if motor != null: motor.begin_roll()
 	root.set("roll_dust_spawned_this_roll", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	var tuning := root.get("player_tuning") as PlayerTuning
