@@ -19,7 +19,7 @@ const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0
 const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
-const POPCORN_RESPAWN_DELAY := 0.10
+const POPCORN_RESPAWN_DELAY := 0.35
 const POPCORN_RESPAWN_RETRY_DELAY := 0.25
 const GREY_ENEMY_WEIGHT: float = 1.0
 const YELLOW_ENEMY_WEIGHT: float = 1.0
@@ -335,6 +335,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 		var nearest_foot: Vector2 = root.call("_nearest_slime_walkable_point", requested_foot)
 		player.global_position = nearest_foot - root.get("ACTOR_FOOT_OFFSET")
 	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
+	root.set("last_player_facing_left", player.flip_h)
 	root.set("player_is_attacking", false)
 	root.set("magic_input_was_down", false)
 	root.call("_cancel_magic_animation")
@@ -917,7 +918,7 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 	if did_respawn:
 		state["finished"] = false
 		root.call("_set_door_active", false)
-		root.call("_set_entrance_open", true)
+		root.call("_set_entrance_open", false if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS else true)
 		root.call("_build_depth_lists")
 	room_states[room_id] = state
 

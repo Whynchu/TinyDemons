@@ -227,13 +227,15 @@ func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, m
 	pending_imbue_activated = false
 	magic_cast_decided = not is_candidate
 	root.set("player_is_magic_casting", true)
-	root.set("player_magic_flip_h", pending_magic_direction.x < 0.0)
+	var remembered_facing_left := bool(root.get("last_player_facing_left"))
+	var magic_facing_left := pending_magic_direction.x < 0.0 if absf(pending_magic_direction.x) > ActorMotor.HORIZONTAL_FACING_DEADZONE else remembered_facing_left
+	root.set("player_magic_flip_h", magic_facing_left)
 	root.set("player_anim_name", "magic")
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
 	var player := root.get("player") as Sprite2D
 	if player != null:
-		player.flip_h = pending_magic_direction.x < 0.0
+		player.flip_h = magic_facing_left
 	_apply_magic_animation_frame(root, 0)
 	return true
 
@@ -342,6 +344,9 @@ func _finish_magic_animation(root: Object) -> void:
 	pending_imbue_activated = false
 	magic_cast_decided = false
 	root.set("player_is_magic_casting", false)
+	var player := root.get("player") as Sprite2D
+	if player != null:
+		player.flip_h = bool(root.get("last_player_facing_left"))
 	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
@@ -366,6 +371,9 @@ func cancel_magic_animation(root: Object) -> void:
 	magic_hold_triggered = false
 	magic_hold_timer = 0.0
 	root.set("player_is_magic_casting", false)
+	var player := root.get("player") as Sprite2D
+	if player != null:
+		player.flip_h = bool(root.get("last_player_facing_left"))
 	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)

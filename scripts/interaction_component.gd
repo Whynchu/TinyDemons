@@ -119,15 +119,23 @@ func _highlight_button_texture(source: Texture2D) -> Texture2D:
 func update_prompt(delta: float, prompt: Sprite2D, dialogue_visible: bool, near_chest: bool, near_npc: bool, near_item: bool, near_fire: bool, chest_position: Vector2, npc_head_position: Vector2, item_position: Vector2, fire_position: Vector2, base_position: Vector2, snap_position: Callable, bob_time: float, ui_z: int) -> void:
 	if prompt == null:
 		return
+	var fire_cost := prompt.get_node_or_null("FireCost") as Sprite2D
 	if dialogue_visible:
 		prompt.visible = false
 		var dialogue_highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
 		if dialogue_highlight != null: dialogue_highlight.visible = false
+		if fire_cost != null: fire_cost.visible = false
 		return
 	var should_show := near_chest or near_npc or near_item or near_fire
 	prompt.visible = should_show
 	var highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
 	if highlight != null: highlight.visible = should_show
+	if fire_cost != null:
+		fire_cost.visible = should_show and near_fire
+		if fire_cost.visible:
+			var prompt_size := prompt.texture.get_size() * prompt.scale
+			var cost_size := fire_cost.texture.get_size() * fire_cost.scale if fire_cost.texture != null else Vector2(5, 5)
+			fire_cost.position = Vector2(0, -prompt_size.y * 0.5 - cost_size.y * 0.5 - 1.0)
 	if not should_show:
 		return
 	if highlight != null: highlight.global_position = prompt.global_position

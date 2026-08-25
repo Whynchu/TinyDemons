@@ -17,13 +17,18 @@ func _initialize() -> void:
 	var room_id: StringName = gameplay.get("current_room_id")
 	var state: Dictionary = rooms.room_states.get(room_id, {}) as Dictionary
 	var flags := state.get("enemy_popcorn", []) as Array
+	var variants := state.get("enemy_variants", []) as Array
 	var scales := state.get("enemy_scales", []) as Array
 	var slimes := gameplay.get("slimes") as Array[Sprite2D]
 	var support: Sprite2D = null
 	var boss: Sprite2D = null
+	var big_threats: Array[Sprite2D] = []
 	for slot in slimes.size():
 		if slot < scales.size() and float(scales[slot]) > 1.0:
 			boss = slimes[slot]
+			big_threats.append(slimes[slot])
+		elif slot < variants.size() and String(variants[slot]) == "purple":
+			big_threats.append(slimes[slot])
 		if slot < flags.size() and bool(flags[slot]):
 			support = slimes[slot]
 	_expect(boss != null, "boss encounter exposes a scaled big threat", failures)
@@ -33,17 +38,28 @@ func _initialize() -> void:
 		gameplay.call("_kill_slime", support)
 		state = rooms.room_states.get(room_id, {}) as Dictionary
 		_expect(state.has("popcorn_respawn_slots"), "defeated popcorn slot enters the respawn queue", failures)
-		for _frame in 20:
+		_expect(not bool(gameplay.get("entrance_open")), "defeating popcorn does not open the boss arrival entrance", failures)
+		for _frame in 6:
+			await process_frame
+		_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slot waits before respawning", failures)
+		for _frame in 72:
 			await process_frame
 		_expect(support.visible and not bool(gameplay.call("_is_slime_dead", support)), "popcorn slot respawns while the boss is alive", failures)
+		_expect(not bool(gameplay.get("entrance_open")), "popcorn respawn keeps the boss arrival entrance sealed", failures)
 
-		gameplay.call("_kill_slime", boss)
+		for threat in big_threats:
+			gameplay.call("_kill_slime", threat)
 		gameplay.call("_kill_slime", support)
 		for _frame in 30:
 			await process_frame
-		_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slot stays defeated after the big threat is gone", failures)
+		_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slot stays defeated after every big threat is gone", failures)
 		state = rooms.room_states.get(room_id, {}) as Dictionary
 		_expect(not state.has("popcorn_respawn_slots"), "big-threat defeat clears pending popcorn respawns", failures)
+		_expect(not bool(gameplay.get("entrance_open")), "the boss entrance stays sealed while regular enemies remain", failures)
+		for slime in slimes:
+			if not bool(gameplay.call("_is_slime_dead", slime)):
+				gameplay.call("_kill_slime", slime)
+		_expect(bool(gameplay.get("entrance_open")), "the boss entrance opens only after the full encounter is defeated", failures)
 
 	gameplay.queue_free()
 	await process_frame

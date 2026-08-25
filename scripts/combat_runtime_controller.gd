@@ -325,23 +325,10 @@ func on_slime_health_healed(root: Object, slime: Sprite2D, amount: float) -> voi
 	root.call("_spawn_slime_healing_number", slime, amount, root.call("_health_feedback_color", String(slime.get("variant"))) as Color)
 
 
-func update_player_health_regen(root: Object, delta: float) -> void:
-	var room_type: StringName = root.get("current_room_type")
-	if room_type != DungeonGraph.ROOM_START and room_type != DungeonGraph.ROOM_REST:
-		return
-	var max_health := float(root.call("_player_max_health"))
-	var health := root.get("player_health_component") as HealthComponent
-	if health != null and health.current_health >= max_health:
-		return
-	if bool(root.call("_is_any_slime_aggroed")):
-		mark_player_in_combat(root)
-		return
-	if health != null:
-		var tuning := root.get("player_tuning") as PlayerTuning
-		health.regen_interval = tuning.regen_interval * 2.0
-		health.regen_amount = maxf(1.0, roundf(max_health / 6.0))
-		health.tick_regeneration(delta)
-	root.call("_update_player_health_ui")
+func update_player_health_regen(_root: Object, _delta: float) -> void:
+	# Fire rooms are paid services now. Do not let the old rest-room regeneration
+	# path silently heal the player without an explicit fire interaction.
+	pass
 
 
 func apply_slime_attack_lunge(root: Object, slime: Sprite2D) -> void:

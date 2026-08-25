@@ -170,6 +170,7 @@ var player_is_magic_casting := false
 var player_is_rolling := false
 var player_is_defending := false
 var last_player_input_direction := Vector2.RIGHT
+var last_player_facing_left := false
 var roll_dust_spawned_this_roll := false
 var player_roll_input_was_down := false
 var roll_dust_frames: Array[Texture2D] = []
@@ -365,6 +366,10 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	_update_player_progression_ui()
 	_update_mp_desaturation()
 func _set_entrance_open(is_open: bool) -> void:
+	# The boss arrival route remains sealed for the entire encounter. The only
+	# path that opens it is _open_final_exit after all encounter actors are dead.
+	if is_open and current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and not final_exit_open:
+		is_open = false
 	entrance_open = is_open; _refresh_room_socket_visuals(door_active)
 func _is_interaction_target_in_front(target_position: Vector2) -> bool:
 	return interaction_component == null or interaction_component.target_is_in_front(self, target_position)
@@ -674,7 +679,21 @@ func _unlock_chest() -> void:
 	_play_sound("chest_unlock", -6.0, 1.0)
 func _build_interact_prompt() -> void:
 	var interaction_marker := _load_texture_or_null("res://assets/artwork/circle55.png")
-	interact_prompt = interaction_component.build_prompt(self, interaction_marker, OVERWORLD_UI_Z + 1); interact_prompt_base_position = Vector2(6, -7)
+	interact_prompt = interaction_component.build_prompt(self, interaction_marker, OVERWORLD_UI_Z + 1)
+	interact_prompt_base_position = Vector2(6, -7)
+	if interact_prompt != null:
+		var fire_cost := Sprite2D.new()
+		fire_cost.name = "FireCost"
+		fire_cost.texture = _pixel_text_texture(str(FIRE_SOUL_COST), SOUL_COLOR)
+		fire_cost.centered = true
+		fire_cost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		fire_cost.z_as_relative = false
+		fire_cost.z_index = OVERWORLD_UI_Z + 2
+		var marker_height: float = float(interaction_marker.get_height()) if interaction_marker != null else 5.0
+		var cost_height: float = float(fire_cost.texture.get_height()) if fire_cost.texture != null else 5.0
+		fire_cost.position = Vector2(0, -marker_height * 0.5 - cost_height * 0.5 - 1.0)
+		fire_cost.visible = false
+		interact_prompt.add_child(fire_cost)
 func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
