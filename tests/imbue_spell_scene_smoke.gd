@@ -64,6 +64,30 @@ func _initialize() -> void:
 	if projectiles != null:
 		projectiles.clear()
 
+	# Exercise the real input-router/frame-controller input path as well as the
+	# direct runtime path.
+	# Once the first press starts the shared animation, the regular player lock
+	# must not stop Triangle from being polled for the hold-to-IMBUE decision.
+	var frame_controller := gameplay.get("gameplay_frame_controller") as GameplayFrameController
+	var input_router := gameplay.get("input_router") as InputRouter
+	if frame_controller != null and input_router != null:
+		Input.action_release(&"magic")
+		input_router.poll(InputRouter.Context.GAMEPLAY)
+		chroma.call("attune", Chroma.Aspect.FIRE)
+		Input.action_press(&"magic")
+		input_router.poll(InputRouter.Context.GAMEPLAY)
+		frame_controller.update_player_input(gameplay, 0.0)
+		_expect(bool(gameplay.get("player_is_magic_casting")), "live Triangle press enters the shared animation", failures)
+		input_router.poll(InputRouter.Context.GAMEPLAY)
+		frame_controller.call("_update_magic_input", gameplay, 0.36)
+		_expect(bool(runtime.get("magic_animation_is_imbue")), "live held Triangle reaches IMBUE while magic animation is locked", failures)
+		Input.action_release(&"magic")
+		input_router.poll(InputRouter.Context.GAMEPLAY)
+		frame_controller.call("_update_magic_input", gameplay, 0.0)
+		_expect(not bool(runtime.get("magic_hold_active")), "releasing Triangle closes the IMBUE decision window", failures)
+		runtime.call("cancel_magic_animation", gameplay)
+		gameplay.set("player_is_magic_casting", false)
+
 	chroma.call("attune", Chroma.Aspect.FIRE)
 	accepted = bool(runtime.call("update_magic_input", gameplay, true, false, 0.0))
 	_expect(not accepted, "IMBUE hold begins as a candidate", failures)
