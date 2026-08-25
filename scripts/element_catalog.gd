@@ -97,8 +97,13 @@ static func is_immune(attacker: int, defender: int) -> bool:
 	return is_zero_approx(effectiveness(attacker, defender))
 
 
-static func damage_number_color(element: int) -> Color:
-	var accent := PaletteLibrary.accent(palette_key(element))
+static func damage_number_color(element: int, was_critical: bool = false) -> Color:
+	var normalized_element := normalize(element)
+	if normalized_element == Element.NEUTRAL:
+		# Neutral damage uses a clean white glyph. On a critical hit the existing
+		# white outline needs a dark interior to stay legible.
+		return Color.BLACK if was_critical else Color.WHITE
+	var accent := PaletteLibrary.accent(palette_key(normalized_element))
 	var boosted := Color.from_hsv(accent.h, clampf(accent.s * DAMAGE_NUMBER_COLOR_BOOST, 0.0, 1.0), clampf(accent.v * DAMAGE_NUMBER_COLOR_BOOST, 0.0, 1.0), accent.a)
 	return Color8(roundi(boosted.r * 255.0), roundi(boosted.g * 255.0), roundi(boosted.b * 255.0), roundi(boosted.a * 255.0))
 

@@ -424,7 +424,7 @@ func update_enemy_health(root: Object, delta: float) -> void:
 
 func spawn_damage_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
 	var tuning := root.get("effects_tuning") as EffectsTuning
-	var color := ElementCatalogScript.damage_number_color(attack_element)
+	var color := ElementCatalogScript.damage_number_color(attack_element, was_critical and not immune)
 	var value := int(round(amount))
 	var display_text := "immune" if immune else str(maxi(value, 0))
 	root.call("_spawn_floating_number", slime.global_position + Vector2(5, -9), 0 if immune else maxi(value, 0), Vector2(0.0, -tuning.damage_number_float_speed), false if immune else was_critical, false, color, display_text)
