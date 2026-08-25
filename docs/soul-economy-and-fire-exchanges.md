@@ -20,10 +20,10 @@ Slime, it guarantees at least one low-level Normal Slime popcorn slot, and
 every additional popcorn slot is also forced to Normal Slime. Shadow itself
 is never selected as a popcorn roll, so the pressure enemy remains present
 while the low-level mana-recovery opportunity stays readable. Boss rooms also
-add one guaranteed Normal Slime popcorn slot beside the scaled boss and its
-minors.
+add two guaranteed Normal Slime popcorn slots beside the scaled boss and its
+minors on Run 1, adding one more support slot per run up to six.
 
-Each popcorn slot returns after defeat while a Shadow or scaled boss remains alive;
+Each popcorn slot returns five seconds after defeat while a Shadow or scaled boss remains alive;
 the respawn queue is cleared as soon as that big threat is defeated.
 
 Normal Slimes continue to use the existing neutral Chroma drop chance. This

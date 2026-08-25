@@ -19,7 +19,7 @@ const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0
 const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
-const POPCORN_RESPAWN_DELAY := 0.35
+const POPCORN_RESPAWN_DELAY := 5.0
 const POPCORN_RESPAWN_RETRY_DELAY := 0.25
 const GREY_ENEMY_WEIGHT: float = 1.0
 const YELLOW_ENEMY_WEIGHT: float = 1.0
@@ -33,7 +33,9 @@ const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.16
 const POPCORN_LEVEL_RUN_INTERVAL: int = 3
-const GUARANTEED_SUPPORT_POPCORN_COUNT: int = 1
+const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
+const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
+const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
@@ -171,7 +173,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				has_shadow_popcorn = true
 				break
 		if not has_shadow_popcorn:
-			for _support_index in GUARANTEED_SUPPORT_POPCORN_COUNT:
+			for _support_index in GUARANTEED_SHADOW_POPCORN_COUNT:
 				variants.append("grey")
 				levels.append(clampi(_popcorn_enemy_level(), 1, _enemy_level_cap()))
 				popcorn_flags.append(true)
@@ -202,12 +204,13 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))
 		scales.append(1.0)
-	# Boss rooms always include a low-level Normal Slime support slot. This is
-	# the boss counterpart to Shadow's guaranteed mana-recovery opportunity.
+	# Boss rooms always include a run-scaled group of low-level Normal Slime
+	# support slots. This is the boss counterpart to Shadow's guaranteed
+	# mana-recovery opportunity.
 	var popcorn_flags: Array[bool] = []
 	for index in variants.size():
 		popcorn_flags.append(false)
-	for _support_index in GUARANTEED_SUPPORT_POPCORN_COUNT:
+	for _support_index in _boss_support_popcorn_count():
 		variants.append("grey")
 		levels.append(clampi(_popcorn_enemy_level(), 1, _enemy_level_cap()))
 		scales.append(1.0)
@@ -235,6 +238,12 @@ func _popcorn_enemy_chance() -> float:
 func _popcorn_enemy_level() -> int:
 	var runs_since_run2 := maxi(progression_run_rank - 2, 0)
 	return 1 + floori(float(runs_since_run2) / float(POPCORN_LEVEL_RUN_INTERVAL))
+
+
+func _boss_support_popcorn_count() -> int:
+	# Run 1 starts at two supports, then adds one more each run until the room
+	# reaches a readable six-support ceiling that fits the expanded actor roster.
+	return mini(BOSS_SUPPORT_POPCORN_BASE_COUNT + maxi(progression_run_rank - 1, 0), BOSS_SUPPORT_POPCORN_MAX_COUNT)
 
 func _normal_enemy_cap() -> int:
 	if progression_run_rank <= 2: return 2
