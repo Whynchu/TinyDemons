@@ -123,8 +123,8 @@ These are code values (not inspector-exposed) that drive gear value:
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity flat points | 0 / 2 / 4 / 6 / 8 for common through mythic | `item_catalog.gd:RARITY_FLAT_POINTS_PER_RANK` |
 | Random primary affixes | Retired from effective/generated gear; legacy fields remain loadable | `item_catalog.gd:bonuses`, `item_instance.gd` |
-| Fusion base cost | 20 Souls | `player_profile.gd:FUSION_BASE_COST` |
-| Fusion cost per enhancement | 15 Souls | `player_profile.gd:FUSION_COST_PER_ENHANCEMENT` |
+| Fusion common +0 step | 1 Soul for +0 -> +1 | `player_profile.gd:FUSION_START_COST` |
+| Fusion cost progression | +1 Soul per enhancement; each rarity adds 10 Souls; common +10 -> rare costs 10 and rare +0 -> +1 costs 11 | `player_profile.gd:fusion_step_cost` |
 | Base stats (archetype) | VIT/STR/DEF sum to 7 | `stats_component.gd:_base_profile_values` |
 | SPD scale | 0.012 per point (see player_tuning) | `player_tuning.gd` |
 

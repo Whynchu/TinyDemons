@@ -95,15 +95,21 @@ func _initialize() -> void:
 	var inventory_before_fusion := restored.inventory.size()
 	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 1, "one duplicate is available as material", failures)
 	_expect(restored.fusion_material_count(fusion_duplicate.instance_id, catalog) <= 1, "equipped base is not a material", failures)
-	_expect(restored.fusion_batch_cost(fusion_base, 1) == PlayerProfile.FUSION_BASE_COST, "single-step fusion costs the base rate", failures)
+	var common_plus_ten := ItemInstance.new(); common_plus_ten.definition_id = &"soldier_sword"; common_plus_ten.rarity = &"common"; common_plus_ten.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+	var common_plus_zero := ItemInstance.new(); common_plus_zero.definition_id = &"soldier_sword"; common_plus_zero.rarity = &"common"; common_plus_zero.enhancement_level = 0
+	var rare_plus_one := ItemInstance.new(); rare_plus_one.definition_id = &"soldier_sword"; rare_plus_one.rarity = &"rare"; rare_plus_one.enhancement_level = 1
+	_expect(restored.fusion_batch_cost(common_plus_zero, 1) == 1, "common +0 to +1 starts at 1 Soul", failures)
+	_expect(restored.fusion_batch_cost(common_plus_ten, 1) == 10, "common +10 to rare costs 10 Souls", failures)
+	_expect(restored.fusion_batch_cost(fusion_base, 1) == 11, "rare +0 to +1 costs 11 Souls", failures)
+	_expect(restored.fusion_batch_cost(rare_plus_one, 1) == 12, "fusion cost rises one Soul per enhancement tier", failures)
 	restored.souls = 50
 	_expect(restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "target fuses its available duplicate", failures)
 	_expect(restored.inventory.size() == inventory_before_fusion - 1, "fusion consumes exactly one material", failures)
 	_expect(restored.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhances the target", failures)
-	_expect(restored.souls == 50 - PlayerProfile.FUSION_BASE_COST, "fusion charges Souls instead of gold", failures)
+	_expect(restored.souls == 50 - 11, "fusion charges the stepped Soul cost", failures)
 	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 0, "no materials remain after fusion", failures)
 	_expect(not restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "fusion fails without materials", failures)
-	_expect(restored.fusion_batch_cost(restored.find_item(fusion_base.instance_id), 1) == PlayerProfile.FUSION_BASE_COST + PlayerProfile.FUSION_COST_PER_ENHANCEMENT, "fusion cost scales with target enhancement", failures)
+	_expect(restored.fusion_batch_cost(restored.find_item(fusion_base.instance_id), 1) == 12, "fusion cost scales with target enhancement", failures)
 	var overflow_item := ItemInstance.new(); overflow_item.instance_id = "overflow-salvage"; overflow_item.definition_id = &"soldier_sword"; overflow_item.rarity = &"mythic"; overflow_item.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
 	_expect(restored.grant_item(overflow_item), "overflow item granted", failures)
 	var gold_before_salvage := restored.gold

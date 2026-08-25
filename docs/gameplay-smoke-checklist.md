@@ -197,7 +197,7 @@ bonus from R9+).
 - Fusion (target-centric) expectations: FUSE tab lists upgrade targets (any
   item with capacity + an eligible unequipped material, plus mythic +10
   overflow), targets may be equipped, materials must be unequipped and share
-  definition + rarity, batch count is set with left/right, cost is
-  `FUSION_BASE_COST` for +0->+1 and grows `+FUSION_COST_PER_ENHANCEMENT` per
-  further step (resetting on rarity bumps), and insufficient gold shows
-  `NEED nG` with the action disabled.
+  definition + rarity, batch count is set with left/right, cost starts at 1
+  Soul for common +0->+1 and rises by 1 per enhancement tier, with each
+  rarity adding 10 Souls (common +10->rare costs 10; rare +0->+1 costs 11),
+  and insufficient Souls shows `NEED nS` with the action disabled.

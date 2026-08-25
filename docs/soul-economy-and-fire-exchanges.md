@@ -41,15 +41,19 @@ fire to begin the run.
 
 ## Equipment fusion
 
-Fusion keeps its current scaling formula, but its currency is Souls:
+Fusion uses a stepped Soul ladder:
 
-- Base fusion step: 20 Souls.
-- Additional cost per current enhancement level: 15 Souls.
+- Common +0 -> +1 costs 1 Soul.
+- Each enhancement step increases the cost by 1 Soul.
+- The common +10 -> rare +0 transition costs 10 Souls.
+- Rare +0 -> +1 costs 11 Souls, and the same progression continues through
+  later rarities.
 - Gold remains the currency for shops, chest rewards, respec, and overflow
   salvage.
 
 The hub FUSE page shows Soul costs and the current Soul balance, and the world
-HUD shows a compact `S#` counter beside the existing gold display.
+HUD shows a purple coin icon with the Soul balance beside the existing gold
+display.
 
 ## Verification
 
