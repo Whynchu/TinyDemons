@@ -176,10 +176,7 @@ func try_cast_imbue(root: Object, allow_candidate := false) -> bool:
 		pending_imbue_activated = false
 		if magic_animation_frame >= IMBUE_EFFECT_FRAME_INDEX:
 			magic_animation_frame = IMBUE_EFFECT_FRAME_INDEX
-			root.set("player_anim_frame", magic_animation_frame)
-			var animation := root.get("player_animation_component") as PlayerAnimationComponent
-			if animation != null:
-				animation.apply_frame(root)
+			_apply_magic_animation_frame(root, magic_animation_frame)
 			_activate_pending_imbue(root)
 		return true
 	return begin_magic_animation(root, direction, null, ChromaComponentScript.AbilityMode.GRAY, true)
@@ -237,10 +234,19 @@ func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, m
 	var player := root.get("player") as Sprite2D
 	if player != null:
 		player.flip_h = pending_magic_direction.x < 0.0
+	_apply_magic_animation_frame(root, 0)
+	return true
+
+
+func _apply_magic_animation_frame(root: Object, frame: int) -> void:
+	# Magic owns the player presentation until the cast finishes. A leftover
+	# walk/attack frame can otherwise be selected while an IMBUE timeline is
+	# still advancing, and those shorter frame sets cannot represent frame 4+.
+	root.set("player_anim_name", "magic")
+	root.set("player_anim_frame", frame)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent
 	if animation != null:
 		animation.apply_frame(root)
-	return true
 
 
 func magic_frame_time(root: Object) -> float:
@@ -264,10 +270,7 @@ func tick_magic_animation(root: Object, delta: float) -> void:
 		if magic_animation_frame >= frame_count:
 			_finish_magic_animation(root)
 			break
-		root.set("player_anim_frame", magic_animation_frame)
-		var animation := root.get("player_animation_component") as PlayerAnimationComponent
-		if animation != null:
-			animation.apply_frame(root)
+		_apply_magic_animation_frame(root, magic_animation_frame)
 		if magic_animation_is_imbue and magic_animation_frame == IMBUE_EFFECT_FRAME_INDEX and not pending_imbue_activated:
 			_activate_pending_imbue(root)
 		elif not magic_animation_is_imbue and magic_cast_decided and magic_animation_frame == MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
