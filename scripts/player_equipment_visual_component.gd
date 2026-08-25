@@ -1,6 +1,8 @@
 extends Node
 class_name PlayerEquipmentVisualComponent
 
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+
 const FRAME_SIZE := Vector2i(36, 36)
 const INACTIVITY_TIME := 6.0
 const FLASH_TIME := 0.16
@@ -10,6 +12,9 @@ const DRAW_WHITE_TIME := 0.18
 const DRAW_COLOR_FADE_TIME := 0.09
 const EQUIPMENT_TEXTURE_OFFSET := Vector2(-10, -10)
 const OCCLUSION_MASK_REFRESH_TIME := 0.08
+const IMBUE_FLASH_TIME := 0.16
+const IMBUE_FADE_TIME := 2.50
+const IMBUE_PARTICLE_INTERVAL := 0.08
 
 var layers: Dictionary = {}
 var shadows: Dictionary = {}
@@ -48,6 +53,16 @@ var guard_flash_timer := 0.0
 var guard_flash_overlay: Sprite2D = null
 var was_defending := false
 var shield_is_out := false
+var imbue_element := ElementCatalogScript.Element.NEUTRAL
+var imbue_remaining := 0.0
+var imbue_flash_timer := 0.0
+var imbue_particle_timer := 0.0
+var imbue_outline_overlays: Dictionary = {}
+var imbue_flash_overlays: Dictionary = {}
+var imbue_outline_texture_cache: Dictionary = {}
+var imbue_color_texture_cache: Dictionary = {}
+var imbue_bleed_positions_cache: Dictionary = {}
+var imbue_noise := FastNoiseLite.new()
 var frame_paths := {
 	"sword_back_idle": "res://assets/artwork/TinyDemon_sword(back)_idle.png",
 	"sword_back_walk": "res://assets/artwork/TinyDemon_sword(back)_walk.png",
@@ -87,6 +102,29 @@ func initialize(root: Object) -> void:
 	_create_layer(parent, "EquipmentSwordFront", 1)
 	_create_occlusion_material()
 	precache_all_palettes(root)
+
+
+func begin_imbue(root: Object, element: int, duration: float) -> void:
+	gameplay_root = root
+	imbue_element = ElementCatalogScript.normalize(element)
+	imbue_remaining = maxf(duration, 0.0)
+	imbue_flash_timer = IMBUE_FLASH_TIME
+	imbue_particle_timer = 0.0
+	imbue_noise.seed = int((root.get("rng") as RandomNumberGenerator).randi()) if root.get("rng") != null else Time.get_ticks_msec()
+	imbue_noise.frequency = 0.28
+	_clear_imbue_overlays()
+	_update_imbue_overlays(root)
+
+
+func end_imbue(root: Object) -> void:
+	imbue_remaining = 0.0
+	imbue_flash_timer = 0.0
+	imbue_particle_timer = 0.0
+	imbue_element = ElementCatalogScript.Element.NEUTRAL
+	_clear_imbue_overlays()
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	if effects != null:
+		effects.clear_effect_particles(&"imbue_weapon")
 
 
 func set_mp_desaturation(saturation: float) -> void:
@@ -352,6 +390,15 @@ func _create_layer(parent: Sprite2D, layer_name: String, z_offset: int) -> void:
 func tick(root: Object, delta: float) -> void:
 	if layers.is_empty():
 		return
+	if imbue_remaining > 0.0:
+		imbue_remaining = maxf(imbue_remaining - maxf(delta, 0.0), 0.0)
+		imbue_flash_timer = maxf(imbue_flash_timer - maxf(delta, 0.0), 0.0)
+		imbue_particle_timer -= maxf(delta, 0.0)
+		if imbue_particle_timer <= 0.0:
+			_spawn_imbue_bleed(root)
+			imbue_particle_timer = IMBUE_PARTICLE_INTERVAL
+		if imbue_remaining <= 0.0:
+			end_imbue(root)
 	if bool(root.get("player_is_rolling")) and active and fade_timer <= 0.0:
 		fade_timer = FLASH_TIME
 		active = false
@@ -428,6 +475,7 @@ func tick(root: Object, delta: float) -> void:
 	if breakup_pending and not breakup_started and fade_timer <= 0.0:
 		_spawn_breakup(root)
 	_update_layers(root)
+	_update_imbue_overlays(root)
 
 
 func begin_attack_visual(root: Object) -> void:
@@ -464,6 +512,7 @@ func interrupt_attack(root: Object) -> void:
 func begin_death(root: Object) -> void:
 	# Death supersedes every equipment lifecycle. In particular, an inactivity or
 	# roll fizzle may have active overlays while `active` is already false.
+	end_imbue(root)
 	active = false
 	shield_is_out = false
 	was_attacking = false
@@ -496,6 +545,7 @@ func reset_for_room(root: Object) -> void:
 	# Room transitions keep this component alive, so cancel every transient
 	# equipment effect before the player is repositioned in the next room. Keep
 	# the normal equipped presentation if it was active before the transition.
+	end_imbue(root)
 	var restore_equipment := active
 	active = false
 	shield_is_out = false
@@ -839,6 +889,172 @@ func _update_guard_flash(root: Object) -> void:
 	guard_flash_overlay.flip_h = shield.flip_h
 	guard_flash_overlay.z_index = shield.z_index + 2
 	guard_flash_overlay.modulate = Color.WHITE
+
+
+func _clear_imbue_overlays() -> void:
+	for overlay in imbue_outline_overlays.values():
+		var sprite := overlay as Sprite2D
+		if sprite != null:
+			sprite.queue_free()
+	imbue_outline_overlays.clear()
+	for overlay in imbue_flash_overlays.values():
+		var sprite := overlay as Sprite2D
+		if sprite != null:
+			sprite.queue_free()
+	imbue_flash_overlays.clear()
+
+
+func _update_imbue_overlays(root: Object) -> void:
+	if imbue_remaining <= 0.0 or imbue_element == ElementCatalogScript.Element.NEUTRAL:
+		_clear_imbue_overlays()
+		return
+	var outline_color := ElementCatalogScript.damage_number_color(imbue_element)
+	var flash_color := PaletteLibrary.accent(ElementCatalogScript.palette_key(imbue_element)).lerp(Color.WHITE, 0.20)
+	var outline_alpha := clampf(imbue_remaining / IMBUE_FADE_TIME, 0.0, 1.0) * 0.9
+	var flash_alpha := clampf(imbue_flash_timer / IMBUE_FLASH_TIME, 0.0, 1.0)
+	var visible_layers: Dictionary = {}
+	for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
+		var layer := layers.get(layer_name) as Sprite2D
+		if layer == null or not layer.visible or layer.texture == null:
+			continue
+		visible_layers[layer] = true
+		var outline := imbue_outline_overlays.get(layer) as Sprite2D
+		if outline == null:
+			outline = Sprite2D.new()
+			outline.name = "%sImbueOutline" % layer.name
+			outline.centered = layer.centered
+			outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			outline.z_as_relative = false
+			root.add_child(outline)
+			imbue_outline_overlays[layer] = outline
+		outline.texture = _imbue_outline_texture(layer.texture, outline_color)
+		outline.global_position = layer.global_position
+		outline.offset = layer.offset + Vector2(-1.0, -1.0)
+		outline.flip_h = layer.flip_h
+		outline.z_index = layer.z_index + 2
+		outline.modulate = Color(1.0, 1.0, 1.0, outline_alpha)
+		outline.visible = outline_alpha > 0.0
+		var flash := imbue_flash_overlays.get(layer) as Sprite2D
+		if flash == null:
+			flash = Sprite2D.new()
+			flash.name = "%sImbueFlash" % layer.name
+			flash.centered = layer.centered
+			flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			flash.z_as_relative = false
+			root.add_child(flash)
+			imbue_flash_overlays[layer] = flash
+		flash.texture = _imbue_color_texture(layer.texture, flash_color)
+		flash.global_position = layer.global_position
+		flash.offset = layer.offset
+		flash.flip_h = layer.flip_h
+		flash.z_index = layer.z_index + 3
+		flash.modulate = Color(1.0, 1.0, 1.0, flash_alpha)
+		flash.visible = flash_alpha > 0.0
+	for layer in imbue_outline_overlays:
+		if not visible_layers.has(layer):
+			(imbue_outline_overlays[layer] as Sprite2D).visible = false
+	for layer in imbue_flash_overlays:
+		if not visible_layers.has(layer):
+			(imbue_flash_overlays[layer] as Sprite2D).visible = false
+
+
+func _imbue_color_texture(source: Texture2D, color: Color) -> Texture2D:
+	if source == null:
+		return null
+	var key := "%s:%s" % [source.get_instance_id(), color.to_html(false)]
+	if imbue_color_texture_cache.has(key):
+		return imbue_color_texture_cache[key] as Texture2D
+	var image := source.get_image().duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var source_color: Color = image.get_pixel(x, y)
+			if source_color.a > 0.0:
+				image.set_pixel(x, y, Color(color.r, color.g, color.b, source_color.a))
+	var texture := ImageTexture.create_from_image(image)
+	imbue_color_texture_cache[key] = texture
+	return texture
+
+
+func _imbue_outline_texture(source: Texture2D, color: Color) -> Texture2D:
+	if source == null:
+		return null
+	var key := "%s:%s" % [source.get_instance_id(), color.to_html(false)]
+	if imbue_outline_texture_cache.has(key):
+		return imbue_outline_texture_cache[key] as Texture2D
+	var image := source.get_image()
+	var output := Image.create(image.get_width() + 2, image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	output.fill(Color.TRANSPARENT)
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a <= 0.0:
+				continue
+			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var neighbor: Vector2i = Vector2i(x, y) + offset
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
+					output.set_pixel(x + 1 + offset.x, y + 1 + offset.y, color)
+	var texture := ImageTexture.create_from_image(output)
+	imbue_outline_texture_cache[key] = texture
+	return texture
+
+
+func _imbue_bleed_positions(source: Texture2D) -> Array:
+	if source == null:
+		return []
+	var key := source.get_instance_id()
+	if imbue_bleed_positions_cache.has(key):
+		return imbue_bleed_positions_cache[key] as Array
+	var image := source.get_image()
+	var positions: Array[Vector2i] = []
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a <= 0.0:
+				continue
+			var edge := false
+			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var neighbor: Vector2i = Vector2i(x, y) + offset
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
+					edge = true
+			if edge:
+				positions.append(Vector2i(x, y))
+	if positions.is_empty():
+		for y in image.get_height():
+			for x in image.get_width():
+				if image.get_pixel(x, y).a > 0.0:
+					positions.append(Vector2i(x, y))
+	imbue_bleed_positions_cache[key] = positions
+	return positions
+
+
+func _spawn_imbue_bleed(root: Object) -> void:
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	if effects == null:
+		return
+	var random_source := root.get("rng") as RandomNumberGenerator
+	if random_source == null:
+		random_source = RandomNumberGenerator.new()
+	var bleed_color := ElementCatalogScript.damage_number_color(imbue_element)
+	for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
+		var layer := layers.get(layer_name) as Sprite2D
+		if layer == null or not layer.visible or layer.texture == null:
+			continue
+		var positions := _imbue_bleed_positions(layer.texture)
+		if positions.is_empty():
+			continue
+		var source_pixel: Vector2i = positions[random_source.randi_range(0, positions.size() - 1)]
+		var pixel_x := layer.texture.get_width() - 1 - source_pixel.x if layer.flip_h else source_pixel.x
+		var particle := Sprite2D.new()
+		particle.name = "ImbueWeaponPixel"
+		particle.texture = root.call("_pixel_particle_texture", bleed_color) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = layer.z_index + 3
+		var origin := layer.global_position + Vector2(pixel_x, source_pixel.y)
+		particle.position = origin
+		root.add_child(particle)
+		var noise_value := imbue_noise.get_noise_2d(float(source_pixel.x), float(source_pixel.y) + float(Time.get_ticks_msec()) * 0.002)
+		var lifetime := random_source.randf_range(0.45, 0.90)
+		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_value * 5.0, -(8.0 + (noise_value + 1.0) * 14.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": &"imbue_weapon", "logical_position": origin})
 
 
 func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: float, should_show := true, grey_key: String = "") -> void:

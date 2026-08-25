@@ -73,7 +73,17 @@ func can_use_elemental_ability() -> bool:
 func spend_elemental_ability() -> bool:
 	if not can_use_elemental_ability():
 		return false
-	_set_chroma(current_chroma - ELEMENTAL_ABILITY_COST)
+	return spend_chroma(ELEMENTAL_ABILITY_COST)
+
+
+func can_spend_chroma(amount: int) -> bool:
+	return amount > 0 and current_chroma >= amount
+
+
+func spend_chroma(amount: int) -> bool:
+	if not can_spend_chroma(amount):
+		return false
+	_set_chroma(current_chroma - amount)
 	if current_chroma == 0 and not binding_active:
 		_set_aspect(Aspect.NONE)
 	return true

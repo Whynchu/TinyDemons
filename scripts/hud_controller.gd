@@ -1,6 +1,8 @@
 extends Node
 class_name HudController
 
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
 var target_overhead_fill_textures: Dictionary = {}
@@ -23,6 +25,7 @@ var run_timer_indicator: Sprite2D = null
 var gold_animation_frames: Array[Texture2D] = []
 var gold_animation_timer := 0.0
 var button_hud_sprites: Array[Sprite2D] = []
+var cooldown_hud: Dictionary = {}
 
 
 func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_fill: CanvasItem, target_fill: CanvasItem, target_health_text: CanvasItem, visible: bool) -> void:
@@ -155,8 +158,37 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: In
 		buttons[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
 
 
+func update_cooldown_hud(root: Object) -> void:
+	if cooldown_hud.is_empty():
+		return
+	var ability := root.get("player_aspect_ability_component") as Node
+	var chroma := root.get("player_chroma_component") as Node
+	var regular_remaining := float(ability.get("cooldown_remaining")) if ability != null else 0.0
+	var regular_duration := float(root.get("GREY_MAGIC_COOLDOWN"))
+	if ability != null and chroma != null:
+		regular_duration = float(ability.call("cooldown_duration_for_mode", int(chroma.call("ability_mode"))))
+	var imbue_runtime := root.get("magic_runtime_controller") as Node
+	var imbue_remaining := float(imbue_runtime.get("imbue_cooldown_remaining")) if imbue_runtime != null else 0.0
+	var imbue_duration := float(root.get("IMBUE_COOLDOWN"))
+	var regular_ratio := 1.0 - clampf(regular_remaining / maxf(regular_duration, 0.001), 0.0, 1.0)
+	var imbue_ratio := 1.0 - clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
+	set_fill_ratio(cooldown_hud.get("triangle_fill") as Sprite2D, Vector2(24, 4), regular_ratio)
+	set_fill_ratio(cooldown_hud.get("imbue_fill") as Sprite2D, Vector2(24, 4), imbue_ratio)
+	var element := ElementCatalogScript.Element.NEUTRAL
+	if imbue_runtime != null:
+		element = int(imbue_runtime.get("pending_imbue_element")) if bool(imbue_runtime.get("magic_hold_active")) else int(imbue_runtime.get("imbued_element"))
+	var player_palette := String(root.get("current_player_palette_name"))
+	var regular_color := PaletteLibrary.accent(player_palette)
+	var imbue_color := ElementCatalogScript.damage_number_color(element) if element != ElementCatalogScript.Element.NEUTRAL else PaletteLibrary.accent("grey")
+	(cooldown_hud.get("triangle_label") as Sprite2D).texture = root.call("_pixel_text_texture", "TRI", regular_color)
+	(cooldown_hud.get("imbue_label") as Sprite2D).texture = root.call("_pixel_text_texture", "IMB", imbue_color)
+	(cooldown_hud.get("triangle_fill") as Sprite2D).self_modulate = regular_color
+	(cooldown_hud.get("imbue_fill") as Sprite2D).self_modulate = imbue_color
+
+
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter)
+	update_cooldown_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))
@@ -212,6 +244,49 @@ func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta:
 	var frame_index := mini(int(timer / 0.12), frames.size() - 1)
 	indicator.texture = frames[frame_index]
 	return timer
+
+
+func _solid_texture(size: Vector2i, color: Color) -> Texture2D:
+	var image := Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
+	image.fill(color)
+	return ImageTexture.create_from_image(image)
+
+
+func _build_cooldown_hud(parent: Node) -> Dictionary:
+	var result: Dictionary = {}
+	var rows := [
+		{"name": "TriangleCooldown", "label": "triangle_label", "base": "triangle_base", "fill": "triangle_fill", "position": Vector2(197, 40), "bar_position": Vector2(212, 41)},
+		{"name": "ImbueCooldown", "label": "imbue_label", "base": "imbue_base", "fill": "imbue_fill", "position": Vector2(197, 50), "bar_position": Vector2(212, 51)},
+	]
+	for row in rows:
+		var label := Sprite2D.new()
+		label.name = row["name"] + "Label"
+		label.centered = false
+		label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		label.position = row["position"]
+		label.z_index = 3
+		parent.add_child(label)
+		var base := Sprite2D.new()
+		base.name = row["name"] + "Base"
+		base.centered = false
+		base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		base.texture = _solid_texture(Vector2i(24, 4), Color8(28, 31, 43, 220))
+		base.position = row["bar_position"]
+		base.z_index = 1
+		parent.add_child(base)
+		var fill := Sprite2D.new()
+		fill.name = row["name"] + "Fill"
+		fill.centered = false
+		fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		fill.texture = _solid_texture(Vector2i(24, 4), Color.WHITE)
+		fill.position = row["bar_position"]
+		fill.z_index = 2
+		parent.add_child(fill)
+		set_fill_ratio(fill, Vector2(24, 4), 1.0)
+		result[row["label"]] = label
+		result[row["base"]] = base
+		result[row["fill"]] = fill
+	return result
 
 
 func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable, target_bar: Sprite2D, _target_fill: Sprite2D, player_fill: Sprite2D) -> Dictionary:
@@ -271,6 +346,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		button.z_index = 2
 		parent.add_child(button)
 		buttons.append(button)
+	var cooldowns := _build_cooldown_hud(parent)
 	var target_text := Sprite2D.new()
 	target_text.name = "TargetHealthText"
 	target_text.centered = true
@@ -302,7 +378,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:

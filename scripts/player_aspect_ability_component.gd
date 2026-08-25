@@ -25,6 +25,10 @@ func configure_mode_cooldowns(elemental_duration: float, grey_duration: float) -
 	grey_cooldown_duration = maxf(grey_duration, 0.0)
 
 
+func cooldown_duration_for_mode(mode: int) -> float:
+	return cooldown_duration if mode == CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL else grey_cooldown_duration
+
+
 func tick(delta: float) -> void:
 	cooldown_remaining = maxf(cooldown_remaining - maxf(delta, 0.0), 0.0)
 

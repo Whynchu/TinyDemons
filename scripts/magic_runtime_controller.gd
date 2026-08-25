@@ -11,6 +11,12 @@ const MAGIC_KNOCKBACK_MULTIPLIER := 0.25
 const MAGIC_FRAME_COUNT := 4
 const MAGIC_CAST_FRAME_INDEX := 2
 const MAGIC_FRAME_TIME_SCALE := 1.20
+const IMBUE_MAGIC_FRAME_COUNT := 9
+const IMBUE_EFFECT_FRAME_INDEX := 4
+const IMBUE_COST := 40
+const IMBUE_DURATION := 15.0
+const IMBUE_COOLDOWN := 30.0
+const IMBUE_HOLD_THRESHOLD := 0.35
 
 var magic_animation_active := false
 var magic_animation_timer := 0.0
@@ -19,6 +25,15 @@ var pending_magic_direction := Vector2.RIGHT
 var pending_magic_target: Sprite2D = null
 var pending_magic_mode := ChromaComponentScript.AbilityMode.GRAY
 var pending_magic_projectile_spawned := false
+var magic_animation_is_imbue := false
+var pending_imbue_element := ElementCatalogScript.Element.NEUTRAL
+var pending_imbue_activated := false
+var magic_hold_timer := 0.0
+var magic_hold_active := false
+var magic_hold_triggered := false
+var imbue_cooldown_remaining := 0.0
+var imbue_remaining := 0.0
+var imbued_element := ElementCatalogScript.Element.NEUTRAL
 
 
 func update_player_mp_ui(root: Object) -> void:
@@ -56,6 +71,34 @@ func restore_player_mp(root: Object) -> void:
 	root.call("_update_player_mp_ui")
 
 
+func update_magic_input(root: Object, magic_down: bool, was_down: bool, delta: float) -> bool:
+	var hold_threshold := _hold_threshold(root)
+	if magic_down:
+		if not was_down:
+			magic_hold_active = true
+			magic_hold_triggered = false
+			magic_hold_timer = 0.0
+			return false
+		if magic_hold_active and not magic_hold_triggered:
+			magic_hold_timer += maxf(delta, 0.0)
+			if magic_hold_timer >= hold_threshold:
+				magic_hold_triggered = true
+				return try_cast_imbue(root)
+		return false
+	if was_down and magic_hold_active:
+		var should_cast_regular := not magic_hold_triggered and magic_hold_timer < hold_threshold
+		magic_hold_active = false
+		magic_hold_triggered = false
+		magic_hold_timer = 0.0
+		return try_cast_magic(root) if should_cast_regular else false
+	return false
+
+
+func _hold_threshold(root: Object) -> float:
+	var configured: Variant = root.get("IMBUE_HOLD_THRESHOLD")
+	return maxf(float(configured), 0.01) if configured != null else IMBUE_HOLD_THRESHOLD
+
+
 func try_cast_magic(root: Object) -> bool:
 	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
 		return false
@@ -68,6 +111,29 @@ func try_cast_magic(root: Object) -> bool:
 		root.call("_sync_chroma_presentation")
 		root.call("_update_player_mp_ui")
 	return accepted
+
+
+func try_cast_imbue(root: Object) -> bool:
+	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+		return false
+	if imbue_cooldown_remaining > 0.0:
+		return false
+	var chroma := root.get("player_chroma_component") as Node
+	if chroma == null or not is_instance_valid(chroma):
+		return false
+	var aspect := int(chroma.get("current_aspect"))
+	var element := ElementCatalogScript.element_for_aspect(aspect)
+	var cost := int(root.get("IMBUE_MP_COST")) if root.get("IMBUE_MP_COST") != null else IMBUE_COST
+	if element == ElementCatalogScript.Element.NEUTRAL or not bool(chroma.call("can_spend_chroma", cost)):
+		return false
+	var player := root.get("player") as Sprite2D
+	var direction := Vector2.LEFT if player != null and player.flip_h else Vector2.RIGHT
+	var target := root.call("_valid_current_target") as Sprite2D
+	if target != null and bool(root.call("_is_slime_targetable", target)):
+		var to_target: Vector2 = magic_target_point(root, target) - player_visual_center(root)
+		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else direction
+	pending_imbue_element = element
+	return begin_magic_animation(root, direction, null, ChromaComponentScript.AbilityMode.GRAY, true)
 
 
 func sync_chroma_presentation(root: Object) -> void:
@@ -95,7 +161,7 @@ func execute_current_aspect_ability(root: Object, mode: int) -> bool:
 	return begin_magic_animation(root, direction, target, mode)
 
 
-func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, mode: int) -> bool:
+func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, mode: int, is_imbue := false) -> bool:
 	if magic_animation_active:
 		return false
 	magic_animation_active = true
@@ -105,6 +171,8 @@ func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, m
 	pending_magic_target = target if target != null and is_instance_valid(target) else null
 	pending_magic_mode = mode
 	pending_magic_projectile_spawned = false
+	magic_animation_is_imbue = is_imbue
+	pending_imbue_activated = false
 	root.set("player_is_magic_casting", true)
 	root.set("player_magic_flip_h", pending_magic_direction.x < 0.0)
 	root.set("player_anim_name", "magic")
@@ -128,22 +196,62 @@ func magic_frame_time(root: Object) -> float:
 
 
 func tick_magic_animation(root: Object, delta: float) -> void:
+	_tick_imbue_timers(root, delta)
 	if not magic_animation_active:
 		return
 	magic_animation_timer += maxf(delta, 0.0)
 	var frame_time := magic_frame_time(root)
+	var frame_count := IMBUE_MAGIC_FRAME_COUNT if magic_animation_is_imbue else MAGIC_FRAME_COUNT
 	while magic_animation_active and magic_animation_timer >= frame_time:
 		magic_animation_timer -= frame_time
 		magic_animation_frame += 1
-		if magic_animation_frame >= MAGIC_FRAME_COUNT:
+		if magic_animation_frame >= frame_count:
 			_finish_magic_animation(root)
 			break
 		root.set("player_anim_frame", magic_animation_frame)
 		var animation := root.get("player_animation_component") as PlayerAnimationComponent
 		if animation != null:
 			animation.apply_frame(root)
-		if magic_animation_frame == MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
+		if magic_animation_is_imbue and magic_animation_frame == IMBUE_EFFECT_FRAME_INDEX and not pending_imbue_activated:
+			_activate_pending_imbue(root)
+		elif not magic_animation_is_imbue and magic_animation_frame == MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
 			_spawn_pending_magic_projectile(root)
+
+
+func _tick_imbue_timers(root: Object, delta: float) -> void:
+	imbue_cooldown_remaining = maxf(imbue_cooldown_remaining - maxf(delta, 0.0), 0.0)
+	if imbue_remaining <= 0.0:
+		return
+	imbue_remaining = maxf(imbue_remaining - maxf(delta, 0.0), 0.0)
+	if imbue_remaining > 0.0:
+		return
+	imbued_element = ElementCatalogScript.Element.NEUTRAL
+	root.set("player_imbued_element", imbued_element)
+	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	if equipment_visual != null:
+		equipment_visual.end_imbue(root)
+
+
+func _activate_pending_imbue(root: Object) -> void:
+	pending_imbue_activated = true
+	var chroma := root.get("player_chroma_component") as Node
+	if chroma == null or not is_instance_valid(chroma):
+		return
+	var cost := int(root.get("IMBUE_MP_COST")) if root.get("IMBUE_MP_COST") != null else IMBUE_COST
+	if not bool(chroma.call("spend_chroma", cost)):
+		return
+	imbued_element = pending_imbue_element
+	root.set("player_imbued_element", imbued_element)
+	var duration := float(root.get("IMBUE_DURATION")) if root.get("IMBUE_DURATION") != null else IMBUE_DURATION
+	var cooldown := float(root.get("IMBUE_COOLDOWN")) if root.get("IMBUE_COOLDOWN") != null else IMBUE_COOLDOWN
+	imbue_remaining = duration
+	imbue_cooldown_remaining = cooldown
+	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	if equipment_visual != null:
+		equipment_visual.begin_imbue(root, imbued_element, duration)
+	root.call("_sync_chroma_presentation")
+	root.call("_update_player_mp_ui")
+	root.call("_play_sound", "magic_cast", -8.0, 0.85)
 
 
 func _spawn_pending_magic_projectile(root: Object) -> void:
@@ -160,6 +268,9 @@ func _finish_magic_animation(root: Object) -> void:
 	magic_animation_frame = 0
 	pending_magic_target = null
 	pending_magic_projectile_spawned = false
+	magic_animation_is_imbue = false
+	pending_imbue_element = ElementCatalogScript.Element.NEUTRAL
+	pending_imbue_activated = false
 	root.set("player_is_magic_casting", false)
 	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 	root.set("player_anim_frame", 0)
@@ -177,6 +288,9 @@ func cancel_magic_animation(root: Object) -> void:
 	magic_animation_frame = 0
 	pending_magic_target = null
 	pending_magic_projectile_spawned = false
+	magic_animation_is_imbue = false
+	pending_imbue_element = ElementCatalogScript.Element.NEUTRAL
+	pending_imbue_activated = false
 	root.set("player_is_magic_casting", false)
 	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
 	root.set("player_anim_frame", 0)
@@ -184,6 +298,25 @@ func cancel_magic_animation(root: Object) -> void:
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent
 	if animation != null:
 		animation.apply_frame(root)
+
+
+func player_weapon_element(_root: Object) -> int:
+	return imbued_element if imbue_remaining > 0.0 else ElementCatalogScript.Element.NEUTRAL
+
+
+func reset_for_room(root: Object, reset_cooldown := false) -> void:
+	cancel_magic_animation(root)
+	magic_hold_active = false
+	magic_hold_triggered = false
+	magic_hold_timer = 0.0
+	if reset_cooldown:
+		imbue_cooldown_remaining = 0.0
+	imbue_remaining = 0.0
+	imbued_element = ElementCatalogScript.Element.NEUTRAL
+	root.set("player_imbued_element", imbued_element)
+	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	if equipment_visual != null:
+		equipment_visual.end_imbue(root)
 
 
 func player_visual_center(root: Object) -> Vector2:

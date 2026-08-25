@@ -16,6 +16,7 @@ var combo_movement := Vector2.ZERO
 var attack2_cooldown_timer := 0.0
 var lunge_velocity := Vector2.ZERO
 var lunge_remaining := 0.0
+var attack_element := ElementCatalogScript.Element.NEUTRAL
 
 
 func start_player_attack(root: Object, new_variant: int) -> void:
@@ -26,6 +27,7 @@ func start_player_attack(root: Object, new_variant: int) -> void:
 	if run_state != null:
 		run_state.record_attack(new_variant, bool(root.call("_is_run_combat_active")))
 	root.set("player_is_attacking", true); begin(new_variant); root.set("player_just_finished_attack2", false); root.set("player_attack_hit_done", false); hit_targets.clear()
+	attack_element = int(root.call("_player_weapon_element")) if root.has_method("_player_weapon_element") else ElementCatalogScript.Element.NEUTRAL
 	var player := root.get("player") as Sprite2D; root.set("player_attack_flip_h", player.flip_h)
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var attack_multiplier := tuning.attack_multiplier(float(root.get("player_spd")))
@@ -72,7 +74,7 @@ func apply_hitbox(root: Object) -> void:
 		root.call("_activate_puzzle_torch", orb, orb.global_position, "grey")
 	for slime in slime_targets:
 		register_hit(slime)
-		var damage_result := root.call("_player_attack_damage_result_against", slime, ElementCatalogScript.Element.NEUTRAL) as CombatCalculator.DamageResult
+		var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
 		var base_damage := damage_result.amount
 		var damage := base_damage
 		var divisor := float(root.call("_player_attack_damage_share_divisor", slime, target_count))
