@@ -36,6 +36,10 @@ func update_player_input(root: Object, delta: float) -> void:
 				roll.start_from_root(root); accepted_roll = true
 		root.call("_record_run_action_input", &"roll", accepted_roll)
 	root.set("player_roll_input_was_down", roll_down)
+	_update_magic_input(root, delta)
+
+
+func _update_magic_input(root: Object, delta: float) -> void:
 	var magic_down: bool = root.call("_is_magic_input_pressed")
 	var accepted_magic: bool = root.call("_update_magic_input", magic_down, bool(root.get("magic_input_was_down")), delta)
 	if accepted_magic:
@@ -144,7 +148,13 @@ func tick(root: Object, delta: float) -> void:
 	var previous_attacking: bool = root.get("player_is_attacking")
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null: guard.tick(root, delta, not player_input_locked and bool(root.call("_is_guard_input_held")))
-	if not player_input_locked: update_player_input(root, delta)
+	if not player_input_locked:
+		update_player_input(root, delta)
+	elif bool(root.get("player_is_magic_casting")) or bool(root.get("magic_input_was_down")):
+		# The shared magic animation is also the hold-to-IMBUE decision window.
+		# Keep polling Triangle while that window is active, even though movement
+		# and the other player actions remain locked.
+		_update_magic_input(root, delta)
 	player_input_locked = dialogue_was_active or bool(root.get("player_is_magic_casting"))
 	var player_attack := root.get("player_attack_component") as PlayerAttackComponent
 	if player_attack != null and player_attack.combo_buffered and bool(root.get("player_is_attacking")) and root.get("player_anim_name") == "attack1":
