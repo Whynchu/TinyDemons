@@ -23,6 +23,9 @@ while the low-level mana-recovery opportunity stays readable. Boss rooms also
 add one guaranteed Normal Slime popcorn slot beside the scaled boss and its
 minors.
 
+Each popcorn slot returns after defeat while a Shadow or scaled boss remains alive;
+the respawn queue is cleared as soon as that big threat is defeated.
+
 Normal Slimes continue to use the existing neutral Chroma drop chance. This
 means a player who is low on mana has a reliable chance to find a neutral
 pickup in the encounter without changing the broader Chroma economy.

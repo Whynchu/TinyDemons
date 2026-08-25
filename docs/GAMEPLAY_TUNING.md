@@ -144,7 +144,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Generated enemy level caps | `3` on R1, `5` on R2, then +1/run | `room_controller.gd:_enemy_level_cap`, `combat_runtime_controller.gd:enemy_level_cap_for_rank` |
 | Run 2 popcorn chance | `0.40` level-1 roll; later runs `0.16` | `room_controller.gd:_popcorn_enemy_chance` |
 | Popcorn enemy level | Level 1 through R4, level 2 on R5, then +1 every 3 runs | `room_controller.gd:_popcorn_enemy_level` |
-| Shadow/boss popcorn safety | Shadow encounters guarantee at least one Normal Slime popcorn slot; every boss room adds one | `room_controller.gd:_generate_enemy_encounter`, `_generate_boss_encounter` |
+| Shadow/boss popcorn safety | Shadow encounters guarantee at least one Normal Slime popcorn slot; every boss room adds one; defeated popcorn slots respawn until the Shadow/scaled boss is gone | `room_controller.gd:_generate_enemy_encounter`, `_generate_boss_encounter`, `record_popcorn_enemy_death`, `update_popcorn_respawns` |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
 | Encounter progression rank | `completed_runs + 1` | `gameplay_state.gd:_ensure_current_room_layout`, `combat_runtime_controller.gd:encounter_run_rank` |
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
