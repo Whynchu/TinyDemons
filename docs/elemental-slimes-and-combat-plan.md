@@ -389,7 +389,7 @@ All rows verified against the current tree:
 | Slime element storage | None | `SlimeActor` field set by `configure_slime_variant`; also extend the `@export_enum` at `slime_actor.gd:4` with `grey`/`yellow` |
 | Health application | `SlimeActor.damage_actor` (`slime_actor.gd:113`), `HealthComponent.apply_damage` | Unchanged amount-only API; typed event flows to feedback in parallel |
 | Damage number color | `CombatRuntimeController.spawn_damage_number` (`combat_runtime_controller.gd:395`), `spawn_player_damage_number` (`:406`), `EffectsSpawner.spawn_health_number` (`effects_spawner.gd:323`) | Optional color parameter forwarded through the existing `healing_color` override channel; no `EffectsSpawner` signature change |
-| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare, Shadow encounters guarantee a Normal Slime popcorn slot, and boss rooms add one |
+| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare, Shadow encounters guarantee a Normal Slime popcorn slot, boss rooms add one, and popcorn slots respawn while the Shadow/scaled boss remains alive |
 | Visual source selection | `build_slime_direction_textures` (`actor_presentation_runtime_controller.gd:64-77`), `SlimeVisualComponent` frame libraries | Generalized fallback recoloring plus `grey`/`yellow` frame entries |
 
 The `ElementCatalog` must not become an alias for `PaletteLibrary`, and
