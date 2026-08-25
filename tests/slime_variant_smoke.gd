@@ -16,6 +16,8 @@ func _initialize() -> void:
 		&"yellow": [2, 2, 1, 3],
 		&"green": [4, 1, 2, 1],
 		&"purple": [1, 3, 1, 3],
+		&"orange": [3, 1, 3, 1],
+		&"aquamarine": [2, 2, 1, 3],
 	}
 	var expected_elements := {
 		&"grey": ElementCatalogScript.Element.NEUTRAL,
@@ -24,6 +26,8 @@ func _initialize() -> void:
 		&"yellow": ElementCatalogScript.Element.ELECTRIC,
 		&"green": ElementCatalogScript.Element.GRASS,
 		&"purple": ElementCatalogScript.Element.SHADOW,
+		&"orange": ElementCatalogScript.Element.GROUND,
+		&"aquamarine": ElementCatalogScript.Element.ICE,
 	}
 	var stats := StatsComponent.new()
 	for variant in CatalogScript.VARIANTS:
@@ -49,10 +53,26 @@ func _initialize() -> void:
 	_expect(purple.speed > purple.vit and purple.strength > purple.def, "Purple growth preserves SPD/STR pressure", failures)
 	_expect(purple.speed + purple.strength > purple.vit + purple.def, "Purple growth stays offensively weighted", failures)
 
+	var ground := StatsComponent.new()
+	var ground_definition := CatalogScript.definition(&"orange")
+	ground.apply_enemy_variant_profile(ground_definition["base_stats"], ground_definition["growth_weights"], &"orange")
+	ground.level = 25
+	_expect(ground.def > ground.speed and ground.vit > ground.strength, "Ground growth preserves sturdy pressure", failures)
+
+	var ice := StatsComponent.new()
+	var ice_definition := CatalogScript.definition(&"aquamarine")
+	ice.apply_enemy_variant_profile(ice_definition["base_stats"], ice_definition["growth_weights"], &"aquamarine")
+	ice.level = 25
+	_expect(ice.speed > ice.def and ice.speed > ice.vit, "Ice growth preserves SPD pressure", failures)
+
 	var rooms := RoomController.new()
 	var gray_seen := false
 	var yellow_seen_at_depth_two := false
 	var yellow_seen_before_depth_two := false
+	var ground_seen_at_depth_three := false
+	var ground_seen_before_depth_three := false
+	var ice_seen_at_depth_four := false
+	var ice_seen_before_depth_four := false
 	for seed in 256:
 		for variant in rooms._generate_enemy_encounter(seed, 0, false, false)["variants"] as Array:
 			gray_seen = gray_seen or String(variant) == "grey"
@@ -60,15 +80,27 @@ func _initialize() -> void:
 			yellow_seen_before_depth_two = yellow_seen_before_depth_two or String(variant) == "yellow"
 		for variant in rooms._generate_enemy_encounter(seed + 4000, 2, false, false)["variants"] as Array:
 			yellow_seen_at_depth_two = yellow_seen_at_depth_two or String(variant) == "yellow"
+		for variant in rooms._generate_enemy_encounter(seed + 6000, 2, false, false)["variants"] as Array:
+			ground_seen_before_depth_three = ground_seen_before_depth_three or String(variant) == "orange"
+		for variant in rooms._generate_enemy_encounter(seed + 8000, 3, false, false)["variants"] as Array:
+			ground_seen_at_depth_three = ground_seen_at_depth_three or String(variant) == "orange"
+		for variant in rooms._generate_enemy_encounter(seed + 10000, 3, false, false)["variants"] as Array:
+			ice_seen_before_depth_four = ice_seen_before_depth_four or String(variant) == "aquamarine"
+		for variant in rooms._generate_enemy_encounter(seed + 12000, 4, false, false)["variants"] as Array:
+			ice_seen_at_depth_four = ice_seen_at_depth_four or String(variant) == "aquamarine"
 	_expect(gray_seen, "Gray can appear in base encounters", failures)
 	_expect(not yellow_seen_before_depth_two, "Yellow is gated below room depth two", failures)
 	_expect(yellow_seen_at_depth_two, "Yellow can appear from room depth two", failures)
+	_expect(not ground_seen_before_depth_three, "Ground is gated below room depth three", failures)
+	_expect(ground_seen_at_depth_three, "Ground can appear from room depth three", failures)
+	_expect(not ice_seen_before_depth_four, "Ice is gated below room depth four", failures)
+	_expect(ice_seen_at_depth_four, "Ice can appear from room depth four", failures)
 	rooms.free()
 
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D
 	_expect(source != null, "green direction texture loads for fallback recolors", failures)
 	if source != null:
-		for palette in ["grey", "yellow"]:
+		for palette in ["grey", "yellow", "orange", "aquamarine"]:
 			var recolored := SlimeVisualComponent.recolor_direction_texture(source, palette, {})
 			_expect(recolored != null, "%s direction texture recolors" % palette, failures)
 			if recolored == null:
@@ -91,6 +123,8 @@ func _initialize() -> void:
 	stats.free()
 	yellow.free()
 	purple.free()
+	ground.free()
+	ice.free()
 	_finished = true
 	call_deferred("_finish", failures)
 

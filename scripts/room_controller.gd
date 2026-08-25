@@ -22,6 +22,10 @@ const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
 const GREY_ENEMY_WEIGHT: float = 1.0
 const YELLOW_ENEMY_WEIGHT: float = 1.0
 const YELLOW_MIN_DEPTH := 2
+const GROUND_ENEMY_WEIGHT: float = 1.0
+const GROUND_MIN_DEPTH := 3
+const ICE_ENEMY_WEIGHT: float = 1.0
+const ICE_MIN_DEPTH := 4
 const PURPLE_ENEMY_WEIGHT: float = 0.12
 const PURPLE_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
@@ -118,6 +122,10 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		count = maxi(count + 1, 2)
 	if room_depth >= YELLOW_MIN_DEPTH:
 		variant_pool.append({"variant": "yellow", "weight": YELLOW_ENEMY_WEIGHT})
+	if room_depth >= GROUND_MIN_DEPTH:
+		variant_pool.append({"variant": "orange", "weight": GROUND_ENEMY_WEIGHT})
+	if room_depth >= ICE_MIN_DEPTH:
+		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
 	if allow_rogue and room_depth >= 3:
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later

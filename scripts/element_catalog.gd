@@ -10,9 +10,11 @@ enum Element {
 	ELECTRIC,
 	GRASS,
 	SHADOW,
+	GROUND,
+	ICE,
 }
 
-const ELEMENT_COUNT := 6
+const ELEMENT_COUNT := 8
 const DEFAULT_ELEMENT := Element.NEUTRAL
 const DAMAGE_NUMBER_COLOR_BOOST := 1.10
 
@@ -23,6 +25,8 @@ const IDS := {
 	Element.ELECTRIC: &"electric",
 	Element.GRASS: &"grass",
 	Element.SHADOW: &"shadow",
+	Element.GROUND: &"ground",
+	Element.ICE: &"ice",
 }
 
 const DISPLAY_NAMES := {
@@ -32,6 +36,8 @@ const DISPLAY_NAMES := {
 	Element.ELECTRIC: "ELECTRIC",
 	Element.GRASS: "GRASS",
 	Element.SHADOW: "SHADOW",
+	Element.GROUND: "GROUND",
+	Element.ICE: "ICE",
 }
 
 const PALETTE_KEYS := {
@@ -41,18 +47,23 @@ const PALETTE_KEYS := {
 	Element.ELECTRIC: "yellow",
 	Element.GRASS: "green",
 	Element.SHADOW: "purple",
+	Element.GROUND: "orange",
+	Element.ICE: "aquamarine",
 }
 
 ## Rows are attacking elements; columns are defending elements. The values
 ## are the Tiny Demons-scaled Generation III relationships: resistance 0.8,
-## weakness 1.25, immunity 0.0, neutral 1.0.
+## weakness 1.25, immunity 0.0, neutral 1.0. Ground and Ice are appended to
+## the original catalog so the existing serialized element values stay stable.
 const MATCHUP_TABLE := [
-	[1.00, 1.00, 1.00, 1.00, 1.00, 0.00],
-	[1.00, 0.80, 0.80, 1.00, 1.25, 1.00],
-	[1.00, 1.25, 0.80, 1.00, 0.80, 1.00],
-	[1.00, 1.00, 1.25, 0.80, 0.80, 1.00],
-	[1.00, 0.80, 1.25, 1.00, 0.80, 1.00],
-	[0.00, 1.00, 1.00, 1.00, 1.00, 1.25],
+	[1.00, 1.00, 1.00, 1.00, 1.00, 0.00, 1.00, 1.00],
+	[1.00, 0.80, 0.80, 1.00, 1.25, 1.00, 1.00, 1.25],
+	[1.00, 1.25, 0.80, 1.00, 0.80, 1.00, 1.25, 1.00],
+	[1.00, 1.00, 1.25, 0.80, 0.80, 1.00, 0.00, 1.00],
+	[1.00, 0.80, 1.25, 1.00, 0.80, 1.00, 1.25, 1.00],
+	[0.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.00, 1.00],
+	[1.00, 1.25, 1.00, 1.25, 0.80, 1.00, 0.80, 1.00],
+	[1.00, 0.80, 0.80, 1.00, 1.25, 1.00, 1.25, 0.80],
 ]
 
 
@@ -118,6 +129,10 @@ static func element_for_palette(palette: String) -> int:
 			return Element.GRASS
 		"purple":
 			return Element.SHADOW
+		"orange":
+			return Element.GROUND
+		"aquamarine":
+			return Element.ICE
 		"grey", "gray":
 			return Element.NEUTRAL
 	return Element.NEUTRAL

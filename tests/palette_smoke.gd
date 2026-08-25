@@ -11,6 +11,9 @@ func _initialize() -> void:
 	_expect(library.NORMAL["blue"] == Color8(59, 93, 201), "blue normal is the canonical player blue", failures)
 	_expect(library.SHADOW["blue"] == Color8(41, 54, 111), "blue shadow is the canonical dark blue", failures)
 	_expect(library.ACCENT["blue"] == Color8(65, 166, 246), "blue accent is the canonical bright blue", failures)
+	_expect(library.ACCENT["orange"] == Color8(255, 205, 117), "orange has a ground highlight", failures)
+	_expect(library.ACCENT["aquamarine"] == Color8(134, 203, 255), "aquamarine has a light ice highlight", failures)
+	_expect(library.accent("aquamarine").v > library.normal("aquamarine").v, "ice highlight is brighter than its base color", failures)
 	_expect(library.ARCHETYPE_HIGHLIGHTS[0] == Color8(65, 166, 246), "archetype highlight blue is the accent blue", failures)
 	for name: String in library.PALETTE_NAMES:
 		_expect(library.NORMAL.has(name) and library.SHADOW.has(name), "palette %s has shadow and normal" % name, failures)

@@ -9,11 +9,11 @@ chart on the same day)
 
 This document is the design and implementation handoff for adding a neutral
 Gray slime, assigning an element to every slime color, and carrying elemental
-matchups through damage calculation and feedback. The rules in §5 and the
-decisions in §12 are now settled; implementation follows the ordered plan in
-§10. All code references below were verified against the current tree (see
-§13 for the verification log, including the corrections applied during
-review).
+matchups through damage calculation and feedback. It now also covers the
+orange Ground and aquamarine Ice variants. The rules in §5 and the decisions
+in §12 are settled; implementation follows the ordered plan in §10. All code
+references below were verified against the current tree (see §13 for the
+verification log, including the corrections applied during review).
 
 Related design:
 
@@ -26,10 +26,10 @@ Related design:
 
 Every slime has two related but separate identities:
 
-- A visual variant/palette: `grey`, `red`, `blue`, `yellow`, `green`, or
-  `purple`.
-- A gameplay element: `neutral`, `fire`, `water`, `electric`, `grass`, or
-  `shadow`.
+- A visual variant/palette: `grey`, `red`, `blue`, `yellow`, `green`,
+  `purple`, `orange`, or `aquamarine`.
+- A gameplay element: `neutral`, `fire`, `water`, `electric`, `grass`,
+  `shadow`, `ground`, or `ice`.
 
 The canonical mapping is:
 
@@ -41,6 +41,8 @@ The canonical mapping is:
 | `yellow` | Electric slime | Electric | High SPD, low DEF |
 | `green` | Grass slime | Grass | High VIT, low STR |
 | `purple` | Shadow slime | Shadow | High SPD and STR, low DEF and VIT |
+| `orange` | Ground slime | Ground | Sturdy DEF/VIT, low SPD |
+| `aquamarine` | Ice slime | Ice | Fast SPD, low DEF |
 
 The code uses `neutral` as the stable element ID and `grey` as the visual
 palette key. This matches the existing split verified in code: gameplay
@@ -63,6 +65,8 @@ element identity with the current generic yellow crit color.
 
 - A Gray/Neutral slime variant with even level-one stats.
 - Yellow/Electric slime support using the existing recolor pipeline.
+- Orange/Ground and aquamarine/Ice slime support using the existing recolor
+  pipeline, with dedicated damage-matchup rows and columns.
 - Explicit element identity on slime definitions and damage events.
 - Gen-III-inspired Fire/Water/Electric/Grass relationships with the custom
   `0.8` resistance and `1.25` weakness values requested for Tiny Demons.
@@ -88,10 +92,10 @@ element identity with the current generic yellow crit color.
 
 ### Element
 
-The type used by the damage matchup calculation. The initial catalog is:
+The type used by the damage matchup calculation. The current catalog is:
 
 ```text
-NEUTRAL, FIRE, WATER, ELECTRIC, GRASS, SHADOW
+NEUTRAL, FIRE, WATER, ELECTRIC, GRASS, SHADOW, GROUND, ICE
 ```
 
 `NEUTRAL` is the combat equivalent of the Normal-type role needed for the
@@ -131,26 +135,29 @@ available until all presentation consumers have read it.
 ## 4. Elemental matchup contract
 
 The relationship layout follows the Generation III subset for Normal, Fire,
-Water, Electric, Grass, and Ghost. Tiny Demons intentionally uses different
-strengths than Pokémon: a weakness is `1.25x`, a resistance is `0.8x`, and an
-immunity is `0.0x`. Neutral is `1.0x`.
+Water, Electric, Grass, Ghost, Ground, and Ice. Tiny Demons intentionally uses
+different strengths than Pokémon: a weakness is `1.25x`, a resistance is
+`0.8x`, and an immunity is `0.0x`. Neutral is `1.0x`.
 
 The original Generation III chart uses `2x`, `0.5x`, and `0x`; the source
 reference is the [Generation III type chart](https://bulbapedia.bulbagarden.net/wiki/Type_chart_%28Generation_III%29)
 (Generation II–V chart on Bulbapedia's type-chart page). The table below is
-the authoritative Tiny Demons rule set. Every cell of the six-type subset was
-re-checked against the source during review; see §13.
+the authoritative Tiny Demons rule set. Ground and Ice use the source
+relationships with the same scaled values as the existing elements; the
+existing Shadow self-weakness remains a Tiny Demons-specific choice.
 
 Rows are attacking elements. Columns are defending elements.
 
-| Attacker ↓ / Defender → | Neutral | Fire | Water | Electric | Grass | Shadow |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Neutral | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | **0.00** |
-| Fire | 1.00 | 0.80 | 0.80 | 1.00 | **1.25** | 1.00 |
-| Water | 1.00 | **1.25** | 0.80 | 1.00 | 0.80 | 1.00 |
-| Electric | 1.00 | 1.00 | **1.25** | 0.80 | 0.80 | 1.00 |
-| Grass | 1.00 | 0.80 | **1.25** | 1.00 | 0.80 | 1.00 |
-| Shadow | **0.00** | 1.00 | 1.00 | 1.00 | 1.00 | **1.25** |
+| Attacker ↓ / Defender → | Neutral | Fire | Water | Electric | Grass | Shadow | Ground | Ice |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Neutral | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | **0.00** | 1.00 | 1.00 |
+| Fire | 1.00 | 0.80 | 0.80 | 1.00 | **1.25** | 1.00 | 1.00 | **1.25** |
+| Water | 1.00 | **1.25** | 0.80 | 1.00 | 0.80 | 1.00 | **1.25** | 1.00 |
+| Electric | 1.00 | 1.00 | **1.25** | 0.80 | 0.80 | 1.00 | **0.00** | 1.00 |
+| Grass | 1.00 | 0.80 | **1.25** | 1.00 | 0.80 | 1.00 | **1.25** | 1.00 |
+| Shadow | **0.00** | 1.00 | 1.00 | 1.00 | 1.00 | **1.25** | 1.00 | 1.00 |
+| Ground | 1.00 | **1.25** | 1.00 | **1.25** | 0.80 | 1.00 | 0.80 | 1.00 |
+| Ice | 1.00 | 0.80 | 0.80 | 1.00 | **1.25** | 1.00 | **1.25** | 0.80 |
 
 The bold cells are the intentional weakness/immunity moments. This means:
 
@@ -161,6 +168,10 @@ The bold cells are the intentional weakness/immunity moments. This means:
   correction: the earlier draft also listed Electric as resisting Grass. In
   the Generation III chart Grass attacking Electric is neutral — it is
   Electric attacking Grass that is resisted — so Grass → Electric is `1.00`.)
+- Ground is strong against Fire and Electric, and is resisted by Grass; an
+  Electric attack has no effect on Ground.
+- Ice is strong against Grass and Ground, and is resisted by Fire, Water, and
+  Ice.
 - Neutral attacks cannot damage Shadow.
 - Shadow attacks cannot damage Neutral.
 - Shadow is weak to Shadow, matching Ghost attacking Ghost.
@@ -266,7 +277,7 @@ effect" read is unambiguous.
 
 ## 6. Slime stat definitions
 
-All six slime variants use an eight-point level-one base budget in the
+All eight slime variants use an eight-point level-one base budget in the
 project's existing stat order: `VIT`, `STR`, `DEF`, `SPD`. These are the
 approved first-pass definitions:
 
@@ -278,6 +289,8 @@ approved first-pass definitions:
 | Yellow | Electric | 2 | 2 | 1 | 3 | Fast, low DEF |
 | Green | Grass | 4 | 1 | 2 | 1 | High health, low damage |
 | Purple | Shadow | 1 | 3 | 1 | 3 | Fast ambush pressure, fragile |
+| Orange | Ground | 3 | 1 | 3 | 1 | Sturdy and grounded, slow |
+| Aquamarine | Ice | 2 | 2 | 1 | 3 | Fast, low DEF |
 
 Approved level-growth weights, in the same stat order:
 
@@ -289,6 +302,8 @@ Approved level-growth weights, in the same stat order:
 | Yellow | 0.20 | 0.15 | 0.10 | 0.55 |
 | Green | 0.55 | 0.10 | 0.20 | 0.15 |
 | Purple | 0.08 | 0.42 | 0.08 | 0.42 |
+| Orange | 0.35 | 0.10 | 0.45 | 0.10 |
+| Aquamarine | 0.15 | 0.20 | 0.15 | 0.50 |
 
 Review corrections and constraints:
 
@@ -296,7 +311,7 @@ Review corrections and constraints:
   enemies already use it (`combat_runtime_controller.gd:173` maps blue →
   `FAVOR_DEF`, red → `FAVOR_STR`, purple → `FAVOR_STR_DEF`, else →
   `FAVOR_VIT`). The real problem is that the five existing profiles cannot
-  express these six definitions (Yellow and Purple especially), not that the
+  express these eight definitions (Yellow, Purple, Ground, and Ice especially), not that the
   mechanism is player-only.
 - Adopting this table rebalances existing variants. Today's bases are
   green `4/2/1/3` (FAVOR_VIT), blue `3/1/3/1` (FAVOR_DEF), red `2/4/1/1`
@@ -313,26 +328,26 @@ Review corrections and constraints:
   sequences. Already-earned level points are never rerolled because
   `_recalculate` replays the same seeded sequence.
 
-## 7. Gray and Yellow presentation plan
+## 7. Gray, Yellow, Ground, and Ice presentation plan
 
 No new imported sprite sheets are required. The verified pipeline already
 recolors the authored Green sheets for Purple
 (`actor_presentation_runtime_controller.gd:64-77`,
-`slime_visual_component.gd:149-155`). Reuse it:
+`slime_visual_component.gd:149-155`). Reuse it for all four variants:
 
 1. Source `SlimeGreenLeft.png` / `SlimeGreenRight.png` for variants without
    dedicated art, exactly as Purple does today.
 2. Recolor the Green shadow/normal/accent source tones (`257179`, `38B764`,
-   `A7F070`) through `PaletteLibrary`. Verified: `grey` and `yellow` both have
-   `SHADOW`, `NORMAL`, and `ACCENT` entries (`palette_library.gd:14-32`), and
-   `_palette_color` recolors any palette that has an `ACCENT` key, so both
-   work through the existing path with no mapping changes.
-3. Add `grey` and `yellow` entries to the attack frame library
+   `A7F070`) through `PaletteLibrary`. `grey`, `yellow`, `orange`, and
+   `aquamarine` all have `SHADOW`, `NORMAL`, and `ACCENT` entries, so they work
+   through the existing path with no imported sprite sheets.
+3. Add `grey`, `yellow`, `orange`, and `aquamarine` entries to the attack frame library
    (`slime_visual_component.gd:59-64`) and shocked frame library
    (`slime_visual_component.gd:88-93`).
 4. Generalize the Purple-only direction-texture fallback in
    `build_slime_direction_textures` into a recolored-fallback list
-   (`grey`, `yellow`, `purple`), each recolored exactly once.
+   (`grey`, `yellow`, `purple`, `orange`, `aquamarine`), each recolored exactly
+   once.
 5. Keep the visual variant key separate from the element ID.
 
 Damage-number colors reuse `PaletteLibrary` — no second RGB table. Per
@@ -395,7 +410,7 @@ commit, and register every new test file in the hard-coded list at
 ### Phase 1 — Pure element and result data
 
 - Add `scripts/element_catalog.gd`: `Element` enum, display names, palette
-  keys, the six-by-six table from §4, `effectiveness(attacker, defender)`,
+  keys, the eight-by-eight table from §4, `effectiveness(attacker, defender)`,
   `damage_number_color(element)` (10%-boosted ACCENT with NORMAL fallback), and the
   `aspect → element` / `magic palette → element` adapters.
 - New `tests/element_catalog_smoke.gd`: every table cell, both immunity
@@ -412,7 +427,7 @@ Exit condition: the type system and formulas work without a main scene.
 
 ### Phase 2 — Variant catalog and Gray/Yellow visuals
 
-- Add `scripts/slime_variant_catalog.gd` with the six definitions from §6
+- Add `scripts/slime_variant_catalog.gd` with the eight definitions from §6
   (variant key, element, display name, base stats, growth weights).
 - Add `StatsComponent.apply_enemy_variant_profile(base_values,
   growth_weights, seed_token)`: stores overrides, folds `seed_token.hash()`
@@ -448,7 +463,7 @@ without missing-texture special cases.
 - Delete `last_damage_was_critical` from `gameplay_state.gd` and both call
   sites.
 - Tests: sword into Shadow = 0/`immune`; Fire Triangle into Grass gets
-  `1.25x`; slime bites carry their own element; guard reduction math is
+  `1.25x`; Ground and Ice slime bites carry their own elements; guard reduction math is
   unchanged for Neutral.
 
 Exit condition: every damage path has an explicit element, Neutral-versus-
@@ -477,7 +492,9 @@ feedback without reading a debug label.
 - Add `grey` at weight `1.0` to the base variant pool
   (`room_controller.gd:108-112`); add `yellow` at weight `1.0` once
   `room_depth >= 2` so the first rooms of run 1 stay on the established
-  colors plus Gray. Purple's constants are untouched.
+  colors plus Gray. Add Ground at depth 3 and Ice at depth 4, both at weight
+  `1.0`, so their interactions are introduced after the existing roster.
+  Purple's constants are untouched.
 - Boss tables stay unchanged (lead never Purple; minors blue/green/red with
   the 4% Purple conversion). Revisit only if Phase 5 metrics say otherwise.
 - Update `GAMEPLAY_TUNING.md`: final stat/matchup weights, the two new
@@ -507,7 +524,7 @@ create an accidental early-game difficulty spike.
 ### Pure data and formula tests
 
 - Every element ID maps to exactly one display name and palette key.
-- The six-by-six table is deterministic and directionally correct, including
+- The eight-by-eight table is deterministic and directionally correct, including
   Grass → Electric = `1.00` (the review correction).
 - Neutral damage is unchanged at `1.0x`.
 - Fire/Water/Electric/Grass use `0.8x` and `1.25x`, not `0.5x` and `2.0x`.
@@ -520,13 +537,14 @@ create an accidental early-game difficulty spike.
 
 ### Slime and encounter tests
 
-- Gray has `2/2/2/2` at level one; all six variants match §6.
+- Gray has `2/2/2/2` at level one; all eight variants match §6.
 - Each slime bite resolves to its own element.
-- Generated encounters can produce Gray immediately and Yellow at depth ≥ 2.
+- Generated encounters can produce Gray immediately, Yellow at depth ≥ 2,
+  Ground at depth ≥ 3, and Ice at depth ≥ 4.
 - Purple's rarity/role remains within the existing tested bounds.
-- Gray and Yellow direction, attack, shocked, death, and health UI paths have
-  valid textures.
-- Target display names and target health bars cover Grey/Yellow.
+- Gray, Yellow, Ground, and Ice direction, attack, shocked, death, and health
+  UI paths have valid textures.
+- Target display names and target health bars cover every slime variant.
 
 ### Integration and presentation tests
 
@@ -534,7 +552,7 @@ create an accidental early-game difficulty spike.
 - Gray Triangle is Neutral; active starter aspects use Fire/Water/Electric.
 - Damage numbers use the attack element's boosted ACCENT color, not the target
   variant and not `NORMAL["yellow"]`/`NORMAL["red"]` (gold/healing clashes).
-- Enemy damage numbers are element-colored for all six variants.
+- Enemy damage numbers are element-colored for all eight variants.
 - Critical numbers keep the exact element color inside the glyph and add a
   white outline.
 - Immune hits show the `immune` floater and deal zero.
@@ -568,14 +586,18 @@ These settle the nine review questions from the draft, with code evidence:
 6. **Yellow availability**: joins the pool at `room_depth >= 2`. Yellow is
    the fastest variant (SPD 3); keeping it out of the very first rooms
    preserves the established run-1 learning curve.
-7. **Immune feedback**: a brief `immune` floater in the attack's element
+7. **Ground/Ice availability**: Ground joins at `room_depth >= 3` and Ice at
+   `room_depth >= 4`. Their first-pass stat profiles are sturdy/slow for
+   Ground and fast/low-DEF for Ice; these are balance levers, not matchup
+   requirements.
+8. **Immune feedback**: a brief `immune` floater in the attack's element
    color through the existing `display_text` path, plus suppressed hit
    reactions. No new glyph pipeline needed.
-8. **Damage-number color source**: a 10%-boosted `PaletteLibrary.ACCENT` with
+9. **Damage-number color source**: a 10%-boosted `PaletteLibrary.ACCENT` with
    `NORMAL` fallback. Verified collisions rule out NORMAL-first: `NORMAL["yellow"]`
    equals the gold number color and `NORMAL["red"]` equals the player healing
    color.
-9. **Shield numbers**: keep the existing light-blue `Color8(148, 220, 255)`
+10. **Shield numbers**: keep the existing light-blue `Color8(148, 220, 255)`
    convention as a separate UI channel. The absorbed portion is guard
    bookkeeping, not elemental damage to the player, and the convention is
    already established.
@@ -588,7 +610,8 @@ accepted.
 ### Matchup research (external)
 
 - Source: Bulbapedia type chart, Generation II–V table (which is the
-  Generation III chart). All 36 cells of the six-type subset were compared.
+  Generation III chart). The Ground/Ice rows and columns were added to the
+  existing subset using the same comparison.
 - Result: the draft table matched Gen III in 35 of 36 cells. Corrected:
   **Grass attacking Electric is `1.00`, not `0.80`** — in Gen III, Electric
   resists Electric and Grass resists Electric, but Electric does not resist
@@ -596,6 +619,9 @@ accepted.
   Fire/Water/Electric/Grass relationships were confirmed accurate.
 - The `0.8`/`1.25` strengths are an intentional, documented deviation from
   the source's `0.5`/`2.0`.
+- Ground is immune to Electric, Ground is strong against Fire/Electric, and
+  Ice is strong against Grass/Ground; these relationships are carried into the
+  scaled eight-by-eight runtime table.
 
 ### Codebase research (internal)
 
@@ -603,12 +629,12 @@ accepted.
 | --- | --- |
 | `CombatCalculator.calculate_snapshot_damage` exists; extend `DamageResult` | Verified — `combat_calculator.gd:65`; result today is only `{amount, critical}` |
 | Mutable global `last_damage_was_critical` | Verified — `gameplay_state.gd:286`; one writer, one reader |
-| `AllocationProfile` is player-oriented | **Corrected** — enemies already use it (`combat_runtime_controller.gd:173`); the gap is that five presets cannot express six variant definitions |
+| `AllocationProfile` is player-oriented | **Corrected** — enemies already use it (`combat_runtime_controller.gd:173`); the gap is that five presets cannot express the eight variant definitions |
 | `CombatRuntimeController` damage/variant/number seams | Verified — all four methods exist (`:47,168,244,395`); damage getters return bare floats |
 | `PlayerAttackComponent.apply_hitbox`, `SlimeActor.apply_attack_hit`/`damage_actor`, `HealthComponent` | Verified — damage crosses as float + crit bool only |
 | `MagicRuntimeController` Triangle path | Verified — grey ×1.10 / elemental ×1.15; palette is visual-only today and already reaches `magic_hit_slime` |
 | `EffectsSpawner.spawn_health_number` color rules | Verified — white default, crit yellow, non-white override channel; XP/gold/level-up/shield specials catalogued |
-| Purple-only Green-sheet recolor; `PaletteLibrary` has grey/yellow | Verified — `actor_presentation_runtime_controller.gd:64-77`; grey and yellow have full SHADOW/NORMAL/ACCENT entries |
+| Purple-only Green-sheet recolor; `PaletteLibrary` has grey/yellow | Verified — `actor_presentation_runtime_controller.gd:64-77`; grey, yellow, orange, and aquamarine now have full SHADOW/NORMAL/ACCENT entries |
 | Encounter pools and Purple rarity | Verified — `room_controller.gd:22-23,108-119,140-162` |
 | `SlimeActor` variant validation | Clarified — the enum lives at `slime_actor.gd:4`; the runtime fallback lives in `configure_slime_variant`, not in the actor |
 | `slime_tuning.gd` per-variant data | **Corrected** — none exists; variant stats come from the AllocationProfile mapping, so the variant catalog adds a new home rather than extending slime_tuning |
