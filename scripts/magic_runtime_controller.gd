@@ -15,7 +15,7 @@ const IMBUE_MAGIC_FRAME_COUNT := 9
 const IMBUE_EFFECT_FRAME_INDEX := 4
 const IMBUE_COST := 40
 const IMBUE_DURATION := 15.0
-const IMBUE_COOLDOWN := 30.0
+const IMBUE_COOLDOWN := 20.0
 const IMBUE_HOLD_THRESHOLD := 0.35
 
 var magic_animation_active := false
@@ -309,8 +309,11 @@ func reset_for_room(root: Object, reset_cooldown := false) -> void:
 	magic_hold_active = false
 	magic_hold_triggered = false
 	magic_hold_timer = 0.0
-	if reset_cooldown:
-		imbue_cooldown_remaining = 0.0
+	if not reset_cooldown:
+		# A room transition cancels an in-progress cast, but the already-applied
+		# weapon effect and its cooldown belong to the run rather than the room.
+		return
+	imbue_cooldown_remaining = 0.0
 	imbue_remaining = 0.0
 	imbued_element = ElementCatalogScript.Element.NEUTRAL
 	root.set("player_imbued_element", imbued_element)

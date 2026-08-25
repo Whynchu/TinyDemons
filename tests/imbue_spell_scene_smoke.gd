@@ -65,7 +65,7 @@ func _initialize() -> void:
 	_expect(int(chroma.get("current_chroma")) == 60, "IMBUE spends exactly 40 mana on frame five", failures)
 	_expect(int(runtime.get("imbued_element")) == Elements.Element.FIRE, "IMBUE snapshots the active element", failures)
 	_expect(absf(float(runtime.get("imbue_remaining")) - 15.0) < 0.1, "IMBUE starts its fifteen second duration", failures)
-	_expect(absf(float(runtime.get("imbue_cooldown_remaining")) - 30.0) < 0.1, "IMBUE starts its thirty second cooldown", failures)
+	_expect(absf(float(runtime.get("imbue_cooldown_remaining")) - 20.0) < 0.1, "IMBUE starts its twenty second cooldown", failures)
 	if equipment != null:
 		equipment.tick(gameplay, 0.0)
 		_expect(int(equipment.get("imbue_element")) == Elements.Element.FIRE, "weapon visual stores the imbued element", failures)
@@ -73,6 +73,15 @@ func _initialize() -> void:
 	for _frame in 5:
 		runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
 	_expect(not bool(gameplay.get("player_is_magic_casting")), "IMBUE returns to normal animation after the held final frame", failures)
+	var imbue_before_room_reset := float(runtime.get("imbue_remaining"))
+	gameplay.call("_reset_magic_runtime")
+	if equipment != null:
+		equipment.reset_for_room(gameplay)
+	_expect(int(runtime.get("imbued_element")) == Elements.Element.FIRE, "room reset preserves the active IMBUE element", failures)
+	_expect(absf(float(runtime.get("imbue_remaining")) - imbue_before_room_reset) < 0.1, "room reset preserves the active IMBUE timer", failures)
+	_expect(int(gameplay.call("_player_weapon_element")) == Elements.Element.FIRE, "weapon attacks retain IMBUE after a room reset", failures)
+	if equipment != null:
+		_expect(int(equipment.get("imbue_element")) == Elements.Element.FIRE, "room reset restores the imbued weapon visual", failures)
 
 	var attack := gameplay.get("player_attack_component") as PlayerAttackComponent
 	if attack != null:
@@ -88,8 +97,8 @@ func _initialize() -> void:
 	_expect(int(runtime.get("imbued_element")) == Elements.Element.NEUTRAL, "weapon element clears after fifteen seconds", failures)
 	_expect(int(gameplay.get("player_imbued_element")) == Elements.Element.NEUTRAL, "gameplay element mirror clears after expiration", failures)
 	_expect(float(runtime.get("imbue_cooldown_remaining")) > 0.0, "IMBUE cooldown outlasts its active duration", failures)
-	runtime.call("tick_magic_animation", gameplay, 15.0)
-	_expect(is_zero_approx(float(runtime.get("imbue_cooldown_remaining"))), "IMBUE becomes ready after thirty seconds", failures)
+	runtime.call("tick_magic_animation", gameplay, 5.0)
+	_expect(is_zero_approx(float(runtime.get("imbue_cooldown_remaining"))), "IMBUE becomes ready after twenty seconds", failures)
 
 	gameplay.queue_free()
 	await process_frame
