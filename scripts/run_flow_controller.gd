@@ -84,6 +84,7 @@ func begin_new_run(root: Object) -> void:
 	# it, just like the first run's tutorial gate.
 	root.starter_flame_attuned_this_run = false
 	_reset_dungeon_for_new_run(root)
+	root.call("_reset_magic_runtime", true)
 	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
 	if momentum != null:
 		momentum.reset_all()

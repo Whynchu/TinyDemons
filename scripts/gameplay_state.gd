@@ -2,6 +2,7 @@ extends Node2D
 class_name GameplayState
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
@@ -51,6 +52,10 @@ const CHROMA_SATURATION_CURVE_EXPONENT := 0.65
 const MAGIC_MP_COST := 10.0
 const MAGIC_COOLDOWN := 2.0
 const GREY_MAGIC_COOLDOWN := 2.5
+const IMBUE_MP_COST := 40.0
+const IMBUE_DURATION := 15.0
+const IMBUE_COOLDOWN := 30.0
+const IMBUE_HOLD_THRESHOLD := 0.35
 const CHROMA_PICKUP_VALUE := 20
 const CHROMA_PICKUP_DROP_CHANCE := 0.35
 const CHROMA_PICKUP_COLLECTION_DISTANCE := 10.0
@@ -166,6 +171,7 @@ var player_attack_input_was_down := false
 var player_attack_hit_done := false
 var player_attack_flip_h := false
 var player_magic_flip_h := false
+var player_imbued_element := ElementCatalogScript.Element.NEUTRAL
 var player_hit_flash_timer := 0.0
 var player_hitstun_timer := 0.0
 var walkable_points: Array[Vector2] = []
@@ -423,6 +429,7 @@ func _respec_player_stats() -> int:
 	return int(profile_runtime_controller.call("respec_player_stats", self))
 func _start_player_death() -> void:
 	_cancel_magic_animation()
+	_reset_magic_runtime(true)
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
@@ -653,7 +660,7 @@ func _build_interact_prompt() -> void:
 func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
-	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; 	hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
+	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; 	hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
@@ -1070,7 +1077,10 @@ func _update_player_mp_ui(_delta: float = 0.0) -> void: magic_runtime_controller
 func _current_player_chroma() -> float: return float(magic_runtime_controller.call("current_player_chroma", self))
 func _restore_player_mp() -> void: magic_runtime_controller.call("restore_player_mp", self)
 func _try_cast_magic() -> bool: return bool(magic_runtime_controller.call("try_cast_magic", self))
+func _update_magic_input(magic_down: bool, was_down: bool, delta: float) -> bool: return bool(magic_runtime_controller.call("update_magic_input", self, magic_down, was_down, delta))
+func _try_cast_imbue() -> bool: return bool(magic_runtime_controller.call("try_cast_imbue", self))
 func _cancel_magic_animation() -> void: magic_runtime_controller.call("cancel_magic_animation", self)
+func _reset_magic_runtime(reset_cooldown: bool = false) -> void: magic_runtime_controller.call("reset_for_room", self, reset_cooldown)
 func _sync_chroma_presentation() -> void: magic_runtime_controller.call("sync_chroma_presentation", self)
 func _execute_current_aspect_ability(mode: int) -> bool: return bool(magic_runtime_controller.call("execute_current_aspect_ability", self, mode))
 func _player_visual_center() -> Vector2: return magic_runtime_controller.call("player_visual_center", self) as Vector2
@@ -1083,6 +1093,7 @@ func _resolve_magic_projectile_hit(target: Sprite2D, world_position: Vector2, pa
 func _magic_projectile_hit_target(sprite: Sprite2D) -> Sprite2D: return magic_runtime_controller.call("magic_projectile_hit_target", self, sprite) as Sprite2D
 func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool: return bool(magic_runtime_controller.call("_circle_intersects_polygon", center, radius, polygon))
 func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0) -> void: magic_runtime_controller.call("magic_hit_slime", self, slime, world_position, palette, ability_mode)
+func _player_weapon_element() -> int: return int(magic_runtime_controller.call("player_weapon_element", self))
 func _spawn_magic_trail(world_position: Vector2, palette: String) -> void: magic_runtime_controller.call("spawn_magic_trail", self, world_position, palette)
 func _spawn_magic_impact(world_position: Vector2, palette: String) -> void: magic_runtime_controller.call("spawn_magic_impact", self, world_position, palette)
 func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)

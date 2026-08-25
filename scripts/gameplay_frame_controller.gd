@@ -13,7 +13,7 @@ static func phase_order() -> Array[StringName]:
 	return PHASE_ORDER.duplicate()
 
 
-func update_player_input(root: Object) -> void:
+func update_player_input(root: Object, delta: float) -> void:
 	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
 	if attack_down and not bool(root.get("player_attack_input_was_down")):
 		var accepted_attack := false
@@ -37,8 +37,8 @@ func update_player_input(root: Object) -> void:
 		root.call("_record_run_action_input", &"roll", accepted_roll)
 	root.set("player_roll_input_was_down", roll_down)
 	var magic_down: bool = root.call("_is_magic_input_pressed")
-	if magic_down and not bool(root.get("magic_input_was_down")):
-		var accepted_magic: bool = root.call("_try_cast_magic")
+	var accepted_magic: bool = root.call("_update_magic_input", magic_down, bool(root.get("magic_input_was_down")), delta)
+	if accepted_magic:
 		root.call("_record_run_action_input", &"magic", accepted_magic)
 	root.set("magic_input_was_down", magic_down)
 
@@ -144,7 +144,7 @@ func tick(root: Object, delta: float) -> void:
 	var previous_attacking: bool = root.get("player_is_attacking")
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null: guard.tick(root, delta, not player_input_locked and bool(root.call("_is_guard_input_held")))
-	if not player_input_locked: update_player_input(root)
+	if not player_input_locked: update_player_input(root, delta)
 	player_input_locked = dialogue_was_active or bool(root.get("player_is_magic_casting"))
 	var player_attack := root.get("player_attack_component") as PlayerAttackComponent
 	if player_attack != null and player_attack.combo_buffered and bool(root.get("player_is_attacking")) and root.get("player_anim_name") == "attack1":
