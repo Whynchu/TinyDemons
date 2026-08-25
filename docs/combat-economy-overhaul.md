@@ -169,8 +169,9 @@ instead of hanging.
 > Status: **Implemented - verified headless**
 
 The old fuse flow consumed a *selected duplicate* and upgraded whichever
-surviving item shared its definition. Cost was a flat 20G per fuse regardless
-of the target's state, so a full +10 upgrade cost the same as a single step.
+surviving item shared its definition. The current flow charges Souls on a
+stepped ladder: common +0 -> +1 costs 1 Soul, each enhancement adds 1 Soul,
+the common +10 -> rare transition costs 10 Souls, and rare +0 -> +1 costs 11.
 The redesign makes the hub FUSE tab explicit and honest:
 
 - The player browses **targets**: any item with upgrade capacity and at least
@@ -182,10 +183,10 @@ The redesign makes the hub FUSE tab explicit and honest:
   target's remaining upgrade capacity (`max_fusion_steps`).
 - The player chooses a **batch count** (left/right in the FUSE tab) up to the
   available material count. `fusion_batch_cost(item, count)` sums per-step
-  costs, so the price scales with the target's enhancement: +0 -> +1 costs
-  `FUSION_BASE_COST` (20G), +1 -> +2 costs `+FUSION_COST_PER_ENHANCEMENT`
-  (15G more), and the step cost resets to the base rate after a rarity bump.
-- `fuse_duplicates(target_id, count)` validates gold and materials, applies
+  costs, so the price scales with the target's enhancement and rarity using
+  `fusion_step_cost`; the common +10 -> rare transition costs 10 Souls and
+  rare +0 -> +1 costs 11 Souls.
+- `fuse_duplicates(target_id, count)` validates Souls and materials, applies
   each step to a working copy (enhancement up to +10, then rarity bump to
   +0), consumes exactly the requested materials, charges the summed cost, and
   emits `changed`.
@@ -198,18 +199,19 @@ New API in `player_profile.gd` (replaces the removed
 - `max_fusion_steps(item)` - steps to reach mythic +10 from the item's state.
 - `fusion_material_count(target_instance_id, catalog)` - eligible material
   count (0 when full or no materials).
-- `fusion_batch_cost(item, count)` - summed per-step gold cost.
+- `fusion_step_cost(rarity, enhancement)` - the Soul cost for one upgrade step.
+- `fusion_batch_cost(item, count)` - summed per-step Soul cost.
 - `fuse_duplicates(target_instance_id, count, catalog)` - validates + applies
   a batch upgrade.
 
 ### Hub UI (screen_state_controller.gd)
 
 - FUSE tab (page 3) lists targets; row label shows the target's enhancement.
-- Detail area shows `FUSE xN  costG  HAVE n  +x -> +y` with the live batch
+- Detail area shows `FUSE xN  costS  HAVE n  +x -> +y` with the live batch
   cost and final-enhancement projection; overflow rows show
   `MYTHIC +10  SALVAGE nG`.
 - Action button reads `FUSE xN` / `SALVAGE` and is disabled when there is no
-  valid action or gold is insufficient (message `NEED nG`).
+  valid action or Souls are insufficient (message `NEED nS`).
 - Left/right adjusts the batch count (`_shift_hub_fusion_count`); page and
   item changes reset it to 1.
 

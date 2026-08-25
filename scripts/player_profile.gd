@@ -7,8 +7,8 @@ const CURRENT_SCHEMA_VERSION := 7
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
-const FUSION_BASE_COST := 20
-const FUSION_COST_PER_ENHANCEMENT := 15
+const FUSION_START_COST := 1
+const FUSION_RARITY_STEP_COST := 10
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
@@ -154,6 +154,17 @@ func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = nu
 	return mini(matches, max_steps)
 
 
+func fusion_step_cost(rarity: StringName, enhancement_level: int) -> int:
+	var rarity_rank: int = int({&"common": 0, &"rare": 1, &"epic": 2, &"legendary": 3, &"mythic": 4}.get(rarity, 0))
+	var enhancement := clampi(enhancement_level, 0, MAX_ITEM_ENHANCEMENT)
+	# Enhancement steps rise one Soul at a time. The +10 rarity transition is
+	# priced at the final cost of that rarity, then the next rarity's +0 step
+	# starts ten Souls higher (common +10 -> rare costs 10; rare +0 -> +1 costs 11).
+	if enhancement >= MAX_ITEM_ENHANCEMENT:
+		return FUSION_START_COST + rarity_rank * FUSION_RARITY_STEP_COST + MAX_ITEM_ENHANCEMENT - 1
+	return FUSION_START_COST + rarity_rank * FUSION_RARITY_STEP_COST + enhancement
+
+
 func fusion_batch_cost(item: ItemInstance, count: int) -> int:
 	if item == null or count <= 0:
 		return 0
@@ -161,7 +172,7 @@ func fusion_batch_cost(item: ItemInstance, count: int) -> int:
 	var rarity := item.rarity
 	var enhancement := item.enhancement_level
 	for step in count:
-		total += FUSION_BASE_COST + maxi(enhancement, 0) * FUSION_COST_PER_ENHANCEMENT
+		total += fusion_step_cost(rarity, enhancement)
 		if enhancement >= MAX_ITEM_ENHANCEMENT:
 			rarity = ItemCatalog.next_rarity(rarity)
 			enhancement = 0

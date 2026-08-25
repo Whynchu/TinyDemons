@@ -18,9 +18,26 @@ func _initialize() -> void:
 	var pickup_runtime := gameplay.get("pickup_runtime_controller") as Node
 	var soul_controller := gameplay.get("soul_pickup_controller") as Node
 	var profile := gameplay.get("player_profile") as PlayerProfile
+	var hud_controller := gameplay.get("hud_controller") as Node
 	var texture := pickup_runtime.call("soul_pickup_texture") as Texture2D if pickup_runtime != null else null
 	_expect(texture != null and texture.get_width() == 9 and texture.get_height() == 9, "Soul stand-in is exactly 9x9", failures)
 	_expect(soul_controller != null, "Soul pickup controller is composed", failures)
+	if hud_controller != null:
+		var player_hud := (gameplay.get("ui") as Node).get_node("PlayerHud") as Node2D
+		var gold_display := player_hud.get_node("GoldDisplay") as Node2D
+		var soul_display := player_hud.get_node("SoulDisplay") as Node2D
+		var soul_icon := hud_controller.get("soul_icon_indicator") as Sprite2D
+		_expect(is_equal_approx(gold_display.position.y, 4.0) and is_equal_approx(soul_display.position.y, 11.0), "currency displays sit inside the top black bar", failures)
+		_expect(soul_icon != null and soul_icon.texture != null and soul_icon.texture.get_width() == 5 and soul_icon.texture.get_height() == 5, "Soul HUD uses a 5x5 coin icon", failures)
+		var soul_image := soul_icon.texture.get_image() if soul_icon != null and soul_icon.texture != null else null
+		var has_purple_pixel := false
+		if soul_image != null:
+			for y in soul_image.get_height():
+				for x in soul_image.get_width():
+					var pixel := soul_image.get_pixel(x, y)
+					if pixel.a > 0.0 and pixel.b > pixel.r and pixel.b > pixel.g:
+						has_purple_pixel = true
+		_expect(has_purple_pixel, "Soul coin pixels are dyed purple", failures)
 	if soul_controller != null and profile != null:
 		var before := profile.souls
 		var player := gameplay.get("player") as Sprite2D

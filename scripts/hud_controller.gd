@@ -2,6 +2,7 @@ extends Node
 class_name HudController
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const SOUL_ICON_COLOR := Color8(211, 167, 255)
 
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
@@ -21,6 +22,7 @@ var room_number_indicator: Sprite2D = null
 var dungeon_run_indicator: Sprite2D = null
 var gold_indicator: Sprite2D = null
 var gold_amount_indicator: Sprite2D = null
+var soul_icon_indicator: Sprite2D = null
 var soul_amount_indicator: Sprite2D = null
 var run_timer_indicator: Sprite2D = null
 var gold_animation_frames: Array[Texture2D] = []
@@ -303,6 +305,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		room_number.position = Vector2(5, 141)
 		parent.add_child(room_number)
+	var gold_display := layout.get_node_or_null("GoldDisplay") as Node2D if layout != null else null
 	var gold := layout.get_node("GoldDisplay/Gold") as Sprite2D if layout != null else Sprite2D.new()
 	gold.name = "GoldIndicator"
 	gold.centered = false
@@ -311,6 +314,8 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		gold.position = Vector2(64, 4)
 		parent.add_child(gold)
+	if gold_display != null:
+		gold_display.position.y = 4.0
 	var gold_amount := layout.get_node("GoldDisplay/GoldAmount") as Sprite2D if layout != null else Sprite2D.new()
 	gold_amount.name = "GoldAmount"
 	gold_amount.centered = false
@@ -323,8 +328,19 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if soul_display == null:
 		soul_display = Node2D.new()
 		soul_display.name = "SoulDisplay"
-		soul_display.position = Vector2(205, 13) if layout != null else Vector2(64, 13)
+		soul_display.position = Vector2(205, 11) if layout != null else Vector2(64, 11)
 		(layout if layout != null else parent).add_child(soul_display)
+	else:
+		soul_display.position = Vector2(205, 11) if layout != null else Vector2(64, 11)
+	var soul_icon := soul_display.get_node_or_null("SoulIcon") as Sprite2D
+	if soul_icon == null:
+		soul_icon = Sprite2D.new()
+		soul_icon.name = "SoulIcon"
+		soul_display.add_child(soul_icon)
+	soul_icon.position = Vector2.ZERO
+	soul_icon.centered = false
+	soul_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	soul_icon.z_index = 2
 	var soul_amount := soul_display.get_node_or_null("SoulAmount") as Sprite2D
 	if soul_amount == null:
 		soul_amount = Sprite2D.new()
@@ -355,6 +371,10 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	gold.vframes = 1
 	gold.frame = 0
 	gold.texture = gold_frames[0] if not gold_frames.is_empty() else null
+	soul_icon.hframes = 1
+	soul_icon.vframes = 1
+	soul_icon.frame = 0
+	soul_icon.texture = _purple_coin_texture(gold_frames[0] if not gold_frames.is_empty() else null)
 	var buttons: Array[Sprite2D] = []
 	for data in [{"texture": "triangle55.png", "position": Vector2(224, 64)}, {"texture": "square55.png", "position": Vector2(219, 69)}, {"texture": "x55.png", "position": Vector2(224, 74)}, {"texture": "circle55.png", "position": Vector2(229, 69)}]:
 		var button := Sprite2D.new()
@@ -397,7 +417,25 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+
+
+func _purple_coin_texture(source: Texture2D) -> Texture2D:
+	if source == null:
+		return null
+	var image := source.get_image()
+	if image == null:
+		return source
+	image = image.duplicate()
+	var target_hue: float = SOUL_ICON_COLOR.h
+	var target_saturation: float = maxf(SOUL_ICON_COLOR.s, 0.45)
+	for y in image.get_height():
+		for x in image.get_width():
+			var source_color := image.get_pixel(x, y)
+			if source_color.a <= 0.0:
+				continue
+			image.set_pixel(x, y, Color.from_hsv(target_hue, target_saturation, source_color.v, source_color.a))
+	return ImageTexture.create_from_image(image)
 
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
