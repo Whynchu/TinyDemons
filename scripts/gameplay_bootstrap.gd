@@ -17,7 +17,7 @@ const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/slime_runtime_con
 const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/actor_presentation_runtime_controller.gd")
 const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
-const SLIME_ROSTER_SIZE := 8
+const SLIME_ROSTER_SIZE := 13
 
 
 func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:

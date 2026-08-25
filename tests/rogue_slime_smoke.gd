@@ -35,6 +35,12 @@ func _initialize() -> void:
 			_expect(variants.size() == scales.size() and variants.size() == popcorn.size(), "boss support slots keep encounter arrays aligned at rank %d seed %d" % [rank, seed], failures)
 			var support_index := variants.size() - 1
 			_expect(support_index > 0 and String(variants[support_index]) == "grey" and bool(popcorn[support_index]) and int((encounter["levels"] as Array)[support_index]) == rooms._popcorn_enemy_level(), "boss encounter guarantees a Normal Slime popcorn slot at rank %d seed %d" % [rank, seed], failures)
+			var support_count := 0
+			for popcorn_value in popcorn:
+				if bool(popcorn_value):
+					support_count += 1
+			var expected_support_count := mini(2 + maxi(rank - 1, 0), 6)
+			_expect(support_count == expected_support_count and support_count == rooms._boss_support_popcorn_count() and support_count >= 2, "boss encounter scales to %d Normal Slime popcorn supports at Run %d" % [expected_support_count, rank], failures)
 			boss_minor_slot_count += variants.size() - 1
 			for variant_index in range(1, variants.size()):
 				if String(variants[variant_index]) == "purple":
