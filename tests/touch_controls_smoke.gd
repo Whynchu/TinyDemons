@@ -9,6 +9,8 @@ func _initialize() -> void:
 	layer.set_last_input_device(InputDeviceTracker.Device.TOUCH)
 	layer.set_input_context(InputRouter.Context.GAMEPLAY)
 	_expect(layer.is_active(), "touch controls activate for touch gameplay input", failures)
+	var touch_root := layer.get_node("TouchControlsRoot") as Control
+	_expect(touch_root != null and touch_root.mouse_filter == Control.MOUSE_FILTER_PASS, "active touch controls remain in the GUI hit-test path", failures)
 
 	layer.set_virtual_stick(Vector2(2.0, 0.25))
 	var stick := layer.movement_vector()
@@ -45,6 +47,9 @@ func _initialize() -> void:
 	layer.set_last_input_device(InputDeviceTracker.Device.TOUCH)
 	layer.set_input_context(InputRouter.Context.HUB)
 	_expect(not layer.is_active(), "touch controls hide behind hub/menu overlays", failures)
+	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "inactive touch overlay does not intercept menu taps", failures)
+	layer.set_input_context(InputRouter.Context.MENU)
+	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "menu touch overlay stays transparent to title Buttons", failures)
 
 	router.set_touch_provider(null)
 	router.poll(InputRouter.Context.GAMEPLAY)

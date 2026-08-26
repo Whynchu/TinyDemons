@@ -1,9 +1,9 @@
 extends CanvasLayer
 class_name TouchControlsLayer
 
-## Optional touch provider for the shared InputRouter. The root Control stays
-## pass-through while inactive so a first touch can switch the device tracker;
-## gameplay controls only become visible for a touch-last device.
+## Optional touch provider for the shared InputRouter. The root Control is
+## ignored while inactive so it never intercepts menu Button taps; gameplay
+## controls only become visible for a touch-last device.
 
 const DEVICE_TOUCH := 2
 const CONTEXT_GAMEPLAY := 0
@@ -251,6 +251,12 @@ func _on_button_exited(action: StringName) -> void:
 
 func _refresh_controls() -> void:
 	_controls_visible = _last_input_device == DEVICE_TOUCH and (_input_context == CONTEXT_GAMEPLAY or _input_context == CONTEXT_DIALOGUE)
+	if _touch_root != null:
+		# InputDeviceTracker receives screen touches independently through _input,
+		# so the inactive overlay does not need to remain in the GUI hit-test path.
+		# Leaving it as PASS makes it the topmost Control on mobile and can swallow
+		# the emulated mouse press that should activate title/menu Buttons.
+		_touch_root.mouse_filter = Control.MOUSE_FILTER_PASS if _controls_visible else Control.MOUSE_FILTER_IGNORE
 	if not _controls_visible:
 		_stick_vector = Vector2.ZERO
 		_stick_pointer_id = -1
