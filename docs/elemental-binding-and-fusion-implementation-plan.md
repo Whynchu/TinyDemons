@@ -177,7 +177,9 @@ current-element replacement, restoration, and no profile mutation.
 
 ### Phase 4 — Flame Fusion transaction
 
-Add explicit Fusion as a second flame action.
+Add Fusion as the hold gesture for the flame interaction. A quick press remains
+the normal Swap action; holding the same button through the short threshold
+selects Fusion without opening a secondary menu.
 
 - Do not require `has_bound_element`.
 - Require a non-Gray current element and a valid recipe with the contacted
@@ -329,7 +331,8 @@ the ownership boundaries must remain stable.
 
 ### Scene and presentation tests
 
-- Flame UI shows the correct action, recipe, cost, and disabled reason.
+- Flame prompt shows the current Soul cost; the quick-press Swap and
+  hold-to-Fuse gestures resolve without a secondary menu.
 - Demon UI shows current/bound state and 50-Soul cost.
 - Hub flame uses bound element first and starter flame as fallback.
 - Current element, Chroma bar, sprite saturation, Triangle mode, and damage
@@ -403,8 +406,8 @@ composition root:
 - `PlayerChromaComponent` keeps current and bound identities separate, supports
   unbound fusion, and restores a bound identity when zero-Chroma recovery is
   collected.
-- Flames expose an explicit Swap/Fuse menu at 5 Souls per action. Fusion never
-  mutates the profile by itself.
+- Flames use a quick-press Swap and hold-to-Fuse gesture at 5 Souls per action.
+  Fusion never mutates the profile by itself.
 - Elemental doors accept the current element, including unbound results, and
   latch their solved state in the run map.
 - Generated Run 6+ layouts contain validated mandatory fusion gates. Run 8+

@@ -115,6 +115,15 @@ design changes only elemental flame actions and elemental Binding.
 
 ## 4. Flame actions
 
+A contacted flame uses one interaction input with two deliberate gestures:
+
+- Release the button after a quick press to **Swap**.
+- Hold the button through the short `0.35`-second threshold to **Fuse**.
+
+Swap resolves on release so the game can distinguish it from a held Fuse. A
+successful Fuse resolves as soon as the threshold is reached; the player does
+not need to release the button or navigate a secondary menu.
+
 ### 4.1 Swap
 
 Swap is the normal flame interaction. It is a single explicit transaction:
@@ -169,8 +178,10 @@ charge both a fusion fee and an additional hidden flame fee.
 ### 4.3 Invalid or unaffordable actions
 
 - Fewer than 5 Souls: Swap/Fuse is disabled and the flame is not consumed.
-- No valid recipe: Fuse is disabled; Swap remains available.
-- Gray/no current element: Fuse is disabled; Swap remains available.
+- No valid recipe: a held Fuse reports that no fusion is available; a quick
+  Swap remains available.
+- Gray/no current element: a held Fuse is rejected; a quick Swap remains
+  available.
 - A rejected action spends no Souls, does not consume the flame, and does not
   change current, bound, Chroma, HP, or save state.
 - Fusion must never happen automatically merely because the player approaches
@@ -407,9 +418,10 @@ or the timing of the Binding unlock before reducing the contract silently.
 
 ### Fusion becomes accidental
 
-Fusion must always be a named, confirmed option. A flame encounter cannot
-infer fusion from the presence of a bound element or from the player's current
-color alone.
+Flame interaction uses a deliberate gesture: a quick press performs Swap, while
+holding the interaction button through the short fusion threshold performs
+Fuse. A flame encounter cannot infer fusion from the presence of a bound
+element or from the player's current color alone.
 
 ### A required door becomes a resource trap
 
@@ -418,9 +430,9 @@ Generation must prove the flame/recipe/door sequence before accepting a layout.
 
 ### Temporary elements become confusing
 
-The HUD and Demon menu must identify `UNBOUND` clearly. The player should know
-that they can use the element now but have not paid the 50-Soul persistence
-cost.
+Flame feedback and the Demon dialogue must identify `UNBOUND` clearly. The
+player should know that they can use the element now but have not paid the
+50-Soul persistence cost.
 
 ### Recipe growth becomes unmaintainable
 
