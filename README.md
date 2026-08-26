@@ -14,21 +14,77 @@ Current gameplay includes:
 - Pixel-based attack, slime splat, chest, and title-screen fizzle effects.
 - Room progression, chest rewards, gold tracking, and restart flow.
 
+## Current Focus
+
+The active gameplay work is the **Elemental Chroma system**: starter-flame
+attunement, Gray/elemental state, Chroma pickups and casting, and mandatory
+elemental puzzle rooms. In parallel, the codebase is entering a staged
+feature-oriented refactor so these systems have typed owners instead of
+continuing to grow inside the gameplay coordinator.
+
+The next combat design slice is documented in
+[`docs/elemental-slimes-and-combat-plan.md`](docs/elemental-slimes-and-combat-plan.md):
+elemental slime variants, the custom scaled Gen-III matchup table, and
+element-colored damage feedback.
+
+The **web port** (browser build with touch controls, gamepad peripherals, and
+last-input-device auto-detection) is implemented and tracked in
+[`docs/web-port-implementation-plan.md`](docs/web-port-implementation-plan.md);
+desktop remains the primary target and both share this codebase.
+
+Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
+status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
+execution plan. The completed Combat & Economy work remains documented in
+[`docs/combat-economy-overhaul.md`](docs/combat-economy-overhaul.md).
+
 ## Project Layout
 
-- `tiny-demons/` - the Godot project
-- `Artwork/` - exported and source art files
+- `project.godot` - the Godot project root (this folder is the project)
+- `assets/` `scenes/` `scripts/` `shaders/` `tests/` - the Godot project
+- `Artwork/` - exported and source art files (source, not imported by Godot)
 - `Mockups/` - reference mockups
+- `screenshots/` - game screenshots
+- `docs/` - audit, plans, tuning index, feature designs, and smoke checklist
 - `docs/game-screenshot.png` - first-room gameplay screenshot used in this README
 
 ## Running The Project
 
-Open `tiny-demons/project.godot` in Godot 4.7 and run the main scene. The project is configured for a small nearest-neighbor pixel-art presentation, so keep texture filtering and integer-like scaling intact when changing the display settings.
+Open `project.godot` in Godot 4.7 and run the main scene. The project is configured for a small nearest-neighbor pixel-art presentation, so keep texture filtering and integer-like scaling intact when changing the display settings.
+
+Run the headless smoke suite before committing:
+```powershell
+pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
+```
 
 ## Controls
 
-- Move: Arrow keys or WASD
-- Attack: configured attack input / controller attack button
-- Roll: `K` / controller roll button
-- Target: configured target input / controller target button
-- Interact or restart: `E` / Enter / controller interact button
+Bindings are defined in the **Input Map** (Project Settings > Input Map) and
+remappable in-editor. Defaults:
+
+- Move: Arrow keys / WASD / left stick / D-pad
+- Attack: `J` / Space / controller X
+- Roll: `K` / controller A
+- Target lock: `Q` / Tab / controller right shoulder or right trigger
+- Guard: `L` / Shift / controller left shoulder or left trigger
+- Interact / confirm: `E` / Enter / controller B
+- Cancel: `X` / controller A
+- Pause: Escape / controller Start
+
+## Web build
+
+The browser build is published to
+[GitHub Pages](https://whynchu.github.io/TinyDemons/) from `main`. Pull
+requests run the Web export and upload a review artifact without publishing;
+only a `main` push (or a manual workflow run on `main`) deploys the public
+site. The workflow is [`.github/workflows/web-pages.yml`](.github/workflows/web-pages.yml).
+In repository settings, set Pages' publishing source to **GitHub Actions** once
+before the first deployment.
+
+On a touch device, the virtual stick and action controls appear after touch
+input. Keyboard, mouse, and gamepad input remain available, and prompts follow
+the last device used. To validate the export locally after installing the
+matching Godot 4.7.1 Web template:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tests/web_export_smoke.ps1 -RequireExport
+```

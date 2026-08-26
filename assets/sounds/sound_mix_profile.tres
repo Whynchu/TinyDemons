@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="SoundMixProfile" format=3 uid="uid://bshb40ywk6kv6"]
+
+[ext_resource type="Script" uid="uid://b0faew6gbo4ij" path="res://scripts/sound_mix_profile.gd" id="1_sound_mix_profile"]
+
+[resource]
+script = ExtResource("1_sound_mix_profile")
+title_music_db = -16.5
+magic_cast_db = -4.0
+enemy_hit_1_db = -1.5
+enemy_hit_2_db = -1.5
+enemy_hit_3_db = -1.5
+enemy_hit_4_db = -1.5
+enemy_hit_5_db = -1.5
+enemy_hit_6_db = -1.5
+orb_hit_db = -1.5
+ui_hover_db = -2.0
+ui_confirm_db = -3.0
+ui_decline_db = -2.0
+ui_denied_db = -2.0
+ui_buy_sell_db = -3.0
+item_pickup_db = -3.0
+chest_reward_db = -1.0
+level_up_db = 1.0
+target_release_db = -1.0
+foot_left_db = 1.0
+foot_right_db = 1.0

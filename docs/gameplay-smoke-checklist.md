@@ -4,6 +4,12 @@ Purpose: establish a repeatable behavior baseline before extracting gameplay
 components. Run this checklist against the current branch before and after each
 consolidation milestone.
 
+> Active gameplay balance changes (gear value, base stats 3/2/2, enemy/boss
+> difficulty) are tracked in
+> [`combat-economy-overhaul.md`](combat-economy-overhaul.md). Update the
+> expected results below whenever that overhaul changes a stat or difficulty
+> knob.
+
 Baseline reference: `main` at `15a2832`
 
 Consolidation branch: `agent/script-consolidation`
@@ -151,6 +157,21 @@ state, and title/start flow remains usable after a prior death.
 Expected result: visual effects remain aligned with their owning actor and no
 new effect appears above the intended UI/world layer.
 
+## Web port release checks
+
+Run `pwsh -ExecutionPolicy Bypass -File tests/web_export_smoke.ps1 -RequireExport`
+with the matching Web template installed before a Pages
+release. The GitHub Actions workflow runs the same check for every pull
+request and deploys only from `main`.
+
+- [ ] Open `https://whynchu.github.io/TinyDemons/` from a clean browser profile.
+- [ ] Chrome desktop: keyboard play, then connect a gamepad and confirm prompts swap.
+- [ ] Firefox desktop: title → dive → first combat with keyboard.
+- [ ] Chrome Android: touch-only title → hub → dive → combat → settlement loop.
+- [ ] Safari iOS: repeat the touch loop and record any WebGL/audio warnings.
+- [ ] Touch controls appear after touch input and disappear after a gamepad or keyboard event.
+- [ ] Reload mid-run and confirm the profile persists.
+
 ## Results
 
 | Test | Result | Evidence/notes |
@@ -170,7 +191,28 @@ new effect appears above the intended UI/world layer.
 ## Automated checks
 
 - `git diff --check`: available and required for each change.
-- Godot headless parse/scene load: currently unavailable because no Godot
-  executable was discoverable in the development environment.
-
-When Godot becomes available, add the exact command and record its result here.
+- Godot headless validation: available (v4.7.1 console build). Command:
+  ```
+  & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path "C:\Development\Tiny-Demons\TinyDemons"
+  ```
+- Headless main-scene load (`--quit-after 30`): passes with no script/runtime errors.
+- Automated smoke tests (all exit 0):
+  - `-s res://tests/run_grade_smoke.gd` -> `RUN_GRADE_SMOKE_OK`
+  - `-s res://tests/progression_smoke.gd` -> `PROGRESSION_SMOKE_OK`
+  - `-s res://tests/item_economy_smoke.gd` -> `ITEM_ECONOMY_SMOKE_OK`
+- One-shot runner (all three + main-scene headless check):
+  `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
+- Smoke tests use a watchdog: if any assertion fails mid-script the process
+  aborts with a `TEST_ABORTED` error and exit code 1 instead of hanging.
+- Post-overhaul expectations: player base 3/2/2 (archetypes sum to 7), gear
+  primary stats 25%/point with a 1-point floor, enhancement +0.1 tier-stat
+  point/level (+1.0 at +10), and
+  enemies `max(1, ceil(depth/4))` (cap `999 if rank>10 else 2+rank`, +rank-8
+bonus from R9+).
+- Fusion (target-centric) expectations: FUSE tab lists upgrade targets (any
+  item with capacity + an eligible unequipped material, plus mythic +10
+  overflow), targets may be equipped, materials must be unequipped and share
+  definition + rarity, batch count is set with left/right, cost starts at 1
+  Soul for common +0->+1 and rises by 1 per enhancement tier, with each
+  rarity adding 10 Souls (common +10->rare costs 10; rare +0->+1 costs 11),
+  and insufficient Souls shows `NEED nS` with the action disabled.

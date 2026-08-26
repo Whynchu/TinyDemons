@@ -1,0 +1,41 @@
+extends SceneTree
+
+
+func _initialize() -> void:
+	var failures: Array[String] = []
+	var packed := load("res://scenes/main.tscn") as PackedScene
+	_expect(packed != null, "main scene loads for title boot characterization", failures)
+	if packed == null:
+		_finish(failures)
+		return
+	var gameplay := packed.instantiate()
+	get_root().add_child(gameplay)
+	for _frame in 120:
+		await process_frame
+	var screens := gameplay.get("screen_state_controller") as ScreenStateController
+	_expect(screens != null, "screen state owner is composed during boot", failures)
+	if screens != null:
+		_expect(screens.title_overlay != null, "title overlay is built during boot", failures)
+		_expect(screens.title_overlay != null and screens.title_overlay.visible, "title overlay is visible after boot", failures)
+		_expect(screens.state == &"title", "screen state settles on title after boot", failures)
+	_expect(not bool(gameplay.get("boot_active")), "boot sequence completes", failures)
+	var loading := gameplay.get("loading_screen_overlay") as CanvasItem
+	_expect(loading == null or not loading.visible, "loading cover releases after title boot", failures)
+	gameplay.queue_free()
+	await process_frame
+	_finish(failures)
+
+
+func _finish(failures: Array[String]) -> void:
+	if failures.is_empty():
+		print("TITLE_BOOT_SCENE_SMOKE_OK")
+		quit(0)
+		return
+	for failure in failures:
+		push_error("FAILED: %s" % failure)
+	quit(1)
+
+
+func _expect(condition: bool, label: String, failures: Array[String]) -> void:
+	if not condition:
+		failures.append(label)
