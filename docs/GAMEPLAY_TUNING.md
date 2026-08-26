@@ -143,7 +143,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Enemy level curve | `max(1, ceil(depth / 4)) + run progression`, clamped by cap | `room_controller.gd:_generated_enemy_base_level` |
 | Generated enemy level caps | `3` on R1, `5` on R2, then +1/run | `room_controller.gd:_enemy_level_cap`, `combat_runtime_controller.gd:enemy_level_cap_for_rank` |
 | Run 2 popcorn chance | `0.40` level-1 roll; later runs `0.16` | `room_controller.gd:_popcorn_enemy_chance` |
-| Popcorn enemy level | Level 1 through R4, level 2 on R5, then +1 every 3 runs | `room_controller.gd:_popcorn_enemy_level` |
+| Popcorn enemy level | `max(1, player level - 5)`; deliberately ignores the normal run cap/bonus | `room_controller.gd:_popcorn_enemy_level`, `_spawn_enemy_slot` |
 | Shadow/boss popcorn safety | Shadow encounters guarantee at least one Normal Slime popcorn slot; boss rooms start with 2 and add 1 per run up to 6; defeated popcorn slots respawn until the Shadow/scaled boss is gone | `room_controller.gd:_generate_enemy_encounter`, `_generate_boss_encounter`, `_boss_support_popcorn_count`, `record_popcorn_enemy_death`, `update_popcorn_respawns` |
 | Popcorn respawn delay | 5.0 seconds before a defeated support slime returns; temporary blocked spawns retry after 0.25 seconds | `room_controller.gd:POPCORN_RESPAWN_DELAY`, `POPCORN_RESPAWN_RETRY_DELAY` |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |

@@ -17,7 +17,9 @@ system. The canonical rules are in
 ## Shadow encounters and mana recovery
 
 The purple palette is displayed as **Shadow Slime**. The grey palette is
-displayed as **Normal Slime**. If a generated encounter contains a Shadow
+displayed as **Normal Slime**. Popcorn Normal Slimes are always five levels
+below the player, with a minimum level of one, so they remain intentional
+gameplay fodder rather than extra challenge. If a generated encounter contains a Shadow
 Slime, it guarantees at least one low-level Normal Slime popcorn slot, and
 every additional popcorn slot is also forced to Normal Slime. Shadow itself
 is never selected as a popcorn roll, so the pressure enemy remains present
@@ -47,7 +49,8 @@ A flame does not heal or refill passively, and the first starter-flame
 attunement is not free. On the first run, if the player has fewer than 5
 Souls, the Cloaked Demon gives them a one-time 5-Soul starter grant during
 their tutorial dialogue. The player then spends those Souls at the starter
-fire to begin the run.
+fire to begin the run. A same-color flame is unavailable when HP and active
+Chroma are already full, so a player cannot spend Souls on a no-op service.
 
 ### Approved elemental Binding/Fusion extension
 

@@ -475,12 +475,11 @@ func activate_puzzle_torch(root: Object, torch: Sprite2D, world_position: Vector
 
 func activate_orb_room_orb(root: Object, orb: Sprite2D, world_position: Vector2, palette: String, apply_player_reaction: bool = true) -> void:
 	# The Orb Room is a single shared-state object, not a local two-orb puzzle.
-	# The player's starter palette resolves to Puzzle Color A; grey energy
-	# resolves to Puzzle Color B. The map controller then synchronizes both
-	# Orb Rooms and the room/environment presentation.
-	var requested_color: StringName = root.call("_orb_puzzle_color_for_palette", palette) as StringName
-	var changed_map_color := not requested_color.is_empty() and bool(root.call("_change_orb_color_from_room", requested_color))
-	if changed_map_color:
+	# Starter/earned palettes still update the strategic puzzle-color key. Every
+	# other valid elemental palette, including fusion results, now persists as
+	# the shared orb's elemental presentation without changing that key.
+	var changed_shared_orb := bool(root.call("_change_orb_palette_from_room", palette))
+	if changed_shared_orb:
 		# Changing the shared map state rebuilds this orb immediately. Feedback
 		# must happen before returning so the successful hit is still readable.
 		root.call("_spawn_magic_impact", world_position, palette)

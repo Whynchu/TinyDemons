@@ -61,6 +61,10 @@ func _initialize() -> void:
 				attack.hit_targets.clear()
 				attack.apply_hitbox(gameplay)
 				_expect(str(orb.get_meta("puzzle_torch_palette", "")) == "red", "imbued physical hit changes the Orb Room orb to its weapon element", failures)
+			for fusion_palette in ["green", "aquamarine", "orange", "purple"]:
+				puzzle.call("activate_puzzle_torch", gameplay, orb, orb.global_position, fusion_palette, false)
+				_expect(str(orb.get_meta("puzzle_torch_palette", "")) == fusion_palette, "%s elemental energy recolors the Orb Room orb" % fusion_palette, failures)
+				_expect(str(map.call("orb_display_palette")) == fusion_palette, "%s elemental energy persists across the shared Orb Room state" % fusion_palette, failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

@@ -59,6 +59,10 @@ var hub_gear_stat_texts: Array[Sprite2D] = []
 var hub_gear_stat_panel: Panel = null
 var hub_cursor_text: Sprite2D = null
 var hub_page_buttons: Array[Button] = []
+var hub_binding_panel: Panel = null
+var hub_binding_texts: Array[Sprite2D] = []
+var hub_binding_action_button: Button = null
+var hub_binding_message := ""
 var hub_item_name_text: Sprite2D = null
 var hub_item_list_texts: Array[Sprite2D] = []
 var hub_shop_price_texts: Array[Sprite2D] = []
@@ -533,7 +537,7 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor}
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable) -> Dictionary:
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable()) -> Dictionary:
 	var panel_size := Vector2(156, 116)
 	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.94), 3, false)
 	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
@@ -545,8 +549,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var title_texture := pixel_texture.call("DEMON HUB", Color.WHITE) as Texture2D
 	create_sprite(overlay, "HubTitle", title_texture, Vector2((panel_size.x - title_texture.get_width()) * 0.5, 4), false)
 	var pages: Array[Button] = []
-	for page_index in 4:
-		var page_button := make_retro_button(["STATS", "GEAR", "SHOP", "FUSE"][page_index], Vector2(4 + page_index * 38, 15), Vector2(36, 12), pixel_texture)
+	var page_labels := ["STATS", "GEAR", "SHOP", "FUSE", "BIND"]
+	for page_index in page_labels.size():
+		var page_button := make_retro_button(page_labels[page_index], Vector2(4 + page_index * 30, 15), Vector2(30, 12), pixel_texture)
 		page_button.focus_mode = Control.FOCUS_NONE
 		page_button.pressed.connect(set_page.bind(page_index))
 		overlay.add_child(page_button); pages.append(page_button)
@@ -617,9 +622,31 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		item_details[detail_index].visible = false
 	var item_action_button := make_retro_button("EQUIP", Vector2(52, 89), Vector2(52, 10), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); overlay.add_child(item_action_button)
+	var binding_panel := Panel.new()
+	binding_panel.name = "HubBindingPanel"
+	binding_panel.position = Vector2(4, 29)
+	binding_panel.size = Vector2(148, 53)
+	binding_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var binding_style := StyleBoxFlat.new()
+	binding_style.bg_color = Color(0.04, 0.06, 0.10, 0.85)
+	binding_style.border_color = Color(0.42, 0.48, 0.62, 0.9)
+	binding_style.set_border_width_all(1)
+	binding_panel.add_theme_stylebox_override("panel", binding_style)
+	binding_panel.visible = false
+	overlay.add_child(binding_panel)
+	var binding_texts: Array[Sprite2D] = []
+	binding_texts.append(create_sprite(overlay, "HubBindingCurrent", null, Vector2(9, 34), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingBound", null, Vector2(9, 44), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingSouls", null, Vector2(9, 54), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingCost", null, Vector2(9, 64), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingMessage", null, Vector2(9, 75), false))
+	var binding_action_button := make_retro_button("BIND", Vector2(99, 88), Vector2(53, 11), pixel_texture)
+	binding_action_button.focus_mode = Control.FOCUS_NONE
+	if bind_element.is_valid(): binding_action_button.pressed.connect(bind_element)
+	overlay.add_child(binding_action_button)
 	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
 	cursor.visible = false
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "cursor": cursor}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor}
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
@@ -659,15 +686,22 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var item_details := hub_item_detail_texts
 	var item_action := hub_item_action_button
 	if item_name != null: item_name.visible = false
-	for node in item_list: node.visible = page != 0
+	var item_page := page >= 1 and page <= 3
+	for node in item_list: node.visible = item_page
 	for node in shop_prices: node.visible = page == 2
 	for node in gear_choices: node.visible = page == 1 and hub_gear_browsing
 	for button in hub_gear_slot_buttons: button.visible = page == 1 and not hub_gear_browsing
 	for node in gear_stats: node.visible = page == 1 or page == 3
 	var gear_stat_panel := hub_gear_stat_panel
 	if gear_stat_panel != null: gear_stat_panel.visible = page == 1 or page == 3
-	for node in item_details: node.visible = page != 0
-	if item_action != null: item_action.visible = page != 0
+	for node in item_details: node.visible = item_page
+	if item_action != null: item_action.visible = item_page
+	if hub_binding_panel != null: hub_binding_panel.visible = page == 4
+	for node in hub_binding_texts: node.visible = page == 4
+	if hub_binding_action_button != null: hub_binding_action_button.visible = page == 4
+	if page == 4:
+		_update_hub_binding_page(root, pixel_texture, profile, highlight_color)
+		return
 	if page != 0:
 		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
 		return
@@ -722,6 +756,47 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if start_button != null:
 		var start_label := start_button.get_child(0) as Sprite2D
 		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if hub_opened_from_npc else "START RUN", Color.WHITE) as Texture2D
+
+
+func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+	if hub_binding_texts.size() < 5 or profile == null:
+		return
+	var chroma := root.get("player_chroma_component") as Node
+	var current := "GRAY"
+	var current_is_bound := false
+	if chroma != null:
+		current = String(chroma.call("aspect_name")).to_upper()
+		current_is_bound = bool(chroma.call("current_is_bound"))
+	var bound := "NONE"
+	if profile.has_bound_element:
+		bound = String(profile.bound_element).to_upper()
+	var cost := PlayerProfile.ELEMENT_BIND_SOUL_COST
+	var can_bind := bool(root.call("_can_bind_current_element"))
+	var enough_souls := profile.souls >= cost
+	var action_enabled := can_bind and enough_souls
+	var action_color := highlight_color if action_enabled else Color8(102, 108, 122) if not can_bind or not enough_souls else Color.WHITE
+	hub_binding_texts[0].texture = pixel_texture.call("CURRENT %s%s" % [current, " BOUND" if current_is_bound else ""], highlight_color if can_bind else Color.WHITE) as Texture2D
+	hub_binding_texts[1].texture = pixel_texture.call("BOUND %s" % bound, Color.WHITE) as Texture2D
+	hub_binding_texts[2].texture = pixel_texture.call("SOULS %d" % profile.souls, Color8(211, 167, 255)) as Texture2D
+	hub_binding_texts[3].texture = pixel_texture.call("COST %d SOULS" % cost, Color8(255, 205, 117)) as Texture2D
+	var status := hub_binding_message
+	if status.is_empty():
+		if current == "GRAY":
+			status = "ATTUNE FIRST"
+		elif current_is_bound:
+			status = "ALREADY BOUND"
+		elif not enough_souls:
+			status = "NEED %d SOULS" % cost
+		else:
+			status = "READY TO BIND"
+	hub_binding_texts[4].texture = pixel_texture.call(status, Color8(255, 105, 105) if not action_enabled and current != "GRAY" and not current_is_bound else Color8(167, 240, 112)) as Texture2D
+	if hub_binding_action_button != null:
+		hub_binding_action_button.disabled = not action_enabled
+		var action_label := hub_binding_action_button.get_child(0) as Sprite2D
+		if action_label != null:
+			var label := "BIND" if action_enabled else "BOUND" if current_is_bound else "NONE" if current == "GRAY" else "NEED 50S"
+			action_label.texture = pixel_texture.call(label, action_color) as Texture2D
+		set_archetype_button_state(hub_binding_action_button, action_enabled, highlight_color)
 
 
 func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, page: int, item_list: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
@@ -1047,6 +1122,13 @@ func update_hub_input(root: Object) -> void:
 		root.call("_set_hub_page", page - 1); return
 	if next_page_pressed:
 		root.call("_set_hub_page", page + 1); return
+	if page == 4:
+		if bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
+			var binding_action := hub_binding_action_button
+			if binding_action != null and not binding_action.disabled: binding_action.pressed.emit()
+		elif bool(root.call("_is_ui_cancel_just_pressed")):
+			root.call("_set_hub_page", 0)
+		return
 	if page != 0:
 		if page == 1 and hub_gear_browsing:
 			if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)

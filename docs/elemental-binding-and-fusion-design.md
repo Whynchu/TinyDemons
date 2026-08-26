@@ -141,8 +141,10 @@ player may later visit the Cloaked Demon if they want to make the current
 element permanent.
 
 If the player uses a flame matching the current element, it is a paid normal
-flame service, not a fusion. It must not silently create a second transaction
-or alter Binding state.
+flame service, not a fusion, as long as it can restore missing HP or Chroma.
+When the player already matches the flame and both HP and active Chroma are
+full, the flame is not interactable and cannot consume Souls for no effect. It
+must not silently create a second transaction or alter Binding state.
 
 ### 4.2 Fuse
 
@@ -182,14 +184,17 @@ charge both a fusion fee and an additional hidden flame fee.
   Swap remains available.
 - Gray/no current element: a held Fuse is rejected; a quick Swap remains
   available.
+- Same current element with full HP and full active Chroma: the flame is not
+  interactable because neither Swap nor restoration would have an effect.
 - A rejected action spends no Souls, does not consume the flame, and does not
   change current, bound, Chroma, HP, or save state.
 - Fusion must never happen automatically merely because the player approaches
   a different flame.
 
-## 5. Cloaked Demon Binding
+## 5. Hub Binding panel
 
-Binding is a dedicated menu action at the Cloaked Demon. A flame can never
+The Cloaked Demon keeps its normal dialogue and opens the Hub as before. The
+Hub now has a dedicated **BIND** panel for permanent Binding. A flame can never
 perform a permanent bind.
 
 The menu should show:
@@ -209,9 +214,9 @@ After confirmation and successful payment:
 - the binding UI confirms the new persistent identity;
 - the player may continue using the current element without another flame use.
 
-If current and bound already match, the menu displays that the element is
-already bound and charges nothing. If the player has no current element, the
-bind action is unavailable.
+If current and bound already match, the Hub panel displays that the element is
+already bound and disables the action. If the player has no current element,
+the bind action is unavailable.
 
 Binding must be atomic. Insufficient Souls or a cancelled confirmation leaves
 every runtime and profile value unchanged.
@@ -322,20 +327,22 @@ solved. This must be covered by focused state tests before production use.
 
 ### Flame prompt
 
-The flame prompt must expose the active options and costs without requiring a
-debug label:
+The flame prompt displays the 5-Soul cost. The interaction itself has two
+deliberate gestures rather than a secondary action menu:
 
 ```text
-SWAP — 5 SOULS
-FUSE WATER + ELECTRIC → GRASS — 5 SOULS
+quick press/release: SWAP — 5 SOULS
+hold: FUSE WATER + ELECTRIC → GRASS — 5 SOULS
 ```
 
-The Fuse row is greyed out when there is no recipe, no current element, or not
-enough Souls. The UI should explain the disabled reason where space allows.
+Holding at a non-fusable flame does not fall back to Swap. The interaction is
+unavailable when the player already matches the flame and both HP and active
+Chroma are full.
 
-### Cloaked Demon menu
+### Hub Binding panel
 
-The menu must display:
+The Hub's BIND panel, reached by accepting the Cloaked Demon's normal Hub
+invitation, must display:
 
 - current element and color;
 - bound element and color, or `NONE`;

@@ -22,6 +22,7 @@ func _initialize() -> void:
 	_expect(float(level_high.vit) / float(level_high.strength) < float(level_balanced.vit) / float(level_balanced.strength), "rogue growth keeps VIT relatively lower than balanced profile", failures)
 
 	var rooms := RoomController.new()
+	rooms.player_level = 10
 	var boss_purple_count := 0
 	var boss_minor_slot_count := 0
 	for rank in [1, 3, 5, 8, 12]:
@@ -49,10 +50,11 @@ func _initialize() -> void:
 	_expect(boss_purple_count > 0, "rare boss sampling still permits an occasional purple minor", failures)
 	_expect(float(boss_purple_count) / float(boss_minor_slot_count) < 0.12, "purple minors stay rare in boss encounters", failures)
 	var expected_caps := {1: 3, 2: 5, 3: 6, 4: 7}
-	var expected_popcorn_levels := {2: 1, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 3}
-	for rank in expected_popcorn_levels:
-		rooms.progression_run_rank = rank
-		_expect(rooms._popcorn_enemy_level() == int(expected_popcorn_levels[rank]), "Run %d popcorn enemies use the gradual level %d curve" % [rank, int(expected_popcorn_levels[rank])], failures)
+	for tested_player_level in [1, 4, 5, 6, 10, 30]:
+		rooms.player_level = tested_player_level
+		var expected_popcorn_level := maxi(1, tested_player_level - 5)
+		_expect(rooms._popcorn_enemy_level() == expected_popcorn_level, "player level %d produces level %d popcorn enemies" % [tested_player_level, expected_popcorn_level], failures)
+	rooms.player_level = 1
 	for rank in [1, 2, 3, 4]:
 		rooms.progression_run_rank = rank
 		var maximum_seen := 0

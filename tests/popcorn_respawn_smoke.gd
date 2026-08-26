@@ -33,6 +33,11 @@ func _initialize() -> void:
 			supports.append(slimes[slot])
 	_expect(boss != null, "boss encounter exposes a scaled big threat", failures)
 	_expect(supports.size() >= 2, "boss encounter exposes at least two popcorn support slots", failures)
+	var profile := gameplay.get("player_profile") as PlayerProfile
+	var expected_popcorn_level := maxi(1, profile.level - 5) if profile != null else 1
+	for support in supports:
+		var support_stats := gameplay.call("_slime_stats", support) as StatsComponent
+		_expect(support_stats != null and support_stats.level == expected_popcorn_level, "initial popcorn support is five levels below the player", failures)
 
 	if boss != null and supports.size() >= 2:
 		for support in supports:
@@ -46,6 +51,8 @@ func _initialize() -> void:
 		rooms.update_popcorn_respawns(gameplay, 0.02)
 		for support in supports:
 			_expect(support.visible and not bool(gameplay.call("_is_slime_dead", support)), "popcorn slots respawn while the boss is alive", failures)
+			var respawned_stats := gameplay.call("_slime_stats", support) as StatsComponent
+			_expect(respawned_stats != null and respawned_stats.level == expected_popcorn_level, "respawned popcorn support remains five levels below the player", failures)
 		_expect(not bool(gameplay.get("entrance_open")), "popcorn respawn keeps the boss arrival entrance sealed", failures)
 
 		for threat in big_threats:

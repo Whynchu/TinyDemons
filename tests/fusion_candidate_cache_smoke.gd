@@ -65,6 +65,7 @@ class _MockScreenState:
 	var hub_item_index := 0
 	var hub_gear_browsing := false
 	var hub_fusion_message := ""
+	var hub_binding_message := ""
 	var hub_fusion_count := 1
 	var hub_fusion_candidates: Array[ItemInstance] = []
 	var hub_fusion_candidates_dirty := true
