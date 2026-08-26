@@ -54,6 +54,44 @@ func _initialize() -> void:
 	router.set_touch_provider(null)
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(not router.pressed(&"magic") and router.movement(0.25) == Vector2.ZERO, "router remains desktop-compatible without a provider", failures)
+
+	# Adaptive layout: portrait windows put the controls in the bottom
+	# letterbox bar, clear of the game area.
+	var content_rect := Rect2(Vector2.ZERO, TouchControlsLayer.BASE_CONTENT_SIZE)
+	var portrait := layer._compute_layout(Vector2(260.0, 563.0), TouchControlsLayer.BASE_CONTENT_SIZE)
+	var portrait_zone := portrait["stick_zone"] as Rect2
+	_expect(portrait_zone.position.y >= TouchControlsLayer.BASE_CONTENT_SIZE.y - 0.01, "portrait stick zone sits in the bottom bar", failures)
+	var portrait_window := portrait["window_rect"] as Rect2
+	var portrait_buttons: Dictionary = portrait["buttons"]
+	var portrait_buttons_inside := true
+	var portrait_buttons_clear := true
+	for action in portrait_buttons:
+		var rect := portrait_buttons[action] as Rect2
+		if not portrait_window.encloses(rect):
+			portrait_buttons_inside = false
+		if rect.intersects(content_rect):
+			portrait_buttons_clear = false
+	_expect(portrait_buttons_inside, "portrait buttons stay inside the window", failures)
+	_expect(portrait_buttons_clear, "portrait buttons do not cover the game", failures)
+	_expect(float(portrait["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "portrait buttons keep the minimum physical size", failures)
+	_expect(portrait_window.encloses(portrait["pause"] as Rect2), "portrait pause button stays inside the window", failures)
+
+	# Landscape windows with side bars park the stick in the left bar and the
+	# buttons in the right bar.
+	var landscape := layer._compute_layout(Vector2(563.0, 260.0), TouchControlsLayer.BASE_CONTENT_SIZE)
+	_expect((landscape["stick_zone"] as Rect2).end.x <= 0.01, "landscape stick zone sits in the left bar", failures)
+	var landscape_buttons: Dictionary = landscape["buttons"]
+	var landscape_right := true
+	for action in landscape_buttons:
+		if (landscape_buttons[action] as Rect2).position.x < TouchControlsLayer.BASE_CONTENT_SIZE.x - 0.01:
+			landscape_right = false
+	_expect(landscape_right, "landscape buttons sit in the right bar", failures)
+
+	# An exact-fit window (desktop-like) falls back to a bottom-corner overlay
+	# that still stays inside the window.
+	var fitted := layer._compute_layout(Vector2(240.0, 160.0), TouchControlsLayer.BASE_CONTENT_SIZE)
+	_expect((fitted["window_rect"] as Rect2).encloses(fitted["stick_zone"] as Rect2), "exact-fit stick zone stays inside the window", failures)
+
 	router.free()
 	layer.free()
 	_finish(failures)
