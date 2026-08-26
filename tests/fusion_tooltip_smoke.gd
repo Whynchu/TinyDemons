@@ -1,5 +1,7 @@
 extends SceneTree
 
+const HubFlowControllerScript = preload("res://scripts/hub_flow_controller.gd")
+
 var _finished := false
 
 
@@ -10,14 +12,15 @@ func _initialize() -> void:
 	var controller_instance: Node = ScreenStateController.new()
 	var host := Node.new()
 	host.add_child(controller_instance)
+	root.screen_state_controller = controller_instance
 	var pixel: Callable = Callable(root, "_pixel_text_texture")
-	var built: Dictionary = controller_instance.call("build_hub", host, pixel, Callable(root, "_adj"), Callable(root, "_apply"), Callable(root, "_cancel"), Callable(root, "_auto"), Callable(root, "_respec"), Callable(root, "_start"), Callable(root, "_title"), Callable(root, "_set_page"), Callable(root, "_item_action"), Callable(root, "_select_gear_slot"))
+	var built: Dictionary = controller_instance.call("build_hub", host, pixel, Callable(root, "_adj"), Callable(root, "_apply"), Callable(root, "_cancel"), Callable(root, "_auto"), Callable(root, "_respec"), Callable(root, "_start"), Callable(root, "_title"), Callable(root, "_set_page"), Callable(root, "_item_action"), Callable(root, "_select_gear_slot"), Callable(), Callable(root, "_select_gear_candidate"))
 	var key_map := {
 		"overlay": "hub_overlay", "summary": "hub_summary_text", "points": "hub_points_text",
 		"stats": "hub_stat_texts", "stat_buttons": "hub_stat_buttons", "derived": "hub_derived_texts",
 		"apply": "hub_apply_button", "cancel": "hub_cancel_button", "auto": "hub_auto_button", "respec": "hub_respec_button",
 		"pages": "hub_page_buttons", "item_name": "hub_item_name_text", "item_list": "hub_item_list_texts",
-		"shop_prices": "hub_shop_price_texts", "gear_choices": "hub_gear_choice_texts",
+		"shop_prices": "hub_shop_price_texts", "gear_choices": "hub_gear_choice_texts", "gear_choice_buttons": "hub_gear_choice_buttons",
 		"gear_slot_buttons": "hub_gear_slot_buttons", "gear_stats": "hub_gear_stat_texts",
 		"gear_stat_panel": "hub_gear_stat_panel", "item_details": "hub_item_detail_texts",
 		"item_action": "hub_item_action_button", "binding_panel": "hub_binding_panel",
@@ -56,6 +59,19 @@ func _initialize() -> void:
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(gear_stats.slice(0, 4).all(func(s: Sprite2D) -> bool: return s.texture != null) and gear_stats[4].texture == null, "gear browse shows four flat-stat rows without stale duplicate SPD", failures)
+	var gear_choice_buttons: Array[Button] = controller_instance.hub_gear_choice_buttons
+	_expect(gear_choice_buttons.size() == 4 and gear_choice_buttons.all(func(b: Button) -> bool: return b.mouse_filter != Control.MOUSE_FILTER_IGNORE), "gear browse exposes touchable choice rows", failures)
+	_expect(gear_choice_buttons[0].visible and gear_choice_buttons[1].visible, "gear browse shows touch targets for visible candidates", failures)
+	gear_choice_buttons[0].pressed.emit()
+	_expect(root.selected_gear_candidate_row == 0, "gear choice row forwards its selected candidate", failures)
+	var gear_flow := HubFlowControllerScript.new()
+	var gear_candidates := gear_flow.hub_gear_candidates(root, &"weapon")
+	root.selected_equipped_instance_id = ""
+	controller_instance.hub_gear_candidate_indices = {"weapon": 0}
+	gear_flow.select_hub_gear_candidate(root, 1)
+	_expect(gear_candidates.size() > 1 and root.selected_equipped_instance_id == gear_candidates[1].instance_id, "touching a gear row equips that visible candidate", failures)
+	_expect(not controller_instance.hub_gear_browsing, "touch gear selection closes the browse state", failures)
+	gear_flow.free()
 	root._set_page(3)
 	controller_instance.hub_page = 3
 	controller_instance.hub_item_index = 0
@@ -103,6 +119,7 @@ func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 
 
 class _MockRoot:
+	var screen_state_controller: ScreenStateController = null
 	var hub_page := 0
 	var hub_pause_mode := false
 	var hub_menu_row := 0
@@ -136,6 +153,7 @@ class _MockRoot:
 	var hub_derived_texts: Array[Sprite2D] = []
 	var hub_page_buttons: Array[Button] = []
 	var hub_gear_slot_buttons: Array[Button] = []
+	var hub_gear_choice_buttons: Array[Button] = []
 	var hub_gear_stat_panel: Panel = null
 	var hub_item_action_button: Button = null
 	var hub_binding_panel: Panel = null
@@ -145,6 +163,8 @@ class _MockRoot:
 	var hub_cancel_button: Button = null
 	var hub_auto_button: Button = null
 	var hub_respec_button: Button = null
+	var selected_gear_candidate_row := -1
+	var selected_equipped_instance_id := ""
 
 	func _pixel_text_texture(text: String, color: Color) -> Texture2D:
 		var image := Image.create(8, 8, false, Image.FORMAT_RGBA8)
@@ -185,11 +205,30 @@ class _MockRoot:
 	func _select_gear_slot(_slot_index: int) -> void:
 		pass
 
+	func _select_gear_candidate(choice_row: int) -> void:
+		selected_gear_candidate_row = choice_row
+
+	func _equip_profile_item(instance_id: String) -> void:
+		selected_equipped_instance_id = instance_id
+		player_profile.equipped_instance_ids["weapon"] = instance_id
+
 	func _health_feedback_color(_palette: StringName) -> Color:
 		return Color.WHITE
 
-	func _hub_gear_candidates(_slot: StringName) -> Array[ItemInstance]:
-		return []
+	func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
+		var candidates: Array[ItemInstance] = []
+		if player_profile == null:
+			return candidates
+		var catalog := ItemCatalog.new()
+		if slot == &"shield":
+			var unequip := ItemInstance.new()
+			unequip.instance_id = ItemCatalog.UNEQUIP_SHIELD_ID
+			candidates.append(unequip)
+		for data: Dictionary in player_profile.inventory:
+			var item := ItemInstance.from_dictionary(data)
+			if catalog.definition_slot(item.definition_id) == slot:
+				candidates.append(item)
+		return candidates
 
 	func _hub_fusion_candidates() -> Array[ItemInstance]:
 		if player_profile == null:

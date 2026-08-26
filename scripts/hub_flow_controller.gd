@@ -5,7 +5,7 @@ const ProgressionControllerScript = preload("res://scripts/progression_controlle
 
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -25,6 +25,7 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
 	root.screen_state_controller.hub_shop_price_texts = controls["shop_prices"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_choice_texts = controls["gear_choices"] as Array[Sprite2D]
+	root.screen_state_controller.hub_gear_choice_buttons = controls["gear_choice_buttons"] as Array[Button]
 	root.screen_state_controller.hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
 	root.screen_state_controller.hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
@@ -185,6 +186,26 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 				break
 		root.screen_state_controller.hub_gear_browsing = true
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
+	if root.screen_state_controller.hub_page != 1 or not root.screen_state_controller.hub_gear_browsing:
+		return
+	var selected_slot_index := clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
+	var slot: StringName = ItemCatalog.SLOTS[selected_slot_index]
+	var candidates := hub_gear_candidates(root, slot)
+	if candidates.is_empty():
+		return
+	var visible_choice_count := maxi(root.screen_state_controller.hub_gear_choice_buttons.size(), 1)
+	var current_index := posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
+	var window_start := clampi(current_index - 1, 0, maxi(candidates.size() - visible_choice_count, 0))
+	var candidate_index := window_start + choice_row
+	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
+		return
+	# A touch row is an explicit selection, so commit it immediately. Controller
+	# navigation still keeps the browse-then-accept flow for precise selection.
+	root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = candidate_index
+	hub_item_action(root)
 
 
 func close_hub_gear_browse(root: Object) -> void:

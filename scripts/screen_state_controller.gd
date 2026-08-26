@@ -54,6 +54,7 @@ var hub_fusion_candidates_dirty := true
 var hub_fusion_count := 1
 var hub_fusion_message := ""
 var hub_gear_choice_texts: Array[Sprite2D] = []
+var hub_gear_choice_buttons: Array[Button] = []
 var hub_gear_slot_buttons: Array[Button] = []
 var hub_gear_stat_texts: Array[Sprite2D] = []
 var hub_gear_stat_panel: Panel = null
@@ -537,7 +538,7 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor}
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable()) -> Dictionary:
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable()) -> Dictionary:
 	var panel_size := Vector2(156, 116)
 	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.94), 3, false)
 	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
@@ -606,9 +607,27 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		slot_button.add_theme_stylebox_override("normal", transparent); slot_button.add_theme_stylebox_override("hover", transparent); slot_button.add_theme_stylebox_override("pressed", transparent)
 		slot_button.pressed.connect(select_gear_slot.bind(slot_index)); overlay.add_child(slot_button); gear_slot_buttons.append(slot_button)
 	var gear_choices: Array[Sprite2D] = []
+	var gear_choice_buttons: Array[Button] = []
 	for choice_index in 4:
 		gear_choices.append(create_sprite(overlay, "HubGearChoice%d" % choice_index, null, Vector2(6, 85 + choice_index * 7), false))
 		gear_choices[choice_index].visible = false
+		var choice_button := Button.new()
+		choice_button.name = "HubGearChoiceButton%d" % choice_index
+		choice_button.position = Vector2(2, 85 + choice_index * 7)
+		choice_button.size = Vector2(98, 7)
+		choice_button.text = ""
+		choice_button.focus_mode = Control.FOCUS_NONE
+		choice_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var choice_transparent := StyleBoxFlat.new()
+		choice_transparent.bg_color = Color.TRANSPARENT
+		choice_transparent.set_border_width_all(0)
+		for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			choice_button.add_theme_stylebox_override(style_state, choice_transparent)
+		choice_button.visible = false
+		if select_gear_candidate.is_valid():
+			choice_button.pressed.connect(select_gear_candidate.bind(choice_index))
+		overlay.add_child(choice_button)
+		gear_choice_buttons.append(choice_button)
 	var gear_stat_panel := Panel.new()
 	gear_stat_panel.name = "HubGearStatPanel"; gear_stat_panel.position = Vector2(101, 29); gear_stat_panel.size = Vector2(51, 53); gear_stat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var gear_stat_style := StyleBoxFlat.new(); gear_stat_style.bg_color = Color(0.04, 0.06, 0.10, 0.85); gear_stat_style.border_color = Color(0.42, 0.48, 0.62, 0.9); gear_stat_style.set_border_width_all(1)
@@ -646,7 +665,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	overlay.add_child(binding_action_button)
 	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
 	cursor.visible = false
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor}
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
@@ -682,6 +701,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var item_list := hub_item_list_texts
 	var shop_prices := hub_shop_price_texts
 	var gear_choices := hub_gear_choice_texts
+	for button in hub_gear_choice_buttons: button.visible = page == 1 and hub_gear_browsing
 	var gear_stats := hub_gear_stat_texts
 	var item_details := hub_item_detail_texts
 	var item_action := hub_item_action_button
@@ -942,6 +962,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 
 
 func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, item_list: Array[Sprite2D], choices: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
+	for button in hub_gear_choice_buttons: button.visible = false
 	var selected_slot_index := clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
 	var candidate_indices := hub_gear_candidate_indices
 	var browsing := hub_gear_browsing
@@ -976,6 +997,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 		for choice_row in choices.size():
 			var choice_index := window_start + choice_row
 			if choice_index >= slot_candidates.size(): break
+			if choice_row < hub_gear_choice_buttons.size(): hub_gear_choice_buttons[choice_row].visible = true
 			var choice_item := slot_candidates[choice_index]
 			var choice_prefix := ">" if choice_index == current_index else " "
 			var is_unequip := choice_item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID

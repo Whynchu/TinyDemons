@@ -270,6 +270,10 @@ func critical_outline_texture(text: String, pixel_number: Callable) -> Texture2D
 	return texture
 
 
+func prompt_texture(text: String, color: Color) -> Texture2D:
+	return name_texture(text.to_upper(), color)
+
+
 func name_texture(text: String, color: Color) -> Texture2D:
 	var cache_key := "%s:%s" % [text, _rgb_key(color)]
 	if name_texture_cache.has(cache_key):

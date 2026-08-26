@@ -86,6 +86,10 @@ func _initialize() -> void:
 	_expect(_has_opaque_pixel(glyphs.number_texture("electric", Color.WHITE)), "lowercase electric text renders without fallback glyphs", failures)
 	_expect(_has_opaque_pixel(glyphs.name_texture("Electric Slime", Color.WHITE)), "Electric Slime name renders without fallback glyphs", failures)
 	_expect(_has_opaque_pixel(glyphs.name_texture("Water Slime", Color.WHITE)), "Water Slime name renders without fallback glyphs", failures)
+	var touch_prompt := glyphs.prompt_texture("TAP", Color.WHITE) as Texture2D
+	var compact_prompt := glyphs.number_texture("TAP", Color.WHITE) as Texture2D
+	_expect(_has_opaque_pixel(touch_prompt) and touch_prompt.get_height() == 7, "touch prompt uses the readable name glyph height", failures)
+	_expect(touch_prompt.get_width() > compact_prompt.get_width(), "touch prompt uses the wider readable glyph set", failures)
 	glyphs.free()
 	_finished = true
 	call_deferred("_finish", failures)
