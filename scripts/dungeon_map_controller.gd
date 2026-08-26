@@ -11,6 +11,7 @@ const RUN2_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
 const LAYOUT_GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
+const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 const PUZZLE_COLOR_A: StringName = &"puzzle_a"
 const PUZZLE_COLOR_B: StringName = &"puzzle_b"
 const PUZZLE_COLOR_C: StringName = &"puzzle_c"
@@ -25,14 +26,18 @@ var starter_flame: StringName = &"fire"
 var starter_palette_name := "red"
 var completed_runs_for_layout := 0
 var starter_flame_attuned_this_run := false
+var bound_flame: StringName = &""
+var current_element := ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
 
 
-func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire") -> StringName:
+func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &"") -> StringName:
 	graph = target_graph
 	completed_runs_for_layout = maxi(completed_runs, 0)
 	if graph != null:
 		graph.configure_progression(completed_runs_for_layout)
 	set_starter_flame(selected_starter_flame)
+	set_bound_flame(selected_bound_flame)
+	current_element = ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
 	starter_flame_attuned_this_run = false
 	authored_run1 = completed_runs == 0
 	authored_run2 = completed_runs == 1
@@ -84,6 +89,18 @@ func set_starter_flame(selected_flame: StringName) -> void:
 	starter_palette_name = ASPECT_CATALOG_SCRIPT.palette_for_flame(starter_flame)
 
 
+func set_bound_flame(selected_flame: StringName) -> void:
+	bound_flame = selected_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_flame) else &""
+
+
+func set_current_element(element: int) -> void:
+	var normalized := ELEMENT_CATALOG_SCRIPT.normalize(element)
+	if current_element == normalized:
+		return
+	current_element = normalized
+	map_state_changed.emit()
+
+
 func starter_palette() -> String:
 	return starter_palette_name
 
@@ -107,7 +124,7 @@ func fire_palette_available(palette: String) -> bool:
 	if palette == "grey":
 		return true
 	var flame := ASPECT_CATALOG_SCRIPT.flame_for_palette(palette)
-	return not flame.is_empty() and flame in available_flames()
+	return not flame.is_empty() and (flame in available_flames() or flame == bound_flame)
 
 
 func fire_flame_for_room(room_id: StringName) -> StringName:
@@ -128,6 +145,8 @@ func available_puzzle_colors() -> Array[StringName]:
 
 
 func palette_for_requirement(requirement: StringName) -> String:
+	if ELEMENT_CATALOG_SCRIPT.is_valid_id(requirement):
+		return str(ELEMENT_CATALOG_SCRIPT.PALETTE_KEYS.get(ELEMENT_CATALOG_SCRIPT.element_for_id(requirement), "grey"))
 	match requirement:
 		PUZZLE_COLOR_A:
 			return starter_palette_name
@@ -235,6 +254,12 @@ func is_connection_color_locked(connection: DungeonGraph.ConnectionRecord) -> bo
 	return connection != null and not connection.color_requirement.is_empty() and (connection.color_requirement != state.active_puzzle_color or connection.color_requirement not in available_puzzle_colors())
 
 
+func is_connection_element_locked(connection: DungeonGraph.ConnectionRecord) -> bool:
+	if connection == null or connection.element_requirement.is_empty() or state.is_element_connection_solved(connection):
+		return false
+	return current_element != ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)
+
+
 func mark_room_engaged(room_id: StringName) -> bool:
 	if graph == null or state.is_room_completed(room_id):
 		return false
@@ -263,6 +288,9 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		return false
 	if is_connection_color_locked(connection):
 		return false
+	if not connection.element_requirement.is_empty():
+		if is_connection_element_locked(connection):
+			return false
 	if source_room == null:
 		return false
 	if connection.hidden_until_clear and not state.is_room_completed(source_room.id):
@@ -281,7 +309,12 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		# prevents a merge from becoming a backdoor into an uncleared enemy branch.
 		# Once the source side is valid, the destination remains escapable until
 		# the player lands the first hit there.
-		return destination_room == null or not (connection.locks_entry_on_destination_engagement and requires_room_clear(destination_room) and state.is_room_engaged(destination_room.id) and not state.is_room_completed(destination_room.id))
+		var entrance_available := destination_room == null or not (connection.locks_entry_on_destination_engagement and requires_room_clear(destination_room) and state.is_room_engaged(destination_room.id) and not state.is_room_completed(destination_room.id))
+		if entrance_available and not connection.element_requirement.is_empty():
+			state.mark_element_connection_solved(connection)
+		return entrance_available
+	if not connection.element_requirement.is_empty():
+		state.mark_element_connection_solved(connection)
 	return true
 
 
@@ -302,6 +335,8 @@ func connection_visual_state(connection: DungeonGraph.ConnectionRecord, is_entra
 		return &"hidden"
 	if is_connection_color_locked(connection):
 		return &"orb_locked"
+	if is_connection_element_locked(connection):
+		return &"element_locked"
 	if not is_connection_available(connection, is_entrance):
 		return &"room_locked"
 	return &"open"

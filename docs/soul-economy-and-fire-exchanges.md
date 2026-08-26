@@ -1,11 +1,9 @@
 # Soul Economy and Fire Exchanges
 
-This document records the first implementation of Souls as the persistent
-currency for fire services and equipment fusion, plus the approved next-step
-elemental Binding/Fusion design. The planned elemental rules are canonical in
-[`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md);
-the current 10-Soul fire values below remain implementation-baseline notes
-until that plan is built.
+This document records the implementation of Souls as the persistent currency
+for flame services and equipment fusion, plus the elemental Binding/Fusion
+system. The canonical rules are in
+[`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md).
 
 ## Enemy drops
 
@@ -36,18 +34,18 @@ pickup in the encounter without changing the broader Chroma economy.
 
 ## Fire services
 
-### Current implementation baseline
+### Implemented flame services
 
-Interacting with an earned fire is one atomic use costing **10 Souls**. The
+Interacting with an earned flame is one atomic use costing **5 Souls**. The
 single use simultaneously:
 
 1. Heals missing HP to full.
 2. Refills the active Chroma bar to full.
 3. Attunes the player to the fire's element.
 
-A fire does not heal or refill passively, and the first starter-flame
-attunement is not free. On the first run, if the player has fewer than 10
-Souls, the Cloaked Demon gives them a one-time 10-Soul starter grant during
+A flame does not heal or refill passively, and the first starter-flame
+attunement is not free. On the first run, if the player has fewer than 5
+Souls, the Cloaked Demon gives them a one-time 5-Soul starter grant during
 their tutorial dialogue. The player then spends those Souls at the starter
 fire to begin the run.
 
@@ -97,9 +95,9 @@ display.
 - `tests/rogue_slime_smoke.gd` covers Shadow/Normal popcorn composition.
 - `tests/soul_pickup_smoke.gd` covers the 9x9 sprite and persistent collection.
 - `tests/item_economy_smoke.gd` covers profile persistence and Soul-paid fusion.
-- `tests/fire_exchange_smoke.gd` covers the one-time starter grant and the
-  fixed 10-Soul atomic fire service.
+- `tests/fire_exchange_smoke.gd` covers the one-time starter grant, explicit
+  Swap/Fuse menu, and fixed 5-Soul atomic flame service.
 - `tests/generated_run_scene_smoke.gd` covers a paid alternate fire attunement.
-- Planned Binding/Fusion coverage must additionally verify 5-Soul Swap/Fuse,
-  no-bound Fusion, flat 50-Soul Demon Binding, current/bound persistence, and
-  unbound elemental door access.
+- `tests/elemental_binding_smoke.gd` covers 5-Soul Swap/Fuse, no-bound Fusion,
+  flat 50-Soul Demon Binding, current/bound persistence, and unbound elemental
+  door access.

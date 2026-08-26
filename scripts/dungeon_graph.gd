@@ -48,6 +48,7 @@ class ConnectionRecord extends RefCounted:
 	var allow_entry_before_source_clear := false
 	var locks_entry_on_destination_engagement := true
 	var route_role: StringName = &"main"
+	var element_requirement: StringName = &""
 
 
 	func _init(
@@ -76,6 +77,7 @@ class ConnectionRecord extends RefCounted:
 			"allow_entry_before_source_clear": allow_entry_before_source_clear,
 			"locks_entry_on_destination_engagement": locks_entry_on_destination_engagement,
 			"route_role": route_role,
+			"element_requirement": element_requirement,
 		}
 
 
@@ -207,6 +209,7 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		connection.allow_entry_before_source_clear = spec.allow_entry_before_source_clear
 		connection.locks_entry_on_destination_engagement = spec.locks_entry_on_destination_engagement
 		connection.route_role = spec.route_role
+		connection.element_requirement = spec.element_requirement
 		source_room.outgoing_connections[connection.exit_socket] = connection
 		destination_room.incoming_connections[connection.destination_entry] = connection
 		_connections[_connection_key(connection.source_room_id, connection.exit_socket)] = connection

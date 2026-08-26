@@ -30,8 +30,8 @@ func _initialize() -> void:
 		gameplay.set("starter_flame_attuned_this_run", false)
 		gameplay.call("_begin_new_run")
 		npc.show_dialogue(gameplay)
-		_expect(profile.souls == 10 and profile.starter_soul_gift_claimed, "Cloaked Demon grants the 10-Soul starter gift", failures)
-		_expect(String(npc.full_message).contains("10 SOULS"), "starter gift is explained in Cloaked Demon dialogue", failures)
+		_expect(profile.souls == 5 and profile.starter_soul_gift_claimed, "Cloaked Demon grants the 5-Soul starter gift", failures)
+		_expect(String(npc.full_message).contains("5 SOULS"), "starter gift is explained in Cloaked Demon dialogue", failures)
 		npc.hide_dialogue(gameplay)
 		var player := gameplay.get("player") as Sprite2D
 		player.global_position += (gameplay.call("_fire_anchor") as Vector2) - (gameplay.call("_actor_foot", player) as Vector2)
@@ -39,27 +39,35 @@ func _initialize() -> void:
 		var interact_prompt := gameplay.get("interact_prompt") as Sprite2D
 		var fire_cost := interact_prompt.get_node_or_null("FireCost") as Sprite2D if interact_prompt != null else null
 		_expect(fire_cost != null and fire_cost.visible and fire_cost.texture != null and fire_cost.position.y < 0.0, "fire interaction shows the Soul cost above the circle prompt", failures)
+		profile.souls = 5
+		gameplay.call("_open_flame_exchange")
+		var flame_menu := gameplay.get("flame_exchange_controller") as Node
+		_expect(flame_menu != null and bool(flame_menu.get("active")), "contacting a flame opens the explicit action menu", failures)
+		var swap_text := flame_menu.get("swap_text") as Sprite2D if flame_menu != null else null
+		_expect(swap_text != null and swap_text.texture != null, "flame menu renders the five-Soul Swap option", failures)
+		if flame_menu != null:
+			flame_menu.call("close", gameplay)
 		profile.souls = 0
 		_expect(bool(gameplay.call("_can_interact_with_fire")), "starter fire remains interactable without Souls", failures)
 		gameplay.call("_interact_with_fire")
 		_expect(not bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"gray", "starter fire refuses an unpaid use", failures)
-		profile.souls = 10
+		profile.souls = 5
 		health.apply_damage(1.0)
 		var damaged_health := health.current_health
 		for _frame in 90:
 			await process_frame
 		_expect(is_equal_approx(health.current_health, damaged_health), "fire rooms do not passively heal without a fire use", failures)
 		gameplay.call("_interact_with_fire")
-		_expect(bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"fire", "first starter attunement costs 10 Souls", failures)
+		_expect(bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"fire", "first starter attunement costs 5 Souls", failures)
 		_expect(profile.souls == 0 and health.current_health == health.maximum_health and chroma.get("current_chroma") == 100, "one fire use restores HP and active Chroma", failures)
 
 		health.apply_damage(1.0)
 		chroma.call("spend_elemental_ability")
 		gameplay.call("_interact_with_fire")
 		_expect(health.current_health < health.maximum_health and chroma.get("current_chroma") < 100 and profile.souls == 0, "fire refuses a second use without Souls", failures)
-		profile.souls = 10
+		profile.souls = 5
 		gameplay.call("_interact_with_fire")
-		_expect(health.current_health == health.maximum_health and chroma.get("current_chroma") == 100 and profile.souls == 0, "each fire use costs one fixed 10-Soul transaction", failures)
+		_expect(health.current_health == health.maximum_health and chroma.get("current_chroma") == 100 and profile.souls == 0, "each fire use costs one fixed 5-Soul transaction", failures)
 
 		# Force an earned alternate palette through the legacy fallback path so the
 		# test isolates the same atomic transaction while changing elements.
@@ -67,10 +75,20 @@ func _initialize() -> void:
 		gameplay.set("run_start_palette_name", "blue")
 		gameplay.set("current_fire_palette_name", "blue")
 		(gameplay.get("screen_state_controller") as Node).set("player_palette_name", "red")
-		profile.souls = 10
+		profile.souls = 5
 		gameplay.call("_interact_with_fire")
-		_expect((gameplay.get("screen_state_controller") as Node).get("player_palette_name") == "blue", "fire exchanges 10 Souls for an earned element change", failures)
+		_expect((gameplay.get("screen_state_controller") as Node).get("player_palette_name") == "blue", "fire exchanges 5 Souls for an earned element change", failures)
 		_expect(chroma.call("aspect_name") == &"water" and chroma.get("current_chroma") == 100 and profile.souls == 0, "the fixed fire cost also covers an element change", failures)
+		# Fusion is explicit and uses the current element without requiring a
+		# permanent Binding. Fire + Electric should produce the orange Ground state.
+		chroma.call("attune_flame", &"fire")
+		gameplay.set("current_fire_palette_name", "yellow")
+		gameplay.set("run_start_palette_name", "yellow")
+		profile.souls = 5
+		_expect(bool(gameplay.call("_can_fuse_with_fire")), "a valid fusion is offered at the contacted flame", failures)
+		_expect(bool(gameplay.call("_fuse_with_fire")), "fusion succeeds without a bound element", failures)
+		_expect(chroma.call("aspect_name") == &"ground" and profile.souls == 0, "fusion produces the current unbound result for 5 Souls", failures)
+		_expect(not profile.has_bound_element and profile.palette_name == "red", "temporary fusion does not mutate the profile identity", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

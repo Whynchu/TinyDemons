@@ -17,6 +17,7 @@ const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/slime_runtime_con
 const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/actor_presentation_runtime_controller.gd")
 const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
+const FLAME_EXCHANGE_CONTROLLER_SCRIPT = preload("res://scripts/flame_exchange_controller.gd")
 const SLIME_ROSTER_SIZE := 13
 
 
@@ -63,6 +64,7 @@ func initialize(root: GameplayState) -> void:
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
 	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
+	root.flame_exchange_controller = _add_runtime_node(root, FLAME_EXCHANGE_CONTROLLER_SCRIPT, "FlameExchangeController") as FlameExchangeController
 	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
 	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
@@ -80,7 +82,7 @@ func initialize(root: GameplayState) -> void:
 	dungeon_graph.configure_progression(profile.completed_runs)
 	var dungeon_seed := rng.randi()
 	root.current_dungeon_seed = dungeon_seed
-	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame)
+	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"")
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
 	if root.debug_start_in_boss_room:
 		if root.dungeon_map_controller.has_complete_layout():
@@ -254,6 +256,8 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	attack.attack_started.connect(Callable(transmutations, "begin_attack")); attack.attack_finished.connect(Callable(transmutations, "finish_attack")); attack.attack_hit_resolved.connect(Callable(transmutations, "record_attack_hits"))
 	transmutations.effect_triggered.connect(Callable(root, "_on_transmutation_effect_triggered")); root.equipment_transmutation_component = transmutations; root._configure_equipment_transmutations()
 	root.player_chroma_component = _ensure_player_component(player, PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma")
+	if profile != null and profile.has_bound_element:
+		root.player_chroma_component.call("set_bound_flame", profile.bound_element)
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
 	root.player_aspect_ability_component.call("configure_mode_cooldowns", root.MAGIC_COOLDOWN, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent

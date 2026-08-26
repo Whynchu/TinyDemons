@@ -27,7 +27,7 @@ const NORMAL := {
 
 const ACCENT := {
 	"blue": Color8(65, 166, 246), "orange": Color8(255, 205, 117),
-	"red": Color8(239, 125, 87),
+	"green": Color8(167, 240, 112), "red": Color8(239, 125, 87),
 	"yellow": Color8(255, 240, 150),
 	"purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194),
 	"aquamarine": Color8(134, 203, 255),

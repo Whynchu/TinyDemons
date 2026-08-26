@@ -29,7 +29,7 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			root.call("_play_sound", "chest_reward", -3.0, 1.0)
 			print("Gold: %d" % (current_gold + scaled_gold))
 		elif bool(root.call("_can_interact_with_fire")):
-			root.call("_interact_with_fire")
+			root.call("_open_flame_exchange")
 		elif bool(root.call("_can_interact_with_npc")):
 			(root.get("npc_controller") as NpcController).show_dialogue(root)
 		elif bool(root.call("_can_interact_with_world_item")):

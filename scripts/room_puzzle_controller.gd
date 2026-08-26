@@ -206,7 +206,7 @@ func _socket_is_color_locked(root: Object, socket: DungeonSocket, is_entrance: b
 		return false
 	var connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection_for_entry(root.current_room_id, socket.socket_id()) if is_entrance else root.dungeon_graph.get_connection(root.current_room_id, socket.socket_id())
 	var visual_state: StringName = root.call("_map_connection_visual_state", connection, is_entrance) as StringName
-	return visual_state == &"orb_locked"
+	return visual_state == &"orb_locked" or visual_state == &"element_locked"
 
 
 func _socket_is_open(root: Object, socket: DungeonSocket, is_entrance: bool) -> bool:
@@ -567,14 +567,15 @@ func refresh_room_socket_visuals(root: Object, is_unlocked: bool) -> void:
 		var authored_open: bool = root.dungeon_map_controller != null and root.dungeon_map_controller.is_authored_run1()
 		visual.visible = true
 		var is_orb_locked := visual_state == &"orb_locked"
+		var is_element_locked := visual_state == &"element_locked"
 		var is_starter_gate: bool = starter_gate_locked and root.current_room_type == DungeonGraph.ROOM_START
 		# The map controller is the source of truth for authored/generated runs.
 		# Do not let the legacy room-wide flag keep an effectively open connection
 		# looking shut (or vice versa), especially after a shared orb recolors the
 		# active puzzle state.
 		var connection_is_open := visual_state == &"open" and (root.dungeon_map_controller != null or is_unlocked or authored_open)
-		visual.texture = starter_flame_shut_texture if is_starter_gate and starter_flame_shut_texture != null else stairs_up_texture if root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs and connection_is_open else _color_locked_door_texture(root, orb_shut_texture, connection) if is_orb_locked else open_texture if connection_is_open else shut_texture
-		if is_orb_locked or is_starter_gate:
+		visual.texture = starter_flame_shut_texture if is_starter_gate and starter_flame_shut_texture != null else stairs_up_texture if root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs and connection_is_open else _color_locked_door_texture(root, orb_shut_texture, connection) if is_orb_locked or is_element_locked else open_texture if connection_is_open else shut_texture
+		if is_orb_locked or is_element_locked or is_starter_gate:
 			# The locked texture already contains the complete semantic color. Do
 			# not multiply it by the room's global environment tint.
 			visual.self_modulate = Color.WHITE
@@ -614,11 +615,12 @@ func _color_locked_door_texture(root: Object, base_texture: Texture2D, connectio
 	if base_texture == null or connection == null:
 		return base_texture
 	var palette_name := ""
+	var requirement := connection.element_requirement if not connection.element_requirement.is_empty() else connection.color_requirement
 	var map_controller := root.get("dungeon_map_controller") as Node
 	if map_controller != null:
-		palette_name = str(map_controller.call("palette_for_requirement", connection.color_requirement))
+		palette_name = str(map_controller.call("palette_for_requirement", requirement))
 	if palette_name.is_empty():
-		palette_name = "blue" if connection.color_requirement == &"puzzle_a" else "grey" if connection.color_requirement == &"puzzle_b" else ""
+		palette_name = "blue" if requirement == &"puzzle_a" else "grey" if requirement == &"puzzle_b" else ""
 	if palette_name.is_empty():
 		return base_texture
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
@@ -631,12 +633,13 @@ func _entrance_lock_modulate(root: Object, connection: DungeonGraph.ConnectionRe
 		return Color.WHITE
 	if boss_entrance_closed:
 		return Color(0.5, 0.5, 0.5, 1.0)
-	if visual_state != &"orb_locked":
+	if visual_state != &"orb_locked" and visual_state != &"element_locked":
 		return Color(0.5, 0.5, 0.5, 1.0)
 	var palette_name := "grey"
+	var requirement := connection.element_requirement if connection != null and not connection.element_requirement.is_empty() else connection.color_requirement if connection != null else &""
 	var map_controller := root.get("dungeon_map_controller") as Node
 	if map_controller != null and connection != null:
-		palette_name = str(map_controller.call("palette_for_requirement", connection.color_requirement))
+		palette_name = str(map_controller.call("palette_for_requirement", requirement))
 	if palette_name.is_empty():
-		palette_name = "blue" if connection != null and connection.color_requirement == &"puzzle_a" else "grey"
+		palette_name = "blue" if requirement == &"puzzle_a" else "grey"
 	return PaletteLibrary.normal(palette_name) * Color(0.5, 0.5, 0.5, 1.0)

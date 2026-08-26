@@ -164,12 +164,11 @@ These affect dungeon generation and room behavior and are `const` in
 | Triangle knockback | `0.25x` normal attack knockback | `magic_runtime_controller.gd:MAGIC_KNOCKBACK_MULTIPLIER` |
 | Enemy Soul drop | 1 Soul per defeated enemy | `combat_runtime_controller.gd:SOUL_DROP_VALUE` |
 | Soul pickup | 9x9 sprite, 10.0 collection distance, 0.38s launch arc | `pickup_runtime_controller.gd`, `gameplay_state.gd` |
-| Fire use | Full HP, full active Chroma, and earned element attunement for 10 Souls; first starter use is also paid | `gameplay_state.gd:FIRE_SOUL_COST` |
+| Fire use / Swap | Full HP, full active Chroma, and earned element attunement for 5 Souls; first starter use is also paid | `gameplay_state.gd:FLAME_SWAP_SOUL_COST` |
 | Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `combat_runtime_controller.gd:update_player_health_regen`, `gameplay_state.gd:_interact_with_fire` |
-| Starter Soul grant | One-time 10-Soul grant from the Cloaked Demon when the first-run player lacks the fire-use cost | `npc_controller.gd`, `player_profile.gd` |
-| Planned flame Swap | 5 Souls; changes current element without changing the persistent bound element | `docs/elemental-binding-and-fusion-design.md` |
-| Planned flame Fusion | 5 Souls; uses current element plus the contacted flame and produces an unbound recipe result | `docs/elemental-binding-and-fusion-design.md` |
-| Planned permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `docs/elemental-binding-and-fusion-design.md` |
+| Starter Soul grant | One-time 5-Soul grant from the Cloaked Demon when the first-run player lacks the flame-use cost | `npc_controller.gd`, `player_profile.gd` |
+| Flame Fusion | 5 Souls; uses current element plus the contacted flame and produces an unbound recipe result | `gameplay_state.gd:FLAME_FUSION_SOUL_COST` |
+| Permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `gameplay_state.gd:ELEMENT_BIND_SOUL_COST` |
 
 ## Magic numbers still hardcoded (known gaps)
 

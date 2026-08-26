@@ -3,12 +3,14 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 7
+const CURRENT_SCHEMA_VERSION := 8
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
 const FUSION_START_COST := 1
 const FUSION_RARITY_STEP_COST := 10
+const ELEMENTAL_FLAME_COST := 5
+const ELEMENT_BIND_SOUL_COST := 50
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
@@ -16,6 +18,8 @@ var open_hub_on_load := false
 var pending_route := "title"
 var starter_flame: StringName = &"fire"
 var palette_name := "blue"
+var bound_element: StringName = &""
+var has_bound_element := false
 var allocation_profile := 0
 var level := 1
 var xp := 0
@@ -104,6 +108,29 @@ func spend_souls(amount: int) -> bool:
 	if not can_spend_souls(amount):
 		return false
 	souls -= amount
+	return true
+
+
+func persistent_flame() -> StringName:
+	return bound_element if has_bound_element else starter_flame
+
+
+func can_bind_element(element: StringName) -> bool:
+	return AspectCatalogScript.is_elemental_flame(element)
+
+
+func bind_element(element: StringName) -> bool:
+	if not can_bind_element(element):
+		return false
+	if has_bound_element and bound_element == element:
+		return true
+	if not spend_souls(ELEMENT_BIND_SOUL_COST):
+		return false
+	bound_element = element
+	has_bound_element = true
+	# palette_name is the durable file-facing identity used by the title/hub
+	# presentation. Temporary flame actions never touch it.
+	palette_name = AspectCatalogScript.palette_for_flame(element)
 	return true
 
 
@@ -325,6 +352,8 @@ func to_dictionary() -> Dictionary:
 		"pending_route": pending_route,
 		"starter_flame": String(starter_flame),
 		"palette_name": palette_name,
+		"bound_element": String(bound_element),
+		"has_bound_element": has_bound_element,
 		"allocation_profile": allocation_profile,
 		"level": level,
 		"xp": xp,
@@ -355,7 +384,7 @@ func load_dictionary(data: Dictionary) -> void:
 	var saved_schema := int(data.get("schema_version", 0))
 	# Chroma changes the meaning of file identity. Older files are intentionally
 	# allowed to die out instead of being guessed into the new model.
-	if saved_schema != CURRENT_SCHEMA_VERSION:
+	if saved_schema != CURRENT_SCHEMA_VERSION and saved_schema != CURRENT_SCHEMA_VERSION - 1:
 		schema_version = CURRENT_SCHEMA_VERSION
 		return
 	schema_version = saved_schema
@@ -367,6 +396,11 @@ func load_dictionary(data: Dictionary) -> void:
 	var saved_flame := StringName(str(data.get("starter_flame", "fire")))
 	starter_flame = saved_flame if AspectCatalogScript.is_starter_flame(saved_flame) else &"fire"
 	palette_name = str(data.get("palette_name", "blue"))
+	var saved_bound := StringName(str(data.get("bound_element", "")))
+	has_bound_element = bool(data.get("has_bound_element", false)) and AspectCatalogScript.is_elemental_flame(saved_bound)
+	bound_element = saved_bound if has_bound_element else &""
+	if has_bound_element:
+		palette_name = AspectCatalogScript.palette_for_flame(bound_element)
 	allocation_profile = int(data.get("allocation_profile", 0))
 	level = clampi(int(data.get("level", 1)), 1, MAX_LEVEL)
 	xp = maxi(int(data.get("xp", 0)), 0)
