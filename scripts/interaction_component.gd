@@ -98,6 +98,17 @@ func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:
 	return prompt
 
 
+func set_prompt_texture(prompt: Sprite2D, texture: Texture2D) -> void:
+	if prompt == null or texture == null:
+		return
+	if prompt.texture == texture:
+		return
+	prompt.texture = texture
+	var highlight := prompt.get_parent().get_node_or_null("InteractPromptHighlight") as Sprite2D
+	if highlight != null:
+		highlight.texture = _highlight_button_texture(texture)
+
+
 func _highlight_button_texture(source: Texture2D) -> Texture2D:
 	if source == null:
 		return null

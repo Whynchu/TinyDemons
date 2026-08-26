@@ -7,6 +7,7 @@
 3. `docs/refactor-route.md` — accepted migration route.
 4. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
 5. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
+6. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
 
 ## Verification
 
@@ -32,6 +33,8 @@ process exits nonzero or a test reports failure.
 | Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd` |
 | Progression and settlement | `progression_controller.gd` / `run_settlement.gd` when extracted |
 | Hub and menu presentation | `screen_state_controller.gd` |
+| Input device prompts | `input_device_tracker.gd`, `input_router.gd` |
+| Touch controls | `touch_controls_layer.gd`, `input_router.gd` |
 | Actor occlusion and visual effects | `occlusion_renderer.gd`, `effects_spawner.gd` |
 | Persistent profile data | `player_profile.gd`, `profile_save_service.gd` |
 

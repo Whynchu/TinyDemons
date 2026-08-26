@@ -10,8 +10,17 @@ func _initialize() -> void:
 		return
 	var gameplay := packed.instantiate()
 	get_root().add_child(gameplay)
+	var boot_started := false
 	for _frame in 90:
 		await process_frame
+		boot_started = boot_started or bool(gameplay.get("boot_active"))
+		if boot_started and not bool(gameplay.get("boot_active")):
+			# The geometry assertions describe the authored debug spawn, not where
+			# the boss AI may push the player after the scene has settled. Stop the
+			# root simulation as soon as bootstrap completes so this smoke remains
+			# deterministic while its later geometry calls stay synchronous.
+			gameplay.set_physics_process(false)
+			break
 	var slimes := gameplay.get("slimes") as Array[Sprite2D]
 	var boss: Sprite2D = null
 	for slime in slimes:

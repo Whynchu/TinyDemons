@@ -12,20 +12,30 @@ var _previous: Dictionary = {}
 var _movement := Vector2.ZERO
 var _target_axis := 0.0
 var _guard_axis := 0.0
+var touch_provider: Node = null
+var _touch_snapshot: Dictionary = {}
 
 const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard", &"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right", &"move_left", &"move_right", &"move_up", &"move_down"]
 
 
 func poll(next_context: int) -> void:
 	context = next_context
+	if touch_provider != null and touch_provider.has_method("set_input_context"):
+		touch_provider.call("set_input_context", context)
 	_previous = _current.duplicate()
 	_current.clear()
+	_touch_snapshot = _read_touch_snapshot()
 	for action in ACTIONS:
-		_current[action] = Input.is_action_pressed(action)
+		_current[action] = Input.is_action_pressed(action) or _touch_action_pressed(action) or _touch_action_just_pressed(action)
 	devices = connected_devices()
 	_movement = _read_movement()
 	_target_axis = _strongest_axis(JOY_AXIS_RIGHT_X)
 	_guard_axis = _strongest_trigger(JOY_AXIS_TRIGGER_LEFT)
+
+
+func set_touch_provider(provider: Node) -> void:
+	touch_provider = provider
+	_touch_snapshot.clear()
 
 
 func connected_devices() -> Array[int]:
@@ -108,7 +118,31 @@ func _read_movement() -> Vector2:
 		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_LEFT): value.x -= 1.0
 		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN): value.y += 1.0
 		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_UP): value.y -= 1.0
+	var touch_movement: Variant = _touch_snapshot.get("movement", Vector2.ZERO)
+	if touch_movement is Vector2 and (touch_movement as Vector2).length() > value.length():
+		value = touch_movement as Vector2
 	return value
+
+
+func _read_touch_snapshot() -> Dictionary:
+	if touch_provider == null or not touch_provider.has_method("is_active"):
+		return {}
+	if not bool(touch_provider.call("is_active")):
+		return {}
+	if not touch_provider.has_method("snapshot"):
+		return {}
+	var snapshot: Variant = touch_provider.call("snapshot")
+	return snapshot as Dictionary if snapshot is Dictionary else {}
+
+
+func _touch_action_pressed(action: StringName) -> bool:
+	var actions: Variant = _touch_snapshot.get("actions", {})
+	return bool((actions as Dictionary).get(action, false)) if actions is Dictionary else false
+
+
+func _touch_action_just_pressed(action: StringName) -> bool:
+	var just_pressed: Variant = _touch_snapshot.get("just_pressed", {})
+	return bool((just_pressed as Dictionary).get(action, false)) if just_pressed is Dictionary else false
 
 
 func _strongest_axis(axis: int) -> float:

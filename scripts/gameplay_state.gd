@@ -119,6 +119,8 @@ var player_health_component: HealthComponent = null
 var player_motor: ActorMotor = null
 var player_controller: PlayerController = null
 var input_router: InputRouter = null
+var input_device_tracker: Node = null
+var touch_controls_layer: Node = null
 var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
 var player_chroma_component: Node = null
@@ -546,6 +548,12 @@ func _is_pause_input_just_pressed() -> bool:
 func _input_context() -> int:
 	if screen_state_controller == null: return InputRouter.Context.GAMEPLAY
 	var ssc := screen_state_controller as ScreenStateController
+	if loading_screen_active or scene_transition_active:
+		return InputRouter.Context.MENU
+	if game_over_overlay != null and game_over_overlay.visible:
+		return InputRouter.Context.MENU
+	if ssc.run_complete_overlay != null and ssc.run_complete_overlay.visible:
+		return InputRouter.Context.MENU
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible: return InputRouter.Context.MENU
 	if ssc.title_overlay != null and ssc.title_overlay.visible: return InputRouter.Context.MENU
 	if ssc.archetype_overlay != null and ssc.archetype_overlay.visible: return InputRouter.Context.MENU
@@ -928,7 +936,22 @@ func _start_player_palette_flash(new_palette: String) -> void:
 	player_palette_flash_overlay = overlay
 	player_palette_flash_phase = 0
 	player_palette_flash_timer = 0.0
-func _update_interact_prompt(delta: float) -> void: interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
+func _input_prompt_texture(action: StringName) -> Texture2D:
+	if input_device_tracker == null:
+		return _load_texture_or_null("res://assets/artwork/circle55.png")
+	var device := int(input_device_tracker.get("current_device"))
+	if device == InputDeviceTracker.Device.GAMEPAD and action == &"interact":
+		return _load_texture_or_null("res://assets/artwork/circle55.png")
+	var label := String(input_device_tracker.call("prompt_label", action))
+	return _pixel_text_texture(label, Color.WHITE)
+
+
+func _update_interact_prompt(delta: float) -> void:
+	if interaction_component != null and interact_prompt != null:
+		interaction_component.set_prompt_texture(interact_prompt, _input_prompt_texture(&"interact"))
+	if npc_controller != null:
+		npc_controller.set_continue_prompt_texture(_input_prompt_texture(&"interact"))
+	interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
 	room_puzzle_controller.call("set_door_active", self, is_active)
 func _collect_dungeon_sockets() -> void:

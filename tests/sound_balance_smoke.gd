@@ -14,7 +14,7 @@ func _initialize() -> void:
 	_expect(music_player != null and profile != null and is_equal_approx(music_player.volume_db, float(profile.get("title_music_db"))), "digital_forever title track uses the editor profile level", failures)
 	manager.start_run_music()
 	_expect(SoundManager.RUN_MUSIC_PATH.ends_with("Dungeon-Crawl.wav"), "run music uses Dungeon-Crawl", failures)
-	_expect(music_player != null and music_player.stream != null and music_player.stream.resource_path.ends_with("Dungeon-Crawl.wav"), "Dungeon-Crawl run track loads", failures)
+	_expect(music_player != null and music_player.stream != null and (music_player.stream.resource_path.ends_with("Dungeon-Crawl.wav") or music_player.stream.resource_path.ends_with("Dungeon-Crawl.ogg")), "Dungeon-Crawl run track loads from the source or compact web variant", failures)
 	_expect(music_player != null and profile != null and is_equal_approx(music_player.volume_db, float(profile.get("run_music_db"))), "Dungeon-Crawl uses the editor profile level", failures)
 	manager.stop_music()
 	manager.play("ui_pause")

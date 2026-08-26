@@ -27,6 +27,11 @@ The next combat design slice is documented in
 elemental slime variants, the custom scaled Gen-III matchup table, and
 element-colored damage feedback.
 
+The **web port** (browser build with touch controls, gamepad peripherals, and
+last-input-device auto-detection) is implemented and tracked in
+[`docs/web-port-implementation-plan.md`](docs/web-port-implementation-plan.md);
+desktop remains the primary target and both share this codebase.
+
 Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
 status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
 execution plan. The completed Combat & Economy work remains documented in
@@ -64,3 +69,22 @@ remappable in-editor. Defaults:
 - Interact / confirm: `E` / Enter / controller B
 - Cancel: `X` / controller A
 - Pause: Escape / controller Start
+
+## Web build
+
+The browser build is published to
+[GitHub Pages](https://whynchu.github.io/TinyDemons/) from `main`. Pull
+requests run the Web export and upload a review artifact without publishing;
+only a `main` push (or a manual workflow run on `main`) deploys the public
+site. The workflow is [`.github/workflows/web-pages.yml`](.github/workflows/web-pages.yml).
+In repository settings, set Pages' publishing source to **GitHub Actions** once
+before the first deployment.
+
+On a touch device, the virtual stick and action controls appear after touch
+input. Keyboard, mouse, and gamepad input remain available, and prompts follow
+the last device used. To validate the export locally after installing the
+matching Godot 4.7.1 Web template:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File tests/web_export_smoke.ps1 -RequireExport
+```

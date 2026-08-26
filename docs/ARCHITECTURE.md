@@ -53,6 +53,9 @@ and string dispatch one feature slice at a time. See
   `stats_component`, `combat_stat_snapshot`, `combat_calculator`.
 - **Presentation**: `hud_controller`, `effects_spawner`,
   `screen_state_controller`, `sprite_frame_library`.
+- **Web/input**: `input_device_tracker` (last deliberate device and prompt
+  labels), `touch_controls_layer` (virtual stick and touch buttons), and
+  `input_router` (the single merged input snapshot).
 - **Infra**: `gameplay` (coordinator), `gameplay_state` (state),
   `gameplay_bootstrap`, `gameplay_frame_controller`,
   `editor_collision_guide`, `editor_polygon_guide`, `ui_layout_guide`.
@@ -77,7 +80,11 @@ All binds live in the **Input Map** (Project Settings > Input Map), defined in
 `project.godot` under `[input]`. `player_controller.gd` and the coordinator's
 `_is_*_input_pressed` helpers poll named actions; the trigger-axis check for
 target/guard stays in `player_controller.gd` because axes are not map entries.
-Remap freely in the editor without touching code.
+Remap freely in the editor without touching code. `InputRouter` is the only
+per-frame snapshot boundary: desktop actions are read from the Input Map and
+the optional `touch_controls_layer` provider is merged there. The
+`input_device_tracker` owns last-device classification and prompt labels; it
+ignores emulated mouse echoes and sub-threshold gamepad drift.
 
 ## Extension guide
 
