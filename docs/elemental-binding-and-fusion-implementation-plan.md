@@ -76,7 +76,7 @@ bound while an unbound Grass or Ice fusion is currently active.
 | Current element, Chroma, zero-Chroma resolution | `PlayerChromaComponent` |
 | Souls and bound-element persistence | `PlayerProfile` / profile controller |
 | Flame interaction selection and routing | `RestFireController` / gameplay interaction boundary |
-| Binding menu and confirmation | `NpcController` plus a dedicated menu/controller if needed |
+| Binding panel and confirmation | Hub UI plus `HubFlowController`; Demon keeps its normal Hub invitation |
 | Triangle ability mode and execution | Existing magic/aspect ability controllers |
 | Door requirements and solved state | Room/puzzle controller |
 | Hub flame presentation | Save-flow/hub presentation controller |
@@ -198,9 +198,10 @@ Exit condition: tests cover no-bound fusion, bound/current mismatch, each
 recipe in both orders, chained Water → Grass → Ice progression, invalid pairs,
 insufficient Souls, cancellation, and no automatic fusion.
 
-### Phase 5 — Cloaked Demon Binding menu
+### Phase 5 — Hub Binding panel
 
-Add the permanent commitment UI at the Cloaked Demon.
+Keep the Cloaked Demon's normal dialogue and Hub transition. Add the permanent
+commitment UI as a dedicated BIND page inside the Hub.
 
 - Show current element, bound element, Soul balance, and the flat 50-Soul cost.
 - Show `NONE`/`UNBOUND` when there is no permanent identity.
@@ -213,8 +214,9 @@ Add the permanent commitment UI at the Cloaked Demon.
 - If current already matches bound, show an already-bound state and charge
   nothing.
 
-Exit condition: a scene-backed test covers the menu, cost display, disabled
-states, confirmation/cancellation, profile update, and hub-flame refresh.
+Exit condition: a scene-backed test covers the normal Demon-to-Hub flow, the
+Binding page, cost display, disabled states, confirmation/cancellation, profile
+update, and hub-flame refresh.
 
 ### Phase 6 — Door and authored-curriculum integration
 
@@ -259,7 +261,7 @@ visual state at every step.
 ### Phase 8 — Economy, tutorial, and polish pass
 
 - Update the flame cost prompt from the current implementation value to 5.
-- Add Demon Binding prompt and 50-Soul confirmation.
+- Polish the Hub BIND panel and its 50-Soul confirmation.
 - Add tutorial dialogue explaining that fusion is temporary until Binding.
 - Make the first Binding opportunity readable without implying it is required
   for the first elemental door.
@@ -282,7 +284,7 @@ The first implementation pass should inspect these existing seams:
 | Chroma state | `scripts/player_chroma_component.gd` | Current/bound state, depletion, recovery |
 | Profile persistence | `scripts/player_profile.gd` | Bound element and Soul payment |
 | Flame interaction | `scripts/gameplay.gd`, `scripts/gameplay_state.gd`, `scripts/rest_fire_controller.gd` | Route Swap/Fuse requests and flame presentation |
-| Demon interaction | `scripts/npc_controller.gd` and UI controllers | Binding menu and confirmation |
+| Demon interaction | `scripts/npc_controller.gd` and UI controllers | Normal Hub invitation in the Demon dialogue; Binding panel and confirmation inside the Hub |
 | Aspect recipes | `scripts/element_catalog.gd` or new fusion catalog | Stable element IDs and recipes |
 | Hub identity | Save-flow/hub flame setup | Bound-first, starter-fallback flame presentation |
 | Triangle behavior | `scripts/magic_runtime_controller.gd` and aspect ability boundary | Current/effective aspect resolution |
@@ -333,7 +335,8 @@ the ownership boundaries must remain stable.
 
 - Flame prompt shows the current Soul cost; the quick-press Swap and
   hold-to-Fuse gestures resolve without a secondary menu.
-- Demon UI shows current/bound state and 50-Soul cost.
+- Hub BIND UI shows current/bound state and 50-Soul cost; Demon dialogue still
+  opens the normal Hub invitation.
 - Hub flame uses bound element first and starter flame as fallback.
 - Current element, Chroma bar, sprite saturation, Triangle mode, and damage
   element remain synchronized.
@@ -348,7 +351,7 @@ Commit each checkpoint as a reviewable slice:
 3. `separate current and bound chroma state`
 4. `add five-soul flame swap`
 5. `add unbound flame fusion`
-6. `add cloaked demon binding menu`
+6. `add Hub binding panel and confirmation`
 7. `allow unbound elements to solve doors`
 8. `integrate zero-chroma recovery and presentation`
 9. `add binding and fusion smoke coverage`
@@ -372,9 +375,9 @@ should be answered during the first implementation review:
 3. Does an unbound current fusion survive death, or does death restore the last
    bound/default state? The recommended behavior is to restore the last durable
    state on death and keep temporary fusion state run-local only.
-4. At what story/run milestone does the Demon Binding menu become available?
-   The menu should not appear as a required solution to the first elemental
-   door.
+4. At what story/run milestone should the optional Hub BIND panel receive its
+   tutorial explanation? It must not appear as a required solution to the
+   first elemental door.
 5. Are current class stat/passive effects always derived from current element,
    or does Binding preserve any portion of the old package during a temporary
    swap? The recommended first implementation uses current element only and

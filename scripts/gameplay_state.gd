@@ -393,22 +393,6 @@ func _sync_current_element_state() -> void:
 	dungeon_map_controller.call("set_current_element", _current_player_element())
 
 
-func _binding_prompt_text() -> String:
-	if player_chroma_component == null:
-		return "NO ELEMENTAL IDENTITY."
-	var current := String(player_chroma_component.call("aspect_name")).to_upper()
-	var bound := String(player_chroma_component.call("bound_aspect_name")).to_upper()
-	var souls := player_profile.souls if player_profile != null else 0
-	if not bool(player_chroma_component.call("has_bound_aspect")):
-		bound = "NONE"
-	var current_status := "BOUND" if bool(player_chroma_component.call("current_is_bound")) else "UNBOUND"
-	if current == "GRAY":
-		current_status = "GRAY"
-	if current_status == "BOUND":
-		return "CURRENT: %s (%s). BOUND: %s. SOULS: %d. ALREADY BOUND." % [current, current_status, bound, souls]
-	return "CURRENT: %s (%s). BOUND: %s. SOULS: %d. BIND %s FOR %d SOULS?" % [current, current_status, bound, souls, current, ELEMENT_BIND_SOUL_COST]
-
-
 func _can_bind_current_element() -> bool:
 	if player_chroma_component == null:
 		return false
@@ -441,6 +425,14 @@ func _bind_current_element() -> bool:
 	_show_fire_exchange_text("BOUND %s" % String(current).to_upper(), _health_feedback_color(palette))
 	_play_sound("ui_confirm", 0.0, 1.0)
 	return true
+
+
+func _hub_bind_current_element() -> bool:
+	if hub_flow_controller == null:
+		return false
+	return bool(hub_flow_controller.call("hub_bind_current_element", self))
+
+
 func _can_interact_with_npc() -> bool:
 	if cloaked_demon == null or not cloaked_demon.visible:
 		return false
@@ -823,6 +815,14 @@ func _can_interact_with_fire() -> bool:
 	var target_palette := _fire_target_palette()
 	if rest_fire == null or not rest_fire.visible or target_palette.is_empty() or AspectCatalogScript.flame_for_palette(target_palette).is_empty():
 		return false
+	var target_flame := AspectCatalogScript.flame_for_palette(target_palette)
+	var current_flame := _current_player_flame()
+	if current_flame == target_flame:
+		var health_full := player_health_component == null or player_health_component.current_health >= player_health_component.maximum_health
+		var chroma_full := player_chroma_component == null or int(player_chroma_component.get("current_chroma")) >= PlayerChromaComponent.MAX_CHROMA
+		if health_full and chroma_full:
+			# Do not expose a paid interaction when the flame would have no effect.
+			return false
 	var fire_position := _fire_anchor()
 	return _actor_foot(player).distance_to(fire_position) <= FIRE_INTERACT_DISTANCE and _is_interaction_target_in_front(fire_position)
 
@@ -950,6 +950,7 @@ func _ensure_current_room_layout() -> void:
 	# grade/loot rank. A strong Run 1 grade should not turn the first rooms of
 	# Run 2 into an immediate difficulty spike.
 	room_controller.progression_run_rank = maxi(1, dungeon_graph.completed_run_count + 1)
+	room_controller.player_level = maxi(1, player_profile.level if player_profile != null else player_stats.level)
 	_apply_room_geometry()
 	_collect_walkable_tiles(floor_tiles)
 	_build_entrance_block_polygons()
@@ -1016,6 +1017,8 @@ func _orb_puzzle_color_for_palette(palette: String) -> StringName:
 	return dungeon_map_controller.call("puzzle_color_for_palette", palette) as StringName
 func _change_orb_color_from_room(next_puzzle_color: StringName = &"") -> bool:
 	return dungeon_map_controller != null and bool(dungeon_map_controller.call("change_orb_from_room", current_room_id, next_puzzle_color))
+func _change_orb_palette_from_room(palette: String) -> bool:
+	return dungeon_map_controller != null and bool(dungeon_map_controller.call("change_orb_from_palette", current_room_id, palette))
 func _on_room_enemies_cleared() -> void:
 	if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		room_controller.mark_cleared(current_room_id)

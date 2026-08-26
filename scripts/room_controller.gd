@@ -11,6 +11,7 @@ var arrival_socket_id: StringName = &""
 var transition_locked := false
 var room_states: Dictionary = {}
 var progression_run_rank := 1
+var player_level := 1
 var boss_slime_authoring_scene: PackedScene = null
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
@@ -32,7 +33,6 @@ const SHADOW_ENEMY_WEIGHT: float = 0.12
 const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.16
-const POPCORN_LEVEL_RUN_INTERVAL: int = 3
 const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
@@ -138,8 +138,9 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
 		variant_pool.append({"variant": "purple", "weight": SHADOW_ENEMY_WEIGHT})
-	# Run 1 teaches levels 1-3. Later runs add one level of pressure each run,
-	# while popcorn stays below the main curve and scales up gradually.
+	# Popcorn is deliberately tied to the player's durable level instead of the
+	# dungeon run curve. It is recovery fodder, so it should remain five levels
+	# below the player even when a high-level player revisits an early run.
 	var base_level := _generated_enemy_base_level(room_depth) + (1 if special_room else 0)
 	var level_spread := maxi(1, roundi(float(base_level) * 0.20))
 	var popcorn_flags: Array[bool] = []
@@ -161,7 +162,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		var is_popcorn := selected != "purple" and encounter_rng.randf() < _popcorn_enemy_chance()
 		popcorn_flags.append(is_popcorn)
 		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
-		levels.append(clampi(enemy_level, 1, _enemy_level_cap()))
+		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, _enemy_level_cap()))
 	# Shadow encounters keep their low-level mana-recovery opportunity readable:
 	# every popcorn slot beside a Shadow Slime becomes a Normal Slime. If the
 	# normal popcorn roll produced no slot, add one so Shadow never removes the
@@ -175,7 +176,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		if not has_shadow_popcorn:
 			for _support_index in GUARANTEED_SHADOW_POPCORN_COUNT:
 				variants.append("grey")
-				levels.append(clampi(_popcorn_enemy_level(), 1, _enemy_level_cap()))
+				levels.append(_popcorn_enemy_level())
 				popcorn_flags.append(true)
 		for index in variants.size():
 			if popcorn_flags[index]:
@@ -212,7 +213,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		popcorn_flags.append(false)
 	for _support_index in _boss_support_popcorn_count():
 		variants.append("grey")
-		levels.append(clampi(_popcorn_enemy_level(), 1, _enemy_level_cap()))
+		levels.append(_popcorn_enemy_level())
 		scales.append(1.0)
 		popcorn_flags.append(true)
 	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags}
@@ -236,8 +237,12 @@ func _popcorn_enemy_chance() -> float:
 
 
 func _popcorn_enemy_level() -> int:
-	var runs_since_run2 := maxi(progression_run_rank - 2, 0)
-	return 1 + floori(float(runs_since_run2) / float(POPCORN_LEVEL_RUN_INTERVAL))
+	return maxi(1, player_level - 5)
+
+
+func _popcorn_enemy_level_for_root(root: Object) -> int:
+	var profile := root.get("player_profile") as PlayerProfile
+	return maxi(1, profile.level - 5) if profile != null else _popcorn_enemy_level()
 
 
 func _boss_support_popcorn_count() -> int:
@@ -999,6 +1004,15 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 		spawn_positions = {}
 		state["enemy_spawn_positions"] = spawn_positions
 	var slime := slimes[slime_index]
+	var popcorn_flags := state.get("enemy_popcorn", []) as Array
+	var is_popcorn := slime_index < popcorn_flags.size() and bool(popcorn_flags[slime_index])
+	var spawn_level := int(active_levels[slime_index])
+	if is_popcorn:
+		# Recalculate on every spawn so a level-up during a run also keeps a
+		# respawning fodder slime five levels under the player.
+		spawn_level = _popcorn_enemy_level_for_root(root)
+		active_levels[slime_index] = spawn_level
+	slime.set_meta("is_popcorn", is_popcorn)
 	var tuning := root.get("slime_tuning") as SlimeTuning
 	var rng := root.get("rng") as RandomNumberGenerator
 	var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]
@@ -1035,7 +1049,7 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	slime.position = spawn_position
 	slime.visible = true
 	slime.flip_h = false
-	root.call("_apply_enemy_room_level", slime, int(active_levels[slime_index]))
+	root.call("_apply_enemy_room_level", slime, spawn_level)
 	var max_health := float(root.call("_enemy_max_health", slime))
 	if actor != null:
 		actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)

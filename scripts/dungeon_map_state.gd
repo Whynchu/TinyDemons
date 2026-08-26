@@ -12,9 +12,11 @@ const PUZZLE_COLOR_B: StringName = &"puzzle_b"
 const PUZZLE_COLOR_C: StringName = &"puzzle_c"
 const PUZZLE_COLOR_D: StringName = &"puzzle_d"
 const VALID_COLORS: Array[StringName] = [MAP_COLOR_NEUTRAL, PUZZLE_COLOR_A, PUZZLE_COLOR_B, PUZZLE_COLOR_C, PUZZLE_COLOR_D]
+const DEFAULT_ORB_PALETTE := "grey"
 
 var active_puzzle_color: StringName = MAP_COLOR_NEUTRAL
 var shared_orb_puzzle_color: StringName = MAP_COLOR_NEUTRAL
+var shared_orb_palette := DEFAULT_ORB_PALETTE
 var current_room_id: StringName = &""
 var discovered_rooms: Dictionary = {}
 var completed_rooms: Dictionary = {}
@@ -30,6 +32,7 @@ func begin(start_room_id: StringName) -> void:
 	# present both Orb Rooms in their authored grey state immediately.
 	active_puzzle_color = PUZZLE_COLOR_B
 	shared_orb_puzzle_color = PUZZLE_COLOR_B
+	shared_orb_palette = DEFAULT_ORB_PALETTE
 	current_room_id = &""
 	discovered_rooms.clear()
 	completed_rooms.clear()
@@ -48,6 +51,19 @@ func set_puzzle_color(next_color: StringName) -> bool:
 	shared_orb_puzzle_color = next_color
 	if changed_value:
 		orb_change_count += 1
+		changed.emit()
+	return true
+
+
+func set_orb_palette(next_palette: String) -> bool:
+	var normalized := next_palette.to_lower()
+	if normalized == "gray":
+		normalized = DEFAULT_ORB_PALETTE
+	if normalized not in PaletteLibrary.PALETTE_NAMES:
+		return false
+	var changed_value := shared_orb_palette != normalized
+	shared_orb_palette = normalized
+	if changed_value:
 		changed.emit()
 	return true
 
@@ -132,6 +148,7 @@ func to_dictionary() -> Dictionary:
 	return {
 		"active_puzzle_color": active_puzzle_color,
 		"shared_orb_puzzle_color": shared_orb_puzzle_color,
+		"shared_orb_palette": shared_orb_palette,
 		"current_room_id": current_room_id,
 		"discovered_rooms": discovered_rooms.duplicate(),
 		"completed_rooms": completed_rooms.duplicate(),

@@ -9,7 +9,6 @@ var type_timer := 0.0
 var button_timer := 0.0
 var dialogue_complete := false
 var allocation_prompt_active := false
-var binding_prompt_active := false
 var allocation_choice := 0
 var dialogue_box: ColorRect = null
 var dialogue_text: Sprite2D = null
@@ -104,14 +103,8 @@ func show_dialogue(root: Object) -> void:
 			else:
 				message = "TO DIVE, OFFER %d SOULS AT THE %s FLAME. IT WILL AWAKEN YOUR CHROMA." % [fire_soul_cost, String(profile.starter_flame).to_upper()]
 		else:
-			if bool(root.call("_can_bind_current_element")):
-				message = root.call("_binding_prompt_text")
-			elif root.get("player_chroma_component") != null and bool((root.get("player_chroma_component") as Node).call("current_is_bound")):
-				message = root.call("_binding_prompt_text")
-			else:
-				message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
+			message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
 	allocation_prompt_active = false
-	binding_prompt_active = false
 	allocation_choice = 0
 	begin_dialogue(message, Callable(root, "_pixel_text_texture"))
 	var player_was_idle := String(root.get("player_anim_name")) == "idle"
@@ -125,7 +118,6 @@ func show_dialogue(root: Object) -> void:
 func hide_dialogue(_root: Object) -> void:
 	end_dialogue()
 	allocation_prompt_active = false
-	binding_prompt_active = false
 	allocation_choice = 0
 	var box := dialogue_box; if box != null: box.visible = false
 	var text := dialogue_text; if text != null: text.visible = false
@@ -150,12 +142,8 @@ func update_dialogue_input(root: Object) -> void:
 		elif input_pressed or bool(root.call("_is_ui_accept_just_pressed")):
 			if allocation_choice == 0:
 				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-				if binding_prompt_active:
-					if bool(root.call("_bind_current_element")):
-						hide_dialogue(root)
-				else:
-					hide_dialogue(root)
-					root.call("_open_hub_from_cloaked_demon")
+				hide_dialogue(root)
+				root.call("_open_hub_from_cloaked_demon")
 			else:
 				root.call("_play_sound", "ui_decline", 0.0, 1.0)
 				hide_dialogue(root)
@@ -171,14 +159,9 @@ func update_dialogue_input(root: Object) -> void:
 			dialogue_button.visible = false
 			dialogue_button_shadow.visible = false
 		else:
-			# The Demon always retains its original Stats/Shop choice. When a
-			# different current element is available, the same confirmation slot
-			# becomes the dedicated Bind/Leave choice instead of trapping the
-			# ordinary dialogue flow in a second "OPEN STATS" page.
-			binding_prompt_active = bool(root.call("_can_bind_current_element"))
 			allocation_prompt_active = true
 			allocation_choice = 0
-			begin_dialogue(root.call("_binding_prompt_text") if binding_prompt_active else "OPEN STATS AND SHOP?", Callable(root, "_pixel_text_texture"))
+			begin_dialogue("OPEN STATS AND SHOP?", Callable(root, "_pixel_text_texture"))
 			dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
 			dialogue_button.visible = false
 			dialogue_button_shadow.visible = false
@@ -265,10 +248,8 @@ func _update_allocation_choices(root: Object) -> void:
 	if not show_choices:
 		return
 	var selected_color := Color8(255, 205, 117)
-	var first_label := "BIND" if binding_prompt_active else "YES"
-	var second_label := "LEAVE" if binding_prompt_active else "NO"
-	yes_text.texture = root.call("_pixel_text_texture", first_label, selected_color if allocation_choice == 0 else Color.WHITE)
-	no_text.texture = root.call("_pixel_text_texture", second_label, selected_color if allocation_choice == 1 else Color.WHITE)
+	yes_text.texture = root.call("_pixel_text_texture", "YES", selected_color if allocation_choice == 0 else Color.WHITE)
+	no_text.texture = root.call("_pixel_text_texture", "NO", selected_color if allocation_choice == 1 else Color.WHITE)
 	if not bool(box.get_meta("choice_extension_applied", false)):
 		box.size.y += 12.0
 		box.set_meta("choice_extension_applied", true)

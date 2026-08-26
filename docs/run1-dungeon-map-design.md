@@ -140,14 +140,21 @@ Each Orb Room has one orb at the center and no two-orb puzzle arrangement. Run 1
 The interaction should be treated as a map-state event that is only available in an Orb Room:
 
 1. Player enters the Orb Room.
-2. Player strikes the central orb with an elemental magic projectile or grey regular attack.
-3. The map-state owner resolves elemental starter energy to Puzzle Color A and grey energy to Puzzle Color B.
-4. The shared orb state and `active_puzzle_color` change together.
-5. Every Orb Room orb synchronizes to the new color.
-6. Every color-gated connection reevaluates.
-7. The environment palette and minimap update from the same state.
+2. Player strikes the central orb with an elemental magic projectile or regular attack.
+3. The map-state owner resolves starter/earned energy to its Puzzle Color key,
+   while any other valid elemental energy (including Grass, Ice, Ground, and
+   Shadow fusion results) is accepted as a shared elemental orb charge.
+4. A Puzzle Color key and its shared orb palette change together. An unkeyed
+   elemental charge changes the shared orb palette while preserving the current
+   Puzzle Color key used by ordinary color-gated doors.
+5. Every Orb Room orb synchronizes to the new elemental color.
+6. Every color-gated connection reevaluates when the Puzzle Color key changed.
+7. The environment palette and minimap update from the same strategic state.
 
-No ordinary room, flame, or global shortcut can change the puzzle-color state; only an Orb Room interaction can do so. The selected starter flame remains the source of Puzzle Color A for the file, while the later bind/primordial system can extend that source without changing map ownership.
+No ordinary room, flame, or global shortcut can change the puzzle-color state; only an Orb Room interaction can do so. All valid elemental palettes can
+charge the shared orb presentation, while the selected/earned starter flames
+remain the source of Puzzle Color keys for route logic. Fusion palettes do not
+silently become a new ordinary color-door key.
 
 ## Room completion and treasure
 
@@ -251,7 +258,11 @@ The design is considered correctly implemented when:
 
 1. Run 1 reproduces the authored room categories, route branches, two selected Orb Rooms, and single Cloaked Room.
 2. One centered orb exists in each Orb Room, and both orbs display the same current color.
-3. Run 1 begins grey; changing either identical Orb Room orb changes one shared `active_puzzle_color` state to Puzzle Color A or Puzzle Color B, with A resolving to the selected starter flame and B resolving to grey.
+3. Run 1 begins grey; changing either identical Orb Room orb changes one shared
+   `active_puzzle_color` state to Puzzle Color A or Puzzle Color B, with A
+   resolving to the selected starter flame and B resolving to grey. Grass, Ice,
+   Ground, Shadow, and other valid elemental charges also recolor the shared
+   orb presentation without replacing the strategic Puzzle Color key.
 4. Color-gated doors open only when their requirement matches that state.
 5. Ordinary doors are not accidentally color locked.
 6. Enemy defeat opens Treasure Room exits even if its single chest remains unopened.

@@ -55,6 +55,7 @@ func _initialize() -> void:
 		_tap_flame(gameplay, chest_controller)
 		_expect(bool(gameplay.get("starter_flame_attuned_this_run")) and chroma.call("aspect_name") == &"fire", "first starter attunement costs 5 Souls", failures)
 		_expect(profile.souls == 0 and health.current_health == health.maximum_health and chroma.get("current_chroma") == 100, "one fire use restores HP and active Chroma", failures)
+		_expect(not bool(gameplay.call("_can_interact_with_fire")), "a full-health, full-Chroma same-color flame is unavailable", failures)
 
 		health.apply_damage(1.0)
 		chroma.call("spend_elemental_ability")

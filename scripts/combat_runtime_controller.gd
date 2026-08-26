@@ -168,8 +168,11 @@ func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int =
 	if stats == null:
 		return
 	var run := root.get("run_state") as RunState
-	var requested := (level_override if level_override > 0 else enemy_level_for_room(root)) + run_enemy_level_bonus(root) + (run.difficulty_bonus if run != null else 0)
-	stats.level = clampi(requested, 1, enemy_level_cap_for_run(root))
+	var is_popcorn := bool(slime.get_meta("is_popcorn", false))
+	var requested := level_override if level_override > 0 else enemy_level_for_room(root)
+	if not is_popcorn:
+		requested += run_enemy_level_bonus(root) + (run.difficulty_bonus if run != null else 0)
+	stats.level = maxi(requested, 1) if is_popcorn else clampi(requested, 1, enemy_level_cap_for_run(root))
 
 
 func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> void:

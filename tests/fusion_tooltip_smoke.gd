@@ -20,7 +20,8 @@ func _initialize() -> void:
 		"shop_prices": "hub_shop_price_texts", "gear_choices": "hub_gear_choice_texts",
 		"gear_slot_buttons": "hub_gear_slot_buttons", "gear_stats": "hub_gear_stat_texts",
 		"gear_stat_panel": "hub_gear_stat_panel", "item_details": "hub_item_detail_texts",
-		"item_action": "hub_item_action_button", "cursor": "hub_cursor_text",
+		"item_action": "hub_item_action_button", "binding_panel": "hub_binding_panel",
+		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text",
 	}
 	for key: String in built:
 		controller_instance.set(str(key_map.get(key, key)), built[key])
@@ -137,6 +138,9 @@ class _MockRoot:
 	var hub_gear_slot_buttons: Array[Button] = []
 	var hub_gear_stat_panel: Panel = null
 	var hub_item_action_button: Button = null
+	var hub_binding_panel: Panel = null
+	var hub_binding_texts: Array[Sprite2D] = []
+	var hub_binding_action_button: Button = null
 	var hub_apply_button: Button = null
 	var hub_cancel_button: Button = null
 	var hub_auto_button: Button = null

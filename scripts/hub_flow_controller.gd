@@ -5,7 +5,7 @@ const ProgressionControllerScript = preload("res://scripts/progression_controlle
 
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -28,6 +28,9 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
 	root.screen_state_controller.hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
+	root.screen_state_controller.hub_binding_panel = controls["binding_panel"] as Panel
+	root.screen_state_controller.hub_binding_texts = controls["binding_texts"] as Array[Sprite2D]
+	root.screen_state_controller.hub_binding_action_button = controls["binding_action"] as Button
 	root.screen_state_controller.hub_cursor_text = controls["cursor"] as Sprite2D
 	root.screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_action_button = controls["item_action"] as Button
@@ -53,6 +56,7 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	root.screen_state_controller.hub_overlay.visible = true
 	root.screen_state_controller.hub_page = 1 if pause_mode else 0
 	root.screen_state_controller.hub_item_index = 0
+	root.screen_state_controller.hub_binding_message = ""
 	root.call("_hub_cancel_stats")
 	root.call("_play_sound", "ui_pause" if pause_mode else "ui_confirm", 0.0, 1.0)
 	root.screen_state_controller.set_state(&"hub")
@@ -102,10 +106,11 @@ func update_hub_input(root: Object) -> void:
 
 
 func set_hub_page(root: Object, page: int) -> void:
-	root.screen_state_controller.hub_page = posmod(page, 4)
+	root.screen_state_controller.hub_page = posmod(page, 5)
 	root.screen_state_controller.hub_item_index = 0
 	root.screen_state_controller.hub_gear_browsing = false
 	root.screen_state_controller.hub_fusion_message = ""
+	root.screen_state_controller.hub_binding_message = ""
 	root.screen_state_controller.hub_fusion_count = 1
 	if root.screen_state_controller.hub_page == 3:
 		invalidate_hub_fusion_candidates(root)
@@ -113,6 +118,20 @@ func set_hub_page(root: Object, page: int) -> void:
 		root.run_state.ensure_shop_stock(root.player_profile.level)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_hover", -6.0, 1.0)
+
+
+func hub_bind_current_element(root: Object) -> bool:
+	if root.player_profile == null:
+		return false
+	var chroma := root.get("player_chroma_component") as Node
+	var current := String(chroma.call("aspect_name")).to_upper() if chroma != null else "GRAY"
+	var success := bool(root.call("_bind_current_element"))
+	if success:
+		root.screen_state_controller.hub_binding_message = "BOUND %s" % current
+	else:
+		root.screen_state_controller.hub_binding_message = "NEED 50 SOULS" if current != "GRAY" and root.player_profile.souls < PlayerProfile.ELEMENT_BIND_SOUL_COST else "BIND UNAVAILABLE"
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	return success
 
 
 func shift_hub_item(root: Object, direction: int) -> void:

@@ -173,14 +173,17 @@ func active_environment_palette() -> String:
 
 
 func puzzle_color_for_palette(palette: String) -> StringName:
-	if palette == "grey":
+	var normalized_palette := palette.to_lower()
+	if normalized_palette == "gray":
+		normalized_palette = "grey"
+	if normalized_palette == "grey":
 		return PUZZLE_COLOR_B
-	if palette == starter_palette_name:
+	if normalized_palette == starter_palette_name:
 		return PUZZLE_COLOR_A
 	var alternates := alternate_flames()
-	if alternates.size() >= 1 and palette == ASPECT_CATALOG_SCRIPT.palette_for_flame(alternates[0]):
+	if alternates.size() >= 1 and normalized_palette == ASPECT_CATALOG_SCRIPT.palette_for_flame(alternates[0]):
 		return PUZZLE_COLOR_C
-	if alternates.size() >= 2 and palette == ASPECT_CATALOG_SCRIPT.palette_for_flame(alternates[1]):
+	if alternates.size() >= 2 and normalized_palette == ASPECT_CATALOG_SCRIPT.palette_for_flame(alternates[1]):
 		return PUZZLE_COLOR_D
 	return &""
 
@@ -223,10 +226,47 @@ func change_orb_from_room(room_id: StringName, next_puzzle_color: StringName = &
 		return false
 	if next_puzzle_color not in available_puzzle_colors():
 		return false
+	var next_palette := palette_for_requirement(next_puzzle_color)
+	if next_palette.is_empty():
+		return false
+	var puzzle_color_was_current: bool = state.active_puzzle_color == next_puzzle_color
+	var room_was_complete: bool = state.is_room_completed(room_id)
+	state.shared_orb_palette = next_palette
 	if not state.set_puzzle_color(next_puzzle_color):
 		return false
 	state.mark_room_completed(room_id)
+	if puzzle_color_was_current and room_was_complete:
+		# A direct fusion charge may have changed the shared presentation while the
+		# strategic Puzzle Color key stayed the same. Emit the missing refresh event.
+		state.changed.emit()
 	puzzle_color_changed.emit(state.active_puzzle_color)
+	return true
+
+
+func change_orb_from_palette(room_id: StringName, palette: String) -> bool:
+	if graph == null or not uses_global_orb_state() or room_id != state.current_room_id:
+		return false
+	var room := graph.get_room(room_id)
+	if room == null or room.room_type != DungeonGraph.ROOM_ORB:
+		return false
+	var normalized_palette := palette.to_lower()
+	if normalized_palette == "gray":
+		normalized_palette = "grey"
+	if normalized_palette not in PaletteLibrary.PALETTE_NAMES:
+		return false
+	# Earned starter flames retain their strategic Puzzle Color behavior. Any
+	# other valid elemental palette (including fusion results) still charges the
+	# shared Orb Room presentation, but must not invalidate the puzzle-key state
+	# used by ordinary color-gated doors.
+	var requested_color := puzzle_color_for_palette(normalized_palette)
+	if not requested_color.is_empty():
+		return change_orb_from_room(room_id, requested_color)
+	var palette_changed: bool = state.shared_orb_palette != normalized_palette
+	state.shared_orb_palette = normalized_palette
+	var room_was_complete: bool = state.is_room_completed(room_id)
+	state.mark_room_completed(room_id)
+	if palette_changed and room_was_complete:
+		state.changed.emit()
 	return true
 
 
@@ -240,8 +280,10 @@ func shared_orb_puzzle_color() -> StringName:
 
 func orb_display_palette() -> StringName:
 	# Orb Rooms are light blue only on the minimap. Their in-world orb starts
-	# grey, then mirrors the resolved starter/grey map color after activation.
-	return StringName(palette_for_requirement(state.shared_orb_puzzle_color))
+	# grey, then mirrors the shared elemental charge after activation. The
+	# strategic puzzle key remains separate so a fusion palette cannot make
+	# ordinary starter-color doors invalid.
+	return StringName(state.shared_orb_palette if not state.shared_orb_palette.is_empty() else palette_for_requirement(state.shared_orb_puzzle_color))
 
 
 func requires_room_clear(room: DungeonGraph.RoomRecord) -> bool:
