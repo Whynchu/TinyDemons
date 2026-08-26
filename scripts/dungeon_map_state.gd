@@ -20,6 +20,7 @@ var discovered_rooms: Dictionary = {}
 var completed_rooms: Dictionary = {}
 var engaged_rooms: Dictionary = {}
 var revealed_connections: Dictionary = {}
+var solved_element_connections: Dictionary = {}
 var orb_change_count := 0
 
 
@@ -34,6 +35,7 @@ func begin(start_room_id: StringName) -> void:
 	completed_rooms.clear()
 	engaged_rooms.clear()
 	revealed_connections.clear()
+	solved_element_connections.clear()
 	orb_change_count = 0
 	mark_room_discovered(start_room_id)
 
@@ -107,6 +109,21 @@ func is_connection_revealed(connection: DungeonGraph.ConnectionRecord) -> bool:
 	return connection != null and bool(revealed_connections.get(connection_key(connection.source_room_id, connection.exit_socket), false))
 
 
+func mark_element_connection_solved(connection: DungeonGraph.ConnectionRecord) -> bool:
+	if connection == null:
+		return false
+	var key := connection_key(connection.source_room_id, connection.exit_socket)
+	if solved_element_connections.has(key):
+		return false
+	solved_element_connections[key] = true
+	changed.emit()
+	return true
+
+
+func is_element_connection_solved(connection: DungeonGraph.ConnectionRecord) -> bool:
+	return connection != null and bool(solved_element_connections.get(connection_key(connection.source_room_id, connection.exit_socket), false))
+
+
 static func connection_key(source_room_id: StringName, exit_socket: StringName) -> String:
 	return "%s:%s" % [source_room_id, exit_socket]
 
@@ -120,5 +137,6 @@ func to_dictionary() -> Dictionary:
 		"completed_rooms": completed_rooms.duplicate(),
 		"engaged_rooms": engaged_rooms.duplicate(),
 		"revealed_connections": revealed_connections.duplicate(),
+		"solved_element_connections": solved_element_connections.duplicate(),
 		"orb_change_count": orb_change_count,
 	}

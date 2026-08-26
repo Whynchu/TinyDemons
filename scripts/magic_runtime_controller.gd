@@ -68,7 +68,11 @@ func current_player_chroma(root: Object) -> float:
 func restore_player_mp(root: Object) -> void:
 	var component := root.get("player_chroma_component") as Node
 	if component != null and is_instance_valid(component):
-		component.call("attune", component.get("current_aspect"))
+		# Resting/refill callers must respect the current/bound split. Calling
+		# attune() with Aspect.NONE silently fails for a dormant bound identity;
+		# refill_chroma() reawakens that identity before restoring the bar.
+		component.call("refill_chroma")
+	root.call("_sync_chroma_presentation")
 	root.call("_update_player_mp_ui")
 
 

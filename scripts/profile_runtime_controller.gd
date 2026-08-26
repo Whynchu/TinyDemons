@@ -11,6 +11,12 @@ func apply_profile_to_runtime(root: Object) -> void:
 		palette = root.current_player_palette_name
 	root.screen_state_controller.player_palette_name = palette
 	root.current_player_palette_name = palette
+	var chroma := root.get("player_chroma_component") as Node
+	if chroma != null and is_instance_valid(chroma):
+		if root.player_profile.has_bound_element:
+			chroma.call("set_bound_flame", root.player_profile.bound_element)
+		else:
+			chroma.call("clear_bound_aspect")
 	if root.run_state == null or not root.run_state.active:
 		root.run_start_palette_name = palette
 	root.player_profile.ensure_starter_items()

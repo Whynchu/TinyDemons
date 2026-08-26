@@ -11,6 +11,7 @@ class_name DungeonLayoutGenerator
 
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
+const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
 const BASE_BOSS_DEPTH := 12
@@ -73,7 +74,8 @@ class LayoutBuilder extends RefCounted:
 		color_requirement: StringName = &"",
 		route_role: StringName = ROUTE_MAIN,
 		requires_source_room_clear: bool = true,
-		locks_entry_on_destination_engagement: bool = true
+		locks_entry_on_destination_engagement: bool = true,
+		element_requirement: StringName = &""
 	) -> void:
 		var key := "%s:%s" % [source_room_id, exit_socket]
 		if connection_keys.has(key):
@@ -97,7 +99,9 @@ class LayoutBuilder extends RefCounted:
 			midpoint,
 			requires_source_room_clear,
 			locks_entry_on_destination_engagement,
-			route_role
+			route_role,
+			false,
+			element_requirement
 		))
 		connection_keys[key] = true
 
@@ -129,6 +133,9 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var cloaked_depth := clampi(boss_depth / 2, 6, boss_depth - 5)
 	var fire_depth := clampi(boss_depth - 6, 6, boss_depth - 5)
 	var first_alternate_fire_depth := -1
+	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame)
+	var fusion_fire_flames: Dictionary = fusion_plan.get("fire_flames", {}) as Dictionary
+	var fusion_gate_requirements: Dictionary = fusion_plan.get("gate_requirements", {}) as Dictionary
 	var off_route_orbs := _off_route_orb_depths(dungeon_seed, run_index, FIRST_ORB_DEPTH, second_orb_depth)
 	if fire_depth == cloaked_depth:
 		fire_depth = mini(fire_depth + 1, boss_depth - 5)
@@ -141,12 +148,15 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		var main_socket := DungeonGraph.WALL_LEFT if generator_rng.randi_range(0, 1) == 0 else DungeonGraph.WALL_RIGHT
 		var destination_coordinate := current_coordinate + _exit_offset(main_socket)
 		var room_type := _room_type_for_depth(destination_depth, boss_depth, second_orb_depth, second_special_depth, cloaked_depth, fire_depth, off_route_orbs)
+		if fusion_fire_flames.has(destination_depth):
+			room_type = DungeonGraph.ROOM_FIRE
 		var respawn_color: StringName = &"puzzle_a" if destination_depth == FIRST_SPECIAL_DEPTH else _special_forward_requirement(second_special_depth, second_special_depth, completed_runs, starter_flame, alternate_flames) if destination_depth == second_special_depth else &""
-		var fire_flame := _fire_flame_for_main_room(destination_depth, fire_depth, starter_flame, alternate_flames)
+		var fire_flame := StringName(fusion_fire_flames.get(destination_depth, _fire_flame_for_main_room(destination_depth, fire_depth, starter_flame, alternate_flames)))
 		var destination_room_id := builder.add_room(destination_coordinate, room_type, 0, respawn_color, fire_flame)
 		var forward_requirement := _special_forward_requirement(source_depth, second_special_depth, completed_runs, starter_flame, alternate_flames)
 		var forward_role: StringName = ROUTE_KEY_PROGRESSION if not forward_requirement.is_empty() else ROUTE_MAIN
-		builder.link(current_room_id, main_socket, destination_room_id, forward_requirement, forward_role)
+		var element_requirement := StringName(fusion_gate_requirements.get(source_depth, ""))
+		builder.link(current_room_id, main_socket, destination_room_id, forward_requirement, forward_role, true, true, element_requirement)
 		var detour_type: StringName = &""
 		var detour_flame: StringName = &""
 		if off_route_orbs.get(destination_depth, false):
@@ -220,6 +230,9 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 		errors.append_array(gated_route_errors)
 		var side_flame_errors := _color_gate_side_flame_errors(layout, completed_runs, selected_starter_flame)
 		errors.append_array(side_flame_errors)
+		if completed_runs >= 5:
+			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame)
+			errors.append_array(fusion_gate_errors)
 	return errors
 
 
@@ -243,6 +256,37 @@ static func _room_type_for_depth(
 	if depth == fire_depth:
 		return DungeonGraph.ROOM_FIRE
 	return DungeonGraph.ROOM_COMBAT
+
+
+static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName) -> Dictionary:
+	# Run 6 is the first run whose critical path asks for a fused element. The
+	# first two fire rooms are deliberately placed before the gate so every
+	# starter choice has a reachable input pair. Later runs teach the two-step
+	# Grass -> Ice chain without putting a prerequisite behind its own gate.
+	if completed_runs < 5:
+		return {}
+	if completed_runs < 7:
+		var pairs: Array = [[&"fire", &"water"], [&"fire", &"electric"], [&"water", &"electric"]]
+		var pair: Array = pairs[posmod(completed_runs - 5, pairs.size())] as Array
+		var first_flame: StringName = pair[0] as StringName
+		var second_flame: StringName = pair[1] as StringName
+		var result_flame := ASPECT_CATALOG_SCRIPT.fusion_result(first_flame, second_flame)
+		var result_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(result_flame))
+		return {
+			"fire_flames": {5: first_flame, 6: second_flame},
+			"gate_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(result_element)},
+			"results": [result_flame],
+		}
+	# The Water + Electric -> Grass gate is followed by a Water fire and an Ice
+	# gate. Depth 10 is already the generated utility fire slot, so reusing it
+	# keeps the late spine compact and leaves the Cloaked Demon room untouched.
+	var grass_element := ELEMENT_CATALOG_SCRIPT.element_for_palette("green")
+	var ice_element := ELEMENT_CATALOG_SCRIPT.element_for_palette("aquamarine")
+	return {
+		"fire_flames": {5: &"water", 6: &"electric", 10: &"water"},
+		"gate_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(grass_element), 10: ELEMENT_CATALOG_SCRIPT.id(ice_element)},
+		"results": [&"grass", &"ice"],
+	}
 
 
 static func _fire_flame_for_main_room(depth: int, fire_depth: int, starter_flame: StringName, alternate_flames: Array[StringName]) -> StringName:
@@ -471,6 +515,91 @@ static func _side_flames_for_connection(
 
 static func _layout_connection_key(connection) -> String:
 	return "%s:%s" % [connection.source_room_id, connection.exit_socket]
+
+
+static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName) -> Array[String]:
+	var errors: Array[String] = []
+	var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame)
+	var reachable_boss := false
+	for state in states:
+		if state.get("room_id", &"") == boss_id:
+			reachable_boss = true
+			break
+	if not reachable_boss:
+		errors.append("generated fusion curriculum leaves the boss unreachable")
+	for connection in layout.connections:
+		if connection.element_requirement.is_empty():
+			continue
+		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)
+		var gate_reachable := false
+		for state in states:
+			if state.get("room_id", &"") != connection.source_room_id:
+				continue
+			var elements: Array = state.get("elements", []) as Array
+			if elements.has(required_element):
+				gate_reachable = true
+				break
+		if not gate_reachable:
+			errors.append("generated fusion gate has no reachable matching result: %s:%s requires %s" % [connection.source_room_id, connection.exit_socket, connection.element_requirement])
+	return errors
+
+
+static func _element_reachable_states(layout, start_id: StringName, _completed_runs: int, starter_flame: StringName) -> Array[Dictionary]:
+	var rooms_by_id: Dictionary = {}
+	for room in layout.rooms:
+		rooms_by_id[room.id] = room
+	var starter_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(starter_flame))
+	var pending: Array[Dictionary] = [{"room_id": start_id, "elements": [starter_element], "flames": [starter_flame]}]
+	var visited: Dictionary = {}
+	var reachable_states: Array[Dictionary] = []
+	while not pending.is_empty():
+		var state: Dictionary = pending.pop_back()
+		var room_id: StringName = state.get("room_id", &"") as StringName
+		var room = rooms_by_id.get(room_id)
+		var flames: Array = (state.get("flames", []) as Array).duplicate()
+		var elements: Array = (state.get("elements", []) as Array).duplicate()
+		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and not flames.has(room.fire_flame):
+			flames.append(room.fire_flame)
+		# Every discovered flame can be revisited. This closure models a player
+		# swapping to an input and then explicitly fusing it at a later fire.
+		for flame in flames:
+			var flame_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(flame as StringName))
+			if flame_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and not elements.has(flame_element):
+				elements.append(flame_element)
+		var element_inputs: Array = elements.duplicate()
+		for first_element in element_inputs:
+			var first_flame := ASPECT_CATALOG_SCRIPT.flame_for_palette(ELEMENT_CATALOG_SCRIPT.palette_key(int(first_element)))
+			if first_flame.is_empty():
+				continue
+			for second_flame in flames:
+				var result_flame := ASPECT_CATALOG_SCRIPT.fusion_result(first_flame, second_flame as StringName)
+				if result_flame.is_empty():
+					continue
+				var result_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(result_flame))
+				if result_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and not elements.has(result_element):
+					elements.append(result_element)
+		var sorted_flames: Array[String] = []
+		for flame in flames:
+			sorted_flames.append(String(flame))
+		sorted_flames.sort()
+		var sorted_elements: Array[int] = []
+		for element in elements:
+			sorted_elements.append(int(element))
+		sorted_elements.sort()
+		var state_key := "%s:%s:%s" % [room_id, ",".join(sorted_flames), ",".join(sorted_elements.map(func(value: int) -> String: return str(value)))]
+		if visited.has(state_key):
+			continue
+		visited[state_key] = true
+		var normalized_state := {"room_id": room_id, "elements": elements, "flames": flames}
+		reachable_states.append(normalized_state)
+		for connection in layout.connections:
+			if connection.source_room_id != room_id and connection.destination_room_id != room_id:
+				continue
+			if not connection.element_requirement.is_empty() and not elements.has(ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)):
+				continue
+			var next_room: StringName = connection.destination_room_id if connection.source_room_id == room_id else connection.source_room_id
+			pending.append({"room_id": next_room, "elements": elements.duplicate(), "flames": flames.duplicate()})
+	return reachable_states
 
 
 static func _boss_is_color_reachable(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName) -> bool:

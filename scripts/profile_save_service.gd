@@ -113,7 +113,7 @@ static func _read_profile(path: String) -> PlayerProfile:
 		return null
 	var data := parsed as Dictionary
 	var schema_version := int(data.get("schema_version", 0))
-	if schema_version != PlayerProfile.CURRENT_SCHEMA_VERSION:
+	if schema_version != PlayerProfile.CURRENT_SCHEMA_VERSION and schema_version != PlayerProfile.CURRENT_SCHEMA_VERSION - 1:
 		return null
 	var profile := PlayerProfile.new()
 	profile.load_dictionary(data)

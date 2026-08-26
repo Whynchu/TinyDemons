@@ -112,14 +112,21 @@ static func damage_number_color(element: int, was_critical: bool = false) -> Col
 ## ELECTRIC=3. Keeping this adapter numeric avoids a dependency cycle between
 ## the player state owner and the stateless combat catalog.
 static func element_for_aspect(aspect: int) -> int:
-	match aspect:
-		1:
-			return Element.FIRE
-		2:
-			return Element.WATER
-		3:
-			return Element.ELECTRIC
+	# PlayerChromaComponent.Aspect intentionally mirrors this enum's stable
+	# numeric ids. The adapter keeps the combat catalog independent of the
+	# player component while allowing fusion aspects 4..7 to flow through.
+	return normalize(aspect)
+
+
+static func element_for_id(element_id: StringName) -> int:
+	for element: int in IDS:
+		if IDS[element] == element_id:
+			return element
 	return Element.NEUTRAL
+
+
+static func is_valid_id(element_id: StringName) -> bool:
+	return element_id in IDS.values() and element_id != IDS[Element.NEUTRAL]
 
 
 static func element_for_palette(palette: String) -> int:

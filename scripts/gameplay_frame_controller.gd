@@ -126,6 +126,13 @@ func tick(root: Object, delta: float) -> void:
 			ssc.menu_input_release_lock = false
 		else:
 			return
+	var flame_exchange := root.get("flame_exchange_controller") as FlameExchangeController
+	if flame_exchange != null and flame_exchange.active:
+		flame_exchange.update_input(root)
+		root.call("_update_rest_fire_animation", delta)
+		root.call("_update_player_palette_flash", delta)
+		root.call("_update_overworld_ui")
+		return
 	var npc := root.get("npc_controller") as NpcController; var dialogue_was_active: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible
 	if dialogue_was_active: npc.update_dialogue_from_root(root, delta); npc.update_dialogue_input(root); root.call("_update_cloaked_demon_animation", delta)
 	var hitstop: float = root.get("hitstop_timer")

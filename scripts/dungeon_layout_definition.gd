@@ -1,6 +1,9 @@
 extends RefCounted
 class_name DungeonLayoutDefinition
 
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+
 ## Immutable authored topology input for a run.
 ##
 ## The graph owns runtime room/connection records. This definition owns only
@@ -53,6 +56,7 @@ class ConnectionSpec extends RefCounted:
 	var allow_entry_before_source_clear := false
 	var locks_entry_on_destination_engagement := true
 	var route_role: StringName = &"main"
+	var element_requirement: StringName = &""
 
 	func _init(
 		new_source_room_id: StringName,
@@ -66,7 +70,8 @@ class ConnectionSpec extends RefCounted:
 		new_requires_source_room_clear: bool = true,
 		new_locks_entry_on_destination_engagement: bool = true,
 		new_route_role: StringName = &"main",
-		new_allow_entry_before_source_clear: bool = false
+		new_allow_entry_before_source_clear: bool = false,
+		new_element_requirement: StringName = &""
 	) -> void:
 		source_room_id = new_source_room_id
 		exit_socket = new_exit_socket
@@ -80,6 +85,7 @@ class ConnectionSpec extends RefCounted:
 		locks_entry_on_destination_engagement = new_locks_entry_on_destination_engagement
 		route_role = new_route_role
 		allow_entry_before_source_clear = new_allow_entry_before_source_clear
+		element_requirement = new_element_requirement
 
 
 var layout_id: StringName = &""
@@ -168,9 +174,10 @@ func make_connection_spec(
 	new_requires_source_room_clear: bool = true,
 	new_locks_entry_on_destination_engagement: bool = true,
 	new_route_role: StringName = &"main",
-	new_allow_entry_before_source_clear: bool = false
+	new_allow_entry_before_source_clear: bool = false,
+	new_element_requirement: StringName = &""
 ) -> ConnectionSpec:
-	return ConnectionSpec.new(new_source_room_id, new_exit_socket, new_destination_room_id, new_destination_entry, new_color_requirement, new_hidden_until_clear, new_hidden_until_event, new_minimap_coordinate, new_requires_source_room_clear, new_locks_entry_on_destination_engagement, new_route_role, new_allow_entry_before_source_clear)
+	return ConnectionSpec.new(new_source_room_id, new_exit_socket, new_destination_room_id, new_destination_entry, new_color_requirement, new_hidden_until_clear, new_hidden_until_event, new_minimap_coordinate, new_requires_source_room_clear, new_locks_entry_on_destination_engagement, new_route_role, new_allow_entry_before_source_clear, new_element_requirement)
 
 
 func add_decorative_door(pixel: Vector2i, color_requirement: StringName = &"", source_room_id: StringName = &"") -> void:
@@ -214,7 +221,7 @@ func validate() -> Array[String]:
 			orb_room_count += 1
 		if spec.room_type == DungeonGraph.ROOM_FIRE and layout_id == &"RUN_GENERATED" and spec.fire_flame.is_empty():
 			errors.append("generated Fire Room is missing a flame: %s" % spec.id)
-		if spec.room_type == DungeonGraph.ROOM_FIRE and not spec.fire_flame.is_empty() and spec.fire_flame not in [&"fire", &"water", &"electric"]:
+		if spec.room_type == DungeonGraph.ROOM_FIRE and not spec.fire_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(spec.fire_flame):
 			errors.append("unknown Fire Room flame: %s" % spec.fire_flame)
 	if start_count != 1:
 		errors.append("expected exactly one Hub room")
@@ -245,6 +252,8 @@ func validate() -> Array[String]:
 				errors.append("Run 1 connector has the wrong paired lower entrance: %s:%s" % [spec.source_room_id, spec.exit_socket])
 		if not spec.color_requirement.is_empty() and spec.color_requirement not in [&"puzzle_a", &"puzzle_b", &"puzzle_c", &"puzzle_d"]:
 			errors.append("unknown puzzle-color door key: %s" % spec.color_requirement)
+		if not spec.element_requirement.is_empty() and not ElementCatalogScript.is_valid_id(spec.element_requirement):
+			errors.append("unknown elemental door key: %s" % spec.element_requirement)
 		if spec.route_role.is_empty():
 			errors.append("connection route role is empty: %s:%s" % [spec.source_room_id, spec.exit_socket])
 	for decorative_door in decorative_door_pixels:

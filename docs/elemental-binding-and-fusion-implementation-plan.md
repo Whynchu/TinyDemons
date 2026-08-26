@@ -1,6 +1,6 @@
 # Tiny Demons — Elemental Binding and Flame Fusion Implementation Plan
 
-Status: approved design plan; implementation not started
+Status: implemented core plan; final polish and future content remain open
 
 Source of truth:
 
@@ -8,8 +8,9 @@ Source of truth:
 
 This plan turns the Binding/Fusion design into ordered implementation slices.
 It is intentionally separate from the existing elemental combat-matchup work
-and from equipment fusion. No code should be changed from this document alone
-until the unresolved implementation questions in §11 are approved.
+and from equipment fusion. The core contract below is now implemented; the
+remaining questions in §7 are future tuning/content decisions, not blockers for
+the current Swap/Fuse/Bind system.
 
 ## 1. Non-negotiable product contract
 
@@ -389,3 +390,28 @@ This plan is implemented when:
 - required doors latch after being solved;
 - save, room-transition, death, and run-reset behavior are tested;
 - documentation, tuning index, and smoke coverage match the shipped rules.
+
+## 9. Implementation record
+
+The current feature branch implements the core slices through the existing
+composition root:
+
+- `AspectCatalog` owns the four commutative recipes and all seven elemental
+  flame identities.
+- `PlayerProfile` persists a bound element with schema-8 compatibility for
+  the previous profile schema; Binding is a flat 50-Soul Demon transaction.
+- `PlayerChromaComponent` keeps current and bound identities separate, supports
+  unbound fusion, and restores a bound identity when zero-Chroma recovery is
+  collected.
+- Flames expose an explicit Swap/Fuse menu at 5 Souls per action. Fusion never
+  mutates the profile by itself.
+- Elemental doors accept the current element, including unbound results, and
+  latch their solved state in the run map.
+- Generated Run 6+ layouts contain validated mandatory fusion gates. Run 8+
+  adds the chained Grass and Ice gates.
+- `tests/elemental_binding_smoke.gd` covers recipes, economy, state separation,
+  unbound door access, and generated Run 6–9 curriculum validation.
+- `tests/generated_fusion_gate_scene_smoke.gd` verifies the R6 gate in the
+  composed scene, including its locked/open/latching presentation states.
+
+The full smoke runner remains the release gate after any further changes.

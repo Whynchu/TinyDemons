@@ -1,6 +1,6 @@
 # Tiny Demons — Elemental Chroma System Handoff
 
-Status: active decision log; Binding/Fusion design approved, implementation pending
+Status: active decision log; Binding/Fusion core implemented
 
 Source design: `docs/Tiny Demons — Elemental Chroma System Design.md`
 
@@ -9,8 +9,8 @@ Binding and flame-fusion authority: [`elemental-binding-and-fusion-design.md`](e
 Implementation route: [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
 
 This document records the decisions made so far, the current integration
-surface in the Godot project, and the questions that must be resolved before
-implementation begins.
+surface in the Godot project, and the remaining questions for future
+class/package and content work.
 
 ## 1. Agreed identity
 
@@ -50,7 +50,7 @@ first dungeon then teaches the selected starter aspect.
 Initial values:
 
 - Maximum Chroma: 100.
-- Starter elemental action cost: 10.
+- Starter elemental action cost: 5 Souls for a flame Swap.
 - Neutral Chroma pickup restoration: 20.
 - Chroma is an integer value from 0 to 100; Triangle spending is not tied to
   the 20-point pickup value.
@@ -259,7 +259,7 @@ source of truth.
 - Add subtle room tinting.
 - Add deterministic Run 2 swapping/backtracking curriculum.
 
-### Phase 5 — Binding and flame fusion — approved design, implementation pending
+### Phase 5 — Binding and flame fusion — implemented
 
 - Implement the current/bound state split.
 - Add 5-Soul Swap and 5-Soul Fusion flame transactions.
@@ -267,6 +267,8 @@ source of truth.
 - Add the four approved recipes and unbound fusion chaining.
 - Preserve bound aspect identity at zero Chroma.
 - Make required elemental doors accept current unbound elements and latch open.
+- Add mandatory fusion-element gates to generated Run 6+ layouts, with the
+  chained Grass/Ice curriculum beginning on Run 8.
 - Implement weakened non-elemental variants only where the ability contract
   approves them.
 - Follow [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
@@ -278,7 +280,7 @@ source of truth.
 - Add broader constrained procedural generation.
 - Evaluate Primordial base-aspect swapping.
 
-## 7. Decisions still required before implementation
+## 7. Decisions still required for future content
 
 ### Class effects
 
@@ -358,20 +360,18 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 
 ## 9. Handoff recommendation
 
-The next implementation artifact should follow
+The implemented core follows
 [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md),
 while the separate ability/class-package sheet for Gray, Fire, Water, and
-Electric continues to govern ability details. Ability execution should wait
-for the relevant behavior sheet rather than inventing status systems during
-Binding/Fusion implementation.
+Electric continues to govern any future class-package details. No new status
+system is implied by the Binding/Fusion implementation.
 
-The safest first milestone is:
+The implemented baseline is:
 
 ```text
 new-file flame choice → Gray run start → selected hub flame → attunement →
 Triangle ability → Chroma depletion → Gray fallback → HUD/desaturation feedback
 ```
 
-No broad procedural rewrite or unapproved elemental status system should begin
-until the Chroma loop and the Binding/Fusion state transitions are playable,
-readable, and covered by automated tests.
+The full smoke runner is the regression gate for further changes; broader
+procedural or status-system work remains outside this feature.

@@ -65,7 +65,12 @@ const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
 const SOUL_PICKUP_AIR_TIME := 0.38
 const SOUL_PICKUP_LAUNCH_SPEED := 30.0
 const SOUL_PICKUP_LAUNCH_SPREAD := 18.0
-const FIRE_SOUL_COST := 10
+const FLAME_SWAP_SOUL_COST := 5
+const FLAME_FUSION_SOUL_COST := 5
+## Compatibility name retained for older dialogue/tests. A normal flame use is
+## now the five-Soul Swap transaction.
+const FIRE_SOUL_COST := FLAME_SWAP_SOUL_COST
+const ELEMENT_BIND_SOUL_COST := 50
 const SOUL_COLOR := Color8(211, 167, 255)
 const MAGIC_PROJECTILE_SPEED := 70.0
 const MAGIC_PROJECTILE_LIFETIME := 2.2
@@ -143,6 +148,7 @@ var dungeon_minimap_controller: Node = null
 var shadow_controller: ShadowController = null
 var interaction_component: InteractionComponent = null
 var chest_controller: ChestController = null
+var flame_exchange_controller: FlameExchangeController = null
 var npc_controller: NpcController = null
 var rest_fire_controller: RestFireController = null
 var hud_controller: HudController = null
@@ -373,6 +379,79 @@ func _set_entrance_open(is_open: bool) -> void:
 	entrance_open = is_open; _refresh_room_socket_visuals(door_active)
 func _is_interaction_target_in_front(target_position: Vector2) -> bool:
 	return interaction_component == null or interaction_component.target_is_in_front(self, target_position)
+
+
+func _current_player_element() -> int:
+	if player_chroma_component == null or not is_instance_valid(player_chroma_component):
+		return ElementCatalogScript.Element.NEUTRAL
+	return ElementCatalogScript.element_for_aspect(int(player_chroma_component.get("current_aspect")))
+
+
+func _sync_current_element_state() -> void:
+	if dungeon_map_controller == null or not dungeon_map_controller.has_method("set_current_element"):
+		return
+	dungeon_map_controller.call("set_current_element", _current_player_element())
+
+
+func _open_flame_exchange() -> void:
+	var controller := get("flame_exchange_controller") as Node
+	if controller != null and controller.has_method("open"):
+		controller.call("open", self)
+
+
+func _flame_exchange_is_active() -> bool:
+	var controller := get("flame_exchange_controller") as Node
+	return controller != null and bool(controller.get("active"))
+
+
+func _binding_prompt_text() -> String:
+	if player_chroma_component == null:
+		return "NO ELEMENTAL IDENTITY."
+	var current := String(player_chroma_component.call("aspect_name")).to_upper()
+	var bound := String(player_chroma_component.call("bound_aspect_name")).to_upper()
+	var souls := player_profile.souls if player_profile != null else 0
+	if not bool(player_chroma_component.call("has_bound_aspect")):
+		bound = "NONE"
+	var current_status := "BOUND" if bool(player_chroma_component.call("current_is_bound")) else "UNBOUND"
+	if current == "GRAY":
+		current_status = "GRAY"
+	if current_status == "BOUND":
+		return "CURRENT: %s (%s). BOUND: %s. SOULS: %d. ALREADY BOUND." % [current, current_status, bound, souls]
+	return "CURRENT: %s (%s). BOUND: %s. SOULS: %d. BIND %s FOR %d SOULS?" % [current, current_status, bound, souls, current, ELEMENT_BIND_SOUL_COST]
+
+
+func _can_bind_current_element() -> bool:
+	if player_chroma_component == null:
+		return false
+	var current := StringName(player_chroma_component.call("aspect_name"))
+	return AspectCatalogScript.is_elemental_flame(current) and not bool(player_chroma_component.call("current_is_bound"))
+
+
+func _bind_current_element() -> bool:
+	if player_profile == null or player_chroma_component == null:
+		return false
+	var current := StringName(player_chroma_component.call("aspect_name"))
+	if not AspectCatalogScript.is_elemental_flame(current):
+		return false
+	if bool(player_chroma_component.call("current_is_bound")):
+		_show_fire_exchange_text("%s ALREADY BOUND" % String(current).to_upper(), _health_feedback_color(AspectCatalogScript.palette_for_flame(current)))
+		return true
+	if not player_profile.bind_element(current):
+		_show_fire_exchange_text("NEED %d SOULS" % ELEMENT_BIND_SOUL_COST, Color8(255, 105, 105))
+		_play_sound("ui_denied", 0.0, 1.0)
+		return false
+	player_chroma_component.call("set_bound_flame", current)
+	var palette := AspectCatalogScript.palette_for_flame(current)
+	player_profile.palette_name = palette
+	call("_save_player_profile")
+	_update_soul_indicator()
+	_sync_current_element_state()
+	if current_room_type == DungeonGraph.ROOM_START:
+		run_start_palette_name = palette
+		call("_apply_rest_fire_palette", palette)
+	_show_fire_exchange_text("BOUND %s" % String(current).to_upper(), _health_feedback_color(palette))
+	_play_sound("ui_confirm", 0.0, 1.0)
+	return true
 func _can_interact_with_npc() -> bool:
 	if cloaked_demon == null or not cloaked_demon.visible:
 		return false
@@ -738,6 +817,14 @@ func _fire_target_palette() -> String:
 	return current_fire_palette_name if current_fire_palette_name == starter_palette else ""
 
 
+func _fire_target_flame() -> StringName:
+	return AspectCatalogScript.flame_for_palette(_fire_target_palette())
+
+
+func _current_player_flame() -> StringName:
+	return StringName(player_chroma_component.call("aspect_name")) if player_chroma_component != null else &"gray"
+
+
 func _show_fire_exchange_text(text: String, color: Color) -> void:
 	var origin: Vector2 = _player_floating_number_origin(text, color)
 	_spawn_floating_number(origin + Vector2(0, -18), 0, Vector2(0, -12), false, false, color, text)
@@ -751,31 +838,52 @@ func _can_interact_with_fire() -> bool:
 	return _actor_foot(player).distance_to(fire_position) <= FIRE_INTERACT_DISTANCE and _is_interaction_target_in_front(fire_position)
 
 
-func _interact_with_fire() -> void:
+func _fire_fusion_result() -> StringName:
 	var target_palette := _fire_target_palette()
-	var flame := AspectCatalogScript.flame_for_palette(target_palette)
-	if target_palette.is_empty() or flame.is_empty():
-		return
-	if player_profile == null or not player_profile.spend_souls(FIRE_SOUL_COST):
-		_show_fire_exchange_text("NEED %d SOULS" % FIRE_SOUL_COST, Color8(255, 105, 105))
+	var target_flame := AspectCatalogScript.flame_for_palette(target_palette)
+	if target_flame.is_empty() or player_chroma_component == null:
+		return &""
+	var current_flame := StringName(player_chroma_component.call("aspect_name"))
+	return AspectCatalogScript.fusion_result(current_flame, target_flame)
+
+
+func _can_fuse_with_fire() -> bool:
+	return _can_interact_with_fire() and not _fire_fusion_result().is_empty()
+
+
+func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
+	var cost := FLAME_FUSION_SOUL_COST if is_fusion else FLAME_SWAP_SOUL_COST
+	if player_chroma_component == null or not is_instance_valid(player_chroma_component):
+		return false
+	if player_profile == null or not player_profile.spend_souls(cost):
+		_show_fire_exchange_text("NEED %d SOULS" % cost, Color8(255, 105, 105))
 		_play_sound("ui_denied", 0.0, 1.0)
-		return
-	# A fire use is one atomic service: the full HP bar, the active Chroma bar,
-	# and the fire's element are restored in the same 10-Soul transaction.
-	if player_chroma_component == null or not bool(player_chroma_component.call("attune_flame", flame)):
-		player_profile.add_souls(FIRE_SOUL_COST)
+		return false
+	var applied := false
+	if is_fusion:
+		var result := _fire_fusion_result()
+		if not result.is_empty():
+			applied = bool(player_chroma_component.call("attune_flame", result))
+	else:
+		applied = bool(player_chroma_component.call("attune_flame", flame))
+	if not applied:
+		player_profile.add_souls(cost)
 		call("_save_player_profile")
 		_update_soul_indicator()
-		return
+		return false
+	var target_palette := AspectCatalogScript.palette_for_flame(flame)
+	var result_flame := StringName(player_chroma_component.call("aspect_name"))
+	var result_palette := AspectCatalogScript.palette_for_flame(result_flame)
 	var healed := 0.0
 	if player_health_component != null:
 		healed = player_health_component.apply_healing(player_health_component.maximum_health)
 		_update_player_health_ui()
 		if healed > 0.0:
-			combat_runtime_controller.call("spawn_player_healing_number", self, healed, _health_feedback_color(target_palette))
-	if screen_state_controller != null and target_palette != screen_state_controller.player_palette_name:
-		_start_player_palette_flash(target_palette)
+			combat_runtime_controller.call("spawn_player_healing_number", self, healed, _health_feedback_color(result_palette if not result_palette.is_empty() else target_palette))
+	if screen_state_controller != null and result_palette != screen_state_controller.player_palette_name:
+		_start_player_palette_flash(result_palette)
 	_update_player_mp_ui()
+	_sync_current_element_state()
 	var is_starter_attunement := current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run
 	if is_starter_attunement:
 		starter_flame_attuned_this_run = true
@@ -785,8 +893,27 @@ func _interact_with_fire() -> void:
 		_set_entrance_open(true)
 	call("_save_player_profile")
 	_update_soul_indicator()
-	_show_fire_exchange_text("FIRE USED", _health_feedback_color(target_palette))
+	var action_name := "FUSED %s" % String(result_flame).to_upper() if is_fusion else "%s USED" % String(flame).to_upper()
+	_show_fire_exchange_text(action_name, _health_feedback_color(result_palette if not result_palette.is_empty() else target_palette))
 	_play_sound("ui_confirm", 0.0, 1.0)
+	return true
+
+
+func _interact_with_fire() -> bool:
+	var target_palette := _fire_target_palette()
+	var flame := AspectCatalogScript.flame_for_palette(target_palette)
+	if target_palette.is_empty() or flame.is_empty():
+		return false
+	return _complete_flame_service(flame, false)
+
+
+func _fuse_with_fire() -> bool:
+	var target_palette := _fire_target_palette()
+	var flame := AspectCatalogScript.flame_for_palette(target_palette)
+	var result := _fire_fusion_result()
+	if target_palette.is_empty() or flame.is_empty() or result.is_empty():
+		return false
+	return _complete_flame_service(flame, true)
 func _start_player_palette_flash(new_palette: String) -> void:
 	screen_state_controller.player_palette_name = new_palette
 	current_player_palette_name = new_palette
@@ -909,6 +1036,7 @@ func _on_room_enemies_cleared() -> void:
 func _map_connection_available(connection: DungeonGraph.ConnectionRecord, is_entrance: bool = false) -> bool:
 	if current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run:
 		return false
+	_sync_current_element_state()
 	return dungeon_map_controller == null or dungeon_map_controller.is_connection_available(connection, is_entrance)
 func _mark_current_room_engaged() -> void:
 	if dungeon_map_controller != null:
@@ -916,6 +1044,7 @@ func _mark_current_room_engaged() -> void:
 func _map_connection_visual_state(connection: DungeonGraph.ConnectionRecord, is_entrance: bool = false) -> StringName:
 	if current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run:
 		return &"room_locked"
+	_sync_current_element_state()
 	return dungeon_map_controller.connection_visual_state(connection, is_entrance) if dungeon_map_controller != null else &"open"
 func _on_dungeon_map_state_changed() -> void:
 	if dungeon_map_controller == null:
@@ -1145,7 +1274,9 @@ func _update_magic_input(magic_down: bool, was_down: bool, delta: float) -> bool
 func _try_cast_imbue() -> bool: return bool(magic_runtime_controller.call("try_cast_imbue", self))
 func _cancel_magic_animation() -> void: magic_runtime_controller.call("cancel_magic_animation", self)
 func _reset_magic_runtime(reset_cooldown: bool = false) -> void: magic_runtime_controller.call("reset_for_room", self, reset_cooldown)
-func _sync_chroma_presentation() -> void: magic_runtime_controller.call("sync_chroma_presentation", self)
+func _sync_chroma_presentation() -> void:
+	magic_runtime_controller.call("sync_chroma_presentation", self)
+	_sync_current_element_state()
 func _execute_current_aspect_ability(mode: int) -> bool: return bool(magic_runtime_controller.call("execute_current_aspect_ability", self, mode))
 func _player_visual_center() -> Vector2: return magic_runtime_controller.call("player_visual_center", self) as Vector2
 func _slime_visual_center(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("slime_visual_center", self, slime) as Vector2

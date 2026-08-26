@@ -1,6 +1,6 @@
 # Tiny Demons — Elemental Binding and Flame Fusion Design
 
-Status: approved design direction; implementation not started
+Status: approved design and implemented core; R6+ fusion-gate curriculum included
 
 This document is the canonical player-facing and systems-facing specification
 for elemental swapping, fusion, and permanent Binding. It records the design
@@ -274,6 +274,20 @@ Binding cost merely to pass. A generated or authored route must guarantee:
 Optional secret or mastery doors may explicitly require a permanently bound
 element, but that must be communicated as optional content rather than used as
 the critical path.
+
+### 7.1 Generated fusion curriculum
+
+Procedural runs begin requiring a fusion result on Run 6 (the generator's
+`completed_runs >= 5` threshold). Run 6 places two input flames on the main
+route before a mandatory result-element door. The input pair rotates across
+the three base combinations on later early fusion runs so the curriculum does
+not always teach the same hybrid first.
+
+Run 8 and later teach the chained Water + Electric → Grass, then Grass + Water
+→ Ice sequence. The Grass and Ice gates are each placed after their required
+input flames. Layout validation performs a reachability pass for every
+generated fusion gate, and the solved state is latched when the current element
+opens the route.
 
 ## 8. Chroma and zero-MP behavior
 

@@ -1,10 +1,13 @@
 extends Node
 class_name PlayerChromaComponent
 
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+
 ## Runtime owner for the player's aspect identity and Chroma state.
 ## Triangle execution, HUD presentation, and visual desaturation are separate.
 
 signal aspect_changed(aspect: Aspect)
+signal bound_aspect_changed(aspect: Aspect)
 signal chroma_changed(current: int, maximum: int)
 signal ability_mode_changed(mode: AbilityMode)
 
@@ -13,6 +16,10 @@ enum Aspect {
 	FIRE,
 	WATER,
 	ELECTRIC,
+	GRASS,
+	SHADOW,
+	GROUND,
+	ICE,
 }
 
 enum AbilityMode {
@@ -27,17 +34,22 @@ const ELEMENTAL_ABILITY_COST := 10
 
 var current_aspect: Aspect = Aspect.NONE
 var current_chroma := 0
+# The permanent identity is deliberately separate from current_aspect. A
+# fusion may change the current element without changing this value.
+var bound_aspect: Aspect = Aspect.NONE
+# Compatibility surface for older callers. It mirrors whether a bound aspect
+# exists; current_is_bound() handles the more precise current/bound question.
 var binding_active := false
 
 
 func begin_new_run() -> void:
 	_set_aspect(Aspect.NONE)
-	binding_active = false
+	_sync_binding_state()
 	_set_chroma(0)
 
 
 func attune(aspect: Aspect) -> bool:
-	if aspect == Aspect.NONE:
+	if not _is_valid_elemental_aspect(aspect):
 		return false
 	_set_aspect(aspect)
 	_set_chroma(MAX_CHROMA)
@@ -45,22 +57,12 @@ func attune(aspect: Aspect) -> bool:
 
 
 func attune_flame(flame: StringName) -> bool:
-	match flame:
-		&"fire":
-			return attune(Aspect.FIRE)
-		&"water":
-			return attune(Aspect.WATER)
-		&"electric":
-			return attune(Aspect.ELECTRIC)
-	return false
+	var aspect := aspect_for_flame(flame)
+	return attune(aspect) if aspect != Aspect.NONE else false
 
 
 func change_flame(flame: StringName) -> bool:
-	var next_aspect := Aspect.NONE
-	match flame:
-		&"fire": next_aspect = Aspect.FIRE
-		&"water": next_aspect = Aspect.WATER
-		&"electric": next_aspect = Aspect.ELECTRIC
+	var next_aspect := aspect_for_flame(flame)
 	if next_aspect == Aspect.NONE:
 		return false
 	_set_aspect(next_aspect)
@@ -68,6 +70,8 @@ func change_flame(flame: StringName) -> bool:
 
 
 func refill_chroma() -> bool:
+	if current_aspect == Aspect.NONE and bound_aspect != Aspect.NONE:
+		_set_aspect(bound_aspect)
 	if current_aspect == Aspect.NONE or current_chroma >= MAX_CHROMA:
 		return false
 	_set_chroma(MAX_CHROMA)
@@ -75,8 +79,10 @@ func refill_chroma() -> bool:
 
 
 func restore_neutral_chroma(_value: int = CHROMA_PICKUP_VALUE) -> bool:
-	# Gray cannot store Chroma. The pickup is consumed by the caller, but this
-	# state owner reports that no restoration occurred.
+	# A dormant bound identity can be recovered by a neutral pickup. Gray with
+	# no permanent identity still cannot store Chroma.
+	if current_aspect == Aspect.NONE and bound_aspect != Aspect.NONE:
+		_set_aspect(bound_aspect)
 	if current_aspect == Aspect.NONE:
 		return false
 	if current_chroma >= MAX_CHROMA:
@@ -103,16 +109,68 @@ func spend_chroma(amount: int) -> bool:
 	if not can_spend_chroma(amount):
 		return false
 	_set_chroma(current_chroma - amount)
-	if current_chroma == 0 and not binding_active:
-		_set_aspect(Aspect.NONE)
+	if current_chroma == 0:
+		# A temporary fusion is useful while charged. Once it is depleted, return
+		# to the permanent identity when one exists; otherwise resolve Gray.
+		if bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
+			_set_aspect(bound_aspect)
+		elif bound_aspect == Aspect.NONE:
+			_set_aspect(Aspect.NONE)
 	return true
 
 
 func set_binding_active(active: bool) -> void:
-	if binding_active == active:
-		return
-	binding_active = active
-	emit_signal(&"ability_mode_changed", ability_mode())
+	# Legacy callers used this to mark the currently attuned aspect as bound.
+	# Preserve that behavior while routing new code through bound_aspect.
+	if active and current_aspect != Aspect.NONE:
+		set_bound_aspect(current_aspect)
+	elif not active:
+		clear_bound_aspect()
+
+
+func set_bound_aspect(aspect: Aspect) -> bool:
+	if aspect != Aspect.NONE and not _is_valid_elemental_aspect(aspect):
+		return false
+	if bound_aspect == aspect:
+		_sync_binding_state()
+		return true
+	var previous_mode := ability_mode()
+	bound_aspect = aspect
+	_sync_binding_state()
+	bound_aspect_changed.emit(bound_aspect)
+	var next_mode := ability_mode()
+	if previous_mode != next_mode:
+		ability_mode_changed.emit(next_mode)
+	return true
+
+
+func set_bound_flame(flame: StringName) -> bool:
+	var aspect := aspect_for_flame(flame)
+	return set_bound_aspect(aspect)
+
+
+func clear_bound_aspect() -> void:
+	set_bound_aspect(Aspect.NONE)
+
+
+func has_bound_aspect() -> bool:
+	return bound_aspect != Aspect.NONE
+
+
+func current_is_bound() -> bool:
+	return current_aspect != Aspect.NONE and current_aspect == bound_aspect
+
+
+func aspect_for_flame(flame: StringName) -> Aspect:
+	match flame:
+		&"fire": return Aspect.FIRE
+		&"water": return Aspect.WATER
+		&"electric": return Aspect.ELECTRIC
+		&"grass": return Aspect.GRASS
+		&"shadow": return Aspect.SHADOW
+		&"ground": return Aspect.GROUND
+		&"ice": return Aspect.ICE
+	return Aspect.NONE
 
 
 func ability_mode() -> AbilityMode:
@@ -120,7 +178,7 @@ func ability_mode() -> AbilityMode:
 		return AbilityMode.GRAY
 	if current_chroma >= ELEMENTAL_ABILITY_COST:
 		return AbilityMode.ELEMENTAL
-	if binding_active and current_chroma == 0:
+	if current_is_bound() and current_chroma == 0:
 		return AbilityMode.BOUND_WEAKENED
 	return AbilityMode.GRAY
 
@@ -133,7 +191,35 @@ func aspect_name() -> StringName:
 			return &"water"
 		Aspect.ELECTRIC:
 			return &"electric"
+		Aspect.GRASS:
+			return &"grass"
+		Aspect.SHADOW:
+			return &"shadow"
+		Aspect.GROUND:
+			return &"ground"
+		Aspect.ICE:
+			return &"ice"
 	return &"gray"
+
+
+func bound_aspect_name() -> StringName:
+	match bound_aspect:
+		Aspect.FIRE: return &"fire"
+		Aspect.WATER: return &"water"
+		Aspect.ELECTRIC: return &"electric"
+		Aspect.GRASS: return &"grass"
+		Aspect.SHADOW: return &"shadow"
+		Aspect.GROUND: return &"ground"
+		Aspect.ICE: return &"ice"
+	return &"gray"
+
+
+func _is_valid_elemental_aspect(aspect: Aspect) -> bool:
+	return aspect > Aspect.NONE and aspect <= Aspect.ICE
+
+
+func _sync_binding_state() -> void:
+	binding_active = bound_aspect != Aspect.NONE
 
 
 func _set_aspect(next_aspect: Aspect) -> void:

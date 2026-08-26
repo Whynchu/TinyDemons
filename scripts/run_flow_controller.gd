@@ -90,9 +90,10 @@ func begin_new_run(root: Object) -> void:
 		momentum.reset_all()
 	if root.player_chroma_component != null:
 		root.player_chroma_component.call("begin_new_run")
+	root.call("_sync_current_element_state")
 	var starter_palette: String = "red"
 	if root.player_profile != null:
-		starter_palette = AspectCatalogScript.palette_for_flame(root.player_profile.starter_flame)
+		starter_palette = AspectCatalogScript.palette_for_flame(root.player_profile.persistent_flame())
 	root.run_start_palette_name = starter_palette
 	# The initial room may have been laid out before new-file selection was
 	# confirmed. Reassign the hub flame here so its visual and interaction target
@@ -122,7 +123,9 @@ func _reset_dungeon_for_new_run(root: Object) -> void:
 		return
 	var new_seed: int = (root.get("rng") as RandomNumberGenerator).randi()
 	root.set("current_dungeon_seed", new_seed)
-	var start_room_id: StringName = StringName(map_controller.call("begin_run", graph, new_seed, root.player_profile.completed_runs if root.player_profile != null else 0, root.player_profile.starter_flame if root.player_profile != null else &"fire"))
+	var start_starter_flame: StringName = root.player_profile.starter_flame if root.player_profile != null else &"fire"
+	var start_bound_flame: StringName = root.player_profile.bound_element if root.player_profile != null and root.player_profile.has_bound_element else &""
+	var start_room_id: StringName = StringName(map_controller.call("begin_run", graph, new_seed, root.player_profile.completed_runs if root.player_profile != null else 0, start_starter_flame, start_bound_flame))
 	room_controller.room_states.clear()
 	var next_room_id := start_room_id
 	if bool(root.get("debug_start_in_boss_room")):
