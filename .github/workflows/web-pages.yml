@@ -13,8 +13,6 @@ permissions:
 env:
   GODOT_VERSION: 4.7.1
   GODOT_RELEASE: 4.7.1-stable
-  GODOT_ROOT: ${{ runner.temp }}/godot
-  XDG_DATA_HOME: ${{ runner.temp }}/godot-data
 
 jobs:
   build:
@@ -29,16 +27,18 @@ jobs:
         run: |
           set -euo pipefail
           release_url="https://github.com/godotengine/godot/releases/download/${GODOT_RELEASE}"
-          mkdir -p "${GODOT_ROOT}" "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}.stable"
+          godot_root="${RUNNER_TEMP}/godot"
+          xdg_data_home="${RUNNER_TEMP}/godot-data"
+          mkdir -p "${godot_root}" "${xdg_data_home}/godot/export_templates/${GODOT_VERSION}.stable"
           curl --fail --location --retry 3 "${release_url}/Godot_v${GODOT_RELEASE}_linux.x86_64.zip" --output "${RUNNER_TEMP}/godot.zip"
           unzip -q "${RUNNER_TEMP}/godot.zip" -d "${RUNNER_TEMP}/godot-unpacked"
-          mv "${RUNNER_TEMP}/godot-unpacked/Godot_v${GODOT_RELEASE}_linux.x86_64" "${GODOT_ROOT}/godot"
-          chmod +x "${GODOT_ROOT}/godot"
+          mv "${RUNNER_TEMP}/godot-unpacked/Godot_v${GODOT_RELEASE}_linux.x86_64" "${godot_root}/godot"
+          chmod +x "${godot_root}/godot"
           curl --fail --location --retry 3 "${release_url}/Godot_v${GODOT_RELEASE}_export_templates.tpz" --output "${RUNNER_TEMP}/templates.tpz"
           unzip -q "${RUNNER_TEMP}/templates.tpz" -d "${RUNNER_TEMP}/templates"
-          find "${RUNNER_TEMP}/templates" -type f -name '*.zip' -exec cp {} "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}.stable/" \;
-          test -f "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}.stable/web_nothreads_release.zip"
-          "${GODOT_ROOT}/godot" --version
+          find "${RUNNER_TEMP}/templates" -type f -name '*.zip' -exec cp {} "${xdg_data_home}/godot/export_templates/${GODOT_VERSION}.stable/" \;
+          test -f "${xdg_data_home}/godot/export_templates/${GODOT_VERSION}.stable/web_nothreads_release.zip"
+          "${godot_root}/godot" --version
 
       - name: Prepare compact web audio
         shell: bash
@@ -54,6 +54,7 @@ jobs:
         shell: pwsh
         env:
           GODOT_BIN: ${{ runner.temp }}/godot/godot
+          XDG_DATA_HOME: ${{ runner.temp }}/godot-data
           REQUIRE_WEB_EXPORT: "1"
         run: |
           & (Join-Path $env:GITHUB_WORKSPACE "tests/web_export_smoke.ps1") -RequireExport
