@@ -161,12 +161,12 @@ func apply_puzzle_environment_tint(root: Object, tint: Color) -> void:
 		root.background_environment.self_modulate = Color.WHITE
 	# Reset every authored surface first so an unused entrance cannot retain a
 	# tint from a previous room.
-	var surface_paths: Array[NodePath] = [^"FloorTiles/FloorLayer", ^"FloorTiles/FloorLFaceLayer", ^"FloorTiles/FloorRFaceLayer", ^"FloorTiles/Entrance", ^"FloorTiles/EntranceRight", ^"Walls/WallLeftLayer", ^"Walls/WallRightLayer", ^"Walls/DoorLeft", ^"Walls/DoorRight"]
+	var surface_paths: Array[NodePath] = [^"FloorTiles/FloorUnderlay", ^"FloorTiles/BossFloorUnderlay", ^"FloorTiles/FloorLayer", ^"FloorTiles/FloorLFaceLayer", ^"FloorTiles/FloorRFaceLayer", ^"FloorTiles/Entrance", ^"FloorTiles/EntranceRight", ^"Walls/WallLeftLayer", ^"Walls/WallRightLayer", ^"Walls/DoorLeft", ^"Walls/DoorRight"]
 	for path in surface_paths:
 		var surface: Node = root.map_root.get_node_or_null(path) if root.map_root != null else null
 		set_puzzle_surface_tint(surface, Color.WHITE)
 	if tint != Color.WHITE:
-		for path in [^"FloorTiles/FloorLayer", ^"FloorTiles/FloorLFaceLayer", ^"FloorTiles/FloorRFaceLayer", ^"Walls/WallLeftLayer", ^"Walls/WallRightLayer"]:
+		for path in [^"FloorTiles/FloorUnderlay", ^"FloorTiles/BossFloorUnderlay", ^"FloorTiles/FloorLayer", ^"FloorTiles/FloorLFaceLayer", ^"FloorTiles/FloorRFaceLayer", ^"Walls/WallLeftLayer", ^"Walls/WallRightLayer"]:
 			set_puzzle_surface_tint(root.map_root.get_node_or_null(path) if root.map_root != null else null, presentation_tint)
 	var starter_gate_locked := starter_flame_gate_locked(root)
 	for socket_value in root.room_controller.active_door_sockets.values():
