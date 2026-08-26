@@ -410,7 +410,7 @@ the full loop with prompts swapping to gamepad.
 | Gamepad invisible until first button press | Certain (platform rule) | "Press a controller button" affordance; prompt defaults to touch/keyboard until then |
 | 70 MB WAV first load | Certain unless addressed | OGG re-encode (Phase 4); measure and record |
 | IndexedDB save lost on instant tab-close | Low | Verify timing; flush-on-hide only if observed |
-| Emulated mouse echo misclassifies touch as mouse | Certain if unhandled | `device == -1` exclusion in the classifier; covered by tests |
+| Emulated mouse echo misclassifies touch as mouse | Certain if unhandled | Ignore emulated mouse plus active/recent touch echoes in the classifier; covered by tests |
 | Joypad drift flips device to gamepad | Certain if unhandled | 0.5 classifier threshold; covered by tests |
 | Focus-only menus untappable | Medium | Phase 3 tap audit; tap-to-activate on the Button, no navigation rework |
 | Safari WebGL2 quirks | Low-Medium | Single-threaded export (best iOS compat); test early in Phase 1 |
@@ -489,12 +489,17 @@ handlers, no mouse/touch usage in `scripts/`; saves `user://`-only
   `touch-action: none`, `user-scalable=no`, `overscroll-behavior: none`) so
   URL-bar bounce, page scroll, and double-tap zoom cannot shift the canvas or
   hijack control drags.
-- **`touch_controls_layer.gd` adaptive layout**: the overlay measures the
-  window through the root viewport's final transform, keeping targets at a
-  usable physical size at any integer scale, and parks controls in the
-  letterbox bars instead of over the game - bottom bar in portrait (stick
-  left, 3x2 button cluster right), side bars in landscape (floating stick
-  left, 2x3 cluster right), with a bottom-corner overlay fallback on
-  exact-fit windows. The stick anchors where the finger lands; buttons
-  release on slide-off. Layout math is asserted in
-  `tests/touch_controls_smoke.gd`.
+- **`touch_controls_layer.gd` adaptive layout**: the overlay lays out all
+  gameplay targets in logical viewport space, so visuals and
+  `InputEventScreenTouch` hit positions stay aligned through integer scaling
+  and letterboxing. The stick anchors where the finger lands; buttons release
+  on slide-off. Menu and dialogue touches are handled separately: visible
+  native `Button` nodes activate on a screen-touch tap, while dialogue and
+  focus-based menus retain a tap-to-accept fallback. Layout and menu hit
+  testing are asserted in `tests/touch_controls_smoke.gd`.
+- **Touch-device handoff protection**: `input_device_tracker.gd` tracks active
+  screen touches and a short post-release grace window, filtering browser
+  mouse-motion echoes even when a platform labels them as a physical mouse.
+  This prevents the virtual stick from being cleared mid-drag and keeps touch
+  prompts visible. The behavior is covered in
+  `tests/input_device_tracker_smoke.gd`.

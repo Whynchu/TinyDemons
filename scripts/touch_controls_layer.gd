@@ -1,17 +1,18 @@
 extends CanvasLayer
 class_name TouchControlsLayer
 
-## Optional touch provider for the shared InputRouter. The overlay measures the
-## window through the root viewport's final transform, so control sizes track
-## the real screen size at any integer content scale. Whenever letterbox bars
-## are large enough (portrait bottom bar, landscape side bars) the controls
-## live in the bars instead of covering the game. The root Control is ignored
-## while inactive so it never intercepts menu Button taps; gameplay controls
-## only become visible for a touch-last device.
+## Optional touch provider for the shared InputRouter. Controls are laid out in
+## the logical viewport used by the CanvasLayer, which keeps their hit regions
+## aligned with InputEventScreenTouch positions at every stretch scale. Menu
+## and dialogue touches are handled separately from the gameplay overlay so a
+## touch-last device can use the whole UI without showing gameplay controls on
+## top of it.
 
 const DEVICE_TOUCH := 2
 const CONTEXT_GAMEPLAY := 0
 const CONTEXT_DIALOGUE := 1
+const CONTEXT_HUB := 2
+const CONTEXT_MENU := 3
 const EMULATED_DEVICE_ID := -1
 const MOUSE_FINGER_ID := -2
 
@@ -37,6 +38,9 @@ var _button_nodes: Dictionary = {}
 var _pressed_actions: Dictionary = {}
 var _press_latches: Dictionary = {}
 var _finger_actions: Dictionary = {}
+var _menu_touch_buttons: Dictionary = {}
+var _menu_accept_fingers: Dictionary = {}
+var _menu_accept_latch := false
 var _stick_vector := Vector2.ZERO
 var _stick_pointer_id := -1
 var _stick_origin := Vector2.ZERO
@@ -44,6 +48,7 @@ var _layout: Dictionary = {}
 var _last_input_device := -1
 var _input_context := CONTEXT_GAMEPLAY
 var _controls_visible := false
+var _touch_input_enabled := false
 var _built := false
 
 
@@ -72,17 +77,21 @@ func build() -> void:
 
 
 func set_input_context(next_context: int) -> void:
+	if _input_context != next_context:
+		_clear_transient_input()
 	_input_context = next_context
 	_refresh_controls()
 
 
 func set_last_input_device(device: int) -> void:
+	if _last_input_device != device:
+		_clear_transient_input()
 	_last_input_device = device
 	_refresh_controls()
 
 
 func is_active() -> bool:
-	return _controls_visible
+	return _touch_input_enabled
 
 
 func movement_vector() -> Vector2:
@@ -90,17 +99,19 @@ func movement_vector() -> Vector2:
 
 
 func action_pressed(action: StringName) -> bool:
+	if action == &"ui_accept":
+		return action_pressed(&"interact")
+	if action == &"interact":
+		return bool(_pressed_actions.get(&"interact", false)) or not _menu_accept_fingers.is_empty()
+	if action == &"cancel" or action == &"ui_cancel":
+		return bool(_pressed_actions.get(&"pause", false)) if _controls_visible else false
 	if not _controls_visible:
 		return false
-	if action == &"ui_accept":
-		return bool(_pressed_actions.get(&"interact", false))
-	if action == &"cancel" or action == &"ui_cancel":
-		return bool(_pressed_actions.get(&"pause", false))
 	return bool(_pressed_actions.get(action, false))
 
 
 func snapshot() -> Dictionary:
-	if not _controls_visible:
+	if not _touch_input_enabled:
 		return {"active": false, "movement": Vector2.ZERO, "actions": {}, "just_pressed": {}}
 	var actions: Dictionary = {}
 	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard"]:
@@ -116,7 +127,11 @@ func snapshot() -> Dictionary:
 		if action == &"pause":
 			just_pressed[&"cancel"] = true
 			just_pressed[&"ui_cancel"] = true
+	if _menu_accept_latch:
+		just_pressed[&"interact"] = true
+		just_pressed[&"ui_accept"] = true
 	_press_latches.clear()
+	_menu_accept_latch = false
 	return {"active": true, "movement": _stick_vector, "actions": actions, "just_pressed": just_pressed}
 
 
@@ -141,59 +156,36 @@ func set_button_state(action: StringName, pressed: bool) -> void:
 	_update_button_visual(action)
 
 
-## Pure layout math, kept separate so tests can assert portrait/landscape
-## behavior without a real device. All returned rects are in content space:
-## the game occupies Rect2(Vector2.ZERO, content_size) and the letterbox bars
-## are the area between that rect and window_rect.
+## Pure layout math, kept separate so tests can assert behavior without a real
+## device. All returned rects are in the logical viewport/canvas space. The
+## physical window scale and any letterbox bars are applied outside this
+## CanvasLayer by Godot, so they must not be included in these coordinates.
 func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictionary:
-	var content_pos := (window_logical - content_size) * 0.5
-	var window_rect := Rect2(-content_pos, window_logical)
-	var unit := minf(window_logical.x, window_logical.y)
-	var margin := clampf(unit * MARGIN_FRACTION, 2.0, 24.0)
+	var viewport_size := Vector2(maxf(window_logical.x, content_size.x), maxf(window_logical.y, content_size.y))
+	var window_rect := Rect2(Vector2.ZERO, viewport_size)
+	var unit := minf(viewport_size.x, viewport_size.y)
+	var margin := clampf(unit * MARGIN_FRACTION, 2.0, 8.0)
 	var button := clampf(unit * BUTTON_FRACTION, BUTTON_MIN, BUTTON_MAX)
 	var gap := maxf(2.0, margin * 0.75)
 	var stick_diameter := clampf(unit * STICK_FRACTION, STICK_MIN, STICK_MAX)
-	var portrait := window_logical.y >= window_logical.x
-	var bar_bottom := window_rect.end.y - content_size.y
-	var bar_side := -window_rect.position.x
-	var stick_zone := Rect2()
-	var stick_home := Vector2.ZERO
+	# Keep the stick in the lower-left corner and the action cluster in the
+	# lower-right corner. These are deliberately inside the viewport: the
+	# stretch transform maps both the visuals and touch positions together.
+	var stick_width := minf(maxf(stick_diameter * 1.65, 68.0), viewport_size.x * 0.46)
+	var stick_zone := Rect2(Vector2(margin, viewport_size.y - margin - stick_diameter), Vector2(maxf(stick_width, stick_diameter), stick_diameter))
+	var stick_home := stick_zone.position + stick_zone.size * 0.5
 	var cluster_origin := Vector2.ZERO
 	var columns := 3
-	if portrait and bar_bottom >= stick_diameter * 0.6:
-		# Portrait: generous bottom bar holds the stick (left) and the button
-		# cluster (right) without covering the game.
-		stick_zone = Rect2(window_rect.position.x + margin, content_size.y, window_logical.x * 0.5 - margin * 1.5, bar_bottom - margin * 0.5)
-		columns = 3
-		var cluster_w := columns * button + float(columns - 1) * gap
-		var cluster_h := 2.0 * button + gap
-		cluster_origin = Vector2(window_rect.end.x - margin - cluster_w, window_rect.end.y - margin - cluster_h)
-		stick_home = stick_zone.position + Vector2(stick_zone.size.x * 0.5, stick_zone.size.y * 0.55)
-	elif not portrait and bar_side >= stick_diameter * 0.7:
-		# Landscape: side bars are wide enough for a floating stick (left) and
-		# a two-column button cluster (right).
-		stick_zone = Rect2(window_rect.position.x + margin * 0.5, window_rect.position.y + margin, bar_side - margin, window_logical.y - margin * 2.0)
-		columns = 2
-		var cluster_w := columns * button + gap
-		var cluster_h := 3.0 * button + 2.0 * gap
-		var right_bar: float = window_rect.end.x - content_size.x
-		cluster_origin = Vector2(content_size.x + (right_bar - cluster_w) * 0.5, window_rect.position.y + (window_logical.y - cluster_h) * 0.5)
-		stick_home = stick_zone.position + stick_zone.size * 0.5
-	else:
-		# No usable bars (near-perfect fit): overlay the bottom corners.
-		stick_zone = Rect2(window_rect.position.x + margin, window_rect.end.y - margin - stick_diameter, minf(window_logical.x * 0.45, stick_diameter * 1.8), stick_diameter)
-		columns = 3
-		var cluster_w := columns * button + float(columns - 1) * gap
-		var cluster_h := 2.0 * button + gap
-		cluster_origin = Vector2(window_rect.end.x - margin - cluster_w, window_rect.end.y - margin - cluster_h)
-		stick_home = stick_zone.position + stick_zone.size * 0.5
+	var cluster_w := columns * button + float(columns - 1) * gap
+	var cluster_h := 2.0 * button + gap
+	cluster_origin = Vector2(maxf(margin, viewport_size.x - margin - cluster_w), maxf(margin, viewport_size.y - margin - cluster_h))
 	var buttons: Dictionary = {}
 	for index in BUTTON_ORDER.size():
 		var col := index % columns
 		var row := index / columns
 		buttons[BUTTON_ORDER[index]] = Rect2(cluster_origin + Vector2(float(col) * (button + gap), float(row) * (button + gap)), Vector2(button, button))
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
-	var pause := Rect2(Vector2(window_rect.end.x - margin - pause_side, window_rect.position.y + margin), Vector2(pause_side, pause_side * 0.8))
+	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))
 	return {
 		"window_rect": window_rect,
 		"margin": margin,
@@ -248,8 +240,6 @@ func _panel_style(background: Color, border: Color, width: int, radius: int = 2)
 
 
 func _input(event: InputEvent) -> void:
-	if not _controls_visible:
-		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.device == EMULATED_DEVICE_ID:
@@ -261,23 +251,36 @@ func _input(event: InputEvent) -> void:
 		if touch.pressed:
 			_finger_down(touch.index, touch.position)
 		else:
-			_finger_up(touch.index)
+			_finger_up(touch.index, touch.position, not touch.canceled)
 		return
 	if event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		if drag.device != EMULATED_DEVICE_ID:
+			if _last_input_device != DEVICE_TOUCH:
+				set_last_input_device(DEVICE_TOUCH)
 			_finger_moved(drag.index, drag.position)
+		return
+	if not _touch_input_enabled:
 		return
 	if event is InputEventMouseButton:
 		# Real-mouse path so the overlay can be tested on desktop; emulated
 		# echoes of real touches are skipped to avoid double state changes.
 		var mouse_button := event as InputEventMouseButton
-		if mouse_button.device == EMULATED_DEVICE_ID or mouse_button.button_index != MOUSE_BUTTON_LEFT:
+		if mouse_button.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mouse_button.device == EMULATED_DEVICE_ID:
+			# A browser may provide only the emulated mouse stream. Bootstrap can
+			# already know that the device is touch-capable, so accept that stream
+			# only when it is not a duplicate of an active screen touch.
+			if _last_input_device != DEVICE_TOUCH or _has_real_touch_capture():
+				return
+		elif _is_menu_context():
+			# Let native Godot Buttons receive an actual desktop mouse click.
 			return
 		if mouse_button.pressed:
 			_finger_down(MOUSE_FINGER_ID, mouse_button.position)
 		else:
-			_finger_up(MOUSE_FINGER_ID)
+			_finger_up(MOUSE_FINGER_ID, mouse_button.position)
 		return
 	if event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
@@ -286,16 +289,45 @@ func _input(event: InputEvent) -> void:
 
 
 func _finger_down(finger_id: int, position: Vector2) -> void:
+	if not _touch_input_enabled:
+		return
+	if _is_menu_context():
+		var menu_button := _menu_button_at(position)
+		if menu_button != null:
+			_menu_touch_buttons[finger_id] = menu_button
+			_update_touch_capture_filter()
+			return
+		_menu_accept_fingers[finger_id] = true
+		_menu_accept_latch = true
+		_update_touch_capture_filter()
+		return
+	if _input_context == CONTEXT_DIALOGUE:
+		var dialogue_button := _menu_button_at(position)
+		if dialogue_button != null:
+			_menu_touch_buttons[finger_id] = dialogue_button
+			_update_touch_capture_filter()
+			return
+		# Dialogue uses the same tap-anywhere behavior as a controller's
+		# interact/accept button when the tap is not on a gameplay control.
+		var dialogue_buttons: Dictionary = _layout.get("buttons", {})
+		var dialogue_pause: Rect2 = _layout.get("pause", Rect2())
+		if not _rect_dictionary_contains(dialogue_buttons, position) and not dialogue_pause.has_point(position):
+			_menu_accept_fingers[finger_id] = true
+			_menu_accept_latch = true
+			_update_touch_capture_filter()
+			return
 	var buttons: Dictionary = _layout.get("buttons", {})
 	for action in buttons:
 		if (buttons[action] as Rect2).has_point(position):
 			_finger_actions[finger_id] = action
 			set_button_state(action, true)
+			_update_touch_capture_filter()
 			return
 	var pause: Rect2 = _layout.get("pause", Rect2())
 	if pause.has_point(position):
 		_finger_actions[finger_id] = &"pause"
 		set_button_state(&"pause", true)
+		_update_touch_capture_filter()
 		return
 	var zone: Rect2 = _layout.get("stick_zone", Rect2())
 	if _stick_pointer_id < 0 and zone.has_point(position):
@@ -303,9 +335,20 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		_stick_origin = _clamped_stick_origin(position)
 		set_virtual_stick(_stick_value_from_position(position))
 		_update_stick_visuals()
+		_update_touch_capture_filter()
 
 
 func _finger_moved(finger_id: int, position: Vector2) -> void:
+	if _menu_touch_buttons.has(finger_id):
+		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
+		if menu_button == null or not is_instance_valid(menu_button) or not menu_button.get_global_rect().grow(3.0).has_point(position):
+			_menu_touch_buttons.erase(finger_id)
+			_update_touch_capture_filter()
+		return
+	if _menu_accept_fingers.has(finger_id):
+		return
+	if not _controls_visible:
+		return
 	if finger_id == _stick_pointer_id:
 		set_virtual_stick(_stick_value_from_position(position))
 		return
@@ -315,15 +358,76 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 		if not rect.grow(3.0).has_point(position):
 			_finger_actions.erase(finger_id)
 			set_button_state(action, false)
+			_update_touch_capture_filter()
 
 
-func _finger_up(finger_id: int) -> void:
+func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_button: bool = true) -> void:
+	if _menu_touch_buttons.has(finger_id):
+		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
+		_menu_touch_buttons.erase(finger_id)
+		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and menu_button.get_global_rect().grow(3.0).has_point(position):
+			menu_button.pressed.emit()
+		_update_touch_capture_filter()
+		return
+	if _menu_accept_fingers.has(finger_id):
+		_menu_accept_fingers.erase(finger_id)
+		_update_touch_capture_filter()
+		return
 	if finger_id == _stick_pointer_id:
 		_release_stick()
 	if _finger_actions.has(finger_id):
 		var action: StringName = _finger_actions[finger_id]
 		_finger_actions.erase(finger_id)
 		set_button_state(action, false)
+	_update_touch_capture_filter()
+
+
+func _rect_dictionary_contains(rectangles: Dictionary, position: Vector2) -> bool:
+	for value in rectangles.values():
+		if value is Rect2 and (value as Rect2).has_point(position):
+			return true
+	return false
+
+
+func _is_menu_context() -> bool:
+	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU
+
+
+func _menu_button_at(position: Vector2) -> BaseButton:
+	var search_root := get_parent()
+	if search_root == null:
+		return null
+	var nodes: Array = []
+	_collect_menu_buttons(search_root, nodes)
+	for index in range(nodes.size() - 1, -1, -1):
+		var button := nodes[index] as BaseButton
+		if button == null or not is_instance_valid(button) or not button.is_visible_in_tree() or button.disabled:
+			continue
+		if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+			continue
+		if button.get_global_rect().has_point(position):
+			return button
+	return null
+
+
+func _collect_menu_buttons(node: Node, output: Array) -> void:
+	for child in node.get_children():
+		if child is BaseButton:
+			output.append(child)
+		_collect_menu_buttons(child, output)
+
+
+func _has_real_touch_capture() -> bool:
+	return _stick_pointer_id >= 0 or not _finger_actions.is_empty() or not _menu_touch_buttons.is_empty() or not _menu_accept_fingers.is_empty()
+
+
+func _update_touch_capture_filter() -> void:
+	if _touch_root == null:
+		return
+	if _has_real_touch_capture():
+		_touch_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	else:
+		_touch_root.mouse_filter = Control.MOUSE_FILTER_PASS if _controls_visible else Control.MOUSE_FILTER_IGNORE
 
 
 func _button_rect(action: StringName) -> Rect2:
@@ -359,14 +463,14 @@ func _release_stick() -> void:
 
 
 func _update_layout() -> void:
-	var window := get_window()
-	if window == null:
-		return
-	var scale := window.get_final_transform().get_scale().x
-	if scale < 0.001:
-		scale = 1.0
-	var window_logical := Vector2(window.size) / scale
-	_layout = _compute_layout(window_logical, _content_size())
+	var viewport := get_viewport()
+	var content_size := _content_size()
+	var viewport_size := content_size
+	if viewport != null:
+		viewport_size = viewport.get_visible_rect().size
+		if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+			viewport_size = content_size
+	_layout = _compute_layout(viewport_size, content_size)
 	if _stick_pointer_id < 0:
 		_stick_origin = _layout["stick_home"]
 	_apply_layout()
@@ -426,20 +530,16 @@ func _update_button_visual(action: StringName) -> void:
 
 func _refresh_controls() -> void:
 	_controls_visible = _last_input_device == DEVICE_TOUCH and (_input_context == CONTEXT_GAMEPLAY or _input_context == CONTEXT_DIALOGUE)
-	if _touch_root != null:
-		# InputDeviceTracker receives screen touches independently through _input,
-		# so the inactive overlay does not need to remain in the GUI hit-test path.
-		# Leaving it as PASS makes it the topmost Control on mobile and can swallow
-		# the emulated mouse press that should activate title/menu Buttons.
-		_touch_root.mouse_filter = Control.MOUSE_FILTER_PASS if _controls_visible else Control.MOUSE_FILTER_IGNORE
+	_touch_input_enabled = _last_input_device == DEVICE_TOUCH and _input_context in [CONTEXT_GAMEPLAY, CONTEXT_DIALOGUE, CONTEXT_HUB, CONTEXT_MENU]
+	_update_touch_capture_filter()
 	if not _controls_visible:
-		_stick_vector = Vector2.ZERO
-		_stick_pointer_id = -1
-		_finger_actions.clear()
-		_pressed_actions.clear()
+		_clear_gameplay_input()
+	if not _touch_input_enabled:
+		_menu_touch_buttons.clear()
+		_menu_accept_fingers.clear()
+		_menu_accept_latch = false
 		_press_latches.clear()
-		for action in _button_nodes:
-			_update_button_visual(action)
+		_update_touch_capture_filter()
 	if not _built:
 		return
 	if _controls_visible:
@@ -449,3 +549,30 @@ func _refresh_controls() -> void:
 		_stick_knob.visible = _controls_visible
 	for action in _button_nodes:
 		(_button_nodes[action] as Control).visible = _controls_visible
+
+
+func _clear_gameplay_input() -> void:
+	_stick_vector = Vector2.ZERO
+	_stick_pointer_id = -1
+	_finger_actions.clear()
+	_pressed_actions.clear()
+	for action in _button_nodes:
+		_update_button_visual(action)
+	for action in BUTTON_ORDER:
+		_press_latches.erase(action)
+	_press_latches.erase(&"pause")
+
+
+func _clear_transient_input() -> void:
+	_stick_vector = Vector2.ZERO
+	_stick_pointer_id = -1
+	_stick_origin = _layout.get("stick_home", _stick_origin)
+	_finger_actions.clear()
+	_menu_touch_buttons.clear()
+	_menu_accept_fingers.clear()
+	_menu_accept_latch = false
+	_pressed_actions.clear()
+	_press_latches.clear()
+	for action in _button_nodes:
+		_update_button_visual(action)
+	_update_touch_capture_filter()

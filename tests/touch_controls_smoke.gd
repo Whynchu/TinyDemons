@@ -39,6 +39,25 @@ func _initialize() -> void:
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(router.just_released(&"attack"), "touch release reaches router release edge", failures)
 
+	# Exercise the real pointer path: a long drag keeps the same stick owner
+	# even when the browser reports a mouse-motion echo with another device id.
+	var stick_home := layer._layout["stick_home"] as Vector2
+	var stick_down := InputEventScreenTouch.new()
+	stick_down.device = 0; stick_down.index = 9; stick_down.pressed = true; stick_down.position = stick_home
+	layer._input(stick_down)
+	var stick_drag := InputEventScreenDrag.new()
+	stick_drag.device = 0; stick_drag.index = 9; stick_drag.position = stick_home + Vector2(12.0, 0.0)
+	layer._input(stick_drag)
+	var movement_before_echo := layer.movement_vector()
+	var echoed_motion := InputEventMouseMotion.new()
+	echoed_motion.device = 0; echoed_motion.relative = Vector2(8.0, 0.0); echoed_motion.position = stick_drag.position
+	layer._input(echoed_motion)
+	_expect(movement_before_echo.x > 0.5 and layer.movement_vector().is_equal_approx(movement_before_echo), "virtual stick keeps moving through a browser mouse echo", failures)
+	var stick_up := InputEventScreenTouch.new()
+	stick_up.device = 0; stick_up.index = 9; stick_up.pressed = false; stick_up.position = stick_drag.position
+	layer._input(stick_up)
+	_expect(layer.movement_vector() == Vector2.ZERO, "virtual stick release clears its pointer", failures)
+
 	layer.set_last_input_device(InputDeviceTracker.Device.KEYBOARD_MOUSE)
 	layer.set_button_state(&"magic", true)
 	layer.set_virtual_stick(Vector2.RIGHT)
@@ -46,51 +65,76 @@ func _initialize() -> void:
 	_expect(not router.pressed(&"magic") and router.movement(0.25) == Vector2.ZERO, "hidden touch provider is inert", failures)
 	layer.set_last_input_device(InputDeviceTracker.Device.TOUCH)
 	layer.set_input_context(InputRouter.Context.HUB)
-	_expect(not layer.is_active(), "touch controls hide behind hub/menu overlays", failures)
+	_expect(layer.is_active(), "touch input remains available behind hub/menu overlays", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "inactive touch overlay does not intercept menu taps", failures)
 	layer.set_input_context(InputRouter.Context.MENU)
+	_expect(layer.is_active(), "touch input remains available on title and other menus", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "menu touch overlay stays transparent to title Buttons", failures)
+
+	# A real screen touch activates the same native Button that a desktop mouse
+	# click would activate. The overlay captures the sequence so a browser's
+	# emulated mouse echo cannot trigger the callback twice.
+	var menu_host := Control.new()
+	menu_host.size = TouchControlsLayer.BASE_CONTENT_SIZE
+	get_root().add_child(menu_host)
+	var menu_button := Button.new()
+	menu_button.position = Vector2(20.0, 20.0)
+	menu_button.size = Vector2(48.0, 20.0)
+	menu_host.add_child(menu_button)
+	await process_frame
+	menu_button.set_meta("touch_pressed", false)
+	menu_button.pressed.connect(func() -> void:
+		menu_button.set_meta("touch_pressed", true)
+	)
+	var menu_down := InputEventScreenTouch.new()
+	menu_down.device = 0; menu_down.index = 7; menu_down.pressed = true; menu_down.position = Vector2(30.0, 30.0)
+	layer._input(menu_down)
+	var menu_up := InputEventScreenTouch.new()
+	menu_up.device = 0; menu_up.index = 7; menu_up.pressed = false; menu_up.position = Vector2(30.0, 30.0)
+	layer._input(menu_up)
+	_expect(bool(menu_button.get_meta("touch_pressed", false)), "screen touch activates a visible menu button", failures)
+	menu_host.queue_free()
+
+	# A tap outside a Button still provides the menu's normal accept edge. This
+	# covers dialogue's tap-anywhere prompt and keyboard/controller selection
+	# fallback without requiring a gameplay overlay to be visible.
+	var menu_accept_down := InputEventScreenTouch.new()
+	menu_accept_down.device = 0; menu_accept_down.index = 8; menu_accept_down.pressed = true; menu_accept_down.position = Vector2(150.0, 80.0)
+	layer._input(menu_accept_down)
+	router.poll(InputRouter.Context.MENU)
+	_expect(router.ui_accept_pressed() and router.ui_accept_just_pressed(), "screen tap outside a button reaches menu accept", failures)
+	var menu_accept_up := InputEventScreenTouch.new()
+	menu_accept_up.device = 0; menu_accept_up.index = 8; menu_accept_up.pressed = false; menu_accept_up.position = Vector2(150.0, 80.0)
+	layer._input(menu_accept_up)
+	router.poll(InputRouter.Context.MENU)
+
+	layer.set_input_context(InputRouter.Context.DIALOGUE)
+	var dialogue_tap := InputEventScreenTouch.new()
+	dialogue_tap.device = 0; dialogue_tap.index = 10; dialogue_tap.pressed = true; dialogue_tap.position = Vector2(120.0, 60.0)
+	layer._input(dialogue_tap)
+	router.poll(InputRouter.Context.DIALOGUE)
+	_expect(router.ui_accept_pressed() and router.ui_accept_just_pressed(), "screen tap outside gameplay controls reaches dialogue accept", failures)
+	var dialogue_release := InputEventScreenTouch.new()
+	dialogue_release.device = 0; dialogue_release.index = 10; dialogue_release.pressed = false; dialogue_release.position = dialogue_tap.position
+	layer._input(dialogue_release)
+	router.poll(InputRouter.Context.DIALOGUE)
 
 	router.set_touch_provider(null)
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(not router.pressed(&"magic") and router.movement(0.25) == Vector2.ZERO, "router remains desktop-compatible without a provider", failures)
 
-	# Adaptive layout: portrait windows put the controls in the bottom
-	# letterbox bar, clear of the game area.
-	var content_rect := Rect2(Vector2.ZERO, TouchControlsLayer.BASE_CONTENT_SIZE)
-	var portrait := layer._compute_layout(Vector2(260.0, 563.0), TouchControlsLayer.BASE_CONTENT_SIZE)
-	var portrait_zone := portrait["stick_zone"] as Rect2
-	_expect(portrait_zone.position.y >= TouchControlsLayer.BASE_CONTENT_SIZE.y - 0.01, "portrait stick zone sits in the bottom bar", failures)
-	var portrait_window := portrait["window_rect"] as Rect2
-	var portrait_buttons: Dictionary = portrait["buttons"]
-	var portrait_buttons_inside := true
-	var portrait_buttons_clear := true
-	for action in portrait_buttons:
-		var rect := portrait_buttons[action] as Rect2
-		if not portrait_window.encloses(rect):
-			portrait_buttons_inside = false
-		if rect.intersects(content_rect):
-			portrait_buttons_clear = false
-	_expect(portrait_buttons_inside, "portrait buttons stay inside the window", failures)
-	_expect(portrait_buttons_clear, "portrait buttons do not cover the game", failures)
-	_expect(float(portrait["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "portrait buttons keep the minimum physical size", failures)
-	_expect(portrait_window.encloses(portrait["pause"] as Rect2), "portrait pause button stays inside the window", failures)
-
-	# Landscape windows with side bars park the stick in the left bar and the
-	# buttons in the right bar.
-	var landscape := layer._compute_layout(Vector2(563.0, 260.0), TouchControlsLayer.BASE_CONTENT_SIZE)
-	_expect((landscape["stick_zone"] as Rect2).end.x <= 0.01, "landscape stick zone sits in the left bar", failures)
-	var landscape_buttons: Dictionary = landscape["buttons"]
-	var landscape_right := true
-	for action in landscape_buttons:
-		if (landscape_buttons[action] as Rect2).position.x < TouchControlsLayer.BASE_CONTENT_SIZE.x - 0.01:
-			landscape_right = false
-	_expect(landscape_right, "landscape buttons sit in the right bar", failures)
-
-	# An exact-fit window (desktop-like) falls back to a bottom-corner overlay
-	# that still stays inside the window.
-	var fitted := layer._compute_layout(Vector2(240.0, 160.0), TouchControlsLayer.BASE_CONTENT_SIZE)
-	_expect((fitted["window_rect"] as Rect2).encloses(fitted["stick_zone"] as Rect2), "exact-fit stick zone stays inside the window", failures)
+	# The layout is always in viewport space. Test both portrait and landscape
+	# shaped viewport values to ensure no control is placed in a letterbox-only
+	# coordinate system that touch events cannot reach.
+	for viewport_size in [Vector2(260.0, 563.0), Vector2(563.0, 260.0), TouchControlsLayer.BASE_CONTENT_SIZE]:
+		var layout := layer._compute_layout(viewport_size, TouchControlsLayer.BASE_CONTENT_SIZE)
+		var layout_window := layout["window_rect"] as Rect2
+		_expect(layout_window.encloses(layout["stick_zone"] as Rect2), "stick zone stays inside the logical viewport", failures)
+		_expect(layout_window.encloses(layout["pause"] as Rect2), "pause button stays inside the logical viewport", failures)
+		var layout_buttons: Dictionary = layout["buttons"]
+		for action in layout_buttons:
+			_expect(layout_window.encloses(layout_buttons[action] as Rect2), "action button stays inside the logical viewport", failures)
+	_expect(float((layer._compute_layout(TouchControlsLayer.BASE_CONTENT_SIZE, TouchControlsLayer.BASE_CONTENT_SIZE))["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "buttons keep the minimum logical size", failures)
 
 	router.free()
 	layer.free()

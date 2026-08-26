@@ -29,6 +29,15 @@ func _initialize() -> void:
 	var drag := InputEventScreenDrag.new()
 	drag.device = 0
 	_expect(tracker.classify_event(drag) == InputDeviceTracker.Device.TOUCH, "screen drag remains touch input", failures)
+	var touch_release := InputEventScreenTouch.new()
+	touch_release.device = 0
+	touch_release.index = touch.index
+	touch_release.pressed = false
+	_expect(tracker.classify_event(touch_release) == InputDeviceTracker.Device.TOUCH, "screen touch release remains touch input", failures)
+	var echoed_motion := InputEventMouseMotion.new()
+	echoed_motion.device = 0
+	echoed_motion.relative = Vector2(4.0, 0.0)
+	_expect(tracker.classify_event(echoed_motion) < 0, "mouse-motion echo after touch does not switch to keyboard", failures)
 
 	var motion := InputEventJoypadMotion.new()
 	motion.axis_value = 0.49
