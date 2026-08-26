@@ -1,0 +1,14 @@
+{
+	"candidate": "C:\\Development\\Tiny-Demons\\TinyDemons\\assets\\sounds\\reconstructed_ui\\sys-click.forensic.wav",
+	"components": {
+		"alignment_samples": -188,
+		"attack": 0.354898792434241,
+		"body": 4.62360774954732,
+		"envelope": 0.756592868343095,
+		"score": 6.56851261327248,
+		"tail": 4.72383305031396,
+		"total": 2.40562811629628,
+		"waveform": 0.602398539769658
+	},
+	"target": "SYS-CLICK"
+}

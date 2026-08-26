@@ -1,0 +1,573 @@
+[gd_scene format=4 uid="uid://cqglsgesc12h7"]
+
+[ext_resource type="Texture2D" uid="uid://d11oi65batt74" path="res://assets/artwork/BG.png" id="1_bg"]
+[ext_resource type="Texture2D" uid="uid://dn1k7etqwr57i" path="res://assets/artwork/Tile.png" id="2_tile"]
+[ext_resource type="Texture2D" uid="uid://bss155baws2ai" path="res://assets/artwork/WallLeft.png" id="3_wall_left"]
+[ext_resource type="Texture2D" uid="uid://b7v1k8gok6lhs" path="res://assets/artwork/WallRight.png" id="4_wall_right"]
+[ext_resource type="Texture2D" uid="uid://c2k6nhy3riyvq" path="res://assets/artwork/DoorRight.png" id="5_door"]
+[ext_resource type="Texture2D" uid="uid://bdfi7adnkl6sx" path="res://assets/artwork/ChestGrey.png" id="6_chest"]
+[ext_resource type="Texture2D" uid="uid://dy7ra3eprvwy6" path="res://assets/artwork/TinyDemon.png" id="7_demon"]
+[ext_resource type="Texture2D" uid="uid://c0krlv2p2r8hp" path="res://assets/artwork/SlimeBlue.png" id="8_slime_blue"]
+[ext_resource type="Texture2D" uid="uid://by84hoph461ir" path="res://assets/artwork/SlimeGreen.png" id="9_slime_green"]
+[ext_resource type="Texture2D" uid="uid://8fgx5pr7dffa" path="res://assets/artwork/SlimeRed.png" id="10_slime_red"]
+[ext_resource type="Script" uid="uid://b0l1a5vjib0fe" path="res://scripts/slime_actor.gd" id="11_slime_actor"]
+[ext_resource type="Texture2D" uid="uid://p1ikyaelccda" path="res://assets/artwork/EnemyHp.png" id="13_enemy_hp"]
+[ext_resource type="Texture2D" uid="uid://buwfuu48fkska" path="res://assets/artwork/SlimeText.png" id="14_slime_text"]
+[ext_resource type="Texture2D" uid="uid://ub5dtvrx1hsa" path="res://assets/artwork/HpOverhead.png" id="15_hp_overhead"]
+[ext_resource type="Texture2D" uid="uid://dk5sq30181jto" path="res://assets/artwork/BlackBars.png" id="16_black_bars"]
+[ext_resource type="Script" uid="uid://bolgaay1voxyo" path="res://scripts/gameplay.gd" id="17_gameplay"]
+[ext_resource type="Texture2D" uid="uid://cqc78kjjt5xk8" path="res://assets/artwork/TinyDemonShadow.png" id="18_demon_shadow"]
+[ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor_collision_guide.gd" id="19_collision_guide"]
+[ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/stats_component.gd" id="20_stats_component"]
+[ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
+[ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
+[ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
+[ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="28_isometric_room_layer"]
+[ext_resource type="Texture2D" uid="uid://l17ya4sh8lu4" path="res://assets/artwork/TileFloor.png" id="29_tile_floor"]
+[ext_resource type="Texture2D" uid="uid://brd1e4d23tsph" path="res://assets/artwork/TileLface.png" id="30_tile_lface"]
+[ext_resource type="Texture2D" uid="uid://dvmnqcr5rjst4" path="res://assets/artwork/TileRface.png" id="31_tile_rface"]
+[ext_resource type="Script" uid="uid://b7cke64rytrh1" path="res://scripts/dungeon_socket.gd" id="32_dungeon_socket"]
+[ext_resource type="Texture2D" uid="uid://ma3hpplhe1x" path="res://assets/artwork/Fire.png" id="33_fire"]
+[ext_resource type="Texture2D" uid="uid://dowvff0q335kb" path="res://assets/artwork/TinyDemonCloacked-Idle.png" id="34_cloaked_idle"]
+[ext_resource type="Texture2D" uid="uid://c2pko5socmgq1" path="res://assets/artwork/TinyDemon-attack1.png" id="35_attack1"]
+[ext_resource type="Texture2D" uid="uid://bihe7fbxbqepy" path="res://assets/artwork/TinyDemon-attack2.png" id="36_attack2"]
+[ext_resource type="Script" uid="uid://cp0oej4aup068" path="res://scripts/attack_hitbox_guide.gd" id="37_attack_hitbox_guide"]
+[ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="38_aggro_dot"]
+[ext_resource type="Texture2D" uid="uid://bvwy8po4byina" path="res://assets/artwork/firepit.png" id="39_firepit"]
+[ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/player_hud.tscn" id="40_player_hud"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
+texture = ExtResource("29_tile_floor")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_vxglm"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_2wyq8")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tile_lface"]
+texture = ExtResource("30_tile_lface")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tile_lface"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_tile_lface")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tile_rface"]
+texture = ExtResource("31_tile_rface")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tile_rface"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_tile_rface")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2f3dj"]
+texture = ExtResource("3_wall_left")
+texture_region_size = Vector2i(16, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_yq6so"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_2f3dj")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_fv21b"]
+texture = ExtResource("4_wall_right")
+texture_region_size = Vector2i(16, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_tel4y"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_fv21b")
+
+[sub_resource type="Gradient" id="Gradient_fire_light"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.32, 0.58, 0.78, 1)
+colors = PackedColorArray(1, 0.803922, 0.458824, 0.78, 0.937255, 0.490196, 0.341176, 0.62, 0.670588, 0.321569, 0.211765, 0.4, 0.670588, 0.321569, 0.211765, 0.18, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fire_light"]
+gradient = SubResource("Gradient_fire_light")
+width = 96
+height = 48
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Main" type="Node2D" unique_id=422795878]
+texture_filter = 1
+script = ExtResource("17_gameplay")
+
+[node name="BackgroundCanvas" type="CanvasLayer" parent="." unique_id=1409530408]
+layer = -10
+
+[node name="Background" type="Sprite2D" parent="BackgroundCanvas" unique_id=1363256938]
+texture = ExtResource("1_bg")
+centered = false
+
+[node name="Map" type="Node2D" parent="." unique_id=635886819]
+
+[node name="FloorTiles" type="Node2D" parent="Map" unique_id=238769299]
+
+[node name="FloorLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=867366707]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAUAAAAAAAAAAAACAAUAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAUAAAAAAAAAAAAFAAUAAAAAAAAAAAAGAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAD//wcAAAAAAAAAAAD//wYAAAAAAAAAAAD//wUAAAAAAAAAAAD//wQAAAAAAAAAAAD//wMAAAAAAAAAAAD//wIAAAAAAAAAAAD//wEAAAAAAAAAAAD//wAAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_vxglm")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("29_tile_floor")
+
+[node name="FloorLFaceLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=1376366888]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAAAAAcAAAAAAAAAAAD//wcAAAAAAAAAAAABAAcAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_tile_lface")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("30_tile_lface")
+
+[node name="FloorRFaceLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=1329971706]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAAGAAAAAAAAAAAAAAAGAAEAAAAAAAAAAAAGAAIAAAAAAAAAAAAGAAMAAAAAAAAAAAAGAAQAAAAAAAAAAAAGAAUAAAAAAAAAAAAGAAYAAAAAAAAAAAAGAAcAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_tile_rface")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("31_tile_rface")
+
+[node name="FloorCollisionGuide" type="Polygon2D" parent="Map/FloorTiles" unique_id=1468149751]
+z_index = 2048
+position = Vector2(105, 95)
+color = Color(0.1, 1, 0.35, 0.28)
+polygon = PackedVector2Array(-49, -6, -49, -7, 13, -38, 17, -38, 79, -7, 79, -6, 67, -1, 67, 0, 75, 3, 75, 4, 65, 9, 61, 9, 55, 6, 17, 25, 13, 25, -25, 6, -31, 9, -35, 9, -45, 4, -45, 3, -37, 0, -37, -1)
+
+[node name="Entrance" type="Sprite2D" parent="Map/FloorTiles" unique_id=1338102268]
+position = Vector2(60, 94)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile 2" type="Sprite2D" parent="Map/FloorTiles/Entrance" unique_id=470963060]
+position = Vector2(4, 2)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="EntranceReturnGuide" type="Polygon2D" parent="Map/FloorTiles/Entrance" unique_id=1539425418]
+z_index = 2048
+position = Vector2(3, -2)
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(-3, 6, -1, 6, 11, 12, 7, 12, -3, 7)
+
+[node name="EntranceRight" type="Sprite2D" parent="Map/FloorTiles" unique_id=1564566762]
+position = Vector2(164, 94)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="Tile 2" type="Sprite2D" parent="Map/FloorTiles/EntranceRight" unique_id=1438974885]
+position = Vector2(-4, 2)
+texture = ExtResource("2_tile")
+centered = false
+
+[node name="EntranceReturnGuide" type="Polygon2D" parent="Map/FloorTiles/EntranceRight" unique_id=1080502097]
+z_index = 2048
+position = Vector2(13, -2)
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(3, 6, 1, 6, -11, 12, -7, 12, 3, 7)
+
+[node name="Walls" type="Node2D" parent="Map" unique_id=1369138822]
+
+[node name="WallLeftLayer" type="TileMapLayer" parent="Map/Walls" unique_id=242950098]
+texture_filter = 1
+position = Vector2(64, 72)
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAD/////AAAAAAAAAAD///7/AAAAAAAAAAD///z/AAAAAAAAAAD///3/AAAAAAAAAAD///v/AAAAAAAAAAD///r/AAAAAAAAAAD///n/AAAAAAAAAAA=")
+tile_set = SubResource("TileSet_yq6so")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("3_wall_left")
+layout_kind = 1
+layout_height = 1
+
+[node name="WallRightLayer" type="TileMapLayer" parent="Map/Walls" unique_id=1927772174]
+texture_filter = 1
+position = Vector2(120, 44)
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_tel4y")
+script = ExtResource("28_isometric_room_layer")
+tile_texture = ExtResource("4_wall_right")
+layout_kind = 2
+layout_height = 1
+
+[node name="DoorRight" type="Sprite2D" parent="Map/Walls" unique_id=1819223406]
+position = Vector2(126, 35)
+texture = ExtResource("5_door")
+centered = false
+
+[node name="DoorExitGuide" type="Polygon2D" parent="Map/Walls/DoorRight" unique_id=2046201733]
+z_index = 2048
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(4, 24, 16, 30, 16, 33, 4, 27)
+
+[node name="DoorLeft" type="Sprite2D" parent="Map/Walls" unique_id=1618703334]
+position = Vector2(98, 35)
+texture = ExtResource("5_door")
+centered = false
+flip_h = true
+
+[node name="DoorExitGuide" type="Polygon2D" parent="Map/Walls/DoorLeft" unique_id=226729640]
+z_index = 2048
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(12, 24, 0, 30, 0, 33, 12, 27)
+
+[node name="Sockets" type="Node2D" parent="Map" unique_id=935553233]
+
+[node name="WALL_LEFT" type="Node2D" parent="Map/Sockets" unique_id=438265164]
+script = ExtResource("32_dungeon_socket")
+socket_kind = 0
+paired_socket_id = &"BOTTOM_RIGHT"
+arrival_offset = Vector2(-6, -10.5)
+visual_path = NodePath("../../Walls/DoorLeft")
+trigger_path = NodePath("../../Walls/DoorLeft/DoorExitGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_LEFT" unique_id=779057270]
+position = Vector2(98, 53)
+
+[node name="WALL_RIGHT" type="Node2D" parent="Map/Sockets" unique_id=247771686]
+script = ExtResource("32_dungeon_socket")
+inward_facing = Vector2(-1, 0)
+arrival_offset = Vector2(-10, -10.5)
+visual_path = NodePath("../../Walls/DoorRight")
+trigger_path = NodePath("../../Walls/DoorRight/DoorExitGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_RIGHT" unique_id=222120380]
+position = Vector2(126, 53)
+
+[node name="BOTTOM_LEFT" type="Node2D" parent="Map/Sockets" unique_id=304692599]
+script = ExtResource("32_dungeon_socket")
+socket_kind = 2
+paired_socket_id = &"WALL_RIGHT"
+inward_facing = Vector2(1, -0.5)
+arrival_offset = Vector2(-2.2, -15.6)
+visual_path = NodePath("../../FloorTiles/Entrance")
+trigger_path = NodePath("../../FloorTiles/Entrance/EntranceReturnGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/Entrance"), NodePath("../../FloorTiles/Entrance/Tile 2")])
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_LEFT" unique_id=1858850565]
+position = Vector2(63, 85)
+
+[node name="BOTTOM_RIGHT" type="Node2D" parent="Map/Sockets" unique_id=1797975729]
+script = ExtResource("32_dungeon_socket")
+socket_kind = 3
+paired_socket_id = &"WALL_LEFT"
+inward_facing = Vector2(-1, -0.5)
+arrival_offset = Vector2(-14.8, -15.6)
+visual_path = NodePath("../../FloorTiles/EntranceRight")
+trigger_path = NodePath("../../FloorTiles/EntranceRight/EntranceReturnGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/EntranceRight"), NodePath("../../FloorTiles/EntranceRight/Tile 2")])
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_RIGHT" unique_id=429081338]
+position = Vector2(160, 85)
+
+[node name="Actors" type="Node2D" parent="." unique_id=1069239336]
+
+[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors" unique_id=110558620]
+position = Vector2(144, 71)
+scale = Vector2(1, 0.6875)
+texture = ExtResource("18_demon_shadow")
+centered = false
+
+[node name="CloakedDemon" type="Sprite2D" parent="Actors" unique_id=1755463594]
+position = Vector2(152, 73)
+texture = ExtResource("34_cloaked_idle")
+hframes = 5
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/CloakedDemon" unique_id=375845748]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(-2, 4.5)
+rect_size = Vector2(5, 3)
+
+[node name="DepthMarker" type="Marker2D" parent="Actors/CloakedDemon" unique_id=297377238]
+position = Vector2(8, 34)
+
+[node name="RestFire" type="Sprite2D" parent="Actors" unique_id=521275519]
+position = Vector2(120, 79.025)
+texture = ExtResource("33_fire")
+hframes = 6
+
+[node name="Firepit" type="Sprite2D" parent="Actors/RestFire" unique_id=438523957]
+show_behind_parent = true
+position = Vector2(0, 2)
+texture = ExtResource("39_firepit")
+
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/RestFire/Firepit" unique_id=1320656307]
+color = Color(1, 1, 1, 0.40784314)
+polygon = PackedVector2Array(-8, 0.9749985, -3, -2.0250015, -1, -3.0250015, 1, -3.0250015, 3, -2.0250015, 8, 0.9749985, 8, 3.9749985, 3, 6.9749985, 1, 7.9749985, -1, 7.9749985, -3, 6.9749985, -8, 3.9749985)
+
+[node name="FireLight" type="PointLight2D" parent="Actors/RestFire" unique_id=739137859]
+color = Color(1, 0.803922, 0.458824, 1)
+energy = 0.12
+texture = SubResource("GradientTexture2D_fire_light")
+offset = Vector2(0, 4)
+texture_scale = 0.7
+
+[node name="DepthMarker" type="Marker2D" parent="Actors/RestFire" unique_id=377784978]
+position = Vector2(0, 8)
+
+[node name="Chest" type="Sprite2D" parent="Actors" unique_id=382431945]
+position = Vector2(157, 69)
+texture = ExtResource("6_chest")
+centered = false
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/Chest" unique_id=75466058]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(2.5, 8.5)
+rect_size = Vector2(11, 6)
+fill_color = Color(0.1, 0.45, 1, 0.22)
+outline_color = Color(0.1, 0.35, 1, 0.85)
+
+[node name="TinyDemon" type="Sprite2D" parent="Actors" unique_id=505468505]
+position = Vector2(71, 81)
+texture = ExtResource("7_demon")
+centered = false
+
+[node name="Stats" type="Node" parent="Actors/TinyDemon" unique_id=402301846]
+script = ExtResource("20_stats_component")
+
+[node name="Equipment" type="Node" parent="Actors/TinyDemon" unique_id=1798955296]
+script = ExtResource("26_equipment_component")
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(6.5, 10.5)
+rect_size = Vector2(4, 5)
+
+[node name="DoorFeetGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1516849712]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(6.5, 13.5)
+rect_size = Vector2(4, 2)
+fill_color = Color(1, 0.85, 0.1, 0.22)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="Attack1HitboxShape" type="Node2D" parent="Actors/TinyDemon" unique_id=2087826386]
+position = Vector2(-10, -10)
+script = ExtResource("37_attack_hitbox_guide")
+attack_sheet = ExtResource("35_attack1")
+
+[node name="Preview" type="Sprite2D" parent="Actors/TinyDemon/Attack1HitboxShape" unique_id=585454505]
+z_index = 20
+texture = ExtResource("35_attack1")
+centered = false
+hframes = 4
+frame = 2
+
+[node name="Hitbox" type="Polygon2D" parent="Actors/TinyDemon/Attack1HitboxShape" unique_id=1265154729]
+z_index = 21
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(18, 6, 25, 6, 31, 9, 35, 14, 35, 24, 34, 27, 31, 31, 25, 34, 8, 34, 13, 28, 22, 28, 24, 19, 23, 10)
+
+[node name="Attack2HitboxShape" type="Node2D" parent="Actors/TinyDemon" unique_id=1483052288]
+position = Vector2(-10, -10)
+script = ExtResource("37_attack_hitbox_guide")
+attack_sheet = ExtResource("36_attack2")
+show_preview = false
+
+[node name="Preview" type="Sprite2D" parent="Actors/TinyDemon/Attack2HitboxShape" unique_id=119548490]
+visible = false
+z_index = 20
+texture = ExtResource("36_attack2")
+centered = false
+hframes = 4
+frame = 2
+
+[node name="Hitbox" type="Polygon2D" parent="Actors/TinyDemon/Attack2HitboxShape" unique_id=1856988149]
+visible = false
+z_index = 21
+color = Color(1, 0.35, 0.15, 0.28)
+polygon = PackedVector2Array(20, 2, 25, 2, 33, 8, 35, 12, 36, 18, 36, 22, 31, 31, 25, 34, 12, 34, 18, 30, 23, 25, 24, 12, 17, 10)
+
+[node name="TinyDemonAttack" type="Sprite2D" parent="Actors" unique_id=1810667410]
+position = Vector2(61, 71)
+centered = false
+
+[node name="TinyDemonShadow" type="Sprite2D" parent="Actors" unique_id=9400076]
+self_modulate = Color(1, 1, 1, 0.25)
+position = Vector2(71, 87)
+scale = Vector2(1, 0.6874999)
+texture = ExtResource("18_demon_shadow")
+centered = false
+
+[node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
+position = Vector2(112, 57)
+texture = ExtResource("8_slime_blue")
+centered = false
+script = ExtResource("11_slime_actor")
+variant = "blue"
+
+[node name="Stats" type="Node" parent="Actors/SlimeBlue" unique_id=1328484161]
+script = ExtResource("20_stats_component")
+base_points = 8
+points_per_level = 2
+allocation_profile = 3
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/SlimeBlue" unique_id=302225224]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, 7.5)
+rect_size = Vector2(9, 4)
+
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/SlimeBlue" unique_id=2006075781]
+color = Color(0.1, 1, 0.35, 0.22)
+polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+
+[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeBlue" unique_id=1620382380]
+color = Color(1, 0.25, 0.2, 0.24)
+polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
+
+[node name="AttackGuideL" type="Node2D" parent="Actors/SlimeBlue" unique_id=850140732]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="AttackGuideR" type="Node2D" parent="Actors/SlimeBlue" unique_id=966756253]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(14.5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="SlimeGreen" type="Sprite2D" parent="Actors" unique_id=1286052185]
+position = Vector2(128, 91)
+texture = ExtResource("9_slime_green")
+centered = false
+script = ExtResource("11_slime_actor")
+
+[node name="Stats" type="Node" parent="Actors/SlimeGreen" unique_id=586404895]
+script = ExtResource("20_stats_component")
+base_points = 8
+points_per_level = 2
+allocation_profile = 1
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/SlimeGreen" unique_id=1632574546]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, 7.5)
+rect_size = Vector2(9, 4)
+
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/SlimeGreen" unique_id=39329856]
+color = Color(0.1, 1, 0.35, 0.22)
+polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+
+[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeGreen" unique_id=1117557686]
+color = Color(1, 0.25, 0.2, 0.24)
+polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
+
+[node name="AttackGuideL" type="Node2D" parent="Actors/SlimeGreen" unique_id=968253540]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.31764707, 0.050980393, 0.9019608)
+
+[node name="AttackGuideR" type="Node2D" parent="Actors/SlimeGreen" unique_id=29236929]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(14.5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="HpOverhead" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=332032270]
+position = Vector2(3, 0)
+texture = ExtResource("15_hp_overhead")
+centered = false
+
+[node name="HpOverheadFill" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=313971386]
+z_index = 1
+position = Vector2(3, 0)
+texture = ExtResource("25_hp_overhead_green")
+centered = false
+
+[node name="AggroMarker" type="Sprite2D" parent="Actors/SlimeGreen" unique_id=1649614281]
+z_index = 3
+texture = ExtResource("38_aggro_dot")
+centered = false
+
+[node name="SlimeRed" type="Sprite2D" parent="Actors" unique_id=1653609669]
+position = Vector2(157, 79)
+texture = ExtResource("10_slime_red")
+centered = false
+script = ExtResource("11_slime_actor")
+variant = "red"
+
+[node name="Stats" type="Node" parent="Actors/SlimeRed" unique_id=2039895840]
+script = ExtResource("20_stats_component")
+base_points = 8
+points_per_level = 2
+allocation_profile = 2
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/SlimeRed" unique_id=573711278]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(3.5, 7.5)
+rect_size = Vector2(9, 4)
+
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/SlimeRed" unique_id=1923709733]
+color = Color(0.1, 1, 0.35, 0.22)
+polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+
+[node name="BodyHitbox" type="Polygon2D" parent="Actors/SlimeRed" unique_id=480441022]
+color = Color(1, 0.25, 0.2, 0.24)
+polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
+
+[node name="AttackGuideL" type="Node2D" parent="Actors/SlimeRed" unique_id=1536968880]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="AttackGuideR" type="Node2D" parent="Actors/SlimeRed" unique_id=742802159]
+position = Vector2(-6, -8)
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(14.5, 8)
+rect_size = Vector2(8.5, 16)
+fill_color = Color(1, 0.85, 0.1, 0.18)
+outline_color = Color(1, 0.7, 0.05, 0.9)
+
+[node name="InterfaceCanvas" type="CanvasLayer" parent="." unique_id=1212943215]
+layer = 10
+
+[node name="UI" type="Node2D" parent="InterfaceCanvas" unique_id=272886269]
+z_index = 4096
+
+[node name="PlayerHud" parent="InterfaceCanvas/UI" unique_id=897373093 instance=ExtResource("40_player_hud")]
+
+[node name="BlackBars" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=688445834]
+z_index = -10
+texture = ExtResource("16_black_bars")
+centered = false
+
+[node name="SlimeText" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=1660814645]
+position = Vector2(112, 144)
+texture = ExtResource("14_slime_text")
+centered = false
+
+[node name="EnemyHp" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=912346691]
+position = Vector2(81, 147)
+texture = ExtResource("13_enemy_hp")
+centered = false
+
+[node name="EnemyHpFill" type="Sprite2D" parent="InterfaceCanvas/UI" unique_id=195377949]
+z_index = 1
+position = Vector2(81, 147)
+texture = ExtResource("22_enemy_hp_green")
+centered = false

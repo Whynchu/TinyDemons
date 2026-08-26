@@ -1,0 +1,2 @@
+numpy
+# scipy, librosa, torch, and jsonschema are optional milestone-2+ dependencies.

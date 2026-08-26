@@ -1,0 +1,28 @@
+# Godot 4+ specific ignores
+.godot/
+.godot-user/
+.godot_user/
+.godot-test-user/
+/android/
+
+# Export artifacts
+*.pck
+*.zip
+web/
+dist/
+
+# Platform junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Workspace files
+previous session.txt
+
+# Tool caches and generated analysis
+**/__pycache__/
+**/.venv*/
+node_modules/
+analysis/
+sfx analysis/
+assets/sounds/generated_ui/

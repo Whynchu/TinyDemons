@@ -1,0 +1,236 @@
+[gd_scene format=4 uid="uid://dm1ohbthvop2c"]
+
+[ext_resource type="Texture2D" uid="uid://l17ya4sh8lu4" path="res://assets/artwork/TileFloor.png" id="1_floor"]
+[ext_resource type="Texture2D" uid="uid://brd1e4d23tsph" path="res://assets/artwork/TileLface.png" id="2_lface"]
+[ext_resource type="Texture2D" uid="uid://dvmnqcr5rjst4" path="res://assets/artwork/TileRface.png" id="3_rface"]
+[ext_resource type="Texture2D" uid="uid://bss155baws2ai" path="res://assets/artwork/WallLeft.png" id="4_wall_left"]
+[ext_resource type="Texture2D" uid="uid://b7v1k8gok6lhs" path="res://assets/artwork/WallRight.png" id="5_wall_right"]
+[ext_resource type="Texture2D" uid="uid://c2k6nhy3riyvq" path="res://assets/artwork/DoorRight.png" id="6_door"]
+[ext_resource type="Texture2D" uid="uid://dn1k7etqwr57i" path="res://assets/artwork/Tile.png" id="7_tile"]
+[ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="8_iso_layer"]
+[ext_resource type="Script" uid="uid://b7cke64rytrh1" path="res://scripts/dungeon_socket.gd" id="9_socket"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_floor"]
+texture = ExtResource("1_floor")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_floor"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_floor")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lface"]
+texture = ExtResource("2_lface")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_lface"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_lface")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_rface"]
+texture = ExtResource("3_rface")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_rface"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_rface")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_wall_left"]
+texture = ExtResource("4_wall_left")
+texture_region_size = Vector2i(16, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_wall_left"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_wall_left")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_wall_right"]
+texture = ExtResource("5_wall_right")
+texture_region_size = Vector2i(16, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_wall_right"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(16, 8)
+sources/0 = SubResource("TileSetAtlasSource_wall_right")
+
+[node name="BasicRoom" type="Node2D" unique_id=1455970877]
+texture_filter = 1
+metadata/prefab_role = "basic_room_authoring_template"
+
+[node name="Map" type="Node2D" parent="." unique_id=155061281]
+
+[node name="FloorTiles" type="Node2D" parent="Map" unique_id=317104128]
+
+[node name="FloorLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=1517315874]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAUAAAAAAAAAAAACAAUAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAUAAAAAAAAAAAAFAAUAAAAAAAAAAAAGAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAD//wcAAAAAAAAAAAD//wYAAAAAAAAAAAD//wUAAAAAAAAAAAD//wQAAAAAAAAAAAD//wMAAAAAAAAAAAD//wIAAAAAAAAAAAD//wEAAAAAAAAAAAD//wAAAAAAAAAAAAADAAcAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_floor")
+script = ExtResource("8_iso_layer")
+tile_texture = ExtResource("1_floor")
+
+[node name="FloorLFaceLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=545522032]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAD//wcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_lface")
+script = ExtResource("8_iso_layer")
+tile_texture = ExtResource("2_lface")
+layout_kind = 3
+
+[node name="FloorRFaceLayer" type="TileMapLayer" parent="Map/FloorTiles" unique_id=1361679944]
+texture_filter = 1
+position = Vector2(120, 64)
+tile_map_data = PackedByteArray("AAAGAAAAAAAAAAAAAAAGAAEAAAAAAAAAAAAGAAIAAAAAAAAAAAAGAAMAAAAAAAAAAAAGAAQAAAAAAAAAAAAGAAUAAAAAAAAAAAAGAAYAAAAAAAAAAAAGAAcAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_rface")
+script = ExtResource("8_iso_layer")
+tile_texture = ExtResource("3_rface")
+layout_kind = 4
+
+[node name="FloorCollisionGuide" type="Polygon2D" parent="Map/FloorTiles" unique_id=2042264602]
+visible = false
+z_index = 2048
+position = Vector2(105, 95)
+color = Color(0.1, 1, 0.35, 0.28)
+polygon = PackedVector2Array(-49, -6, -49, -7, 13, -38, 17, -38, 79, -7, 79, -6, 67, -1, 67, 0, 75, 3, 75, 4, 65, 9, 61, 9, 55, 6, 17, 25, 13, 25, -25, 6, -31, 9, -35, 9, -45, 4, -45, 3, -37, 0, -37, -1)
+
+[node name="Entrance" type="Sprite2D" parent="Map/FloorTiles" unique_id=2025298192]
+position = Vector2(60, 94)
+texture = ExtResource("7_tile")
+centered = false
+
+[node name="Tile 2" type="Sprite2D" parent="Map/FloorTiles/Entrance" unique_id=1424366287]
+position = Vector2(4, 2)
+texture = ExtResource("7_tile")
+centered = false
+
+[node name="EntranceReturnGuide" type="Polygon2D" parent="Map/FloorTiles/Entrance" unique_id=548514319]
+visible = false
+z_index = 2048
+position = Vector2(3, -2)
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(-3, 6, -1, 6, 11, 12, 7, 12, -3, 7)
+
+[node name="EntranceRight" type="Sprite2D" parent="Map/FloorTiles" unique_id=1847570328]
+position = Vector2(164, 94)
+texture = ExtResource("7_tile")
+centered = false
+
+[node name="Tile 2" type="Sprite2D" parent="Map/FloorTiles/EntranceRight" unique_id=1119132314]
+position = Vector2(-4, 2)
+texture = ExtResource("7_tile")
+centered = false
+
+[node name="EntranceReturnGuide" type="Polygon2D" parent="Map/FloorTiles/EntranceRight" unique_id=1850464629]
+visible = false
+z_index = 2048
+position = Vector2(13, -2)
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(3, 6, 1, 6, -11, 12, -7, 12, 3, 7)
+
+[node name="Walls" type="Node2D" parent="Map" unique_id=819896677]
+
+[node name="WallLeftLayer" type="TileMapLayer" parent="Map/Walls" unique_id=1815427234]
+texture_filter = 1
+position = Vector2(64, 72)
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAD/////AAAAAAAAAAD///7/AAAAAAAAAAD///z/AAAAAAAAAAD///3/AAAAAAAAAAD///v/AAAAAAAAAAD///r/AAAAAAAAAAD///n/AAAAAAAAAAA=")
+tile_set = SubResource("TileSet_wall_left")
+script = ExtResource("8_iso_layer")
+tile_texture = ExtResource("4_wall_left")
+layout_kind = 1
+layout_height = 1
+
+[node name="WallRightLayer" type="TileMapLayer" parent="Map/Walls" unique_id=1702093497]
+texture_filter = 1
+position = Vector2(120, 44)
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_wall_right")
+script = ExtResource("8_iso_layer")
+tile_texture = ExtResource("5_wall_right")
+layout_kind = 2
+layout_height = 1
+
+[node name="DoorRight" type="Sprite2D" parent="Map/Walls" unique_id=424452827]
+position = Vector2(126, 35)
+texture = ExtResource("6_door")
+centered = false
+
+[node name="DoorExitGuide" type="Polygon2D" parent="Map/Walls/DoorRight" unique_id=1643684603]
+visible = false
+z_index = 2048
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(4, 24, 16, 30, 16, 33, 4, 27)
+
+[node name="DoorLeft" type="Sprite2D" parent="Map/Walls" unique_id=287861257]
+position = Vector2(98, 35)
+texture = ExtResource("6_door")
+centered = false
+flip_h = true
+
+[node name="DoorExitGuide" type="Polygon2D" parent="Map/Walls/DoorLeft" unique_id=1560624605]
+visible = false
+z_index = 2048
+color = Color(1, 0.85, 0.1, 0.28)
+polygon = PackedVector2Array(12, 24, 0, 30, 0, 33, 12, 27)
+
+[node name="Sockets" type="Node2D" parent="Map" unique_id=1860883152]
+
+[node name="WALL_LEFT" type="Node2D" parent="Map/Sockets" unique_id=510794303]
+script = ExtResource("9_socket")
+socket_kind = 0
+paired_socket_id = &"BOTTOM_RIGHT"
+arrival_offset = Vector2(-6, -10.5)
+visual_path = NodePath("../../Walls/DoorLeft")
+trigger_path = NodePath("../../Walls/DoorLeft/DoorExitGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_LEFT" unique_id=2047002230]
+position = Vector2(98, 53)
+
+[node name="WALL_RIGHT" type="Node2D" parent="Map/Sockets" unique_id=325030692]
+script = ExtResource("9_socket")
+inward_facing = Vector2(-1, 0)
+arrival_offset = Vector2(-10, -10.5)
+visual_path = NodePath("../../Walls/DoorRight")
+trigger_path = NodePath("../../Walls/DoorRight/DoorExitGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_RIGHT" unique_id=2122602550]
+position = Vector2(126, 53)
+
+[node name="BOTTOM_LEFT" type="Node2D" parent="Map/Sockets" unique_id=254991027]
+script = ExtResource("9_socket")
+socket_kind = 2
+paired_socket_id = &"WALL_RIGHT"
+inward_facing = Vector2(1, -0.5)
+arrival_offset = Vector2(-2.2, -15.6)
+visual_path = NodePath("../../FloorTiles/Entrance")
+trigger_path = NodePath("../../FloorTiles/Entrance/EntranceReturnGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/Entrance"), NodePath("../../FloorTiles/Entrance/Tile 2")])
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_LEFT" unique_id=977244243]
+position = Vector2(63, 85)
+
+[node name="BOTTOM_RIGHT" type="Node2D" parent="Map/Sockets" unique_id=1869793520]
+script = ExtResource("9_socket")
+socket_kind = 3
+paired_socket_id = &"WALL_LEFT"
+inward_facing = Vector2(-1, -0.5)
+arrival_offset = Vector2(-14.8, -15.6)
+visual_path = NodePath("../../FloorTiles/EntranceRight")
+trigger_path = NodePath("../../FloorTiles/EntranceRight/EntranceReturnGuide")
+spawn_marker_path = NodePath("SpawnMarker")
+block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/EntranceRight"), NodePath("../../FloorTiles/EntranceRight/Tile 2")])
+
+[node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_RIGHT" unique_id=1351297780]
+position = Vector2(160, 85)

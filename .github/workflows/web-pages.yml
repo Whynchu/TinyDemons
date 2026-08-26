@@ -1,0 +1,94 @@
+name: Web Pages
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.1
+  GODOT_RELEASE: 4.7.1-stable
+  GODOT_ROOT: ${{ runner.temp }}/godot
+  XDG_DATA_HOME: ${{ runner.temp }}/godot-data
+
+jobs:
+  build:
+    name: Build Web export
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Install Godot and Web export template
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_url="https://github.com/godotengine/godot/releases/download/${GODOT_RELEASE}"
+          mkdir -p "${GODOT_ROOT}" "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}.stable"
+          curl --fail --location --retry 3 "${release_url}/Godot_v${GODOT_RELEASE}_linux.x86_64.zip" --output "${RUNNER_TEMP}/godot.zip"
+          unzip -q "${RUNNER_TEMP}/godot.zip" -d "${RUNNER_TEMP}/godot-unpacked"
+          mv "${RUNNER_TEMP}/godot-unpacked/Godot_v${GODOT_RELEASE}_linux.x86_64" "${GODOT_ROOT}/godot"
+          chmod +x "${GODOT_ROOT}/godot"
+          curl --fail --location --retry 3 "${release_url}/Godot_v${GODOT_RELEASE}_export_templates.tpz" --output "${RUNNER_TEMP}/templates.tpz"
+          unzip -q "${RUNNER_TEMP}/templates.tpz" -d "${RUNNER_TEMP}/templates"
+          find "${RUNNER_TEMP}/templates" -type f -name '*.zip' -exec cp {} "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}.stable/" \;
+          test -f "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}.stable/web_nothreads_release.zip"
+          "${GODOT_ROOT}/godot" --version
+
+      - name: Prepare compact web audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y ffmpeg
+          fi
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/convert_audio_to_ogg.ps1 -DeleteWavSources
+
+      - name: Export and validate Web build
+        shell: pwsh
+        env:
+          GODOT_BIN: ${{ runner.temp }}/godot/godot
+          REQUIRE_WEB_EXPORT: "1"
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE "tests/web_export_smoke.ps1") -RequireExport
+
+      - name: Configure GitHub Pages
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload pull request artifact
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TinyDemons-web-pr-${{ github.event.pull_request.number }}
+          path: dist
+          if-no-files-found: error
+
+      - name: Upload Pages artifact
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
