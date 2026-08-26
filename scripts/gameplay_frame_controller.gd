@@ -126,13 +126,6 @@ func tick(root: Object, delta: float) -> void:
 			ssc.menu_input_release_lock = false
 		else:
 			return
-	var flame_exchange := root.get("flame_exchange_controller") as FlameExchangeController
-	if flame_exchange != null and flame_exchange.active:
-		flame_exchange.update_input(root)
-		root.call("_update_rest_fire_animation", delta)
-		root.call("_update_player_palette_flash", delta)
-		root.call("_update_overworld_ui")
-		return
 	var npc := root.get("npc_controller") as NpcController; var dialogue_was_active: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible
 	if dialogue_was_active: npc.update_dialogue_from_root(root, delta); npc.update_dialogue_input(root); root.call("_update_cloaked_demon_animation", delta)
 	var hitstop: float = root.get("hitstop_timer")
@@ -174,7 +167,7 @@ func tick(root: Object, delta: float) -> void:
 	if not player_input_locked and root.get("player_motor") != null: (root.get("player_motor") as ActorMotor).move_player(root, delta)
 	(root.get("magic_runtime_controller") as MagicRuntimeController).tick_magic_animation(root, delta); (root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_tick_run_telemetry", delta); root.call("_move_slimes", delta); root.call("_update_special_enemy_respawns", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_player_mp_ui", delta); root.call("_update_magic_projectiles", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
 	if not dialogue_was_active:
-		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME"))); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drops", delta); root.call("_update_chroma_pickups", delta); root.call("_update_soul_pickups", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); root.call("_update_player_palette_flash", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
+		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME")), delta); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drops", delta); root.call("_update_chroma_pickups", delta); root.call("_update_soul_pickups", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); root.call("_update_player_palette_flash", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
 	else:
 		root.call("_update_player_palette_flash", delta)
 	var now_attacking: bool = root.get("player_is_attacking")

@@ -7,10 +7,42 @@ signal reward_claimed
 var unlocked_state := false
 var claimed := false
 var unlock_fade_timer := 0.0
+var flame_hold_timer := 0.0
+var flame_hold_active := false
+var flame_action_resolved := false
+
+const FLAME_FUSION_HOLD_THRESHOLD := 0.35
 
 
-func update_interaction(root: Object, interact_input_down: bool, interact_input_was_down: bool, reward_gold: int, flash_time: float) -> void:
-	if interact_input_down and not interact_input_was_down:
+func update_interaction(root: Object, interact_input_down: bool, interact_input_was_down: bool, reward_gold: int, flash_time: float, delta: float = 0.0) -> void:
+	var interact_pressed := interact_input_down and not interact_input_was_down
+	var near_fire := bool(root.call("_can_interact_with_fire"))
+	if flame_hold_active:
+		if not interact_input_down or not near_fire:
+			# A short press is resolved on release so the same input can safely
+			# distinguish Swap from the longer Fuse gesture.
+			if not interact_input_down and not flame_action_resolved and near_fire:
+				root.call("_interact_with_fire")
+			_reset_flame_gesture()
+		elif not flame_action_resolved:
+			flame_hold_timer += maxf(delta, 0.0)
+			var hold_threshold := float(root.get("FLAME_FUSION_HOLD_THRESHOLD"))
+			if hold_threshold <= 0.0:
+				hold_threshold = FLAME_FUSION_HOLD_THRESHOLD
+			if flame_hold_timer >= hold_threshold:
+				if bool(root.call("_can_fuse_with_fire")):
+					root.call("_fuse_with_fire")
+				else:
+					var target_palette := str(root.call("_fire_target_palette"))
+					var feedback_color := Color.WHITE
+					if not target_palette.is_empty():
+						feedback_color = root.call("_health_feedback_color", target_palette) as Color
+					root.call("_show_fire_exchange_text", "NO FUSION", feedback_color)
+					root.call("_play_sound", "ui_denied", 0.0, 1.0)
+				flame_action_resolved = true
+		root.set("interact_input_was_down", interact_input_down)
+		return
+	if interact_pressed:
 		var chest := root.get("chest") as Sprite2D
 		if bool(root.get("chest_unlocked")) and not bool(root.get("chest_claimed")) and bool(root.call("_can_interact_with_chest")):
 			root.set("chest_claimed", true)
@@ -28,13 +60,21 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), scaled_gold)
 			root.call("_play_sound", "chest_reward", -3.0, 1.0)
 			print("Gold: %d" % (current_gold + scaled_gold))
-		elif bool(root.call("_can_interact_with_fire")):
-			root.call("_open_flame_exchange")
+		elif near_fire:
+			flame_hold_active = true
+			flame_hold_timer = 0.0
+			flame_action_resolved = false
 		elif bool(root.call("_can_interact_with_npc")):
 			(root.get("npc_controller") as NpcController).show_dialogue(root)
 		elif bool(root.call("_can_interact_with_world_item")):
 			root.call("_collect_world_item_drop")
 	root.set("interact_input_was_down", interact_input_down)
+
+
+func _reset_flame_gesture() -> void:
+	flame_hold_timer = 0.0
+	flame_hold_active = false
+	flame_action_resolved = false
 
 
 func unlock() -> void:

@@ -67,6 +67,7 @@ const SOUL_PICKUP_LAUNCH_SPEED := 30.0
 const SOUL_PICKUP_LAUNCH_SPREAD := 18.0
 const FLAME_SWAP_SOUL_COST := 5
 const FLAME_FUSION_SOUL_COST := 5
+const FLAME_FUSION_HOLD_THRESHOLD := 0.35
 ## Compatibility name retained for older dialogue/tests. A normal flame use is
 ## now the five-Soul Swap transaction.
 const FIRE_SOUL_COST := FLAME_SWAP_SOUL_COST
@@ -148,7 +149,6 @@ var dungeon_minimap_controller: Node = null
 var shadow_controller: ShadowController = null
 var interaction_component: InteractionComponent = null
 var chest_controller: ChestController = null
-var flame_exchange_controller: FlameExchangeController = null
 var npc_controller: NpcController = null
 var rest_fire_controller: RestFireController = null
 var hud_controller: HudController = null
@@ -391,17 +391,6 @@ func _sync_current_element_state() -> void:
 	if dungeon_map_controller == null or not dungeon_map_controller.has_method("set_current_element"):
 		return
 	dungeon_map_controller.call("set_current_element", _current_player_element())
-
-
-func _open_flame_exchange() -> void:
-	var controller := get("flame_exchange_controller") as Node
-	if controller != null and controller.has_method("open"):
-		controller.call("open", self)
-
-
-func _flame_exchange_is_active() -> bool:
-	var controller := get("flame_exchange_controller") as Node
-	return controller != null and bool(controller.get("active"))
 
 
 func _binding_prompt_text() -> String:
@@ -900,6 +889,8 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 
 
 func _interact_with_fire() -> bool:
+	if not _can_interact_with_fire():
+		return false
 	var target_palette := _fire_target_palette()
 	var flame := AspectCatalogScript.flame_for_palette(target_palette)
 	if target_palette.is_empty() or flame.is_empty():
@@ -908,6 +899,8 @@ func _interact_with_fire() -> bool:
 
 
 func _fuse_with_fire() -> bool:
+	if not _can_interact_with_fire():
+		return false
 	var target_palette := _fire_target_palette()
 	var flame := AspectCatalogScript.flame_for_palette(target_palette)
 	var result := _fire_fusion_result()

@@ -167,6 +167,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Fire use / Swap | Full HP, full active Chroma, and earned element attunement for 5 Souls; first starter use is also paid | `gameplay_state.gd:FLAME_SWAP_SOUL_COST` |
 | Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `combat_runtime_controller.gd:update_player_health_regen`, `gameplay_state.gd:_interact_with_fire` |
 | Starter Soul grant | One-time 5-Soul grant from the Cloaked Demon when the first-run player lacks the flame-use cost | `npc_controller.gd`, `player_profile.gd` |
+| Flame interaction gesture | Quick press swaps on release; holding for 0.35 seconds fuses | `chest_controller.gd`, `gameplay_state.gd:FLAME_FUSION_HOLD_THRESHOLD` |
 | Flame Fusion | 5 Souls; uses current element plus the contacted flame and produces an unbound recipe result | `gameplay_state.gd:FLAME_FUSION_SOUL_COST` |
 | Permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `gameplay_state.gd:ELEMENT_BIND_SOUL_COST` |
 

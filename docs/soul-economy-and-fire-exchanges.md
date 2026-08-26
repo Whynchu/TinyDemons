@@ -57,6 +57,8 @@ The next elemental flame design changes the action surface as follows:
   without changing the persistent bound element.
 - **Fuse** at a flame costs **5 Souls** and uses the current element plus the
   contacted flame's element.
+- A quick interaction press performs Swap; holding the interaction button
+  through the short fusion threshold performs Fuse.
 - Fusion does **not** require a bound element. Its result is current and usable
   immediately, but remains unbound.
 - Permanent **Bind/Rebind** is available only through the Cloaked Demon and
@@ -95,8 +97,8 @@ display.
 - `tests/rogue_slime_smoke.gd` covers Shadow/Normal popcorn composition.
 - `tests/soul_pickup_smoke.gd` covers the 9x9 sprite and persistent collection.
 - `tests/item_economy_smoke.gd` covers profile persistence and Soul-paid fusion.
-- `tests/fire_exchange_smoke.gd` covers the one-time starter grant, explicit
-  Swap/Fuse menu, and fixed 5-Soul atomic flame service.
+- `tests/fire_exchange_smoke.gd` covers the one-time starter grant, quick-press
+  Swap/hold-to-Fuse gesture, and fixed 5-Soul atomic flame service.
 - `tests/generated_run_scene_smoke.gd` covers a paid alternate fire attunement.
 - `tests/elemental_binding_smoke.gd` covers 5-Soul Swap/Fuse, no-bound Fusion,
   flat 50-Soul Demon Binding, current/bound persistence, and unbound elemental

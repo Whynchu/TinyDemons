@@ -17,7 +17,6 @@ const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/slime_runtime_con
 const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/actor_presentation_runtime_controller.gd")
 const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
-const FLAME_EXCHANGE_CONTROLLER_SCRIPT = preload("res://scripts/flame_exchange_controller.gd")
 const SLIME_ROSTER_SIZE := 13
 
 
@@ -64,7 +63,6 @@ func initialize(root: GameplayState) -> void:
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
 	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
-	root.flame_exchange_controller = _add_runtime_node(root, FLAME_EXCHANGE_CONTROLLER_SCRIPT, "FlameExchangeController") as FlameExchangeController
 	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
 	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
