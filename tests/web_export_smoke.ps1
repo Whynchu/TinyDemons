@@ -9,7 +9,7 @@ $godotVersion = if ($env:GODOT_VERSION) { $env:GODOT_VERSION } else { "4.7.1" }
 $godot = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
 $presetText = Get-Content -LiteralPath (Join-Path $root "export_presets.cfg") -Raw
 $projectText = Get-Content -LiteralPath (Join-Path $root "project.godot") -Raw
-foreach ($requiredPresetValue in @('[preset.0]', 'platform="Web"', 'export_path="dist/index.html"', 'variant/thread_support=false', 'progressive_web_app/enabled=false')) {
+foreach ($requiredPresetValue in @('[preset.0]', 'platform="Web"', 'export_path="dist/index.html"', 'variant/thread_support=false', 'progressive_web_app/enabled=false', 'image-rendering:pixelated')) {
 	if (-not $presetText.Contains($requiredPresetValue)) { throw "Web preset is missing $requiredPresetValue" }
 }
 if (-not $projectText.Contains('renderer/rendering_method.web="gl_compatibility"')) {
