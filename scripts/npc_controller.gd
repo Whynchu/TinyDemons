@@ -16,8 +16,11 @@ var dialogue_button: Sprite2D = null
 var dialogue_button_shadow: Sprite2D = null
 var dialogue_yes_text: Sprite2D = null
 var dialogue_no_text: Sprite2D = null
+var dialogue_yes_button: Button = null
+var dialogue_no_button: Button = null
 var dialogue_layer: CanvasLayer = null
 var dialogue_input_was_down := false
+var allocation_choice_pending := -1
 var demon_idle_frames: Array[Texture2D] = []
 var demon_walk_frames: Array[Texture2D] = []
 var demon_animation_timer := 0.0
@@ -106,6 +109,7 @@ func show_dialogue(root: Object) -> void:
 			message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
 	allocation_prompt_active = false
 	allocation_choice = 0
+	allocation_choice_pending = -1
 	begin_dialogue(message, Callable(root, "_pixel_text_texture"))
 	var player_was_idle := String(root.get("player_anim_name")) == "idle"
 	dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE); dialogue_text.visible = true; dialogue_button.visible = false; dialogue_input_was_down = root.call("_is_interact_input_pressed"); dialogue_box.visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); (root.get("player_attack_visual") as Sprite2D).visible = false
@@ -119,12 +123,15 @@ func hide_dialogue(_root: Object) -> void:
 	end_dialogue()
 	allocation_prompt_active = false
 	allocation_choice = 0
+	allocation_choice_pending = -1
 	var box := dialogue_box; if box != null: box.visible = false
 	var text := dialogue_text; if text != null: text.visible = false
 	var button := dialogue_button; if button != null: button.visible = false
 	var shadow := dialogue_button_shadow; if shadow != null: shadow.visible = false
 	var yes_text := dialogue_yes_text; if yes_text != null: yes_text.visible = false
 	var no_text := dialogue_no_text; if no_text != null: no_text.visible = false
+	var yes_button := dialogue_yes_button; if yes_button != null: yes_button.visible = false
+	var no_button := dialogue_no_button; if no_button != null: no_button.visible = false
 	dialogue_input_was_down = false
 
 
@@ -145,7 +152,11 @@ func update_dialogue_input(root: Object) -> void:
 	var input_down: bool = root.call("_is_interact_input_pressed")
 	var input_pressed := input_down and not dialogue_input_was_down
 	if allocation_prompt_active and dialogue_complete:
-		if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+		if allocation_choice_pending >= 0:
+			var pending_choice := allocation_choice_pending
+			allocation_choice_pending = -1
+			_resolve_allocation_choice(root, pending_choice)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
 			allocation_choice = 1 - allocation_choice
 			_update_allocation_choices(root)
 			root.call("_play_sound", "ui_hover", -6.0, 1.0)
@@ -153,13 +164,7 @@ func update_dialogue_input(root: Object) -> void:
 			root.call("_play_sound", "ui_decline", 0.0, 1.0)
 			hide_dialogue(root)
 		elif input_pressed or bool(root.call("_is_ui_accept_just_pressed")):
-			if allocation_choice == 0:
-				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-				hide_dialogue(root)
-				root.call("_open_hub_from_cloaked_demon")
-			else:
-				root.call("_play_sound", "ui_decline", 0.0, 1.0)
-				hide_dialogue(root)
+			_resolve_allocation_choice(root, allocation_choice)
 	elif dialogue_complete and (input_pressed or bool(root.call("_is_ui_accept_just_pressed"))):
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		if dialogue_page_index + 1 < dialogue_pages.size():
@@ -174,12 +179,28 @@ func update_dialogue_input(root: Object) -> void:
 		else:
 			allocation_prompt_active = true
 			allocation_choice = 0
+			allocation_choice_pending = -1
 			begin_dialogue("OPEN STATS AND SHOP?", Callable(root, "_pixel_text_texture"))
 			dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
 			dialogue_button.visible = false
 			dialogue_button_shadow.visible = false
 		update_dialogue_from_root(root, 0.0)
 	dialogue_input_was_down = input_down
+
+
+func _resolve_allocation_choice(root: Object, choice: int) -> void:
+	allocation_choice = clampi(choice, 0, 1)
+	if allocation_choice == 0:
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+		hide_dialogue(root)
+		root.call("_open_hub_from_cloaked_demon")
+	else:
+		root.call("_play_sound", "ui_decline", 0.0, 1.0)
+		hide_dialogue(root)
+
+
+func _queue_allocation_choice(choice: int) -> void:
+	allocation_choice_pending = clampi(choice, 0, 1)
 
 
 func request_dialogue() -> void:
@@ -246,7 +267,28 @@ func build_dialogue(parent: Node, continue_texture: Texture2D) -> Dictionary:
 	no_text.z_index = 2
 	no_text.visible = false
 	layer.add_child(no_text)
-	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow, "yes": yes_text, "no": no_text}
+	var yes_button := _make_allocation_choice_button(layer, "NpcDialogueYesButton", 0)
+	var no_button := _make_allocation_choice_button(layer, "NpcDialogueNoButton", 1)
+	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow, "yes": yes_text, "no": no_text, "yes_button": yes_button, "no_button": no_button}
+
+
+func _make_allocation_choice_button(parent: Node, button_name: String, choice: int) -> Button:
+	var button := Button.new()
+	button.name = button_name
+	button.text = ""
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.size = Vector2(24, 12)
+	button.visible = false
+	var transparent := StyleBoxFlat.new()
+	transparent.bg_color = Color.TRANSPARENT
+	transparent.set_border_width_all(0)
+	for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.add_theme_stylebox_override(style_state, transparent)
+	button.pressed.connect(_queue_allocation_choice.bind(choice))
+	parent.add_child(button)
+	return button
 
 
 func _update_allocation_choices(root: Object) -> void:
@@ -258,6 +300,8 @@ func _update_allocation_choices(root: Object) -> void:
 	var show_choices := allocation_prompt_active and dialogue_complete and box.visible
 	yes_text.visible = show_choices
 	no_text.visible = show_choices
+	if dialogue_yes_button != null: dialogue_yes_button.visible = show_choices
+	if dialogue_no_button != null: dialogue_no_button.visible = show_choices
 	if not show_choices:
 		return
 	var selected_color := Color8(255, 205, 117)
@@ -270,6 +314,10 @@ func _update_allocation_choices(root: Object) -> void:
 	var choice_group_x := maxf(box.size.x - 54.0, 7.0)
 	yes_text.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x, choice_y))
 	no_text.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x + 30.0, choice_y))
+	if dialogue_yes_button != null:
+		dialogue_yes_button.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x - 4.0, choice_y - 3.0))
+	if dialogue_no_button != null:
+		dialogue_no_button.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x + 26.0, choice_y - 3.0))
 
 
 func _highlight_button_texture(source: Texture2D) -> Texture2D:
@@ -298,6 +346,7 @@ func begin_dialogue(message: String, pixel_texture: Callable = Callable()) -> vo
 	type_timer = 0.0
 	button_timer = 0.0
 	dialogue_complete = false
+	allocation_choice_pending = -1
 
 
 func end_dialogue() -> void:

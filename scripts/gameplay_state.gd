@@ -764,7 +764,17 @@ func _build_interact_prompt() -> void:
 		fire_cost.position = Vector2(0, -marker_height * 0.5 - cost_height * 0.5 - 1.0)
 		fire_cost.visible = false
 		interact_prompt.add_child(fire_cost)
-func _build_npc_dialogue() -> void: var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png")); npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer; npc_controller.dialogue_box = dialogue["box"] as ColorRect; npc_controller.dialogue_text = dialogue["text"] as Sprite2D; npc_controller.dialogue_button = dialogue["button"] as Sprite2D; npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D; npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D; npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
+func _build_npc_dialogue() -> void:
+	var dialogue := npc_controller.build_dialogue(self, _load_texture_or_null("res://assets/artwork/circle55.png"))
+	npc_controller.dialogue_layer = dialogue["layer"] as CanvasLayer
+	npc_controller.dialogue_box = dialogue["box"] as ColorRect
+	npc_controller.dialogue_text = dialogue["text"] as Sprite2D
+	npc_controller.dialogue_button = dialogue["button"] as Sprite2D
+	npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D
+	npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D
+	npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
+	npc_controller.dialogue_yes_button = dialogue["yes_button"] as Button
+	npc_controller.dialogue_no_button = dialogue["no_button"] as Button
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
 	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.soul_icon_indicator = hud["soul"] as Sprite2D; hud_controller.soul_amount_indicator = hud["soul_amount"] as Sprite2D; 	hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator(); _update_soul_indicator()
@@ -946,7 +956,7 @@ func _input_prompt_texture(action: StringName) -> Texture2D:
 		return _load_texture_or_null("res://assets/artwork/circle55.png")
 	var label := String(input_device_tracker.call("prompt_label", action))
 	if device == InputDeviceTracker.Device.TOUCH and effects_spawner != null:
-		return effects_spawner.prompt_texture(label, Color.WHITE)
+		return effects_spawner.prompt_texture(label, Color.BLACK)
 	return _pixel_text_texture(label, Color.WHITE)
 
 

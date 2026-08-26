@@ -38,6 +38,25 @@ func _initialize() -> void:
 	layer.set_virtual_stick(Vector2.ZERO)
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(router.just_released(&"attack"), "touch release reaches router release edge", failures)
+	var target_rect: Rect2 = layer._layout["buttons"][&"target"]
+	var target_down := InputEventScreenTouch.new()
+	target_down.device = 0; target_down.index = 11; target_down.pressed = true; target_down.position = target_rect.get_center()
+	layer._input(target_down)
+	var target_up := InputEventScreenTouch.new()
+	target_up.device = 0; target_up.index = 11; target_up.pressed = false; target_up.position = target_rect.get_center()
+	layer._input(target_up)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.pressed(&"target") and router.just_pressed(&"target"), "touch target toggles on with a tap", failures)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.pressed(&"target") and not router.just_pressed(&"target"), "toggled target remains active after release", failures)
+	var target_down_again := InputEventScreenTouch.new()
+	target_down_again.device = 0; target_down_again.index = 12; target_down_again.pressed = true; target_down_again.position = target_rect.get_center()
+	layer._input(target_down_again)
+	var target_up_again := InputEventScreenTouch.new()
+	target_up_again.device = 0; target_up_again.index = 12; target_up_again.pressed = false; target_up_again.position = target_rect.get_center()
+	layer._input(target_up_again)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(not router.pressed(&"target") and router.just_released(&"target"), "second target tap toggles targeting off", failures)
 
 	# Exercise the real pointer path: a long drag keeps the same stick owner
 	# even when the browser reports a mouse-motion echo with another device id.
@@ -148,6 +167,14 @@ func _initialize() -> void:
 		var layout_buttons: Dictionary = layout["buttons"]
 		for action in layout_buttons:
 			_expect(layout_window.encloses(layout_buttons[action] as Rect2), "action button stays inside the logical viewport", failures)
+		var attack_rect: Rect2 = layout_buttons[&"attack"]
+		var magic_rect: Rect2 = layout_buttons[&"magic"]
+		var use_rect: Rect2 = layout_buttons[&"interact"]
+		var roll_rect: Rect2 = layout_buttons[&"roll"]
+		var guard_rect: Rect2 = layout_buttons[&"guard"]
+		var target_layout_rect: Rect2 = layout_buttons[&"target"]
+		_expect(magic_rect.position.y < attack_rect.position.y and attack_rect.position.y == use_rect.position.y and roll_rect.position.y > attack_rect.position.y, "touch actions form a diamond with Magic top and Roll bottom", failures)
+		_expect(attack_rect.position.x < roll_rect.position.x and roll_rect.position.x < use_rect.position.x and guard_rect.position.x < roll_rect.position.x and target_layout_rect.position.x > roll_rect.position.x, "touch actions place Use right and Guard/Target around Roll", failures)
 	_expect(float((layer._compute_layout(TouchControlsLayer.BASE_CONTENT_SIZE, TouchControlsLayer.BASE_CONTENT_SIZE))["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "buttons keep the minimum logical size", failures)
 
 	router.free()
