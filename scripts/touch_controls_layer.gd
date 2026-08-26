@@ -26,6 +26,10 @@ const STICK_MAX := 140.0
 const MARGIN_FRACTION := 0.03
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
+const BUTTON_GRID_POSITIONS := {
+	&"magic": Vector2i(1, 0), &"attack": Vector2i(0, 1), &"interact": Vector2i(2, 1),
+	&"guard": Vector2i(0, 2), &"roll": Vector2i(1, 2), &"target": Vector2i(2, 2),
+}
 const BUTTON_LABELS := {
 	&"attack": "ATK", &"roll": "ROLL", &"magic": "MAG",
 	&"guard": "GUARD", &"target": "TGT", &"interact": "USE", &"pause": "II", &"cancel": "CANCEL",
@@ -41,6 +45,7 @@ var _finger_actions: Dictionary = {}
 var _menu_touch_buttons: Dictionary = {}
 var _menu_accept_fingers: Dictionary = {}
 var _menu_accept_latch := false
+var _target_toggle_active := false
 var _stick_vector := Vector2.ZERO
 var _stick_pointer_id := -1
 var _stick_origin := Vector2.ZERO
@@ -179,13 +184,12 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictiona
 	var cluster_origin := Vector2.ZERO
 	var columns := 3
 	var cluster_w := columns * button + float(columns - 1) * gap
-	var cluster_h := 2.0 * button + gap
+	var cluster_h := 3.0 * button + 2.0 * gap
 	cluster_origin = Vector2(maxf(margin, viewport_size.x - margin - cluster_w), maxf(margin, viewport_size.y - margin - cluster_h))
 	var buttons: Dictionary = {}
-	for index in BUTTON_ORDER.size():
-		var col := index % columns
-		var row := index / columns
-		buttons[BUTTON_ORDER[index]] = Rect2(cluster_origin + Vector2(float(col) * (button + gap), float(row) * (button + gap)), Vector2(button, button))
+	for action in BUTTON_ORDER:
+		var grid_position: Vector2i = BUTTON_GRID_POSITIONS[action]
+		buttons[action] = Rect2(cluster_origin + Vector2(float(grid_position.x) * (button + gap), float(grid_position.y) * (button + gap)), Vector2(button, button))
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
 	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))
 	var cancel_width := clampf(button * 2.5, 42.0, 96.0)
@@ -332,7 +336,11 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 	for action in buttons:
 		if (buttons[action] as Rect2).has_point(position):
 			_finger_actions[finger_id] = action
-			set_button_state(action, true)
+			if action == &"target":
+				_target_toggle_active = not _target_toggle_active
+				set_button_state(&"target", _target_toggle_active)
+			else:
+				set_button_state(action, true)
 			_update_touch_capture_filter()
 			return
 	var pause: Rect2 = _layout.get("pause", Rect2())
@@ -364,7 +372,7 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 		var rect := _button_rect(action)
 		if not rect.grow(3.0).has_point(position):
 			_finger_actions.erase(finger_id)
-			set_button_state(action, false)
+			if action != &"target": set_button_state(action, false)
 			_update_touch_capture_filter()
 		return
 	if not _controls_visible:
@@ -391,7 +399,7 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 	if _finger_actions.has(finger_id):
 		var action: StringName = _finger_actions[finger_id]
 		_finger_actions.erase(finger_id)
-		set_button_state(action, false)
+		if action != &"target": set_button_state(action, false)
 	_update_touch_capture_filter()
 
 
@@ -585,6 +593,7 @@ func _clear_gameplay_input() -> void:
 	for action in BUTTON_ORDER:
 		_pressed_actions[action] = false
 		_update_button_visual(action)
+	_target_toggle_active = false
 	_pressed_actions[&"pause"] = false
 	_update_button_visual(&"pause")
 	for action in BUTTON_ORDER:
@@ -601,6 +610,7 @@ func _clear_transient_input() -> void:
 	_menu_accept_fingers.clear()
 	_menu_accept_latch = false
 	_pressed_actions.clear()
+	_target_toggle_active = false
 	_press_latches.clear()
 	for action in _button_nodes:
 		_update_button_visual(action)
