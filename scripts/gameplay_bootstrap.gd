@@ -17,6 +17,8 @@ const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/slime_runtime_con
 const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/actor_presentation_runtime_controller.gd")
 const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
+const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/input_device_tracker.gd")
+const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/touch_controls_layer.gd")
 const SLIME_ROSTER_SIZE := 13
 
 
@@ -31,6 +33,15 @@ func initialize(root: GameplayState) -> void:
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
 	root.input_router = _add_runtime_node(root, InputRouter, "InputRouter") as InputRouter
+	var input_device_tracker := _add_runtime_node(root, INPUT_DEVICE_TRACKER_SCRIPT, "InputDeviceTracker") as InputDeviceTracker
+	var touch_controls_layer := _add_runtime_node(root, TOUCH_CONTROLS_LAYER_SCRIPT, "TouchControlsLayer") as TouchControlsLayer
+	root.input_device_tracker = input_device_tracker
+	root.touch_controls_layer = touch_controls_layer
+	input_device_tracker.device_changed.connect(Callable(touch_controls_layer, "set_last_input_device"))
+	touch_controls_layer.build()
+	touch_controls_layer.set_last_input_device(input_device_tracker.current_device)
+	touch_controls_layer.set_input_context(InputRouter.Context.MENU)
+	root.input_router.set_touch_provider(touch_controls_layer)
 	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
 	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController")
 	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController")
@@ -56,7 +67,10 @@ func initialize(root: GameplayState) -> void:
 	geometry_debug.enabled = root.debug_actor_geometry; geometry_debug.z_as_relative = false; geometry_debug.z_index = 4096; root.actor_geometry_debug_drawer = geometry_debug
 	root.depth_sorter = _add_runtime_node(root, DepthSorter, "DepthSorter") as DepthSorter
 	var occlusion := _add_runtime_node(root, OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
-	occlusion.resolution_scale = effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
+	# Web keeps the same visuals but uses the lowest exact-pixel occlusion pass
+	# to avoid multiplying every actor pixel on weaker mobile CPUs. Desktop keeps
+	# the inspector-selected scale unchanged.
+	occlusion.resolution_scale = 1 if OS.has_feature("web") else effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
 	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
 	root.room_controller.room_cleared.connect(Callable(root.dungeon_map_controller, "on_room_completed"))
 	root.dungeon_map_controller.connect(&"map_state_changed", Callable(root, "_on_dungeon_map_state_changed"))

@@ -148,7 +148,7 @@ func update_overhead_bars(
 		set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
 
-func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: InputRouter = null) -> void:
+func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: InputRouter = null, input_device_tracker: Node = null, pixel_texture: Callable = Callable()) -> void:
 	if buttons.size() < 4:
 		return
 	var pressed := [false, false, false, false]
@@ -157,8 +157,23 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: In
 		pressed[1] = router.button_pressed(JOY_BUTTON_X)
 		pressed[2] = router.button_pressed(JOY_BUTTON_A)
 		pressed[3] = router.button_pressed(JOY_BUTTON_B)
+	var device := int(input_device_tracker.get("current_device")) if input_device_tracker != null else 1
+	var keyboard_labels := ["U", "J", "K", "E"]
 	for index in buttons.size():
-		buttons[index].modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+		var button := buttons[index]
+		if device == 2:
+			button.visible = false
+			button.modulate = Color.WHITE
+		elif device == 0 and pixel_texture.is_valid():
+			button.visible = true
+			button.texture = pixel_texture.call(keyboard_labels[index] if index < keyboard_labels.size() else "", Color.WHITE) as Texture2D
+			button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+		else:
+			button.visible = true
+			var gamepad_texture: Variant = button.get_meta("gamepad_texture", button.texture)
+			if gamepad_texture is Texture2D:
+				button.texture = gamepad_texture as Texture2D
+		button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
 
 
 func update_cooldown_hud(root: Object) -> void:
@@ -193,7 +208,7 @@ func update_cooldown_hud(root: Object) -> void:
 
 
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
-	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter)
+	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter, root.get("input_device_tracker") as Node, Callable(root, "_pixel_text_texture"))
 	update_cooldown_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
@@ -379,6 +394,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	for data in [{"texture": "triangle55.png", "position": Vector2(224, 64)}, {"texture": "square55.png", "position": Vector2(219, 69)}, {"texture": "x55.png", "position": Vector2(224, 74)}, {"texture": "circle55.png", "position": Vector2(229, 69)}]:
 		var button := Sprite2D.new()
 		button.texture = load_texture.call("res://assets/artwork/" + data["texture"])
+		button.set_meta("gamepad_texture", button.texture)
 		button.centered = false
 		button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		button.position = data["position"]

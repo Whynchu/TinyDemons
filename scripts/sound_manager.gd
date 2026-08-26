@@ -126,6 +126,7 @@ func start_run_music(volume_linear: float = -1.0) -> void:
 
 func _start_music_track(track_path: String, volume_linear: float) -> void:
 	_ensure_mix_profile()
+	var resolved_track_path := _preferred_audio_path(track_path)
 	if _music_player == null:
 		_music_player = AudioStreamPlayer.new()
 		_music_player.name = "Music_Theme"
@@ -135,11 +136,11 @@ func _start_music_track(track_path: String, volume_linear: float) -> void:
 	if _music_fade_tween != null and _music_fade_tween.is_valid():
 		_music_fade_tween.kill()
 		_music_fade_tween = null
-	if _music_stream_path != track_path:
+	if _music_stream_path != resolved_track_path:
 		_music_player.stop()
 		_music_player.stream = null
-		_music_stream_path = track_path
-		_music_player.stream = load(track_path) as AudioStream
+		_music_stream_path = resolved_track_path
+		_music_player.stream = load(_music_stream_path) as AudioStream
 		if not _music_player.finished.is_connected(_replay_music):
 			_music_player.finished.connect(_replay_music)
 	var music_key: StringName = &"run_music" if track_path == RUN_MUSIC_PATH else &"title_music"
@@ -249,9 +250,17 @@ func _player(sound_name: String) -> AudioStreamPlayer:
 
 func _load_stream(sound_name: String) -> AudioStream:
 	var path: String = CLIPS.get(sound_name, "")
-	if path.is_empty() or not ResourceLoader.exists(path):
+	if path.is_empty():
 		return null
-	return load(path) as AudioStream
+	var preferred_path := _preferred_audio_path(path)
+	if not ResourceLoader.exists(preferred_path):
+		return null
+	return load(preferred_path) as AudioStream
+
+
+func _preferred_audio_path(path: String) -> String:
+	var ogg_path := path.get_basename() + ".ogg"
+	return ogg_path if ResourceLoader.exists(ogg_path) else path
 
 
 func get_mix_profile() -> Resource:

@@ -23,6 +23,10 @@ window/size/window_width_override=960
 window/size/window_height_override=640
 window/stretch/mode="canvas_items"
 
+[input_devices]
+
+pointing/emulate_mouse_from_touch=true
+
 [input]
 
 move_left={
@@ -107,3 +111,4 @@ cancel={
 textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
+renderer/rendering_method.web="gl_compatibility"

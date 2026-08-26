@@ -128,6 +128,19 @@ func hide_dialogue(_root: Object) -> void:
 	dialogue_input_was_down = false
 
 
+func set_continue_prompt_texture(texture: Texture2D) -> void:
+	if texture == null or dialogue_button == null:
+		return
+	if dialogue_button.texture == texture:
+		return
+	dialogue_button.texture = texture
+	var outline := dialogue_button.get_node_or_null("NpcDialogueContinueOutline") as Sprite2D
+	if outline != null:
+		outline.texture = _highlight_button_texture(texture)
+	if dialogue_button_shadow != null:
+		dialogue_button_shadow.texture = texture
+
+
 func update_dialogue_input(root: Object) -> void:
 	var input_down: bool = root.call("_is_interact_input_pressed")
 	var input_pressed := input_down and not dialogue_input_was_down

@@ -66,7 +66,8 @@ game reads them at runtime with no code change.
 
 ### `scripts/effects_tuning.gd` — particles/numbers (9 exports, all `inspector`)
 
-`resolution_scale` 2, `roll_dust_frame_time` 0.05, `damage_number_lifetime` 0.65,
+`resolution_scale` 2 (web runtime uses 1 to cap the occlusion pixel workload),
+`roll_dust_frame_time` 0.05, `damage_number_lifetime` 0.65,
 `damage_number_pop_time` 0.10, `damage_number_float_speed` 12.0,
 `slime_death_particle_count` 26, `slime_death_particle_lifetime` 0.7,
 `slime_death_particle_speed_min` 14, `slime_death_particle_speed_max` 38.

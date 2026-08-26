@@ -157,6 +157,21 @@ state, and title/start flow remains usable after a prior death.
 Expected result: visual effects remain aligned with their owning actor and no
 new effect appears above the intended UI/world layer.
 
+## Web port release checks
+
+Run `pwsh -ExecutionPolicy Bypass -File tests/web_export_smoke.ps1 -RequireExport`
+with the matching Web template installed before a Pages
+release. The GitHub Actions workflow runs the same check for every pull
+request and deploys only from `main`.
+
+- [ ] Open `https://whynchu.github.io/TinyDemons/` from a clean browser profile.
+- [ ] Chrome desktop: keyboard play, then connect a gamepad and confirm prompts swap.
+- [ ] Firefox desktop: title → dive → first combat with keyboard.
+- [ ] Chrome Android: touch-only title → hub → dive → combat → settlement loop.
+- [ ] Safari iOS: repeat the touch loop and record any WebGL/audio warnings.
+- [ ] Touch controls appear after touch input and disappear after a gamepad or keyboard event.
+- [ ] Reload mid-run and confirm the profile persists.
+
 ## Results
 
 | Test | Result | Evidence/notes |
