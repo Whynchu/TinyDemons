@@ -70,6 +70,19 @@ func _initialize() -> void:
 	layer.set_input_context(InputRouter.Context.MENU)
 	_expect(layer.is_active(), "touch input remains available on title and other menus", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "menu touch overlay stays transparent to title Buttons", failures)
+	var cancel_node := layer.get_node("TouchControlsRoot/Touch_Cancel") as Panel
+	var cancel_rect: Rect2 = layer._layout["cancel"]
+	_expect(cancel_node != null and cancel_node.visible, "menu cancel control is visible for touch input", failures)
+	var cancel_down := InputEventScreenTouch.new()
+	cancel_down.device = 0; cancel_down.index = 6; cancel_down.pressed = true; cancel_down.position = cancel_rect.get_center()
+	layer._input(cancel_down)
+	router.poll(InputRouter.Context.MENU)
+	_expect(router.ui_cancel_pressed() and router.ui_cancel_just_pressed(), "menu cancel touch reaches UI cancel", failures)
+	var cancel_up := InputEventScreenTouch.new()
+	cancel_up.device = 0; cancel_up.index = 6; cancel_up.pressed = false; cancel_up.position = cancel_rect.get_center()
+	layer._input(cancel_up)
+	router.poll(InputRouter.Context.MENU)
+	_expect(not router.ui_cancel_pressed(), "menu cancel touch releases cleanly", failures)
 
 	# A real screen touch activates the same native Button that a desktop mouse
 	# click would activate. The overlay captures the sequence so a browser's
@@ -131,6 +144,7 @@ func _initialize() -> void:
 		var layout_window := layout["window_rect"] as Rect2
 		_expect(layout_window.encloses(layout["stick_zone"] as Rect2), "stick zone stays inside the logical viewport", failures)
 		_expect(layout_window.encloses(layout["pause"] as Rect2), "pause button stays inside the logical viewport", failures)
+		_expect(layout_window.encloses(layout["cancel"] as Rect2), "cancel button stays inside the logical viewport", failures)
 		var layout_buttons: Dictionary = layout["buttons"]
 		for action in layout_buttons:
 			_expect(layout_window.encloses(layout_buttons[action] as Rect2), "action button stays inside the logical viewport", failures)

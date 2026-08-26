@@ -570,6 +570,8 @@ func _shift_hub_gear_candidate(direction: int) -> void:
 	hub_flow_controller.call("shift_hub_gear_candidate", self, direction)
 func _select_hub_gear_slot(slot_index: int) -> void:
 	hub_flow_controller.call("select_hub_gear_slot", self, slot_index)
+func _select_hub_gear_candidate(choice_row: int) -> void:
+	hub_flow_controller.call("select_hub_gear_candidate", self, choice_row)
 func _close_hub_gear_browse() -> void:
 	hub_flow_controller.call("close_hub_gear_browse", self)
 func _refresh_hub_fusion_candidates() -> void:
@@ -943,6 +945,8 @@ func _input_prompt_texture(action: StringName) -> Texture2D:
 	if device == InputDeviceTracker.Device.GAMEPAD and action == &"interact":
 		return _load_texture_or_null("res://assets/artwork/circle55.png")
 	var label := String(input_device_tracker.call("prompt_label", action))
+	if device == InputDeviceTracker.Device.TOUCH and effects_spawner != null:
+		return effects_spawner.prompt_texture(label, Color.WHITE)
 	return _pixel_text_texture(label, Color.WHITE)
 
 
