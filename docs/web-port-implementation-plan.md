@@ -474,3 +474,27 @@ handlers, no mouse/touch usage in `scripts/`; saves `user://`-only
   CI installs `web_nothreads_release.zip` and treats export failure as fatal.
 - Post-OGG payload size and crowded-room phone frame times.
 - Per-browser gamepad mapping failures (if any) and player-facing guidance.
+
+### Landed since the plan (2026-08-26, phone sizing pass)
+
+- **Integer content scaling** (`window/stretch/scale_mode="integer"` in
+  `project.godot`) fixes the nearest-neighbor tile seams seen at fractional
+  phone scales; the engine now letterboxes and centers the 240x160 content on
+  every platform. Desktop's 960x640 window is exactly 4x, so it is unchanged;
+  free desktop resizing to non-multiples may now show thin bars. On hiDPI
+  phones (DPR >= 2) portrait typically lands on a 3x integer scale, so the
+  game still fills most of the screen width.
+- **Mobile page CSS** is injected through the Web preset's
+  `html/head_include` (fixed positioning, `overflow: hidden`,
+  `touch-action: none`, `user-scalable=no`, `overscroll-behavior: none`) so
+  URL-bar bounce, page scroll, and double-tap zoom cannot shift the canvas or
+  hijack control drags.
+- **`touch_controls_layer.gd` adaptive layout**: the overlay measures the
+  window through the root viewport's final transform, keeping targets at a
+  usable physical size at any integer scale, and parks controls in the
+  letterbox bars instead of over the game - bottom bar in portrait (stick
+  left, 3x2 button cluster right), side bars in landscape (floating stick
+  left, 2x3 cluster right), with a bottom-corner overlay fallback on
+  exact-fit windows. The stick anchors where the finger lands; buttons
+  release on slide-off. Layout math is asserted in
+  `tests/touch_controls_smoke.gd`.
