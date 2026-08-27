@@ -1,0 +1,90 @@
+extends SceneTree
+
+const TEST_PATH := "res://.godot_user/settings_panel_scene_smoke.cfg"
+
+var _finished := false
+
+
+func _initialize() -> void:
+	create_timer(20.0).timeout.connect(_watchdog)
+	var failures: Array[String] = []
+	var packed := load("res://scenes/main.tscn") as PackedScene
+	_expect(packed != null, "main scene loads for settings panel coverage", failures)
+	if packed == null:
+		_finish(failures)
+		return
+	var gameplay := packed.instantiate()
+	root.add_child(gameplay)
+	for _frame in 120:
+		await process_frame
+	var screens := gameplay.get("screen_state_controller") as ScreenStateController
+	var settings := gameplay.get("settings_service") as SettingsService
+	var sound := gameplay.get("sound_manager") as SoundManager
+	_expect(screens != null and settings != null and sound != null, "settings, screen, and sound owners are composed", failures)
+	if screens != null and settings != null and sound != null:
+		settings.file_path = TEST_PATH
+		settings.reset_to_defaults()
+		_expect(screens.title_settings_button != null, "title screen exposes a Settings button", failures)
+		if screens.title_settings_button != null:
+			screens.title_settings_button.pressed.emit()
+		await process_frame
+		_expect(screens.settings_overlay != null and screens.settings_overlay.visible, "title Settings button opens the shared panel", failures)
+		_expect(screens.state == &"settings" and screens.settings_value_buttons.size() == 5, "settings panel enters its five-row state", failures)
+		gameplay.call("_adjust_setting", 1, 1)
+		gameplay.call("_adjust_setting", 3, -1)
+		_expect(str(settings.get_setting(&"aspect")) == "16:10", "aspect row applies immediately", failures)
+		_expect(int(settings.get_setting(&"music_volume")) == 90, "volume row applies in ten-point steps", failures)
+		_expect(sound.music_volume() == 90, "music volume applies to the live sound manager", failures)
+		settings.set_setting(&"sfx_volume", 40)
+		_expect(sound.sfx_volume() == 40, "SFX volume applies to the live sound manager", failures)
+		_expect(settings.load_settings().get("aspect") == "16:10", "settings changes persist through ConfigFile", failures)
+		_expect(settings.load_settings().get("sfx_volume") == 40, "audio settings persist through ConfigFile", failures)
+		gameplay.call("_close_settings")
+		await process_frame
+		_expect(not screens.settings_overlay.visible and screens.title_overlay.visible, "closing title settings restores the title", failures)
+		_expect(screens.state == &"title", "closing title settings restores title state", failures)
+		var focus_owner := gameplay.get_viewport().gui_get_focus_owner()
+		_expect(focus_owner == screens.title_settings_button or focus_owner == screens.title_start_button or focus_owner == screens.title_continue_button, "closing settings restores title focus", failures)
+		gameplay.call("_open_pause_menu")
+		await process_frame
+		_expect(screens.hub_pause_mode and screens.pause_settings_button != null, "pause menu exposes Settings", failures)
+		if screens.pause_settings_button != null:
+			screens.pause_settings_button.pressed.emit()
+		await process_frame
+		_expect(screens.settings_overlay.visible and screens.settings_origin == &"pause", "pause Settings opens the same panel", failures)
+		gameplay.call("_close_settings")
+		await process_frame
+		_expect(not screens.settings_overlay.visible and screens.hub_pause_mode, "closing pause settings restores the pause menu", failures)
+	gameplay.queue_free()
+	await process_frame
+	_cleanup()
+	_finish(failures)
+
+
+func _cleanup() -> void:
+	var absolute_path := ProjectSettings.globalize_path(TEST_PATH)
+	if FileAccess.file_exists(absolute_path):
+		DirAccess.remove_absolute(absolute_path)
+
+
+func _watchdog() -> void:
+	if _finished:
+		return
+	push_error("TEST_ABORTED: settings panel scene smoke failed before completion")
+	quit(1)
+
+
+func _finish(failures: Array[String]) -> void:
+	_finished = true
+	if failures.is_empty():
+		print("SETTINGS_PANEL_SCENE_SMOKE_OK")
+		quit(0)
+		return
+	for failure: String in failures:
+		push_error("FAILED: %s" % failure)
+	quit(1)
+
+
+func _expect(condition: bool, label: String, failures: Array[String]) -> void:
+	if not condition:
+		failures.append(label)

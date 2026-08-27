@@ -21,11 +21,15 @@ func _initialize() -> void:
 	var screen := gameplay.get("screen_state_controller") as Node
 	_expect(profile != null and chroma != null and npc != null and screen != null, "Hub Binding owners are composed", failures)
 	if profile != null and chroma != null and npc != null and screen != null:
+		var original_profile := profile.to_dictionary()
 		profile.has_started = true
 		profile.completed_runs = 1
 		profile.souls = PlayerProfile.ELEMENT_BIND_SOUL_COST
 		profile.starter_soul_gift_claimed = true
+		profile.has_bound_element = false
+		profile.bound_element = &""
 		gameplay.set("starter_flame_attuned_this_run", true)
+		chroma.call("clear_bound_aspect")
 		chroma.call("attune_flame", &"fire")
 		npc.show_dialogue(gameplay)
 		_expect(not String(npc.full_message).contains("BIND"), "Cloaked Demon dialogue remains the normal Hub invitation", failures)
@@ -44,6 +48,11 @@ func _initialize() -> void:
 		_expect(profile.has_bound_element and profile.bound_element == &"fire", "Hub Binding commits the current element", failures)
 		_expect(profile.souls == 0, "Hub Binding charges 50 Souls", failures)
 		_expect(binding_action == null or binding_action.disabled, "bound element disables repeat Binding", failures)
+		# Binding is intentionally tested against the live profile, so restore the
+		# developer's save after the assertion instead of leaking test state into
+		# later scene tests or a real local run.
+		profile.load_dictionary(original_profile)
+		ProfileSaveService.save_profile(profile)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
