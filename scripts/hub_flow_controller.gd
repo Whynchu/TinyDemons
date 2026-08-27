@@ -5,7 +5,7 @@ const ProgressionControllerScript = preload("res://scripts/progression_controlle
 
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_menu_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_menu_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -39,6 +39,11 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_item_action_button = controls["item_action"] as Button
 	root.screen_state_controller.hub_fusion_decrease_button = controls["fusion_decrease"] as Button
 	root.screen_state_controller.hub_fusion_increase_button = controls["fusion_increase"] as Button
+	root.screen_state_controller.pause_menu_buttons = controls["pause_buttons"] as Array[Button]
+	if root.screen_state_controller.pause_menu_buttons.size() >= 3:
+		root.screen_state_controller.pause_resume_button = root.screen_state_controller.pause_menu_buttons[0]
+		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[1]
+		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[2]
 
 
 func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) -> void:
@@ -59,7 +64,7 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	if root.loading_screen_overlay != null: root.loading_screen_overlay.visible = false
 	if root.game_over_overlay != null: root.game_over_overlay.visible = false
 	root.screen_state_controller.hub_overlay.visible = true
-	root.screen_state_controller.hub_page = 1 if pause_mode else 0
+	root.screen_state_controller.hub_page = 0
 	root.screen_state_controller.hub_item_index = 0
 	root.screen_state_controller.hub_binding_message = ""
 	root.call("_hub_cancel_stats")

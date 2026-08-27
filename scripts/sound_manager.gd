@@ -78,6 +78,61 @@ var _music_fade_tween: Tween = null
 var _music_stream_path := ""
 var _music_mix_key: StringName = &""
 var _music_fallback_volume_db := TITLE_MUSIC_VOLUME_DB
+var _music_volume_percent := 100
+var _sfx_volume_percent := 100
+var _settings_service: SettingsService = null
+
+
+func configure_settings(settings: SettingsService) -> void:
+	_settings_service = settings
+	if _settings_service != null:
+		_music_volume_percent = int(_settings_service.get_setting(&"music_volume", 100))
+		_sfx_volume_percent = int(_settings_service.get_setting(&"sfx_volume", 100))
+		if not _settings_service.setting_changed.is_connected(_on_setting_changed):
+			_settings_service.setting_changed.connect(_on_setting_changed)
+	_refresh_audio_volumes()
+
+
+func set_music_volume(value: int) -> void:
+	var clamped := clampi(value, 0, 100)
+	if _settings_service != null and int(_settings_service.get_setting(&"music_volume", _music_volume_percent)) != clamped:
+		_settings_service.set_setting(&"music_volume", clamped)
+		return
+	_music_volume_percent = clamped
+	_refresh_audio_volumes()
+
+
+func set_sfx_volume(value: int) -> void:
+	var clamped := clampi(value, 0, 100)
+	if _settings_service != null and int(_settings_service.get_setting(&"sfx_volume", _sfx_volume_percent)) != clamped:
+		_settings_service.set_setting(&"sfx_volume", clamped)
+		return
+	_sfx_volume_percent = clamped
+	_refresh_audio_volumes()
+
+
+func music_volume() -> int:
+	return _music_volume_percent
+
+
+func sfx_volume() -> int:
+	return _sfx_volume_percent
+
+
+func _on_setting_changed(key: StringName, value: Variant) -> void:
+	if key == &"music_volume":
+		_music_volume_percent = clampi(int(value), 0, 100)
+	elif key == &"sfx_volume":
+		_sfx_volume_percent = clampi(int(value), 0, 100)
+	else:
+		return
+	_refresh_audio_volumes()
+
+
+func _settings_volume_db(percent: int) -> float:
+	if percent <= 0:
+		return -80.0
+	return linear_to_db(clampf(float(percent) / 100.0, 0.0001, 1.0))
 
 func _ready() -> void:
 	_ensure_mix_profile()
@@ -149,7 +204,7 @@ func _start_music_track(track_path: String, volume_linear: float) -> void:
 		fallback_volume_db = linear_to_db(maxf(volume_linear, 0.000001))
 	_music_mix_key = music_key
 	_music_fallback_volume_db = fallback_volume_db
-	_music_player.volume_db = _profile_music_volume_db(music_key, fallback_volume_db)
+	_music_player.volume_db = _profile_music_volume_db(music_key, fallback_volume_db) + _settings_volume_db(_music_volume_percent)
 	if _music_player.stream != null and not _music_player.playing:
 		_music_player.play()
 
@@ -186,7 +241,7 @@ func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) 
 	if player == null or player.stream == null:
 		return
 	_player_requested_volume_db[sound_name] = volume_db
-	player.volume_db = volume_db + _profile_trim_db(StringName(sound_name))
+	player.volume_db = volume_db + _profile_trim_db(StringName(sound_name)) + _settings_volume_db(_sfx_volume_percent)
 	player.pitch_scale = pitch_scale
 	player.play()
 
@@ -202,7 +257,7 @@ func chatter(volume_db: float = -12.0) -> void:
 		add_child(_chatter_player)
 	if not _chatter_player.playing:
 		_chatter_player.stream = _chatter_blip()
-		_chatter_player.volume_db = volume_db + _profile_trim_db(&"chatter")
+		_chatter_player.volume_db = volume_db + _profile_trim_db(&"chatter") + _settings_volume_db(_sfx_volume_percent)
 		_chatter_player.pitch_scale = 0.85 + randf_range(0.0, 0.35)
 		_chatter_player.play()
 
@@ -306,11 +361,11 @@ func _refresh_audio_volumes() -> void:
 		if player == null:
 			continue
 		var requested_volume_db := float(_player_requested_volume_db.get(sound_name, 0.0))
-		player.volume_db = requested_volume_db + _profile_trim_db(StringName(sound_name))
+		player.volume_db = requested_volume_db + _profile_trim_db(StringName(sound_name)) + _settings_volume_db(_sfx_volume_percent)
 	if _chatter_player != null:
-		_chatter_player.volume_db = _chatter_requested_volume_db + _profile_trim_db(&"chatter")
+		_chatter_player.volume_db = _chatter_requested_volume_db + _profile_trim_db(&"chatter") + _settings_volume_db(_sfx_volume_percent)
 	if _music_player != null and not _music_mix_key.is_empty():
-		_music_player.volume_db = _profile_music_volume_db(_music_mix_key, _music_fallback_volume_db)
+		_music_player.volume_db = _profile_music_volume_db(_music_mix_key, _music_fallback_volume_db) + _settings_volume_db(_music_volume_percent)
 
 
 func _profile_file_signature() -> int:
