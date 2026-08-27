@@ -6,6 +6,11 @@ extends Node2D
 		show_preview = value
 		_rebuild_preview()
 
+@export_enum("3:2", "16:10", "16:9") var preview_aspect := "3:2":
+	set(value):
+		preview_aspect = value
+		_rebuild_preview()
+
 var preview_nodes: Array[Node2D] = []
 
 func _ready() -> void:
@@ -29,17 +34,21 @@ func _rebuild_preview() -> void:
 		return
 
 	# These are editor-only Sprite2D nodes. Runtime gameplay hides this guide node.
-	# Runtime: HpBarFill (14, 0) + 48x16 / 2 + (0, -1).
-	_add_pixel_sprite("EditorPlayerHealth", Vector2(38, 7), "12/15", Color.WHITE, true)
-	# Runtime: EnemyHp (81, 147) + 80x16 / 2.
-	_add_pixel_sprite("EditorTargetHealth", Vector2(121, 155), "8/13", Color.WHITE, true)
-	_add_pixel_sprite("EditorGoldAmount", Vector2(72, 4), "0", Color("#ffcd75"), false)
-	_add_pixel_sprite("EditorRoomNumber", Vector2(208, 4), "R1", Color("#f4f4f4"), false)
-	_add_texture_sprite("EditorGold", "res://assets/artwork/GoldFresh2.png", Vector2(64, 4), Vector2(0, 0), Vector2(5, 5))
-	_add_texture_sprite("EditorTriangle", "res://assets/artwork/triangle55.png", Vector2(224, 64))
-	_add_texture_sprite("EditorSquare", "res://assets/artwork/square55.png", Vector2(219, 69))
-	_add_texture_sprite("EditorX", "res://assets/artwork/x55.png", Vector2(224, 74))
-	_add_texture_sprite("EditorCircle", "res://assets/artwork/circle55.png", Vector2(229, 69))
+	# Keep every preview coordinate routed through DisplayLayout so an editor
+	# screenshot and the live 3:2/16:10/16:9 presentation agree.
+	var view_size := Vector2(DisplayLayout.view_size(preview_aspect))
+	_add_pixel_sprite("EditorPlayerHealth", DisplayLayout.position_for(Vector2(38, 7), &"hp_mp", view_size), "12/15", Color.WHITE, true)
+	_add_pixel_sprite("EditorTargetHealth", DisplayLayout.position_for(Vector2(121, 155), &"target", view_size), "8/13", Color.WHITE, true)
+	_add_pixel_sprite("EditorGoldAmount", DisplayLayout.position_for(Vector2(212, 4), &"gold", view_size), "0", Color("#ffcd75"), false)
+	_add_pixel_sprite("EditorSoulAmount", DisplayLayout.position_for(Vector2(212, 11), &"souls", view_size), "0", Color("#d3a7ff"), false)
+	_add_pixel_sprite("EditorRoomNumber", Vector2(5, 146), "R1", Color("#f4f4f4"), false)
+	_add_pixel_sprite("EditorDungeonRun", Vector2(5, 153), "DUNGEON R1", Color("#f4f4f4"), false)
+	_add_pixel_sprite("EditorRunTimer", DisplayLayout.position_for(Vector2(199, 153), &"run_timer", view_size), "TIME 00:00", Color("#f4f4f4"), false)
+	_add_texture_sprite("EditorGold", "res://assets/artwork/GoldFresh2.png", DisplayLayout.position_for(Vector2(205, 2), &"gold", view_size), Vector2(0, 0), Vector2(5, 5))
+	_add_texture_sprite("EditorTriangle", "res://assets/artwork/triangle55.png", DisplayLayout.position_for(Vector2(224, 64), &"input_prompts", view_size))
+	_add_texture_sprite("EditorSquare", "res://assets/artwork/square55.png", DisplayLayout.position_for(Vector2(219, 69), &"input_prompts", view_size))
+	_add_texture_sprite("EditorX", "res://assets/artwork/x55.png", DisplayLayout.position_for(Vector2(224, 74), &"input_prompts", view_size))
+	_add_texture_sprite("EditorCircle", "res://assets/artwork/circle55.png", DisplayLayout.position_for(Vector2(229, 69), &"input_prompts", view_size))
 
 
 func _add_texture_sprite(node_name: String, path: String, sprite_position: Vector2, region_position := Vector2.ZERO, region_size := Vector2.ZERO) -> void:

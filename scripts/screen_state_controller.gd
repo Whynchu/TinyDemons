@@ -65,6 +65,11 @@ var hub_binding_panel: Panel = null
 var hub_binding_texts: Array[Sprite2D] = []
 var hub_binding_action_button: Button = null
 var hub_binding_message := ""
+var pause_resume_button: Button = null
+var pause_settings_button: Button = null
+var pause_quit_button: Button = null
+var pause_cursor_text: Sprite2D = null
+var pause_menu_buttons: Array[Button] = []
 var hub_item_name_text: Sprite2D = null
 var hub_item_list_texts: Array[Sprite2D] = []
 var hub_item_row_buttons: Array[Button] = []
@@ -76,9 +81,11 @@ var hub_fusion_increase_button: Button = null
 var title_overlay: ColorRect = null
 var title_start_button: Button = null
 var title_continue_button: Button = null
+var title_settings_button: Button = null
 var title_frame_timer := 0.0
 var title_screen_text: Sprite2D = null
 var title_start_text: Sprite2D = null
+var title_settings_text: Sprite2D = null
 var title_cursor_text: Sprite2D = null
 var title_transition_active := false
 var title_transition_timer := 0.0
@@ -118,6 +125,64 @@ var run_complete_button: Button = null
 var run_complete_cursor: Sprite2D = null
 var game_over_cursor_text: Sprite2D = null
 var player_palette_name := "blue"
+var settings_overlay: ColorRect = null
+var settings_title_text: Sprite2D = null
+var settings_row_labels: Array[Sprite2D] = []
+var settings_value_buttons: Array[Button] = []
+var settings_left_buttons: Array[Button] = []
+var settings_right_buttons: Array[Button] = []
+var settings_back_button: Button = null
+var settings_cursor_text: Sprite2D = null
+var settings_row := 0
+var settings_origin := &"title"
+var settings_interact_input_was_down := false
+var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
+
+
+func apply_display_layout(root: Object) -> void:
+	var display := root.get("display_controller") as DisplayController
+	display_view_size = Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE)
+	var game_over := root.get("game_over_overlay") as ColorRect
+	for overlay in [title_overlay, save_select_overlay, archetype_overlay, run_complete_overlay, game_over] as Array:
+		if overlay != null and bool(overlay.get_meta("display_full_view", false)):
+			overlay.size = display_view_size
+	if title_overlay != null:
+		var title := title_overlay.get_node_or_null("TitleText") as Sprite2D
+		if title != null and title.texture != null: title.position.x = (display_view_size.x - title.texture.get_width() * title.scale.x) * 0.5
+		var title_x := (display_view_size.x - 64.0) * 0.5
+		if title_start_button != null: title_start_button.position.x = title_x
+		if title_continue_button != null: title_continue_button.position.x = title_x
+		if title_settings_button != null: title_settings_button.position.x = title_x
+	if hub_overlay != null:
+		hub_overlay.position = (display_view_size - hub_overlay.size) * 0.5
+	if run_complete_overlay != null:
+		run_complete_overlay.position = (display_view_size - run_complete_overlay.size) * 0.5
+	if title_overlay != null and title_cursor_text != null:
+		var focused := root.get_viewport().gui_get_focus_owner() as Button
+		if focused != null: title_cursor_text.position = Vector2(focused.position.x - 8.0, focused.position.y + 4.0)
+	if archetype_overlay != null:
+		var cover := archetype_overlay.get_node_or_null("ArchetypeHoldCover") as ColorRect
+		if cover != null: cover.size = display_view_size
+	if settings_overlay != null:
+		settings_overlay.size = display_view_size
+		_position_settings_controls()
+
+
+func _view_size_for_parent(parent: Node) -> Vector2:
+	var current: Node = parent
+	while current != null:
+		var display := current.get("display_controller") as DisplayController
+		if display != null:
+			return Vector2(display.view_size_value())
+		current = current.get_parent()
+	return display_view_size
+
+
+func create_view_overlay(parent: Node, overlay_name: String, color: Color, z_index: int, visible: bool = true) -> ColorRect:
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_overlay(parent, overlay_name, display_view_size, color, z_index, visible)
+	overlay.set_meta("display_full_view", true)
+	return overlay
 
 func retro_button_alpha(timer: float) -> float:
 	var phase := fmod(timer, 2.4); var pulse := lerpf(1.0, 0.45, (phase - 0.6) / 0.9) if phase >= 0.6 and phase < 1.5 else lerpf(0.45, 1.0, (phase - 1.5) / 0.6) if phase >= 1.5 and phase < 2.1 else 1.0; return snappedf(snappedf(pulse, 0.08), 0.125)
@@ -143,6 +208,9 @@ func set_state(new_state: StringName) -> void:
 
 
 func update_title_flow(root: Object, delta: float) -> void:
+	if settings_overlay != null and settings_overlay.visible:
+		root.call("_update_settings_input")
+		return
 	if archetype_overlay != null and archetype_overlay.visible and not title_transition_active:
 		root.call("_update_archetype_input", delta)
 		return
@@ -173,11 +241,13 @@ func update_title_flow(root: Object, delta: float) -> void:
 	var frame_timer := title_frame_timer
 	var new_game := title_start_button
 	var continue_button := title_continue_button
+	var settings_button := title_settings_button
 	if new_game != null: new_game.modulate.a = retro_button_alpha(frame_timer); new_game.position.y = 102.0 + retro_button_bob(frame_timer)
 	if continue_button != null: continue_button.modulate.a = retro_button_alpha(frame_timer + 0.4); continue_button.position.y = 120.0 + retro_button_bob(frame_timer + 0.4)
+	if settings_button != null: settings_button.modulate.a = retro_button_alpha(frame_timer + 0.8); settings_button.position.y = 138.0 + retro_button_bob(frame_timer + 0.8)
 	var cursor := title_cursor_text
 	var focused := root.get_viewport().gui_get_focus_owner() as Button
-	var selected := continue_button if focused == continue_button and not continue_button.disabled else new_game
+	var selected := settings_button if focused == settings_button else continue_button if focused == continue_button and not continue_button.disabled else new_game
 	if focused != _last_title_focus:
 		var changed_from_existing := _last_title_focus != null
 		_last_title_focus = focused
@@ -283,6 +353,7 @@ func start_new_game(root: Object) -> void:
 	if title_start_text != null: title_start_text.visible = false
 	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
 	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
+	if title_settings_button != null: title_settings_button.visible = false; title_settings_button.release_focus()
 	if title_cursor_text != null: title_cursor_text.visible = false
 	archetype_overlay.visible = true; set_state(&"archetype")
 	archetype_overlay.modulate.a = 1.0
@@ -306,6 +377,7 @@ func start_save_select(root: Object, mode: String) -> void:
 	if title_start_text != null: title_start_text.visible = false
 	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
 	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
+	if title_settings_button != null: title_settings_button.visible = false; title_settings_button.release_focus()
 	if title_cursor_text != null: title_cursor_text.visible = false
 
 
@@ -498,12 +570,13 @@ func make_retro_button(label: String, button_position: Vector2, size: Vector2, p
 
 
 func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, return_title: Callable) -> Dictionary:
-	var overlay := create_overlay(parent, "GameOverOverlay", Vector2(240, 160), Color(0, 0, 0, 0.62), 0, false)
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_view_overlay(parent, "GameOverOverlay", Color(0, 0, 0, 0.62), 0, false)
 	overlay.modulate.a = 0.0
 	var title_texture := pixel_texture.call("GAME OVER", Color.WHITE) as Texture2D
-	create_sprite(overlay, "GameOverTitle", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))
+	create_sprite(overlay, "GameOverTitle", title_texture, Vector2((display_view_size.x - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))
 	var saved_texture := pixel_texture.call("PROGRESS SAVED", Color8(167, 240, 112)) as Texture2D
-	create_sprite(overlay, "GameOverSaved", saved_texture, Vector2((240.0 - saved_texture.get_width()) * 0.5, 88), false)
+	create_sprite(overlay, "GameOverSaved", saved_texture, Vector2((display_view_size.x - saved_texture.get_width()) * 0.5, 88), false)
 	var normal_style := StyleBoxFlat.new()
 	normal_style.bg_color = Color(0, 0, 0, 0)
 	normal_style.border_color = Color(0.72, 0.72, 0.72, 0.9)
@@ -512,18 +585,19 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 	focus_style.bg_color = Color(1, 1, 1, 0.12)
 	focus_style.border_color = Color.WHITE
 	focus_style.set_border_width_all(1)
-	var restart_button := _make_text_button("HUB", Vector2(99, 105), normal_style, focus_style, pixel_texture, restart)
-	var title_button := _make_text_button("TITLE", Vector2(99, 121), normal_style, focus_style, pixel_texture, return_title)
+	var restart_button := _make_text_button("HUB", Vector2((display_view_size.x - 42.0) * 0.5, 105), normal_style, focus_style, pixel_texture, restart)
+	var title_button := _make_text_button("TITLE", Vector2((display_view_size.x - 42.0) * 0.5, 121), normal_style, focus_style, pixel_texture, return_title)
 	overlay.add_child(restart_button)
 	overlay.add_child(title_button)
-	var cursor := create_sprite(overlay, "GameOverCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(91, 108), false)
+	var cursor := create_sprite(overlay, "GameOverCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 42.0) * 0.5 - 8.0, 108), false)
 	return {"overlay": overlay, "restart": restart_button, "title": title_button, "cursor": cursor}
 
 
 func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Callable) -> Dictionary:
+	display_view_size = _view_size_for_parent(parent)
 	var panel_size := Vector2(216, 152)
 	var overlay := create_overlay(parent, "RunCompleteOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.96), 6, false)
-	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
+	overlay.position = (display_view_size - panel_size) * 0.5
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = overlay.color
 	panel_style.border_color = Color8(255, 205, 117)
@@ -542,10 +616,11 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor}
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable()) -> Dictionary:
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable()) -> Dictionary:
+	display_view_size = _view_size_for_parent(parent)
 	var panel_size := Vector2(156, 116)
 	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.94), 3, false)
-	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
+	overlay.position = (_view_size_for_parent(parent) - panel_size) * 0.5
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = overlay.color
 	panel_style.border_color = Color(0.75, 0.78, 0.86, 0.9)
@@ -718,14 +793,31 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	binding_action_button.focus_mode = Control.FOCUS_NONE
 	if bind_element.is_valid(): binding_action_button.pressed.connect(bind_element)
 	overlay.add_child(binding_action_button)
+	var pause_buttons: Array[Button] = []
+	var pause_labels := ["RESUME", "SETTINGS", "QUIT TO TITLE"]
+	for index in pause_labels.size():
+		var pause_button := make_retro_button(pause_labels[index], Vector2((panel_size.x - 92.0) * 0.5, 43 + index * 17), Vector2(92, 13), pixel_texture)
+		pause_button.name = "Pause%s" % pause_labels[index].replace(" ", "")
+		pause_button.focus_mode = Control.FOCUS_ALL
+		if index == 0:
+			pause_button.pressed.connect(pause_resume if pause_resume.is_valid() else _start_run)
+		elif index == 1 and pause_settings.is_valid():
+			pause_button.pressed.connect(pause_settings)
+		elif index == 2 and pause_quit.is_valid():
+			pause_button.pressed.connect(pause_quit)
+		overlay.add_child(pause_button)
+		pause_buttons.append(pause_button)
 	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
 	cursor.visible = false
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "pause_buttons": pause_buttons, "cursor": cursor}
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile == null: return
+	if hub_pause_mode:
+		_update_pause_ui(pixel_texture)
+		return
 	var summary := hub_summary_text
 	var points := hub_points_text
 	var progression := root.get("progression_tuning") as ProgressionTuning
@@ -836,6 +928,52 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if start_button != null:
 		var start_label := start_button.get_child(0) as Sprite2D
 		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if hub_opened_from_npc else "START RUN", Color.WHITE) as Texture2D
+
+
+func _update_pause_ui(pixel_texture: Callable) -> void:
+	var hidden_nodes: Array[CanvasItem] = []
+	hidden_nodes.append(hub_summary_text)
+	hidden_nodes.append(hub_points_text)
+	hidden_nodes.append_array(hub_stat_texts)
+	hidden_nodes.append_array(hub_stat_buttons)
+	hidden_nodes.append_array(hub_stat_row_buttons)
+	hidden_nodes.append_array(hub_derived_texts)
+	hidden_nodes.append(hub_apply_button)
+	hidden_nodes.append(hub_cancel_button)
+	hidden_nodes.append(hub_auto_button)
+	hidden_nodes.append(hub_respec_button)
+	hidden_nodes.append(hub_item_name_text)
+	hidden_nodes.append_array(hub_item_list_texts)
+	hidden_nodes.append_array(hub_item_row_buttons)
+	hidden_nodes.append_array(hub_shop_price_texts)
+	hidden_nodes.append_array(hub_gear_choice_texts)
+	hidden_nodes.append_array(hub_gear_choice_buttons)
+	hidden_nodes.append_array(hub_gear_slot_buttons)
+	hidden_nodes.append_array(hub_gear_stat_texts)
+	hidden_nodes.append(hub_gear_stat_panel)
+	hidden_nodes.append_array(hub_item_detail_texts)
+	hidden_nodes.append(hub_item_action_button)
+	hidden_nodes.append(hub_fusion_decrease_button)
+	hidden_nodes.append(hub_fusion_increase_button)
+	hidden_nodes.append(hub_binding_panel)
+	hidden_nodes.append_array(hub_binding_texts)
+	hidden_nodes.append(hub_binding_action_button)
+	for node in hidden_nodes:
+		if node != null:
+			node.visible = false
+	for page_button in hub_page_buttons:
+		page_button.visible = false
+	var title := hub_overlay.get_node_or_null("HubTitle") as Sprite2D if hub_overlay != null else null
+	if title != null:
+		var title_texture := pixel_texture.call("PAUSE", Color.WHITE) as Texture2D
+		title.texture = title_texture
+		title.position.x = (hub_overlay.size.x - title_texture.get_width()) * 0.5
+	for index in pause_menu_buttons.size():
+		var button := pause_menu_buttons[index]
+		button.visible = index < 3
+		set_archetype_button_state(button, index == hub_menu_row, PaletteLibrary.accent(player_palette_name))
+	if hub_cursor_text != null:
+		hub_cursor_text.visible = false
 
 
 func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
@@ -1197,16 +1335,14 @@ func update_hub_input(root: Object) -> void:
 		else: root.call("_close_hub_to_run")
 		return
 	if hub_pause_mode:
-		if hub_gear_browsing:
-			if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed: root.call("_hub_item_action")
-			return
-		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+			hub_menu_row = posmod(hub_menu_row - 1, 3); update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
+			hub_menu_row = posmod(hub_menu_row + 1, 3); update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
-			var pause_action := hub_item_action_button
-			if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
+			if hub_menu_row >= 0 and hub_menu_row < pause_menu_buttons.size():
+				var pause_action := pause_menu_buttons[hub_menu_row]
+				if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
 		return
 	if previous_page_pressed:
 		root.call("_set_hub_page", page - 1); return
@@ -1262,37 +1398,214 @@ func update_hub_input(root: Object) -> void:
 		else: root.call("_return_to_title")
 
 
-func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool) -> Dictionary:
-	var overlay := create_overlay(parent, "TitleOverlay", Vector2(240, 160), Color.BLACK, 2)
+func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool, settings_callback: Callable = Callable()) -> Dictionary:
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_view_overlay(parent, "TitleOverlay", Color.BLACK, 2)
 	var title_texture := pixel_texture.call("TINY DEMONS", Color.WHITE) as Texture2D
-	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((240.0 - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
-	var new_game_button := make_retro_button("NEW GAME", Vector2(88, 102), Vector2(64, 14), pixel_texture)
+	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((display_view_size.x - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
+	var new_game_button := make_retro_button("NEW GAME", Vector2((display_view_size.x - 64.0) * 0.5, 102), Vector2(64, 14), pixel_texture)
 	new_game_button.pressed.connect(new_game_callback)
 	overlay.add_child(new_game_button)
-	var continue_button := make_retro_button("CONTINUE", Vector2(88, 120), Vector2(64, 14), pixel_texture)
+	var continue_button := make_retro_button("CONTINUE", Vector2((display_view_size.x - 64.0) * 0.5, 120), Vector2(64, 14), pixel_texture)
 	continue_button.pressed.connect(continue_callback)
 	continue_button.disabled = not has_profile
 	overlay.add_child(continue_button)
-	var cursor := create_sprite(overlay, "TitleCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(80, 106 if not has_profile else 124), false)
+	var settings_button := make_retro_button("SETTINGS", Vector2((display_view_size.x - 64.0) * 0.5, 138), Vector2(64, 14), pixel_texture)
+	if settings_callback.is_valid(): settings_button.pressed.connect(settings_callback)
+	overlay.add_child(settings_button)
+	var cursor := create_sprite(overlay, "TitleCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 106 if not has_profile else 124), false)
 	(continue_button if has_profile else new_game_button).grab_focus()
-	return {"overlay": overlay, "text": title_text, "new_game": new_game_button, "continue": continue_button, "start_text": new_game_button.get_child(0) as Sprite2D, "cursor": cursor}
+	return {"overlay": overlay, "text": title_text, "new_game": new_game_button, "continue": continue_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
+
+
+func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable) -> Dictionary:
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_view_overlay(parent, "SettingsOverlay", Color(0.015, 0.02, 0.035, 0.98), 8, false)
+	var title := create_sprite(overlay, "SettingsTitle", pixel_texture.call("SETTINGS", Color.WHITE) as Texture2D, Vector2.ZERO, false)
+	settings_title_text = title
+	var labels: Array[Sprite2D] = []
+	var values: Array[Button] = []
+	var left_buttons: Array[Button] = []
+	var right_buttons: Array[Button] = []
+	var row_labels := ["FULLSCREEN", "ASPECT", "PIXEL PERFECT", "MUSIC", "SFX"]
+	var row_y := 35.0
+	var center_x := display_view_size.x * 0.5
+	for index in row_labels.size():
+		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(center_x - 75.0, row_y + index * 17.0 + 3.0), false)
+		labels.append(label)
+		var left := make_retro_button("<", Vector2(center_x + 18.0, row_y + index * 17.0), Vector2(16, 12), pixel_texture)
+		left.name = "SettingsLeft%d" % index
+		left.focus_mode = Control.FOCUS_NONE
+		if adjust_callback.is_valid(): left.pressed.connect(adjust_callback.bind(index, -1))
+		overlay.add_child(left)
+		left_buttons.append(left)
+		var value := make_retro_button("", Vector2(center_x + 36.0, row_y + index * 17.0), Vector2(65, 12), pixel_texture)
+		value.name = "SettingsValue%d" % index
+		if adjust_callback.is_valid(): value.pressed.connect(adjust_callback.bind(index, 1))
+		overlay.add_child(value)
+		values.append(value)
+		var right := make_retro_button(">", Vector2(center_x + 103.0, row_y + index * 17.0), Vector2(16, 12), pixel_texture)
+		right.name = "SettingsRight%d" % index
+		right.focus_mode = Control.FOCUS_NONE
+		if adjust_callback.is_valid(): right.pressed.connect(adjust_callback.bind(index, 1))
+		overlay.add_child(right)
+		right_buttons.append(right)
+	var back := make_retro_button("BACK", Vector2(center_x - 26.0, 133), Vector2(52, 13), pixel_texture)
+	back.name = "SettingsBack"
+	back.pressed.connect(close_callback)
+	overlay.add_child(back)
+	var cursor := create_sprite(overlay, "SettingsCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2.ZERO, false)
+	settings_row_labels = labels
+	settings_value_buttons = values
+	settings_left_buttons = left_buttons
+	settings_right_buttons = right_buttons
+	settings_back_button = back
+	settings_cursor_text = cursor
+	_position_settings_controls()
+	return {"overlay": overlay, "title": title, "labels": labels, "values": values, "left": left_buttons, "right": right_buttons, "back": back, "cursor": cursor}
+
+
+func _position_settings_controls() -> void:
+	if settings_overlay == null:
+		return
+	var center_x := display_view_size.x * 0.5
+	if settings_title_text != null and settings_title_text.texture != null:
+		settings_title_text.position = Vector2((display_view_size.x - settings_title_text.texture.get_width()) * 0.5, 13)
+	for index in settings_row_labels.size():
+		var y := 35.0 + index * 17.0
+		settings_row_labels[index].position = Vector2(center_x - 75.0, y + 3.0)
+		settings_left_buttons[index].position = Vector2(center_x + 18.0, y)
+		settings_value_buttons[index].position = Vector2(center_x + 36.0, y)
+		settings_right_buttons[index].position = Vector2(center_x + 103.0, y)
+	if settings_back_button != null:
+		settings_back_button.position = Vector2(center_x - 26.0, 133)
+	_update_settings_cursor()
+
+
+func open_settings(root: Object, origin: StringName) -> void:
+	if settings_overlay == null:
+		return
+	settings_origin = origin
+	settings_row = 0
+	settings_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
+	settings_overlay.visible = true
+	settings_overlay.modulate.a = 1.0
+	set_state(&"settings")
+	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+	if not settings_value_buttons.is_empty():
+		settings_value_buttons[settings_row].grab_focus()
+
+
+func close_settings(root: Object) -> void:
+	if settings_overlay != null:
+		settings_overlay.visible = false
+	settings_interact_input_was_down = false
+	if settings_origin == &"pause":
+		if hub_overlay != null:
+			hub_overlay.visible = true
+		hub_pause_mode = true
+		hub_menu_row = 1
+		set_state(&"hub")
+		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		if pause_settings_button != null: pause_settings_button.grab_focus()
+	else:
+		if title_overlay != null: title_overlay.visible = true
+		set_state(&"title")
+		var title_focus := title_continue_button if title_continue_button != null and not title_continue_button.disabled else title_start_button
+		if title_focus != null: title_focus.grab_focus()
+		if title_settings_button != null: title_settings_button.visible = true
+	root.call("_play_sound", "ui_decline", 0.0, 1.0)
+
+
+func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
+	var service := root.get("settings_service") as SettingsService
+	if service == null or settings_value_buttons.is_empty():
+		return
+	var values := service.values()
+	var value_labels := ["ON" if bool(values.get("fullscreen", false)) else "OFF", str(values.get("aspect", "3:2")), "ON" if bool(values.get("pixel_perfect", true)) else "OFF", str(values.get("music_volume", 100)), str(values.get("sfx_volume", 100))]
+	var highlight := PaletteLibrary.accent(String(root.get("current_player_palette_name")))
+	for index in settings_value_buttons.size():
+		var value_button := settings_value_buttons[index]
+		var value_text := value_button.get_child(0) as Sprite2D
+		if value_text != null: value_text.texture = pixel_texture.call(value_labels[index], Color.WHITE) as Texture2D
+		set_archetype_button_state(value_button, settings_row == index, highlight)
+		set_archetype_button_state(settings_left_buttons[index], false, highlight)
+		set_archetype_button_state(settings_right_buttons[index], false, highlight)
+	_update_settings_cursor()
+
+
+func adjust_setting(root: Object, row: int, direction: int) -> void:
+	var service := root.get("settings_service") as SettingsService
+	if service == null:
+		return
+	settings_row = clampi(row, 0, 4)
+	var current: Variant
+	match settings_row:
+		0:
+			current = not bool(service.get_setting(&"fullscreen", false))
+			service.set_setting(&"fullscreen", current)
+		1:
+			var aspects := ["3:2", "16:10", "16:9"]
+			var current_index := aspects.find(str(service.get_setting(&"aspect", "3:2")))
+			service.set_setting(&"aspect", aspects[posmod(current_index + (1 if direction >= 0 else -1), aspects.size())])
+		2:
+			current = not bool(service.get_setting(&"pixel_perfect", true))
+			service.set_setting(&"pixel_perfect", current)
+		3:
+			service.set_setting(&"music_volume", int(service.get_setting(&"music_volume", 100)) + (10 if direction >= 0 else -10))
+		4:
+			service.set_setting(&"sfx_volume", int(service.get_setting(&"sfx_volume", 100)) + (10 if direction >= 0 else -10))
+	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func _update_settings_cursor() -> void:
+	if settings_cursor_text == null or settings_value_buttons.is_empty():
+		return
+	var row := clampi(settings_row, 0, settings_value_buttons.size() - 1)
+	var selected := settings_value_buttons[row]
+	settings_cursor_text.visible = true
+	settings_cursor_text.position = Vector2(selected.position.x - 8.0, selected.position.y + 4.0)
+
+
+func update_settings_input(root: Object) -> void:
+	if settings_overlay == null or not settings_overlay.visible:
+		return
+	if bool(root.call("_is_ui_cancel_just_pressed")):
+		close_settings(root)
+		return
+	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+		settings_row = posmod(settings_row - 1, settings_value_buttons.size())
+		update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
+		settings_row = posmod(settings_row + 1, settings_value_buttons.size())
+		update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")):
+		adjust_setting(root, settings_row, -1)
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+		adjust_setting(root, settings_row, 1)
+	elif bool(root.call("_is_ui_accept_just_pressed")):
+		if settings_row >= 0 and settings_row < settings_value_buttons.size():
+			settings_value_buttons[settings_row].pressed.emit()
 
 func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), preview_texture: Callable = Callable()) -> ColorRect:
-	var overlay := create_overlay(parent, "SaveSelectOverlay", Vector2(240, 160), Color.BLACK, 4, false)
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_view_overlay(parent, "SaveSelectOverlay", Color.BLACK, 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	var _title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2(88, 42), false)
-	var _cursor := create_sprite(overlay, "SaveSelectCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(55, 70), false)
-	var prompt := create_sprite(overlay, "OverwritePrompt", pixel_texture.call("OVERWRITE?  YES / NO", Color.WHITE) as Texture2D, Vector2(70, 126), false)
+	var _title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 64.0) * 0.5, 42), false)
+	var _cursor := create_sprite(overlay, "SaveSelectCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 130.0) * 0.5, 70), false)
+	var prompt := create_sprite(overlay, "OverwritePrompt", pixel_texture.call("OVERWRITE?  YES / NO", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 100.0) * 0.5, 126), false)
 	prompt.visible = false
-	var prompt_cursor := create_sprite(overlay, "OverwriteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(99, 140), false); prompt_cursor.visible = false
-	var yes := make_retro_button("YES", Vector2(105, 137), Vector2(24, 12), pixel_texture); yes.name = "OverwriteYes"; yes.visible = false; yes.pressed.connect(overwrite_yes); overlay.add_child(yes)
-	var no := make_retro_button("NO", Vector2(135, 137), Vector2(20, 12), pixel_texture); no.name = "OverwriteNo"; no.visible = false; no.pressed.connect(overwrite_no); overlay.add_child(no)
+	var prompt_cursor := create_sprite(overlay, "OverwriteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 42.0) * 0.5, 140), false); prompt_cursor.visible = false
+	var yes := make_retro_button("YES", Vector2((display_view_size.x - 30.0) * 0.5, 137), Vector2(24, 12), pixel_texture); yes.name = "OverwriteYes"; yes.visible = false; yes.pressed.connect(overwrite_yes); overlay.add_child(yes)
+	var no := make_retro_button("NO", Vector2((display_view_size.x + 30.0) * 0.5, 137), Vector2(20, 12), pixel_texture); no.name = "OverwriteNo"; no.visible = false; no.pressed.connect(overwrite_no); overlay.add_child(no)
 	for slot in ProfileSaveService.SLOT_COUNT:
 		var profile := ProfileSaveService.load_profile_for_slot(slot)
 		var label := "SAVE %d  EMPTY" % (slot + 1)
 		if profile != null and profile.has_started:
 			label = "SAVE %d  LV %d  G %d" % [slot + 1, profile.level, profile.gold]
-		var button := make_retro_button(label, Vector2(64, 66 + slot * 20), Vector2(112, 14), pixel_texture)
+		var button := make_retro_button(label, Vector2((display_view_size.x - 112.0) * 0.5, 66 + slot * 20), Vector2(112, 14), pixel_texture)
 		button.disabled = false
 		button.set_meta("save_slot", slot)
 		button.pressed.connect(select_callback.bind(slot))
@@ -1301,7 +1614,7 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 			var demon := Sprite2D.new()
 			demon.name = "Save%dPreview" % slot
 			demon.texture = preview_texture.call(profile.palette_name) as Texture2D
-			demon.position = Vector2(58, 73 + slot * 20)
+			demon.position = Vector2((display_view_size.x - 112.0) * 0.5 - 6.0, 73 + slot * 20)
 			demon.scale = Vector2.ONE * 0.55
 			demon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			overlay.add_child(demon)
@@ -1309,7 +1622,8 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 
 
 func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable) -> Dictionary:
-	var overlay := create_overlay(parent, "ArchetypeOverlay", Vector2(240, 160), Color.BLACK, 1, false)
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_view_overlay(parent, "ArchetypeOverlay", Color.BLACK, 1, false)
 	var preview := create_sprite(overlay, "ArchetypePreview", null, Vector2(0, 43), false, Vector2(1.5, 1.5))
 	var name_text := create_sprite(overlay, "ArchetypeName", null, Vector2.ZERO, false)
 	var left_buttons: Array[Button] = []
@@ -1322,12 +1636,12 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 	# keep that obsolete row hidden.
 	for button in left_buttons: button.visible = false
 	for button in right_buttons: button.visible = false
-	var left_type := make_archetype_arrow(overlay, -1, Vector2(75, 33), shift_type.bind(-1), pixel_texture)
-	var right_type := make_archetype_arrow(overlay, 1, Vector2(155, 33), shift_type.bind(1), pixel_texture)
-	var start_button := make_retro_button("START", Vector2(99, 104), Vector2(42, 14), pixel_texture)
+	var left_type := make_archetype_arrow(overlay, -1, Vector2(display_view_size.x * 0.5 - 45.0, 33), shift_type.bind(-1), pixel_texture)
+	var right_type := make_archetype_arrow(overlay, 1, Vector2(display_view_size.x * 0.5 + 35.0, 33), shift_type.bind(1), pixel_texture)
+	var start_button := make_retro_button("START", Vector2((display_view_size.x - 42.0) * 0.5, 104), Vector2(42, 14), pixel_texture)
 	start_button.pressed.connect(start_callback)
 	overlay.add_child(start_button)
-	var hold_cover := create_overlay(overlay, "ArchetypeHoldCover", Vector2(240, 160), Color.BLACK, 10)
+	var hold_cover := create_view_overlay(overlay, "ArchetypeHoldCover", Color.BLACK, 10)
 	return {"overlay": overlay, "preview": preview, "name": name_text, "left": left_buttons, "right": right_buttons, "type_left": left_type, "type_right": right_type, "start": start_button, "cover": hold_cover}
 
 
@@ -1340,9 +1654,10 @@ func make_archetype_arrow(parent: Node, side: int, button_position: Vector2, pre
 
 
 func build_loading(parent: Node, pixel_texture: Callable) -> Dictionary:
-	var overlay := create_overlay(parent, "LoadingScreen", Vector2(240, 160), Color.BLACK, 4090, false)
+	display_view_size = _view_size_for_parent(parent)
+	var overlay := create_view_overlay(parent, "LoadingScreen", Color.BLACK, 4090, false)
 	var text := create_sprite(overlay, "LoadingText", pixel_texture.call("LOADING", Color.WHITE) as Texture2D, Vector2.ZERO, false, Vector2.ONE, 4091)
-	text.position = Vector2(240, 160) - text.texture.get_size() - Vector2(4, 4)
+	text.position = display_view_size - text.texture.get_size() - Vector2(4, 4)
 	return {"overlay": overlay, "text": text}
 
 
@@ -1358,7 +1673,7 @@ func update_loading(overlay: ColorRect, text: Sprite2D, fading: bool, timer: flo
 	timer += delta
 	var labels := ["LOADING", "LOADING.", "LOADING..", "LOADING..."]
 	text.texture = pixel_texture.call(labels[mini(int(timer / 0.28) % 4, 3)], Color.WHITE) as Texture2D
-	text.position = Vector2(240, 160) - text.texture.get_size() - Vector2(4, 4)
+	text.position = display_view_size - text.texture.get_size() - Vector2(4, 4)
 	return {"fading": fading, "timer": timer, "finished": false}
 
 

@@ -101,6 +101,9 @@ func tick(root: Object, delta: float) -> void:
 					(child as Button).pressed.emit()
 					break
 		return
+	if ssc.settings_overlay != null and ssc.settings_overlay.visible:
+		root.call("_update_settings_input")
+		return
 	var title_overlay := ssc.title_overlay; var archetype_overlay := ssc.archetype_overlay
 	if ssc.title_transition_active or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
 		root.call("_update_title_screen", delta)

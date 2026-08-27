@@ -112,6 +112,9 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 @onready var player_stats: StatsComponent = $Actors/TinyDemon/Stats
 var player_equipment: EquipmentComponent = null
 var player_profile: PlayerProfile = null
+var settings_service: SettingsService = null
+var display_controller: DisplayController = null
+var display_world_offset := Vector2.ZERO
 var run_state: RunState = null
 var current_dungeon_seed := 0
 var has_persistent_profile := false
@@ -526,8 +529,46 @@ func _build_run_complete_ui() -> void:
 	screen_state_controller.run_complete_texts = controls["lines"] as Array[Sprite2D]
 	screen_state_controller.run_complete_button = controls["return"] as Button
 	screen_state_controller.run_complete_cursor = controls["cursor"] as Sprite2D
+func _build_settings_ui() -> void:
+	var controls: Dictionary = screen_state_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"))
+	screen_state_controller.settings_overlay = controls["overlay"] as ColorRect
+	screen_state_controller.settings_title_text = controls["title"] as Sprite2D
+	screen_state_controller.settings_row_labels = controls["labels"] as Array[Sprite2D]
+	screen_state_controller.settings_value_buttons = controls["values"] as Array[Button]
+	screen_state_controller.settings_left_buttons = controls["left"] as Array[Button]
+	screen_state_controller.settings_right_buttons = controls["right"] as Array[Button]
+	screen_state_controller.settings_back_button = controls["back"] as Button
+	screen_state_controller.settings_cursor_text = controls["cursor"] as Sprite2D
+func _open_settings_from_title() -> void:
+	screen_state_controller.open_settings(self, &"title")
+func _open_settings_from_pause() -> void:
+	screen_state_controller.open_settings(self, &"pause")
+func _adjust_setting(row: int, direction: int) -> void:
+	screen_state_controller.adjust_setting(self, row, direction)
+func _update_settings_input() -> void:
+	screen_state_controller.update_settings_input(self)
+func _close_settings() -> void:
+	screen_state_controller.close_settings(self)
+func _quit_to_title_from_pause() -> void:
+	if screen_state_controller.hub_overlay != null:
+		screen_state_controller.hub_overlay.visible = false
+	call("_return_to_title")
 func _build_hub_ui() -> void:
 	hub_flow_controller.call("build_hub_ui", self)
+func _on_display_view_size_changed(_view_size: Vector2i = DisplayLayout.NATIVE_SIZE) -> void:
+	if hud_controller != null and hud_controller.has_method("apply_display_layout"):
+		hud_controller.apply_display_layout(self)
+	if screen_state_controller != null and screen_state_controller.has_method("apply_display_layout"):
+		screen_state_controller.apply_display_layout(self)
+	var view_size := Vector2(_view_size)
+	if scene_transition_overlay != null:
+		scene_transition_overlay.size = view_size
+	if loading_screen_overlay != null:
+		loading_screen_overlay.size = view_size
+		if loading_screen_text != null and loading_screen_text.texture != null:
+			loading_screen_text.position = view_size - loading_screen_text.texture.get_size() - Vector2(4, 4)
+	if touch_controls_layer != null and touch_controls_layer.has_method("refresh_layout"):
+		touch_controls_layer.refresh_layout()
 func _show_hub(from_npc: bool = false, pause_mode: bool = false) -> void:
 	hub_flow_controller.call("show_hub", self, from_npc, pause_mode)
 func _open_pause_menu() -> void:
@@ -555,6 +596,7 @@ func _input_context() -> int:
 	if ssc.run_complete_overlay != null and ssc.run_complete_overlay.visible:
 		return InputRouter.Context.MENU
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible: return InputRouter.Context.MENU
+	if ssc.settings_overlay != null and ssc.settings_overlay.visible: return InputRouter.Context.MENU
 	if ssc.title_overlay != null and ssc.title_overlay.visible: return InputRouter.Context.MENU
 	if ssc.archetype_overlay != null and ssc.archetype_overlay.visible: return InputRouter.Context.MENU
 	if ssc.hub_overlay != null and ssc.hub_overlay.visible: return InputRouter.Context.HUB
@@ -710,7 +752,9 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 		screen_state_controller.title_particle_layer = Node2D.new(); screen_state_controller.title_particle_layer.name = "TitleParticleLayer"; screen_state_controller.title_particle_layer.z_index = 10; ui.add_child(screen_state_controller.title_particle_layer)
 	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_button_frame_breakup() -> void: screen_state_controller.spawn_button_frame_breakup(screen_state_controller.title_start_button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
-func _build_scene_transition() -> void: scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", Vector2(240, 160), Color.BLACK, 200); scene_transition_overlay.modulate.a = 0.0
+func _build_scene_transition() -> void:
+	var view_size := Vector2(display_controller.view_size_value()) if display_controller != null else Vector2(DisplayLayout.NATIVE_SIZE)
+	scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", view_size, Color.BLACK, 200); scene_transition_overlay.set_meta("display_full_view", true); scene_transition_overlay.modulate.a = 0.0
 func _begin_scene_transition() -> void:
 	if scene_transition_active or scene_transition_overlay == null: return
 	scene_transition_active = true; screen_state_controller.set_state(&"transition"); scene_transition_timer = 0.0; scene_transition_overlay.visible = true

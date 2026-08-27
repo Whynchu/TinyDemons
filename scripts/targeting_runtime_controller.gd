@@ -121,7 +121,7 @@ func update_puzzle_torch_target_ui(root: Object, torch: Sprite2D) -> void:
 	var name_text := root.get("target_name_text") as Sprite2D
 	name_text.texture = root.call("_pixel_name_texture", "ENTRY ORB", Color.WHITE) as Texture2D
 	name_text.centered = true
-	name_text.position = Vector2(120, 148)
+	name_text.position = (root.get("hud_controller") as HudController).target_name_position()
 	(root.get("target_health_text") as Sprite2D).visible = false
 	var palette := str(torch.get_meta("puzzle_torch_palette", "grey"))
 	var color := PaletteLibrary.normal(palette)

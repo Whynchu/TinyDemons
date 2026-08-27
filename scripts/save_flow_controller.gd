@@ -5,12 +5,14 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
 
 func build_title_screen(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_title(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_start_new_game"), Callable(root, "_continue_game"), root.has_persistent_profile)
+	var controls: Dictionary = root.screen_state_controller.build_title(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_start_new_game"), Callable(root, "_continue_game"), root.has_persistent_profile, Callable(root, "_open_settings_from_title"))
 	root.screen_state_controller.title_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.title_screen_text = controls["text"] as Sprite2D
 	root.screen_state_controller.title_start_button = controls["new_game"] as Button
 	root.screen_state_controller.title_continue_button = controls["continue"] as Button
+	root.screen_state_controller.title_settings_button = controls["settings"] as Button
 	root.screen_state_controller.title_start_text = controls["start_text"] as Sprite2D
+	root.screen_state_controller.title_settings_text = controls["settings_text"] as Sprite2D
 	root.screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D
 	build_archetype_screen(root)
 
@@ -61,7 +63,10 @@ func update_save_select_cursor(root: Object) -> void:
 		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == root.screen_state_controller.save_select_index:
 			(child as Button).grab_focus()
 	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
-	if cursor != null: cursor.position = Vector2(55, 70 + root.screen_state_controller.save_select_index * 20)
+	if cursor != null:
+		var display := root.get("display_controller") as DisplayController
+		var view_width := float(display.view_size_value().x) if display != null else 240.0
+		cursor.position = Vector2((view_width - 130.0) * 0.5, 70 + root.screen_state_controller.save_select_index * 20)
 
 
 func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
@@ -97,7 +102,9 @@ func set_overwrite_prompt(root: Object, active: bool) -> void:
 	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null:
 		cursor.visible = active
-		cursor.position = Vector2(99, 140)
+		var display := root.get("display_controller") as DisplayController
+		var view_width := float(display.view_size_value().x) if display != null else 240.0
+		cursor.position = Vector2((view_width - 42.0) * 0.5, 140)
 
 
 func cancel_overwrite(root: Object) -> void:
@@ -156,7 +163,11 @@ func reset_runtime_for_new_save(root: Object) -> void:
 
 func update_overwrite_cursor(root: Object) -> void:
 	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
-	if cursor != null: cursor.position = Vector2(99 if root.screen_state_controller.save_overwrite_choice == 0 else 129, 140)
+	if cursor != null:
+		var display := root.get("display_controller") as DisplayController
+		var view_width := float(display.view_size_value().x) if display != null else 240.0
+		var base_x := (view_width - 42.0) * 0.5
+		cursor.position = Vector2(base_x if root.screen_state_controller.save_overwrite_choice == 0 else base_x + 30.0, 140)
 
 
 func close_save_select(root: Object) -> void:
@@ -169,6 +180,7 @@ func close_save_select(root: Object) -> void:
 	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
 	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
+	if root.screen_state_controller.title_settings_button != null: root.screen_state_controller.title_settings_button.visible = true
 	if root.screen_state_controller.title_cursor_text != null: root.screen_state_controller.title_cursor_text.visible = true
 	root.screen_state_controller.title_transition_active = false
 	root.screen_state_controller.pending_title_destination = ""
@@ -188,6 +200,7 @@ func cancel_character_creation(root: Object) -> void:
 	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
 	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
+	if root.screen_state_controller.title_settings_button != null: root.screen_state_controller.title_settings_button.visible = true
 	if root.screen_state_controller.title_cursor_text != null: root.screen_state_controller.title_cursor_text.visible = true
 	root.screen_state_controller.title_transition_active = false
 	root.screen_state_controller.pending_title_destination = ""
@@ -285,11 +298,13 @@ func select_archetype_menu_row(root: Object, row: int) -> void:
 
 
 func update_archetype_screen(root: Object) -> void:
+	var display := root.get("display_controller") as DisplayController
+	var view_width := float(display.view_size_value().x) if display != null else 240.0
 	var flame: StringName = AspectCatalogScript.STARTER_FLAMES[root.screen_state_controller.starter_flame_index]
 	var flame_name: String = AspectCatalogScript.display_name(flame)
 	var flame_palette: String = AspectCatalogScript.palette_for_flame(flame)
 	root.screen_state_controller.archetype_name_text.texture = root.call("_pixel_text_texture", flame_name, PaletteLibrary.normal(flame_palette) if root.screen_state_controller.archetype_menu_row == 0 else Color.WHITE)
-	root.screen_state_controller.archetype_name_text.position = Vector2((240.0 - root.screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
+	root.screen_state_controller.archetype_name_text.position = Vector2((view_width - root.screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
 	var colors: Array[String] = [flame_palette]
 	if not root.player_animation_component.idle_frames.is_empty():
 		if root.screen_state_controller.archetype_preview_palette != colors[0] or root.screen_state_controller.archetype_preview_frames.size() != root.player_animation_component.idle_frames.size():
@@ -305,7 +320,9 @@ func update_archetype_preview_animation(root: Object) -> void:
 	var frame_time: float = maxf(root.player_tuning.idle_frame_time, 0.01)
 	var frame_index: int = posmod(int(root.screen_state_controller.archetype_frame_timer / frame_time), root.screen_state_controller.archetype_preview_frames.size())
 	root.screen_state_controller.archetype_preview.texture = root.screen_state_controller.archetype_preview_frames[frame_index]
-	root.screen_state_controller.archetype_preview.position = Vector2((240.0 - root.screen_state_controller.archetype_preview.texture.get_width() * root.screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
+	var display := root.get("display_controller") as DisplayController
+	var view_width := float(display.view_size_value().x) if display != null else 240.0
+	root.screen_state_controller.archetype_preview.position = Vector2((view_width - root.screen_state_controller.archetype_preview.texture.get_width() * root.screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
 
 
 func update_archetype_button_styles(root: Object) -> void:

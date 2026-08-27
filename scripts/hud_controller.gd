@@ -29,6 +29,52 @@ var gold_animation_frames: Array[Texture2D] = []
 var gold_animation_timer := 0.0
 var button_hud_sprites: Array[Sprite2D] = []
 var cooldown_hud: Dictionary = {}
+var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
+
+
+func target_name_position() -> Vector2:
+	return DisplayLayout.position_for(Vector2(120, 148), &"target_name", display_view_size)
+
+
+func apply_display_layout(root: Object) -> void:
+	var display := root.get("display_controller") as DisplayController
+	display_view_size = Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE)
+	var ui := root.get("ui") as Node
+	if ui == null:
+		return
+	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
+	if player_hud != null:
+		_set_layout_position(player_hud.get_node_or_null("PlayerStatus/Health") as Node2D, &"hp_mp")
+		_set_layout_position(player_hud.get_node_or_null("PlayerStatus/Mana") as Node2D, &"hp_mp")
+		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
+		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
+		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")
+	_set_layout_position(root.get("target_health_bar") as Sprite2D, &"target")
+	_set_layout_position(root.get("target_health_fill") as Sprite2D, &"target")
+	_set_layout_position(root.get("target_health_damage_fill") as Sprite2D, &"target")
+	_set_layout_position(root.get("target_name_text") as Sprite2D, &"target_name", Vector2(120, 148))
+	_set_layout_position(root.get("target_health_text") as Sprite2D, &"target")
+	_set_layout_position(root.get("focus_label") as Sprite2D, &"focus", Vector2(120, 148))
+	_set_layout_position(root.get("focus_label_base") as Sprite2D, &"focus", Vector2(120, 148))
+	for button in button_hud_sprites:
+		_set_layout_position(button, &"input_prompts")
+	for key in cooldown_hud.keys():
+		var control := cooldown_hud[key] as Sprite2D
+		if control != null:
+			_set_layout_position(control, &"cooldowns")
+
+
+func _set_layout_position(node: Node2D, anchor: StringName, base_override: Vector2 = Vector2.INF) -> void:
+	if node == null:
+		return
+	var base := base_override
+	if base == Vector2.INF:
+		if node.has_meta("display_layout_base_position"):
+			base = node.get_meta("display_layout_base_position") as Vector2
+		else:
+			base = node.position
+			node.set_meta("display_layout_base_position", base)
+	node.position = DisplayLayout.position_for(base, anchor, display_view_size)
 
 
 func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_fill: CanvasItem, target_fill: CanvasItem, target_health_text: CanvasItem, visible: bool) -> void:
@@ -43,7 +89,7 @@ func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_
 
 func update_target_ui(target: Sprite2D, target_name: Sprite2D, _target_bar: Sprite2D, target_damage_fill: Sprite2D, target_fill: Sprite2D, target_health_text: Sprite2D, bar_size: Vector2, display_name: Callable, max_health_for: Callable, health_for: Callable, display_health_for: Callable, pixel_name: Callable, pixel_number: Callable, set_values: Callable) -> Vector2:
 	if target == null: return bar_size
-	target_name.texture = pixel_name.call(display_name.call(target), Color.WHITE); target_name.centered = true; target_name.position = Vector2(120, 148)
+	target_name.texture = pixel_name.call(display_name.call(target), Color.WHITE); target_name.centered = true; target_name.position = target_name_position()
 	var fill_texture := target_health_fill_textures.get(target, target_fill.texture) as Texture2D
 	if fill_texture != null:
 		target_fill.texture = fill_texture

@@ -32,6 +32,10 @@ func _add_runtime_node(root: GameplayState, script: Script, node_name: StringNam
 func initialize(root: GameplayState) -> void:
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
+	root.settings_service = _add_runtime_node(root, SettingsService, "SettingsService") as SettingsService
+	root.settings_service.load_settings()
+	root.display_controller = _add_runtime_node(root, DisplayController, "DisplayController") as DisplayController
+	root.display_controller.initialize(root, root.settings_service)
 	root.input_router = _add_runtime_node(root, InputRouter, "InputRouter") as InputRouter
 	var input_device_tracker := _add_runtime_node(root, INPUT_DEVICE_TRACKER_SCRIPT, "InputDeviceTracker") as InputDeviceTracker
 	var touch_controls_layer := _add_runtime_node(root, TOUCH_CONTROLS_LAYER_SCRIPT, "TouchControlsLayer") as TouchControlsLayer
@@ -82,6 +86,7 @@ func initialize(root: GameplayState) -> void:
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
 	root.dungeon_minimap_controller = _add_runtime_node(root, DUNGEON_MINIMAP_CONTROLLER_SCRIPT, "DungeonMinimapController", root.ui) as Node
 	root.sound_manager = _add_runtime_node(root, SoundManager, "SoundManager") as SoundManager
+	root.sound_manager.configure_settings(root.settings_service)
 	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
 	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
 	root.chroma_pickup_controller = _add_runtime_node(root, ChromaPickupController, "ChromaPickupController") as ChromaPickupController
@@ -149,7 +154,7 @@ func initialize(root: GameplayState) -> void:
 	root.set("boot_active", true)
 	await root.get_tree().process_frame
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_hub_ui"); root.call("_build_scene_transition")
+	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
 	_initialize_walkable_area(root, root.EDGE_MARGIN, root.SLIME_EDGE_PADDING)
@@ -214,6 +219,7 @@ func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> vo
 	if screens.title_start_text != null: screens.title_start_text.visible = true
 	if screens.title_start_button != null: screens.title_start_button.visible = true
 	if screens.title_continue_button != null: screens.title_continue_button.visible = not screens.title_continue_button.disabled
+	if screens.title_settings_button != null: screens.title_settings_button.visible = true
 	if screens.title_cursor_text != null: screens.title_cursor_text.visible = true
 	screens.title_transition_active = false
 	screens.pending_title_destination = ""

@@ -106,6 +106,11 @@ func is_active() -> bool:
 	return _touch_input_enabled
 
 
+func refresh_layout() -> void:
+	if _built:
+		_update_layout()
+
+
 func movement_vector() -> Vector2:
 	return _stick_vector if _controls_visible else Vector2.ZERO
 
@@ -595,6 +600,9 @@ func _find_visible_control(node: Node, target_name: StringName) -> Control:
 
 
 func _content_size() -> Vector2:
+	var display := get_parent().get("display_controller") as DisplayController if get_parent() != null else null
+	if display != null:
+		return display.view_size_as_vector()
 	return Vector2(
 		float(ProjectSettings.get_setting("display/window/size/viewport_width", int(BASE_CONTENT_SIZE.x))),
 		float(ProjectSettings.get_setting("display/window/size/viewport_height", int(BASE_CONTENT_SIZE.y))))
