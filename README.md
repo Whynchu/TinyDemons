@@ -37,6 +37,10 @@ and decorative bars expanding to fit, title/pause settings panel with
 fullscreen and volume sliders, pause quit-to-title) is implemented and tracked in
 [`docs/modular-display-and-settings-plan.md`](docs/modular-display-and-settings-plan.md).
 
+The current combat slice adds the scene-authored Spin Attack and held-button
+charge attack; its editor hitbox workflow and tuning contract are tracked in
+[`docs/spin-and-charge-attacks-plan.md`](docs/spin-and-charge-attacks-plan.md).
+
 Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
 status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
 execution plan. The completed Combat & Economy work remains documented in
