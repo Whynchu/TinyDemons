@@ -24,6 +24,7 @@ const STICK_FRACTION := 0.26
 const STICK_MIN := 44.0
 const STICK_MAX := 140.0
 const MARGIN_FRACTION := 0.03
+const TAP_INTERACT_ACTION := &"tap_interact"
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
 const BUTTON_GRID_POSITIONS := {
@@ -42,6 +43,7 @@ var _button_nodes: Dictionary = {}
 var _pressed_actions: Dictionary = {}
 var _press_latches: Dictionary = {}
 var _finger_actions: Dictionary = {}
+var _tap_interact_origins: Dictionary = {}
 var _menu_touch_buttons: Dictionary = {}
 var _menu_accept_fingers: Dictionary = {}
 var _menu_accept_latch := false
@@ -86,6 +88,10 @@ func set_input_context(next_context: int) -> void:
 	if _input_context != next_context:
 		_clear_transient_input()
 	_input_context = next_context
+	if _built:
+		# The hub cancel control is nested inside HubOverlay, so refresh its
+		# position whenever a menu becomes visible or closes.
+		_update_layout()
 	_refresh_controls()
 
 
@@ -193,7 +199,7 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictiona
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
 	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))
 	var cancel_width := clampf(button * 2.5, 42.0, 96.0)
-	var cancel_position := Vector2(maxf(margin, viewport_size.x - margin - cancel_width), margin + button * 1.5)
+	var cancel_position := Vector2(maxf(margin, viewport_size.x - margin - cancel_width), maxf(margin, viewport_size.y - margin - button))
 	var cancel := Rect2(cancel_position, Vector2(cancel_width, button))
 	return {
 		"window_rect": window_rect,
@@ -356,6 +362,16 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		set_virtual_stick(_stick_value_from_position(position))
 		_update_stick_visuals()
 		_update_touch_capture_filter()
+		return
+	# A touch on the world is the direct form of the TAP prompt. Keep the
+	# existing USE button for players who prefer an explicit action control, but
+	# let a tap on an interactable (or empty) world position use the same input
+	# path without requiring a second button press.
+	if _input_context == CONTEXT_GAMEPLAY:
+		_finger_actions[finger_id] = TAP_INTERACT_ACTION
+		_tap_interact_origins[finger_id] = position
+		set_button_state(&"interact", true)
+		_update_touch_capture_filter()
 
 
 func _finger_moved(finger_id: int, position: Vector2) -> void:
@@ -369,6 +385,15 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 		return
 	if _finger_actions.has(finger_id):
 		var action: StringName = _finger_actions[finger_id]
+		if action == TAP_INTERACT_ACTION:
+			var origin := _tap_interact_origins.get(finger_id, position) as Vector2
+			var threshold := maxf(float(_layout.get("button_size", 20.0)) * 0.35, 6.0)
+			if origin.distance_to(position) > threshold:
+				_finger_actions.erase(finger_id)
+				_tap_interact_origins.erase(finger_id)
+				set_button_state(&"interact", false)
+				_update_touch_capture_filter()
+			return
 		var rect := _button_rect(action)
 		if not rect.grow(3.0).has_point(position):
 			_finger_actions.erase(finger_id)
@@ -399,7 +424,11 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 	if _finger_actions.has(finger_id):
 		var action: StringName = _finger_actions[finger_id]
 		_finger_actions.erase(finger_id)
-		if action != &"target": set_button_state(action, false)
+		_tap_interact_origins.erase(finger_id)
+		if action == TAP_INTERACT_ACTION:
+			set_button_state(&"interact", false)
+		elif action != &"target":
+			set_button_state(action, false)
 	_update_touch_capture_filter()
 
 
@@ -498,9 +527,37 @@ func _update_layout() -> void:
 		if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 			viewport_size = content_size
 	_layout = _compute_layout(viewport_size, content_size)
+	_layout["cancel"] = _context_cancel_rect(_layout)
 	if _stick_pointer_id < 0:
 		_stick_origin = _layout["stick_home"]
 	_apply_layout()
+
+
+func _context_cancel_rect(layout: Dictionary) -> Rect2:
+	var cancel: Rect2 = layout.get("cancel", Rect2())
+	if _input_context != CONTEXT_HUB:
+		return cancel
+	var hub_overlay := _find_visible_control(get_parent(), &"HubOverlay")
+	if hub_overlay == null:
+		return cancel
+	var bounds := hub_overlay.get_global_rect()
+	var inset := maxf(float(layout.get("margin", 4.0)) * 0.75, 3.0)
+	var nested_position := Vector2(bounds.end.x - cancel.size.x - inset, bounds.end.y - cancel.size.y - inset)
+	if bounds.encloses(Rect2(nested_position, cancel.size)):
+		cancel.position = nested_position
+	return cancel
+
+
+func _find_visible_control(node: Node, target_name: StringName) -> Control:
+	if node == null:
+		return null
+	if node is Control and node.name == target_name and (node as Control).visible:
+		return node as Control
+	for child in node.get_children():
+		var found := _find_visible_control(child, target_name)
+		if found != null:
+			return found
+	return null
 
 
 func _content_size() -> Vector2:
@@ -590,6 +647,7 @@ func _clear_gameplay_input() -> void:
 			gameplay_fingers.append(finger_id)
 	for finger_id in gameplay_fingers:
 		_finger_actions.erase(finger_id)
+		_tap_interact_origins.erase(finger_id)
 	for action in BUTTON_ORDER:
 		_pressed_actions[action] = false
 		_update_button_visual(action)
@@ -606,6 +664,7 @@ func _clear_transient_input() -> void:
 	_stick_pointer_id = -1
 	_stick_origin = _layout.get("stick_home", _stick_origin)
 	_finger_actions.clear()
+	_tap_interact_origins.clear()
 	_menu_touch_buttons.clear()
 	_menu_accept_fingers.clear()
 	_menu_accept_latch = false
