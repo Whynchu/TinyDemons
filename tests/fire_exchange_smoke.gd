@@ -28,7 +28,10 @@ func _initialize() -> void:
 		profile.palette_name = "red"
 		profile.souls = 0
 		profile.starter_soul_gift_claimed = false
+		profile.has_bound_element = false
+		profile.bound_element = &""
 		gameplay.set("starter_flame_attuned_this_run", false)
+		chroma.call("clear_bound_aspect")
 		gameplay.call("_begin_new_run")
 		npc.show_dialogue(gameplay)
 		_expect(profile.souls == 5 and profile.starter_soul_gift_claimed, "Cloaked Demon grants the 5-Soul starter gift", failures)
