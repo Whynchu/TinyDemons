@@ -63,6 +63,13 @@ func movement(deadzone: float) -> Vector2:
 	return _movement.limit_length(1.0) if _movement.length() >= deadzone else Vector2.ZERO
 
 
+func raw_movement() -> Vector2:
+	## Returns the merged stick/D-pad/keyboard/touch sample without applying the
+	## locomotion deadzone. Gesture recognizers need the same input source as
+	## movement, but must see the full analog path between samples.
+	return _movement.limit_length(1.0)
+
+
 func action_pressed(action: StringName) -> bool:
 	return pressed(action)
 

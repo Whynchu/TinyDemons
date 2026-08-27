@@ -347,7 +347,8 @@ func _new_mp_desaturation_material() -> ShaderMaterial:
 
 func _set_mp_grey_texture(texture: Texture2D) -> void:
 	var animation_name := String(player_anim_name)
-	var material := mp_desaturation_attack_material if player_is_attacking and animation_name.begins_with("attack") else mp_desaturation_material
+	var attack_animation := animation_name.begins_with("attack") or animation_name == "spin_attack" or animation_name == "charge"
+	var material := mp_desaturation_attack_material if player_is_attacking and attack_animation else mp_desaturation_material
 	if material != null:
 		material.set_shader_parameter("grey_texture", texture)
 		material.set_shader_parameter("grey_mix", 1.0 - _chroma_visual_saturation())
@@ -1317,6 +1318,7 @@ func _update_cloaked_demon_shadow() -> void: shadow_controller.update_cloaked_de
 func _update_targeting() -> void: interaction_component.update_targeting(self)
 func _target_facing_left(target: Sprite2D) -> bool: return interaction_component.target_facing_left(self, target)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
+func _raw_movement_input() -> Vector2: return input_router.raw_movement() if input_router != null else Vector2.ZERO
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _target_cycle_direction() -> int: return player_controller.target_cycle_direction(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_guard_input_held() -> bool: return player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)

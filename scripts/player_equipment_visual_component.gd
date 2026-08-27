@@ -82,6 +82,10 @@ var frame_paths := {
 	"sword_front_attack2": "res://assets/artwork/TinyDemon_sword(front)_attack2.png",
 	"sword_front_between": "res://assets/artwork/TinyDemon_sword(front)_betweenattack1.png",
 	"sword_front_after": "res://assets/artwork/TinyDemon_sword(front)_afterattack2.png",
+	"sword_back_spin": "res://assets/artwork/TinyDemon-Spin_Attack_swordBehind.png",
+	"sword_front_spin": "res://assets/artwork/TinyDemon-Spin_Attack_swordFront.png",
+	"shield_back_spin": "res://assets/artwork/TinyDemon-Spin_Attack_shieldBehind.png",
+	"shield_front_spin": "res://assets/artwork/TinyDemon-Spin_Attack_shieldFront.png",
 	"sword_magic": "res://assets/artwork/Sword-Magic.png",
 	"shield_magic": "res://assets/artwork/Shield-Magic.png",
 }
@@ -445,7 +449,9 @@ func tick(root: Object, delta: float) -> void:
 			draw_white_timer = DRAW_WHITE_TIME
 			draw_color_fade_timer = DRAW_COLOR_FADE_TIME
 			shield_is_out = true
-		last_attack_name = String(root.get("player_anim_name")) if String(root.get("player_anim_name")).begins_with("attack") else last_attack_name
+		var current_animation_name := String(root.get("player_anim_name"))
+		if current_animation_name.begins_with("attack") or current_animation_name == "spin_attack":
+			last_attack_name = current_animation_name
 		active = true
 		inactivity_timer = 0.0
 		fade_timer = 0.0
@@ -816,8 +822,10 @@ func _update_layers(root: Object) -> void:
 	var state := "idle"
 	if currently_magic_casting: state = "magic"
 	elif bool(root.get("player_is_defending")): state = "defend"
+	elif currently_attacking and animation_name == "spin_attack": state = "spin"
 	elif currently_attacking and animation_name == "attack1": state = "attack1"
-	elif currently_attacking and animation_name == "attack2": state = "attack2"
+	elif currently_attacking and (animation_name == "attack2" or animation_name == "attack2_charged"): state = "attack2"
+	elif currently_attacking and animation_name == "charge": state = "between"
 	elif transition_hold_timer > 0.0 and last_attack_name == "attack2": state = "after"
 	elif transition_hold_timer > 0.0: state = "between"
 	elif float(root.get("player_between_timer")) > 0.0 and last_attack_name == "attack2": state = "after"
@@ -827,10 +835,10 @@ func _update_layers(root: Object) -> void:
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var equipment := root.get("player_equipment") as EquipmentComponent
 	var shield_available := equipment != null and equipment.has_shield and (guard == null or guard.cooldown_timer <= 0.0)
-	var sword_back_key := "sword_back_%s" % ("attack" if state == "attack1" else state)
-	var shield_back_key := "shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")
-	var shield_front_key := "shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)
-	var sword_front_key := "sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")
+	var sword_back_key := "sword_back_spin" if state == "spin" else "sword_back_%s" % ("attack" if state == "attack1" else state)
+	var shield_back_key := "shield_back_spin" if state == "spin" else "shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")
+	var shield_front_key := "shield_front_spin" if state == "spin" else "shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)
+	var sword_front_key := "sword_front_spin" if state == "spin" else "sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")
 	var sword_back_visible := state != "attack2"
 	if state == "magic":
 		_set_layer("EquipmentSwordBack", frames.get("sword_magic"), frame_index, opacity, true, "sword_magic")
@@ -839,9 +847,9 @@ func _update_layers(root: Object) -> void:
 		_set_layer("EquipmentSwordFront", null, frame_index, opacity, false)
 	else:
 		_set_layer("EquipmentSwordBack", frames.get(sword_back_key), frame_index, opacity, sword_back_visible, sword_back_key)
-		_set_layer("EquipmentShieldBack", frames.get(shield_back_key), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "between"), shield_back_key)
+		_set_layer("EquipmentShieldBack", frames.get(shield_back_key), frame_index, opacity, shield_available and (state.begins_with("attack") or state == "spin" or state == "between"), shield_back_key)
 		_set_layer("EquipmentShieldFront", frames.get(shield_front_key), frame_index, opacity, shield_available, shield_front_key)
-		_set_layer("EquipmentSwordFront", frames.get(sword_front_key), frame_index, opacity, state.begins_with("attack") or state == "between" or state == "after", sword_front_key)
+		_set_layer("EquipmentSwordFront", frames.get(sword_front_key), frame_index, opacity, state.begins_with("attack") or state == "spin" or state == "between" or state == "after", sword_front_key)
 	_update_draw_overlays()
 	if fade_timer > 0.0:
 		var white_fade_progress := pow(1.0 - opacity, 2.2)
@@ -1097,16 +1105,17 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 		return
 	layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
 	var animation_name := String(gameplay_root.get("player_anim_name"))
+	var attack_animation := animation_name.begins_with("attack") or animation_name == "spin_attack"
 	var facing_left := bool(gameplay_root.get("player_magic_flip_h")) if animation_name == "magic" else player.flip_h
 	if animation_name != "magic":
 		var guard := gameplay_root.get("player_guard_component") as PlayerGuardComponent
 		if guard != null and bool(gameplay_root.get("player_is_defending")):
 			facing_left = guard.facing_left
-		elif not animation_name.begins_with("attack") and bool(gameplay_root.call("_is_target_input_held")):
+		elif not attack_animation and bool(gameplay_root.call("_is_target_input_held")):
 			var target := gameplay_root.call("_valid_current_target") as Sprite2D
 			if target != null and not bool(gameplay_root.get("player_is_attacking")):
 				facing_left = bool(gameplay_root.call("_target_facing_left", target))
-	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if animation_name.begins_with("attack") else facing_left
+	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if attack_animation else facing_left
 	_set_layer_opacity(layer, opacity)
 	layer.visible = true
 

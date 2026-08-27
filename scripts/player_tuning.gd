@@ -31,6 +31,24 @@ func attack_multiplier(spd: float) -> float:
 @export var combo_window := 0.18
 @export var between_attack_time := 0.12
 @export var attack2_cooldown := 0.16
+@export_group("Spin attack")
+@export var spin_circle_min_magnitude := 0.55
+@export var spin_circle_max_duration := 0.50
+@export var spin_circle_required_turn := TAU * 0.80
+@export var spin_circle_arm_duration := 0.28
+@export var spin_frame_time := 0.075
+@export var spin_recovery_frame_time := 0.14
+@export var spin_recovery_start_frame := 6
+@export var spin_hit_start_frame := 3
+@export var spin_hit_end_frame := 6
+@export var spin_damage_multiplier := 1.10
+@export var spin_knockback_multiplier := 1.10
+@export_group("Charge attack")
+@export var charge_minimum_time := 0.35
+@export var charge_maximum_time := 1.00
+@export var charged_attack2_frame_time_multiplier := 1.35
+@export var charged_attack2_damage_multiplier := 1.60
+@export var charged_attack2_knockback_multiplier := 1.50
 @export var roll_frame_time := 0.05
 @export var roll_distance := 30.0
 @export var roll_duration := 0.30

@@ -20,6 +20,7 @@ const ANIMATIONS := [
 	["roll", "res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME],
 	["attack", "res://assets/artwork/TinyDemon-attack1.png", ATTACK_FRAME],
 	["attack2", "res://assets/artwork/TinyDemon-attack2.png", ATTACK_FRAME],
+	["spin", "res://assets/artwork/TinyDemon-Spin_Attack.png", ATTACK_FRAME],
 ]
 
 
@@ -55,6 +56,7 @@ func _bake() -> void:
 	# Left-facing variants are horizontal flips of the attack frames.
 	base["attack_left"] = library.flip_frames(base.get("attack", []))
 	base["attack2_left"] = library.flip_frames(base.get("attack2", []))
+	base["spin_left"] = library.flip_frames(base.get("spin", []))
 	base["between"] = [load("res://assets/artwork/TinyDemon-attack-between.png") as Texture2D] as Array[Texture2D]
 	base["after"] = [load("res://assets/artwork/TinyDemon-after-attack2.png") as Texture2D] as Array[Texture2D]
 
