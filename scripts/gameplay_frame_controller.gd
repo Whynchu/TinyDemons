@@ -15,10 +15,15 @@ static func phase_order() -> Array[StringName]:
 
 func update_player_input(root: Object, delta: float) -> void:
 	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
+	if attack != null:
+		attack.set_attack_input_held(attack_down)
+		attack.update_spin_input(root, root.call("_raw_movement_input"), delta, not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")))
 	if attack_down and not bool(root.get("player_attack_input_was_down")):
 		var accepted_attack := false
 		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
-			if float(root.get("player_between_timer")) > 0.0:
+			if attack != null and attack.spin_gesture.is_armed():
+				accepted_attack = attack.start_spin_attack(root)
+			elif float(root.get("player_between_timer")) > 0.0:
 				if attack != null and not attack.combo_buffered:
 					attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input")); accepted_attack = true
 			elif attack != null:
@@ -160,6 +165,8 @@ func tick(root: Object, delta: float) -> void:
 		_update_magic_input(root, delta)
 	player_input_locked = dialogue_was_active or bool(root.get("player_is_magic_casting"))
 	var player_attack := root.get("player_attack_component") as PlayerAttackComponent
+	if player_attack != null and not player_input_locked:
+		player_attack.tick_charge(root, delta)
 	if player_attack != null and player_attack.combo_buffered and bool(root.get("player_is_attacking")) and root.get("player_anim_name") == "attack1":
 		var movement: Vector2 = root.call("_movement_input"); var combo_direction_changed := movement.length() > 0.25 and (player_attack.combo_movement.length() <= 0.25 or movement.normalized().dot(player_attack.combo_movement.normalized()) < 0.99)
 		if combo_direction_changed: player_attack.consume_combo()

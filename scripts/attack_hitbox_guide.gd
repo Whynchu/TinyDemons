@@ -14,6 +14,10 @@ class_name AttackHitboxGuide
 	set(value):
 		frame_index = value
 		_refresh_deferred()
+@export var use_frame_hitboxes := false:
+	set(value):
+		use_frame_hitboxes = value
+		_refresh_deferred()
 @export var show_preview := true:
 	set(value):
 		show_preview = value
@@ -24,8 +28,17 @@ func _ready() -> void:
 	_refresh_preview()
 
 
-func world_polygon(mirror_h: bool) -> PackedVector2Array:
-	var hitbox := get_node_or_null("Hitbox") as Polygon2D
+func hitbox_for_frame(requested_frame: int = -1) -> Polygon2D:
+	var selected_frame := frame_index if requested_frame < 0 else requested_frame
+	if use_frame_hitboxes:
+		var frame_hitbox := get_node_or_null("HitboxFrame%d" % selected_frame) as Polygon2D
+		if frame_hitbox != null:
+			return frame_hitbox
+	return get_node_or_null("Hitbox") as Polygon2D
+
+
+func world_polygon(mirror_h: bool, requested_frame: int = -1) -> PackedVector2Array:
+	var hitbox := hitbox_for_frame(requested_frame)
 	var result := PackedVector2Array()
 	if hitbox == null:
 		return result
@@ -44,7 +57,7 @@ func _refresh_deferred() -> void:
 
 func _refresh_preview() -> void:
 	var preview := get_node_or_null("Preview") as Sprite2D
-	var hitbox := get_node_or_null("Hitbox") as Polygon2D
+	var hitbox := hitbox_for_frame()
 	if not Engine.is_editor_hint():
 		visible = false
 		return
@@ -57,5 +70,6 @@ func _refresh_preview() -> void:
 		preview.hframes = maxi(1, floori(float(attack_sheet.get_width()) / float(frame_width))) if attack_sheet != null else 1
 		preview.vframes = maxi(1, floori(float(attack_sheet.get_height()) / float(frame_height))) if attack_sheet != null else 1
 		preview.frame = clampi(frame_index, 0, preview.hframes * preview.vframes - 1)
-	if hitbox != null:
-		hitbox.visible = show_preview
+	for child in get_children():
+		if child is Polygon2D:
+			(child as Polygon2D).visible = show_preview and child == hitbox

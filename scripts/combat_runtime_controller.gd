@@ -199,7 +199,7 @@ func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float 
 	var player_tuning := root.get("player_tuning") as PlayerTuning
 	var slime_tuning := root.get("slime_tuning") as SlimeTuning
 	var multiplier := (transmutation.attack_knockback_multiplier() if transmutation != null else 1.0) * maxf(knockback_multiplier, 0.0)
-	var combo := 1.0 if attack != null and attack.variant == 2 else player_tuning.attack1_knockback_multiplier
+	var combo := attack.base_knockback_multiplier(player_tuning) if attack != null else player_tuning.attack1_knockback_multiplier
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_velocity = root.call("_perspective_movement", direction.normalized() * (player_tuning.attack_knockback * combo * multiplier / slime_tuning.knockback_duration))
 	combat.knockback_timer = slime_tuning.knockback_duration

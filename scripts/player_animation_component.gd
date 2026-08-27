@@ -11,6 +11,8 @@ var attack_frames: Array[Texture2D] = []
 var attack2_frames: Array[Texture2D] = []
 var attack_left_frames: Array[Texture2D] = []
 var attack2_left_frames: Array[Texture2D] = []
+var spin_frames: Array[Texture2D] = []
+var spin_left_frames: Array[Texture2D] = []
 var magic_frames: Array[Texture2D] = []
 var between_attack_texture: Texture2D = null
 var after_attack2_texture: Texture2D = null
@@ -22,6 +24,8 @@ var base_attack_frames: Array[Texture2D] = []
 var base_attack2_frames: Array[Texture2D] = []
 var base_attack_left_frames: Array[Texture2D] = []
 var base_attack2_left_frames: Array[Texture2D] = []
+var base_spin_frames: Array[Texture2D] = []
+var base_spin_left_frames: Array[Texture2D] = []
 var base_magic_frames: Array[Texture2D] = []
 var base_between_attack_texture: Texture2D = null
 var base_after_attack2_texture: Texture2D = null
@@ -36,47 +40,87 @@ func build_frames(root: Object) -> void:
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
 	for index in raw_dust.size(): dust.append(library.dither_roll_dust_frame(raw_dust[index], float(index) / float(maxi(raw_dust.size(), 1))))
 	root.set("roll_dust_frames", dust); root.set("roll_dust_flipped_frames", library.flip_effect_frames(dust, Vector2i(16, 16)))
-	var attack_size: Vector2i = root.get("PLAYER_ATTACK_FRAME_SIZE") if root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(32, 32); attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
-	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); between_attack_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
-	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
+	var attack_size: Vector2i = root.get("PLAYER_ATTACK_FRAME_SIZE") if root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(32, 32); attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
+	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
+	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
 	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture; using_baked = _detect_baked(); apply_palette(root, "blue"); precache_all_palettes(); warm_all_palette_caches(root)
 
 
 func apply_frame(root: Object) -> void:
-	var player := root.get("player") as Sprite2D; var animation_key: String = root.get("player_anim_name"); var frame := int(root.get("player_anim_frame")); var frames: Array[Texture2D] = roll_frames if bool(root.get("player_is_rolling")) else attack2_frames if animation_key == "attack2" else attack_frames if animation_key == "attack1" else magic_frames if animation_key == "magic" else defend_frames if animation_key == "defend" else walk_frames if animation_key == "walk" else idle_frames
-	if frames.is_empty(): return
+	var player := root.get("player") as Sprite2D
+	var animation_key := String(root.get("player_anim_name"))
+	var frame := int(root.get("player_anim_frame"))
+	var frames: Array[Texture2D] = idle_frames
+	if bool(root.get("player_is_rolling")):
+		frames = roll_frames
+	elif animation_key == "spin_attack":
+		frames = spin_frames
+	elif animation_key == "attack2" or animation_key == "attack2_charged":
+		frames = attack2_frames
+	elif animation_key == "attack1":
+		frames = attack_frames
+	elif animation_key == "magic":
+		frames = magic_frames
+	elif animation_key == "defend":
+		frames = defend_frames
+	elif animation_key == "walk":
+		frames = walk_frames
+	if animation_key == "charge":
+		player.offset = Vector2(-10, -10)
+		player.flip_h = bool(root.get("player_attack_flip_h"))
+		_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
+		var charge_grey_set: Dictionary = frames_by_palette.get("grey", {})
+		var charge_grey := charge_grey_set.get("between") as Texture2D
+		root.call("_set_mp_grey_texture", charge_grey)
+		var charge_texture := between_attack_texture if between_attack_texture != null else (attack_frames[0] if not attack_frames.is_empty() else null)
+		if charge_texture != null:
+			root.call("_set_actor_base_texture", player, charge_texture)
+		return
+	if frames.is_empty():
+		return
 	var grey_set: Dictionary = frames_by_palette.get("grey", {})
 	if bool(root.get("player_is_rolling")):
-		var roll_frame := int(root.get("player_roll_component").frame)
-		root.call("_set_mp_grey_texture", (grey_set.get("roll", []) as Array[Texture2D])[roll_frame])
-		root.call("_set_actor_base_texture", player, frames[roll_frame]); return
-	if animation_key == "attack1" or animation_key == "attack2":
-		var flip: bool = root.get("player_attack_flip_h"); var active_attack_frames: Array[Texture2D] = attack2_left_frames if animation_key == "attack2" and flip else attack_left_frames if flip else attack2_frames if animation_key == "attack2" else attack_frames
-		if active_attack_frames.is_empty(): return
-		var grey_attack := grey_set.get("attack2_left" if animation_key == "attack2" and flip else "attack_left" if flip else "attack2" if animation_key == "attack2" else "attack", []) as Array[Texture2D]
-		root.call("_set_mp_grey_texture", grey_attack[frame])
+		var roll_frame := clampi(int(root.get("player_roll_component").frame), 0, frames.size() - 1)
+		var grey_roll := grey_set.get("roll", []) as Array[Texture2D]
+		root.call("_set_mp_grey_texture", grey_roll[mini(roll_frame, grey_roll.size() - 1)] if not grey_roll.is_empty() else null)
+		root.call("_set_actor_base_texture", player, frames[roll_frame])
+		return
+	var is_spin := animation_key == "spin_attack"
+	var is_attack2 := animation_key == "attack2" or animation_key == "attack2_charged"
+	var is_attack_animation := is_spin or is_attack2 or animation_key == "attack1"
+	if is_attack_animation:
+		var flip := bool(root.get("player_attack_flip_h"))
+		var active_attack_frames: Array[Texture2D] = spin_left_frames if is_spin and flip else spin_frames if is_spin else attack2_left_frames if is_attack2 and flip else attack_left_frames if flip else attack2_frames if is_attack2 else attack_frames
+		if active_attack_frames.is_empty():
+			return
+		var resolved_frame := clampi(frame, 0, active_attack_frames.size() - 1)
+		var grey_key := "spin_left" if is_spin and flip else "spin" if is_spin else "attack2_left" if is_attack2 and flip else "attack_left" if flip else "attack2" if is_attack2 else "attack"
+		var grey_attack := grey_set.get(grey_key, []) as Array[Texture2D]
+		root.call("_set_mp_grey_texture", grey_attack[mini(resolved_frame, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
 		var visual := root.get("player_attack_visual") as Sprite2D
 		# Assign the new frame while the attack layer is hidden. Exposing it first
 		# can render the previous attack frame for one frame as a delayed ghost.
 		visual.visible = false
-		visual.texture = active_attack_frames[frame]
+		visual.texture = active_attack_frames[resolved_frame]
 		_set_render_visibility(player, visual, bool(root.get("player_is_attacking")))
 		update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index)
 		return
 	if animation_key == "magic":
 		var flip := bool(root.get("player_magic_flip_h"))
 		var grey_magic := grey_set.get("magic", []) as Array[Texture2D]
+		var resolved_magic_frame := clampi(frame, 0, frames.size() - 1)
 		player.offset = Vector2(-10, -10)
 		player.flip_h = flip
-		root.call("_set_mp_grey_texture", grey_magic[mini(frame, grey_magic.size() - 1)] if not grey_magic.is_empty() else null)
+		root.call("_set_mp_grey_texture", grey_magic[mini(resolved_magic_frame, grey_magic.size() - 1)] if not grey_magic.is_empty() else null)
 		_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
-		root.call("_set_actor_base_texture", player, magic_frames[mini(frame, magic_frames.size() - 1)])
+		root.call("_set_actor_base_texture", player, frames[resolved_magic_frame])
 		return
+	var resolved_frame := clampi(frame, 0, frames.size() - 1)
 	player.offset = Vector2(-10, -10)
 	_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
 	var grey_frames := grey_set.get(animation_key, []) as Array[Texture2D]
-	root.call("_set_mp_grey_texture", grey_frames[frame])
-	root.call("_set_actor_base_texture", player, frames[frame])
+	root.call("_set_mp_grey_texture", grey_frames[mini(resolved_frame, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
+	root.call("_set_actor_base_texture", player, frames[resolved_frame])
 
 
 func _set_transition_grey(root: Object, transition_name: String) -> void:
@@ -112,6 +156,8 @@ func _store_palette(palette_name: String) -> void:
 		"attack2": _baked_or_recolor(palette_name, "attack2", base_attack2_frames),
 		"attack_left": _baked_or_recolor(palette_name, "attack_left", base_attack_left_frames),
 		"attack2_left": _baked_or_recolor(palette_name, "attack2_left", base_attack2_left_frames),
+		"spin": _baked_or_recolor(palette_name, "spin", base_spin_frames),
+		"spin_left": _baked_or_recolor(palette_name, "spin_left", base_spin_left_frames),
 		"magic": _baked_or_recolor(palette_name, "magic", base_magic_frames),
 		"between": _baked_or_recolor_texture(palette_name, "between", base_between_attack_texture),
 		"after": _baked_or_recolor_texture(palette_name, "after", base_after_attack2_texture),
@@ -152,7 +198,7 @@ func _baked_or_recolor_texture(palette_name: String, anim: String, source_textur
 
 
 func _anim_frame_size(anim: String) -> Vector2i:
-	if anim == "attack" or anim == "attack2" or anim == "attack_left" or anim == "attack2_left":
+	if anim == "attack" or anim == "attack2" or anim == "attack_left" or anim == "attack2_left" or anim == "spin" or anim == "spin_left":
 		var attack_size: Vector2i = coordinator_root.get("PLAYER_ATTACK_FRAME_SIZE") if coordinator_root != null and coordinator_root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(36, 36)
 		return attack_size
 	return Vector2i(36, 36)
@@ -163,7 +209,7 @@ func _load_palette(palette_name: String) -> void:
 		_store_palette(palette_name)
 	var palette_frames: Dictionary = frames_by_palette[palette_name]
 	idle_frames = palette_frames["idle"]; walk_frames = palette_frames["walk"]; defend_frames = palette_frames["defend"]; roll_frames = palette_frames["roll"]
-	attack_frames = palette_frames["attack"]; attack2_frames = palette_frames["attack2"]; attack_left_frames = palette_frames["attack_left"]; attack2_left_frames = palette_frames["attack2_left"]; magic_frames = palette_frames["magic"]
+	attack_frames = palette_frames["attack"]; attack2_frames = palette_frames["attack2"]; attack_left_frames = palette_frames["attack_left"]; attack2_left_frames = palette_frames["attack2_left"]; spin_frames = palette_frames["spin"]; spin_left_frames = palette_frames["spin_left"]; magic_frames = palette_frames["magic"]
 	between_attack_texture = palette_frames["between"]; after_attack2_texture = palette_frames["after"]
 
 
@@ -187,6 +233,8 @@ func warm_player_caches(root: Object) -> void:
 	for texture in attack2_frames: warm_texture_cache(texture)
 	for texture in attack2_left_frames: warm_texture_cache(texture)
 	for texture in attack_left_frames: warm_texture_cache(texture)
+	for texture in spin_frames: warm_texture_cache(texture)
+	for texture in spin_left_frames: warm_texture_cache(texture)
 	for texture in magic_frames: warm_texture_cache(texture)
 
 
@@ -206,6 +254,8 @@ func warm_all_palette_caches(_root: Object) -> void:
 		for texture in palette_frames.get("attack2") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("attack2_left") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("attack_left") as Array[Texture2D]: warm_texture_cache(texture)
+		for texture in palette_frames.get("spin") as Array[Texture2D]: warm_texture_cache(texture)
+		for texture in palette_frames.get("spin_left") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("magic") as Array[Texture2D]: warm_texture_cache(texture)
 
 
@@ -243,25 +293,41 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			root.set("player_anim_timer", 0.0)
 			apply_frame(root)
 			return
-		var attack_timer := float(root.get("player_anim_timer")) + delta
+		var attack_component := root.get("player_attack_component") as PlayerAttackComponent
+		var attack_name := String(root.get("player_anim_name"))
+		if attack_name == "charge" or (attack_component != null and attack_component.is_charging()):
+			apply_frame(root)
+			return
 		var attack_tuning := root.get("player_tuning") as PlayerTuning
 		var attack_multiplier := attack_tuning.attack_multiplier(float(root.get("player_spd")))
-		var attack_frame_time := attack_tuning.attack_frame_time / attack_multiplier
+		var is_spin := attack_name == "spin_attack"
+		var is_attack2 := attack_name == "attack2" or attack_name == "attack2_charged"
+		var active_frames: Array[Texture2D] = spin_frames if is_spin else attack2_frames if is_attack2 else attack_frames
+		if active_frames.is_empty():
+			return
+		var current_frame := clampi(int(root.get("player_anim_frame")), 0, active_frames.size() - 1)
+		var attack_frame_time := attack_tuning.attack_frame_time
+		if is_spin:
+			attack_frame_time = attack_tuning.spin_recovery_frame_time if current_frame >= attack_tuning.spin_recovery_start_frame else attack_tuning.spin_frame_time
+		elif attack_name == "attack2_charged":
+			attack_frame_time *= attack_tuning.charged_attack2_frame_time_multiplier
+		attack_frame_time = maxf(attack_frame_time / attack_multiplier, 0.001)
+		var attack_timer := float(root.get("player_anim_timer")) + delta
 		if attack_timer < attack_frame_time:
 			root.set("player_anim_timer", attack_timer)
 			return
 		attack_timer = fmod(attack_timer, attack_frame_time)
-		var animation_frame := int(root.get("player_anim_frame")) + 1
-		var attack_name := String(root.get("player_anim_name"))
-		var active_frames := attack2_frames if attack_name == "attack2" else attack_frames
-		var hit_frame := attack_tuning.attack2_hit_frame if attack_name == "attack2" else attack_tuning.attack_hit_frame
+		var animation_frame := current_frame + 1
+		var hit_frame := attack_tuning.attack2_hit_frame if is_attack2 else attack_tuning.attack_hit_frame
 		if animation_frame >= active_frames.size():
-			var attack_component := root.get("player_attack_component") as PlayerAttackComponent
+			if attack_name == "attack1" and attack_component != null and attack_component.should_enter_charge():
+				attack_component.begin_charge(root)
+				return
 			var combo := attack_name == "attack1" and attack_component != null and attack_component.combo_buffered and between_attack_texture != null
-			var attack2_finished := attack_name == "attack2"
+			var attack2_finished := is_attack2
 			var transition_texture: Texture2D = after_attack2_texture if attack2_finished else between_attack_texture
 			var transition_time := attack_tuning.attack2_cooldown / attack_multiplier if attack2_finished else attack_tuning.between_attack_time / attack_multiplier
-			if attack_name == "attack2" and attack_component != null:
+			if attack2_finished and attack_component != null:
 				attack_component.start_attack2_cooldown(attack_tuning.attack2_cooldown / attack_multiplier)
 			root.set("player_just_finished_attack2", attack2_finished)
 			root.set("player_is_attacking", false)
@@ -283,7 +349,9 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		root.set("player_anim_timer", attack_timer)
 		root.set("player_anim_frame", animation_frame)
 		apply_frame(root)
-		if animation_frame == hit_frame and not bool(root.get("player_attack_hit_done")):
+		if attack_component != null and attack_component.frame_uses_hitbox(animation_frame, attack_tuning):
+			root.call("_apply_player_attack_hitbox")
+		elif animation_frame == hit_frame and not bool(root.get("player_attack_hit_done")):
 			root.call("_apply_player_attack_hitbox")
 			root.set("player_attack_hit_done", true)
 		return
