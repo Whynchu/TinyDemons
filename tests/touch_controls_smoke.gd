@@ -1,6 +1,9 @@
 extends SceneTree
 
 var stat_touch_count := 0
+var stat_row_touch_count := 0
+var item_row_touch_count := 0
+var fusion_count_touch_count := 0
 
 
 func _initialize() -> void:
@@ -98,7 +101,7 @@ func _initialize() -> void:
 	var hub_host := Node.new()
 	get_root().add_child(hub_host)
 	var hub_builder := ScreenStateController.new()
-	var hub_controls := hub_builder.build_hub(hub_host, Callable(self, "_pixel_texture"), Callable(self, "_record_stat_touch"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"))
+	var hub_controls := hub_builder.build_hub(hub_host, Callable(self, "_pixel_texture"), Callable(self, "_record_stat_touch"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_record_hub_row"), Callable(self, "_record_item_row"), Callable(self, "_record_fusion_count"))
 	var hub_overlay := hub_controls["overlay"] as ColorRect
 	hub_overlay.visible = true
 	for child in hub_overlay.get_children():
@@ -106,12 +109,22 @@ func _initialize() -> void:
 			(child as BaseButton).visible = false
 	for stat_button in hub_controls["stat_buttons"] as Array[Button]:
 		stat_button.visible = true
+	for stat_row in hub_controls["stat_rows"] as Array[Button]:
+		stat_row.visible = true
 	await process_frame
 	layer.set_input_context(InputRouter.Context.HUB)
 	_expect(layer.is_active(), "touch input remains available behind hub/menu overlays", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "inactive touch overlay does not intercept menu taps", failures)
 	var hub_cancel_rect: Rect2 = layer._layout["cancel"]
 	_expect(hub_overlay.get_global_rect().encloses(hub_cancel_rect), "hub cancel control is nested inside the hub panel", failures)
+	var hub_blank_down := InputEventScreenTouch.new()
+	hub_blank_down.device = 0; hub_blank_down.index = 13; hub_blank_down.pressed = true; hub_blank_down.position = hub_overlay.global_position + Vector2(78.0, 110.0)
+	layer._input(hub_blank_down)
+	router.poll(InputRouter.Context.HUB)
+	_expect(not router.ui_accept_just_pressed(), "blank hub touch does not move the hidden menu cursor", failures)
+	var hub_blank_up := InputEventScreenTouch.new()
+	hub_blank_up.device = 0; hub_blank_up.index = 13; hub_blank_up.pressed = false; hub_blank_up.position = hub_blank_down.position
+	layer._input(hub_blank_up)
 	var stat_right := (hub_controls["stat_right"] as Array[Button])[0]
 	var stat_down := InputEventScreenTouch.new()
 	stat_down.device = 0; stat_down.index = 14; stat_down.pressed = true; stat_down.position = stat_right.get_global_rect().get_center()
@@ -120,6 +133,47 @@ func _initialize() -> void:
 	stat_up.device = 0; stat_up.index = 14; stat_up.pressed = false; stat_up.position = stat_down.position
 	layer._input(stat_up)
 	_expect(stat_touch_count == 1, "touching a hub stat arrow activates its enlarged hit target", failures)
+	var stat_rows := hub_controls["stat_rows"] as Array[Button]
+	_expect(stat_rows.size() == 4 and stat_rows[0].size.x >= 100.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets", failures)
+	var stat_row_down := InputEventScreenTouch.new()
+	stat_row_down.device = 0; stat_row_down.index = 15; stat_row_down.pressed = true; stat_row_down.position = stat_rows[2].get_global_rect().get_center()
+	layer._input(stat_row_down)
+	var stat_row_up := InputEventScreenTouch.new()
+	stat_row_up.device = 0; stat_row_up.index = 15; stat_row_up.pressed = false; stat_row_up.position = stat_row_down.position
+	layer._input(stat_row_up)
+	_expect(stat_row_touch_count == 1, "touching a hub stat row selects it directly", failures)
+	# The first touch regression was caused by a one-shot cursor advance. A
+	# second arrow touch must still reach its own button after the row touch.
+	var stat_down_again := InputEventScreenTouch.new()
+	stat_down_again.device = 0; stat_down_again.index = 16; stat_down_again.pressed = true; stat_down_again.position = stat_right.get_global_rect().get_center()
+	layer._input(stat_down_again)
+	var stat_up_again := InputEventScreenTouch.new()
+	stat_up_again.device = 0; stat_up_again.index = 16; stat_up_again.pressed = false; stat_up_again.position = stat_down_again.position
+	layer._input(stat_up_again)
+	_expect(stat_touch_count == 2, "repeated hub stat touches remain responsive", failures)
+	for child in hub_overlay.get_children():
+		if child is BaseButton:
+			(child as BaseButton).visible = false
+	for item_row in hub_controls["item_rows"] as Array[Button]:
+		item_row.visible = true
+	(hub_controls["fusion_decrease"] as Button).visible = true
+	(hub_controls["fusion_increase"] as Button).visible = true
+	var item_rows := hub_controls["item_rows"] as Array[Button]
+	_expect(item_rows.size() == 5 and item_rows[0].size.x >= 140.0, "shop and fusion rows expose direct touch targets", failures)
+	var item_row_down := InputEventScreenTouch.new()
+	item_row_down.device = 0; item_row_down.index = 17; item_row_down.pressed = true; item_row_down.position = item_rows[0].get_global_rect().get_center()
+	layer._input(item_row_down)
+	var item_row_up := InputEventScreenTouch.new()
+	item_row_up.device = 0; item_row_up.index = 17; item_row_up.pressed = false; item_row_up.position = item_row_down.position
+	layer._input(item_row_up)
+	_expect(item_row_touch_count == 1, "touching a shop or fusion row selects it directly", failures)
+	var fusion_count_down := InputEventScreenTouch.new()
+	fusion_count_down.device = 0; fusion_count_down.index = 18; fusion_count_down.pressed = true; fusion_count_down.position = (hub_controls["fusion_increase"] as Button).get_global_rect().get_center()
+	layer._input(fusion_count_down)
+	var fusion_count_up := InputEventScreenTouch.new()
+	fusion_count_up.device = 0; fusion_count_up.index = 18; fusion_count_up.pressed = false; fusion_count_up.position = fusion_count_down.position
+	layer._input(fusion_count_up)
+	_expect(fusion_count_touch_count == 1, "touching fusion count controls reaches their callbacks", failures)
 	hub_host.free()
 	hub_builder.free()
 	layer.set_input_context(InputRouter.Context.MENU)
@@ -163,9 +217,7 @@ func _initialize() -> void:
 	_expect(bool(menu_button.get_meta("touch_pressed", false)), "screen touch activates a visible menu button", failures)
 	menu_host.queue_free()
 
-	# A tap outside a Button still provides the menu's normal accept edge. This
-	# covers dialogue's tap-anywhere prompt and keyboard/controller selection
-	# fallback without requiring a gameplay overlay to be visible.
+	# A tap outside a Button still provides the menu's normal accept edge.
 	var menu_accept_down := InputEventScreenTouch.new()
 	menu_accept_down.device = 0; menu_accept_down.index = 8; menu_accept_down.pressed = true; menu_accept_down.position = Vector2(150.0, 80.0)
 	layer._input(menu_accept_down)
@@ -177,15 +229,23 @@ func _initialize() -> void:
 	router.poll(InputRouter.Context.MENU)
 
 	layer.set_input_context(InputRouter.Context.DIALOGUE)
+	var dialogue_box := ColorRect.new()
+	dialogue_box.name = "NpcDialogueBox"
+	dialogue_box.position = (layer._layout["buttons"][&"attack"] as Rect2).position
+	dialogue_box.size = (layer._layout["buttons"][&"attack"] as Rect2).size
+	dialogue_box.visible = true
+	dialogue_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	get_root().add_child(dialogue_box)
 	var dialogue_tap := InputEventScreenTouch.new()
-	dialogue_tap.device = 0; dialogue_tap.index = 10; dialogue_tap.pressed = true; dialogue_tap.position = Vector2(120.0, 60.0)
+	dialogue_tap.device = 0; dialogue_tap.index = 10; dialogue_tap.pressed = true; dialogue_tap.position = dialogue_box.get_global_rect().get_center()
 	layer._input(dialogue_tap)
 	router.poll(InputRouter.Context.DIALOGUE)
-	_expect(router.ui_accept_pressed() and router.ui_accept_just_pressed(), "screen tap outside gameplay controls reaches dialogue accept", failures)
+	_expect(router.ui_accept_pressed() and router.ui_accept_just_pressed(), "screen tap on the dialogue panel reaches dialogue accept", failures)
 	var dialogue_release := InputEventScreenTouch.new()
 	dialogue_release.device = 0; dialogue_release.index = 10; dialogue_release.pressed = false; dialogue_release.position = dialogue_tap.position
 	layer._input(dialogue_release)
 	router.poll(InputRouter.Context.DIALOGUE)
+	dialogue_box.queue_free()
 
 	router.set_touch_provider(null)
 	router.poll(InputRouter.Context.GAMEPLAY)
@@ -235,6 +295,18 @@ func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 
 func _record_stat_touch(_stat_name: StringName, _direction: int) -> void:
 	stat_touch_count += 1
+
+
+func _record_hub_row(_row: int) -> void:
+	stat_row_touch_count += 1
+
+
+func _record_item_row(_row: int) -> void:
+	item_row_touch_count += 1
+
+
+func _record_fusion_count(_direction: int) -> void:
+	fusion_count_touch_count += 1
 
 
 func _pixel_texture(_text: String, color: Color) -> Texture2D:

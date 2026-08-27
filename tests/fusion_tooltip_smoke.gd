@@ -17,13 +17,13 @@ func _initialize() -> void:
 	var built: Dictionary = controller_instance.call("build_hub", host, pixel, Callable(root, "_adj"), Callable(root, "_apply"), Callable(root, "_cancel"), Callable(root, "_auto"), Callable(root, "_respec"), Callable(root, "_start"), Callable(root, "_title"), Callable(root, "_set_page"), Callable(root, "_item_action"), Callable(root, "_select_gear_slot"), Callable(), Callable(root, "_select_gear_candidate"))
 	var key_map := {
 		"overlay": "hub_overlay", "summary": "hub_summary_text", "points": "hub_points_text",
-		"stats": "hub_stat_texts", "stat_buttons": "hub_stat_buttons", "derived": "hub_derived_texts",
+		"stats": "hub_stat_texts", "stat_buttons": "hub_stat_buttons", "stat_rows": "hub_stat_row_buttons", "derived": "hub_derived_texts",
 		"apply": "hub_apply_button", "cancel": "hub_cancel_button", "auto": "hub_auto_button", "respec": "hub_respec_button",
-		"pages": "hub_page_buttons", "item_name": "hub_item_name_text", "item_list": "hub_item_list_texts",
+		"pages": "hub_page_buttons", "item_name": "hub_item_name_text", "item_list": "hub_item_list_texts", "item_rows": "hub_item_row_buttons",
 		"shop_prices": "hub_shop_price_texts", "gear_choices": "hub_gear_choice_texts", "gear_choice_buttons": "hub_gear_choice_buttons",
 		"gear_slot_buttons": "hub_gear_slot_buttons", "gear_stats": "hub_gear_stat_texts",
 		"gear_stat_panel": "hub_gear_stat_panel", "item_details": "hub_item_detail_texts",
-		"item_action": "hub_item_action_button", "binding_panel": "hub_binding_panel",
+		"item_action": "hub_item_action_button", "fusion_decrease": "hub_fusion_decrease_button", "fusion_increase": "hub_fusion_increase_button", "binding_panel": "hub_binding_panel",
 		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text",
 	}
 	for key: String in built:
@@ -31,6 +31,8 @@ func _initialize() -> void:
 	var stat_buttons := built["stat_buttons"] as Array[Button]
 	var stat_texts := built["stats"] as Array[Sprite2D]
 	_expect(stat_buttons.size() == 8 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets", failures)
+	_expect((built["stat_rows"] as Array[Button]).size() == 4 and (built["item_rows"] as Array[Button]).size() == 5, "hub stats, shop, and fusion expose row touch targets", failures)
+	_expect((built["fusion_decrease"] as Button).size.x >= 20.0 and (built["fusion_increase"] as Button).size.x >= 20.0, "fusion exposes direct count controls", failures)
 	_expect(stat_texts.all(func(text: Sprite2D) -> bool: return text.centered), "hub stat values are centered between their touch targets", failures)
 	controller_instance.hub_overlay = ColorRect.new()
 	controller_instance.hub_page = 1

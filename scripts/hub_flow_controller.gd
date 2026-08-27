@@ -5,7 +5,7 @@ const ProgressionControllerScript = preload("res://scripts/progression_controlle
 
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_menu_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -13,6 +13,7 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_stat_buttons = controls["stat_buttons"] as Array[Button]
 	root.screen_state_controller.hub_stat_left_buttons = controls["stat_left"] as Array[Button]
 	root.screen_state_controller.hub_stat_right_buttons = controls["stat_right"] as Array[Button]
+	root.screen_state_controller.hub_stat_row_buttons = controls["stat_rows"] as Array[Button]
 	root.screen_state_controller.hub_respec_button = controls["respec"] as Button
 	root.screen_state_controller.hub_start_button = controls["start"] as Button
 	root.screen_state_controller.hub_title_button = controls["title"] as Button
@@ -23,6 +24,7 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_page_buttons = controls["pages"] as Array[Button]
 	root.screen_state_controller.hub_item_name_text = controls["item_name"] as Sprite2D
 	root.screen_state_controller.hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
+	root.screen_state_controller.hub_item_row_buttons = controls["item_rows"] as Array[Button]
 	root.screen_state_controller.hub_shop_price_texts = controls["shop_prices"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_choice_texts = controls["gear_choices"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_choice_buttons = controls["gear_choice_buttons"] as Array[Button]
@@ -35,6 +37,8 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_cursor_text = controls["cursor"] as Sprite2D
 	root.screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_action_button = controls["item_action"] as Button
+	root.screen_state_controller.hub_fusion_decrease_button = controls["fusion_decrease"] as Button
+	root.screen_state_controller.hub_fusion_increase_button = controls["fusion_increase"] as Button
 
 
 func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) -> void:
@@ -145,6 +149,30 @@ func shift_hub_item(root: Object, direction: int) -> void:
 		count = hub_fusion_candidates(root).size()
 		root.screen_state_controller.hub_fusion_count = 1
 	if count > 0: root.screen_state_controller.hub_item_index = posmod(root.screen_state_controller.hub_item_index + direction, count)
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func select_hub_item_row(root: Object, row: int) -> void:
+	var page: int = int(root.screen_state_controller.hub_page)
+	if page != 2 and page != 3:
+		return
+	var count := 0
+	if page == 2 and root.run_state != null:
+		root.run_state.ensure_shop_stock(root.player_profile.level)
+		count = root.run_state.shop_stock.size()
+	elif page == 3:
+		count = hub_fusion_candidates(root).size()
+	if count <= 0:
+		return
+	var visible_rows := maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
+	var selected := clampi(root.screen_state_controller.hub_item_index, 0, count - 1)
+	var window_start := clampi(selected - 2, 0, maxi(count - visible_rows, 0))
+	var target := window_start + row
+	if row < 0 or row >= visible_rows or target < 0 or target >= count:
+		return
+	root.screen_state_controller.hub_item_index = target
+	if page == 3:
+		root.screen_state_controller.hub_fusion_count = 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
