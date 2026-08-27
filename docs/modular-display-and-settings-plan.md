@@ -1,0 +1,362 @@
+# Tiny Demons — Modular Display and Settings Plan
+
+Status: implementation complete; automated verification green
+
+Date: 2026-08-27
+
+This document is the design and implementation handoff for making the game's
+display modular — aspect-ratio support beyond the native 240×160 (3:2), with
+16:10 and 16:9 at launch — plus a settings panel on the title screen and in
+the pause menu (fullscreen, aspect, pixel-perfect scaling, music/SFX volume),
+and a quit-to-title pause option. The look must be preserved: the void
+background and the decorative black bars expand to fill the wider view rather
+than letterboxing the game in plain black.
+
+Design decisions were locked with the team on 2026-08-27 (§9). Current-state
+facts below were audited against the tree on 2026-08-26/27 (§10).
+
+Related docs:
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — component ownership rules
+- [`web-port-implementation-plan.md`](web-port-implementation-plan.md) — the
+  integer-scaling and touch-layout work this builds on
+- [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) — tuning resource index
+
+## 1. Goal and non-goals
+
+### Goal
+
+- The game renders natively at 3:2 (240×160), 16:10 (256×160), and 16:9
+  (284×160), preserving the pixel-art look: nearest-neighbor, integer
+  scaling, the void background, and the decorative top/bottom bars all extend
+  to fill the wider view.
+- A settings panel reachable from the title screen and the pause menu offers:
+  fullscreen toggle, aspect ratio, pixel-perfect (integer) toggle, one music
+  slider, one SFX slider.
+- The pause menu gains RESUME and QUIT TO TITLE alongside SETTINGS.
+- Everything works identically on desktop and web (fullscreen on web is
+  browser-gated — see §4).
+
+### Non-goals for this slice
+
+- 4:3, 21:9, or arbitrary aspect ratios. The layout system is data-driven so
+  these become table entries later, but they are not enabled now.
+- Per-profile display settings (settings are device-wide).
+- A glyph/icon atlas for the settings UI; the existing pixel-text style is
+  reused.
+- Resizable desktop window management beyond fullscreen (no windowed-size
+  picker).
+- Rebinding, language, or accessibility settings.
+
+## 2. Verified current state
+
+The full audit evidence is in §10. The load-bearing facts:
+
+- **Three bar/background layers exist, all hardcoded to 240×160:**
+  1. Decorative in-game frame: `BlackBars.png` (opaque near-black RGB(6,6,6)
+     bars y 0–15 and y 145–159, transparent middle; HUD text sits on them;
+     `scenes/main.tscn:559-562`).
+  2. Void background: `BG.png`, flat RGB(17,19,24), exactly 240×160,
+     screen-fixed on CanvasLayer −10 (`scenes/main.tscn:108-113`). Beyond
+     x=240 there is nothing — the engine default clear color.
+  3. Engine letterbox bars from integer scaling (pure black).
+- **All UI is absolute 240×160 pixel coordinates** — no anchors or
+  containers anywhere: HUD (`scenes/player_hud.tscn`,
+  `scripts/hud_controller.gd:279-400`), minimap
+  (`scripts/dungeon_minimap_controller.gd:9-11`), overlays and menus
+  (`scripts/screen_state_controller.gd:501-1395`), title screen
+  (`screen_state_controller.gd:1265-1278` with hardcoded button bob at
+  `:176-177`).
+- **Rooms** are 8×8 isometric diamonds (~128 px wide) centered at
+  `Map/FloorTiles/FloorLayer` position (120, 64) (`scenes/main.tscn:119-125`),
+  surrounded by void; only the boss room is larger than the screen and uses a
+  player-following camera with no limits
+  (`scripts/room_controller.gd:1371-1394`).
+- **No settings infrastructure**: no ConfigFile, no fullscreen code; the
+  profile is per-slot run data (`scripts/player_profile.gd:15-45`) and is the
+  wrong home for device-wide display prefs.
+- **Pause is the hub overlay in pause mode**
+  (`scripts/hub_flow_controller.gd:72-76`); no RESUME/SETTINGS/QUIT items.
+- **Volumes are compile-time constants** (`scripts/sound_manager.gd:22-25`)
+  with one Master bus; a per-play runtime volume field exists but is not
+  persisted (`sound_manager.gd:73`).
+- **The touch overlay** adapts to the visible rect already
+  (`scripts/touch_controls_layer.gd`), but its `BASE_CONTENT_SIZE` fallback
+  assumes 240×160 and must follow the active view size.
+- Wide modes only add **width**; height stays 160 in every mode. Top/bottom
+  bar thickness and all bottom-row HUD positions are unaffected vertically.
+
+## 3. Display model
+
+The lever is `Window.content_scale_size`. The existing pipeline
+(`canvas_items` + `keep` + `integer`, `project.godot:24-26` after the web
+sizing pass) is untouched; swapping the base size changes the rendered view
+while staying pixel-perfect.
+
+| Mode | Base size | Ratio | Notes |
+| --- | --- | --- | --- |
+| Native 3:2 | 240×160 | 1.500 | Current look, unchanged default |
+| Wide 16:10 | 256×160 | 1.600 | +16 px of width |
+| Wide 16:9 | 284×160 | 1.775 | +44 px of width (0.16% off exact 16:9 — imperceptible) |
+
+Reference integer scales: 1920×1080 desktop renders 6× in all three modes
+(1440×960 / 1536×960 / 1704×960). A hiDPI phone in portrait (780×1688 device
+px) renders 3× / 3× / 2× — the known trade-off: 16:9 mode renders smaller on
+portrait phones. Accepted; the touch overlay compensates with physical-size
+targets.
+
+Settings (device-wide):
+
+| Key | Values | Default |
+| --- | --- | --- |
+| `fullscreen` | on/off | off |
+| `aspect` | `3:2` / `16:10` / `16:9` | `3:2` |
+| `pixel_perfect` | on (integer) / off (fractional fill) | on |
+| `music_volume` | 0–100, step 10 | 100 |
+| `sfx_volume` | 0–100, step 10 | 100 |
+
+Pixel-perfect off switches `Window.content_scale_stretch` back to fractional
+(fill the window, seams may appear — the setting exists for players who
+prefer a full screen over crisp pixels). Aspect and pixel-perfect compose
+freely.
+
+## 4. Component design and ownership
+
+| Concern | Owner | Change |
+| --- | --- | --- |
+| Settings load/save/apply | `scripts/settings_service.gd` (new, stateless-ish helper over a `user://settings.cfg` ConfigFile) | Device-wide store; applied once at bootstrap and live on every change; IndexedDB flush caveat from the web plan applies |
+| Display application | `scripts/display_controller.gd` (new node, created by `gameplay_bootstrap.gd`) | Owns `content_scale_size`, `content_scale_stretch`, fullscreen (`DisplayServer.window_set_mode`); emits `view_size_changed(size)` |
+| Layout truth | `scripts/display_layout.gd` (new, stateless) | `view_size()`, edge anchors (`left_x`, `right_x(w)`, `center_x(w)`, `top_y`, `bottom_y(h)`), and the per-element HUD classification (left / center / right) |
+| HUD re-homing | `hud_controller.gd`, `player_hud.tscn` positions via layout offsets | Right-cluster (gold/soul/run timer/cooldowns/input prompts) anchors to the right edge; centered clusters (HP/MP, target name) shift by half the extra width; left/bottom items unchanged |
+| Overlays and menus | `screen_state_controller.gd` | `create_overlay` sizes to the view; manual `(240 − w)/2` centering math becomes view-relative; title text/button bob keeps absolute y, x recenters |
+| Void + frame | `main.tscn` Background sprite, `BlackBars.png` | Engine `default_clear_color` set to the void RGB(17,19,24); BG extended to cover the view (flat color — a ColorRect sized to the view is acceptable); decorative bars become runtime-drawn strips (top 16 px, bottom 15 px, RGB(6,6,6)) sized to view width. The static PNG is retired so all modes share one code path |
+| Room centering | `room_controller.gd` / `main.tscn` Map node | Shift the room origin right by half the extra width so the diamond stays centered; boss camera needs no change (floor is larger than any supported view) |
+| Touch overlay | `touch_controls_layer.gd` | Replace the `BASE_CONTENT_SIZE`/ProjectSettings fallback with the live view size from the display controller; verify edge parking in wide modes |
+| Volumes | `sound_manager.gd` | `set_music_volume(0-100)` / `set_sfx_volume(0-100)`: linear value → dB offset applied when (re)building players and live to existing players; stays on the Master bus — no bus split in this slice |
+| Settings UI | `screen_state_controller.gd` (title + panel), `hub_flow_controller.gd` (pause) | Title gets a SETTINGS button under CONTINUE; pause-mode hub panel gets RESUME / SETTINGS / QUIT TO TITLE |
+| Web page backdrop | `export_presets.cfg` `html/head_include` | Change page CSS background from `#000` to the void `#111318` so out-of-canvas page pixels match |
+
+When these land, update `AGENTS.md` (ownership table) and
+`docs/ARCHITECTURE.md` (scripts list) in the same commit.
+
+### Fullscreen rules
+
+- Desktop: `DisplayServer.window_set_mode(WINDOW_MODE_FULLSCREEN /
+  WINDOW_MODE_WINDOWED)`; remember the windowed rect implicitly via the
+  existing 960×640 override.
+- Web: browsers allow fullscreen only inside an input-event dispatch. The
+  settings panel's `Button.pressed` signal qualifies, so the toggle works on
+  web — but it must be flipped directly from the signal handler, not from a
+  deferred call.
+
+### Settings panel behavior
+
+- Rows: FULLSCREEN (ON/OFF), ASPECT (3:2 / 16:10 / 16:9), PIXEL PERFECT
+  (ON/OFF), MUSIC (0–100), SFX (0–100).
+- Up/down moves a cursor; left/right adjusts the value (keyboard, gamepad,
+  and touch all reach this — no drag-only controls); confirm/back closes.
+- Every change applies immediately (live preview) and persists immediately.
+- The title version and pause version are the same panel built by one helper;
+  pause wraps it with the hub's pause-mode chrome.
+
+### Quit to title
+
+QUIT TO TITLE abandons the current run (no settlement screen) and returns to
+the title state through the existing `save_flow_controller` title flow.
+Anything already persisted to the profile (souls, unlocks, prior settlements)
+is untouched. Implementation must verify the run-state teardown path used by
+game-over → title is reused, not duplicated.
+
+## 5. HUD re-homing map
+
+Classification to implement in `display_layout.gd` (verify each element
+against the live scene during Phase 2 — this list comes from the audit):
+
+- **Left-anchored (no move)**: player status/level/XP cluster
+  (`player_hud.tscn:182-216`), minimap (`dungeon_minimap_controller.gd:9-11`),
+  room number / dungeon run (`hud_controller.gd:321,382`).
+- **Right-anchored (shift +extra width)**: gold display
+  (`player_hud.tscn:280`), soul display (`hud_controller.gd:346-349`),
+  cooldown rows (`hud_controller.gd:279-280`), run timer
+  (`hud_controller.gd:374`, `player_hud.tscn:312`), input-prompt buttons
+  (`hud_controller.gd:394-400`).
+- **Center-anchored (shift +half extra width)**: HP/MP bar row
+  (`player_hud.tscn:218,249`), target name/focus labels
+  (`hud_controller.gd:46,418,426`), enemy HP bar (`main.tscn:564-578`).
+- **Unchanged**: world-anchored interact prompt (follows the world marker).
+
+## 6. Ordered implementation plan
+
+One testable milestone per commit. Run
+`pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1` before every
+commit; register new tests in `tests/run_all_smoke.ps1`.
+
+### Phase 1 — Settings store and display application (native 3:2 only)
+
+- Add `settings_service.gd` (ConfigFile at `user://settings.cfg`, round-trip
+  with defaults) and `display_controller.gd` (fullscreen, pixel-perfect
+  toggle, `view_size_changed` signal; aspect writes but stays 3:2 until
+  Phase 4).
+- Add `sound_manager.set_music_volume/set_sfx_volume` (linear → dB offset,
+  live-applied) and persist through the settings store.
+- New `tests/settings_service_smoke.gd`: defaults, round-trip, corrupt-file
+  fallback, clamping.
+
+Exit condition: settings persist and apply at 3:2; zero visual change by
+default.
+
+### Phase 2 — Layout owner and HUD re-homing
+
+- Add `display_layout.gd` with the classification map (§5); HUD call sites
+  read offsets from it (behavior identical at 240 width).
+- Update `ui_layout_guide.gd` preview math to match the layout owner's
+  formulas so the editor preview stays honest.
+- New `tests/display_layout_smoke.gd`: at 240 width every offset is zero; at
+  284 width right-anchored elements shift +44, center +22, left unchanged;
+  minimap and room number fixed.
+
+Exit condition: full suite green with no visual diff at 3:2 (screenshot
+compare against `docs/game-screenshot.png` expectations).
+
+### Phase 3 — Settings panel on the title screen
+
+- Title screen gains SETTINGS (third button; extend the cursor/bob logic at
+  `screen_state_controller.gd:176-177`).
+- Build the panel (§4) with the five rows; wire to the settings store and
+  display controller; fullscreen flips from the button-press handler.
+- New `tests/settings_panel_scene_smoke.gd`: panel opens from title, rows
+  adjust values, store persists, closing returns focus to the title cursor.
+
+Exit condition: fullscreen, pixel-perfect, and both volumes are changeable
+from the title screen on desktop and web.
+
+### Phase 4 — Wide aspects: background, frame, rooms, touch
+
+- Set `default_clear_color` to RGB(17,19,24); extend the void background to
+  the view; replace `BlackBars.png` with runtime-drawn bars at view width.
+- Re-center rooms by half the extra width; update the touch layer to read the
+  live view size.
+- Enable 16:10 and 16:9 in the ASPECT row.
+- Tests: overlays and decorative bars cover the full view at all three
+  widths; room diamond is horizontally centered at 256 and 284; touch layout
+  math runs at all three base sizes (extend `touch_controls_smoke.gd`).
+
+Exit condition: 16:9 and 16:10 look correct — void and frame fill the view,
+HUD spread to the edges, no raw clear-color strip.
+
+### Phase 5 — Pause menu items
+
+- Pause-mode hub panel gains RESUME, SETTINGS (same panel as title), and
+  QUIT TO TITLE (§4), keyboard/gamepad/touch navigable.
+- New `tests/pause_menu_scene_smoke.gd`: items exist, RESUME returns to the
+  run, QUIT TO TITLE reaches the title state with the run abandoned and the
+  profile intact.
+
+Exit condition: the pause flow is self-sufficient on all three input types.
+
+### Phase 6 — Verification matrix and docs
+
+- Visual matrix: desktop (all three aspects × integer on/off × windowed/
+  fullscreen), web (Chrome/Firefox), phone (portrait/landscape × aspect
+  modes), with screenshots recorded in this file's log.
+- Update `README.md` (controls/settings), `AGENTS.md` and `ARCHITECTURE.md`
+  (new owners), `GAMEPLAY_TUNING.md` (no tuning exports expected — confirm).
+
+## 7. Verification checklist
+
+- Settings persist across restarts and corrupt-file recovery (automated).
+- At 240 width, zero visual diff vs the pre-feature baseline (automated
+  offsets + manual screenshot).
+- Every overlay covers the full view at 240/256/284; no 240-wide black
+  overlay leaks at wide modes.
+- Decorative bars are exactly 16 px top / 15 px bottom at every width; HUD
+  text still sits on them.
+- Room diamond is horizontally centered in all modes; boss room camera
+  unchanged.
+- Fullscreen toggles on desktop and from the web settings panel (input-event
+  rule respected).
+- Volumes apply live and persist; no clipping at 100.
+- Touch controls park correctly in all modes; QUIT TO TITLE then NEW GAME
+  starts cleanly (state teardown).
+- Full `tests/run_all_smoke.ps1` green.
+
+## 8. Risks and mitigations
+
+| Risk | Mitigation |
+| --- | --- |
+| A missed hardcoded 240/160 position leaks in wide mode | Phase 2 grep pass over `scripts/` and `scenes/` for `240`/`160` UI constants; layout tests assert zero offset at 240 so regressions fail loudly |
+| Extra void looks empty at 16:9 | Void-colored clear color + extended BG make it read as intentional; HUD spreads to edges so the space is used; room stays centered |
+| Portrait phone shrink in 16:9 (3× → 2×) | Accepted trade-off; touch targets keep physical size; pixel-perfect setting lets players choose |
+| Fullscreen silently failing on web | Apply from the `Button.pressed` handler only; manual matrix verifies |
+| Quit-to-title leaking run state | Reuse the game-over → title teardown path; scene test asserts clean re-entry |
+| Pause menu crowding (hub panel is 156×116) | Settings opens as its own panel over the hub chrome rather than stuffing rows into the hub grid |
+
+## 9. Resolved decisions (2026-08-27)
+
+1. **Preserve the look by expansion**: the void background and decorative
+   black bars extend to fill wider ratios — no plain-black letterbox strips
+   inside the presentation. Residual engine bars are void-colored via the
+   clear color.
+2. **Ratio list**: 3:2 (native), 16:10, 16:9. 4:3 and ultrawide are excluded
+   from this slice; the data-driven model can add them later.
+3. **HUD spreads to the new edges** in wide modes (left/center/right
+   classification in §5).
+4. **Settings live on the title screen AND in the pause menu**; the pause
+   menu also gains RESUME and QUIT TO TITLE.
+5. **Volumes**: one music slider and one SFX slider, 0–100 step 10, applied
+   live and persisted device-wide.
+6. Settings storage is a device-wide `user://settings.cfg`, not the per-slot
+   profile (audit finding: profile schema is run data only).
+7. Pixel-perfect (integer scaling) stays ON by default with an opt-out
+   toggle, keeping the web sizing pass as the default presentation.
+
+## 10. Research verification log
+
+Audited 2026-08-26/27 against the live tree:
+
+- Frame/background/void: `BlackBars.png` measured 240×160, opaque bars y 0–15
+  and y 145–159, RGB(6,6,6), no script references; `BG.png` 240×160 flat
+  RGB(17,19,24) on CanvasLayer −10 (`main.tscn:108-113,559-562`);
+  `project.godot` sets no `default_clear_color`.
+- Fixed-position UI: HUD `player_hud.tscn` + `hud_controller.gd:279-400`;
+  minimap `dungeon_minimap_controller.gd:9-11`; overlays
+  `screen_state_controller.gd:501-1395` (title `:1265-1278`, bob `:176-177`,
+  RunComplete `:524-526`, Hub `:546-548`); transition
+  `gameplay_state.gd:713`. Editor HUD preview `ui_layout_guide.gd` mirrors the
+  same constants and must stay in sync.
+- Rooms: 8×8 diamond, 16×8 tiles, FloorLayer at (120, 64)
+  (`main.tscn:119-125`, `isometric_room_layer.gd:52-54`); boss camera
+  `room_controller.gd:1371-1394`.
+- No settings/fullscreen/ConfigFile code; profile is per-slot run data
+  (`player_profile.gd:15-45`); pause is the hub overlay
+  (`hub_flow_controller.gd:72-76`); volume constants
+  `sound_manager.gd:22-25,73`.
+- Touch overlay adapts to the visible rect but has 240×160 fallbacks to
+  replace (`touch_controls_layer.gd`).
+- Platform rules (from the web plan research): web fullscreen only inside an
+  input-event dispatch; `user://` persists to IndexedDB on web.
+
+## 11. Implementation record
+
+The six phases are implemented on `feature/modular-display-settings`:
+
+1. `SettingsService` owns device-wide `user://settings.cfg` preferences;
+   `DisplayController` applies logical size/scaling/fullscreen; and
+   `SoundManager` applies live persisted music/SFX volume offsets.
+2. `DisplayLayout` is the shared left/center/right offset source for HUD,
+   overlays, menus, room centering, and the editor layout guide.
+3. Title SETTINGS and the shared five-row settings panel support keyboard,
+   gamepad, and touch/button activation with immediate persistence.
+4. 3:2, 16:10, and 16:9 expand the runtime void/frame, room placement, HUD,
+   overlays, and touch layout while preserving the fixed 160 px height.
+5. Pause mode now exposes RESUME, SETTINGS, and QUIT TO TITLE; quit reuses the
+   existing title teardown transition and leaves persisted profile progress
+   intact.
+6. README, contributor ownership, architecture, tuning, export CSS, and the
+   smoke-suite registration are updated with the implementation boundaries.
+
+Automated evidence: `tests/run_all_smoke.ps1` passes all registered gameplay,
+settings, responsive-layout, pause, web-export, and main-scene checks. The
+remaining verification item is the manual visual matrix on physical desktop,
+browser, and phone targets (especially fullscreen and portrait integer-scale
+trade-offs); it does not block the code implementation.

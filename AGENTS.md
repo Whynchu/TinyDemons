@@ -33,6 +33,8 @@ process exits nonzero or a test reports failure.
 | Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd` |
 | Progression and settlement | `progression_controller.gd` / `run_settlement.gd` when extracted |
 | Hub and menu presentation | `screen_state_controller.gd` |
+| Display settings and responsive layout | `display_controller.gd`, `display_layout.gd`, `settings_service.gd`, `screen_state_controller.gd` |
+| Audio mix settings | `sound_manager.gd`, `settings_service.gd` |
 | Input device prompts | `input_device_tracker.gd`, `input_router.gd` |
 | Touch controls | `touch_controls_layer.gd`, `input_router.gd` |
 | Actor occlusion and visual effects | `occlusion_renderer.gd`, `effects_spawner.gd` |

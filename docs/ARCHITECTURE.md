@@ -17,6 +17,7 @@ main.tscn (GameplayState, extends Node2D)
  │    ├── Chest                chest_controller
  │    └── CloakedDemon         npc_controller
  ├── RestFire                  rest_fire_controller
+ ├── DisplayController         logical view, void/frame, and settings apply
  └── InterfaceCanvas/UI        HUD (player_hud, hud_controller), screen
                               overlays (screen_state_controller), effects
                               layer (effects_spawner)
@@ -52,7 +53,11 @@ and string dispatch one feature slice at a time. See
   `item_instance`, `equipment_component`, `equipment_transmutation_component`,
   `stats_component`, `combat_stat_snapshot`, `combat_calculator`.
 - **Presentation**: `hud_controller`, `effects_spawner`,
-  `screen_state_controller`, `sprite_frame_library`.
+  `screen_state_controller`, `sprite_frame_library`, `display_controller`,
+  `display_layout`.
+- **Settings/audio**: `settings_service` owns device-wide persisted options;
+  `sound_manager` consumes the live music/SFX values and applies their dB
+  offsets to the Master bus.
 - **Web/input**: `input_device_tracker` (last deliberate device and prompt
   labels), `touch_controls_layer` (virtual stick and touch buttons), and
   `input_router` (the single merged input snapshot).
@@ -85,6 +90,12 @@ per-frame snapshot boundary: desktop actions are read from the Input Map and
 the optional `touch_controls_layer` provider is merged there. The
 `input_device_tracker` owns last-device classification and prompt labels; it
 ignores emulated mouse echoes and sub-threshold gamepad drift.
+
+The display controller applies the active logical view size (240×160, 256×160,
+or 284×160) and emits `view_size_changed`; layout consumers use
+`display_layout.gd` so wide modes add horizontal space without changing the
+native 3:2 coordinates. `settings_service.gd` stores display/audio preferences
+in device-wide `user://settings.cfg`, separate from slot profile data.
 
 ## Extension guide
 

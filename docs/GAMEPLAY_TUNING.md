@@ -134,6 +134,16 @@ on each item's authored tier stat. For the basic sword that is STR 2.0 at
 common `+0`, STR 2.1 at common `+1`, STR 3.0 at common `+10`, STR 4.0 at rare
 `+0`, STR 5.0 at rare `+10`, and STR 6.0 at epic `+0`.
 
+## Display and settings (not gameplay tuning)
+
+Display and audio preferences are intentionally excluded from this gameplay
+tuning index. `settings_service.gd` owns the device-wide
+`user://settings.cfg` values (`fullscreen`, `aspect`, `pixel_perfect`,
+`music_volume`, and `sfx_volume`), while `display_controller.gd` applies the
+logical view and `sound_manager.gd` applies volume changes. They are user
+preferences rather than balance knobs and require no additional tuning
+resource exports.
+
 ## World / scene constants (code, not exported)
 
 These affect dungeon generation and room behavior and are `const` in

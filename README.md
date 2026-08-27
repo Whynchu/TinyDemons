@@ -32,6 +32,11 @@ last-input-device auto-detection) is implemented and tracked in
 [`docs/web-port-implementation-plan.md`](docs/web-port-implementation-plan.md);
 desktop remains the primary target and both share this codebase.
 
+The **modular display and settings** slice (16:10/16:9 aspects with the void
+and decorative bars expanding to fit, title/pause settings panel with
+fullscreen and volume sliders, pause quit-to-title) is implemented and tracked in
+[`docs/modular-display-and-settings-plan.md`](docs/modular-display-and-settings-plan.md).
+
 Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
 status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
 execution plan. The completed Combat & Economy work remains documented in
@@ -55,6 +60,10 @@ Run the headless smoke suite before committing:
 ```powershell
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 ```
+
+Display settings are device-wide and can be changed from SETTINGS on the title
+screen or from the pause menu. Available options are aspect (3:2, 16:10, or
+16:9), fullscreen, pixel-perfect scaling, music volume, and SFX volume.
 
 ## Controls
 
