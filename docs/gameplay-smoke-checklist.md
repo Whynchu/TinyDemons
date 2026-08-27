@@ -80,6 +80,12 @@ does not tunnel the player through walls, and dust does not duplicate.
 - [ ] Perform attack 1 facing both directions.
 - [ ] Buffer attack 2 inside and outside the combo window.
 - [ ] Confirm attack lunge and hitbox direction.
+- [ ] Complete a fast circular stick gesture and confirm Spin Attack starts on
+      the next Attack press.
+- [ ] Select `SpinAttackHitboxShape` in Godot, preview frames 0–7, and edit
+      `HitboxFrame0`–`HitboxFrame7` independently.
+- [ ] Hold Attack through Attack 1, confirm the charge pose, then release after
+      the threshold and confirm the stronger/slower charged Attack 2.
 - [ ] Hit a slime and observe damage number/flash/knockback.
 - [ ] Receive a slime hit and observe hit flash, hit-stop, knockback, and stun.
 
