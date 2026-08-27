@@ -15,6 +15,7 @@ var hub_stat_texts: Array[Sprite2D] = []
 var hub_stat_buttons: Array[Button] = []
 var hub_stat_left_buttons: Array[Button] = []
 var hub_stat_right_buttons: Array[Button] = []
+var hub_stat_row_buttons: Array[Button] = []
 var hub_respec_button: Button = null
 var hub_start_button: Button = null
 var hub_title_button: Button = null
@@ -66,9 +67,12 @@ var hub_binding_action_button: Button = null
 var hub_binding_message := ""
 var hub_item_name_text: Sprite2D = null
 var hub_item_list_texts: Array[Sprite2D] = []
+var hub_item_row_buttons: Array[Button] = []
 var hub_shop_price_texts: Array[Sprite2D] = []
 var hub_item_detail_texts: Array[Sprite2D] = []
 var hub_item_action_button: Button = null
+var hub_fusion_decrease_button: Button = null
+var hub_fusion_increase_button: Button = null
 var title_overlay: ColorRect = null
 var title_start_button: Button = null
 var title_continue_button: Button = null
@@ -538,7 +542,7 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor}
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable()) -> Dictionary:
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable()) -> Dictionary:
 	var panel_size := Vector2(156, 116)
 	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.94), 3, false)
 	overlay.position = Vector2((240.0 - panel_size.x) * 0.5, (160.0 - panel_size.y) * 0.5)
@@ -563,6 +567,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var stat_buttons: Array[Button] = []
 	var stat_left: Array[Button] = []
 	var stat_right: Array[Button] = []
+	var stat_rows: Array[Button] = []
 	var derived: Array[Sprite2D] = []
 	var stat_names := [&"VIT", &"STR", &"DEF", &"SPD"]
 	var stat_arrow_size := Vector2(18, 12)
@@ -572,6 +577,24 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		# to scan on the small hub panel.
 		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(panel_size.x * 0.5, 45 + index * 11), true)
 		stats.append(stat_text)
+		# Give each stat row its own touch target so a tap selects that row instead
+		# of falling through to the controller-style generic accept action.
+		var row_button := Button.new()
+		row_button.name = "HubStatRow%d" % index
+		row_button.position = Vector2(23, 39 + index * 11)
+		row_button.size = Vector2(panel_size.x - 47, 12)
+		row_button.text = ""
+		row_button.focus_mode = Control.FOCUS_NONE
+		row_button.mouse_filter = Control.MOUSE_FILTER_STOP
+		row_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var row_transparent := StyleBoxFlat.new()
+		row_transparent.bg_color = Color.TRANSPARENT
+		row_transparent.set_border_width_all(0)
+		for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			row_button.add_theme_stylebox_override(style_state, row_transparent)
+		if select_stat_row.is_valid(): row_button.pressed.connect(select_stat_row.bind(index))
+		overlay.add_child(row_button)
+		stat_rows.append(row_button)
 		var left := make_archetype_arrow(overlay, -1, Vector2(5, 39 + index * 11), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
 		var right := make_archetype_arrow(overlay, 1, Vector2(panel_size.x - 23, 39 + index * 11), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
 		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
@@ -600,6 +623,24 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var item_list: Array[Sprite2D] = []
 	for list_index in 5:
 		item_list.append(create_sprite(overlay, "HubItemList%d" % list_index, null, Vector2(7, 32 + list_index * 10), false))
+	var item_row_buttons: Array[Button] = []
+	for list_index in 5:
+		var item_row_button := Button.new()
+		item_row_button.name = "HubItemRow%d" % list_index
+		item_row_button.position = Vector2(3, 28 + list_index * 10)
+		item_row_button.size = Vector2(panel_size.x - 6, 11)
+		item_row_button.text = ""
+		item_row_button.focus_mode = Control.FOCUS_NONE
+		item_row_button.mouse_filter = Control.MOUSE_FILTER_STOP
+		item_row_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var item_row_transparent := StyleBoxFlat.new()
+		item_row_transparent.bg_color = Color.TRANSPARENT
+		item_row_transparent.set_border_width_all(0)
+		for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			item_row_button.add_theme_stylebox_override(style_state, item_row_transparent)
+		if select_item_row.is_valid(): item_row_button.pressed.connect(select_item_row.bind(list_index))
+		overlay.add_child(item_row_button)
+		item_row_buttons.append(item_row_button)
 	var shop_prices: Array[Sprite2D] = []
 	for list_index in 5:
 		shop_prices.append(create_sprite(overlay, "HubShopPrice%d" % list_index, null, Vector2(125, 32 + list_index * 10), false))
@@ -645,6 +686,16 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		item_details[detail_index].visible = false
 	var item_action_button := make_retro_button("EQUIP", Vector2(52, 89), Vector2(52, 10), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); overlay.add_child(item_action_button)
+	var fusion_decrease_button := make_retro_button("<", Vector2(4, 89), Vector2(20, 10), pixel_texture)
+	fusion_decrease_button.name = "HubFusionDecrease"
+	fusion_decrease_button.focus_mode = Control.FOCUS_NONE
+	if adjust_fusion_count.is_valid(): fusion_decrease_button.pressed.connect(adjust_fusion_count.bind(-1))
+	overlay.add_child(fusion_decrease_button)
+	var fusion_increase_button := make_retro_button(">", Vector2(28, 89), Vector2(20, 10), pixel_texture)
+	fusion_increase_button.name = "HubFusionIncrease"
+	fusion_increase_button.focus_mode = Control.FOCUS_NONE
+	if adjust_fusion_count.is_valid(): fusion_increase_button.pressed.connect(adjust_fusion_count.bind(1))
+	overlay.add_child(fusion_increase_button)
 	var binding_panel := Panel.new()
 	binding_panel.name = "HubBindingPanel"
 	binding_panel.position = Vector2(4, 29)
@@ -669,7 +720,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	overlay.add_child(binding_action_button)
 	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
 	cursor.visible = false
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor}
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
@@ -698,7 +749,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		title.texture = title_texture
 		title.position.x = (156.0 - title_texture.get_width()) * 0.5
 	var stat_nodes: Array[CanvasItem] = []
-	stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
+	stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_row_buttons); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
 	for node in stat_nodes:
 		if node != null: node.visible = page == 0
 	var item_name := hub_item_name_text
@@ -709,6 +760,13 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var gear_stats := hub_gear_stat_texts
 	var item_details := hub_item_detail_texts
 	var item_action := hub_item_action_button
+	for button in hub_item_row_buttons: button.visible = false
+	if hub_fusion_decrease_button != null:
+		hub_fusion_decrease_button.visible = page == 3
+		hub_fusion_decrease_button.disabled = true
+	if hub_fusion_increase_button != null:
+		hub_fusion_increase_button.visible = page == 3
+		hub_fusion_increase_button.disabled = true
 	if item_name != null: item_name.visible = false
 	var item_page := page >= 1 and page <= 3
 	for node in item_list: node.visible = item_page
@@ -858,6 +916,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			item_list[row].texture = null
 			if row < shop_prices.size(): shop_prices[row].texture = null
 			continue
+		if row < hub_item_row_buttons.size(): hub_item_row_buttons[row].visible = page == 2 or page == 3
 		var row_item: ItemInstance
 		var row_sold := false
 		var row_price := 0
@@ -894,7 +953,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			item_list[0].texture = pixel_texture.call(empty_text, Color8(255, 205, 117) if page == 3 else Color.WHITE) as Texture2D
 		for detail in details: detail.texture = null
 		for stale_stat in hub_gear_stat_texts: stale_stat.texture = null
-		action.disabled = true; return
+		action.disabled = true
+		return
 	var mastery := item.enhancement_level
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
 	if page != 3:
@@ -958,6 +1018,12 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if not selected_transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % selected_transmutation_name)
 		details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D if not item_info.is_empty() else null
 	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.souls < profile.fusion_batch_cost(item, fusion_count))))
+	if hub_fusion_decrease_button != null:
+		hub_fusion_decrease_button.disabled = page != 3 or not can_fuse or fusion_count <= 1
+		set_archetype_button_state(hub_fusion_decrease_button, not hub_fusion_decrease_button.disabled, highlight_color)
+	if hub_fusion_increase_button != null:
+		hub_fusion_increase_button.disabled = page != 3 or not can_fuse or fusion_count >= material_count
+		set_archetype_button_state(hub_fusion_increase_button, not hub_fusion_increase_button.disabled, highlight_color)
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)

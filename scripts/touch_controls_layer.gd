@@ -308,16 +308,26 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 	if not _touch_input_enabled:
 		return
 	var cancel: Rect2 = _layout.get("cancel", Rect2())
-	if cancel.has_point(position) and _cancel_control_visible():
-		_finger_actions[finger_id] = &"cancel"
-		set_button_state(&"cancel", true)
-		_update_touch_capture_filter()
-		return
 	if _is_menu_context():
 		var menu_button := _menu_button_at(position)
 		if menu_button != null:
 			_menu_touch_buttons[finger_id] = menu_button
 			_update_touch_capture_filter()
+			return
+		# A disabled native button still owns its visual hit area. Reserve that
+		# area so it cannot accidentally fall through to the overlapping cancel
+		# control at the bottom-right of the compact hub panel.
+		if _menu_button_at(position, true) != null:
+			return
+		if cancel.has_point(position) and _cancel_control_visible():
+			_finger_actions[finger_id] = &"cancel"
+			set_button_state(&"cancel", true)
+			_update_touch_capture_filter()
+			return
+		# Hub pages expose their actionable controls as native Buttons. A blank
+		# touch must stay inert; falling through to generic accept moves the
+		# controller cursor even though no visible control was selected.
+		if _input_context == CONTEXT_HUB:
 			return
 		_menu_accept_fingers[finger_id] = true
 		_menu_accept_latch = true
@@ -327,6 +337,22 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		var dialogue_button := _menu_button_at(position)
 		if dialogue_button != null:
 			_menu_touch_buttons[finger_id] = dialogue_button
+			_update_touch_capture_filter()
+			return
+		if _menu_button_at(position, true) != null:
+			return
+		if cancel.has_point(position) and _cancel_control_visible():
+			_finger_actions[finger_id] = &"cancel"
+			set_button_state(&"cancel", true)
+			_update_touch_capture_filter()
+			return
+		# The continue prompt is a Sprite2D rather than a native Button. Treat
+		# the visible dialogue panel as a touch target so the flame lesson can
+		# advance even when the floating gameplay controls overlap the prompt.
+		var dialogue_rect := _dialogue_touch_rect()
+		if dialogue_rect.has_point(position):
+			_menu_accept_fingers[finger_id] = true
+			_menu_accept_latch = true
 			_update_touch_capture_filter()
 			return
 		# Dialogue uses the same tap-anywhere behavior as a controller's
@@ -443,7 +469,7 @@ func _is_menu_context() -> bool:
 	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU
 
 
-func _menu_button_at(position: Vector2) -> BaseButton:
+func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseButton:
 	var search_root := get_parent()
 	if search_root == null:
 		return null
@@ -451,7 +477,7 @@ func _menu_button_at(position: Vector2) -> BaseButton:
 	_collect_menu_buttons(search_root, nodes)
 	for index in range(nodes.size() - 1, -1, -1):
 		var button := nodes[index] as BaseButton
-		if button == null or not is_instance_valid(button) or not button.is_visible_in_tree() or button.disabled:
+		if button == null or not is_instance_valid(button) or not button.is_visible_in_tree() or (button.disabled and not include_disabled):
 			continue
 		if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
 			continue
@@ -546,6 +572,14 @@ func _context_cancel_rect(layout: Dictionary) -> Rect2:
 	if bounds.encloses(Rect2(nested_position, cancel.size)):
 		cancel.position = nested_position
 	return cancel
+
+
+func _dialogue_touch_rect() -> Rect2:
+	var dialogue_box := _find_visible_control(get_parent(), &"NpcDialogueBox")
+	if dialogue_box == null:
+		return Rect2()
+	# Include the panel border and the slightly offset TAP continue glyph.
+	return dialogue_box.get_global_rect().grow(4.0)
 
 
 func _find_visible_control(node: Node, target_name: StringName) -> Control:

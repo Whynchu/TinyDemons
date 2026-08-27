@@ -564,6 +564,8 @@ func _set_hub_page(page: int) -> void:
 	hub_flow_controller.call("set_hub_page", self, page)
 func _shift_hub_item(direction: int) -> void:
 	hub_flow_controller.call("shift_hub_item", self, direction)
+func _select_hub_item_row(row: int) -> void:
+	hub_flow_controller.call("select_hub_item_row", self, row)
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 	return hub_flow_controller.call("hub_gear_candidates", self, slot) as Array[ItemInstance]
 func _shift_hub_gear_candidate(direction: int) -> void:
