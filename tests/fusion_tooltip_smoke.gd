@@ -28,6 +28,10 @@ func _initialize() -> void:
 	}
 	for key: String in built:
 		controller_instance.set(str(key_map.get(key, key)), built[key])
+	var stat_buttons := built["stat_buttons"] as Array[Button]
+	var stat_texts := built["stats"] as Array[Sprite2D]
+	_expect(stat_buttons.size() == 8 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets", failures)
+	_expect(stat_texts.all(func(text: Sprite2D) -> bool: return text.centered), "hub stat values are centered between their touch targets", failures)
 	controller_instance.hub_overlay = ColorRect.new()
 	controller_instance.hub_page = 1
 	controller_instance.hub_pause_mode = false
@@ -53,8 +57,12 @@ func _initialize() -> void:
 	root.player_profile = profile
 	root.progression_tuning = ProgressionTuning.new()
 	root.run_state = RunState.new()
+	controller_instance.hub_page = 0
+	controller_instance.call("update_hub_ui", root, pixel)
+	_expect(controller_instance.hub_derived_texts.all(func(text: Sprite2D) -> bool: return not text.visible), "stats page hides duplicate derived values", failures)
 	var gear_stats := controller_instance.hub_gear_stat_texts as Array[Sprite2D]
 	var details := controller_instance.hub_item_detail_texts as Array[Sprite2D]
+	controller_instance.hub_page = 1
 	controller_instance.hub_gear_browsing = true
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)

@@ -565,11 +565,15 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var stat_right: Array[Button] = []
 	var derived: Array[Sprite2D] = []
 	var stat_names := [&"VIT", &"STR", &"DEF", &"SPD"]
+	var stat_arrow_size := Vector2(18, 12)
 	for index in stat_names.size():
-		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(18, 42 + index * 12), false)
+		# Keep the value centered between generous touch targets. The old row also
+		# included gear and allocation bookkeeping, which made the core stats hard
+		# to scan on the small hub panel.
+		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(panel_size.x * 0.5, 45 + index * 11), true)
 		stats.append(stat_text)
-		var left := make_archetype_arrow(overlay, -1, Vector2(4, 40 + index * 12), adjust_stat.bind(stat_names[index], -1), pixel_texture)
-		var right := make_archetype_arrow(overlay, 1, Vector2(84, 40 + index * 12), adjust_stat.bind(stat_names[index], 1), pixel_texture)
+		var left := make_archetype_arrow(overlay, -1, Vector2(5, 39 + index * 11), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
+		var right := make_archetype_arrow(overlay, 1, Vector2(panel_size.x - 23, 39 + index * 11), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
 		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
 		left.set_meta("hub_stat_index", index); right.set_meta("hub_stat_index", index)
 		stat_left.append(left); stat_right.append(right); stat_buttons.append(left); stat_buttons.append(right)
@@ -579,7 +583,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	apply_button.focus_mode = Control.FOCUS_NONE
 	apply_button.pressed.connect(apply_stats)
 	overlay.add_child(apply_button)
-	var cancel_button := make_retro_button("CANCEL", Vector2(39, 88), Vector2(38, 11), pixel_texture)
+	var cancel_button := make_retro_button("CLEAR", Vector2(39, 88), Vector2(34, 11), pixel_texture)
 	cancel_button.focus_mode = Control.FOCUS_NONE
 	cancel_button.pressed.connect(cancel_stats)
 	overlay.add_child(cancel_button)
@@ -727,33 +731,31 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		return
 	var pending := [hub_pending_vit, hub_pending_str, hub_pending_def, hub_pending_spd]
 	var remaining := int(root.call("_hub_points_remaining"))
-	if points != null: points.texture = pixel_texture.call("POINTS TO SPEND: %d" % remaining, Color8(255, 205, 117)) as Texture2D
-	var allocations := [profile.allocated_vit + pending[0], profile.allocated_str + pending[1], profile.allocated_def + pending[2], profile.allocated_spd + pending[3]]
+	if points != null: points.texture = pixel_texture.call("POINTS %d" % remaining, Color8(255, 205, 117)) as Texture2D
 	var stat_texts := hub_stat_texts
 	var selected_row := hub_menu_row
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 	var effective_values: Array[float] = []
-	var gear_values: Array[float] = []
 	if snapshot != null:
 		effective_values = [snapshot.vit + pending[0], snapshot.strength + pending[1], snapshot.def + pending[2], snapshot.speed + pending[3]]
-		gear_values = [snapshot.gear_vit, snapshot.gear_strength, snapshot.gear_def, snapshot.gear_speed]
 	for index in stat_texts.size():
 		var effective := effective_values[index] if index < effective_values.size() else 0.0
-		var gear := gear_values[index] if index < gear_values.size() else 0.0
-		stat_texts[index].texture = pixel_texture.call("%s %.1f  G%+.1f A+%d" % [["VIT", "STR", "DEF", "SPD"][index], effective, gear, allocations[index]], highlight_color if selected_row == index else Color.WHITE) as Texture2D
+		var before_pending := effective - float(pending[index])
+		var value_text := "%s %.1f" % [["VIT", "STR", "DEF", "SPD"][index], before_pending]
+		if int(pending[index]) != 0:
+			value_text += ">%0.1f" % effective
+		stat_texts[index].texture = pixel_texture.call(value_text, highlight_color if selected_row == index else Color.WHITE) as Texture2D
 	var stat_buttons := hub_stat_buttons
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
 		var stat_index := int(button.get_meta("hub_stat_index", 0))
 		button.disabled = remaining <= 0 if direction > 0 else int(pending[stat_index]) <= 0
 		set_archetype_button_state(button, selected_row == stat_index, highlight_color)
-	if snapshot != null:
-		snapshot.vit += pending[0]; snapshot.strength += pending[1]; snapshot.def += pending[2]; snapshot.speed += pending[3]
-		var combat_tuning := root.get("combat_tuning") as CombatTuning
-		var derived_texts := hub_derived_texts
-		var derived_values := ["HP %.1f" % CombatCalculator.max_health_for_snapshot(snapshot, combat_tuning), "ATK %.1f" % CombatCalculator.attack_power_for_snapshot(snapshot, combat_tuning), "DEF %.1f" % snapshot.def, "SPD %.1f" % snapshot.speed]
-		for index in derived_texts.size():
-			derived_texts[index].texture = pixel_texture.call(derived_values[index], Color8(167, 240, 112)) as Texture2D if index < derived_values.size() else null
+	# HP, ATK, DEF, and SPD used to be repeated in a second derived column.
+	# Keep those calculations in combat and the gear page; the allocation page
+	# should only answer which core stat will change.
+	for derived_text in hub_derived_texts:
+		derived_text.visible = false
 	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3])
 	var apply_button := hub_apply_button
 	var cancel_button := hub_cancel_button
@@ -1263,8 +1265,8 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 	return {"overlay": overlay, "preview": preview, "name": name_text, "left": left_buttons, "right": right_buttons, "type_left": left_type, "type_right": right_type, "start": start_button, "cover": hold_cover}
 
 
-func make_archetype_arrow(parent: Node, side: int, button_position: Vector2, pressed_callback: Callable, pixel_texture: Callable) -> Button:
-	var button := Button.new(); button.position = button_position; button.size = Vector2(10, 10); button.text = ""; button.focus_mode = Control.FOCUS_NONE; button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; button.set_meta("archetype_arrow", true)
+func make_archetype_arrow(parent: Node, side: int, button_position: Vector2, pressed_callback: Callable, pixel_texture: Callable, hit_size: Vector2 = Vector2(10, 10)) -> Button:
+	var button := Button.new(); button.position = button_position; button.size = hit_size; button.text = ""; button.focus_mode = Control.FOCUS_NONE; button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; button.set_meta("archetype_arrow", true)
 	for style_state in ["normal", "hover", "pressed", "focus"]:
 		var style := StyleBoxFlat.new(); style.bg_color = Color.TRANSPARENT; style.border_width_left = 0; style.border_width_top = 0; style.border_width_right = 0; style.border_width_bottom = 0; button.add_theme_stylebox_override(style_state, style)
 	var glyph := Sprite2D.new(); glyph.texture = pixel_texture.call("<" if side < 0 else ">", Color.WHITE) as Texture2D; glyph.centered = true; glyph.position = button.size * 0.5; glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; button.add_child(glyph)

@@ -1,5 +1,7 @@
 extends SceneTree
 
+var stat_touch_count := 0
+
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -38,6 +40,16 @@ func _initialize() -> void:
 	layer.set_virtual_stick(Vector2.ZERO)
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(router.just_released(&"attack"), "touch release reaches router release edge", failures)
+	var world_tap := InputEventScreenTouch.new()
+	world_tap.device = 0; world_tap.index = 13; world_tap.pressed = true; world_tap.position = Vector2(120.0, 60.0)
+	layer._input(world_tap)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.pressed(&"interact") and router.just_pressed(&"interact"), "world tap reaches the displayed TAP interaction", failures)
+	var world_tap_release := InputEventScreenTouch.new()
+	world_tap_release.device = 0; world_tap_release.index = 13; world_tap_release.pressed = false; world_tap_release.position = world_tap.position
+	layer._input(world_tap_release)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(not router.pressed(&"interact") and router.just_released(&"interact"), "world TAP interaction releases cleanly", failures)
 	var target_rect: Rect2 = layer._layout["buttons"][&"target"]
 	var target_down := InputEventScreenTouch.new()
 	target_down.device = 0; target_down.index = 11; target_down.pressed = true; target_down.position = target_rect.get_center()
@@ -83,9 +95,33 @@ func _initialize() -> void:
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(not router.pressed(&"magic") and router.movement(0.25) == Vector2.ZERO, "hidden touch provider is inert", failures)
 	layer.set_last_input_device(InputDeviceTracker.Device.TOUCH)
+	var hub_host := Node.new()
+	get_root().add_child(hub_host)
+	var hub_builder := ScreenStateController.new()
+	var hub_controls := hub_builder.build_hub(hub_host, Callable(self, "_pixel_texture"), Callable(self, "_record_stat_touch"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"))
+	var hub_overlay := hub_controls["overlay"] as ColorRect
+	hub_overlay.visible = true
+	for child in hub_overlay.get_children():
+		if child is BaseButton:
+			(child as BaseButton).visible = false
+	for stat_button in hub_controls["stat_buttons"] as Array[Button]:
+		stat_button.visible = true
+	await process_frame
 	layer.set_input_context(InputRouter.Context.HUB)
 	_expect(layer.is_active(), "touch input remains available behind hub/menu overlays", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "inactive touch overlay does not intercept menu taps", failures)
+	var hub_cancel_rect: Rect2 = layer._layout["cancel"]
+	_expect(hub_overlay.get_global_rect().encloses(hub_cancel_rect), "hub cancel control is nested inside the hub panel", failures)
+	var stat_right := (hub_controls["stat_right"] as Array[Button])[0]
+	var stat_down := InputEventScreenTouch.new()
+	stat_down.device = 0; stat_down.index = 14; stat_down.pressed = true; stat_down.position = stat_right.get_global_rect().get_center()
+	layer._input(stat_down)
+	var stat_up := InputEventScreenTouch.new()
+	stat_up.device = 0; stat_up.index = 14; stat_up.pressed = false; stat_up.position = stat_down.position
+	layer._input(stat_up)
+	_expect(stat_touch_count == 1, "touching a hub stat arrow activates its enlarged hit target", failures)
+	hub_host.free()
+	hub_builder.free()
 	layer.set_input_context(InputRouter.Context.MENU)
 	_expect(layer.is_active(), "touch input remains available on title and other menus", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "menu touch overlay stays transparent to title Buttons", failures)
@@ -195,3 +231,21 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
+
+
+func _record_stat_touch(_stat_name: StringName, _direction: int) -> void:
+	stat_touch_count += 1
+
+
+func _pixel_texture(_text: String, color: Color) -> Texture2D:
+	var image := Image.create(3, 5, false, Image.FORMAT_RGBA8)
+	image.fill(color)
+	return ImageTexture.create_from_image(image)
+
+
+func _noop() -> void:
+	pass
+
+
+func _noop_int(_value: int) -> void:
+	pass
