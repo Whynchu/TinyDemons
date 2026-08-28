@@ -367,3 +367,100 @@ The slice is complete when a new player can:
 
 Only after this loop is stable should content expansion, floor shops, a
 walkable hub, and transmutation rerolling begin.
+
+## Follow-up Plan: Simplified Run Results and Attainable Grades
+
+### Problem statement
+
+The current post-run panel exposes too many raw counters and combines time,
+damage, exploration, combat variety, accuracy, and input discipline into a
+single score. In practice, the S threshold is not a believable target during a
+normal strong clear. The result screen should answer three useful questions
+quickly: how much of the current level was completed, how cleanly was combat
+handled, and how efficiently was the level cleared?
+
+This is a follow-up implementation slice. It should not be folded into the
+existing score silently; the displayed metrics, grade thresholds, reward
+inputs, and smoke fixtures must change together.
+
+### Target scoring model
+
+Use three player-readable categories, each normalized to 0–100:
+
+| Category | Starting weight | Measurement direction |
+| --- | ---: | --- |
+| Level completion | 50% | Current-level objective progress, with a complete level reaching 100% |
+| Combat | 25% | A compact combination of successful clears/kills and damage avoided; no style or input-count requirement |
+| Speed | 25% | Clear time compared with a level-specific target window, with a forgiving floor and cap |
+
+The weighted total remains a 0–100 score so existing reward code can migrate
+without introducing a second scale. Completion must be based on the current
+level's authored/generated objective count rather than a global lifetime or
+run-rank value. If the player can extract or die before the level is complete,
+the result must show the partial percentage that was actually achieved.
+
+The first tuning pass should make S achievable by a strong, repeatable clear,
+not by perfect damage, perfect accuracy, every optional room, and an extreme
+time simultaneously. Begin with provisional thresholds of S 90+, A 75+, B 60+,
+C 40+, and D below 40, then calibrate them against representative real runs.
+Thresholds and speed target windows belong in tuning data once the first
+playtest establishes the normal clear-time distribution.
+
+### Result-panel rewrite
+
+Replace the current long diagnostic list with a compact hierarchy:
+
+```text
+LEVEL COMPLETE   100%
+COMBAT           84%
+SPEED            72%
+GRADE S          91
+
+REWARDS
++GOLD / GEAR / XP
+RETURN TO HUB
+```
+
+The exact reward line depends on the existing settlement result, but the panel
+should not display implementation-only counters such as wasted inputs, style
+ratios, or every attack/block count. Those values may remain in debug logging
+or a later optional detail view. Each category gets one clear value and a
+consistent color treatment; the grade and reward remain visually dominant.
+
+### Implementation sequence
+
+1. Audit every `RunGrade` field and every consumer in `RunState`,
+   `RunFlowController`, loot rarity/reward calculation, profile persistence,
+   the result UI, and tests.
+2. Add explicit current-level objective progress to the run state and finalize
+   it at the same settlement boundary used by completion, extraction, and
+   defeat. Keep partial-run values valid and deterministic.
+3. Replace the grade evaluator with the three weighted categories. Keep the
+   output keys temporarily compatible where reward code still needs them, then
+   remove obsolete presentation-only fields after the migration is covered.
+4. Move target times, category weights, and grade thresholds into a tuning
+   resource or clearly owned constants. Avoid deriving speed from the player's
+   personal best during the same run.
+5. Simplify `build_run_complete` and `show_run_complete` to render only the
+   compact result hierarchy, preserving touch/controller return behavior.
+6. Rebalance loot/reward use of the score so an attainable S is valuable but
+   cannot create an outsized difficulty or drop-rate jump.
+7. Replace the synthetic S fixture with representative clean/ordinary/partial
+   run fixtures and add boundary tests for each grade and each category clamp.
+8. Run a manual matrix across a full clear, a slow clear, a damaged clear, and
+   an early defeat/extraction; verify that the panel communicates the outcome
+   without requiring a second pass through the old diagnostic counters.
+
+### Exit criteria
+
+- A normal excellent current-level clear can reach S without requiring every
+  optional behavior or a near-zero damage run.
+- A partial session reports a truthful completion percentage and cannot receive
+  a high grade solely from speed or combat.
+- Combat and speed categories are bounded, explainable, and independent of
+  unrelated UI/input noise.
+- Rewards, profile `last_run_grade`, and future-run loot modifiers use the new
+  score/grade consistently.
+- The result panel is materially shorter, readable at 3:2/16:9, and usable by
+  keyboard, gamepad, and touch.
+- `run_grade_smoke`, result-panel smoke coverage, and the full smoke suite pass.

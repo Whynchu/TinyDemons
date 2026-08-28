@@ -41,7 +41,9 @@ func attack_multiplier(spd: float) -> float:
 @export var spin_recovery_start_frame := 6
 @export var spin_hit_start_frame := 3
 @export var spin_hit_end_frame := 6
-@export var spin_damage_multiplier := 1.10
+## Spin trades single-target power for reliable area coverage. It is deliberately
+## below a normal Attack 1, but it does not use the normal multi-target split.
+@export var spin_damage_multiplier := 0.90
 @export var spin_knockback_multiplier := 1.10
 @export_group("Charge attack")
 @export var charge_minimum_time := 0.35

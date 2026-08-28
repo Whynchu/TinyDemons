@@ -499,6 +499,16 @@ func begin_attack_visual(root: Object) -> void:
 	_update_layers(root)
 
 
+func finish_spin_attack_visual(root: Object) -> void:
+	# Spin's authored final frames are the complete recovery. Clear the generic
+	# attack hold immediately so the equipment cannot display a between/after
+	# layer after the body has already returned to idle.
+	was_attacking = false
+	last_attack_name = ""
+	transition_hold_timer = 0.0
+	_update_layers(root)
+
+
 func interrupt_attack(root: Object) -> void:
 	# Orb knockback cancels the attack instead of entering the normal between-
 	# attack presentation. Clear the component's own transition memory too, or
@@ -838,7 +848,7 @@ func _update_layers(root: Object) -> void:
 	var sword_back_key := "sword_back_spin" if state == "spin" else "sword_back_%s" % ("attack" if state == "attack1" else state)
 	var shield_back_key := "shield_back_spin" if state == "spin" else "shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")
 	var shield_front_key := "shield_front_spin" if state == "spin" else "shield_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)
-	var sword_front_key := "sword_front_spin" if state == "spin" else "sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after")
+	var sword_front_key := "sword_front_spin" if state == "spin" else "sword_front_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between" if state == "between" else "after" if state == "after" else state)
 	var sword_back_visible := state != "attack2"
 	if state == "magic":
 		_set_layer("EquipmentSwordBack", frames.get("sword_magic"), frame_index, opacity, true, "sword_magic")

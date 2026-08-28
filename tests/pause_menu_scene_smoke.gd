@@ -27,6 +27,10 @@ func _initialize() -> void:
 		_expect(screens.pause_menu_buttons.size() == 3, "pause exposes Resume, Settings, and Quit to Title", failures)
 		for button in screens.pause_menu_buttons:
 			_expect(button.visible, "pause menu action is visible", failures)
+		_expect(screens.hub_gear_stat_panel != null and screens.hub_gear_stat_panel.visible, "pause shows the character status panel", failures)
+		_expect(screens.hub_gear_stat_texts.size() >= 5 and screens.hub_gear_stat_texts[0].visible, "pause status panel shows HP and core stats", failures)
+		if screens.hub_gear_stat_panel != null and not screens.pause_menu_buttons.is_empty():
+			_expect(screens.pause_menu_buttons[0].position.x + screens.pause_menu_buttons[0].size.x < screens.hub_gear_stat_panel.position.x, "pause actions do not overlap the status panel", failures)
 		if screens.pause_resume_button != null:
 			screens.pause_resume_button.pressed.emit()
 		await process_frame

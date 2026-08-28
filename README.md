@@ -41,6 +41,12 @@ The current combat slice adds the scene-authored Spin Attack and held-button
 charge attack; its editor hitbox workflow and tuning contract are tracked in
 [`docs/spin-and-charge-attacks-plan.md`](docs/spin-and-charge-attacks-plan.md).
 
+The next progression/UI redesign is documented in
+[`docs/ffiii-inspired-stats-and-menu-implementation-plan.md`](docs/ffiii-inspired-stats-and-menu-implementation-plan.md):
+six manually allocated attributes (STR/AGI/VIT/INT/MND/DEF), typed physical and
+magic combat paths, INT-driven Imbue strength, save migration, and
+FFIII-inspired menu layouts using Tiny Demons' own visual language.
+
 Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
 status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
 execution plan. The completed Combat & Economy work remains documented in

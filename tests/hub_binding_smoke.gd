@@ -35,6 +35,11 @@ func _initialize() -> void:
 		_expect(not String(npc.full_message).contains("BIND"), "Cloaked Demon dialogue remains the normal Hub invitation", failures)
 		npc.hide_dialogue(gameplay)
 		gameplay.call("_open_hub_from_cloaked_demon")
+		var pause_buttons := screen.get("pause_menu_buttons") as Array[Button]
+		var pause_button_visible := false
+		for pause_button in pause_buttons:
+			pause_button_visible = pause_button_visible or pause_button.visible
+		_expect(not bool(screen.get("hub_pause_mode")) and not pause_button_visible, "Cloaked Demon Hub does not retain pause actions underneath it", failures)
 		gameplay.call("_set_hub_page", 4)
 		var binding_panel := screen.get("hub_binding_panel") as Panel
 		var binding_action := screen.get("hub_binding_action_button") as Button

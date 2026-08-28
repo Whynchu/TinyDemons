@@ -21,7 +21,7 @@ game reads them at runtime with no code change.
 | Idle/walk | `idle_frame_time` 0.22, `walk_frame_time` 0.18 |
 | Attack | `attack_frame_time` 0.09, `attack_hit_frame` 2, `attack2_hit_frame` 2, `combo_window` 0.18, `between_attack_time` 0.12, `attack2_cooldown` 0.16 |
 | Spin gesture / timing | `spin_circle_min_magnitude` 0.55, `spin_circle_max_duration` 0.50, `spin_circle_required_turn` 0.80τ, `spin_circle_arm_duration` 0.28, `spin_frame_time` 0.075, `spin_recovery_frame_time` 0.14, active frames 3–6 |
-| Spin balance | `spin_damage_multiplier` 1.10, `spin_knockback_multiplier` 1.10; spin uses eight authored body frames and no lunge |
+| Spin balance | `spin_damage_multiplier` 0.90, `spin_knockback_multiplier` 1.10; spin uses eight authored body frames, no lunge, and does not split damage across multiple targets |
 | Charge balance | `charge_minimum_time` 0.35, `charge_maximum_time` 1.00, `charged_attack2_frame_time_multiplier` 1.35, `charged_attack2_damage_multiplier` 1.60, `charged_attack2_knockback_multiplier` 1.50 |
 | Roll | `roll_frame_time` 0.05, `roll_distance` 30, `roll_duration` 0.30 |
 | Lunge/knockback | `attack_lunge_distance` 6, `attack_lunge_duration` 0.18, `attack_knockback` 16, `attack1_knockback_multiplier` 0.60 |

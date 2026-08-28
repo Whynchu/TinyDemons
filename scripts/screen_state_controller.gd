@@ -211,6 +211,15 @@ func update_title_flow(root: Object, delta: float) -> void:
 	if settings_overlay != null and settings_overlay.visible:
 		root.call("_update_settings_input")
 		return
+	if menu_input_release_lock:
+		# A confirm used to close title Settings must be released before the title
+		# screen can dispatch its focused button. Otherwise BACK immediately falls
+		# through to New Game on the next frame.
+		var released := not bool(root.call("_is_interact_input_pressed")) and not bool(root.call("_is_ui_accept_pressed")) and not bool(root.call("_is_menu_cancel_input_pressed"))
+		if released:
+			menu_input_release_lock = false
+		else:
+			return
 	if archetype_overlay != null and archetype_overlay.visible and not title_transition_active:
 		root.call("_update_archetype_input", delta)
 		return
@@ -796,7 +805,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var pause_buttons: Array[Button] = []
 	var pause_labels := ["RESUME", "SETTINGS", "QUIT TO TITLE"]
 	for index in pause_labels.size():
-		var pause_button := make_retro_button(pause_labels[index], Vector2((panel_size.x - 92.0) * 0.5, 43 + index * 17), Vector2(92, 13), pixel_texture)
+		# Reserve the right-hand column for the character status panel while
+		# keeping the pause actions in a compact, touch-friendly group.
+		var pause_button := make_retro_button(pause_labels[index], Vector2(5, 43 + index * 17), Vector2(88, 13), pixel_texture)
 		pause_button.name = "Pause%s" % pause_labels[index].replace(" ", "")
 		pause_button.focus_mode = Control.FOCUS_ALL
 		if index == 0:
@@ -816,7 +827,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile == null: return
 	if hub_pause_mode:
-		_update_pause_ui(pixel_texture)
+		_update_pause_ui(root, pixel_texture)
 		return
 	var summary := hub_summary_text
 	var points := hub_points_text
@@ -832,6 +843,10 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	for page_index in page_buttons.size():
 		page_buttons[page_index].visible = not pause_mode
 		set_archetype_button_state(page_buttons[page_index], page == page_index, highlight_color)
+	for pause_button in pause_menu_buttons:
+		# Pause actions share this overlay with the demon hub. They must be hidden
+		# whenever the hub is opened from the cloaked demon.
+		pause_button.visible = false
 	if summary != null:
 		summary.visible = pause_mode
 		summary.position = Vector2(7, 18)
@@ -930,7 +945,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if hub_opened_from_npc else "START RUN", Color.WHITE) as Texture2D
 
 
-func _update_pause_ui(pixel_texture: Callable) -> void:
+func _update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	var hidden_nodes: Array[CanvasItem] = []
 	hidden_nodes.append(hub_summary_text)
 	hidden_nodes.append(hub_points_text)
@@ -972,8 +987,32 @@ func _update_pause_ui(pixel_texture: Callable) -> void:
 		var button := pause_menu_buttons[index]
 		button.visible = index < 3
 		set_archetype_button_state(button, index == hub_menu_row, PaletteLibrary.accent(player_palette_name))
+	_update_pause_status(root, pixel_texture)
 	if hub_cursor_text != null:
 		hub_cursor_text.visible = false
+
+
+func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
+	if hub_gear_stat_panel != null:
+		hub_gear_stat_panel.visible = true
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
+	if snapshot == null:
+		for stat in hub_gear_stat_texts:
+			stat.visible = false
+		return
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var values := [
+		"HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)),
+		"VIT %d" % roundi(snapshot.vit),
+		"STR %d" % roundi(snapshot.strength),
+		"DEF %d" % roundi(snapshot.def),
+		"SPD %d" % roundi(snapshot.speed),
+	]
+	for index in hub_gear_stat_texts.size():
+		var stat := hub_gear_stat_texts[index]
+		stat.visible = index < values.size()
+		if stat.visible:
+			stat.texture = pixel_texture.call(values[index], Color8(167, 240, 112)) as Texture2D
 
 
 func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
@@ -1488,12 +1527,19 @@ func open_settings(root: Object, origin: StringName) -> void:
 	settings_origin = origin
 	settings_row = 0
 	settings_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
+	# Settings replaces its source screen. Leaving the pause panel visible under
+	# it makes focus and touch hit-testing ambiguous, especially on the web port.
+	if origin == &"pause":
+		if hub_overlay != null:
+			hub_overlay.visible = false
+	elif origin == &"title":
+		if title_overlay != null:
+			title_overlay.visible = false
 	settings_overlay.visible = true
 	settings_overlay.modulate.a = 1.0
 	set_state(&"settings")
 	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
-	if not settings_value_buttons.is_empty():
-		settings_value_buttons[settings_row].grab_focus()
+	_focus_settings_selection()
 
 
 func close_settings(root: Object) -> void:
@@ -1510,6 +1556,7 @@ func close_settings(root: Object) -> void:
 		if pause_settings_button != null: pause_settings_button.grab_focus()
 	else:
 		if title_overlay != null: title_overlay.visible = true
+		menu_input_release_lock = true
 		set_state(&"title")
 		var title_focus := title_continue_button if title_continue_button != null and not title_continue_button.disabled else title_start_button
 		if title_focus != null: title_focus.grab_focus()
@@ -1531,6 +1578,8 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 		set_archetype_button_state(value_button, settings_row == index, highlight)
 		set_archetype_button_state(settings_left_buttons[index], false, highlight)
 		set_archetype_button_state(settings_right_buttons[index], false, highlight)
+	if settings_back_button != null:
+		set_archetype_button_state(settings_back_button, settings_row == settings_value_buttons.size(), highlight)
 	_update_settings_cursor()
 
 
@@ -1561,10 +1610,22 @@ func adjust_setting(root: Object, row: int, direction: int) -> void:
 func _update_settings_cursor() -> void:
 	if settings_cursor_text == null or settings_value_buttons.is_empty():
 		return
-	var row := clampi(settings_row, 0, settings_value_buttons.size() - 1)
-	var selected := settings_value_buttons[row]
+	var back_row := settings_value_buttons.size()
+	var row := clampi(settings_row, 0, back_row)
+	var selected := settings_back_button if row == back_row else settings_value_buttons[row]
+	if selected == null:
+		return
 	settings_cursor_text.visible = true
 	settings_cursor_text.position = Vector2(selected.position.x - 8.0, selected.position.y + 4.0)
+
+
+func _focus_settings_selection() -> void:
+	var back_row := settings_value_buttons.size()
+	if settings_row == back_row:
+		if settings_back_button != null:
+			settings_back_button.grab_focus()
+	elif settings_row >= 0 and settings_row < back_row:
+		settings_value_buttons[settings_row].grab_focus()
 
 
 func update_settings_input(root: Object) -> void:
@@ -1573,20 +1634,28 @@ func update_settings_input(root: Object) -> void:
 	if bool(root.call("_is_ui_cancel_just_pressed")):
 		close_settings(root)
 		return
+	var interact_down := bool(root.call("_is_interact_input_pressed"))
+	var interact_pressed := interact_down and not settings_interact_input_was_down
+	settings_interact_input_was_down = interact_down
+	var row_count := settings_value_buttons.size() + (1 if settings_back_button != null else 0)
 	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
-		settings_row = posmod(settings_row - 1, settings_value_buttons.size())
+		settings_row = posmod(settings_row - 1, row_count)
 		update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+		_focus_settings_selection()
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
-		settings_row = posmod(settings_row + 1, settings_value_buttons.size())
+		settings_row = posmod(settings_row + 1, row_count)
 		update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+		_focus_settings_selection()
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")):
+	elif settings_row < settings_value_buttons.size() and bool(root.call("_is_ui_direction_just_pressed", &"ui_left")):
 		adjust_setting(root, settings_row, -1)
-	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+	elif settings_row < settings_value_buttons.size() and bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
 		adjust_setting(root, settings_row, 1)
-	elif bool(root.call("_is_ui_accept_just_pressed")):
-		if settings_row >= 0 and settings_row < settings_value_buttons.size():
+	elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
+		if settings_row == settings_value_buttons.size() and settings_back_button != null:
+			settings_back_button.pressed.emit()
+		elif settings_row >= 0 and settings_row < settings_value_buttons.size():
 			settings_value_buttons[settings_row].pressed.emit()
 
 func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), preview_texture: Callable = Callable()) -> ColorRect:

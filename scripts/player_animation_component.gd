@@ -264,6 +264,11 @@ func apply_palette_async(root: Object, palette_name: String) -> void:
 	# All player palettes are precomputed and occlusion-warmed during startup.
 	# Repeating that full cache walk during an interaction causes a visible hitch
 	# when the player attunes at a flame.
+	# Palette changes can happen while the player is holding a charge. Re-apply
+	# the active animation state so the authored between-attacks pose is refreshed
+	# in the new palette instead of leaving the previous chroma frame on screen.
+	if root.get("player") != null:
+		apply_frame(root)
 	var health_texture := base_health_fill_texture as Texture2D
 	if health_texture != null:
 		var fill := root.get("player_health_fill") as Sprite2D; fill.texture = recolor_texture(health_texture, palette_name); var damage_fill := root.get("player_health_damage_fill") as Sprite2D
@@ -295,6 +300,14 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			return
 		var attack_component := root.get("player_attack_component") as PlayerAttackComponent
 		var attack_name := String(root.get("player_anim_name"))
+		if attack_component != null and attack_component.is_charging() and attack_name != "charge":
+			# The charge state owns a single authored pose. If another transition
+			# briefly leaves the old attack name behind, normalize it before the
+			# next draw so the last attack frame cannot remain stuck on screen.
+			root.set("player_anim_name", "charge")
+			root.set("player_anim_frame", 0)
+			root.set("player_anim_timer", 0.0)
+			attack_name = "charge"
 		if attack_name == "charge" or (attack_component != null and attack_component.is_charging()):
 			apply_frame(root)
 			return
@@ -320,6 +333,29 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		var animation_frame := current_frame + 1
 		var hit_frame := attack_tuning.attack2_hit_frame if is_attack2 else attack_tuning.attack_hit_frame
 		if animation_frame >= active_frames.size():
+			if is_spin:
+				# Spin has no combo bridge or finisher recovery. Its final authored
+				# frames are its complete recovery, then the player returns directly
+				# to the normal movement/idle animation.
+				root.set("player_between_timer", 0.0)
+				root.set("player_just_finished_attack2", false)
+				root.set("player_is_attacking", false)
+				if attack_component != null:
+					attack_component.combo_buffered = false
+					attack_component.combo_timer = 0.0
+					attack_component.finish()
+				root.set("player_attack_hit_done", false)
+				root.call("_restore_actor_base_visual_scale", root.get("player"))
+				(root.get("player") as Sprite2D).visible = true
+				(root.get("player_attack_visual") as Sprite2D).visible = false
+				root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+				root.set("player_anim_frame", 0)
+				root.set("player_anim_timer", 0.0)
+				apply_frame(root)
+				var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+				if equipment_visual != null:
+					equipment_visual.finish_spin_attack_visual(root)
+				return
 			if attack_name == "attack1" and attack_component != null and attack_component.should_enter_charge():
 				attack_component.begin_charge(root)
 				return

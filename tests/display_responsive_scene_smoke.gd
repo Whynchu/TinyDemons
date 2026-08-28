@@ -29,7 +29,9 @@ func _initialize() -> void:
 			settings.set_setting(&"aspect", aspect)
 			await process_frame
 			var expected: Vector2i = view_sizes[aspect]
+			var screens := gameplay.get("screen_state_controller") as ScreenStateController
 			_expect(display.view_size_value() == expected, "%s applies its logical view size" % aspect, failures)
+			_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT, "%s preserves the full vertical scale" % aspect, failures)
 			var ui := gameplay.get_node("InterfaceCanvas/UI") as Node
 			var top_bar := ui.get_node_or_null("DisplayTopBar") as ColorRect
 			var bottom_bar := ui.get_node_or_null("DisplayBottomBar") as ColorRect
@@ -39,6 +41,11 @@ func _initialize() -> void:
 			_expect(void_background != null and void_background.size == Vector2(expected), "%s void background covers the full logical view" % aspect, failures)
 			var title_overlay := (gameplay.get("screen_state_controller") as ScreenStateController).title_overlay
 			_expect(title_overlay != null and title_overlay.size == Vector2(expected), "%s title overlay covers the full view" % aspect, failures)
+			_expect(screens.settings_overlay != null and screens.settings_overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
+			if screens.settings_title_text != null and screens.settings_title_text.texture != null:
+				_expect(is_equal_approx(screens.settings_title_text.position.x, (expected.x - screens.settings_title_text.texture.get_width()) * 0.5), "%s settings title recenters with the view" % aspect, failures)
+			if not screens.settings_value_buttons.is_empty():
+				_expect(is_equal_approx(screens.settings_value_buttons[0].position.x, expected.x * 0.5 + 36.0), "%s settings controls expand from the view center" % aspect, failures)
 			var floor_layer := gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D
 			_expect(floor_layer != null and is_equal_approx(floor_layer.global_position.x, expected.x * 0.5), "%s room diamond remains centered" % aspect, failures)
 			var content_size := touch._content_size()

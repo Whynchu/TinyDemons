@@ -74,6 +74,11 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	var attack_multiplier := tuning.attack_multiplier(float(root.get("player_spd")))
 	if new_kind == AttackKind.SPIN:
 		cancel_lunge()
+		# A spin is a standalone attack. It cannot inherit a pending combo or
+		# the recovery timer from an attack that happened immediately before it.
+		combo_buffered = false
+		combo_timer = 0.0
+		root.set("player_between_timer", 0.0)
 	else:
 		start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
 	root.set("player_anim_name", animation_name)
@@ -215,15 +220,18 @@ func apply_hitbox(root: Object) -> void:
 		var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
 		var base_damage := damage_result.amount
 		var damage := base_damage
-		var divisor := float(root.call("_player_attack_damage_share_divisor", slime, target_count))
+		# Spin is the player's area-control option: its single-target coefficient
+		# is lower than Attack 1, but each enemy receives the full spin hit instead
+		# of the normal multi-target damage share.
+		var divisor := 1.0 if is_spin_attack() else float(root.call("_player_attack_damage_share_divisor", slime, target_count))
 		if not damage_result.immune and tuning != null:
 			if is_charged_attack2():
 				damage = maxf(base_damage * tuning.charged_attack2_damage_multiplier, base_damage + 1.0)
 			elif variant == 2:
 				damage = maxf(base_damage * tuning.attack2_damage_multiplier, base_damage + 1.0)
 			elif is_spin_attack():
-				damage = maxf(base_damage * tuning.spin_damage_multiplier, base_damage)
-			if target_count > 1 and (variant == 2 or is_spin_attack()):
+				damage = base_damage * tuning.spin_damage_multiplier
+			if target_count > 1 and variant == 2:
 				damage = maxf(damage * tuning.attack2_multi_target_damage_multiplier, damage + 1.0)
 		var divided_damage := 0.0 if damage_result.immune else floorf(damage / maxf(divisor, 1.0))
 		if is_finisher() and not damage_result.immune:

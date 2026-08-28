@@ -154,6 +154,7 @@ func tick(root: Object, delta: float) -> void:
 	var player_input_locked: bool = dialogue_was_active or bool(root.get("player_is_magic_casting"))
 	var player_tuning := root.get("player_tuning") as PlayerTuning
 	var previous_attacking: bool = root.get("player_is_attacking")
+	var previous_attack_animation := String(root.get("player_anim_name"))
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null: guard.tick(root, delta, not player_input_locked and bool(root.call("_is_guard_input_held")))
 	if not player_input_locked:
@@ -177,7 +178,12 @@ func tick(root: Object, delta: float) -> void:
 	if not player_input_locked and root.get("player_motor") != null: (root.get("player_motor") as ActorMotor).move_player(root, delta)
 	(root.get("magic_runtime_controller") as MagicRuntimeController).tick_magic_animation(root, delta); (root.get("player_animation_component") as PlayerAnimationComponent).tick_coordinator_animation(root, delta); root.call("_tick_run_telemetry", delta); root.call("_move_slimes", delta); root.call("_update_special_enemy_respawns", delta); root.call("_update_enemy_hit_flashes", delta); root.call("_update_enemy_health", delta); root.call("_update_target_ui"); root.call("_update_player_health_regen", delta); root.call("_update_player_health_ui", delta); root.call("_update_player_mp_ui", delta); root.call("_update_magic_projectiles", delta); root.call("_update_damage_numbers", delta); (root.get("effects_spawner") as EffectsSpawner).update_pixel_particles_from_root(root, delta); (root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent).tick(root, delta)
 	if not dialogue_was_active:
-		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME")), delta); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drops", delta); root.call("_update_chroma_pickups", delta); root.call("_update_soul_pickups", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); root.call("_update_player_palette_flash", delta); _stabilize(root); (root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), root.get("player_is_attacking"), Vector2(-10, -10), root.get("player").z_index)
+		var chest_controller := root.get("chest_controller") as ChestController; chest_controller.update_interaction(root, root.call("_is_interact_input_pressed"), bool(root.get("interact_input_was_down")), int(root.get("CHEST_REWARD_GOLD")), float(root.get("CHEST_COLLECT_FLASH_TIME")), delta); chest_controller.update_visuals_from_root(root, delta); root.call("_update_world_item_drops", delta); root.call("_update_chroma_pickups", delta); root.call("_update_soul_pickups", delta); root.call("_update_rest_fire_animation", delta); root.call("_update_cloaked_demon_animation", delta); root.call("_update_door_transition"); root.call("_update_depth_sorting"); root.call("_update_targeting"); root.call("_update_actor_occlusion", delta); root.call("_update_player_palette_flash", delta); _stabilize(root)
+		# The charge pose is rendered by the base player sprite. The shared attack
+		# visual updater must not turn the previous attack frame back on after the
+		# animation component has deliberately hidden it.
+		var attack_visual_active := bool(root.get("player_is_attacking")) and String(root.get("player_anim_name")) != "charge"
+		(root.get("player_animation_component") as PlayerAnimationComponent).update_attack_visual(root.get("player"), root.get("player_attack_visual"), attack_visual_active, Vector2(-10, -10), root.get("player").z_index)
 	else:
 		root.call("_update_player_palette_flash", delta)
 	var now_attacking: bool = root.get("player_is_attacking")
@@ -185,7 +191,9 @@ func tick(root: Object, delta: float) -> void:
 	if previous_attacking and not now_attacking:
 		var orb_cancelled := bool(root.get("orb_knockback_attack_cancelled"))
 		root.set("orb_knockback_attack_cancelled", false)
-		if not orb_cancelled:
+		if not orb_cancelled and previous_attack_animation != "spin_attack":
+			# Spin owns its full recovery in the authored animation. Do not let the
+			# generic attack completion bridge add a between/after pose afterward.
 			var attack_multiplier := player_tuning.attack_multiplier(float(root.get("player_spd")))
 			if bool(root.get("player_just_finished_attack2")) and anim.after_attack2_texture != null:
 				anim.begin_transition(root, "after", anim.after_attack2_texture, player_tuning.attack2_cooldown / attack_multiplier)
