@@ -44,6 +44,8 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
 	root.screen_state_controller.hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
+	root.screen_state_controller.hub_gear_choice_panel = controls["gear_choice_panel"] as Panel
+	root.screen_state_controller.hub_gear_choice_content_clip = controls["gear_choice_content_clip"] as Control
 	root.screen_state_controller.hub_binding_panel = controls["binding_panel"] as Panel
 	root.screen_state_controller.hub_binding_texts = controls["binding_texts"] as Array[Sprite2D]
 	root.screen_state_controller.hub_binding_action_button = controls["binding_action"] as Button
@@ -297,13 +299,13 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 	root.screen_state_controller.hub_equipment_action_focus = false
 	var slot: StringName = ItemCatalog.SLOTS[root.screen_state_controller.hub_item_index]
 	var candidates := hub_gear_candidates(root, slot)
+	root.screen_state_controller.hub_gear_browsing = not candidates.is_empty()
 	if not candidates.is_empty():
 		var equipped_id := str(root.player_profile.equipped_instance_ids.get(String(slot), ""))
 		for index in candidates.size():
 			if candidates[index].instance_id == equipped_id:
 				root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
 				break
-		root.screen_state_controller.hub_gear_browsing = true
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
