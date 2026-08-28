@@ -105,6 +105,7 @@ func _initialize() -> void:
 	var hub_controls := hub_builder.build_hub(hub_host, Callable(self, "_pixel_texture"), Callable(self, "_record_stat_touch"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_record_hub_row"), Callable(self, "_record_item_row"), Callable(self, "_record_fusion_count"))
 	var hub_overlay := hub_controls["overlay"] as ColorRect
 	hub_overlay.visible = true
+	(hub_overlay.get_node("HubAllocatePage") as Control).visible = true
 	for child in hub_overlay.get_children():
 		if child is BaseButton:
 			(child as BaseButton).visible = false
@@ -116,8 +117,7 @@ func _initialize() -> void:
 	layer.set_input_context(InputRouter.Context.HUB)
 	_expect(layer.is_active(), "touch input remains available behind hub/menu overlays", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "inactive touch overlay does not intercept menu taps", failures)
-	var hub_cancel_rect: Rect2 = layer._layout["cancel"]
-	_expect(hub_overlay.get_global_rect().encloses(hub_cancel_rect), "hub cancel control is nested inside the hub panel", failures)
+	_expect(not (layer.get_node("TouchControlsRoot/Touch_Cancel") as Panel).visible, "hub uses its native BACK button instead of a floating cancel control", failures)
 	var hub_blank_down := InputEventScreenTouch.new()
 	hub_blank_down.device = 0; hub_blank_down.index = 13; hub_blank_down.pressed = true; hub_blank_down.position = hub_overlay.global_position + Vector2(78.0, 110.0)
 	layer._input(hub_blank_down)
@@ -155,8 +155,17 @@ func _initialize() -> void:
 	for child in hub_overlay.get_children():
 		if child is BaseButton:
 			(child as BaseButton).visible = false
+	(hub_overlay.get_node("HubAllocatePage") as Control).visible = false
+	(hub_overlay.get_node("HubItemsPage") as Control).visible = true
 	for item_row in hub_controls["item_rows"] as Array[Button]:
 		item_row.visible = true
+	for competing_button in (hub_controls["gear_slot_buttons"] as Array[Button]):
+		competing_button.visible = false
+	for competing_button in (hub_controls["gear_choice_buttons"] as Array[Button]):
+		competing_button.visible = false
+	for competing_button in (hub_controls["equipment_actions"] as Array[Button]):
+		competing_button.visible = false
+	(hub_controls["item_action"] as Button).visible = false
 	(hub_controls["fusion_decrease"] as Button).visible = true
 	(hub_controls["fusion_increase"] as Button).visible = true
 	var item_rows := hub_controls["item_rows"] as Array[Button]
@@ -175,8 +184,8 @@ func _initialize() -> void:
 	fusion_count_up.device = 0; fusion_count_up.index = 18; fusion_count_up.pressed = false; fusion_count_up.position = fusion_count_down.position
 	layer._input(fusion_count_up)
 	_expect(fusion_count_touch_count == 1, "touching fusion count controls reaches their callbacks", failures)
-	# The pause shell is a separate visible overlay, but it must use the same
-	# direct native-button touch path and nest the cancel affordance safely.
+	# The pause shell is a separate full-screen overlay and uses its native
+	# button/footer path without a second floating cancel affordance.
 	var pause_overlay := hub_controls["pause_overlay"] as ColorRect
 	var pause_buttons := hub_controls["pause_buttons"] as Array[Button]
 	hub_overlay.visible = false
@@ -185,8 +194,7 @@ func _initialize() -> void:
 	pause_buttons[0].pressed.connect(Callable(self, "_record_pause_touch"))
 	layer.set_input_context(InputRouter.Context.PAUSE)
 	await process_frame
-	var pause_cancel_rect: Rect2 = layer._layout["cancel"]
-	_expect(pause_overlay.get_global_rect().encloses(pause_cancel_rect), "pause cancel control is nested inside the dedicated pause panel", failures)
+	_expect(not (layer.get_node("TouchControlsRoot/Touch_Cancel") as Panel).visible, "pause uses its native BACK button instead of a floating cancel control", failures)
 	_expect(pause_buttons[0].is_visible_in_tree() and not pause_buttons[0].disabled and layer.call("_menu_button_at", pause_buttons[0].get_global_rect().get_center()) == pause_buttons[0], "pause command is discoverable by the direct touch hit-test", failures)
 	var pause_down := InputEventScreenTouch.new()
 	pause_down.device = 0; pause_down.index = 19; pause_down.pressed = true; pause_down.position = pause_buttons[0].get_global_rect().get_center()
@@ -201,18 +209,7 @@ func _initialize() -> void:
 	_expect(layer.is_active(), "touch input remains available on title and other menus", failures)
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "menu touch overlay stays transparent to title Buttons", failures)
 	var cancel_node := layer.get_node("TouchControlsRoot/Touch_Cancel") as Panel
-	var cancel_rect: Rect2 = layer._layout["cancel"]
-	_expect(cancel_node != null and cancel_node.visible, "menu cancel control is visible for touch input", failures)
-	var cancel_down := InputEventScreenTouch.new()
-	cancel_down.device = 0; cancel_down.index = 6; cancel_down.pressed = true; cancel_down.position = cancel_rect.get_center()
-	layer._input(cancel_down)
-	router.poll(InputRouter.Context.MENU)
-	_expect(router.ui_cancel_pressed() and router.ui_cancel_just_pressed(), "menu cancel touch reaches UI cancel", failures)
-	var cancel_up := InputEventScreenTouch.new()
-	cancel_up.device = 0; cancel_up.index = 6; cancel_up.pressed = false; cancel_up.position = cancel_rect.get_center()
-	layer._input(cancel_up)
-	router.poll(InputRouter.Context.MENU)
-	_expect(not router.ui_cancel_pressed(), "menu cancel touch releases cleanly", failures)
+	_expect(cancel_node != null and not cancel_node.visible, "menu back is owned by the active native footer", failures)
 
 	# A real screen touch activates the same native Button that a desktop mouse
 	# click would activate. The overlay captures the sequence so a browser's

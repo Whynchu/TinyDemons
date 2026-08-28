@@ -14,7 +14,7 @@ const HUB_COMMAND_PAGE_TARGETS := [5, 0, 1, 2, 3, 4]
 
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_stat_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"), Callable(root, "_set_pause_status_page"), Callable(root, "_set_pause_equipment_page"), Callable(root, "_pause_back"), Callable(root, "_remove_hub_gear"), Callable(root, "_remove_all_hub_gear"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_stat_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"), Callable(root, "_set_pause_status_page"), Callable(root, "_set_pause_equipment_page"), Callable(root, "_pause_back"), Callable(root, "_remove_hub_gear"), Callable(root, "_remove_all_hub_gear"), Callable(root, "_hub_back_or_close"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -82,6 +82,7 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	invalidate_hub_fusion_candidates(root)
 	root.screen_state_controller.hub_opened_from_npc = from_npc
 	root.screen_state_controller.hub_pause_mode = false
+	root.screen_state_controller.hub_is_root = true
 	root.screen_state_controller.hub_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
 	root.screen_state_controller.hub_cancel_input_was_down = bool(root.call("_is_menu_cancel_input_pressed"))
 	root.screen_state_controller.hub_page_previous_input_was_down = bool(root.call("_is_hub_previous_page_input_pressed"))
@@ -109,6 +110,7 @@ func open_pause_menu(root: Object) -> void:
 	root.screen_state_controller.pause_input_was_down = true
 	root.screen_state_controller.hub_pause_mode = true
 	root.screen_state_controller.pause_page = 0
+	root.screen_state_controller.hub_is_root = true
 	root.screen_state_controller.pause_menu_row = 0
 	root.screen_state_controller.pause_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
 	root.screen_state_controller.pause_cancel_input_was_down = bool(root.call("_is_menu_cancel_input_pressed"))
@@ -145,6 +147,7 @@ func close_hub_to_run(root: Object) -> void:
 	if root.screen_state_controller.pause_overlay != null: root.screen_state_controller.pause_overlay.visible = false
 	root.screen_state_controller.hub_opened_from_npc = false
 	root.screen_state_controller.hub_pause_mode = false
+	root.screen_state_controller.hub_is_root = true
 	root.screen_state_controller.pause_page = 0
 	root.screen_state_controller.pause_interact_input_was_down = false
 	root.screen_state_controller.pause_cancel_input_was_down = false
@@ -161,6 +164,14 @@ func update_hub_input(root: Object) -> void:
 
 func set_hub_page(root: Object, page: int) -> void:
 	var screen: Object = root.screen_state_controller
+	if page < 0:
+		_set_screen_property_if_available(screen, &"hub_is_root", true)
+		screen.hub_content_focus = false
+		screen.hub_equipment_action_focus = false
+		screen.hub_gear_browsing = false
+		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		return
+	_set_screen_property_if_available(screen, &"hub_is_root", false)
 	screen.hub_page = posmod(page, HUB_PAGE_COUNT)
 	var command_index: int = int(HUB_COMMAND_PAGE_TARGETS.find(screen.hub_page))
 	if command_index >= 0: _set_screen_property_if_available(screen, &"hub_menu_row", command_index)
@@ -178,6 +189,20 @@ func set_hub_page(root: Object, page: int) -> void:
 		root.run_state.ensure_shop_stock(root.player_profile.level)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_hover", -6.0, 1.0)
+
+
+func back_to_hub_root(root: Object) -> void:
+	var screen: Object = root.screen_state_controller
+	if screen.hub_is_root:
+		close_hub_to_run(root)
+		return
+	screen.hub_is_root = true
+	screen.hub_content_focus = false
+	screen.hub_equipment_action_focus = false
+	screen.hub_gear_browsing = false
+	screen.hub_binding_message = ""
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
 func _set_screen_property_if_available(screen: Object, property_name: StringName, value: Variant) -> void:
@@ -458,8 +483,6 @@ func select_hub_menu_row(root: Object, row: int) -> void:
 	root.screen_state_controller.hub_menu_row = posmod(row, 6)
 	root.screen_state_controller.hub_content_focus = false
 	root.screen_state_controller.hub_equipment_action_focus = false
-	var command_buttons: Array[Button] = root.screen_state_controller.hub_page_buttons
-	if root.screen_state_controller.hub_menu_row < command_buttons.size(): command_buttons[root.screen_state_controller.hub_menu_row].grab_focus()
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 

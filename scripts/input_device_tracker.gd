@@ -100,3 +100,31 @@ func prompt_label(action: StringName) -> String:
 			return "TAP" if normalized in [&"interact", &"ui_accept", &"cancel", &"ui_cancel"] else "TOUCH"
 		_:
 			return {&"attack": "J", &"interact": "E", &"roll": "K", &"magic": "U", &"cancel": "X", &"pause": "ESC", &"target": "Q", &"guard": "L"}.get(normalized, "KEY")
+
+
+func menu_confirm_prompt() -> String:
+	match current_device:
+		Device.GAMEPAD:
+			return "O SELECT" if _is_playstation_pad() else "B SELECT"
+		Device.TOUCH:
+			return "TAP SELECT"
+		_:
+			return "ENTER SELECT"
+
+
+func menu_back_prompt() -> String:
+	match current_device:
+		Device.GAMEPAD:
+			return "X BACK" if _is_playstation_pad() else "A BACK"
+		Device.TOUCH:
+			return "BACK"
+		_:
+			return "ESC BACK"
+
+
+func _is_playstation_pad() -> bool:
+	for device in Input.get_connected_joypads():
+		var joy_name := Input.get_joy_name(device).to_lower()
+		if joy_name.contains("playstation") or joy_name.contains("dualshock") or joy_name.contains("dualsense") or joy_name.contains("ps4") or joy_name.contains("ps5") or joy_name == "wireless controller":
+			return true
+	return false

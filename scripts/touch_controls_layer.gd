@@ -117,6 +117,10 @@ func movement_vector() -> Vector2:
 
 
 func action_pressed(action: StringName) -> bool:
+	if action == &"menu_confirm":
+		return action_pressed(&"interact")
+	if action == &"menu_back":
+		return action_pressed(&"cancel")
 	if action == &"ui_accept":
 		return action_pressed(&"interact")
 	if action == &"interact":
@@ -476,7 +480,7 @@ func _is_menu_context() -> bool:
 
 
 func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseButton:
-	var search_root := get_parent()
+	var search_root := _active_menu_root()
 	if search_root == null:
 		return null
 	var nodes: Array = []
@@ -490,6 +494,43 @@ func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseB
 		if button.get_global_rect().has_point(position):
 			return button
 	return null
+
+
+func _active_menu_root() -> Node:
+	var host := get_parent()
+	if host == null:
+		return null
+	var preferred_names: Array[StringName] = []
+	match _input_context:
+		CONTEXT_HUB: preferred_names = [&"HubOverlay"]
+		CONTEXT_PAUSE: preferred_names = [&"PauseOverlay"]
+		CONTEXT_MENU: preferred_names = [&"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"TitleOverlay"]
+		CONTEXT_DIALOGUE: preferred_names = [&"NpcDialogueBox"]
+	for target_name in preferred_names:
+		var found := _find_visible_control(host, target_name)
+		if found != null and found.is_visible_in_tree():
+			return _menu_root_for_target(found, target_name)
+	# A route can become visible between the current physics poll and the next
+	# one. Use visible-overlay discovery as a same-frame fallback so a touch
+	# released during that transition cannot search the gameplay host or a stale
+	# source menu.
+	var visible_fallbacks: Array[StringName] = [&"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"PauseOverlay", &"HubOverlay", &"NpcDialogueBox", &"TitleOverlay"]
+	for target_name in visible_fallbacks:
+		if preferred_names.has(target_name):
+			continue
+		var found := _find_visible_control(host, target_name)
+		if found != null and found.is_visible_in_tree():
+			return _menu_root_for_target(found, target_name)
+	return host
+
+
+func _menu_root_for_target(found: Control, target_name: StringName) -> Node:
+	# Dialogue's visible panel and its native YES/NO buttons are siblings in the
+	# dialogue CanvasLayer. Return that owner so choice taps are discoverable;
+	# routed menu overlays keep their own full subtree as the search root.
+	if target_name == &"NpcDialogueBox" and found.get_parent() != null:
+		return found.get_parent()
+	return found
 
 
 func _collect_menu_buttons(node: Node, output: Array) -> void:
@@ -522,7 +563,7 @@ func _button_rect(action: StringName) -> Rect2:
 
 
 func _cancel_control_visible() -> bool:
-	return _touch_input_enabled and _input_context != CONTEXT_GAMEPLAY
+	return _touch_input_enabled and _input_context == CONTEXT_DIALOGUE
 
 
 func _clamped_stick_origin(position: Vector2) -> Vector2:
@@ -559,7 +600,6 @@ func _update_layout() -> void:
 		if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 			viewport_size = content_size
 	_layout = _compute_layout(viewport_size, content_size)
-	_layout["cancel"] = _context_cancel_rect(_layout)
 	if _stick_pointer_id < 0:
 		_stick_origin = _layout["stick_home"]
 	_apply_layout()
@@ -679,6 +719,8 @@ func _refresh_controls() -> void:
 		var visible := _controls_visible
 		if action == &"cancel":
 			visible = _cancel_control_visible()
+		elif action == &"pause":
+			visible = _controls_visible
 		(_button_nodes[action] as Control).visible = visible
 
 
