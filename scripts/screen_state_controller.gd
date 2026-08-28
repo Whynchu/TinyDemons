@@ -3,6 +3,10 @@ class_name ScreenStateController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
+const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
+const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
+const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
+const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
 
 ## Hub content pages retain the old numeric values for transaction callers. The
 ## visible command column maps STATUS to page 5 and ALLOCATE/EQUIPMENT/SHOP/
@@ -89,6 +93,7 @@ var hub_gear_choice_buttons: Array[Button] = []
 var hub_gear_slot_buttons: Array[Button] = []
 var hub_gear_stat_texts: Array[Sprite2D] = []
 var hub_gear_stat_panel: Panel = null
+var hub_allocate_panel: Panel = null
 var hub_item_list_panel: Panel = null
 var hub_item_content_clip: Control = null
 var hub_gear_choice_panel: Panel = null
@@ -858,6 +863,8 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	}
 	for page_root: Control in [status_page, allocate_page, items_page, bind_page]:
 		page_root.visible = false
+	var allocate_panel := _make_menu_card(allocate_page, "HubAllocatePanel", Vector2(14, 35), Vector2(maxf(display_view_size.x - 28.0, 80.0), 72))
+	hub_allocate_panel = allocate_panel
 
 	var card := _make_menu_card(root_page, "HubPlayerCard", Vector2(10, 27), Vector2(136, 72))
 	hub_player_card_panel = card
@@ -901,9 +908,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var stat_arrow_size := Vector2(20, 12)
 	for index in stat_names.size():
 		var y := 39.0 + index * 11.0
-		var stat_text := create_sprite(allocate_page, "HubStat%d" % index, null, Vector2(48, y + 5), true)
+		var stat_text := create_sprite(allocate_page, "HubStat%d" % index, null, Vector2(76, y + 5), true)
 		stats.append(stat_text)
-		var row_button := _make_transparent_touch_button(allocate_page, "HubStatRow%d" % index, Vector2(20, y), Vector2(148, 12), select_stat_row, index)
+		var row_button := _make_transparent_touch_button(allocate_page, "HubStatRow%d" % index, Vector2(44, y), Vector2(112, 12), select_stat_row, index)
 		stat_rows.append(row_button)
 		var left := make_archetype_arrow(allocate_page, -1, Vector2(20, y), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
 		var right := make_archetype_arrow(allocate_page, 164, Vector2(164, y), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
@@ -1129,13 +1136,16 @@ func _position_hub_controls() -> void:
 	if summary != null: summary.position = Vector2(16, 106)
 	if hub_points_text != null: hub_points_text.position = Vector2(14, 23)
 	if hub_context_text != null: hub_context_text.position = Vector2(14, display_view_size.y - 25.0)
+	if hub_allocate_panel != null:
+		hub_allocate_panel.position = Vector2(14, 35)
+		hub_allocate_panel.size = Vector2(maxf(width - 28.0, 80.0), 72)
 	var stat_right_x := maxf(164.0, width - 76.0)
 	for index in hub_stat_texts.size():
 		var y := 44.0 + index * 11.0
-		hub_stat_texts[index].position = Vector2(48, y)
+		hub_stat_texts[index].position = Vector2(76, y)
 		if index < hub_stat_row_buttons.size():
-			hub_stat_row_buttons[index].position = Vector2(20, y - 5.0)
-			hub_stat_row_buttons[index].size = Vector2(maxf(148.0, stat_right_x - 14.0), 12)
+			hub_stat_row_buttons[index].position = Vector2(44, y - 5.0)
+			hub_stat_row_buttons[index].size = Vector2(maxf(80.0, stat_right_x - 52.0), 12)
 		if index < hub_stat_left_buttons.size(): hub_stat_left_buttons[index].position = Vector2(20, y - 5.0)
 		if index < hub_stat_right_buttons.size(): hub_stat_right_buttons[index].position = Vector2(stat_right_x, y - 5.0)
 	var utility_x := [37.0, 73.0, 109.0, 145.0]
@@ -1264,7 +1274,9 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	for page_index in page_buttons.size():
 		var target_page := int(page_buttons[page_index].get_meta("hub_page_target", page_index))
 		page_buttons[page_index].visible = showing_root
-		set_archetype_button_state(page_buttons[page_index], target_page == page, highlight_color)
+		var page_active := target_page == page
+		set_archetype_button_state(page_buttons[page_index], page_active, highlight_color)
+		_set_menu_button_icon(page_buttons[page_index], MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and page_active)
 	if hub_cursor_text != null and not page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
 		hub_cursor_text.texture = pixel_texture.call(">", highlight_color) as Texture2D
@@ -1277,6 +1289,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		title.texture = title_texture
 	if hub_points_text != null: hub_points_text.visible = false
 	var confirm_prompt := _menu_confirm_prompt_for(root)
+	if page == HUB_PAGE_EQUIPMENT:
+		confirm_prompt = confirm_prompt.replace("SELECT", "EQUIP")
 	var back_prompt := _menu_back_prompt_for(root)
 	if hub_context_text != null:
 		hub_context_text.visible = true
@@ -1285,7 +1299,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if showing_root:
 		return
 	var stat_nodes: Array[CanvasItem] = []
-	stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_row_buttons); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
+	stat_nodes.append(hub_allocate_panel); stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_row_buttons); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
 	for node in stat_nodes:
 		if node != null: node.visible = page == HUB_PAGE_ALLOCATE
 	for node in hub_status_texts:
@@ -1309,6 +1323,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		equipment_action.mouse_filter = Control.MOUSE_FILTER_IGNORE if gear_browsing else Control.MOUSE_FILTER_STOP
 		var action_active := page == HUB_PAGE_EQUIPMENT and hub_content_focus and hub_equipment_action_focus and equipment_action_index == hub_action_column
 		set_archetype_button_state(equipment_action, action_active, highlight_color)
+		_set_menu_button_icon(equipment_action, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and action_active)
 	if page == HUB_PAGE_EQUIPMENT and hub_equipment_action_buttons.size() >= 3:
 		var selected_slot: StringName = ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var equipped_item := profile.find_item(str(profile.equipped_instance_ids.get(String(selected_slot), "")))
@@ -1340,7 +1355,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	# separate comparison card used by its inventory view.
 	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_FUSION
 	for node in item_details: node.visible = item_page
-	if item_action != null: item_action.visible = item_page
+	if item_action != null: item_action.visible = item_page and page != HUB_PAGE_EQUIPMENT
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
 	for node in hub_binding_texts: node.visible = page == HUB_PAGE_BIND
 	if hub_binding_action_button != null: hub_binding_action_button.visible = page == HUB_PAGE_BIND
@@ -1367,8 +1382,9 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		var before_pending := effective - float(pending[index])
 		var value_text := "%s %.1f" % [["VIT", "STR", "DEF", "AGI", "INT", "MND"][index], before_pending]
 		if int(pending[index]) != 0:
-			value_text += ">%0.1f" % effective
-		stat_texts[index].texture = pixel_texture.call(value_text, highlight_color if selected_row == index else Color.WHITE) as Texture2D
+			value_text += " > %0.1f" % effective
+		var stat_color := highlight_color if selected_row == index else Color8(167, 240, 112) if int(pending[index]) != 0 else Color.WHITE
+		stat_texts[index].texture = pixel_texture.call(value_text, stat_color) as Texture2D
 	var stat_buttons := hub_stat_buttons
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
@@ -1393,7 +1409,10 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		var label := respec_button.get_child(0) as Sprite2D
 		if label != null: label.texture = pixel_texture.call("RESPEC" if cost <= 0 else "RESPEC %d" % cost, Color.WHITE) as Texture2D
 	var utility_buttons: Array[Button] = [apply_button, cancel_button, auto_button, respec_button]
-	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], hub_content_focus and selected_row == 6 and hub_action_column == index, highlight_color)
+	for index in utility_buttons.size():
+		var utility_active := hub_content_focus and selected_row == 6 and hub_action_column == index
+		set_archetype_button_state(utility_buttons[index], utility_active, highlight_color)
+		_set_menu_button_icon(utility_buttons[index], MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and utility_active)
 	if hub_context_text != null:
 		hub_context_text.texture = pixel_texture.call("LEFT/RIGHT ADJUST", Color8(148, 220, 255)) as Texture2D
 
@@ -1464,6 +1483,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		var button := pause_menu_buttons[index]
 		button.visible = pause_page == 0
 		set_archetype_button_state(button, index == pause_menu_row, highlight)
+		_set_menu_button_icon(button, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and pause_page == 0 and index == pause_menu_row)
 	if pause_back_button != null:
 		pause_back_button.visible = true
 		set_archetype_button_state(pause_back_button, pause_page != 0, highlight)
@@ -1728,9 +1748,15 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)
+	_set_menu_button_icon(action, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and not action.disabled)
 
 
 func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, item_list: Array[Sprite2D], choices: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
+	# Equipment owns its top Equip/Remove action row. The old lower action
+	# button belongs to Shop/Fusion and must never become a second, hidden focus
+	# target while the slot picker is being navigated.
+	action.visible = false
+	action.disabled = true
 	for button in hub_gear_choice_buttons: button.visible = false
 	var selected_slot_index := clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
 	var candidate_indices := hub_gear_candidate_indices
@@ -1791,14 +1817,8 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 		if selected_slot_index == ItemCatalog.SLOTS.find(&"shield") and not available_candidates.is_empty():
 			details[0].texture = pixel_texture.call("NO SHIELD EQUIPPED", Color8(255, 205, 117)) as Texture2D
 			details[1].texture = pixel_texture.call("SELECT FROM INVENTORY", Color8(148, 220, 255)) as Texture2D
-			action.disabled = false
-			action.visible = true
 		else:
 			details[0].texture = pixel_texture.call("NO GEAR FOR THIS SLOT", Color8(255, 205, 117)) as Texture2D
-			action.disabled = true
-			action.visible = false
-		var empty_label := action.get_child(0) as Sprite2D
-		if empty_label != null: empty_label.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
 		return
 	_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, browsing)
 	details[0].texture = null
@@ -1817,11 +1837,8 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 		if details.size() > 3:
 			details[3].texture = null
 			details[3].visible = true
-	action.disabled = false
+	action.disabled = true
 	action.visible = false
-	var label := action.get_child(0) as Sprite2D
-	if label != null: label.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
-	set_archetype_button_state(action, true, highlight_color)
 
 
 func _set_transmutation_description(details: Array[Sprite2D], pixel_texture: Callable, description: String) -> void:
@@ -1884,7 +1901,9 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		var preview_magic := CombatCalculator.magic_power_for_snapshot(preview_snapshot, tuning)
 		if hub_context_text != null:
 			var context := "P%.0f>%.0f M%.0f>%.0f" % [current_attack, preview_attack, current_magic, preview_magic] if comparing else "P%.0f M%.0f" % [preview_attack, preview_magic]
-			hub_context_text.texture = pixel_texture.call("%s  %s" % [context, _menu_back_prompt_for(root)], Color8(148, 220, 255)) as Texture2D
+			var confirm_prompt := _menu_confirm_prompt_for(root).replace("SELECT", "EQUIP")
+			var back_prompt := _menu_back_prompt_for(root)
+			hub_context_text.texture = pixel_texture.call("%s  %s  %s" % [context, confirm_prompt, back_prompt], Color8(148, 220, 255)) as Texture2D
 		preview_equipment.free()
 		return
 	# Lightweight test doubles and legacy callers may not expose a player
@@ -2015,8 +2034,10 @@ func update_hub_input(root: Object) -> void:
 		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
 			hub_equipment_action_focus = true; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		elif bool(root.call("_is_menu_confirm_just_pressed")):
-			var equipment_item_action := hub_item_action_button
-			if equipment_item_action != null and not equipment_item_action.disabled: equipment_item_action.pressed.emit()
+			# A slot is the natural equipment target. Confirming any slot opens
+			# the picker directly; it must not depend on the hidden legacy action
+			# button, which is disabled for occupied slots and made ARM appear inert.
+			root.call("_select_hub_gear_slot", hub_item_index)
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
@@ -2214,7 +2235,9 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 				var option_button := settings_option_buttons[index][option_index] as Button
 				option_button.visible = true
 				option_button.focus_mode = Control.FOCUS_NONE
-				set_archetype_button_state(option_button, option_index == active_option and settings_row == index, highlight)
+				var option_active := option_index == active_option and settings_row == index
+				set_archetype_button_state(option_button, option_active, highlight)
+				_set_menu_button_icon(option_button, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and option_active and option_button.size.x >= 24.0)
 	if settings_back_button != null:
 		set_archetype_button_state(settings_back_button, settings_row == settings_value_buttons.size(), highlight)
 	if settings_description_text != null:
@@ -2303,8 +2326,65 @@ func _set_button_text(button: Button, label: String, pixel_texture: Callable, co
 	var text := button.get_child(0) as Sprite2D
 	if text == null:
 		return
-	text.texture = pixel_texture.call(label, color) as Texture2D
-	text.position = button.size * 0.5
+	var icon_texture: Texture2D = _menu_face_texture_for_prompt(label)
+	var shown_label: String = _menu_face_label_without_icon(label) if icon_texture != null else label
+	text.texture = pixel_texture.call(shown_label, color) as Texture2D
+	_set_menu_button_icon(button, icon_texture, icon_texture != null)
+
+
+func _menu_face_texture_for_prompt(label: String) -> Texture2D:
+	if label.begins_with("O "):
+		return MENU_CIRCLE_TEXTURE
+	if label.begins_with("X "):
+		return MENU_X_TEXTURE
+	if label.begins_with("TRIANGLE "):
+		return MENU_TRIANGLE_TEXTURE
+	if label.begins_with("SQUARE "):
+		return MENU_SQUARE_TEXTURE
+	return null
+
+
+func _menu_face_label_without_icon(label: String) -> String:
+	if label.begins_with("O ") or label.begins_with("X "):
+		return label.substr(2)
+	if label.begins_with("TRIANGLE "):
+		return label.substr(9)
+	if label.begins_with("SQUARE "):
+		return label.substr(7)
+	return label
+
+
+func _menu_uses_face_art(root: Object) -> bool:
+	if root == null or not root.has_method("_menu_confirm_prompt"):
+		return false
+	return str(root.call("_menu_confirm_prompt")).begins_with("O ")
+
+
+func _set_menu_button_icon(button: Button, icon_texture: Texture2D, visible: bool) -> void:
+	if button == null:
+		return
+	var text := button.get_child(0) as Sprite2D
+	if text == null:
+		return
+	var icon: Sprite2D = button.get_node_or_null("MenuFaceIcon") as Sprite2D
+	if icon == null:
+		icon = Sprite2D.new()
+		icon.name = "MenuFaceIcon"
+		icon.centered = false
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		button.add_child(icon)
+	icon.texture = icon_texture
+	icon.visible = visible and icon_texture != null
+	if icon.visible:
+		var text_width: float = float(text.texture.get_width()) if text.texture != null else 0.0
+		var group_width: float = 5.0 + 3.0 + text_width
+		var start_x: float = floorf((button.size.x - group_width) * 0.5)
+		icon.position = Vector2(start_x, floor((button.size.y - 5.0) * 0.5))
+		text.centered = false
+		text.position = Vector2(start_x + 8.0, floor((button.size.y - float(text.texture.get_height())) * 0.5))
+	else:
+		text.centered = true
+		text.position = button.size * 0.5
 
 
 func _menu_confirm_prompt_for(root: Object) -> String:

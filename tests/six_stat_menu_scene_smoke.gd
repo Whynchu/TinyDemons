@@ -35,6 +35,7 @@ func _initialize() -> void:
 		screens.hub_page_buttons[1].pressed.emit()
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_ALLOCATE and screens.hub_stat_texts.size() == 6 and screens.hub_stat_buttons.size() == 12 and screens.hub_stat_row_buttons.size() == 6, "Allocate exposes six rows, twelve arrows, and full-row targets", failures)
+		_expect(screens.hub_allocate_panel != null and screens.hub_allocate_panel.visible, "Allocate groups its adjustable rows inside a dedicated card", failures)
 		_expect(screens.hub_stat_left_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)) and screens.hub_stat_row_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)), "Allocate keeps each arrow and row target inside its stat lane", failures)
 		screens.hub_stat_row_buttons[4].pressed.emit()
 		screens.hub_stat_right_buttons[4].pressed.emit()
@@ -48,6 +49,7 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_EQUIPMENT and screens.hub_equipment_action_buttons.size() == 3 and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.visible), "Equipment exposes its top Equip/Remove/Remove All action row", failures)
 		_expect(screens.hub_gear_slot_buttons.size() == 4 and screens.hub_gear_stat_texts.size() == 6, "Equipment keeps four Tiny Demons slots and six-stat comparison capacity", failures)
+		_expect(screens.hub_item_action_button != null and not screens.hub_item_action_button.visible, "Equipment does not expose a duplicate lower action button", failures)
 		var item_column_end := screens.hub_item_content_clip.position.x + screens.hub_item_content_clip.size.x if screens.hub_item_content_clip != null else -1.0
 		var stat_column_start := screens.hub_gear_stat_panel.position.x if screens.hub_gear_stat_panel != null else -1.0
 		_expect(screens.hub_item_content_clip != null and screens.hub_item_content_clip.clip_contents and item_column_end <= stat_column_start - 10.0, "equipment item text is clipped before the stat-card gutter", failures)
@@ -56,6 +58,22 @@ func _initialize() -> void:
 		_expect(screens.hub_equipment_action_buttons[0].position.x + screens.hub_equipment_action_buttons[0].size.x <= screens.hub_equipment_action_buttons[1].position.x and screens.hub_equipment_action_buttons[1].position.x + screens.hub_equipment_action_buttons[1].size.x <= screens.hub_equipment_action_buttons[2].position.x, "equipment action buttons keep non-overlapping hit regions", failures)
 		_expect(screens.hub_gear_choice_panel != null and screens.hub_gear_choice_content_clip != null and not screens.hub_gear_choice_panel.visible, "equipment keeps the lower slot-picker closed until a slot is selected", failures)
 		profile.ensure_starter_items()
+		screens.hub_item_index = 1
+		screens.hub_gear_browsing = false
+		var input_router := gameplay.get("input_router") as InputRouter
+		input_router.poll(InputRouter.Context.HUB)
+		Input.action_press("interact")
+		input_router.poll(InputRouter.Context.HUB)
+		screens.update_hub_input(gameplay)
+		Input.action_release("interact")
+		input_router.poll(InputRouter.Context.HUB)
+		await process_frame
+		_expect(screens.hub_item_index == 1 and screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible, "controller confirm on ARM opens the equipment picker directly", failures)
+		gameplay.call("_hub_item_action")
+		await process_frame
+		_expect(not screens.hub_gear_browsing and not str(profile.equipped_instance_ids.get("armor", "")).is_empty(), "equipment picker confirm equips the selected candidate", failures)
+		gameplay.call("_close_hub_gear_browse")
+		await process_frame
 		screens.hub_gear_slot_buttons[0].pressed.emit()
 		await process_frame
 		var top_slot_bottom := screens.hub_item_content_clip.position.y + screens.hub_gear_slot_buttons[0].position.y + screens.hub_gear_slot_buttons[0].size.y
