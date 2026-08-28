@@ -71,7 +71,9 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	var player := root.get("player") as Sprite2D
 	root.set("player_attack_flip_h", player.flip_h)
 	var tuning := root.get("player_tuning") as PlayerTuning
-	var attack_multiplier := tuning.attack_multiplier(float(root.get("player_spd")))
+	var agi_value: Variant = root.get("player_agi")
+	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	var attack_multiplier := tuning.attack_multiplier_for_agi(effective_agi)
 	if new_kind == AttackKind.SPIN:
 		cancel_lunge()
 		# A spin is a standalone attack. It cannot inherit a pending combo or
@@ -170,7 +172,10 @@ func tick_charge(root: Object, delta: float) -> void:
 	if attack_kind != AttackKind.CHARGING:
 		return
 	var tuning := root.get("player_tuning") as PlayerTuning
-	charge_elapsed = minf(charge_elapsed + maxf(delta, 0.0), tuning.charge_maximum_time if tuning != null else 1.0)
+	var agi_value: Variant = root.get("player_agi")
+	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	var charge_multiplier := tuning.charge_multiplier_for_agi(effective_agi) if tuning != null else 1.0
+	charge_elapsed = minf(charge_elapsed + maxf(delta, 0.0) * charge_multiplier, tuning.charge_maximum_time if tuning != null else 1.0)
 	if attack_button_held:
 		return
 	if tuning != null and charge_elapsed >= tuning.charge_minimum_time:

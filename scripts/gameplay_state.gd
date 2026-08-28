@@ -7,6 +7,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
 @export var debug_actor_geometry := false
+@export var debug_stat_breakdown := false
 
 const SLIME_ATTACK_FRAME_SIZE := Vector2i(16, 16)
 const SLIME_NOTICE_FRAME_TIME := 0.10
@@ -229,7 +230,14 @@ var game_over_button: Button = null
 var game_over_title_button: Button = null
 var game_over_fade_timer := 0.0
 var last_game_over_focus: Button = null
-var player_spd := 0.0
+var player_agi := 0.0
+## Temporary compatibility property for pre-AGI runtime callers and saved
+## characterization tests. New gameplay code should read player_agi.
+var player_spd:
+	get:
+		return player_agi
+	set(value):
+		player_agi = float(value)
 var player_speed_multiplier := 1.0
 var final_exit_open := false
 var settlement_room_active := false
@@ -537,14 +545,16 @@ func _build_run_complete_ui() -> void:
 	screen_state_controller.run_complete_button = controls["return"] as Button
 	screen_state_controller.run_complete_cursor = controls["cursor"] as Sprite2D
 func _build_settings_ui() -> void:
-	var controls: Dictionary = screen_state_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"))
+	var controls: Dictionary = screen_state_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"), Callable(self, "_select_setting_option"))
 	screen_state_controller.settings_overlay = controls["overlay"] as ColorRect
 	screen_state_controller.settings_title_text = controls["title"] as Sprite2D
 	screen_state_controller.settings_row_labels = controls["labels"] as Array[Sprite2D]
 	screen_state_controller.settings_value_buttons = controls["values"] as Array[Button]
 	screen_state_controller.settings_left_buttons = controls["left"] as Array[Button]
 	screen_state_controller.settings_right_buttons = controls["right"] as Array[Button]
+	screen_state_controller.settings_option_buttons = controls["options"] as Array[Array]
 	screen_state_controller.settings_back_button = controls["back"] as Button
+	screen_state_controller.settings_description_text = controls["description"] as Sprite2D
 	screen_state_controller.settings_cursor_text = controls["cursor"] as Sprite2D
 func _open_settings_from_title() -> void:
 	screen_state_controller.open_settings(self, &"title")
@@ -552,11 +562,15 @@ func _open_settings_from_pause() -> void:
 	screen_state_controller.open_settings(self, &"pause")
 func _adjust_setting(row: int, direction: int) -> void:
 	screen_state_controller.adjust_setting(self, row, direction)
+func _select_setting_option(row: int, option_index: int) -> void:
+	screen_state_controller.select_setting_option(self, row, option_index)
 func _update_settings_input() -> void:
 	screen_state_controller.update_settings_input(self)
 func _close_settings() -> void:
 	screen_state_controller.close_settings(self)
 func _quit_to_title_from_pause() -> void:
+	if screen_state_controller.pause_overlay != null:
+		screen_state_controller.pause_overlay.visible = false
 	if screen_state_controller.hub_overlay != null:
 		screen_state_controller.hub_overlay.visible = false
 	call("_return_to_title")
@@ -585,6 +599,7 @@ func _open_hub_from_cloaked_demon() -> void:
 func _close_hub_to_run() -> void:
 	hub_flow_controller.call("close_hub_to_run", self)
 func _update_hub_input() -> void: hub_flow_controller.call("update_hub_input", self)
+func _update_pause_input() -> void: screen_state_controller.update_pause_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
 func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
@@ -606,6 +621,7 @@ func _input_context() -> int:
 	if ssc.settings_overlay != null and ssc.settings_overlay.visible: return InputRouter.Context.MENU
 	if ssc.title_overlay != null and ssc.title_overlay.visible: return InputRouter.Context.MENU
 	if ssc.archetype_overlay != null and ssc.archetype_overlay.visible: return InputRouter.Context.MENU
+	if ssc.pause_overlay != null and ssc.pause_overlay.visible: return InputRouter.Context.PAUSE
 	if ssc.hub_overlay != null and ssc.hub_overlay.visible: return InputRouter.Context.HUB
 	if npc_controller != null and npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: return InputRouter.Context.DIALOGUE
 	return InputRouter.Context.GAMEPLAY
@@ -639,8 +655,20 @@ func _salvage_profile_overflow(instance_id: String) -> int:
 	return int(hub_flow_controller.call("salvage_profile_overflow", self, instance_id))
 func _hub_item_action() -> void:
 	hub_flow_controller.call("hub_item_action", self)
+func _remove_hub_gear() -> void:
+	hub_flow_controller.call("remove_hub_gear", self)
+func _remove_all_hub_gear() -> void:
+	hub_flow_controller.call("remove_all_hub_gear", self)
 func _select_hub_menu_row(row: int) -> void:
 	hub_flow_controller.call("select_hub_menu_row", self, row)
+func _select_hub_stat_row(row: int) -> void:
+	hub_flow_controller.call("select_hub_stat_row", self, row)
+func _set_pause_status_page() -> void:
+	screen_state_controller.set_pause_page(self, 1)
+func _set_pause_equipment_page() -> void:
+	screen_state_controller.set_pause_page(self, 2)
+func _pause_back() -> void:
+	screen_state_controller.pause_back(self)
 func _shift_hub_action_column(direction: int) -> void:
 	hub_flow_controller.call("shift_hub_action_column", self, direction)
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
@@ -771,6 +799,7 @@ func _clear_roll_dust() -> void: effects_spawner.clear_roll_dust()
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("damage_slime", self, slime, amount, was_critical, attack_element, immune)
 func _damage_slime_with_number(slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("damage_slime_with_number", self, slime, amount, was_critical, show_damage_number, attack_element, immune)
 func _player_attack_damage_result_against(slime: Sprite2D, attack_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_attack_damage_result_against", self, slime, attack_element) as CombatCalculator.DamageResult
+func _player_magic_damage_result_against(slime: Sprite2D, attack_element: int, magic_base_bonus: float = 0.0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_magic_damage_result_against", self, slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
 func _player_attack_damage_against(slime: Sprite2D) -> float: return float(combat_runtime_controller.call("player_attack_damage_against", self, slime))
 func _combat_momentum() -> CombatMomentumComponent: return combat_runtime_controller.call("combat_momentum", self) as CombatMomentumComponent
 func _register_combo_hit() -> void: combat_runtime_controller.call("register_combo_hit", self)
@@ -780,6 +809,8 @@ func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> 
 func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent, attack_element: int = 0, defense_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("combat_damage", self, attacker_stats, defender_stats, attack_element, defense_element) as CombatCalculator.DamageResult
 func _max_health_for_stats(stats: StatsComponent) -> float: return float(combat_runtime_controller.call("max_health_for_stats", self, stats))
 func _player_stat_snapshot() -> CombatStatSnapshot: return combat_runtime_controller.call("player_stat_snapshot", self) as CombatStatSnapshot
+func _player_stat_debug_breakdown() -> Dictionary: return combat_runtime_controller.call("player_stat_debug_breakdown", self) as Dictionary
+func _player_stat_debug_summary() -> String: return str(combat_runtime_controller.call("player_stat_debug_summary", self))
 func _recompute_player_speed_multiplier() -> void: combat_runtime_controller.call("recompute_player_speed_multiplier", self)
 func _player_max_health() -> float: return float(combat_runtime_controller.call("player_max_health", self))
 func _enemy_max_health(slime: Sprite2D) -> float: return float(combat_runtime_controller.call("enemy_max_health", self, slime))
@@ -788,7 +819,7 @@ func _enemy_level_cap_for_run() -> int: return int(combat_runtime_controller.cal
 func _run_enemy_level_bonus() -> int: return int(combat_runtime_controller.call("run_enemy_level_bonus", self))
 func _apply_enemy_room_level(slime: Sprite2D, level_override: int = 0) -> void: combat_runtime_controller.call("apply_enemy_room_level", self, slime, level_override)
 func _configure_slime_variant(slime: Sprite2D, variant: String) -> void: combat_runtime_controller.call("configure_slime_variant", self, slime, variant)
-func _knockback_slime(slime: Sprite2D, knockback_multiplier: float = 1.0) -> void: combat_runtime_controller.call("knockback_slime", self, slime, knockback_multiplier)
+func _knockback_slime(slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true) -> void: combat_runtime_controller.call("knockback_slime", self, slime, knockback_multiplier, strength_scaled)
 func _slime_knockback_direction(slime: Sprite2D) -> Vector2: return combat_runtime_controller.call("slime_knockback_direction", self, slime) as Vector2
 func _kill_slime(slime: Sprite2D) -> void: combat_runtime_controller.call("kill_slime", self, slime)
 func _is_slime_dead(slime: Sprite2D) -> bool: return bool(combat_runtime_controller.call("is_slime_dead", self, slime))

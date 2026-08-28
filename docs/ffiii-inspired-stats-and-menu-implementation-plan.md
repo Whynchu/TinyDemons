@@ -1,8 +1,8 @@
 # FFIII-Inspired Six-Stat & Menu Redesign — Implementation Plan
 
-Status: approved design; reviewed against the reference screenshots and the
-current codebase on 2026-08-27; composite elemental combat clarification added
-on 2026-08-28; implementation not started
+Status: implemented and verified on `feature/ffiii-stats-menu-rework`; reviewed
+against the reference screenshots and the current codebase on 2026-08-27;
+composite elemental combat clarification added on 2026-08-28
 
 Date: 2026-08-27
 
@@ -255,6 +255,40 @@ action multiplier = 1 + clamp(agility delta × per-action scale, min, max)
 AGI may alter timer duration and motion magnitude only within configured
 bounds. It never changes an animation sheet’s frame count, event frame, or
 attack-hitbox frame index.
+
+### 2.4 Implementation worksheet (Phase 0 lock)
+
+The first implementation pass uses the following named tuning values. They
+are deliberately conservative so the current physical game remains familiar
+while the new INT/MND choices become measurable immediately:
+
+| Area | Locked first-pass value |
+| --- | --- |
+| Level-1 balanced base (VIT/STR/DEF/AGI/INT/MND) | `3 / 2 / 2 / 1 / 1 / 1` |
+| Level-up point bands | levels `2–5: 1`, `6–10: 2`, `11–20: 3`, `21–35: 4`, `36+: 5` |
+| Physical packet | base `2.0` + `STR × 0.50`; P.DEF curve scale `12.0` |
+| Triangle magic packet | base `2.0` + `INT × 0.75`; elemental mode adds `0.75`; M.DEF curve scale `12.0` |
+| Imbue magic portion | base `1.0` + `INT × 0.50`; physical portion uses the normal weapon contract |
+| Elemental slime physical portion | base `1.5` + `STR × 0.85` |
+| Elemental slime magic portion | base `0.75` + `INT × 0.50` |
+| Existing roll/critical | roll `0.85–1.15`, critical chance `10%`, critical multiplier `1.5` |
+| AGI reference and scales | reference `1.0`; movement `0.012`, roll `0.015`, recovery `0.010`; existing `-0.5/+1.0` bounds |
+| Physical knockback STR helper | reference `5.0`, `+4%` per STR, bounded `0.75–1.50` |
+| Starter flat gear | weapon `STR +2`; armor `VIT +1/DEF +1`; shield `VIT +1/DEF +2/AGI -1`; accessory `STR +1/VIT +1/AGI +1` |
+
+The starter package therefore keeps the established effective gear totals
+(`VIT +3`, `STR +3`, `DEF +3`, `AGI +0`) while the balanced player baseline
+adds one point each of INT and MND. Flat gear is applied before additive rates.
+The first benchmark target is a readable level-one physical hit of roughly
+`3–5` damage into a level-one neutral slime and a Triangle result that rises
+only with INT; exact integer outcomes remain governed by the shared roll and
+element table.
+
+The authored enemy table is the catalog source of truth. Normal Slime has
+`INT 0` and the physical contract. Every colored variant has a positive INT
+and the separate elemental-slime contract; MND is defensive and never changes
+the element multiplier. The composite resolver exposes both post-mitigation
+components for tests and debugging, but presentation emits one damage number.
 
 ### 2.3 Damage classification
 
@@ -784,9 +818,11 @@ must be updated rather than bypassed.
 | Menu redesign reintroduces touch traps/overlap. | Separate hub/pause state, direct tap targets, routing tests, and supported-aspect visual checks. |
 | Reference imitation obscures Tiny Demons identity. | Reuse only layout grammar; use original colors, glyphs, panel treatment, and game terminology. |
 
-## 9. Values to approve in Phase 0
+## 9. Values approved in Phase 0
 
-These are intentionally not hard-coded by this document:
+The implementation worksheet in §2.4 is the approved first-pass balance
+contract. These values are now represented by named tuning fields and covered
+by focused smoke tests:
 
 1. Level-1 base values for STR/AGI/VIT/INT/MND/DEF.
 2. Stat-point award bands for a six-choice economy.
@@ -798,11 +834,16 @@ These are intentionally not hard-coded by this document:
 6. Whether VIT receives a later explicit health-only secondary effect after
    the initial max-HP implementation proves readable.
 
-None of these values may be inferred from palette color, old allocation
-profiles, or a UI label. They are balance data and require a named tuning value
-plus test coverage.
+None of these values are inferred from palette color, old allocation profiles,
+or a UI label. They are balance data represented by named tuning values and
+the six-stat calculator, profile, equipment, composite-combat, slime, and
+Imbue smoke coverage.
 
 ## 10. Definition of done
+
+Implementation status: complete on the feature branch. The baseline was pushed
+to `main` before implementation began; the feature branch contains the full
+six-stat, combat-contract, menu, migration, and verification slice.
 
 The slice is complete only when:
 
