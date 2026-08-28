@@ -23,18 +23,23 @@ func _initialize() -> void:
 		var starting_runs := profile.completed_runs
 		gameplay.call("_open_pause_menu")
 		await process_frame
-		_expect(screens.hub_overlay.visible and screens.hub_pause_mode, "pause opens the hub in pause mode", failures)
-		_expect(screens.pause_menu_buttons.size() == 3, "pause exposes Resume, Settings, and Quit to Title", failures)
+		_expect(screens.pause_overlay != null and screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.hub_pause_mode, "pause opens its own overlay", failures)
+		_expect(screens.state == &"pause", "pause owns a distinct screen state", failures)
+		_expect(screens.pause_menu_buttons.size() == 5, "pause exposes Resume, Status, Equipment, Settings, and Quit to Title", failures)
 		for button in screens.pause_menu_buttons:
 			_expect(button.visible, "pause menu action is visible", failures)
-		_expect(screens.hub_gear_stat_panel != null and screens.hub_gear_stat_panel.visible, "pause shows the character status panel", failures)
-		_expect(screens.hub_gear_stat_texts.size() >= 5 and screens.hub_gear_stat_texts[0].visible, "pause status panel shows HP and core stats", failures)
-		if screens.hub_gear_stat_panel != null and not screens.pause_menu_buttons.is_empty():
-			_expect(screens.pause_menu_buttons[0].position.x + screens.pause_menu_buttons[0].size.x < screens.hub_gear_stat_panel.position.x, "pause actions do not overlap the status panel", failures)
+		_expect(screens.pause_player_card_texts.size() >= 5 and screens.pause_player_card_texts[0].texture != null, "pause shows the player card", failures)
+		_expect(screens.pause_status_texts.size() >= 14 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
+		if screens.pause_status_button != null:
+			screens.pause_status_button.pressed.emit()
+		_expect(screens.pause_page == 1 and screens.pause_status_texts[0].visible and not screens.hub_overlay.visible, "pause Status opens a read-only page without hub controls", failures)
+		if screens.pause_equipment_button != null:
+			screens.pause_equipment_button.pressed.emit()
+		_expect(screens.pause_page == 2 and screens.pause_equipment_texts[0].visible, "pause Equipment opens a read-only page", failures)
 		if screens.pause_resume_button != null:
 			screens.pause_resume_button.pressed.emit()
 		await process_frame
-		_expect(not screens.hub_overlay.visible and not screens.hub_pause_mode, "Resume returns to gameplay", failures)
+		_expect(not screens.pause_overlay.visible and not screens.hub_overlay.visible and not screens.hub_pause_mode, "Resume returns to gameplay", failures)
 		_expect(screens.state == &"gameplay", "Resume restores gameplay state", failures)
 		gameplay.call("_open_pause_menu")
 		await process_frame
@@ -42,7 +47,7 @@ func _initialize() -> void:
 		_expect(pause_quit != null and not pause_quit.disabled, "Quit to Title is available from pause", failures)
 		if pause_quit != null:
 			pause_quit.pressed.emit()
-		_expect(not screens.hub_overlay.visible, "Quit to Title closes the pause overlay", failures)
+		_expect(not screens.pause_overlay.visible and not screens.hub_overlay.visible, "Quit to Title closes the pause overlay", failures)
 		_expect(bool(gameplay.get("scene_transition_active")), "Quit to Title reuses the scene teardown transition", failures)
 		_expect(profile.gold == starting_gold and profile.completed_runs == starting_runs, "Quit to Title leaves settled profile progress intact", failures)
 		_expect(profile.pending_route == "title", "Quit to Title records the title route", failures)

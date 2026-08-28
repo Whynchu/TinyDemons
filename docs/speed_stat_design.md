@@ -1,4 +1,9 @@
-# Speed Stat — Design & Implementation Plan
+# Speed Stat — Historical Design (Superseded)
+
+> Superseded by [`ffiii-inspired-stats-and-menu-implementation-plan.md`](ffiii-inspired-stats-and-menu-implementation-plan.md).
+> The player-facing SPD attribute is now AGI, with INT and MND completing the
+> six-stat model. This document remains as the historical record of the
+> earlier bounded speed rollout and compatibility considerations.
 
 ## Objective
 
