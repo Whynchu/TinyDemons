@@ -11,6 +11,13 @@ $tests += "fire_exchange_smoke"
 $tests += "circular_input_smoke"
 $tests += "spin_damage_smoke"
 $tests += "spin_charge_scene_smoke"
+$tests += "six_stat_profile_migration_smoke"
+$tests += "six_stat_calculator_smoke"
+$tests += "composite_elemental_damage_smoke"
+$tests += "six_stat_equipment_smoke"
+$tests += "six_stat_menu_scene_smoke"
+$tests += "demon_hub_menu_scene_smoke"
+$tests += "imbue_intelligence_smoke"
 $failed = $false
 foreach ($test in $tests) {
 	Write-Host "=== $test ==="

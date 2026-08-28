@@ -4,6 +4,7 @@ var stat_touch_count := 0
 var stat_row_touch_count := 0
 var item_row_touch_count := 0
 var fusion_count_touch_count := 0
+var pause_touch_count := 0
 
 
 func _initialize() -> void:
@@ -134,7 +135,7 @@ func _initialize() -> void:
 	layer._input(stat_up)
 	_expect(stat_touch_count == 1, "touching a hub stat arrow activates its enlarged hit target", failures)
 	var stat_rows := hub_controls["stat_rows"] as Array[Button]
-	_expect(stat_rows.size() == 4 and stat_rows[0].size.x >= 100.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets", failures)
+	_expect(stat_rows.size() == 6 and stat_rows[0].size.x >= 80.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets for six stats", failures)
 	var stat_row_down := InputEventScreenTouch.new()
 	stat_row_down.device = 0; stat_row_down.index = 15; stat_row_down.pressed = true; stat_row_down.position = stat_rows[2].get_global_rect().get_center()
 	layer._input(stat_row_down)
@@ -159,7 +160,7 @@ func _initialize() -> void:
 	(hub_controls["fusion_decrease"] as Button).visible = true
 	(hub_controls["fusion_increase"] as Button).visible = true
 	var item_rows := hub_controls["item_rows"] as Array[Button]
-	_expect(item_rows.size() == 5 and item_rows[0].size.x >= 140.0, "shop and fusion rows expose direct touch targets", failures)
+	_expect(item_rows.size() == 5 and item_rows[0].size.x >= 80.0, "shop and fusion rows expose direct touch targets", failures)
 	var item_row_down := InputEventScreenTouch.new()
 	item_row_down.device = 0; item_row_down.index = 17; item_row_down.pressed = true; item_row_down.position = item_rows[0].get_global_rect().get_center()
 	layer._input(item_row_down)
@@ -174,6 +175,26 @@ func _initialize() -> void:
 	fusion_count_up.device = 0; fusion_count_up.index = 18; fusion_count_up.pressed = false; fusion_count_up.position = fusion_count_down.position
 	layer._input(fusion_count_up)
 	_expect(fusion_count_touch_count == 1, "touching fusion count controls reaches their callbacks", failures)
+	# The pause shell is a separate visible overlay, but it must use the same
+	# direct native-button touch path and nest the cancel affordance safely.
+	var pause_overlay := hub_controls["pause_overlay"] as ColorRect
+	var pause_buttons := hub_controls["pause_buttons"] as Array[Button]
+	hub_overlay.visible = false
+	pause_overlay.visible = true
+	pause_touch_count = 0
+	pause_buttons[0].pressed.connect(Callable(self, "_record_pause_touch"))
+	layer.set_input_context(InputRouter.Context.PAUSE)
+	await process_frame
+	var pause_cancel_rect: Rect2 = layer._layout["cancel"]
+	_expect(pause_overlay.get_global_rect().encloses(pause_cancel_rect), "pause cancel control is nested inside the dedicated pause panel", failures)
+	_expect(pause_buttons[0].is_visible_in_tree() and not pause_buttons[0].disabled and layer.call("_menu_button_at", pause_buttons[0].get_global_rect().get_center()) == pause_buttons[0], "pause command is discoverable by the direct touch hit-test", failures)
+	var pause_down := InputEventScreenTouch.new()
+	pause_down.device = 0; pause_down.index = 19; pause_down.pressed = true; pause_down.position = pause_buttons[0].get_global_rect().get_center()
+	layer._input(pause_down)
+	var pause_up := InputEventScreenTouch.new()
+	pause_up.device = 0; pause_up.index = 19; pause_up.pressed = false; pause_up.position = pause_down.position
+	layer._input(pause_up)
+	_expect(pause_touch_count == 1, "touching a pause command activates its direct button", failures)
 	hub_host.free()
 	hub_builder.free()
 	layer.set_input_context(InputRouter.Context.MENU)
@@ -307,6 +328,10 @@ func _record_item_row(_row: int) -> void:
 
 func _record_fusion_count(_direction: int) -> void:
 	fusion_count_touch_count += 1
+
+
+func _record_pause_touch() -> void:
+	pause_touch_count += 1
 
 
 func _pixel_texture(_text: String, color: Color) -> Texture2D:

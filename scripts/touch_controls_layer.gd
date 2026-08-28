@@ -13,6 +13,7 @@ const CONTEXT_GAMEPLAY := 0
 const CONTEXT_DIALOGUE := 1
 const CONTEXT_HUB := 2
 const CONTEXT_MENU := 3
+const CONTEXT_PAUSE := 4
 const EMULATED_DEVICE_ID := -1
 const MOUSE_FINGER_ID := -2
 
@@ -332,7 +333,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# Hub pages expose their actionable controls as native Buttons. A blank
 		# touch must stay inert; falling through to generic accept moves the
 		# controller cursor even though no visible control was selected.
-		if _input_context == CONTEXT_HUB:
+		if _input_context == CONTEXT_HUB or _input_context == CONTEXT_PAUSE:
 			return
 		_menu_accept_fingers[finger_id] = true
 		_menu_accept_latch = true
@@ -471,7 +472,7 @@ func _rect_dictionary_contains(rectangles: Dictionary, position: Vector2) -> boo
 
 
 func _is_menu_context() -> bool:
-	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU
+	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU or _input_context == CONTEXT_PAUSE
 
 
 func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseButton:
@@ -566,12 +567,13 @@ func _update_layout() -> void:
 
 func _context_cancel_rect(layout: Dictionary) -> Rect2:
 	var cancel: Rect2 = layout.get("cancel", Rect2())
-	if _input_context != CONTEXT_HUB:
+	if _input_context != CONTEXT_HUB and _input_context != CONTEXT_PAUSE:
 		return cancel
-	var hub_overlay := _find_visible_control(get_parent(), &"HubOverlay")
-	if hub_overlay == null:
+	var overlay_name: StringName = &"HubOverlay" if _input_context == CONTEXT_HUB else &"PauseOverlay"
+	var menu_overlay := _find_visible_control(get_parent(), overlay_name)
+	if menu_overlay == null:
 		return cancel
-	var bounds := hub_overlay.get_global_rect()
+	var bounds := menu_overlay.get_global_rect()
 	var inset := maxf(float(layout.get("margin", 4.0)) * 0.75, 3.0)
 	var nested_position := Vector2(bounds.end.x - cancel.size.x - inset, bounds.end.y - cancel.size.y - inset)
 	if bounds.encloses(Rect2(nested_position, cancel.size)):
@@ -656,7 +658,7 @@ func _update_button_visual(action: StringName) -> void:
 
 func _refresh_controls() -> void:
 	_controls_visible = _last_input_device == DEVICE_TOUCH and (_input_context == CONTEXT_GAMEPLAY or _input_context == CONTEXT_DIALOGUE)
-	_touch_input_enabled = _last_input_device == DEVICE_TOUCH and _input_context in [CONTEXT_GAMEPLAY, CONTEXT_DIALOGUE, CONTEXT_HUB, CONTEXT_MENU]
+	_touch_input_enabled = _last_input_device == DEVICE_TOUCH and _input_context in [CONTEXT_GAMEPLAY, CONTEXT_DIALOGUE, CONTEXT_HUB, CONTEXT_MENU, CONTEXT_PAUSE]
 	_update_touch_capture_filter()
 	if not _controls_visible:
 		_clear_gameplay_input()

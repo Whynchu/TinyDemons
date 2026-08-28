@@ -312,7 +312,9 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			apply_frame(root)
 			return
 		var attack_tuning := root.get("player_tuning") as PlayerTuning
-		var attack_multiplier := attack_tuning.attack_multiplier(float(root.get("player_spd")))
+		var agi_value: Variant = root.get("player_agi")
+		var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+		var attack_multiplier := attack_tuning.attack_multiplier_for_agi(effective_agi)
 		var is_spin := attack_name == "spin_attack"
 		var is_attack2 := attack_name == "attack2" or attack_name == "attack2_charged"
 		var active_frames: Array[Texture2D] = spin_frames if is_spin else attack2_frames if is_attack2 else attack_frames

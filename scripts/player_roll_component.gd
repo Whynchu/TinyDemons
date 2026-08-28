@@ -35,7 +35,9 @@ func start_from_root(root: Object) -> void:
 	if motor != null: motor.begin_roll()
 	root.set("roll_dust_spawned_this_roll", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	var tuning := root.get("player_tuning") as PlayerTuning
-	var roll_multiplier := tuning.roll_multiplier(float(root.get("player_spd")))
+	var agi_value: Variant = root.get("player_agi")
+	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	var roll_multiplier := tuning.roll_multiplier_for_agi(effective_agi)
 	start_motion(root.call("_perspective_movement", movement_direction * (tuning.roll_distance * roll_multiplier / tuning.roll_duration))); player.visible = true
 	anim.apply_frame(root)
 
@@ -44,7 +46,9 @@ func update_from_root(root: Object, delta: float) -> void:
 	if not bool(root.get("player_is_rolling")): return
 	var anim := root.get("player_animation_component") as PlayerAnimationComponent
 	var tuning := root.get("player_tuning") as PlayerTuning; var player := root.get("player") as Sprite2D; var before := player.global_position
-	var roll_multiplier := tuning.roll_multiplier(float(root.get("player_spd")))
+	var agi_value: Variant = root.get("player_agi")
+	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	var roll_multiplier := tuning.roll_multiplier_for_agi(effective_agi)
 	var result := tick_motion(delta, tuning.roll_duration, tuning.roll_frame_time / roll_multiplier, (anim.roll_frames as Array[Texture2D]).size(), Callable(self, "move_swept").bind(root))
 	if not bool(root.get("roll_dust_spawned_this_roll")):
 		var movement_direction := player.global_position - before

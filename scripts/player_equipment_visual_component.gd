@@ -55,6 +55,7 @@ var was_defending := false
 var shield_is_out := false
 var imbue_element := ElementCatalogScript.Element.NEUTRAL
 var imbue_remaining := 0.0
+var last_imbue_visual_intensity := 1.0
 var imbue_flash_timer := 0.0
 var imbue_particle_timer := 0.0
 var imbue_outline_overlays: Dictionary = {}
@@ -122,6 +123,7 @@ func begin_imbue(root: Object, element: int, duration: float) -> void:
 
 func end_imbue(root: Object) -> void:
 	imbue_remaining = 0.0
+	last_imbue_visual_intensity = 1.0
 	imbue_flash_timer = 0.0
 	imbue_particle_timer = 0.0
 	imbue_element = ElementCatalogScript.Element.NEUTRAL
@@ -400,7 +402,7 @@ func tick(root: Object, delta: float) -> void:
 		imbue_particle_timer -= maxf(delta, 0.0)
 		if imbue_particle_timer <= 0.0:
 			_spawn_imbue_bleed(root)
-			imbue_particle_timer = IMBUE_PARTICLE_INTERVAL
+			imbue_particle_timer = IMBUE_PARTICLE_INTERVAL / maxf(imbue_visual_intensity(root), 0.01)
 		if imbue_remaining <= 0.0:
 			end_imbue(root)
 	if bool(root.get("player_is_rolling")) and active and fade_timer <= 0.0:
@@ -941,12 +943,14 @@ func _clear_imbue_overlays() -> void:
 
 func _update_imbue_overlays(root: Object) -> void:
 	if imbue_remaining <= 0.0 or imbue_element == ElementCatalogScript.Element.NEUTRAL:
+		last_imbue_visual_intensity = 1.0
 		_clear_imbue_overlays()
 		return
+	last_imbue_visual_intensity = imbue_visual_intensity(root)
 	var outline_color := ElementCatalogScript.damage_number_color(imbue_element)
 	var flash_color := PaletteLibrary.accent(ElementCatalogScript.palette_key(imbue_element)).lerp(Color.WHITE, 0.20)
-	var outline_alpha := clampf(imbue_remaining / IMBUE_FADE_TIME, 0.0, 1.0) * 0.9
-	var flash_alpha := clampf(imbue_flash_timer / IMBUE_FLASH_TIME, 0.0, 1.0)
+	var outline_alpha := clampf(clampf(imbue_remaining / IMBUE_FADE_TIME, 0.0, 1.0) * 0.9 * last_imbue_visual_intensity, 0.0, 1.0)
+	var flash_alpha := clampf(clampf(imbue_flash_timer / IMBUE_FLASH_TIME, 0.0, 1.0) * last_imbue_visual_intensity, 0.0, 1.0)
 	var visible_layers: Dictionary = {}
 	for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
 		var layer := layers.get(layer_name) as Sprite2D
@@ -993,6 +997,14 @@ func _update_imbue_overlays(root: Object) -> void:
 	for layer in imbue_flash_overlays:
 		if not visible_layers.has(layer):
 			(imbue_flash_overlays[layer] as Sprite2D).visible = false
+
+
+func imbue_visual_intensity(root: Object) -> float:
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root != null and root.has_method("_player_stat_snapshot") else null
+	if tuning == null or snapshot == null:
+		return 1.0
+	return tuning.imbue_visual_intensity_for_intelligence(snapshot.intelligence)
 
 
 func _imbue_color_texture(source: Texture2D, color: Color) -> Texture2D:

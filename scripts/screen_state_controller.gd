@@ -4,6 +4,19 @@ class_name ScreenStateController
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
 
+## Hub content pages retain the old numeric values for transaction callers. The
+## visible command column maps STATUS to page 5 and ALLOCATE/EQUIPMENT/SHOP/
+## FUSION/BIND to pages 0..4. Keeping this translation local lets old save/menu
+## probes continue to address a transaction page while the player sees the new
+## FFIII-inspired command order.
+const HUB_PAGE_ALLOCATE := 0
+const HUB_PAGE_EQUIPMENT := 1
+const HUB_PAGE_SHOP := 2
+const HUB_PAGE_FUSION := 3
+const HUB_PAGE_BIND := 4
+const HUB_PAGE_STATUS := 5
+const HUB_COMMAND_PAGE_TARGETS := [HUB_PAGE_STATUS, HUB_PAGE_ALLOCATE, HUB_PAGE_EQUIPMENT, HUB_PAGE_SHOP, HUB_PAGE_FUSION, HUB_PAGE_BIND]
+
 signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
@@ -36,16 +49,30 @@ var hub_pending_def: int:
 var hub_pending_spd: int:
 	get: return hub_progression_draft.spd
 	set(value): hub_progression_draft.spd = maxi(int(value), 0)
+var hub_pending_agi: int:
+	get: return hub_progression_draft.agi
+	set(value): hub_progression_draft.agi = maxi(int(value), 0)
+var hub_pending_int: int:
+	get: return hub_progression_draft.intelligence
+	set(value): hub_progression_draft.intelligence = maxi(int(value), 0)
+var hub_pending_mnd: int:
+	get: return hub_progression_draft.mnd
+	set(value): hub_progression_draft.mnd = maxi(int(value), 0)
 var hub_opened_from_npc := false
 var hub_pause_mode := false
 var hub_menu_row := 0
+var hub_stat_row := 0
 var hub_action_column := 0
+var hub_content_focus := false
+var hub_equipment_action_focus := false
 var hub_interact_input_was_down := false
 var hub_cancel_input_was_down := false
 var menu_input_release_lock := false
 var hub_page_previous_input_was_down := false
 var hub_page_next_input_was_down := false
 var pause_input_was_down := false
+var pause_interact_input_was_down := false
+var pause_cancel_input_was_down := false
 var hub_page := 0
 var hub_item_index := 0
 var hub_gear_candidate_indices := {"weapon": 0, "armor": 0, "shield": 0, "accessory": 0}
@@ -61,6 +88,11 @@ var hub_gear_stat_texts: Array[Sprite2D] = []
 var hub_gear_stat_panel: Panel = null
 var hub_cursor_text: Sprite2D = null
 var hub_page_buttons: Array[Button] = []
+var hub_back_button: Button = null
+var hub_player_card_panel: Panel = null
+var hub_player_card_texts: Array[Sprite2D] = []
+var hub_status_texts: Array[Sprite2D] = []
+var hub_context_text: Sprite2D = null
 var hub_binding_panel: Panel = null
 var hub_binding_texts: Array[Sprite2D] = []
 var hub_binding_action_button: Button = null
@@ -70,12 +102,25 @@ var pause_settings_button: Button = null
 var pause_quit_button: Button = null
 var pause_cursor_text: Sprite2D = null
 var pause_menu_buttons: Array[Button] = []
+var pause_overlay: ColorRect = null
+var pause_title_text: Sprite2D = null
+var pause_page := 0
+var pause_menu_row := 0
+var pause_player_card_panel: Panel = null
+var pause_player_card_texts: Array[Sprite2D] = []
+var pause_status_texts: Array[Sprite2D] = []
+var pause_equipment_texts: Array[Sprite2D] = []
+var pause_description_text: Sprite2D = null
+var pause_back_button: Button = null
+var pause_status_button: Button = null
+var pause_equipment_button: Button = null
 var hub_item_name_text: Sprite2D = null
 var hub_item_list_texts: Array[Sprite2D] = []
 var hub_item_row_buttons: Array[Button] = []
 var hub_shop_price_texts: Array[Sprite2D] = []
 var hub_item_detail_texts: Array[Sprite2D] = []
 var hub_item_action_button: Button = null
+var hub_equipment_action_buttons: Array[Button] = []
 var hub_fusion_decrease_button: Button = null
 var hub_fusion_increase_button: Button = null
 var title_overlay: ColorRect = null
@@ -131,6 +176,9 @@ var settings_row_labels: Array[Sprite2D] = []
 var settings_value_buttons: Array[Button] = []
 var settings_left_buttons: Array[Button] = []
 var settings_right_buttons: Array[Button] = []
+var settings_option_buttons: Array[Array] = []
+var settings_option_labels: Array[Array] = []
+var settings_description_text: Sprite2D = null
 var settings_back_button: Button = null
 var settings_cursor_text: Sprite2D = null
 var settings_row := 0
@@ -155,6 +203,8 @@ func apply_display_layout(root: Object) -> void:
 		if title_settings_button != null: title_settings_button.position.x = title_x
 	if hub_overlay != null:
 		hub_overlay.position = (display_view_size - hub_overlay.size) * 0.5
+	if pause_overlay != null:
+		pause_overlay.position = (display_view_size - pause_overlay.size) * 0.5
 	if run_complete_overlay != null:
 		run_complete_overlay.position = (display_view_size - run_complete_overlay.size) * 0.5
 	if title_overlay != null and title_cursor_text != null:
@@ -335,7 +385,9 @@ func start_selected_archetype(root: Object) -> void:
 		profile.base_vit = int(initial_stats["VIT"])
 		profile.base_str = int(initial_stats["STR"])
 		profile.base_def = int(initial_stats["DEF"])
-		profile.base_spd = int(initial_stats["SPD"])
+		profile.base_agi = int(initial_stats.get("AGI", initial_stats.get("SPD", 1)))
+		profile.base_int = int(initial_stats.get("INT", 1))
+		profile.base_mnd = int(initial_stats.get("MND", 1))
 		var starter_flame: StringName = ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[starter_flame_index]
 		profile.starter_flame = starter_flame
 		profile.allocation_profile = int(StatsComponent.AllocationProfile.BALANCED)
@@ -625,288 +677,359 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor}
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable()) -> Dictionary:
+func _add_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
+	var outer := Panel.new()
+	outer.name = "FrameOuter"
+	outer.position = Vector2.ZERO
+	outer.size = panel_size
+	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var outer_style := StyleBoxFlat.new()
+	outer_style.bg_color = Color.TRANSPARENT
+	outer_style.border_color = Color(0.78, 0.82, 0.92, 0.95)
+	outer_style.set_border_width_all(1)
+	outer.add_theme_stylebox_override("panel", outer_style)
+	overlay.add_child(outer)
+	var inner := Panel.new()
+	inner.name = "FrameInner"
+	inner.position = Vector2(3, 3)
+	inner.size = panel_size - Vector2(6, 6)
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var inner_style := StyleBoxFlat.new()
+	inner_style.bg_color = Color.TRANSPARENT
+	inner_style.border_color = Color(0.30, 0.34, 0.44, 0.92)
+	inner_style.set_border_width_all(1)
+	inner.add_theme_stylebox_override("panel", inner_style)
+	overlay.add_child(inner)
+
+
+func _menu_card_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.035, 0.045, 0.075, 0.90)
+	style.border_color = Color(0.42, 0.48, 0.62, 0.9)
+	style.set_border_width_all(1)
+	return style
+
+
+func _make_menu_card(parent: Node, card_name: String, card_position: Vector2, card_size: Vector2) -> Panel:
+	var card := Panel.new()
+	card.name = card_name
+	card.position = card_position
+	card.size = card_size
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_theme_stylebox_override("panel", _menu_card_style())
+	parent.add_child(card)
+	return card
+
+
+func _make_transparent_touch_button(parent: Node, button_name: String, button_position: Vector2, button_size: Vector2, callback: Callable = Callable(), callback_arg: Variant = null) -> Button:
+	var button := Button.new()
+	button.name = button_name
+	button.position = button_position
+	button.size = button_size
+	button.text = ""
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var transparent := StyleBoxFlat.new()
+	transparent.bg_color = Color.TRANSPARENT
+	transparent.set_border_width_all(0)
+	for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.add_theme_stylebox_override(style_state, transparent)
+	if callback.is_valid():
+		if callback_arg == null: button.pressed.connect(callback)
+		else: button.pressed.connect(callback.bind(callback_arg))
+	parent.add_child(button)
+	return button
+
+
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable(), pause_status: Callable = Callable(), pause_equipment: Callable = Callable(), pause_back: Callable = Callable(), equipment_remove: Callable = Callable(), equipment_remove_all: Callable = Callable()) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
-	var panel_size := Vector2(156, 116)
-	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.94), 3, false)
+	var panel_size := Vector2(228, 148)
+	var overlay := create_overlay(parent, "HubOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.96), 3, false)
 	overlay.position = (_view_size_for_parent(parent) - panel_size) * 0.5
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = overlay.color
-	panel_style.border_color = Color(0.75, 0.78, 0.86, 0.9)
-	panel_style.set_border_width_all(1)
-	overlay.add_theme_stylebox_override("panel", panel_style)
+	_add_menu_frame(overlay, panel_size)
 	var title_texture := pixel_texture.call("DEMON HUB", Color.WHITE) as Texture2D
-	create_sprite(overlay, "HubTitle", title_texture, Vector2((panel_size.x - title_texture.get_width()) * 0.5, 4), false)
+	create_sprite(overlay, "HubTitle", title_texture, Vector2(9, 4), false)
+	var title_rule := ColorRect.new()
+	title_rule.name = "HubTitleRule"
+	title_rule.position = Vector2(9, 17)
+	title_rule.size = Vector2(panel_size.x - 18, 1)
+	title_rule.color = Color(0.36, 0.40, 0.52, 0.85)
+	title_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(title_rule)
+
+	var card := _make_menu_card(overlay, "HubPlayerCard", Vector2(6, 23), Vector2(54, 102))
+	hub_player_card_panel = card
+	var card_texts: Array[Sprite2D] = []
+	for index in 6:
+		card_texts.append(create_sprite(overlay, "HubCardText%d" % index, null, Vector2(10, 29 + index * 13), false))
+	hub_player_card_texts = card_texts
+	var summary := create_sprite(overlay, "HubSummary", null, Vector2(10, 100), false)
+	var points := create_sprite(overlay, "HubPoints", null, Vector2(66, 25), false)
+	var context := create_sprite(overlay, "HubContext", null, Vector2(66, 120), false)
+	hub_context_text = context
+
 	var pages: Array[Button] = []
-	var page_labels := ["STATS", "GEAR", "SHOP", "FUSE", "BIND"]
-	for page_index in page_labels.size():
-		var page_button := make_retro_button(page_labels[page_index], Vector2(4 + page_index * 30, 15), Vector2(30, 12), pixel_texture)
-		page_button.focus_mode = Control.FOCUS_NONE
-		page_button.pressed.connect(set_page.bind(page_index))
-		overlay.add_child(page_button); pages.append(page_button)
-	var summary := create_sprite(overlay, "HubSummary", null, Vector2.ZERO, false)
-	summary.visible = false
-	var points := create_sprite(overlay, "HubPoints", null, Vector2(7, 32), false)
+	var page_labels := ["STATUS", "ALLOCATE", "EQUIPMENT", "SHOP", "FUSION", "BIND"]
+	for command_index in page_labels.size():
+		var page_button := make_retro_button(page_labels[command_index], Vector2(155, 25 + command_index * 15), Vector2(66, 12), pixel_texture)
+		page_button.name = "HubCommand%s" % page_labels[command_index].capitalize()
+		page_button.focus_mode = Control.FOCUS_ALL
+		page_button.set_meta("hub_command_index", command_index)
+		page_button.set_meta("hub_page_target", HUB_COMMAND_PAGE_TARGETS[command_index])
+		page_button.pressed.connect(set_page.bind(HUB_COMMAND_PAGE_TARGETS[command_index]))
+		overlay.add_child(page_button)
+		pages.append(page_button)
+	var back_button := make_retro_button("BACK", Vector2(155, 130), Vector2(66, 12), pixel_texture)
+	back_button.name = "HubBack"
+	back_button.focus_mode = Control.FOCUS_ALL
+	if pause_resume.is_valid(): back_button.pressed.connect(pause_resume)
+	overlay.add_child(back_button)
+
 	var stats: Array[Sprite2D] = []
 	var stat_buttons: Array[Button] = []
 	var stat_left: Array[Button] = []
 	var stat_right: Array[Button] = []
 	var stat_rows: Array[Button] = []
-	var derived: Array[Sprite2D] = []
-	var stat_names := [&"VIT", &"STR", &"DEF", &"SPD"]
+	var stat_names := [&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"]
 	var stat_arrow_size := Vector2(18, 12)
 	for index in stat_names.size():
-		# Keep the value centered between generous touch targets. The old row also
-		# included gear and allocation bookkeeping, which made the core stats hard
-		# to scan on the small hub panel.
-		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(panel_size.x * 0.5, 45 + index * 11), true)
+		var y := 36.0 + index * 11.0
+		var stat_text := create_sprite(overlay, "HubStat%d" % index, null, Vector2(110, y + 5), true)
 		stats.append(stat_text)
-		# Give each stat row its own touch target so a tap selects that row instead
-		# of falling through to the controller-style generic accept action.
-		var row_button := Button.new()
-		row_button.name = "HubStatRow%d" % index
-		row_button.position = Vector2(23, 39 + index * 11)
-		row_button.size = Vector2(panel_size.x - 47, 12)
-		row_button.text = ""
-		row_button.focus_mode = Control.FOCUS_NONE
-		row_button.mouse_filter = Control.MOUSE_FILTER_STOP
-		row_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var row_transparent := StyleBoxFlat.new()
-		row_transparent.bg_color = Color.TRANSPARENT
-		row_transparent.set_border_width_all(0)
-		for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
-			row_button.add_theme_stylebox_override(style_state, row_transparent)
-		if select_stat_row.is_valid(): row_button.pressed.connect(select_stat_row.bind(index))
-		overlay.add_child(row_button)
+		var row_button := _make_transparent_touch_button(overlay, "HubStatRow%d" % index, Vector2(64, y), Vector2(88, 12), select_stat_row, index)
 		stat_rows.append(row_button)
-		var left := make_archetype_arrow(overlay, -1, Vector2(5, 39 + index * 11), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
-		var right := make_archetype_arrow(overlay, 1, Vector2(panel_size.x - 23, 39 + index * 11), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
+		var left := make_archetype_arrow(overlay, -1, Vector2(65, y), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
+		var right := make_archetype_arrow(overlay, 1, Vector2(133, y), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
 		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
 		left.set_meta("hub_stat_index", index); right.set_meta("hub_stat_index", index)
 		stat_left.append(left); stat_right.append(right); stat_buttons.append(left); stat_buttons.append(right)
-	for index in 4:
-		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(100, 42 + index * 12), false))
-	var apply_button := make_retro_button("APPLY", Vector2(3, 88), Vector2(34, 11), pixel_texture)
-	apply_button.focus_mode = Control.FOCUS_NONE
-	apply_button.pressed.connect(apply_stats)
-	overlay.add_child(apply_button)
-	var cancel_button := make_retro_button("CLEAR", Vector2(39, 88), Vector2(34, 11), pixel_texture)
-	cancel_button.focus_mode = Control.FOCUS_NONE
-	cancel_button.pressed.connect(cancel_stats)
-	overlay.add_child(cancel_button)
-	var auto_button := make_retro_button("AUTO", Vector2(79, 88), Vector2(29, 11), pixel_texture)
-	auto_button.focus_mode = Control.FOCUS_NONE
-	auto_button.pressed.connect(auto_allocate)
-	overlay.add_child(auto_button)
-	var respec_button := make_retro_button("RESPEC", Vector2(110, 88), Vector2(43, 11), pixel_texture)
-	respec_button.focus_mode = Control.FOCUS_NONE
-	respec_button.pressed.connect(respec)
-	overlay.add_child(respec_button)
-	var item_name := create_sprite(overlay, "HubItemName", null, Vector2(8, 38), false)
+	var derived: Array[Sprite2D] = []
+	for index in 6:
+		derived.append(create_sprite(overlay, "HubDerived%d" % index, null, Vector2(66, 36 + index * 11), false))
+	var status_texts: Array[Sprite2D] = []
+	for index in 14:
+		var column := 0 if index < 8 else 1
+		var row := index if index < 8 else index - 8
+		status_texts.append(create_sprite(overlay, "HubStatus%d" % index, null, Vector2(66 + column * 45, 38 + row * 9), false))
+		status_texts[index].visible = false
+	var apply_button := make_retro_button("APPLY", Vector2(65, 106), Vector2(22, 11), pixel_texture)
+	apply_button.focus_mode = Control.FOCUS_NONE; apply_button.pressed.connect(apply_stats); overlay.add_child(apply_button)
+	var cancel_button := make_retro_button("CLEAR", Vector2(89, 106), Vector2(22, 11), pixel_texture)
+	cancel_button.focus_mode = Control.FOCUS_NONE; cancel_button.pressed.connect(cancel_stats); overlay.add_child(cancel_button)
+	var auto_button := make_retro_button("AUTO", Vector2(113, 106), Vector2(22, 11), pixel_texture)
+	auto_button.focus_mode = Control.FOCUS_NONE; auto_button.pressed.connect(auto_allocate); overlay.add_child(auto_button)
+	var respec_button := make_retro_button("RESPEC", Vector2(137, 106), Vector2(16, 11), pixel_texture)
+	respec_button.focus_mode = Control.FOCUS_NONE; respec_button.pressed.connect(respec); overlay.add_child(respec_button)
+
+	var item_name := create_sprite(overlay, "HubItemName", null, Vector2(66, 30), false)
 	item_name.visible = false
 	var item_list: Array[Sprite2D] = []
 	for list_index in 5:
-		item_list.append(create_sprite(overlay, "HubItemList%d" % list_index, null, Vector2(7, 32 + list_index * 10), false))
+		item_list.append(create_sprite(overlay, "HubItemList%d" % list_index, null, Vector2(67, 32 + list_index * 12), false))
 	var item_row_buttons: Array[Button] = []
 	for list_index in 5:
-		var item_row_button := Button.new()
-		item_row_button.name = "HubItemRow%d" % list_index
-		item_row_button.position = Vector2(3, 28 + list_index * 10)
-		item_row_button.size = Vector2(panel_size.x - 6, 11)
-		item_row_button.text = ""
-		item_row_button.focus_mode = Control.FOCUS_NONE
-		item_row_button.mouse_filter = Control.MOUSE_FILTER_STOP
-		item_row_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var item_row_transparent := StyleBoxFlat.new()
-		item_row_transparent.bg_color = Color.TRANSPARENT
-		item_row_transparent.set_border_width_all(0)
-		for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
-			item_row_button.add_theme_stylebox_override(style_state, item_row_transparent)
-		if select_item_row.is_valid(): item_row_button.pressed.connect(select_item_row.bind(list_index))
-		overlay.add_child(item_row_button)
-		item_row_buttons.append(item_row_button)
+		item_row_buttons.append(_make_transparent_touch_button(overlay, "HubItemRow%d" % list_index, Vector2(64, 29 + list_index * 12), Vector2(88, 12), select_item_row, list_index))
 	var shop_prices: Array[Sprite2D] = []
 	for list_index in 5:
-		shop_prices.append(create_sprite(overlay, "HubShopPrice%d" % list_index, null, Vector2(125, 32 + list_index * 10), false))
+		shop_prices.append(create_sprite(overlay, "HubShopPrice%d" % list_index, null, Vector2(132, 32 + list_index * 12), false))
 	var gear_slot_buttons: Array[Button] = []
 	for slot_index in 4:
-		var slot_button := Button.new()
-		slot_button.position = Vector2(2, 30 + slot_index * 10); slot_button.size = Vector2(100, 10); slot_button.focus_mode = Control.FOCUS_NONE; slot_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var transparent := StyleBoxFlat.new(); transparent.bg_color = Color(0, 0, 0, 0); transparent.set_border_width_all(0)
-		slot_button.add_theme_stylebox_override("normal", transparent); slot_button.add_theme_stylebox_override("hover", transparent); slot_button.add_theme_stylebox_override("pressed", transparent)
-		slot_button.pressed.connect(select_gear_slot.bind(slot_index)); overlay.add_child(slot_button); gear_slot_buttons.append(slot_button)
+		gear_slot_buttons.append(_make_transparent_touch_button(overlay, "HubGearSlot%d" % slot_index, Vector2(64, 31 + slot_index * 12), Vector2(88, 12), select_gear_slot, slot_index))
 	var gear_choices: Array[Sprite2D] = []
 	var gear_choice_buttons: Array[Button] = []
 	for choice_index in 4:
-		gear_choices.append(create_sprite(overlay, "HubGearChoice%d" % choice_index, null, Vector2(6, 85 + choice_index * 7), false))
+		gear_choices.append(create_sprite(overlay, "HubGearChoice%d" % choice_index, null, Vector2(67, 82 + choice_index * 8), false))
 		gear_choices[choice_index].visible = false
-		var choice_button := Button.new()
-		choice_button.name = "HubGearChoiceButton%d" % choice_index
-		choice_button.position = Vector2(2, 85 + choice_index * 7)
-		choice_button.size = Vector2(98, 7)
-		choice_button.text = ""
-		choice_button.focus_mode = Control.FOCUS_NONE
-		choice_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var choice_transparent := StyleBoxFlat.new()
-		choice_transparent.bg_color = Color.TRANSPARENT
-		choice_transparent.set_border_width_all(0)
-		for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
-			choice_button.add_theme_stylebox_override(style_state, choice_transparent)
-		choice_button.visible = false
-		if select_gear_candidate.is_valid():
-			choice_button.pressed.connect(select_gear_candidate.bind(choice_index))
-		overlay.add_child(choice_button)
-		gear_choice_buttons.append(choice_button)
+		gear_choice_buttons.append(_make_transparent_touch_button(overlay, "HubGearChoiceButton%d" % choice_index, Vector2(64, 79 + choice_index * 8), Vector2(88, 8), select_gear_candidate, choice_index))
+		gear_choice_buttons[choice_index].visible = false
 	var gear_stat_panel := Panel.new()
-	gear_stat_panel.name = "HubGearStatPanel"; gear_stat_panel.position = Vector2(101, 29); gear_stat_panel.size = Vector2(51, 53); gear_stat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var gear_stat_style := StyleBoxFlat.new(); gear_stat_style.bg_color = Color(0.04, 0.06, 0.10, 0.85); gear_stat_style.border_color = Color(0.42, 0.48, 0.62, 0.9); gear_stat_style.set_border_width_all(1)
-	gear_stat_panel.add_theme_stylebox_override("panel", gear_stat_style); overlay.add_child(gear_stat_panel)
+	gear_stat_panel.name = "HubGearStatPanel"; gear_stat_panel.position = Vector2(64, 79); gear_stat_panel.size = Vector2(88, 25); gear_stat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gear_stat_panel.add_theme_stylebox_override("panel", _menu_card_style()); overlay.add_child(gear_stat_panel)
 	var gear_stats: Array[Sprite2D] = []
-	for stat_index in 5:
-		gear_stats.append(create_sprite(overlay, "HubGearStat%d" % stat_index, null, Vector2(105, 32 + stat_index * 10), false))
+	for stat_index in 6:
+		gear_stats.append(create_sprite(overlay, "HubGearStat%d" % stat_index, null, Vector2(66, 81 + stat_index * 6), false))
 	var item_details: Array[Sprite2D] = []
 	for detail_index in 4:
-		item_details.append(create_sprite(overlay, "HubItemDetail%d" % detail_index, null, Vector2(7, 83 + detail_index * 7), false))
+		item_details.append(create_sprite(overlay, "HubItemDetail%d" % detail_index, null, Vector2(66, 94 + detail_index * 6), false))
 		item_details[detail_index].visible = false
-	var item_action_button := make_retro_button("EQUIP", Vector2(52, 89), Vector2(52, 10), pixel_texture)
+	var item_action_button := make_retro_button("EQUIP", Vector2(97, 106), Vector2(54, 11), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); overlay.add_child(item_action_button)
-	var fusion_decrease_button := make_retro_button("<", Vector2(4, 89), Vector2(20, 10), pixel_texture)
-	fusion_decrease_button.name = "HubFusionDecrease"
-	fusion_decrease_button.focus_mode = Control.FOCUS_NONE
+	var equipment_actions: Array[Button] = []
+	var equip_action := make_retro_button("EQUIP", Vector2(65, 23), Vector2(28, 11), pixel_texture)
+	equip_action.name = "HubEquipmentEquip"; equip_action.focus_mode = Control.FOCUS_NONE; equip_action.pressed.connect(item_action); overlay.add_child(equip_action); equipment_actions.append(equip_action)
+	var remove_action := make_retro_button("REMOVE", Vector2(95, 23), Vector2(31, 11), pixel_texture)
+	remove_action.name = "HubEquipmentRemove"; remove_action.focus_mode = Control.FOCUS_NONE
+	if equipment_remove.is_valid(): remove_action.pressed.connect(equipment_remove)
+	overlay.add_child(remove_action); equipment_actions.append(remove_action)
+	var remove_all_action := make_retro_button("REMOVE ALL", Vector2(128, 23), Vector2(25, 11), pixel_texture)
+	remove_all_action.name = "HubEquipmentRemoveAll"; remove_all_action.focus_mode = Control.FOCUS_NONE
+	if equipment_remove_all.is_valid(): remove_all_action.pressed.connect(equipment_remove_all)
+	overlay.add_child(remove_all_action); equipment_actions.append(remove_all_action)
+	var fusion_decrease_button := make_retro_button("<", Vector2(65, 106), Vector2(20, 11), pixel_texture)
+	fusion_decrease_button.name = "HubFusionDecrease"; fusion_decrease_button.focus_mode = Control.FOCUS_NONE
 	if adjust_fusion_count.is_valid(): fusion_decrease_button.pressed.connect(adjust_fusion_count.bind(-1))
 	overlay.add_child(fusion_decrease_button)
-	var fusion_increase_button := make_retro_button(">", Vector2(28, 89), Vector2(20, 10), pixel_texture)
-	fusion_increase_button.name = "HubFusionIncrease"
-	fusion_increase_button.focus_mode = Control.FOCUS_NONE
+	var fusion_increase_button := make_retro_button(">", Vector2(85, 106), Vector2(20, 11), pixel_texture)
+	fusion_increase_button.name = "HubFusionIncrease"; fusion_increase_button.focus_mode = Control.FOCUS_NONE
 	if adjust_fusion_count.is_valid(): fusion_increase_button.pressed.connect(adjust_fusion_count.bind(1))
 	overlay.add_child(fusion_increase_button)
 	var binding_panel := Panel.new()
-	binding_panel.name = "HubBindingPanel"
-	binding_panel.position = Vector2(4, 29)
-	binding_panel.size = Vector2(148, 53)
-	binding_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var binding_style := StyleBoxFlat.new()
-	binding_style.bg_color = Color(0.04, 0.06, 0.10, 0.85)
-	binding_style.border_color = Color(0.42, 0.48, 0.62, 0.9)
-	binding_style.set_border_width_all(1)
-	binding_panel.add_theme_stylebox_override("panel", binding_style)
-	binding_panel.visible = false
-	overlay.add_child(binding_panel)
+	binding_panel.name = "HubBindingPanel"; binding_panel.position = Vector2(64, 29); binding_panel.size = Vector2(88, 72); binding_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	binding_panel.add_theme_stylebox_override("panel", _menu_card_style()); binding_panel.visible = false; overlay.add_child(binding_panel)
 	var binding_texts: Array[Sprite2D] = []
-	binding_texts.append(create_sprite(overlay, "HubBindingCurrent", null, Vector2(9, 34), false))
-	binding_texts.append(create_sprite(overlay, "HubBindingBound", null, Vector2(9, 44), false))
-	binding_texts.append(create_sprite(overlay, "HubBindingSouls", null, Vector2(9, 54), false))
-	binding_texts.append(create_sprite(overlay, "HubBindingCost", null, Vector2(9, 64), false))
-	binding_texts.append(create_sprite(overlay, "HubBindingMessage", null, Vector2(9, 75), false))
-	var binding_action_button := make_retro_button("BIND", Vector2(99, 88), Vector2(53, 11), pixel_texture)
+	binding_texts.append(create_sprite(overlay, "HubBindingCurrent", null, Vector2(67, 34), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingBound", null, Vector2(67, 46), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingSouls", null, Vector2(67, 58), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingCost", null, Vector2(67, 70), false))
+	binding_texts.append(create_sprite(overlay, "HubBindingMessage", null, Vector2(67, 84), false))
+	var binding_action_button := make_retro_button("BIND", Vector2(97, 106), Vector2(54, 11), pixel_texture)
 	binding_action_button.focus_mode = Control.FOCUS_NONE
 	if bind_element.is_valid(): binding_action_button.pressed.connect(bind_element)
 	overlay.add_child(binding_action_button)
-	var pause_buttons: Array[Button] = []
-	var pause_labels := ["RESUME", "SETTINGS", "QUIT TO TITLE"]
-	for index in pause_labels.size():
-		# Reserve the right-hand column for the character status panel while
-		# keeping the pause actions in a compact, touch-friendly group.
-		var pause_button := make_retro_button(pause_labels[index], Vector2(5, 43 + index * 17), Vector2(88, 13), pixel_texture)
-		pause_button.name = "Pause%s" % pause_labels[index].replace(" ", "")
-		pause_button.focus_mode = Control.FOCUS_ALL
-		if index == 0:
-			pause_button.pressed.connect(pause_resume if pause_resume.is_valid() else _start_run)
-		elif index == 1 and pause_settings.is_valid():
-			pause_button.pressed.connect(pause_settings)
-		elif index == 2 and pause_quit.is_valid():
-			pause_button.pressed.connect(pause_quit)
-		overlay.add_child(pause_button)
-		pause_buttons.append(pause_button)
-	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false)
-	cursor.visible = false
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "pause_buttons": pause_buttons, "cursor": cursor}
+	var cursor := create_sprite(overlay, "HubCursor", null, Vector2(0, 0), false); cursor.visible = false
+
+	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back)
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
+
+
+func _build_pause_overlay(parent: Node, pixel_texture: Callable, pause_resume: Callable, pause_settings: Callable, pause_quit: Callable, pause_status: Callable, pause_equipment: Callable, pause_back: Callable) -> Dictionary:
+	var panel_size := Vector2(208, 148)
+	var overlay := create_overlay(parent, "PauseOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.97), 4, false)
+	overlay.position = (_view_size_for_parent(parent) - panel_size) * 0.5
+	_add_menu_frame(overlay, panel_size)
+	var title := create_sprite(overlay, "PauseTitle", pixel_texture.call("PAUSE", Color.WHITE) as Texture2D, Vector2(9, 4), false)
+	var rule := ColorRect.new(); rule.position = Vector2(9, 17); rule.size = Vector2(panel_size.x - 18, 1); rule.color = Color(0.36, 0.40, 0.52, 0.85); rule.mouse_filter = Control.MOUSE_FILTER_IGNORE; overlay.add_child(rule)
+	var card := _make_menu_card(overlay, "PausePlayerCard", Vector2(6, 23), Vector2(58, 102))
+	var card_texts: Array[Sprite2D] = []
+	for index in 6: card_texts.append(create_sprite(overlay, "PauseCardText%d" % index, null, Vector2(10, 29 + index * 13), false))
+	var status_texts: Array[Sprite2D] = []
+	for index in 14:
+		var column := 0 if index < 8 else 1
+		var row := index if index < 8 else index - 8
+		status_texts.append(create_sprite(overlay, "PauseStatus%d" % index, null, Vector2(70 + column * 64, 30 + row * 11), false))
+		status_texts[index].visible = false
+	var equipment_texts: Array[Sprite2D] = []
+	for index in 8:
+		equipment_texts.append(create_sprite(overlay, "PauseEquipment%d" % index, null, Vector2(70, 31 + index * 10), false))
+		equipment_texts[index].visible = false
+	var description := create_sprite(overlay, "PauseDescription", null, Vector2(70, 112), false)
+	var buttons: Array[Button] = []
+	var labels := ["RESUME", "STATUS", "EQUIPMENT", "SETTINGS", "QUIT TITLE"]
+	for index in labels.size():
+		var button := make_retro_button(labels[index], Vector2(137, 25 + index * 15), Vector2(64, 12), pixel_texture)
+		button.name = "Pause%s" % labels[index].replace(" ", "").capitalize()
+		button.focus_mode = Control.FOCUS_ALL
+		if index == 0 and pause_resume.is_valid(): button.pressed.connect(pause_resume)
+		elif index == 1:
+			if pause_status.is_valid(): button.pressed.connect(pause_status)
+			else: button.pressed.connect(set_pause_page.bind(1))
+		elif index == 2:
+			if pause_equipment.is_valid(): button.pressed.connect(pause_equipment)
+			else: button.pressed.connect(set_pause_page.bind(2))
+		elif index == 3 and pause_settings.is_valid(): button.pressed.connect(pause_settings)
+		elif index == 4 and pause_quit.is_valid(): button.pressed.connect(pause_quit)
+		overlay.add_child(button); buttons.append(button)
+	var back := make_retro_button("BACK", Vector2(137, 130), Vector2(64, 12), pixel_texture)
+	back.name = "PauseBack"
+	if pause_back.is_valid(): back.pressed.connect(pause_back)
+	overlay.add_child(back)
+	var cursor := create_sprite(overlay, "PauseCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(129, 29), false); cursor.visible = false
+	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "description": description, "back": back, "status_button": buttons[1], "equipment_button": buttons[2]}
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile == null: return
-	if hub_pause_mode:
-		_update_pause_ui(root, pixel_texture)
-		return
 	var summary := hub_summary_text
 	var points := hub_points_text
 	var progression := root.get("progression_tuning") as ProgressionTuning
-	if summary != null: summary.texture = pixel_texture.call("LV %d XP %d/%d G%d S%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression), profile.gold, profile.souls], Color.WHITE) as Texture2D
+	if summary != null:
+		summary.texture = pixel_texture.call("LV %d  XP %d/%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression)], Color.WHITE) as Texture2D
+	_update_player_card(root, pixel_texture, hub_player_card_texts, hub_summary_text)
 	var page := hub_page
-	var pause_mode := hub_pause_mode
 	var page_buttons := hub_page_buttons
 	var highlight_color: Color = root.call("_health_feedback_color", player_palette_name)
-	var cursor := hub_cursor_text
-	if cursor != null:
-		cursor.visible = false
 	for page_index in page_buttons.size():
-		page_buttons[page_index].visible = not pause_mode
-		set_archetype_button_state(page_buttons[page_index], page == page_index, highlight_color)
-	for pause_button in pause_menu_buttons:
-		# Pause actions share this overlay with the demon hub. They must be hidden
-		# whenever the hub is opened from the cloaked demon.
-		pause_button.visible = false
-	if summary != null:
-		summary.visible = pause_mode
-		summary.position = Vector2(7, 18)
+		var target_page := int(page_buttons[page_index].get_meta("hub_page_target", page_index))
+		page_buttons[page_index].visible = true
+		set_archetype_button_state(page_buttons[page_index], target_page == page, highlight_color)
+	if hub_cursor_text != null and not page_buttons.is_empty():
+		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
+		hub_cursor_text.texture = pixel_texture.call(">", highlight_color) as Texture2D
+		hub_cursor_text.visible = true
+		hub_cursor_text.position = Vector2(page_buttons[cursor_index].position.x - 7.0, page_buttons[cursor_index].position.y + 4.0)
 	var title := hub_overlay.get_node_or_null("HubTitle") as Sprite2D
 	if title != null:
-		var title_texture := pixel_texture.call("PAUSE" if pause_mode else "DEMON HUB", Color.WHITE) as Texture2D
+		var title_texture := pixel_texture.call("DEMON HUB", Color.WHITE) as Texture2D
 		title.texture = title_texture
-		title.position.x = (156.0 - title_texture.get_width()) * 0.5
 	var stat_nodes: Array[CanvasItem] = []
 	stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_row_buttons); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
 	for node in stat_nodes:
-		if node != null: node.visible = page == 0
+		if node != null: node.visible = page == HUB_PAGE_ALLOCATE
+	for node in hub_status_texts:
+		node.visible = page == HUB_PAGE_STATUS
 	var item_name := hub_item_name_text
 	var item_list := hub_item_list_texts
 	var shop_prices := hub_shop_price_texts
 	var gear_choices := hub_gear_choice_texts
-	for button in hub_gear_choice_buttons: button.visible = page == 1 and hub_gear_browsing
+	for button in hub_gear_choice_buttons: button.visible = page == HUB_PAGE_EQUIPMENT and hub_gear_browsing
 	var gear_stats := hub_gear_stat_texts
 	var item_details := hub_item_detail_texts
 	var item_action := hub_item_action_button
+	for equipment_action_index in hub_equipment_action_buttons.size():
+		var equipment_action := hub_equipment_action_buttons[equipment_action_index]
+		equipment_action.visible = page == HUB_PAGE_EQUIPMENT
+		var action_active := page == HUB_PAGE_EQUIPMENT and hub_content_focus and hub_equipment_action_focus and equipment_action_index == hub_action_column
+		set_archetype_button_state(equipment_action, action_active, highlight_color)
+	if page == HUB_PAGE_EQUIPMENT and hub_equipment_action_buttons.size() >= 3:
+		var selected_slot: StringName = ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
+		var equipped_item := profile.find_item(str(profile.equipped_instance_ids.get(String(selected_slot), "")))
+		hub_equipment_action_buttons[1].disabled = equipped_item == null
+		hub_equipment_action_buttons[2].disabled = profile.equipped_instance_ids.values().all(func(id: String) -> bool: return str(id).is_empty())
 	for button in hub_item_row_buttons: button.visible = false
 	if hub_fusion_decrease_button != null:
-		hub_fusion_decrease_button.visible = page == 3
+		hub_fusion_decrease_button.visible = page == HUB_PAGE_FUSION
 		hub_fusion_decrease_button.disabled = true
 	if hub_fusion_increase_button != null:
-		hub_fusion_increase_button.visible = page == 3
+		hub_fusion_increase_button.visible = page == HUB_PAGE_FUSION
 		hub_fusion_increase_button.disabled = true
 	if item_name != null: item_name.visible = false
-	var item_page := page >= 1 and page <= 3
+	var item_page := page >= HUB_PAGE_EQUIPMENT and page <= HUB_PAGE_FUSION
 	for node in item_list: node.visible = item_page
-	for node in shop_prices: node.visible = page == 2
-	for node in gear_choices: node.visible = page == 1 and hub_gear_browsing
-	for button in hub_gear_slot_buttons: button.visible = page == 1 and not hub_gear_browsing
-	for node in gear_stats: node.visible = page == 1 or page == 3
+	for node in shop_prices: node.visible = page == HUB_PAGE_SHOP
+	for node in gear_choices: node.visible = page == HUB_PAGE_EQUIPMENT and hub_gear_browsing
+	for button in hub_gear_slot_buttons: button.visible = page == HUB_PAGE_EQUIPMENT and not hub_gear_browsing
+	for node in gear_stats: node.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
 	var gear_stat_panel := hub_gear_stat_panel
-	if gear_stat_panel != null: gear_stat_panel.visible = page == 1 or page == 3
+	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
 	for node in item_details: node.visible = item_page
 	if item_action != null: item_action.visible = item_page
-	if hub_binding_panel != null: hub_binding_panel.visible = page == 4
-	for node in hub_binding_texts: node.visible = page == 4
-	if hub_binding_action_button != null: hub_binding_action_button.visible = page == 4
-	if page == 4:
+	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
+	for node in hub_binding_texts: node.visible = page == HUB_PAGE_BIND
+	if hub_binding_action_button != null: hub_binding_action_button.visible = page == HUB_PAGE_BIND
+	if page == HUB_PAGE_BIND:
 		_update_hub_binding_page(root, pixel_texture, profile, highlight_color)
 		return
-	if page != 0:
+	if page == HUB_PAGE_STATUS:
+		_update_hub_status_page(root, pixel_texture, profile, highlight_color)
+		return
+	if page != HUB_PAGE_ALLOCATE:
 		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
 		return
-	var pending := [hub_pending_vit, hub_pending_str, hub_pending_def, hub_pending_spd]
+	var pending := [hub_pending_vit, hub_pending_str, hub_pending_def, hub_pending_agi, hub_pending_int, hub_pending_mnd]
 	var remaining := int(root.call("_hub_points_remaining"))
 	if points != null: points.texture = pixel_texture.call("POINTS %d" % remaining, Color8(255, 205, 117)) as Texture2D
 	var stat_texts := hub_stat_texts
-	var selected_row := hub_menu_row
+	var selected_row := hub_stat_row
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 	var effective_values: Array[float] = []
 	if snapshot != null:
-		effective_values = [snapshot.vit + pending[0], snapshot.strength + pending[1], snapshot.def + pending[2], snapshot.speed + pending[3]]
+		effective_values = [snapshot.vit + pending[0], snapshot.strength + pending[1], snapshot.def + pending[2], snapshot.agi + pending[3], snapshot.intelligence + pending[4], snapshot.mnd + pending[5]]
 	for index in stat_texts.size():
 		var effective := effective_values[index] if index < effective_values.size() else 0.0
 		var before_pending := effective - float(pending[index])
-		var value_text := "%s %.1f" % [["VIT", "STR", "DEF", "SPD"][index], before_pending]
+		var value_text := "%s %.1f" % [["VIT", "STR", "DEF", "AGI", "INT", "MND"][index], before_pending]
 		if int(pending[index]) != 0:
 			value_text += ">%0.1f" % effective
 		stat_texts[index].texture = pixel_texture.call(value_text, highlight_color if selected_row == index else Color.WHITE) as Texture2D
@@ -916,12 +1039,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		var stat_index := int(button.get_meta("hub_stat_index", 0))
 		button.disabled = remaining <= 0 if direction > 0 else int(pending[stat_index]) <= 0
 		set_archetype_button_state(button, selected_row == stat_index, highlight_color)
-	# HP, ATK, DEF, and SPD used to be repeated in a second derived column.
-	# Keep those calculations in combat and the gear page; the allocation page
+	# Derived combat values stay on the read-only Status page; the allocation page
 	# should only answer which core stat will change.
 	for derived_text in hub_derived_texts:
 		derived_text.visible = false
-	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3])
+	var pending_total: int = int(pending[0]) + int(pending[1]) + int(pending[2]) + int(pending[3]) + int(pending[4]) + int(pending[5])
 	var apply_button := hub_apply_button
 	var cancel_button := hub_cancel_button
 	if apply_button != null: apply_button.disabled = pending_total <= 0
@@ -931,88 +1053,144 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var respec_button := hub_respec_button
 	if respec_button != null:
 		var cost := profile.respec_cost()
-		respec_button.disabled = profile.allocated_vit + profile.allocated_str + profile.allocated_def <= 0 or profile.gold < cost
+		respec_button.disabled = profile.allocated_vit + profile.allocated_str + profile.allocated_def + profile.allocated_agi + profile.allocated_int + profile.allocated_mnd <= 0 or profile.gold < cost
 		var label := respec_button.get_child(0) as Sprite2D
 		if label != null: label.texture = pixel_texture.call("RESPEC" if cost <= 0 else "RESPEC %d" % cost, Color.WHITE) as Texture2D
 	var utility_buttons: Array[Button] = [apply_button, cancel_button, auto_button, respec_button]
-	var exit_buttons: Array[Button] = [hub_start_button, hub_title_button]
-	var selected_column := hub_action_column
-	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], selected_row == 4 and selected_column == index, highlight_color)
-	for index in exit_buttons.size(): set_archetype_button_state(exit_buttons[index], selected_row == 5 and selected_column == index, highlight_color)
-	var start_button := hub_start_button
-	if start_button != null:
-		var start_label := start_button.get_child(0) as Sprite2D
-		if start_label != null: start_label.texture = pixel_texture.call("RETURN" if hub_opened_from_npc else "START RUN", Color.WHITE) as Texture2D
+	for index in utility_buttons.size(): set_archetype_button_state(utility_buttons[index], hub_content_focus and selected_row == 6 and hub_action_column == index, highlight_color)
+	if hub_context_text != null:
+		hub_context_text.texture = pixel_texture.call("LEFT/RIGHT ADJUST", Color8(148, 220, 255)) as Texture2D
 
 
-func _update_pause_ui(root: Object, pixel_texture: Callable) -> void:
-	var hidden_nodes: Array[CanvasItem] = []
-	hidden_nodes.append(hub_summary_text)
-	hidden_nodes.append(hub_points_text)
-	hidden_nodes.append_array(hub_stat_texts)
-	hidden_nodes.append_array(hub_stat_buttons)
-	hidden_nodes.append_array(hub_stat_row_buttons)
-	hidden_nodes.append_array(hub_derived_texts)
-	hidden_nodes.append(hub_apply_button)
-	hidden_nodes.append(hub_cancel_button)
-	hidden_nodes.append(hub_auto_button)
-	hidden_nodes.append(hub_respec_button)
-	hidden_nodes.append(hub_item_name_text)
-	hidden_nodes.append_array(hub_item_list_texts)
-	hidden_nodes.append_array(hub_item_row_buttons)
-	hidden_nodes.append_array(hub_shop_price_texts)
-	hidden_nodes.append_array(hub_gear_choice_texts)
-	hidden_nodes.append_array(hub_gear_choice_buttons)
-	hidden_nodes.append_array(hub_gear_slot_buttons)
-	hidden_nodes.append_array(hub_gear_stat_texts)
-	hidden_nodes.append(hub_gear_stat_panel)
-	hidden_nodes.append_array(hub_item_detail_texts)
-	hidden_nodes.append(hub_item_action_button)
-	hidden_nodes.append(hub_fusion_decrease_button)
-	hidden_nodes.append(hub_fusion_increase_button)
-	hidden_nodes.append(hub_binding_panel)
-	hidden_nodes.append_array(hub_binding_texts)
-	hidden_nodes.append(hub_binding_action_button)
-	for node in hidden_nodes:
-		if node != null:
-			node.visible = false
-	for page_button in hub_page_buttons:
-		page_button.visible = false
-	var title := hub_overlay.get_node_or_null("HubTitle") as Sprite2D if hub_overlay != null else null
-	if title != null:
-		var title_texture := pixel_texture.call("PAUSE", Color.WHITE) as Texture2D
-		title.texture = title_texture
-		title.position.x = (hub_overlay.size.x - title_texture.get_width()) * 0.5
+func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Sprite2D], summary: Sprite2D = null) -> void:
+	if texts.is_empty():
+		return
+	var profile := root.get("player_profile") as PlayerProfile
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
+	var element := "GRAY"
+	var chroma_component := root.get("player_chroma_component") as Node
+	if chroma_component != null and chroma_component.has_method("aspect_name"):
+		element = String(chroma_component.call("aspect_name")).to_upper()
+	var max_health := CombatCalculator.max_health_for_snapshot(snapshot, root.get("combat_tuning") as CombatTuning)
+	var health := max_health
+	var health_component := root.get("player_health_component") as Node
+	if health_component != null:
+		health = float(health_component.get("current_health"))
+	var chroma := 0
+	if chroma_component != null:
+		chroma = int(chroma_component.get("current_chroma"))
+	var values := ["TINY DEMON", element, "LV %d" % profile.level, "HP %d/%d" % [roundi(health), roundi(max_health)], "CHR %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "READY"]
+	for index in texts.size():
+		var label: String = str(values[index]) if index < values.size() else ""
+		var label_color := Color.WHITE
+		if index == 1:
+			var palette_value: Variant = root.get("current_player_palette_name")
+			var palette_name: StringName = StringName(str(palette_value)) if palette_value != null else &"blue"
+			label_color = PaletteLibrary.accent(palette_name)
+		texts[index].texture = pixel_texture.call(label, label_color) as Texture2D
+	if summary != null:
+		summary.visible = true
+
+
+func _update_hub_status_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
+	if snapshot == null:
+		return
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var player_tuning := root.get("player_tuning") as PlayerTuning
+	var max_hp := roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning))
+	var hp := max_hp
+	var health_component := root.get("player_health_component") as Node
+	if health_component != null:
+		hp = roundi(float(health_component.get("current_health")))
+	var chroma_component := root.get("player_chroma_component") as Node
+	var chroma := int(chroma_component.get("current_chroma")) if chroma_component != null else 0
+	var left := ["HP ....... %d/%d" % [hp, max_hp], "CHROMA ... %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR ...... %d" % roundi(snapshot.strength), "AGI ...... %d" % roundi(snapshot.agi), "VIT ...... %d" % roundi(snapshot.vit), "INT ...... %d" % roundi(snapshot.intelligence), "MND ...... %d" % roundi(snapshot.mnd), "DEF ...... %d" % roundi(snapshot.def)]
+	var right := ["P.ATK .... %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .... %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .... %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .... %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV ...... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "RECOVERY . %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0)]
+	for index in 8:
+		hub_status_texts[index].texture = pixel_texture.call(left[index], Color.WHITE) as Texture2D
+	for index in 6:
+		hub_status_texts[index + 8].texture = pixel_texture.call(right[index], highlight_color if index == 0 else Color.WHITE) as Texture2D
+	if hub_points_text != null: hub_points_text.texture = pixel_texture.call("LV %d  EXP %d/%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, root.get("progression_tuning") as ProgressionTuning)], Color8(255, 205, 117)) as Texture2D
+	if hub_points_text != null: hub_points_text.visible = true
+	if hub_context_text != null: hub_context_text.texture = pixel_texture.call("READ ONLY  /  BACK", Color8(148, 220, 255)) as Texture2D
+
+
+func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
+	if pause_overlay == null or not pause_overlay.visible:
+		return
+	var highlight := PaletteLibrary.accent(player_palette_name)
+	_update_player_card(root, pixel_texture, pause_player_card_texts)
 	for index in pause_menu_buttons.size():
 		var button := pause_menu_buttons[index]
-		button.visible = index < 3
-		set_archetype_button_state(button, index == hub_menu_row, PaletteLibrary.accent(player_palette_name))
-	_update_pause_status(root, pixel_texture)
-	if hub_cursor_text != null:
-		hub_cursor_text.visible = false
+		button.visible = true
+		set_archetype_button_state(button, index == pause_menu_row, highlight)
+	if pause_back_button != null:
+		pause_back_button.visible = true
+		set_archetype_button_state(pause_back_button, pause_page != 0, highlight)
+	for node in pause_status_texts: node.visible = pause_page == 1
+	for node in pause_equipment_texts: node.visible = pause_page == 2
+	if pause_description_text != null:
+		pause_description_text.visible = pause_page == 0
+		pause_description_text.texture = pixel_texture.call("PAUSE  /  SELECT A COMMAND", Color8(148, 220, 255)) as Texture2D
+	if pause_page == 1:
+		_update_pause_status(root, pixel_texture)
+	elif pause_page == 2:
+		_update_pause_equipment(root, pixel_texture)
+	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
+		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
+		pause_cursor_text.visible = true
+		pause_cursor_text.position = Vector2(pause_menu_buttons[cursor_index].position.x - 7.0, pause_menu_buttons[cursor_index].position.y + 4.0)
 
 
 func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
-	if hub_gear_stat_panel != null:
-		hub_gear_stat_panel.visible = true
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 	if snapshot == null:
-		for stat in hub_gear_stat_texts:
-			stat.visible = false
 		return
 	var tuning := root.get("combat_tuning") as CombatTuning
+	var player_tuning := root.get("player_tuning") as PlayerTuning
+	var health := CombatCalculator.max_health_for_snapshot(snapshot, tuning)
+	var chroma_component := root.get("player_chroma_component") as Node
+	var chroma := int(chroma_component.get("current_chroma")) if chroma_component != null else 0
 	var values := [
-		"HP %d" % roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)),
-		"VIT %d" % roundi(snapshot.vit),
-		"STR %d" % roundi(snapshot.strength),
-		"DEF %d" % roundi(snapshot.def),
-		"SPD %d" % roundi(snapshot.speed),
+		"HP ...... %d/%d" % [roundi(health), roundi(health)], "CHROMA .. %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
+		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
 	]
-	for index in hub_gear_stat_texts.size():
-		var stat := hub_gear_stat_texts[index]
-		stat.visible = index < values.size()
-		if stat.visible:
-			stat.texture = pixel_texture.call(values[index], Color8(167, 240, 112)) as Texture2D
+	for index in mini(values.size(), pause_status_texts.size()):
+		pause_status_texts[index].texture = pixel_texture.call(values[index], Color.WHITE) as Texture2D
+	if pause_description_text != null: pause_description_text.texture = pixel_texture.call("READ ONLY  /  BACK", Color8(148, 220, 255)) as Texture2D
+
+
+func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
+	var profile := root.get("player_profile") as PlayerProfile
+	if profile == null:
+		return
+	var catalog := ItemCatalog.new()
+	var slot_labels := ["WEAPON", "ARMOR", "SHIELD", "ACCESSORY"]
+	for index in mini(slot_labels.size(), pause_equipment_texts.size()):
+		var slot: StringName = ItemCatalog.SLOTS[index]
+		var item := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
+		var name := "EMPTY"
+		if item != null:
+			name = str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
+			if item.enhancement_level > 0: name += " +%d" % item.enhancement_level
+		pause_equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
+	for index in range(slot_labels.size(), pause_equipment_texts.size()):
+		pause_equipment_texts[index].texture = null
+	if pause_description_text != null: pause_description_text.texture = pixel_texture.call("READ ONLY  /  EQUIPPED GEAR", Color8(148, 220, 255)) as Texture2D
+
+
+func set_pause_page(root: Object, page: int) -> void:
+	pause_page = clampi(page, 0, 2)
+	update_pause_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func pause_back(root: Object) -> void:
+	if pause_page != 0:
+		set_pause_page(root, 0)
+		root.call("_play_sound", "ui_decline", 0.0, 1.0)
+		return
+	root.call("_close_hub_to_run")
 
 
 func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
@@ -1173,13 +1351,13 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		var next_bonuses := catalog.bonuses(projected, 0)
 		var preview_stats := hub_gear_stat_texts
 		var preview_rows: Array[String] = []
-		var preview_order := ["strength", "defense", "vitality", "speed"]
+		var preview_order := ["strength", "defense", "vitality", "agi", "intelligence", "mnd"]
 		for stat: String in preview_order:
 			var before := float(bonuses.get(stat, 0.0))
 			var after := float(next_bonuses.get(stat, 0.0))
 			if is_equal_approx(before, 0.0) and is_equal_approx(after, 0.0):
 				continue
-			var preview_label: String = str({"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "SPD"}.get(stat, stat.to_upper()))
+			var preview_label: String = str({"health_rate": "HP", "damage_rate": "DMG", "strength": "STR", "defense": "DEF", "vitality": "VIT", "speed": "AGI", "agi": "AGI", "intelligence": "INT", "mnd": "MND"}.get(stat, stat.to_upper()))
 			preview_rows.append("%s %.1f>%.1f" % [preview_label, before, after])
 		for row_index in preview_stats.size():
 			if row_index < preview_rows.size():
@@ -1294,7 +1472,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			details[3].texture = null
 			details[3].visible = true
 	action.disabled = false
-	action.visible = not browsing
+	action.visible = false
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)
@@ -1324,26 +1502,64 @@ func _set_transmutation_description(details: Array[Sprite2D], pixel_texture: Cal
 
 func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, candidate: ItemInstance, slot_index: int, comparing: bool) -> void:
 	var stats := hub_gear_stat_texts
-	if hub_pause_mode and not comparing:
-		var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
-		if snapshot != null:
-			var tuning := root.get("combat_tuning") as CombatTuning
-			var values := [roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning)), snapshot.vit, snapshot.strength, snapshot.def, snapshot.speed]
-			for index in mini(stats.size(), values.size()):
-				stats[index].texture = pixel_texture.call("%s %d" % [["HP", "VIT", "STR", "DEF", "SPD"][index], values[index]], Color8(167, 240, 112)) as Texture2D
-		return
 	var slot := ItemCatalog.SLOTS[clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)]
+	var live_snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
+	var player_stats := root.get("player_stats") as StatsComponent
+	if live_snapshot != null and player_stats != null:
+		# Preview through the same equipment component and shared snapshot used by
+		# combat. This keeps rarity rates, transmutation health effects, and the
+		# flat-before-rate ordering identical between the menu and runtime.
+		var preview_equipment := EquipmentComponent.new()
+		var preview_item := candidate
+		if candidate != null and candidate.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
+			preview_item = null
+		preview_equipment.configure_preview_from_profile(profile, catalog, slot, preview_item)
+		var preview_snapshot := CombatStatSnapshot.from_components(player_stats, preview_equipment)
+		var fields := [
+			{"key": "vit", "label": "VIT"}, {"key": "strength", "label": "STR"},
+			{"key": "def", "label": "DEF"}, {"key": "agi", "label": "AGI"},
+			{"key": "intelligence", "label": "INT"}, {"key": "mnd", "label": "MND"},
+		]
+		for index in mini(stats.size(), fields.size()):
+			var field: Dictionary = fields[index]
+			var key := str(field["key"])
+			var before := float(live_snapshot.get(key))
+			var after := float(preview_snapshot.get(key))
+			var delta := after - before
+			var shown := delta if comparing else after
+			var prefix := "+" if shown > 0.0 and comparing else "-" if shown < 0.0 and comparing else ""
+			var color := Color8(148, 220, 255) if delta > 0.0 else Color8(239, 125, 87) if delta < 0.0 else Color8(167, 240, 112) if not comparing else Color8(150, 156, 170)
+			stats[index].visible = true
+			stats[index].texture = pixel_texture.call("%s %s%.1f" % [str(field["label"]), prefix, absf(shown) if comparing else shown], color) as Texture2D
+		var tuning := root.get("combat_tuning") as CombatTuning
+		var current_attack := CombatCalculator.attack_power_for_snapshot(live_snapshot, tuning)
+		var preview_attack := CombatCalculator.attack_power_for_snapshot(preview_snapshot, tuning)
+		var current_magic := CombatCalculator.magic_power_for_snapshot(live_snapshot, tuning)
+		var preview_magic := CombatCalculator.magic_power_for_snapshot(preview_snapshot, tuning)
+		if hub_context_text != null:
+			var context := "P.ATK %.0f>%.0f  M.ATK %.0f>%.0f" % [current_attack, preview_attack, current_magic, preview_magic] if comparing else "P.ATK %.0f  M.ATK %.0f" % [preview_attack, preview_magic]
+			hub_context_text.texture = pixel_texture.call(context, Color8(148, 220, 255)) as Texture2D
+		preview_equipment.free()
+		return
+	# Lightweight test doubles and legacy callers may not expose a player
+	# snapshot. Keep their package-only comparison readable while using the
+	# canonical six-stat names.
 	var equipped := profile.find_item(str(profile.equipped_instance_ids.get(String(slot), "")))
 	var candidate_bonuses := _effective_item_bonuses(catalog, candidate, profile.mastery_level(candidate.definition_id))
 	var equipped_bonuses := _effective_item_bonuses(catalog, equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
-	var fields := [{"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}, {"key": "speed", "label": "SPD", "rate": false}]
+	var fields := [{"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}, {"key": "agi", "label": "AGI", "rate": false}, {"key": "intelligence", "label": "INT", "rate": false}, {"key": "mnd", "label": "MND", "rate": false}]
 	for index in mini(stats.size(), fields.size()):
 		var field: Dictionary = fields[index]
 		var key := str(field["key"])
 		var value := float(candidate_bonuses.get(key, 0.0)) - float(equipped_bonuses.get(key, 0.0)) if comparing else float(candidate_bonuses.get(key, 0.0))
 		var prefix := "+" if value > 0 else "-" if value < 0 else ""
 		var color := Color8(148, 220, 255) if value > 0 else Color8(239, 125, 87) if value < 0 else Color8(150, 156, 170)
-		stats[index].texture = pixel_texture.call("%s %s%.1f%s" % [str(field["label"]), prefix, absf(value), "%" if bool(field["rate"]) else ""], color) as Texture2D
+		if is_zero_approx(value) and (key == "intelligence" or key == "mnd"):
+			stats[index].texture = null
+			stats[index].visible = false
+		else:
+			stats[index].visible = true
+			stats[index].texture = pixel_texture.call("%s %s%.1f%s" % [str(field["label"]), prefix, absf(value), "%" if bool(field["rate"]) else ""], color) as Texture2D
 	for index in range(fields.size(), stats.size()):
 		stats[index].texture = null
 		stats[index].visible = false
@@ -1354,87 +1570,131 @@ func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_l
 		return {}
 	return catalog.bonuses(item, mastery_level)
 
+func update_pause_input(root: Object) -> void:
+	if pause_overlay == null or not pause_overlay.visible:
+		return
+	var interact_down := bool(root.call("_is_interact_input_pressed"))
+	var interact_pressed := interact_down and not pause_interact_input_was_down
+	pause_interact_input_was_down = interact_down
+	var cancel_down := bool(root.call("_is_menu_cancel_input_pressed"))
+	var cancel_pressed := cancel_down and not pause_cancel_input_was_down
+	pause_cancel_input_was_down = cancel_down
+	if cancel_pressed or bool(root.call("_is_ui_cancel_just_pressed")):
+		root.call("_pause_back")
+		return
+	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+		pause_menu_row = posmod(pause_menu_row - 1, pause_menu_buttons.size()); update_pause_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
+		pause_menu_row = posmod(pause_menu_row + 1, pause_menu_buttons.size()); update_pause_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
+		if pause_menu_row >= 0 and pause_menu_row < pause_menu_buttons.size():
+			var action := pause_menu_buttons[pause_menu_row]
+			if action != null and not action.disabled: action.pressed.emit()
+
+
 func update_hub_input(root: Object) -> void:
-	var row := hub_menu_row
 	var page := hub_page
 	var interact_down := bool(root.call("_is_interact_input_pressed"))
 	var interact_pressed := interact_down and not hub_interact_input_was_down
 	hub_interact_input_was_down = interact_down
-	var previous_page_down := bool(root.call("_is_hub_previous_page_input_pressed"))
-	var next_page_down := bool(root.call("_is_hub_next_page_input_pressed"))
-	var previous_page_pressed := previous_page_down and not hub_page_previous_input_was_down
-	var next_page_pressed := next_page_down and not hub_page_next_input_was_down
-	hub_page_previous_input_was_down = previous_page_down
-	hub_page_next_input_was_down = next_page_down
 	var cancel_down := bool(root.call("_is_menu_cancel_input_pressed"))
 	var cancel_pressed := cancel_down and not hub_cancel_input_was_down
 	hub_cancel_input_was_down = cancel_down
-	if cancel_pressed:
-		if page == 1 and hub_gear_browsing: root.call("_close_hub_gear_browse")
-		else: root.call("_close_hub_to_run")
+	if cancel_pressed or bool(root.call("_is_ui_cancel_just_pressed")):
+		if page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+			root.call("_close_hub_gear_browse")
+		elif hub_content_focus:
+			if hub_equipment_action_focus:
+				hub_equipment_action_focus = false
+			else:
+				hub_content_focus = false
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		else:
+			root.call("_close_hub_to_run")
 		return
-	if hub_pause_mode:
+	if not hub_content_focus:
 		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
-			hub_menu_row = posmod(hub_menu_row - 1, 3); update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			root.call("_select_hub_menu_row", hub_menu_row - 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
-			hub_menu_row = posmod(hub_menu_row + 1, 3); update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			root.call("_select_hub_menu_row", hub_menu_row + 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) and page != HUB_PAGE_STATUS:
+			hub_content_focus = true
+			hub_equipment_action_focus = page == HUB_PAGE_EQUIPMENT
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
-			if hub_menu_row >= 0 and hub_menu_row < pause_menu_buttons.size():
-				var pause_action := pause_menu_buttons[hub_menu_row]
-				if pause_action != null and not pause_action.disabled: pause_action.pressed.emit()
+			if hub_menu_row >= 0 and hub_menu_row < HUB_COMMAND_PAGE_TARGETS.size(): root.call("_set_hub_page", HUB_COMMAND_PAGE_TARGETS[hub_menu_row])
 		return
-	if previous_page_pressed:
-		root.call("_set_hub_page", page - 1); return
-	if next_page_pressed:
-		root.call("_set_hub_page", page + 1); return
-	if page == 4:
+	if page == HUB_PAGE_STATUS:
+		hub_content_focus = false
+		return
+	if page == HUB_PAGE_BIND:
 		if bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
 			var binding_action := hub_binding_action_button
 			if binding_action != null and not binding_action.disabled: binding_action.pressed.emit()
-		elif bool(root.call("_is_ui_cancel_just_pressed")):
-			root.call("_set_hub_page", 0)
 		return
-	if page != 0:
-		if page == 1 and hub_gear_browsing:
-			if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	if page == HUB_PAGE_ALLOCATE:
+		if hub_stat_row == 6:
+			if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+				hub_stat_row = 5; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+				var utility_direction := -1 if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) else 1
+				root.call("_shift_hub_action_column", utility_direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 			elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
-				root.call("_hub_item_action")
-			elif bool(root.call("_is_ui_cancel_just_pressed")): root.call("_close_hub_gear_browse")
+				if hub_action_column < 4:
+					var utility_button := [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button][hub_action_column] as Button
+					if utility_button != null and not utility_button.disabled: utility_button.pressed.emit()
 			return
-		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 1 and bool(root.call("_is_ui_direction_just_pressed", &"ui_left")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 1 and bool(root.call("_is_ui_direction_just_pressed", &"ui_right")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 3 and bool(root.call("_is_ui_direction_just_pressed", &"ui_left")): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif page == 3 and bool(root.call("_is_ui_direction_just_pressed", &"ui_right")): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+			hub_stat_row = maxi(hub_stat_row - 1, 0); update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
+			hub_stat_row = mini(hub_stat_row + 1, 6); update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+			var direction := -1 if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) else 1
+			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"][hub_stat_row], direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
-			var action := hub_item_action_button
-			if action != null and not action.disabled: action.pressed.emit()
-		elif bool(root.call("_is_ui_cancel_just_pressed")): root.call("_set_hub_page", 0)
+			if hub_action_column < 4:
+				var utility_button := [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button][hub_action_column] as Button
+				if utility_button != null and not utility_button.disabled: utility_button.pressed.emit()
 		return
-	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
-		root.call("_select_hub_menu_row", row - 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
-		root.call("_select_hub_menu_row", row + 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
-		var direction := -1 if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) else 1
-		if row < 4:
-			root.call("_hub_adjust_stat", [&"VIT", &"STR", &"DEF", &"SPD"][row], direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		else:
-			root.call("_shift_hub_action_column", direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	if page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed: root.call("_hub_item_action")
+		return
+	if page == HUB_PAGE_EQUIPMENT:
+		if hub_equipment_action_focus:
+			if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+				var action_direction := -1 if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) else 1
+				root.call("_shift_hub_action_column", action_direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
+				hub_equipment_action_focus = false; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			elif bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+				hub_content_focus = false; hub_equipment_action_focus = false; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
+				if hub_action_column >= 0 and hub_action_column < hub_equipment_action_buttons.size():
+					var equipment_action := hub_equipment_action_buttons[hub_action_column]
+					if equipment_action != null and not equipment_action.disabled: equipment_action.pressed.emit()
+			return
+		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")):
+			if hub_item_index <= 0:
+				hub_equipment_action_focus = true; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			else:
+				root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")):
+			root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+			hub_equipment_action_focus = true; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
+			var equipment_item_action := hub_item_action_button
+			if equipment_item_action != null and not equipment_item_action.disabled: equipment_item_action.pressed.emit()
+		return
+	if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif page == HUB_PAGE_FUSION and bool(root.call("_is_ui_direction_just_pressed", &"ui_left")): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif page == HUB_PAGE_FUSION and bool(root.call("_is_ui_direction_just_pressed", &"ui_right")): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_ui_accept_just_pressed")) or interact_pressed:
-		if row < 4:
-			root.call("_select_hub_menu_row", row + 1)
-		elif row == 4:
-			var utility_button := [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button][hub_action_column] as Button
-			if utility_button != null and not utility_button.disabled: utility_button.pressed.emit()
-		else:
-			var exit_button := [hub_start_button, hub_title_button][hub_action_column] as Button
-			if exit_button != null and not exit_button.disabled: exit_button.pressed.emit()
-	elif bool(root.call("_is_ui_cancel_just_pressed")):
-		if hub_opened_from_npc: root.call("_close_hub_to_run")
-		else: root.call("_return_to_title")
+		var action := hub_item_action_button
+		if action != null and not action.disabled: action.pressed.emit()
 
 
 func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool, settings_callback: Callable = Callable()) -> Dictionary:
@@ -1457,7 +1717,7 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	return {"overlay": overlay, "text": title_text, "new_game": new_game_button, "continue": continue_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
 
 
-func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable) -> Dictionary:
+func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable, select_option_callback: Callable = Callable()) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := create_view_overlay(parent, "SettingsOverlay", Color(0.015, 0.02, 0.035, 0.98), 8, false)
 	var title := create_sprite(overlay, "SettingsTitle", pixel_texture.call("SETTINGS", Color.WHITE) as Texture2D, Vector2.ZERO, false)
@@ -1467,11 +1727,23 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 	var left_buttons: Array[Button] = []
 	var right_buttons: Array[Button] = []
 	var row_labels := ["FULLSCREEN", "ASPECT", "PIXEL PERFECT", "MUSIC", "SFX"]
+	var option_labels: Array[Array] = [["OFF", "ON"], ["3:2", "16:10", "16:9"], ["OFF", "ON"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]]
 	var row_y := 35.0
 	var center_x := display_view_size.x * 0.5
 	for index in row_labels.size():
-		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(center_x - 75.0, row_y + index * 17.0 + 3.0), false)
+		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(center_x - 104.0, row_y + index * 17.0 + 3.0), false)
 		labels.append(label)
+		var options_for_row: Array[Button] = []
+		for option_index in option_labels[index].size():
+			var option_text: String = str(option_labels[index][option_index])
+			var option_button := make_retro_button(option_text, Vector2(center_x - 24.0 + option_index * 13.0, row_y + index * 17.0), Vector2(12, 12), pixel_texture)
+			option_button.name = "SettingsOption%d_%d" % [index, option_index]
+			option_button.focus_mode = Control.FOCUS_NONE
+			if select_option_callback.is_valid(): option_button.pressed.connect(select_option_callback.bind(index, option_index))
+			overlay.add_child(option_button)
+			options_for_row.append(option_button)
+		settings_option_buttons.append(options_for_row)
+		settings_option_labels.append(option_labels[index])
 		var left := make_retro_button("<", Vector2(center_x + 18.0, row_y + index * 17.0), Vector2(16, 12), pixel_texture)
 		left.name = "SettingsLeft%d" % index
 		left.focus_mode = Control.FOCUS_NONE
@@ -1489,7 +1761,14 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 		if adjust_callback.is_valid(): right.pressed.connect(adjust_callback.bind(index, 1))
 		overlay.add_child(right)
 		right_buttons.append(right)
-	var back := make_retro_button("BACK", Vector2(center_x - 26.0, 133), Vector2(52, 13), pixel_texture)
+		# The old single-value/arrow controls remain as non-interactive compatibility
+		# handles for existing callers; the horizontal options above own the UI.
+		left.visible = false
+		value.visible = false
+		right.visible = false
+	var description := create_sprite(overlay, "SettingsDescription", null, Vector2(center_x - 104.0, 123), false)
+	settings_description_text = description
+	var back := make_retro_button("BACK", Vector2(center_x + 53.0, 141), Vector2(52, 13), pixel_texture)
 	back.name = "SettingsBack"
 	back.pressed.connect(close_callback)
 	overlay.add_child(back)
@@ -1501,7 +1780,7 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 	settings_back_button = back
 	settings_cursor_text = cursor
 	_position_settings_controls()
-	return {"overlay": overlay, "title": title, "labels": labels, "values": values, "left": left_buttons, "right": right_buttons, "back": back, "cursor": cursor}
+	return {"overlay": overlay, "title": title, "labels": labels, "values": values, "left": left_buttons, "right": right_buttons, "options": settings_option_buttons, "back": back, "description": description, "cursor": cursor}
 
 
 func _position_settings_controls() -> void:
@@ -1512,12 +1791,15 @@ func _position_settings_controls() -> void:
 		settings_title_text.position = Vector2((display_view_size.x - settings_title_text.texture.get_width()) * 0.5, 13)
 	for index in settings_row_labels.size():
 		var y := 35.0 + index * 17.0
-		settings_row_labels[index].position = Vector2(center_x - 75.0, y + 3.0)
+		settings_row_labels[index].position = Vector2(center_x - 104.0, y + 3.0)
 		settings_left_buttons[index].position = Vector2(center_x + 18.0, y)
 		settings_value_buttons[index].position = Vector2(center_x + 36.0, y)
 		settings_right_buttons[index].position = Vector2(center_x + 103.0, y)
+		if index < settings_option_buttons.size():
+			for option_index in settings_option_buttons[index].size():
+				(settings_option_buttons[index][option_index] as Button).position = Vector2(center_x - 24.0 + option_index * 13.0, y)
 	if settings_back_button != null:
-		settings_back_button.position = Vector2(center_x - 26.0, 133)
+		settings_back_button.position = Vector2(center_x + 53.0, 141)
 	_update_settings_cursor()
 
 
@@ -1530,8 +1812,8 @@ func open_settings(root: Object, origin: StringName) -> void:
 	# Settings replaces its source screen. Leaving the pause panel visible under
 	# it makes focus and touch hit-testing ambiguous, especially on the web port.
 	if origin == &"pause":
-		if hub_overlay != null:
-			hub_overlay.visible = false
+		if pause_overlay != null:
+			pause_overlay.visible = false
 	elif origin == &"title":
 		if title_overlay != null:
 			title_overlay.visible = false
@@ -1547,12 +1829,13 @@ func close_settings(root: Object) -> void:
 		settings_overlay.visible = false
 	settings_interact_input_was_down = false
 	if settings_origin == &"pause":
-		if hub_overlay != null:
-			hub_overlay.visible = true
+		if pause_overlay != null:
+			pause_overlay.visible = true
 		hub_pause_mode = true
-		hub_menu_row = 1
-		set_state(&"hub")
-		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		pause_page = 0
+		pause_menu_row = 3
+		set_state(&"pause")
+		update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 		if pause_settings_button != null: pause_settings_button.grab_focus()
 	else:
 		if title_overlay != null: title_overlay.visible = true
@@ -1575,12 +1858,57 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 		var value_button := settings_value_buttons[index]
 		var value_text := value_button.get_child(0) as Sprite2D
 		if value_text != null: value_text.texture = pixel_texture.call(value_labels[index], Color.WHITE) as Texture2D
-		set_archetype_button_state(value_button, settings_row == index, highlight)
+		set_archetype_button_state(value_button, false, highlight)
 		set_archetype_button_state(settings_left_buttons[index], false, highlight)
 		set_archetype_button_state(settings_right_buttons[index], false, highlight)
+		if index < settings_option_buttons.size():
+			var active_option := _settings_option_index(index, values)
+			for option_index in settings_option_buttons[index].size():
+				var option_button := settings_option_buttons[index][option_index] as Button
+				option_button.visible = true
+				option_button.focus_mode = Control.FOCUS_ALL
+				set_archetype_button_state(option_button, option_index == active_option and settings_row == index, highlight)
 	if settings_back_button != null:
 		set_archetype_button_state(settings_back_button, settings_row == settings_value_buttons.size(), highlight)
+	if settings_description_text != null:
+		var descriptions := ["DISPLAY MODE", "LOGICAL ASPECT", "PIXEL FILTER", "MUSIC VOLUME", "SFX VOLUME", "RETURN"]
+		var description_index := clampi(settings_row, 0, descriptions.size() - 1)
+		settings_description_text.texture = pixel_texture.call(descriptions[description_index], Color8(148, 220, 255)) as Texture2D
 	_update_settings_cursor()
+
+
+func _settings_option_index(row: int, values: Dictionary) -> int:
+	match row:
+		0: return 1 if bool(values.get("fullscreen", false)) else 0
+		1:
+			return ["3:2", "16:10", "16:9"].find(str(values.get("aspect", "3:2")))
+		2: return 1 if bool(values.get("pixel_perfect", true)) else 0
+		3: return clampi(roundi(float(values.get("music_volume", 100)) / 10.0), 0, 10)
+		4: return clampi(roundi(float(values.get("sfx_volume", 100)) / 10.0), 0, 10)
+	return 0
+
+
+func _settings_option_index_for_cursor(row: int) -> int:
+	var service := get_parent().get("settings_service") as SettingsService if get_parent() != null else null
+	if service == null:
+		return 0
+	return _settings_option_index(row, service.values())
+
+
+func select_setting_option(root: Object, row: int, option_index: int) -> void:
+	var service := root.get("settings_service") as SettingsService
+	if service == null:
+		return
+	settings_row = clampi(row, 0, 4)
+	match settings_row:
+		0: service.set_setting(&"fullscreen", option_index == 1)
+		1:
+			var aspects := ["3:2", "16:10", "16:9"]
+			service.set_setting(&"aspect", aspects[clampi(option_index, 0, aspects.size() - 1)])
+		2: service.set_setting(&"pixel_perfect", option_index == 1)
+		3: service.set_setting(&"music_volume", clampi(option_index, 0, 10) * 10)
+		4: service.set_setting(&"sfx_volume", clampi(option_index, 0, 10) * 10)
+	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func adjust_setting(root: Object, row: int, direction: int) -> void:
@@ -1612,7 +1940,10 @@ func _update_settings_cursor() -> void:
 		return
 	var back_row := settings_value_buttons.size()
 	var row := clampi(settings_row, 0, back_row)
-	var selected := settings_back_button if row == back_row else settings_value_buttons[row]
+	var selected: Control = settings_back_button
+	if row != back_row and row >= 0 and row < settings_option_buttons.size():
+		var service_row_values: int = _settings_option_index_for_cursor(row)
+		selected = settings_option_buttons[row][service_row_values] as Button
 	if selected == null:
 		return
 	settings_cursor_text.visible = true
@@ -1625,7 +1956,10 @@ func _focus_settings_selection() -> void:
 		if settings_back_button != null:
 			settings_back_button.grab_focus()
 	elif settings_row >= 0 and settings_row < back_row:
-		settings_value_buttons[settings_row].grab_focus()
+		if settings_row < settings_option_buttons.size() and not settings_option_buttons[settings_row].is_empty():
+			(settings_option_buttons[settings_row][_settings_option_index_for_cursor(settings_row)] as Button).grab_focus()
+		else:
+			settings_value_buttons[settings_row].grab_focus()
 
 
 func update_settings_input(root: Object) -> void:
