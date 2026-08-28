@@ -44,8 +44,8 @@ Related docs:
 - Per-profile display settings (settings are device-wide).
 - A glyph/icon atlas for the settings UI; the existing pixel-text style is
   reused.
-- Resizable desktop window management beyond fullscreen (no windowed-size
-  picker).
+- A freeform window-size picker; desktop aspect changes retain the current
+  window height and adjust its width to the selected supported ratio.
 - Rebinding, language, or accessibility settings.
 
 ## 2. Verified current state
@@ -88,10 +88,16 @@ The full audit evidence is in §10. The load-bearing facts:
 
 ## 3. Display model
 
-The lever is `Window.content_scale_size`. The existing pipeline
-(`canvas_items` + `keep` + `integer`, `project.godot:24-26` after the web
-sizing pass) is untouched; swapping the base size changes the rendered view
-while staying pixel-perfect.
+The lever is `Window.content_scale_size`. The canvas-items pipeline keeps the
+native vertical scale with `keep_height` and preserves integer scaling when
+pixel-perfect mode is enabled. This is important because `keep` would fit a
+wide logical base into a narrower 3:2 target by shrinking the entire view,
+making menus look shorter instead of adding horizontal space.
+
+On desktop windowed mode, the display controller keeps the current window
+height and updates only the width for the selected supported ratio. Web and
+mobile builds cannot resize the browser/device viewport, so they use the same
+height-preserving canvas behavior inside the available viewport.
 
 | Mode | Base size | Ratio | Notes |
 | --- | --- | --- | --- |
@@ -360,3 +366,51 @@ settings, responsive-layout, pause, web-export, and main-scene checks. The
 remaining verification item is the manual visual matrix on physical desktop,
 browser, and phone targets (especially fullscreen and portrait integer-scale
 trade-offs); it does not block the code implementation.
+
+## 12. Regression follow-up — 2026-08-27
+
+The completed follow-up pass covers four boundary regressions found while using
+the new wide-display and menu work:
+
+| Symptom | Contract and fix | Automated coverage |
+| --- | --- | --- |
+| Charge hold shows the prior attack frame | `charge` owns the single authored between-attacks pose; the shared attack overlay stays hidden while it is held, including after palette changes | `spin_charge_scene_smoke` |
+| Spin ends in a between/after pose | Spin's authored final frames are its complete recovery; both the frame-controller fallback and equipment transition hold are skipped/cleared | `spin_charge_scene_smoke` |
+| Settings BACK confirm starts New Game | A title-settings close arms a release lock; the title dispatcher waits for the confirm/cancel edge to be released | `settings_panel_scene_smoke` |
+| 16:9 enemies appear shifted or outside the room | Spawn solving and saved spawn positions use world space; actor placement goes through `global_position`, and saved positions rebase when Map/Actors move | `enemy_room_entrance_scene_smoke` at 16:9 |
+
+The shared hub overlay also explicitly hides pause-only action buttons whenever
+it is opened from the cloaked demon. This prevents stale RESUME/SETTINGS/QUIT
+controls from appearing underneath the normal Demon Hub, with a regression
+assertion in `hub_binding_smoke`.
+
+All exit criteria are met: the focused smoke tests for each row pass,
+`git diff --check` is clean, and the complete `tests/run_all_smoke.ps1` suite
+passes through web export and the headless main-scene boot. Manual wide-mode
+visual checks remain useful after the code gate, particularly on a physical
+16:9 phone where integer scaling can choose a smaller vertical scale.
+
+## 13. Charge-pose Chroma regression — 2026-08-27
+
+### Symptom
+
+The held attack/charge pose could look ghosted or appear to change frames as
+the player's Chroma fell. Charge displays the player base sprite while hiding
+the attack overlay, but the shared MP desaturation bridge was still treating
+`charge` as an attack-layer animation. Its grey reference texture therefore
+landed on the hidden attack material, while the visible base sprite retained
+the previous attack frame as its grey sample. The stale sample became visible
+as the desaturation mix increased.
+
+### Correction
+
+Charge now uses the base player's desaturation material. Attack and spin
+animations continue to use the attack overlay material. Chroma amount changes
+only the material's grey mix; it cannot select or expose a different charge
+frame.
+
+### Verification
+
+`spin_charge_scene_smoke.gd` now verifies that the visible base layer samples
+the authored `between` grey frame and remains on that same pose at 100, 50, 10,
+and 0 Chroma. The focused scene test and complete smoke suite both pass.

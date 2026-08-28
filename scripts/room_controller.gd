@@ -1044,16 +1044,20 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	occupied.append(spawn_foot)
 	var actor := slime as SlimeActor
 	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	# The spawn solver returns a world-space position because it validates against
+	# the world-space floor outline. Actors are children of the offset Actors
+	# node, so assign through global_position instead of treating that point as a
+	# local coordinate (the old path double-applied the 16:9 horizontal offset).
+	slime.global_position = spawn_position
 	if brain != null:
-		brain.start_position = spawn_position
-	slime.position = spawn_position
+		brain.start_position = slime.position
 	slime.visible = true
 	slime.flip_h = false
 	root.call("_apply_enemy_room_level", slime, spawn_level)
 	var max_health := float(root.call("_enemy_max_health", slime))
 	if actor != null:
 		actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
-		actor.reset_runtime_state(spawn_position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
+		actor.reset_runtime_state(slime.position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
 	var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter
 	presenter.display_health = max_health
 	presenter.damage_fill_hold_timer = 0.0
@@ -1111,6 +1115,27 @@ func reset_slimes_for_room(root: Object) -> void:
 		for slime in slimes:
 			if slime.visible:
 				root.call("_trigger_slime_notice", slime)
+
+
+func rebase_enemy_spawn_positions(delta: Vector2) -> void:
+	# Spawn positions are stored in world space because walkability, sockets, and
+	# collision geometry are all queried in world space. When the wide display
+	# mode moves Map and Actors together, keep saved room positions in that same
+	# space so revisiting a room does not resurrect enemies at the old 3:2 edge.
+	if delta == Vector2.ZERO:
+		return
+	for room_id in room_states.keys():
+		var state := room_states[room_id] as Dictionary
+		if state == null:
+			continue
+		var positions := state.get("enemy_spawn_positions", {}) as Dictionary
+		for slot in positions.keys():
+			var saved_position: Variant = positions[slot]
+			if saved_position is Vector2:
+				positions[slot] = (saved_position as Vector2) + delta
+		if not positions.is_empty():
+			state["enemy_spawn_positions"] = positions
+			room_states[room_id] = state
 
 
 func _apply_authored_boss_geometry(slime: Sprite2D) -> void:

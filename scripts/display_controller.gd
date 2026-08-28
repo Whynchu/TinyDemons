@@ -2,7 +2,7 @@ extends Node
 class_name DisplayController
 
 ## Applies the logical display settings and owns the runtime-sized void/frame.
-## The content-scale pipeline remains canvas_items + keep; only the native
+## The content-scale pipeline remains canvas_items + keep_height; only the native
 ## content width and integer/fractional preference change here.
 
 signal view_size_changed(view_size: Vector2i)
@@ -59,9 +59,13 @@ func apply_settings() -> void:
 	if window != null:
 		window.content_scale_size = current_view_size
 		window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
-		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+		# Wide logical modes add horizontal content while preserving the native
+		# 160px vertical scale. KEEP would fit a 16:9 base into a 3:2 target by
+		# shrinking it vertically, which makes every menu look compressed.
+		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT
 		window.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_INTEGER if pixel_perfect else Window.CONTENT_SCALE_STRETCH_FRACTIONAL
 		_apply_fullscreen(window, fullscreen)
+		_resize_window_width_for_aspect(window, current_view_size, fullscreen)
 	RenderingServer.set_default_clear_color(VOID_COLOR)
 	_sync_presentation()
 	_apply_world_offset()
@@ -92,6 +96,22 @@ func _apply_fullscreen(window: Window, enabled: bool) -> void:
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)
+
+
+func _resize_window_width_for_aspect(window: Window, view_size: Vector2i, fullscreen: bool) -> void:
+	# The browser/mobile viewport owns its physical size. Desktop windowed mode
+	# can show the selected logical width directly while retaining the user's
+	# current height, so switching to a wide mode never compresses the menu.
+	if window == null or fullscreen or OS.has_feature("web"):
+		return
+	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
+		return
+	var current_size := window.size
+	if current_size.y <= 0 or view_size.y <= 0:
+		return
+	var target_width := maxi(1, roundi(float(current_size.y) * float(view_size.x) / float(view_size.y)))
+	if current_size.x != target_width:
+		window.size = Vector2i(target_width, current_size.y)
 
 
 func _on_setting_changed(key: StringName, _value: Variant) -> void:
@@ -165,5 +185,8 @@ func _apply_world_offset() -> void:
 	var actors_root := _root.get_node_or_null("Actors") as Node2D
 	if actors_root != null:
 		actors_root.position += delta
+	var room_controller := _root.get("room_controller") as RoomController
+	if room_controller != null:
+		room_controller.rebase_enemy_spawn_positions(delta)
 	_world_offset = desired
 	_root.set("display_world_offset", desired)

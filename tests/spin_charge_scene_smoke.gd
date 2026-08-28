@@ -36,6 +36,10 @@ func _initialize() -> void:
 		_expect(attack.start_spin_attack(gameplay), "spin attack can start with the supplied animation", failures)
 		_expect(attack.is_spin_attack() and StringName(gameplay.get("player_anim_name")) == &"spin_attack", "spin attack owns its animation state", failures)
 		_expect(not attack.has_lunge(), "spin attack does not use the forward combo lunge", failures)
+		gameplay.set("player_between_timer", 0.4)
+		attack.buffer_combo(1.0)
+		_expect(attack.start_spin_attack(gameplay), "spin attack can start while a prior combo recovery is pending", failures)
+		_expect(is_zero_approx(float(gameplay.get("player_between_timer"))) and not attack.combo_buffered, "spin attack clears combo and recovery state", failures)
 		for frame_index in range(tuning.spin_hit_start_frame, tuning.spin_hit_end_frame + 1):
 			gameplay.set("player_anim_frame", frame_index)
 			animation.apply_frame(gameplay)
@@ -54,6 +58,21 @@ func _initialize() -> void:
 		_expect(left_sword_front != null and left_sword_front.flip_h and left_sword_back != null and left_sword_back.flip_h, "spin equipment mirrors both sword layers when facing left", failures)
 		player.flip_h = false
 		gameplay.set("player_attack_flip_h", false)
+		for _frame in 40:
+			animation.tick_coordinator_animation(gameplay, 0.10)
+		_expect(not bool(gameplay.get("player_is_attacking")) and is_zero_approx(float(gameplay.get("player_between_timer"))), "spin attack finishes without a combo recovery", failures)
+		_expect(StringName(gameplay.get("player_anim_name")) == &"idle", "spin attack returns directly to idle", failures)
+		equipment.tick(gameplay, 0.0)
+		_expect(not equipment.was_attacking and is_zero_approx(equipment.transition_hold_timer), "spin completion clears equipment recovery hold", failures)
+		var frame_controller := gameplay.get("gameplay_frame_controller") as GameplayFrameController
+		_expect(frame_controller != null, "gameplay frame controller is available for spin transition coverage", failures)
+		if frame_controller != null:
+			_expect(attack.start_spin_attack(gameplay), "spin can be completed through the gameplay frame controller", failures)
+			gameplay.set("player_anim_frame", animation.spin_frames.size() - 1)
+			gameplay.set("player_anim_timer", 1.0)
+			frame_controller.tick(gameplay, 0.0)
+			_expect(StringName(gameplay.get("player_anim_name")) == &"idle" and is_zero_approx(float(gameplay.get("player_between_timer"))), "frame controller does not append recovery after spin", failures)
+			_expect(not equipment.was_attacking and is_zero_approx(equipment.transition_hold_timer), "frame controller keeps spin equipment in idle after completion", failures)
 		gameplay.call("_interrupt_player_attack")
 		gameplay.set("player_between_timer", 0.0)
 		attack.set_attack_input_held(true)
@@ -62,6 +81,33 @@ func _initialize() -> void:
 			animation.tick_coordinator_animation(gameplay, 0.10)
 		_expect(attack.is_charging() and StringName(gameplay.get("player_anim_name")) == &"charge", "holding attack enters the post-attack charge pose", failures)
 		_expect(player.visible and not (gameplay.get("player_attack_visual") as Sprite2D).visible, "charge pose restores the base player layer", failures)
+		_expect(player.texture == animation.between_attack_texture, "charge uses the authored between-attacks pose", failures)
+		var charge_grey_set := animation.frames_by_palette.get("grey", {}) as Dictionary
+		var charge_grey := charge_grey_set.get("between") as Texture2D
+		var base_mp_material := gameplay.get("mp_desaturation_material") as ShaderMaterial
+		_expect(base_mp_material != null and base_mp_material.get_shader_parameter("grey_texture") == charge_grey, "charge assigns its grey reference frame to the visible base layer", failures)
+		# Chroma changes should alter only the desaturation amount. They must never
+		# change the authored charge pose or make the base layer sample a stale
+		# attack frame.
+		var chroma := gameplay.get("player_chroma_component") as Node
+		var charge_texture := player.texture
+		for chroma_value in [100, 50, 10, 0]:
+			if chroma != null:
+				chroma.call("_set_chroma", chroma_value)
+			gameplay.call("_update_mp_desaturation")
+			base_mp_material = gameplay.get("mp_desaturation_material") as ShaderMaterial
+			_expect(player.texture == charge_texture and player.texture == animation.between_attack_texture, "charge pose stays on one authored frame at %d Chroma" % chroma_value, failures)
+			_expect(base_mp_material != null and base_mp_material.get_shader_parameter("grey_texture") == charge_grey, "charge grey reference stays aligned at %d Chroma" % chroma_value, failures)
+		# A flame/chroma change can happen while the attack button remains held.
+		# The active pose must be refreshed in the new palette rather than leaving
+		# the previous palette's attack frame frozen on the player.
+		gameplay.call("_apply_player_palette_async", "red")
+		_expect(player.texture == animation.between_attack_texture, "charge refreshes its between-attacks pose after a palette change", failures)
+		gameplay.call("_apply_player_palette_async", "blue")
+		_expect(player.texture == animation.between_attack_texture, "charge keeps the between-attacks pose when returning to water chroma", failures)
+		gameplay.set("player_anim_name", "attack1")
+		animation.tick_coordinator_animation(gameplay, 0.0)
+		_expect(StringName(gameplay.get("player_anim_name")) == &"charge" and player.texture == animation.between_attack_texture, "charging state repairs a stale attack animation name", failures)
 		attack.tick_charge(gameplay, tuning.charge_minimum_time)
 		attack.set_attack_input_held(false)
 		attack.tick_charge(gameplay, 0.01)

@@ -43,8 +43,10 @@ All feel and balance values live on `scripts/player_tuning.gd`:
 - Spin requires at least `0.55` movement magnitude, approximately `288°` of
   signed turn, and must complete within `0.50s`. Recognition arms the move for
   `0.28s`.
-- Spin uses `0.075s` frame timing, slows to `0.14s` from frame 6, and applies
-  `1.10x` damage and `1.10x` knockback.
+- Spin uses `0.075s` frame timing, slows to `0.14s` from frame 6, applies
+  `0.90x` damage and `1.10x` knockback, and does not split damage across
+  multiple enemies. This makes its single-target hit slightly weaker than a
+  normal Attack 1 while rewarding a clean multi-target spin.
 - Charge begins after `0.35s`, caps at `1.00s`, and uses Attack 2's art with a
   `1.35x` frame-time multiplier, `1.60x` damage, and `1.50x` knockback.
 
@@ -76,3 +78,13 @@ The focused checks are:
 
 `tests/run_all_smoke.ps1` includes both checks and the existing attack shadow,
 elemental, equipment, touch, display, and web-export checks.
+
+The spin balance regression is covered by:
+
+```powershell
+& $godot --headless --path TinyDemons -s res://tests/spin_damage_smoke.gd
+```
+
+It compares a normal Attack 1 against a one-target spin, verifies the spin's
+reduced coefficient, and verifies that two spin targets each receive the full
+undivided spin amount while a two-target normal attack is split.

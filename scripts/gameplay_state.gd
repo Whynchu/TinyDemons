@@ -347,7 +347,13 @@ func _new_mp_desaturation_material() -> ShaderMaterial:
 
 func _set_mp_grey_texture(texture: Texture2D) -> void:
 	var animation_name := String(player_anim_name)
-	var attack_animation := animation_name.begins_with("attack") or animation_name == "spin_attack" or animation_name == "charge"
+	# Charge deliberately renders through the base player sprite: the attack
+	# overlay is hidden while the authored between-attacks pose is held. Do not
+	# route its grey reference frame to the attack material, or the base sprite
+	# keeps sampling the previous attack frame. That stale sample only becomes
+	# visible as Chroma falls, which makes the charge look like a ghostly,
+	# Chroma-dependent animation.
+	var attack_animation := animation_name.begins_with("attack") or animation_name == "spin_attack"
 	var material := mp_desaturation_attack_material if player_is_attacking and attack_animation else mp_desaturation_material
 	if material != null:
 		material.set_shader_parameter("grey_texture", texture)
@@ -367,7 +373,7 @@ func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float 
 		sound_manager.play(sound_name, volume_db, pitch_scale)
 func _is_ui_accept_pressed() -> bool: return input_router != null and input_router.ui_accept_pressed()
 func _is_ui_accept_just_pressed() -> bool: return input_router != null and input_router.ui_accept_just_pressed()
-func _is_ui_cancel_just_pressed() -> bool: return input_router != null and input_router.ui_cancel_just_pressed()
+func _is_ui_cancel_just_pressed() -> bool: return input_router != null and input_router.menu_cancel_just_pressed()
 func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)
 func _apply_player_palette_async(palette_name: String) -> void:
 	if player_animation_component != null: player_animation_component.apply_palette_async(self, palette_name)

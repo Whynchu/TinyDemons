@@ -9,6 +9,7 @@ $tests += "pause_menu_scene_smoke"
 $tests += "soul_pickup_smoke"
 $tests += "fire_exchange_smoke"
 $tests += "circular_input_smoke"
+$tests += "spin_damage_smoke"
 $tests += "spin_charge_scene_smoke"
 $failed = $false
 foreach ($test in $tests) {

@@ -108,6 +108,13 @@ func ui_cancel_just_pressed() -> bool:
 	return just_pressed(&"ui_cancel")
 
 
+func menu_cancel_just_pressed() -> bool:
+	## Menus use the game's mapped cancel button as well as Godot's built-in
+	## ui_cancel action. Keeping the edge check here prevents each menu from
+	## having to know which input source supplied the back action.
+	return just_pressed(&"cancel") or ui_cancel_just_pressed()
+
+
 func ui_direction_just_pressed(direction: StringName) -> bool:
 	return just_pressed(direction)
 
