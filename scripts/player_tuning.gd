@@ -2,6 +2,7 @@ extends Resource
 class_name PlayerTuning
 
 @export var speed := 36.0
+@export var agi_reference := 1.0
 @export var speed_scale := 0.012
 @export var roll_scale := 0.015
 @export var attack_scale := 0.010
@@ -13,12 +14,31 @@ func speed_multiplier(spd: float) -> float:
 	return 1.0 + clampf(float(spd) * speed_scale, speed_effect_min, speed_effect_max)
 
 
+func agi_multiplier(agi: float) -> float:
+	return 1.0 + clampf((float(agi) - agi_reference) * speed_scale, speed_effect_min, speed_effect_max)
+
+
 func roll_multiplier(spd: float) -> float:
 	return 1.0 + clampf(float(spd) * roll_scale, speed_effect_min, speed_effect_max)
 
 
+func roll_multiplier_for_agi(agi: float) -> float:
+	return 1.0 + clampf((float(agi) - agi_reference) * roll_scale, speed_effect_min, speed_effect_max)
+
+
 func attack_multiplier(spd: float) -> float:
 	return 1.0 + clampf(float(spd) * attack_scale, speed_effect_min, speed_effect_max)
+
+
+func attack_multiplier_for_agi(agi: float) -> float:
+	return 1.0 + clampf((float(agi) - agi_reference) * attack_scale, speed_effect_min, speed_effect_max)
+
+
+func charge_multiplier_for_agi(agi: float) -> float:
+	# Charging uses the safe action/recovery scale. Keeping this as a named
+	# helper makes the charge contract explicit without introducing a second AGI
+	# curve that could drift away from attack timing.
+	return attack_multiplier_for_agi(agi)
 @export var hit_flash_time := 0.12
 @export var hitstun_time := 1.0 / 30.0
 @export var hit_knockback := 10.0

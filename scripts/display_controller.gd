@@ -11,6 +11,7 @@ const VOID_COLOR := Color8(17, 19, 24)
 const FRAME_COLOR := Color8(6, 6, 6)
 const TOP_BAR_HEIGHT := 16.0
 const BOTTOM_BAR_HEIGHT := 15.0
+const WORLD_CENTER := Vector2(120.0, 80.0)
 
 var settings_service: SettingsService = null
 var current_view_size := DisplayLayout.NATIVE_SIZE
@@ -19,6 +20,9 @@ var _void_background: ColorRect = null
 var _top_bar: ColorRect = null
 var _bottom_bar: ColorRect = null
 var _world_offset := Vector2.ZERO
+var _world_camera: Camera2D = null
+var _large_room_camera_active := false
+var _aspect_mode := "3:2"
 
 
 func initialize(root: Node, service: SettingsService) -> void:
@@ -44,15 +48,24 @@ func view_size_as_vector() -> Vector2:
 	return Vector2(current_view_size)
 
 
+func aspect_mode() -> String:
+	return _aspect_mode
+
+
+func world_camera() -> Camera2D:
+	return _world_camera
+
+
 func apply_settings() -> void:
-	var aspect := "3:2"
+	var aspect := str(SettingsService.DEFAULTS.get("aspect", "3:2"))
 	var pixel_perfect := true
 	var fullscreen := false
 	if settings_service != null:
-		aspect = str(settings_service.get_setting(&"aspect", "3:2"))
+		aspect = str(settings_service.get_setting(&"aspect", aspect))
 		pixel_perfect = bool(settings_service.get_setting(&"pixel_perfect", true))
 		fullscreen = bool(settings_service.get_setting(&"fullscreen", false))
-	var next_size := DisplayLayout.view_size(aspect)
+	_aspect_mode = aspect
+	var next_size := _view_size_for_aspect(aspect)
 	var size_changed := next_size != current_view_size
 	current_view_size = next_size
 	var window := get_window()
@@ -61,8 +74,17 @@ func apply_settings() -> void:
 		window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 		# Wide logical modes add horizontal content while preserving the native
 		# 160px vertical scale. KEEP would fit a 16:9 base into a 3:2 target by
-		# shrinking it vertically, which makes every menu look compressed.
-		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT
+		# shrinking it vertically, which makes every menu look compressed. A
+		# narrower-than-3:2 browser/window surface is the one exception: keeping
+		# height there would crop the menu horizontally, so fit the complete
+		# logical canvas and accept vertical letterboxing instead.
+		var preserve_height := true
+		if DisplayLayout.is_full_aspect(_aspect_mode):
+			var live_size := _live_window_size()
+			var live_ratio := live_size.x / maxf(live_size.y, 1.0)
+			var logical_ratio := float(current_view_size.x) / maxf(float(current_view_size.y), 1.0)
+			preserve_height = live_ratio >= logical_ratio
+		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if preserve_height else Window.CONTENT_SCALE_ASPECT_KEEP
 		window.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_INTEGER if pixel_perfect else Window.CONTENT_SCALE_STRETCH_FRACTIONAL
 		_apply_fullscreen(window, fullscreen)
 		_resize_window_width_for_aspect(window, current_view_size, fullscreen)
@@ -102,7 +124,7 @@ func _resize_window_width_for_aspect(window: Window, view_size: Vector2i, fullsc
 	# The browser/mobile viewport owns its physical size. Desktop windowed mode
 	# can show the selected logical width directly while retaining the user's
 	# current height, so switching to a wide mode never compresses the menu.
-	if window == null or fullscreen or OS.has_feature("web"):
+	if window == null or fullscreen or OS.has_feature("web") or OS.has_feature("mobile") or DisplayLayout.is_full_aspect(_aspect_mode):
 		return
 	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
 		return
@@ -122,7 +144,10 @@ func _on_setting_changed(key: StringName, _value: Variant) -> void:
 
 
 func _on_window_size_changed() -> void:
-	_sync_presentation()
+	if DisplayLayout.is_full_aspect(_aspect_mode):
+		apply_settings()
+	else:
+		_sync_presentation()
 
 
 func _build_presentation() -> void:
@@ -172,21 +197,69 @@ func _sync_presentation() -> void:
 
 
 func _apply_world_offset() -> void:
+	# World geometry is authored in one stable coordinate system. Wide displays
+	# are centered by the camera, never by translating Map, Actors, or cached
+	# walkability/enemy-spawn data.
+	_world_offset = Vector2.ZERO
+	if _root != null:
+		_root.set("display_world_offset", _world_offset)
+	_sync_world_camera()
+
+
+func set_large_room_camera_active(active: bool) -> void:
+	_large_room_camera_active = active
+	_sync_world_camera()
+
+
+func _sync_world_camera() -> void:
 	if _root == null:
 		return
-	var desired := Vector2(DisplayLayout.center_x(float(current_view_size.x)), 0.0)
-	var delta := desired - _world_offset
-	if delta == Vector2.ZERO:
-		_root.set("display_world_offset", desired)
+	_ensure_world_camera()
+	if _world_camera == null:
 		return
-	var map_root := _root.get_node_or_null("Map") as Node2D
-	if map_root != null:
-		map_root.position += delta
-	var actors_root := _root.get_node_or_null("Actors") as Node2D
-	if actors_root != null:
-		actors_root.position += delta
-	var room_controller := _root.get("room_controller") as RoomController
-	if room_controller != null:
-		room_controller.rebase_enemy_spawn_positions(delta)
-	_world_offset = desired
-	_root.set("display_world_offset", desired)
+	_world_camera.global_position = WORLD_CENTER
+	_world_camera.enabled = not _large_room_camera_active
+
+
+func _ensure_world_camera() -> void:
+	if _world_camera != null or _root == null:
+		return
+	_world_camera = Camera2D.new()
+	_world_camera.name = "DisplayWorldCamera"
+	_world_camera.top_level = true
+	_world_camera.position_smoothing_enabled = false
+	_world_camera.global_position = WORLD_CENTER
+	_root.add_child(_world_camera)
+
+
+func _view_size_for_aspect(aspect: String) -> Vector2i:
+	if not DisplayLayout.is_full_aspect(aspect):
+		return DisplayLayout.view_size(aspect)
+	var live_size := _live_window_size()
+	if live_size.y <= 0.0 or live_size.x <= 0.0:
+		return DisplayLayout.view_size(aspect)
+	var live_width := maxi(DisplayLayout.NATIVE_SIZE.x, roundi(DisplayLayout.NATIVE_SIZE.y * live_size.x / live_size.y))
+	return DisplayLayout.view_size(aspect, live_width)
+
+
+func _live_window_size() -> Vector2:
+	if OS.has_feature("web"):
+		# Adaptive web canvases can retain the project override in Window.size
+		# while the standalone iPhone page has already resized its CSS viewport.
+		# Read the browser viewport when available so FULL follows the actual
+		# borderless landscape surface, including home-screen launches.
+		var browser_size: Variant = JavaScriptBridge.eval("[window.innerWidth, window.innerHeight]")
+		if browser_size is Array and (browser_size as Array).size() >= 2:
+			var browser_width := float((browser_size as Array)[0])
+			var browser_height := float((browser_size as Array)[1])
+			if browser_width > 0.0 and browser_height > 0.0:
+				return Vector2(browser_width, browser_height)
+	var window := get_window()
+	if window != null and window.size.x > 0 and window.size.y > 0:
+		return Vector2(window.size)
+	var viewport := get_viewport()
+	if viewport != null:
+		var visible_size := viewport.get_visible_rect().size
+		if visible_size.x > 0.0 and visible_size.y > 0.0:
+			return visible_size
+	return Vector2(DisplayLayout.NATIVE_SIZE)

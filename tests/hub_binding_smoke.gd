@@ -35,17 +35,14 @@ func _initialize() -> void:
 		_expect(not String(npc.full_message).contains("BIND"), "Cloaked Demon dialogue remains the normal Hub invitation", failures)
 		npc.hide_dialogue(gameplay)
 		gameplay.call("_open_hub_from_cloaked_demon")
-		var pause_buttons := screen.get("pause_menu_buttons") as Array[Button]
-		var pause_button_visible := false
-		for pause_button in pause_buttons:
-			pause_button_visible = pause_button_visible or pause_button.visible
-		_expect(not bool(screen.get("hub_pause_mode")) and not pause_button_visible, "Cloaked Demon Hub does not retain pause actions underneath it", failures)
+		var pause_overlay := screen.get("pause_overlay") as ColorRect
+		_expect(not bool(screen.get("hub_pause_mode")) and (pause_overlay == null or not pause_overlay.is_visible_in_tree()), "Cloaked Demon Hub does not retain the pause overlay underneath it", failures)
 		gameplay.call("_set_hub_page", 4)
 		var binding_panel := screen.get("hub_binding_panel") as Panel
 		var binding_action := screen.get("hub_binding_action_button") as Button
 		var page_buttons := screen.get("hub_page_buttons") as Array[Button]
 		_expect(bool(screen.get("hub_overlay").visible), "Demon interaction opens the Hub", failures)
-		_expect(page_buttons.size() == 5, "Hub exposes a fifth Binding panel", failures)
+		_expect(page_buttons.size() == 6, "Hub exposes Status, Allocate, Equipment, Shop, Fusion, and Bind commands", failures)
 		_expect(binding_panel != null and binding_panel.visible, "Binding panel is visible on the BIND tab", failures)
 		_expect(binding_action != null and not binding_action.disabled, "eligible current element enables Binding", failures)
 		if binding_action != null:

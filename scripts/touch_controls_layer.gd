@@ -13,6 +13,7 @@ const CONTEXT_GAMEPLAY := 0
 const CONTEXT_DIALOGUE := 1
 const CONTEXT_HUB := 2
 const CONTEXT_MENU := 3
+const CONTEXT_PAUSE := 4
 const EMULATED_DEVICE_ID := -1
 const MOUSE_FINGER_ID := -2
 
@@ -116,6 +117,10 @@ func movement_vector() -> Vector2:
 
 
 func action_pressed(action: StringName) -> bool:
+	if action == &"menu_confirm":
+		return action_pressed(&"interact")
+	if action == &"menu_back":
+		return action_pressed(&"cancel")
 	if action == &"ui_accept":
 		return action_pressed(&"interact")
 	if action == &"interact":
@@ -332,7 +337,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# Hub pages expose their actionable controls as native Buttons. A blank
 		# touch must stay inert; falling through to generic accept moves the
 		# controller cursor even though no visible control was selected.
-		if _input_context == CONTEXT_HUB:
+		if _input_context == CONTEXT_HUB or _input_context == CONTEXT_PAUSE:
 			return
 		_menu_accept_fingers[finger_id] = true
 		_menu_accept_latch = true
@@ -471,11 +476,11 @@ func _rect_dictionary_contains(rectangles: Dictionary, position: Vector2) -> boo
 
 
 func _is_menu_context() -> bool:
-	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU
+	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU or _input_context == CONTEXT_PAUSE
 
 
 func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseButton:
-	var search_root := get_parent()
+	var search_root := _active_menu_root()
 	if search_root == null:
 		return null
 	var nodes: Array = []
@@ -489,6 +494,43 @@ func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseB
 		if button.get_global_rect().has_point(position):
 			return button
 	return null
+
+
+func _active_menu_root() -> Node:
+	var host := get_parent()
+	if host == null:
+		return null
+	var preferred_names: Array[StringName] = []
+	match _input_context:
+		CONTEXT_HUB: preferred_names = [&"HubOverlay"]
+		CONTEXT_PAUSE: preferred_names = [&"PauseOverlay"]
+		CONTEXT_MENU: preferred_names = [&"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"TitleOverlay"]
+		CONTEXT_DIALOGUE: preferred_names = [&"NpcDialogueBox"]
+	for target_name in preferred_names:
+		var found := _find_visible_control(host, target_name)
+		if found != null and found.is_visible_in_tree():
+			return _menu_root_for_target(found, target_name)
+	# A route can become visible between the current physics poll and the next
+	# one. Use visible-overlay discovery as a same-frame fallback so a touch
+	# released during that transition cannot search the gameplay host or a stale
+	# source menu.
+	var visible_fallbacks: Array[StringName] = [&"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"PauseOverlay", &"HubOverlay", &"NpcDialogueBox", &"TitleOverlay"]
+	for target_name in visible_fallbacks:
+		if preferred_names.has(target_name):
+			continue
+		var found := _find_visible_control(host, target_name)
+		if found != null and found.is_visible_in_tree():
+			return _menu_root_for_target(found, target_name)
+	return host
+
+
+func _menu_root_for_target(found: Control, target_name: StringName) -> Node:
+	# Dialogue's visible panel and its native YES/NO buttons are siblings in the
+	# dialogue CanvasLayer. Return that owner so choice taps are discoverable;
+	# routed menu overlays keep their own full subtree as the search root.
+	if target_name == &"NpcDialogueBox" and found.get_parent() != null:
+		return found.get_parent()
+	return found
 
 
 func _collect_menu_buttons(node: Node, output: Array) -> void:
@@ -521,7 +563,7 @@ func _button_rect(action: StringName) -> Rect2:
 
 
 func _cancel_control_visible() -> bool:
-	return _touch_input_enabled and _input_context != CONTEXT_GAMEPLAY
+	return _touch_input_enabled and _input_context == CONTEXT_DIALOGUE
 
 
 func _clamped_stick_origin(position: Vector2) -> Vector2:
@@ -558,7 +600,6 @@ func _update_layout() -> void:
 		if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 			viewport_size = content_size
 	_layout = _compute_layout(viewport_size, content_size)
-	_layout["cancel"] = _context_cancel_rect(_layout)
 	if _stick_pointer_id < 0:
 		_stick_origin = _layout["stick_home"]
 	_apply_layout()
@@ -566,12 +607,13 @@ func _update_layout() -> void:
 
 func _context_cancel_rect(layout: Dictionary) -> Rect2:
 	var cancel: Rect2 = layout.get("cancel", Rect2())
-	if _input_context != CONTEXT_HUB:
+	if _input_context != CONTEXT_HUB and _input_context != CONTEXT_PAUSE:
 		return cancel
-	var hub_overlay := _find_visible_control(get_parent(), &"HubOverlay")
-	if hub_overlay == null:
+	var overlay_name: StringName = &"HubOverlay" if _input_context == CONTEXT_HUB else &"PauseOverlay"
+	var menu_overlay := _find_visible_control(get_parent(), overlay_name)
+	if menu_overlay == null:
 		return cancel
-	var bounds := hub_overlay.get_global_rect()
+	var bounds := menu_overlay.get_global_rect()
 	var inset := maxf(float(layout.get("margin", 4.0)) * 0.75, 3.0)
 	var nested_position := Vector2(bounds.end.x - cancel.size.x - inset, bounds.end.y - cancel.size.y - inset)
 	if bounds.encloses(Rect2(nested_position, cancel.size)):
@@ -656,7 +698,7 @@ func _update_button_visual(action: StringName) -> void:
 
 func _refresh_controls() -> void:
 	_controls_visible = _last_input_device == DEVICE_TOUCH and (_input_context == CONTEXT_GAMEPLAY or _input_context == CONTEXT_DIALOGUE)
-	_touch_input_enabled = _last_input_device == DEVICE_TOUCH and _input_context in [CONTEXT_GAMEPLAY, CONTEXT_DIALOGUE, CONTEXT_HUB, CONTEXT_MENU]
+	_touch_input_enabled = _last_input_device == DEVICE_TOUCH and _input_context in [CONTEXT_GAMEPLAY, CONTEXT_DIALOGUE, CONTEXT_HUB, CONTEXT_MENU, CONTEXT_PAUSE]
 	_update_touch_capture_filter()
 	if not _controls_visible:
 		_clear_gameplay_input()
@@ -677,6 +719,8 @@ func _refresh_controls() -> void:
 		var visible := _controls_visible
 		if action == &"cancel":
 			visible = _cancel_control_visible()
+		elif action == &"pause":
+			visible = _controls_visible
 		(_button_nodes[action] as Control).visible = visible
 
 

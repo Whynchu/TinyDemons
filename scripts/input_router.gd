@@ -3,13 +3,15 @@ class_name InputRouter
 
 ## One per-frame polling boundary for gameplay, dialogue, hub, and menu input.
 
-enum Context { GAMEPLAY, DIALOGUE, HUB, MENU }
+enum Context { GAMEPLAY, DIALOGUE, HUB, MENU, PAUSE }
 
 var context := Context.GAMEPLAY
 var devices: Array[int] = []
 var _current: Dictionary = {}
 var _previous: Dictionary = {}
 var _movement := Vector2.ZERO
+var _menu_directions: Dictionary = {}
+var _previous_menu_directions: Dictionary = {}
 var _target_axis := 0.0
 var _guard_axis := 0.0
 var touch_provider: Node = null
@@ -23,12 +25,24 @@ func poll(next_context: int) -> void:
 	if touch_provider != null and touch_provider.has_method("set_input_context"):
 		touch_provider.call("set_input_context", context)
 	_previous = _current.duplicate()
+	_previous_menu_directions = _menu_directions.duplicate()
 	_current.clear()
 	_touch_snapshot = _read_touch_snapshot()
 	for action in ACTIONS:
 		_current[action] = Input.is_action_pressed(action) or _touch_action_pressed(action) or _touch_action_just_pressed(action)
 	devices = connected_devices()
+	# Menu intent is deliberately separate from Godot's built-in ui_accept and
+	# ui_cancel actions. The game's contract is Circle / Xbox B = confirm and
+	# Cross / Xbox A = back, so a platform default cannot silently invert it.
+	_current[&"menu_confirm"] = Input.is_action_pressed(&"interact") or Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or _touch_action_pressed(&"interact") or _touch_action_just_pressed(&"interact")
+	_current[&"menu_back"] = Input.is_action_pressed(&"cancel") or Input.is_key_pressed(KEY_ESCAPE) or _touch_action_pressed(&"cancel") or _touch_action_just_pressed(&"cancel")
 	_movement = _read_movement()
+	_menu_directions = {
+		&"ui_up": bool(_current.get(&"ui_up", false)) or _movement.y < -0.65,
+		&"ui_down": bool(_current.get(&"ui_down", false)) or _movement.y > 0.65,
+		&"ui_left": bool(_current.get(&"ui_left", false)) or _movement.x < -0.65,
+		&"ui_right": bool(_current.get(&"ui_right", false)) or _movement.x > 0.65,
+	}
 	_target_axis = _strongest_axis(JOY_AXIS_RIGHT_X)
 	_guard_axis = _strongest_trigger(JOY_AXIS_TRIGGER_LEFT)
 
@@ -108,11 +122,31 @@ func ui_cancel_just_pressed() -> bool:
 	return just_pressed(&"ui_cancel")
 
 
+func menu_confirm_pressed() -> bool:
+	return pressed(&"menu_confirm")
+
+
+func menu_confirm_just_pressed() -> bool:
+	return just_pressed(&"menu_confirm")
+
+
+func menu_back_pressed() -> bool:
+	return pressed(&"menu_back")
+
+
+func menu_back_just_pressed() -> bool:
+	return just_pressed(&"menu_back")
+
+
+func menu_direction_just_pressed(direction: StringName) -> bool:
+	return bool(_menu_directions.get(direction, false)) and not bool(_previous_menu_directions.get(direction, false))
+
+
 func menu_cancel_just_pressed() -> bool:
-	## Menus use the game's mapped cancel button as well as Godot's built-in
-	## ui_cancel action. Keeping the edge check here prevents each menu from
-	## having to know which input source supplied the back action.
-	return just_pressed(&"cancel") or ui_cancel_just_pressed()
+	## Compatibility alias for older menu callers. New menu code should use the
+	## explicit menu_back methods so the built-in ui_cancel mapping cannot invert
+	## the Circle/B confirm and Cross/A back contract.
+	return menu_back_just_pressed()
 
 
 func ui_direction_just_pressed(direction: StringName) -> bool:

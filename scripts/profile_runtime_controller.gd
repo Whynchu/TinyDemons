@@ -26,7 +26,7 @@ func apply_profile_to_runtime(root: Object) -> void:
 		return
 	root.player_stats.level = root.player_profile.level
 	if root.player_profile.has_started:
-		root.player_stats.configure_manual_growth(root.player_profile.base_vit, root.player_profile.base_str, root.player_profile.base_def, root.player_profile.base_spd, root.player_profile.allocated_vit, root.player_profile.allocated_str, root.player_profile.allocated_def, root.player_profile.allocated_spd)
+		root.player_stats.configure_manual_growth(root.player_profile.base_vit, root.player_profile.base_str, root.player_profile.base_def, root.player_profile.base_agi, root.player_profile.allocated_vit, root.player_profile.allocated_str, root.player_profile.allocated_def, root.player_profile.allocated_agi, root.player_profile.base_int, root.player_profile.base_mnd, root.player_profile.allocated_int, root.player_profile.allocated_mnd)
 	else:
 		root.player_stats.manual_allocation_enabled = false
 	root.call("_configure_equipment_transmutations")
@@ -88,7 +88,9 @@ func sync_runtime_progression_to_profile(root: Object) -> void:
 		root.player_profile.allocated_vit = int(allocation["VIT"])
 		root.player_profile.allocated_str = int(allocation["STR"])
 		root.player_profile.allocated_def = int(allocation["DEF"])
-		root.player_profile.allocated_spd = int(allocation["SPD"])
+		root.player_profile.allocated_agi = int(allocation.get("AGI", allocation.get("SPD", 0)))
+		root.player_profile.allocated_int = int(allocation.get("INT", 0))
+		root.player_profile.allocated_mnd = int(allocation.get("MND", 0))
 	root.call("_save_player_profile")
 
 

@@ -91,11 +91,18 @@ the optional `touch_controls_layer` provider is merged there. The
 `input_device_tracker` owns last-device classification and prompt labels; it
 ignores emulated mouse echoes and sub-threshold gamepad drift.
 
-The display controller applies the active logical view size (240×160, 256×160,
-or 284×160) and emits `view_size_changed`; layout consumers use
-`display_layout.gd` so wide modes add horizontal space without changing the
-native 3:2 coordinates. `settings_service.gd` stores display/audio preferences
+The display controller applies the active logical view size (adaptive `FULL`
+at a live width×160, or fixed 240×160, 256×160, and 284×160 presets) and emits
+`view_size_changed`; layout consumers use `display_layout.gd` so wide modes add
+horizontal space without changing the native world coordinates. Normal-room
+centering is camera-owned, so aspect changes never translate Map/Actors or
+their collision data. `settings_service.gd` stores display/audio preferences
 in device-wide `user://settings.cfg`, separate from slot profile data.
+
+Menu intent is owned by `InputRouter`: Circle/Xbox B confirms and Cross/Xbox A
+backs out, while only the visible full-screen route is polled. Touch menu taps
+are scoped to that route and gameplay touch controls are disabled while a menu
+is active.
 
 ## Extension guide
 

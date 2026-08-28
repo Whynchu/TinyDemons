@@ -8,6 +8,7 @@ func _initialize() -> void:
 	_expect(DisplayLayout.view_size("3:2") == Vector2i(240, 160), "3:2 uses the native content size", failures)
 	_expect(DisplayLayout.view_size("16:10") == Vector2i(256, 160), "16:10 keeps height and adds width", failures)
 	_expect(DisplayLayout.view_size("16:9") == Vector2i(284, 160), "16:9 keeps height and adds width", failures)
+	_expect(DisplayLayout.view_size("FULL", 346) == Vector2i(346, 160) and DisplayLayout.is_full_aspect("FULL"), "FULL uses the live width while preserving height", failures)
 	_expect(DisplayLayout.offset_for(&"gold", native) == Vector2.ZERO, "right HUD offset is zero at native width", failures)
 	_expect(DisplayLayout.offset_for(&"hp_mp", native) == Vector2.ZERO, "center HUD offset is zero at native width", failures)
 	_expect(DisplayLayout.offset_for(&"player_status", native) == Vector2.ZERO, "left HUD offset is zero at native width", failures)

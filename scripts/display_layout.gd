@@ -5,6 +5,7 @@ class_name DisplayLayout
 ## content only; the native 240×160 frame remains the zero-offset baseline.
 
 const NATIVE_SIZE := Vector2i(240, 160)
+const FULL_ASPECT := "FULL"
 const ASPECT_SIZES := {
 	"3:2": Vector2i(240, 160),
 	"16:10": Vector2i(256, 160),
@@ -32,8 +33,14 @@ const HUD_ANCHORS := {
 }
 
 
-static func view_size(aspect: String = "3:2") -> Vector2i:
+static func view_size(aspect: String = "3:2", full_width: int = 0) -> Vector2i:
+	if aspect == FULL_ASPECT:
+		return Vector2i(maxi(full_width, NATIVE_SIZE.x), NATIVE_SIZE.y)
 	return ASPECT_SIZES.get(aspect, NATIVE_SIZE) as Vector2i
+
+
+static func is_full_aspect(aspect: String) -> bool:
+	return aspect == FULL_ASPECT
 
 
 static func extra_width(view_width: float) -> float:

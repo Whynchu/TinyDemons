@@ -4,6 +4,7 @@ class_name CombatRuntimeController
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const CombatDamageRequestScript = preload("res://scripts/combat_damage_request.gd")
 
 const ENEMY_HEALTH_R1_FACTOR := 0.50
 const ENEMY_HEALTH_R2_FACTOR := 0.65
@@ -48,7 +49,7 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 
 
 func player_attack_damage_result_against(root: Object, slime: Sprite2D, attack_element: int = ElementCatalogScript.Element.NEUTRAL) -> CombatCalculator.DamageResult:
-	var result := combat_damage(root, root.get("player_stats") as StatsComponent, root.call("_slime_stats", slime) as StatsComponent, attack_element, slime_element(slime))
+	var result := player_weapon_damage_result_against(root, slime, attack_element)
 	var momentum := combat_momentum(root)
 	var current_target := root.call("_valid_current_target") as Sprite2D
 	var multiplier := momentum.focus_multiplier(slime == current_target) * momentum.combo_multiplier()
@@ -62,6 +63,28 @@ func player_attack_damage_result_against(root: Object, slime: Sprite2D, attack_e
 	if not result.immune:
 		result.amount *= multiplier
 	return result
+
+
+func player_weapon_damage_result_against(root: Object, slime: Sprite2D, attack_element: int = ElementCatalogScript.Element.NEUTRAL) -> CombatCalculator.DamageResult:
+	var player_stats := root.get("player_stats") as StatsComponent
+	var slime_stats := root.call("_slime_stats", slime) as StatsComponent
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var active_element_value: Variant = root.get("player_imbued_element")
+	var active_element := int(active_element_value) if active_element_value != null else ElementCatalogScript.Element.NEUTRAL
+	var request: RefCounted
+	if active_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == active_element:
+		request = CombatDamageRequestScript.imbued_weapon(tuning.damage_base, tuning.damage_per_strength, tuning.imbue_base, tuning.imbue_per_int, attack_element, slime_element(slime), true)
+	else:
+		request = CombatDamageRequestScript.physical(tuning.damage_base, tuning.damage_per_strength, attack_element, slime_element(slime), true)
+	return combat_damage_request(root, player_stats, slime_stats, request)
+
+
+func player_magic_damage_result_against(root: Object, slime: Sprite2D, attack_element: int, magic_base_bonus: float = 0.0) -> CombatCalculator.DamageResult:
+	var player_stats := root.get("player_stats") as StatsComponent
+	var slime_stats := root.call("_slime_stats", slime) as StatsComponent
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var request := CombatDamageRequestScript.magic(tuning.magic_base + magic_base_bonus, tuning.magic_per_int, attack_element, slime_element(slime), true)
+	return combat_damage_request(root, player_stats, slime_stats, request)
 
 
 func player_attack_damage_against(root: Object, slime: Sprite2D) -> float:
@@ -101,12 +124,18 @@ func player_attack_damage_share_divisor(root: Object, slime: Sprite2D, target_co
 
 func combat_damage(root: Object, attacker_stats: StatsComponent, defender_stats: StatsComponent, attack_element: int = ElementCatalogScript.Element.NEUTRAL, defense_element: int = ElementCatalogScript.Element.NEUTRAL) -> CombatCalculator.DamageResult:
 	var player_stats := root.get("player_stats") as StatsComponent
-	var equipment := root.get("player_equipment") as EquipmentComponent
 	var tuning := root.get("combat_tuning") as CombatTuning
+	var strength_scale := tuning.damage_per_strength if attacker_stats == player_stats else tuning.enemy_damage_per_strength
+	var request := CombatDamageRequestScript.physical(tuning.damage_base, strength_scale, attack_element, defense_element, attacker_stats == player_stats)
+	return combat_damage_request(root, attacker_stats, defender_stats, request)
+
+
+func combat_damage_request(root: Object, attacker_stats: StatsComponent, defender_stats: StatsComponent, request: RefCounted) -> CombatCalculator.DamageResult:
+	var player_stats := root.get("player_stats") as StatsComponent
+	var equipment := root.get("player_equipment") as EquipmentComponent
 	var attacker_snapshot := CombatStatSnapshot.from_components(attacker_stats, equipment if attacker_stats == player_stats else null)
 	var defender_snapshot := CombatStatSnapshot.from_components(defender_stats, equipment if defender_stats == player_stats else null)
-	var strength_scale := tuning.damage_per_strength if attacker_stats == player_stats else tuning.enemy_damage_per_strength
-	return CombatCalculator.calculate_snapshot_damage(attacker_snapshot, defender_snapshot, attacker_stats == player_stats, root.get("rng") as RandomNumberGenerator, tuning, strength_scale, attack_element, defense_element)
+	return CombatCalculator.calculate_request(request, attacker_snapshot, defender_snapshot, root.get("rng") as RandomNumberGenerator, root.get("combat_tuning") as CombatTuning)
 
 
 func max_health_for_stats(root: Object, stats: StatsComponent) -> float:
@@ -118,14 +147,37 @@ func player_stat_snapshot(root: Object) -> CombatStatSnapshot:
 	return CombatStatSnapshot.from_components(root.get("player_stats") as StatsComponent, root.get("player_equipment") as EquipmentComponent)
 
 
+func player_stat_debug_breakdown(root: Object) -> Dictionary:
+	var snapshot := player_stat_snapshot(root)
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var breakdown := snapshot.debug_breakdown(tuning)
+	var player_tuning := root.get("player_tuning") as PlayerTuning
+	if player_tuning != null:
+		breakdown["MOV"] = player_tuning.agi_multiplier(snapshot.agi)
+		breakdown["RECOVERY"] = player_tuning.attack_multiplier_for_agi(snapshot.agi)
+	breakdown["KNOCKBACK"] = (tuning.knockback_multiplier_for_strength(snapshot.strength) if tuning != null else 1.0)
+	return breakdown
+
+
+func player_stat_debug_summary(root: Object) -> String:
+	var breakdown := player_stat_debug_breakdown(root)
+	return "LV %d | VIT %.1f STR %.1f DEF %.1f AGI %.1f INT %.1f MND %.1f | HP %.1f P.ATK %.1f P.DEF %.2f M.ATK %.1f M.DEF %.2f MOV %.2fx RECOVERY %.2fx KNOCKBACK %.2fx" % [
+		int(breakdown["LV"]), float(breakdown["VIT"]), float(breakdown["STR"]), float(breakdown["DEF"]), float(breakdown["AGI"]), float(breakdown["INT"]), float(breakdown["MND"]),
+		float(breakdown["HP"]), float(breakdown["P.ATK"]), float(breakdown["P.DEF"]), float(breakdown["M.ATK"]), float(breakdown["M.DEF"]), float(breakdown["MOV"]), float(breakdown["RECOVERY"]), float(breakdown["KNOCKBACK"]),
+	]
+
+
 func recompute_player_speed_multiplier(root: Object) -> void:
 	var stats := root.get("player_stats") as StatsComponent
 	var tuning := root.get("player_tuning") as PlayerTuning
 	if stats == null or tuning == null:
 		return
 	var snapshot := player_stat_snapshot(root)
-	root.set("player_spd", snapshot.speed)
-	root.set("player_speed_multiplier", tuning.speed_multiplier(snapshot.speed))
+	root.set("player_spd", snapshot.agi)
+	root.set("player_agi", snapshot.agi)
+	root.set("player_speed_multiplier", tuning.agi_multiplier(snapshot.agi))
+	if bool(root.get("debug_stat_breakdown")):
+		print("STAT_BREAKDOWN %s" % player_stat_debug_summary(root))
 
 
 func player_max_health(root: Object) -> float:
@@ -181,6 +233,7 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 	var palette := String(definition["variant"])
 	slime.set("variant", palette)
 	slime.set_meta("element", int(definition["element"]))
+	slime.set_meta("damage_contract", String(definition.get("damage_contract", &"physical")))
 	var actor := slime as SlimeActor
 	if actor != null:
 		actor.combat_element = int(definition["element"])
@@ -190,7 +243,7 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 	root.call("_configure_slime_ambush", slime, palette)
 
 
-func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0) -> void:
+func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true) -> void:
 	if bool(root.call("_is_slime_dead", slime)):
 		return
 	var direction: Vector2 = root.call("_slime_knockback_direction", slime)
@@ -199,6 +252,10 @@ func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float 
 	var player_tuning := root.get("player_tuning") as PlayerTuning
 	var slime_tuning := root.get("slime_tuning") as SlimeTuning
 	var multiplier := (transmutation.attack_knockback_multiplier() if transmutation != null else 1.0) * maxf(knockback_multiplier, 0.0)
+	if strength_scaled:
+		var combat_tuning := root.get("combat_tuning") as CombatTuning
+		if combat_tuning != null:
+			multiplier *= combat_tuning.knockback_multiplier_for_strength(player_stat_snapshot(root).strength)
 	var combo := attack.base_knockback_multiplier(player_tuning) if attack != null else player_tuning.attack1_knockback_multiplier
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_velocity = root.call("_perspective_movement", direction.normalized() * (player_tuning.attack_knockback * combo * multiplier / slime_tuning.knockback_duration))
@@ -273,7 +330,17 @@ func slime_element(slime: Sprite2D) -> int:
 
 
 func slime_attack_damage_result(root: Object, slime: Sprite2D) -> CombatCalculator.DamageResult:
-	return combat_damage(root, root.call("_slime_stats", slime) as StatsComponent, root.get("player_stats") as StatsComponent, slime_element(slime), ElementCatalogScript.Element.NEUTRAL)
+	var slime_stats := root.call("_slime_stats", slime) as StatsComponent
+	var player_stats := root.get("player_stats") as StatsComponent
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var element := slime_element(slime)
+	var variant := StringName(str(slime.get("variant")))
+	var request: RefCounted
+	if element != ElementCatalogScript.Element.NEUTRAL and SlimeVariantCatalogScript.is_elemental_variant(variant):
+		request = CombatDamageRequestScript.elemental_slime(tuning.elemental_slime_physical_base, tuning.elemental_slime_physical_per_strength, tuning.elemental_slime_magic_base, tuning.elemental_slime_magic_per_int, element, ElementCatalogScript.Element.NEUTRAL, false)
+	else:
+		request = CombatDamageRequestScript.physical(tuning.damage_base, tuning.enemy_damage_per_strength, ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.NEUTRAL, false)
+	return combat_damage_request(root, slime_stats, player_stats, request)
 
 
 func slime_attack_damage(root: Object, slime: Sprite2D) -> float:

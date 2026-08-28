@@ -1,8 +1,9 @@
 # FFIII-Inspired Six-Stat & Menu Redesign — Implementation Plan
 
-Status: approved design; reviewed against the reference screenshots and the
-current codebase on 2026-08-27; composite elemental combat clarification added
-on 2026-08-28; implementation not started
+Status: implemented and verified on `feature/ffiii-stats-menu-rework`; reviewed
+against the reference screenshots and the current codebase on 2026-08-27;
+composite elemental combat and responsive-menu corrections verified on
+2026-08-28
 
 Date: 2026-08-27
 
@@ -36,7 +37,8 @@ Related documents:
 - [`speed_stat_design.md`](speed_stat_design.md) — historical SPD rollout;
   AGI replaces the player-facing SPD attribute under this plan.
 - [`modular-display-and-settings-plan.md`](modular-display-and-settings-plan.md)
-  — supported 3:2, 16:10, and 16:9 logical display widths.
+  — adaptive `FULL` landscape presentation plus fixed 3:2, 16:10, and 16:9
+  logical display widths.
 
 ## 1. Locked product decisions
 
@@ -255,6 +257,40 @@ action multiplier = 1 + clamp(agility delta × per-action scale, min, max)
 AGI may alter timer duration and motion magnitude only within configured
 bounds. It never changes an animation sheet’s frame count, event frame, or
 attack-hitbox frame index.
+
+### 2.4 Implementation worksheet (Phase 0 lock)
+
+The first implementation pass uses the following named tuning values. They
+are deliberately conservative so the current physical game remains familiar
+while the new INT/MND choices become measurable immediately:
+
+| Area | Locked first-pass value |
+| --- | --- |
+| Level-1 balanced base (VIT/STR/DEF/AGI/INT/MND) | `3 / 2 / 2 / 1 / 1 / 1` |
+| Level-up point bands | levels `2–5: 1`, `6–10: 2`, `11–20: 3`, `21–35: 4`, `36+: 5` |
+| Physical packet | base `2.0` + `STR × 0.50`; P.DEF curve scale `12.0` |
+| Triangle magic packet | base `2.0` + `INT × 0.75`; elemental mode adds `0.75`; M.DEF curve scale `12.0` |
+| Imbue magic portion | base `1.0` + `INT × 0.50`; physical portion uses the normal weapon contract |
+| Elemental slime physical portion | base `1.5` + `STR × 0.85` |
+| Elemental slime magic portion | base `0.75` + `INT × 0.50` |
+| Existing roll/critical | roll `0.85–1.15`, critical chance `10%`, critical multiplier `1.5` |
+| AGI reference and scales | reference `1.0`; movement `0.012`, roll `0.015`, recovery `0.010`; existing `-0.5/+1.0` bounds |
+| Physical knockback STR helper | reference `5.0`, `+4%` per STR, bounded `0.75–1.50` |
+| Starter flat gear | weapon `STR +2`; armor `VIT +1/DEF +1`; shield `VIT +1/DEF +2/AGI -1`; accessory `STR +1/VIT +1/AGI +1` |
+
+The starter package therefore keeps the established effective gear totals
+(`VIT +3`, `STR +3`, `DEF +3`, `AGI +0`) while the balanced player baseline
+adds one point each of INT and MND. Flat gear is applied before additive rates.
+The first benchmark target is a readable level-one physical hit of roughly
+`3–5` damage into a level-one neutral slime and a Triangle result that rises
+only with INT; exact integer outcomes remain governed by the shared roll and
+element table.
+
+The authored enemy table is the catalog source of truth. Normal Slime has
+`INT 0` and the physical contract. Every colored variant has a positive INT
+and the separate elemental-slime contract; MND is defensive and never changes
+the element multiplier. The composite resolver exposes both post-mitigation
+components for tests and debugging, but presentation emits one damage number.
 
 ### 2.3 Damage classification
 
@@ -495,8 +531,10 @@ and pause each own a separate instance/state; they may reuse shell styling but
 never toggle visibility across the same mutable control collection.
 
 The shell uses the active logical view width from the display controller. It
-must be centered at 240×160 and naturally widen at 256×160/284×160 without
-making the panel shorter or moving the footer outside the top/bottom bars.
+is full-screen and opaque at every route, centered at 240×160, widened at
+256×160/284×160, and live-sized in `FULL` mode from the browser/window
+landscape viewport. The logical height remains 160, and the footer stays inside
+the lower safe area rather than being positioned from a stale 240×160 origin.
 
 ### 5.3 Cloaked Demon menu
 
@@ -611,10 +649,11 @@ reuse hidden hub widgets.
 
 The Settings page (from both title and pause) follows `config-menu.png`:
 each row is a label plus a **horizontal option selector** with the cursor on
-the active value (e.g. `ASPECT   3:2   16:10   16:9`; MUSIC/SFX step 0–100),
-and the bottom strip describes the highlighted row. It hosts the five landed
-settings rows (fullscreen, aspect, pixel perfect, music, SFX) without
-changing their approved behavior.
+the active value (e.g. `ASPECT   FULL   3:2   16:10   16:9`; MUSIC/SFX step
+0–100), and the bottom strip describes the highlighted row. It hosts the five
+landed settings rows (fullscreen, aspect, pixel perfect, music, SFX) without
+changing their approved behavior. `FULL` is the default adaptive landscape
+mode; the other values are fixed logical-width presets.
 
 Status/Equipment opened from pause are read-only for progression transactions:
 no shop, fuse, bind, allocation, or run-start actions. Returning from Settings
@@ -623,15 +662,41 @@ Game or leave two overlays visible.
 
 ### 5.7 Input contract
 
-- Keyboard/controller: one visible cursor, directional row navigation,
-  accept, and cancel/back work on every page.
+- Keyboard/controller: one visible pixel cursor, directional row navigation,
+  accept, and cancel/back work on every page. The platform-neutral mapping is
+  **Circle / Xbox B = CONFIRM** and **Cross / Xbox A = BACK**; Start opens or
+  closes Pause.
+- Prompts are device-aware: PlayStation shows `O SELECT` / `X BACK`, Xbox
+  shows `B SELECT` / `A BACK`, keyboard shows `ENTER SELECT` / `ESC BACK`,
+  and touch shows `TAP SELECT` / `BACK`.
 - Touch: every displayed action has a direct tap target; no touch path relies
-  on hidden focus, a held control, or controller-only glyphs.
-- The footer back/cancel control lives in the lower-right safe area when touch
-  controls are active and mirrors the Cancel action.
+  on hidden focus, a held control, or controller-only glyphs. Native button
+  hit-testing is scoped to the visible route, including the parent layer of
+  dialogue choices.
+- The footer/back control lives in the lower-right safe area when a page needs
+  it and mirrors the Back action. Gameplay touch controls and their input are
+  disabled while an opaque menu route is active.
 - Prompts use the active input device but must retain sufficient contrast. In
   particular, TAP text uses black glyph interiors with a white highlight, as
   established by the touch UI direction.
+
+### 5.8 Responsive and mobile presentation contract
+
+- `FULL` is the default aspect setting. It derives the logical width from the
+  live window/browser viewport while keeping the 160 px logical height. This
+  supports borderless standalone iPhone web launches in landscape (including
+  the common 19.5:9 surface) without assuming a 16:9 capture.
+- The fixed presets remain available for deliberate 3:2 (240×160), 16:10
+  (256×160), and 16:9 (284×160) presentation checks. All menu, HUD, touch,
+  and decorative-frame placement reads the active logical size.
+- World geometry, cached walkable polygons, collision shapes, and saved actor
+  positions stay in one stable coordinate system. A display-owned `Camera2D`
+  centers the world; aspect changes never translate `Map`, `Actors`, or their
+  collision data.
+- Pause, Demon Hub, Status, Allocate, Equipment, Shop, Fusion, Bind, Settings,
+  save select, archetype, run-complete, and game-over are mutually exclusive
+  full-screen routes. A child page replaces its source command page, and only
+  the active route receives menu input.
 
 ## 6. Implementation phases and exit criteria
 
@@ -710,7 +775,8 @@ visually without changing its timing contract.
 
 ### Phase 4 — Shared menu shell and Cloaked Demon redesign
 
-1. Build the reusable shell with own hub and pause instances.
+1. Build the reusable shell with independent hub and pause instances plus
+   mutually exclusive full-screen route ownership.
 2. Implement read-only Status and separate Allocate pages.
 3. Rebuild Equipment with its action row, comparison panel, and description
    bar; port Shop/Fusion/Bind into the shell.
@@ -718,7 +784,7 @@ visually without changing its timing contract.
 5. Remove all obsolete Start Run controls from the Demon Hub while keeping the
    hub flame’s run-entry path intact.
 6. Restyle Pause and Settings with the shell without changing their already
-   approved settings behavior.
+   approved settings behavior; keep Circle/B as confirm and Cross/A as back.
 
 Exit condition: no hub/pause overlap exists; every page works by controller,
 keyboard, mouse, and touch at all supported widths.
@@ -730,8 +796,9 @@ keyboard, mouse, and touch at all supported widths.
    run through the flame, fight, die/settle, reload, and confirm persistence.
 3. Test physical, pure magic, Imbue composite, and elemental-slime composite
    hits against neutral, resistant, weak, and immune targets.
-4. Perform manual visual review for 3:2, 16:10, and 16:9 on desktop and web,
-   including touch controls.
+4. Perform manual visual review for fixed 3:2, 16:10, and 16:9 plus adaptive
+   `FULL` on desktop and web, including a borderless iPhone landscape surface
+   and touch controls.
 5. Update affected design docs and mark the historical SPD plan superseded.
 
 Exit condition: the full profile → hub → flame → combat → settlement loop is
@@ -751,8 +818,8 @@ unexplained stat effect.
 | Imbue | STR physical portion + INT magic portion, DEF/M.DEF composite mitigation, one damage number/full-packet element multiplier, fixed cost/duration/cooldown, visual-intensity cap, front/back occlusion, room persistence. |
 | Elemental slime combat | Neutral slimes remain physical-only; non-neutral slimes use their separate STR-primary/INT-magic contract with DEF/M.DEF composite mitigation and one full-packet element matchup. |
 | Enemy profiles | Normal/Fire/Water/Electric/Grass/Shadow/Ground/Ice six-stat identities, neutral-versus-elemental contracts, and deterministic generation. |
-| Menus | Status/Allocate/Equipment/Shop/Fusion/Bind/Pause transitions, no simultaneous overlays, direct touch taps, cancel routing. |
-| Responsive display | Centering and safe footer at 240×160, 256×160, 284×160; web touch and desktop controller smoke paths. |
+| Menus | Status/Allocate/Equipment/Shop/Fusion/Bind/Pause transitions, mutually exclusive full-screen routes, direct touch taps, Circle/B confirm, Cross/A back, and cancel routing. |
+| Responsive display | Stable-camera centering and safe footer at 240×160, 256×160, 284×160, and live `FULL` widths; web touch and desktop controller smoke paths. |
 
 Likely new focused smoke tests:
 
@@ -784,9 +851,11 @@ must be updated rather than bypassed.
 | Menu redesign reintroduces touch traps/overlap. | Separate hub/pause state, direct tap targets, routing tests, and supported-aspect visual checks. |
 | Reference imitation obscures Tiny Demons identity. | Reuse only layout grammar; use original colors, glyphs, panel treatment, and game terminology. |
 
-## 9. Values to approve in Phase 0
+## 9. Values approved in Phase 0
 
-These are intentionally not hard-coded by this document:
+The implementation worksheet in §2.4 is the approved first-pass balance
+contract. These values are now represented by named tuning fields and covered
+by focused smoke tests:
 
 1. Level-1 base values for STR/AGI/VIT/INT/MND/DEF.
 2. Stat-point award bands for a six-choice economy.
@@ -798,11 +867,16 @@ These are intentionally not hard-coded by this document:
 6. Whether VIT receives a later explicit health-only secondary effect after
    the initial max-HP implementation proves readable.
 
-None of these values may be inferred from palette color, old allocation
-profiles, or a UI label. They are balance data and require a named tuning value
-plus test coverage.
+None of these values are inferred from palette color, old allocation profiles,
+or a UI label. They are balance data represented by named tuning values and
+the six-stat calculator, profile, equipment, composite-combat, slime, and
+Imbue smoke coverage.
 
 ## 10. Definition of done
+
+Implementation status: complete on the feature branch. The baseline was pushed
+to `main` before implementation began; the feature branch contains the full
+six-stat, combat-contract, menu, migration, and verification slice.
 
 The slice is complete only when:
 
@@ -820,5 +894,5 @@ The slice is complete only when:
   coherent Tiny Demons menu shell inspired by the references, not copied
   assets;
 - menu input works on controller, keyboard/mouse, and touch at all supported
-  display widths; and
+  display widths, with only the active full-screen route receiving input; and
 - the full smoke suite plus targeted migration/combat/menu tests pass.
