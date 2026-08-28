@@ -382,6 +382,13 @@ func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float 
 func _is_ui_accept_pressed() -> bool: return input_router != null and input_router.ui_accept_pressed()
 func _is_ui_accept_just_pressed() -> bool: return input_router != null and input_router.ui_accept_just_pressed()
 func _is_ui_cancel_just_pressed() -> bool: return input_router != null and input_router.menu_cancel_just_pressed()
+func _is_menu_confirm_pressed() -> bool: return input_router != null and input_router.menu_confirm_pressed()
+func _is_menu_confirm_just_pressed() -> bool: return input_router != null and input_router.menu_confirm_just_pressed()
+func _is_menu_back_pressed() -> bool: return input_router != null and input_router.menu_back_pressed()
+func _is_menu_back_just_pressed() -> bool: return input_router != null and input_router.menu_back_just_pressed()
+func _is_menu_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.menu_direction_just_pressed(direction)
+func _menu_confirm_prompt() -> String: return input_device_tracker.menu_confirm_prompt() if input_device_tracker != null else "ENTER SELECT"
+func _menu_back_prompt() -> String: return input_device_tracker.menu_back_prompt() if input_device_tracker != null else "ESC BACK"
 func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)
 func _apply_player_palette_async(palette_name: String) -> void:
 	if player_animation_component != null: player_animation_component.apply_palette_async(self, palette_name)
@@ -537,13 +544,14 @@ func _start_player_death() -> void:
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
-func _build_game_over_ui() -> void: var controls: Dictionary = screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D
+func _build_game_over_ui() -> void: var controls: Dictionary = screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D; screen_state_controller.game_over_footer_text = controls["footer"] as Sprite2D
 func _build_run_complete_ui() -> void:
 	var controls: Dictionary = screen_state_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
 	screen_state_controller.run_complete_overlay = controls["overlay"] as ColorRect
 	screen_state_controller.run_complete_texts = controls["lines"] as Array[Sprite2D]
 	screen_state_controller.run_complete_button = controls["return"] as Button
 	screen_state_controller.run_complete_cursor = controls["cursor"] as Sprite2D
+	screen_state_controller.run_complete_footer_text = controls["footer"] as Sprite2D
 func _build_settings_ui() -> void:
 	var controls: Dictionary = screen_state_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"), Callable(self, "_select_setting_option"))
 	screen_state_controller.settings_overlay = controls["overlay"] as ColorRect
@@ -598,6 +606,11 @@ func _open_hub_from_cloaked_demon() -> void:
 	hub_flow_controller.call("open_hub_from_cloaked_demon", self)
 func _close_hub_to_run() -> void:
 	hub_flow_controller.call("close_hub_to_run", self)
+func _hub_back_or_close() -> void:
+	if screen_state_controller.pause_overlay != null and screen_state_controller.pause_overlay.visible:
+		_pause_back()
+	elif screen_state_controller.hub_overlay != null and screen_state_controller.hub_overlay.visible:
+		hub_flow_controller.call("back_to_hub_root", self)
 func _update_hub_input() -> void: hub_flow_controller.call("update_hub_input", self)
 func _update_pause_input() -> void: screen_state_controller.update_pause_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
@@ -719,15 +732,14 @@ func _run_metric_color(quality: float) -> Color:
 func _update_run_complete_input() -> void:
 	if screen_state_controller.run_complete_button == null:
 		return
-	var interact_down := _is_interact_input_pressed()
-	var interact_pressed := interact_down and not interact_input_was_down
-	interact_input_was_down = interact_down
+	if screen_state_controller.run_complete_footer_text != null:
+		screen_state_controller.run_complete_footer_text.texture = _pixel_text_texture(_menu_back_prompt(), Color8(148, 220, 255))
 	if screen_state_controller.menu_input_release_lock:
-		var released := not interact_down and not _is_ui_accept_pressed() and not _is_menu_cancel_input_pressed()
+		var released := not _is_menu_confirm_pressed() and not _is_menu_back_pressed()
 		if released:
 			screen_state_controller.menu_input_release_lock = false
 		return
-	if _is_ui_accept_just_pressed() or interact_pressed or _is_ui_cancel_just_pressed() or _is_menu_cancel_input_pressed():
+	if _is_menu_confirm_just_pressed() or _is_menu_back_just_pressed():
 		screen_state_controller.run_complete_button.pressed.emit()
 func _return_from_run_complete() -> void:
 	run_flow_controller.call("return_from_run_complete", self)
@@ -735,7 +747,15 @@ func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible: return
 	_apply_run_rank_grade("F")
 	_settle_current_run(&"defeat")
-	game_over_overlay.visible = true; screen_state_controller.set_state(&"game_over"); game_over_fade_timer = 0.0; game_over_overlay.modulate.a = 0.0; last_game_over_focus = null; game_over_button.grab_focus()
+	game_over_overlay.visible = true
+	screen_state_controller.set_state(&"game_over")
+	game_over_fade_timer = 0.0
+	game_over_overlay.modulate.a = 0.0
+	screen_state_controller.game_over_row = 0
+	screen_state_controller.menu_input_release_lock = true
+	last_game_over_focus = null
+	if game_over_button != null: game_over_button.release_focus()
+	if game_over_title_button != null: game_over_title_button.release_focus()
 func _build_title_screen() -> void: save_flow_controller.call("build_title_screen", self)
 func _build_archetype_screen() -> void: save_flow_controller.call("build_archetype_screen", self)
 func _update_title_screen(delta: float) -> void: save_flow_controller.call("update_title_screen", self, delta)

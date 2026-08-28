@@ -11,12 +11,12 @@ const SETTINGS_PATH := "user://settings.cfg"
 const SECTION := "settings"
 const DEFAULTS := {
 	"fullscreen": false,
-	"aspect": "3:2",
+	"aspect": "FULL",
 	"pixel_perfect": true,
 	"music_volume": 100,
 	"sfx_volume": 100,
 }
-const VALID_ASPECTS := ["3:2", "16:10", "16:9"]
+const VALID_ASPECTS := ["FULL", "3:2", "16:10", "16:9"]
 
 var file_path := SETTINGS_PATH
 var _values: Dictionary = DEFAULTS.duplicate(true)

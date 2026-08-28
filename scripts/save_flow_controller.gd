@@ -61,7 +61,7 @@ func update_save_select_cursor(root: Object) -> void:
 	if root.screen_state_controller.save_select_overlay == null: return
 	for child in root.screen_state_controller.save_select_overlay.get_children():
 		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == root.screen_state_controller.save_select_index:
-			(child as Button).grab_focus()
+			(child as Button).release_focus()
 	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
 	if cursor != null:
 		var display := root.get("display_controller") as DisplayController
@@ -185,8 +185,6 @@ func close_save_select(root: Object) -> void:
 	root.screen_state_controller.title_transition_active = false
 	root.screen_state_controller.pending_title_destination = ""
 	root.screen_state_controller.set_state(&"title")
-	if root.screen_state_controller.title_continue_button != null:
-		(root.screen_state_controller.title_continue_button if not root.screen_state_controller.title_continue_button.disabled else root.screen_state_controller.title_start_button).grab_focus()
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
@@ -205,7 +203,6 @@ func cancel_character_creation(root: Object) -> void:
 	root.screen_state_controller.title_transition_active = false
 	root.screen_state_controller.pending_title_destination = ""
 	root.screen_state_controller.set_state(&"title")
-	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.grab_focus()
 
 
 func select_continue_slot(root: Object, slot: int) -> void:
@@ -294,7 +291,6 @@ func update_archetype_arrow_animation(root: Object) -> void:
 func select_archetype_menu_row(root: Object, row: int) -> void:
 	root.screen_state_controller.archetype_menu_row = posmod(row, 2)
 	root.call("_update_archetype_screen")
-	if root.screen_state_controller.archetype_menu_row == 1: root.screen_state_controller.archetype_start_button.grab_focus()
 
 
 func update_archetype_screen(root: Object) -> void:

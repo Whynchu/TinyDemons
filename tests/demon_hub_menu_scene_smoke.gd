@@ -22,7 +22,7 @@ func _initialize() -> void:
 		gameplay.call("_show_hub", true, false)
 		await process_frame
 		_expect(screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.hub_pause_mode == false, "Demon interaction opens only the preparation overlay", failures)
-		_expect(screens.hub_overlay.size == Vector2(228, 148) and screens.hub_overlay.get_node_or_null("HubPlayerCard") != null, "Demon Hub has the compact player card shell", failures)
+		_expect(screens.hub_overlay.size == screens.display_view_size and screens.hub_overlay.position == Vector2.ZERO and screens.hub_overlay.get_node_or_null("HubRootPage/HubPlayerCard") != null, "Demon Hub owns the full-screen player card shell", failures)
 		_expect(screens.hub_overlay.get_node_or_null("HubCommandStart") == null, "Demon Hub does not construct a hidden Start Run button", failures)
 		_expect(screens.hub_page_buttons.all(func(button: Button) -> bool: return button.get_meta("hub_page_target", -1) >= 0), "hub commands use explicit page targets", failures)
 		gameplay.call("_close_hub_to_run")
@@ -30,7 +30,7 @@ func _initialize() -> void:
 		gameplay.call("_open_pause_menu")
 		await process_frame
 		_expect(screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "pause opens a distinct overlay and state", failures)
-		_expect(screens.pause_overlay.size == Vector2(208, 148) and screens.pause_menu_buttons.size() == 5, "pause uses its own compact command shell", failures)
+		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 5, "pause uses its own full-screen command shell", failures)
 		_expect(gameplay.call("_input_context") == InputRouter.Context.PAUSE, "pause routes through the dedicated input context", failures)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()

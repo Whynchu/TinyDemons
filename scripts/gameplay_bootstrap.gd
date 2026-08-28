@@ -224,9 +224,6 @@ func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> vo
 	screens.title_transition_active = false
 	screens.pending_title_destination = ""
 	screens.set_state(&"title")
-	var focus_target := screens.title_continue_button if screens.title_continue_button != null and not screens.title_continue_button.disabled else screens.title_start_button
-	if focus_target != null:
-		focus_target.grab_focus()
 
 
 func _enter_debug_gameplay(root: Object) -> void:

@@ -87,18 +87,8 @@ func _physics_process(delta: float) -> void:
 	_update_roll_dust(0.0)
 	_update_large_room_camera()
 func _update_game_over_input() -> void:
-	if game_over_overlay == null or not game_over_overlay.visible: return
-	var focused := get_viewport().gui_get_focus_owner() as Button
-	if focused != last_game_over_focus:
-		var changed_from_existing := last_game_over_focus != null
-		last_game_over_focus = focused
-		if changed_from_existing and focused != null:
-			_play_sound("ui_hover", -6.0, 1.0)
-	if _is_interact_input_pressed():
-		var interact_focused := get_viewport().gui_get_focus_owner() as Button
-		if interact_focused != null and not interact_focused.disabled:
-			_play_sound("ui_confirm", 0.0, 1.0)
-			interact_focused.pressed.emit()
+	if screen_state_controller != null:
+		screen_state_controller.update_game_over_input(self)
 func _return_to_title() -> void:
 	_settle_current_run(&"return_to_title")
 	if player_profile != null:
