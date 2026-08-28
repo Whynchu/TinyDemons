@@ -115,11 +115,18 @@ func tick(root: Object, delta: float) -> void:
 		if ssc.title_transition_active and ssc.title_transition_timer < 0.72: return
 		if not ssc.title_transition_active: return
 	if bool(root.get("loading_screen_active")): root.call("_update_loading_screen", delta); return
-	var hub_overlay := ssc.hub_overlay
-	if hub_overlay != null and hub_overlay.visible:
-		if ssc.hub_pause_mode and bool(root.call("_is_pause_input_just_pressed")):
+	var pause_overlay := ssc.pause_overlay
+	if pause_overlay != null and pause_overlay.visible:
+		if bool(root.call("_is_pause_input_just_pressed")):
 			root.call("_close_hub_to_run")
 			return
+		root.call("_update_pause_input")
+		# The HUD remains alive above the menu. Continue ticking it so the coin
+		# animation and top-bar status do not freeze while the game is paused.
+		root.call("_update_overworld_ui")
+		return
+	var hub_overlay := ssc.hub_overlay
+	if hub_overlay != null and hub_overlay.visible:
 		root.call("_update_hub_input")
 		# The HUD remains alive above the nested hub panel. Continue ticking it so
 		# the coin animation and gold display do not freeze while shopping.
@@ -194,7 +201,9 @@ func tick(root: Object, delta: float) -> void:
 		if not orb_cancelled and previous_attack_animation != "spin_attack":
 			# Spin owns its full recovery in the authored animation. Do not let the
 			# generic attack completion bridge add a between/after pose afterward.
-			var attack_multiplier := player_tuning.attack_multiplier(float(root.get("player_spd")))
+			var agi_value: Variant = root.get("player_agi")
+			var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+			var attack_multiplier := player_tuning.attack_multiplier_for_agi(effective_agi)
 			if bool(root.get("player_just_finished_attack2")) and anim.after_attack2_texture != null:
 				anim.begin_transition(root, "after", anim.after_attack2_texture, player_tuning.attack2_cooldown / attack_multiplier)
 			elif (player_attack == null or not player_attack.combo_buffered) and anim.between_attack_texture != null:

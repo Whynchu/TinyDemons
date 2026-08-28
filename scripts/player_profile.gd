@@ -3,7 +3,7 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 8
+const CURRENT_SCHEMA_VERSION := 9
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
@@ -27,11 +27,27 @@ var unspent_stat_points := 0
 var base_vit := 3
 var base_str := 2
 var base_def := 2
-var base_spd := 1
+var base_agi := 1
+var base_int := 1
+var base_mnd := 1
+## Temporary compatibility alias for schema-8 callers.
+var base_spd:
+	get:
+		return base_agi
+	set(value):
+		base_agi = maxi(int(value), 0)
 var allocated_vit := 0
 var allocated_str := 0
 var allocated_def := 0
-var allocated_spd := 0
+var allocated_agi := 0
+var allocated_int := 0
+var allocated_mnd := 0
+## Temporary compatibility alias for schema-8 callers.
+var allocated_spd:
+	get:
+		return allocated_agi
+	set(value):
+		allocated_agi = maxi(int(value), 0)
 var gold := 0
 var souls := 0
 var starter_soul_gift_claimed := false
@@ -319,7 +335,9 @@ func allocate_stat(stat_name: StringName, amount: int = 1) -> bool:
 		&"VIT": allocated_vit += points
 		&"STR": allocated_str += points
 		&"DEF": allocated_def += points
-		&"SPD": allocated_spd += points
+		&"AGI", &"SPD": allocated_agi += points
+		&"INT": allocated_int += points
+		&"MND": allocated_mnd += points
 		_:
 			return false
 	unspent_stat_points -= points
@@ -331,7 +349,7 @@ func respec_cost() -> int:
 
 
 func reset_allocated_stats() -> int:
-	var refunded := allocated_vit + allocated_str + allocated_def + allocated_spd
+	var refunded := allocated_vit + allocated_str + allocated_def + allocated_agi + allocated_int + allocated_mnd
 	var cost := respec_cost()
 	if refunded <= 0 or gold < cost:
 		return 0
@@ -339,7 +357,9 @@ func reset_allocated_stats() -> int:
 	allocated_vit = 0
 	allocated_str = 0
 	allocated_def = 0
-	allocated_spd = 0
+	allocated_agi = 0
+	allocated_int = 0
+	allocated_mnd = 0
 	unspent_stat_points += refunded
 	return refunded
 
@@ -361,11 +381,17 @@ func to_dictionary() -> Dictionary:
 		"base_vit": base_vit,
 		"base_str": base_str,
 		"base_def": base_def,
-		"base_spd": base_spd,
+		"base_agi": base_agi,
+		"base_int": base_int,
+		"base_mnd": base_mnd,
+		"base_spd": base_agi,
 		"allocated_vit": allocated_vit,
 		"allocated_str": allocated_str,
 		"allocated_def": allocated_def,
-		"allocated_spd": allocated_spd,
+		"allocated_agi": allocated_agi,
+		"allocated_int": allocated_int,
+		"allocated_mnd": allocated_mnd,
+		"allocated_spd": allocated_agi,
 		"gold": gold,
 		"souls": souls,
 		"starter_soul_gift_claimed": starter_soul_gift_claimed,
@@ -387,7 +413,8 @@ func load_dictionary(data: Dictionary) -> void:
 	if saved_schema != CURRENT_SCHEMA_VERSION and saved_schema != CURRENT_SCHEMA_VERSION - 1:
 		schema_version = CURRENT_SCHEMA_VERSION
 		return
-	schema_version = saved_schema
+	var is_schema_8 := saved_schema == CURRENT_SCHEMA_VERSION - 1
+	schema_version = CURRENT_SCHEMA_VERSION
 	has_started = bool(data.get("has_started", false))
 	open_hub_on_load = bool(data.get("open_hub_on_load", false))
 	pending_route = str(data.get("pending_route", "hub" if open_hub_on_load else "title"))
@@ -408,11 +435,15 @@ func load_dictionary(data: Dictionary) -> void:
 	base_vit = maxi(int(data.get("base_vit", 3)), 0)
 	base_str = maxi(int(data.get("base_str", 2)), 0)
 	base_def = maxi(int(data.get("base_def", 2)), 0)
-	base_spd = maxi(int(data.get("base_spd", 1)), 0)
+	base_agi = maxi(int(data.get("base_spd", 1) if is_schema_8 else data.get("base_agi", data.get("base_spd", 1))), 0)
+	base_int = maxi(int(data.get("base_int", 1)), 0)
+	base_mnd = maxi(int(data.get("base_mnd", 1)), 0)
 	allocated_vit = maxi(int(data.get("allocated_vit", 0)), 0)
 	allocated_str = maxi(int(data.get("allocated_str", 0)), 0)
 	allocated_def = maxi(int(data.get("allocated_def", 0)), 0)
-	allocated_spd = maxi(int(data.get("allocated_spd", 0)), 0)
+	allocated_agi = maxi(int(data.get("allocated_spd", 0) if is_schema_8 else data.get("allocated_agi", data.get("allocated_spd", 0))), 0)
+	allocated_int = maxi(int(data.get("allocated_int", 0)), 0)
+	allocated_mnd = maxi(int(data.get("allocated_mnd", 0)), 0)
 	gold = maxi(int(data.get("gold", 0)), 0)
 	souls = maxi(int(data.get("souls", 0)), 0)
 	starter_soul_gift_claimed = bool(data.get("starter_soul_gift_claimed", false))

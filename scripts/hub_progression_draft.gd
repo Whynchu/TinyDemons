@@ -6,13 +6,32 @@ class_name HubProgressionDraft
 var vit := 0
 var str := 0
 var def := 0
-var spd := 0
+var agi := 0
+var intelligence := 0
+var mnd := 0
+
+## Temporary compatibility alias for the pre-AGI hub code.
+var spd:
+	get:
+		return agi
+	set(value):
+		agi = maxi(int(value), 0)
 
 func clear() -> void:
 	vit = 0
 	str = 0
 	def = 0
-	spd = 0
+	agi = 0
+	intelligence = 0
+	mnd = 0
 
 func as_dictionary() -> Dictionary:
-	return {"VIT": vit, "STR": str, "DEF": def, "SPD": spd}
+	return {
+		"VIT": vit,
+		"STR": str,
+		"DEF": def,
+		"AGI": agi,
+		"INT": intelligence,
+		"MND": mnd,
+		"SPD": agi,
+	}

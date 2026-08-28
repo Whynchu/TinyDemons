@@ -3,7 +3,7 @@ class_name InputRouter
 
 ## One per-frame polling boundary for gameplay, dialogue, hub, and menu input.
 
-enum Context { GAMEPLAY, DIALOGUE, HUB, MENU }
+enum Context { GAMEPLAY, DIALOGUE, HUB, MENU, PAUSE }
 
 var context := Context.GAMEPLAY
 var devices: Array[int] = []

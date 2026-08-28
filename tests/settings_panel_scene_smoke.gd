@@ -40,6 +40,7 @@ func _initialize() -> void:
 		_expect(sound.sfx_volume() == 40, "SFX volume applies to the live sound manager", failures)
 		_expect(settings.load_settings().get("aspect") == "16:10", "settings changes persist through ConfigFile", failures)
 		_expect(settings.load_settings().get("sfx_volume") == 40, "audio settings persist through ConfigFile", failures)
+		_expect(screens.settings_option_buttons.size() == 5 and screens.settings_option_buttons[1].size() == 3 and screens.settings_option_buttons[3].size() == 11, "settings exposes direct horizontal option controls", failures)
 		# Confirming the navigable BACK row must close Settings without allowing the
 		# same held input to fall through to the title screen's New Game button.
 		screens.settings_row = screens.settings_value_buttons.size()
@@ -77,7 +78,7 @@ func _initialize() -> void:
 		gameplay.call("_update_settings_input")
 		await process_frame
 		_expect(not screens.settings_overlay.visible and screens.hub_pause_mode, "mapped cancel closes pause settings", failures)
-		_expect(screens.hub_overlay.visible and screens.hub_gear_stat_panel.visible, "closing settings restores the pause status panel", failures)
+		_expect(screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.pause_page == 0, "closing settings restores the dedicated pause command panel", failures)
 	gameplay.queue_free()
 	await process_frame
 	_cleanup()
