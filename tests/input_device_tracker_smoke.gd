@@ -58,6 +58,12 @@ func _initialize() -> void:
 	tracker.set_device(InputDeviceTracker.Device.TOUCH)
 	_expect(tracker.prompt_label(&"interact") == "TAP", "touch interaction prompt uses TAP", failures)
 	_expect(tracker.prompt_label(&"attack") == "TOUCH", "touch action prompt remains device-aware", failures)
+	tracker.set_device(InputDeviceTracker.Device.GAMEPAD)
+	var rebuilt := InputDeviceTracker.new()
+	get_root().add_child(rebuilt)
+	await process_frame
+	_expect(rebuilt.current_device == InputDeviceTracker.Device.GAMEPAD, "last controller device survives tracker rebuild", failures)
+	rebuilt.queue_free()
 
 	tracker.free()
 	_finish(failures)
