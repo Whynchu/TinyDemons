@@ -10,14 +10,14 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var expected_stats := {
-		&"grey": [2, 2, 2, 2],
-		&"red": [1, 4, 2, 1],
-		&"blue": [2, 1, 4, 1],
-		&"yellow": [2, 2, 1, 3],
-		&"green": [4, 1, 2, 1],
-		&"purple": [1, 3, 1, 3],
-		&"orange": [3, 1, 3, 1],
-		&"aquamarine": [2, 2, 1, 3],
+		&"grey": [2, 2, 2, 2, 0, 1],
+		&"red": [1, 4, 2, 1, 2, 1],
+		&"blue": [2, 1, 4, 1, 2, 3],
+		&"yellow": [2, 2, 1, 3, 3, 1],
+		&"green": [4, 1, 2, 1, 2, 2],
+		&"purple": [1, 3, 1, 3, 3, 1],
+		&"orange": [3, 1, 3, 1, 2, 2],
+		&"aquamarine": [2, 2, 1, 3, 3, 2],
 	}
 	var expected_elements := {
 		&"grey": ElementCatalogScript.Element.NEUTRAL,
@@ -35,8 +35,11 @@ func _initialize() -> void:
 		stats.apply_enemy_variant_profile(definition["base_stats"], definition["growth_weights"], variant)
 		stats.level = 1
 		var expected: Array = expected_stats[variant]
-		_expect([stats.vit, stats.strength, stats.def, stats.speed] == expected, "%s level-one stats are exact" % variant, failures)
+		_expect([stats.vit, stats.strength, stats.def, stats.agi, stats.intelligence, stats.mnd] == expected, "%s level-one six-stat profile is exact" % variant, failures)
 		_expect(CatalogScript.element_for_variant(variant) == expected_elements[variant], "%s element is exact" % variant, failures)
+		_expect(CatalogScript.damage_contract_for_variant(variant) == (&"physical" if variant == &"grey" else &"elemental_slime"), "%s damage contract is explicit" % variant, failures)
+		_expect(CatalogScript.is_elemental_variant(variant) == (variant != &"grey") and stats.intelligence == expected[4], "%s INT contract matches neutral/elemental rule" % variant, failures)
+		_expect(stats.mnd == expected[5], "%s MND is present as defensive magic stat" % variant, failures)
 		_expect(CatalogScript.display_name_for_variant(variant) != "", "%s has a display name" % variant, failures)
 	_expect(CatalogScript.display_name_for_variant(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
 

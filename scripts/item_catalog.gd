@@ -30,23 +30,25 @@ const BASIC_GEAR_DROP_WEIGHT := 5.0
 
 const DEFINITIONS := {
 	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 45},
-	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 3.0, "speed": -1.0}, "price": 90},
-	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "tier_stat": "defense", "bonuses": {"defense": 2.0, "speed": -1.0}, "price": 95},
-	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "speed": -1.0}, "price": 115},
-	&"iron_maul": {"name": "IRON MAUL", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 2.0, "speed": -1.0}, "price": 105},
-	&"quick_dagger": {"name": "QUICK DAGGER", "slot": &"weapon", "tier_stat": "speed", "bonuses": {"speed": 3.0}, "price": 75},
+	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 3.0, "agility": -1.0}, "price": 90},
+	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "tier_stat": "defense", "bonuses": {"defense": 2.0, "agility": -1.0}, "price": 95},
+	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "agility": -1.0}, "price": 115},
+	&"iron_maul": {"name": "IRON MAUL", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 2.0, "agility": -1.0}, "price": 105},
+	&"quick_dagger": {"name": "QUICK DAGGER", "slot": &"weapon", "tier_stat": "agility", "bonuses": {"agility": 3.0}, "price": 75},
 	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"armor", "tier_stat": "vitality", "bonuses": {"vitality": 1.0, "defense": 1.0}, "price": 45},
-	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "speed": 1.0}, "price": 110},
-	&"iron_cuirass": {"name": "IRON CUIRASS", "slot": &"armor", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0, "speed": -1.0}, "price": 105},
-	&"feather_cloak": {"name": "FEATHER CLOAK", "slot": &"armor", "tier_stat": "speed", "bonuses": {"speed": 3.0}, "price": 80},
-	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "speed": -1.0, "defense": 2.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 45},
-	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "speed": -2.0, "defense": 3.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0}, "price": 110},
-	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "speed": -1.0, "defense": 2.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0}, "price": 105},
+	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"armor", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "agility": 1.0}, "price": 110},
+	&"iron_cuirass": {"name": "IRON CUIRASS", "slot": &"armor", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0, "agility": -1.0}, "price": 105},
+	&"feather_cloak": {"name": "FEATHER CLOAK", "slot": &"armor", "tier_stat": "agility", "bonuses": {"agility": 3.0}, "price": 80},
+	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "agility": -1.0, "defense": 2.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 45},
+	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "agility": -2.0, "defense": 3.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0}, "price": 110},
+	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "agility": -1.0, "defense": 2.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0}, "price": 105},
 	&"parry_buckler": {"name": "PARRY BUCKLER", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "defense": 2.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 50},
-	&"bangle": {"name": "BANGLE", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 1.0, "vitality": 1.0, "speed": 1.0}, "price": 45},
-	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 2.0, "speed": -1.0}, "price": 105},
-	&"warrior_charm": {"name": "WARRIOR CHARM", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0, "speed": -1.0}, "price": 100},
-	&"swift_boots": {"name": "SWIFT BOOTS", "slot": &"accessory", "tier_stat": "speed", "bonuses": {"speed": 3.0}, "price": 85},
+	&"bangle": {"name": "BANGLE", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 1.0, "vitality": 1.0, "agility": 1.0}, "price": 45},
+	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 2.0, "agility": -1.0}, "price": 105},
+	&"warrior_charm": {"name": "WARRIOR CHARM", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0, "agility": -1.0}, "price": 100},
+	&"swift_boots": {"name": "SWIFT BOOTS", "slot": &"accessory", "tier_stat": "agility", "bonuses": {"agility": 3.0}, "price": 85},
+	&"chroma_talisman": {"name": "CHROMA TALISMAN", "slot": &"accessory", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 125},
+	&"mindweave_robe": {"name": "MINDWEAVE ROBE", "slot": &"armor", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 125},
 }
 
 const TRANSMUTATIONS := {
@@ -204,18 +206,20 @@ func player_stat_rates(item: ItemInstance) -> Dictionary:
 	# A rarity rate is a buff to a stat the item positively supplies. Negative
 	# trade-offs remain flat so a higher rarity never turns a penalty into a
 	# hidden bonus.
-	for stat: String in ["strength", "vitality", "defense", "speed"]:
+	for stat: String in ["strength", "vitality", "defense", "agi", "intelligence", "mnd"]:
 		if float(package.get(stat, 0.0)) > 0.0:
 			result[stat] = rate
+			if stat == "agi":
+				result["speed"] = rate
 	return result
 
 func player_stat_rate_text(item: ItemInstance) -> String:
-	var labels := {"strength": "STR", "vitality": "VIT", "defense": "DEF", "speed": "SPD"}
+	var labels := {"strength": "STR", "vitality": "VIT", "defense": "DEF", "agi": "AGI", "intelligence": "INT", "mnd": "MND"}
 	var parts: Array[String] = []
 	var rates := player_stat_rates(item)
 	if rates.is_empty() and item != null:
 		return "PLAYER +%d%%" % roundi(rarity_stat_rate(item.rarity) * 100.0)
-	for stat: String in ["strength", "vitality", "defense", "speed"]:
+	for stat: String in ["strength", "vitality", "defense", "agi", "intelligence", "mnd"]:
 		if rates.has(stat):
 			parts.append("%s +%d%%" % [labels[stat], roundi(float(rates[stat]) * 100.0)])
 	return " ".join(parts)
@@ -226,10 +230,10 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var result: Dictionary = {}
 	var base_bonuses: Dictionary = definition.get("bonuses", {})
 	var flat_points := float(rarity_flat_points(item.rarity)) + enhancement_flat_points(item.enhancement_level)
-	var tier_stat := str(definition.get("tier_stat", ""))
+	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
 	for stat: String in base_bonuses:
 		var base_value := float(base_bonuses[stat])
-		var normalized_stat: String = str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat))
+		var normalized_stat: String = _normalize_stat_key(str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat)))
 		if normalized_stat in ["health_rate", "damage_rate"]:
 			continue
 		var flat_value := base_value
@@ -238,16 +242,29 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 		# Legacy affixes remain serialized for save compatibility, but the new
 		# tier package is deterministic and no longer adds hidden stat points.
 		result[normalized_stat] = flat_value
+		if normalized_stat == "agi":
+			result["speed"] = flat_value
 	return result
 
 
 func combat_primary_points(item: ItemInstance) -> Dictionary:
 	var result: Dictionary = {}
 	var displayed_bonuses := bonuses(item)
-	for stat in ["strength", "vitality", "defense", "speed"]:
+	for stat in ["strength", "vitality", "defense", "agi", "intelligence", "mnd"]:
 		if displayed_bonuses.has(stat):
 			result[stat] = float(displayed_bonuses[stat])
+	if displayed_bonuses.has("agi"):
+		result["speed"] = float(displayed_bonuses["agi"])
 	return result
+
+
+static func _normalize_stat_key(stat: String) -> String:
+	return {
+		"speed": "agi",
+		"agility": "agi",
+		"int": "intelligence",
+		"mind": "mnd",
+	}.get(stat, stat)
 
 
 func shield_bonuses(item: ItemInstance) -> Dictionary:

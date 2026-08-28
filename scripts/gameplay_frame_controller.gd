@@ -74,32 +74,34 @@ func tick(root: Object, delta: float) -> void:
 		return
 	var ssc := root.get("screen_state_controller") as ScreenStateController
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
-		if bool(root.call("_is_menu_cancel_input_pressed")):
+		if ssc.save_select_footer_text != null:
+			ssc.save_select_footer_text.texture = root.call("_pixel_text_texture", root.call("_menu_back_prompt"), Color8(148, 220, 255)) as Texture2D
+		if bool(root.call("_is_menu_back_just_pressed")):
 			if ssc.save_overwrite_prompt_active: root.call("_cancel_overwrite")
 			else: root.call("_close_save_select")
 			return
 		if ssc.menu_input_release_lock:
-			if not bool(root.call("_is_interact_input_pressed")) and not bool(root.call("_is_ui_accept_pressed")):
+			if not bool(root.call("_is_menu_confirm_pressed")) and not bool(root.call("_is_menu_back_pressed")):
 				ssc.menu_input_release_lock = false
 			else:
 				return
 		if ssc.save_overwrite_prompt_active:
 			var choice := ssc.save_overwrite_choice
-			if bool(root.call("_is_ui_direction_just_pressed", &"ui_left")) or bool(root.call("_is_ui_direction_just_pressed", &"ui_right")):
+			if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
 				ssc.save_overwrite_choice = 1 - choice; root.call("_update_overwrite_cursor"); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			elif bool(root.call("_is_interact_input_pressed")) or bool(root.call("_is_ui_accept_just_pressed")):
+			elif bool(root.call("_is_menu_confirm_just_pressed")):
 				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 				if choice == 0: (ssc.save_select_overlay.get_node("OverwriteYes") as Button).pressed.emit()
 				else: (ssc.save_select_overlay.get_node("OverwriteNo") as Button).pressed.emit()
 			return
 		var slot := ssc.save_select_index
-		if bool(root.call("_is_ui_direction_just_pressed", &"ui_up")): slot -= 1
-		elif bool(root.call("_is_ui_direction_just_pressed", &"ui_down")): slot += 1
+		if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): slot -= 1
+		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): slot += 1
 		if slot != ssc.save_select_index:
 			ssc.save_select_index = posmod(slot, ProfileSaveService.SLOT_COUNT)
 			root.call("_update_save_select_cursor")
 			root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif bool(root.call("_is_interact_input_pressed")) or bool(root.call("_is_ui_accept_just_pressed")):
+		elif bool(root.call("_is_menu_confirm_just_pressed")):
 			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 			for child in ssc.save_select_overlay.get_children():
 				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == ssc.save_select_index:
@@ -115,11 +117,18 @@ func tick(root: Object, delta: float) -> void:
 		if ssc.title_transition_active and ssc.title_transition_timer < 0.72: return
 		if not ssc.title_transition_active: return
 	if bool(root.get("loading_screen_active")): root.call("_update_loading_screen", delta); return
-	var hub_overlay := ssc.hub_overlay
-	if hub_overlay != null and hub_overlay.visible:
-		if ssc.hub_pause_mode and bool(root.call("_is_pause_input_just_pressed")):
+	var pause_overlay := ssc.pause_overlay
+	if pause_overlay != null and pause_overlay.visible:
+		if bool(root.call("_is_pause_input_just_pressed")):
 			root.call("_close_hub_to_run")
 			return
+		root.call("_update_pause_input")
+		# The HUD remains alive above the menu. Continue ticking it so the coin
+		# animation and top-bar status do not freeze while the game is paused.
+		root.call("_update_overworld_ui")
+		return
+	var hub_overlay := ssc.hub_overlay
+	if hub_overlay != null and hub_overlay.visible:
 		root.call("_update_hub_input")
 		# The HUD remains alive above the nested hub panel. Continue ticking it so
 		# the coin animation and gold display do not freeze while shopping.
@@ -130,7 +139,7 @@ func tick(root: Object, delta: float) -> void:
 		root.call("_update_run_complete_input")
 		return
 	if ssc.menu_input_release_lock:
-		if not bool(root.call("_is_menu_cancel_input_pressed")):
+		if not bool(root.call("_is_menu_back_pressed")) and not bool(root.call("_is_menu_confirm_pressed")):
 			ssc.menu_input_release_lock = false
 		else:
 			return
@@ -194,7 +203,9 @@ func tick(root: Object, delta: float) -> void:
 		if not orb_cancelled and previous_attack_animation != "spin_attack":
 			# Spin owns its full recovery in the authored animation. Do not let the
 			# generic attack completion bridge add a between/after pose afterward.
-			var attack_multiplier := player_tuning.attack_multiplier(float(root.get("player_spd")))
+			var agi_value: Variant = root.get("player_agi")
+			var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+			var attack_multiplier := player_tuning.attack_multiplier_for_agi(effective_agi)
 			if bool(root.get("player_just_finished_attack2")) and anim.after_attack2_texture != null:
 				anim.begin_transition(root, "after", anim.after_attack2_texture, player_tuning.attack2_cooldown / attack_multiplier)
 			elif (player_attack == null or not player_attack.combo_buffered) and anim.between_attack_texture != null:

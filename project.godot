@@ -25,14 +25,6 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
 window/stretch/scale_mode="integer"
 
-[rendering]
-
-environment/defaults/default_clear_color=Color(0.0666667, 0.0745098, 0.0941176, 1)
-
-[input_devices]
-
-pointing/emulate_mouse_from_touch=true
-
 [input]
 
 move_left={
@@ -118,3 +110,4 @@ textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
 renderer/rendering_method.web="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.0666667, 0.0745098, 0.0941176, 1)

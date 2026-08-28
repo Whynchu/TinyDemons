@@ -259,7 +259,9 @@ func magic_frame_time(root: Object) -> float:
 	var tuning := root.get("player_tuning") as PlayerTuning
 	if tuning == null:
 		return 0.108
-	var attack_multiplier := tuning.attack_multiplier(float(root.get("player_spd")))
+	var agi_value: Variant = root.get("player_agi")
+	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	var attack_multiplier := tuning.attack_multiplier_for_agi(effective_agi)
 	return maxf(tuning.attack_frame_time * MAGIC_FRAME_TIME_SCALE / attack_multiplier, 0.001)
 
 
@@ -550,14 +552,16 @@ func magic_attack_element(palette: String, ability_mode: int) -> int:
 
 func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
 	var attack_element := magic_attack_element(palette, ability_mode)
-	var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
-	var damage := 0.0 if damage_result == null or damage_result.immune else magic_damage_for_mode(damage_result.amount, ability_mode)
+	var combat_tuning := root.get("combat_tuning") as CombatTuning
+	var magic_base_bonus := combat_tuning.elemental_magic_bonus if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL and combat_tuning != null else 0.0
+	var damage_result := root.call("_player_magic_damage_result_against", slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
+	var damage := 0.0 if damage_result == null or damage_result.immune else damage_result.amount
 	var was_critical := damage_result != null and damage_result.critical
 	var immune := damage_result != null and damage_result.immune
 	var resolved_element := damage_result.element if damage_result != null else attack_element
 	root.call("_damage_slime_with_number", slime, damage, was_critical, false, resolved_element, immune)
 	if not immune:
-		root.call("_knockback_slime", slime, MAGIC_KNOCKBACK_MULTIPLIER)
+		root.call("_knockback_slime", slime, MAGIC_KNOCKBACK_MULTIPLIER, false)
 	root.call("_spawn_damage_number", slime, damage, was_critical, resolved_element, immune)
 	root.call("_play_sound", "magic_hit", -8.0, 1.0)
 	spawn_magic_impact(root, world_position, palette)

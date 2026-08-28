@@ -1394,6 +1394,9 @@ func restore_normal_room_geometry(root: Object) -> void:
 
 
 func configure_large_room_camera(root: Object, enabled: bool) -> void:
+	var display_controller := root.get("display_controller") as DisplayController
+	if display_controller != null:
+		display_controller.set_large_room_camera_active(enabled)
 	var player := root.get("player") as Sprite2D
 	var camera := player.get_node_or_null("LargeRoomCamera") as Camera2D
 	if camera == null:

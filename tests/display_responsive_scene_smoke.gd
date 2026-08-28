@@ -24,6 +24,7 @@ func _initialize() -> void:
 	if display != null and settings != null and touch != null:
 		settings.file_path = TEST_PATH
 		settings.reset_to_defaults()
+		var stable_floor := (gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D).global_position
 		var view_sizes := {"3:2": Vector2i(240, 160), "16:10": Vector2i(256, 160), "16:9": Vector2i(284, 160)}
 		for aspect in view_sizes.keys():
 			settings.set_setting(&"aspect", aspect)
@@ -43,11 +44,12 @@ func _initialize() -> void:
 			_expect(title_overlay != null and title_overlay.size == Vector2(expected), "%s title overlay covers the full view" % aspect, failures)
 			_expect(screens.settings_overlay != null and screens.settings_overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
 			if screens.settings_title_text != null and screens.settings_title_text.texture != null:
-				_expect(is_equal_approx(screens.settings_title_text.position.x, (expected.x - screens.settings_title_text.texture.get_width()) * 0.5), "%s settings title recenters with the view" % aspect, failures)
+				_expect(is_equal_approx(screens.settings_title_text.position.x, 13.0), "%s settings title stays in its title tab" % aspect, failures)
 			if not screens.settings_value_buttons.is_empty():
-				_expect(is_equal_approx(screens.settings_value_buttons[0].position.x, expected.x * 0.5 + 36.0), "%s settings controls expand from the view center" % aspect, failures)
+				_expect(screens.settings_value_buttons[0].position.x >= 90.0 and screens.settings_value_buttons[0].position.x < expected.x, "%s settings controls stay in their option column" % aspect, failures)
 			var floor_layer := gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D
-			_expect(floor_layer != null and is_equal_approx(floor_layer.global_position.x, expected.x * 0.5), "%s room diamond remains centered" % aspect, failures)
+			_expect(floor_layer != null and floor_layer.global_position.is_equal_approx(stable_floor), "%s room geometry remains in authored coordinates" % aspect, failures)
+			_expect(display.world_camera() != null and display.world_camera().enabled and display.world_camera().global_position.is_equal_approx(Vector2(120, 80)), "%s display camera keeps the room centered" % aspect, failures)
 			var content_size := touch._content_size()
 			_expect(content_size == Vector2(expected), "%s touch layer reads the live logical size" % aspect, failures)
 			var player_hud := ui.get_node("PlayerHud") as Node2D
@@ -57,6 +59,16 @@ func _initialize() -> void:
 			var center_shift := right_shift * 0.5
 			_expect(is_equal_approx(gold_display.position.x, 205.0 + right_shift), "%s right HUD cluster reaches the edge" % aspect, failures)
 			_expect(is_equal_approx(health.position.x, 66.0 + center_shift), "%s center HUD cluster shifts by half the expansion" % aspect, failures)
+		var original_window_size := gameplay.get_window().size
+		gameplay.get_window().size = Vector2i(960, 720)
+		settings.set_setting(&"aspect", "FULL")
+		await process_frame
+		var live_window := gameplay.get_window().size
+		var expected_full := Vector2i(maxi(240, roundi(160.0 * float(live_window.x) / maxf(float(live_window.y), 1.0))), 160)
+		_expect(display.view_size_value() == expected_full, "FULL follows the live window aspect", failures)
+		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "FULL keeps the complete logical canvas on a narrow 4:3 surface", failures)
+		_expect((gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D).global_position.is_equal_approx(stable_floor), "FULL preserves authored collision geometry", failures)
+		gameplay.get_window().size = original_window_size
 	gameplay.queue_free()
 	await process_frame
 	_cleanup()

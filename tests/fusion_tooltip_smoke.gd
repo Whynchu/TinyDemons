@@ -30,8 +30,8 @@ func _initialize() -> void:
 		controller_instance.set(str(key_map.get(key, key)), built[key])
 	var stat_buttons := built["stat_buttons"] as Array[Button]
 	var stat_texts := built["stats"] as Array[Sprite2D]
-	_expect(stat_buttons.size() == 8 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets", failures)
-	_expect((built["stat_rows"] as Array[Button]).size() == 4 and (built["item_rows"] as Array[Button]).size() == 5, "hub stats, shop, and fusion expose row touch targets", failures)
+	_expect(stat_buttons.size() == 12 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets for six stats", failures)
+	_expect((built["stat_rows"] as Array[Button]).size() == 6 and (built["item_rows"] as Array[Button]).size() == 5, "hub stats, shop, and fusion expose row touch targets", failures)
 	_expect((built["fusion_decrease"] as Button).size.x >= 20.0 and (built["fusion_increase"] as Button).size.x >= 20.0, "fusion exposes direct count controls", failures)
 	_expect(stat_texts.all(func(text: Sprite2D) -> bool: return text.centered), "hub stat values are centered between their touch targets", failures)
 	controller_instance.hub_overlay = ColorRect.new()

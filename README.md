@@ -32,9 +32,10 @@ last-input-device auto-detection) is implemented and tracked in
 [`docs/web-port-implementation-plan.md`](docs/web-port-implementation-plan.md);
 desktop remains the primary target and both share this codebase.
 
-The **modular display and settings** slice (16:10/16:9 aspects with the void
-and decorative bars expanding to fit, title/pause settings panel with
-fullscreen and volume sliders, pause quit-to-title) is implemented and tracked in
+The **modular display and settings** slice (adaptive `FULL` landscape mode plus
+3:2/16:10/16:9 presets, with the void and decorative bars expanding to fit,
+title/pause settings panel with fullscreen and volume sliders, pause
+quit-to-title) is implemented and tracked in
 [`docs/modular-display-and-settings-plan.md`](docs/modular-display-and-settings-plan.md).
 
 The current combat slice adds the scene-authored Spin Attack and held-button
@@ -72,8 +73,10 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 ```
 
 Display settings are device-wide and can be changed from SETTINGS on the title
-screen or from the pause menu. Available options are aspect (3:2, 16:10, or
-16:9), fullscreen, pixel-perfect scaling, music volume, and SFX volume.
+screen or from the pause menu. Available options are aspect (`FULL`, 3:2,
+16:10, or 16:9), fullscreen, pixel-perfect scaling, music volume, and SFX
+volume. `FULL` is the default and follows the live landscape browser/window
+viewport while keeping the 160 px logical height.
 
 ## Controls
 
@@ -85,8 +88,8 @@ remappable in-editor. Defaults:
 - Roll: `K` / controller A
 - Target lock: `Q` / Tab / controller right shoulder or right trigger
 - Guard: `L` / Shift / controller left shoulder or left trigger
-- Interact / confirm: `E` / Enter / controller B
-- Cancel: `X` / controller A
+- Interact / confirm: `E` / Enter / controller B (PlayStation Circle)
+- Cancel/back: `X` / Escape / controller A (PlayStation Cross)
 - Pause: Escape / controller Start
 
 ## Web build

@@ -8,8 +8,13 @@ enum Stat {
 	VIT,
 	STR,
 	DEF,
-	SPD,
+	AGI,
+	INT,
+	MND,
 }
+
+const STAT_NAMES: Array[StringName] = [&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"]
+const LEGACY_SPEED_NAME: StringName = &"SPD"
 
 enum AllocationProfile {
 	BALANCED,
@@ -42,16 +47,39 @@ enum AllocationProfile {
 var vit := 0
 var strength := 0
 var def := 0
-var speed := 0
+var agi := 0
+var intelligence := 0
+var mnd := 0
+## Temporary compatibility mirror for callers that still read SPD directly.
+var speed:
+	get:
+		return agi
+	set(value):
+		agi = maxi(int(value), 0)
 var manual_allocation_enabled := false
 var manual_base_vit := 3
 var manual_base_str := 2
 var manual_base_def := 2
-var manual_base_spd := 1
+var manual_base_agi := 1
+var manual_base_int := 1
+var manual_base_mnd := 1
 var manual_vit := 0
 var manual_str := 0
 var manual_def := 0
-var manual_spd := 0
+var manual_agi := 0
+var manual_int := 0
+var manual_mnd := 0
+## Temporary compatibility aliases for schema-8 callers.
+var manual_base_spd:
+	get:
+		return manual_base_agi
+	set(value):
+		manual_base_agi = maxi(int(value), 0)
+var manual_spd:
+	get:
+		return manual_agi
+	set(value):
+		manual_agi = maxi(int(value), 0)
 var enemy_variant_profile_enabled := false
 var enemy_variant_base_values: Dictionary = {}
 var enemy_variant_growth_weights: Dictionary = {}
@@ -74,8 +102,12 @@ func get_stat(stat: Stat) -> int:
 			return strength
 		Stat.DEF:
 			return def
-		Stat.SPD:
-			return speed
+		Stat.AGI:
+			return agi
+		Stat.INT:
+			return intelligence
+		Stat.MND:
+			return mnd
 	return 0
 
 
@@ -84,25 +116,41 @@ func get_stats() -> Dictionary:
 		"VIT": vit,
 		"STR": strength,
 		"DEF": def,
-		"SPD": speed,
+		"AGI": agi,
+		"INT": intelligence,
+		"MND": mnd,
+		# Temporary read compatibility for pre-schema-9 consumers.
+		"SPD": agi,
 	}
 
 
-func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, base_spd_value: int, vit_points: int, str_points: int, def_points: int, spd_points: int) -> void:
+func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, base_agi_value: int, vit_points: int, str_points: int, def_points: int, agi_points: int, base_int_value: int = 1, base_mnd_value: int = 1, int_points: int = 0, mnd_points: int = 0) -> void:
 	manual_allocation_enabled = true
 	manual_base_vit = maxi(base_vit_value, 0)
 	manual_base_str = maxi(base_str_value, 0)
 	manual_base_def = maxi(base_def_value, 0)
-	manual_base_spd = maxi(base_spd_value, 0)
+	manual_base_agi = maxi(base_agi_value, 0)
+	manual_base_int = maxi(base_int_value, 0)
+	manual_base_mnd = maxi(base_mnd_value, 0)
 	manual_vit = maxi(vit_points, 0)
 	manual_str = maxi(str_points, 0)
 	manual_def = maxi(def_points, 0)
-	manual_spd = maxi(spd_points, 0)
+	manual_agi = maxi(agi_points, 0)
+	manual_int = maxi(int_points, 0)
+	manual_mnd = maxi(mnd_points, 0)
 	_recalculate()
 
 
 func manual_allocation() -> Dictionary:
-	return {"VIT": manual_vit, "STR": manual_str, "DEF": manual_def, "SPD": manual_spd}
+	return {
+		"VIT": manual_vit,
+		"STR": manual_str,
+		"DEF": manual_def,
+		"AGI": manual_agi,
+		"INT": manual_int,
+		"MND": manual_mnd,
+		"SPD": manual_agi,
+	}
 
 
 func apply_enemy_variant_profile(base_values: Dictionary, growth_weights: Dictionary, seed_token: StringName) -> void:
@@ -114,13 +162,17 @@ func apply_enemy_variant_profile(base_values: Dictionary, growth_weights: Dictio
 		Stat.VIT: maxi(int(base_values.get("VIT", 0)), 0),
 		Stat.STR: maxi(int(base_values.get("STR", 0)), 0),
 		Stat.DEF: maxi(int(base_values.get("DEF", 0)), 0),
-		Stat.SPD: maxi(int(base_values.get("SPD", 0)), 0),
+		Stat.AGI: maxi(int(base_values.get("AGI", base_values.get("SPD", 0))), 0),
+		Stat.INT: maxi(int(base_values.get("INT", 0)), 0),
+		Stat.MND: maxi(int(base_values.get("MND", 0)), 0),
 	}
 	enemy_variant_growth_weights = {
-		Stat.VIT: maxf(float(growth_weights.get("VIT", 0.25)), 0.0),
-		Stat.STR: maxf(float(growth_weights.get("STR", 0.25)), 0.0),
-		Stat.DEF: maxf(float(growth_weights.get("DEF", 0.25)), 0.0),
-		Stat.SPD: maxf(float(growth_weights.get("SPD", 0.25)), 0.0),
+		Stat.VIT: maxf(float(growth_weights.get("VIT", 0.0)), 0.0),
+		Stat.STR: maxf(float(growth_weights.get("STR", 0.0)), 0.0),
+		Stat.DEF: maxf(float(growth_weights.get("DEF", 0.0)), 0.0),
+		Stat.AGI: maxf(float(growth_weights.get("AGI", growth_weights.get("SPD", 0.0))), 0.0),
+		Stat.INT: maxf(float(growth_weights.get("INT", 0.0)), 0.0),
+		Stat.MND: maxf(float(growth_weights.get("MND", 0.0)), 0.0),
 	}
 	enemy_variant_seed_token = seed_token
 	_recalculate()
@@ -141,11 +193,15 @@ func _recalculate() -> void:
 			Stat.VIT: manual_base_vit + manual_vit,
 			Stat.STR: manual_base_str + manual_str,
 			Stat.DEF: manual_base_def + manual_def,
-			Stat.SPD: manual_base_spd + manual_spd,
+			Stat.AGI: manual_base_agi + manual_agi,
+			Stat.INT: manual_base_int + manual_int,
+			Stat.MND: manual_base_mnd + manual_mnd,
 		}
 	else:
 		values = enemy_variant_base_values.duplicate() if enemy_variant_profile_enabled else _base_profile_values()
-		var allocated := int(values[Stat.VIT]) + int(values[Stat.STR]) + int(values[Stat.DEF]) + int(values[Stat.SPD])
+		var allocated := 0
+		for stat in STAT_NAMES:
+			allocated += int(values[_stat_from_name(stat)])
 		var extra_points := maxi(total_stat_points() - allocated, 0)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _growth_seed()
@@ -156,8 +212,27 @@ func _recalculate() -> void:
 	vit = values[Stat.VIT]
 	strength = values[Stat.STR]
 	def = values[Stat.DEF]
-	speed = values[Stat.SPD]
+	agi = values[Stat.AGI]
+	intelligence = values[Stat.INT]
+	mnd = values[Stat.MND]
 	stats_changed.emit(self)
+
+
+func _stat_from_name(stat_name: StringName) -> Stat:
+	match stat_name:
+		&"VIT":
+			return Stat.VIT
+		&"STR":
+			return Stat.STR
+		&"DEF":
+			return Stat.DEF
+		&"AGI":
+			return Stat.AGI
+		&"INT":
+			return Stat.INT
+		&"MND":
+			return Stat.MND
+	return Stat.VIT
 
 
 func _base_profile_values() -> Dictionary:
@@ -167,35 +242,45 @@ func _base_profile_values() -> Dictionary:
 				Stat.VIT: 4,
 				Stat.STR: 2,
 				Stat.DEF: 1,
-				Stat.SPD: 3,
+				Stat.AGI: 3,
+				Stat.INT: 1,
+				Stat.MND: 1,
 			}
 		AllocationProfile.FAVOR_STR:
 			return {
 				Stat.VIT: 2,
 				Stat.STR: 4,
 				Stat.DEF: 1,
-				Stat.SPD: 1,
+				Stat.AGI: 1,
+				Stat.INT: 1,
+				Stat.MND: 1,
 			}
 		AllocationProfile.FAVOR_DEF:
 			return {
 				Stat.VIT: 3,
 				Stat.STR: 1,
 				Stat.DEF: 3,
-				Stat.SPD: 1,
+				Stat.AGI: 1,
+				Stat.INT: 1,
+				Stat.MND: 1,
 			}
 		AllocationProfile.FAVOR_STR_DEF:
 			return {
 				Stat.VIT: 1,
 				Stat.STR: 3,
 				Stat.DEF: 3,
-				Stat.SPD: 1,
+				Stat.AGI: 1,
+				Stat.INT: 1,
+				Stat.MND: 1,
 			}
 		_:
 			return {
 				Stat.VIT: 3,
 				Stat.STR: 2,
 				Stat.DEF: 2,
-				Stat.SPD: 2,
+				Stat.AGI: 1,
+				Stat.INT: 1,
+				Stat.MND: 1,
 			}
 
 
@@ -208,35 +293,45 @@ func _growth_weights() -> Dictionary:
 				Stat.VIT: 0.58,
 				Stat.STR: 0.22,
 				Stat.DEF: 0.10,
-				Stat.SPD: 0.10,
+				Stat.AGI: 0.10,
+				Stat.INT: 0.0,
+				Stat.MND: 0.0,
 			}
 		AllocationProfile.FAVOR_STR:
 			return {
 				Stat.VIT: 0.22,
 				Stat.STR: 0.60,
 				Stat.DEF: 0.10,
-				Stat.SPD: 0.08,
+				Stat.AGI: 0.08,
+				Stat.INT: 0.0,
+				Stat.MND: 0.0,
 			}
 		AllocationProfile.FAVOR_DEF:
 			return {
 				Stat.VIT: 0.22,
 				Stat.STR: 0.10,
 				Stat.DEF: 0.60,
-				Stat.SPD: 0.08,
+				Stat.AGI: 0.08,
+				Stat.INT: 0.0,
+				Stat.MND: 0.0,
 			}
 		AllocationProfile.FAVOR_STR_DEF:
 			return {
 				Stat.VIT: 0.10,
 				Stat.STR: 0.42,
 				Stat.DEF: 0.42,
-				Stat.SPD: 0.06,
+				Stat.AGI: 0.06,
+				Stat.INT: 0.0,
+				Stat.MND: 0.0,
 			}
 		_:
 			return {
 				Stat.VIT: 0.30,
 				Stat.STR: 0.28,
 				Stat.DEF: 0.28,
-				Stat.SPD: 0.14,
+				Stat.AGI: 0.14,
+				Stat.INT: 0.0,
+				Stat.MND: 0.0,
 			}
 
 
@@ -244,8 +339,10 @@ func _roll_growth_stat(rng: RandomNumberGenerator, point_index: int, current_val
 	var weights := _growth_weights()
 	var weighted_stats: Array[Dictionary] = []
 	var total_weight := 0.0
-	for stat in [Stat.VIT, Stat.STR, Stat.DEF, Stat.SPD]:
+	for stat in [Stat.VIT, Stat.STR, Stat.DEF, Stat.AGI, Stat.INT, Stat.MND]:
 		var base_weight := float(weights[stat])
+		if base_weight <= 0.0:
+			continue
 		var current_value := int(current_values[stat])
 		var variance := rng.randf_range(-0.06, 0.06)
 		var anti_run_bias := 1.0 / (1.0 + maxf(float(current_value - 1), 0.0) * 0.04)

@@ -6,9 +6,14 @@ extends Node2D
 		show_preview = value
 		_rebuild_preview()
 
-@export_enum("3:2", "16:10", "16:9") var preview_aspect := "3:2":
+@export_enum("FULL", "3:2", "16:10", "16:9") var preview_aspect := "3:2":
 	set(value):
 		preview_aspect = value
+		_rebuild_preview()
+
+@export_range(240, 800, 1) var full_preview_width := 346:
+	set(value):
+		full_preview_width = maxi(value, 240)
 		_rebuild_preview()
 
 var preview_nodes: Array[Node2D] = []
@@ -35,8 +40,9 @@ func _rebuild_preview() -> void:
 
 	# These are editor-only Sprite2D nodes. Runtime gameplay hides this guide node.
 	# Keep every preview coordinate routed through DisplayLayout so an editor
-	# screenshot and the live 3:2/16:10/16:9 presentation agree.
-	var view_size := Vector2(DisplayLayout.view_size(preview_aspect))
+	# screenshot and the live fixed/adaptive presentation agree. The default
+	# FULL sample is 346×160, matching a 2532×1170 iPhone landscape surface.
+	var view_size := Vector2(DisplayLayout.view_size(preview_aspect, full_preview_width))
 	_add_pixel_sprite("EditorPlayerHealth", DisplayLayout.position_for(Vector2(38, 7), &"hp_mp", view_size), "12/15", Color.WHITE, true)
 	_add_pixel_sprite("EditorTargetHealth", DisplayLayout.position_for(Vector2(121, 155), &"target", view_size), "8/13", Color.WHITE, true)
 	_add_pixel_sprite("EditorGoldAmount", DisplayLayout.position_for(Vector2(212, 4), &"gold", view_size), "0", Color("#ffcd75"), false)

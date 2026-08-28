@@ -13,8 +13,9 @@ static func allocate_stats(profile: PlayerProfile, allocations: Dictionary) -> D
 	var result := {"spent": 0, "remaining": 0, "changed": false}
 	if profile == null:
 		return result
-	for stat_name in [&"VIT", &"STR", &"DEF", &"SPD"]:
-		var amount := maxi(int(allocations.get(String(stat_name), 0)), 0)
+	for stat_name in StatsComponent.STAT_NAMES:
+		var fallback_key := "SPD" if stat_name == &"AGI" else String(stat_name)
+		var amount := maxi(int(allocations.get(String(stat_name), allocations.get(fallback_key, 0))), 0)
 		if amount <= 0:
 			continue
 		var before := profile.unspent_stat_points
@@ -28,8 +29,9 @@ static func points_remaining(profile: PlayerProfile, pending: Dictionary) -> int
 	if profile == null:
 		return 0
 	var reserved := 0
-	for stat_name in [&"VIT", &"STR", &"DEF", &"SPD"]:
-		reserved += maxi(int(pending.get(String(stat_name), 0)), 0)
+	for stat_name in StatsComponent.STAT_NAMES:
+		var fallback_key := "SPD" if stat_name == &"AGI" else String(stat_name)
+		reserved += maxi(int(pending.get(String(stat_name), pending.get(fallback_key, 0))), 0)
 	return maxi(profile.unspent_stat_points - reserved, 0)
 
 static func apply_run_grade(profile: PlayerProfile, grade: String) -> bool:

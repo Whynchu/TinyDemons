@@ -3,9 +3,18 @@ class_name HubFlowController
 
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 
+const HUB_PAGE_COUNT := 6
+const HUB_PAGE_ALLOCATE := 0
+const HUB_PAGE_EQUIPMENT := 1
+const HUB_PAGE_SHOP := 2
+const HUB_PAGE_FUSION := 3
+const HUB_PAGE_BIND := 4
+const HUB_PAGE_STATUS := 5
+const HUB_COMMAND_PAGE_TARGETS := [5, 0, 1, 2, 3, 4]
+
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_menu_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_stat_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"), Callable(root, "_set_pause_status_page"), Callable(root, "_set_pause_equipment_page"), Callable(root, "_pause_back"), Callable(root, "_remove_hub_gear"), Callable(root, "_remove_all_hub_gear"), Callable(root, "_hub_back_or_close"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -22,6 +31,10 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_cancel_button = controls["cancel"] as Button
 	root.screen_state_controller.hub_auto_button = controls["auto"] as Button
 	root.screen_state_controller.hub_page_buttons = controls["pages"] as Array[Button]
+	root.screen_state_controller.hub_back_button = controls["back"] as Button
+	root.screen_state_controller.hub_player_card_texts = controls["card"] as Array[Sprite2D]
+	root.screen_state_controller.hub_status_texts = controls["status"] as Array[Sprite2D]
+	root.screen_state_controller.hub_context_text = controls["context"] as Sprite2D
 	root.screen_state_controller.hub_item_name_text = controls["item_name"] as Sprite2D
 	root.screen_state_controller.hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_row_buttons = controls["item_rows"] as Array[Button]
@@ -31,30 +44,47 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_gear_slot_buttons = controls["gear_slot_buttons"] as Array[Button]
 	root.screen_state_controller.hub_gear_stat_texts = controls["gear_stats"] as Array[Sprite2D]
 	root.screen_state_controller.hub_gear_stat_panel = controls["gear_stat_panel"] as Panel
+	root.screen_state_controller.hub_gear_choice_panel = controls["gear_choice_panel"] as Panel
+	root.screen_state_controller.hub_gear_choice_content_clip = controls["gear_choice_content_clip"] as Control
 	root.screen_state_controller.hub_binding_panel = controls["binding_panel"] as Panel
 	root.screen_state_controller.hub_binding_texts = controls["binding_texts"] as Array[Sprite2D]
 	root.screen_state_controller.hub_binding_action_button = controls["binding_action"] as Button
 	root.screen_state_controller.hub_cursor_text = controls["cursor"] as Sprite2D
 	root.screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_action_button = controls["item_action"] as Button
+	root.screen_state_controller.hub_equipment_action_buttons = controls["equipment_actions"] as Array[Button]
 	root.screen_state_controller.hub_fusion_decrease_button = controls["fusion_decrease"] as Button
 	root.screen_state_controller.hub_fusion_increase_button = controls["fusion_increase"] as Button
 	root.screen_state_controller.pause_menu_buttons = controls["pause_buttons"] as Array[Button]
-	if root.screen_state_controller.pause_menu_buttons.size() >= 3:
+	root.screen_state_controller.pause_overlay = controls["pause_overlay"] as ColorRect
+	root.screen_state_controller.pause_title_text = controls["pause_title"] as Sprite2D
+	root.screen_state_controller.pause_cursor_text = controls["pause_cursor"] as Sprite2D
+	root.screen_state_controller.pause_player_card_texts = controls["pause_card"] as Array[Sprite2D]
+	root.screen_state_controller.pause_status_texts = controls["pause_status"] as Array[Sprite2D]
+	root.screen_state_controller.pause_equipment_texts = controls["pause_equipment"] as Array[Sprite2D]
+	root.screen_state_controller.pause_description_text = controls["pause_description"] as Sprite2D
+	root.screen_state_controller.pause_back_button = controls["pause_back"] as Button
+	root.screen_state_controller.pause_status_button = controls["pause_status_button"] as Button
+	root.screen_state_controller.pause_equipment_button = controls["pause_equipment_button"] as Button
+	if root.screen_state_controller.pause_menu_buttons.size() >= 5:
 		root.screen_state_controller.pause_resume_button = root.screen_state_controller.pause_menu_buttons[0]
-		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[1]
-		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[2]
+		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[3]
+		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[4]
 
 
 func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) -> void:
 	if root.screen_state_controller.hub_overlay == null:
+		return
+	if pause_mode:
+		open_pause_menu(root)
 		return
 	# Inventory and equipped-slot state can change while the hub is closed. The
 	# fusion page is intentionally cached for UI reads, so refresh its eligibility
 	# whenever the hub is opened instead of showing a stale duplicate list.
 	invalidate_hub_fusion_candidates(root)
 	root.screen_state_controller.hub_opened_from_npc = from_npc
-	root.screen_state_controller.hub_pause_mode = pause_mode
+	root.screen_state_controller.hub_pause_mode = false
+	root.screen_state_controller.hub_is_root = true
 	root.screen_state_controller.hub_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
 	root.screen_state_controller.hub_cancel_input_was_down = bool(root.call("_is_menu_cancel_input_pressed"))
 	root.screen_state_controller.hub_page_previous_input_was_down = bool(root.call("_is_hub_previous_page_input_pressed"))
@@ -64,21 +94,35 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	if root.loading_screen_overlay != null: root.loading_screen_overlay.visible = false
 	if root.game_over_overlay != null: root.game_over_overlay.visible = false
 	root.screen_state_controller.hub_overlay.visible = true
-	root.screen_state_controller.hub_page = 0
+	if root.screen_state_controller.pause_overlay != null: root.screen_state_controller.pause_overlay.visible = false
+	root.screen_state_controller.hub_page = root.screen_state_controller.HUB_PAGE_STATUS
 	root.screen_state_controller.hub_item_index = 0
+	root.screen_state_controller.hub_content_focus = false
 	root.screen_state_controller.hub_binding_message = ""
 	root.call("_hub_cancel_stats")
-	root.call("_play_sound", "ui_pause" if pause_mode else "ui_confirm", 0.0, 1.0)
+	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	root.screen_state_controller.set_state(&"hub")
 	root.call("_select_hub_menu_row", 0)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func open_pause_menu(root: Object) -> void:
-	if root.player_dead or root.player_death_pending or root.screen_state_controller.hub_overlay == null or root.screen_state_controller.hub_overlay.visible:
+	if root.player_dead or root.player_death_pending or root.screen_state_controller.pause_overlay == null or root.screen_state_controller.pause_overlay.visible or (root.screen_state_controller.hub_overlay != null and root.screen_state_controller.hub_overlay.visible):
 		return
 	root.screen_state_controller.pause_input_was_down = true
-	show_hub(root, false, true)
+	root.screen_state_controller.hub_pause_mode = true
+	root.screen_state_controller.pause_page = 0
+	root.screen_state_controller.hub_is_root = true
+	root.screen_state_controller.pause_menu_row = 0
+	root.screen_state_controller.pause_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
+	root.screen_state_controller.pause_cancel_input_was_down = bool(root.call("_is_menu_cancel_input_pressed"))
+	root.screen_state_controller.hub_overlay.visible = false
+	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
+	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
+	root.screen_state_controller.pause_overlay.visible = true
+	root.screen_state_controller.set_state(&"pause")
+	root.screen_state_controller.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_pause", 0.0, 1.0)
 
 
 func open_hub_from_cloaked_demon(root: Object) -> void:
@@ -95,15 +139,20 @@ func open_hub_from_cloaked_demon(root: Object) -> void:
 
 
 func close_hub_to_run(root: Object) -> void:
-	if root.screen_state_controller.hub_overlay == null:
+	if root.screen_state_controller.hub_overlay == null and root.screen_state_controller.pause_overlay == null:
 		return
-	var was_pause: bool = bool(root.screen_state_controller.hub_pause_mode)
+	var was_pause: bool = bool(root.screen_state_controller.hub_pause_mode) or (root.screen_state_controller.pause_overlay != null and root.screen_state_controller.pause_overlay.visible)
 	root.call("_hub_cancel_stats")
 	root.screen_state_controller.hub_gear_browsing = false
 	root.screen_state_controller.menu_input_release_lock = bool(root.call("_is_menu_cancel_input_pressed"))
-	root.screen_state_controller.hub_overlay.visible = false
+	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false
+	if root.screen_state_controller.pause_overlay != null: root.screen_state_controller.pause_overlay.visible = false
 	root.screen_state_controller.hub_opened_from_npc = false
 	root.screen_state_controller.hub_pause_mode = false
+	root.screen_state_controller.hub_is_root = true
+	root.screen_state_controller.pause_page = 0
+	root.screen_state_controller.pause_interact_input_was_down = false
+	root.screen_state_controller.pause_cancel_input_was_down = false
 	root.interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
 	root.screen_state_controller.set_state(&"gameplay")
 	root.call("_play_sound", "ui_unpause", 0.0, 1.0)
@@ -116,18 +165,53 @@ func update_hub_input(root: Object) -> void:
 
 
 func set_hub_page(root: Object, page: int) -> void:
-	root.screen_state_controller.hub_page = posmod(page, 5)
-	root.screen_state_controller.hub_item_index = 0
-	root.screen_state_controller.hub_gear_browsing = false
-	root.screen_state_controller.hub_fusion_message = ""
-	root.screen_state_controller.hub_binding_message = ""
-	root.screen_state_controller.hub_fusion_count = 1
-	if root.screen_state_controller.hub_page == 3:
+	var screen: Object = root.screen_state_controller
+	if page < 0:
+		_set_screen_property_if_available(screen, &"hub_is_root", true)
+		screen.hub_content_focus = false
+		screen.hub_equipment_action_focus = false
+		screen.hub_gear_browsing = false
+		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		return
+	_set_screen_property_if_available(screen, &"hub_is_root", false)
+	screen.hub_page = posmod(page, HUB_PAGE_COUNT)
+	var command_index: int = int(HUB_COMMAND_PAGE_TARGETS.find(screen.hub_page))
+	if command_index >= 0: _set_screen_property_if_available(screen, &"hub_menu_row", command_index)
+	screen.hub_item_index = 0
+	_set_screen_property_if_available(screen, &"hub_content_focus", false)
+	_set_screen_property_if_available(screen, &"hub_equipment_action_focus", false)
+	_set_screen_property_if_available(screen, &"hub_action_column", 0)
+	screen.hub_gear_browsing = false
+	screen.hub_fusion_message = ""
+	screen.hub_binding_message = ""
+	screen.hub_fusion_count = 1
+	if screen.hub_page == HUB_PAGE_FUSION:
 		invalidate_hub_fusion_candidates(root)
-	if root.run_state != null and root.screen_state_controller.hub_page == 2:
+	if root.run_state != null and screen.hub_page == HUB_PAGE_SHOP:
 		root.run_state.ensure_shop_stock(root.player_profile.level)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_hover", -6.0, 1.0)
+
+
+func back_to_hub_root(root: Object) -> void:
+	var screen: Object = root.screen_state_controller
+	if screen.hub_is_root:
+		close_hub_to_run(root)
+		return
+	screen.hub_is_root = true
+	screen.hub_content_focus = false
+	screen.hub_equipment_action_focus = false
+	screen.hub_gear_browsing = false
+	screen.hub_binding_message = ""
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_decline", 0.0, 1.0)
+
+
+func _set_screen_property_if_available(screen: Object, property_name: StringName, value: Variant) -> void:
+	for property: Dictionary in screen.get_property_list():
+		if StringName(str(property.get("name", ""))) == property_name:
+			screen.set(property_name, value)
+			return
 
 
 func hub_bind_current_element(root: Object) -> bool:
@@ -176,6 +260,8 @@ func select_hub_item_row(root: Object, row: int) -> void:
 	if row < 0 or row >= visible_rows or target < 0 or target >= count:
 		return
 	root.screen_state_controller.hub_item_index = target
+	root.screen_state_controller.hub_content_focus = true
+	root.screen_state_controller.hub_equipment_action_focus = false
 	if page == 3:
 		root.screen_state_controller.hub_fusion_count = 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
@@ -209,15 +295,17 @@ func shift_hub_gear_candidate(root: Object, direction: int) -> void:
 func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 	if root.screen_state_controller.hub_page != 1: return
 	root.screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
+	root.screen_state_controller.hub_content_focus = true
+	root.screen_state_controller.hub_equipment_action_focus = false
 	var slot: StringName = ItemCatalog.SLOTS[root.screen_state_controller.hub_item_index]
 	var candidates := hub_gear_candidates(root, slot)
+	root.screen_state_controller.hub_gear_browsing = not candidates.is_empty()
 	if not candidates.is_empty():
 		var equipped_id := str(root.player_profile.equipped_instance_ids.get(String(slot), ""))
 		for index in candidates.size():
 			if candidates[index].instance_id == equipped_id:
 				root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
 				break
-		root.screen_state_controller.hub_gear_browsing = true
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -367,14 +455,50 @@ func hub_item_action(root: Object) -> void:
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
+func remove_hub_gear(root: Object) -> void:
+	if root.player_profile == null or root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_EQUIPMENT:
+		return
+	var slot: StringName = ItemCatalog.SLOTS[clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
+	if bool(root.call("_unequip_profile_slot", slot)):
+		root.screen_state_controller.hub_gear_browsing = false
+		invalidate_hub_fusion_candidates(root)
+		root.call("_save_player_profile")
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func remove_all_hub_gear(root: Object) -> void:
+	if root.player_profile == null or root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_EQUIPMENT:
+		return
+	var changed := false
+	for slot in ItemCatalog.SLOTS:
+		changed = bool(root.call("_unequip_profile_slot", slot)) or changed
+	if changed:
+		root.screen_state_controller.hub_gear_browsing = false
+		invalidate_hub_fusion_candidates(root)
+		root.call("_save_player_profile")
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
 func select_hub_menu_row(root: Object, row: int) -> void:
-	root.screen_state_controller.hub_menu_row = posmod(row, 5)
-	if root.screen_state_controller.hub_menu_row < 4: root.screen_state_controller.hub_action_column = 0
+	root.screen_state_controller.hub_menu_row = posmod(row, 6)
+	root.screen_state_controller.hub_content_focus = false
+	root.screen_state_controller.hub_equipment_action_focus = false
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func select_hub_stat_row(root: Object, row: int) -> void:
+	if root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_ALLOCATE:
+		return
+	root.screen_state_controller.hub_stat_row = posmod(row, 6)
+	root.screen_state_controller.hub_content_focus = true
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func shift_hub_action_column(root: Object, direction: int) -> void:
-	var count: int = 4 if root.screen_state_controller.hub_menu_row == 4 else 2
+	var page: int = int(root.screen_state_controller.hub_page)
+	var count: int = 3 if page == 1 else 4 if page == 0 else 2
 	root.screen_state_controller.hub_action_column = posmod(root.screen_state_controller.hub_action_column + direction, count)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
@@ -387,7 +511,9 @@ func hub_adjust_stat(root: Object, stat_name: StringName, direction: int) -> voi
 		&"VIT": root.screen_state_controller.hub_pending_vit = maxi(root.screen_state_controller.hub_pending_vit - 1, 0)
 		&"STR": root.screen_state_controller.hub_pending_str = maxi(root.screen_state_controller.hub_pending_str - 1, 0)
 		&"DEF": root.screen_state_controller.hub_pending_def = maxi(root.screen_state_controller.hub_pending_def - 1, 0)
-		&"SPD": root.screen_state_controller.hub_pending_spd = maxi(root.screen_state_controller.hub_pending_spd - 1, 0)
+		&"AGI", &"SPD": root.screen_state_controller.hub_pending_agi = maxi(root.screen_state_controller.hub_pending_agi - 1, 0)
+		&"INT": root.screen_state_controller.hub_pending_int = maxi(root.screen_state_controller.hub_pending_int - 1, 0)
+		&"MND": root.screen_state_controller.hub_pending_mnd = maxi(root.screen_state_controller.hub_pending_mnd - 1, 0)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -397,31 +523,33 @@ func hub_allocate_stat(root: Object, stat_name: StringName) -> void:
 		&"VIT": root.screen_state_controller.hub_pending_vit += 1
 		&"STR": root.screen_state_controller.hub_pending_str += 1
 		&"DEF": root.screen_state_controller.hub_pending_def += 1
-		&"SPD": root.screen_state_controller.hub_pending_spd += 1
+		&"AGI", &"SPD": root.screen_state_controller.hub_pending_agi += 1
+		&"INT": root.screen_state_controller.hub_pending_int += 1
+		&"MND": root.screen_state_controller.hub_pending_mnd += 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func hub_points_remaining(root: Object) -> int:
-	return ProgressionControllerScript.points_remaining(root.player_profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "SPD": root.screen_state_controller.hub_pending_spd})
+	return ProgressionControllerScript.points_remaining(root.player_profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "AGI": root.screen_state_controller.hub_pending_agi, "INT": root.screen_state_controller.hub_pending_int, "MND": root.screen_state_controller.hub_pending_mnd})
 
 
 func hub_confirm_stats(root: Object) -> void:
 	if root.player_profile == null: return
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-	ProgressionControllerScript.allocate_stats(root.player_profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "SPD": root.screen_state_controller.hub_pending_spd})
-	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_spd = 0
+	ProgressionControllerScript.allocate_stats(root.player_profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "AGI": root.screen_state_controller.hub_pending_agi, "INT": root.screen_state_controller.hub_pending_int, "MND": root.screen_state_controller.hub_pending_mnd})
+	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_agi = 0; root.screen_state_controller.hub_pending_int = 0; root.screen_state_controller.hub_pending_mnd = 0
 	root.call("_apply_profile_to_runtime"); root.call("_apply_player_level"); root.call("_sync_runtime_progression_to_profile")
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func hub_cancel_stats(root: Object) -> void:
-	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_spd = 0
+	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_agi = 0; root.screen_state_controller.hub_pending_int = 0; root.screen_state_controller.hub_pending_mnd = 0
 	if root.screen_state_controller != null and root.screen_state_controller.hub_overlay != null: root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func hub_auto_allocate(root: Object) -> void:
 	if root.player_profile == null: return
-	var patterns: Array = [[&"VIT", &"STR", &"DEF", &"SPD"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"SPD"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"SPD"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"SPD"], [&"STR", &"DEF", &"STR", &"DEF", &"SPD"]]
+	var patterns: Array = [[&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"AGI", &"MND"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"AGI", &"INT"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"MND", &"AGI"], [&"STR", &"DEF", &"STR", &"DEF", &"AGI", &"INT", &"MND"]]
 	var pattern: Array = patterns[clampi(root.player_profile.allocation_profile, 0, patterns.size() - 1)]
 	var index: int = 0
 	while hub_points_remaining(root) > 0:
@@ -429,7 +557,9 @@ func hub_auto_allocate(root: Object) -> void:
 			&"VIT": root.screen_state_controller.hub_pending_vit += 1
 			&"STR": root.screen_state_controller.hub_pending_str += 1
 			&"DEF": root.screen_state_controller.hub_pending_def += 1
-			&"SPD": root.screen_state_controller.hub_pending_spd += 1
+			&"AGI", &"SPD": root.screen_state_controller.hub_pending_agi += 1
+			&"INT": root.screen_state_controller.hub_pending_int += 1
+			&"MND": root.screen_state_controller.hub_pending_mnd += 1
 		index += 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 

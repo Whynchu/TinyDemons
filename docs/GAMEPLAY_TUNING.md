@@ -143,9 +143,9 @@ Display and audio preferences are intentionally excluded from this gameplay
 tuning index. `settings_service.gd` owns the device-wide
 `user://settings.cfg` values (`fullscreen`, `aspect`, `pixel_perfect`,
 `music_volume`, and `sfx_volume`), while `display_controller.gd` applies the
-logical view and `sound_manager.gd` applies volume changes. They are user
-preferences rather than balance knobs and require no additional tuning
-resource exports.
+logical view (`FULL` adaptive landscape default, or fixed 3:2/16:10/16:9)
+and `sound_manager.gd` applies volume changes. They are user preferences
+rather than balance knobs and require no additional tuning resource exports.
 
 ## World / scene constants (code, not exported)
 
