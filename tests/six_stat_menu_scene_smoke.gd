@@ -47,6 +47,10 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_EQUIPMENT and screens.hub_equipment_action_buttons.size() == 3 and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.visible), "Equipment exposes its top Equip/Remove/Remove All action row", failures)
 		_expect(screens.hub_gear_slot_buttons.size() == 4 and screens.hub_gear_stat_texts.size() == 6, "Equipment keeps four Tiny Demons slots and six-stat comparison capacity", failures)
+		var item_column_end := screens.hub_item_content_clip.position.x + screens.hub_item_content_clip.size.x if screens.hub_item_content_clip != null else -1.0
+		var stat_column_start := screens.hub_gear_stat_panel.position.x if screens.hub_gear_stat_panel != null else -1.0
+		_expect(screens.hub_item_content_clip != null and screens.hub_item_content_clip.clip_contents and item_column_end <= stat_column_start - 10.0, "equipment item text is clipped before the stat-card gutter", failures)
+		_expect(screens.hub_equipment_action_buttons[0].position.x + screens.hub_equipment_action_buttons[0].size.x <= screens.hub_equipment_action_buttons[1].position.x and screens.hub_equipment_action_buttons[1].position.x + screens.hub_equipment_action_buttons[1].size.x <= screens.hub_equipment_action_buttons[2].position.x, "equipment action buttons keep non-overlapping hit regions", failures)
 		screens.hub_page_buttons[3].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 5, "Shop remains a transaction page inside the shell", failures)
 		screens.hub_page_buttons[4].pressed.emit()

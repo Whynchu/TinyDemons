@@ -59,12 +59,16 @@ func _initialize() -> void:
 			var center_shift := right_shift * 0.5
 			_expect(is_equal_approx(gold_display.position.x, 205.0 + right_shift), "%s right HUD cluster reaches the edge" % aspect, failures)
 			_expect(is_equal_approx(health.position.x, 66.0 + center_shift), "%s center HUD cluster shifts by half the expansion" % aspect, failures)
+		var original_window_size := gameplay.get_window().size
+		gameplay.get_window().size = Vector2i(960, 720)
 		settings.set_setting(&"aspect", "FULL")
 		await process_frame
 		var live_window := gameplay.get_window().size
 		var expected_full := Vector2i(maxi(240, roundi(160.0 * float(live_window.x) / maxf(float(live_window.y), 1.0))), 160)
 		_expect(display.view_size_value() == expected_full, "FULL follows the live window aspect", failures)
+		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "FULL keeps the complete logical canvas on a narrow 4:3 surface", failures)
 		_expect((gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D).global_position.is_equal_approx(stable_floor), "FULL preserves authored collision geometry", failures)
+		gameplay.get_window().size = original_window_size
 	gameplay.queue_free()
 	await process_frame
 	_cleanup()
