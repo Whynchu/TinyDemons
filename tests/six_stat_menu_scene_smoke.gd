@@ -35,6 +35,7 @@ func _initialize() -> void:
 		screens.hub_page_buttons[1].pressed.emit()
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_ALLOCATE and screens.hub_stat_texts.size() == 6 and screens.hub_stat_buttons.size() == 12 and screens.hub_stat_row_buttons.size() == 6, "Allocate exposes six rows, twelve arrows, and full-row targets", failures)
+		_expect(screens.hub_stat_left_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)) and screens.hub_stat_row_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)), "Allocate keeps each arrow and row target inside its stat lane", failures)
 		screens.hub_stat_row_buttons[4].pressed.emit()
 		screens.hub_stat_right_buttons[4].pressed.emit()
 		_expect(screens.hub_stat_row == 4 and screens.hub_pending_int == 1 and screens.hub_pending_vit == 0 and screens.hub_pending_mnd == 0, "Allocate routes an INT row adjustment through the pending transaction", failures)
@@ -50,7 +51,20 @@ func _initialize() -> void:
 		var item_column_end := screens.hub_item_content_clip.position.x + screens.hub_item_content_clip.size.x if screens.hub_item_content_clip != null else -1.0
 		var stat_column_start := screens.hub_gear_stat_panel.position.x if screens.hub_gear_stat_panel != null else -1.0
 		_expect(screens.hub_item_content_clip != null and screens.hub_item_content_clip.clip_contents and item_column_end <= stat_column_start - 10.0, "equipment item text is clipped before the stat-card gutter", failures)
+		var equipment_card_end := screens.hub_item_list_panel.position.x + screens.hub_item_list_panel.size.x if screens.hub_item_list_panel != null else -1.0
+		_expect(equipment_card_end >= screens.display_view_size.x - 14.0 and screens.hub_gear_stat_panel != null and not screens.hub_gear_stat_panel.visible, "equipment uses one full-width upper card for slots and stat preview", failures)
 		_expect(screens.hub_equipment_action_buttons[0].position.x + screens.hub_equipment_action_buttons[0].size.x <= screens.hub_equipment_action_buttons[1].position.x and screens.hub_equipment_action_buttons[1].position.x + screens.hub_equipment_action_buttons[1].size.x <= screens.hub_equipment_action_buttons[2].position.x, "equipment action buttons keep non-overlapping hit regions", failures)
+		_expect(screens.hub_gear_choice_panel != null and screens.hub_gear_choice_content_clip != null and not screens.hub_gear_choice_panel.visible, "equipment keeps the lower slot-picker closed until a slot is selected", failures)
+		profile.ensure_starter_items()
+		screens.hub_gear_slot_buttons[0].pressed.emit()
+		await process_frame
+		var top_slot_bottom := screens.hub_item_content_clip.position.y + screens.hub_gear_slot_buttons[0].position.y + screens.hub_gear_slot_buttons[0].size.y
+		var choice_window_top := screens.hub_gear_choice_panel.position.y if screens.hub_gear_choice_panel != null else -1.0
+		_expect(screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible and screens.hub_gear_choice_content_clip.visible and screens.hub_gear_choice_texts[0].texture != null, "equipment opens a populated lower window for the selected slot", failures)
+		_expect(screens.hub_item_list_texts[0].visible and choice_window_top >= top_slot_bottom, "equipment keeps equipped slots visible above the separate candidate window", failures)
+		_expect(screens.hub_gear_choice_buttons[0].visible and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_IGNORE), "equipment limits touch input to the active picker while browsing", failures)
+		gameplay.call("_close_hub_gear_browse")
+		await process_frame
 		screens.hub_page_buttons[3].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 5, "Shop remains a transaction page inside the shell", failures)
 		screens.hub_page_buttons[4].pressed.emit()

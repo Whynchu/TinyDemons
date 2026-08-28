@@ -91,6 +91,8 @@ var hub_gear_stat_texts: Array[Sprite2D] = []
 var hub_gear_stat_panel: Panel = null
 var hub_item_list_panel: Panel = null
 var hub_item_content_clip: Control = null
+var hub_gear_choice_panel: Panel = null
+var hub_gear_choice_content_clip: Control = null
 var hub_cursor_text: Sprite2D = null
 var hub_page_buttons: Array[Button] = []
 var hub_back_button: Button = null
@@ -893,6 +895,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var stat_right: Array[Button] = []
 	var stat_rows: Array[Button] = []
 	var stat_names := [&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"]
+	# Keep the touch targets at the established row size. Disabled arrows use an
+	# explicit transparent style below, so the full 12px target remains usable
+	# without creating the stacked dark blocks seen in the old layout.
 	var stat_arrow_size := Vector2(20, 12)
 	for index in stat_names.size():
 		var y := 39.0 + index * 11.0
@@ -943,11 +948,26 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var gear_slot_buttons: Array[Button] = []
 	for slot_index in 4:
 		gear_slot_buttons.append(_make_transparent_touch_button(item_content_clip, "HubGearSlot%d" % slot_index, Vector2(0, slot_index * 12), Vector2(150, 12), select_gear_slot, slot_index))
+	# Equipment has two distinct levels of information: the upper window always
+	# remains the four equipped slots, while the lower window is the temporary
+	# inventory picker for the selected slot. Keeping a separate clip prevents
+	# candidate labels and slot labels from ever sharing the same pixels or hit
+	# regions when the picker is open.
+	var gear_choice_panel := _make_menu_card(items_page, "HubGearChoicePanel", Vector2(14, 91), Vector2(150, 42))
+	gear_choice_panel.visible = false
+	var gear_choice_content_clip := Control.new()
+	gear_choice_content_clip.name = "HubGearChoiceContentClip"
+	gear_choice_content_clip.position = Vector2(14, 91)
+	gear_choice_content_clip.size = Vector2(150, 42)
+	gear_choice_content_clip.clip_contents = true
+	gear_choice_content_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gear_choice_content_clip.visible = false
+	items_page.add_child(gear_choice_content_clip)
 	var gear_choices: Array[Sprite2D] = []
 	var gear_choice_buttons: Array[Button] = []
 	for choice_index in 4:
-		gear_choices.append(create_sprite(item_content_clip, "HubGearChoice%d" % choice_index, null, Vector2(6, 4 + choice_index * 10), false))
-		var choice_button := _make_transparent_touch_button(item_content_clip, "HubGearChoiceButton%d" % choice_index, Vector2(0, choice_index * 10), Vector2(150, 10), select_gear_candidate, choice_index)
+		gear_choices.append(create_sprite(gear_choice_content_clip, "HubGearChoice%d" % choice_index, null, Vector2(6, 4 + choice_index * 10), false))
+		var choice_button := _make_transparent_touch_button(gear_choice_content_clip, "HubGearChoiceButton%d" % choice_index, Vector2(0, choice_index * 10), Vector2(150, 10), select_gear_candidate, choice_index)
 		gear_choice_buttons.append(choice_button)
 	var gear_stat_panel := Panel.new()
 	gear_stat_panel.name = "HubGearStatPanel"; gear_stat_panel.position = Vector2(174, 35); gear_stat_panel.size = Vector2(maxf(display_view_size.x - 188.0, 48.0), 66); gear_stat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -995,9 +1015,11 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var cursor := create_sprite(root_page, "HubCursor", null, Vector2.ZERO, false); cursor.visible = false
 	hub_item_list_panel = item_list_panel
 	hub_item_content_clip = item_content_clip
+	hub_gear_choice_panel = gear_choice_panel
+	hub_gear_choice_content_clip = gear_choice_content_clip
 
 	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back)
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
 
 
 func _make_menu_page(parent: Node, page_name: String) -> Control:
@@ -1130,12 +1152,15 @@ func _position_hub_controls() -> void:
 	# card's space. Keep a ten-pixel gutter between the two regions.
 	var gear_x := maxf(174.0, width * 0.58)
 	var list_width := maxf(120.0, gear_x - 24.0)
+	var equipment_page := hub_page == HUB_PAGE_EQUIPMENT
+	var list_height := 54.0 if equipment_page else 66.0
+	var equipment_panel_width := maxf(80.0, width - 28.0)
 	if hub_item_list_panel != null:
 		hub_item_list_panel.position = Vector2(14, 35)
-		hub_item_list_panel.size = Vector2(list_width, 66)
+		hub_item_list_panel.size = Vector2(equipment_panel_width if equipment_page else list_width, list_height)
 	if hub_item_content_clip != null:
 		hub_item_content_clip.position = Vector2(14, 35)
-		hub_item_content_clip.size = Vector2(list_width, 66)
+		hub_item_content_clip.size = Vector2(list_width, list_height)
 	for index in hub_item_list_texts.size():
 		hub_item_list_texts[index].position = Vector2(6, 4 + index * 12)
 		if index < hub_item_row_buttons.size():
@@ -1149,11 +1174,19 @@ func _position_hub_controls() -> void:
 		hub_gear_choice_texts[index].position = Vector2(6, 4 + index * 10)
 		if index < hub_gear_choice_buttons.size():
 			hub_gear_choice_buttons[index].position = Vector2(0, index * 10)
-			hub_gear_choice_buttons[index].size = Vector2(list_width, 10)
+			hub_gear_choice_buttons[index].size = Vector2(equipment_panel_width if equipment_page else list_width, 10)
+	if hub_gear_choice_panel != null:
+		hub_gear_choice_panel.position = Vector2(14, 91)
+		hub_gear_choice_panel.size = Vector2(equipment_panel_width, 42)
+	if hub_gear_choice_content_clip != null:
+		hub_gear_choice_content_clip.position = Vector2(14, 91)
+		hub_gear_choice_content_clip.size = Vector2(equipment_panel_width, 42)
 	if hub_gear_stat_panel != null:
 		hub_gear_stat_panel.position = Vector2(gear_x, 35)
 		hub_gear_stat_panel.size = Vector2(maxf(48.0, width - gear_x - 10.0), 66)
-	for index in hub_gear_stat_texts.size(): hub_gear_stat_texts[index].position = Vector2(gear_x + 6.0, 41 + index * 9)
+	var gear_stat_y := 40.0 if equipment_page else 41.0
+	var gear_stat_pitch := 8.0 if equipment_page else 9.0
+	for index in hub_gear_stat_texts.size(): hub_gear_stat_texts[index].position = Vector2(gear_x + 6.0, gear_stat_y + index * gear_stat_pitch)
 	for index in hub_item_detail_texts.size(): hub_item_detail_texts[index].position = Vector2(14, 105 + index * 8)
 	if hub_item_name_text != null: hub_item_name_text.position = Vector2(14, 25)
 	if hub_item_action_button != null: hub_item_action_button.position = Vector2(width - 78.0, 119)
@@ -1221,6 +1254,9 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		summary.texture = pixel_texture.call("LV %d  XP %d/%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression)], Color.WHITE) as Texture2D
 	_update_player_card(root, pixel_texture, hub_player_card_texts, hub_summary_text)
 	var page := hub_page
+	# Page changes alter the height of the shared inventory card (Equipment
+	# uses four upper slot rows; Shop/Fusion use five inventory rows).
+	_position_hub_controls()
 	var page_buttons := hub_page_buttons
 	var highlight_color := PaletteLibrary.accent(player_palette_name)
 	if root.has_method("_health_feedback_color"):
@@ -1258,13 +1294,19 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var item_list := hub_item_list_texts
 	var shop_prices := hub_shop_price_texts
 	var gear_choices := hub_gear_choice_texts
-	for button in hub_gear_choice_buttons: button.visible = page == HUB_PAGE_EQUIPMENT and hub_gear_browsing
+	var gear_browsing := page == HUB_PAGE_EQUIPMENT and hub_gear_browsing
+	for button in hub_gear_choice_buttons:
+		button.visible = gear_browsing
 	var gear_stats := hub_gear_stat_texts
 	var item_details := hub_item_detail_texts
 	var item_action := hub_item_action_button
 	for equipment_action_index in hub_equipment_action_buttons.size():
 		var equipment_action := hub_equipment_action_buttons[equipment_action_index]
 		equipment_action.visible = page == HUB_PAGE_EQUIPMENT
+		# The picker is a child state of Equipment. Keep the top action row
+		# visible for orientation, but remove it from the touch/input path until
+		# the picker is closed.
+		equipment_action.mouse_filter = Control.MOUSE_FILTER_IGNORE if gear_browsing else Control.MOUSE_FILTER_STOP
 		var action_active := page == HUB_PAGE_EQUIPMENT and hub_content_focus and hub_equipment_action_focus and equipment_action_index == hub_action_column
 		set_archetype_button_state(equipment_action, action_active, highlight_color)
 	if page == HUB_PAGE_EQUIPMENT and hub_equipment_action_buttons.size() >= 3:
@@ -1283,11 +1325,20 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var item_page := page >= HUB_PAGE_EQUIPMENT and page <= HUB_PAGE_FUSION
 	for node in item_list: node.visible = item_page
 	for node in shop_prices: node.visible = page == HUB_PAGE_SHOP
-	for node in gear_choices: node.visible = page == HUB_PAGE_EQUIPMENT and hub_gear_browsing
-	for button in hub_gear_slot_buttons: button.visible = page == HUB_PAGE_EQUIPMENT and not hub_gear_browsing
+	for node in gear_choices: node.visible = gear_browsing
+	for button in hub_gear_slot_buttons:
+		button.visible = page == HUB_PAGE_EQUIPMENT
+		button.mouse_filter = Control.MOUSE_FILTER_STOP if page == HUB_PAGE_EQUIPMENT else Control.MOUSE_FILTER_IGNORE
+	if hub_item_list_panel != null: hub_item_list_panel.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION
+	if hub_item_content_clip != null: hub_item_content_clip.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION
+	if hub_gear_choice_panel != null: hub_gear_choice_panel.visible = gear_browsing
+	if hub_gear_choice_content_clip != null: hub_gear_choice_content_clip.visible = gear_browsing
 	for node in gear_stats: node.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
 	var gear_stat_panel := hub_gear_stat_panel
-	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
+	# Equipment already has one full-width upper card; its stats live inside
+	# that card instead of drawing a second nested border. Fusion keeps the
+	# separate comparison card used by its inventory view.
+	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_FUSION
 	for node in item_details: node.visible = item_page
 	if item_action != null: item_action.visible = item_page
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
@@ -1934,6 +1985,10 @@ func update_hub_input(root: Object) -> void:
 	if page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
 		if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): root.call("_shift_hub_gear_candidate", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): root.call("_shift_hub_gear_candidate", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
+			var slot_direction := -1 if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) else 1
+			var next_slot := posmod(hub_item_index + slot_direction, ItemCatalog.SLOTS.size())
+			root.call("_select_hub_gear_slot", next_slot); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_menu_confirm_just_pressed")): root.call("_hub_item_action")
 		return
 	if page == HUB_PAGE_EQUIPMENT:
@@ -2363,7 +2418,7 @@ func build_archetype(parent: Node, shift_type: Callable, shift_color: Callable, 
 
 func make_archetype_arrow(parent: Node, side: int, button_position: Vector2, pressed_callback: Callable, pixel_texture: Callable, hit_size: Vector2 = Vector2(10, 10)) -> Button:
 	var button := Button.new(); button.position = button_position; button.size = hit_size; button.text = ""; button.focus_mode = Control.FOCUS_NONE; button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND; button.set_meta("archetype_arrow", true)
-	for style_state in ["normal", "hover", "pressed", "focus"]:
+	for style_state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		var style := StyleBoxFlat.new(); style.bg_color = Color.TRANSPARENT; style.border_width_left = 0; style.border_width_top = 0; style.border_width_right = 0; style.border_width_bottom = 0; button.add_theme_stylebox_override(style_state, style)
 	var glyph := Sprite2D.new(); glyph.texture = pixel_texture.call("<" if side < 0 else ">", Color.WHITE) as Texture2D; glyph.centered = true; glyph.position = button.size * 0.5; glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; button.add_child(glyph)
 	button.pressed.connect(pressed_callback); parent.add_child(button); return button
