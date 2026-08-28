@@ -74,8 +74,17 @@ func apply_settings() -> void:
 		window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 		# Wide logical modes add horizontal content while preserving the native
 		# 160px vertical scale. KEEP would fit a 16:9 base into a 3:2 target by
-		# shrinking it vertically, which makes every menu look compressed.
-		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT
+		# shrinking it vertically, which makes every menu look compressed. A
+		# narrower-than-3:2 browser/window surface is the one exception: keeping
+		# height there would crop the menu horizontally, so fit the complete
+		# logical canvas and accept vertical letterboxing instead.
+		var preserve_height := true
+		if DisplayLayout.is_full_aspect(_aspect_mode):
+			var live_size := _live_window_size()
+			var live_ratio := live_size.x / maxf(live_size.y, 1.0)
+			var logical_ratio := float(current_view_size.x) / maxf(float(current_view_size.y), 1.0)
+			preserve_height = live_ratio >= logical_ratio
+		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if preserve_height else Window.CONTENT_SCALE_ASPECT_KEEP
 		window.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_INTEGER if pixel_perfect else Window.CONTENT_SCALE_STRETCH_FRACTIONAL
 		_apply_fullscreen(window, fullscreen)
 		_resize_window_width_for_aspect(window, current_view_size, fullscreen)

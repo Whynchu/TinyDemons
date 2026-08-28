@@ -89,6 +89,8 @@ var hub_gear_choice_buttons: Array[Button] = []
 var hub_gear_slot_buttons: Array[Button] = []
 var hub_gear_stat_texts: Array[Sprite2D] = []
 var hub_gear_stat_panel: Panel = null
+var hub_item_list_panel: Panel = null
+var hub_item_content_clip: Control = null
 var hub_cursor_text: Sprite2D = null
 var hub_page_buttons: Array[Button] = []
 var hub_back_button: Button = null
@@ -921,23 +923,31 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	respec_button.focus_mode = Control.FOCUS_NONE; respec_button.pressed.connect(respec); allocate_page.add_child(respec_button)
 
 	var item_name := create_sprite(items_page, "HubItemName", null, Vector2(14, 25), false)
+	var item_list_panel := _make_menu_card(items_page, "HubItemListPanel", Vector2(14, 35), Vector2(150, 66))
+	var item_content_clip := Control.new()
+	item_content_clip.name = "HubItemContentClip"
+	item_content_clip.position = Vector2(14, 35)
+	item_content_clip.size = Vector2(150, 66)
+	item_content_clip.clip_contents = true
+	item_content_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	items_page.add_child(item_content_clip)
 	var item_list: Array[Sprite2D] = []
 	for list_index in 5:
-		item_list.append(create_sprite(items_page, "HubItemList%d" % list_index, null, Vector2(20, 39 + list_index * 12), false))
+		item_list.append(create_sprite(item_content_clip, "HubItemList%d" % list_index, null, Vector2(6, 4 + list_index * 12), false))
 	var item_row_buttons: Array[Button] = []
 	for list_index in 5:
-		item_row_buttons.append(_make_transparent_touch_button(items_page, "HubItemRow%d" % list_index, Vector2(14, 35 + list_index * 12), Vector2(150, 12), select_item_row, list_index))
+		item_row_buttons.append(_make_transparent_touch_button(item_content_clip, "HubItemRow%d" % list_index, Vector2(0, list_index * 12), Vector2(150, 12), select_item_row, list_index))
 	var shop_prices: Array[Sprite2D] = []
 	for list_index in 5:
 		shop_prices.append(create_sprite(items_page, "HubShopPrice%d" % list_index, null, Vector2(174, 39 + list_index * 12), false))
 	var gear_slot_buttons: Array[Button] = []
 	for slot_index in 4:
-		gear_slot_buttons.append(_make_transparent_touch_button(items_page, "HubGearSlot%d" % slot_index, Vector2(14, 35 + slot_index * 12), Vector2(150, 12), select_gear_slot, slot_index))
+		gear_slot_buttons.append(_make_transparent_touch_button(item_content_clip, "HubGearSlot%d" % slot_index, Vector2(0, slot_index * 12), Vector2(150, 12), select_gear_slot, slot_index))
 	var gear_choices: Array[Sprite2D] = []
 	var gear_choice_buttons: Array[Button] = []
 	for choice_index in 4:
-		gear_choices.append(create_sprite(items_page, "HubGearChoice%d" % choice_index, null, Vector2(20, 39 + choice_index * 10), false))
-		var choice_button := _make_transparent_touch_button(items_page, "HubGearChoiceButton%d" % choice_index, Vector2(14, 35 + choice_index * 10), Vector2(150, 10), select_gear_candidate, choice_index)
+		gear_choices.append(create_sprite(item_content_clip, "HubGearChoice%d" % choice_index, null, Vector2(6, 4 + choice_index * 10), false))
+		var choice_button := _make_transparent_touch_button(item_content_clip, "HubGearChoiceButton%d" % choice_index, Vector2(0, choice_index * 10), Vector2(150, 10), select_gear_candidate, choice_index)
 		gear_choice_buttons.append(choice_button)
 	var gear_stat_panel := Panel.new()
 	gear_stat_panel.name = "HubGearStatPanel"; gear_stat_panel.position = Vector2(174, 35); gear_stat_panel.size = Vector2(maxf(display_view_size.x - 188.0, 48.0), 66); gear_stat_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -953,11 +963,11 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var equipment_actions: Array[Button] = []
 	var equip_action := make_retro_button("EQUIP", Vector2(14, 22), Vector2(42, 12), pixel_texture)
 	equip_action.name = "HubEquipmentEquip"; equip_action.focus_mode = Control.FOCUS_NONE; equip_action.pressed.connect(item_action); items_page.add_child(equip_action); equipment_actions.append(equip_action)
-	var remove_action := make_retro_button("REMOVE", Vector2(60, 22), Vector2(48, 12), pixel_texture)
+	var remove_action := make_retro_button("REMOVE", Vector2(64, 22), Vector2(50, 12), pixel_texture)
 	remove_action.name = "HubEquipmentRemove"; remove_action.focus_mode = Control.FOCUS_NONE
 	if equipment_remove.is_valid(): remove_action.pressed.connect(equipment_remove)
 	items_page.add_child(remove_action); equipment_actions.append(remove_action)
-	var remove_all_action := make_retro_button("REMOVE ALL", Vector2(112, 22), Vector2(58, 12), pixel_texture)
+	var remove_all_action := make_retro_button("REMOVE ALL", Vector2(122, 22), Vector2(62, 12), pixel_texture)
 	remove_all_action.name = "HubEquipmentRemoveAll"; remove_all_action.focus_mode = Control.FOCUS_NONE
 	if equipment_remove_all.is_valid(): remove_all_action.pressed.connect(equipment_remove_all)
 	items_page.add_child(remove_all_action); equipment_actions.append(remove_all_action)
@@ -983,9 +993,11 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	if bind_element.is_valid(): binding_action_button.pressed.connect(bind_element)
 	bind_page.add_child(binding_action_button)
 	var cursor := create_sprite(root_page, "HubCursor", null, Vector2.ZERO, false); cursor.visible = false
+	hub_item_list_panel = item_list_panel
+	hub_item_content_clip = item_content_clip
 
 	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back)
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
 
 
 func _make_menu_page(parent: Node, page_name: String) -> Control:
@@ -1112,22 +1124,32 @@ func _position_hub_controls() -> void:
 		var column := 0 if index < 8 else 1
 		var row := index if index < 8 else index - 8
 		hub_status_texts[index].position = Vector2(14 + column * width * 0.5, 42 + row * 10)
-	var list_width := maxf(150.0, width - 100.0)
+	# The item labels and their touch rows share a bounded left column. The
+	# previous width calculation grew from the viewport width independently of
+	# the stat card, so a wide display could let item text/buttons enter the
+	# card's space. Keep a ten-pixel gutter between the two regions.
+	var gear_x := maxf(174.0, width * 0.58)
+	var list_width := maxf(120.0, gear_x - 24.0)
+	if hub_item_list_panel != null:
+		hub_item_list_panel.position = Vector2(14, 35)
+		hub_item_list_panel.size = Vector2(list_width, 66)
+	if hub_item_content_clip != null:
+		hub_item_content_clip.position = Vector2(14, 35)
+		hub_item_content_clip.size = Vector2(list_width, 66)
 	for index in hub_item_list_texts.size():
-		hub_item_list_texts[index].position = Vector2(20, 39 + index * 12)
+		hub_item_list_texts[index].position = Vector2(6, 4 + index * 12)
 		if index < hub_item_row_buttons.size():
-			hub_item_row_buttons[index].position = Vector2(14, 35 + index * 12)
+			hub_item_row_buttons[index].position = Vector2(0, index * 12)
 			hub_item_row_buttons[index].size = Vector2(list_width, 12)
-		if index < hub_shop_price_texts.size(): hub_shop_price_texts[index].position = Vector2(width - 62.0, 39 + index * 12)
+		if index < hub_shop_price_texts.size(): hub_shop_price_texts[index].position = Vector2(maxf(gear_x, width - 62.0), 39 + index * 12)
 	for index in hub_gear_slot_buttons.size():
-		hub_gear_slot_buttons[index].position = Vector2(14, 35 + index * 12)
+		hub_gear_slot_buttons[index].position = Vector2(0, index * 12)
 		hub_gear_slot_buttons[index].size = Vector2(list_width, 12)
 	for index in hub_gear_choice_texts.size():
-		hub_gear_choice_texts[index].position = Vector2(20, 39 + index * 10)
+		hub_gear_choice_texts[index].position = Vector2(6, 4 + index * 10)
 		if index < hub_gear_choice_buttons.size():
-			hub_gear_choice_buttons[index].position = Vector2(14, 35 + index * 10)
+			hub_gear_choice_buttons[index].position = Vector2(0, index * 10)
 			hub_gear_choice_buttons[index].size = Vector2(list_width, 10)
-	var gear_x := maxf(174.0, width * 0.58)
 	if hub_gear_stat_panel != null:
 		hub_gear_stat_panel.position = Vector2(gear_x, 35)
 		hub_gear_stat_panel.size = Vector2(maxf(48.0, width - gear_x - 10.0), 66)
@@ -1136,7 +1158,7 @@ func _position_hub_controls() -> void:
 	if hub_item_name_text != null: hub_item_name_text.position = Vector2(14, 25)
 	if hub_item_action_button != null: hub_item_action_button.position = Vector2(width - 78.0, 119)
 	for index in hub_equipment_action_buttons.size():
-		hub_equipment_action_buttons[index].position = Vector2([14.0, 60.0, 112.0][mini(index, 2)], 22)
+		hub_equipment_action_buttons[index].position = Vector2([14.0, 64.0, 122.0][mini(index, 2)], 22)
 	if hub_fusion_decrease_button != null: hub_fusion_decrease_button.position = Vector2(14, 119)
 	if hub_fusion_increase_button != null: hub_fusion_increase_button.position = Vector2(39, 119)
 	if hub_binding_panel != null:
