@@ -105,6 +105,7 @@ var hub_player_card_panel: Panel = null
 var hub_player_card_texts: Array[Sprite2D] = []
 var hub_status_texts: Array[Sprite2D] = []
 var hub_context_text: Sprite2D = null
+var hub_currency_text: Sprite2D = null
 var hub_binding_panel: Panel = null
 var hub_binding_texts: Array[Sprite2D] = []
 var hub_binding_action_button: Button = null
@@ -877,6 +878,8 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	points.visible = false
 	var context := create_sprite(overlay, "HubContext", null, Vector2(14, display_view_size.y - 25.0), false)
 	hub_context_text = context
+	var currency := create_sprite(overlay, "HubCurrency", null, Vector2(display_view_size.x - 76.0, 23), false)
+	hub_currency_text = currency
 
 	var pages: Array[Button] = []
 	var page_labels := ["STATUS", "ALLOCATE", "EQUIPMENT", "SHOP", "FUSION", "BIND"]
@@ -1118,6 +1121,8 @@ func _position_hub_controls() -> void:
 	var width := display_view_size.x
 	hub_overlay.position = Vector2.ZERO
 	hub_overlay.size = display_view_size
+	if hub_currency_text != null:
+		hub_currency_text.position = Vector2(maxf(14.0, width - 76.0), 23)
 	for page_root: Control in hub_page_roots.values():
 		page_root.position = Vector2.ZERO
 		page_root.size = display_view_size
@@ -1276,7 +1281,9 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		page_buttons[page_index].visible = showing_root
 		var page_active := target_page == page
 		set_archetype_button_state(page_buttons[page_index], page_active, highlight_color)
-		_set_menu_button_icon(page_buttons[page_index], MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and page_active)
+		# The hub command rail is navigation, not an action prompt. Keep it
+		# text-only so the selected command does not gain a second Circle box.
+		_set_menu_button_icon(page_buttons[page_index], null, false)
 	if hub_cursor_text != null and not page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
 		hub_cursor_text.texture = pixel_texture.call(">", highlight_color) as Texture2D
@@ -1294,8 +1301,12 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var back_prompt := _menu_back_prompt_for(root)
 	if hub_context_text != null:
 		hub_context_text.visible = true
-		hub_context_text.texture = pixel_texture.call("%s  /  %s" % [confirm_prompt, back_prompt], Color8(148, 220, 255)) as Texture2D
+		hub_context_text.texture = pixel_texture.call(confirm_prompt, Color8(148, 220, 255)) as Texture2D
 	_set_button_text(hub_back_button, back_prompt, pixel_texture, highlight_color)
+	if hub_currency_text != null:
+		var currency_label := "GOLD %d" % profile.gold if page == HUB_PAGE_SHOP else "SOULS %d" % profile.souls
+		hub_currency_text.visible = page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION or page == HUB_PAGE_BIND
+		hub_currency_text.texture = pixel_texture.call(currency_label, Color8(255, 205, 117) if page == HUB_PAGE_SHOP else Color8(211, 167, 255)) as Texture2D
 	if showing_root:
 		return
 	var stat_nodes: Array[CanvasItem] = []
@@ -1323,7 +1334,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		equipment_action.mouse_filter = Control.MOUSE_FILTER_IGNORE if gear_browsing else Control.MOUSE_FILTER_STOP
 		var action_active := page == HUB_PAGE_EQUIPMENT and hub_content_focus and hub_equipment_action_focus and equipment_action_index == hub_action_column
 		set_archetype_button_state(equipment_action, action_active, highlight_color)
-		_set_menu_button_icon(equipment_action, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and action_active)
+		_set_menu_button_icon(equipment_action, null, false)
 	if page == HUB_PAGE_EQUIPMENT and hub_equipment_action_buttons.size() >= 3:
 		var selected_slot: StringName = ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var equipped_item := profile.find_item(str(profile.equipped_instance_ids.get(String(selected_slot), "")))
@@ -1468,7 +1479,7 @@ func _update_hub_status_page(root: Object, pixel_texture: Callable, profile: Pla
 		hub_status_texts[index + 8].texture = pixel_texture.call(right[index], highlight_color if index == 0 else Color.WHITE) as Texture2D
 	if hub_points_text != null: hub_points_text.texture = pixel_texture.call("LV %d  EXP %d/%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, root.get("progression_tuning") as ProgressionTuning)], Color8(255, 205, 117)) as Texture2D
 	if hub_points_text != null: hub_points_text.visible = true
-	if hub_context_text != null: hub_context_text.texture = pixel_texture.call(_menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
+	if hub_context_text != null: hub_context_text.texture = null
 
 
 func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
@@ -1483,7 +1494,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		var button := pause_menu_buttons[index]
 		button.visible = pause_page == 0
 		set_archetype_button_state(button, index == pause_menu_row, highlight)
-		_set_menu_button_icon(button, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and pause_page == 0 and index == pause_menu_row)
+		_set_menu_button_icon(button, null, false)
 	if pause_back_button != null:
 		pause_back_button.visible = true
 		set_archetype_button_state(pause_back_button, pause_page != 0, highlight)
@@ -1494,7 +1505,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	for node in pause_equipment_texts: node.visible = pause_page == 2
 	if pause_description_text != null:
 		pause_description_text.visible = true
-		pause_description_text.texture = pixel_texture.call("%s  /  %s" % [confirm_prompt, back_prompt], Color8(148, 220, 255)) as Texture2D
+		pause_description_text.texture = pixel_texture.call(confirm_prompt, Color8(148, 220, 255)) as Texture2D
 	if pause_page == 1:
 		_update_pause_status(root, pixel_texture)
 	elif pause_page == 2:
@@ -1524,7 +1535,7 @@ func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
 	]
 	for index in mini(values.size(), pause_status_texts.size()):
 		pause_status_texts[index].texture = pixel_texture.call(values[index], Color.WHITE) as Texture2D
-	if pause_description_text != null: pause_description_text.texture = pixel_texture.call(_menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
+	if pause_description_text != null: pause_description_text.texture = null
 
 
 func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
@@ -1543,7 +1554,7 @@ func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
 		pause_equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
 	for index in range(slot_labels.size(), pause_equipment_texts.size()):
 		pause_equipment_texts[index].texture = null
-	if pause_description_text != null: pause_description_text.texture = pixel_texture.call(_menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
+	if pause_description_text != null: pause_description_text.texture = null
 
 
 func set_pause_page(root: Object, page: int) -> void:
@@ -1902,8 +1913,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		if hub_context_text != null:
 			var context := "P%.0f>%.0f M%.0f>%.0f" % [current_attack, preview_attack, current_magic, preview_magic] if comparing else "P%.0f M%.0f" % [preview_attack, preview_magic]
 			var confirm_prompt := _menu_confirm_prompt_for(root).replace("SELECT", "EQUIP")
-			var back_prompt := _menu_back_prompt_for(root)
-			hub_context_text.texture = pixel_texture.call("%s  %s  %s" % [context, confirm_prompt, back_prompt], Color8(148, 220, 255)) as Texture2D
+			hub_context_text.texture = pixel_texture.call("%s  %s" % [context, confirm_prompt], Color8(148, 220, 255)) as Texture2D
 		preview_equipment.free()
 		return
 	# Lightweight test doubles and legacy callers may not expose a player
@@ -2375,6 +2385,9 @@ func _set_menu_button_icon(button: Button, icon_texture: Texture2D, visible: boo
 		button.add_child(icon)
 	icon.texture = icon_texture
 	icon.visible = visible and icon_texture != null
+	# Button state colors belong to the control label/border. Face-button art
+	# keeps its authored color even while the surrounding action is selected.
+	icon.modulate = Color.WHITE
 	if icon.visible:
 		var text_width: float = float(text.texture.get_width()) if text.texture != null else 0.0
 		var group_width: float = 5.0 + 3.0 + text_width
