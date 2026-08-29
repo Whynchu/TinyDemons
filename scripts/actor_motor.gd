@@ -24,8 +24,10 @@ func move_player(root: Object, delta: float) -> void:
 		root.set("last_player_input_direction", input.normalized())
 	var moving := input.length_squared() > 0.0; root.set("player_is_moving", moving)
 	# Running is a roll continuation: hold the roll button after a dodge (the
-	# frame controller latches player_roll_hold_armed) and keep moving.
-	var running := moving and bool(root.get("player_roll_input_held")) and bool(root.get("player_roll_hold_armed")) and not bool(root.get("player_is_defending"))
+	# frame controller latches player_roll_hold_armed) and keep moving. Lock-on
+	# targeting (player_is_targeting) suppresses the run so the player keeps
+	# walk speed while circling a target.
+	var running := moving and bool(root.get("player_roll_input_held")) and bool(root.get("player_roll_hold_armed")) and not bool(root.get("player_is_defending")) and not bool(root.get("player_is_targeting"))
 	root.set("player_is_running", running)
 	if not moving: return
 	update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))

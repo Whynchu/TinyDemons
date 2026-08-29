@@ -68,6 +68,7 @@ func _initialize() -> void:
 		gameplay.set("player_is_magic_casting", false)
 		gameplay.set("player_is_rolling", false)
 		gameplay.set("player_is_defending", false)
+		gameplay.set("player_is_targeting", false)
 		var on_motion := func(motion: Vector2) -> void: _captured_motion = motion
 		motor.motion_requested.connect(on_motion)
 		gameplay.set("player_roll_input_held", true)
@@ -77,6 +78,12 @@ func _initialize() -> void:
 		var speed_multiplier := float(gameplay.get("player_speed_multiplier"))
 		var expected := gameplay.call("_perspective_movement", Vector2.RIGHT * tuning.run_speed * speed_multiplier * 0.5) as Vector2
 		_expect(_captured_motion.is_equal_approx(expected), "run moves at run_speed, nearly as fast as rolling", failures)
+		gameplay.set("player_is_targeting", true)
+		motor.move_player(gameplay, 0.5)
+		_expect(not bool(gameplay.get("player_is_running")), "lock-on targeting suppresses the run", failures)
+		gameplay.set("player_is_targeting", false)
+		motor.move_player(gameplay, 0.5)
+		_expect(bool(gameplay.get("player_is_running")), "releasing the lock-on restores the run", failures)
 		gameplay.set("player_roll_input_held", false)
 		motor.move_player(gameplay, 0.5)
 		_expect(not bool(gameplay.get("player_is_running")), "releasing the roll button returns to walking", failures)

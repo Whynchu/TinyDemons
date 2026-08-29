@@ -182,6 +182,9 @@ var player_is_attacking := false
 var player_is_magic_casting := false
 var player_is_rolling := false
 var player_is_defending := false
+## True while the player holds the lock-on/target input. Movement stays walk
+## speed while targeting so the player cannot sprint into a lock.
+var player_is_targeting := false
 var last_player_input_direction := Vector2.RIGHT
 var last_player_facing_left := false
 var roll_dust_spawned_this_roll := false

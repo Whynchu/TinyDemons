@@ -16,14 +16,14 @@ game reads them at runtime with no code change.
 
 | Group | Fields |
 | --- | --- |
-| Movement | `speed` 36, `run_speed` 80, `speed_scale` 0.012, `roll_scale` 0.015, `attack_scale` 0.010, `speed_effect_min` -0.5, `speed_effect_max` 1.0 |
+| Movement | `speed` 36, `run_speed` 64.8, `speed_scale` 0.012, `roll_scale` 0.015, `attack_scale` 0.010, `speed_effect_min` -0.5, `speed_effect_max` 1.0 |
 | Hit reaction | `hit_flash_time` 0.12, `hitstun_time` 1/30, `hit_knockback` 10, `hit_knockback_duration` 0.12 |
 | Idle/walk/run | `idle_frame_time` 0.22, `walk_frame_time` 0.18, `run_frame_time` 0.10 |
 | Attack | `attack_frame_time` 0.09, `attack_hit_frame` 2, `attack2_hit_frame` 2, `combo_window` 0.18, `between_attack_time` 0.12, `attack2_cooldown` 0.16 |
 | Spin gesture / timing | `spin_circle_min_magnitude` 0.55, `spin_circle_max_duration` 0.50, `spin_circle_required_turn` 0.80τ, `spin_circle_arm_duration` 0.28, `spin_frame_time` 0.075, `spin_recovery_frame_time` 0.14, active frames 3–6 |
 | Spin balance | `spin_damage_multiplier` 0.90, `spin_knockback_multiplier` 1.10; spin uses eight authored body frames, no lunge, and does not split damage across multiple targets |
 | Charge balance | `charge_minimum_time` 0.35, `charge_maximum_time` 1.00, `charged_attack2_frame_time_multiplier` 1.35, `charged_attack2_damage_multiplier` 1.60, `charged_attack2_knockback_multiplier` 1.50 |
-| Roll | `roll_frame_time` 0.05, `roll_distance` 30, `roll_duration` 0.30 |
+| Roll | `roll_frame_time` 0.05, `roll_distance` 24.3, `roll_duration` 0.30 |
 | Lunge/knockback | `attack_lunge_distance` 6, `attack_lunge_duration` 0.18, `attack_knockback` 16, `attack1_knockback_multiplier` 0.60 |
 | Damage | `attack2_damage_multiplier` 1.25, `attack2_multi_target_damage_multiplier` 1.10 |
 | Regen | `regen_delay` 2.0, `regen_interval` 1.0, `regen_amount` 1.0 |
