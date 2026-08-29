@@ -141,7 +141,7 @@ freely.
 | Settings load/save/apply | `scripts/settings_service.gd` (new, stateless-ish helper over a `user://settings.cfg` ConfigFile) | Device-wide store; applied once at bootstrap and live on every change; IndexedDB flush caveat from the web plan applies |
 | Display application | `scripts/display_controller.gd` (new node, created by `gameplay_bootstrap.gd`) | Owns `content_scale_size`, `content_scale_stretch`, fullscreen (`DisplayServer.window_set_mode`); emits `view_size_changed(size)` |
 | Layout truth | `scripts/display_layout.gd` (new, stateless) | `view_size()`, edge anchors (`left_x`, `right_x(w)`, `center_x(w)`, `top_y`, `bottom_y(h)`), and the per-element HUD classification (left / center / right) |
-| HUD re-homing | `hud_controller.gd`, `player_hud.tscn` positions via layout offsets | Right-cluster (gold/soul/run timer/cooldowns/input prompts) anchors to the right edge; centered clusters (HP/MP, target name) shift by half the extra width; left/bottom items unchanged |
+| HUD re-homing | `hud_controller.gd`, `player_hud.tscn` positions via layout offsets | Right-cluster (gold/soul/run timer/input prompts) anchors to the right edge; the two ability icons stay beside the left-anchored PlayerStatus strip; centered clusters (HP/MP, target name) shift by half the extra width; left/bottom items unchanged |
 | Overlays and menus | `screen_state_controller.gd` | `create_overlay` sizes to the view; manual `(240 − w)/2` centering math becomes view-relative; title text/button bob keeps absolute y, x recenters |
 | Void + frame | `main.tscn` Background sprite, `BlackBars.png` | Engine `default_clear_color` set to the void RGB(17,19,24); BG extended to cover the view (flat color — a ColorRect sized to the view is acceptable); decorative bars become runtime-drawn strips (top 16 px, bottom 15 px, RGB(6,6,6)) sized to view width. The static PNG is retired so all modes share one code path |
 | Room centering | `display_controller.gd`, `room_controller.gd` | Keep Map/Actors, walkable polygons, collision shapes, and saved positions in stable world space; a display-owned camera centers normal rooms while the existing boss camera remains authoritative |
@@ -189,10 +189,11 @@ against the live scene during Phase 2 — this list comes from the audit):
 
 - **Left-anchored (no move)**: player status/level/XP cluster
   (`player_hud.tscn:182-216`), minimap (`dungeon_minimap_controller.gd:9-11`),
-  room number / dungeon run (`hud_controller.gd:321,382`).
+  room number / dungeon run (`hud_controller.gd:321,382`), and the two ability
+  icons beside the player status strip (`hud_controller.gd`).
 - **Right-anchored (shift +extra width)**: gold display
   (`player_hud.tscn:280`), soul display (`hud_controller.gd:346-349`),
-  ability cooldown icon widgets (`hud_controller.gd`), run timer
+  run timer
   (`hud_controller.gd:374`, `player_hud.tscn:312`), input-prompt buttons
   (`hud_controller.gd:394-400`).
 - **Center-anchored (shift +half extra width)**: HP/MP bar row
@@ -203,13 +204,15 @@ against the live scene during Phase 2 — this list comes from the audit):
 The two in-game ability indicators are authored 16x16 button sprites: Magic
 replaces the old `TRI` row and Imbue replaces the old `IMB` row. Each icon is
 recolored from the active player Chroma palette while preserving its dark
-silhouette and neutral highlights. A per-icon shader desaturates and dims the
-remaining cooldown sector, beginning at 12 o'clock and restoring color
-clockwise as the timer falls. A compact white `seconds.tenths` readout sits in
-the icon center only while the cooldown is active; it disappears when ready.
-Unavailable actions remain visible in the same icon position, fully greyed,
-so the control never shifts or vanishes as the player changes aspect or
-Chroma.
+silhouette and neutral highlights. During cooldown the complete icon remains
+grey and dim; the remaining sector, beginning at 12 o'clock, receives an
+extra shade that peels away clockwise as the timer falls. The authored color
+returns only when the cooldown reaches zero. A compact white `seconds.tenths`
+readout sits in the icon center only while the cooldown is active; it
+disappears when ready. Unavailable actions remain visible in the same icon
+position, fully greyed, so the control never shifts or vanishes as the player
+changes aspect or Chroma. The icons use a two-pixel gap after the 82px
+PlayerStatus strip and an 18px horizontal pitch.
 
 ## 6. Ordered implementation plan
 

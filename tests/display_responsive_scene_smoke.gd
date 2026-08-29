@@ -72,9 +72,13 @@ func _initialize() -> void:
 			var player_hud := ui.get_node("PlayerHud") as Node2D
 			var gold_display := player_hud.get_node("GoldDisplay") as Node2D
 			var player_status := player_hud.get_node("PlayerStatus") as Node2D
+			var cooldown_hud := (gameplay.get("hud_controller") as HudController).cooldown_hud
+			var magic_icon := cooldown_hud.get("magic_icon") as Sprite2D
+			var imbue_icon := cooldown_hud.get("imbue_icon") as Sprite2D
 			var right_shift := float(expected.x - 240)
 			_expect(is_equal_approx(gold_display.position.x, 205.0 + right_shift), "%s right HUD cluster reaches the edge" % aspect, failures)
 			_expect(player_status != null and player_status.position.is_equal_approx(Vector2.ZERO), "%s player HUD stays flush to the frame top-left" % aspect, failures)
+			_expect(magic_icon != null and magic_icon.position.is_equal_approx(Vector2(84, 0)) and imbue_icon != null and imbue_icon.position.is_equal_approx(Vector2(102, 0)), "%s ability icons stay lined up beside PlayerStatus" % aspect, failures)
 			var player_frame := player_hud.get_node("PlayerStatus/UIFrame") as Sprite2D
 			_expect(player_frame != null and player_frame.position.is_equal_approx(Vector2.ZERO), "%s player HUD frame keeps its authored origin" % aspect, failures)
 		var original_window_size := gameplay.get_window().size

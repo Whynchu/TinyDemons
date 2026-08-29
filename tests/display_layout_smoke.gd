@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_expect(DisplayLayout.offset_for(&"target_name", wide) == Vector2(22, 0), "center target text moves by half the extra width", failures)
 	_expect(DisplayLayout.offset_for(&"minimap", wide) == Vector2.ZERO, "minimap stays left anchored", failures)
 	_expect(DisplayLayout.offset_for(&"room_number", wide) == Vector2.ZERO, "room number stays left anchored", failures)
+	_expect(DisplayLayout.offset_for(&"ability_icons", wide) == Vector2.ZERO, "ability icons stay beside the player status strip", failures)
 	_expect(DisplayLayout.bottom_y(160.0) == 0.0, "bottom anchor has no native vertical offset", failures)
 	var expanded := DisplayLayout.visible_size_for_window(Vector2(844, 390), native, true)
 	_expect(expanded == Vector2(346, 160), "wide surfaces expose their full logical width", failures)

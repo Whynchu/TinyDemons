@@ -24,7 +24,10 @@ const HUD_ANCHORS := {
 	"gold": ANCHOR_RIGHT,
 	"souls": ANCHOR_RIGHT,
 	"run_timer": ANCHOR_RIGHT,
-	"cooldowns": ANCHOR_RIGHT,
+	"ability_icons": ANCHOR_LEFT,
+	# Compatibility alias for older callers; ability indicators now live beside
+	# the authored PlayerStatus strip instead of in the old right-side rows.
+	"cooldowns": ANCHOR_LEFT,
 	"combo": ANCHOR_CENTER,
 	"input_prompts": ANCHOR_RIGHT,
 	"hp_mp": ANCHOR_CENTER,

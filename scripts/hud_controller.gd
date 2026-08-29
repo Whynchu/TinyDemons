@@ -82,7 +82,7 @@ func apply_display_layout(root: Object) -> void:
 	for key in cooldown_hud.keys():
 		var control := cooldown_hud[key] as Sprite2D
 		if control != null:
-			_set_layout_position(control, &"cooldowns")
+			_set_layout_position(control, &"ability_icons")
 
 
 func _set_layout_position(node: Node2D, anchor: StringName, base_override: Vector2 = Vector2.INF) -> void:
@@ -465,8 +465,10 @@ func cooldown_timer_texture(seconds: float, color: Color) -> Texture2D:
 func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable) -> Dictionary:
 	var result: Dictionary = {}
 	var rows := [
-		{"name": "MagicCooldown", "key": "magic", "texture": "magic button 16x16.png", "position": Vector2(197, 37)},
-		{"name": "ImbueCooldown", "key": "imbue", "texture": "imbue button 16x16.png", "position": Vector2(197, 55)},
+		# PlayerStatus is an authored 82x16 strip. Two pixels of breathing room
+		# and an 18px pitch keep both 16px indicators aligned to its top edge.
+		{"name": "MagicCooldown", "key": "magic", "texture": "magic button 16x16.png", "position": Vector2(84, 0)},
+		{"name": "ImbueCooldown", "key": "imbue", "texture": "imbue button 16x16.png", "position": Vector2(102, 0)},
 	]
 	for row in rows:
 		# Use a direct load first so a fresh clone can build the HUD before the

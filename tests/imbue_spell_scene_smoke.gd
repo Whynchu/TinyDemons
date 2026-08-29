@@ -38,7 +38,7 @@ func _initialize() -> void:
 		var imbue_shadow := hud.cooldown_hud["imbue_timer_shadow"] as Sprite2D
 		_expect(magic_icon != null and imbue_icon != null and magic_icon.texture != null and imbue_icon.texture != null, "cooldown icons load their authored 16x16 art", failures)
 		_expect(magic_icon.texture.get_size().is_equal_approx(Vector2(16, 16)) and imbue_icon.texture.get_size().is_equal_approx(Vector2(16, 16)), "cooldown icons preserve their native pixel size", failures)
-		_expect(magic_icon.position.y < 64.0 and imbue_icon.position.y < 64.0, "cooldown icons sit above button indicators", failures)
+		_expect(magic_icon.position.is_equal_approx(Vector2(84, 0)) and imbue_icon.position.is_equal_approx(Vector2(102, 0)), "cooldown icons align beside the player status strip", failures)
 		_expect(magic_icon.material is ShaderMaterial and imbue_icon.material is ShaderMaterial, "cooldown icons use independent radial shader materials", failures)
 		hud.update_cooldown_hud(gameplay)
 		_expect(not magic_timer.visible and not imbue_timer.visible and not magic_shadow.visible and not imbue_shadow.visible, "ready cooldown icons hide their countdown text", failures)
