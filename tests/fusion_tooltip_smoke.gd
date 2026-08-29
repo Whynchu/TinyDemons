@@ -81,6 +81,9 @@ func _initialize() -> void:
 	gear_flow.select_hub_gear_candidate(root, 1)
 	_expect(gear_candidates.size() > 1 and root.selected_equipped_instance_id == gear_candidates[1].instance_id, "touching a gear row equips that visible candidate", failures)
 	_expect(not controller_instance.hub_gear_browsing, "touch gear selection closes the browse state", failures)
+	controller_instance.call("update_hub_ui", root, pixel)
+	_expect(controller_instance.hub_gear_stat_panel.visible and controller_instance.hub_item_detail_panel != null and controller_instance.hub_item_detail_panel.visible, "equipment separates its stat card from the slot list and keeps a detail card", failures)
+	_expect(details.size() >= 6 and details[0].visible, "equipment exposes the selected item in the expanded detail rows", failures)
 	gear_flow.free()
 	root._set_page(3)
 	controller_instance.hub_page = 3
@@ -94,6 +97,11 @@ func _initialize() -> void:
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(details[0].texture != null, "shop page shows item bonus text in details[0]", failures)
+	_expect(controller_instance.hub_item_name_text.visible and controller_instance.hub_item_name_text.texture != null and controller_instance.hub_item_detail_panel.visible, "shop shows the selected position/name and bounded detail panel", failures)
+	_expect(controller_instance.hub_item_action_button.position.y < 40.0, "shop action sits in the header instead of covering description text", failures)
+	controller_instance.hub_item_index = 6
+	controller_instance.call("update_hub_ui", root, pixel)
+	_expect(controller_instance.hub_item_name_text.visible and controller_instance.hub_item_name_text.texture != null, "shop keeps a visible selection header at the end of the scroll window", failures)
 	root._set_page(3)
 	controller_instance.hub_page = 3
 	controller_instance.hub_item_index = 0

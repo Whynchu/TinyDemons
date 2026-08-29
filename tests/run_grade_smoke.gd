@@ -18,12 +18,12 @@ func _initialize() -> void:
 	full_style.set_run_room_count(4)
 	for action in [&"attack1", &"attack2", &"spin", &"charged", &"dodge_roll", &"backflip", &"block", &"magic", &"imbued"]:
 		full_style.record_style_action(action)
-	for combo in 5:
+	for combo in 9:
 		full_style.record_combo_hit(combo + 1)
 	var full_grade: Dictionary = RunGradeEvaluator.evaluate(full_style, full_style.starting_health)
 	_expect(int(full_grade["score"]) >= 90 and str(full_grade["grade"]) == "S", "full varied run earns S grade", failures)
 	_expect(bool(full_grade["full_clear"]) and bool(full_grade["map_complete"]), "full run separates map and room completion", failures)
-	_expect(int(full_grade["style_score"]) == 10 and int(full_grade["max_combo"]) == 5, "style and combo telemetry reach their caps", failures)
+	_expect(int(full_grade["style_score"]) == 10 and int(full_grade["max_combo"]) == 9, "style remains capped while combo telemetry records beyond five hits", failures)
 
 	var partial := RunState.new()
 	partial.begin(456, 0, 40.0)
@@ -38,7 +38,7 @@ func _initialize() -> void:
 	partial.record_room_completion(&"room_1_3")
 	for action in [&"attack1", &"attack2", &"spin", &"charged", &"dodge_roll", &"backflip", &"block", &"magic", &"imbued"]:
 		partial.record_style_action(action)
-	for combo in 5:
+	for combo in 9:
 		partial.record_combo_hit(combo + 1)
 	var partial_grade: Dictionary = RunGradeEvaluator.evaluate(partial, partial.starting_health)
 	_expect(bool(partial_grade["map_complete"]) and not bool(partial_grade["full_clear"]), "map completion is independent from room completion", failures)

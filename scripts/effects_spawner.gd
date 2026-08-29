@@ -181,13 +181,18 @@ func number_texture(text: String, color: Color) -> Texture2D:
 	patterns["J"] = ["001", "001", "001", "101", "010"]
 	patterns["Q"] = ["111", "101", "111", "001", "001"]
 	patterns["Z"] = ["111", "001", "010", "100", "111"]
-	patterns["a"] = ["000", "000", "110", "001", "111"]
+	# Lowercase uses the same five-pixel cap as the combat glyphs, but the
+	# previous set was a collection of partially drawn three-pixel shapes. In
+	# descriptions that made o/e read like broken boxes and g/y lose their
+	# identity. Keep a shared baseline and give the curved/descending letters
+	# enough horizontal room to survive nearest-neighbour scaling.
+	patterns["a"] = ["000", "010", "101", "111", "101"]
 	patterns["b"] = ["100", "100", "110", "101", "110"]
-	patterns["c"] = ["000", "000", "111", "100", "111"]
+	patterns["c"] = ["000", "011", "100", "100", "011"]
 	patterns["d"] = ["001", "001", "011", "101", "011"]
-	patterns["e"] = ["000", "010", "101", "111", "100"]
+	patterns["e"] = ["0000", "0110", "1001", "1111", "1000"]
 	patterns["f"] = ["011", "100", "110", "100", "100"]
-	patterns["g"] = ["000", "101", "101", "111", "110"]
+	patterns["g"] = ["0000", "0110", "1001", "0111", "0001"]
 	patterns["h"] = ["100", "100", "110", "101", "101"]
 	patterns["i"] = ["010", "000", "110", "010", "111"]
 	patterns["j"] = ["001", "000", "001", "101", "010"]
@@ -195,18 +200,18 @@ func number_texture(text: String, color: Color) -> Texture2D:
 	patterns["l"] = ["100", "100", "100", "100", "110"]
 	patterns["m"] = ["00000", "00000", "11011", "10101", "10101"]
 	patterns["n"] = ["000", "000", "110", "101", "101"]
-	patterns["o"] = ["000", "101", "101", "101", "111"]
+	patterns["o"] = ["0000", "0110", "1001", "1001", "0110"]
 	patterns["p"] = ["000", "110", "101", "110", "100"]
-	patterns["q"] = ["000", "000", "011", "101", "011"]
-	patterns["r"] = ["000", "000", "110", "101", "100"]
+	patterns["q"] = ["000", "011", "101", "011", "001"]
+	patterns["r"] = ["000", "110", "101", "100", "100"]
 	patterns["s"] = ["000", "011", "100", "010", "110"]
 	patterns["t"] = ["010", "010", "111", "010", "011"]
-	patterns["u"] = ["000", "000", "101", "101", "111"]
-	patterns["v"] = ["000", "000", "101", "101", "010"]
+	patterns["u"] = ["000", "101", "101", "101", "011"]
+	patterns["v"] = ["000", "101", "101", "010", "010"]
 	patterns["w"] = ["00000", "00000", "10101", "10101", "01010"]
-	patterns["x"] = ["000", "000", "101", "010", "101"]
-	patterns["y"] = ["000", "000", "101", "101", "011"]
-	patterns["z"] = ["000", "000", "111", "010", "111"]
+	patterns["x"] = ["000", "101", "010", "101", "101"]
+	patterns["y"] = ["0000", "1001", "1001", "0111", "0010"]
+	patterns["z"] = ["000", "111", "010", "100", "111"]
 	var compact_patterns: Dictionary = {}
 	for character in patterns:
 		compact_patterns[character] = _compact_glyph_pattern(patterns[character] as Array)

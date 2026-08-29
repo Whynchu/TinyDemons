@@ -107,4 +107,6 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var combo_hit_window := 1.5
 @export var combo_damage_per_hit := 0.05
 @export var combo_damage_cap := 0.25
-@export var combo_max_steps := 5
+## A non-positive value means the visible streak has no artificial hit ceiling.
+## Damage remains independently bounded by combo_damage_cap.
+@export var combo_max_steps := 0

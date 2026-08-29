@@ -56,7 +56,7 @@ func _initialize() -> void:
 		var stat_column_start := screens.hub_gear_stat_panel.position.x if screens.hub_gear_stat_panel != null else -1.0
 		_expect(screens.hub_item_content_clip != null and screens.hub_item_content_clip.clip_contents and item_column_end <= stat_column_start - 10.0, "equipment item text is clipped before the stat-card gutter", failures)
 		var equipment_card_end := screens.hub_item_list_panel.position.x + screens.hub_item_list_panel.size.x if screens.hub_item_list_panel != null else -1.0
-		_expect(equipment_card_end >= screens.display_view_size.x - 14.0 and screens.hub_gear_stat_panel != null and not screens.hub_gear_stat_panel.visible, "equipment uses one full-width upper card for slots and stat preview", failures)
+		_expect(equipment_card_end <= stat_column_start - 10.0 and screens.hub_gear_stat_panel != null and screens.hub_gear_stat_panel.visible, "equipment keeps the slot list left of the visible stat preview card", failures)
 		_expect(screens.hub_equipment_action_buttons[0].position.x + screens.hub_equipment_action_buttons[0].size.x <= screens.hub_equipment_action_buttons[1].position.x and screens.hub_equipment_action_buttons[1].position.x + screens.hub_equipment_action_buttons[1].size.x <= screens.hub_equipment_action_buttons[2].position.x, "equipment action buttons keep non-overlapping hit regions", failures)
 		_expect(screens.hub_gear_choice_panel != null and screens.hub_gear_choice_content_clip != null and not screens.hub_gear_choice_panel.visible, "equipment keeps the lower slot-picker closed until a slot is selected", failures)
 		profile.ensure_starter_items()
