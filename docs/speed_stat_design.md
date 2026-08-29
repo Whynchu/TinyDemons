@@ -21,6 +21,10 @@ Design guardrail: **gameplay feel must not change drastically.** Effects are
 intentionally shallow so that only *large* stat deltas produce noticeable
 changes — SPD must not become a runaway train.
 
+Current AGI gear packages and the six-slot equipment direction are defined in
+gear-catalogue-spec.md and gear-catalogue.md. The speed-specific item ideas
+below are historical and do not authorize a new random-affix system.
+
 ---
 
 ## Part 1 — Understanding the Current System

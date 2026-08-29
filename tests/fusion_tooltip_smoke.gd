@@ -31,7 +31,7 @@ func _initialize() -> void:
 	var stat_buttons := built["stat_buttons"] as Array[Button]
 	var stat_texts := built["stats"] as Array[Sprite2D]
 	_expect(stat_buttons.size() == 12 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets for six stats", failures)
-	_expect((built["stat_rows"] as Array[Button]).size() == 6 and (built["item_rows"] as Array[Button]).size() == 5, "hub stats, shop, and fusion expose row touch targets", failures)
+	_expect((built["stat_rows"] as Array[Button]).size() == 6 and (built["item_rows"] as Array[Button]).size() == 6, "hub stats, shop, and fusion expose row touch targets", failures)
 	_expect((built["fusion_decrease"] as Button).size.x >= 20.0 and (built["fusion_increase"] as Button).size.x >= 20.0, "fusion exposes direct count controls", failures)
 	_expect(stat_texts.all(func(text: Sprite2D) -> bool: return text.centered), "hub stat values are centered between their touch targets", failures)
 	controller_instance.hub_overlay = ColorRect.new()
@@ -68,7 +68,7 @@ func _initialize() -> void:
 	controller_instance.hub_gear_browsing = true
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(gear_stats.slice(0, 4).all(func(s: Sprite2D) -> bool: return s.texture != null) and gear_stats[4].texture == null, "gear browse shows four flat-stat rows without stale duplicate SPD", failures)
+	_expect(gear_stats.slice(0, 4).all(func(s: Sprite2D) -> bool: return s.texture != null) and gear_stats[4].texture == null and gear_stats[5].texture == null, "gear browse keeps canonical stats without a stale duplicate SPD row", failures)
 	var gear_choice_buttons: Array[Button] = controller_instance.hub_gear_choice_buttons
 	_expect(gear_choice_buttons.size() == 4 and gear_choice_buttons.all(func(b: Button) -> bool: return b.mouse_filter != Control.MOUSE_FILTER_IGNORE), "gear browse exposes touchable choice rows", failures)
 	_expect(gear_choice_buttons[0].visible and gear_choice_buttons[1].visible, "gear browse shows touch targets for visible candidates", failures)

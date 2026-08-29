@@ -113,6 +113,16 @@ conversion.
 
 ## Item / stat economy
 
+The implemented six-slot content expansion is documented in
+[`gear-catalogue-spec.md`](gear-catalogue-spec.md),
+[`gear-catalogue.md`](gear-catalogue.md), and
+[`gear-drop-tables.md`](gear-drop-tables.md). The runtime currently uses the
+six canonical slots, with `armor` retained only as a Body save alias. Head and
+Arm use zero-power starters; future effect rows remain gated until their
+action contracts land. Do not add catalogue values here without also adding
+the corresponding authored definition, source rule, effect contract, and smoke
+coverage.
+
 These are code values (not inspector-exposed) that drive gear value:
 
 | Knob | Value | Location |
@@ -129,6 +139,8 @@ These are code values (not inspector-exposed) that drive gear value:
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity flat points | 0 / 2 / 4 / 6 / 8 for common through mythic | `item_catalog.gd:RARITY_FLAT_POINTS_PER_RANK` |
 | Random primary affixes | Retired from effective/generated gear; legacy fields remain loadable | `item_catalog.gd:bonuses`, `item_instance.gd` |
+| Approved catalogue size | 44 authored bases across Weapon/Head/Body/Arm/Shield/Accessory; values are implementation baseline pending balance review | `docs/gear-catalogue.md` |
+| Initial gear economy exclusions | No direct Souls, gold, global drop-rate, or Style multipliers | `docs/gear-effect-contracts.md`, `docs/gear-drop-tables.md` |
 | Fusion common +0 step | 1 Soul for +0 -> +1 | `player_profile.gd:FUSION_START_COST` |
 | Fusion cost progression | +1 Soul per enhancement; each rarity adds 10 Souls; common +10 -> rare costs 10 and rare +0 -> +1 costs 11 | `player_profile.gd:fusion_step_cost` |
 | Base stats (archetype) | VIT/STR/DEF sum to 7 | `stats_component.gd:_base_profile_values` |

@@ -5,6 +5,13 @@ against the reference screenshots and the current codebase on 2026-08-27;
 composite elemental combat and responsive-menu corrections verified on
 2026-08-28
 
+> The six-stat/menu implementation is complete. Its original four-slot
+> equipment presentation remains the compatibility baseline; the approved
+> content expansion adds Head and Arm and renames the old Armor slot to Body.
+> Current equipment content must follow [`gear-catalogue-spec.md`](gear-catalogue-spec.md)
+> and [`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md),
+> not invent a second slot or affix model here.
+
 Date: 2026-08-27
 
 ## Objective
@@ -26,6 +33,8 @@ Related documents:
 - [`meta_progression_design.md`](meta_progression_design.md) — persistent
   progression and equipment intent; this plan supersedes its player-stat
   details once implemented.
+- [`gear-catalogue-spec.md`](gear-catalogue-spec.md) — approved six-slot
+  equipment taxonomy, item anatomy, and effect boundaries.
 - [`elemental-chroma-implementation-plan.md`](elemental-chroma-implementation-plan.md)
   — current/bound element, Chroma, flame, and Triangle rules.
 - [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
@@ -354,8 +363,9 @@ file writes schema 9 on its next normal save.
 
 - Current `speed` equipment data becomes `agility` in authored definitions and
   item presentation.
-- Read `speed` as a temporary compatibility alias while all catalog and affix
-  entries are converted, then remove it in a follow-up cleanup commit.
+- Read `speed` as a temporary compatibility alias while all catalog entries are
+  converted, then remove it in a follow-up cleanup commit. Do not reintroduce a
+  random primary-affix layer as part of the gear catalogue expansion.
 - Existing VIT/STR/DEF gear values retain their current interpretation.
 - INT/MND gear begins with a small authored pool. No item may gain a new
   magical bonus just to fill a table; every initial bonus must support a real
@@ -506,7 +516,7 @@ control):
 | --- | --- | --- | --- |
 | `pause-menu.png` | Demon Hub main page; Pause | Right-side vertical command column; player-card column at left; greyed disabled entries; footer button hints | Party list (one card instead), Gil box, Quicksave/Save/Formation/Job entries |
 | `status-menu.png` | Status page | Identity + LV/EXP block at top; HP/Chroma rows; two-column stat block with dotted leaders (attributes left, derived values right) | Portrait art, job level, the 8-slot magic-charge grid |
-| `equipment-menu.png` | Equipment page | Top action row inside the frame; slot grid with icons; large item-list region; bottom context/comparison strip | R Hand/L Hand/Head/Body/Arms slot labels (Tiny Demons keeps Weapon/Armor/Shield/Accessory) |
+| `equipment-menu.png` | Equipment page | Top action row inside the frame; slot grid with icons; large item-list region; bottom context/comparison strip | R Hand/L Hand/job-specific labels; Tiny Demons uses Weapon/Head/Body/Arm/Shield/Accessory, with `armor` retained only as a save alias |
 | `config-menu.png` | Settings page (title and pause) | Rows of horizontal option selectors with the cursor on the active value; bottom description strip for the highlighted row | All FFIII option content |
 
 ### 5.2 Shared shell
@@ -613,9 +623,12 @@ belong on Status/Equipment rather than making allocation rows unreadable.
   frame** (EQUIP / REMOVE / REMOVE ALL with the cursor on the active
   command), a slot grid with tiny icons, a large item-list region, and a
   bottom context strip carrying the comparison (`P.ATK: 8 → 10`) or the
-  highlighted item's description. Retain Tiny Demons'
-  Weapon/Armor/Shield/Accessory slots; never relabel them as body parts that
-  do not match their mechanics.
+  highlighted item's description. The landed menu began with the compatible
+  Weapon/Armor/Shield/Accessory set. The landed catalogue presentation uses
+  Weapon/Head/Body/Arm/Shield/Accessory, with `armor` retained only as a
+  load/save alias for Body. The upper region shows currently
+  slotted gear, the lower region shows valid choices for the selected slot, and
+  EQUIP enters item selection directly.
 - **Shop/Fusion:** keep their current transactions and validation rules, but
   display them inside the same shell so selected row, cost, outcome, and BACK
   are consistent. Sold-out or unaffordable entries use the greyed-disabled
@@ -758,8 +771,9 @@ derived/combat outcomes; all existing element effectiveness tests remain green.
 
 ### Phase 3 — Equipment, enemies, and presentation
 
-1. Convert catalog/affix keys from speed to agility and add authored INT/MND
-   opportunities only where meaningful.
+1. Convert catalog stat keys from legacy speed to agility and add authored
+   INT/MND opportunities only where meaningful. The follow-up catalogue uses
+   explicit authored packages rather than reintroducing random primary affixes.
 2. Update equipment previews and comparisons to use the shared six-stat
    snapshot rather than locally reconstructed numbers.
 3. Give every existing slime variant an explicit six-stat profile, preserving
@@ -847,7 +861,7 @@ must be updated rather than bypassed.
 | MND has no immediate value. | MND-derived M.DEF mitigates Triangle, Imbue magic portions, and every non-neutral slime’s magic portion from the first combat phase. |
 | Composite attacks become difficult to read or overcomplicated. | Resolve physical and magic portions against DEF/M.DEF internally, then use one roll, one critical result, one full-packet element matchup, and one damage number. |
 | Imbue and elemental slime balance become coupled. | Keep separate typed contracts and base/scaling values while sharing only the low-level composite resolver. |
-| Save migration weakens existing files. | Map all four old attributes exactly, retain points, run before/after snapshot fixtures. |
+| Save migration weakens existing files. | Map all legacy attributes exactly, default newly introduced INT/MND safely, retain points, and run before/after snapshot fixtures. |
 | Menu redesign reintroduces touch traps/overlap. | Separate hub/pause state, direct tap targets, routing tests, and supported-aspect visual checks. |
 | Reference imitation obscures Tiny Demons identity. | Reuse only layout grammar; use original colors, glyphs, panel treatment, and game terminology. |
 
@@ -861,7 +875,9 @@ by focused smoke tests:
 2. Stat-point award bands for a six-choice economy.
 3. HP, physical, pure magic, Imbue composite, elemental-slime composite, AGI,
    DEF, and MND coefficients/caps.
-4. Initial INT/MND gear and affix distribution.
+4. Current compatibility INT/MND gear distribution; the expanded catalogue
+   package distribution is defined in gear-catalogue.md and remains subject to
+   the six-slot balance simulation.
 5. Exact enemy six-stat tables, elemental-slime base/scales, and which future
    enemy actions are pure magic.
 6. Whether VIT receives a later explicit health-only secondary effect after

@@ -1,5 +1,14 @@
 # Meta Progression Vertical Slice — Implementation Plan
 
+> **Historical foundation plan — completed and superseded for current equipment
+> content.** This document records the original four-slot vertical slice. The
+> approved current equipment direction is the six-slot, 44-base expansion in
+> [`gear-catalogue-spec.md`](gear-catalogue-spec.md) and
+> [`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md).
+> References below to four slots, random affixes, Common/Rare/Epic-only
+> content, or deferred transmutations describe the old delivery slice and are
+> not current design requirements.
+
 ## Objective
 
 Deliver a fully functional, end-to-end meta-progression vertical slice in four
@@ -15,7 +24,7 @@ outcomes, survives death/title transitions, and is testable with representative
 content. It does not mean the final quantity of equipment, final hub artwork,
 floor shops, or production balancing is complete.
 
-## Locked Slice Scope
+## Historical Locked Slice Scope (completed)
 
 ### Included
 
@@ -50,7 +59,7 @@ floor shops, or production balancing is complete.
 - Large item/affix catalogs and final balance.
 - Temporary run-boon selection beyond preserving a clean `RunState` boundary.
 
-## Architecture
+## Historical Architecture Foundation
 
 Keep the first implementation compact. Data and state should be extensible,
 but the slice does not need a framework for every future crafting idea.
@@ -161,7 +170,7 @@ item base output
 The character sheet must be able to display this breakdown. Scaling never reads
 its own final output as an input.
 
-## Representative Slice Content
+## Historical Representative Slice Content
 
 Use existing visuals where possible. Mechanical validation is the priority.
 
@@ -188,7 +197,7 @@ Prefer hooks that can be expressed through existing attack, guard, roll, health,
 and targeting signals. Every transmutation gets an explicit trigger, effect,
 tradeoff, cooldown/stack rule if needed, and UI description.
 
-## Four-Day Delivery Plan
+## Historical Four-Day Delivery Plan
 
 ### Day 1 — Persistent profile and stat foundation
 
@@ -261,7 +270,7 @@ Day 4 exit test:
 - Saving during hub/run transitions cannot duplicate rewards.
 - A complete run/death/restart loop works without state leakage.
 
-## File-Level Change Map
+## Historical File-Level Change Map
 
 Exact names may follow current conventions, but responsibilities should remain
 separate.
@@ -295,7 +304,7 @@ separate.
   `player_roll_component.gd` — expose narrow transmutation events without
   containing item-database logic.
 
-## Save and Migration Rules
+## Historical Save and Migration Rules
 
 - Start schema at version 1.
 - Write to a temporary save, then replace the profile save after success.
@@ -307,7 +316,7 @@ separate.
 - Developer reset must require an explicit debug action and never run as part
   of ordinary death/restart flow.
 
-## Verification Matrix
+## Historical Verification Matrix
 
 ### Progression
 
@@ -339,7 +348,7 @@ separate.
 - Multi-target, guard, roll, and target-lock transmutations trigger correctly.
 - Starter gear remains capable of clearing early content.
 
-## Scope Controls
+## Historical Scope Controls
 
 If the schedule slips, cut in this order:
 
@@ -352,7 +361,7 @@ If the schedule slips, cut in this order:
 Do not cut save/load, death settlement, stat allocation, item-instance
 ownership, or atomic economy operations. Those are the foundation.
 
-## Definition of Done
+## Historical Definition of Done
 
 The slice is complete when a new player can:
 
@@ -367,6 +376,29 @@ The slice is complete when a new player can:
 
 Only after this loop is stable should content expansion, floor shops, a
 walkable hub, and transmutation rerolling begin.
+
+## Current handoff: approved gear catalogue expansion
+
+The foundation described above is now stable enough for the six-slot catalogue
+content pass. The implementation checkpoint has landed the slot schema,
+authored read model, source policy, menus, and current effect contracts:
+
+- Weapon, Head, Body, Arm, Shield, and one Accessory slot;
+- zero-power starter items for Head and Arm;
+- 44 authored bases in the shared runtime schema, with values still subject to
+  balance review;
+- deterministic authored packages instead of hidden random primary affixes;
+- current Common/Rare/Epic/Legendary/Mythic rarity support;
+- explicit current transmutation contracts and future Imbue Resonance/Elemental
+  Ward contracts;
+- current fusion, transmutation, shop, chest, run-clear, and save boundaries;
+- no direct Souls, gold, global drop-rate, or Style multipliers; and
+- future Spear, Bow, Tome, Fist, Thrown, Bell, Harp, and Dark-weapon families
+  retained as documentation extension points only.
+
+Use [`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md)
+for the remaining effect-owner and balance phases. Do not expand the runtime
+catalogue from this historical plan’s old affix or four-slot examples.
 
 ## Follow-up Plan: Simplified Run Results and Attainable Grades
 

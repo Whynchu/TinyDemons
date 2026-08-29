@@ -11,6 +11,10 @@
 > appears in the hub for optional or curriculum-required attunement to 100.
 > Non-elemental sections of this document remain useful unless contradicted by
 > a newer feature document.
+>
+> For the current equipment direction, use the approved six-slot catalogue in
+> gear-catalogue-spec.md and gear-catalogue.md. This broad vision page remains
+> a directional reference, not the implementation authority for item definitions.
 
 > Status: **Design proposal — discussion first.** This is the "what makes Tiny
 > Demons *Tiny Demons*" document. It projects the mid-big picture direction and

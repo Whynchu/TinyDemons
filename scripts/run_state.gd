@@ -49,6 +49,10 @@ var style_actions: Dictionary = {}
 var max_combo_count := 0
 var combo_hit_count := 0
 var clear_summary: Dictionary = {}
+## Reward-source telemetry is intentionally run-scoped. It gives balance work a
+## stable record of what was offered and why without adding persistence fields
+## to ItemInstance or changing the player-facing result card.
+var gear_reward_telemetry: Array[Dictionary] = []
 
 
 func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: float = 1.0) -> void:
@@ -92,6 +96,7 @@ func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: 
 	max_combo_count = 0
 	combo_hit_count = 0
 	clear_summary.clear()
+	gear_reward_telemetry.clear()
 
 
 func start_timer() -> void:
@@ -234,19 +239,56 @@ func record_dodge() -> void:
 	dodge_count += 1
 
 
+func record_gear_reward(source: StringName, item: ItemInstance, run_rank: int, player_level: int, score: int = -1, grade: String = "", slot_was_empty: bool = false, was_equipped: bool = false, action: StringName = &"generated") -> void:
+	if item == null or item.definition_id.is_empty():
+		return
+	var catalog := ItemCatalog.new()
+	var slot := catalog.definition_slot(item.definition_id)
+	gear_reward_telemetry.append({
+		"source": String(source),
+		"slot": String(slot),
+		"definition_id": String(item.definition_id),
+		"rarity": String(item.rarity),
+		"run_rank": maxi(run_rank, 1),
+		"player_level": maxi(player_level, 1),
+		"score": score,
+		"grade": grade.to_upper(),
+		"slot_was_empty": slot_was_empty,
+		"was_equipped": was_equipped,
+		"action": String(action),
+	})
+
+
 func ensure_shop_stock(level: int) -> void:
 	if not shop_stock.is_empty():
 		return
 	var catalog := ItemCatalog.new()
 	for slot_index in ItemCatalog.SLOTS.size():
 		var slot := ItemCatalog.SLOTS[slot_index]
-		var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common")
+		var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common", false, &"shop", level)
+		if item.definition_id.is_empty():
+			continue
 		item.instance_id = "shop-%s-basic-%s" % [run_id, String(slot)]
-		shop_stock.append({"item": item.to_dictionary(), "price": roundi(catalog.price(item) * 2.5), "sold": false})
+		shop_stock.append(_shop_entry(catalog, item, slot, roundi(catalog.price(item) * 2.5)))
 	var premium_slot := ItemCatalog.SLOTS[posmod(dungeon_seed, ItemCatalog.SLOTS.size())]
-	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true)
-	premium.instance_id = "shop-%s-premium" % run_id
-	shop_stock.append({"item": premium.to_dictionary(), "price": roundi(catalog.price(premium) * 2.5), "sold": false})
+	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true, &"shop", level)
+	if not premium.definition_id.is_empty():
+		premium.instance_id = "shop-%s-premium" % run_id
+		shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))
+
+
+func _shop_entry(catalog: ItemCatalog, item: ItemInstance, slot: StringName, shop_price: int) -> Dictionary:
+	var definition := catalog.definition_data(item.definition_id)
+	return {
+		"item": item.to_dictionary(),
+		"price": shop_price,
+		"sold": false,
+		"source": "shop",
+		"slot": String(slot),
+		"role": str(definition.get("role", "stat")),
+		"primary_stat": str(definition.get("primary_stat", "")),
+		"description": str(definition.get("player_description", "")),
+	}
 
 
 func mark_settled(run_result: StringName) -> bool:

@@ -169,7 +169,7 @@ func _initialize() -> void:
 	(hub_controls["fusion_decrease"] as Button).visible = true
 	(hub_controls["fusion_increase"] as Button).visible = true
 	var item_rows := hub_controls["item_rows"] as Array[Button]
-	_expect(item_rows.size() == 5 and item_rows[0].size.x >= 80.0, "shop and fusion rows expose direct touch targets", failures)
+	_expect(item_rows.size() == 6 and item_rows[0].size.x >= 80.0, "shop and fusion rows expose direct touch targets for all six slots", failures)
 	var item_row_down := InputEventScreenTouch.new()
 	item_row_down.device = 0; item_row_down.index = 17; item_row_down.pressed = true; item_row_down.position = item_rows[0].get_global_rect().get_center()
 	layer._input(item_row_down)

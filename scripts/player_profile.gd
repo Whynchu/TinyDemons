@@ -3,7 +3,9 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 9
+const CURRENT_SCHEMA_VERSION := 10
+const LEGACY_SIX_STAT_SCHEMA_VERSION := 9
+const LEGACY_SPEED_SCHEMA_VERSION := 8
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
@@ -13,6 +15,7 @@ const ELEMENTAL_FLAME_COST := 5
 const ELEMENT_BIND_SOUL_COST := 50
 const MAX_PLAYER_NAME_LENGTH := 8
 const DEFAULT_PLAYER_NAME := "DEMON"
+const CLEAR_REWARD_SLOT_HISTORY_LIMIT := 3
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
@@ -55,13 +58,17 @@ var gold := 0
 var souls := 0
 var starter_soul_gift_claimed := false
 var inventory: Array[Dictionary] = []
-var equipped_instance_ids := {"weapon": "", "armor": "", "shield": "", "accessory": ""}
+## Canonical state has six slots. The `armor` key is retained as a synchronized
+## load/save alias so older menu/test callers do not lose the Body item during
+## migration.
+var equipped_instance_ids := {"weapon": "", "head": "", "body": "", "armor": "", "arm": "", "shield": "", "accessory": ""}
 var family_mastery: Dictionary = {}
 var next_item_sequence := 1
 var completed_runs := 0
 var last_clear_score := 0
 var difficulty_rank := 1
 var last_run_grade := "D"
+var clear_reward_slot_history: Array[String] = []
 
 
 static func normalize_player_name(value: String) -> String:
@@ -76,12 +83,19 @@ static func normalize_player_name(value: String) -> String:
 
 func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 	var items := catalog if catalog != null else ItemCatalog.new()
-	var is_new_inventory := inventory.is_empty()
 	for slot: StringName in ItemCatalog.SLOTS:
 		var starter := items.starter_item(slot)
+		# Existing four-slot files may already own `starter-armor`; retain that
+		# stable instance ID as Body instead of duplicating it as `starter-body`.
+		if slot == &"body" and find_item("starter-armor") != null and find_item(starter.instance_id) == null:
+			if get_equipped_instance_id(slot).is_empty():
+				equipped_instance_ids["body"] = "starter-armor"
+			_sync_body_alias()
+			continue
 		grant_item(starter)
-		if is_new_inventory and str(equipped_instance_ids.get(String(slot), "")).is_empty():
+		if get_equipped_instance_id(slot).is_empty():
 			equipped_instance_ids[String(slot)] = starter.instance_id
+	_sync_body_alias()
 
 
 func grant_item(item: ItemInstance) -> bool:
@@ -107,14 +121,47 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	if slot not in ItemCatalog.SLOTS:
 		return false
 	equipped_instance_ids[String(slot)] = instance_id
+	_sync_body_alias()
 	return true
 
 
 func unequip_slot(slot: StringName, _catalog: ItemCatalog = null) -> bool:
-	if slot not in ItemCatalog.SLOTS or str(equipped_instance_ids.get(String(slot), "")).is_empty():
+	var canonical := ItemCatalog.canonical_slot(slot)
+	if canonical not in ItemCatalog.SLOTS or get_equipped_instance_id(canonical).is_empty():
 		return false
-	equipped_instance_ids[String(slot)] = ""
+	equipped_instance_ids[String(canonical)] = ""
+	# Body keeps `armor` as a synchronized legacy alias. Clear both sides for
+	# an intentional unequip; otherwise the compatibility sync would immediately
+	# restore the old Armor value into Body.
+	if canonical == &"body":
+		equipped_instance_ids["armor"] = ""
+	_sync_body_alias()
 	return true
+
+
+func get_equipped_instance_id(slot: Variant) -> String:
+	var canonical := ItemCatalog.canonical_slot(slot)
+	if canonical == &"body":
+		var body_id := str(equipped_instance_ids.get("body", ""))
+		return body_id if not body_id.is_empty() else str(equipped_instance_ids.get("armor", ""))
+	return str(equipped_instance_ids.get(String(canonical), ""))
+
+
+func record_clear_reward_slot(slot: Variant) -> void:
+	var canonical := ItemCatalog.canonical_slot(slot)
+	if canonical.is_empty():
+		return
+	clear_reward_slot_history.append(String(canonical))
+	if clear_reward_slot_history.size() > CLEAR_REWARD_SLOT_HISTORY_LIMIT:
+		clear_reward_slot_history = clear_reward_slot_history.slice(-CLEAR_REWARD_SLOT_HISTORY_LIMIT)
+
+
+func _sync_body_alias() -> void:
+	var body_id := str(equipped_instance_ids.get("body", ""))
+	if body_id.is_empty():
+		body_id = str(equipped_instance_ids.get("armor", ""))
+		equipped_instance_ids["body"] = body_id
+	equipped_instance_ids["armor"] = body_id
 
 
 func purchase_item(item: ItemInstance, cost: int) -> bool:
@@ -389,6 +436,7 @@ func reset_allocated_stats() -> int:
 
 
 func to_dictionary() -> Dictionary:
+	_sync_body_alias()
 	return {
 		"schema_version": CURRENT_SCHEMA_VERSION,
 		"has_started": has_started,
@@ -428,6 +476,7 @@ func to_dictionary() -> Dictionary:
 		"last_clear_score": last_clear_score,
 		"difficulty_rank": difficulty_rank,
 		"last_run_grade": last_run_grade,
+		"clear_reward_slot_history": clear_reward_slot_history.duplicate(),
 	}
 
 
@@ -435,10 +484,10 @@ func load_dictionary(data: Dictionary) -> void:
 	var saved_schema := int(data.get("schema_version", 0))
 	# Chroma changes the meaning of file identity. Older files are intentionally
 	# allowed to die out instead of being guessed into the new model.
-	if saved_schema != CURRENT_SCHEMA_VERSION and saved_schema != CURRENT_SCHEMA_VERSION - 1:
+	if saved_schema not in [CURRENT_SCHEMA_VERSION, LEGACY_SIX_STAT_SCHEMA_VERSION, LEGACY_SPEED_SCHEMA_VERSION]:
 		schema_version = CURRENT_SCHEMA_VERSION
 		return
-	var is_schema_8 := saved_schema == CURRENT_SCHEMA_VERSION - 1
+	var is_schema_8 := saved_schema == LEGACY_SPEED_SCHEMA_VERSION
 	schema_version = CURRENT_SCHEMA_VERSION
 	has_started = bool(data.get("has_started", false))
 	open_hub_on_load = bool(data.get("open_hub_on_load", false))
@@ -475,10 +524,18 @@ func load_dictionary(data: Dictionary) -> void:
 	starter_soul_gift_claimed = bool(data.get("starter_soul_gift_claimed", false))
 	var saved_inventory: Variant = data.get("inventory", [])
 	inventory.assign(saved_inventory if saved_inventory is Array else [])
+	equipped_instance_ids = {"weapon": "", "head": "", "body": "", "armor": "", "arm": "", "shield": "", "accessory": ""}
 	var saved_equipment: Variant = data.get("equipped_instance_ids", {})
 	if saved_equipment is Dictionary:
 		for slot: StringName in ItemCatalog.SLOTS:
+			if slot == &"body":
+				continue
 			equipped_instance_ids[String(slot)] = str(saved_equipment.get(String(slot), ""))
+		var saved_body := str(saved_equipment.get("body", ""))
+		if saved_body.is_empty():
+			saved_body = str(saved_equipment.get("armor", ""))
+		equipped_instance_ids["body"] = saved_body
+	_sync_body_alias()
 	var saved_mastery: Variant = data.get("family_mastery", {})
 	family_mastery.clear()
 	if saved_mastery is Dictionary:
@@ -493,4 +550,13 @@ func load_dictionary(data: Dictionary) -> void:
 	last_run_grade = str(data.get("last_run_grade", "D")).to_upper()
 	if last_run_grade not in ["S", "A", "B", "C", "D", "F"]:
 		last_run_grade = "D"
+	clear_reward_slot_history.clear()
+	var saved_reward_history: Variant = data.get("clear_reward_slot_history", [])
+	if saved_reward_history is Array:
+		for history_slot: Variant in saved_reward_history:
+			var canonical_history_slot := ItemCatalog.canonical_slot(history_slot)
+			if canonical_history_slot in ItemCatalog.SLOTS:
+				clear_reward_slot_history.append(String(canonical_history_slot))
+		if clear_reward_slot_history.size() > CLEAR_REWARD_SLOT_HISTORY_LIMIT:
+			clear_reward_slot_history = clear_reward_slot_history.slice(-CLEAR_REWARD_SLOT_HISTORY_LIMIT)
 	ensure_starter_items()

@@ -4,7 +4,19 @@ Status: engineering closeout complete; release compliance pending
 
 Audit date: 2026-08-22
 
+This branch name identifies the audit baseline. The current equipment handoff
+is being prepared on the feature/gear-catalogue-expansion branch.
+
 Branch: `refactor/2026-08-18`
+
+Current content handoff (2026-08-29): the six-stat/menu, elemental composite
+combat, responsive display, input work, and six-slot catalogue foundation are
+landed on this feature branch. See
+[`gear-catalogue-spec.md`](gear-catalogue-spec.md) for the six-slot taxonomy,
+[`gear-catalogue.md`](gear-catalogue.md) for the 44 authored bases, and
+[`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md)
+for the implementation boundary. Future behavior effects remain explicitly
+gated; existing stat, shield, and transmutation contracts remain active.
 
 Detailed execution route: [`refactor-route.md`](refactor-route.md)
 
@@ -321,20 +333,21 @@ change and its listed evidence; line movement alone does not advance status.
   boss/add displacement, and vertical attack reach.
 - Verification: the complete 17-test smoke suite and main-scene headless boot pass.
 
-### Next active route — Elemental Chroma product work
+### Current active route — Gear catalogue effect batches and balance
 
-The refactor audit is complete. New feature work resumes against the Elemental
-Chroma documents, with [`elemental-chroma-handoff.md`](elemental-chroma-handoff.md)
-as the decision log and [`elemental-chroma-implementation-plan.md`](elemental-chroma-implementation-plan.md)
-as the execution plan.
+The refactor audit, six-stat/menu slice, and six-slot catalogue foundation are
+complete. The remaining bounded work is to implement and tune the explicitly
+gated action/elemental effects, then run six-slot balance simulations. Head and
+Arm use zero-power starter items; old Armor data migrates to Body; future
+weapon families remain documentation-only until their action contracts exist.
 
-The next bounded slice is implementation planning for the approved Binding and
-flame-fusion extension. See [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
-and [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
-for the current/bound state split, 5-Soul flame actions, 50-Soul Demon Binding,
-unbound fusion, and current-element door access. The exact Gray and
-Fire/Water/Electric ability contracts and broader elemental room expansion
-remain separately bounded work.
+The current equipment handoff is [`gear-catalogue-spec.md`](gear-catalogue-spec.md)
+with [`gear-catalogue.md`](gear-catalogue.md),
+[`gear-effect-contracts.md`](gear-effect-contracts.md),
+[`gear-drop-tables.md`](gear-drop-tables.md), and
+[`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md).
+Elemental Chroma and elemental-slime documents remain authoritative for flame,
+binding, matchup, and slime contracts; the gear documents do not replace them.
 
 ---
 

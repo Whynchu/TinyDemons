@@ -50,7 +50,7 @@ func _initialize() -> void:
 		screens.hub_page_buttons[2].pressed.emit()
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_EQUIPMENT and screens.hub_equipment_action_buttons.size() == 3 and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.visible), "Equipment exposes its top Equip/Remove/Remove All action row", failures)
-		_expect(screens.hub_gear_slot_buttons.size() == 4 and screens.hub_gear_stat_texts.size() == 6, "Equipment keeps four Tiny Demons slots and six-stat comparison capacity", failures)
+		_expect(screens.hub_gear_slot_buttons.size() == 6 and screens.hub_gear_stat_texts.size() == 6, "Equipment exposes the six approved slots and six-stat comparison capacity", failures)
 		_expect(screens.hub_item_action_button != null and not screens.hub_item_action_button.visible, "Equipment does not expose a duplicate lower action button", failures)
 		var item_column_end := screens.hub_item_content_clip.position.x + screens.hub_item_content_clip.size.x if screens.hub_item_content_clip != null else -1.0
 		var stat_column_start := screens.hub_gear_stat_panel.position.x if screens.hub_gear_stat_panel != null else -1.0
@@ -60,7 +60,7 @@ func _initialize() -> void:
 		_expect(screens.hub_equipment_action_buttons[0].position.x + screens.hub_equipment_action_buttons[0].size.x <= screens.hub_equipment_action_buttons[1].position.x and screens.hub_equipment_action_buttons[1].position.x + screens.hub_equipment_action_buttons[1].size.x <= screens.hub_equipment_action_buttons[2].position.x, "equipment action buttons keep non-overlapping hit regions", failures)
 		_expect(screens.hub_gear_choice_panel != null and screens.hub_gear_choice_content_clip != null and not screens.hub_gear_choice_panel.visible, "equipment keeps the lower slot-picker closed until a slot is selected", failures)
 		profile.ensure_starter_items()
-		screens.hub_item_index = 1
+		screens.hub_item_index = 3
 		screens.hub_gear_browsing = false
 		var input_router := gameplay.get("input_router") as InputRouter
 		input_router.poll(InputRouter.Context.HUB)
@@ -70,10 +70,10 @@ func _initialize() -> void:
 		Input.action_release("interact")
 		input_router.poll(InputRouter.Context.HUB)
 		await process_frame
-		_expect(screens.hub_item_index == 1 and screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible, "controller confirm on ARM opens the equipment picker directly", failures)
+		_expect(screens.hub_item_index == 3 and screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible, "controller confirm on ARM opens the equipment picker directly", failures)
 		gameplay.call("_hub_item_action")
 		await process_frame
-		_expect(not screens.hub_gear_browsing and not str(profile.equipped_instance_ids.get("armor", "")).is_empty(), "equipment picker confirm equips the selected candidate", failures)
+		_expect(not screens.hub_gear_browsing and profile.get_equipped_instance_id(&"arm") == "starter-arm", "equipment picker confirm equips the selected Arm candidate", failures)
 		gameplay.call("_close_hub_gear_browse")
 		await process_frame
 		screens.hub_gear_slot_buttons[0].pressed.emit()
@@ -86,7 +86,7 @@ func _initialize() -> void:
 		gameplay.call("_close_hub_gear_browse")
 		await process_frame
 		screens.hub_page_buttons[3].pressed.emit()
-		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 5, "Shop remains a transaction page inside the shell", failures)
+		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 6, "Shop remains a six-slot transaction page inside the shell", failures)
 		screens.hub_page_buttons[4].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_FUSION and screens.hub_fusion_decrease_button.visible and screens.hub_fusion_increase_button.visible, "Fusion remains a transaction page inside the shell", failures)
 		screens.hub_page_buttons[5].pressed.emit()

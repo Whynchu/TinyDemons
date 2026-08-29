@@ -229,11 +229,17 @@ func complete_run(root: Object) -> void:
 	var dropped_item: ItemInstance = null
 	if reward_rng.randf() < clampf(0.30 + float(score) * 0.0065, 0.30, 0.95):
 		var catalog := ItemCatalog.new()
-		var slot: StringName = ItemCatalog.SLOTS[reward_rng.randi_range(0, ItemCatalog.SLOTS.size() - 1)]
+		var slot: StringName = catalog.select_slot_for_source(root.player_profile, reward_rng.randi(), root.player_profile.level, &"clear_reward", run_rank(root), root.player_profile.clear_reward_slot_history)
+		var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, slot)
 		var rarity := clear_reward_rarity(root, score, reward_rng.randf())
-		dropped_item = catalog.generate_item(slot, reward_rng.randi(), root.player_profile.level, rarity)
-		dropped_item.instance_id = root.player_profile.create_item_id("clear")
-		root.player_profile.grant_item(dropped_item)
+		dropped_item = catalog.generate_item(slot, reward_rng.randi(), root.player_profile.level, rarity, false, &"clear_reward", run_rank(root))
+		if dropped_item.definition_id.is_empty():
+			dropped_item = null
+		else:
+			dropped_item.instance_id = root.player_profile.create_item_id("clear")
+			root.player_profile.grant_item(dropped_item)
+			root.player_profile.record_clear_reward_slot(slot)
+			root.run_state.record_gear_reward(&"clear_reward", dropped_item, run_rank(root), root.player_profile.level, score, str(grade["grade"]), slot_was_empty, false, &"granted")
 	if root.player_profile != null:
 		root.player_profile.gold += gold_reward
 		root.player_profile.completed_runs += 1
@@ -268,6 +274,7 @@ func complete_run(root: Object) -> void:
 		"style_actions": grade["style_actions"],
 		"max_combo": int(grade["max_combo"]),
 		"combo_hits": int(grade["combo_hits"]),
+		"gear_reward_telemetry": root.run_state.gear_reward_telemetry.duplicate(true),
 		# Raw telemetry remains available to backend reward/debug screens without
 		# competing with the compact player-facing result panel.
 		"damage": root.run_state.damage_taken,

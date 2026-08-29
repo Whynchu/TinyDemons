@@ -65,6 +65,14 @@ and string dispatch one feature slice at a time. See
   `gameplay_bootstrap`, `gameplay_frame_controller`,
   `editor_collision_guide`, `editor_polygon_guide`, `ui_layout_guide`.
 
+Equipment content authority is documented in
+[`gear-catalogue-spec.md`](gear-catalogue-spec.md). `item_catalog` owns stable
+authored definitions and generation; `player_profile` owns persistent item
+instances and equipped IDs; `equipment_component` produces the runtime
+snapshot; and combat/effect owners consume that snapshot. New slot, drop, or
+passive behavior must not be implemented as an item-name branch in
+`gameplay.gd`.
+
 ## Tuning resources (all `@export`-driven, in-editor editable)
 
 | Resource | Focus |
