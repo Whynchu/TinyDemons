@@ -10,8 +10,8 @@ directional Attack 1 → Attack 2 combo:
   movement stream arms Spin Attack. Pressing Attack while it is armed performs
   the spin; clockwise and counter-clockwise circles are accepted. The spin
   snapshots the movement direction at activation and applies only a small,
-  fixed lunge so the gesture has directional influence without becoming a
-  second dodge.
+  committed forward lunge so the gesture has clear directional influence
+  without becoming a second dodge.
 - Holding Attack performs Attack 1, enters the existing post-Attack 1 pose, and
   waits in a charge state. Releasing after the minimum charge starts a slower,
   stronger charged Attack 2. Releasing before the threshold cancels the charge.
@@ -49,8 +49,9 @@ All feel and balance values live on `scripts/player_tuning.gd`:
   `0.28s`.
 - Spin uses `0.075s` frame timing, slows to `0.14s` from frame 6, applies
   `0.90x` damage and `1.10x` knockback, and does not split damage across
-  multiple enemies. Its `spin_lunge_distance`/`spin_lunge_duration` provide a
-  small input-direction impulse. This makes its single-target hit slightly
+  multiple enemies. Its `12.0`-pixel `spin_lunge_distance` eases out from
+  peak speed through frame 5 of the eight-frame animation, leaving the final
+  two recovery frames stationary. This makes its single-target hit slightly
   weaker than a normal Attack 1 while rewarding a clean multi-target spin.
 - Charge begins after `0.35s`, caps at `1.00s`, and uses Attack 2's art with a
   `1.35x` frame-time multiplier, `1.60x` damage, and `1.50x` knockback.

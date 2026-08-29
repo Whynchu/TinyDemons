@@ -110,12 +110,14 @@ func update_from_root(root: Object, delta: float) -> void:
 	var frame_time := tuning.roll_frame_time / roll_multiplier
 	var hold_landing_frame := true
 	if is_backflip:
-		# Backflip frames are authored as a complete, even sequence. Do not reuse
-		# the roll's long penultimate landing hold: at the old 0.30s total this
-		# made the flip look both rushed and stuttery.
+		# Backflip movement follows the complete seven-frame sequence. Do not
+		# reuse the roll's shorter fixed duration: it ends the retreat early.
 		frame_time = tuning.backflip_frame_time / roll_multiplier
 		hold_landing_frame = false
-	var result := tick_motion(delta, tuning.roll_duration, frame_time, frame_set.size(), Callable(self, "move_swept").bind(root), hold_landing_frame)
+	var motion_duration := tuning.roll_duration
+	if is_backflip:
+		motion_duration = frame_time * float(frame_set.size())
+	var result := tick_motion(delta, motion_duration, frame_time, frame_set.size(), Callable(self, "move_swept").bind(root), hold_landing_frame)
 	if is_backflip:
 		if not landing_sound_played and frame == frame_set.size() - 1:
 			landing_sound_played = true

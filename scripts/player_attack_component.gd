@@ -22,6 +22,9 @@ var combo_movement := Vector2.ZERO
 var attack2_cooldown_timer := 0.0
 var lunge_velocity := Vector2.ZERO
 var lunge_remaining := 0.0
+var lunge_duration := 0.0
+var lunge_elapsed := 0.0
+var lunge_ease_out := false
 var attack_element := ElementCatalogScript.Element.NEUTRAL
 var attack_button_held := false
 var charge_elapsed := 0.0
@@ -109,17 +112,25 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 			input_direction = root.call("_player_facing_vector")
 		spin_direction = input_direction.normalized() if input_direction.length_squared() > 0.0001 else Vector2.RIGHT
 		var spin_distance := tuning.spin_lunge_distance if tuning != null else 3.5
-		var spin_duration := tuning.spin_lunge_duration / attack_multiplier if tuning != null else 0.16
+		# Finish the spin's travel before frame 6 (the third-to-last frame). The
+		# remaining recovery frames can settle visually without carrying motion.
+		var spin_duration := tuning.spin_lunge_duration / attack_multiplier if tuning != null else 0.73
+		if tuning != null:
+			spin_duration = tuning.spin_frame_time * float(tuning.spin_recovery_start_frame) / attack_multiplier
 		spin_duration = maxf(spin_duration, 0.001)
-		start_lunge(root.call("_perspective_movement", spin_direction * (spin_distance / spin_duration)), spin_duration)
+		start_lunge(root.call("_perspective_movement", spin_direction * (spin_distance * 2.0 / spin_duration)), spin_duration, true)
 		# A spin is a standalone attack. It cannot inherit a pending combo or
 		# the recovery timer from an attack that happened immediately before it.
 		combo_buffered = false
 		combo_timer = 0.0
 		root.set("player_between_timer", 0.0)
 	else:
-		var run_lunge_multiplier := tuning.run_attack_lunge_multiplier if running_attack_active else 1.0
-		start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * run_lunge_multiplier * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
+		var lunge_multiplier := tuning.run_attack_lunge_multiplier if running_attack_active else 1.0
+		if new_kind == AttackKind.CHARGED_ATTACK2:
+			lunge_multiplier = tuning.charged_attack_lunge_multiplier
+		var lunge_distance := tuning.attack_lunge_distance * lunge_multiplier
+		var motion_duration := tuning.attack_lunge_duration / attack_multiplier
+		start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (lunge_distance / motion_duration)), motion_duration)
 	root.set("player_anim_name", animation_name)
 	if new_variant == 2:
 		root.set("player_between_timer", 0.0)
@@ -461,14 +472,20 @@ func start_attack2_cooldown(duration: float) -> void:
 	attack2_cooldown_timer = maxf(duration, 0.0)
 
 
-func start_lunge(velocity: Vector2, duration: float) -> void:
+func start_lunge(velocity: Vector2, duration: float, ease_out: bool = false) -> void:
 	lunge_velocity = velocity
-	lunge_remaining = maxf(duration, 0.0)
+	lunge_duration = maxf(duration, 0.0)
+	lunge_remaining = lunge_duration
+	lunge_elapsed = 0.0
+	lunge_ease_out = ease_out
 
 
 func cancel_lunge() -> void:
 	lunge_velocity = Vector2.ZERO
 	lunge_remaining = 0.0
+	lunge_duration = 0.0
+	lunge_elapsed = 0.0
+	lunge_ease_out = false
 
 
 func has_lunge() -> bool:
@@ -481,6 +498,13 @@ func consume_lunge(delta: float) -> Vector2:
 	var step := minf(delta, lunge_remaining)
 	lunge_remaining = maxf(lunge_remaining - delta, 0.0)
 	var motion := lunge_velocity * step
+	if lunge_ease_out and lunge_duration > 0.0:
+		var start_progress := clampf(lunge_elapsed / lunge_duration, 0.0, 1.0)
+		var end_progress := clampf((lunge_elapsed + step) / lunge_duration, 0.0, 1.0)
+		var start_speed := 1.0 - start_progress
+		var end_speed := 1.0 - end_progress
+		motion = lunge_velocity * step * (start_speed + end_speed) * 0.5
+	lunge_elapsed = minf(lunge_elapsed + step, lunge_duration)
 	if lunge_remaining <= 0.0:
 		lunge_velocity = Vector2.ZERO
 	return motion

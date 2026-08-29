@@ -15,6 +15,8 @@ var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
 var charge_aura_timer := 0.0
 var charge_ready_blink_timer := 0.0
+var charge_ready_opaque_timer := 0.0
+var charge_ready_was_maxed := false
 var charge_aura_active := false
 var charge_ready_highlight: Sprite2D = null
 
@@ -90,11 +92,15 @@ func update_charge_aura_from_root(root: Object, delta: float) -> void:
 		charge_aura_timer = 0.0
 		_hide_charge_ready_highlight()
 		charge_ready_blink_timer = 0.0
+		charge_ready_opaque_timer = 0.0
+		charge_ready_was_maxed = false
 		return
 	var tuning := root.get("player_tuning") as PlayerTuning
 	if tuning == null:
 		_hide_charge_ready_highlight()
 		charge_ready_blink_timer = 0.0
+		charge_ready_opaque_timer = 0.0
+		charge_ready_was_maxed = false
 		return
 	var charge_span := maxf(tuning.charge_maximum_time, tuning.charge_minimum_time)
 	var progress := clampf(attack.charge_elapsed / maxf(charge_span, 0.01), 0.0, 1.0)
@@ -163,7 +169,14 @@ func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerT
 func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: float, delta: float) -> void:
 	if progress < 0.82 or player.texture == null:
 		_hide_charge_ready_highlight()
+		charge_ready_opaque_timer = 0.0
+		charge_ready_was_maxed = false
 		return
+	var tuning := root.get("player_tuning") as PlayerTuning
+	if progress >= 1.0 and not charge_ready_was_maxed:
+		charge_ready_was_maxed = true
+		charge_ready_opaque_timer = (tuning.attack_frame_time if tuning != null else 0.09) * 2.0
+	charge_ready_opaque_timer = maxf(charge_ready_opaque_timer - maxf(delta, 0.0), 0.0)
 	charge_ready_blink_timer = fmod(charge_ready_blink_timer + maxf(delta, 0.0), 0.20)
 	if charge_ready_highlight == null or not is_instance_valid(charge_ready_highlight):
 		charge_ready_highlight = Sprite2D.new()
@@ -181,7 +194,7 @@ func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: fl
 	ActorGeometry.sync_overlay(charge_ready_highlight, player)
 	var readiness := clampf((progress - 0.82) / 0.18, 0.0, 1.0)
 	var blink := 0.5 + 0.5 * sin(charge_ready_blink_timer / 0.20 * TAU)
-	var alpha := lerpf(0.12, 0.46, readiness) * lerpf(0.55, 1.0, blink)
+	var alpha := 1.0 if charge_ready_opaque_timer > 0.0 else lerpf(0.12, 0.46, readiness) * lerpf(0.55, 1.0, blink)
 	charge_ready_highlight.modulate = Color(1.0, 1.0, 1.0, alpha)
 	charge_ready_highlight.visible = true
 

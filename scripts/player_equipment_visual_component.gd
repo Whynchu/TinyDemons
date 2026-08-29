@@ -111,7 +111,7 @@ func initialize(root: Object) -> void:
 
 func begin_imbue(root: Object, element: int, duration: float) -> void:
 	gameplay_root = root
-	imbue_element = ElementCatalogScript.normalize(element)
+	imbue_element = ElementCatalogScript.normalize(element) as ElementCatalogScript.Element
 	imbue_remaining = maxf(duration, 0.0)
 	imbue_flash_timer = IMBUE_FLASH_TIME
 	imbue_particle_timer = 0.0
@@ -487,11 +487,13 @@ func tick(root: Object, delta: float) -> void:
 
 
 func begin_attack_visual(root: Object) -> void:
-	# Attack sprites are initialized immediately by PlayerAttackComponent. Keep
-	# equipment and shadow layers in lockstep instead of leaving the previous
-	# idle/attack frame visible until the next gameplay tick.
+	# Attack sprites are initialized immediately by PlayerAttackComponent. Use
+	# the same white deployment flash as guard so the sword and shield do not
+	# pop in when an attack starts.
 	_clear_fade_overlays()
 	_clear_draw_overlays()
+	draw_white_timer = DRAW_WHITE_TIME
+	draw_color_fade_timer = DRAW_COLOR_FADE_TIME
 	active = true
 	shield_is_out = true
 	was_attacking = true
