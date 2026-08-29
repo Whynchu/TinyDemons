@@ -110,7 +110,7 @@ func show_dialogue(root: Object) -> void:
 				message = "TO DIVE, OFFER %d SOULS AT THE %s FLAME. IT WILL AWAKEN YOUR CHROMA." % [fire_soul_cost, String(profile.starter_flame).to_upper()]
 			else:
 				message = "OPEN STATS AND SHOP?"
-	allocation_prompt_active = false
+	allocation_prompt_active = profile != null and not (profile.completed_runs == 0 and not bool(root.get("starter_flame_attuned_this_run"))) and message == "OPEN STATS AND SHOP?"
 	allocation_choice = 0
 	allocation_choice_pending = -1
 	begin_dialogue(message, Callable(root, "_pixel_text_texture"))
@@ -185,12 +185,11 @@ func update_dialogue_input(root: Object) -> void:
 			if first_run_flame_pending:
 				hide_dialogue(root)
 			else:
+				# The shop question already owns this dialogue bubble. Its choices
+				# become visible when the text finishes; do not start another phase.
 				allocation_prompt_active = true
 				allocation_choice = 0
 				allocation_choice_pending = -1
-				# Keep the completed shop question visible while the choices appear
-				# below it; clearing this texture made the prompt look like it was in
-				# a separate bubble from YES and NO.
 				dialogue_button.visible = false
 				dialogue_button_shadow.visible = false
 		update_dialogue_from_root(root, 0.0)
