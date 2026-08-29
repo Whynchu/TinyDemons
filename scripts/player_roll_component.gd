@@ -96,7 +96,10 @@ func start_backflip_from_root(root: Object) -> void:
 	landing_sound_played = false
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var roll_multiplier := _roll_multiplier_for(root, tuning)
-	start_motion(away * (tuning.roll_distance * roll_multiplier / tuning.roll_duration)); player.visible = true
+	# The backflip uses the full animation cadence, so derive its velocity from
+	# that duration while keeping the same total travel as a regular roll.
+	var backflip_duration := tuning.backflip_frame_time * float(frames.size()) / roll_multiplier
+	start_motion(away * (tuning.roll_distance / maxf(backflip_duration, 0.001))); player.visible = true
 	anim.apply_frame(root)
 
 
