@@ -168,6 +168,10 @@ func _initialize() -> void:
 			gameplay.set("room_transition_locked", false)
 			_expect(bool(gameplay.call("_try_enter_any_active_socket")), "boss room can traverse the reopened arrival entrance", failures)
 			_expect(gameplay.get("current_room_id") == boss_entry_connection.source_room_id, "boss return route lands in the dungeon approach room", failures)
+			var restored_left_return_guide := gameplay.get_node_or_null("Map/FloorTiles/Entrance/EntranceReturnGuide") as Polygon2D
+			var restored_right_return_guide := gameplay.get_node_or_null("Map/FloorTiles/EntranceRight/EntranceReturnGuide") as Polygon2D
+			_expect(restored_left_return_guide != null and restored_left_return_guide.position.is_equal_approx(Vector2(3, -2)), "boss return restores the normal left entrance guide position", failures)
+			_expect(restored_right_return_guide != null and restored_right_return_guide.position.is_equal_approx(Vector2(13, -2)), "boss return restores the normal right entrance guide position", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

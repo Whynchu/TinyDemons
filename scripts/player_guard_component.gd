@@ -84,7 +84,7 @@ func tick(root: Object, delta: float, guard_held: bool) -> void:
 			durability = maximum_durability
 			display_durability = maximum_durability
 	else:
-		var can_guard := not bool(root.get("player_dead")) and not bool(root.get("player_death_pending")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and float(root.get("player_hitstun_timer")) <= 0.0
+		var can_guard := not bool(root.get("player_dead")) and not bool(root.get("player_death_pending")) and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_backflipping")) and float(root.get("player_hitstun_timer")) <= 0.0
 		var should_defend := guard_held and can_guard and durability > 0.0
 		if should_defend and not facing_locked:
 			facing_left = bool((root.get("player") as Sprite2D).flip_h)

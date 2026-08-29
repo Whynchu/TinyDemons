@@ -93,7 +93,7 @@ func begin_new_run(root: Object) -> void:
 	root.call("_sync_current_element_state")
 	var starter_palette: String = "red"
 	if root.player_profile != null:
-		starter_palette = AspectCatalogScript.palette_for_flame(root.player_profile.persistent_flame())
+		starter_palette = root.player_profile.hub_palette()
 	root.run_start_palette_name = starter_palette
 	# The initial room may have been laid out before new-file selection was
 	# confirmed. Reassign the hub flame here so its visual and interaction target

@@ -37,6 +37,15 @@ func _initialize() -> void:
 		_expect(profile.souls == 5 and profile.starter_soul_gift_claimed, "Cloaked Demon grants the 5-Soul starter gift", failures)
 		_expect(String(npc.full_message).contains("5 SOULS"), "starter gift is explained in Cloaked Demon dialogue", failures)
 		npc.hide_dialogue(gameplay)
+		# The gift is conditional on being out of Souls, not a one-time start-of-
+		# game grant: a veteran with zero Souls receives it again.
+		profile.souls = 0
+		profile.completed_runs = 3
+		npc.show_dialogue(gameplay)
+		_expect(profile.souls == 5, "Cloaked Demon re-offers Souls whenever the player is out", failures)
+		_expect(String(npc.full_message).contains("5 SOULS"), "the re-offer is explained in Cloaked Demon dialogue", failures)
+		npc.hide_dialogue(gameplay)
+		profile.completed_runs = 0
 		var player := gameplay.get("player") as Sprite2D
 		player.global_position += (gameplay.call("_fire_anchor") as Vector2) - (gameplay.call("_actor_foot", player) as Vector2)
 		gameplay.call("_update_interact_prompt", 0.0)

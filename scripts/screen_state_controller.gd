@@ -3,6 +3,7 @@ class_name ScreenStateController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
+const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
@@ -107,6 +108,7 @@ var hub_player_card_texts: Array[Sprite2D] = []
 var hub_status_texts: Array[Sprite2D] = []
 var hub_context_text: Sprite2D = null
 var hub_currency_text: Sprite2D = null
+var hub_currency_icon: Sprite2D = null
 var hub_binding_panel: Panel = null
 var hub_binding_texts: Array[Sprite2D] = []
 var hub_binding_action_button: Button = null
@@ -881,6 +883,16 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	hub_context_text = context
 	var currency := create_sprite(overlay, "HubCurrency", null, Vector2(display_view_size.x - 76.0, 23), false)
 	hub_currency_text = currency
+	var currency_icon := Sprite2D.new()
+	currency_icon.name = "HubCurrencyIcon"
+	currency_icon.centered = false
+	currency_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	currency_icon.texture = SoulVisualsScript.texture()
+	currency_icon.position = Vector2(display_view_size.x - 82.0, 23)
+	currency_icon.z_index = 2
+	currency_icon.visible = false
+	overlay.add_child(currency_icon)
+	hub_currency_icon = currency_icon
 
 	var pages: Array[Button] = []
 	var page_labels := ["STATUS", "ALLOCATE", "EQUIPMENT", "SHOP", "FUSION", "BIND"]
@@ -1030,7 +1042,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	hub_gear_choice_content_clip = gear_choice_content_clip
 
 	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back)
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": currency_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
 
 
 func _make_menu_page(parent: Node, page_name: String) -> Control:
@@ -1124,6 +1136,8 @@ func _position_hub_controls() -> void:
 	hub_overlay.size = display_view_size
 	if hub_currency_text != null:
 		hub_currency_text.position = Vector2(maxf(14.0, width - 76.0), 23)
+	if hub_currency_icon != null:
+		hub_currency_icon.position = Vector2(maxf(8.0, width - 82.0), 23)
 	for page_root: Control in hub_page_roots.values():
 		page_root.position = Vector2.ZERO
 		page_root.size = display_view_size
@@ -1307,7 +1321,13 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_currency_text != null:
 		var currency_label := "GOLD %d" % profile.gold if page == HUB_PAGE_SHOP else "SOULS %d" % profile.souls
 		hub_currency_text.visible = page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION or page == HUB_PAGE_BIND
-		hub_currency_text.texture = pixel_texture.call(currency_label, Color8(255, 205, 117) if page == HUB_PAGE_SHOP else Color8(211, 167, 255)) as Texture2D
+		var is_soul_currency := page == HUB_PAGE_FUSION or page == HUB_PAGE_BIND
+		hub_currency_text.texture = pixel_texture.call(currency_label, Color8(255, 205, 117) if page == HUB_PAGE_SHOP else SoulVisualsScript.SOUL_COLOR) as Texture2D
+		if hub_currency_icon != null:
+			hub_currency_icon.visible = hub_currency_text.visible and is_soul_currency
+			hub_currency_icon.texture = SoulVisualsScript.texture()
+	elif hub_currency_icon != null:
+		hub_currency_icon.visible = false
 	if showing_root:
 		return
 	var stat_nodes: Array[CanvasItem] = []

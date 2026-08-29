@@ -35,6 +35,7 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_player_card_texts = controls["card"] as Array[Sprite2D]
 	root.screen_state_controller.hub_status_texts = controls["status"] as Array[Sprite2D]
 	root.screen_state_controller.hub_context_text = controls["context"] as Sprite2D
+	root.screen_state_controller.hub_currency_icon = controls.get("currency_icon") as Sprite2D
 	root.screen_state_controller.hub_item_name_text = controls["item_name"] as Sprite2D
 	root.screen_state_controller.hub_item_list_texts = controls["item_list"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_row_buttons = controls["item_rows"] as Array[Button]
@@ -133,6 +134,7 @@ func open_hub_from_cloaked_demon(root: Object) -> void:
 	root.player_is_moving = false
 	root.player_is_attacking = false
 	root.player_is_rolling = false
+	root.player_is_backflipping = false
 	root.player_attack_visual.visible = false
 	root.interact_prompt.visible = false
 	show_hub(root, true)

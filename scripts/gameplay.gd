@@ -144,6 +144,7 @@ func _enter_final_settlement_room() -> void:
 	room_transition_locked = true
 	player_is_attacking = false
 	player_is_rolling = false
+	player_is_backflipping = false
 	player_is_defending = false
 	player.global_position = Vector2(120, 80) + display_world_offset
 	player.flip_h = false

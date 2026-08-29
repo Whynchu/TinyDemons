@@ -18,7 +18,9 @@ func apply_profile_to_runtime(root: Object) -> void:
 		else:
 			chroma.call("clear_bound_aspect")
 	if root.run_state == null or not root.run_state.active:
-		root.run_start_palette_name = palette
+		# The hub flame is a durable starter-or-bound identity, not whichever
+		# temporary aspect happened to be active during the previous run.
+		root.run_start_palette_name = root.player_profile.hub_palette()
 	root.player_profile.ensure_starter_items()
 	if root.player_equipment != null:
 		root.player_equipment.configure_from_profile(root.player_profile)

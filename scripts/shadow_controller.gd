@@ -36,4 +36,17 @@ func update_cloaked_demon_shadow(root: Object, depth_scale: float) -> void:
 
 
 func _sync_sprite_shadow(sprite_shadow: Sprite2D, source: Sprite2D, offset: Vector2) -> void:
-	sprite_shadow.texture = source.texture; sprite_shadow.material = source.material; sprite_shadow.global_position = source.global_position + offset; sprite_shadow.offset = source.offset; sprite_shadow.scale = source.scale; sprite_shadow.flip_h = source.flip_h; sprite_shadow.visible = source.visible and source.texture != null; sprite_shadow.z_index = source.z_index - 1
+	# A drop shadow follows the source frame, but it must not inherit the source
+	# material. The player and attack layers can carry the MP desaturation shader;
+	# copying that material makes this layer render as a normal-colour duplicate
+	# instead of the black silhouette used by the sword/shield shadows.
+	sprite_shadow.texture = source.texture
+	sprite_shadow.material = null
+	sprite_shadow.self_modulate = Color(0.0, 0.0, 0.0, 0.25)
+	sprite_shadow.global_position = source.global_position + offset
+	sprite_shadow.offset = source.offset
+	sprite_shadow.scale = source.scale
+	sprite_shadow.flip_h = source.flip_h
+	sprite_shadow.modulate.a = source.modulate.a
+	sprite_shadow.visible = source.visible and source.texture != null
+	sprite_shadow.z_index = source.z_index - 1

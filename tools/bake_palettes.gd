@@ -17,6 +17,7 @@ const ANIMATIONS := [
 	["idle", "res://assets/artwork/TinyDemon-idle.png", PLAYER_FRAME],
 	["walk", "res://assets/artwork/TinyDemon-walk.png", PLAYER_FRAME],
 	["run", "res://assets/artwork/TinyDemon-run.png", PLAYER_FRAME],
+	["backflip", "res://assets/artwork/TinyDemon-backflip.png", PLAYER_FRAME],
 	["defend", "res://assets/artwork/TinyDemon-Defend.png", PLAYER_FRAME],
 	["roll", "res://assets/artwork/TinyDemon-roll.png", PLAYER_FRAME],
 	["attack", "res://assets/artwork/TinyDemon-attack1.png", ATTACK_FRAME],

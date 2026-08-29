@@ -18,7 +18,7 @@ const HORIZONTAL_FACING_DEADZONE := 0.1
 func move_player(root: Object, delta: float) -> void:
 	var controller := root.get("player_controller") as PlayerController
 	if controller != null and not controller.can_receive_input(): root.set("player_is_moving", false); root.set("player_is_running", false); return
-	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0: root.set("player_is_moving", false); root.set("player_is_running", false); return
+	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0: root.set("player_is_moving", false); root.set("player_is_running", false); return
 	var input: Vector2 = root.call("_movement_input")
 	if input.length_squared() > 0.0:
 		root.set("last_player_input_direction", input.normalized())
@@ -41,6 +41,11 @@ func move_player(root: Object, delta: float) -> void:
 func update_horizontal_facing(root: Object, direction: Vector2, update_visual: bool = true) -> void:
 	var player := root.get("player") as Sprite2D
 	if player == null:
+		return
+	# Lock-on owns the facing while the target button is held: the player must
+	# not turn with movement, even when no target is locked (they keep the facing
+	# they had when they pressed lock-on).
+	if root.get("player_is_targeting") == true:
 		return
 	# Keep facing independent from the vertical component. A controller can
 	# report a tiny horizontal value while the stick is held straight up/down;

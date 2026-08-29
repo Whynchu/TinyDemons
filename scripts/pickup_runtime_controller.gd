@@ -1,6 +1,8 @@
 extends Node
 class_name PickupRuntimeController
 
+const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+
 const CHEST_INTERACT_DISTANCE := 16.0
 const DEPTH_Z_SCALE := 10.0
 const CHROMA_PICKUP_VALUE := 20
@@ -48,21 +50,10 @@ func placeholder_item_texture() -> Texture2D:
 func soul_pickup_texture() -> Texture2D:
 	if soul_pickup_texture_cache != null:
 		return soul_pickup_texture_cache
-	# Temporary 9x9 stand-in: a small pixel diamond with a bright core. Keeping
-	# this generated and nearest-filtered makes the asset easy to replace later.
-	var image := Image.create(9, 9, false, Image.FORMAT_RGBA8)
-	for y in 9:
-		for x in 9:
-			var distance := absi(x - 4) + absi(y - 4)
-			if distance > 4:
-				image.set_pixel(x, y, Color(0, 0, 0, 0))
-			elif distance <= 1:
-				image.set_pixel(x, y, Color.WHITE)
-			elif distance <= 2:
-				image.set_pixel(x, y, SOUL_COLOR.lerp(Color.WHITE, 0.35))
-			else:
-				image.set_pixel(x, y, SOUL_COLOR.darkened(0.30))
-	soul_pickup_texture_cache = ImageTexture.create_from_image(image)
+	# Use the authored soul for both world pickups and currency displays. The
+	# shared helper recolours only the grey body and its light outline, preserving
+	# the two dark eye pixels.
+	soul_pickup_texture_cache = SoulVisualsScript.texture()
 	return soul_pickup_texture_cache
 
 

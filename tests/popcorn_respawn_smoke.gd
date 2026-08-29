@@ -23,6 +23,7 @@ func _initialize() -> void:
 	var supports: Array[Sprite2D] = []
 	var boss: Sprite2D = null
 	var big_threats: Array[Sprite2D] = []
+	var regular_enemies: Array[Sprite2D] = []
 	for slot in slimes.size():
 		if slot < scales.size() and float(scales[slot]) > 1.0:
 			boss = slimes[slot]
@@ -31,6 +32,8 @@ func _initialize() -> void:
 			big_threats.append(slimes[slot])
 		if slot < flags.size() and bool(flags[slot]):
 			supports.append(slimes[slot])
+		elif not big_threats.has(slimes[slot]):
+			regular_enemies.append(slimes[slot])
 	_expect(boss != null, "boss encounter exposes a scaled big threat", failures)
 	_expect(supports.size() >= 2, "boss encounter exposes at least two popcorn support slots", failures)
 	var profile := gameplay.get("player_profile") as PlayerProfile
@@ -65,7 +68,11 @@ func _initialize() -> void:
 			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots stay defeated after every big threat is gone", failures)
 		state = rooms.room_states.get(room_id, {}) as Dictionary
 		_expect(not state.has("popcorn_respawn_slots"), "big-threat defeat clears pending popcorn respawns", failures)
-		_expect(not bool(gameplay.get("entrance_open")), "the boss entrance stays sealed while regular enemies remain", failures)
+		var regular_enemies_alive := false
+		for regular in regular_enemies:
+			if not bool(gameplay.call("_is_slime_dead", regular)):
+				regular_enemies_alive = true
+		_expect(bool(gameplay.get("entrance_open")) == not regular_enemies_alive, "boss entrance follows the remaining regular-enemy roster", failures)
 		for slime in slimes:
 			if not bool(gameplay.call("_is_slime_dead", slime)):
 				gameplay.call("_kill_slime", slime)

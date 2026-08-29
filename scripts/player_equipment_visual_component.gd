@@ -405,7 +405,7 @@ func tick(root: Object, delta: float) -> void:
 			imbue_particle_timer = IMBUE_PARTICLE_INTERVAL / maxf(imbue_visual_intensity(root), 0.01)
 		if imbue_remaining <= 0.0:
 			end_imbue(root)
-	if bool(root.get("player_is_rolling")) and active and fade_timer <= 0.0:
+	if (bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping"))) and active and fade_timer <= 0.0:
 		fade_timer = FLASH_TIME
 		active = false
 		shield_is_out = false
@@ -793,7 +793,7 @@ func _update_layers(root: Object) -> void:
 	for layer_name in layers:
 		var depth_layer := layers[layer_name] as Sprite2D
 		depth_layer.z_index = player.z_index + (-1 if String(layer_name).ends_with("Back") else 1)
-	if (bool(root.get("player_is_rolling")) or String(root.get("player_anim_name")) == "run") and fade_timer <= 0.0:
+	if (bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or String(root.get("player_anim_name")) == "run") and fade_timer <= 0.0:
 		for layer in layers.values():
 			(layer as Sprite2D).visible = false
 		_update_equipment_shadows()

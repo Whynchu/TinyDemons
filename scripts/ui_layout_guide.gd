@@ -1,6 +1,8 @@
 @tool
 extends Node2D
 
+const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+
 @export var show_preview := true:
 	set(value):
 		show_preview = value
@@ -51,6 +53,7 @@ func _rebuild_preview() -> void:
 	_add_pixel_sprite("EditorDungeonRun", Vector2(5, 153), "DUNGEON R1", Color("#f4f4f4"), false)
 	_add_pixel_sprite("EditorRunTimer", DisplayLayout.position_for(Vector2(199, 153), &"run_timer", view_size), "TIME 00:00", Color("#f4f4f4"), false)
 	_add_texture_sprite("EditorGold", "res://assets/artwork/GoldFresh2.png", DisplayLayout.position_for(Vector2(205, 2), &"gold", view_size), Vector2(0, 0), Vector2(5, 5))
+	_add_texture_sprite("EditorSoul", "res://assets/artwork/Souls.png", DisplayLayout.position_for(Vector2(205, 9), &"souls", view_size))
 	_add_texture_sprite("EditorTriangle", "res://assets/artwork/triangle55.png", DisplayLayout.position_for(Vector2(224, 64), &"input_prompts", view_size))
 	_add_texture_sprite("EditorSquare", "res://assets/artwork/square55.png", DisplayLayout.position_for(Vector2(219, 69), &"input_prompts", view_size))
 	_add_texture_sprite("EditorX", "res://assets/artwork/x55.png", DisplayLayout.position_for(Vector2(224, 74), &"input_prompts", view_size))
@@ -64,6 +67,10 @@ func _add_texture_sprite(node_name: String, path: String, sprite_position: Vecto
 	var sprite := Sprite2D.new()
 	sprite.name = node_name
 	sprite.texture = texture
+	if node_name == "EditorSoul":
+		var soul_texture := SoulVisualsScript.texture()
+		if soul_texture != null:
+			sprite.texture = soul_texture
 	sprite.position = sprite_position
 	sprite.centered = false
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

@@ -141,7 +141,7 @@ func begin_player_death(root: Object, depth_scale: float) -> void:
 	if bool(root.get("player_dead")):
 		return
 	root.set("player_dead", true); root.set("player_death_pending", false); root.set("player_death_timer", 0.0); root.set("player_death_particles_started", false)
-	root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.call("_clear_roll_dust")
+	root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.set("player_is_backflipping", false); root.call("_clear_roll_dust")
 	var player := root.get("player") as Sprite2D
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	root.set("player_death_origin", player.global_position); root.set("player_death_offset", player.offset); root.set("player_death_scale", player.scale); root.set("player_death_texture", player.texture)

@@ -125,7 +125,7 @@ func _begin_magic_candidate(root: Object) -> bool:
 
 
 func _magic_action_blocked(root: Object, allow_candidate := false) -> bool:
-	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
+	if bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or bool(root.get("player_is_defending")) or bool(root.get("player_dead")):
 		return true
 	if bool(root.get("player_is_magic_casting")) and not (allow_candidate and magic_animation_active and magic_hold_active and not magic_animation_is_imbue):
 		return true

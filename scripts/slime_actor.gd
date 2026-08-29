@@ -168,7 +168,7 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_enemy_attack_attempt()
-	if bool(root.get("player_is_rolling")):
+	if bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")):
 		if run_state != null:
 			run_state.record_dodge()
 		return
