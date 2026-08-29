@@ -61,6 +61,9 @@ game reads them at runtime with no code change.
 
 ### `scripts/progression_tuning.gd` — leveling economy (5 exports, all `inspector`)
 
+Enemy XP rewards use a global `2.0x` multiplier in addition to the encounter
+and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
+
 | Field | Default | Meaning |
 | --- | ---: | --- |
 | `xp_base` | 100.0 | XP for level 1->2 |
