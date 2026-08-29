@@ -2,9 +2,12 @@
 
 ## Status
 
-**Proposal — discussion first.** This document defines the intended direction and
-the smallest version worth building. It does not authorize implementation until
-the open decisions are resolved.
+**Foundation implemented; catalogue expansion approved.** This document retains
+the broader soft-roguelite and hub direction. Detailed equipment rules now live
+in [`gear-catalogue-spec.md`](gear-catalogue-spec.md), its authored list in
+[`gear-catalogue.md`](gear-catalogue.md), and the associated drop/effect plans.
+The original four-slot prototype is historical; new equipment work follows the
+approved six-slot model.
 
 ## Vision
 
@@ -131,6 +134,12 @@ free or inexpensive so an exciting equipment drop can inspire a new build.
   offensive transmutations.
 - **DEF** scales damage mitigation, shield durability, guard recovery,
   knockback resistance, counters, and defensive transmutations.
+- **AGI** scales movement, roll/run motion, attack/recovery timing, and selected
+  mobility effects within bounded tuning limits.
+- **INT** scales Triangle magic and the magic portion of Imbue and elemental
+  slime contracts. It also controls the approved Imbue visual-intensity path.
+- **MND** is the source of derived M.DEF and protects against Triangle, Imbue
+  magic portions, and non-neutral elemental-slime magic portions.
 
 DEF should support active shield play instead of existing only as passive
 damage reduction.
@@ -141,18 +150,23 @@ Stats are calculated once through an explicit, non-recursive pipeline:
 
 ```text
 Innate stats + allocated points + flat equipment stats
-  = Effective VIT / STR / DEF
+  = Effective VIT / STR / DEF / AGI / INT / MND
 
 Core HP (level-independent)
   × (1 + Effective VIT × VIT rate + additive Core-HP equipment bonuses)
   + flat equipment HP
   = Maximum HP
 
-Item base output
-  + Effective STR × item STR scaling
-  + Effective VIT × item VIT scaling
-  + Effective DEF × item DEF scaling
-  = Item output before conditional effects
+Physical raw output
+  = weapon/ability base + Effective STR × physical scale
+
+Magic raw output
+  = spell/ability base + Effective INT × magic scale
+
+Composite output
+  = physical portion after P.DEF mitigation
+  + magic portion after M.DEF mitigation
+  -> one roll/critical result -> one full-packet element matchup
 ```
 
 Bonuses in the same percentage category are added before being applied. No item
@@ -166,164 +180,65 @@ without making those bonuses interchangeable.
 
 ## Equipment Model
 
-### Slots
-
-The final system supports the existing four equipment slots:
+The approved equipment model is defined in
+[`gear-catalogue-spec.md`](gear-catalogue-spec.md). It has six slots:
 
 - Weapon
-- Armor
+- Head
+- Body (the former Armor slot)
+- Arm
 - Shield
 - Accessory
 
-Each slot must have its own stat vocabulary and gameplay identity. Not every
-modifier should be legal on every slot.
+The new Head and Arm slots are zero-power starter slots initially. They add
+room for INT/MND, magic defense, attack handling, charge, combo, and recovery
+builds without invalidating the current starter balance. The single Accessory
+slot remains the broad build-twist slot; a second Accessory, Relic, or Core slot
+is not approved.
 
-| Slot | Primary purpose | Early modifier examples |
-| --- | --- | --- |
-| Weapon | Offensive identity | strength, attack damage, critical chance, attack effect |
-| Armor | Survivability | maximum health, defense, roll recovery |
-| Shield | Guard play | defense, guard window, block reward |
-| Accessory | Build twist | health, strength, economy, utility |
+The catalogue target is 44 authored bases. Weapon families are data and
+behavior tags, not automatic slots. Future Spear, Bow, Tome, Fist, Thrown,
+Bell, Harp, and Dark-weapon families are documented extension points and stay
+out of the drop pool until their actions, animations, and hitbox contracts
+exist.
 
-### Item anatomy
+Every entry has one primary stat, a small authored secondary package, explicit
+tradeoffs, source/progression tags, and a player-facing description. The
+current deterministic rarity/enhancement model remains in place. Random
+primary affixes are not part of the approved expansion; the legacy `quality`
+field may affect price/salvage only until a future migration removes it.
 
-Every item has five readable layers:
-
-1. **Base item** — authored identity, such as Short Sword, Basic Shield, or
-   Bangle. The base is reliable and understandable.
-2. **Rarity tier** — determines baseline strength and modifier count.
-3. **Modifiers (affixes)** — randomized bonuses from the allowed slot pool.
-4. **Upgrade level** — a deterministic duplicate-fusion track, shown as `+0`
-   through a capped value.
-5. **Special effect** — a rare build-defining property reserved for later
-   tiers/content.
-
-Every authored item also has a visible scaling profile. Scaling ranges may roll
-within narrow authored limits, but random generation cannot erase the base
-item's identity. A STR sword may roll from C to A STR scaling; it cannot become
-a pure VIT weapon unless that is an authored version of the item.
-
-```text
-Guardian Sword
-STR: C
-VIT: -
-DEF: B
-```
-
-The comparison UI presents both the readable grade and the exact projected
-change for the current character.
-
-The current `Basic Sword`, `Basic Tunic`, `Basic Shield`, and `Bangle` remain
-valid starter bases. Their bonuses move into item definitions rather than
-being hard-coded as the player’s permanent loadout.
-
-### Tiers
-
-Start with three tiers:
-
-| Tier | Modifier count | Role |
-| --- | ---: | --- |
-| Common | 0–1 | Reliable baseline, familiar bases |
-| Rare | 1–2 | First interesting build decisions |
-| Epic | 2–3 | Meaningful chase items |
-
-Legendary and set-like items are deliberately deferred. They should arrive
-only after rarity, affix readability, and balance have proven themselves.
-
-### Randomness rules
-
-- Bases are hand-authored; randomness is layered on top.
-- Affixes must be slot-restricted and have compatible stat ranges.
-- A rare item should never be merely “higher numbers”; at least some affixes
-  should change how the player approaches combat.
-- Avoid universal all-purpose modifiers. A shield should not compete with a
-  weapon by rolling the same best damage effects.
-- The inspect screen always displays the base, tier, upgrade level, exact
-  modifier values, and a comparison to the currently equipped item.
+Rarity is Common, Rare, Epic, Legendary, or Mythic. Rarity may strengthen the
+authored package and unlock a documented passive/transmutation, but it cannot
+turn a generic item into an unrelated stat bundle. Transmutations remain
+separate behavioral identities and currently include Gathering Edge, Blood
+Feed, Bloodwoven Core, Bastion Core, and Duelist Focus.
 
 ## Acquisition and Economy
 
-### In-run rewards
+The detailed source rules are in [`gear-drop-tables.md`](gear-drop-tables.md).
+The current boundaries remain:
 
-- Combat rooms can directly drop identified equipment. This is recommended for
-  the first version because it makes drops exciting and understandable.
-- Chests provide gold and can later have a small chance to provide equipment.
-- Bosses should have a better chance for high-tier or unique rewards, but must
-  not be the only viable source of progress.
-- Temporary boons remain distinct from permanent equipment.
+- Normal enemy deaths primarily provide Souls/Chroma rather than inventory
+  flooding.
+- Treasure chests provide identified world gear under seeded source rules.
+- Run-clear rewards provide one performance-sensitive persistent gear roll.
+- The hub shop provides reliable choices and a seeded premium option.
+- Bosses may later use a curated unique/high-tier pool.
+- Matching definition/rarity duplicates remain the dependable fusion material.
+- No initial gear effect multiplies Souls, gold, or global drop rate.
 
-### Shops
-
-The hub merchant is the first shop. Certain dungeon floors can later host a
-smaller run shop using the same catalog and purchase boundary.
-
-Recommended initial stock:
-
-- Reliable starter/basic items, so bad luck never blocks a build.
-- One rotating randomized premium equipment item.
-- A small number of healing or run-only utility goods when consumables exist.
-
-Use existing gold as the initial currency. Add a fusion material only if it is
-needed to pace upgrades; do not add currencies simply to make the system look
-deeper.
-
-### Fusion and transmutation
-
-These are intentionally separate mechanics:
-
-- **Fusion:** consume matching duplicates to improve the mastery of that
-  equipment family, initially `+0 -> +3`. Family mastery applies to every
-  current and future instance of that authored base, so finding a better random
-  roll never invalidates previous fusion investment. Mastery improves base
-  item output, not every multiplicative modifier.
-- **Transmutation:** a build-defining behavioral effect found on eligible high
-  tier items or applied through a later controlled process. Transmutations
-  react to real combat events and are distinct from ordinary numeric affixes.
-  Rerolling a transmutation may be added later, but risky rerolling must never
-  replace fusion as the dependable path.
-
-### Transmutation design language
-
-Tiny Demons transmutations should use the combat rules that already define the
-game: attack variants, combo timing, lunging, directional hit shapes,
-multi-target damage sharing, directional guard, shield durability/breaking,
-rolling, target lock, knockback, health thresholds, and room performance.
-
-Initial examples:
-
-- **Gathering Edge (weapon):** after Attack 1 hits multiple enemies, Attack 2
-  divides its damage less severely among those same targets. Its output scales
-  with STR.
-- **Defiant Edge (weapon):** a successful frontal block arms the next Attack 2,
-  which consumes the charge for additional DEF-scaled damage.
-- **Blood Rhythm (weapon):** Attack 2 may spend current health for additional
-  VIT-scaled damage but can never reduce the player below one health.
-- **Bastion Core (shield):** DEF scales shield durability; successful frontal
-  blocks store charges consumed by Attack 2 for knockback.
-- **Living Bulwark (shield):** VIT improves shield regeneration delay and rate,
-  trading away some maximum durability.
-- **Shatterguard (shield):** breaking the shield knocks back enemies in front,
-  but increases the break-recovery time.
-- **Bloodwoven Tunic (armor):** grants a percentage of Core HP and improves
-  VIT's contribution while providing little DEF.
-- **Anchorplate (armor):** improves DEF and knockback resistance but shortens
-  attack lunges.
-- **Duelist Seal (accessory):** attacks gain STR scaling against the locked
-  target and lose some effectiveness against other enemies.
-- **Crowd Idol (accessory):** attacks divide multi-target damage less severely
-  but deal less damage against a lone target.
-- **Pilgrim's Knot (accessory):** clearing a room without health damage grants
-  a temporary next-room bonus; shield durability damage is allowed.
-
-Ordinary affixes provide readable numerical texture. Transmutations should
-change a decision, create a trigger chain, or introduce a tradeoff.
+The six-slot expansion adds missing-slot protection and explicit source tags so
+Head and Arm items appear early enough to matter. It does not add another
+currency or move reward mutation into menu presentation code.
 
 ## Hub Responsibilities
 
 The hub is a calm preparation space, not another combat room. Its first
 features should be:
 
-1. Build screen: show equipped Weapon/Armor/Shield/Accessory and final stats.
+1. Build screen: show equipped Weapon/Head/Body/Arm/Shield/Accessory and final
+   stats.
 2. Inventory: inspect, compare, equip, and retain collected items.
 3. Merchant: buy basic equipment and one rotating premium item.
 4. Fusion station: added only after duplicate inventory is working.
@@ -345,13 +260,15 @@ ProfileState
     fusion resources, unlocks
 
 ItemDefinition (authored data)
-  - base identity, slot, base stats, art, permitted affix pool
+  - base identity, slot, family, base stats, art, source/effect tags
 
 ItemInstance (generated/persistent data)
-  - instance ID, definition ID, rarity, rolled affixes, upgrade level
+  - instance ID, definition ID, rarity, quality, transmutation ID, enhancement
+    level, and compatibility fields
 
-AffixDefinition (authored data)
-  - permitted slots, stat/effect, value range, rarity weighting
+Effect/Transmutation definitions (authored data)
+  - explicit owner, trigger, stat/effect values, stacking rule, source gates,
+    and player-facing text
 
 Economy / Inventory boundary
   - validates grants, purchases, equips, fusion, and persistence exactly once
@@ -364,32 +281,20 @@ Combat reads the equipped item instances and derives player bonuses through a
 single stat-calculation path. UI and shops must request mutations through the
 inventory/economy boundary; they must not change player stats or gold directly.
 
-## First Vertical Slice
+## Foundation Slice and Current Expansion
 
-Do not build the whole system first. Validate the loop with:
+The original vertical slice is complete in the current runtime: persistent
+profiles, manual six-stat allocation, five rarities, identified gear, shops,
+enhancement fusion, transmutations, composite combat, and the menu flow are
+implemented. Its four-slot scope was appropriate for proving the pipeline but
+is not the final catalogue target.
 
-- Persistent profile, inventory, and a menu-based hub equipment screen.
-- Infrastructure for all four slots, with weapon-first content depth.
-- Three authored weapon bases with clearly distinct stat focus or behavior.
-- Common, Rare, and Epic tiers.
-- Four to six weapon-only affixes.
-- Direct weapon drops from combat rooms.
-- One hub merchant with basic stock and one rotating premium item.
-- Equip/compare flow that changes real combat stats in the next run.
-- Equipment-family duplicate fusion from `+0` to `+3`.
-- One proven transmutation hook in each equipment slot, using placeholder item
-  content where final artwork is unavailable.
-- Manual VIT/STR/DEF allocation with the capped point-award schedule.
-- Death settlement and return to hub/title with level, XP, gold, equipment, and
-  allocations retained.
-
-Explicitly out of scope for this slice:
-
-- Transmutation.
-- Floor shops.
-- Legendary tiers, sets, item identification, or multiple crafting currencies.
-- A walkable hub scene; the first hub is a complete menu flow.
-- Broad content production beyond the minimum items needed to test every slot.
+The current catalogue implementation is the approved six-slot expansion described in
+[`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md):
+Head and Arm are visible with zero-power starters, Armor is renamed to Body
+with compatibility, all 44 rows are authored, and source/effect coverage is
+integrated in tested batches. Future weapon families and future effect rows
+remain gated until their combat contracts are approved.
 
 ### Slice success criteria
 
@@ -407,25 +312,23 @@ the player to the hub without losing persistent progression.
 - Player level provides reliable baseline growth; items provide the more
   expressive build-changing growth.
 - Gold, drops, duplicates, and fusion materials must each have distinct value.
-- Use telemetry/debug displays during development: rarity acquired, affix
-  frequencies, time to first upgrade, shop purchase rate, and boss win rate.
+- Use telemetry/debug displays during development: source and slot acquired,
+  definition/rarity frequencies, time to first upgrade, shop purchase rate,
+  empty-slot coverage, and boss win rate.
 
-## Open Decisions Before Implementation
+## Resolved Direction and Remaining Review
 
-1. Confirm soft-roguelite persistence on death.
-2. Confirm that death, boss victory, and voluntary extraction return to the
-   hub by default, with title return as an explicit safe option.
-3. Confirm the provisional point-award bands after deciding target boss levels
-   and the long-term level cap.
-4. Confirm direct, identified drops for the first version.
-5. Define the three first weapon bases and what makes each play differently.
-6. Define the initial weapon-only affix pool and forbidden combinations.
-7. Decide whether family fusion costs only matching duplicates or also a small
-   gold amount.
-8. Decide whether the hub shop’s rotating premium item refreshes per run,
-   per boss clear, or by real-world time. Recommendation: per run.
-9. Confirm the menu-based hub for the first implementation; treat a walkable
-   hub as a later presentation upgrade.
+The following decisions are approved: soft-roguelite persistence, identified
+drops, the menu-based hub, the existing fusion/economy boundary, the six-stat
+model, and the six equipment slots with one Accessory. The new Head and Arm
+slots use zero-power starter items, and elemental gear uses explicit Imbue
+Resonance/Elemental Ward contracts without overriding the starter or bound
+flame.
+
+Remaining review belongs to the catalogue documents rather than this broad
+vision page: final names, numerical packages, source weights, elemental ward
+ordering, effect stacking, art coverage, and the balance simulation for a full
+six-slot loadout.
 
 ## Independent Review Notes
 
@@ -437,8 +340,7 @@ risks:
    interchangeable economy.
 3. Permanent gear can either dominate run balance or feel irrelevant.
 
-The resulting guardrails are: build content deeply for the weapon slot first,
-keep the other three slots to the minimum needed to prove the shared pipeline,
-retain gold plus duplicates as the only initial progression inputs, make base
-combat viable with starter gear, and expand transmutation content only after
-the vertical slice is fun.
+The resulting guardrails are: design all six approved slots with distinct
+identities, implement them in tested batches, retain gold plus duplicates as
+the only initial progression inputs, make base combat viable with starter gear,
+and expand transmutation content only after each underlying effect is readable.

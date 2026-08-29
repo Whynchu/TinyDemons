@@ -23,6 +23,10 @@ $tests += "menu_route_scene_smoke"
 $tests += "run_locomotion_smoke"
 $tests += "wall_socket_geometry_smoke"
 $tests += "starter_flame_hub_scene_smoke"
+$tests += "gear_catalogue_expansion_smoke"
+$tests += "gear_effect_contract_smoke"
+$tests += "gear_slot_migration_smoke"
+$tests += "gear_drop_policy_smoke"
 $failed = $false
 foreach ($test in $tests) {
 	Write-Host "=== $test ==="

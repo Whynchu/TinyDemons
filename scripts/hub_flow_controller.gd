@@ -274,6 +274,7 @@ func hub_gear_candidates(root: Object, slot: StringName) -> Array[ItemInstance]:
 	if root.player_profile == null:
 		return candidates
 	var catalog := ItemCatalog.new()
+	slot = ItemCatalog.canonical_slot(slot)
 	if slot == &"shield":
 		var unequip := ItemInstance.new()
 		unequip.instance_id = ItemCatalog.UNEQUIP_SHIELD_ID
@@ -303,7 +304,7 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 	var candidates := hub_gear_candidates(root, slot)
 	root.screen_state_controller.hub_gear_browsing = not candidates.is_empty()
 	if not candidates.is_empty():
-		var equipped_id := str(root.player_profile.equipped_instance_ids.get(String(slot), ""))
+		var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
 		for index in candidates.size():
 			if candidates[index].instance_id == equipped_id:
 				root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
@@ -400,7 +401,7 @@ func hub_item_action(root: Object) -> void:
 		if not candidates.is_empty():
 			var candidate_index: int = posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
 			if not root.screen_state_controller.hub_gear_browsing:
-				var equipped_id := str(root.player_profile.equipped_instance_ids.get(String(slot), ""))
+				var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
 				for index in candidates.size():
 					if candidates[index].instance_id == equipped_id:
 						root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
@@ -408,7 +409,7 @@ func hub_item_action(root: Object) -> void:
 				root.screen_state_controller.hub_gear_browsing = true
 			else:
 				var selected: ItemInstance = candidates[candidate_index]
-				var equipped_id := str(root.player_profile.equipped_instance_ids.get(String(slot), ""))
+				var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
 				if selected.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID or (slot == &"shield" and selected.instance_id == equipped_id):
 					root.call("_unequip_profile_slot", slot)
 				else:
@@ -424,7 +425,11 @@ func hub_item_action(root: Object) -> void:
 		var entry: Dictionary = root.run_state.shop_stock[index]
 		if not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+			var catalog := ItemCatalog.new()
+			var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, catalog.definition_slot(item.definition_id))
 			if root.player_profile.purchase_item(item, int(entry.get("price", 0))):
+				if root.run_state != null:
+					root.run_state.record_gear_reward(&"shop", item, root.player_profile.difficulty_rank, root.player_profile.level, -1, "", slot_was_empty, false, &"purchased")
 				entry["sold"] = true; root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
 			else:
 				root.call("_play_sound", "ui_denied", 0.0, 1.0)

@@ -19,13 +19,18 @@ func _grant_chest_item_reward() -> bool:
 		return true
 	var item_drops: Array[ItemInstance] = []
 	var drop_count := _chest_item_drop_count(reward_rng.randf())
+	var catalog := ItemCatalog.new()
 	for index in drop_count:
 		var item_seed := generation_seed ^ (0x13579BDF + index * 0x2468ACE)
-		var slot := ItemCatalog.SLOTS[posmod(item_seed, ItemCatalog.SLOTS.size())]
+		var slot := catalog.select_slot_for_source(player_profile, item_seed, player_profile.level, &"chest", _run_rank())
+		var slot_was_empty := catalog.slot_needs_introduction(player_profile, slot)
 		var rarity := _roll_run_loot_rarity(reward_rng.randf())
-		var item := ItemCatalog.new().generate_item(slot, item_seed, player_profile.level, rarity)
+		var item := catalog.generate_item(slot, item_seed, player_profile.level, rarity, false, &"chest", _run_rank())
+		if item.definition_id.is_empty():
+			continue
 		item.instance_id = "%s-%d" % [reward_id, index]
 		item_drops.append(item)
+		run_state.record_gear_reward(&"chest", item, _run_rank(), player_profile.level, -1, "", slot_was_empty, false, &"dropped")
 	_spawn_chest_item_drops(item_drops)
 	_play_sound("ui_use_item")
 	return true

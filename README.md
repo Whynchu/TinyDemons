@@ -42,11 +42,18 @@ The current combat slice adds the scene-authored Spin Attack and held-button
 charge attack; its editor hitbox workflow and tuning contract are tracked in
 [`docs/spin-and-charge-attacks-plan.md`](docs/spin-and-charge-attacks-plan.md).
 
-The next progression/UI redesign is documented in
+The implemented progression/UI redesign is documented in
 [`docs/ffiii-inspired-stats-and-menu-implementation-plan.md`](docs/ffiii-inspired-stats-and-menu-implementation-plan.md):
 six manually allocated attributes (STR/AGI/VIT/INT/MND/DEF), typed physical and
 magic combat paths, INT-driven Imbue strength, save migration, and
 FFIII-inspired menu layouts using Tiny Demons' own visual language.
+
+The next progression content slice is the approved six-slot equipment
+catalogue. Its documentation-first boundary is in
+[`docs/gear-catalogue-spec.md`](docs/gear-catalogue-spec.md), with the authored
+44-base list, effect contracts, drop rules, and implementation sequence in the
+linked companion documents. Head and Arm are approved additions; future weapon
+families remain documented extension points until their combat contracts exist.
 
 Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
 status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted

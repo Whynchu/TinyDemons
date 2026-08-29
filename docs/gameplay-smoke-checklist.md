@@ -4,6 +4,10 @@ Purpose: establish a repeatable behavior baseline before extracting gameplay
 components. Run this checklist against the current branch before and after each
 consolidation milestone.
 
+The checklist covers the landed runtime baseline, including six-slot Head/Arm
+coverage, Body migration, catalogue source rules, and effect read-model tests.
+The focused catalogue tests are also included by `tests/run_all_smoke.ps1`.
+
 > Active gameplay balance changes (gear value, base stats 3/2/2, enemy/boss
 > difficulty) are tracked in
 > [`combat-economy-overhaul.md`](combat-economy-overhaul.md). Update the

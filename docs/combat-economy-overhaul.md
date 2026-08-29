@@ -5,6 +5,12 @@
 > Scope: player gear value, base stats, enemy/boss difficulty, and the
 > automated safety net around all of it.
 
+This document is the completed balance record for the current runtime
+foundation. Its four-slot values and historical pre-overhaul comparison remain
+useful for regression review; the approved six-slot content direction,
+elemental gear boundaries, and future package metadata are now defined in
+gear-catalogue-spec.md and its companion catalogue documents.
+
 This is the current flagship overhaul of Tiny Demons. The game is fun and
 playable in its present state; the goal here is to make **gear feel
 impactful**, make **difficulty scale honestly** so progress is earned, and

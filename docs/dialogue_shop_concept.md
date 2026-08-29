@@ -6,6 +6,10 @@ Bring the useful interaction ideas from the inspected Open Net Battle Lua system
 
 This system should make NPC conversations and shops feel deliberate, readable, and safe to use with the game's pixel-art presentation.
 
+The shop interaction contract remains useful, but current equipment identity,
+six-slot stock, source tags, and purchase boundaries are defined in
+gear-catalogue-spec.md and gear-drop-tables.md.
+
 ## Goals
 
 1. Provide reliable NPC dialogue with pages, typewriter text, confirm/cancel input, and clean open/close behavior.
@@ -95,7 +99,10 @@ Shop entries should be data, not hard-coded branches in the UI:
 }
 ```
 
-The first version can use a small static catalog. Purchase behavior can later be connected to the real inventory once that boundary is ready.
+The original concept allowed a small static catalog while the boundary was
+being built. Current equipment purchases must use the authored item catalogue
+and the real inventory/economy boundary; menu presentation must not invent
+gear definitions.
 
 ## Tiny Demons integration
 

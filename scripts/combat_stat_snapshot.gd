@@ -38,6 +38,12 @@ var gear_speed_rate:
 		gear_agi_rate = float(value)
 var core_health_rate_bonus := 0.0
 var vit_health_multiplier_bonus := 0.0
+## Read-only catalogue effects carried with the snapshot so status previews and
+## combat can inspect the same equipped loadout without another item lookup.
+var declared_effects: Dictionary = {}
+var active_effects: Dictionary = {}
+var elemental_resonances: Array[Dictionary] = []
+var elemental_wards: Array[Dictionary] = []
 
 
 static func from_components(stats: StatsComponent, equipment: EquipmentComponent = null) -> CombatStatSnapshot:
@@ -59,6 +65,11 @@ static func from_components(stats: StatsComponent, equipment: EquipmentComponent
 	snapshot.gear_mnd_rate = equipment.mnd_rate_bonus if equipment != null else 0.0
 	snapshot.core_health_rate_bonus = equipment.core_health_rate_bonus if equipment != null else 0.0
 	snapshot.vit_health_multiplier_bonus = equipment.vit_health_multiplier_bonus if equipment != null else 0.0
+	if equipment != null:
+		snapshot.declared_effects = equipment.declared_effects.duplicate(true)
+		snapshot.active_effects = equipment.active_effects.duplicate(true)
+		snapshot.elemental_resonances = equipment.elemental_resonances.duplicate(true)
+		snapshot.elemental_wards = equipment.elemental_wards.duplicate(true)
 	# Flat gear points land first; rarity then buffs the resulting affected
 	# player stat. This keeps the two parts of the tier package visible and
 	# deterministic in the hub and in combat.
