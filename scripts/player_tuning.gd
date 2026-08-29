@@ -91,9 +91,9 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var charge_aura_particle_lifetime := 0.28
 @export var roll_frame_time := 0.05
 ## Backflip uses a steady cadence instead of the roll's landing-frame hold.
-## Backflip reads at approximately 12 FPS so each pose has time to read
+## Backflip reads at approximately 14 FPS so each pose has time to read
 ## without changing the dodge's movement speed or i-frames.
-@export var backflip_frame_time := 0.0833333
+@export var backflip_frame_time := 0.0714286
 @export var roll_distance := 24.3
 @export var roll_duration := 0.30
 @export var death_particle_lifetime := 1.8
