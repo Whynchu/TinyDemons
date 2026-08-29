@@ -490,10 +490,12 @@ func begin_attack_visual(root: Object) -> void:
 	# Attack sprites are initialized immediately by PlayerAttackComponent. Use
 	# the same white deployment flash as guard so the sword and shield do not
 	# pop in when an attack starts.
+	var equipment_was_active := active and shield_is_out
 	_clear_fade_overlays()
 	_clear_draw_overlays()
-	draw_white_timer = DRAW_WHITE_TIME
-	draw_color_fade_timer = DRAW_COLOR_FADE_TIME
+	if not equipment_was_active:
+		draw_white_timer = DRAW_WHITE_TIME
+		draw_color_fade_timer = DRAW_COLOR_FADE_TIME
 	active = true
 	shield_is_out = true
 	was_attacking = true

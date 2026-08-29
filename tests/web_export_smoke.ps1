@@ -9,7 +9,7 @@ $godotVersion = if ($env:GODOT_VERSION) { $env:GODOT_VERSION } else { "4.7.1" }
 $godot = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
 $presetText = Get-Content -LiteralPath (Join-Path $root "export_presets.cfg") -Raw
 $projectText = Get-Content -LiteralPath (Join-Path $root "project.godot") -Raw
-foreach ($requiredPresetValue in @('[preset.0]', 'platform="Web"', 'export_path="dist/index.html"', 'variant/thread_support=false', 'progressive_web_app/enabled=true', 'progressive_web_app/icon_144x144="res://assets/artwork/tinydemonicon_pwa_144.png"', 'progressive_web_app/icon_180x180="res://assets/artwork/tinydemonicon_pwa_180.png"', 'progressive_web_app/icon_512x512="res://assets/artwork/tinydemonicon_pwa_512.png"', 'image-rendering:pixelated')) {
+foreach ($requiredPresetValue in @('[preset.0]', 'platform="Web"', 'export_path="dist/index.html"', 'variant/thread_support=false', 'progressive_web_app/enabled=true', 'progressive_web_app/icon_144x144="res://assets/artwork/tinydemonicon_pwa_144.png"', 'progressive_web_app/icon_180x180="res://assets/artwork/tinydemonicon_pwa_180.png"', 'progressive_web_app/icon_512x512="res://assets/artwork/tinydemonicon_pwa_512.png"', 'image-rendering:pixelated', 'width:100%;height:100%;touch-action:none')) {
 	if (-not $presetText.Contains($requiredPresetValue)) { throw "Web preset is missing $requiredPresetValue" }
 }
 if (-not $projectText.Contains('renderer/rendering_method.web="gl_compatibility"')) {

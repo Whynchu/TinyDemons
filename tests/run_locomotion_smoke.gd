@@ -183,6 +183,9 @@ func _initialize() -> void:
 			var shield_before := equipment_layers.get("EquipmentShieldFront") as Sprite2D
 			_expect(sword_before != null and sword_before.visible and shield_before != null and shield_before.visible, "backflip test starts with visible sword and shield layers", failures)
 			_expect(float(equipment_visual.get("draw_white_timer")) > 0.0 and float(equipment_visual.get("draw_color_fade_timer")) > 0.0, "attack deployment starts the sword and shield white fade", failures)
+			equipment_visual.tick(gameplay, 0.30)
+			equipment_visual.begin_attack_visual(gameplay)
+			_expect(is_zero_approx(float(equipment_visual.get("draw_white_timer"))) and is_zero_approx(float(equipment_visual.get("draw_color_fade_timer"))), "repeated attacks do not replay the equipment deployment flash", failures)
 			gameplay.set("player_is_backflipping", true)
 			equipment_visual.tick(gameplay, 0.0)
 			_expect(not equipment_visual.active and equipment_visual.roll_fizzle_active and equipment_visual.fade_timer > 0.0, "backflip starts the same equipment fizzle as a roll", failures)
