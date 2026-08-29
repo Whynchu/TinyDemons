@@ -196,6 +196,11 @@ func on_room_entered(room_id: StringName) -> void:
 	var room := graph.get_room(room_id)
 	if room == null:
 		return
+	# Non-combat utility rooms have no later encounter event to announce their
+	# completion. Mark them when the player physically enters them, while keeping
+	# puzzle/orb objectives tied to their actual interactions.
+	if room_completes_on_entry(room) and not state.is_room_completed(room_id):
+		on_room_completed(room_id)
 	for connection_value in room.outgoing_connections.values():
 		var connection := connection_value as DungeonGraph.ConnectionRecord
 		if connection != null and (state.is_room_completed(room_id) or not requires_room_clear(room)):
@@ -207,8 +212,10 @@ func on_room_entered(room_id: StringName) -> void:
 
 
 func on_room_completed(room_id: StringName) -> void:
+	var was_completed := state.is_room_completed(room_id)
 	state.mark_room_completed(room_id)
-	room_completed.emit(room_id)
+	if not was_completed:
+		room_completed.emit(room_id)
 	if graph == null:
 		return
 	var room := graph.get_room(room_id)
@@ -234,7 +241,7 @@ func change_orb_from_room(room_id: StringName, next_puzzle_color: StringName = &
 	state.shared_orb_palette = next_palette
 	if not state.set_puzzle_color(next_puzzle_color):
 		return false
-	state.mark_room_completed(room_id)
+	on_room_completed(room_id)
 	if puzzle_color_was_current and room_was_complete:
 		# A direct fusion charge may have changed the shared presentation while the
 		# strategic Puzzle Color key stayed the same. Emit the missing refresh event.
@@ -264,7 +271,7 @@ func change_orb_from_palette(room_id: StringName, palette: String) -> bool:
 	var palette_changed: bool = state.shared_orb_palette != normalized_palette
 	state.shared_orb_palette = normalized_palette
 	var room_was_complete: bool = state.is_room_completed(room_id)
-	state.mark_room_completed(room_id)
+	on_room_completed(room_id)
 	if palette_changed and room_was_complete:
 		state.changed.emit()
 	return true
@@ -290,6 +297,43 @@ func requires_room_clear(room: DungeonGraph.RoomRecord) -> bool:
 	if room == null:
 		return false
 	return room.room_type == DungeonGraph.ROOM_COMBAT or room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room.room_type == DungeonGraph.ROOM_TREASURE
+
+
+func room_completes_on_entry(room: DungeonGraph.RoomRecord) -> bool:
+	if room == null or room.depth < 1:
+		return false
+	return room.room_type == DungeonGraph.ROOM_REST or room.room_type == DungeonGraph.ROOM_TRADER or room.room_type == DungeonGraph.ROOM_NPC
+
+
+func run_room_ids() -> Array[StringName]:
+	var room_ids: Array[StringName] = []
+	if graph == null:
+		return room_ids
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room != null and room.depth >= 1:
+			room_ids.append(room.id)
+	return room_ids
+
+
+func run_room_count() -> int:
+	return run_room_ids().size()
+
+
+func discovered_run_room_count() -> int:
+	var count := 0
+	for room_id in run_room_ids():
+		if state.is_room_discovered(room_id):
+			count += 1
+	return count
+
+
+func completed_run_room_count() -> int:
+	var count := 0
+	for room_id in run_room_ids():
+		if state.is_room_completed(room_id):
+			count += 1
+	return count
 
 
 func is_connection_color_locked(connection: DungeonGraph.ConnectionRecord) -> bool:

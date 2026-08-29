@@ -83,6 +83,23 @@ func _initialize() -> void:
 		_expect(display.visible_view_size_value().is_equal_approx(Vector2(expected_full)), "FULL uses the complete active logical frame", failures)
 		_expect(display.presentation_origin_value().is_equal_approx(Vector2.ZERO), "FULL has no extra presentation offset", failures)
 		_expect((gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D).global_position.is_equal_approx(stable_floor), "FULL preserves authored collision geometry", failures)
+		# Simulate a live mobile orientation change while FULL is active. The
+		# logical frame must be recalculated after the viewport settles, and the
+		# full-screen menu frame must follow it instead of retaining old geometry.
+		var orientation_screens := gameplay.get("screen_state_controller") as ScreenStateController
+		gameplay.get_window().size = Vector2i(720, 960)
+		await process_frame
+		await process_frame
+		var portrait_expected := Vector2i(240, 160)
+		_expect(display.view_size_value() == portrait_expected, "portrait orientation clamps FULL to the native logical width", failures)
+		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "portrait orientation switches to crop-safe keep scaling", failures)
+		_expect(orientation_screens != null and (orientation_screens.settings_overlay as ColorRect).size == Vector2(portrait_expected), "portrait orientation resizes settings overlay", failures)
+		gameplay.get_window().size = Vector2i(960, 540)
+		await process_frame
+		await process_frame
+		var landscape_expected := Vector2i(284, 160)
+		_expect(display.view_size_value() == landscape_expected, "landscape orientation restores FULL logical width", failures)
+		_expect(orientation_screens != null and (orientation_screens.run_complete_overlay as ColorRect).size == Vector2(landscape_expected), "landscape orientation resizes result overlay", failures)
 		gameplay.get_window().size = original_window_size
 	gameplay.queue_free()
 	await process_frame

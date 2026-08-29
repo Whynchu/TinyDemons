@@ -228,6 +228,10 @@ func apply_hitbox(root: Object) -> void:
 		return
 	var target_count := slime_targets.size()
 	var tuning := root.get("player_tuning") as PlayerTuning
+	var successful_damage_count := 0
+	var used_imbue := false
+	var imbued_element_value = root.get("player_imbued_element")
+	var active_imbued_element := int(imbued_element_value) if imbued_element_value != null else ElementCatalogScript.Element.NEUTRAL
 	for orb in orb_targets:
 		register_hit(orb)
 		root.call("_activate_puzzle_torch", orb, orb.global_position, ElementCatalogScript.palette_key(attack_element))
@@ -259,12 +263,28 @@ func apply_hitbox(root: Object) -> void:
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
 		root.call("_damage_slime", slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
+		if not damage_result.immune and damage_result.amount > 0.0:
+			successful_damage_count += 1
+			if active_imbued_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == ElementCatalogScript.normalize(active_imbued_element):
+				used_imbue = true
 		if running_attack_active and not damage_result.immune and tuning != null:
 			root.set("hitstop_timer", maxf(float(root.get("hitstop_timer")), tuning.hitstop_duration * tuning.run_attack_hitstop_multiplier))
 		if not damage_result.immune:
 			root.call("_knockback_slime", slime, special_knockback_multiplier(tuning))
 		if not damage_result.immune and root.has_method("_apply_player_lifesteal"):
 			root.call("_apply_player_lifesteal", maxf(divided_damage, 1.0))
+	if successful_damage_count > 0 and root.has_method("_record_run_style_action"):
+		if is_spin_attack():
+			root.call("_record_run_style_action", &"spin")
+		elif is_charged_attack2():
+			root.call("_record_run_style_action", &"charged")
+			root.call("_record_run_style_action", &"attack2")
+		elif variant == 2:
+			root.call("_record_run_style_action", &"attack2")
+		else:
+			root.call("_record_run_style_action", &"attack1")
+		if used_imbue:
+			root.call("_record_run_style_action", &"imbued")
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_attack_hits(variant, eligible_targets.size())

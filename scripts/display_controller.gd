@@ -31,6 +31,7 @@ var _content_scale_aspect := Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT
 var _windowed_size_before_fixed_aspect := Vector2i.ZERO
 var _applying_settings := false
 var _presentation_refresh_queued := false
+var _last_live_surface_size := Vector2.ZERO
 
 
 func initialize(root: Node, service: SettingsService) -> void:
@@ -48,6 +49,24 @@ func initialize(root: Node, service: SettingsService) -> void:
 	apply_settings()
 	if window != null and not window.size_changed.is_connected(_on_window_size_changed):
 		window.size_changed.connect(_on_window_size_changed)
+	_last_live_surface_size = _live_window_size()
+
+
+func _process(_delta: float) -> void:
+	# Some browser shells/home-screen launches resize the canvas without
+	# forwarding a Godot Window.size_changed signal. Polling the surface gives
+	# orientation changes the same settled layout path as desktop resizes.
+	if _applying_settings:
+		return
+	var live_size := _live_window_size()
+	if live_size.x <= 0.0 or live_size.y <= 0.0:
+		return
+	if _last_live_surface_size.is_zero_approx():
+		_last_live_surface_size = live_size
+		return
+	if not live_size.is_equal_approx(_last_live_surface_size):
+		_last_live_surface_size = live_size
+		apply_settings()
 
 
 func view_size_value() -> Vector2i:
@@ -185,6 +204,9 @@ func _on_setting_changed(key: StringName, _value: Variant) -> void:
 
 
 func _on_window_size_changed() -> void:
+	var live_size := _live_window_size()
+	if live_size.x > 0.0 and live_size.y > 0.0:
+		_last_live_surface_size = live_size
 	if _applying_settings:
 		_queue_presentation_refresh()
 		return
@@ -199,13 +221,33 @@ func _queue_presentation_refresh() -> void:
 
 
 func _refresh_after_window_size_changed() -> void:
+	# Browser orientation changes can deliver the resize signal before the CSS
+	# viewport reports its final dimensions. Wait one frame, then recalculate the
+	# FULL logical width and the keep/keep-height decision together.
+	await get_tree().process_frame
 	_presentation_refresh_queued = false
 	if _applying_settings:
 		_queue_presentation_refresh()
 		return
-	var presentation_changed := _sync_presentation()
-	if presentation_changed:
-		view_size_changed.emit(current_view_size)
+	var refreshed_size := _view_size_for_aspect(_aspect_mode)
+	var logical_size_changed := refreshed_size != current_view_size
+	if logical_size_changed:
+		current_view_size = refreshed_size
+	var window := get_window()
+	if window != null:
+		if logical_size_changed:
+			window.content_scale_size = current_view_size
+		var next_content_scale_aspect := Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if _preserve_height_for_surface(_live_window_size(), current_view_size) else Window.CONTENT_SCALE_ASPECT_KEEP
+		if next_content_scale_aspect != _content_scale_aspect:
+			_content_scale_aspect = next_content_scale_aspect
+			window.content_scale_aspect = _content_scale_aspect
+	_sync_presentation()
+	_apply_world_offset()
+	# Reapply every logical UI position after an orientation event, even when the
+	# final logical width happens to match the previous one. This clears stale
+	# transforms on menus and touch controls after a rapid portrait/landscape
+	# switch.
+	view_size_changed.emit(current_view_size)
 
 
 func _build_presentation() -> void:

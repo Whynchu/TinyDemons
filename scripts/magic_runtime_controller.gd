@@ -560,6 +560,8 @@ func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, pal
 	var immune := damage_result != null and damage_result.immune
 	var resolved_element := damage_result.element if damage_result != null else attack_element
 	root.call("_damage_slime_with_number", slime, damage, was_critical, false, resolved_element, immune)
+	if not immune and damage > 0.0 and root.has_method("_record_run_style_action"):
+		root.call("_record_run_style_action", &"magic")
 	if not immune:
 		root.call("_knockback_slime", slime, MAGIC_KNOCKBACK_MULTIPLIER, false)
 	root.call("_spawn_damage_number", slime, damage, was_critical, resolved_element, immune)

@@ -39,16 +39,32 @@ func sync_current_room_metadata(root: Object) -> void:
 		root.current_room_type = room.room_type
 		if root.current_room_depth >= 1 and root.run_state != null and root.run_state.active:
 			root.run_state.start_timer()
-			root.run_state.record_room_visited(root.current_room_id)
+			# Map completion means physical discovery. Room objective completion is
+			# finalized independently from DungeonMapState at settlement time.
+			root.run_state.record_map_room_entry(root.current_room_id)
 
 
-func finalize_run_exploration(root: Object) -> void:
-	if root.run_state == null or root.dungeon_graph == null: return
-	var explorable_rooms: int = 0
+func finalize_run_metrics(root: Object) -> void:
+	if root.run_state == null or root.dungeon_graph == null:
+		return
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var total_rooms := 0
 	for room_id in root.dungeon_graph.get_room_ids():
 		var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
-		if room != null and room.depth >= 1: explorable_rooms += 1
-	root.run_state.set_explorable_room_count(explorable_rooms)
+		if room == null or room.depth < 1:
+			continue
+		total_rooms += 1
+		if map_controller != null and bool(map_controller.call("is_room_discovered", room.id)):
+			root.run_state.record_map_room_entry(room.id)
+		if map_controller != null and bool(map_controller.call("is_room_completed", room.id)):
+			root.run_state.record_room_completion(room.id)
+	root.run_state.set_map_room_count(total_rooms)
+	root.run_state.set_run_room_count(total_rooms)
+
+
+func record_style_action(root: Object, action: StringName) -> void:
+	if root.run_state != null and root.run_state.active:
+		root.run_state.record_style_action(action)
 
 
 func finalize_run_enemy_total(root: Object) -> void:
@@ -181,6 +197,7 @@ func is_run_combat_active(root: Object) -> bool:
 func on_player_successful_block(root: Object, _shield_damage: float, _health_damage: float) -> void:
 	if root.run_state != null and is_run_combat_active(root):
 		root.run_state.record_block()
+		record_style_action(root, &"block")
 	root.call("_play_sound", "block", -8.0, 0.95 + root.rng.randf_range(-0.08, 0.08))
 
 
@@ -201,12 +218,12 @@ func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0
 func complete_run(root: Object) -> void:
 	if root.run_state == null or root.run_state.settled or root.screen_state_controller.run_complete_overlay == null or root.screen_state_controller.run_complete_overlay.visible:
 		return
-	root.call("_finalize_run_exploration")
+	root.call("_finalize_run_metrics")
 	root.call("_finalize_run_enemy_total")
 	var grade: Dictionary = RunGradeEvaluator.evaluate(root.run_state, root.run_state.starting_health)
 	var score: int = int(grade["score"])
 	apply_run_rank_grade(root, str(grade["grade"]))
-	var gold_reward: int = 45 + score * 3 + int(grade["variety_count"]) * 8
+	var gold_reward: int = 45 + score * 3
 	var reward_rng := RandomNumberGenerator.new()
 	reward_rng.seed = root.current_dungeon_seed ^ root.run_state.run_id.hash() ^ score * 7919
 	var dropped_item: ItemInstance = null
@@ -228,10 +245,44 @@ func complete_run(root: Object) -> void:
 		var reward_catalog := ItemCatalog.new()
 		drop_label = reward_catalog.display_name(dropped_item)
 		drop_color = reward_catalog.rarity_color(dropped_item.rarity)
-	root.run_state.clear_summary = {"score": score, "grade": str(grade["grade"]), "gold": gold_reward, "drop": drop_label, "difficulty": run_difficulty_bonus(root), "run_rank": run_rank(root), "time": root.run_state.elapsed_time, "damage": root.run_state.damage_taken, "variety": int(grade["variety_count"]), "variety_max": int(grade["variety_max"]), "kills": root.run_state.enemies_killed, "total_enemies": root.run_state.total_enemies, "blocks": root.run_state.block_count, "attacks": root.run_state.attack_count, "attack_hits": root.run_state.attack_swing_hit_count, "accuracy": float(grade["accuracy"]), "wasted_inputs": root.run_state.total_wasted_inputs(), "explored_rooms": int(grade["explored_rooms"]), "explorable_rooms": int(grade["explorable_rooms"]), "dodges": root.run_state.dodge_count, "time_quality": float(grade["time_score"]) / 28.0, "survival_quality": float(grade["survival_score"]) / 25.0, "control_quality": float(grade["control_score"]) / 2.0}
+	root.run_state.clear_summary = {
+		"score": score,
+		"grade": str(grade["grade"]),
+		"gold": gold_reward,
+		"drop": drop_label,
+		"difficulty": run_difficulty_bonus(root),
+		"run_rank": run_rank(root),
+		"time": root.run_state.elapsed_time,
+		"time_quality": float(grade["time_quality"]),
+		"time_target": float(grade["time_target"]),
+		"map_discovered_rooms": int(grade["map_discovered_rooms"]),
+		"map_room_count": int(grade["map_room_count"]),
+		"map_completion_ratio": float(grade["map_completion_ratio"]),
+		"completed_rooms": int(grade["completed_rooms"]),
+		"room_count": int(grade["room_count"]),
+		"room_completion_ratio": float(grade["room_completion_ratio"]),
+		"full_clear": bool(grade["full_clear"]),
+		"style": int(grade["style_score"]),
+		"style_max": int(grade["style_max"]),
+		"style_quality": float(grade["style_quality"]),
+		"style_actions": grade["style_actions"],
+		"max_combo": int(grade["max_combo"]),
+		"combo_hits": int(grade["combo_hits"]),
+		# Raw telemetry remains available to backend reward/debug screens without
+		# competing with the compact player-facing result panel.
+		"damage": root.run_state.damage_taken,
+		"kills": root.run_state.enemies_killed,
+		"total_enemies": root.run_state.total_enemies,
+		"blocks": root.run_state.block_count,
+		"dodges": root.run_state.dodge_count,
+		"attacks": root.run_state.attack_count,
+		"attack_hits": root.run_state.attack_swing_hit_count,
+		"wasted_inputs": root.run_state.total_wasted_inputs(),
+	}
 	root.call("_sync_runtime_progression_to_profile")
 	settle_current_run(root, &"complete")
 	root.call("_play_sound", "run_clear", -6.0, 1.0)
+	root.call("_fade_out_music", 2.0)
 	show_run_complete(root, drop_color)
 
 
@@ -244,14 +295,22 @@ func show_run_complete(root: Object, drop_color: Color) -> void:
 	root.screen_state_controller.menu_input_release_lock = true
 	var summary: Dictionary = root.run_state.clear_summary
 	var elapsed: int = int(round(float(summary.get("time", 0.0))))
-	var kills: int = int(summary.get("kills", 0))
-	var total_enemies: int = maxi(int(summary.get("total_enemies", 0)), kills)
-	var exploration_quality: float = float(summary.get("explored_rooms", 0)) / float(maxi(int(summary.get("explorable_rooms", 0)), 1))
-	var kill_quality: float = float(kills) / float(maxi(total_enemies, 1))
-	var accuracy_quality: float = float(summary.get("accuracy", 0.0))
-	var style_quality: float = float(summary.get("variety", 0)) / float(maxi(int(summary.get("variety_max", 0)), 1))
-	var lines: Array[String] = ["GRADE %s    SCORE %03d" % [str(summary.get("grade", "D")), int(summary.get("score", 0))], "TIME %02d:%02d  DMG %d" % [floori(float(elapsed) / 60.0), elapsed % 60, roundi(float(summary.get("damage", 0.0)))], "EXPLORE %d/%d" % [int(summary.get("explored_rooms", 0)), int(summary.get("explorable_rooms", 0))], "KILLS %d/%d  BLOCKS %d  DODGES %d" % [kills, total_enemies, int(summary.get("blocks", 0)), int(summary.get("dodges", 0))], "ATTACKS %d  HITS %d" % [int(summary.get("attacks", 0)), int(summary.get("attack_hits", 0))], "ACCURACY %d%%" % roundi(accuracy_quality * 100.0), "MISINPUTS %d" % int(summary.get("wasted_inputs", 0)), "STYLE %d/%d" % [int(summary.get("variety", 0)), int(summary.get("variety_max", 3))], "SPOILS", "+%d GOLD" % int(summary.get("gold", 0)), str(summary.get("drop", "NO GEAR DROP"))]
-	var line_colors: Array[Color] = [Color8(255, 205, 117), metric_color((float(summary.get("time_quality", 0.0)) + float(summary.get("survival_quality", 0.0))) * 0.5), metric_color(exploration_quality), metric_color(kill_quality), metric_color(accuracy_quality), metric_color(accuracy_quality), metric_color(float(summary.get("control_quality", 0.0))), metric_color(style_quality), Color8(255, 205, 117), Color8(255, 205, 117), drop_color]
+	var map_quality := float(summary.get("map_completion_ratio", 0.0))
+	var room_quality := float(summary.get("room_completion_ratio", 0.0))
+	var time_quality := float(summary.get("time_quality", 0.0))
+	var style_quality := float(summary.get("style_quality", 0.0))
+	var lines: Array[String] = [
+		"GRADE %s    SCORE %03d" % [str(summary.get("grade", "D")), int(summary.get("score", 0))],
+		"TIME %02d:%02d" % [floori(float(elapsed) / 60.0), elapsed % 60],
+		"MAP %d/%d" % [int(summary.get("map_discovered_rooms", 0)), int(summary.get("map_room_count", 0))],
+		"ROOMS %d/%d" % [int(summary.get("completed_rooms", 0)), int(summary.get("room_count", 0))],
+		"STYLE %d/%d" % [int(summary.get("style", 0)), int(summary.get("style_max", 10))],
+		"MAX COMBO x%d" % int(summary.get("max_combo", 0)),
+		"REWARDS",
+		"+%d GOLD" % int(summary.get("gold", 0)),
+		str(summary.get("drop", "NO GEAR DROP")),
+	]
+	var line_colors: Array[Color] = [Color8(255, 205, 117), metric_color(time_quality), metric_color(map_quality), metric_color(room_quality), metric_color(style_quality), metric_color(style_quality), Color8(255, 205, 117), Color8(255, 205, 117), drop_color]
 	for index in mini(root.screen_state_controller.run_complete_texts.size(), lines.size()):
 		root.screen_state_controller.run_complete_texts[index].texture = root.call("_pixel_text_texture", lines[index], line_colors[index])
 	root.screen_state_controller.run_complete_overlay.visible = true

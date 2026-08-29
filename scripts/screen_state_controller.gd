@@ -244,6 +244,7 @@ func apply_display_layout(root: Object) -> void:
 	for overlay in [title_overlay, save_select_overlay, name_entry_overlay, archetype_overlay, run_complete_overlay, game_over] as Array:
 		if overlay != null and bool(overlay.get_meta("display_full_view", false)):
 			overlay.size = display_view_size
+			_resize_menu_frame(overlay, display_view_size)
 	if title_overlay != null:
 		var title := title_overlay.get_node_or_null("TitleText") as Sprite2D
 		if title != null and title.texture != null: title.position.x = (display_view_size.x - title.texture.get_width() * title.scale.x) * 0.5
@@ -256,7 +257,9 @@ func apply_display_layout(root: Object) -> void:
 	if pause_overlay != null:
 		pause_overlay.position = (display_view_size - pause_overlay.size) * 0.5
 	if run_complete_overlay != null:
-		run_complete_overlay.position = (display_view_size - run_complete_overlay.size) * 0.5
+		run_complete_overlay.position = Vector2.ZERO
+		run_complete_overlay.size = display_view_size
+		_position_run_complete_controls()
 	if title_overlay != null and title_cursor_text != null:
 		var focused := root.get_viewport().gui_get_focus_owner() as Button
 		if focused != null: title_cursor_text.position = Vector2(focused.position.x - 8.0, focused.position.y + 4.0)
@@ -290,7 +293,7 @@ func apply_display_layout(root: Object) -> void:
 		if selected_game_over != null:
 			game_over_cursor_text.position = Vector2(selected_game_over.position.x - 8.0, selected_game_over.position.y + 3.0)
 	if run_complete_footer_text != null:
-		run_complete_footer_text.position = Vector2(216.0 - 64.0, 152.0 - 18.0)
+		run_complete_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 	if save_select_footer_text != null:
 		save_select_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 	if archetype_footer_text != null:
@@ -796,25 +799,23 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 
 func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Callable) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
-	var panel_size := Vector2(216, 152)
-	var overlay := create_overlay(parent, "RunCompleteOverlay", panel_size, Color(0.015, 0.02, 0.035, 0.96), 6, false)
-	overlay.position = (display_view_size - panel_size) * 0.5
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = overlay.color
-	panel_style.border_color = Color8(255, 205, 117)
-	panel_style.set_border_width_all(1)
-	overlay.add_theme_stylebox_override("panel", panel_style)
-	var title_texture := pixel_texture.call("RUN COMPLETE", Color8(255, 205, 117)) as Texture2D
-	create_sprite(overlay, "RunCompleteTitle", title_texture, Vector2((panel_size.x - title_texture.get_width()) * 0.5, 5), false)
+	var overlay := create_view_overlay(parent, "RunCompleteOverlay", Color(0.015, 0.02, 0.035, 1.0), 6, false)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_add_menu_frame(overlay, display_view_size)
+	_add_menu_title(overlay, "RunCompleteTitle", "RESULT", pixel_texture)
+	var content_width := minf(220.0, maxf(display_view_size.x - 20.0, 100.0))
+	_make_menu_card(overlay, "RunCompleteMetrics", Vector2(10, 25), Vector2(content_width, 80))
+	_make_menu_card(overlay, "RunCompleteRewards", Vector2(10, 109), Vector2(content_width, 29))
 	var lines: Array[Sprite2D] = []
-	for index in 11:
-		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, Vector2(10, 20 + index * 10), false))
-	var return_button := make_retro_button("RETURN TO HUB", Vector2(65, 136), Vector2(86, 12), pixel_texture)
+	var line_positions := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
+	for index in line_positions.size():
+		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, line_positions[index], false))
+	var return_button := make_menu_command_button("RETURN TO HUB", Vector2(14, 141), Vector2(86, 12), pixel_texture)
 	return_button.focus_mode = Control.FOCUS_NONE
 	return_button.pressed.connect(return_to_hub)
 	overlay.add_child(return_button)
-	var cursor := create_sprite(overlay, "RunCompleteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(56, 139), false)
-	var footer := create_sprite(overlay, "RunCompleteFooter", pixel_texture.call("A BACK", Color8(148, 220, 255)) as Texture2D, Vector2(panel_size.x - 64.0, panel_size.y - 18.0), false)
+	var cursor := create_sprite(overlay, "RunCompleteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(6, 144), false)
+	var footer := create_sprite(overlay, "RunCompleteFooter", pixel_texture.call("A BACK", Color8(148, 220, 255)) as Texture2D, Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0), false)
 	run_complete_footer_text = footer
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor, "footer": footer}
 
@@ -842,6 +843,39 @@ func _add_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
 	inner_style.set_border_width_all(1)
 	inner.add_theme_stylebox_override("panel", inner_style)
 	overlay.add_child(inner)
+
+
+func _resize_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
+	if overlay == null:
+		return
+	var outer := overlay.get_node_or_null("FrameOuter") as Panel
+	if outer != null:
+		outer.size = panel_size
+	var inner := overlay.get_node_or_null("FrameInner") as Panel
+	if inner != null:
+		inner.size = panel_size - Vector2(6, 6)
+	var title_rule := overlay.get_node_or_null("RunCompleteTitleRule") as ColorRect
+	if title_rule != null:
+		title_rule.size = Vector2(maxf(panel_size.x - 16.0, 16.0), 1.0)
+
+
+func _position_run_complete_controls() -> void:
+	if run_complete_overlay == null:
+		return
+	var content_width := minf(220.0, maxf(display_view_size.x - 20.0, 100.0))
+	var metrics := run_complete_overlay.get_node_or_null("RunCompleteMetrics") as Panel
+	if metrics != null:
+		metrics.position = Vector2(10, 25)
+		metrics.size = Vector2(content_width, 80)
+	var rewards := run_complete_overlay.get_node_or_null("RunCompleteRewards") as Panel
+	if rewards != null:
+		rewards.position = Vector2(10, 109)
+		rewards.size = Vector2(content_width, 29)
+	var title_rule := run_complete_overlay.get_node_or_null("RunCompleteTitleRule") as ColorRect
+	if title_rule != null:
+		title_rule.size = Vector2(maxf(display_view_size.x - 16.0, 16.0), 1.0)
+	if run_complete_footer_text != null:
+		run_complete_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 
 
 func _menu_card_style() -> StyleBoxFlat:

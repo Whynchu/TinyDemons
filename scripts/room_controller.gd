@@ -338,6 +338,10 @@ func end_transition() -> void:
 func enter_connected_room(root: Object, destination_room_id: StringName, destination_socket_id: StringName) -> void:
 	root.set("room_transition_locked", true)
 	begin_transition()
+	# A combo is local to an encounter. Entering a new room must not carry the
+	# previous room's timer or multiplier into the next one.
+	if root.has_method("_reset_combo"):
+		root.call("_reset_combo")
 	root.call("_save_current_room_state")
 	root.set("current_room_id", destination_room_id)
 	root.call("_sync_current_room_metadata")
@@ -551,6 +555,7 @@ func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
 
 func mark_cleared(room_id: StringName) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var was_finished := bool(state.get("finished", false))
 	state["finished"] = true
 	var graph: DungeonGraph = get_parent().get("dungeon_graph") as DungeonGraph if get_parent() != null else null
 	var room := graph.get_room(room_id) if graph != null else null
@@ -558,7 +563,8 @@ func mark_cleared(room_id: StringName) -> void:
 		state["special_clear_earned"] = true
 		_ensure_special_enemy_respawn_timers(state)
 	room_states[room_id] = state
-	room_cleared.emit(room_id)
+	if not was_finished:
+		room_cleared.emit(room_id)
 
 
 func is_cleared(room_id: StringName) -> bool:
@@ -667,6 +673,8 @@ func apply_puzzle_state(root: Object, solved: bool) -> void:
 	(root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
 	root.call("_set_door_active", solved)
 	root.call("_set_entrance_open", true)
+	if solved:
+		mark_cleared(root.get("current_room_id"))
 
 
 func apply_orb_state(root: Object) -> void:
@@ -1445,6 +1453,4 @@ func update_large_room_camera(root: Object) -> void:
 
 func _mark_finished(root: Object) -> void:
 	var room_id: StringName = root.get("current_room_id")
-	var state := room_states.get(room_id, {}) as Dictionary
-	state["finished"] = true
-	room_states[room_id] = state
+	mark_cleared(room_id)

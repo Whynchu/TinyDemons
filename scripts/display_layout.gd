@@ -25,6 +25,7 @@ const HUD_ANCHORS := {
 	"souls": ANCHOR_RIGHT,
 	"run_timer": ANCHOR_RIGHT,
 	"cooldowns": ANCHOR_RIGHT,
+	"combo": ANCHOR_CENTER,
 	"input_prompts": ANCHOR_RIGHT,
 	"hp_mp": ANCHOR_CENTER,
 	"target": ANCHOR_CENTER,
