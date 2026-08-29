@@ -5,6 +5,7 @@ var coordinator_root: Object = null
 var using_baked := false
 var idle_frames: Array[Texture2D] = []
 var walk_frames: Array[Texture2D] = []
+var run_frames: Array[Texture2D] = []
 var defend_frames: Array[Texture2D] = []
 var roll_frames: Array[Texture2D] = []
 var attack_frames: Array[Texture2D] = []
@@ -18,6 +19,7 @@ var between_attack_texture: Texture2D = null
 var after_attack2_texture: Texture2D = null
 var base_idle_frames: Array[Texture2D] = []
 var base_walk_frames: Array[Texture2D] = []
+var base_run_frames: Array[Texture2D] = []
 var base_defend_frames: Array[Texture2D] = []
 var base_roll_frames: Array[Texture2D] = []
 var base_attack_frames: Array[Texture2D] = []
@@ -36,14 +38,27 @@ var frames_by_palette: Dictionary = {}
 func build_frames(root: Object) -> void:
 	coordinator_root = root
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary; var size := Vector2i(36, 36)
-	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_frames("res://assets/artwork/TinyDemon-Magic.png", size)
+	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_frames("res://assets/artwork/TinyDemon-Magic.png", size)
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
 	for index in raw_dust.size(): dust.append(library.dither_roll_dust_frame(raw_dust[index], float(index) / float(maxi(raw_dust.size(), 1))))
 	root.set("roll_dust_frames", dust); root.set("roll_dust_flipped_frames", library.flip_effect_frames(dust, Vector2i(16, 16)))
 	var attack_size: Vector2i = root.get("PLAYER_ATTACK_FRAME_SIZE") if root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(32, 32); attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
 	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
-	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
+	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
 	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture; using_baked = _detect_baked(); apply_palette(root, "blue"); precache_all_palettes(); warm_all_palette_caches(root)
+
+
+## Resolves the locomotion animation name from shared root state so every
+## transition (attack/magic/between recovery) returns to the correct state:
+## defend > run > walk > idle.
+func movement_anim_name(root: Object) -> String:
+	if bool(root.get("player_is_defending")):
+		return "defend"
+	if bool(root.get("player_is_running")):
+		return "run"
+	if bool(root.get("player_is_moving")):
+		return "walk"
+	return "idle"
 
 
 func apply_frame(root: Object) -> void:
@@ -65,6 +80,8 @@ func apply_frame(root: Object) -> void:
 		frames = defend_frames
 	elif animation_key == "walk":
 		frames = walk_frames
+	elif animation_key == "run":
+		frames = run_frames
 	if animation_key == "charge":
 		player.offset = Vector2(-10, -10)
 		player.flip_h = bool(root.get("player_attack_flip_h"))
@@ -150,6 +167,7 @@ func _store_palette(palette_name: String) -> void:
 	frames_by_palette[palette_name] = {
 		"idle": _baked_or_recolor(palette_name, "idle", base_idle_frames),
 		"walk": _baked_or_recolor(palette_name, "walk", base_walk_frames),
+		"run": _baked_or_recolor(palette_name, "run", base_run_frames),
 		"defend": _baked_or_recolor(palette_name, "defend", base_defend_frames),
 		"roll": _baked_or_recolor(palette_name, "roll", base_roll_frames),
 		"attack": _baked_or_recolor(palette_name, "attack", base_attack_frames),
@@ -208,7 +226,7 @@ func _load_palette(palette_name: String) -> void:
 	if not frames_by_palette.has(palette_name):
 		_store_palette(palette_name)
 	var palette_frames: Dictionary = frames_by_palette[palette_name]
-	idle_frames = palette_frames["idle"]; walk_frames = palette_frames["walk"]; defend_frames = palette_frames["defend"]; roll_frames = palette_frames["roll"]
+	idle_frames = palette_frames["idle"]; walk_frames = palette_frames["walk"]; run_frames = palette_frames["run"]; defend_frames = palette_frames["defend"]; roll_frames = palette_frames["roll"]
 	attack_frames = palette_frames["attack"]; attack2_frames = palette_frames["attack2"]; attack_left_frames = palette_frames["attack_left"]; attack2_left_frames = palette_frames["attack2_left"]; spin_frames = palette_frames["spin"]; spin_left_frames = palette_frames["spin_left"]; magic_frames = palette_frames["magic"]
 	between_attack_texture = palette_frames["between"]; after_attack2_texture = palette_frames["after"]
 
@@ -225,6 +243,7 @@ func warm_texture_cache(texture: Texture2D) -> void: (coordinator_root.get("occl
 func warm_player_caches(root: Object) -> void:
 	for texture in idle_frames: warm_texture_cache(texture)
 	for texture in walk_frames: warm_texture_cache(texture)
+	for texture in run_frames: warm_texture_cache(texture)
 	for texture in defend_frames: warm_texture_cache(texture)
 	for texture in roll_frames: warm_texture_cache(texture)
 	for texture in root.get("roll_dust_frames") as Array[Texture2D]: warm_texture_cache(texture)
@@ -248,6 +267,7 @@ func warm_all_palette_caches(_root: Object) -> void:
 		var palette_frames: Dictionary = frames_by_palette[palette_name]
 		for texture in palette_frames.get("idle") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("walk") as Array[Texture2D]: warm_texture_cache(texture)
+		for texture in palette_frames.get("run") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("defend") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("roll") as Array[Texture2D]: warm_texture_cache(texture)
 		for texture in palette_frames.get("attack") as Array[Texture2D]: warm_texture_cache(texture)
@@ -350,7 +370,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 				root.call("_restore_actor_base_visual_scale", root.get("player"))
 				(root.get("player") as Sprite2D).visible = true
 				(root.get("player_attack_visual") as Sprite2D).visible = false
-				root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+				root.set("player_anim_name", movement_anim_name(root))
 				root.set("player_anim_frame", 0)
 				root.set("player_anim_timer", 0.0)
 				apply_frame(root)
@@ -381,7 +401,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			elif combo:
 				begin_transition(root, "between", between_attack_texture, attack_tuning.between_attack_time / attack_multiplier)
 			else:
-				root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+				root.set("player_anim_name", movement_anim_name(root))
 				apply_frame(root)
 			return
 		root.set("player_anim_timer", attack_timer)
@@ -395,7 +415,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		return
 	if float(root.get("player_between_timer")) > 0.0:
 		return
-	var idle_name := "defend" if bool(root.get("player_is_defending")) else "walk" if bool(root.get("player_is_moving")) else "idle"
+	var idle_name := "defend" if bool(root.get("player_is_defending")) else "run" if bool(root.get("player_is_running")) else "walk" if bool(root.get("player_is_moving")) else "idle"
 	if String(root.get("player_anim_name")) != idle_name:
 		root.set("player_anim_name", idle_name)
 		root.set("player_anim_frame", 0)
@@ -404,17 +424,17 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 		return
 	var idle_tuning := root.get("player_tuning") as PlayerTuning
 	var idle_timer := float(root.get("player_anim_timer")) + delta
-	var idle_frame_time := idle_tuning.walk_frame_time if idle_name == "walk" or idle_name == "defend" else idle_tuning.idle_frame_time
+	var idle_frame_time := idle_tuning.walk_frame_time if idle_name == "walk" or idle_name == "defend" else idle_tuning.run_frame_time if idle_name == "run" else idle_tuning.idle_frame_time
 	if idle_timer < idle_frame_time:
 		root.set("player_anim_timer", idle_timer)
 		return
 	root.set("player_anim_timer", fmod(idle_timer, idle_frame_time))
-	var idle_frame_set := defend_frames if idle_name == "defend" else walk_frames if idle_name == "walk" else idle_frames
+	var idle_frame_set := defend_frames if idle_name == "defend" else run_frames if idle_name == "run" else walk_frames if idle_name == "walk" else idle_frames
 	if idle_frame_set.is_empty(): return
 	root.set("player_anim_frame", (int(root.get("player_anim_frame")) + 1) % idle_frame_set.size())
-	if idle_name == "walk":
+	if idle_name == "walk" or idle_name == "run":
 		var step_frame := int(root.get("player_anim_frame"))
-		# Four-frame walk cycle: trigger on visual frames 2 and 4.
+		# Four-frame walk/run cycle: trigger on visual frames 2 and 4.
 		if step_frame == 1 or step_frame == 3:
 			root.call("_on_player_walk_step", step_frame)
 	apply_frame(root)

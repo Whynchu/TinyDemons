@@ -793,7 +793,7 @@ func _update_layers(root: Object) -> void:
 	for layer_name in layers:
 		var depth_layer := layers[layer_name] as Sprite2D
 		depth_layer.z_index = player.z_index + (-1 if String(layer_name).ends_with("Back") else 1)
-	if bool(root.get("player_is_rolling")) and fade_timer <= 0.0:
+	if (bool(root.get("player_is_rolling")) or String(root.get("player_anim_name")) == "run") and fade_timer <= 0.0:
 		for layer in layers.values():
 			(layer as Sprite2D).visible = false
 		_update_equipment_shadows()

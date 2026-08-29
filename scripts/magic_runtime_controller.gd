@@ -353,7 +353,7 @@ func _finish_magic_animation(root: Object) -> void:
 	var player := root.get("player") as Sprite2D
 	if player != null:
 		player.flip_h = bool(root.get("last_player_facing_left"))
-	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root))
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent
@@ -380,7 +380,7 @@ func cancel_magic_animation(root: Object) -> void:
 	var player := root.get("player") as Sprite2D
 	if player != null:
 		player.flip_h = bool(root.get("last_player_facing_left"))
-	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root))
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent

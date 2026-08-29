@@ -536,7 +536,7 @@ func update_entry_orb_player_reaction(root: Object) -> void:
 	root.set("player_attack_hit_done", false)
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	(root.get("player") as Sprite2D).visible = true
-	root.set("player_anim_name", "walk" if bool(root.get("player_is_moving")) else "idle")
+	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root))
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
 	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)

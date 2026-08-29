@@ -2,6 +2,9 @@ extends Resource
 class_name PlayerTuning
 
 @export var speed := 36.0
+## Hold-to-run movement speed reached by continuing to hold the roll button
+## after a roll dodge. Almost as fast as rolling (roll_distance / roll_duration).
+@export var run_speed := 80.0
 @export var agi_reference := 1.0
 @export var speed_scale := 0.012
 @export var roll_scale := 0.015
@@ -45,6 +48,7 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var hit_knockback_duration := 0.12
 @export var idle_frame_time := 0.22
 @export var walk_frame_time := 0.18
+@export var run_frame_time := 0.10
 @export var attack_frame_time := 0.09
 @export var attack2_hit_frame := 2
 @export var attack_hit_frame := 2

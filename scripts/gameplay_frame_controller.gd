@@ -39,8 +39,15 @@ func update_player_input(root: Object, delta: float) -> void:
 			var roll := root.get("player_roll_component") as PlayerRollComponent
 			if roll != null:
 				roll.start_from_root(root); accepted_roll = true
+		if accepted_roll:
+			# Running is a continuation of this roll-button hold: while the button
+			# stays held after the dodge, movement becomes a run instead of a walk.
+			root.set("player_roll_hold_armed", true)
 		root.call("_record_run_action_input", &"roll", accepted_roll)
 	root.set("player_roll_input_was_down", roll_down)
+	root.set("player_roll_input_held", roll_down)
+	if not roll_down:
+		root.set("player_roll_hold_armed", false)
 	_update_magic_input(root, delta)
 
 
@@ -218,7 +225,7 @@ func tick(root: Object, delta: float) -> void:
 			if player_attack != null and player_attack.combo_buffered and player_attack.can_start_attack2():
 				player_attack.start_player_attack(root, 2); player_attack.consume_combo()
 			elif not bool(root.get("player_is_magic_casting")) and not (anim.idle_frames as Array[Texture2D]).is_empty():
-				root.set("player_anim_name", "defend" if bool(root.get("player_is_defending")) else "walk" if bool(root.get("player_is_moving")) else "idle")
+				root.set("player_anim_name", anim.movement_anim_name(root))
 				root.set("player_anim_frame", 0)
 				root.set("player_anim_timer", 0.0)
 				anim.apply_frame(root)
