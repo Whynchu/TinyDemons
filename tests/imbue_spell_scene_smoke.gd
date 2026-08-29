@@ -28,32 +28,50 @@ func _initialize() -> void:
 		return
 
 	var hud := gameplay.get("hud_controller") as HudController
-	_expect(hud != null and hud.cooldown_hud.size() == 6, "HUD builds both cooldown rows", failures)
+	_expect(hud != null and hud.cooldown_hud.size() == 6, "HUD builds both cooldown icon widgets", failures)
 	if hud != null and hud.cooldown_hud.size() == 6:
-		var triangle_label := hud.cooldown_hud["triangle_label"] as Sprite2D
-		var imbue_label := hud.cooldown_hud["imbue_label"] as Sprite2D
-		var triangle_fill := hud.cooldown_hud["triangle_fill"] as Sprite2D
-		var imbue_fill := hud.cooldown_hud["imbue_fill"] as Sprite2D
-		_expect(triangle_label.position.y < 64.0 and imbue_label.position.y < 64.0, "cooldown rows sit above button indicators", failures)
-		_expect(triangle_fill.region_enabled and imbue_fill.region_enabled, "cooldown rows use progress fills", failures)
+		var magic_icon := hud.cooldown_hud["magic_icon"] as Sprite2D
+		var imbue_icon := hud.cooldown_hud["imbue_icon"] as Sprite2D
+		var magic_timer := hud.cooldown_hud["magic_timer"] as Sprite2D
+		var imbue_timer := hud.cooldown_hud["imbue_timer"] as Sprite2D
+		var magic_shadow := hud.cooldown_hud["magic_timer_shadow"] as Sprite2D
+		var imbue_shadow := hud.cooldown_hud["imbue_timer_shadow"] as Sprite2D
+		_expect(magic_icon != null and imbue_icon != null and magic_icon.texture != null and imbue_icon.texture != null, "cooldown icons load their authored 16x16 art", failures)
+		_expect(magic_icon.texture.get_size().is_equal_approx(Vector2(16, 16)) and imbue_icon.texture.get_size().is_equal_approx(Vector2(16, 16)), "cooldown icons preserve their native pixel size", failures)
+		_expect(magic_icon.position.y < 64.0 and imbue_icon.position.y < 64.0, "cooldown icons sit above button indicators", failures)
+		_expect(magic_icon.material is ShaderMaterial and imbue_icon.material is ShaderMaterial, "cooldown icons use independent radial shader materials", failures)
 		hud.update_cooldown_hud(gameplay)
-		_expect(imbue_fill.self_modulate.is_equal_approx(PaletteLibrary.accent("grey")), "ready IMBUE cooldown uses its base color", failures)
+		_expect(not magic_timer.visible and not imbue_timer.visible and not magic_shadow.visible and not imbue_shadow.visible, "ready cooldown icons hide their countdown text", failures)
+		var imbue_material := imbue_icon.material as ShaderMaterial
+		_expect(imbue_material != null and is_zero_approx(float(imbue_material.get_shader_parameter("cooldown_ratio"))), "ready IMBUE icon has no radial cooldown coverage", failures)
+		chroma.call("attune", Chroma.Aspect.FIRE)
+		gameplay.set("current_player_palette_name", "red")
+		hud.update_cooldown_hud(gameplay)
+		var imbue_palette_textures: Dictionary = imbue_icon.get_meta("cooldown_palette_textures", {}) as Dictionary
+		_expect(imbue_icon.texture == imbue_palette_textures.get("red"), "cooldown icons recolor from the active player Chroma palette", failures)
 		runtime.set("imbue_cooldown_remaining", 2.0)
 		hud.update_cooldown_hud(gameplay)
-		_expect(imbue_fill.self_modulate.is_equal_approx(PaletteLibrary.shadow("grey")), "unavailable IMBUE cooldown is greyed out", failures)
+		_expect(imbue_timer.visible and imbue_shadow.visible and imbue_timer.texture != null and imbue_timer.texture.get_size().is_equal_approx(Vector2(14, 5)), "cooling IMBUE icon shows its centered compact countdown", failures)
+		_expect(imbue_material != null and is_equal_approx(float(imbue_material.get_shader_parameter("cooldown_ratio")), 0.1), "IMBUE radial coverage follows remaining cooldown", failures)
 		runtime.set("imbue_cooldown_remaining", 0.0)
-		runtime.set("imbue_remaining", 5.0)
-		runtime.set("imbued_element", Elements.Element.FIRE)
 		hud.update_cooldown_hud(gameplay)
-		_expect(imbue_fill.self_modulate.is_equal_approx(Elements.damage_number_color(Elements.Element.FIRE)), "active IMBUE cooldown uses the element highlight", failures)
-		runtime.set("imbue_remaining", 0.0)
-		runtime.set("imbued_element", Elements.Element.NEUTRAL)
+		_expect(not imbue_timer.visible and is_zero_approx(float(imbue_material.get_shader_parameter("cooldown_ratio"))), "ready IMBUE icon clears its timer and radial coverage", failures)
+		chroma.call("spend_chroma", 80)
+		hud.update_cooldown_hud(gameplay)
+		_expect(is_equal_approx(float(imbue_material.get_shader_parameter("unavailable")), 1.0), "unavailable IMBUE icon stays greyed without a countdown", failures)
+		chroma.call("attune", Chroma.Aspect.FIRE)
+		hud.update_cooldown_hud(gameplay)
 
 	chroma.call("attune", Chroma.Aspect.FIRE)
 	var accepted := bool(runtime.call("update_magic_input", gameplay, true, false, 0.0))
 	_expect(not accepted and bool(gameplay.get("player_is_magic_casting")) and int(gameplay.get("player_anim_frame")) == 0, "triangle press starts the shared magic animation immediately", failures)
 	accepted = bool(runtime.call("update_magic_input", gameplay, false, true, 0.0))
 	_expect(accepted and bool(gameplay.get("player_is_magic_casting")) and projectiles.projectiles.is_empty(), "short triangle press starts the normal spell", failures)
+	if hud != null:
+		hud.update_cooldown_hud(gameplay)
+		var magic_icon := hud.cooldown_hud["magic_icon"] as Sprite2D
+		var magic_material := magic_icon.material as ShaderMaterial if magic_icon != null else null
+		_expect(magic_material != null and float(magic_material.get_shader_parameter("flash_strength")) > 0.0, "normal magic activation briefly highlights its cooldown icon", failures)
 	var normal_frame_time := float(runtime.call("magic_frame_time", gameplay))
 	runtime.call("tick_magic_animation", gameplay, normal_frame_time * 2.01)
 	_expect(not projectiles.projectiles.is_empty(), "short triangle press reaches the normal projectile frame", failures)

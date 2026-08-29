@@ -3,6 +3,13 @@ class_name HudController
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
+const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_icon.gdshader")
+
+const COOLDOWN_FLASH_DURATION := 0.14
+const COOLDOWN_ICON_DIM := 0.58
+const COOLDOWN_ICON_DESATURATION := 0.92
+const COOLDOWN_TIMER_SHADOW_COLOR := Color8(17, 19, 24, 235)
 
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
@@ -32,6 +39,9 @@ var gold_animation_frames: Array[Texture2D] = []
 var gold_animation_timer := 0.0
 var button_hud_sprites: Array[Sprite2D] = []
 var cooldown_hud: Dictionary = {}
+var cooldown_flash_remaining := {&"magic": 0.0, &"imbue": 0.0}
+var cooldown_previous_remaining := {&"magic": -1.0, &"imbue": -1.0}
+var cooldown_timer_texture_cache: Dictionary = {}
 var last_combo_text := ""
 var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
 
@@ -241,7 +251,7 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: In
 		button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
 
 
-func update_cooldown_hud(root: Object) -> void:
+func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
 	if cooldown_hud.is_empty():
 		return
 	var ability := root.get("player_aspect_ability_component") as Node
@@ -249,32 +259,80 @@ func update_cooldown_hud(root: Object) -> void:
 	var regular_remaining := float(ability.get("cooldown_remaining")) if ability != null else 0.0
 	var regular_duration := float(root.get("GREY_MAGIC_COOLDOWN"))
 	if ability != null and chroma != null:
-		regular_duration = float(ability.call("cooldown_duration_for_mode", int(chroma.call("ability_mode"))))
+		var active_duration := float(ability.get("active_cooldown_duration"))
+		regular_duration = active_duration if active_duration > 0.0 and regular_remaining > 0.0 else float(ability.call("cooldown_duration_for_mode", int(chroma.call("ability_mode"))))
 	var imbue_runtime := root.get("magic_runtime_controller") as Node
 	var imbue_remaining := float(imbue_runtime.get("imbue_cooldown_remaining")) if imbue_runtime != null else 0.0
 	var imbue_duration := float(root.get("IMBUE_COOLDOWN"))
-	var regular_ratio := 1.0 - clampf(regular_remaining / maxf(regular_duration, 0.001), 0.0, 1.0)
-	var imbue_ratio := 1.0 - clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
-	set_fill_ratio(cooldown_hud.get("triangle_fill") as Sprite2D, Vector2(24, 4), regular_ratio)
-	set_fill_ratio(cooldown_hud.get("imbue_fill") as Sprite2D, Vector2(24, 4), imbue_ratio)
-	var player_palette := String(root.get("current_player_palette_name"))
-	var regular_color := PaletteLibrary.accent(player_palette)
-	var imbue_active := imbue_runtime != null and float(imbue_runtime.get("imbue_remaining")) > 0.0
-	var imbue_color := PaletteLibrary.accent("grey")
-	if imbue_active:
-		var element := int(imbue_runtime.get("imbued_element"))
-		imbue_color = ElementCatalogScript.damage_number_color(element)
-	elif imbue_remaining > 0.0:
-		imbue_color = PaletteLibrary.shadow("grey")
-	(cooldown_hud.get("triangle_label") as Sprite2D).texture = root.call("_pixel_text_texture", "TRI", regular_color)
-	(cooldown_hud.get("imbue_label") as Sprite2D).texture = root.call("_pixel_text_texture", "IMB", imbue_color)
-	(cooldown_hud.get("triangle_fill") as Sprite2D).self_modulate = regular_color
-	(cooldown_hud.get("imbue_fill") as Sprite2D).self_modulate = imbue_color
+	var regular_cooldown_ratio := clampf(regular_remaining / maxf(regular_duration, 0.001), 0.0, 1.0)
+	var imbue_cooldown_ratio := clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
+	_update_cooldown_flash(&"magic", regular_remaining, delta)
+	_update_cooldown_flash(&"imbue", imbue_remaining, delta)
+	var magic_available := _magic_cooldown_available(chroma)
+	var imbue_available := _imbue_cooldown_available(root, chroma)
+	_update_cooldown_icon(root, &"magic", regular_remaining, regular_cooldown_ratio, magic_available)
+	_update_cooldown_icon(root, &"imbue", imbue_remaining, imbue_cooldown_ratio, imbue_available)
+
+
+func _update_cooldown_flash(ability_key: StringName, remaining: float, delta: float) -> void:
+	var previous := float(cooldown_previous_remaining.get(ability_key, -1.0))
+	if previous >= 0.0 and remaining > previous + 0.0001:
+		cooldown_flash_remaining[ability_key] = COOLDOWN_FLASH_DURATION
+	cooldown_flash_remaining[ability_key] = maxf(float(cooldown_flash_remaining.get(ability_key, 0.0)) - maxf(delta, 0.0), 0.0)
+	cooldown_previous_remaining[ability_key] = remaining
+
+
+func _magic_cooldown_available(chroma: Node) -> bool:
+	if chroma == null or not is_instance_valid(chroma):
+		return true
+	var mode := int(chroma.call("ability_mode"))
+	return mode != ChromaComponentScript.AbilityMode.ELEMENTAL or bool(chroma.call("can_use_elemental_ability"))
+
+
+func _imbue_cooldown_available(root: Object, chroma: Node) -> bool:
+	if chroma == null or not is_instance_valid(chroma):
+		return false
+	var element := ElementCatalogScript.element_for_aspect(int(chroma.get("current_aspect")))
+	var configured_cost: Variant = root.get("IMBUE_MP_COST")
+	var cost := int(configured_cost) if configured_cost != null else 40
+	return element != ElementCatalogScript.Element.NEUTRAL and bool(chroma.call("can_spend_chroma", cost))
+
+
+func _update_cooldown_icon(root: Object, ability_key: StringName, remaining: float, cooldown_ratio: float, available: bool) -> void:
+	var icon := cooldown_hud.get(String(ability_key) + "_icon") as Sprite2D
+	var timer := cooldown_hud.get(String(ability_key) + "_timer") as Sprite2D
+	var timer_shadow := cooldown_hud.get(String(ability_key) + "_timer_shadow") as Sprite2D
+	if icon == null:
+		return
+	var palette_textures: Dictionary = icon.get_meta("cooldown_palette_textures", {}) as Dictionary
+	var palette_name := str(root.get("current_player_palette_name"))
+	if palette_name.is_empty():
+		palette_name = "blue"
+	var palette_texture := palette_textures.get(palette_name, palette_textures.get("blue")) as Texture2D
+	if palette_texture != null and icon.texture != palette_texture:
+		icon.texture = palette_texture
+	var material := icon.material as ShaderMaterial
+	if material != null:
+		material.set_shader_parameter("cooldown_ratio", cooldown_ratio)
+		material.set_shader_parameter("unavailable", 1.0 if not available and remaining <= 0.0001 else 0.0)
+		var flash_ratio := clampf(float(cooldown_flash_remaining.get(ability_key, 0.0)) / COOLDOWN_FLASH_DURATION, 0.0, 1.0)
+		material.set_shader_parameter("flash_strength", flash_ratio * 0.72)
+	var timer_visible := remaining > 0.0001
+	if timer != null:
+		timer.visible = timer_visible
+	if timer_shadow != null:
+		timer_shadow.visible = timer_visible
+	if timer_visible:
+		var shown := ceilf(remaining * 10.0) / 10.0
+		if timer != null:
+			timer.texture = cooldown_timer_texture(shown, Color.WHITE)
+		if timer_shadow != null:
+			timer_shadow.texture = cooldown_timer_texture(shown, COOLDOWN_TIMER_SHADOW_COLOR)
 
 
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter, root.get("input_device_tracker") as Node, Callable(root, "_pixel_text_texture"))
-	update_cooldown_hud(root)
+	update_cooldown_hud(root, delta)
 	update_combo_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
@@ -361,40 +419,103 @@ func _solid_texture(size: Vector2i, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func _build_cooldown_hud(parent: Node) -> Dictionary:
+func cooldown_timer_texture(seconds: float, color: Color) -> Texture2D:
+	var display_seconds := ceilf(maxf(seconds, 0.0) * 10.0) / 10.0
+	var text := "%.1f" % display_seconds
+	var cache_key := "%s:%s" % [text, color.to_html(false)]
+	if cooldown_timer_texture_cache.has(cache_key):
+		return cooldown_timer_texture_cache[cache_key] as Texture2D
+	var glyphs := {
+		"0": ["111", "101", "101", "101", "111"],
+		"1": ["010", "110", "010", "010", "111"],
+		"2": ["111", "001", "111", "100", "111"],
+		"3": ["111", "001", "111", "001", "111"],
+		"4": ["101", "101", "111", "001", "001"],
+		"5": ["111", "100", "111", "001", "111"],
+		"6": ["111", "100", "111", "101", "111"],
+		"7": ["111", "001", "010", "010", "010"],
+		"8": ["111", "101", "111", "101", "111"],
+		"9": ["111", "101", "111", "001", "111"],
+		".": ["0", "0", "0", "0", "1"],
+	}
+	var text_width := 0
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs["0"])
+		text_width += (pattern[0] as String).length() + 1
+	text_width = maxi(text_width - 1, 1)
+	# Four-character countdowns such as 20.0 fit inside the 16px icon with a
+	# one-pixel side margin. Keeping a fixed 14px canvas also keeps every value
+	# centered at an integer pixel coordinate.
+	var image := Image.create(14, 5, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var x_offset := maxi((14 - text_width) / 2, 0)
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs["0"])
+		for y in 5:
+			var row := pattern[y] as String
+			for x in row.length():
+				if row[x] == "1":
+					image.set_pixel(x_offset + x, y, color)
+		x_offset += (pattern[0] as String).length() + 1
+	var texture := ImageTexture.create_from_image(image)
+	cooldown_timer_texture_cache[cache_key] = texture
+	return texture
+
+
+func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable) -> Dictionary:
 	var result: Dictionary = {}
 	var rows := [
-		{"name": "TriangleCooldown", "label": "triangle_label", "base": "triangle_base", "fill": "triangle_fill", "position": Vector2(197, 40), "bar_position": Vector2(212, 41)},
-		{"name": "ImbueCooldown", "label": "imbue_label", "base": "imbue_base", "fill": "imbue_fill", "position": Vector2(197, 50), "bar_position": Vector2(212, 51)},
+		{"name": "MagicCooldown", "key": "magic", "texture": "magic button 16x16.png", "position": Vector2(197, 37)},
+		{"name": "ImbueCooldown", "key": "imbue", "texture": "imbue button 16x16.png", "position": Vector2(197, 55)},
 	]
 	for row in rows:
-		var label := Sprite2D.new()
-		label.name = row["name"] + "Label"
-		label.centered = false
-		label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		label.position = row["position"]
-		label.z_index = 3
-		parent.add_child(label)
-		var base := Sprite2D.new()
-		base.name = row["name"] + "Base"
-		base.centered = false
-		base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		base.texture = _solid_texture(Vector2i(24, 4), Color8(28, 31, 43, 220))
-		base.position = row["bar_position"]
-		base.z_index = 1
-		parent.add_child(base)
-		var fill := Sprite2D.new()
-		fill.name = row["name"] + "Fill"
-		fill.centered = false
-		fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		fill.texture = _solid_texture(Vector2i(24, 4), Color.WHITE)
-		fill.position = row["bar_position"]
-		fill.z_index = 2
-		parent.add_child(fill)
-		set_fill_ratio(fill, Vector2(24, 4), 1.0)
-		result[row["label"]] = label
-		result[row["base"]] = base
-		result[row["fill"]] = fill
+		# Use a direct load first so a fresh clone can build the HUD before the
+		# editor has written the optional .import sidecar for a newly added PNG.
+		var source := load("res://assets/artwork/" + row["texture"]) as Texture2D
+		if source == null:
+			source = load_texture.call("res://assets/artwork/" + row["texture"]) as Texture2D
+		var palette_textures: Dictionary = {}
+		for palette_name in PaletteLibrary.PALETTE_NAMES:
+			palette_textures[palette_name] = library.recolor_ability_icon(source, palette_name)
+		var icon := Sprite2D.new()
+		icon.name = row["name"] + "Icon"
+		icon.centered = false
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.texture = palette_textures.get("blue") as Texture2D
+		icon.position = row["position"]
+		icon.z_index = 1
+		icon.set_meta("cooldown_palette_textures", palette_textures)
+		var material := ShaderMaterial.new()
+		material.shader = ABILITY_COOLDOWN_SHADER
+		material.set_shader_parameter("cooldown_ratio", 0.0)
+		material.set_shader_parameter("unavailable", 0.0)
+		material.set_shader_parameter("desaturation_amount", COOLDOWN_ICON_DESATURATION)
+		material.set_shader_parameter("cooldown_dim", COOLDOWN_ICON_DIM)
+		material.set_shader_parameter("flash_strength", 0.0)
+		icon.material = material
+		parent.add_child(icon)
+
+		var timer_shadow := Sprite2D.new()
+		timer_shadow.name = row["name"] + "TimerShadow"
+		timer_shadow.centered = false
+		timer_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		timer_shadow.position = row["position"] + Vector2(1, 5)
+		timer_shadow.z_index = 2
+		timer_shadow.visible = false
+		parent.add_child(timer_shadow)
+
+		var timer := Sprite2D.new()
+		timer.name = row["name"] + "Timer"
+		timer.centered = false
+		timer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		timer.position = row["position"] + Vector2(1, 5)
+		timer.z_index = 3
+		timer.visible = false
+		parent.add_child(timer)
+
+		result[String(row["key"]) + "_icon"] = icon
+		result[String(row["key"]) + "_timer"] = timer
+		result[String(row["key"]) + "_timer_shadow"] = timer_shadow
 	return result
 
 
@@ -520,7 +641,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		button.z_index = 2
 		parent.add_child(button)
 		buttons.append(button)
-	var cooldowns := _build_cooldown_hud(parent)
+	var cooldowns := _build_cooldown_hud(parent, library, load_texture)
 	var combo := _build_combo_hud(parent)
 	var target_text := Sprite2D.new()
 	target_text.name = "TargetHealthText"

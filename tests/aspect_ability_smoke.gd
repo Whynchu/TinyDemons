@@ -36,6 +36,7 @@ func _initialize() -> void:
 	_expect(callback_modes == [Chroma.AbilityMode.GRAY], "Gray mode reaches the execution callback", failures)
 	_expect(chroma.current_chroma == 0, "Gray activation spends no Chroma", failures)
 	_expect(is_equal_approx(ability.cooldown_remaining, 2.5), "gray activation starts the longer cooldown", failures)
+	_expect(is_equal_approx(ability.active_cooldown_duration, 2.5), "gray activation records the active cooldown duration", failures)
 	_expect(not ability.try_activate(chroma, func(_mode: int) -> bool: return true), "cooldown rejects activation", failures)
 	ability.tick(2.5)
 
@@ -48,6 +49,7 @@ func _initialize() -> void:
 	_expect(callback_modes[-1] == Chroma.AbilityMode.ELEMENTAL, "elemental mode reaches the execution callback", failures)
 	_expect(chroma.current_chroma == 90, "elemental payment spends 10 Chroma after accepted execution", failures)
 	_expect(is_equal_approx(ability.cooldown_remaining, 2.0), "elemental activation starts the standard cooldown", failures)
+	_expect(is_equal_approx(ability.active_cooldown_duration, 2.0), "elemental activation records the active cooldown duration", failures)
 	ability.tick(2.0)
 
 	accepted = ability.try_activate(chroma, func(_mode: int) -> bool: return false)
