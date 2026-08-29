@@ -54,6 +54,8 @@ func _rebuild_preview() -> void:
 	_add_pixel_sprite("EditorRunTimer", DisplayLayout.position_for(Vector2(199, 153), &"run_timer", view_size), "TIME 00:00", Color("#f4f4f4"), false)
 	_add_texture_sprite("EditorGold", "res://assets/artwork/GoldFresh2.png", DisplayLayout.position_for(Vector2(205, 2), &"gold", view_size), Vector2(0, 0), Vector2(5, 5))
 	_add_texture_sprite("EditorSoul", "res://assets/artwork/Souls.png", DisplayLayout.position_for(Vector2(205, 9), &"souls", view_size))
+	_add_texture_sprite("EditorMagicCooldown", "res://assets/artwork/magic button 16x16.png", DisplayLayout.position_for(Vector2(84, 0), &"ability_icons", view_size))
+	_add_texture_sprite("EditorImbueCooldown", "res://assets/artwork/imbue button 16x16.png", DisplayLayout.position_for(Vector2(102, 0), &"ability_icons", view_size))
 	_add_texture_sprite("EditorTriangle", "res://assets/artwork/triangle55.png", DisplayLayout.position_for(Vector2(224, 64), &"input_prompts", view_size))
 	_add_texture_sprite("EditorSquare", "res://assets/artwork/square55.png", DisplayLayout.position_for(Vector2(219, 69), &"input_prompts", view_size))
 	_add_texture_sprite("EditorX", "res://assets/artwork/x55.png", DisplayLayout.position_for(Vector2(224, 74), &"input_prompts", view_size))
