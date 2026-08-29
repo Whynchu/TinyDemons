@@ -147,9 +147,11 @@ func apply_settings() -> void:
 	var presentation_changed := _sync_presentation()
 	_apply_world_offset()
 	_applying_settings = false
-	var layout_changed := size_changed or presentation_changed or previous_content_scale_aspect != _content_scale_aspect
-	if layout_changed:
-		view_size_changed.emit(current_view_size)
+	# Fullscreen can change the physical viewport without changing the logical
+	# FULL width immediately. Always notify layout owners so full-view menu
+	# frames recalculate against the newly visible surface.
+	view_size_changed.emit(current_view_size)
+	if size_changed or presentation_changed or previous_content_scale_aspect != _content_scale_aspect:
 		# The viewport transform may update one frame after content_scale_size is
 		# assigned. Re-read it once settled so an aspect switch cannot leave the
 		# UI using the previous frame's center.
