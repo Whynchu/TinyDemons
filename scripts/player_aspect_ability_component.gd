@@ -13,6 +13,7 @@ const CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.g
 var cooldown_duration := 0.0
 var grey_cooldown_duration := 0.0
 var cooldown_remaining := 0.0
+var active_cooldown_duration := 0.0
 
 
 func configure_cooldown(duration: float) -> void:
@@ -55,6 +56,7 @@ func try_activate(chroma: Node, execute: Callable, blocked: bool = false) -> boo
 		if not bool(chroma.call("spend_elemental_ability")):
 			ability_rejected.emit()
 			return false
-	cooldown_remaining = grey_cooldown_duration if mode != CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL else cooldown_duration
+	active_cooldown_duration = cooldown_duration_for_mode(mode)
+	cooldown_remaining = active_cooldown_duration
 	emit_signal(&"ability_started", mode)
 	return true

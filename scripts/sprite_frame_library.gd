@@ -5,6 +5,7 @@ class_name SpriteFrameLibrary
 ## The library owns source-image caching so callers do not need gameplay state.
 
 const EFFECT_RESOLUTION_SCALE := 2
+const ABILITY_ICON_WATER_HIGHLIGHT := Color8(115, 239, 247)
 
 var image_cache: Dictionary = {}
 var recolor_cache: Dictionary = {}
@@ -166,6 +167,35 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 					var replacement: Color = target[color_index]
 					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
 					break
+	var texture := ImageTexture.create_from_image(image)
+	recolor_cache[cache_key] = texture
+	return texture
+
+
+## Recolors the authored Magic/Imbue icons. Their source artwork is an indexed
+## water palette with a separate cyan highlight, dark outline pixels, and light
+## glints. Only the water tones are remapped so the icon's silhouette and
+## authored neutral details survive every player Chroma choice.
+func recolor_ability_icon(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null:
+		return null
+	var cache_key := "ability_icon:%d:%s" % [source.get_instance_id(), palette_name]
+	if recolor_cache.has(cache_key):
+		return recolor_cache[cache_key] as Texture2D
+	var source_to_target := {
+		_rgb_int(PaletteLibrary.shadow("blue")): PaletteLibrary.shadow(palette_name),
+		_rgb_int(PaletteLibrary.normal("blue")): PaletteLibrary.normal(palette_name),
+		_rgb_int(PaletteLibrary.accent("blue")): PaletteLibrary.accent(palette_name),
+		_rgb_int(ABILITY_ICON_WATER_HIGHLIGHT): PaletteLibrary.accent(palette_name).lerp(PaletteLibrary.WHITE, 0.35),
+	}
+	var image := _cached_image(source).duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			var key := _rgb_int(color)
+			if source_to_target.has(key):
+				var replacement: Color = source_to_target[key]
+				image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
 	var texture := ImageTexture.create_from_image(image)
 	recolor_cache[cache_key] = texture
 	return texture

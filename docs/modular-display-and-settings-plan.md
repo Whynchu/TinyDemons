@@ -192,13 +192,24 @@ against the live scene during Phase 2 — this list comes from the audit):
   room number / dungeon run (`hud_controller.gd:321,382`).
 - **Right-anchored (shift +extra width)**: gold display
   (`player_hud.tscn:280`), soul display (`hud_controller.gd:346-349`),
-  cooldown rows (`hud_controller.gd:279-280`), run timer
+  ability cooldown icon widgets (`hud_controller.gd`), run timer
   (`hud_controller.gd:374`, `player_hud.tscn:312`), input-prompt buttons
   (`hud_controller.gd:394-400`).
 - **Center-anchored (shift +half extra width)**: HP/MP bar row
   (`player_hud.tscn:218,249`), target name/focus labels
   (`hud_controller.gd:46,418,426`), enemy HP bar (`main.tscn:564-578`).
 - **Unchanged**: world-anchored interact prompt (follows the world marker).
+
+The two in-game ability indicators are authored 16x16 button sprites: Magic
+replaces the old `TRI` row and Imbue replaces the old `IMB` row. Each icon is
+recolored from the active player Chroma palette while preserving its dark
+silhouette and neutral highlights. A per-icon shader desaturates and dims the
+remaining cooldown sector, beginning at 12 o'clock and restoring color
+clockwise as the timer falls. A compact white `seconds.tenths` readout sits in
+the icon center only while the cooldown is active; it disappears when ready.
+Unavailable actions remain visible in the same icon position, fully greyed,
+so the control never shifts or vanishes as the player changes aspect or
+Chroma.
 
 ## 6. Ordered implementation plan
 
