@@ -48,6 +48,7 @@ func update_player_input(root: Object, delta: float) -> void:
 	root.set("player_roll_input_held", roll_down)
 	if not roll_down:
 		root.set("player_roll_hold_armed", false)
+	root.set("player_is_targeting", root.call("_is_target_input_held"))
 	_update_magic_input(root, delta)
 
 

@@ -69,7 +69,7 @@ CombatStatSnapshot
 | `attack_frame_time` | 0.09 | 11 | `player_animation_component.gd:86,89` |
 | `between_attack_time` | 0.12 | 15 | attack finish / combo (`player_animation_component.gd:118`, `gameplay_frame_controller.gd:136`) |
 | `attack2_cooldown` | 0.16 | 16 | attack2 recovery (`player_animation_component.gd:101`, `gameplay_frame_controller.gd:134`) |
-| `roll_distance` | 30.0 | 18 | `player_roll_component.gd:32` |
+| `roll_distance` | 24.3 | 18 | `player_roll_component.gd:32` |
 | `roll_duration` | 0.30 | 19 | `player_roll_component.gd:32,39` |
 | `roll_frame_time` | 0.05 | 17 | `player_roll_component.gd:39` |
 

@@ -25,6 +25,7 @@ signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
 var _last_title_focus: Button = null
+var _prompt_texture_cache: Dictionary = {}
 var hub_overlay: ColorRect = null
 var hub_summary_text: Sprite2D = null
 var hub_points_text: Sprite2D = null
@@ -1277,12 +1278,12 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if root.has_method("_health_feedback_color"):
 		highlight_color = root.call("_health_feedback_color", player_palette_name)
 	for page_index in page_buttons.size():
-		var target_page := int(page_buttons[page_index].get_meta("hub_page_target", page_index))
 		page_buttons[page_index].visible = showing_root
-		var page_active := target_page == page
-		set_archetype_button_state(page_buttons[page_index], page_active, highlight_color)
-		# The hub command rail is navigation, not an action prompt. Keep it
-		# text-only so the selected command does not gain a second Circle box.
+		# The command rail is pure navigation: the arrow cursor marks the
+		# selected command. No page box or text highlight may linger around the
+		# last-visited menu after backing out to the hub root, and the command
+		# stays text-only (no Circle box).
+		set_archetype_button_state(page_buttons[page_index], false, highlight_color)
 		_set_menu_button_icon(page_buttons[page_index], null, false)
 	if hub_cursor_text != null and not page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
@@ -1301,7 +1302,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var back_prompt := _menu_back_prompt_for(root)
 	if hub_context_text != null:
 		hub_context_text.visible = true
-		hub_context_text.texture = pixel_texture.call(confirm_prompt, Color8(148, 220, 255)) as Texture2D
+		hub_context_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, Color8(148, 220, 255)) as Texture2D
 	_set_button_text(hub_back_button, back_prompt, pixel_texture, highlight_color)
 	if hub_currency_text != null:
 		var currency_label := "GOLD %d" % profile.gold if page == HUB_PAGE_SHOP else "SOULS %d" % profile.souls
@@ -1384,10 +1385,13 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if points != null: points.texture = pixel_texture.call("POINTS %d" % remaining, Color8(255, 205, 117)) as Texture2D
 	var stat_texts := hub_stat_texts
 	var selected_row := hub_stat_row
-	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
+	# The allocate page shows BASE stats (level + allocated points), not the
+	# equipment-modified effective values, so the player reads the stat they are
+	# actually spending points on rather than a gear-inflated number.
+	var player_stats := root.get("player_stats") as StatsComponent
 	var effective_values: Array[float] = []
-	if snapshot != null:
-		effective_values = [snapshot.vit + pending[0], snapshot.strength + pending[1], snapshot.def + pending[2], snapshot.agi + pending[3], snapshot.intelligence + pending[4], snapshot.mnd + pending[5]]
+	if player_stats != null:
+		effective_values = [float(player_stats.vit) + pending[0], float(player_stats.strength) + pending[1], float(player_stats.def) + pending[2], float(player_stats.agi) + pending[3], float(player_stats.intelligence) + pending[4], float(player_stats.mnd) + pending[5]]
 	for index in stat_texts.size():
 		var effective := effective_values[index] if index < effective_values.size() else 0.0
 		var before_pending := effective - float(pending[index])
@@ -2352,6 +2356,29 @@ func _menu_face_texture_for_prompt(label: String) -> Texture2D:
 	if label.begins_with("SQUARE "):
 		return MENU_SQUARE_TEXTURE
 	return null
+
+
+## Composes a face-button glyph (PlayStation circle/X/triangle/square) with its
+## action label into one texture so plain Sprite2D prompts such as the hub
+## context text match the glyph treatment that menu buttons already use.
+func _pixel_prompt_texture(pixel_texture: Callable, label: String, color: Color) -> Texture2D:
+	var glyph := _menu_face_texture_for_prompt(label)
+	if glyph == null:
+		return pixel_texture.call(label, color) as Texture2D
+	var cache_key := "%s:%s" % [label, color.to_html(false)]
+	if _prompt_texture_cache.has(cache_key):
+		return _prompt_texture_cache[cache_key] as Texture2D
+	var text_texture := pixel_texture.call(_menu_face_label_without_icon(label), color) as Texture2D
+	var glyph_image := glyph.get_image()
+	var text_image := text_texture.get_image()
+	var gap := 1
+	var image := Image.create(glyph_image.get_width() + gap + text_image.get_width(), maxi(glyph_image.get_height(), text_image.get_height()), false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	image.blit_rect(glyph_image, Rect2i(Vector2i.ZERO, glyph_image.get_size()), Vector2i.ZERO)
+	image.blit_rect(text_image, Rect2i(Vector2i.ZERO, text_image.get_size()), Vector2i(glyph_image.get_width() + gap, 0))
+	var texture := ImageTexture.create_from_image(image)
+	_prompt_texture_cache[cache_key] = texture
+	return texture
 
 
 func _menu_face_label_without_icon(label: String) -> String:
