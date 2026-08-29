@@ -553,6 +553,17 @@ The gameplay player strip communicates resources through the bars only:
 - Floating XP reward feedback remains available, but now uses the same yellow
   progression color as the XP bar.
 
+The colored line in each authored bar does not span the full 82px source strip:
+XP uses 34px, Chroma uses 46px, and HP uses 62px, each beginning at source x17.
+The HUD records those active-track bounds and the runtime clips within them, so
+resource changes remain visually linear while preserving the source artwork's
+transparent padding. The HP damage-transition duplicate copies the same track
+metadata.
+
+Charge presentation follows the same separation of meaning: charge-aura pixels
+are white compressed-air streaks, while the player receives the active palette
+highlight only as the held charge reaches its ready threshold.
+
 ### Verification
 
 `player_hud_scene_smoke.gd` verifies the imported layer dimensions, exact origin,

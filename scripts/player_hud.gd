@@ -15,6 +15,15 @@ const LEVEL_NUMBER_ATLAS: Texture2D = preload("res://assets/artwork/player_UI_lv
 const LEVEL_NUMBER_COLOR := PaletteLibrary.WHITE
 const LEVEL_NUMBER_ORIGIN := Vector2i(66, 8)
 const LEVEL_SLOT_ORIGINS := [66, 71, 76]
+# The authored bars share an 82px strip but their colored tracks do not. The
+# leading pixels are intentional artwork padding; clipping the whole strip by
+# ratio makes a half-full XP/Chroma bar look almost full. Keep each source's
+# active line as explicit layout data so the scene remains editable.
+const BAR_TRACKS := {
+	"PlayerStatus/LevelXp/XpBarFill": Vector2(17, 34),
+	"PlayerStatus/Health/HpBarFill": Vector2(17, 62),
+	"PlayerStatus/Mana/MpBarFill": Vector2(17, 46),
+}
 
 var _xp_source: Texture2D
 var _hp_source: Texture2D
@@ -70,7 +79,13 @@ func _configure_sprites() -> void:
 			continue
 		fill.centered = false
 		fill.region_enabled = true
-		fill.region_rect = Rect2(Vector2.ZERO, HUD_SIZE)
+		var track: Vector2 = BAR_TRACKS.get(path, Vector2.ZERO)
+		if track != Vector2.ZERO:
+			fill.set_meta("fill_track_start_x", track.x)
+			fill.set_meta("fill_track_width", track.y)
+			fill.region_rect = Rect2(Vector2.ZERO, Vector2(track.x + track.y, HUD_SIZE.y))
+		else:
+			fill.region_rect = Rect2(Vector2.ZERO, HUD_SIZE)
 		fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	# These nodes remain as compatibility targets for gameplay and pause-menu
 	# code, but their old numerical presentation is deliberately absent from

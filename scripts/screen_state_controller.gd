@@ -1461,6 +1461,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var shop_prices := hub_shop_price_texts
 	var gear_choices := hub_gear_choice_texts
 	var gear_browsing := page == HUB_PAGE_EQUIPMENT and hub_gear_browsing
+	var equipment_action_state := page == HUB_PAGE_EQUIPMENT and hub_equipment_action_focus and not gear_browsing
+	var equipment_content_state := page == HUB_PAGE_EQUIPMENT and not equipment_action_state
 	for button in hub_gear_choice_buttons:
 		button.visible = gear_browsing
 	var gear_stats := hub_gear_stat_texts
@@ -1468,11 +1470,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var item_action := hub_item_action_button
 	for equipment_action_index in hub_equipment_action_buttons.size():
 		var equipment_action := hub_equipment_action_buttons[equipment_action_index]
-		equipment_action.visible = page == HUB_PAGE_EQUIPMENT
-		# The picker is a child state of Equipment. Keep the top action row
-		# visible for orientation, but remove it from the touch/input path until
-		# the picker is closed.
-		equipment_action.mouse_filter = Control.MOUSE_FILTER_IGNORE if gear_browsing else Control.MOUSE_FILTER_STOP
+		# Equipment is a real nested route: the command row, slot list, and item
+		# picker replace one another. Hiding inactive controls prevents a stale
+		# button or a hidden row from stealing controller/touch input.
+		equipment_action.visible = equipment_action_state
+		equipment_action.mouse_filter = Control.MOUSE_FILTER_STOP if equipment_action_state else Control.MOUSE_FILTER_IGNORE
 		var action_active := page == HUB_PAGE_EQUIPMENT and hub_content_focus and hub_equipment_action_focus and equipment_action_index == hub_action_column
 		set_archetype_button_state(equipment_action, action_active, highlight_color)
 		_set_menu_button_icon(equipment_action, null, false)
@@ -1489,25 +1491,25 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		hub_fusion_increase_button.visible = page == HUB_PAGE_FUSION
 		hub_fusion_increase_button.disabled = true
 	var item_page := page >= HUB_PAGE_EQUIPMENT and page <= HUB_PAGE_FUSION
-	if item_name != null: item_name.visible = item_page
-	for node in item_list: node.visible = item_page
+	if item_name != null: item_name.visible = item_page and not equipment_action_state
+	for node in item_list: node.visible = item_page and not equipment_action_state
 	for node in shop_prices: node.visible = page == HUB_PAGE_SHOP
 	for node in gear_choices: node.visible = gear_browsing
 	for button in hub_gear_slot_buttons:
-		button.visible = page == HUB_PAGE_EQUIPMENT
-		button.mouse_filter = Control.MOUSE_FILTER_STOP if page == HUB_PAGE_EQUIPMENT and not gear_browsing else Control.MOUSE_FILTER_IGNORE
-	if hub_item_list_panel != null: hub_item_list_panel.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION
-	if hub_item_content_clip != null: hub_item_content_clip.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION
+		button.visible = equipment_content_state
+		button.mouse_filter = Control.MOUSE_FILTER_STOP if page == HUB_PAGE_EQUIPMENT and not hub_equipment_action_focus and not gear_browsing else Control.MOUSE_FILTER_IGNORE
+	if hub_item_list_panel != null: hub_item_list_panel.visible = (page == HUB_PAGE_EQUIPMENT and not equipment_action_state) or page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION
+	if hub_item_content_clip != null: hub_item_content_clip.visible = (page == HUB_PAGE_EQUIPMENT and not equipment_action_state) or page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION
 	if hub_gear_choice_panel != null: hub_gear_choice_panel.visible = gear_browsing
 	if hub_gear_choice_content_clip != null: hub_gear_choice_content_clip.visible = gear_browsing
-	for node in gear_stats: node.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
+	for node in gear_stats: node.visible = (page == HUB_PAGE_EQUIPMENT and not equipment_action_state) or page == HUB_PAGE_FUSION
 	var gear_stat_panel := hub_gear_stat_panel
 	# Equipment and Fusion share the same right-hand six-stat comparison card.
 	# The equipment slot list is kept to the left of it, so long item names can
 	# never draw through the stat column.
-	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
-	if hub_item_detail_panel != null: hub_item_detail_panel.visible = item_page
-	for node in item_details: node.visible = item_page
+	if gear_stat_panel != null: gear_stat_panel.visible = (page == HUB_PAGE_EQUIPMENT and not equipment_action_state) or page == HUB_PAGE_FUSION
+	if hub_item_detail_panel != null: hub_item_detail_panel.visible = item_page and not equipment_action_state
+	for node in item_details: node.visible = item_page and not equipment_action_state
 	if item_action != null: item_action.visible = item_page and page != HUB_PAGE_EQUIPMENT
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
 	for node in hub_binding_texts: node.visible = page == HUB_PAGE_BIND
@@ -2011,15 +2013,30 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	var selected_slot: StringName = ItemCatalog.SLOTS[selected_slot_index]
 	var candidate_indices := hub_gear_candidate_indices
 	var browsing := hub_gear_browsing
+	var action_state := hub_equipment_action_focus and not browsing
 	var selected_candidate: ItemInstance = null
 	var slot_candidates := root.call("_hub_gear_candidates", selected_slot) as Array[ItemInstance]
-	var slot_labels := ["WPN", "HEAD", "BODY", "ARM", "SHD", "ACC"]
+	var slot_labels := ["WEAPON", "HEAD", "BODY", "ARM", "SHIELD", "ACCESSORY"]
 	if hub_item_name_text != null:
-		hub_item_name_text.texture = pixel_texture.call("SLOT %d/%d %s" % [selected_slot_index + 1, ItemCatalog.SLOTS.size(), slot_labels[selected_slot_index]], highlight_color if browsing else Color.WHITE) as Texture2D
-		hub_item_name_text.visible = true
+		var header := "%s GEAR" % slot_labels[selected_slot_index] if browsing else "SELECT SLOT"
+		hub_item_name_text.texture = pixel_texture.call(header, highlight_color if browsing else Color.WHITE) as Texture2D
+		hub_item_name_text.visible = not action_state
 	for detail in details:
 		detail.texture = null
 		detail.visible = false
+	if action_state:
+		# The action row is the complete Equipment screen at this depth. Clear
+		# descendants so no slot header, stat card, or old picker label can sit
+		# underneath it and look like a second active menu.
+		for row in item_list:
+			row.texture = null
+		for choice in choices:
+			choice.texture = null
+		if hub_item_detail_panel != null:
+			hub_item_detail_panel.visible = false
+		if hub_gear_stat_panel != null:
+			hub_gear_stat_panel.visible = false
+		return
 	for row in item_list.size():
 		if row >= ItemCatalog.SLOTS.size():
 			item_list[row].texture = null
@@ -2257,8 +2274,16 @@ func update_hub_input(root: Object) -> void:
 	var page := hub_page
 	if bool(root.call("_is_menu_back_just_pressed")):
 		if page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+			# Item picker -> slot list.
 			root.call("_close_hub_gear_browse")
+		elif page == HUB_PAGE_EQUIPMENT and not hub_equipment_action_focus:
+			# Slot list -> Equipment command row.
+			hub_equipment_action_focus = true
+			hub_content_focus = true
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		else:
+			# Command row -> Demon Hub root (or the normal back route for other
+			# pages).
 			root.call("_hub_back_or_close")
 		return
 	if hub_is_root:
@@ -2316,27 +2341,20 @@ func update_hub_input(root: Object) -> void:
 				var action_direction := -1 if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) else 1
 				root.call("_shift_hub_action_column", action_direction); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 			elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
-				hub_equipment_action_focus = false; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
-			elif bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
-				hub_equipment_action_focus = false; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+				# Command row -> slot list.
+				hub_equipment_action_focus = false; hub_gear_browsing = false; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 			elif bool(root.call("_is_menu_confirm_just_pressed")):
 				if hub_action_column >= 0 and hub_action_column < hub_equipment_action_buttons.size():
 					var equipment_action := hub_equipment_action_buttons[hub_action_column]
 					if equipment_action != null and not equipment_action.disabled: equipment_action.pressed.emit()
 			return
 		if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
-			if hub_item_index <= 0:
-				hub_equipment_action_focus = true; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
-			else:
-				root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
 			root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
-			hub_equipment_action_focus = true; update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		elif bool(root.call("_is_menu_confirm_just_pressed")):
-			# A slot is the natural equipment target. Confirming any slot opens
-			# the picker directly; it must not depend on the hidden legacy action
-			# button, which is disabled for occupied slots and made ARM appear inert.
+			# Slot confirm descends into the candidate item menu. The candidate
+			# confirm is handled by the separate browsing branch above.
 			root.call("_select_hub_gear_slot", hub_item_index)
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)

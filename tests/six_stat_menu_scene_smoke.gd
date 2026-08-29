@@ -50,19 +50,22 @@ func _initialize() -> void:
 		screens.hub_page_buttons[2].pressed.emit()
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_EQUIPMENT and screens.hub_equipment_action_buttons.size() == 3 and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.visible), "Equipment exposes its top Equip/Remove/Remove All action row", failures)
+		_expect(screens.hub_equipment_action_focus and screens.hub_item_name_text != null and not screens.hub_item_name_text.visible, "Equipment enters on its command row without a colliding slot header", failures)
 		_expect(screens.hub_gear_slot_buttons.size() == 6 and screens.hub_gear_stat_texts.size() == 6, "Equipment exposes the six approved slots and six-stat comparison capacity", failures)
 		_expect(screens.hub_item_action_button != null and not screens.hub_item_action_button.visible, "Equipment does not expose a duplicate lower action button", failures)
 		var item_column_end := screens.hub_item_content_clip.position.x + screens.hub_item_content_clip.size.x if screens.hub_item_content_clip != null else -1.0
 		var stat_column_start := screens.hub_gear_stat_panel.position.x if screens.hub_gear_stat_panel != null else -1.0
 		_expect(screens.hub_item_content_clip != null and screens.hub_item_content_clip.clip_contents and item_column_end <= stat_column_start - 10.0, "equipment item text is clipped before the stat-card gutter", failures)
 		var equipment_card_end := screens.hub_item_list_panel.position.x + screens.hub_item_list_panel.size.x if screens.hub_item_list_panel != null else -1.0
-		_expect(equipment_card_end <= stat_column_start - 10.0 and screens.hub_gear_stat_panel != null and screens.hub_gear_stat_panel.visible, "equipment keeps the slot list left of the visible stat preview card", failures)
+		_expect(equipment_card_end <= stat_column_start - 10.0 and screens.hub_gear_stat_panel != null and not screens.hub_gear_stat_panel.visible, "equipment keeps inactive content hidden while the command row is active", failures)
 		_expect(screens.hub_equipment_action_buttons[0].position.x + screens.hub_equipment_action_buttons[0].size.x <= screens.hub_equipment_action_buttons[1].position.x and screens.hub_equipment_action_buttons[1].position.x + screens.hub_equipment_action_buttons[1].size.x <= screens.hub_equipment_action_buttons[2].position.x, "equipment action buttons keep non-overlapping hit regions", failures)
 		_expect(screens.hub_gear_choice_panel != null and screens.hub_gear_choice_content_clip != null and not screens.hub_gear_choice_panel.visible, "equipment keeps the lower slot-picker closed until a slot is selected", failures)
+		_expect(screens.hub_gear_slot_buttons.all(func(button: Button) -> bool: return not button.visible and button.mouse_filter == Control.MOUSE_FILTER_IGNORE), "equipment command row disables slot hit targets", failures)
 		profile.ensure_starter_items()
 		screens.hub_item_index = 3
 		screens.hub_gear_browsing = false
 		var input_router := gameplay.get("input_router") as InputRouter
+		# Confirm EQUIP enters the six-slot parent menu first.
 		input_router.poll(InputRouter.Context.HUB)
 		Input.action_press("interact")
 		input_router.poll(InputRouter.Context.HUB)
@@ -70,10 +73,19 @@ func _initialize() -> void:
 		Input.action_release("interact")
 		input_router.poll(InputRouter.Context.HUB)
 		await process_frame
-		_expect(screens.hub_item_index == 3 and screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible, "controller confirm on ARM opens the equipment picker directly", failures)
+		_expect(screens.hub_item_index == 3 and not screens.hub_equipment_action_focus and not screens.hub_gear_browsing and screens.hub_item_list_texts[3].visible and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return not button.visible), "controller confirm on EQUIP enters the slot menu", failures)
+		# A second confirm on ARM enters the item menu.
+		_set_menu_edge(input_router, true, false)
+		screens.update_hub_input(gameplay)
+		_set_menu_edge(input_router, false, false)
+		await process_frame
+		_expect(screens.hub_item_index == 3 and screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible and screens.hub_gear_choice_buttons[0].visible, "controller confirm on ARM opens the equipment item picker", failures)
+		_expect(screens.hub_gear_slot_buttons.all(func(button: Button) -> bool: return button.visible and button.mouse_filter == Control.MOUSE_FILTER_IGNORE) and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return not button.visible), "equipment item picker keeps only its candidate rows interactive", failures)
+		screens.hub_gear_candidate_indices["arm"] = 0
+		screens.update_hub_ui(gameplay, Callable(gameplay, "_pixel_text_texture"))
 		gameplay.call("_hub_item_action")
 		await process_frame
-		_expect(not screens.hub_gear_browsing and profile.get_equipped_instance_id(&"arm") == "starter-arm", "equipment picker confirm equips the selected Arm candidate", failures)
+		_expect(not screens.hub_gear_browsing and not screens.hub_equipment_action_focus and profile.get_equipped_instance_id(&"arm") == "starter-arm", "equipment picker confirm equips the selected Arm candidate and returns to slots", failures)
 		gameplay.call("_close_hub_gear_browse")
 		await process_frame
 		screens.hub_gear_slot_buttons[0].pressed.emit()
@@ -83,8 +95,16 @@ func _initialize() -> void:
 		_expect(screens.hub_gear_browsing and screens.hub_gear_choice_panel.visible and screens.hub_gear_choice_content_clip.visible and screens.hub_gear_choice_texts[0].texture != null, "equipment opens a populated lower window for the selected slot", failures)
 		_expect(screens.hub_item_list_texts[0].visible and choice_window_top >= top_slot_bottom, "equipment keeps equipped slots visible above the separate candidate window", failures)
 		_expect(screens.hub_gear_choice_buttons[0].visible and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_IGNORE), "equipment limits touch input to the active picker while browsing", failures)
-		gameplay.call("_close_hub_gear_browse")
+		screens.hub_back_button.pressed.emit()
 		await process_frame
+		_expect(not screens.hub_gear_browsing and not screens.hub_equipment_action_focus, "native BACK from the item picker returns to the slot list", failures)
+		# Back follows the same hierarchy in reverse: slots -> command row -> hub.
+		_set_menu_edge(input_router, false, true)
+		screens.update_hub_input(gameplay)
+		_expect(screens.hub_equipment_action_focus and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.visible), "equipment BACK from slots returns to the command row", failures)
+		_set_menu_edge(input_router, false, true)
+		screens.update_hub_input(gameplay)
+		_expect(screens.hub_is_root and screens.hub_overlay.get_node_or_null("HubRootPage").visible, "equipment BACK from the command row returns to Demon Hub", failures)
 		screens.hub_page_buttons[3].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 6, "Shop remains a six-slot transaction page inside the shell", failures)
 		screens.hub_page_buttons[4].pressed.emit()
@@ -120,3 +140,10 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
+
+
+func _set_menu_edge(router: InputRouter, confirm: bool, back: bool) -> void:
+	router.set("_previous", {&"menu_confirm": false, &"menu_back": false})
+	router.set("_current", {&"menu_confirm": confirm, &"menu_back": back})
+	router.set("_previous_menu_directions", {})
+	router.set("_menu_directions", {})

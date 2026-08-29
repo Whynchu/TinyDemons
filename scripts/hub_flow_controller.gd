@@ -180,8 +180,13 @@ func set_hub_page(root: Object, page: int) -> void:
 	var command_index: int = int(HUB_COMMAND_PAGE_TARGETS.find(screen.hub_page))
 	if command_index >= 0: _set_screen_property_if_available(screen, &"hub_menu_row", command_index)
 	screen.hub_item_index = 0
-	_set_screen_property_if_available(screen, &"hub_content_focus", false)
-	_set_screen_property_if_available(screen, &"hub_equipment_action_focus", false)
+	# Equipment has a deliberate three-step route. Entering the page always
+	# lands on its top command row; Equip then descends into slots and finally
+	# into the item list. Other transaction pages retain their normal content
+	# focus behavior.
+	var equipment_page: bool = screen.hub_page == HUB_PAGE_EQUIPMENT
+	_set_screen_property_if_available(screen, &"hub_content_focus", equipment_page)
+	_set_screen_property_if_available(screen, &"hub_equipment_action_focus", equipment_page)
 	_set_screen_property_if_available(screen, &"hub_action_column", 0)
 	screen.hub_gear_browsing = false
 	screen.hub_fusion_message = ""
@@ -207,6 +212,24 @@ func back_to_hub_root(root: Object) -> void:
 	screen.hub_binding_message = ""
 	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
+
+
+func back_from_hub_route(root: Object) -> void:
+	# The native footer BACK button must follow the same nested Equipment route
+	# as controller/keyboard input. Previously it always jumped to the hub root,
+	# which made touch navigation disagree with the visible menu hierarchy.
+	var screen: Object = root.screen_state_controller
+	if screen.hub_page == HUB_PAGE_EQUIPMENT:
+		if screen.hub_gear_browsing:
+			close_hub_gear_browse(root)
+			return
+		if not screen.hub_equipment_action_focus:
+			screen.hub_equipment_action_focus = true
+			screen.hub_content_focus = true
+			screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_decline", 0.0, 1.0)
+			return
+	back_to_hub_root(root)
 
 
 func _set_screen_property_if_available(screen: Object, property_name: StringName, value: Variant) -> void:
@@ -302,6 +325,9 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 	root.screen_state_controller.hub_equipment_action_focus = false
 	var slot: StringName = ItemCatalog.SLOTS[root.screen_state_controller.hub_item_index]
 	var candidates := hub_gear_candidates(root, slot)
+	# A slot selection is the parent state of the item picker. Empty slots remain
+	# selectable so the player can move through the six-piece list, but only a
+	# slot with candidates can descend into the item state.
 	root.screen_state_controller.hub_gear_browsing = not candidates.is_empty()
 	if not candidates.is_empty():
 		var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
@@ -333,7 +359,9 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 
 
 func close_hub_gear_browse(root: Object) -> void:
+	# BACK from the item list returns to the slot list, not the top command row.
 	root.screen_state_controller.hub_gear_browsing = false
+	root.screen_state_controller.hub_equipment_action_focus = false
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -396,6 +424,16 @@ func salvage_profile_overflow(root: Object, instance_id: String) -> int:
 func hub_item_action(root: Object) -> void:
 	if root.player_profile == null: return
 	if root.screen_state_controller.hub_page == 1:
+		# The visible EQUIP command is a route transition. It must not silently
+		# select the first slot or open an item picker beneath the command row.
+		if root.screen_state_controller.hub_equipment_action_focus:
+			root.screen_state_controller.hub_equipment_action_focus = false
+			root.screen_state_controller.hub_gear_browsing = false
+			root.screen_state_controller.hub_content_focus = true
+			root.screen_state_controller.hub_item_index = clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
+			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+			return
 		var slot: StringName = ItemCatalog.SLOTS[clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var candidates := hub_gear_candidates(root, slot)
 		if not candidates.is_empty():
@@ -417,6 +455,8 @@ func hub_item_action(root: Object) -> void:
 				# Equipping or unequipping changes which copies may be used as
 				# materials, so the cached target list must be rebuilt.
 				invalidate_hub_fusion_candidates(root)
+				# Confirming an item returns to the slot list. The selected slot and
+				# candidate cursor are preserved for quick successive changes.
 				root.screen_state_controller.hub_gear_browsing = false
 			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		return

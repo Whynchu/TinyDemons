@@ -13,7 +13,7 @@ still marked `future`, while the complete 44-row catalogue remains inspectable.
 | 0 — Documentation/data audit | Complete | Four catalogue companion docs and 44-row schema audit |
 | 1 — Slot/save compatibility | Complete | Canonical six slots, Armor alias, starter Head/Arm, schema migration smoke |
 | 2 — Shared catalogue schema | Complete | Authored metadata, deterministic generation, fail-closed definitions |
-| 3 — Equipment/menu flow | Complete | Six-slot Equipment, direct picker flow, shared snapshot previews, Pause read-only routes |
+| 3 — Equipment/menu flow | Complete | Six-slot Equipment, command → slot → item route, shared snapshot previews, Pause read-only routes |
 | 4 — Catalogue content | Complete for authored data | All 44 rows exist; future-effect rows are intentionally runtime-gated |
 | 5 — Drops/shop/fusion | Complete for current contracts | Source tags, missing-slot priority, clear anti-repeat history, six-option shop |
 | 6 — Effect hooks/balance | Pending by design | Existing effects remain active; future action/elemental contracts need their owner and tuning tests |
@@ -72,8 +72,10 @@ without reconstructing hidden behavior from its display name.
 4. Update the FFIII-style Equipment screen to show six slots, current gear in
    the upper region, selectable items in the lower region, and comparison text
    in the bottom strip.
-5. Make EQUIP enter item selection directly and keep only the active route’s
-   input enabled.
+5. Make Equipment use the explicit command → slot → item route: EQUIP opens
+   slot selection, a slot opens its legal item list, a confirmed item returns
+   to slots, and BACK unwinds item → slot → command → hub. Keep only the active
+   route’s input enabled.
 6. Update Status, Shop, Fusion, and read-only Pause Equipment routes.
 
 Exit: controller, keyboard, mouse, and touch can inspect and equip every legal

@@ -628,7 +628,9 @@ belong on Status/Equipment rather than making allocation rows unreadable.
   Weapon/Head/Body/Arm/Shield/Accessory, with `armor` retained only as a
   load/save alias for Body. The upper region shows currently
   slotted gear, the lower region shows valid choices for the selected slot, and
-  EQUIP enters item selection directly.
+  EQUIP enters slot selection; confirming a slot opens its legal item list;
+  confirming an item returns to the slot list, and BACK unwinds item → slot →
+  command row → Demon Hub while only the active route accepts input.
 - **Shop/Fusion:** keep their current transactions and validation rules, but
   display them inside the same shell so selected row, cost, outcome, and BACK
   are consistent. Sold-out or unaffordable entries use the greyed-disabled
