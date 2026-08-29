@@ -545,14 +545,14 @@ func is_slime_collision_rect_walkable_at(root: Object, slime: Sprite2D, foot: Ve
 	if polygon.size() >= 3:
 		return is_slime_collision_polygon_walkable(root, polygon)
 	var guide := slime.get_node_or_null("CollisionGuide") as Node2D
-	var collision_rect := Rect2(foot - Vector2(4.5, 2.2), Vector2(9, 4))
+	var collision_bounds := Rect2(foot - Vector2(4.5, 2.2), Vector2(9, 4))
 	if guide != null:
 		var guide_position: Vector2 = guide.get("rect_position")
 		var guide_size: Vector2 = guide.get("rect_size")
 		var actor_position := foot - (root.get("ACTOR_FOOT_OFFSET") as Vector2)
 		var origin := actor_position + guide.position + guide_position + Vector2(minf(guide_size.x, 0.0), minf(guide_size.y, 0.0))
-		collision_rect = Rect2(origin, guide_size.abs())
-	var samples := [collision_rect.position, collision_rect.position + Vector2(collision_rect.size.x, 0), collision_rect.position + collision_rect.size, collision_rect.position + Vector2(0, collision_rect.size.y), collision_rect.get_center(), collision_rect.position + Vector2(collision_rect.size.x * 0.5, 0), collision_rect.position + Vector2(collision_rect.size.x, collision_rect.size.y * 0.5), collision_rect.position + Vector2(collision_rect.size.x * 0.5, collision_rect.size.y), collision_rect.position + Vector2(0, collision_rect.size.y * 0.5)]
+		collision_bounds = Rect2(origin, guide_size.abs())
+	var samples := [collision_bounds.position, collision_bounds.position + Vector2(collision_bounds.size.x, 0), collision_bounds.position + collision_bounds.size, collision_bounds.position + Vector2(0, collision_bounds.size.y), collision_bounds.get_center(), collision_bounds.position + Vector2(collision_bounds.size.x * 0.5, 0), collision_bounds.position + Vector2(collision_bounds.size.x, collision_bounds.size.y * 0.5), collision_bounds.position + Vector2(collision_bounds.size.x * 0.5, collision_bounds.size.y), collision_bounds.position + Vector2(0, collision_bounds.size.y * 0.5)]
 	for sample in samples:
 		if not is_slime_walkable_point(root, sample):
 			return false

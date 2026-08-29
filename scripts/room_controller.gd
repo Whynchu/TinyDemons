@@ -814,7 +814,7 @@ func _is_special_room_state(root: Object, room_id: StringName, state: Dictionary
 
 
 func update_special_enemy_respawns(root: Object, delta: float) -> void:
-	var current_room_id: StringName = StringName(root.get("current_room_id"))
+	var active_room_id: StringName = StringName(root.get("current_room_id"))
 	var current_state: Dictionary = {}
 	var ready_slots: Array[int] = []
 	for room_key in room_states.keys():
@@ -829,7 +829,7 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 		if timers.is_empty():
 			room_states[room_key] = state
 			continue
-		var room_is_current: bool = room_id == current_room_id and root.get("current_room_type") == DungeonGraph.ROOM_SPECIAL_ENEMY
+		var room_is_current: bool = room_id == active_room_id and root.get("current_room_type") == DungeonGraph.ROOM_SPECIAL_ENEMY
 		for timer_key in timers.keys():
 			var remaining := maxf(0.0, float(timers[timer_key]) - maxf(delta, 0.0))
 			timers[timer_key] = remaining
@@ -841,9 +841,9 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 			current_state = state
 	if ready_slots.is_empty():
 		return
-	var state: Dictionary = current_state
-	var timers: Dictionary = state.get("special_respawn_timers", {}) as Dictionary
-	_prepare_enemy_slot_visuals(root, state)
+	var current_room_state: Dictionary = current_state
+	var current_room_timers: Dictionary = current_room_state.get("special_respawn_timers", {}) as Dictionary
+	_prepare_enemy_slot_visuals(root, current_room_state)
 	var player := root.get("player") as Sprite2D
 	var player_foot: Vector2 = root.call("_actor_foot", player)
 	var chest := root.get("chest") as Sprite2D
@@ -853,24 +853,24 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 		if slime.visible and not bool(root.call("_is_slime_dead", slime)):
 			occupied.append(root.call("_actor_foot", slime))
 	var layout_rng := RandomNumberGenerator.new()
-	layout_rng.seed = int(state.get("enemy_spawn_seed", String(root.get("current_room_id")).hash() + 303)) + 1771
+	layout_rng.seed = int(current_room_state.get("enemy_spawn_seed", String(root.get("current_room_id")).hash() + 303)) + 1771
 	var did_respawn := false
 	for slot in ready_slots:
 		var timer_key := str(slot)
-		if _spawn_enemy_slot(root, state, slot, occupied, layout_rng, player_foot, chest_rect):
-			timers.erase(timer_key)
+		if _spawn_enemy_slot(root, current_room_state, slot, occupied, layout_rng, player_foot, chest_rect):
+			current_room_timers.erase(timer_key)
 			did_respawn = true
 		else:
 			# Keep retrying if a temporary actor/wall arrangement prevents a valid
 			# spawn. This does not reset the original staggered schedule.
-			timers[timer_key] = 0.25
-	state["special_respawn_timers"] = timers
+			current_room_timers[timer_key] = 0.25
+	current_room_state["special_respawn_timers"] = current_room_timers
 	if did_respawn:
-		state["finished"] = false
+		current_room_state["finished"] = false
 		root.call("_set_door_active", false)
 		root.call("_set_entrance_open", true)
 		root.call("_build_depth_lists")
-	room_states[root.get("current_room_id")] = state
+	room_states[root.get("current_room_id")] = current_room_state
 
 
 func update_popcorn_respawns(root: Object, delta: float) -> void:

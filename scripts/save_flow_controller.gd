@@ -84,6 +84,12 @@ func update_save_select_cursor(root: Object) -> void:
 func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
 	if root.player_animation_component == null:
 		return null
+	var palette_frames: Dictionary = root.player_animation_component.frames_by_palette.get(palette_name, {}) as Dictionary
+	var baked_idle_frames: Array[Texture2D] = palette_frames.get("idle", []) as Array[Texture2D]
+	if not baked_idle_frames.is_empty():
+		# Save/name previews must use the same pre-rendered palette frames as
+		# character creation; recoloring the blue source would restore old eyes.
+		return baked_idle_frames[0]
 	var base_frames: Array[Texture2D] = root.player_animation_component.base_idle_frames
 	if base_frames.is_empty():
 		return null
@@ -331,11 +337,18 @@ func update_archetype_screen(root: Object) -> void:
 	root.screen_state_controller.archetype_name_text.texture = root.call("_pixel_text_texture", flame_name, PaletteLibrary.normal(flame_palette) if root.screen_state_controller.archetype_menu_row == 0 else Color.WHITE)
 	root.screen_state_controller.archetype_name_text.position = Vector2((view_width - root.screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
 	var colors: Array[String] = [flame_palette]
-	if not root.player_animation_component.idle_frames.is_empty():
-		if root.screen_state_controller.archetype_preview_palette != colors[0] or root.screen_state_controller.archetype_preview_frames.size() != root.player_animation_component.idle_frames.size():
+	var cached_palette_frames: Dictionary = root.player_animation_component.frames_by_palette.get(flame_palette, {}) as Dictionary
+	var preview_source_frames: Array[Texture2D] = cached_palette_frames.get("idle", []) as Array[Texture2D]
+	if preview_source_frames.is_empty():
+		preview_source_frames = root.player_animation_component.idle_frames
+	if not preview_source_frames.is_empty():
+		# Use the pre-rendered palette frames directly. Recoloring the active blue
+		# frames here bypasses the baked green/yellow eye treatment and shows the
+		# old base-colored eyes in character creation.
+		if root.screen_state_controller.archetype_preview_palette != colors[0] or root.screen_state_controller.archetype_preview_frames.size() != preview_source_frames.size():
 			root.screen_state_controller.archetype_preview_frames.clear()
 			root.screen_state_controller.archetype_preview_palette = colors[0]
-			for frame in root.player_animation_component.idle_frames: root.screen_state_controller.archetype_preview_frames.append(root.player_animation_component.recolor_texture(frame, root.screen_state_controller.archetype_preview_palette))
+			for frame in preview_source_frames: root.screen_state_controller.archetype_preview_frames.append(frame)
 		update_archetype_preview_animation(root)
 	root.call("_update_archetype_button_styles")
 

@@ -48,7 +48,7 @@ func _rebuild_preview() -> void:
 	_add_pixel_sprite("EditorPlayerHealth", DisplayLayout.position_for(Vector2(38, 7), &"hp_mp", view_size), "12/15", Color.WHITE, true)
 	_add_pixel_sprite("EditorTargetHealth", DisplayLayout.position_for(Vector2(121, 155), &"target", view_size), "8/13", Color.WHITE, true)
 	_add_pixel_sprite("EditorGoldAmount", DisplayLayout.position_for(Vector2(212, 4), &"gold", view_size), "0", Color("#ffcd75"), false)
-	_add_pixel_sprite("EditorSoulAmount", DisplayLayout.position_for(Vector2(212, 11), &"souls", view_size), "0", Color("#d3a7ff"), false)
+	_add_pixel_sprite("EditorSoulAmount", DisplayLayout.position_for(Vector2(212, 11), &"souls", view_size), "0", Color("#ea7ac5"), false)
 	_add_pixel_sprite("EditorRoomNumber", Vector2(5, 146), "R1", Color("#f4f4f4"), false)
 	_add_pixel_sprite("EditorDungeonRun", Vector2(5, 153), "DUNGEON R1", Color("#f4f4f4"), false)
 	_add_pixel_sprite("EditorRunTimer", DisplayLayout.position_for(Vector2(199, 153), &"run_timer", view_size), "TIME 00:00", Color("#f4f4f4"), false)

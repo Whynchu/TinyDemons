@@ -9,8 +9,23 @@ extends SceneTree
 ## recolor cost.  Run it whenever the palette set or player art changes.
 
 const OUT_ROOT := "res://assets/baked/player"
+const FULL_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet.png"
 const PLAYER_FRAME := Vector2i(36, 36)
 const ATTACK_FRAME := Vector2i(36, 36)
+
+const FULL_SHEET_ROWS := {
+	"idle": 0,
+	"walk": 1,
+	"run": 2,
+	"attack": 3,
+	"between": 4,
+	"attack2": 5,
+	"after": 6,
+	"roll": 7,
+	"backflip": 8,
+	"magic": 9,
+	"spin": 10,
+}
 
 # [animation key, source path, frame size]
 const ANIMATIONS := [
@@ -45,22 +60,22 @@ func _bake() -> void:
 	var failures: Array[String] = []
 	var library := SpriteFrameLibrary.new()
 
-	# Slice the base (blue-palette source) frames for each animation.
+	# Slice the base (blue-palette source) frames from the authored master sheet.
 	var base: Dictionary = {}
-	for entry in ANIMATIONS:
-		var key: String = entry[0]
-		var path: String = entry[1]
-		var size: Vector2i = entry[2]
-		if not ResourceLoader.exists(path):
-			failures.append("missing source: %s" % path)
-			continue
-		base[key] = library.slice_frames(path, size)
+	var full_sheet := load(FULL_SHEET_PATH) as Texture2D
+	if full_sheet == null:
+		failures.append("missing source: %s" % FULL_SHEET_PATH)
+	else:
+		for key: String in FULL_SHEET_ROWS:
+			base[key] = _slice_sheet_row(full_sheet, int(FULL_SHEET_ROWS[key]))
 	# Left-facing variants are horizontal flips of the attack frames.
 	base["attack_left"] = library.flip_frames(base.get("attack", []))
 	base["attack2_left"] = library.flip_frames(base.get("attack2", []))
 	base["spin_left"] = library.flip_frames(base.get("spin", []))
-	base["between"] = [load("res://assets/artwork/TinyDemon-attack-between.png") as Texture2D] as Array[Texture2D]
-	base["after"] = [load("res://assets/artwork/TinyDemon-after-attack2.png") as Texture2D] as Array[Texture2D]
+	var between_frames := base.get("between", []) as Array[Texture2D]
+	var after_frames := base.get("after", []) as Array[Texture2D]
+	base["between"] = [between_frames[0]] as Array[Texture2D] if not between_frames.is_empty() else []
+	base["after"] = [after_frames[0]] as Array[Texture2D] if not after_frames.is_empty() else []
 
 	for palette_name: String in PaletteLibrary.PALETTE_NAMES:
 		var dir := OUT_ROOT + "/" + palette_name
@@ -87,6 +102,26 @@ func _bake() -> void:
 			push_error(f)
 		print("BAKE_FAILED")
 		quit(1)
+
+
+func _slice_sheet_row(sheet: Texture2D, row: int) -> Array[Texture2D]:
+	var source := sheet.get_image()
+	var frames: Array[Texture2D] = []
+	var frame_count := source.get_width() / PLAYER_FRAME.x
+	for index in frame_count:
+		var frame := Image.create(PLAYER_FRAME.x, PLAYER_FRAME.y, false, Image.FORMAT_RGBA8)
+		frame.blit_rect(source, Rect2i(index * PLAYER_FRAME.x, row * PLAYER_FRAME.y, PLAYER_FRAME.x, PLAYER_FRAME.y), Vector2i.ZERO)
+		if _has_visible_pixels(frame):
+			frames.append(ImageTexture.create_from_image(frame))
+	return frames
+
+
+func _has_visible_pixels(image: Image) -> bool:
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+	return false
 
 
 func _pack_sheet(frames: Array[Texture2D], out_path: String, failures: Array[String]) -> bool:

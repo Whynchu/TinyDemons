@@ -9,6 +9,7 @@ const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_
 const COOLDOWN_FLASH_DURATION := 0.14
 const COOLDOWN_ICON_DIM := 0.58
 const COOLDOWN_ICON_DESATURATION := 0.92
+const COOLDOWN_ELAPSED_BRIGHTNESS := 0.82
 const COOLDOWN_TIMER_SHADOW_COLOR := Color8(17, 19, 24, 235)
 
 var target_health_fill_textures: Dictionary = {}
@@ -38,6 +39,7 @@ var combo_fill: Sprite2D = null
 var gold_animation_frames: Array[Texture2D] = []
 var gold_animation_timer := 0.0
 var button_hud_sprites: Array[Sprite2D] = []
+var ability_prompt_hud: Array[Sprite2D] = []
 var cooldown_hud: Dictionary = {}
 var cooldown_flash_remaining := {&"magic": 0.0, &"imbue": 0.0}
 var cooldown_previous_remaining := {&"magic": -1.0, &"imbue": -1.0}
@@ -79,6 +81,9 @@ func apply_display_layout(root: Object) -> void:
 	_set_layout_position(root.get("focus_label_base") as Sprite2D, &"focus", Vector2(120, 148))
 	for button in button_hud_sprites:
 		_set_layout_position(button, &"input_prompts")
+	for prompt in ability_prompt_hud:
+		if prompt != null and prompt.get_parent() != null and prompt.get_parent().name not in ["AbilityIcons", "MagicCooldownIcon", "ImbueCooldownIcon"]:
+			_set_layout_position(prompt, &"ability_icons")
 	for key in cooldown_hud.keys():
 		var control := cooldown_hud[key] as Sprite2D
 		if control != null:
@@ -223,7 +228,7 @@ func update_overhead_bars(
 		set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
 
-func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: InputRouter = null, input_device_tracker: Node = null, pixel_texture: Callable = Callable()) -> void:
+func update_button_hud(buttons: Array[Sprite2D], _devices: Array[int], router: InputRouter = null, input_device_tracker: Node = null, pixel_texture: Callable = Callable()) -> void:
 	if buttons.size() < 4:
 		return
 	var pressed := [false, false, false, false]
@@ -249,6 +254,29 @@ func update_button_hud(buttons: Array[Sprite2D], devices: Array[int], router: In
 			if gamepad_texture is Texture2D:
 				button.texture = gamepad_texture as Texture2D
 		button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+
+
+func update_ability_prompt_hud(prompts: Array[Sprite2D], input_device_tracker: Node = null, router: InputRouter = null, pixel_texture: Callable = Callable()) -> void:
+	if prompts.size() < 2:
+		return
+	var device := int(input_device_tracker.get("current_device")) if input_device_tracker != null else 1
+	var pressed := router != null and router.action_pressed(&"magic")
+	for prompt in prompts:
+		if prompt == null:
+			continue
+		if device == 2:
+			prompt.visible = false
+			prompt.modulate = Color.WHITE
+		elif device == 0 and pixel_texture.is_valid():
+			prompt.visible = true
+			prompt.texture = pixel_texture.call("U", Color.WHITE) as Texture2D
+			prompt.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed else Color.WHITE
+		else:
+			prompt.visible = true
+			var gamepad_texture: Variant = prompt.get_meta("gamepad_texture", prompt.texture)
+			if gamepad_texture is Texture2D:
+				prompt.texture = gamepad_texture as Texture2D
+			prompt.modulate = Color(1.7, 1.7, 1.0, 1.0) if pressed else Color.WHITE
 
 
 func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
@@ -332,6 +360,7 @@ func _update_cooldown_icon(root: Object, ability_key: StringName, remaining: flo
 
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter, root.get("input_device_tracker") as Node, Callable(root, "_pixel_text_texture"))
+	update_ability_prompt_hud(ability_prompt_hud, root.get("input_device_tracker") as Node, root.get("input_router") as InputRouter, Callable(root, "_pixel_text_texture"))
 	update_cooldown_hud(root, delta)
 	update_combo_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
@@ -448,7 +477,7 @@ func cooldown_timer_texture(seconds: float, color: Color) -> Texture2D:
 	# centered at an integer pixel coordinate.
 	var image := Image.create(14, 5, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
-	var x_offset := maxi((14 - text_width) / 2, 0)
+	var x_offset := maxi(int(float(14 - text_width) / 2.0), 0)
 	for character in text:
 		var pattern: Array = glyphs.get(character, glyphs["0"])
 		for y in 5:
@@ -479,8 +508,11 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 		var palette_textures: Dictionary = {}
 		for palette_name in PaletteLibrary.PALETTE_NAMES:
 			palette_textures[palette_name] = library.recolor_ability_icon(source, palette_name)
-		var icon := Sprite2D.new()
-		icon.name = row["name"] + "Icon"
+		var icon := parent.get_node_or_null(row["name"] + "Icon") as Sprite2D
+		if icon == null:
+			icon = Sprite2D.new()
+			icon.name = row["name"] + "Icon"
+			parent.add_child(icon)
 		icon.centered = false
 		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		icon.texture = palette_textures.get("blue") as Texture2D
@@ -493,28 +525,29 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 		material.set_shader_parameter("unavailable", 0.0)
 		material.set_shader_parameter("desaturation_amount", COOLDOWN_ICON_DESATURATION)
 		material.set_shader_parameter("cooldown_dim", COOLDOWN_ICON_DIM)
+		material.set_shader_parameter("elapsed_brightness", COOLDOWN_ELAPSED_BRIGHTNESS)
 		material.set_shader_parameter("flash_strength", 0.0)
 		icon.material = material
-		parent.add_child(icon)
-
-		var timer_shadow := Sprite2D.new()
-		timer_shadow.name = row["name"] + "TimerShadow"
+		var timer_shadow := parent.get_node_or_null(row["name"] + "TimerShadow") as Sprite2D
+		if timer_shadow == null:
+			timer_shadow = Sprite2D.new()
+			timer_shadow.name = row["name"] + "TimerShadow"
+			parent.add_child(timer_shadow)
 		timer_shadow.centered = false
 		timer_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		timer_shadow.position = row["position"] + Vector2(1, 5)
 		timer_shadow.z_index = 2
 		timer_shadow.visible = false
-		parent.add_child(timer_shadow)
-
-		var timer := Sprite2D.new()
-		timer.name = row["name"] + "Timer"
+		var timer := parent.get_node_or_null(row["name"] + "Timer") as Sprite2D
+		if timer == null:
+			timer = Sprite2D.new()
+			timer.name = row["name"] + "Timer"
+			parent.add_child(timer)
 		timer.centered = false
 		timer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		timer.position = row["position"] + Vector2(1, 5)
 		timer.z_index = 3
 		timer.visible = false
-		parent.add_child(timer)
-
 		result[String(row["key"]) + "_icon"] = icon
 		result[String(row["key"]) + "_timer"] = timer
 		result[String(row["key"]) + "_timer_shadow"] = timer_shadow
@@ -522,38 +555,45 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 
 
 func _build_combo_hud(parent: Node) -> Dictionary:
-	var label := Sprite2D.new()
-	label.name = "ComboLabel"
+	var label := parent.get_node_or_null("ComboLabel") as Sprite2D
+	if label == null:
+		label = Sprite2D.new()
+		label.name = "ComboLabel"
+		parent.add_child(label)
 	label.centered = true
 	label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	label.position = Vector2(120, 131)
 	label.z_index = 3
 	label.visible = false
-	parent.add_child(label)
-	var base := Sprite2D.new()
-	base.name = "ComboBase"
+	var base := parent.get_node_or_null("ComboBase") as Sprite2D
+	if base == null:
+		base = Sprite2D.new()
+		base.name = "ComboBase"
+		parent.add_child(base)
 	base.centered = false
 	base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	base.texture = _solid_texture(Vector2i(48, 4), Color8(28, 31, 43, 220))
 	base.position = Vector2(96, 139)
 	base.z_index = 1
 	base.visible = false
-	parent.add_child(base)
-	var fill := Sprite2D.new()
-	fill.name = "ComboFill"
+	var fill := parent.get_node_or_null("ComboFill") as Sprite2D
+	if fill == null:
+		fill = Sprite2D.new()
+		fill.name = "ComboFill"
+		parent.add_child(fill)
 	fill.centered = false
 	fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	fill.texture = _solid_texture(Vector2i(48, 4), Color8(255, 205, 117))
 	fill.position = Vector2(96, 139)
 	fill.z_index = 2
 	fill.visible = false
-	parent.add_child(fill)
 	set_fill_ratio(fill, Vector2(48, 4), 1.0)
 	return {"label": label, "base": base, "fill": fill}
 
 
 func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable, target_bar: Sprite2D, _target_fill: Sprite2D, player_fill: Sprite2D) -> Dictionary:
 	var layout := parent.get_node_or_null("PlayerHud") as Node2D
+	var hud_parent: Node = layout if layout != null else parent
 	var room_number := layout.get_node("RoomNumber") as Sprite2D if layout != null else Sprite2D.new()
 	room_number.name = "RoomNumber"
 	room_number.centered = false
@@ -633,42 +673,75 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	soul_icon.frame = 0
 	soul_icon.texture = SoulVisualsScript.texture()
 	var buttons: Array[Sprite2D] = []
-	for data in [{"texture": "triangle55.png", "position": Vector2(224, 64)}, {"texture": "square55.png", "position": Vector2(219, 69)}, {"texture": "x55.png", "position": Vector2(224, 74)}, {"texture": "circle55.png", "position": Vector2(229, 69)}]:
-		var button := Sprite2D.new()
-		button.texture = load_texture.call("res://assets/artwork/" + data["texture"])
+	var button_names := ["TrianglePrompt", "SquarePrompt", "XPrompt", "CirclePrompt"]
+	var button_textures := ["triangle55.png", "square55.png", "x55.png", "circle55.png"]
+	var button_positions := [Vector2(224, 64), Vector2(219, 69), Vector2(224, 74), Vector2(229, 69)]
+	for index in button_names.size():
+		var button := hud_parent.get_node_or_null("InputPrompts/" + button_names[index]) as Sprite2D
+		if button == null:
+			button = Sprite2D.new()
+			button.name = button_names[index]
+			hud_parent.add_child(button)
+		button.texture = load_texture.call("res://assets/artwork/" + button_textures[index]) if button.texture == null else button.texture
 		button.set_meta("gamepad_texture", button.texture)
 		button.centered = false
 		button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		button.position = data["position"]
+		button.position = button_positions[index]
 		button.z_index = 2
-		parent.add_child(button)
 		buttons.append(button)
-	var cooldowns := _build_cooldown_hud(parent, library, load_texture)
-	var combo := _build_combo_hud(parent)
-	var target_text := Sprite2D.new()
+	var ability_prompts: Array[Sprite2D] = []
+	var ability_icons := hud_parent.get_node_or_null("AbilityIcons") as Node
+	var prompt_parents := ["MagicCooldownIcon", "ImbueCooldownIcon"]
+	var prompt_names := ["TrianglePromptMagic", "TrianglePromptImbue"]
+	for index in prompt_names.size():
+		var prompt_parent := ability_icons.get_node_or_null(prompt_parents[index]) as Node if ability_icons != null else null
+		var prompt := prompt_parent.get_node_or_null(prompt_names[index]) as Sprite2D if prompt_parent != null else null
+		if prompt == null and ability_icons != null:
+			prompt = ability_icons.get_node_or_null(prompt_names[index]) as Sprite2D
+		if prompt == null:
+			prompt = hud_parent.get_node_or_null("InputPrompts/" + prompt_names[index]) as Sprite2D
+		if prompt == null:
+			continue
+		prompt.set_meta("gamepad_texture", prompt.texture if prompt.texture != null else load_texture.call("res://assets/artwork/triangle55.png"))
+		prompt.centered = false
+		prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		prompt.z_index = 10
+		ability_prompts.append(prompt)
+	var cooldowns := _build_cooldown_hud(hud_parent.get_node_or_null("AbilityIcons") if layout != null else parent, library, load_texture)
+	var combo := _build_combo_hud(hud_parent.get_node_or_null("ComboHud") if layout != null else parent)
+	var target_text := hud_parent.get_node_or_null("TargetHud/TargetHealthText") as Sprite2D
+	if target_text == null:
+		target_text = Sprite2D.new()
+		hud_parent.add_child(target_text)
 	target_text.name = "TargetHealthText"
 	target_text.centered = true
 	target_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	target_text.z_index = 3
+	# EnemyHp/EnemyHpFill and its delayed-damage copy occupy z 0..2. Keep the
+	# numeric health readout on an explicit layer above that stack even though
+	# the authored text lives inside PlayerHud/TargetHud.
+	target_text.z_index = 4
 	target_text.position = target_bar.position + target_bar.texture.get_size() * 0.5
 	target_text.visible = false
-	parent.add_child(target_text)
-	var focus_label_base := Sprite2D.new()
-	focus_label_base.name = "FocusLabelBase"
+	var focus_label_base := hud_parent.get_node_or_null("TargetHud/FocusLabelBase") as Sprite2D
+	if focus_label_base == null:
+		focus_label_base = Sprite2D.new()
+		focus_label_base.name = "FocusLabelBase"
+		hud_parent.add_child(focus_label_base)
 	focus_label_base.centered = false
 	focus_label_base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	focus_label_base.z_index = 2
 	focus_label_base.position = Vector2(120, 148)
 	focus_label_base.visible = false
-	parent.add_child(focus_label_base)
-	var focus_label := Sprite2D.new()
-	focus_label.name = "FocusLabel"
+	var focus_label := hud_parent.get_node_or_null("TargetHud/FocusLabel") as Sprite2D
+	if focus_label == null:
+		focus_label = Sprite2D.new()
+		focus_label.name = "FocusLabel"
+		hud_parent.add_child(focus_label)
 	focus_label.centered = false
 	focus_label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	focus_label.z_index = 3
 	focus_label.position = Vector2(120, 148)
 	focus_label.visible = false
-	parent.add_child(focus_label)
 	var player_text := layout.get_node("PlayerStatus/Health/HpText") as Sprite2D if layout != null else Sprite2D.new()
 	player_text.name = "PlayerHealthText"
 	player_text.centered = true
@@ -676,7 +749,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "ability_prompts": ability_prompts, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
 	var marker_texture := _aggro_marker_texture(_palette_name)

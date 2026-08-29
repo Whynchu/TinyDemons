@@ -124,7 +124,9 @@ is active.
    two systems genuinely share them.
 3. Wire the capability into the frame loop from `gameplay_frame_controller.gd`
    or the component's own `tick`.
-4. Add a smoke assertion to `tests/` and run `tests/run_all_smoke.ps1`.
+4. Add a smoke assertion to `tests/` and verify it through MCP when a Godot
+   editor peer is active; reserve `tests/run_all_smoke.ps1` for the supervised
+   standalone gate described below.
 
 ### Add an enemy variant
 
@@ -165,8 +167,15 @@ is active.
 - **Prefer typed references and signals.** A string-created `Callable` remains a
   transitional seam, not the target architecture.
 - **Balance through tuning resources**, not literals in `gameplay.gd`.
-- **Run the smoke suite before every commit**:
+- **Use MCP-first verification when the Godot editor peer is active.** Use MCP
+  for scene inspection, diagnostics, playtests, screenshots, and runtime logs;
+  do not launch the standalone smoke runner from that session.
+- **Run the full smoke suite only as a supervised standalone check** (with no
+  MCP Godot runtime active):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
+  The runner starts one Godot process per registered test (currently around 90),
+  so a headless renderer crash can multiply into Windows memory-error dialogs.
+  Start with one focused test and stop the runner at the first repeating crash.
 - **Keep source art out of the import path.** Loose images in `Artwork/`,
   `Mockups/`, and `screenshots/` are `.gdignore`-marked; only `assets/` is
   imported.

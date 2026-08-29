@@ -74,10 +74,10 @@ func observe_polled_input() -> void:
 
 func _joypad_has_active_input(device: int) -> bool:
 	for button_index in 32:
-		if Input.is_joy_button_pressed(device, button_index):
+		if Input.is_joy_button_pressed(device, button_index as JoyButton):
 			return true
 	for axis in [JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y, JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y, JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
-		if absf(Input.get_joy_axis(device, axis)) > JOYPAD_MOTION_THRESHOLD:
+		if absf(Input.get_joy_axis(device, axis as JoyAxis)) > JOYPAD_MOTION_THRESHOLD:
 			return true
 	return false
 
