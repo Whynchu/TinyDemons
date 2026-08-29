@@ -1,67 +1,178 @@
 @tool
 extends Node2D
 
-const BAR_SIZE := Vector2(48, 16)
-const XP_COLOR := PaletteLibrary.NORMAL["blue"]
-const HP_COLOR := Color8(190, 55, 65)
+## The authored player HUD is one 82x16 logical-pixel strip. Keep the layer
+## sprites at the strip origin so the artwork can be edited in the scene as a
+## single, flush-top-left composition.
+const HUD_SIZE := Vector2(82, 16)
+const HUD_SIZE_PIXELS := Vector2i(82, 16)
+const XP_COLOR := PaletteLibrary.NORMAL["yellow"]
+const HP_COLOR := PaletteLibrary.NORMAL["red"]
 const HP_HIGHLIGHT := Color8(239, 125, 87)
 const MP_COLOR := PaletteLibrary.ACCENT["blue"]
 const GOLD_COLOR := PaletteLibrary.NORMAL["yellow"]
+const LEVEL_NUMBER_ATLAS: Texture2D = preload("res://assets/artwork/player_UI_lvlnumbers.png")
+const LEVEL_NUMBER_COLOR := PaletteLibrary.WHITE
+const LEVEL_NUMBER_ORIGIN := Vector2i(66, 8)
+const LEVEL_SLOT_ORIGINS := [66, 71, 76]
 
-var _source_fill: Texture2D
+var _xp_source: Texture2D
+var _hp_source: Texture2D
+var _mp_source: Texture2D
 var _solid_texture_cache: Dictionary = {}
+var _level_number_texture_cache: Dictionary = {}
 
 
 func _ready() -> void:
-	_source_fill = ($PlayerStatus/LevelXp/XpBarFill as Sprite2D).texture
-	($PreviewContext as Node2D).visible = Engine.is_editor_hint()
+	_capture_source_textures()
+	var preview := get_node_or_null("PreviewContext") as Node2D
+	if preview != null:
+		preview.visible = Engine.is_editor_hint()
 	_configure_sprites()
 	set_static_text("lv. 1")
 	if Engine.is_editor_hint():
-		_set_text($PlayerStatus/Health/HpText, "10/10", Color.WHITE)
-		_set_text($RoomNumber, "D1", Color.WHITE)
-		_set_text($DungeonRun, "SLIMEY DEPTHS R1", Color.WHITE)
-		_set_text($RunTimer, "TIME 00:00", Color.WHITE)
+		_set_text(get_node_or_null("PlayerStatus/Health/HpText") as Sprite2D, "10/10", Color.WHITE)
+		_set_text(get_node_or_null("RoomNumber") as Sprite2D, "D1", Color.WHITE)
+		_set_text(get_node_or_null("DungeonRun") as Sprite2D, "SLIMEY DEPTHS R1", Color.WHITE)
+		_set_text(get_node_or_null("RunTimer") as Sprite2D, "TIME 00:00", Color.WHITE)
 	else:
-		_set_text($PlayerStatus/Health/HpText, "0/0", Color.WHITE)
-	_set_text($PlayerStatus/LevelXp/XpText, "0/100", Color.WHITE)
-	_set_text($PlayerStatus/Mana/MpText, "0/100", Color.WHITE)
-	_set_text($GoldDisplay/GoldAmount, "0", GOLD_COLOR)
-	apply_bar_colors(XP_COLOR)
+		_set_text(get_node_or_null("PlayerStatus/Health/HpText") as Sprite2D, "0/0", Color.WHITE)
+	_set_text(get_node_or_null("PlayerStatus/LevelXp/XpText") as Sprite2D, "0/100", Color.WHITE)
+	_set_text(get_node_or_null("PlayerStatus/Mana/MpText") as Sprite2D, "0/100", Color.WHITE)
+	_set_text(get_node_or_null("GoldDisplay/GoldAmount") as Sprite2D, "0", GOLD_COLOR)
+	apply_bar_colors(XP_COLOR, MP_COLOR)
+
+
+func _capture_source_textures() -> void:
+	if _xp_source == null:
+		var xp_fill := get_node_or_null("PlayerStatus/LevelXp/XpBarFill") as Sprite2D
+		if xp_fill != null:
+			_xp_source = xp_fill.texture
+	if _hp_source == null:
+		var hp_fill := get_node_or_null("PlayerStatus/Health/HpBarFill") as Sprite2D
+		if hp_fill != null:
+			_hp_source = hp_fill.texture
+	if _mp_source == null:
+		var mp_fill := get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D
+		if mp_fill != null:
+			_mp_source = mp_fill.texture
 
 
 func _configure_sprites() -> void:
-	var gold := $GoldDisplay/Gold as Sprite2D
-	gold.hframes = 4
-	gold.vframes = 1
-	gold.frame = 0
-	for fill in [$PlayerStatus/LevelXp/XpBarFill, $PlayerStatus/Health/HpBarFill, $PlayerStatus/Mana/MpBarFill]:
-		var sprite := fill as Sprite2D
-		sprite.region_enabled = true
-		sprite.region_rect = Rect2(Vector2.ZERO, BAR_SIZE)
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var gold := get_node_or_null("GoldDisplay/Gold") as Sprite2D
+	if gold != null:
+		gold.hframes = 4
+		gold.vframes = 1
+		gold.frame = 0
+	for path in ["PlayerStatus/LevelXp/XpBarFill", "PlayerStatus/Health/HpBarFill", "PlayerStatus/Mana/MpBarFill"]:
+		var fill := get_node_or_null(path) as Sprite2D
+		if fill == null:
+			continue
+		fill.centered = false
+		fill.region_enabled = true
+		fill.region_rect = Rect2(Vector2.ZERO, HUD_SIZE)
+		fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# These nodes remain as compatibility targets for gameplay and pause-menu
+	# code, but their old numerical presentation is deliberately absent from
+	# the live HUD. Enemy/target numbers are built by HudController separately.
+	for path in [
+		"PlayerStatus/LevelXp/LevelTextAnchor/LevelText",
+		"PlayerStatus/LevelXp/XpText",
+		"PlayerStatus/Health/HpLabel",
+		"PlayerStatus/Health/HpText",
+		"PlayerStatus/Mana/MpLabel",
+		"PlayerStatus/Mana/MpText",
+		"PlayerStatus/LevelXp/XpBar",
+		"PlayerStatus/Health/HpBar",
+		"PlayerStatus/Mana/MpBar",
+	]:
+		var legacy_sprite := get_node_or_null(path) as Sprite2D
+		if legacy_sprite != null:
+			legacy_sprite.visible = false
 
 
 func set_static_text(level_text: String, _player_color: Color = XP_COLOR) -> void:
-	var level_sprite := $PlayerStatus/LevelXp/LevelTextAnchor/LevelText as Sprite2D
-	_set_text(level_sprite, level_text, Color.WHITE)
-	level_sprite.position.x = -float(level_sprite.texture.get_width())
-	_set_text($PlayerStatus/Health/HpLabel, "hp", Color.WHITE)
-	_set_text($PlayerStatus/Mana/MpLabel, "ch", Color.WHITE)
+	# Keep the legacy targets populated for callers that still use them in
+	# pause/status contexts, while the gameplay HUD uses the dedicated badge.
+	var legacy_level := get_node_or_null("PlayerStatus/LevelXp/LevelTextAnchor/LevelText") as Sprite2D
+	_set_text(legacy_level, level_text, Color.WHITE)
+	if legacy_level != null:
+		legacy_level.visible = false
+	set_level_number(_level_from_text(level_text))
+	var hp_label := get_node_or_null("PlayerStatus/Health/HpLabel") as Sprite2D
+	var mp_label := get_node_or_null("PlayerStatus/Mana/MpLabel") as Sprite2D
+	_set_text(hp_label, "hp", Color.WHITE)
+	_set_text(mp_label, "ch", Color.WHITE)
+	if hp_label != null:
+		hp_label.visible = false
+	if mp_label != null:
+		mp_label.visible = false
 
 
-func apply_bar_colors(player_color: Color = XP_COLOR) -> void:
-	if _source_fill == null:
-		_source_fill = ($PlayerStatus/LevelXp/XpBarFill as Sprite2D).texture
-	($PlayerStatus/LevelXp/XpBarFill as Sprite2D).texture = _solid_texture(_source_fill, player_color)
-	($PlayerStatus/Health/HpBarFill as Sprite2D).texture = _solid_texture(_source_fill, HP_COLOR)
-	($PlayerStatus/Mana/MpBarFill as Sprite2D).texture = _solid_texture(_source_fill, MP_COLOR)
-	for frame in [$PlayerStatus/LevelXp/XpBar, $PlayerStatus/Health/HpBar, $PlayerStatus/Mana/MpBar]:
-		(frame as Sprite2D).self_modulate = Color.WHITE
+func set_level_number(level: int) -> void:
+	var number_sprite := get_node_or_null("PlayerStatus/LevelNumber") as Sprite2D
+	if number_sprite == null:
+		return
+	number_sprite.texture = _level_number_texture(level)
+	number_sprite.centered = false
+	number_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	number_sprite.visible = true
+
+
+func apply_bar_colors(_player_color: Color = XP_COLOR, chroma_color: Color = MP_COLOR) -> void:
+	_capture_source_textures()
+	var xp_fill := get_node_or_null("PlayerStatus/LevelXp/XpBarFill") as Sprite2D
+	var hp_fill := get_node_or_null("PlayerStatus/Health/HpBarFill") as Sprite2D
+	var mp_fill := get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D
+	if xp_fill != null:
+		xp_fill.texture = _solid_texture(_xp_source, XP_COLOR)
+	if hp_fill != null:
+		hp_fill.texture = _solid_texture(_hp_source, HP_COLOR)
+	if mp_fill != null:
+		mp_fill.texture = _solid_texture(_mp_source, chroma_color)
+	for frame_path in ["PlayerStatus/LevelXp/XpBar", "PlayerStatus/Health/HpBar", "PlayerStatus/Mana/MpBar"]:
+		var frame := get_node_or_null(frame_path) as Sprite2D
+		if frame != null:
+			frame.self_modulate = Color.WHITE
 
 
 func hp_highlight_texture() -> Texture2D:
-	return _solid_texture(_source_fill, HP_HIGHLIGHT)
+	_capture_source_textures()
+	return _solid_texture(_hp_source, HP_HIGHLIGHT)
+
+
+func _level_from_text(level_text: String) -> int:
+	var digits := ""
+	for character in level_text:
+		if "0123456789".find(character) >= 0:
+			digits += character
+	return maxi(int(digits), 0) if not digits.is_empty() else 1
+
+
+func _level_number_texture(level: int) -> Texture2D:
+	var display_level := clampi(level, 0, 999)
+	if _level_number_texture_cache.has(display_level):
+		return _level_number_texture_cache[display_level] as Texture2D
+	var image := Image.create(HUD_SIZE_PIXELS.x, HUD_SIZE_PIXELS.y, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var atlas_image := LEVEL_NUMBER_ATLAS.get_image()
+	if atlas_image == null:
+		return null
+	var digits := str(display_level)
+	var first_slot := maxi(LEVEL_SLOT_ORIGINS.size() - digits.length(), 0)
+	var digit_offset := maxi(digits.length() - LEVEL_SLOT_ORIGINS.size(), 0)
+	for index in mini(digits.length(), LEVEL_SLOT_ORIGINS.size()):
+		var digit := int(digits.substr(index + digit_offset, 1))
+		var slot := first_slot + index
+		var slot_x: int = LEVEL_SLOT_ORIGINS[slot]
+		for y in 7:
+			for x in 4:
+				var source_pixel := atlas_image.get_pixel(digit * 4 + x, y)
+				if source_pixel.a > 0.0:
+					image.set_pixel(slot_x + x, LEVEL_NUMBER_ORIGIN.y + y, Color(LEVEL_NUMBER_COLOR.r, LEVEL_NUMBER_COLOR.g, LEVEL_NUMBER_COLOR.b, source_pixel.a))
+	var texture := ImageTexture.create_from_image(image)
+	_level_number_texture_cache[display_level] = texture
+	return texture
 
 
 func _solid_texture(source: Texture2D, color: Color) -> Texture2D:

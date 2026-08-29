@@ -48,7 +48,7 @@ func update_player_mp_ui(root: Object) -> void:
 	if fill_size == Vector2.ZERO and fill.texture != null:
 		fill_size = fill.texture.get_size()
 	if fill_size == Vector2.ZERO:
-		fill_size = Vector2(48, 16)
+		fill_size = Vector2(82, 16)
 	root.set("player_mp_fill_size", fill_size)
 	var max_mp := float(root.get("PLAYER_MAX_MP")) if root.get("PLAYER_MAX_MP") != null else 100.0
 	var chroma := current_player_chroma(root)

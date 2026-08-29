@@ -48,8 +48,12 @@ func apply_display_layout(root: Object) -> void:
 		return
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
-		_set_layout_position(player_hud.get_node_or_null("PlayerStatus/Health") as Node2D, &"hp_mp")
-		_set_layout_position(player_hud.get_node_or_null("PlayerStatus/Mana") as Node2D, &"hp_mp")
+		# PlayerStatus is an authored 82x16 composite. Its origin is intentionally
+		# fixed at the active frame's top-left; moving the legacy Health/Mana
+		# groups independently would tear the new layers apart on wide displays.
+		var player_status := player_hud.get_node_or_null("PlayerStatus") as Node2D
+		if player_status != null:
+			player_status.position = Vector2.ZERO
 		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
 		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
 		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")

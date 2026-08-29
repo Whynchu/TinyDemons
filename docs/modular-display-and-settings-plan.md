@@ -513,3 +513,49 @@ Currency visual note: use `#A73BA7` as the Souls base colour so the HUD and
 world pickup match the Square-button icon. Derive the lighter soul outline /
 highlight from that base while preserving the authored black eyes and grey
 source-art details that are not part of the recolour.
+
+## 15. Authored player HUD strip — 2026-08-29
+
+### Approved visual contract
+
+The player gameplay HUD is now an authored 82×16 logical-pixel strip, matching
+`Mockups/NEW_UI.png`. Its source layers are kept in `Artwork/` and their runtime
+copies are imported from `assets/artwork/`:
+
+- `player_UI_frame.png` supplies the shared frame and dark bar wells.
+- `player_UI_hp.png`, `player_UI_mp.png`, and `player_UI_xp.png` supply the
+  three bar shapes at their final pixel coordinates.
+- `player_UI_portrait.png`, `player_UI_lvl.png`, and
+  `player_UI_lvlnumberbg.png` supply the portrait, `LVL` label, and three
+  silhouette-backed number slots.
+- `player_UI_lvlnumbers.png` is the ten-digit 4×7 pinball-style atlas. Digits
+  are right-aligned into the three supplied slots, leaving unused slots
+  transparent so the silhouette remains visible behind them.
+
+All layers are children of `PlayerStatus` and start at `(0, 0)`. `PlayerStatus`
+itself is anchored to the active logical frame's top-left and is not moved by
+the wide-aspect center anchor used by the retired HP/MP groups. The individual
+art layers remain scene-authored nodes so future pixel adjustments can be made
+in the editor without a text setup pass overwriting their positions.
+
+### Gameplay versus menu readouts
+
+The gameplay player strip communicates resources through the bars only:
+
+- HP uses the authored red bar and the existing damage-transition fill.
+- XP is always `PaletteLibrary.NORMAL["yellow"]`, independent of the player's
+  selected Chroma palette.
+- MP/Chroma uses `PaletteLibrary.ACCENT[current_palette]`, the same accent that
+  represents the active Chroma element elsewhere in gameplay.
+- Player HP, MP/Chroma, and XP numerals/labels are hidden on the gameplay HUD.
+  Their legacy nodes remain populated as compatibility targets for pause/status
+  screens and runtime presenters; enemy/target health readouts remain visible.
+- Floating XP reward feedback remains available, but now uses the same yellow
+  progression color as the XP bar.
+
+### Verification
+
+`player_hud_scene_smoke.gd` verifies the imported layer dimensions, exact origin,
+4×7 level glyph alignment, yellow XP, palette-driven Chroma, and hidden gameplay
+resource numerals. `display_responsive_scene_smoke.gd` verifies that the strip
+stays flush to the top-left across 3:2, 16:10, 16:9, and `FULL` display modes.

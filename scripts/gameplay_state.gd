@@ -409,7 +409,7 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(self)
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
-		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name))
+		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name), PaletteLibrary.accent(palette_name))
 	_update_player_progression_ui()
 	_update_mp_desaturation()
 func _set_entrance_open(is_open: bool) -> void:
@@ -908,7 +908,7 @@ func _build_room_number_indicator() -> void:
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
-	hud_root.call("apply_bar_colors", player_hud_color)
+	hud_root.call("apply_bar_colors", player_hud_color, PaletteLibrary.accent(screen_state_controller.player_palette_name))
 	_update_player_progression_ui()
 func _update_gold_indicator() -> void: if hud_controller.gold_indicator != null: hud_controller.gold_amount_indicator.texture = _pixel_text_texture(str(player_profile.gold if player_profile != null else 0), Color8(255, 205, 117))
 func _update_soul_indicator() -> void: if hud_controller.soul_amount_indicator != null: hud_controller.soul_amount_indicator.texture = _pixel_text_texture(str(player_profile.souls if player_profile != null else 0), SOUL_COLOR)
