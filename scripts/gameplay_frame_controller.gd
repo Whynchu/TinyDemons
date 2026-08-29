@@ -17,10 +17,10 @@ func update_player_input(root: Object, delta: float) -> void:
 	var attack_down: bool = root.call("_is_attack_input_pressed"); var attack := root.get("player_attack_component") as PlayerAttackComponent
 	if attack != null:
 		attack.set_attack_input_held(attack_down)
-		attack.update_spin_input(root, root.call("_raw_movement_input"), delta, not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")))
+		attack.update_spin_input(root, root.call("_raw_movement_input"), delta, not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_backflipping")) and not bool(root.get("player_is_defending")))
 	if attack_down and not bool(root.get("player_attack_input_was_down")):
 		var accepted_attack := false
-		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
+		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_backflipping")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
 			if attack != null and attack.spin_gesture.is_armed():
 				accepted_attack = attack.start_spin_attack(root)
 			elif float(root.get("player_between_timer")) > 0.0:
@@ -35,10 +35,14 @@ func update_player_input(root: Object, delta: float) -> void:
 	var roll_down: bool = root.call("_is_roll_input_pressed")
 	if roll_down and not bool(root.get("player_roll_input_was_down")):
 		var accepted_roll := false
-		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_defending")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
+		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_backflipping")) and not bool(root.get("player_is_defending")) and (root.get("player_motor") == null or not (root.get("player_motor") as ActorMotor).is_in_knockback()):
 			var roll := root.get("player_roll_component") as PlayerRollComponent
 			if roll != null:
-				roll.start_from_root(root); accepted_roll = true
+				if roll.should_backflip(root):
+					roll.start_backflip_from_root(root)
+				else:
+					roll.start_from_root(root)
+				accepted_roll = true
 		if accepted_roll:
 			# Running is a continuation of this roll-button hold: while the button
 			# stays held after the dodge, movement becomes a run instead of a walk.
@@ -48,7 +52,12 @@ func update_player_input(root: Object, delta: float) -> void:
 	root.set("player_roll_input_held", roll_down)
 	if not roll_down:
 		root.set("player_roll_hold_armed", false)
-	root.set("player_is_targeting", root.call("_is_target_input_held"))
+	var target_down: bool = root.call("_is_target_input_held")
+	if target_down and not bool(root.get("target_input_was_down")):
+		# Remember the facing from just before the lock-on so a no-target backflip
+		# retreats while keeping the player's original facing.
+		root.set("player_facing_left_before_target", bool(root.get("last_player_facing_left")))
+	root.set("player_is_targeting", target_down)
 	_update_magic_input(root, delta)
 
 

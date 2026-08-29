@@ -8,7 +8,9 @@ system. The canonical rules are in
 ## Enemy drops
 
 - Every defeated enemy drops one Soul.
-- Souls use a generated 9x9 nearest-filtered diamond sprite for now.
+- Souls use the authored 5x5 `Souls.png` sprite. The grey body is recoloured
+  to the existing soul-purple currency base, while the light outline is a
+  lighter highlight of that same base; the two dark eye pixels remain intact.
 - The pickup launches, lands, bobs, and auto-collects like a Chroma pickup.
 - Collected Souls are saved on `PlayerProfile`, so they survive room changes
   and are available when the player returns to the hub.
@@ -24,8 +26,10 @@ Slime, it guarantees at least one low-level Normal Slime popcorn slot, and
 every additional popcorn slot is also forced to Normal Slime. Shadow itself
 is never selected as a popcorn roll, so the pressure enemy remains present
 while the low-level mana-recovery opportunity stays readable. Boss rooms also
-add two guaranteed Normal Slime popcorn slots beside the scaled boss and its
-minors on Run 1, adding one more support slot per run up to six.
+add guaranteed Normal Slime popcorn slots beside the scaled boss: Runs 1–4
+use only that neutral popcorn support, while normal/elemental minor slimes
+join the boss roster starting on Run 5. The popcorn group starts at two slots
+on Run 1 and adds one more support slot per run up to six.
 
 Each popcorn slot returns five seconds after defeat while a Shadow or scaled boss remains alive;
 the respawn queue is cleared as soon as that big threat is defeated.
@@ -47,10 +51,16 @@ single use simultaneously:
 
 A flame does not heal or refill passively, and the first starter-flame
 attunement is not free. On the first run, if the player has fewer than 5
-Souls, the Cloaked Demon gives them a one-time 5-Soul starter grant during
+Souls, the Cloaked Demon gives them a conditional 5-Soul starter grant during
 their tutorial dialogue. The player then spends those Souls at the starter
 fire to begin the run. A same-color flame is unavailable when HP and active
 Chroma are already full, so a player cannot spend Souls on a no-op service.
+
+The starter flame selected during character creation is the hub flame even
+though it is not yet permanently bound. It remains the hub flame across later
+runs until the player explicitly completes a permanent Bind for another
+element. Temporary run attunements and Fusion results do not change that hub
+identity.
 
 ### Approved elemental Binding/Fusion extension
 
@@ -91,17 +101,20 @@ Fusion uses a stepped Soul ladder:
 - Gold remains the currency for shops, chest rewards, respec, and overflow
   salvage.
 
-The hub FUSE page shows Soul costs and the current Soul balance, and the world
-HUD shows a purple coin icon with the Soul balance beside the existing gold
-display.
+The hub FUSE and BIND pages show Soul costs and the current Soul balance with
+the authored soul icon, and the world HUD shows the same icon beside the Soul
+balance and existing gold display.
 
 ## Verification
 
 - `tests/rogue_slime_smoke.gd` covers Shadow/Normal popcorn composition.
-- `tests/soul_pickup_smoke.gd` covers the 9x9 sprite and persistent collection.
+- `tests/soul_pickup_smoke.gd` covers the authored 5x5 sprite, recolour rules,
+  currency headers, and persistent collection.
 - `tests/item_economy_smoke.gd` covers profile persistence and Soul-paid fusion.
-- `tests/fire_exchange_smoke.gd` covers the one-time starter grant, quick-press
+- `tests/fire_exchange_smoke.gd` covers the conditional starter grant, quick-press
   Swap/hold-to-Fuse gesture, and fixed 5-Soul atomic flame service.
+- `tests/starter_flame_hub_scene_smoke.gd` covers starter-flame hub persistence
+  across runs and replacement only after an explicit Bind.
 - `tests/generated_run_scene_smoke.gd` covers a paid alternate fire attunement.
 - `tests/elemental_binding_smoke.gd` covers 5-Soul Swap/Fuse, no-bound Fusion,
   flat 50-Soul Demon Binding, current/bound persistence, and unbound elemental

@@ -17,6 +17,10 @@ enum SocketKind {
 @export_node_path("Polygon2D") var trigger_path: NodePath
 @export_node_path("Marker2D") var spawn_marker_path: NodePath
 @export var block_tile_paths: Array[NodePath] = []
+## Some authored sockets do not have a replacement floor tile to use as a
+## blocker. Their doorway guide is still the exact seam that must be sealed
+## while the connection is hidden or locked.
+@export var block_trigger_when_closed := false
 
 
 func socket_id() -> StringName:

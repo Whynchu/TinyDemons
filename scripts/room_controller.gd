@@ -36,6 +36,7 @@ const LATER_POPCORN_CHANCE: float = 0.16
 const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
+const BOSS_MIXED_SUPPORT_START_RANK: int = 5
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
@@ -185,7 +186,9 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := _generated_enemy_base_level(room_depth)
-	var minor_count := 2 if progression_run_rank <= 2 else 3 if progression_run_rank <= 4 else 4 if progression_run_rank <= 5 else 6 if progression_run_rank <= 10 else 6
+	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
+	# Normal/elemental minor slimes join the roster starting with Run 5.
+	var minor_count := 0 if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK else 4 if progression_run_rank <= 5 else 6
 	# Purple is a rare supporting encounter. It is never the scaled lead boss,
 	# and it is not guaranteed as a minor, because its pressure is much higher
 	# than the ordinary slime variants.
@@ -355,6 +358,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.call("_cancel_magic_animation")
 	root.call("_reset_magic_runtime")
 	root.set("player_is_rolling", false)
+	root.set("player_is_backflipping", false)
 	root.set("orb_knockback_animation_lock", false)
 	root.set("orb_knockback_animation_grace", false)
 	root.set("orb_knockback_attack_cancelled", false)
@@ -482,6 +486,10 @@ func build_entrance_blocks(root: Object) -> void:
 			if connection_available and not boss_entrance_sealed:
 				continue
 		for tile in socket.block_tiles(): blocks.append(root.call("_tile_top_polygon", tile))
+		if socket.block_trigger_when_closed:
+			var trigger_block := _socket_trigger_polygon(socket)
+			if trigger_block.size() >= 3:
+				blocks.append(trigger_block)
 	root.set("entrance_block_polygons", blocks)
 
 
@@ -616,7 +624,12 @@ func _assign_rest_fire_palette(root: Object) -> void:
 	var fire_palette: String
 	var graph := root.get("dungeon_graph") as DungeonGraph
 	var tutorial_run := graph != null and graph.completed_run_count == 0
-	if room_type == DungeonGraph.ROOM_START or tutorial_run:
+	if room_type == DungeonGraph.ROOM_START:
+		var profile := root.get("player_profile") as PlayerProfile
+		fire_palette = profile.hub_palette() if profile != null else str(root.get("run_start_palette_name"))
+		if fire_palette.is_empty(): fire_palette = str(root.get("run_start_palette_name"))
+		if fire_palette.is_empty(): fire_palette = String((root.get("screen_state_controller") as Object).get("player_palette_name"))
+	elif tutorial_run:
 		fire_palette = str(root.get("run_start_palette_name"))
 		if fire_palette.is_empty(): fire_palette = String((root.get("screen_state_controller") as Object).get("player_palette_name"))
 	else:
@@ -1351,6 +1364,10 @@ func capture_normal_room_geometry(root: Object) -> void:
 	if guide != null:
 		saved["guide_position"] = guide.position
 		saved["guide_polygon"] = guide.polygon.duplicate()
+	for path in ["FloorTiles/Entrance/EntranceReturnGuide", "FloorTiles/EntranceRight/EntranceReturnGuide"]:
+		var return_guide := map_root.get_node_or_null(path) as Polygon2D
+		if return_guide != null:
+			saved["position:%s" % path] = return_guide.position
 	for path in ["FloorTiles/Entrance", "FloorTiles/EntranceRight", "Walls/DoorLeft", "Walls/DoorRight"]:
 		var node := map_root.get_node_or_null(path) as Sprite2D
 		if node != null:
@@ -1389,8 +1406,12 @@ func restore_normal_room_geometry(root: Object) -> void:
 			node.texture = saved.get("texture:%s" % path, node.texture)
 			node.flip_h = bool(saved.get("flip_h:%s" % path, node.flip_h))
 			node.flip_v = bool(saved.get("flip_v:%s" % path, node.flip_v))
-		node.offset = saved.get("offset:%s" % path, node.offset)
-		node.scale = saved.get("scale:%s" % path, node.scale)
+			node.offset = saved.get("offset:%s" % path, node.offset)
+			node.scale = saved.get("scale:%s" % path, node.scale)
+	for path in ["FloorTiles/Entrance/EntranceReturnGuide", "FloorTiles/EntranceRight/EntranceReturnGuide"]:
+		var return_guide := map_root.get_node_or_null(path) as Polygon2D
+		if return_guide != null:
+			return_guide.position = saved.get("position:%s" % path, return_guide.position)
 
 
 func configure_large_room_camera(root: Object, enabled: bool) -> void:

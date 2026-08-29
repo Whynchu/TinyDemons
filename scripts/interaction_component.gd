@@ -60,8 +60,13 @@ func update_targeting(root: Object) -> void:
 	target_cycle_axis = cycle_direction
 	target = root.call("_valid_current_target") as Sprite2D
 	var player := root.get("player") as Sprite2D
-	if target != null and not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")):
-		player.flip_h = target_facing_left(root, target)
+	if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")):
+		if target != null:
+			player.flip_h = target_facing_left(root, target)
+		else:
+			# Lock the facing the player had when they pressed lock-on, even with
+			# no target to stare at, so the lock keeps them looking that way.
+			player.flip_h = root.get("player_facing_left_before_target") == true
 	root.call("_update_target_ui")
 
 

@@ -107,7 +107,7 @@ func set_attack_input_held(held: bool) -> void:
 
 func update_spin_input(root: Object, movement: Vector2, delta: float, can_listen: bool) -> void:
 	_configure_spin_gesture(root)
-	if not can_listen or active or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_defending")):
+	if not can_listen or active or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or bool(root.get("player_is_defending")):
 		spin_gesture.reset()
 		return
 	spin_gesture.update(movement, delta)

@@ -43,14 +43,15 @@ func _initialize() -> void:
 		var player_material := player.material as ShaderMaterial
 		_expect(attack_material != null and not grey_attack.is_empty() and attack_material.get_shader_parameter("grey_texture") == grey_attack[0], "empty-MP attack uses its matching grey frame", failures)
 		_expect(player_material != null and player_material != attack_material, "base and attack layers use independent MP materials", failures)
-		_expect(sprite_shadow.material == attack_material, "attack shadow uses the attack layer MP material", failures)
+		_expect(sprite_shadow.material == null, "attack shadow does not inherit the attack layer MP material", failures)
+		_expect(sprite_shadow.self_modulate.is_equal_approx(Color(0.0, 0.0, 0.0, 0.25)), "attack shadow uses the equipment-style black silhouette tint", failures)
 		for frame_index in grey_attack.size():
 			gameplay.set("player_anim_name", "attack1")
 			gameplay.set("player_anim_frame", frame_index)
 			animation.apply_frame(gameplay)
 			gameplay.call("_update_player_shadow")
 			_expect(attack_visual.material.get_shader_parameter("grey_texture") == grey_attack[frame_index], "empty-MP attack keeps grey frame %d synchronized" % frame_index, failures)
-			_expect(sprite_shadow.material.get_shader_parameter("grey_texture") == grey_attack[frame_index], "empty-MP attack shadow keeps grey frame %d synchronized" % frame_index, failures)
+			_expect(sprite_shadow.material == null, "empty-MP attack shadow stays independent of the grey shader at frame %d" % frame_index, failures)
 			_expect(not player.visible and attack_visual.visible, "attack frame %d keeps the base layer hidden" % frame_index, failures)
 		var visible_equipment_layers := 0
 		var equipment_grey_set := equipment.get("frames_by_palette").get("grey", {}) as Dictionary

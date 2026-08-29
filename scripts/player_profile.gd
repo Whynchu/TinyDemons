@@ -127,8 +127,19 @@ func spend_souls(amount: int) -> bool:
 	return true
 
 
+## The hub flame is the file's starter choice until the player pays for an
+## explicit permanent Bind. Temporary run attunements and fusions must not
+## replace this identity.
+func hub_flame() -> StringName:
+	return bound_element if has_bound_element and AspectCatalogScript.is_elemental_flame(bound_element) else starter_flame
+
+
+func hub_palette() -> String:
+	return AspectCatalogScript.palette_for_flame(hub_flame())
+
+
 func persistent_flame() -> StringName:
-	return bound_element if has_bound_element else starter_flame
+	return hub_flame()
 
 
 func can_bind_element(element: StringName) -> bool:

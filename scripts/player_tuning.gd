@@ -76,6 +76,8 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var charged_attack2_damage_multiplier := 1.60
 @export var charged_attack2_knockback_multiplier := 1.50
 @export var roll_frame_time := 0.05
+## Backflip uses a steady cadence instead of the roll's landing-frame hold.
+@export var backflip_frame_time := 0.05
 @export var roll_distance := 24.3
 @export var roll_duration := 0.30
 @export var death_particle_lifetime := 1.8

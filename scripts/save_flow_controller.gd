@@ -135,7 +135,7 @@ func reset_runtime_for_new_save(root: Object) -> void:
 	root.player_profile.last_clear_score = 0
 	root.player_profile.difficulty_rank = 1
 	root.player_profile.last_run_grade = "D"
-	root.run_start_palette_name = root.player_profile.palette_name
+	root.run_start_palette_name = root.player_profile.hub_palette()
 	root.player_profile.pending_route = "title"
 	root.player_profile.open_hub_on_load = false
 	if root.run_state != null:

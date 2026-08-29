@@ -32,10 +32,15 @@ func _initialize() -> void:
 			var variants := encounter["variants"] as Array
 			var scales := encounter["scales"] as Array
 			var popcorn := encounter["popcorn"] as Array
+			var expected_minor_count := 0 if rank < 5 else 4 if rank <= 5 else 6
 			_expect(String(variants[0]) != "purple", "scaled lead boss excludes the purple variant at rank %d seed %d" % [rank, seed], failures)
 			_expect(variants.size() == scales.size() and variants.size() == popcorn.size(), "boss support slots keep encounter arrays aligned at rank %d seed %d" % [rank, seed], failures)
-			var support_index := variants.size() - 1
-			_expect(support_index > 0 and String(variants[support_index]) == "grey" and bool(popcorn[support_index]) and int((encounter["levels"] as Array)[support_index]) == rooms._popcorn_enemy_level(), "boss encounter guarantees a Normal Slime popcorn slot at rank %d seed %d" % [rank, seed], failures)
+			_expect(variants.size() == 1 + expected_minor_count + rooms._boss_support_popcorn_count(), "boss encounter uses the expected mixed-support roster at Run %d" % rank, failures)
+			var last_support_index := variants.size() - 1
+			_expect(last_support_index > 0 and String(variants[last_support_index]) == "grey" and bool(popcorn[last_support_index]) and int((encounter["levels"] as Array)[last_support_index]) == rooms._popcorn_enemy_level(), "boss encounter guarantees a Normal Slime popcorn slot at rank %d seed %d" % [rank, seed], failures)
+			if rank < 5:
+				for neutral_index in range(1, variants.size()):
+					_expect(String(variants[neutral_index]) == "grey" and bool(popcorn[neutral_index]), "Runs 1–4 boss support stays neutral popcorn at rank %d seed %d" % [rank, seed], failures)
 			var support_count := 0
 			for popcorn_value in popcorn:
 				if bool(popcorn_value):

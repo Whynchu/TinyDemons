@@ -1,5 +1,7 @@
 extends SceneTree
 
+const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+
 var _finished := false
 
 
@@ -20,7 +22,7 @@ func _initialize() -> void:
 	var profile := gameplay.get("player_profile") as PlayerProfile
 	var hud_controller := gameplay.get("hud_controller") as Node
 	var texture := pickup_runtime.call("soul_pickup_texture") as Texture2D if pickup_runtime != null else null
-	_expect(texture != null and texture.get_width() == 9 and texture.get_height() == 9, "Soul stand-in is exactly 9x9", failures)
+	_expect(texture != null and texture.get_width() == 5 and texture.get_height() == 5, "Soul pickup uses the authored 5x5 Souls icon", failures)
 	_expect(soul_controller != null, "Soul pickup controller is composed", failures)
 	if hud_controller != null:
 		var player_hud := (gameplay.get("ui") as Node).get_node("PlayerHud") as Node2D
@@ -28,16 +30,24 @@ func _initialize() -> void:
 		var soul_display := player_hud.get_node("SoulDisplay") as Node2D
 		var soul_icon := hud_controller.get("soul_icon_indicator") as Sprite2D
 		_expect(is_equal_approx(gold_display.position.y, 2.0) and is_equal_approx(soul_display.position.y, 9.0), "currency displays sit inside the top black bar", failures)
-		_expect(soul_icon != null and soul_icon.texture != null and soul_icon.texture.get_width() == 5 and soul_icon.texture.get_height() == 5, "Soul HUD uses a 5x5 coin icon", failures)
+		_expect(soul_icon != null and soul_icon.texture == texture, "Soul HUD and pickups share one authored soul texture", failures)
+		_expect(soul_icon != null and soul_icon.texture != null and soul_icon.texture.get_width() == 5 and soul_icon.texture.get_height() == 5, "Soul HUD uses a 5x5 soul icon", failures)
 		var soul_image := soul_icon.texture.get_image() if soul_icon != null and soul_icon.texture != null else null
-		var has_purple_pixel := false
-		if soul_image != null:
-			for y in soul_image.get_height():
-				for x in soul_image.get_width():
-					var pixel := soul_image.get_pixel(x, y)
-					if pixel.a > 0.0 and pixel.b > pixel.r and pixel.b > pixel.g:
-						has_purple_pixel = true
-		_expect(has_purple_pixel, "Soul coin pixels are dyed purple", failures)
+		var source_texture := load(SoulVisualsScript.SOURCE_PATH) as Texture2D
+		var source_image := source_texture.get_image() if source_texture != null else null
+		_expect(soul_image != null and soul_image.get_pixel(2, 1).is_equal_approx(SoulVisualsScript.SOUL_COLOR), "Soul body uses the existing soul-purple currency colour", failures)
+		_expect(soul_image != null and soul_image.get_pixel(1, 0).is_equal_approx(SoulVisualsScript.SOUL_HIGHLIGHT_COLOR), "Soul outline uses a highlight of the soul-purple base", failures)
+		_expect(soul_image != null and source_image != null and soul_image.get_pixel(1, 2).is_equal_approx(source_image.get_pixel(1, 2)), "Soul eyes remain the authored dark pixels", failures)
+		_expect(soul_image != null and source_image != null and not soul_image.get_pixel(2, 1).is_equal_approx(source_image.get_pixel(2, 1)), "Soul grey body is recoloured", failures)
+		_expect(soul_image != null and source_image != null and not soul_image.get_pixel(1, 0).is_equal_approx(source_image.get_pixel(1, 0)), "Soul light outline is recoloured independently", failures)
+		var hub_screen := gameplay.get("screen_state_controller") as Node
+		if hub_screen != null:
+			gameplay.call("_show_hub")
+			gameplay.call("_set_hub_page", 3)
+			var hub_currency_icon := hub_screen.get("hub_currency_icon") as Sprite2D
+			_expect(hub_currency_icon != null and hub_currency_icon.visible and hub_currency_icon.texture == texture, "Fusion currency header uses the authored soul icon", failures)
+			gameplay.call("_set_hub_page", 4)
+			_expect(hub_currency_icon != null and hub_currency_icon.visible and hub_currency_icon.texture == texture, "Binding currency header uses the authored soul icon", failures)
 	if soul_controller != null and profile != null:
 		var before := profile.souls
 		var player := gameplay.get("player") as Sprite2D

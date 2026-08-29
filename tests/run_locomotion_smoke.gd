@@ -108,6 +108,57 @@ func _initialize() -> void:
 		frame_controller.update_player_input(gameplay, 0.016)
 		_expect(not bool(gameplay.get("player_roll_hold_armed")), "releasing the roll button disarms the run latch", failures)
 
+	# Backflip: the target-lock retreat dodge with i-frames and a landing step.
+	var backflip_frames := anim.backflip_frames as Array[Texture2D]
+	_expect(backflip_frames.size() == 8, "TinyDemon-backflip sheet slices into eight 36x36 frames", failures)
+	var roll := gameplay.get("player_roll_component") as PlayerRollComponent
+	_expect(roll != null, "roll component is composed for the backflip", failures)
+	if roll != null and not backflip_frames.is_empty():
+		gameplay.set("player_is_targeting", false)
+		router.set("_movement", Vector2.LEFT)
+		_expect(not roll.should_backflip(gameplay), "backflip requires the lock-on input", failures)
+		gameplay.set("player_is_targeting", true)
+		player.flip_h = false
+		gameplay.set("player_facing_left_before_target", false)
+		router.set("_movement", Vector2.LEFT)
+		_expect(roll.should_backflip(gameplay), "no-target backflip activates when holding away from facing", failures)
+		router.set("_movement", Vector2.RIGHT)
+		_expect(not roll.should_backflip(gameplay), "pushing toward the facing does not backflip", failures)
+		router.set("_movement", Vector2.LEFT)
+		var equipment_visual := gameplay.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+		var equipment_fixture := gameplay.get("player_equipment") as EquipmentComponent
+		if equipment_visual != null and equipment_fixture != null:
+			var shield_was_equipped := equipment_fixture.has_shield
+			equipment_fixture.has_shield = true
+			gameplay.set("player_is_rolling", false)
+			gameplay.set("player_is_backflipping", false)
+			gameplay.set("player_is_attacking", false)
+			gameplay.set("player_is_defending", false)
+			gameplay.set("player_is_magic_casting", false)
+			gameplay.set("player_anim_name", "idle")
+			equipment_visual.begin_attack_visual(gameplay)
+			var equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
+			var sword_before := equipment_layers.get("EquipmentSwordBack") as Sprite2D
+			var shield_before := equipment_layers.get("EquipmentShieldFront") as Sprite2D
+			_expect(sword_before != null and sword_before.visible and shield_before != null and shield_before.visible, "backflip test starts with visible sword and shield layers", failures)
+			gameplay.set("player_is_backflipping", true)
+			equipment_visual.tick(gameplay, 0.0)
+			_expect(not equipment_visual.active and equipment_visual.roll_fizzle_active and equipment_visual.fade_timer > 0.0, "backflip starts the same equipment fizzle as a roll", failures)
+			gameplay.set("player_is_backflipping", false)
+			equipment_visual.tick(gameplay, 0.20)
+			_expect(not sword_before.visible and not shield_before.visible, "backflip equipment breakup clears sword and shield layers", failures)
+			equipment_fixture.has_shield = shield_was_equipped
+		roll.start_backflip_from_root(gameplay)
+		_expect(bool(gameplay.get("player_is_backflipping")), "backflip input starts the retreat dodge", failures)
+		_expect(not bool(player.flip_h), "backflip keeps the pre-target facing", failures)
+		for _tick in 60:
+			roll.update_from_root(gameplay, 1.0 / 60.0)
+			if not bool(gameplay.get("player_is_backflipping")):
+				break
+		_expect(not bool(gameplay.get("player_is_backflipping")), "backflip completes and clears its state", failures)
+		router.set("_movement", Vector2.ZERO)
+		gameplay.set("player_is_targeting", false)
+
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

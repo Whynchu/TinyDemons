@@ -197,6 +197,7 @@ arrival_offset = Vector2(-6, -10.5)
 visual_path = NodePath("../../Walls/DoorLeft")
 trigger_path = NodePath("../../Walls/DoorLeft/DoorExitGuide")
 spawn_marker_path = NodePath("SpawnMarker")
+block_trigger_when_closed = true
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_LEFT" unique_id=2047002230]
 position = Vector2(98, 53)
@@ -208,6 +209,7 @@ arrival_offset = Vector2(-10, -10.5)
 visual_path = NodePath("../../Walls/DoorRight")
 trigger_path = NodePath("../../Walls/DoorRight/DoorExitGuide")
 spawn_marker_path = NodePath("SpawnMarker")
+block_trigger_when_closed = true
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/WALL_RIGHT" unique_id=2122602550]
 position = Vector2(126, 53)
