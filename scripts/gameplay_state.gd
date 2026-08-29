@@ -64,8 +64,8 @@ const CHROMA_PICKUP_AIR_TIME := 0.38
 const SOUL_PICKUP_VALUE := 1
 const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
 const SOUL_PICKUP_AIR_TIME := 0.38
-const SOUL_PICKUP_LAUNCH_SPEED := 30.0
-const SOUL_PICKUP_LAUNCH_SPREAD := 18.0
+const SOUL_PICKUP_LAUNCH_SPEED := 18.0
+const SOUL_PICKUP_LAUNCH_SPREAD := 10.0
 const FLAME_SWAP_SOUL_COST := 5
 const FLAME_FUSION_SOUL_COST := 5
 const FLAME_FUSION_HOLD_THRESHOLD := 0.35
@@ -512,8 +512,8 @@ func _can_interact_with_world_item() -> bool:
 	return bool(pickup_runtime_controller.call("can_interact_with_world_item", self))
 func _collect_world_item_drop() -> bool:
 	return bool(pickup_runtime_controller.call("collect_world_item_drop", self))
-func _spawn_chroma_pickup(position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
-	pickup_runtime_controller.call("spawn_chroma_pickup", self, position, value, launch_seed, launch_direction)
+func _spawn_chroma_pickup(position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
+	return pickup_runtime_controller.call("spawn_chroma_pickup", self, position, value, launch_seed, launch_direction, avoid_position) as Vector2
 func _restore_chroma_pickups(saved_pickups: Array) -> void:
 	pickup_runtime_controller.call("restore_chroma_pickups", self, saved_pickups)
 func _update_chroma_pickups(delta: float) -> void:
@@ -527,8 +527,8 @@ func _remove_chroma_pickup(index: int) -> void:
 	pickup_runtime_controller.call("remove_chroma_pickup", self, index)
 func _clear_chroma_pickups() -> void:
 	pickup_runtime_controller.call("clear_chroma_pickups", self)
-func _spawn_soul_pickup(position: Vector2, value: int = SOUL_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
-	pickup_runtime_controller.call("spawn_soul_pickup", self, position, value, launch_seed, launch_direction)
+func _spawn_soul_pickup(position: Vector2, value: int = SOUL_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
+	return pickup_runtime_controller.call("spawn_soul_pickup", self, position, value, launch_seed, launch_direction, avoid_position) as Vector2
 func _update_soul_pickups(delta: float) -> void:
 	pickup_runtime_controller.call("update_soul_pickups", self, delta)
 func _collect_soul_pickup(index: int) -> void:

@@ -26,6 +26,10 @@ var attack_element := ElementCatalogScript.Element.NEUTRAL
 var attack_button_held := false
 var charge_elapsed := 0.0
 var hit_sound_played := false
+## Captured when the current swing starts. Movement is locked during attacks, so
+## this latch keeps a running attack's bonuses stable through the hit frame.
+var running_attack_active := false
+var combo_running_attack := false
 var spin_gesture = CircularInputRecognizerScript.new()
 var _spin_gesture_configured := false
 var _spin_gesture_signature := 0
@@ -57,6 +61,12 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	var frames: Array[Texture2D] = anim.spin_frames if new_kind == AttackKind.SPIN else anim.attack2_frames if new_variant == 2 else anim.attack_frames
 	if frames.is_empty():
 		return false
+	var starts_from_run := bool(root.get("player_is_running"))
+	if new_variant == 2 and combo_buffered:
+		starts_from_run = combo_running_attack
+	elif new_kind == AttackKind.CHARGED_ATTACK2 and attack_kind == AttackKind.CHARGING:
+		starts_from_run = running_attack_active
+	running_attack_active = starts_from_run and new_kind != AttackKind.SPIN
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_attack(new_variant, bool(root.call("_is_run_combat_active")))
@@ -82,7 +92,8 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 		combo_timer = 0.0
 		root.set("player_between_timer", 0.0)
 	else:
-		start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
+		var run_lunge_multiplier := tuning.run_attack_lunge_multiplier if running_attack_active else 1.0
+		start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (tuning.attack_lunge_distance * run_lunge_multiplier * attack_multiplier / tuning.attack_lunge_duration)), tuning.attack_lunge_duration / attack_multiplier)
 	root.set("player_anim_name", animation_name)
 	if new_variant == 2:
 		root.set("player_between_timer", 0.0)
@@ -238,6 +249,8 @@ func apply_hitbox(root: Object) -> void:
 				damage = base_damage * tuning.spin_damage_multiplier
 			if target_count > 1 and variant == 2:
 				damage = maxf(damage * tuning.attack2_multi_target_damage_multiplier, damage + 1.0)
+			if running_attack_active:
+				damage *= tuning.run_attack_damage_multiplier
 		var divided_damage := 0.0 if damage_result.immune else floorf(damage / maxf(divisor, 1.0))
 		if is_finisher() and not damage_result.immune:
 			# A combo finisher must always beat the equivalent first-swing share,
@@ -246,6 +259,8 @@ func apply_hitbox(root: Object) -> void:
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
 		root.call("_damage_slime", slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
+		if running_attack_active and not damage_result.immune and tuning != null:
+			root.set("hitstop_timer", maxf(float(root.get("hitstop_timer")), tuning.hitstop_duration * tuning.run_attack_hitstop_multiplier))
 		if not damage_result.immune:
 			root.call("_knockback_slime", slime, special_knockback_multiplier(tuning))
 		if not damage_result.immune and root.has_method("_apply_player_lifesteal"):
@@ -335,6 +350,7 @@ func finish() -> void:
 	if active:
 		active = false
 		attack_finished.emit()
+	running_attack_active = false
 	attack_kind = AttackKind.NONE
 	charge_elapsed = 0.0
 	hit_targets.clear()
@@ -345,12 +361,14 @@ func cancel() -> void:
 	finish()
 	combo_buffered = false
 	combo_timer = 0.0
+	combo_running_attack = false
 	attack_button_held = false
 
 
 func buffer_combo(window: float) -> void:
 	combo_buffered = true
 	combo_timer = maxf(window, 0.0)
+	combo_running_attack = running_attack_active
 
 
 func set_combo_movement(movement: Vector2) -> void:
@@ -363,6 +381,7 @@ func tick_combo(delta: float) -> void:
 	combo_timer = maxf(combo_timer - delta, 0.0)
 	if combo_timer <= 0.0:
 		combo_buffered = false
+		combo_running_attack = false
 
 
 func consume_combo() -> bool:
@@ -370,6 +389,7 @@ func consume_combo() -> bool:
 		return false
 	combo_buffered = false
 	combo_timer = 0.0
+	combo_running_attack = false
 	return true
 
 

@@ -6,6 +6,8 @@ class DamageRoot extends Node:
 	var player_tuning: PlayerTuning
 	var player_attack_flip_h := false
 	var player_anim_frame := 3
+	var player_is_running := false
+	var hitstop_timer := 0.0
 	var slimes: Array[Sprite2D] = []
 	var puzzle_torches: Array[Sprite2D] = []
 	var run_state: RunState = null
@@ -54,6 +56,7 @@ func _initialize() -> void:
 	root.player = Sprite2D.new()
 	root.add_child(root.player)
 	_add_attack_guide(root.player, "Attack1HitboxShape")
+	_add_attack_guide(root.player, "Attack2HitboxShape")
 	_add_attack_guide(root.player, "SpinAttackHitboxShape")
 	var target_a := Sprite2D.new()
 	var target_b := Sprite2D.new()
@@ -69,6 +72,28 @@ func _initialize() -> void:
 	attack.apply_hitbox(root)
 	var normal_single := root.damage_values[0] if root.damage_values.size() == 1 else 0.0
 	_expect(root.damage_values.size() == 1 and is_equal_approx(normal_single, 20.0), "normal Attack 1 keeps its full single-target damage", failures)
+
+	root.damage_values.clear()
+	root.hitstop_timer = 0.0
+	attack.begin(1, PlayerAttackComponent.AttackKind.ATTACK1)
+	attack.running_attack_active = true
+	attack.apply_hitbox(root)
+	var running_single := root.damage_values[0] if root.damage_values.size() == 1 else 0.0
+	var expected_running := floorf(20.0 * root.player_tuning.run_attack_damage_multiplier)
+	_expect(root.damage_values.size() == 1 and is_equal_approx(running_single, expected_running), "running Attack 1 gets its tuned damage bonus", failures)
+	_expect(root.hitstop_timer > root.player_tuning.hitstop_duration, "running Attack 1 gets slightly longer hitstop", failures)
+	attack.running_attack_active = false
+
+	root.damage_values.clear()
+	root.hitstop_timer = 0.0
+	attack.begin(2, PlayerAttackComponent.AttackKind.ATTACK2)
+	attack.running_attack_active = true
+	attack.apply_hitbox(root)
+	var running_followup := root.damage_values[0] if root.damage_values.size() == 1 else 0.0
+	var expected_followup := floorf(20.0 * root.player_tuning.attack2_damage_multiplier * root.player_tuning.run_attack_damage_multiplier)
+	_expect(root.damage_values.size() == 1 and is_equal_approx(running_followup, expected_followup), "running Attack 2 gets its tuned damage bonus", failures)
+	_expect(root.hitstop_timer > root.player_tuning.hitstop_duration, "running Attack 2 gets slightly longer hitstop", failures)
+	attack.running_attack_active = false
 
 	root.damage_values.clear()
 	root.damage_targets.clear()

@@ -25,6 +25,7 @@ game reads them at runtime with no code change.
 | Charge balance | `charge_minimum_time` 0.35, `charge_maximum_time` 1.00, `charged_attack2_frame_time_multiplier` 1.35, `charged_attack2_damage_multiplier` 1.60, `charged_attack2_knockback_multiplier` 1.50 |
 | Roll | `roll_frame_time` 0.05, `roll_distance` 24.3, `roll_duration` 0.30 |
 | Lunge/knockback | `attack_lunge_distance` 6, `attack_lunge_duration` 0.18, `attack_knockback` 16, `attack1_knockback_multiplier` 0.60 |
+| Running attack | `run_attack_lunge_multiplier` 1.25, `run_attack_damage_multiplier` 1.10, `run_attack_hitstop_multiplier` 1.20; the bonus is captured per swing and inherited by Attack 2 |
 | Damage | `attack2_damage_multiplier` 1.25, `attack2_multi_target_damage_multiplier` 1.10 |
 | Regen | `regen_delay` 2.0, `regen_interval` 1.0, `regen_amount` 1.0 |
 | Death/hitstop | `death_particle_lifetime` 1.8, `death_fade_time` 0.7, `death_particle_delay` 0.7, `hitstop_duration` 1/40, `death_observe_time` 1.4, `health_damage_hang_time` 0.14 |
@@ -78,8 +79,9 @@ game reads them at runtime with no code change.
 ### `scripts/chroma_tuning.gd` — Chroma pickups (6 exports, all `inspector`)
 
 `pickup_value` 20, `enemy_drop_chance` 0.35, `pickup_collection_distance` 10,
-`pickup_air_time` 0.38, `pickup_launch_speed` 30, and `pickup_launch_spread`
-18.
+`pickup_air_time` 0.38, `pickup_launch_speed` 18, and `pickup_launch_spread`
+10. Resource drops use a damped launch with a gentle wall bounce so Chroma and
+Souls settle inside the room without snapping or flying too far from the enemy.
 
 ## Elemental slime definitions
 

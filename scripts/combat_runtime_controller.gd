@@ -13,6 +13,7 @@ const ENEMY_HEALTH_MAX_FACTOR := 1.0
 const R1_BOSS_HEALTH_FACTOR := 0.50
 const BOSS_ENCOUNTER_HEALTH_FACTOR := 0.90
 const SOUL_DROP_VALUE := 1
+const RESOURCE_DROP_LATERAL_OFFSET := 3.0
 
 
 static func enemy_health_factor(completed_runs: int, encounter_scale: float = 1.0) -> float:
@@ -287,11 +288,18 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 	var drop_rng := RandomNumberGenerator.new()
 	drop_rng.seed = seed_value
 	var chroma_tuning := root.get("chroma_tuning") as ChromaTuning
-	if chroma_tuning != null and drop_rng.randf() < chroma_tuning.enemy_drop_chance:
-		root.call("_spawn_chroma_pickup", root.call("_actor_foot", slime), chroma_tuning.pickup_value, seed_value, root.call("_slime_knockback_direction", slime))
+	var drop_origin: Vector2 = root.call("_actor_foot", slime) as Vector2
+	var drop_direction: Vector2 = root.call("_slime_knockback_direction", slime) as Vector2
 	# Souls are the persistent exchange currency. Every defeated enemy drops one
 	# so the fire and equipment-fusion economy does not depend on a lucky roll.
-	root.call("_spawn_soul_pickup", root.call("_actor_foot", slime), SOUL_DROP_VALUE, seed_value ^ 0x51A7, root.call("_slime_knockback_direction", slime))
+	if chroma_tuning != null and drop_rng.randf() < chroma_tuning.enemy_drop_chance:
+		# Give the two currencies a small lateral fan so their first frames do not
+		# occupy the same pixel when an enemy drops both.
+		var drop_tangent := Vector2(-drop_direction.y, drop_direction.x)
+		var chroma_position: Vector2 = root.call("_spawn_chroma_pickup", drop_origin + drop_tangent * RESOURCE_DROP_LATERAL_OFFSET, chroma_tuning.pickup_value, seed_value, drop_direction) as Vector2
+		root.call("_spawn_soul_pickup", drop_origin - drop_tangent * RESOURCE_DROP_LATERAL_OFFSET, SOUL_DROP_VALUE, seed_value ^ 0x51A7, drop_direction, chroma_position)
+	else:
+		root.call("_spawn_soul_pickup", drop_origin, SOUL_DROP_VALUE, seed_value ^ 0x51A7, drop_direction)
 	(root.get("effects_spawner") as EffectsSpawner).spawn_slime_death_from_root(root, slime)
 	var room_controller := root.get("room_controller") as RoomController
 	room_controller.record_special_enemy_death(root, slime)
