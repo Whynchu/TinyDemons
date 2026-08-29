@@ -103,32 +103,19 @@ func _initialize() -> void:
 		if attack != null:
 			gameplay.set("player_is_attacking", false)
 			gameplay.set("player_is_running", true)
-			var started_running_attack := attack.start_player_attack(gameplay, 1)
+			var started_running_attack := attack.start_running_attack(gameplay)
 			var running_lunge_speed := attack.lunge_velocity.length()
-			_expect(started_running_attack and attack.running_attack_active, "Attack 1 captures the active run state", failures)
+			var running_cooldown := attack.attack2_cooldown_duration(tuning)
+			_expect(started_running_attack and attack.running_attack_active and attack.variant == 2 and StringName(gameplay.get("player_anim_name")) == &"attack2", "running input skips Attack 1 and starts the special Attack 2", failures)
+			_expect(not bool(gameplay.get("player_is_running")), "running Attack 2 consumes the roll-continuation run state", failures)
 			attack.finish()
 			gameplay.set("player_is_attacking", false)
 			gameplay.set("player_is_running", false)
-			var started_normal_attack := attack.start_player_attack(gameplay, 1)
+			var started_normal_attack := attack.start_player_attack(gameplay, 2)
 			var normal_lunge_speed := attack.lunge_velocity.length()
-			_expect(started_normal_attack and running_lunge_speed > normal_lunge_speed, "a running Attack 1 gets extra forward lunge velocity", failures)
-			attack.finish()
-			gameplay.set("player_is_attacking", false)
-			gameplay.set("player_is_running", true)
-			attack.start_player_attack(gameplay, 1)
-			attack.buffer_combo(tuning.combo_window)
-			attack.finish()
-			gameplay.set("player_is_attacking", false)
-			gameplay.set("player_is_running", false)
-			var started_running_followup := attack.start_player_attack(gameplay, 2)
-			var running_followup_lunge_speed := attack.lunge_velocity.length()
-			_expect(started_running_followup and attack.running_attack_active, "Attack 2 inherits the running attack state through the combo", failures)
-			attack.consume_combo()
-			attack.finish()
-			gameplay.set("player_is_attacking", false)
-			var started_normal_followup := attack.start_player_attack(gameplay, 2)
-			var normal_followup_lunge_speed := attack.lunge_velocity.length()
-			_expect(started_normal_followup and running_followup_lunge_speed > normal_followup_lunge_speed, "a running Attack 2 gets extra forward lunge velocity", failures)
+			var normal_cooldown := attack.attack2_cooldown_duration(tuning)
+			_expect(started_normal_attack and running_lunge_speed > normal_lunge_speed, "running Attack 2 gets extra forward lunge velocity", failures)
+			_expect(running_cooldown > normal_cooldown and tuning.run_attack_extra_cooldown_frames >= 1.0 and tuning.run_attack_extra_cooldown_frames <= 2.0, "running Attack 2 gets one-to-two extra recovery frames", failures)
 			attack.finish()
 			gameplay.set("player_is_attacking", false)
 		motor.motion_requested.disconnect(on_motion)
@@ -147,6 +134,17 @@ func _initialize() -> void:
 		gameplay.set("player_roll_input_was_down", true)
 		frame_controller.update_player_input(gameplay, 0.016)
 		_expect(not bool(gameplay.get("player_roll_hold_armed")), "releasing the roll button disarms the run latch", failures)
+		# The input-only latch check does not advance the dodge animation; reset
+		# that fixture state before exercising the attack route.
+		gameplay.set("player_is_rolling", false)
+		gameplay.set("player_attack_input_was_down", false)
+		gameplay.set("player_is_running", true)
+		router.get("_current")[&"attack"] = true
+		frame_controller.update_player_input(gameplay, 0.016)
+		var routed_attack := gameplay.get("player_attack_component") as PlayerAttackComponent
+		_expect(routed_attack != null and routed_attack.variant == 2 and routed_attack.running_attack_active and StringName(gameplay.get("player_anim_name")) == &"attack2", "frame input routes a running attack directly to Attack 2", failures)
+		gameplay.call("_interrupt_player_attack")
+		router.get("_current")[&"attack"] = false
 
 	# Backflip: the target-lock retreat dodge with i-frames and a landing step.
 	var backflip_frames := anim.backflip_frames as Array[Texture2D]

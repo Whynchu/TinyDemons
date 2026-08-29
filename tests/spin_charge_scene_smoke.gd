@@ -23,6 +23,9 @@ func _initialize() -> void:
 		var guide := player.get_node_or_null("SpinAttackHitboxShape") as AttackHitboxGuide
 		_expect(guide != null and guide.use_frame_hitboxes, "spin attack uses scene-authored per-frame hitboxes", failures)
 		_expect(animation.spin_frames.size() == 8 and animation.spin_left_frames.size() == 8, "spin body has eight right and left frames", failures)
+		var input_router := gameplay.get("input_router") as InputRouter
+		if input_router != null:
+			input_router.set("_movement", Vector2.RIGHT)
 		if guide != null:
 			for frame_index in 8:
 				var frame_hitbox := guide.get_node_or_null("HitboxFrame%d" % frame_index) as Polygon2D
@@ -35,7 +38,7 @@ func _initialize() -> void:
 		attack.set_attack_input_held(false)
 		_expect(attack.start_spin_attack(gameplay), "spin attack can start with the supplied animation", failures)
 		_expect(attack.is_spin_attack() and StringName(gameplay.get("player_anim_name")) == &"spin_attack", "spin attack owns its animation state", failures)
-		_expect(not attack.has_lunge(), "spin attack does not use the forward combo lunge", failures)
+		_expect(attack.has_lunge() and attack.spin_direction.is_equal_approx(Vector2.RIGHT), "spin attack snapshots the input direction for a small lunge", failures)
 		gameplay.set("player_between_timer", 0.4)
 		attack.buffer_combo(1.0)
 		_expect(attack.start_spin_attack(gameplay), "spin attack can start while a prior combo recovery is pending", failures)
@@ -82,6 +85,26 @@ func _initialize() -> void:
 		_expect(attack.is_charging() and StringName(gameplay.get("player_anim_name")) == &"charge", "holding attack enters the post-attack charge pose", failures)
 		_expect(player.visible and not (gameplay.get("player_attack_visual") as Sprite2D).visible, "charge pose restores the base player layer", failures)
 		_expect(player.texture == animation.between_attack_texture, "charge uses the authored between-attacks pose", failures)
+		var effects := gameplay.get("effects_spawner") as EffectsSpawner
+		_expect(effects != null, "charge effect spawner is composed", failures)
+		if effects != null:
+			effects.update_charge_aura_from_root(gameplay, 0.0)
+			var initial_aura_count := _charge_aura_count(effects)
+			# Advance past the one-second cap so the test observes the authored
+			# peak even when the fixture's AGI charge multiplier is below 1.0.
+			attack.tick_charge(gameplay, 1.10)
+			effects.update_charge_aura_from_root(gameplay, 0.20)
+			var peak_aura_count := _charge_aura_count(effects)
+			var peak_streak_visible := false
+			for particle_data in effects.pixel_particles:
+				if particle_data.get("effect_tag", &"") == EffectsSpawner.CHARGE_AURA_TAG and float(particle_data.get("charge_progress", 0.0)) >= 0.90:
+					var particle := particle_data.get("sprite") as Sprite2D
+					peak_streak_visible = particle != null and is_equal_approx(particle.scale.y, 2.0)
+					if peak_streak_visible:
+						break
+			_expect(initial_aura_count > 0, "charge aura emits its initial foot wisp", failures)
+			_expect(peak_aura_count > initial_aura_count, "charge aura increases its particle cadence near peak", failures)
+			_expect(peak_streak_visible, "charge aura stretches a peak particle into an air streak", failures)
 		var charge_grey_set := animation.frames_by_palette.get("grey", {}) as Dictionary
 		var charge_grey := charge_grey_set.get("between") as Texture2D
 		var base_mp_material := gameplay.get("mp_desaturation_material") as ShaderMaterial
@@ -111,6 +134,9 @@ func _initialize() -> void:
 		attack.tick_charge(gameplay, tuning.charge_minimum_time)
 		attack.set_attack_input_held(false)
 		attack.tick_charge(gameplay, 0.01)
+		if effects != null:
+			effects.update_charge_aura_from_root(gameplay, 0.0)
+			_expect(_charge_aura_count(effects) == 0, "charge aura clears when the hold becomes charged Attack 2", failures)
 		_expect(attack.is_charged_attack2() and attack.variant == 2 and StringName(gameplay.get("player_anim_name")) == &"attack2_charged", "releasing a charged hold starts charged attack 2", failures)
 		_expect(attack.special_knockback_multiplier(tuning) > 1.0 and attack.knockback_multiplier(tuning) > 1.0, "charged attack 2 has stronger knockback than regular attack 2", failures)
 		_expect(tuning.charged_attack2_damage_multiplier > tuning.attack2_damage_multiplier and tuning.charged_attack2_frame_time_multiplier > 1.0, "charged attack 2 is stronger and slower by tuning", failures)
@@ -141,6 +167,14 @@ func _hide_modal_screens(gameplay: Node) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
+
+
+func _charge_aura_count(effects: EffectsSpawner) -> int:
+	var count := 0
+	for particle_data in effects.pixel_particles:
+		if particle_data.get("effect_tag", &"") == EffectsSpawner.CHARGE_AURA_TAG:
+			count += 1
+	return count
 
 
 func _finish(failures: Array[String]) -> void:

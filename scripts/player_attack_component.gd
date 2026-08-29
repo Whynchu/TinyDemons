@@ -30,6 +30,7 @@ var hit_sound_played := false
 ## this latch keeps a running attack's bonuses stable through the hit frame.
 var running_attack_active := false
 var combo_running_attack := false
+var spin_direction := Vector2.RIGHT
 var spin_gesture = CircularInputRecognizerScript.new()
 var _spin_gesture_configured := false
 var _spin_gesture_signature := 0
@@ -38,6 +39,20 @@ var _spin_gesture_signature := 0
 func start_player_attack(root: Object, new_variant: int) -> bool:
 	var requested_kind := AttackKind.ATTACK2 if new_variant == 2 else AttackKind.ATTACK1
 	return _start_attack(root, requested_kind, 2 if new_variant == 2 else 1, "attack2" if new_variant == 2 else "attack1")
+
+
+## A running attack skips the first swing and commits directly to the regular
+## Attack 2 animation with the running-specific movement, damage, knockback,
+## hitstop, and recovery contract.
+func start_running_attack(root: Object) -> bool:
+	if not bool(root.get("player_is_running")):
+		return false
+	var started := _start_attack(root, AttackKind.ATTACK2, 2, "attack2")
+	if started:
+		# The roll continuation has been spent. Holding the button through this
+		# attack cannot silently create another run after the attack recovers.
+		root.set("player_is_running", false)
+	return started
 
 
 func start_spin_attack(root: Object) -> bool:
@@ -61,12 +76,12 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	var frames: Array[Texture2D] = anim.spin_frames if new_kind == AttackKind.SPIN else anim.attack2_frames if new_variant == 2 else anim.attack_frames
 	if frames.is_empty():
 		return false
-	var starts_from_run := bool(root.get("player_is_running"))
+	var starts_from_run := new_kind == AttackKind.ATTACK2 and bool(root.get("player_is_running"))
 	if new_variant == 2 and combo_buffered:
 		starts_from_run = combo_running_attack
 	elif new_kind == AttackKind.CHARGED_ATTACK2 and attack_kind == AttackKind.CHARGING:
 		starts_from_run = running_attack_active
-	running_attack_active = starts_from_run and new_kind != AttackKind.SPIN
+	running_attack_active = starts_from_run and new_kind == AttackKind.ATTACK2
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_attack(new_variant, bool(root.call("_is_run_combat_active")))
@@ -85,7 +100,18 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
 	var attack_multiplier := tuning.attack_multiplier_for_agi(effective_agi)
 	if new_kind == AttackKind.SPIN:
-		cancel_lunge()
+		var input_direction: Vector2 = root.call("_movement_input")
+		if input_direction.length_squared() <= 0.0001:
+			var remembered_direction: Variant = root.get("last_player_input_direction")
+			if remembered_direction is Vector2:
+				input_direction = remembered_direction as Vector2
+		if input_direction.length_squared() <= 0.0001:
+			input_direction = root.call("_player_facing_vector")
+		spin_direction = input_direction.normalized() if input_direction.length_squared() > 0.0001 else Vector2.RIGHT
+		var spin_distance := tuning.spin_lunge_distance if tuning != null else 3.5
+		var spin_duration := tuning.spin_lunge_duration / attack_multiplier if tuning != null else 0.16
+		spin_duration = maxf(spin_duration, 0.001)
+		start_lunge(root.call("_perspective_movement", spin_direction * (spin_distance / spin_duration)), spin_duration)
 		# A spin is a standalone attack. It cannot inherit a pending combo or
 		# the recovery timer from an attack that happened immediately before it.
 		combo_buffered = false
@@ -304,11 +330,21 @@ func base_knockback_multiplier(tuning: PlayerTuning) -> float:
 func special_knockback_multiplier(tuning: PlayerTuning) -> float:
 	if tuning == null:
 		return 1.0
+	var multiplier := 1.0
 	if is_spin_attack():
-		return tuning.spin_knockback_multiplier
-	if is_charged_attack2():
-		return tuning.charged_attack2_knockback_multiplier
-	return 1.0
+		multiplier *= tuning.spin_knockback_multiplier
+	elif is_charged_attack2():
+		multiplier *= tuning.charged_attack2_knockback_multiplier
+	if running_attack_active:
+		multiplier *= tuning.run_attack_knockback_multiplier
+	return multiplier
+
+
+func attack2_cooldown_duration(tuning: PlayerTuning) -> float:
+	if tuning == null:
+		return 0.0
+	var extra_frames := tuning.run_attack_extra_cooldown_frames if running_attack_active else 0.0
+	return maxf(tuning.attack2_cooldown + tuning.attack_frame_time * maxf(extra_frames, 0.0), 0.0)
 
 
 func has_frame_hitboxes() -> bool:
