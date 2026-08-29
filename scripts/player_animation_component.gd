@@ -398,9 +398,12 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			var combo := attack_name == "attack1" and attack_component != null and attack_component.combo_buffered and between_attack_texture != null
 			var attack2_finished := is_attack2
 			var transition_texture: Texture2D = after_attack2_texture if attack2_finished else between_attack_texture
-			var transition_time := attack_tuning.attack2_cooldown / attack_multiplier if attack2_finished else attack_tuning.between_attack_time / attack_multiplier
+			var attack2_recovery := attack_tuning.attack2_cooldown
 			if attack2_finished and attack_component != null:
-				attack_component.start_attack2_cooldown(attack_tuning.attack2_cooldown / attack_multiplier)
+				attack2_recovery = attack_component.attack2_cooldown_duration(attack_tuning)
+			var transition_time := attack2_recovery / attack_multiplier if attack2_finished else attack_tuning.between_attack_time / attack_multiplier
+			if attack2_finished and attack_component != null:
+				attack_component.start_attack2_cooldown(transition_time)
 			root.set("player_just_finished_attack2", attack2_finished)
 			root.set("player_is_attacking", false)
 			if attack_component != null: attack_component.finish()

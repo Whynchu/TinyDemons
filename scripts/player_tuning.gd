@@ -69,12 +69,26 @@ func charge_multiplier_for_agi(agi: float) -> float:
 ## below a normal Attack 1, but it does not use the normal multi-target split.
 @export var spin_damage_multiplier := 0.90
 @export var spin_knockback_multiplier := 1.10
+@export var spin_lunge_distance := 3.5
+@export var spin_lunge_duration := 0.16
 @export_group("Charge attack")
 @export var charge_minimum_time := 0.35
 @export var charge_maximum_time := 1.00
 @export var charged_attack2_frame_time_multiplier := 1.35
 @export var charged_attack2_damage_multiplier := 1.60
 @export var charged_attack2_knockback_multiplier := 1.50
+@export_group("Charge attack visual")
+@export var charge_aura_start_interval := 0.16
+@export var charge_aura_peak_interval := 0.055
+@export var charge_aura_start_speed := 8.0
+@export var charge_aura_peak_speed := 24.0
+@export var charge_aura_start_rise := 12.0
+@export var charge_aura_peak_rise := 26.0
+@export var charge_aura_start_spread := 2.0
+@export var charge_aura_peak_spread := 7.0
+@export var charge_aura_start_curl := 8.0
+@export var charge_aura_peak_curl := 52.0
+@export var charge_aura_particle_lifetime := 0.28
 @export var roll_frame_time := 0.05
 ## Backflip uses a steady cadence instead of the roll's landing-frame hold.
 ## Backflip reads at a measured 15.4 FPS cadence so the full pose sequence is
@@ -92,7 +106,9 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export_group("Running attack")
 @export var run_attack_lunge_multiplier := 1.25
 @export var run_attack_damage_multiplier := 1.10
+@export var run_attack_knockback_multiplier := 1.25
 @export var run_attack_hitstop_multiplier := 1.20
+@export var run_attack_extra_cooldown_frames := 1.5
 @export var attack_knockback := 16.0
 @export var attack1_knockback_multiplier := 0.60
 @export var attack2_damage_multiplier := 1.25

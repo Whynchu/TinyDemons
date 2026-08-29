@@ -23,6 +23,10 @@ func update_player_input(root: Object, delta: float) -> void:
 		if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")) and not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_backflipping")) and not bool(root.get("player_is_defending")) and (attack == null or attack.can_start_attack2()):
 			if attack != null and attack.spin_gesture.is_armed():
 				accepted_attack = attack.start_spin_attack(root)
+			elif attack != null and bool(root.get("player_is_running")):
+				# A roll-continuation run commits directly to the stronger Attack 2
+				# variant; it does not spend the run on a weaker opening swing.
+				accepted_attack = attack.start_running_attack(root)
 			elif float(root.get("player_between_timer")) > 0.0:
 				if attack != null and not attack.combo_buffered:
 					attack.buffer_combo((root.get("player_tuning") as PlayerTuning).combo_window); attack.set_combo_movement(root.call("_movement_input")); accepted_attack = true

@@ -2,6 +2,7 @@ extends Node
 class_name EffectsSpawner
 
 signal effect_requested(kind: StringName, position: Vector2)
+const CHARGE_AURA_TAG := &"charge_aura"
 var damage_number_texture_cache: Dictionary = {}
 var critical_outline_texture_cache: Dictionary = {}
 var name_texture_cache: Dictionary = {}
@@ -12,6 +13,8 @@ var pixel_particles: Array[Dictionary] = []
 var slime_notice_effects: Array[Dictionary] = []
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
+var charge_aura_timer := 0.0
+var charge_aura_active := false
 
 
 func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
@@ -65,9 +68,90 @@ func spawn_chroma_pickup_burst_from_root(root: Object, world_position: Vector2) 
 
 
 func update_pixel_particles_from_root(root: Object, delta: float) -> void:
+	update_charge_aura_from_root(root, delta)
 	update_pixel_particles(delta, Callable(root, "_snap_half_pixel"), (root.get("effects_tuning") as EffectsTuning).slime_death_particle_lifetime)
 	update_slime_notices(root, delta)
 	update_fire_sparks_from_root(root, delta)
+
+
+## Emits a restrained foot-level charge effect. The cadence, launch speed, and
+## outward curl ramp with the held charge: it starts as a few soft wisps and
+## reaches a denser, streaked air-whip at the one-second cap without tinting or
+## flashing the player sprite itself.
+func update_charge_aura_from_root(root: Object, delta: float) -> void:
+	var attack := root.get("player_attack_component") as PlayerAttackComponent
+	var player := root.get("player") as Sprite2D
+	if attack == null or player == null or not is_instance_valid(player) or not attack.is_charging():
+		if charge_aura_active:
+			clear_effect_particles(CHARGE_AURA_TAG)
+		charge_aura_active = false
+		charge_aura_timer = 0.0
+		return
+	var tuning := root.get("player_tuning") as PlayerTuning
+	if tuning == null:
+		return
+	var charge_span := maxf(tuning.charge_maximum_time, tuning.charge_minimum_time)
+	var progress := clampf(attack.charge_elapsed / maxf(charge_span, 0.01), 0.0, 1.0)
+	var eased_progress := progress * progress * (3.0 - 2.0 * progress)
+	var cadence := lerpf(tuning.charge_aura_start_interval, tuning.charge_aura_peak_interval, eased_progress)
+	cadence = maxf(cadence, 0.016)
+	if not charge_aura_active:
+		charge_aura_active = true
+		charge_aura_timer = 0.0
+	charge_aura_timer -= maxf(delta, 0.0)
+	var random_source := root.get("rng") as RandomNumberGenerator
+	if random_source == null:
+		random_source = RandomNumberGenerator.new()
+		random_source.randomize()
+	var emitted := 0
+	while charge_aura_timer <= 0.0 and emitted < 4:
+		_spawn_charge_aura_particle(root, player, tuning, eased_progress, random_source)
+		charge_aura_timer += cadence
+		emitted += 1
+	if emitted >= 4 and charge_aura_timer <= 0.0:
+		charge_aura_timer = cadence
+
+
+func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerTuning, progress: float, random_source: RandomNumberGenerator) -> void:
+	var foot: Vector2 = root.call("_actor_foot", player)
+	var side := -1.0 if random_source.randf() < 0.5 else 1.0
+	var spread := lerpf(tuning.charge_aura_start_spread, tuning.charge_aura_peak_spread, progress)
+	var launch_speed := lerpf(tuning.charge_aura_start_speed, tuning.charge_aura_peak_speed, progress)
+	var rise_speed := lerpf(tuning.charge_aura_start_rise, tuning.charge_aura_peak_rise, progress)
+	var curl := lerpf(tuning.charge_aura_start_curl, tuning.charge_aura_peak_curl, progress)
+	var origin := foot + Vector2(side * random_source.randf_range(0.0, spread), random_source.randf_range(-0.5, 0.5))
+	var horizontal_speed := side * launch_speed * random_source.randf_range(0.35, 0.90)
+	var vertical_speed := -rise_speed * random_source.randf_range(0.80, 1.15)
+	var palette_name := str(root.get("current_player_palette_name"))
+	if palette_name.is_empty():
+		palette_name = "blue"
+	var air_color := PaletteLibrary.accent(palette_name).lerp(Color.WHITE, 0.35)
+	var pixel_size := 2 if progress >= 0.70 and random_source.randf() < 0.30 else 1
+	var particle := Sprite2D.new()
+	particle.name = "ChargeAuraParticle"
+	particle.texture = root.call("_pixel_particle_texture", air_color, pixel_size) as Texture2D
+	particle.centered = true
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = false
+	particle.z_index = maxi(player.z_index - 2, 0)
+	particle.position = origin
+	particle.modulate = Color(air_color.r, air_color.g, air_color.b, lerpf(0.38, 0.78, progress))
+	particle.scale = Vector2(1.0, 2.0 if progress >= 0.70 else 1.0)
+	particle.rotation = Vector2(horizontal_speed, vertical_speed).angle() + PI * 0.5
+	root.add_child(particle)
+	var lifetime := maxf(tuning.charge_aura_particle_lifetime * random_source.randf_range(0.78, 1.12), 0.05)
+	pixel_particles.append({
+		"sprite": particle,
+		"velocity": Vector2(horizontal_speed, vertical_speed),
+		"timer": lifetime,
+		"lifetime": lifetime,
+		"gravity": lerpf(34.0, 52.0, progress),
+		"effect_tag": CHARGE_AURA_TAG,
+		"logical_position": origin,
+		"alpha_scale": lerpf(0.38, 0.78, progress),
+		"curl": side * curl * random_source.randf_range(0.75, 1.25),
+		"charge_progress": progress,
+	})
 
 
 func spawn_slime_notice(root: Object, slime: Sprite2D, duration: float) -> void:
@@ -522,6 +606,9 @@ func clear_effect_particles(effect_tag: StringName) -> void:
 		if particle != null:
 			particle.queue_free()
 		pixel_particles.remove_at(index)
+	if effect_tag == CHARGE_AURA_TAG:
+		charge_aura_active = false
+		charge_aura_timer = 0.0
 
 
 func update_pixel_particles(delta: float, snap_position: Callable, default_lifetime: float) -> void:
@@ -536,13 +623,19 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 			continue
 		var velocity := particle_data["velocity"] as Vector2
 		velocity.y += float(particle_data.get("gravity", 18.0)) * delta
+		if particle_data.get("effect_tag", &"") == CHARGE_AURA_TAG:
+			velocity.x += float(particle_data.get("curl", 0.0)) * delta
 		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
 		logical_position += velocity * delta
 		particle_data["logical_position"] = logical_position
 		particle.position = snap_position.call(logical_position)
 		var color := particle.modulate
 		var lifetime := float(particle_data.get("lifetime", default_lifetime))
-		color.a = clampf(timer / lifetime, 0.0, 1.0)
+		color.a = float(particle_data.get("alpha_scale", 1.0)) * clampf(timer / lifetime, 0.0, 1.0)
+		if particle_data.get("effect_tag", &"") == CHARGE_AURA_TAG:
+			particle.rotation = velocity.angle() + PI * 0.5
+			var charge_progress := float(particle_data.get("charge_progress", 0.0))
+			particle.scale = Vector2(1.0, 2.0 if charge_progress >= 0.70 else 1.0)
 		if bool(particle_data.get("fire_spark", false)):
 			var progress := 1.0 - clampf(timer / lifetime, 0.0, 1.0)
 			var fire_color := Color(1.0, 0.12, 0.05).lerp(Color(1.0, 0.86, 0.18), clampf(progress / 0.35, 0.0, 1.0))

@@ -473,3 +473,43 @@ frame.
 `spin_charge_scene_smoke.gd` now verifies that the visible base layer samples
 the authored `between` grey frame and remains on that same pose at 100, 50, 10,
 and 0 Chroma. The focused scene test and complete smoke suite both pass.
+
+## 14. Player HUD authoring follow-up — 2026-08-29
+
+### Symptom
+
+Moving the first visible layer in `scenes/player_hud.tscn` does not always
+produce an obvious change in the live HUD. The editor preview backdrop can be
+the selected/visible layer instead of the authored HUD group, while the actual
+HUD is instanced under `main.tscn`. Runtime layout code can then reposition
+the same groups again for the current display mode.
+
+### Current sources of confusion
+
+- `PlayerHud` owns an editor-only `PreviewContext` containing the backdrop and
+  black bars; the actual status, currency, room, and timer groups are siblings
+  outside that preview context.
+- `player_hud.gd` regenerates example/static text and currently applies a
+  level-label offset as part of that setup, which can override an intentional
+  editor position.
+- `HudController` reapplies responsive positions for health, mana, gold, souls,
+  and the run timer. `DisplayLayout` adds the aspect-ratio offset at runtime,
+  so authored positions need to remain the stable base positions rather than
+  being replaced by hard-coded screen coordinates.
+
+### Follow-up
+
+Make the source HUD scene authoritative and easier to author: expose the
+movable groups and their base anchors clearly in the editor, preserve those
+authored bases when responsive offsets are applied, avoid unconditional text
+setup from resetting layout positions, and make the preview backdrop visually
+helpful without intercepting selection of the real HUD nodes. Add an editor/
+runtime smoke check so a deliberate scene movement is reflected in the
+assembled HUD at native, 4:3, 16:9, and 16:10 layouts. The existing
+`scenes/player_hud.tscn` working-tree edit must be reviewed and preserved while
+this follow-up is implemented.
+
+Currency visual note: use `#A73BA7` as the Souls base colour so the HUD and
+world pickup match the Square-button icon. Derive the lighter soul outline /
+highlight from that base while preserving the authored black eyes and grey
+source-art details that are not part of the recolour.
