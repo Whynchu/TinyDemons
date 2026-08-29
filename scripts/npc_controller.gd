@@ -188,7 +188,9 @@ func update_dialogue_input(root: Object) -> void:
 				allocation_prompt_active = true
 				allocation_choice = 0
 				allocation_choice_pending = -1
-				dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
+				# Keep the completed shop question visible while the choices appear
+				# below it; clearing this texture made the prompt look like it was in
+				# a separate bubble from YES and NO.
 				dialogue_button.visible = false
 				dialogue_button_shadow.visible = false
 		update_dialogue_from_root(root, 0.0)
