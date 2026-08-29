@@ -63,6 +63,14 @@ func _initialize() -> void:
 	get_root().add_child(rebuilt)
 	await process_frame
 	_expect(rebuilt.current_device == InputDeviceTracker.Device.GAMEPAD, "last controller device survives tracker rebuild", failures)
+	var startup_mouse_motion := InputEventMouseMotion.new()
+	startup_mouse_motion.device = 0
+	startup_mouse_motion.relative = Vector2(4.0, 0.0)
+	rebuilt._input(startup_mouse_motion)
+	_expect(rebuilt.current_device == InputDeviceTracker.Device.GAMEPAD, "startup mouse-motion echo does not replace a restored controller", failures)
+	await create_timer(0.80).timeout
+	rebuilt._input(startup_mouse_motion)
+	_expect(rebuilt.current_device == InputDeviceTracker.Device.KEYBOARD_MOUSE, "real mouse movement can switch devices after the handoff", failures)
 	rebuilt.queue_free()
 
 	tracker.free()

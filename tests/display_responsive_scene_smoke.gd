@@ -50,6 +50,12 @@ func _initialize() -> void:
 			var title_overlay := (gameplay.get("screen_state_controller") as ScreenStateController).title_overlay
 			_expect(title_overlay != null and title_overlay.size == Vector2(expected), "%s title overlay covers the full view" % aspect, failures)
 			_expect(screens.settings_overlay != null and screens.settings_overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
+			var result_metrics := screens.run_complete_overlay.get_node_or_null("RunCompleteMetrics") as Panel if screens.run_complete_overlay != null else null
+			var result_width := minf(220.0, maxf(float(expected.x) - 20.0, 100.0))
+			var result_x := floorf(maxf((float(expected.x) - result_width) * 0.5, 10.0))
+			_expect(result_metrics != null and is_equal_approx(result_metrics.position.x, result_x), "%s result metrics stay centered in the active frame" % aspect, failures)
+			if not screens.run_complete_texts.is_empty():
+				_expect(is_equal_approx(screens.run_complete_texts[0].position.x, result_x + 9.0), "%s result text follows its centered card" % aspect, failures)
 			if screens.settings_title_text != null and screens.settings_title_text.texture != null:
 				_expect(is_equal_approx(screens.settings_title_text.position.x, 13.0), "%s settings title stays in its title tab" % aspect, failures)
 			if not screens.settings_value_buttons.is_empty():

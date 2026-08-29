@@ -833,6 +833,8 @@ func _build_scene_transition() -> void:
 	scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", view_size, Color.BLACK, 200); scene_transition_overlay.set_meta("display_full_view", true); scene_transition_overlay.modulate.a = 0.0
 func _begin_scene_transition() -> void:
 	if scene_transition_active or scene_transition_overlay == null: return
+	if input_device_tracker != null:
+		input_device_tracker.call("persist_current_device")
 	scene_transition_active = true; screen_state_controller.set_state(&"transition"); scene_transition_timer = 0.0; scene_transition_overlay.visible = true
 func _start_roll_dust(direction: Vector2) -> void: effects_spawner.start_roll_dust(self, player, direction, roll_dust_frames, roll_dust_flipped_frames, Callable(self, "_actor_foot"), Callable(self, "_snap_half_pixel"))
 func _update_roll_dust(delta: float) -> void: effects_spawner.update_roll_dust(delta, player.z_index, roll_dust_frames, roll_dust_flipped_frames, effects_tuning.roll_dust_frame_time, Callable(self, "_snap_half_pixel"))
@@ -1082,6 +1084,8 @@ func _input_prompt_texture(action: StringName) -> Texture2D:
 	var label := String(input_device_tracker.call("prompt_label", action))
 	if device == InputDeviceTracker.Device.TOUCH and effects_spawner != null:
 		return effects_spawner.prompt_texture(label, Color.BLACK)
+	if effects_spawner != null:
+		return effects_spawner.keyboard_prompt_texture(label)
 	return _pixel_text_texture(label, Color.WHITE)
 
 

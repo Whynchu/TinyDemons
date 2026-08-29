@@ -28,6 +28,14 @@ func _initialize() -> void:
 	var music_player := manager.get_node_or_null("Music_Theme") as AudioStreamPlayer
 	_expect(music_player != null and is_equal_approx(music_player.volume_db, original_run_music_db - 3.0), "editing the music slider updates active music", failures)
 	profile.set("run_music_db", original_run_music_db)
+	var fade_start_db := music_player.volume_db if music_player != null else 0.0
+	manager.fade_out_music(0.60)
+	await create_timer(0.15).timeout
+	var fade_mid_db := music_player.volume_db if music_player != null else fade_start_db
+	_expect(music_player != null and fade_mid_db < fade_start_db, "music fade lowers the active player before stopping", failures)
+	_expect(music_player != null and music_player.playing, "music remains active during the fade", failures)
+	await create_timer(0.60).timeout
+	_expect(music_player != null and not music_player.playing, "music fade stops only after its duration", failures)
 
 	manager.free()
 	_finish(failures)

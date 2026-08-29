@@ -15,10 +15,12 @@ const EMULATED_DEVICE_ID := -1
 ## stick cannot disappear in the middle of a drag.
 const TOUCH_MOUSE_ECHO_GRACE_MSEC := 250
 const LAST_DEVICE_META_KEY := "tiny_demons_last_input_device"
+const RESTORED_DEVICE_MOUSE_GRACE_MSEC := 750
 
 var current_device: int = Device.KEYBOARD_MOUSE
 var _active_touch_indices: Dictionary = {}
 var _last_real_touch_msec := -1000000
+var _restored_device_mouse_grace_until_msec := 0
 
 
 func _ready() -> void:
@@ -27,6 +29,11 @@ func _ready() -> void:
 		# GameplayState is rebuilt during transitions; retain the last deliberate
 		# device across that rebuild instead of falling back to keyboard prompts.
 		current_device = persisted_device
+		if current_device != Device.KEYBOARD_MOUSE:
+			# Browser shells frequently send one passive cursor-motion event while
+			# the canvas is being rebuilt. Do not let that handoff echo immediately
+			# replace a restored gamepad/touch device.
+			_restored_device_mouse_grace_until_msec = Time.get_ticks_msec() + RESTORED_DEVICE_MOUSE_GRACE_MSEC
 	elif DisplayServer.is_touchscreen_available():
 		current_device = Device.TOUCH
 		Engine.set_meta(LAST_DEVICE_META_KEY, current_device)
@@ -34,6 +41,8 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	var detected := classify_event(event)
+	if detected == Device.KEYBOARD_MOUSE and event is InputEventMouseMotion and Time.get_ticks_msec() < _restored_device_mouse_grace_until_msec:
+		return
 	if detected >= 0:
 		set_device(detected)
 
@@ -44,6 +53,33 @@ func set_device(device: int) -> void:
 	current_device = device
 	Engine.set_meta(LAST_DEVICE_META_KEY, current_device)
 	device_changed.emit(device)
+
+
+func persist_current_device() -> void:
+	## Scene transitions rebuild GameplayState, so explicitly write the current
+	## device at the handoff as well as when an input event changes it. This also
+	## covers platforms that deliver a controller event only to the action poller.
+	Engine.set_meta(LAST_DEVICE_META_KEY, current_device)
+
+
+func observe_polled_input() -> void:
+	## A browser/controller can have a button held across a scene reload without
+	## emitting a second InputEventJoypadButton. Sample the physical state once
+	## per frame so the newly built hub still selects controller prompts.
+	for device in Input.get_connected_joypads():
+		if _joypad_has_active_input(int(device)):
+			set_device(Device.GAMEPAD)
+			return
+
+
+func _joypad_has_active_input(device: int) -> bool:
+	for button_index in 32:
+		if Input.is_joy_button_pressed(device, button_index):
+			return true
+	for axis in [JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y, JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y, JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
+		if absf(Input.get_joy_axis(device, axis)) > JOYPAD_MOTION_THRESHOLD:
+			return true
+	return false
 
 
 func classify_event(event: InputEvent) -> int:

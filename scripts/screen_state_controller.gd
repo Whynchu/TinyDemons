@@ -8,6 +8,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
+const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
 
 ## Hub content pages retain the old numeric values for transaction callers. The
 ## visible command column maps STATUS to page 5 and ALLOCATE/EQUIPMENT/SHOP/
@@ -804,17 +805,17 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	_add_menu_frame(overlay, display_view_size)
 	_add_menu_title(overlay, "RunCompleteTitle", "RESULT", pixel_texture)
 	var content_width := minf(220.0, maxf(display_view_size.x - 20.0, 100.0))
-	_make_menu_card(overlay, "RunCompleteMetrics", Vector2(10, 25), Vector2(content_width, 80))
-	_make_menu_card(overlay, "RunCompleteRewards", Vector2(10, 109), Vector2(content_width, 29))
+	var content_x := _run_complete_content_x(content_width)
+	_make_menu_card(overlay, "RunCompleteMetrics", Vector2(content_x, 25), Vector2(content_width, 80))
+	_make_menu_card(overlay, "RunCompleteRewards", Vector2(content_x, 109), Vector2(content_width, 29))
 	var lines: Array[Sprite2D] = []
-	var line_positions := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
-	for index in line_positions.size():
-		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, line_positions[index], false))
-	var return_button := make_menu_command_button("RETURN TO HUB", Vector2(14, 141), Vector2(86, 12), pixel_texture)
+	for index in RUN_COMPLETE_LINE_POSITIONS.size():
+		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, _run_complete_line_position(index, content_x), false))
+	var return_button := make_menu_command_button("RETURN TO HUB", Vector2(content_x + 4.0, 141), Vector2(86, 12), pixel_texture)
 	return_button.focus_mode = Control.FOCUS_NONE
 	return_button.pressed.connect(return_to_hub)
 	overlay.add_child(return_button)
-	var cursor := create_sprite(overlay, "RunCompleteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(6, 144), false)
+	var cursor := create_sprite(overlay, "RunCompleteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(content_x - 4.0, 144), false)
 	var footer := create_sprite(overlay, "RunCompleteFooter", pixel_texture.call("A BACK", Color8(148, 220, 255)) as Texture2D, Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0), false)
 	run_complete_footer_text = footer
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor, "footer": footer}
@@ -863,19 +864,36 @@ func _position_run_complete_controls() -> void:
 	if run_complete_overlay == null:
 		return
 	var content_width := minf(220.0, maxf(display_view_size.x - 20.0, 100.0))
+	var content_x := _run_complete_content_x(content_width)
 	var metrics := run_complete_overlay.get_node_or_null("RunCompleteMetrics") as Panel
 	if metrics != null:
-		metrics.position = Vector2(10, 25)
+		metrics.position = Vector2(content_x, 25)
 		metrics.size = Vector2(content_width, 80)
 	var rewards := run_complete_overlay.get_node_or_null("RunCompleteRewards") as Panel
 	if rewards != null:
-		rewards.position = Vector2(10, 109)
+		rewards.position = Vector2(content_x, 109)
 		rewards.size = Vector2(content_width, 29)
+	for index in mini(run_complete_texts.size(), RUN_COMPLETE_LINE_POSITIONS.size()):
+		if run_complete_texts[index] != null:
+			run_complete_texts[index].position = _run_complete_line_position(index, content_x)
+	if run_complete_button != null:
+		run_complete_button.position = Vector2(content_x + 4.0, 141)
+	if run_complete_cursor != null:
+		run_complete_cursor.position = Vector2(content_x - 4.0, 144)
 	var title_rule := run_complete_overlay.get_node_or_null("RunCompleteTitleRule") as ColorRect
 	if title_rule != null:
 		title_rule.size = Vector2(maxf(display_view_size.x - 16.0, 16.0), 1.0)
 	if run_complete_footer_text != null:
 		run_complete_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
+
+
+func _run_complete_content_x(content_width: float) -> float:
+	return floorf(maxf((display_view_size.x - content_width) * 0.5, 10.0))
+
+
+func _run_complete_line_position(index: int, content_x: float) -> Vector2:
+	var base_position: Vector2 = RUN_COMPLETE_LINE_POSITIONS[index]
+	return Vector2(content_x + base_position.x - 10.0, base_position.y)
 
 
 func _menu_card_style() -> StyleBoxFlat:
