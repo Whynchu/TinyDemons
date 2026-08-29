@@ -13,6 +13,10 @@ Current gameplay includes:
 - Perspective-aware collision, attack guides, knockback, and brief hitstop.
 - Pixel-based attack, slime splat, chest, and title-screen fizzle effects.
 - Room progression, chest rewards, gold tracking, and restart flow.
+- Elemental Chroma casting, Soul pickups, elemental binding, and flame fusion.
+- Six-stat progression, six-slot equipment, rarity effects, and gear drops.
+- An authored player HUD with radial ability cooldowns and device-aware prompts.
+- Responsive desktop/browser presentation with touch controls and gamepad input.
 
 ## Current Focus
 
@@ -74,10 +78,26 @@ execution plan. The completed Combat & Economy work remains documented in
 
 Open `project.godot` in Godot 4.7 and run the main scene. The project is configured for a small nearest-neighbor pixel-art presentation, so keep texture filtering and integer-like scaling intact when changing the display settings.
 
-Run the headless smoke suite before committing:
+When the Godot MCP editor peer is active, perform verification through MCP:
+scene inspection, script diagnostics, playtests, screenshots, and runtime
+logs. Do not run the full standalone smoke runner from that session. It starts
+one separate Godot process per registered test (currently around 90); a single
+headless renderer failure can create repeated Windows memory-error dialogs.
+
+Run the headless smoke suite only as a supervised standalone check, with no MCP
+Godot runtime active. Start with one focused test before using the full runner:
+
 ```powershell
+# Focused check
+& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path . --log-file ".godot_user/focused-smoke.log" -s res://tests/player_hud_scene_smoke.gd
+
+# Full suite — standalone/supervised only
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 ```
+
+If Windows memory-error dialogs start repeating, stop the smoke runner and
+terminate only the `Godot_v4.7.1-stable_win64_console` worker processes. Keep
+the main editor/MCP process alive if it remains healthy.
 
 Display settings are device-wide and can be changed from SETTINGS on the title
 screen or from the pause menu. Available options are aspect (`FULL`, 3:2,

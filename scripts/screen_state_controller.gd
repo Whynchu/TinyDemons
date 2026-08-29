@@ -15,6 +15,7 @@ const HUB_ITEM_DETAIL_PANEL_TOP := 103.0
 const HUB_ITEM_DETAIL_PANEL_HEIGHT := 42.0
 const HUB_GEAR_BROWSE_DETAIL_TOP := 136.0
 const HUB_ITEM_TEXT_WRAP_LENGTH := 34
+const STATUS_LEFT_ROW_COUNT := 10
 
 ## Hub content pages retain the old numeric values for transaction callers. The
 ## visible command column maps STATUS to page 5 and ALLOCATE/EQUIPMENT/SHOP/
@@ -32,7 +33,6 @@ const HUB_COMMAND_PAGE_TARGETS := [HUB_PAGE_STATUS, HUB_PAGE_ALLOCATE, HUB_PAGE_
 signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
-var _last_title_focus: Button = null
 var _prompt_texture_cache: Dictionary = {}
 var hub_overlay: ColorRect = null
 var hub_summary_text: Sprite2D = null
@@ -54,8 +54,8 @@ var hub_pending_vit: int:
 	get: return hub_progression_draft.vit
 	set(value): hub_progression_draft.vit = maxi(int(value), 0)
 var hub_pending_str: int:
-	get: return hub_progression_draft.str
-	set(value): hub_progression_draft.str = maxi(int(value), 0)
+	get: return hub_progression_draft.strength
+	set(value): hub_progression_draft.strength = maxi(int(value), 0)
 var hub_pending_def: int:
 	get: return hub_progression_draft.def
 	set(value): hub_progression_draft.def = maxi(int(value), 0)
@@ -943,7 +943,7 @@ func _make_transparent_touch_button(parent: Node, button_name: String, button_po
 	return button
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable(), pause_status: Callable = Callable(), pause_equipment: Callable = Callable(), pause_back: Callable = Callable(), equipment_remove: Callable = Callable(), equipment_remove_all: Callable = Callable(), hub_back: Callable = Callable()) -> Dictionary:
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable(), pause_status: Callable = Callable(), pause_equipment: Callable = Callable(), pause_back_callback: Callable = Callable(), equipment_remove: Callable = Callable(), equipment_remove_all: Callable = Callable(), hub_back: Callable = Callable()) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := create_view_overlay(parent, "HubOverlay", Color(0.015, 0.02, 0.035, 1.0), 3, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -977,7 +977,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var card := _make_menu_card(root_page, "HubPlayerCard", Vector2(10, 27), Vector2(136, 72))
 	hub_player_card_panel = card
 	var card_texts: Array[Sprite2D] = []
-	for index in 6:
+	for index in 7:
 		card_texts.append(create_sprite(root_page, "HubCardText%d" % index, null, Vector2(16, 33 + index * 10), false))
 	hub_player_card_texts = card_texts
 	var summary := create_sprite(root_page, "HubSummary", null, Vector2(16, 106), false)
@@ -1041,9 +1041,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	for index in 6:
 		derived.append(create_sprite(allocate_page, "HubDerived%d" % index, null, Vector2(14, 39 + index * 11), false))
 	var status_texts: Array[Sprite2D] = []
-	for index in 14:
-		var column := 0 if index < 8 else 1
-		var row := index if index < 8 else index - 8
+	for index in 16:
+		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
+		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
 		status_texts.append(create_sprite(status_page, "HubStatus%d" % index, null, Vector2(14 + column * (display_view_size.x * 0.5), 42 + row * 10), false))
 	var apply_button := make_retro_button("APPLY", Vector2(37, 113), Vector2(32, 12), pixel_texture)
 	apply_button.focus_mode = Control.FOCUS_NONE; apply_button.pressed.connect(apply_stats); allocate_page.add_child(apply_button)
@@ -1148,7 +1148,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	hub_gear_choice_content_clip = gear_choice_content_clip
 	hub_item_detail_panel = item_detail_panel
 
-	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back)
+	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back_callback)
 	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": currency_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "allocate_preview_panel": allocate_preview_panel, "allocate_preview_title": hub_allocate_preview_title, "allocate_preview": hub_allocate_preview_texts, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
 
 
@@ -1185,7 +1185,7 @@ func _add_menu_title(overlay: ColorRect, title_name: String, label: String, pixe
 	return title
 
 
-func _build_pause_overlay(parent: Node, pixel_texture: Callable, pause_resume: Callable, pause_settings: Callable, pause_quit: Callable, pause_status: Callable, pause_equipment: Callable, pause_back: Callable) -> Dictionary:
+func _build_pause_overlay(parent: Node, pixel_texture: Callable, pause_resume: Callable, pause_settings: Callable, pause_quit: Callable, pause_status: Callable, pause_equipment: Callable, pause_back_callback: Callable) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := create_view_overlay(parent, "PauseOverlay", Color(0.015, 0.02, 0.035, 1.0), 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -1200,11 +1200,11 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, pause_resume: C
 	var card := _make_menu_card(pause_root_page, "PausePlayerCard", Vector2(10, 27), Vector2(136, 72))
 	pause_player_card_panel = card
 	var card_texts: Array[Sprite2D] = []
-	for index in 6: card_texts.append(create_sprite(pause_root_page, "PauseCardText%d" % index, null, Vector2(16, 33 + index * 10), false))
+	for index in 7: card_texts.append(create_sprite(pause_root_page, "PauseCardText%d" % index, null, Vector2(16, 33 + index * 10), false))
 	var status_texts: Array[Sprite2D] = []
-	for index in 14:
-		var column := 0 if index < 8 else 1
-		var row := index if index < 8 else index - 8
+	for index in 16:
+		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
+		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
 		status_texts.append(create_sprite(status_page, "PauseStatus%d" % index, null, Vector2(14 + column * (display_view_size.x * 0.5), 42 + row * 10), false))
 	var equipment_texts: Array[Sprite2D] = []
 	for index in 8:
@@ -1229,7 +1229,7 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, pause_resume: C
 	var back := make_menu_command_button("BACK", Vector2(display_view_size.x - 76.0, display_view_size.y - 19.0), Vector2(68, 13), pixel_texture)
 	back.name = "PauseBack"
 	back.focus_mode = Control.FOCUS_NONE
-	if pause_back.is_valid(): back.pressed.connect(pause_back)
+	if pause_back_callback.is_valid(): back.pressed.connect(pause_back_callback)
 	overlay.add_child(back)
 	var cursor := create_sprite(pause_root_page, "PauseCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2.ZERO, false); cursor.visible = false
 	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "description": description, "back": back, "status_button": buttons[1], "equipment_button": buttons[2]}
@@ -1260,7 +1260,10 @@ func _position_hub_controls() -> void:
 	for index in hub_player_card_texts.size():
 		hub_player_card_texts[index].position = Vector2(16, 33 + index * 10)
 	var summary := hub_overlay.get_node_or_null("HubRootPage/HubSummary") as Sprite2D
-	if summary != null: summary.position = Vector2(16, 106)
+	if summary != null:
+		summary.position = Vector2(16, 106)
+		summary.texture = null
+		summary.visible = false
 	if hub_points_text != null: hub_points_text.position = Vector2(14, 23)
 	if hub_context_text != null: hub_context_text.position = Vector2(14, display_view_size.y - 14.0)
 	var allocation_preview_x := maxf(132.0, width - 108.0)
@@ -1287,8 +1290,8 @@ func _position_hub_controls() -> void:
 	for index in utility_buttons.size():
 		if utility_buttons[index] != null: utility_buttons[index].position = Vector2(utility_x[index], 113)
 	for index in hub_status_texts.size():
-		var column := 0 if index < 8 else 1
-		var row := index if index < 8 else index - 8
+		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
+		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
 		hub_status_texts[index].position = Vector2(14 + column * width * 0.5, 42 + row * 10)
 	# The item labels and their touch rows share a bounded left column. The
 	# previous width calculation grew from the viewport width independently of
@@ -1373,8 +1376,8 @@ func _position_pause_controls() -> void:
 		pause_player_card_panel.size = Vector2(minf(150.0, maxf(136.0, width - 100.0)), 72)
 	for index in pause_player_card_texts.size(): pause_player_card_texts[index].position = Vector2(16, 33 + index * 10)
 	for index in pause_status_texts.size():
-		var column := 0 if index < 8 else 1
-		var row := index if index < 8 else index - 8
+		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
+		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
 		pause_status_texts[index].position = Vector2(14 + column * width * 0.5, 42 + row * 10)
 	for index in pause_equipment_texts.size(): pause_equipment_texts[index].position = Vector2(14, 42 + index * 12)
 	if pause_description_text != null: pause_description_text.position = Vector2(14, display_view_size.y - 25.0)
@@ -1397,12 +1400,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	else:
 		var active_page := hub_page_roots.get(hub_page) as Control
 		if active_page != null: active_page.visible = true
-	var summary := hub_summary_text
 	var points := hub_points_text
-	var progression := root.get("progression_tuning") as ProgressionTuning
-	if summary != null:
-		summary.texture = pixel_texture.call("LV %d  XP %d/%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, progression)], Color.WHITE) as Texture2D
-	_update_player_card(root, pixel_texture, hub_player_card_texts, hub_summary_text)
+	_update_player_card(root, pixel_texture, hub_player_card_texts)
 	var page := hub_page
 	# Page changes alter the height of the shared inventory card (Equipment uses
 	# six compact slot rows; Shop/Fusion use the larger inventory rows).
@@ -1439,13 +1438,14 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		hub_context_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, Color8(148, 220, 255)) as Texture2D
 	_set_button_text(hub_back_button, back_prompt, pixel_texture, highlight_color)
 	if hub_currency_text != null:
+		var currency_visible := not showing_root and (page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION or page == HUB_PAGE_BIND)
 		var currency_label := "GOLD %d" % profile.gold if page == HUB_PAGE_SHOP else "SOULS %d" % profile.souls
-		hub_currency_text.visible = page == HUB_PAGE_SHOP or page == HUB_PAGE_FUSION or page == HUB_PAGE_BIND
 		var is_soul_currency := page == HUB_PAGE_FUSION or page == HUB_PAGE_BIND
-		hub_currency_text.texture = pixel_texture.call(currency_label, Color8(255, 205, 117) if page == HUB_PAGE_SHOP else SoulVisualsScript.SOUL_COLOR) as Texture2D
+		hub_currency_text.visible = currency_visible
+		hub_currency_text.texture = pixel_texture.call(currency_label, Color8(255, 205, 117) if page == HUB_PAGE_SHOP else SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D if currency_visible else null
 		if hub_currency_icon != null:
-			hub_currency_icon.visible = hub_currency_text.visible and is_soul_currency
-			hub_currency_icon.texture = SoulVisualsScript.texture()
+			hub_currency_icon.visible = currency_visible and is_soul_currency
+			hub_currency_icon.texture = SoulVisualsScript.texture() if hub_currency_icon.visible else null
 	elif hub_currency_icon != null:
 		hub_currency_icon.visible = false
 	if showing_root:
@@ -1594,10 +1594,12 @@ func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Spr
 	if chroma_component != null:
 		chroma = int(chroma_component.get("current_chroma"))
 	var display_name := PlayerProfile.normalize_player_name(profile.player_name)
-	var values := [display_name, element, "LV %d" % profile.level, "HP %d/%d" % [roundi(health), roundi(max_health)], "CHR %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "READY"]
+	var progression := root.get("progression_tuning") as ProgressionTuning
+	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression)
+	var values := [display_name, element, "LV %d" % profile.level, "XP %d/%d" % [profile.xp, xp_required], "HP %d/%d" % [roundi(health), roundi(max_health)], "CHR %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "READY"]
 	for index in texts.size():
 		var label: String = str(values[index]) if index < values.size() else ""
-		var label_color := Color.WHITE
+		var label_color := Color8(255, 205, 117) if index == 3 else Color.WHITE
 		if index == 1:
 			var palette_value: Variant = root.get("current_player_palette_name")
 			var palette_name: StringName = StringName(str(palette_value)) if palette_value != null else &"blue"
@@ -1607,7 +1609,7 @@ func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Spr
 		summary.visible = true
 
 
-func _update_hub_status_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+func _update_hub_status_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color) -> void:
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot
 	if snapshot == null:
 		return
@@ -1620,14 +1622,17 @@ func _update_hub_status_page(root: Object, pixel_texture: Callable, profile: Pla
 		hp = roundi(float(health_component.get("current_health")))
 	var chroma_component := root.get("player_chroma_component") as Node
 	var chroma := int(chroma_component.get("current_chroma")) if chroma_component != null else 0
-	var left := ["HP ....... %d/%d" % [hp, max_hp], "CHROMA ... %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR ...... %d" % roundi(snapshot.strength), "AGI ...... %d" % roundi(snapshot.agi), "VIT ...... %d" % roundi(snapshot.vit), "INT ...... %d" % roundi(snapshot.intelligence), "MND ...... %d" % roundi(snapshot.mnd), "DEF ...... %d" % roundi(snapshot.def)]
+	var progression := root.get("progression_tuning") as ProgressionTuning
+	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression)
+	var left := ["LV ....... %d" % profile.level, "XP ....... %d/%d" % [profile.xp, xp_required], "HP ....... %d/%d" % [hp, max_hp], "CHROMA ... %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR ...... %d" % roundi(snapshot.strength), "AGI ...... %d" % roundi(snapshot.agi), "VIT ...... %d" % roundi(snapshot.vit), "INT ...... %d" % roundi(snapshot.intelligence), "MND ...... %d" % roundi(snapshot.mnd), "DEF ...... %d" % roundi(snapshot.def)]
 	var right := ["P.ATK .... %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .... %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .... %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .... %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV ...... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "RECOVERY . %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0)]
-	for index in 8:
-		hub_status_texts[index].texture = pixel_texture.call(left[index], Color.WHITE) as Texture2D
+	for index in left.size():
+		hub_status_texts[index].texture = pixel_texture.call(left[index], Color8(255, 205, 117) if index == 1 else Color.WHITE) as Texture2D
 	for index in 6:
-		hub_status_texts[index + 8].texture = pixel_texture.call(right[index], Color.WHITE) as Texture2D
-	if hub_points_text != null: hub_points_text.texture = pixel_texture.call("LV %d  EXP %d/%d" % [profile.level, profile.xp, PlayerProfile.xp_required_for_level(profile.level, root.get("progression_tuning") as ProgressionTuning)], Color8(255, 205, 117)) as Texture2D
-	if hub_points_text != null: hub_points_text.visible = true
+		hub_status_texts[index + STATUS_LEFT_ROW_COUNT].texture = pixel_texture.call(right[index], Color.WHITE) as Texture2D
+	if hub_points_text != null:
+		hub_points_text.texture = null
+		hub_points_text.visible = false
 	if hub_context_text != null: hub_context_text.texture = null
 
 
@@ -1747,12 +1752,16 @@ func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
 	var max_health := CombatCalculator.max_health_for_snapshot(snapshot, tuning)
 	var chroma_component := root.get("player_chroma_component") as Node
 	var chroma := int(chroma_component.get("current_chroma")) if chroma_component != null else 0
+	var profile := root.get("player_profile") as PlayerProfile
+	var progression := root.get("progression_tuning") as ProgressionTuning
+	var xp := profile.xp if profile != null else 0
+	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression) if profile != null else 0
 	var values := [
-		"HP ...... %d/%d" % [roundi(health), roundi(max_health)], "CHROMA .. %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
+		"LV ...... %d" % (profile.level if profile != null else 0), "XP ...... %d/%d" % [xp, xp_required], "HP ...... %d/%d" % [roundi(health), roundi(max_health)], "CHROMA .. %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
 		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
 	]
 	for index in mini(values.size(), pause_status_texts.size()):
-		pause_status_texts[index].texture = pixel_texture.call(values[index], Color.WHITE) as Texture2D
+		pause_status_texts[index].texture = pixel_texture.call(values[index], Color8(255, 205, 117) if index == 1 else Color.WHITE) as Texture2D
 	if pause_description_text != null: pause_description_text.texture = null
 
 
@@ -1765,11 +1774,11 @@ func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
 	for index in mini(slot_labels.size(), pause_equipment_texts.size()):
 		var slot: StringName = ItemCatalog.SLOTS[index]
 		var item := profile.find_item(profile.get_equipped_instance_id(slot))
-		var name := "EMPTY"
+		var item_name := "EMPTY"
 		if item != null:
-			name = str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
-			if item.enhancement_level > 0: name += " +%d" % item.enhancement_level
-		pause_equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
+			item_name = str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
+			if item.enhancement_level > 0: item_name += " +%d" % item.enhancement_level
+		pause_equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], item_name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
 	for index in range(slot_labels.size(), pause_equipment_texts.size()):
 		pause_equipment_texts[index].texture = null
 	if pause_description_text != null: pause_description_text.texture = null
@@ -2196,13 +2205,13 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 			preview_item = null
 		preview_equipment.configure_preview_from_profile(profile, catalog, slot, preview_item)
 		var preview_snapshot := CombatStatSnapshot.from_components(player_stats, preview_equipment)
-		var fields := [
+		var comparison_fields := [
 			{"key": "vit", "label": "VIT"}, {"key": "strength", "label": "STR"},
 			{"key": "def", "label": "DEF"}, {"key": "agi", "label": "AGI"},
 			{"key": "intelligence", "label": "INT"}, {"key": "mnd", "label": "MND"},
 		]
-		for index in mini(stats.size(), fields.size()):
-			var field: Dictionary = fields[index]
+		for index in mini(stats.size(), comparison_fields.size()):
+			var field: Dictionary = comparison_fields[index]
 			var key := str(field["key"])
 			var before := float(live_snapshot.get(key))
 			var after := float(preview_snapshot.get(key))
@@ -2229,9 +2238,9 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 	var equipped := profile.find_item(profile.get_equipped_instance_id(slot))
 	var candidate_bonuses := _effective_item_bonuses(catalog, candidate, profile.mastery_level(candidate.definition_id))
 	var equipped_bonuses := _effective_item_bonuses(catalog, equipped, profile.mastery_level(equipped.definition_id)) if equipped != null else {}
-	var fields := [{"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}, {"key": "agi", "label": "AGI", "rate": false}, {"key": "intelligence", "label": "INT", "rate": false}, {"key": "mnd", "label": "MND", "rate": false}]
-	for index in mini(stats.size(), fields.size()):
-		var field: Dictionary = fields[index]
+	var fallback_fields := [{"key": "vitality", "label": "VIT", "rate": false}, {"key": "strength", "label": "STR", "rate": false}, {"key": "defense", "label": "DEF", "rate": false}, {"key": "agi", "label": "AGI", "rate": false}, {"key": "intelligence", "label": "INT", "rate": false}, {"key": "mnd", "label": "MND", "rate": false}]
+	for index in mini(stats.size(), fallback_fields.size()):
+		var field: Dictionary = fallback_fields[index]
 		var key := str(field["key"])
 		var value := float(candidate_bonuses.get(key, 0.0)) - float(equipped_bonuses.get(key, 0.0)) if comparing else float(candidate_bonuses.get(key, 0.0))
 		var prefix := "+" if value > 0 else "-" if value < 0 else ""
@@ -2242,7 +2251,7 @@ func _update_gear_comparison_stats(root: Object, pixel_texture: Callable, profil
 		else:
 			stats[index].visible = true
 			stats[index].texture = pixel_texture.call("%s %s%.1f%s" % [str(field["label"]), prefix, absf(value), "%" if bool(field["rate"]) else ""], color) as Texture2D
-	for index in range(fields.size(), stats.size()):
+	for index in range(fallback_fields.size(), stats.size()):
 		stats[index].texture = null
 		stats[index].visible = false
 
@@ -2724,7 +2733,7 @@ func _pixel_prompt_sequence_texture(pixel_texture: Callable, labels: Array[Strin
 		var glyph_image := part["glyph"] as Image
 		var text_image := part["text"] as Image
 		var part_height := int(part["height"])
-		var y_offset := (max_height - part_height) / 2
+		var y_offset := int(float(max_height - part_height) / 2.0)
 		var text_x := x_offset
 		if glyph_image != null:
 			image.blit_rect(glyph_image, Rect2i(Vector2i.ZERO, glyph_image.get_size()), Vector2i(x_offset, y_offset))
@@ -2961,13 +2970,13 @@ func _position_name_entry_controls() -> void:
 	var grid_origin := Vector2(origin_x + 12.0, 66.0)
 	for index in name_entry_cell_buttons.size():
 		var button := name_entry_cell_buttons[index]
-		button.position = grid_origin + Vector2((index % NAME_ENTRY_COLUMNS) * 17.0, (index / NAME_ENTRY_COLUMNS) * 12.0)
+		button.position = grid_origin + Vector2((index % NAME_ENTRY_COLUMNS) * 17.0, int(float(index) / float(NAME_ENTRY_COLUMNS)) * 12.0)
 		var label := name_entry_cell_texts[index]
 		label.position = button.size * 0.5
 	if name_entry_preview != null: name_entry_preview.position = Vector2(origin_x + 197.0, 82.0)
 	if name_entry_cursor_text != null:
 		var current_index := name_entry_row * NAME_ENTRY_COLUMNS + name_entry_column
-		name_entry_cursor_text.position = grid_origin + Vector2((current_index % NAME_ENTRY_COLUMNS) * 17.0 - 6.0, (current_index / NAME_ENTRY_COLUMNS) * 12.0 + 4.0)
+		name_entry_cursor_text.position = grid_origin + Vector2((current_index % NAME_ENTRY_COLUMNS) * 17.0 - 6.0, int(float(current_index) / float(NAME_ENTRY_COLUMNS)) * 12.0 + 4.0)
 
 
 func show_name_entry(root: Object, pending_slot: int) -> void:
@@ -3023,7 +3032,7 @@ func update_name_entry_ui(root: Object, pixel_texture: Callable) -> void:
 	if name_entry_confirm_text != null: name_entry_confirm_text.texture = _pixel_prompt_texture(pixel_texture, _menu_confirm_prompt_for(root), highlight) as Texture2D
 	if name_entry_back_text != null: name_entry_back_text.texture = _pixel_prompt_texture(pixel_texture, _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
 	var selected_index := clampi(name_entry_row * NAME_ENTRY_COLUMNS + name_entry_column, 0, maxi(characters.size() - 1, 0))
-	name_entry_row = selected_index / NAME_ENTRY_COLUMNS
+	name_entry_row = int(float(selected_index) / float(NAME_ENTRY_COLUMNS))
 	name_entry_column = selected_index % NAME_ENTRY_COLUMNS
 	for index in name_entry_cell_buttons.size():
 		var active := index < characters.size()
@@ -3080,7 +3089,7 @@ func _move_name_entry_cursor(delta: Vector2i) -> void:
 		next = posmod(current + delta.x, characters.size())
 	else:
 		next = clampi(current + delta.y * NAME_ENTRY_COLUMNS, 0, characters.size() - 1)
-	name_entry_row = next / NAME_ENTRY_COLUMNS
+	name_entry_row = int(float(next) / float(NAME_ENTRY_COLUMNS))
 	name_entry_column = next % NAME_ENTRY_COLUMNS
 	_update_name_entry_visuals()
 

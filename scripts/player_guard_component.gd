@@ -183,10 +183,10 @@ func _update_meter(root: Object) -> void:
 	# layer is reserved for a broken shield's recovery cycle.
 	fill.modulate.a = bar_alpha if not shield_broken_recovery or fully_restored else 0.0
 	damage_fill.modulate.a = bar_alpha if shield_broken_recovery else 0.0
-	var position := player.global_position + BAR_OFFSET
-	frame.global_position = position
-	fill.global_position = position
-	damage_fill.global_position = position
+	var bar_position := player.global_position + BAR_OFFSET
+	frame.global_position = bar_position
+	fill.global_position = bar_position
+	damage_fill.global_position = bar_position
 	frame.z_index = int(root.get("OVERWORLD_UI_Z"))
 	fill.z_index = int(root.get("OVERWORLD_UI_Z")) + 1
 	damage_fill.z_index = int(root.get("OVERWORLD_UI_Z")) + 2

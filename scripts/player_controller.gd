@@ -27,7 +27,7 @@ func connected_devices() -> Array[int]:
 	return []
 
 
-func movement_input(devices: Array[int], deadzone: float) -> Vector2:
+func movement_input(_devices: Array[int], deadzone: float) -> Vector2:
 	if input_router != null:
 		return input_router.movement(deadzone)
 	return Vector2.ZERO
@@ -39,19 +39,19 @@ func action_pressed(action: StringName, _devices: Array[int], _button: int) -> b
 	return false
 
 
-func target_held(devices: Array[int], trigger_deadzone: float) -> bool:
+func target_held(_devices: Array[int], trigger_deadzone: float) -> bool:
 	if input_router != null:
 		return input_router.target_held(trigger_deadzone)
 	return false
 
 
-func target_cycle_direction(devices: Array[int], deadzone: float) -> int:
+func target_cycle_direction(_devices: Array[int], deadzone: float) -> int:
 	if input_router != null:
 		return input_router.target_cycle_direction(deadzone)
 	return 0
 
 
-func guard_held(devices: Array[int], trigger_deadzone: float) -> bool:
+func guard_held(_devices: Array[int], trigger_deadzone: float) -> bool:
 	if input_router != null:
 		return input_router.guard_held(trigger_deadzone)
 	return false

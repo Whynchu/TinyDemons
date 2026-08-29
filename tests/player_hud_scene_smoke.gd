@@ -55,6 +55,33 @@ func _initialize() -> void:
 		var legacy := hud.get_node_or_null(path) as CanvasItem
 		_expect(legacy != null and not legacy.visible, "%s stays out of the gameplay HUD" % path, failures)
 
+	for path in [
+		"SoulDisplay/SoulIcon",
+		"SoulDisplay/SoulAmount",
+		"InputPrompts/TrianglePrompt",
+		"InputPrompts/SquarePrompt",
+		"InputPrompts/XPrompt",
+		"InputPrompts/CirclePrompt",
+		"AbilityIcons/TrianglePromptMagic",
+		"AbilityIcons/TrianglePromptImbue",
+		"AbilityIcons/MagicCooldownIcon",
+		"AbilityIcons/MagicCooldownTimerShadow",
+		"AbilityIcons/MagicCooldownTimer",
+		"AbilityIcons/ImbueCooldownIcon",
+		"AbilityIcons/ImbueCooldownTimerShadow",
+		"AbilityIcons/ImbueCooldownTimer",
+		"ComboHud/ComboLabel",
+		"ComboHud/ComboBase",
+		"ComboHud/ComboFill",
+		"TargetHud/TargetHealthText",
+		"TargetHud/FocusLabelBase",
+		"TargetHud/FocusLabel",
+	]:
+		var authored := hud.get_node_or_null(path) as Sprite2D
+		_expect(authored != null, "%s is authored in the player HUD scene" % path, failures)
+	var target_health_text := hud.get_node_or_null("TargetHud/TargetHealthText") as Sprite2D
+	_expect(target_health_text != null and target_health_text.z_index > 3, "enemy health text is above the health-bar layers", failures)
+
 	var atlas := load("res://assets/artwork/player_UI_lvlnumbers.png") as Texture2D
 	_expect(atlas != null and atlas.get_size().is_equal_approx(Vector2(40, 7)), "level number atlas contains ten 4x7 digits", failures)
 	hud.call("set_static_text", "lv. 21", Color.WHITE)
@@ -73,6 +100,16 @@ func _initialize() -> void:
 	hud.call("apply_bar_colors", PaletteLibrary.NORMAL["red"], PaletteLibrary.ACCENT["orange"])
 	_expect(xp_fill != null and _contains_color(xp_fill.texture.get_image(), PaletteLibrary.NORMAL["yellow"]), "XP remains yellow when the player palette changes", failures)
 	_expect(mp_fill != null and _contains_color(mp_fill.texture.get_image(), PaletteLibrary.ACCENT["orange"]), "Chroma fill follows the active Chroma accent", failures)
+	var portrait := hud.get_node_or_null("PlayerStatus/Portrait") as Sprite2D
+	var portrait_source := portrait.texture if portrait != null else null
+	var portrait_library := SpriteFrameLibrary.new()
+	hud.call("apply_portrait_palette", "red", portrait_library)
+	_expect(portrait != null and portrait.texture != portrait_source, "portrait recolors when the player palette changes", failures)
+	_expect(portrait != null and _contains_color(portrait.texture.get_image(), PaletteLibrary.NORMAL["red"]), "portrait uses the active palette color", failures)
+	hud.call("apply_portrait_palette", "green", portrait_library)
+	_expect(portrait != null and _contains_color(portrait.texture.get_image(), PaletteLibrary.SHADOW["green"]), "green portrait uses the green shadow as its base", failures)
+	hud.call("apply_portrait_palette", "yellow", portrait_library)
+	_expect(portrait != null and _contains_color(portrait.texture.get_image(), PaletteLibrary.SHADOW["yellow"]), "yellow portrait uses the yellow shadow as its base", failures)
 
 	hud.queue_free()
 	hud_controller.queue_free()

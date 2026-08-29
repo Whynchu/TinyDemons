@@ -87,7 +87,8 @@ class LayoutBuilder extends RefCounted:
 			push_error("Generated layout attempted to link a missing room.")
 			return
 		var destination_entry := DungeonGraph.BOTTOM_RIGHT if exit_socket == DungeonGraph.WALL_LEFT else DungeonGraph.BOTTOM_LEFT
-		var midpoint: Vector2i = (source.minimap_coordinate + destination.minimap_coordinate) / 2
+		var midpoint_sum: Vector2i = source.minimap_coordinate + destination.minimap_coordinate
+		var midpoint: Vector2i = Vector2i(int(float(midpoint_sum.x) / 2.0), int(float(midpoint_sum.y) / 2.0))
 		layout.add_connection(layout.make_connection_spec(
 			source_room_id,
 			exit_socket,
@@ -130,7 +131,7 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 
 	var second_orb_depth := boss_depth - 4
 	var second_special_depth := boss_depth - 2
-	var cloaked_depth := clampi(boss_depth / 2, 6, boss_depth - 5)
+	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
 	var fire_depth := clampi(boss_depth - 6, 6, boss_depth - 5)
 	var first_alternate_fire_depth := -1
 	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame)

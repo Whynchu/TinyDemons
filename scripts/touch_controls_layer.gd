@@ -659,7 +659,6 @@ func _apply_layout() -> void:
 	_stick_knob.size = Vector2(knob_side, knob_side)
 	_stick_base.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.10, 0.15, 0.62), Color(0.52, 0.58, 0.72, 0.78), 2, int(diameter * 0.5)))
 	_update_stick_visuals()
-	var buttons: Dictionary = _layout["buttons"]
 	for action in _button_nodes:
 		var node := _button_nodes[action] as Control
 		node.position = _button_rect(action).position
@@ -716,12 +715,12 @@ func _refresh_controls() -> void:
 		_stick_base.visible = _controls_visible
 		_stick_knob.visible = _controls_visible
 	for action in _button_nodes:
-		var visible := _controls_visible
+		var control_visible := _controls_visible
 		if action == &"cancel":
-			visible = _cancel_control_visible()
+			control_visible = _cancel_control_visible()
 		elif action == &"pause":
-			visible = _controls_visible
-		(_button_nodes[action] as Control).visible = visible
+			control_visible = _controls_visible
+		(_button_nodes[action] as Control).visible = control_visible
 
 
 func _clear_gameplay_input() -> void:

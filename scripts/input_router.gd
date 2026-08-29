@@ -43,8 +43,8 @@ func poll(next_context: int) -> void:
 		&"ui_left": bool(_current.get(&"ui_left", false)) or _movement.x < -0.65,
 		&"ui_right": bool(_current.get(&"ui_right", false)) or _movement.x > 0.65,
 	}
-	_target_axis = _strongest_axis(JOY_AXIS_RIGHT_X)
-	_guard_axis = _strongest_trigger(JOY_AXIS_TRIGGER_LEFT)
+	_target_axis = _strongest_axis(JOY_AXIS_RIGHT_X as JoyAxis)
+	_guard_axis = _strongest_trigger(JOY_AXIS_TRIGGER_LEFT as JoyAxis)
 
 
 func set_touch_provider(provider: Node) -> void:
@@ -93,7 +93,7 @@ func button_pressed(button: int) -> bool:
 
 
 func target_held(trigger_deadzone: float) -> bool:
-	return pressed(&"target") or _strongest_trigger(JOY_AXIS_TRIGGER_RIGHT) > trigger_deadzone
+	return pressed(&"target") or _strongest_trigger(JOY_AXIS_TRIGGER_RIGHT as JoyAxis) > trigger_deadzone
 
 
 func target_cycle_direction(deadzone: float) -> int:
@@ -160,12 +160,12 @@ func _read_movement() -> Vector2:
 	if pressed(&"move_up"): value.y -= 1.0
 	if pressed(&"move_down"): value.y += 1.0
 	for device in devices:
-		var stick := Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y))
+		var stick := Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X as JoyAxis), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y as JoyAxis))
 		if stick.length() > value.length(): value = stick
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_RIGHT): value.x += 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_LEFT): value.x -= 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN): value.y += 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_UP): value.y -= 1.0
+		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_RIGHT as JoyButton): value.x += 1.0
+		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_LEFT as JoyButton): value.x -= 1.0
+		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN as JoyButton): value.y += 1.0
+		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_UP as JoyButton): value.y -= 1.0
 	var touch_movement: Variant = _touch_snapshot.get("movement", Vector2.ZERO)
 	if touch_movement is Vector2 and (touch_movement as Vector2).length() > value.length():
 		value = touch_movement as Vector2
@@ -189,11 +189,11 @@ func _touch_action_pressed(action: StringName) -> bool:
 
 
 func _touch_action_just_pressed(action: StringName) -> bool:
-	var just_pressed: Variant = _touch_snapshot.get("just_pressed", {})
-	return bool((just_pressed as Dictionary).get(action, false)) if just_pressed is Dictionary else false
+	var pressed_edges: Variant = _touch_snapshot.get("just_pressed", {})
+	return bool((pressed_edges as Dictionary).get(action, false)) if pressed_edges is Dictionary else false
 
 
-func _strongest_axis(axis: int) -> float:
+func _strongest_axis(axis: JoyAxis) -> float:
 	var strongest := 0.0
 	for device in devices:
 		var value := Input.get_joy_axis(device, axis)
@@ -201,7 +201,7 @@ func _strongest_axis(axis: int) -> float:
 	return strongest
 
 
-func _strongest_trigger(axis: int) -> float:
+func _strongest_trigger(axis: JoyAxis) -> float:
 	var strongest := 0.0
 	for device in devices:
 		strongest = maxf(strongest, Input.get_joy_axis(device, axis))

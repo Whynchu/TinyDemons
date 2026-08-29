@@ -2,13 +2,14 @@ shader_type canvas_item;
 render_mode unshaded;
 
 // The value is the fraction of the cooldown still remaining. While it is
-// above zero the whole icon stays grey and dim; zero restores the selected
-// Chroma palette. The radial sector gets an extra shade so progress remains
-// legible without making the artwork look ready too early.
+// above zero the remaining sector stays grey and dim; the elapsed sector keeps
+// the selected Chroma palette and is brightened so cooldown progress is easy to
+// read without making the whole button look ready too early.
 uniform float cooldown_ratio : hint_range(0.0, 1.0) = 0.0;
 uniform float unavailable : hint_range(0.0, 1.0) = 0.0;
 uniform float desaturation_amount : hint_range(0.0, 1.0) = 0.92;
 uniform float cooldown_dim : hint_range(0.0, 1.0) = 0.58;
+uniform float elapsed_brightness : hint_range(0.0, 1.0) = 0.82;
 uniform float flash_strength : hint_range(0.0, 2.0) = 0.0;
 
 const float TAU_VALUE = 6.28318530718;
@@ -32,7 +33,8 @@ void fragment() {
 		vec3 grey = vec3(luminance);
 		vec3 dimmed = mix(source.rgb, grey, desaturation_amount) * cooldown_dim;
 		vec3 deeper_sector = dimmed * 0.72;
-		vec3 cooldown_color = mix(dimmed, deeper_sector, dimmed_sector);
+		vec3 elapsed_color = min(source.rgb * elapsed_brightness, vec3(1.0));
+		vec3 cooldown_color = mix(elapsed_color, deeper_sector, dimmed_sector);
 		vec3 output_color = mix(source.rgb, cooldown_color, cooldown_active);
 		// A short additive flash keeps the authored icon readable on activation
 		// before the radial cooldown treatment settles over it.

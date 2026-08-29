@@ -11,6 +11,21 @@
 
 ## Verification
 
+### MCP-first safety rule
+
+When a Godot editor peer is connected through the MCP toolkit, use MCP for
+scene inspection, script diagnostics, playtests, screenshots, and runtime logs.
+Do **not** run `tests/run_all_smoke.ps1` from that editor session. That script
+launches a separate Godot process for every registered smoke test (currently
+around 90 processes in sequence); a headless renderer crash can therefore
+produce an avalanche of Windows memory-error dialogs.
+
+Use the full runner only as an explicitly supervised, standalone verification
+step when no MCP Godot editor/runtime is active. Prefer one focused smoke test
+first. If a standalone Godot crash begins repeating, stop the runner and end
+only the `Godot_v4.7.1-stable_win64_console` worker processes; leave the main
+editor process running unless it is also failing.
+
 ```powershell
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 & "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path . --log-file ".godot_user/editor-scan.log" --editor --quit

@@ -6,6 +6,7 @@ extends Node2D
 ## single, flush-top-left composition.
 const HUD_SIZE := Vector2(82, 16)
 const HUD_SIZE_PIXELS := Vector2i(82, 16)
+const SOUL_VISUALS_SCRIPT = preload("res://scripts/soul_visuals.gd")
 const XP_COLOR := PaletteLibrary.NORMAL["yellow"]
 const HP_COLOR := PaletteLibrary.NORMAL["red"]
 const HP_HIGHLIGHT := Color8(239, 125, 87)
@@ -28,6 +29,7 @@ const BAR_TRACKS := {
 var _xp_source: Texture2D
 var _hp_source: Texture2D
 var _mp_source: Texture2D
+var _portrait_source: Texture2D
 var _solid_texture_cache: Dictionary = {}
 var _level_number_texture_cache: Dictionary = {}
 
@@ -41,6 +43,12 @@ func _ready() -> void:
 	set_static_text("lv. 1")
 	if Engine.is_editor_hint():
 		_set_text(get_node_or_null("PlayerStatus/Health/HpText") as Sprite2D, "10/10", Color.WHITE)
+		var soul_icon := get_node_or_null("SoulDisplay/SoulIcon") as Sprite2D
+		if soul_icon != null:
+			soul_icon.texture = SOUL_VISUALS_SCRIPT.texture()
+			soul_icon.centered = false
+			soul_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_set_text(get_node_or_null("SoulDisplay/SoulAmount") as Sprite2D, "0", SOUL_VISUALS_SCRIPT.SOUL_HIGHLIGHT_COLOR)
 		_set_text(get_node_or_null("RoomNumber") as Sprite2D, "D1", Color.WHITE)
 		_set_text(get_node_or_null("DungeonRun") as Sprite2D, "SLIMEY DEPTHS R1", Color.WHITE)
 		_set_text(get_node_or_null("RunTimer") as Sprite2D, "TIME 00:00", Color.WHITE)
@@ -65,6 +73,10 @@ func _capture_source_textures() -> void:
 		var mp_fill := get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D
 		if mp_fill != null:
 			_mp_source = mp_fill.texture
+	if _portrait_source == null:
+		var portrait := get_node_or_null("PlayerStatus/Portrait") as Sprite2D
+		if portrait != null:
+			_portrait_source = portrait.texture
 
 
 func _configure_sprites() -> void:
@@ -151,6 +163,15 @@ func apply_bar_colors(_player_color: Color = XP_COLOR, chroma_color: Color = MP_
 			frame.self_modulate = Color.WHITE
 
 
+func apply_portrait_palette(palette_name: String, library: SpriteFrameLibrary) -> void:
+	_capture_source_textures()
+	var portrait := get_node_or_null("PlayerStatus/Portrait") as Sprite2D
+	if portrait == null or _portrait_source == null or library == null:
+		return
+	portrait.texture = library.recolor_portrait_texture(_portrait_source, palette_name)
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
 func hp_highlight_texture() -> Texture2D:
 	_capture_source_textures()
 	return _solid_texture(_hp_source, HP_HIGHLIGHT)
@@ -224,12 +245,13 @@ func glyph_texture(value: String, color: Color) -> Texture2D:
 		"6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
 		"8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
 		".": ["0", "0", "0", "0", "1"], "-": ["000", "000", "111", "000", "000"], ":": ["0", "1", "0", "1", "0"], "/": ["001", "001", "010", "100", "100"],
-		"L": ["100", "100", "100", "100", "111"], "v": ["000", "000", "101", "101", "010"],
+		"L": ["100", "100", "100", "100", "111"], "D": ["110", "101", "101", "101", "110"],
+		"I": ["111", "010", "010", "010", "111"], "Y": ["101", "101", "010", "010", "010"], "v": ["000", "000", "101", "101", "010"],
 		"l": ["10", "10", "10", "10", "11"], "h": ["100", "100", "110", "101", "101"],
 		"c": ["000", "000", "111", "100", "111"],
 		"p": ["000", "110", "101", "110", "100"], "m": ["00000", "11011", "10101", "10101", "10101"],
 		"S": ["011", "100", "010", "001", "110"], "T": ["111", "010", "010", "010", "010"],
-		"A": ["010", "101", "111", "101", "101"], "R": ["110", "101", "110", "101", "101"],
+		"A": ["010", "101", "111", "101", "101"], "M": ["10001", "11011", "10101", "10101", "10101"], "R": ["110", "101", "110", "101", "101"],
 		"E": ["111", "100", "110", "100", "111"], " ": ["0", "0", "0", "0", "0"]
 	}
 	var width := 0

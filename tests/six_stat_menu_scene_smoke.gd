@@ -29,7 +29,7 @@ func _initialize() -> void:
 
 		screens.hub_page_buttons[0].pressed.emit()
 		await process_frame
-		_expect(screens.hub_page == screens.HUB_PAGE_STATUS and screens.hub_status_texts.size() == 14 and screens.hub_status_texts[0].visible and screens.hub_status_texts[0].texture != null, "Status is read-only and shows the six-stat/derived block", failures)
+		_expect(screens.hub_page == screens.HUB_PAGE_STATUS and screens.hub_status_texts.size() == 16 and screens.hub_status_texts[0].visible and screens.hub_status_texts[0].texture != null, "Status is read-only and shows level, XP, and the six-stat/derived block", failures)
 		_expect(not screens.hub_stat_buttons[0].visible and not screens.hub_apply_button.visible, "Status does not expose allocation controls", failures)
 
 		screens.hub_page_buttons[1].pressed.emit()

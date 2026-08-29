@@ -166,16 +166,24 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 	elif other == root.get("cloaked_demon"):
 		separate_actor(root, actor, other)
 	elif actor == root.get("player") or other == root.get("player"):
-		# Player and enemy may never trade displacement.  Shared pushes made
-		# lock-on movement feel like the player and slime could occupy one spot.
-		# The moving body is pushed back by its own overlap instead. If a wall
-		# prevents that correction, push the other body as a last resort rather
-		# than allowing the pair to remain stacked.
+		# The player should be able to push an enemy even while that enemy is in
+		# an attack animation.  Slime AI intentionally stops its own scoot during
+		# attacks, so making the player absorb the overlap turns an attacking
+		# slime into an immovable wall.  Resolve the contact by moving the
+		# non-player body first; static geometry still makes the enemy give way
+		# only when the destination is valid.
 		var push := overlap_push_vector(root, actor, other)
 		if push != Vector2.ZERO:
-			var separated := try_move_swept(actor, push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
-			if not separated:
-				try_move_swept(other, -push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+			var player := root.get("player") as Sprite2D
+			var enemy := other if actor == player else actor
+			var enemy_push := -push if actor == player else push
+			var can_move_enemy := enemy != null and enemy != player
+			if can_move_enemy and try_move_swept(enemy, enemy_push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static")):
+				return
+			# If the enemy is pinned against room geometry, preserve the old
+			# safety behavior and separate the player instead of allowing the
+			# two collision bodies to remain stacked.
+			try_move_swept(player, push if actor == player else -push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 	else:
 		push_actor(root, actor, other, movement)
 

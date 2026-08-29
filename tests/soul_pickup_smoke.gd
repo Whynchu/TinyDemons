@@ -37,7 +37,8 @@ func _initialize() -> void:
 		var source_image := source_texture.get_image() if source_texture != null else null
 		_expect(soul_image != null and soul_image.get_pixel(2, 1).is_equal_approx(SoulVisualsScript.SOUL_COLOR), "Soul body uses the existing soul-purple currency colour", failures)
 		_expect(soul_image != null and soul_image.get_pixel(1, 0).is_equal_approx(SoulVisualsScript.SOUL_HIGHLIGHT_COLOR), "Soul outline uses a highlight of the soul-purple base", failures)
-		_expect(soul_image != null and source_image != null and soul_image.get_pixel(1, 2).is_equal_approx(source_image.get_pixel(1, 2)), "Soul eyes remain the authored dark pixels", failures)
+		_expect(soul_image != null and soul_image.get_pixel(1, 2).is_equal_approx(Color.WHITE), "Soul eyes remain white after recoloring", failures)
+		_expect(soul_image != null and source_image != null and soul_image.get_pixel(1, 2).is_equal_approx(source_image.get_pixel(1, 2)), "Soul eyes remain the authored white pixels", failures)
 		_expect(soul_image != null and source_image != null and not soul_image.get_pixel(2, 1).is_equal_approx(source_image.get_pixel(2, 1)), "Soul grey body is recoloured", failures)
 		_expect(soul_image != null and source_image != null and not soul_image.get_pixel(1, 0).is_equal_approx(source_image.get_pixel(1, 0)), "Soul light outline is recoloured independently", failures)
 		var hub_screen := gameplay.get("screen_state_controller") as Node

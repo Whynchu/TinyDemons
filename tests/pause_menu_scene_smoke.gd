@@ -28,8 +28,8 @@ func _initialize() -> void:
 		_expect(screens.pause_menu_buttons.size() == 5, "pause exposes Resume, Status, Equipment, Settings, and Quit to Title", failures)
 		for button in screens.pause_menu_buttons:
 			_expect(button.visible, "pause menu action is visible", failures)
-		_expect(screens.pause_player_card_texts.size() >= 5 and screens.pause_player_card_texts[0].texture != null, "pause shows the player card", failures)
-		_expect(screens.pause_status_texts.size() >= 14 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
+		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null, "pause shows the player card with XP and ready state", failures)
+		_expect(screens.pause_status_texts.size() >= 16 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()
 		_expect(screens.pause_page == 1 and screens.pause_status_texts[0].visible and not screens.hub_overlay.visible, "pause Status opens a read-only page without hub controls", failures)

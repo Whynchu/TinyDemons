@@ -73,7 +73,8 @@ const FLAME_FUSION_HOLD_THRESHOLD := 0.35
 ## now the five-Soul Swap transaction.
 const FIRE_SOUL_COST := FLAME_SWAP_SOUL_COST
 const ELEMENT_BIND_SOUL_COST := 50
-const SOUL_COLOR := Color8(211, 167, 255)
+const SOUL_COLOR := Color8(167, 59, 167)
+const SOUL_HIGHLIGHT_COLOR := Color8(234, 122, 197)
 const MAGIC_PROJECTILE_SPEED := 70.0
 const MAGIC_PROJECTILE_LIFETIME := 2.2
 const MAGIC_PROJECTILE_SIZE := 3
@@ -362,9 +363,9 @@ func _update_mp_desaturation() -> void:
 
 
 func _new_mp_desaturation_material() -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = preload("res://shaders/mp_desaturation.gdshader")
-	return material
+	var desaturation_material := ShaderMaterial.new()
+	desaturation_material.shader = preload("res://shaders/mp_desaturation.gdshader")
+	return desaturation_material
 
 
 func _set_mp_grey_texture(texture: Texture2D) -> void:
@@ -376,10 +377,10 @@ func _set_mp_grey_texture(texture: Texture2D) -> void:
 	# visible as Chroma falls, which makes the charge look like a ghostly,
 	# Chroma-dependent animation.
 	var attack_animation := animation_name.begins_with("attack") or animation_name == "spin_attack"
-	var material := mp_desaturation_attack_material if player_is_attacking and attack_animation else mp_desaturation_material
-	if material != null:
-		material.set_shader_parameter("grey_texture", texture)
-		material.set_shader_parameter("grey_mix", 1.0 - _chroma_visual_saturation())
+	var active_desaturation_material := mp_desaturation_attack_material if player_is_attacking and attack_animation else mp_desaturation_material
+	if active_desaturation_material != null:
+		active_desaturation_material.set_shader_parameter("grey_texture", texture)
+		active_desaturation_material.set_shader_parameter("grey_mix", 1.0 - _chroma_visual_saturation())
 func _chroma_visual_saturation() -> float:
 	var normalized := clampf(_current_player_chroma() / PLAYER_MAX_MP, 0.0, 1.0)
 	if normalized <= 0.0:
@@ -410,6 +411,7 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
 		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name), PaletteLibrary.accent(palette_name))
+		player_hud.call("apply_portrait_palette", palette_name, sprite_frame_library)
 	_update_player_progression_ui()
 	_update_mp_desaturation()
 func _set_entrance_open(is_open: bool) -> void:
@@ -512,23 +514,23 @@ func _can_interact_with_world_item() -> bool:
 	return bool(pickup_runtime_controller.call("can_interact_with_world_item", self))
 func _collect_world_item_drop() -> bool:
 	return bool(pickup_runtime_controller.call("collect_world_item_drop", self))
-func _spawn_chroma_pickup(position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
-	return pickup_runtime_controller.call("spawn_chroma_pickup", self, position, value, launch_seed, launch_direction, avoid_position) as Vector2
+func _spawn_chroma_pickup(spawn_position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
+	return pickup_runtime_controller.call("spawn_chroma_pickup", self, spawn_position, value, launch_seed, launch_direction, avoid_position) as Vector2
 func _restore_chroma_pickups(saved_pickups: Array) -> void:
 	pickup_runtime_controller.call("restore_chroma_pickups", self, saved_pickups)
 func _update_chroma_pickups(delta: float) -> void:
 	pickup_runtime_controller.call("update_chroma_pickups", self, delta)
 func _collect_chroma_pickup(index: int) -> void:
 	pickup_runtime_controller.call("collect_chroma_pickup", self, index)
-func _spawn_chroma_pickup_burst(position: Vector2) -> void:
+func _spawn_chroma_pickup_burst(spawn_position: Vector2) -> void:
 	if effects_spawner != null:
-		effects_spawner.spawn_chroma_pickup_burst_from_root(self, position)
+		effects_spawner.spawn_chroma_pickup_burst_from_root(self, spawn_position)
 func _remove_chroma_pickup(index: int) -> void:
 	pickup_runtime_controller.call("remove_chroma_pickup", self, index)
 func _clear_chroma_pickups() -> void:
 	pickup_runtime_controller.call("clear_chroma_pickups", self)
-func _spawn_soul_pickup(position: Vector2, value: int = SOUL_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
-	return pickup_runtime_controller.call("spawn_soul_pickup", self, position, value, launch_seed, launch_direction, avoid_position) as Vector2
+func _spawn_soul_pickup(spawn_position: Vector2, value: int = SOUL_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
+	return pickup_runtime_controller.call("spawn_soul_pickup", self, spawn_position, value, launch_seed, launch_direction, avoid_position) as Vector2
 func _update_soul_pickups(delta: float) -> void:
 	pickup_runtime_controller.call("update_soul_pickups", self, delta)
 func _collect_soul_pickup(index: int) -> void:
@@ -881,7 +883,7 @@ func _build_interact_prompt() -> void:
 	if interact_prompt != null:
 		var fire_cost := Sprite2D.new()
 		fire_cost.name = "FireCost"
-		fire_cost.texture = _pixel_text_texture(str(FIRE_SOUL_COST), SOUL_COLOR)
+		fire_cost.texture = _pixel_text_texture(str(FIRE_SOUL_COST), SOUL_HIGHLIGHT_COLOR)
 		fire_cost.centered = true
 		fire_cost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		fire_cost.z_as_relative = false
@@ -904,14 +906,14 @@ func _build_npc_dialogue() -> void:
 	npc_controller.dialogue_no_button = dialogue["no_button"] as Button
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
-	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.soul_icon_indicator = hud["soul"] as Sprite2D; hud_controller.soul_amount_indicator = hud["soul_amount"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.combo_label = hud["combo_label"] as Sprite2D; hud_controller.combo_base = hud["combo_base"] as Sprite2D; hud_controller.combo_fill = hud["combo_fill"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator(); _update_soul_indicator()
+	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.soul_icon_indicator = hud["soul"] as Sprite2D; hud_controller.soul_amount_indicator = hud["soul_amount"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.combo_label = hud["combo_label"] as Sprite2D; hud_controller.combo_base = hud["combo_base"] as Sprite2D; hud_controller.combo_fill = hud["combo_fill"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.ability_prompt_hud = hud["ability_prompts"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator(); _update_soul_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
 	hud_root.call("apply_bar_colors", player_hud_color, PaletteLibrary.accent(screen_state_controller.player_palette_name))
 	_update_player_progression_ui()
 func _update_gold_indicator() -> void: if hud_controller.gold_indicator != null: hud_controller.gold_amount_indicator.texture = _pixel_text_texture(str(player_profile.gold if player_profile != null else 0), Color8(255, 205, 117))
-func _update_soul_indicator() -> void: if hud_controller.soul_amount_indicator != null: hud_controller.soul_amount_indicator.texture = _pixel_text_texture(str(player_profile.souls if player_profile != null else 0), SOUL_COLOR)
+func _update_soul_indicator() -> void: if hud_controller.soul_amount_indicator != null: hud_controller.soul_amount_indicator.texture = _pixel_text_texture(str(player_profile.souls if player_profile != null else 0), SOUL_HIGHLIGHT_COLOR)
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _update_cloaked_demon_animation(delta: float) -> void:
 	var near_player := _can_interact_with_npc(); var patrolling := (current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC) and not near_player and (npc_controller.dialogue_box == null or not npc_controller.dialogue_box.visible)

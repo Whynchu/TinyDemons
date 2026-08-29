@@ -14,6 +14,7 @@ var slime_notice_effects: Array[Dictionary] = []
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
 var charge_aura_timer := 0.0
+var charge_ready_blink_timer := 0.0
 var charge_aura_active := false
 var charge_ready_highlight: Sprite2D = null
 
@@ -88,15 +89,17 @@ func update_charge_aura_from_root(root: Object, delta: float) -> void:
 		charge_aura_active = false
 		charge_aura_timer = 0.0
 		_hide_charge_ready_highlight()
+		charge_ready_blink_timer = 0.0
 		return
 	var tuning := root.get("player_tuning") as PlayerTuning
 	if tuning == null:
 		_hide_charge_ready_highlight()
+		charge_ready_blink_timer = 0.0
 		return
 	var charge_span := maxf(tuning.charge_maximum_time, tuning.charge_minimum_time)
 	var progress := clampf(attack.charge_elapsed / maxf(charge_span, 0.01), 0.0, 1.0)
 	var eased_progress := progress * progress * (3.0 - 2.0 * progress)
-	_update_charge_ready_highlight(root, player, progress)
+	_update_charge_ready_highlight(root, player, progress, delta)
 	var cadence := lerpf(tuning.charge_aura_start_interval, tuning.charge_aura_peak_interval, eased_progress)
 	cadence = maxf(cadence, 0.016)
 	if not charge_aura_active:
@@ -127,7 +130,7 @@ func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerT
 	var horizontal_speed := side * launch_speed * random_source.randf_range(0.35, 0.90)
 	var vertical_speed := -rise_speed * random_source.randf_range(0.80, 1.15)
 	# The charge effect is deliberately neutral so it reads as compressed air,
-	# while the player highlight below carries the selected flame color.
+	# while the player outline below provides the neutral charge feedback.
 	var air_color := Color.WHITE
 	var pixel_size := 2 if progress >= 0.70 and random_source.randf() < 0.30 else 1
 	var particle := Sprite2D.new()
@@ -157,10 +160,11 @@ func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerT
 	})
 
 
-func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: float) -> void:
+func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: float, delta: float) -> void:
 	if progress < 0.82 or player.texture == null:
 		_hide_charge_ready_highlight()
 		return
+	charge_ready_blink_timer = fmod(charge_ready_blink_timer + maxf(delta, 0.0), 0.20)
 	if charge_ready_highlight == null or not is_instance_valid(charge_ready_highlight):
 		charge_ready_highlight = Sprite2D.new()
 		charge_ready_highlight.name = "ChargeReadyHighlight"
@@ -175,13 +179,10 @@ func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: fl
 	else:
 		charge_ready_highlight.texture = root.call("_white_texture", player.texture) as Texture2D
 	ActorGeometry.sync_overlay(charge_ready_highlight, player)
-	var palette_name := str(root.get("current_player_palette_name"))
-	if palette_name.is_empty():
-		palette_name = "blue"
 	var readiness := clampf((progress - 0.82) / 0.18, 0.0, 1.0)
-	var alpha := lerpf(0.10, 0.72, readiness)
-	var highlight := PaletteLibrary.accent(palette_name)
-	charge_ready_highlight.modulate = Color(highlight.r, highlight.g, highlight.b, alpha)
+	var blink := 0.5 + 0.5 * sin(charge_ready_blink_timer / 0.20 * TAU)
+	var alpha := lerpf(0.12, 0.46, readiness) * lerpf(0.55, 1.0, blink)
+	charge_ready_highlight.modulate = Color(1.0, 1.0, 1.0, alpha)
 	charge_ready_highlight.visible = true
 
 

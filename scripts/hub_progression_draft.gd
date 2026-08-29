@@ -4,7 +4,7 @@ class_name HubProgressionDraft
 ## Ephemeral hub-only edits. The profile remains the durable owner; this object
 ## is discarded or reset when the hub transaction is cancelled/applied.
 var vit := 0
-var str := 0
+var strength := 0
 var def := 0
 var agi := 0
 var intelligence := 0
@@ -19,7 +19,7 @@ var spd:
 
 func clear() -> void:
 	vit = 0
-	str = 0
+	strength = 0
 	def = 0
 	agi = 0
 	intelligence = 0
@@ -28,7 +28,7 @@ func clear() -> void:
 func as_dictionary() -> Dictionary:
 	return {
 		"VIT": vit,
-		"STR": str,
+		"STR": strength,
 		"DEF": def,
 		"AGI": agi,
 		"INT": intelligence,

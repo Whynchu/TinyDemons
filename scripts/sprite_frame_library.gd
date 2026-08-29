@@ -6,6 +6,7 @@ class_name SpriteFrameLibrary
 
 const EFFECT_RESOLUTION_SCALE := 2
 const ABILITY_ICON_WATER_HIGHLIGHT := Color8(115, 239, 247)
+const PLAYER_EYE_HIGHLIGHT_COLOR := Color8(65, 166, 246)
 
 var image_cache: Dictionary = {}
 var recolor_cache: Dictionary = {}
@@ -149,7 +150,20 @@ func _is_orb_white(color: Color) -> bool:
 func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 	if source == null:
 		return null
-	var cache_key := "%d:%s" % [source.get_instance_id(), palette_name]
+	return _recolor_player_palette_texture(source, palette_name, "%d:%s" % [source.get_instance_id(), palette_name], false)
+
+
+## Portraits only contain the player's authored base-color pixels. Green and
+## yellow use their shadow as that base so the face does not become washed out
+## beside the portrait's neutral highlights.
+func recolor_portrait_texture(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null:
+		return null
+	var cache_key := "portrait:%d:%s" % [source.get_instance_id(), palette_name]
+	return _recolor_player_palette_texture(source, palette_name, cache_key, _uses_shadow_base_palette(palette_name))
+
+
+func _recolor_player_palette_texture(source: Texture2D, palette_name: String, cache_key: String, use_shadow_as_base: bool) -> Texture2D:
 	if recolor_cache.has(cache_key):
 		return recolor_cache[cache_key] as Texture2D
 	var target: Array[Color] = PaletteLibrary.triple(palette_name)
@@ -162,9 +176,15 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)
 			var key := _rgb_int(color)
+			if key == _rgb_int(PLAYER_EYE_HIGHLIGHT_COLOR):
+				var eye_color := PaletteLibrary.shadow(palette_name) if palette_name == "green" or palette_name == "yellow" else PaletteLibrary.normal(palette_name)
+				image.set_pixel(x, y, Color(eye_color.r, eye_color.g, eye_color.b, color.a))
+				continue
 			for color_index in source_colors.size():
 				if key == source_keys[color_index]:
 					var replacement: Color = target[color_index]
+					if use_shadow_as_base and color_index == 1:
+						replacement = target[0]
 					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
 					break
 	var texture := ImageTexture.create_from_image(image)
@@ -175,17 +195,22 @@ func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D:
 ## Recolors the authored Magic/Imbue icons. Their source artwork is an indexed
 ## water palette with a separate cyan highlight, dark outline pixels, and light
 ## glints. Only the water tones are remapped so the icon's silhouette and
-## authored neutral details survive every player Chroma choice.
+## authored neutral details survive every player Chroma choice. Green and yellow
+## deliberately shift the colored ramp down one step: base -> shadow, highlight
+## -> normal, and the separate cyan highlight -> accent/white.
 func recolor_ability_icon(source: Texture2D, palette_name: String) -> Texture2D:
 	if source == null:
 		return null
 	var cache_key := "ability_icon:%d:%s" % [source.get_instance_id(), palette_name]
 	if recolor_cache.has(cache_key):
 		return recolor_cache[cache_key] as Texture2D
+	var shifted_base := _uses_shadow_base_palette(palette_name)
+	var base_color := PaletteLibrary.shadow(palette_name) if shifted_base else PaletteLibrary.normal(palette_name)
+	var highlight_color := PaletteLibrary.normal(palette_name) if shifted_base else PaletteLibrary.accent(palette_name)
 	var source_to_target := {
 		_rgb_int(PaletteLibrary.shadow("blue")): PaletteLibrary.shadow(palette_name),
-		_rgb_int(PaletteLibrary.normal("blue")): PaletteLibrary.normal(palette_name),
-		_rgb_int(PaletteLibrary.accent("blue")): PaletteLibrary.accent(palette_name),
+		_rgb_int(PaletteLibrary.normal("blue")): base_color,
+		_rgb_int(PaletteLibrary.accent("blue")): highlight_color,
 		_rgb_int(ABILITY_ICON_WATER_HIGHLIGHT): PaletteLibrary.accent(palette_name).lerp(PaletteLibrary.WHITE, 0.35),
 	}
 	var image := _cached_image(source).duplicate()
@@ -199,6 +224,10 @@ func recolor_ability_icon(source: Texture2D, palette_name: String) -> Texture2D:
 	var texture := ImageTexture.create_from_image(image)
 	recolor_cache[cache_key] = texture
 	return texture
+
+
+func _uses_shadow_base_palette(palette_name: String) -> bool:
+	return palette_name == "green" or palette_name == "yellow"
 
 
 ## Recolors the neutral closed Orb-door art into the semantic map-door color.

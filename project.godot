@@ -15,6 +15,10 @@ run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
+
 [display]
 
 window/size/viewport_width=240
@@ -22,8 +26,11 @@ window/size/viewport_height=160
 window/size/window_width_override=960
 window/size/window_height_override=640
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 window/stretch/scale_mode="integer"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_mcp_toolkit/plugin.cfg")
 
 [input]
 
@@ -104,10 +111,13 @@ cancel={
 ]
 }
 
+[mcp_toolkit]
+
+status="No .mcp.json found — use Project > Tools > MCP Toolkit > Write .mcp.json to create one."
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
-renderer/rendering_method.web="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.0666667, 0.0745098, 0.0941176, 1)

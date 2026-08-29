@@ -17,6 +17,14 @@ func _initialize() -> void:
 		await process_frame
 	var profile := gameplay.get("player_profile") as PlayerProfile
 	_expect(profile != null, "starter-flame persistence has a live profile", failures)
+	var animation := gameplay.get("player_animation_component") as PlayerAnimationComponent
+	var screen := gameplay.get("screen_state_controller") as ScreenStateController
+	if animation != null and screen != null:
+		screen.starter_flame_index = 2
+		gameplay.call("_update_archetype_screen")
+		var yellow_frames: Dictionary = animation.frames_by_palette.get("yellow", {}) as Dictionary
+		var yellow_idle: Array[Texture2D] = yellow_frames.get("idle", []) as Array[Texture2D]
+		_expect(not yellow_idle.is_empty() and not screen.archetype_preview_frames.is_empty() and screen.archetype_preview_frames[0] == yellow_idle[0], "electric character creation preview uses the pre-rendered yellow idle", failures)
 	if profile != null:
 		var original_profile := profile.to_dictionary()
 		profile.has_started = true

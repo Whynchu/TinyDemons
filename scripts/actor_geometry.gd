@@ -67,16 +67,16 @@ static func collision_rect(actor: Sprite2D, chest: Sprite2D, firepit: Sprite2D, 
 		var boss_body := body_polygon(actor, actor_foot_offset)
 		if boss_body.size() >= 3:
 			return global_points_bounds(boss_body)
-	var guide_rect := guide_rect(actor, "CollisionGuide")
-	var foot_position := foot(actor, actor_foot_offset)
+	var guide_bounds := guide_rect(actor, "CollisionGuide")
+	var actor_foot := foot(actor, actor_foot_offset)
 	var size := actor_collision_size
-	if actor != chest and slimes.has(actor) and not guide_rect.has_area():
+	if actor != chest and slimes.has(actor) and not guide_bounds.has_area():
 		size *= 1.0 + (encounter_scale - 1.0) * 0.35
-	if guide_rect.has_area():
-		return guide_rect
+	if guide_bounds.has_area():
+		return guide_bounds
 	if actor == chest:
 		return Rect2(actor.global_position + Vector2(8, 13) - chest_collision_size * 0.5, chest_collision_size)
-	return Rect2(foot_position - Vector2(size.x * 0.5, size.y * 0.55), size)
+	return Rect2(actor_foot - Vector2(size.x * 0.5, size.y * 0.55), size)
 
 
 static func collision_polygon(slime: Sprite2D, actor_foot_offset: Vector2, requested_foot: Vector2 = Vector2.INF) -> PackedVector2Array:
@@ -100,7 +100,7 @@ static func body_polygon(slime: Sprite2D, actor_foot_offset: Vector2) -> PackedV
 	return polygon
 
 
-static func contact_radius(actor: Sprite2D, chest: Sprite2D, guide_rect: Rect2, fallback_radius: float) -> float:
+static func contact_radius(actor: Sprite2D, chest: Sprite2D, guide_bounds: Rect2, fallback_radius: float) -> float:
 	if actor == chest:
 		return 5.5
 	var body := actor.get_node_or_null("BodyHitbox") as Polygon2D
@@ -113,7 +113,7 @@ static func contact_radius(actor: Sprite2D, chest: Sprite2D, guide_rect: Rect2, 
 		var encounter_scale := float(actor.get_meta("encounter_scale", 1.0))
 		return maxf((maximum_x - minimum_x) * encounter_scale * 0.5, 2.0)
 	var scale_factor := 1.0 + (float(actor.get_meta("encounter_scale", 1.0)) - 1.0) * 0.35
-	return (maxf(minf(guide_rect.size.x, guide_rect.size.y) * 0.5, 2.0) if guide_rect.has_area() else fallback_radius) * scale_factor
+	return (maxf(minf(guide_bounds.size.x, guide_bounds.size.y) * 0.5, 2.0) if guide_bounds.has_area() else fallback_radius) * scale_factor
 
 
 static func directional_reach(polygon: PackedVector2Array, origin: Vector2, direction: Vector2) -> float:
@@ -132,8 +132,8 @@ static func polygon_center(polygon: PackedVector2Array) -> Vector2:
 	return center / float(polygon.size())
 
 
-static func combat_target_point(collision_rect: Rect2) -> Vector2:
-	return collision_rect.get_center()
+static func combat_target_point(target_bounds: Rect2) -> Vector2:
+	return target_bounds.get_center()
 
 
 static func global_polygon_bounds(polygon_owner: Polygon2D) -> Rect2:

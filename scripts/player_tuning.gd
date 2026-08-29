@@ -72,9 +72,9 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var spin_lunge_distance := 3.5
 @export var spin_lunge_duration := 0.16
 @export_group("Charge attack")
-@export var charge_minimum_time := 0.35
-@export var charge_maximum_time := 1.00
-@export var charged_attack2_frame_time_multiplier := 1.35
+@export var charge_minimum_time := 0.25
+@export var charge_maximum_time := 0.65
+@export var charged_attack2_frame_time_multiplier := 0.90
 @export var charged_attack2_damage_multiplier := 1.60
 @export var charged_attack2_knockback_multiplier := 1.50
 @export_group("Charge attack visual")

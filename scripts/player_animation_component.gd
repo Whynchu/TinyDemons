@@ -120,15 +120,15 @@ func apply_frame(root: Object) -> void:
 		var active_attack_frames: Array[Texture2D] = spin_left_frames if is_spin and flip else spin_frames if is_spin else attack2_left_frames if is_attack2 and flip else attack_left_frames if flip else attack2_frames if is_attack2 else attack_frames
 		if active_attack_frames.is_empty():
 			return
-		var resolved_frame := clampi(frame, 0, active_attack_frames.size() - 1)
+		var attack_frame_index := clampi(frame, 0, active_attack_frames.size() - 1)
 		var grey_key := "spin_left" if is_spin and flip else "spin" if is_spin else "attack2_left" if is_attack2 and flip else "attack_left" if flip else "attack2" if is_attack2 else "attack"
 		var grey_attack := grey_set.get(grey_key, []) as Array[Texture2D]
-		root.call("_set_mp_grey_texture", grey_attack[mini(resolved_frame, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
+		root.call("_set_mp_grey_texture", grey_attack[mini(attack_frame_index, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
 		var visual := root.get("player_attack_visual") as Sprite2D
 		# Assign the new frame while the attack layer is hidden. Exposing it first
 		# can render the previous attack frame for one frame as a delayed ghost.
 		visual.visible = false
-		visual.texture = active_attack_frames[resolved_frame]
+		visual.texture = active_attack_frames[attack_frame_index]
 		_set_render_visibility(player, visual, bool(root.get("player_is_attacking")))
 		update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index)
 		return
@@ -142,12 +142,12 @@ func apply_frame(root: Object) -> void:
 		_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
 		root.call("_set_actor_base_texture", player, frames[resolved_magic_frame])
 		return
-	var resolved_frame := clampi(frame, 0, frames.size() - 1)
+	var base_frame_index := clampi(frame, 0, frames.size() - 1)
 	player.offset = Vector2(-10, -10)
 	_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
 	var grey_frames := grey_set.get(animation_key, []) as Array[Texture2D]
-	root.call("_set_mp_grey_texture", grey_frames[mini(resolved_frame, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
-	root.call("_set_actor_base_texture", player, frames[resolved_frame])
+	root.call("_set_mp_grey_texture", grey_frames[mini(base_frame_index, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
+	root.call("_set_actor_base_texture", player, frames[base_frame_index])
 
 
 func _set_transition_grey(root: Object, transition_name: String) -> void:
