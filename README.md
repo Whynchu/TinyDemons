@@ -121,6 +121,10 @@ remappable in-editor. Defaults:
 
 ## Web build
 
+Current game version: **0.1.01**. Every push to `main` must increment the
+patch version by at least `0.0.01`; update the title-screen version and this
+README in the same commit.
+
 The browser build is published to
 [GitHub Pages](https://whynchu.github.io/TinyDemons/) from `main`. Pull
 requests run the Web export and upload a review artifact without publishing;
