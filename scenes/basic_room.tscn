@@ -224,6 +224,7 @@ visual_path = NodePath("../../FloorTiles/Entrance")
 trigger_path = NodePath("../../FloorTiles/Entrance/EntranceReturnGuide")
 spawn_marker_path = NodePath("SpawnMarker")
 block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/Entrance"), NodePath("../../FloorTiles/Entrance/Tile 2")])
+block_trigger_when_closed = true
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_LEFT" unique_id=977244243]
 position = Vector2(63, 85)
@@ -238,6 +239,7 @@ visual_path = NodePath("../../FloorTiles/EntranceRight")
 trigger_path = NodePath("../../FloorTiles/EntranceRight/EntranceReturnGuide")
 spawn_marker_path = NodePath("SpawnMarker")
 block_tile_paths = Array[NodePath]([NodePath("../../FloorTiles/EntranceRight"), NodePath("../../FloorTiles/EntranceRight/Tile 2")])
+block_trigger_when_closed = true
 
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_RIGHT" unique_id=1351297780]
 position = Vector2(160, 85)

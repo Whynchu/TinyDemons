@@ -32,14 +32,21 @@ func _initialize() -> void:
 			var expected: Vector2i = view_sizes[aspect]
 			var screens := gameplay.get("screen_state_controller") as ScreenStateController
 			_expect(display.view_size_value() == expected, "%s applies its logical view size" % aspect, failures)
-			_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT, "%s preserves the full vertical scale" % aspect, failures)
+			var live_surface := display.live_window_size_value()
+			var should_preserve_height := live_surface.x / maxf(live_surface.y, 1.0) >= float(expected.x) / maxf(float(expected.y), 1.0)
+			var expected_scale_aspect := Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if should_preserve_height else Window.CONTENT_SCALE_ASPECT_KEEP
+			_expect(gameplay.get_window().content_scale_aspect == expected_scale_aspect, "%s selects a crop-safe content scale mode" % aspect, failures)
+			var visible_size := display.visible_view_size_value()
+			_expect(visible_size.x >= expected.x and visible_size.y >= expected.y, "%s presentation frame fits the visible logical surface" % aspect, failures)
+			_expect(display.presentation_origin_value().is_equal_approx(DisplayLayout.centered_origin(visible_size, Vector2(expected))), "%s centers its active frame in the visible surface" % aspect, failures)
 			var ui := gameplay.get_node("InterfaceCanvas/UI") as Node
 			var top_bar := ui.get_node_or_null("DisplayTopBar") as ColorRect
 			var bottom_bar := ui.get_node_or_null("DisplayBottomBar") as ColorRect
 			var void_background := gameplay.get_node_or_null("BackgroundCanvas/DisplayVoidBackground") as ColorRect
 			_expect(top_bar != null and top_bar.size == Vector2(expected.x, 16), "%s top bar covers the full width" % aspect, failures)
 			_expect(bottom_bar != null and bottom_bar.position == Vector2(0, 145) and bottom_bar.size == Vector2(expected.x, 15), "%s bottom bar keeps its exact height" % aspect, failures)
-			_expect(void_background != null and void_background.size == Vector2(expected), "%s void background covers the full logical view" % aspect, failures)
+			_expect(void_background != null and void_background.size.is_equal_approx(visible_size), "%s void background covers the full logical view" % aspect, failures)
+			_expect((gameplay.get_node("InterfaceCanvas") as CanvasLayer).offset.is_equal_approx(display.presentation_origin_value()), "%s interface canvas follows the centered presentation frame" % aspect, failures)
 			var title_overlay := (gameplay.get("screen_state_controller") as ScreenStateController).title_overlay
 			_expect(title_overlay != null and title_overlay.size == Vector2(expected), "%s title overlay covers the full view" % aspect, failures)
 			_expect(screens.settings_overlay != null and screens.settings_overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
@@ -47,6 +54,10 @@ func _initialize() -> void:
 				_expect(is_equal_approx(screens.settings_title_text.position.x, 13.0), "%s settings title stays in its title tab" % aspect, failures)
 			if not screens.settings_value_buttons.is_empty():
 				_expect(screens.settings_value_buttons[0].position.x >= 90.0 and screens.settings_value_buttons[0].position.x < expected.x, "%s settings controls stay in their option column" % aspect, failures)
+			for option_row in screens.settings_option_buttons:
+				for option_value in option_row:
+					var option_button := option_value as Button
+					_expect(Rect2(option_button.position, option_button.size).end.x <= float(expected.x), "%s settings option fits inside the active frame" % aspect, failures)
 			var floor_layer := gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D
 			_expect(floor_layer != null and floor_layer.global_position.is_equal_approx(stable_floor), "%s room geometry remains in authored coordinates" % aspect, failures)
 			_expect(display.world_camera() != null and display.world_camera().enabled and display.world_camera().global_position.is_equal_approx(Vector2(120, 80)), "%s display camera keeps the room centered" % aspect, failures)
@@ -66,7 +77,11 @@ func _initialize() -> void:
 		var live_window := gameplay.get_window().size
 		var expected_full := Vector2i(maxi(240, roundi(160.0 * float(live_window.x) / maxf(float(live_window.y), 1.0))), 160)
 		_expect(display.view_size_value() == expected_full, "FULL follows the live window aspect", failures)
-		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "FULL keeps the complete logical canvas on a narrow 4:3 surface", failures)
+		var full_should_preserve_height := live_window.x / maxf(live_window.y, 1.0) >= float(expected_full.x) / maxf(float(expected_full.y), 1.0)
+		var full_expected_scale_aspect := Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if full_should_preserve_height else Window.CONTENT_SCALE_ASPECT_KEEP
+		_expect(gameplay.get_window().content_scale_aspect == full_expected_scale_aspect, "FULL chooses a crop-safe content scale mode", failures)
+		_expect(display.visible_view_size_value().is_equal_approx(Vector2(expected_full)), "FULL uses the complete active logical frame", failures)
+		_expect(display.presentation_origin_value().is_equal_approx(Vector2.ZERO), "FULL has no extra presentation offset", failures)
 		_expect((gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D).global_position.is_equal_approx(stable_floor), "FULL preserves authored collision geometry", failures)
 		gameplay.get_window().size = original_window_size
 	gameplay.queue_free()

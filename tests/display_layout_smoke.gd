@@ -19,6 +19,10 @@ func _initialize() -> void:
 	_expect(DisplayLayout.offset_for(&"minimap", wide) == Vector2.ZERO, "minimap stays left anchored", failures)
 	_expect(DisplayLayout.offset_for(&"room_number", wide) == Vector2.ZERO, "room number stays left anchored", failures)
 	_expect(DisplayLayout.bottom_y(160.0) == 0.0, "bottom anchor has no native vertical offset", failures)
+	var expanded := DisplayLayout.visible_size_for_window(Vector2(844, 390), native, true)
+	_expect(expanded == Vector2(346, 160), "wide surfaces expose their full logical width", failures)
+	_expect(DisplayLayout.centered_origin(expanded, native) == Vector2(53, 0), "native frame centers inside a wide logical surface", failures)
+	_expect(DisplayLayout.visible_size_for_window(Vector2(390, 844), wide, true) == wide, "narrow surfaces do not crop a fixed frame", failures)
 	_finish(failures)
 
 

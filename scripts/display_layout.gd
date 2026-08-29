@@ -47,6 +47,19 @@ static func extra_width(view_width: float) -> float:
 	return maxf(view_width - float(NATIVE_SIZE.x), 0.0)
 
 
+static func visible_size_for_window(window_size: Vector2, content_size: Vector2, preserve_height: bool) -> Vector2:
+	if not preserve_height or window_size.x <= 0.0 or window_size.y <= 0.0:
+		return content_size
+	var expanded_width := content_size.y * window_size.x / window_size.y
+	return Vector2(maxf(content_size.x, roundf(expanded_width)), content_size.y)
+
+
+static func centered_origin(visible_size: Vector2, content_size: Vector2) -> Vector2:
+	return Vector2(
+		maxf((visible_size.x - content_size.x) * 0.5, 0.0),
+		maxf((visible_size.y - content_size.y) * 0.5, 0.0))
+
+
 static func left_x(_view_width: float) -> float:
 	return 0.0
 
