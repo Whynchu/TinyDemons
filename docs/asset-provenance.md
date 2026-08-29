@@ -29,6 +29,10 @@ grant or imply third-party licensing.
 - `analysis/`, local virtual environments, generated click experiments, and other
   intermediate reports are not runtime dependencies and remain ignored or outside
   the shipping asset path.
+- The authored player HUD layers and their Aseprite source remain under
+  `Artwork/`; the matching PNG runtime copies under `assets/artwork/` are the
+  imported shipping resources. The generated 4×7 level-number atlas follows the
+  same source/runtime split.
 
 ## Fresh-clone acceptance checks
 

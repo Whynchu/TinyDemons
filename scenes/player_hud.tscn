@@ -5,6 +5,13 @@
 [ext_resource type="Texture2D" uid="uid://dk5sq30181jto" path="res://assets/artwork/BlackBars.png" id="3_bars"]
 [ext_resource type="Texture2D" uid="uid://bmhr71mqr5v2r" path="res://assets/artwork/HpBar.png" id="4_frame"]
 [ext_resource type="Texture2D" uid="uid://cjlw60ovgvd7n" path="res://assets/artwork/GoldFresh2.png" id="6_gold"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_frame.png" id="7_ui_frame"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_hp.png" id="8_ui_hp"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_mp.png" id="9_ui_mp"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_xp.png" id="10_ui_xp"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_lvl.png" id="11_ui_lvl"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_lvlnumberbg.png" id="12_ui_level_bg"]
+[ext_resource type="Texture2D" path="res://assets/artwork/player_UI_portrait.png" id="13_ui_portrait"]
 
 [sub_resource type="Image" id="Image_qcjqi"]
 data = {
@@ -80,11 +87,11 @@ image = SubResource("Image_hdl38")
 
 [sub_resource type="Image" id="Image_ke71k"]
 data = {
-"data": PackedByteArray(255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 0),
+"data": PackedByteArray(255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255),
 "format": "RGBA8",
 "height": 5,
 "mipmaps": false,
-"width": 9
+"width": 7
 }
 
 [sub_resource type="ImageTexture" id="ImageTexture_43ll4"]
@@ -179,10 +186,39 @@ texture = ExtResource("3_bars")
 centered = false
 
 [node name="PlayerStatus" type="Node2D" parent="." unique_id=858215162]
-position = Vector2(17, 0)
+position = Vector2(0, 0)
+
+[node name="UIFrame" type="Sprite2D" parent="PlayerStatus"]
+texture_filter = 1
+z_index = 0
+texture = ExtResource("7_ui_frame")
+centered = false
+
+[node name="Portrait" type="Sprite2D" parent="PlayerStatus"]
+texture_filter = 1
+z_index = 2
+texture = ExtResource("13_ui_portrait")
+centered = false
+
+[node name="LevelNumberBackground" type="Sprite2D" parent="PlayerStatus"]
+texture_filter = 1
+z_index = 1
+texture = ExtResource("12_ui_level_bg")
+centered = false
+
+[node name="LevelLabel" type="Sprite2D" parent="PlayerStatus"]
+texture_filter = 1
+z_index = 2
+texture = ExtResource("11_ui_lvl")
+centered = false
+
+[node name="LevelNumber" type="Sprite2D" parent="PlayerStatus"]
+texture_filter = 1
+z_index = 3
+centered = false
 
 [node name="LevelXp" type="Node2D" parent="PlayerStatus" unique_id=1346476942]
-position = Vector2(-10, 1)
+position = Vector2(0, 0)
 
 [node name="LevelTextAnchor" type="Node2D" parent="PlayerStatus/LevelXp" unique_id=409233186]
 position = Vector2(22, 5)
@@ -195,27 +231,29 @@ centered = false
 
 [node name="XpBar" type="Sprite2D" parent="PlayerStatus/LevelXp" unique_id=1133011864]
 texture_filter = 1
-position = Vector2(25, 0)
+position = Vector2(0, 0)
 texture = ExtResource("4_frame")
 centered = false
+visible = false
 
 [node name="XpBarFill" type="Sprite2D" parent="PlayerStatus/LevelXp" unique_id=1272737847]
 z_index = 1
 texture_filter = 1
-position = Vector2(25, 0)
-texture = SubResource("ImageTexture_lqhkl")
+position = Vector2(0, 0)
+texture = ExtResource("10_ui_xp")
 centered = false
 region_enabled = true
-region_rect = Rect2(0, 0, 48, 16)
+region_rect = Rect2(0, 0, 82, 16)
 
 [node name="XpText" type="Sprite2D" parent="PlayerStatus/LevelXp" unique_id=954926779]
 z_index = 2
 texture_filter = 1
 position = Vector2(49, 7.5)
 texture = SubResource("ImageTexture_50hf8")
+visible = false
 
 [node name="Health" type="Node2D" parent="PlayerStatus" unique_id=2041997762]
-position = Vector2(66, 1)
+position = Vector2(0, 0)
 
 [node name="HpLabel" type="Sprite2D" parent="PlayerStatus/Health" unique_id=307952716]
 z_index = 2
@@ -223,30 +261,33 @@ texture_filter = 1
 position = Vector2(0, 5)
 texture = SubResource("ImageTexture_7yc75")
 centered = false
+visible = false
 
 [node name="HpBar" type="Sprite2D" parent="PlayerStatus/Health" unique_id=1489274521]
 texture_filter = 1
-position = Vector2(9, 0)
+position = Vector2(0, 0)
 texture = ExtResource("4_frame")
 centered = false
+visible = false
 
 [node name="HpBarFill" type="Sprite2D" parent="PlayerStatus/Health" unique_id=2054211985]
 z_index = 1
 texture_filter = 1
-position = Vector2(9, 0)
-texture = SubResource("ImageTexture_hpbnu")
+position = Vector2(0, 0)
+texture = ExtResource("8_ui_hp")
 centered = false
 region_enabled = true
-region_rect = Rect2(0, 0, 48, 16)
+region_rect = Rect2(0, 0, 82, 16)
 
 [node name="HpText" type="Sprite2D" parent="PlayerStatus/Health" unique_id=35208586]
 z_index = 2
 texture_filter = 1
 position = Vector2(33, 7.5)
 texture = SubResource("ImageTexture_3pvjt")
+visible = false
 
 [node name="Mana" type="Node2D" parent="PlayerStatus" unique_id=1830361462]
-position = Vector2(126, 1)
+position = Vector2(0, 0)
 
 [node name="MpLabel" type="Sprite2D" parent="PlayerStatus/Mana" unique_id=1197097724]
 z_index = 2
@@ -254,27 +295,30 @@ texture_filter = 1
 position = Vector2(0, 5)
 texture = SubResource("ImageTexture_43ll4")
 centered = false
+visible = false
 
 [node name="MpBar" type="Sprite2D" parent="PlayerStatus/Mana" unique_id=853475172]
 texture_filter = 1
-position = Vector2(11, 0)
+position = Vector2(0, 0)
 texture = ExtResource("4_frame")
 centered = false
+visible = false
 
 [node name="MpBarFill" type="Sprite2D" parent="PlayerStatus/Mana" unique_id=885208127]
 z_index = 1
 texture_filter = 1
-position = Vector2(11, 0)
-texture = SubResource("ImageTexture_0gtav")
+position = Vector2(0, 0)
+texture = ExtResource("9_ui_mp")
 centered = false
 region_enabled = true
-region_rect = Rect2(0, 0, 48, 16)
+region_rect = Rect2(0, 0, 82, 16)
 
 [node name="MpText" type="Sprite2D" parent="PlayerStatus/Mana" unique_id=722189651]
 z_index = 2
 texture_filter = 1
 position = Vector2(35, 7.5)
 texture = SubResource("ImageTexture_e3h3h")
+visible = false
 
 [node name="GoldDisplay" type="Node2D" parent="." unique_id=763344297]
 position = Vector2(205, 2)

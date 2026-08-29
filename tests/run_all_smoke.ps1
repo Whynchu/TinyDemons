@@ -28,6 +28,7 @@ $tests += "gear_catalogue_expansion_smoke"
 $tests += "gear_effect_contract_smoke"
 $tests += "gear_slot_migration_smoke"
 $tests += "gear_drop_policy_smoke"
+$tests += "player_hud_scene_smoke"
 $failed = $false
 foreach ($test in $tests) {
 	Write-Host "=== $test ==="

@@ -71,11 +71,12 @@ func _initialize() -> void:
 			_expect(content_size == Vector2(expected), "%s touch layer reads the live logical size" % aspect, failures)
 			var player_hud := ui.get_node("PlayerHud") as Node2D
 			var gold_display := player_hud.get_node("GoldDisplay") as Node2D
-			var health := player_hud.get_node("PlayerStatus/Health") as Node2D
+			var player_status := player_hud.get_node("PlayerStatus") as Node2D
 			var right_shift := float(expected.x - 240)
-			var center_shift := right_shift * 0.5
 			_expect(is_equal_approx(gold_display.position.x, 205.0 + right_shift), "%s right HUD cluster reaches the edge" % aspect, failures)
-			_expect(is_equal_approx(health.position.x, 66.0 + center_shift), "%s center HUD cluster shifts by half the expansion" % aspect, failures)
+			_expect(player_status != null and player_status.position.is_equal_approx(Vector2.ZERO), "%s player HUD stays flush to the frame top-left" % aspect, failures)
+			var player_frame := player_hud.get_node("PlayerStatus/UIFrame") as Sprite2D
+			_expect(player_frame != null and player_frame.position.is_equal_approx(Vector2.ZERO), "%s player HUD frame keeps its authored origin" % aspect, failures)
 		var original_window_size := gameplay.get_window().size
 		gameplay.get_window().size = Vector2i(960, 720)
 		settings.set_setting(&"aspect", "FULL")

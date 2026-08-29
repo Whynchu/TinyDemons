@@ -652,15 +652,13 @@ func update_player_progression_ui(root: Object) -> void:
 	if hud_root != null:
 		hud_root.call("set_static_text", "lv. %d" % level, health_feedback_color(root, String(screen.get("player_palette_name"))))
 	xp_text.texture = root.call("_pixel_text_texture", "%d/%d" % [xp, required], Color.WHITE) as Texture2D
-	var fill_size := xp_fill.texture.get_size() if xp_fill.texture != null else Vector2(48, 16)
+	var fill_size := xp_fill.texture.get_size() if xp_fill.texture != null else Vector2(82, 16)
 	(root.get("hud_controller") as HudController).set_fill_ratio(xp_fill, fill_size, float(xp) / float(required))
 
 
 func spawn_player_xp_number(root: Object, amount: int) -> void:
-	var screen := root.get("screen_state_controller") as Node
-	var color := health_feedback_color(root, String(screen.get("player_palette_name")))
 	var text := "+%d xp" % maxi(amount, 0)
-	spawn_player_number(root, text, amount, color, true, text)
+	spawn_player_number(root, text, amount, PaletteLibrary.NORMAL["yellow"], true, text)
 
 
 func spawn_player_level_number(root: Object, level: int) -> void:
