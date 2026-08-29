@@ -31,6 +31,7 @@ var _content_scale_aspect := Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT
 var _windowed_size_before_fixed_aspect := Vector2i.ZERO
 var _applying_settings := false
 var _presentation_refresh_queued := false
+var _pending_surface_size := Vector2.ZERO
 var _last_live_surface_size := Vector2.ZERO
 
 
@@ -65,8 +66,8 @@ func _process(_delta: float) -> void:
 		_last_live_surface_size = live_size
 		return
 	if not live_size.is_equal_approx(_last_live_surface_size):
-		_last_live_surface_size = live_size
-		apply_settings()
+		_pending_surface_size = live_size
+		_queue_presentation_refresh()
 
 
 func view_size_value() -> Vector2i:
@@ -206,11 +207,11 @@ func _on_setting_changed(key: StringName, _value: Variant) -> void:
 func _on_window_size_changed() -> void:
 	var live_size := _live_window_size()
 	if live_size.x > 0.0 and live_size.y > 0.0:
-		_last_live_surface_size = live_size
+		_pending_surface_size = live_size
 	if _applying_settings:
 		_queue_presentation_refresh()
 		return
-	apply_settings()
+	_queue_presentation_refresh()
 
 
 func _queue_presentation_refresh() -> void:
@@ -221,14 +222,24 @@ func _queue_presentation_refresh() -> void:
 
 
 func _refresh_after_window_size_changed() -> void:
-	# Browser orientation changes can deliver the resize signal before the CSS
-	# viewport reports its final dimensions. Wait one frame, then recalculate the
-	# FULL logical width and the keep/keep-height decision together.
+	# Browser orientation changes can deliver several intermediate dimensions.
+	# Wait two frames and only commit once the CSS viewport has stopped changing.
+	await get_tree().process_frame
 	await get_tree().process_frame
 	_presentation_refresh_queued = false
 	if _applying_settings:
 		_queue_presentation_refresh()
 		return
+	var settled_surface_size := _live_window_size()
+	if settled_surface_size.is_zero_approx():
+		_queue_presentation_refresh()
+		return
+	if not _pending_surface_size.is_zero_approx() and not settled_surface_size.is_equal_approx(_pending_surface_size):
+		_pending_surface_size = settled_surface_size
+		_queue_presentation_refresh()
+		return
+	_last_live_surface_size = settled_surface_size
+	_pending_surface_size = Vector2.ZERO
 	var refreshed_size := _view_size_for_aspect(_aspect_mode)
 	var logical_size_changed := refreshed_size != current_view_size
 	if logical_size_changed:
@@ -380,7 +391,7 @@ func _live_window_size() -> Vector2:
 		# while the standalone iPhone page has already resized its CSS viewport.
 		# Read the browser viewport when available so FULL follows the actual
 		# borderless landscape surface, including home-screen launches.
-		var browser_size: Variant = JavaScriptBridge.eval("[window.innerWidth, window.innerHeight]")
+		var browser_size: Variant = JavaScriptBridge.eval("(window.visualViewport ? [window.visualViewport.width, window.visualViewport.height] : [window.innerWidth, window.innerHeight])")
 		if browser_size is Array and (browser_size as Array).size() >= 2:
 			var browser_width := float((browser_size as Array)[0])
 			var browser_height := float((browser_size as Array)[1])
