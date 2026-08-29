@@ -131,11 +131,11 @@ func update_target_ui(target: Sprite2D, target_name: Sprite2D, _target_bar: Spri
 	return bar_size
 
 
-func update_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, regen_speed: float, drain_speed: float, max_health: float, fill: Sprite2D, damage_fill: Sprite2D, fill_size: Vector2, health_text: Sprite2D, pixel_number: Callable, set_values: Callable) -> Dictionary:
+func update_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, _regen_speed: float, drain_speed: float, max_health: float, fill: Sprite2D, damage_fill: Sprite2D, fill_size: Vector2, health_text: Sprite2D, pixel_number: Callable, set_values: Callable) -> Dictionary:
 	# Bar speeds are %-relative: they scale with max HP so the bar fills/drains at
 	# the same visual rate regardless of how large the pool is.
 	var scale := max_health / 100.0
-	if health > display_health: display_health = move_toward(display_health, health, regen_speed * scale * delta)
+	if health > display_health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
 	if damage_hold > 0.0: damage_hold = maxf(damage_hold - delta, 0.0)
 	elif display_health > health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
 	set_values.call(fill, damage_fill, fill_size, health, display_health, max_health)
