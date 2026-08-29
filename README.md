@@ -121,7 +121,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.1.01**. Every push to `main` must increment the
+Current game version: **0.1.02**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the title-screen version and this
 README in the same commit.
 
