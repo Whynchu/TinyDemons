@@ -11,11 +11,14 @@ const FUSION_START_COST := 1
 const FUSION_RARITY_STEP_COST := 10
 const ELEMENTAL_FLAME_COST := 5
 const ELEMENT_BIND_SOUL_COST := 50
+const MAX_PLAYER_NAME_LENGTH := 8
+const DEFAULT_PLAYER_NAME := "DEMON"
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
 var open_hub_on_load := false
 var pending_route := "title"
+var player_name := DEFAULT_PLAYER_NAME
 var starter_flame: StringName = &"fire"
 var palette_name := "blue"
 var bound_element: StringName = &""
@@ -59,6 +62,16 @@ var completed_runs := 0
 var last_clear_score := 0
 var difficulty_rank := 1
 var last_run_grade := "D"
+
+
+static func normalize_player_name(value: String) -> String:
+	var normalized := ""
+	for character in value.strip_edges().to_upper():
+		if character == " " or character in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'.":
+			normalized += character
+		if normalized.length() >= MAX_PLAYER_NAME_LENGTH:
+			break
+	return normalized if not normalized.is_empty() else DEFAULT_PLAYER_NAME
 
 
 func ensure_starter_items(catalog: ItemCatalog = null) -> void:
@@ -381,6 +394,7 @@ func to_dictionary() -> Dictionary:
 		"has_started": has_started,
 		"open_hub_on_load": open_hub_on_load,
 		"pending_route": pending_route,
+		"player_name": normalize_player_name(player_name),
 		"starter_flame": String(starter_flame),
 		"palette_name": palette_name,
 		"bound_element": String(bound_element),
@@ -431,6 +445,7 @@ func load_dictionary(data: Dictionary) -> void:
 	pending_route = str(data.get("pending_route", "hub" if open_hub_on_load else "title"))
 	if pending_route not in ["title", "hub", "run"]:
 		pending_route = "title"
+	player_name = normalize_player_name(str(data.get("player_name", DEFAULT_PLAYER_NAME)))
 	var saved_flame := StringName(str(data.get("starter_flame", "fire")))
 	starter_flame = saved_flame if AspectCatalogScript.is_starter_flame(saved_flame) else &"fire"
 	palette_name = str(data.get("palette_name", "blue"))

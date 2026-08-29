@@ -36,7 +36,9 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_page == screens.HUB_PAGE_ALLOCATE and screens.hub_stat_texts.size() == 6 and screens.hub_stat_buttons.size() == 12 and screens.hub_stat_row_buttons.size() == 6, "Allocate exposes six rows, twelve arrows, and full-row targets", failures)
 		_expect(screens.hub_allocate_panel != null and screens.hub_allocate_panel.visible, "Allocate groups its adjustable rows inside a dedicated card", failures)
+		_expect(screens.hub_allocate_preview_panel != null and screens.hub_allocate_preview_panel.visible and screens.hub_allocate_preview_texts.size() == 7 and screens.hub_allocate_preview_texts.all(func(text: Sprite2D) -> bool: return text.texture != null), "Allocate shows the seven effective combat previews in a separate right card", failures)
 		_expect(screens.hub_stat_left_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)) and screens.hub_stat_row_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)), "Allocate keeps each arrow and row target inside its stat lane", failures)
+		_expect(screens.hub_stat_right_buttons.all(func(button: Button) -> bool: return button.position.x < screens.hub_allocate_preview_panel.position.x), "Allocate keeps adjustment arrows inside the left stat card", failures)
 		screens.hub_stat_row_buttons[4].pressed.emit()
 		screens.hub_stat_right_buttons[4].pressed.emit()
 		_expect(screens.hub_stat_row == 4 and screens.hub_pending_int == 1 and screens.hub_pending_vit == 0 and screens.hub_pending_mnd == 0, "Allocate routes an INT row adjustment through the pending transaction", failures)

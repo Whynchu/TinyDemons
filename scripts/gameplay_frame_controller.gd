@@ -92,7 +92,7 @@ func tick(root: Object, delta: float) -> void:
 	var ssc := root.get("screen_state_controller") as ScreenStateController
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
 		if ssc.save_select_footer_text != null:
-			ssc.save_select_footer_text.texture = root.call("_pixel_text_texture", root.call("_menu_back_prompt"), Color8(148, 220, 255)) as Texture2D
+			ssc.save_select_footer_text.texture = ssc._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), str(root.call("_menu_back_prompt")), Color8(148, 220, 255)) as Texture2D
 		if bool(root.call("_is_menu_back_just_pressed")):
 			if ssc.save_overwrite_prompt_active: root.call("_cancel_overwrite")
 			else: root.call("_close_save_select")
@@ -127,6 +127,9 @@ func tick(root: Object, delta: float) -> void:
 		return
 	if ssc.settings_overlay != null and ssc.settings_overlay.visible:
 		root.call("_update_settings_input")
+		return
+	if ssc.name_entry_overlay != null and ssc.name_entry_overlay.visible:
+		ssc.update_name_entry_input(root)
 		return
 	var title_overlay := ssc.title_overlay; var archetype_overlay := ssc.archetype_overlay
 	if ssc.title_transition_active or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
