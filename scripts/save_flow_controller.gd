@@ -15,6 +15,18 @@ func build_title_screen(root: Object) -> void:
 	root.screen_state_controller.title_settings_text = controls["settings_text"] as Sprite2D
 	root.screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D
 	build_archetype_screen(root)
+	var name_controls: Dictionary = root.screen_state_controller.build_name_entry(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_finish_name_entry"), Callable(root, "_cancel_name_entry"), Callable(root, "_save_preview_texture"))
+	root.screen_state_controller.name_entry_overlay = name_controls["overlay"] as ColorRect
+	root.screen_state_controller.name_entry_prompt_text = name_controls["prompt"] as Sprite2D
+	root.screen_state_controller.name_entry_name_text = name_controls["name"] as Sprite2D
+	root.screen_state_controller.name_entry_page_text = name_controls["page"] as Sprite2D
+	root.screen_state_controller.name_entry_message_text = name_controls["message"] as Sprite2D
+	root.screen_state_controller.name_entry_actions_text = name_controls["actions"] as Sprite2D
+	root.screen_state_controller.name_entry_confirm_text = name_controls["confirm"] as Sprite2D
+	root.screen_state_controller.name_entry_back_text = name_controls["back"] as Sprite2D
+	root.screen_state_controller.name_entry_cursor_text = name_controls["cursor"] as Sprite2D
+	root.screen_state_controller.name_entry_preview = name_controls["preview"] as Sprite2D
+	root.screen_state_controller.name_entry_cell_buttons = name_controls["cells"] as Array[Button]
 
 
 func build_archetype_screen(root: Object) -> void:
@@ -118,13 +130,30 @@ func confirm_overwrite(root: Object) -> void:
 	set_overwrite_prompt(root, false)
 	var selected_slot: int = int(root.screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(root.screen_state_controller.save_overwrite_slot) else root.screen_state_controller.save_select_index)
 	ProfileSaveService.select_slot(selected_slot)
-	ProfileSaveService.clear_slot(selected_slot)
 	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
+	# Keep the old profile on disk and in memory until the player confirms a
+	# name. This makes BACK from the name screen safe even when the selected slot
+	# is an overwrite of an existing file.
+	root.screen_state_controller.show_name_entry(root, selected_slot)
+
+
+func finish_name_entry(root: Object, player_name: String) -> void:
+	var selected_slot: int = int(root.screen_state_controller.name_entry_pending_slot)
+	if selected_slot < 0:
+		return
+	ProfileSaveService.select_slot(selected_slot)
+	ProfileSaveService.clear_slot(selected_slot)
 	root.player_profile = PlayerProfile.new()
+	root.player_profile.player_name = PlayerProfile.normalize_player_name(player_name)
 	reset_runtime_for_new_save(root)
 	root.has_persistent_profile = false
 	root.call("_apply_profile_to_runtime")
 	root.call("_update_gold_indicator")
+	root.call("_update_soul_indicator")
+	if root.screen_state_controller.name_entry_overlay != null:
+		root.screen_state_controller.name_entry_overlay.visible = false
+	root.screen_state_controller.name_entry_owner = null
+	root.screen_state_controller.name_entry_pending_slot = -1
 	root.screen_state_controller.show_character_creation(root)
 
 

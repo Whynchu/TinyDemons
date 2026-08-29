@@ -646,6 +646,7 @@ func _input_context() -> int:
 		return InputRouter.Context.MENU
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible: return InputRouter.Context.MENU
 	if ssc.settings_overlay != null and ssc.settings_overlay.visible: return InputRouter.Context.MENU
+	if ssc.name_entry_overlay != null and ssc.name_entry_overlay.visible: return InputRouter.Context.MENU
 	if ssc.title_overlay != null and ssc.title_overlay.visible: return InputRouter.Context.MENU
 	if ssc.archetype_overlay != null and ssc.archetype_overlay.visible: return InputRouter.Context.MENU
 	if ssc.pause_overlay != null and ssc.pause_overlay.visible: return InputRouter.Context.PAUSE
@@ -747,7 +748,7 @@ func _update_run_complete_input() -> void:
 	if screen_state_controller.run_complete_button == null:
 		return
 	if screen_state_controller.run_complete_footer_text != null:
-		screen_state_controller.run_complete_footer_text.texture = _pixel_text_texture(_menu_back_prompt(), Color8(148, 220, 255))
+		screen_state_controller.run_complete_footer_text.texture = screen_state_controller._pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color8(148, 220, 255))
 	if screen_state_controller.menu_input_release_lock:
 		var released := not _is_menu_confirm_pressed() and not _is_menu_back_pressed()
 		if released:
@@ -783,6 +784,10 @@ func _save_preview_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_preview_texture", self, palette_name) as Texture2D
 func _select_save_slot(slot: int) -> void:
 	save_flow_controller.call("select_save_slot", self, slot)
+func _finish_name_entry(player_name: String) -> void:
+	save_flow_controller.call("finish_name_entry", self, player_name)
+func _cancel_name_entry() -> void:
+	screen_state_controller.cancel_name_entry(self)
 func _set_overwrite_prompt(active: bool) -> void:
 	save_flow_controller.call("set_overwrite_prompt", self, active)
 func _cancel_overwrite() -> void:
