@@ -171,6 +171,8 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	if bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")):
 		if run_state != null:
 			run_state.record_dodge()
+		if root.has_method("_record_run_style_action"):
+			root.call("_record_run_style_action", &"backflip" if bool(root.get("player_is_backflipping")) else &"dodge_roll")
 		return
 	var damage_result := root.call("_slime_attack_damage_result", slime) as CombatCalculator.DamageResult
 	root.call("_mark_player_in_combat")

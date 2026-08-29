@@ -126,6 +126,24 @@ func _initialize() -> void:
 				open_side_count += 1
 				_expect(not _contains_polygon(blocks, trigger), "opened %s doorway no longer uses a seam blocker" % String(socket_id), failures)
 			_expect(open_side_count > 0, "normal combat room exposes at least one side doorway for the open-state check", failures)
+
+			# The lower entrance is a diagonal floor edge, so a body-wide walkability
+			# check can stop the player before the feet reach its open transition
+			# trigger. Exercise the same axis movement used by gameplay to ensure an
+			# available authored entrance remains reachable.
+			var open_entrance := rooms.active_entrance_sockets.get(DungeonGraph.BOTTOM_RIGHT) as DungeonSocket
+			var open_entrance_connection := graph.get_connection_for_entry(TARGET_ROOM, DungeonGraph.BOTTOM_RIGHT)
+			if open_entrance != null and open_entrance_connection != null and bool(map.call("is_connection_available", open_entrance_connection, true)):
+				var saved_open_player_position := player.position
+				player.position = Vector2(167, 81)
+				var entered_open_entrance := false
+				for _step in 12:
+					gameplay.call("_try_move_actor_axes", player, Vector2(0.0, 0.5))
+					if StringName(gameplay.get("current_room_id")) != TARGET_ROOM:
+						entered_open_entrance = true
+						break
+				_expect(entered_open_entrance, "open lower entrance remains reachable by normal movement", failures)
+				player.position = saved_open_player_position
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

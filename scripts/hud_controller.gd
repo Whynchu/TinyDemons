@@ -25,10 +25,14 @@ var gold_amount_indicator: Sprite2D = null
 var soul_icon_indicator: Sprite2D = null
 var soul_amount_indicator: Sprite2D = null
 var run_timer_indicator: Sprite2D = null
+var combo_label: Sprite2D = null
+var combo_base: Sprite2D = null
+var combo_fill: Sprite2D = null
 var gold_animation_frames: Array[Texture2D] = []
 var gold_animation_timer := 0.0
 var button_hud_sprites: Array[Sprite2D] = []
 var cooldown_hud: Dictionary = {}
+var last_combo_text := ""
 var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
 
 
@@ -49,6 +53,9 @@ func apply_display_layout(root: Object) -> void:
 		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
 		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
 		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")
+	_set_layout_position(combo_label, &"combo")
+	_set_layout_position(combo_base, &"combo")
+	_set_layout_position(combo_fill, &"combo")
 	_set_layout_position(root.get("target_health_bar") as Sprite2D, &"target")
 	_set_layout_position(root.get("target_health_fill") as Sprite2D, &"target")
 	_set_layout_position(root.get("target_health_damage_fill") as Sprite2D, &"target")
@@ -256,9 +263,32 @@ func update_cooldown_hud(root: Object) -> void:
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter, root.get("input_device_tracker") as Node, Callable(root, "_pixel_text_texture"))
 	update_cooldown_hud(root)
+	update_combo_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))
+
+
+func update_combo_hud(root: Object) -> void:
+	if combo_label == null or combo_base == null or combo_fill == null:
+		return
+	var screen_state := root.get("screen_state_controller") as Node
+	var menu_active := screen_state != null and StringName(screen_state.get("state")) != &"gameplay"
+	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
+	var active := not menu_active and momentum != null and momentum.combo_count > 0 and momentum.combo_timer > 0.0
+	combo_label.visible = active
+	combo_base.visible = active
+	combo_fill.visible = active
+	if not active:
+		last_combo_text = ""
+		return
+	var combo_text := "COMBO x%d" % momentum.combo_count
+	if combo_text != last_combo_text:
+		last_combo_text = combo_text
+		combo_label.texture = root.call("_pixel_text_texture", combo_text, Color8(255, 205, 117)) as Texture2D
+	var ratio := momentum.combo_timer / maxf(momentum.combo_hit_window, 0.001)
+	set_fill_ratio(combo_fill, Vector2(48, 4), ratio)
+	combo_fill.self_modulate = Color8(255, 205, 117)
 
 
 func update_run_timer(root: Object) -> void:
@@ -356,6 +386,37 @@ func _build_cooldown_hud(parent: Node) -> Dictionary:
 	return result
 
 
+func _build_combo_hud(parent: Node) -> Dictionary:
+	var label := Sprite2D.new()
+	label.name = "ComboLabel"
+	label.centered = true
+	label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	label.position = Vector2(120, 131)
+	label.z_index = 3
+	label.visible = false
+	parent.add_child(label)
+	var base := Sprite2D.new()
+	base.name = "ComboBase"
+	base.centered = false
+	base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	base.texture = _solid_texture(Vector2i(48, 4), Color8(28, 31, 43, 220))
+	base.position = Vector2(96, 139)
+	base.z_index = 1
+	base.visible = false
+	parent.add_child(base)
+	var fill := Sprite2D.new()
+	fill.name = "ComboFill"
+	fill.centered = false
+	fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	fill.texture = _solid_texture(Vector2i(48, 4), Color8(255, 205, 117))
+	fill.position = Vector2(96, 139)
+	fill.z_index = 2
+	fill.visible = false
+	parent.add_child(fill)
+	set_fill_ratio(fill, Vector2(48, 4), 1.0)
+	return {"label": label, "base": base, "fill": fill}
+
+
 func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable, target_bar: Sprite2D, _target_fill: Sprite2D, player_fill: Sprite2D) -> Dictionary:
 	var layout := parent.get_node_or_null("PlayerHud") as Node2D
 	var room_number := layout.get_node("RoomNumber") as Sprite2D if layout != null else Sprite2D.new()
@@ -448,6 +509,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		parent.add_child(button)
 		buttons.append(button)
 	var cooldowns := _build_cooldown_hud(parent)
+	var combo := _build_combo_hud(parent)
 	var target_text := Sprite2D.new()
 	target_text.name = "TargetHealthText"
 	target_text.centered = true
@@ -479,7 +541,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
 	var marker_texture := _aggro_marker_texture(_palette_name)

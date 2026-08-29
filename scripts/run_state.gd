@@ -33,8 +33,21 @@ var attack_input_count := 0
 var roll_input_count := 0
 var wasted_attack_inputs := 0
 var wasted_roll_inputs := 0
-var visited_rooms: Dictionary = {}
-var explorable_room_count := 0
+## Map discovery is based on physically entering rooms. It is deliberately
+## separate from room objective completion: a player may discover every room
+## without clearing every encounter or solving every room objective.
+var map_discovered_rooms: Dictionary = {}
+var map_room_count := 0
+## Snapshot of rooms whose local objective has been completed. The graph owns
+## the full room set; this dictionary only records the completed members of it.
+var completed_run_rooms: Dictionary = {}
+var run_room_count := 0
+## Successful style events are retained as backend telemetry. The evaluator
+## turns these into capped, flexible style points rather than rewarding raw
+## button presses or attack spam.
+var style_actions: Dictionary = {}
+var max_combo_count := 0
+var combo_hit_count := 0
 var clear_summary: Dictionary = {}
 
 
@@ -71,8 +84,13 @@ func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: 
 	roll_input_count = 0
 	wasted_attack_inputs = 0
 	wasted_roll_inputs = 0
-	visited_rooms.clear()
-	explorable_room_count = 0
+	map_discovered_rooms.clear()
+	map_room_count = 0
+	completed_run_rooms.clear()
+	run_room_count = 0
+	style_actions.clear()
+	max_combo_count = 0
+	combo_hit_count = 0
 	clear_summary.clear()
 
 
@@ -159,13 +177,45 @@ func record_action_input(action: StringName, accepted: bool) -> void:
 			wasted_roll_inputs += 1
 
 
-func record_room_visited(room_id: StringName) -> void:
+func record_map_room_entry(room_id: StringName) -> void:
 	if not room_id.is_empty():
-		visited_rooms[room_id] = true
+		map_discovered_rooms[room_id] = true
 
 
-func set_explorable_room_count(count: int) -> void:
-	explorable_room_count = maxi(count, visited_rooms.size())
+func record_room_completion(room_id: StringName) -> void:
+	if not room_id.is_empty():
+		completed_run_rooms[room_id] = true
+
+
+func set_map_room_count(count: int) -> void:
+	map_room_count = maxi(count, map_discovered_rooms.size())
+
+
+func set_run_room_count(count: int) -> void:
+	run_room_count = maxi(count, completed_run_rooms.size())
+
+
+func record_style_action(action: StringName) -> void:
+	if action.is_empty():
+		return
+	style_actions[action] = int(style_actions.get(action, 0)) + 1
+
+
+func record_combo_hit(combo_count: int) -> void:
+	combo_hit_count += 1
+	max_combo_count = maxi(max_combo_count, combo_count)
+
+
+func map_completion_ratio() -> float:
+	if map_room_count <= 0:
+		return 1.0
+	return clampf(float(map_discovered_rooms.size()) / float(map_room_count), 0.0, 1.0)
+
+
+func room_completion_ratio() -> float:
+	if run_room_count <= 0:
+		return 1.0
+	return clampf(float(completed_run_rooms.size()) / float(run_room_count), 0.0, 1.0)
 
 
 func total_wasted_inputs() -> int:

@@ -125,12 +125,11 @@ func try_move_swept(actor: Sprite2D, movement: Vector2, max_step: float, can_sta
 
 func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, is_walkable: Callable, is_slime_walkable: Callable, collision_rect: Callable, collision_polygon: Callable) -> bool:
 	if not slimes.has(actor):
-		var rect: Rect2 = collision_rect.call(actor)
-		if rect.has_area():
-			for sample in _rect_walkability_samples(rect):
-				if not bool(is_walkable.call(sample)):
-					return false
-			return true
+		# Room floor geometry is authored for the actor's foot path. The sprite
+		# body is intentionally allowed to overhang the isometric floor edge; using
+		# every body corner here makes ordinary wall travel snag and prevents an
+		# open lower doorway from reaching its transition trigger. Closed doorway
+		# seams are handled by the entrance block polygons through this foot check.
 		return bool(is_walkable.call(foot.call(actor)))
 	var polygon: PackedVector2Array = collision_polygon.call(actor)
 	if polygon.size() >= 3:
@@ -153,20 +152,6 @@ func _polygon_center(polygon: PackedVector2Array) -> Vector2:
 	for point in polygon:
 		center += point
 	return center / float(polygon.size())
-
-
-func _rect_walkability_samples(rect: Rect2) -> Array[Vector2]:
-	return [
-		rect.position,
-		rect.position + Vector2(rect.size.x, 0.0),
-		rect.position + rect.size,
-		rect.position + Vector2(0.0, rect.size.y),
-		rect.get_center(),
-		rect.position + Vector2(rect.size.x * 0.5, 0.0),
-		rect.position + Vector2(rect.size.x, rect.size.y * 0.5),
-		rect.position + Vector2(rect.size.x * 0.5, rect.size.y),
-		rect.position + Vector2(0.0, rect.size.y * 0.5),
-	]
 
 
 func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, root: Object) -> void:

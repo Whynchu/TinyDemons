@@ -34,11 +34,18 @@ func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bo
 
 
 func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
-	if slime != null and not bool(root.call("_is_slime_dead", slime)) and root.has_method("_mark_current_room_engaged"):
+	# Projectile callbacks can survive one frame past a scene transition. Do not
+	# dereference a freed target while resolving late contact.
+	if slime == null or not is_instance_valid(slime) or bool(root.call("_is_slime_dead", slime)):
+		return
+	if root.has_method("_mark_current_room_engaged"):
 		# A room locks only after a real player hit. Empty swings and passive
 		# enemy aggro deliberately leave the arrival entrance available.
 		root.call("_mark_current_room_engaged")
-	register_combo_hit(root)
+	# Combo is a damage-confirmed streak, not a swing/projectile-contact
+	# counter. Immune hits and zero-damage packets must not refresh it.
+	if not immune and amount > 0.0:
+		register_combo_hit(root)
 	var ambush := root.call("_slime_ambush", slime) as SlimeAmbushComponent
 	if ambush != null:
 		var tuning := root.get("slime_tuning") as SlimeTuning
@@ -102,7 +109,11 @@ func combat_momentum(root: Object) -> CombatMomentumComponent:
 
 
 func register_combo_hit(root: Object) -> void:
-	combat_momentum(root).register_hit()
+	var momentum := combat_momentum(root)
+	momentum.register_hit()
+	var run := root.get("run_state") as RunState
+	if run != null and run.active:
+		run.record_combo_hit(momentum.combo_count)
 
 
 func tick_focus_combo(root: Object, delta: float) -> void:

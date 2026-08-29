@@ -385,36 +385,48 @@ inputs, and smoke fixtures must change together.
 
 ### Target scoring model
 
-Use three player-readable categories, each normalized to 0–100:
+Use three player-readable categories:
 
-| Category | Starting weight | Measurement direction |
+| Category | Weight | Measurement direction |
 | --- | ---: | --- |
-| Level completion | 50% | Current-level objective progress, with a complete level reaching 100% |
-| Combat | 25% | A compact combination of successful clears/kills and damage avoided; no style or input-count requirement |
-| Speed | 25% | Clear time compared with a level-specific target window, with a forgiving floor and cap |
+| Room completion | 60% | Completed local room objectives; a full clear reaches 100% |
+| Time | 30% | Clear time compared with a route-scaled target window |
+| Style | 10% | A capped 0–10 measure of varied, successful combat actions |
 
-The weighted total remains a 0–100 score so existing reward code can migrate
-without introducing a second scale. Completion must be based on the current
-level's authored/generated objective count rather than a global lifetime or
-run-rank value. If the player can extract or die before the level is complete,
-the result must show the partial percentage that was actually achieved.
+Map discovery and room completion are intentionally distinct. Map discovery is
+the percentage of non-hub rooms the player physically entered. Room completion
+is the percentage of those authored/generated rooms whose local objective was
+completed. Discovery is shown as a progress metric, but room completion drives
+the completion pillar so walking through a room cannot substitute for clearing
+it. Utility rooms such as rest, trader, and NPC rooms complete on entry; combat
+and puzzle rooms retain their objective-specific completion behavior.
 
-The first tuning pass should make S achievable by a strong, repeatable clear,
-not by perfect damage, perfect accuracy, every optional room, and an extreme
-time simultaneously. Begin with provisional thresholds of S 90+, A 75+, B 60+,
-C 40+, and D below 40, then calibrate them against representative real runs.
-Thresholds and speed target windows belong in tuning data once the first
-playtest establishes the normal clear-time distribution.
+Style is flexible rather than a checklist: successful basic/follow-up attacks,
+spin and charged attacks, dodge rolls, backflips, blocks, magic, imbued hits,
+and sustained combo flow contribute to a capped 0–10 score. Repeating one
+action does not farm unlimited points, and the visible combo increments once
+per enemy hit, including multi-target attacks.
+
+The weighted total remains a 0–100 score. A run that leaves a room objective
+incomplete is capped at grade B even if its time and style would otherwise
+produce A or S. Damage, survival, accuracy, and mis-input counts remain useful
+backend telemetry but do not lower the player-facing grade.
+
+The first tuning pass uses S 90+, A 78+, B 64+, C 48+, and D below 48. Target
+times and thresholds are clearly owned constants for now so they can move into
+tuning data after representative playtests establish normal clear times.
 
 ### Result-panel rewrite
 
 Replace the current long diagnostic list with a compact hierarchy:
 
 ```text
-LEVEL COMPLETE   100%
-COMBAT           84%
-SPEED            72%
-GRADE S          91
+GRADE S          091
+TIME             00:42
+MAP              8/8
+ROOMS            8/8
+STYLE            8/10
+MAX COMBO        x5
 
 REWARDS
 +GOLD / GEAR / XP
@@ -422,45 +434,52 @@ RETURN TO HUB
 ```
 
 The exact reward line depends on the existing settlement result, but the panel
-should not display implementation-only counters such as wasted inputs, style
-ratios, or every attack/block count. Those values may remain in debug logging
-or a later optional detail view. Each category gets one clear value and a
-consistent color treatment; the grade and reward remain visually dominant.
+should not display implementation-only counters such as damage, wasted inputs,
+accuracy, or every attack/block count. Those values remain available in the
+backend summary for debugging and future detail views. Map discovery is shown
+alongside room completion so the two kinds of progress are understandable at a
+glance. Each metric gets one clear value and a consistent color treatment; the
+grade and reward remain visually dominant.
 
 ### Implementation sequence
 
 1. Audit every `RunGrade` field and every consumer in `RunState`,
    `RunFlowController`, loot rarity/reward calculation, profile persistence,
    the result UI, and tests.
-2. Add explicit current-level objective progress to the run state and finalize
-   it at the same settlement boundary used by completion, extraction, and
-   defeat. Keep partial-run values valid and deterministic.
-3. Replace the grade evaluator with the three weighted categories. Keep the
-   output keys temporarily compatible where reward code still needs them, then
-   remove obsolete presentation-only fields after the migration is covered.
+2. Add separate physical map-entry discovery and local room-objective
+   completion to the run state. Finalize both at the same settlement boundary
+   used by completion, extraction, and defeat. Keep partial-run values valid
+   and deterministic.
+3. Replace the grade evaluator with the 60/30/10 room/time/style model. Keep
+   raw combat telemetry in the summary for backend consumers without letting it
+   change the displayed grade.
 4. Move target times, category weights, and grade thresholds into a tuning
    resource or clearly owned constants. Avoid deriving speed from the player's
    personal best during the same run.
 5. Simplify `build_run_complete` and `show_run_complete` to render only the
    compact result hierarchy, preserving touch/controller return behavior.
-6. Rebalance loot/reward use of the score so an attainable S is valuable but
+6. Add the visible combo timer to the HUD, freeze it in menus, reset it on
+   damage/death/room transition, and record its max/hit telemetry once per
+   successful enemy hit.
+7. Rebalance loot/reward use of the score so an attainable S is valuable but
    cannot create an outsized difficulty or drop-rate jump.
-7. Replace the synthetic S fixture with representative clean/ordinary/partial
-   run fixtures and add boundary tests for each grade and each category clamp.
-8. Run a manual matrix across a full clear, a slow clear, a damaged clear, and
-   an early defeat/extraction; verify that the panel communicates the outcome
-   without requiring a second pass through the old diagnostic counters.
+8. Replace the synthetic S fixture with representative full-clear,
+   slow-clear, and partial-run fixtures and add boundary tests for grade clamps,
+   style caps, completion ratios, and orientation-driven UI reflow.
+9. Run a manual matrix across full/partial, fast/slow, and varied-style runs;
+   verify the panel communicates the outcome without requiring a second pass
+   through diagnostic counters.
 
 ### Exit criteria
 
 - A normal excellent current-level clear can reach S without requiring every
   optional behavior or a near-zero damage run.
-- A partial session reports a truthful completion percentage and cannot receive
-  a high grade solely from speed or combat.
-- Combat and speed categories are bounded, explainable, and independent of
-  unrelated UI/input noise.
+- A partial session reports truthful map-entry and room-completion percentages
+  and cannot receive a high grade solely from speed or style.
+- Room completion, time, and style are bounded, explainable, and independent of
+  unrelated damage/UI/input noise.
 - Rewards, profile `last_run_grade`, and future-run loot modifiers use the new
   score/grade consistently.
-- The result panel is materially shorter, readable at 3:2/16:9, and usable by
-  keyboard, gamepad, and touch.
+- The result panel is materially shorter, readable at 3:2/16:9 and mobile
+  landscape orientations, and usable by keyboard, gamepad, and touch.
 - `run_grade_smoke`, result-panel smoke coverage, and the full smoke suite pass.

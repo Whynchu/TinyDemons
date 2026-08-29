@@ -36,9 +36,14 @@ func _on_player_walk_step(_step_frame: int) -> void:
 	if not player_is_moving or player_is_rolling or player_is_attacking or player_is_defending:
 		return
 	_play_sound("foot_left" if _step_frame == 1 else "foot_right", -8.0, 1.0 + rng.randf_range(-0.025, 0.025))
-func _fade_out_music() -> void:
+func _fade_out_music(duration: float = 1.0) -> void:
+	# Keep the desired track in sync with the fade. This prevents the music
+	# state tick from immediately starting the run track again while the result
+	# screen is being shown.
+	music_track_wanted = &""
+	music_wanted = false
 	if sound_manager != null:
-		sound_manager.fade_out_music()
+		sound_manager.fade_out_music(duration)
 func _start_music() -> void:
 	if sound_manager != null:
 		sound_manager.start_title_music()

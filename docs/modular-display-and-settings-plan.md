@@ -439,13 +439,14 @@ The correction contract is:
    authored coordinates. Web CSS now gives the canvas and its containing page
    the full landscape surface without a competing viewport size.
 3. Both lower authored sockets declare their return trigger as part of the
-   closed blocker fence. Walkability uses a small seam exclusion margin, and
-   movable non-slime actors validate their collision-rectangle samples rather
-   than only a single foot point. Open connection state still removes the
-   corresponding blocker before traversal.
+   closed blocker fence. Walkability keeps the actor's existing foot-path
+   contract so room edges and diagonal doorway approaches remain smooth; the
+   closed entrance polygons provide the localized seam guard. Open connection
+   state still removes the corresponding blocker before traversal.
 
 Coverage is in `display_layout_smoke`, `display_responsive_scene_smoke`, and
-`wall_socket_geometry_smoke`; the remaining verification item is the manual
+`wall_socket_geometry_smoke`, including an open lower-entrance movement test;
+the remaining verification item is the manual
 desktop/browser/iPhone landscape matrix at 4:3, 16:10, 16:9, and `FULL`.
 
 ## 13. Charge-pose Chroma regression — 2026-08-27
