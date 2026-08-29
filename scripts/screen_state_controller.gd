@@ -9,6 +9,12 @@ const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
 const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
+const HUB_ITEM_DETAIL_TOP := 105.0
+const HUB_ITEM_DETAIL_PITCH := 7.0
+const HUB_ITEM_DETAIL_PANEL_TOP := 103.0
+const HUB_ITEM_DETAIL_PANEL_HEIGHT := 42.0
+const HUB_GEAR_BROWSE_DETAIL_TOP := 136.0
+const HUB_ITEM_TEXT_WRAP_LENGTH := 34
 
 ## Hub content pages retain the old numeric values for transaction callers. The
 ## visible command column maps STATUS to page 5 and ALLOCATE/EQUIPMENT/SHOP/
@@ -141,6 +147,7 @@ var hub_item_list_texts: Array[Sprite2D] = []
 var hub_item_row_buttons: Array[Button] = []
 var hub_shop_price_texts: Array[Sprite2D] = []
 var hub_item_detail_texts: Array[Sprite2D] = []
+var hub_item_detail_panel: Panel = null
 var hub_item_action_button: Button = null
 var hub_equipment_action_buttons: Array[Button] = []
 var hub_fusion_decrease_button: Button = null
@@ -1058,13 +1065,13 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	items_page.add_child(item_content_clip)
 	var item_list: Array[Sprite2D] = []
 	for list_index in 6:
-		item_list.append(create_sprite(item_content_clip, "HubItemList%d" % list_index, null, Vector2(6, 4 + list_index * 12), false))
+		item_list.append(create_sprite(item_content_clip, "HubItemList%d" % list_index, null, Vector2(6, 4 + list_index * 10), false))
 	var item_row_buttons: Array[Button] = []
 	for list_index in 6:
-		item_row_buttons.append(_make_transparent_touch_button(item_content_clip, "HubItemRow%d" % list_index, Vector2(0, list_index * 12), Vector2(150, 12), select_item_row, list_index))
+		item_row_buttons.append(_make_transparent_touch_button(item_content_clip, "HubItemRow%d" % list_index, Vector2(0, list_index * 10), Vector2(150, 10), select_item_row, list_index))
 	var shop_prices: Array[Sprite2D] = []
 	for list_index in 6:
-		shop_prices.append(create_sprite(items_page, "HubShopPrice%d" % list_index, null, Vector2(174, 39 + list_index * 12), false))
+		shop_prices.append(create_sprite(items_page, "HubShopPrice%d" % list_index, null, Vector2(174, 39 + list_index * 10), false))
 	var gear_slot_buttons: Array[Button] = []
 	for slot_index in 6:
 		gear_slot_buttons.append(_make_transparent_touch_button(item_content_clip, "HubGearSlot%d" % slot_index, Vector2(0, slot_index * 12), Vector2(150, 12), select_gear_slot, slot_index))
@@ -1095,10 +1102,12 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var gear_stats: Array[Sprite2D] = []
 	for stat_index in 6:
 		gear_stats.append(create_sprite(items_page, "HubGearStat%d" % stat_index, null, Vector2(180, 41 + stat_index * 9), false))
+	var item_detail_panel := _make_menu_card(items_page, "HubItemDetailPanel", Vector2(14, HUB_ITEM_DETAIL_PANEL_TOP), Vector2(maxf(display_view_size.x - 28.0, 80.0), HUB_ITEM_DETAIL_PANEL_HEIGHT))
+	item_detail_panel.visible = false
 	var item_details: Array[Sprite2D] = []
-	for detail_index in 4:
-		item_details.append(create_sprite(items_page, "HubItemDetail%d" % detail_index, null, Vector2(14, 105 + detail_index * 8), false))
-	var item_action_button := make_retro_button("EQUIP", Vector2(display_view_size.x - 78.0, 119), Vector2(64, 13), pixel_texture)
+	for detail_index in 6:
+		item_details.append(create_sprite(items_page, "HubItemDetail%d" % detail_index, null, Vector2(20, HUB_ITEM_DETAIL_TOP + detail_index * HUB_ITEM_DETAIL_PITCH), false))
+	var item_action_button := make_retro_button("BUY", Vector2(maxf(96.0, display_view_size.x - 144.0), 21), Vector2(52, 13), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); items_page.add_child(item_action_button)
 	var equipment_actions: Array[Button] = []
 	var equip_action := make_retro_button("EQUIP", Vector2(14, 22), Vector2(42, 12), pixel_texture)
@@ -1137,6 +1146,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	hub_item_content_clip = item_content_clip
 	hub_gear_choice_panel = gear_choice_panel
 	hub_gear_choice_content_clip = gear_choice_content_clip
+	hub_item_detail_panel = item_detail_panel
 
 	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back)
 	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": currency_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "allocate_preview_panel": allocate_preview_panel, "allocate_preview_title": hub_allocate_preview_title, "allocate_preview": hub_allocate_preview_texts, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
@@ -1287,12 +1297,11 @@ func _position_hub_controls() -> void:
 	var gear_x := maxf(174.0, width * 0.58)
 	var list_width := maxf(120.0, gear_x - 24.0)
 	var equipment_page := hub_page == HUB_PAGE_EQUIPMENT
-	var list_height := 54.0 if equipment_page else 66.0
-	var item_row_pitch := 9.0 if equipment_page else 12.0
-	var equipment_panel_width := maxf(80.0, width - 28.0)
+	var list_height := 54.0 if equipment_page else 62.0
+	var item_row_pitch := 9.0 if equipment_page else 10.0
 	if hub_item_list_panel != null:
 		hub_item_list_panel.position = Vector2(14, 35)
-		hub_item_list_panel.size = Vector2(equipment_panel_width if equipment_page else list_width, list_height)
+		hub_item_list_panel.size = Vector2(list_width, list_height)
 	if hub_item_content_clip != null:
 		hub_item_content_clip.position = Vector2(14, 35)
 		hub_item_content_clip.size = Vector2(list_width, list_height)
@@ -1301,7 +1310,7 @@ func _position_hub_controls() -> void:
 		if index < hub_item_row_buttons.size():
 			hub_item_row_buttons[index].position = Vector2(0, index * item_row_pitch)
 			hub_item_row_buttons[index].size = Vector2(list_width, item_row_pitch)
-		if index < hub_shop_price_texts.size(): hub_shop_price_texts[index].position = Vector2(maxf(gear_x, width - 62.0), 39 + index * 12)
+		if index < hub_shop_price_texts.size(): hub_shop_price_texts[index].position = Vector2(maxf(gear_x, width - 62.0), 39 + index * item_row_pitch)
 	var gear_row_pitch := 9.0
 	for index in hub_gear_slot_buttons.size():
 		hub_gear_slot_buttons[index].position = Vector2(0, index * gear_row_pitch)
@@ -1310,22 +1319,27 @@ func _position_hub_controls() -> void:
 		hub_gear_choice_texts[index].position = Vector2(6, 4 + index * 10)
 		if index < hub_gear_choice_buttons.size():
 			hub_gear_choice_buttons[index].position = Vector2(0, index * 10)
-			hub_gear_choice_buttons[index].size = Vector2(equipment_panel_width if equipment_page else list_width, 10)
+			hub_gear_choice_buttons[index].size = Vector2(list_width, 10)
 	if hub_gear_choice_panel != null:
 		hub_gear_choice_panel.position = Vector2(14, 91)
-		hub_gear_choice_panel.size = Vector2(equipment_panel_width, 42)
+		hub_gear_choice_panel.size = Vector2(list_width, 42)
 	if hub_gear_choice_content_clip != null:
 		hub_gear_choice_content_clip.position = Vector2(14, 91)
-		hub_gear_choice_content_clip.size = Vector2(equipment_panel_width, 42)
+		hub_gear_choice_content_clip.size = Vector2(list_width, 42)
 	if hub_gear_stat_panel != null:
 		hub_gear_stat_panel.position = Vector2(gear_x, 35)
 		hub_gear_stat_panel.size = Vector2(maxf(48.0, width - gear_x - 10.0), 66)
 	var gear_stat_y := 40.0 if equipment_page else 41.0
 	var gear_stat_pitch := 8.0 if equipment_page else 9.0
 	for index in hub_gear_stat_texts.size(): hub_gear_stat_texts[index].position = Vector2(gear_x + 6.0, gear_stat_y + index * gear_stat_pitch)
-	for index in hub_item_detail_texts.size(): hub_item_detail_texts[index].position = Vector2(14, 105 + index * 8)
+	var gear_browse_details := equipment_page and hub_gear_browsing
+	if hub_item_detail_panel != null:
+		hub_item_detail_panel.position = Vector2(14, HUB_GEAR_BROWSE_DETAIL_TOP - 2.0 if gear_browse_details else HUB_ITEM_DETAIL_PANEL_TOP)
+		hub_item_detail_panel.size = Vector2(maxf(width - 28.0, 80.0), 11.0 if gear_browse_details else HUB_ITEM_DETAIL_PANEL_HEIGHT)
+	var detail_top := HUB_GEAR_BROWSE_DETAIL_TOP if gear_browse_details else HUB_ITEM_DETAIL_TOP
+	for index in hub_item_detail_texts.size(): hub_item_detail_texts[index].position = Vector2(20, detail_top + index * HUB_ITEM_DETAIL_PITCH)
 	if hub_item_name_text != null: hub_item_name_text.position = Vector2(14, 25)
-	if hub_item_action_button != null: hub_item_action_button.position = Vector2(width - 78.0, 119)
+	if hub_item_action_button != null: hub_item_action_button.position = Vector2(maxf(96.0, width - 144.0), 21)
 	for index in hub_equipment_action_buttons.size():
 		hub_equipment_action_buttons[index].position = Vector2([14.0, 64.0, 122.0][mini(index, 2)], 22)
 	if hub_fusion_decrease_button != null: hub_fusion_decrease_button.position = Vector2(14, 119)
@@ -1474,8 +1488,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_fusion_increase_button != null:
 		hub_fusion_increase_button.visible = page == HUB_PAGE_FUSION
 		hub_fusion_increase_button.disabled = true
-	if item_name != null: item_name.visible = false
 	var item_page := page >= HUB_PAGE_EQUIPMENT and page <= HUB_PAGE_FUSION
+	if item_name != null: item_name.visible = item_page
 	for node in item_list: node.visible = item_page
 	for node in shop_prices: node.visible = page == HUB_PAGE_SHOP
 	for node in gear_choices: node.visible = gear_browsing
@@ -1488,10 +1502,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_gear_choice_content_clip != null: hub_gear_choice_content_clip.visible = gear_browsing
 	for node in gear_stats: node.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
 	var gear_stat_panel := hub_gear_stat_panel
-	# Equipment already has one full-width upper card; its stats live inside
-	# that card instead of drawing a second nested border. Fusion keeps the
-	# separate comparison card used by its inventory view.
-	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_FUSION
+	# Equipment and Fusion share the same right-hand six-stat comparison card.
+	# The equipment slot list is kept to the left of it, so long item names can
+	# never draw through the stat column.
+	if gear_stat_panel != null: gear_stat_panel.visible = page == HUB_PAGE_EQUIPMENT or page == HUB_PAGE_FUSION
+	if hub_item_detail_panel != null: hub_item_detail_panel.visible = item_page
 	for node in item_details: node.visible = item_page
 	if item_action != null: item_action.visible = item_page and page != HUB_PAGE_EQUIPMENT
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
@@ -1815,12 +1830,12 @@ func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: Pl
 func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, page: int, item_list: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
 	var catalog := ItemCatalog.new()
 	var shop_prices := hub_shop_price_texts
+	for detail in details:
+		detail.texture = null
+		detail.visible = false
 	if page == 1:
 		_update_hub_gear_slots(root, pixel_texture, profile, catalog, item_list, hub_gear_choice_texts, details, action, highlight_color)
 		return
-	for detail_index in range(2, details.size()):
-		details[detail_index].visible = false
-	details[0].position = Vector2(14, 105); details[1].position = Vector2(14, 115); action.position = Vector2(display_view_size.x - 78.0, 119)
 	var item: ItemInstance = null
 	var price := 0
 	var sold := false
@@ -1842,6 +1857,14 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if count > 0:
 			item = fusion_items[clampi(index, 0, count - 1)]
 	var selected := clampi(index, 0, maxi(count - 1, 0))
+	if hub_item_name_text != null:
+		if item != null:
+			var header_name := str(catalog.definition_data(item.definition_id).get("name", "ITEM"))
+			if item.enhancement_level > 0: header_name += " +%d" % item.enhancement_level
+			hub_item_name_text.texture = pixel_texture.call("%d/%d %s" % [selected + 1, count, header_name], catalog.rarity_color(item.rarity)) as Texture2D
+		else:
+			hub_item_name_text.texture = pixel_texture.call("0/0 NO ITEMS", Color8(140, 145, 160)) as Texture2D
+		hub_item_name_text.visible = true
 	var window_start := clampi(selected - 2, 0, maxi(count - item_list.size(), 0))
 	for row in item_list.size():
 		var source_index := window_start + row
@@ -1876,16 +1899,17 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			var row_slot := catalog.definition_slot(row_item.definition_id)
 			if profile.get_equipped_instance_id(row_slot) == row_item.instance_id:
 				row_label += " E"
-		var row_color := Color8(120, 120, 130) if row_sold else catalog.rarity_color(row_item.rarity)
+		var row_color := highlight_color if source_index == selected else Color8(120, 120, 130) if row_sold else catalog.rarity_color(row_item.rarity)
 		item_list[row].texture = pixel_texture.call(row_label, row_color) as Texture2D
 		if page == 2 and row < shop_prices.size():
-			shop_prices[row].texture = pixel_texture.call("SOLD" if row_sold else "%dG" % row_price, Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
+			shop_prices[row].texture = pixel_texture.call("SOLD" if row_sold else "%dG" % row_price, highlight_color if source_index == selected else Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
 	if item == null:
 		if not item_list.is_empty():
 			var empty_text := hub_fusion_message if page == 3 and not hub_fusion_message.is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
 			item_list[0].texture = pixel_texture.call(empty_text, Color8(255, 205, 117) if page == 3 else Color.WHITE) as Texture2D
 		for detail in details: detail.texture = null
 		for stale_stat in hub_gear_stat_texts: stale_stat.texture = null
+		if hub_item_detail_panel != null: hub_item_detail_panel.visible = true
 		action.disabled = true
 		return
 	var mastery := item.enhancement_level
@@ -1895,10 +1919,13 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			var bonus_label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
 			var value := float(bonuses[stat])
 			bonus_parts.append("%s %s%.1f" % [bonus_label, "+" if value > 0 else "", value])
-		details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
+		if not bonus_parts.is_empty():
+			details[0].texture = pixel_texture.call("  ".join(bonus_parts), Color.WHITE) as Texture2D
+			details[0].visible = not bonus_parts.is_empty()
 	var selected_transmutation_name := catalog.transmutation_name(item.transmutation_id)
 	if page == 3 and not selected_transmutation_name.is_empty():
 		details[0].texture = pixel_texture.call("SPECIAL: %s" % selected_transmutation_name, Color8(148, 220, 255)) as Texture2D
+		details[0].visible = true
 	elif page == 3:
 		details[0].texture = null
 	var slot := catalog.definition_slot(item.definition_id)
@@ -1909,6 +1936,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var fusion_count := clampi(hub_fusion_count, 1, maxi(material_count, 1))
 	if page == 3 and overflow:
 		details[1].texture = pixel_texture.call("MYTHIC +10  SALVAGE %dG" % catalog.overflow_salvage_value(item), Color8(255, 205, 117)) as Texture2D
+		details[1].visible = true
 		for stale_stat in hub_gear_stat_texts: stale_stat.texture = null
 	elif page == 3:
 		var batch_cost := profile.fusion_batch_cost(item, fusion_count)
@@ -1923,6 +1951,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 				final_enhancement += 1
 		var next_text := "%s -> %s +0" % [String(final_rarity).to_upper(), String(ItemCatalog.next_rarity(final_rarity)).to_upper()] if final_rarity != item.rarity else "+%d -> +%d" % [mastery, final_enhancement]
 		details[1].texture = pixel_texture.call("FUSE x%d  %dS  S%d  MAT%d  %s" % [fusion_count, batch_cost, profile.souls, material_count, next_text], fusion_color) as Texture2D
+		details[1].visible = true
 		var projected := ItemInstance.from_dictionary(item.to_dictionary())
 		projected.enhancement_level = final_enhancement
 		projected.rarity = final_rarity
@@ -1949,9 +1978,11 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		var player_rate_text := catalog.player_stat_rate_text(item)
 		if not player_rate_text.is_empty(): item_info.append(player_rate_text)
 		if not selected_transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % selected_transmutation_name)
-		details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D if not item_info.is_empty() else null
+		if not item_info.is_empty():
+			details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D
+		details[1].visible = not item_info.is_empty()
 		var item_detail_lines := catalog.effect_display_lines(item)
-		item_detail_lines.append_array(_wrap_gear_text(catalog.player_description(item), 34))
+		item_detail_lines.append_array(_wrap_gear_text(catalog.player_description(item), HUB_ITEM_TEXT_WRAP_LENGTH))
 		_set_gear_detail_lines(details, pixel_texture, item_detail_lines, Color8(210, 220, 235))
 	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.souls < profile.fusion_batch_cost(item, fusion_count))))
 	if hub_fusion_decrease_button != null:
@@ -1973,11 +2004,21 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	action.visible = false
 	action.disabled = true
 	for button in hub_gear_choice_buttons: button.visible = false
+	for stat in hub_gear_stat_texts:
+		stat.texture = null
+		stat.visible = false
 	var selected_slot_index := clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
+	var selected_slot: StringName = ItemCatalog.SLOTS[selected_slot_index]
 	var candidate_indices := hub_gear_candidate_indices
 	var browsing := hub_gear_browsing
 	var selected_candidate: ItemInstance = null
+	var slot_candidates := root.call("_hub_gear_candidates", selected_slot) as Array[ItemInstance]
+	var slot_labels := ["WPN", "HEAD", "BODY", "ARM", "SHD", "ACC"]
+	if hub_item_name_text != null:
+		hub_item_name_text.texture = pixel_texture.call("SLOT %d/%d %s" % [selected_slot_index + 1, ItemCatalog.SLOTS.size(), slot_labels[selected_slot_index]], highlight_color if browsing else Color.WHITE) as Texture2D
+		hub_item_name_text.visible = true
 	for detail in details:
+		detail.texture = null
 		detail.visible = false
 	for row in item_list.size():
 		if row >= ItemCatalog.SLOTS.size():
@@ -1987,7 +2028,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 		var shown_item := profile.find_item(profile.get_equipped_instance_id(slot))
 		if row == selected_slot_index:
 			selected_candidate = shown_item
-		var slot_name: String = ["WPN", "HEAD", "BODY", "ARM", "SHD", "ACC"][row]
+		var slot_name: String = slot_labels[row]
 		var shown_name := "EMPTY"
 		var shown_color := Color8(140, 145, 160)
 		if shown_item != null:
@@ -1996,11 +2037,10 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			if shown_mastery > 0: shown_name += " +%d" % shown_mastery
 			shown_color = catalog.rarity_color(shown_item.rarity)
 		var prefix := ">" if row == selected_slot_index else " "
-		item_list[row].texture = pixel_texture.call("%s%s: %s" % [prefix, slot_name, shown_name], shown_color) as Texture2D
+		var row_color := highlight_color if row == selected_slot_index else shown_color
+		item_list[row].texture = pixel_texture.call("%s%s: %s" % [prefix, slot_name, shown_name], row_color) as Texture2D
 	for choice in choices: choice.texture = null
 	if browsing:
-		var selected_slot := ItemCatalog.SLOTS[selected_slot_index]
-		var slot_candidates := root.call("_hub_gear_candidates", selected_slot) as Array[ItemInstance]
 		var current_index := posmod(int(candidate_indices.get(String(selected_slot), 0)), maxi(slot_candidates.size(), 1))
 		if not slot_candidates.is_empty(): selected_candidate = slot_candidates[current_index]
 		var window_start := clampi(current_index - 1, 0, maxi(slot_candidates.size() - choices.size(), 0))
@@ -2014,49 +2054,50 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			var choice_label := "%s%s" % [choice_prefix, "UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), str(catalog.definition_data(choice_item.definition_id).get("name", "ITEM"))]]
 			var choice_mastery := choice_item.enhancement_level
 			if choice_mastery > 0: choice_label += " +%d" % choice_mastery
-			choices[choice_row].texture = pixel_texture.call(choice_label, Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)) as Texture2D
-			details[0].texture = null; details[1].texture = null
+			var choice_color := highlight_color if choice_index == current_index else Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)
+			choices[choice_row].texture = pixel_texture.call(choice_label, choice_color) as Texture2D
 		action.visible = false
+		if hub_item_detail_panel != null: hub_item_detail_panel.visible = true
+		if not details.is_empty():
+			details[0].position = Vector2(20, HUB_GEAR_BROWSE_DETAIL_TOP)
+			details[0].texture = pixel_texture.call("SELECT %s" % catalog.display_name(selected_candidate) if selected_candidate != null else "NO GEAR", highlight_color) as Texture2D
+			details[0].visible = true
 		if selected_candidate != null:
 			_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, true)
 		return
 	else:
 		for choice in choices: choice.visible = false
-	details[0].visible = true; details[1].visible = true
-	details[0].position = Vector2(14, 105); details[1].position = Vector2(14, 115)
-	if details.size() > 2: details[2].position = Vector2(14, 123)
-	if details.size() > 3: details[3].position = Vector2(14, 131)
-	action.position = Vector2(display_view_size.x - 78.0, 119)
+	if hub_item_detail_panel != null: hub_item_detail_panel.visible = true
+	for detail_index in details.size(): details[detail_index].position = Vector2(20, HUB_ITEM_DETAIL_TOP + detail_index * HUB_ITEM_DETAIL_PITCH)
 	if selected_candidate == null:
-		var available_candidates := root.call("_hub_gear_candidates", ItemCatalog.SLOTS[selected_slot_index]) as Array[ItemInstance]
+		var available_candidates := slot_candidates
 		if selected_slot_index == ItemCatalog.SLOTS.find(&"shield") and not available_candidates.is_empty():
 			details[0].texture = pixel_texture.call("NO SHIELD EQUIPPED", Color8(255, 205, 117)) as Texture2D
 			details[1].texture = pixel_texture.call("SELECT FROM INVENTORY", Color8(148, 220, 255)) as Texture2D
+			details[0].visible = true; details[1].visible = true
 		else:
 			details[0].texture = pixel_texture.call("NO GEAR FOR THIS SLOT", Color8(255, 205, 117)) as Texture2D
+			details[0].visible = true
 		return
 	_update_gear_comparison_stats(root, pixel_texture, profile, catalog, selected_candidate, selected_slot_index, browsing)
 	details[0].texture = pixel_texture.call(catalog.display_name(selected_candidate), catalog.rarity_color(selected_candidate.rarity)) as Texture2D
+	details[0].visible = true
 	var transmutation_name := catalog.transmutation_name(selected_candidate.transmutation_id)
 	var item_info: Array[String] = []
 	var player_rate_text := catalog.player_stat_rate_text(selected_candidate)
 	if not player_rate_text.is_empty(): item_info.append(player_rate_text)
 	if not transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % transmutation_name)
-	details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D if not item_info.is_empty() else null
-	var description_lines := catalog.effect_display_lines(selected_candidate)
-	description_lines.append_array(_wrap_gear_text(catalog.player_description(selected_candidate), 34))
-	if not transmutation_name.is_empty():
-		description_lines.append_array(_wrap_gear_text(catalog.transmutation_description(selected_candidate.transmutation_id), 34))
-	_set_gear_detail_lines(details, pixel_texture, description_lines, Color8(210, 220, 235))
 	if selected_slot_index == ItemCatalog.SLOTS.find(&"shield"):
 		var shield_values := catalog.shield_bonuses(selected_candidate)
-		if details.size() > 2:
-			var shield_text := "BLOCK +%d  ARM +%d%%" % [roundi(float(shield_values.get("guard_durability", 0.0))), roundi(float(shield_values.get("guard_reduction", 0.0)))]
-			details[2].texture = pixel_texture.call(shield_text, Color8(148, 220, 255)) as Texture2D
-			details[2].visible = true
-		if details.size() > 3:
-			details[3].texture = null
-			details[3].visible = true
+		item_info.append("BLOCK +%d ARM +%d%%" % [roundi(float(shield_values.get("guard_durability", 0.0))), roundi(float(shield_values.get("guard_reduction", 0.0)))])
+	if not item_info.is_empty():
+		details[1].texture = pixel_texture.call("  ".join(item_info), Color8(148, 220, 255)) as Texture2D
+		details[1].visible = true
+	var description_lines := catalog.effect_display_lines(selected_candidate)
+	description_lines.append_array(_wrap_gear_text(catalog.player_description(selected_candidate), HUB_ITEM_TEXT_WRAP_LENGTH))
+	if not transmutation_name.is_empty():
+		description_lines.append_array(_wrap_gear_text(catalog.transmutation_description(selected_candidate.transmutation_id), HUB_ITEM_TEXT_WRAP_LENGTH))
+	_set_gear_detail_lines(details, pixel_texture, description_lines, Color8(210, 220, 235))
 	action.disabled = true
 	action.visible = false
 
@@ -2071,8 +2112,15 @@ func _set_transmutation_description(details: Array[Sprite2D], pixel_texture: Cal
 	var lines: Array[String] = []
 	var line := ""
 	for word in words:
+		if word.length() > HUB_ITEM_TEXT_WRAP_LENGTH:
+			if not line.is_empty():
+				lines.append(line)
+				line = ""
+			while word.length() > HUB_ITEM_TEXT_WRAP_LENGTH:
+				lines.append(word.left(HUB_ITEM_TEXT_WRAP_LENGTH))
+				word = word.substr(HUB_ITEM_TEXT_WRAP_LENGTH)
 		var candidate := word if line.is_empty() else "%s %s" % [line, word]
-		if candidate.length() > 34 and not line.is_empty():
+		if candidate.length() > HUB_ITEM_TEXT_WRAP_LENGTH and not line.is_empty():
 			lines.append(line)
 			line = word
 		else:
@@ -2089,6 +2137,13 @@ func _wrap_gear_text(text: String, line_length: int) -> Array[String]:
 		return lines
 	var line := ""
 	for word in text.split(" "):
+		if word.length() > line_length:
+			if not line.is_empty():
+				lines.append(line)
+				line = ""
+			while word.length() > line_length:
+				lines.append(word.left(line_length))
+				word = word.substr(line_length)
 		var candidate := word if line.is_empty() else "%s %s" % [line, word]
 		if candidate.length() > line_length and not line.is_empty():
 			lines.append(line)

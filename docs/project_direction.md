@@ -184,7 +184,9 @@ resets the combo.
 
 **Provisional design:**
 - Combo window: ~1.5s between hits.
-- Each combo step: +5% damage (caps at +25% at 5 hits).
+- Each combo step: +5% damage, with the current damage bonus capped at +25%.
+- The visible combo count continues beyond five hits; five is a damage milestone,
+  not a streak ceiling.
 - Getting hit resets the combo to 0.
 - Combo count shown as a small counter near the player HUD (not a huge number).
 
@@ -268,8 +270,8 @@ Build in this order. Each phase is independently shippable and verifiable.
 - Playtest: FOCUS and combo alone should make combat feel meaningfully better.
 
 > **Status: implemented 2026-08-18.** FOCUS (+30% bonus / 2.5s window / −20%
-> penalty) and the hit-streak combo (+5%/hit, +25% cap, 1.5s window, reset on
-> hit) shipped as `CombatMomentumComponent` and slot into
+> penalty) and the hit-streak combo (+5%/hit, +25% damage cap, uncapped visible
+> streak count, 1.5s window, reset on hit) shipped as `CombatMomentumComponent` and slot into
 > `_player_attack_damage_against`. The "FOCUS" HUD label next to the target
 > name is a backfill gauge: it renders in the player's main color and drains
 > from the right as the window expires; on draining out it flashes white once,
@@ -313,7 +315,8 @@ Build in this order. Each phase is independently shippable and verifiable.
 1. **Aspect matchups** — confirm the wheel and the +50%/-25% damage swing.
 2. **Spell resource** — confirm MP as the spell cost + regen source.
 3. **FOCUS numbers** — confirm 2.5s window / +30% bonus / -20% penalty.
-4. **Combo numbers** — confirm 1.5s window / +5% per hit / cap 25%.
+4. **Combo numbers** — confirm 1.5s window / +5% per hit / 25% damage cap;
+   the visible streak count is not capped at five.
 5. **Rest-fire swap** — confirm it's opt-in and run-only (not permanent).
 6. **Puzzle/trap pacing** — confirm ~1 special room per 4-5 combat rooms.
 7. **The palette swap** — confirm removing `aquamarine` for `ice` (uses the

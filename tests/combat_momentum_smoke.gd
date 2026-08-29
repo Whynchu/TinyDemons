@@ -34,7 +34,8 @@ func _initialize() -> void:
 	_expect(is_equal_approx(m.combo_multiplier(), 1.0 + tuning.combo_damage_per_hit), "one hit grants one step", failures)
 	for i in 8:
 		m.register_hit()
-	_expect(is_equal_approx(m.combo_multiplier(), 1.0 + tuning.combo_damage_cap), "combo caps at configured ceiling", failures)
+	_expect(m.combo_count == 9, "combo count continues past the old five-hit ceiling", failures)
+	_expect(is_equal_approx(m.combo_multiplier(), 1.0 + tuning.combo_damage_cap), "combo damage remains bounded independently of streak count", failures)
 	m.tick(tuning.combo_hit_window, true)
 	_expect(is_equal_approx(m.combo_multiplier(), 1.0), "combo decays to neutral after window", failures)
 	m.register_hit()

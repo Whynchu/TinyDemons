@@ -458,7 +458,7 @@ TIME             00:42
 MAP              8/8
 ROOMS            8/8
 STYLE            8/10
-MAX COMBO        x5
+MAX COMBO        x12
 
 REWARDS
 +GOLD / GEAR / XP
