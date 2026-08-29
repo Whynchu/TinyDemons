@@ -54,9 +54,11 @@ All feel and balance values live on `scripts/player_tuning.gd`:
   weaker than a normal Attack 1 while rewarding a clean multi-target spin.
 - Charge begins after `0.35s`, caps at `1.00s`, and uses Attack 2's art with a
   `1.35x` frame-time multiplier, `1.60x` damage, and `1.50x` knockback.
-- While charging, a foot-level air aura emits sparse palette-tinted pixels. Its
-  cadence, outward speed, rise, curl, and streak length ramp toward the charge
-  cap; the peak reads as whipping air rather than a Chroma or hurt flash.
+- While charging, a foot-level air aura emits sparse white pixels. Its cadence,
+  outward speed, rise, curl, and streak length ramp toward the charge cap; the
+  peak reads as whipping air rather than a Chroma or hurt flash. At the ready
+  threshold, a restrained copy of the player uses the active palette highlight
+  so the charged state is unmistakable without recoloring the air effect.
 - A run attack skips Attack 1 and starts the regular Attack 2 animation as a
   dedicated variant. It captures the run state, uses separate
   damage/knockback/hitstop tuning, and adds `1.5` Attack 2 frame times to

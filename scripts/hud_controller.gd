@@ -132,7 +132,15 @@ func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 	if fill == null:
 		return
 	fill.region_enabled = true
-	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clampf(ratio, 0.0, 1.0), fill_size.y))
+	var clamped_ratio := clampf(ratio, 0.0, 1.0)
+	var track_start := float(fill.get_meta("fill_track_start_x", -1.0))
+	if track_start >= 0.0:
+		var track_width := maxf(float(fill.get_meta("fill_track_width", fill_size.x - track_start)), 0.0)
+		var source_width := maxf(track_start + track_width, track_start)
+		var visible_width := clampf(track_start + roundf(track_width * clamped_ratio), 0.0, source_width)
+		fill.region_rect = Rect2(Vector2.ZERO, Vector2(visible_width, fill_size.y))
+		return
+	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clamped_ratio, fill_size.y))
 
 
 func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, health: float, display_health: float, max_health: float) -> void:
@@ -649,7 +657,10 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 
 
 func duplicate_fill_sprite(source: Sprite2D, sprite_name: String) -> Sprite2D:
-	var sprite := Sprite2D.new(); sprite.name = sprite_name; sprite.texture = source.texture; sprite.centered = source.centered; sprite.position = source.position; sprite.offset = source.offset; sprite.scale = source.scale; sprite.region_enabled = source.region_enabled; sprite.region_rect = source.region_rect; sprite.texture_filter = source.texture_filter; sprite.z_as_relative = source.z_as_relative; sprite.z_index = source.z_index; source.get_parent().add_child(sprite); return sprite
+	var sprite := Sprite2D.new(); sprite.name = sprite_name; sprite.texture = source.texture; sprite.centered = source.centered; sprite.position = source.position; sprite.offset = source.offset; sprite.scale = source.scale; sprite.region_enabled = source.region_enabled; sprite.region_rect = source.region_rect; sprite.texture_filter = source.texture_filter; sprite.z_as_relative = source.z_as_relative; sprite.z_index = source.z_index
+	for meta_name in source.get_meta_list():
+		sprite.set_meta(meta_name, source.get_meta(meta_name))
+	source.get_parent().add_child(sprite); return sprite
 
 
 func brighter_bar_texture(source: Texture2D) -> Texture2D:

@@ -96,15 +96,22 @@ func _initialize() -> void:
 			effects.update_charge_aura_from_root(gameplay, 0.20)
 			var peak_aura_count := _charge_aura_count(effects)
 			var peak_streak_visible := false
+			var aura_is_white := true
 			for particle_data in effects.pixel_particles:
 				if particle_data.get("effect_tag", &"") == EffectsSpawner.CHARGE_AURA_TAG and float(particle_data.get("charge_progress", 0.0)) >= 0.90:
 					var particle := particle_data.get("sprite") as Sprite2D
+					aura_is_white = aura_is_white and particle != null and is_equal_approx(particle.modulate.r, 1.0) and is_equal_approx(particle.modulate.g, 1.0) and is_equal_approx(particle.modulate.b, 1.0)
 					peak_streak_visible = particle != null and is_equal_approx(particle.scale.y, 2.0)
 					if peak_streak_visible:
 						break
 			_expect(initial_aura_count > 0, "charge aura emits its initial foot wisp", failures)
 			_expect(peak_aura_count > initial_aura_count, "charge aura increases its particle cadence near peak", failures)
 			_expect(peak_streak_visible, "charge aura stretches a peak particle into an air streak", failures)
+			_expect(aura_is_white, "charge aura particles remain neutral white", failures)
+			var ready_highlight := effects.charge_ready_highlight
+			var expected_highlight := PaletteLibrary.accent(str(gameplay.get("current_player_palette_name")))
+			_expect(ready_highlight != null and ready_highlight.visible, "charge cap shows the player ready highlight", failures)
+			_expect(ready_highlight != null and is_equal_approx(ready_highlight.modulate.r, expected_highlight.r) and is_equal_approx(ready_highlight.modulate.g, expected_highlight.g) and is_equal_approx(ready_highlight.modulate.b, expected_highlight.b), "charge ready highlight uses the active player accent", failures)
 		var charge_grey_set := animation.frames_by_palette.get("grey", {}) as Dictionary
 		var charge_grey := charge_grey_set.get("between") as Texture2D
 		var base_mp_material := gameplay.get("mp_desaturation_material") as ShaderMaterial
@@ -137,6 +144,7 @@ func _initialize() -> void:
 		if effects != null:
 			effects.update_charge_aura_from_root(gameplay, 0.0)
 			_expect(_charge_aura_count(effects) == 0, "charge aura clears when the hold becomes charged Attack 2", failures)
+			_expect(effects.charge_ready_highlight == null or not effects.charge_ready_highlight.visible, "charge ready highlight clears when the attack releases", failures)
 		_expect(attack.is_charged_attack2() and attack.variant == 2 and StringName(gameplay.get("player_anim_name")) == &"attack2_charged", "releasing a charged hold starts charged attack 2", failures)
 		_expect(attack.special_knockback_multiplier(tuning) > 1.0 and attack.knockback_multiplier(tuning) > 1.0, "charged attack 2 has stronger knockback than regular attack 2", failures)
 		_expect(tuning.charged_attack2_damage_multiplier > tuning.attack2_damage_multiplier and tuning.charged_attack2_frame_time_multiplier > 1.0, "charged attack 2 is stronger and slower by tuning", failures)

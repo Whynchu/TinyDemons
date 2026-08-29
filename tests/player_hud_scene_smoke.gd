@@ -26,9 +26,23 @@ func _initialize() -> void:
 		hud.get_node_or_null("PlayerStatus/Health/HpBarFill") as Sprite2D,
 		hud.get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D,
 	]
-	for fill in fills:
+	var authored_track_widths := [34.0, 62.0, 46.0]
+	for index in fills.size():
+		var fill := fills[index] as Sprite2D
 		_expect(fill != null and fill.texture != null and fill.texture.get_size().is_equal_approx(Vector2(82, 16)), "player bar uses the full-strip fill source", failures)
-		_expect(fill != null and fill.region_enabled and fill.region_rect.size.is_equal_approx(Vector2(82, 16)), "player bar clips within the full authored strip", failures)
+		var expected_source_width: float = 17.0 + float(authored_track_widths[index])
+		_expect(fill != null and fill.region_enabled and is_equal_approx(fill.region_rect.size.x, expected_source_width) and is_equal_approx(fill.region_rect.size.y, 16.0), "player bar clips to its authored active track", failures)
+		_expect(fill != null and is_equal_approx(float(fill.get_meta("fill_track_start_x", -1.0)), 17.0) and is_equal_approx(float(fill.get_meta("fill_track_width", -1.0)), authored_track_widths[index]), "player bar exposes its authored track geometry", failures)
+
+	var hud_controller := HudController.new()
+	root.add_child(hud_controller)
+	var half_widths := [34.0, 48.0, 40.0]
+	for index in fills.size():
+		var fill := fills[index] as Sprite2D
+		hud_controller.set_fill_ratio(fill, Vector2(82, 16), 0.5)
+		_expect(fill != null and is_equal_approx(fill.region_rect.size.x, half_widths[index]), "player bar uses a linear half-fill for its authored track", failures)
+		hud_controller.set_fill_ratio(fill, Vector2(82, 16), 1.0)
+		_expect(fill != null and is_equal_approx(fill.region_rect.size.x, 17.0 + authored_track_widths[index]), "player bar reaches the authored track edge at full", failures)
 
 	for path in [
 		"PlayerStatus/LevelXp/LevelTextAnchor/LevelText",
@@ -61,6 +75,7 @@ func _initialize() -> void:
 	_expect(mp_fill != null and _contains_color(mp_fill.texture.get_image(), PaletteLibrary.ACCENT["orange"]), "Chroma fill follows the active Chroma accent", failures)
 
 	hud.queue_free()
+	hud_controller.queue_free()
 	await process_frame
 	_finish(failures)
 
