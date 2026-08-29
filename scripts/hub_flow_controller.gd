@@ -206,6 +206,10 @@ func back_to_hub_root(root: Object) -> void:
 		close_hub_to_run(root)
 		return
 	screen.hub_is_root = true
+	# Keep the page state consistent with the visible root. Otherwise Cancel
+	# enters the stale submenu branch before the root-state branch can close the
+	# hub, producing one or more phantom presses after nested menus.
+	screen.hub_page = screen.HUB_PAGE_STATUS
 	screen.hub_content_focus = false
 	screen.hub_equipment_action_focus = false
 	screen.hub_gear_browsing = false
