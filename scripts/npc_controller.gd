@@ -109,7 +109,7 @@ func show_dialogue(root: Object) -> void:
 			if first_dive:
 				message = "TO DIVE, OFFER %d SOULS AT THE %s FLAME. IT WILL AWAKEN YOUR CHROMA." % [fire_soul_cost, String(profile.starter_flame).to_upper()]
 			else:
-				message = "LV %d. %d PTS TO SPEND." % [profile.level, profile.unspent_stat_points] if profile.unspent_stat_points > 0 else "LV %d. READY TO TRADE." % profile.level
+				message = "OPEN STATS AND SHOP?"
 	allocation_prompt_active = false
 	allocation_choice = 0
 	allocation_choice_pending = -1
@@ -180,13 +180,17 @@ func update_dialogue_input(root: Object) -> void:
 			dialogue_button.visible = false
 			dialogue_button_shadow.visible = false
 		else:
-			allocation_prompt_active = true
-			allocation_choice = 0
-			allocation_choice_pending = -1
-			begin_dialogue("OPEN STATS AND SHOP?", Callable(root, "_pixel_text_texture"))
-			dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
-			dialogue_button.visible = false
-			dialogue_button_shadow.visible = false
+			var profile := root.get("player_profile") as PlayerProfile
+			var first_run_flame_pending := profile != null and profile.completed_runs == 0 and not bool(root.get("starter_flame_attuned_this_run"))
+			if first_run_flame_pending:
+				hide_dialogue(root)
+			else:
+				allocation_prompt_active = true
+				allocation_choice = 0
+				allocation_choice_pending = -1
+				dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE) as Texture2D
+				dialogue_button.visible = false
+				dialogue_button_shadow.visible = false
 		update_dialogue_from_root(root, 0.0)
 	dialogue_input_was_down = input_down
 
