@@ -151,7 +151,7 @@ func _initialize() -> void:
 	var backflip_frames := anim.backflip_frames as Array[Texture2D]
 	_expect(backflip_frames.size() == 7, "TinyDemon-backflip sheet slices into seven 36x36 frames", failures)
 	var player_tuning := gameplay.get("player_tuning") as PlayerTuning
-	_expect(player_tuning != null and is_equal_approx(player_tuning.backflip_frame_time, 0.0833333), "backflip uses the 12 FPS authored cadence", failures)
+	_expect(player_tuning != null and is_equal_approx(player_tuning.backflip_frame_time, 0.0714286), "backflip uses the 14 FPS authored cadence", failures)
 	var roll := gameplay.get("player_roll_component") as PlayerRollComponent
 	_expect(roll != null, "roll component is composed for the backflip", failures)
 	if roll != null and not backflip_frames.is_empty():

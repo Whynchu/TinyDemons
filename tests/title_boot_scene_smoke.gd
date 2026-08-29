@@ -17,6 +17,8 @@ func _initialize() -> void:
 	if screens != null:
 		_expect(screens.title_overlay != null, "title overlay is built during boot", failures)
 		_expect(screens.title_overlay != null and screens.title_overlay.visible, "title overlay is visible after boot", failures)
+		var version := screens.title_overlay.get_node_or_null("TitleVersion") as Sprite2D
+		_expect(version != null and version.texture != null and version.position.is_equal_approx(Vector2(4, screens.display_view_size.y - 8.0)), "title screen shows the game version in the bottom-left", failures)
 		_expect(screens.state == &"title", "screen state settles on title after boot", failures)
 	_expect(not bool(gameplay.get("boot_active")), "boot sequence completes", failures)
 	var loading := gameplay.get("loading_screen_overlay") as CanvasItem

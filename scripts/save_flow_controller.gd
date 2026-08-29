@@ -338,7 +338,7 @@ func select_archetype_menu_row(root: Object, row: int) -> void:
 
 func update_archetype_screen(root: Object) -> void:
 	var display := root.get("display_controller") as DisplayController
-	var view_width := float(display.view_size_value().x) if display != null else 240.0
+	var view_width := root.screen_state_controller.layout_view_size().x if root.screen_state_controller != null else (float(display.view_size_value().x) if display != null else 240.0)
 	var flame: StringName = AspectCatalogScript.STARTER_FLAMES[root.screen_state_controller.starter_flame_index]
 	var flame_name: String = AspectCatalogScript.display_name(flame)
 	var flame_palette: String = AspectCatalogScript.palette_for_flame(flame)
@@ -367,7 +367,7 @@ func update_archetype_preview_animation(root: Object) -> void:
 	var frame_index: int = posmod(int(root.screen_state_controller.archetype_frame_timer / frame_time), root.screen_state_controller.archetype_preview_frames.size())
 	root.screen_state_controller.archetype_preview.texture = root.screen_state_controller.archetype_preview_frames[frame_index]
 	var display := root.get("display_controller") as DisplayController
-	var view_width := float(display.view_size_value().x) if display != null else 240.0
+	var view_width := root.screen_state_controller.layout_view_size().x if root.screen_state_controller != null else (float(display.view_size_value().x) if display != null else 240.0)
 	root.screen_state_controller.archetype_preview.position = Vector2((view_width - root.screen_state_controller.archetype_preview.texture.get_width() * root.screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
 
 

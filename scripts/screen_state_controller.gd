@@ -8,6 +8,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
+const GAME_VERSION := "0.1.0"
 const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
 const HUB_ITEM_DETAIL_TOP := 105.0
 const HUB_ITEM_DETAIL_PITCH := 7.0
@@ -247,7 +248,11 @@ var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
 
 func apply_display_layout(root: Object) -> void:
 	var display := root.get("display_controller") as DisplayController
-	display_view_size = Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE)
+	# FULL keeps the authored 160px height but can expose additional logical
+	# width when the browser viewport is wider than the configured content size.
+	# Menus are full-view overlays, so their frame and responsive anchors must
+	# use that visible width instead of the narrower content-scale width.
+	display_view_size = display.visible_view_size_value() if display != null and DisplayLayout.is_full_aspect(display.aspect_mode()) else (Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE))
 	var game_over := root.get("game_over_overlay") as ColorRect
 	for overlay in [title_overlay, save_select_overlay, name_entry_overlay, archetype_overlay, run_complete_overlay, game_over] as Array:
 		if overlay != null and bool(overlay.get_meta("display_full_view", false)):
@@ -256,6 +261,8 @@ func apply_display_layout(root: Object) -> void:
 	if title_overlay != null:
 		var title := title_overlay.get_node_or_null("TitleText") as Sprite2D
 		if title != null and title.texture != null: title.position.x = (display_view_size.x - title.texture.get_width() * title.scale.x) * 0.5
+		var version := title_overlay.get_node_or_null("TitleVersion") as Sprite2D
+		if version != null: version.position = Vector2(4.0, display_view_size.y - 8.0)
 		var title_x := (display_view_size.x - 64.0) * 0.5
 		if title_start_button != null: title_start_button.position.x = title_x
 		if title_continue_button != null: title_continue_button.position.x = title_x
@@ -274,6 +281,11 @@ func apply_display_layout(root: Object) -> void:
 	if archetype_overlay != null:
 		var cover := archetype_overlay.get_node_or_null("ArchetypeHoldCover") as ColorRect
 		if cover != null: cover.size = display_view_size
+		if archetype_type_left_button != null: archetype_type_left_button.position = Vector2(display_view_size.x * 0.5 - 45.0, 33.0)
+		if archetype_type_right_button != null: archetype_type_right_button.position = Vector2(display_view_size.x * 0.5 + 35.0, 33.0)
+		if archetype_start_button != null: archetype_start_button.position.x = (display_view_size.x - archetype_start_button.size.x) * 0.5
+		for button in archetype_left_buttons: button.position = Vector2(display_view_size.x * 0.5 - 45.0, 69.0)
+		for button in archetype_right_buttons: button.position = Vector2(display_view_size.x * 0.5 + 35.0, 69.0)
 	if hub_overlay != null:
 		hub_overlay.position = Vector2.ZERO
 		hub_overlay.size = display_view_size
@@ -315,6 +327,10 @@ func _view_size_for_parent(parent: Node) -> Vector2:
 		if display != null:
 			return Vector2(display.view_size_value())
 		current = current.get_parent()
+	return display_view_size
+
+
+func layout_view_size() -> Vector2:
 	return display_view_size
 
 
@@ -2380,6 +2396,7 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	var overlay := create_view_overlay(parent, "TitleOverlay", Color.BLACK, 2)
 	var title_texture := pixel_texture.call("TINY DEMONS", Color.WHITE) as Texture2D
 	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((display_view_size.x - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
+	var version_text := create_sprite(overlay, "TitleVersion", pixel_texture.call(GAME_VERSION, Color8(148, 220, 255)) as Texture2D, Vector2(4, display_view_size.y - 8.0), false)
 	var new_game_button := make_retro_button("NEW GAME", Vector2((display_view_size.x - 64.0) * 0.5, 102), Vector2(64, 14), pixel_texture)
 	new_game_button.focus_mode = Control.FOCUS_NONE
 	new_game_button.pressed.connect(new_game_callback)
@@ -2395,7 +2412,7 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	overlay.add_child(settings_button)
 	var cursor := create_sprite(overlay, "TitleCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 106 if not has_profile else 124), false)
 	title_menu_row = 1 if has_profile else 0
-	return {"overlay": overlay, "text": title_text, "new_game": new_game_button, "continue": continue_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
+	return {"overlay": overlay, "text": title_text, "version": version_text, "new_game": new_game_button, "continue": continue_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
 
 
 func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable, select_option_callback: Callable = Callable()) -> Dictionary:
