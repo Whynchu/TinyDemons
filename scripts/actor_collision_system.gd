@@ -5,6 +5,16 @@ class_name ActorCollisionSystem
 
 @export var contact_distance := 64.0
 
+## Spatial broad-phase for the slime crowd. A uniform grid is rebuilt once per
+## frame so contact separation and AI steering only examine slimes in nearby
+## cells instead of scanning the whole room, keeping crowd work bounded by local
+## density rather than the total enemy count.
+const SLIME_GRID_CELL_SIZE := 24.0
+
+var _slime_grid: Dictionary = {}
+var _slime_grid_index: Dictionary = {}
+var _slime_grid_valid := false
+
 
 func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides: Callable) -> void:
 	for actor in actors_to_stabilize:
@@ -39,15 +49,23 @@ func resolve_motion_contacts(actor: Sprite2D, movement: Vector2, candidates: Arr
 
 func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: int = 2) -> int:
 	var resolved_pairs := 0
+	if slimes.size() < 2:
+		return 0
+	# The frame cache normally builds the broad-phase grid; build it lazily so the
+	# resolver stays correct for direct callers.
+	if not _slime_grid_valid:
+		build_slime_grid(slimes, Callable(root, "_actor_foot"))
 	for _separation_pass in max_passes:
 		var resolved_this_pass := false
 		for actor_index in slimes.size():
 			var actor := slimes[actor_index]
 			if not is_instance_valid(actor) or not actor.visible:
 				continue
-			for other_index in range(actor_index + 1, slimes.size()):
-				var other := slimes[other_index]
-				if not is_instance_valid(other) or not other.visible:
+			var nearby := slime_grid_candidates(root.call("_actor_foot", actor), contact_distance)
+			for other in nearby:
+				if other == actor or not is_instance_valid(other) or not other.visible:
+					continue
+				if slime_grid_position(other) <= actor_index:
 					continue
 				var push := actor_contact_push_vector(root, actor, other)
 				if push == Vector2.ZERO:
@@ -58,6 +76,56 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 		if not resolved_this_pass:
 			break
 	return resolved_pairs
+
+
+func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable) -> void:
+	_slime_grid.clear()
+	_slime_grid_index.clear()
+	for index in slimes.size():
+		var slime := slimes[index]
+		if slime == null or not is_instance_valid(slime) or not slime.visible:
+			continue
+		var cell := _grid_cell(actor_foot.call(slime) as Vector2)
+		var bucket: Variant = _slime_grid.get(cell)
+		if bucket == null:
+			bucket = []
+			_slime_grid[cell] = bucket
+		(bucket as Array).append(slime)
+		_slime_grid_index[slime] = index
+	_slime_grid_valid = true
+
+
+func invalidate_slime_grid() -> void:
+	_slime_grid_valid = false
+
+
+## Returns the slimes whose broad-phase cells overlap a circle of `radius`
+## around `point`. Callers still apply their exact distance/dead/boss filters.
+func slime_grid_candidates(point: Vector2, radius: float) -> Array[Sprite2D]:
+	var result: Array[Sprite2D] = []
+	if not _slime_grid_valid:
+		return result
+	var cell_radius := maxi(1, int(ceil(radius / SLIME_GRID_CELL_SIZE)))
+	var center := _grid_cell(point)
+	for cell_x in range(center.x - cell_radius, center.x + cell_radius + 1):
+		for cell_y in range(center.y - cell_radius, center.y + cell_radius + 1):
+			var bucket: Variant = _slime_grid.get(Vector2i(cell_x, cell_y))
+			if bucket == null:
+				continue
+			for slime in bucket as Array:
+				if not result.has(slime):
+					result.append(slime)
+	return result
+
+
+## The slot index recorded for a slime by the last grid build (used to dedupe
+## contact pairs). Returns -1 for slimes not present in the grid.
+func slime_grid_position(slime: Sprite2D) -> int:
+	return int(_slime_grid_index.get(slime, -1))
+
+
+func _grid_cell(point: Vector2) -> Vector2i:
+	return Vector2i(floori(point.x / SLIME_GRID_CELL_SIZE), floori(point.y / SLIME_GRID_CELL_SIZE))
 
 
 func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:

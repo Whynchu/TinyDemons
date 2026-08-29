@@ -57,7 +57,7 @@ func continue_game(root: Object) -> void:
 
 func open_save_select_after_title_transition(root: Object) -> void:
 	if root.screen_state_controller.save_select_overlay == null:
-		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_cancel_overwrite"), Callable(root, "_save_preview_texture"))
+		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_cancel_overwrite"), Callable(root, "_save_portrait_texture"))
 	root.screen_state_controller.save_select_index = 0
 	root.screen_state_controller.menu_input_release_lock = true
 	# Keep the opaque title cover behind the save menu so the gameplay scene is
@@ -94,6 +94,14 @@ func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
 	if base_frames.is_empty():
 		return null
 	return root.player_animation_component.recolor_texture(base_frames[0], palette_name)
+
+
+func save_portrait_texture(root: Object, palette_name: String) -> Texture2D:
+	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	if library == null:
+		return null
+	var source := load("res://assets/artwork/player_UI_portrait.png") as Texture2D
+	return library.recolor_portrait_texture(source, palette_name)
 
 
 func select_save_slot(root: Object, slot: int) -> void:

@@ -97,7 +97,7 @@ func set_current_element(element: int) -> void:
 	var normalized := ELEMENT_CATALOG_SCRIPT.normalize(element)
 	if current_element == normalized:
 		return
-	current_element = normalized
+	current_element = normalized as ELEMENT_CATALOG_SCRIPT.Element
 	map_state_changed.emit()
 
 

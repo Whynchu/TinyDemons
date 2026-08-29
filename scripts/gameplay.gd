@@ -93,9 +93,8 @@ func _physics_process(delta: float) -> void:
 		if input_device_tracker != null:
 			input_device_tracker.call("observe_polled_input")
 	gameplay_frame_controller.tick(self, delta)
-	# Bosses are much taller than normal slimes; refresh foot-based z-order every
-	# frame so the player can correctly pass in front of or behind them.
-	_update_depth_sorting()
+	# Depth sorting runs inside the frame schedule for gameplay; the world is
+	# frozen during dialogue/overlays, so the last sort still stands there.
 	_update_player_shadow()
 	_update_roll_dust(0.0)
 	_update_large_room_camera()

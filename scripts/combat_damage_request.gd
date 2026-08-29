@@ -44,8 +44,8 @@ static func physical(
 	request.contract_id = CONTRACT_PHYSICAL
 	request.physical_base = base_power
 	request.physical_stat_scale = strength_scale
-	request.attack_element = attack_element_value
-	request.defense_element = defense_element_value
+	request.attack_element = attack_element_value as ElementCatalogScript.Element
+	request.defense_element = defense_element_value as ElementCatalogScript.Element
 	request.critical_eligible = can_critical
 	return request
 
@@ -62,8 +62,8 @@ static func magic(
 	request.contract_id = CONTRACT_MAGIC
 	request.magic_base = base_power
 	request.magic_stat_scale = intelligence_scale
-	request.attack_element = attack_element_value
-	request.defense_element = defense_element_value
+	request.attack_element = attack_element_value as ElementCatalogScript.Element
+	request.defense_element = defense_element_value as ElementCatalogScript.Element
 	request.critical_eligible = can_critical
 	return request
 
@@ -84,8 +84,8 @@ static func imbued_weapon(
 	request.physical_stat_scale = strength_scale
 	request.magic_base = imbue_base_power
 	request.magic_stat_scale = intelligence_scale
-	request.attack_element = attack_element_value
-	request.defense_element = defense_element_value
+	request.attack_element = attack_element_value as ElementCatalogScript.Element
+	request.defense_element = defense_element_value as ElementCatalogScript.Element
 	request.critical_eligible = can_critical
 	return request
 
@@ -106,8 +106,8 @@ static func elemental_slime(
 	request.physical_stat_scale = strength_scale
 	request.magic_base = magic_base_power
 	request.magic_stat_scale = intelligence_scale
-	request.attack_element = attack_element_value
-	request.defense_element = defense_element_value
+	request.attack_element = attack_element_value as ElementCatalogScript.Element
+	request.defense_element = defense_element_value as ElementCatalogScript.Element
 	request.critical_eligible = can_critical
 	return request
 

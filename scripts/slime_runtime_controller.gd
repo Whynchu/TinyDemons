@@ -77,6 +77,10 @@ func is_target_actor_dead(root: Object, target: Sprite2D) -> bool:
 func move_slimes(root: Object, delta: float) -> void:
 	prepare_slime_frame_cache(root)
 	var slimes := root.get("slimes") as Array[Sprite2D]
+	(root.get("combat_runtime_controller") as CombatRuntimeController).clear_enemy_max_health_frame_cache()
+	# Spatial broad-phase for the crowd: built once per frame so slime-slime
+	# contact and AI steering only examine spatially local slimes.
+	(root.get("actor_collision_system") as ActorCollisionSystem).build_slime_grid(slimes, Callable(root, "_actor_foot"))
 	for slime in slimes:
 		if bool(root.call("_is_slime_dead", slime)):
 			continue

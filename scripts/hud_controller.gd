@@ -716,10 +716,13 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	target_text.name = "TargetHealthText"
 	target_text.centered = true
 	target_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# EnemyHp/EnemyHpFill and its delayed-damage copy occupy z 0..2. Keep the
-	# numeric health readout on an explicit layer above that stack even though
-	# the authored text lives inside PlayerHud/TargetHud.
-	target_text.z_index = 4
+	# Keep the numeric readout in the same draw stack as EnemyHp so it cannot be
+	# ordered behind the bar through the PlayerHud scene boundary.
+	var target_bar_parent := target_bar.get_parent()
+	if target_bar_parent != null and target_text.get_parent() != target_bar_parent:
+		target_text.reparent(target_bar_parent, false)
+	target_text.z_as_relative = true
+	target_text.z_index = target_bar.z_index + 3
 	target_text.position = target_bar.position + target_bar.texture.get_size() * 0.5
 	target_text.visible = false
 	var focus_label_base := hud_parent.get_node_or_null("TargetHud/FocusLabelBase") as Sprite2D

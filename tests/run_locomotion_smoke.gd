@@ -108,6 +108,7 @@ func _initialize() -> void:
 			var running_cooldown := attack.attack2_cooldown_duration(tuning)
 			_expect(started_running_attack and attack.running_attack_active and attack.variant == 2 and StringName(gameplay.get("player_anim_name")) == &"attack2", "running input skips Attack 1 and starts the special Attack 2", failures)
 			_expect(not bool(gameplay.get("player_is_running")), "running Attack 2 consumes the roll-continuation run state", failures)
+			_expect(is_equal_approx(tuning.run_attack_lunge_multiplier * tuning.attack_lunge_distance, 14.0), "running Attack 2 travels fourteen pixels", failures)
 			attack.finish()
 			gameplay.set("player_is_attacking", false)
 			gameplay.set("player_is_running", false)
@@ -150,7 +151,7 @@ func _initialize() -> void:
 	var backflip_frames := anim.backflip_frames as Array[Texture2D]
 	_expect(backflip_frames.size() == 7, "TinyDemon-backflip sheet slices into seven 36x36 frames", failures)
 	var player_tuning := gameplay.get("player_tuning") as PlayerTuning
-	_expect(player_tuning != null and is_equal_approx(player_tuning.backflip_frame_time, 0.065), "backflip uses the slightly faster authored cadence", failures)
+	_expect(player_tuning != null and is_equal_approx(player_tuning.backflip_frame_time, 0.0833333), "backflip uses the 12 FPS authored cadence", failures)
 	var roll := gameplay.get("player_roll_component") as PlayerRollComponent
 	_expect(roll != null, "roll component is composed for the backflip", failures)
 	if roll != null and not backflip_frames.is_empty():
@@ -181,6 +182,7 @@ func _initialize() -> void:
 			var sword_before := equipment_layers.get("EquipmentSwordBack") as Sprite2D
 			var shield_before := equipment_layers.get("EquipmentShieldFront") as Sprite2D
 			_expect(sword_before != null and sword_before.visible and shield_before != null and shield_before.visible, "backflip test starts with visible sword and shield layers", failures)
+			_expect(float(equipment_visual.get("draw_white_timer")) > 0.0 and float(equipment_visual.get("draw_color_fade_timer")) > 0.0, "attack deployment starts the sword and shield white fade", failures)
 			gameplay.set("player_is_backflipping", true)
 			equipment_visual.tick(gameplay, 0.0)
 			_expect(not equipment_visual.active and equipment_visual.roll_fizzle_active and equipment_visual.fade_timer > 0.0, "backflip starts the same equipment fizzle as a roll", failures)

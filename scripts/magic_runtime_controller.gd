@@ -170,7 +170,7 @@ func try_cast_imbue(root: Object, allow_candidate := false) -> bool:
 	if target != null and bool(root.call("_is_slime_targetable", target)):
 		var to_target: Vector2 = magic_target_point(root, target) - player_visual_center(root)
 		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else direction
-	pending_imbue_element = element
+	pending_imbue_element = element as ElementCatalogScript.Element
 	var candidate := allow_candidate and magic_animation_active and magic_hold_active and not magic_animation_is_imbue
 	if candidate:
 		magic_animation_is_imbue = true
@@ -206,7 +206,6 @@ func execute_current_aspect_ability(root: Object, mode: int) -> bool:
 		return true
 	var current := root.call("_valid_current_target") as Sprite2D
 	var target := current if current != null and bool(root.call("_is_slime_targetable", current)) else root.call("_closest_target") as Sprite2D
-	var player := root.get("player") as Sprite2D
 	var direction := Vector2.RIGHT
 	if target != null:
 		var to_target: Vector2 = magic_target_point(root, target) - player_visual_center(root)
@@ -415,7 +414,7 @@ func player_visual_center(root: Object) -> Vector2:
 	return player.global_position + Vector2(8, 7)
 
 
-func slime_visual_center(root: Object, slime: Sprite2D) -> Vector2:
+func slime_visual_center(_root: Object, slime: Sprite2D) -> Vector2:
 	return slime.global_position + Vector2(8, 2)
 
 

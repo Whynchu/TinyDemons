@@ -2837,7 +2837,7 @@ func update_settings_input(root: Object) -> void:
 		elif settings_row >= 0 and settings_row < settings_value_buttons.size():
 			settings_value_buttons[settings_row].pressed.emit()
 
-func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), preview_texture: Callable = Callable()) -> ColorRect:
+func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), portrait_texture: Callable = Callable()) -> ColorRect:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := create_view_overlay(parent, "SaveSelectOverlay", Color.BLACK, 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -2851,22 +2851,31 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 	for slot in ProfileSaveService.SLOT_COUNT:
 		var profile := ProfileSaveService.load_profile_for_slot(slot)
 		var label := "SAVE %d  EMPTY" % (slot + 1)
+		var palette_name := "blue"
 		if profile != null and profile.has_started:
 			label = "SAVE %d  %s" % [slot + 1, PlayerProfile.normalize_player_name(profile.player_name)]
-		var button := make_retro_button(label, Vector2((display_view_size.x - 112.0) * 0.5, 66 + slot * 20), Vector2(112, 14), pixel_texture)
+			var flame := profile.starter_flame
+			palette_name = AspectCatalog.palette_for_flame(flame)
+			if palette_name == "grey" and not profile.palette_name.is_empty():
+				palette_name = profile.palette_name
+		var button := make_retro_button(label, Vector2((display_view_size.x - 112.0) * 0.5, 66 + slot * 20), Vector2(112, 18), pixel_texture)
 		button.focus_mode = Control.FOCUS_NONE
 		button.disabled = false
 		button.set_meta("save_slot", slot)
 		button.pressed.connect(select_callback.bind(slot))
 		overlay.add_child(button)
-		if profile != null and profile.has_started and preview_texture.is_valid():
-			var demon := Sprite2D.new()
-			demon.name = "Save%dPreview" % slot
-			demon.texture = preview_texture.call(profile.palette_name) as Texture2D
-			demon.position = Vector2((display_view_size.x - 112.0) * 0.5 - 6.0, 73 + slot * 20)
-			demon.scale = Vector2.ONE * 0.55
-			demon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			overlay.add_child(demon)
+		var label_sprite := button.get_child(0) as Sprite2D
+		if label_sprite != null:
+			label_sprite.position = Vector2(67, 9)
+		if profile != null and profile.has_started and portrait_texture.is_valid():
+			var portrait := Sprite2D.new()
+			portrait.name = "Save%dPortrait" % slot
+			portrait.texture = portrait_texture.call(palette_name) as Texture2D
+			portrait.position = Vector2(1, 1)
+			portrait.centered = false
+			portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			portrait.z_index = 1
+			button.add_child(portrait)
 	save_select_footer_text = create_sprite(overlay, "SaveSelectFooter", pixel_texture.call("A BACK", Color8(148, 220, 255)) as Texture2D, Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0), false)
 	for child in overlay.get_children():
 		if child is Button and (child as Button).name in [&"OverwriteYes", &"OverwriteNo"]:

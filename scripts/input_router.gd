@@ -21,7 +21,7 @@ const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause"
 
 
 func poll(next_context: int) -> void:
-	context = next_context
+	context = next_context as Context
 	if touch_provider != null and touch_provider.has_method("set_input_context"):
 		touch_provider.call("set_input_context", context)
 	_previous = _current.duplicate()

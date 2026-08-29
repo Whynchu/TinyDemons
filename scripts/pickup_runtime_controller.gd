@@ -734,7 +734,6 @@ func collect_soul_pickup(root: Object, index: int) -> void:
 	if index < 0 or index >= root.soul_pickup_controller.values.size():
 		return
 	var value: int = root.soul_pickup_controller.values[index]
-	var pickup: Sprite2D = root.soul_pickup_controller.sprites[index]
 	if root.player_profile == null:
 		remove_soul_pickup(root, index)
 		return

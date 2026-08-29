@@ -32,7 +32,10 @@ static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
 	var buddy_avoidance := Vector2.ZERO
 	var collision := root.get("actor_collision_system") as ActorCollisionSystem
 	var is_boss := _is_boss(slime)
-	for buddy in root.get("slimes") as Array[Sprite2D]:
+	# Only nearby slimes can crowd a target point; the broad-phase grid bounds
+	# this to the local crowd instead of scanning the whole room.
+	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, collision.contact_distance) if collision != null else []
+	for buddy in nearby:
 		if buddy == slime or bool(root.call("_is_slime_dead", buddy)): continue
 		if is_boss and not _is_boss(buddy): continue
 		var buddy_delta: Vector2 = slime_foot - root.call("_actor_foot", buddy); var buddy_distance: float = buddy_delta.length(); var clear_distance: float = collision.actor_contact_radius(root, slime) + collision.actor_contact_radius(root, buddy) + 4.0
@@ -176,6 +179,11 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var best_direction := towards_player
 	var best_score := -INF
 	var direction_count := maxi(tuning.steering_direction_count, 4)
+	# Buddy avoidance only cares about slimes within steering clearance. Query
+	# the broad-phase grid once instead of re-scanning the whole crowd per
+	# candidate direction.
+	var collision := root.get("actor_collision_system") as ActorCollisionSystem
+	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, tuning.steering_clearance) if collision != null else []
 
 	for index in direction_count:
 		var angle := TAU * float(index) / float(direction_count)
@@ -186,7 +194,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		if not bool(root.call("_is_slime_collision_rect_walkable_at", actor, candidate_foot)):
 			danger += tuning.steering_blocked_danger_weight
 
-		for buddy in root.get("slimes") as Array[Sprite2D]:
+		for buddy in nearby:
 			if buddy == actor or bool(root.call("_is_slime_dead", buddy)):
 				continue
 			if _is_boss(actor) and not _is_boss(buddy):

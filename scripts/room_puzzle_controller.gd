@@ -340,13 +340,13 @@ func _update_first_orb_tutorial_prompt(root: Object, orb: Sprite2D) -> void:
 		prompt.z_as_relative = false
 		root.add_child(prompt)
 		root.set("orb_tutorial_prompt", prompt)
-		var outline := Sprite2D.new()
-		outline.name = "FirstOrbTutorialPromptOutline"
-		outline.centered = true
-		outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		outline.z_as_relative = false
-		outline.z_index = -1
-		prompt.add_child(outline)
+		var prompt_outline := Sprite2D.new()
+		prompt_outline.name = "FirstOrbTutorialPromptOutline"
+		prompt_outline.centered = true
+		prompt_outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		prompt_outline.z_as_relative = false
+		prompt_outline.z_index = -1
+		prompt.add_child(prompt_outline)
 	var map_controller := root.get("dungeon_map_controller") as Node
 	var active_color: StringName = StringName(map_controller.call("current_color")) if map_controller != null and map_controller.has_method("current_color") else &"puzzle_b"
 	var prompt_path := FIRST_ORB_SQUARE_PROMPT_PATH if active_color == &"puzzle_a" else FIRST_ORB_TRIANGLE_PROMPT_PATH
@@ -592,9 +592,9 @@ func refresh_room_socket_visuals(root: Object, is_unlocked: bool) -> void:
 			# DoorRight* asset; victory then restores the same walkway at full color.
 			visual.texture = entrance_walkway_texture
 			visual.self_modulate = _entrance_lock_modulate(root, connection, visual_state)
-			var extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
-			if extra_tile != null:
-				extra_tile.visible = true
+			var boss_extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
+			if boss_extra_tile != null:
+				boss_extra_tile.visible = true
 			continue
 		# DoorRight* art is authored for the back wall. Entrance sockets instead
 		# use the authored walkway tile; its existing orientation is preserved.

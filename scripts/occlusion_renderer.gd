@@ -8,6 +8,14 @@ var effect_image_cache: Dictionary = {}
 var highlighted_image_cache: Dictionary = {}
 var grey_highlighted_image_cache: Dictionary = {}
 var white_image_cache: Dictionary = {}
+# The pixel Images above are cached, but their ImageTexture wrappers are not:
+# set_actor_base_texture would upload a fresh GPU texture on every animation
+# frame change. These caches key the wrapper by source texture so an already
+# processed frame is reused instead of re-uploaded.
+var effect_texture_cache: Dictionary = {}
+var highlighted_effect_texture_cache: Dictionary = {}
+var grey_highlighted_effect_texture_cache: Dictionary = {}
+var white_effect_texture_cache: Dictionary = {}
 var highlighted_texture_cache: Dictionary = {}
 var orb_highlighted_texture_cache: Dictionary = {}
 var occluded_actor_textures: Dictionary = {}
@@ -60,11 +68,11 @@ func _register_sprite(actor: Sprite2D) -> void:
 	var image := cached_texture_image(actor.texture)
 	original_actor_images[actor] = image
 	sprite_images[actor] = image
-	occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(actor.texture, image), image.get_size())
+	occluded_actor_textures[actor] = effect_texture_for(actor.texture, image)
 	actor_occlusion_grace[actor] = 0.0
-	highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(actor.texture, image), image.get_size())
-	grey_highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_grey_highlighted_image(actor.texture, image), image.get_size())
-	white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(actor.texture, image))
+	highlighted_actor_textures[actor] = highlighted_effect_texture_for(actor.texture, image)
+	grey_highlighted_actor_textures[actor] = grey_highlighted_effect_texture_for(actor.texture, image)
+	white_actor_textures[actor] = white_effect_texture_for(actor.texture, image)
 
 
 func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
@@ -74,10 +82,10 @@ func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
 	original_actor_textures[actor] = texture
 	var image := cached_texture_image(texture)
 	original_actor_images[actor] = image; sprite_images[actor] = image
-	occluded_actor_textures[actor] = effect_texture_with_display_size(cached_effect_image(texture, image), image.get_size())
-	highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_highlighted_image(texture, image), image.get_size())
-	grey_highlighted_actor_textures[actor] = effect_texture_with_display_size(cached_grey_highlighted_image(texture, image), image.get_size())
-	white_actor_textures[actor] = ImageTexture.create_from_image(cached_white_image(texture, image)); actor.texture = texture
+	occluded_actor_textures[actor] = effect_texture_for(texture, image)
+	highlighted_actor_textures[actor] = highlighted_effect_texture_for(texture, image)
+	grey_highlighted_actor_textures[actor] = grey_highlighted_effect_texture_for(texture, image)
+	white_actor_textures[actor] = white_effect_texture_for(texture, image); actor.texture = texture
 
 
 func white_texture(source: Texture2D) -> Texture2D:
@@ -352,6 +360,42 @@ func effect_texture_with_display_size(image: Image, display_size: Vector2i) -> I
 	var texture := ImageTexture.create_from_image(image)
 	texture.set_size_override(display_size)
 	return texture
+
+
+func effect_texture_for(texture: Texture2D, source_image: Image) -> ImageTexture:
+	var cached: Variant = effect_texture_cache.get(texture)
+	if cached != null:
+		return cached as ImageTexture
+	var result := effect_texture_with_display_size(cached_effect_image(texture, source_image), source_image.get_size())
+	effect_texture_cache[texture] = result
+	return result
+
+
+func highlighted_effect_texture_for(texture: Texture2D, source_image: Image) -> ImageTexture:
+	var cached: Variant = highlighted_effect_texture_cache.get(texture)
+	if cached != null:
+		return cached as ImageTexture
+	var result := effect_texture_with_display_size(cached_highlighted_image(texture, source_image), source_image.get_size())
+	highlighted_effect_texture_cache[texture] = result
+	return result
+
+
+func grey_highlighted_effect_texture_for(texture: Texture2D, source_image: Image) -> ImageTexture:
+	var cached: Variant = grey_highlighted_effect_texture_cache.get(texture)
+	if cached != null:
+		return cached as ImageTexture
+	var result := effect_texture_with_display_size(cached_grey_highlighted_image(texture, source_image), source_image.get_size())
+	grey_highlighted_effect_texture_cache[texture] = result
+	return result
+
+
+func white_effect_texture_for(texture: Texture2D, source_image: Image) -> ImageTexture:
+	var cached: Variant = white_effect_texture_cache.get(texture)
+	if cached != null:
+		return cached as ImageTexture
+	var result := ImageTexture.create_from_image(cached_white_image(texture, source_image))
+	white_effect_texture_cache[texture] = result
+	return result
 
 
 func is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D], actor_screen_scale: Callable, actor_visual_offset: Callable) -> bool:

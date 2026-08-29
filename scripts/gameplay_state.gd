@@ -786,6 +786,9 @@ func _update_save_select_cursor() -> void:
 	save_flow_controller.call("update_save_select_cursor", self)
 func _save_preview_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_preview_texture", self, palette_name) as Texture2D
+
+func _save_portrait_texture(palette_name: String) -> Texture2D:
+	return save_flow_controller.call("save_portrait_texture", self, palette_name) as Texture2D
 func _select_save_slot(slot: int) -> void:
 	save_flow_controller.call("select_save_slot", self, slot)
 func _finish_name_entry(player_name: String) -> void:

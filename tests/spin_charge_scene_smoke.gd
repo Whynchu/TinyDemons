@@ -38,7 +38,14 @@ func _initialize() -> void:
 		attack.set_attack_input_held(false)
 		_expect(attack.start_spin_attack(gameplay), "spin attack can start with the supplied animation", failures)
 		_expect(attack.is_spin_attack() and StringName(gameplay.get("player_anim_name")) == &"spin_attack", "spin attack owns its animation state", failures)
-		_expect(attack.has_lunge() and attack.spin_direction.is_equal_approx(Vector2.RIGHT), "spin attack snapshots the input direction for a small lunge", failures)
+		var expected_spin_duration := tuning.spin_frame_time * float(tuning.spin_recovery_start_frame) / tuning.attack_multiplier_for_agi(float(gameplay.get("player_agi")))
+		var expected_spin_velocity := gameplay.call("_perspective_movement", Vector2.RIGHT * (tuning.spin_lunge_distance * 2.0 / expected_spin_duration)) as Vector2
+		_expect(attack.has_lunge() and attack.spin_direction.is_equal_approx(Vector2.RIGHT), "spin attack snapshots the input direction for a forward lunge", failures)
+		_expect(attack.lunge_velocity.is_equal_approx(expected_spin_velocity), "spin attack starts at peak forward velocity", failures)
+		_expect(is_equal_approx(attack.lunge_duration, expected_spin_duration) and attack.lunge_ease_out, "spin travel ends by the third-to-last animation frame", failures)
+		var first_spin_step := attack.consume_lunge(expected_spin_duration * 0.1)
+		var second_spin_step := attack.consume_lunge(expected_spin_duration * 0.1)
+		_expect(first_spin_step.length() > second_spin_step.length(), "spin lunge eases down toward its destination", failures)
 		gameplay.set("player_between_timer", 0.4)
 		attack.buffer_combo(1.0)
 		_expect(attack.start_spin_attack(gameplay), "spin attack can start while a prior combo recovery is pending", failures)
@@ -93,6 +100,9 @@ func _initialize() -> void:
 			# Advance past the one-second cap so the test observes the authored
 			# peak even when the fixture's AGI charge multiplier is below 1.0.
 			attack.tick_charge(gameplay, 1.10)
+			effects.update_charge_aura_from_root(gameplay, 0.0)
+			var ready_highlight := effects.charge_ready_highlight
+			var ready_opaque_on_cap := ready_highlight != null and is_equal_approx(ready_highlight.modulate.a, 1.0)
 			effects.update_charge_aura_from_root(gameplay, 0.20)
 			var peak_aura_count := _charge_aura_count(effects)
 			var peak_streak_visible := false
@@ -108,10 +118,10 @@ func _initialize() -> void:
 			_expect(peak_aura_count > initial_aura_count, "charge aura increases its particle cadence near peak", failures)
 			_expect(peak_streak_visible, "charge aura stretches a peak particle into an air streak", failures)
 			_expect(aura_is_white, "charge aura particles remain neutral white", failures)
-			var ready_highlight := effects.charge_ready_highlight
 			var expected_highlight := PaletteLibrary.accent(str(gameplay.get("current_player_palette_name")))
 			_expect(ready_highlight != null and ready_highlight.visible, "charge cap shows the player ready highlight", failures)
 			_expect(ready_highlight != null and is_equal_approx(ready_highlight.modulate.r, expected_highlight.r) and is_equal_approx(ready_highlight.modulate.g, expected_highlight.g) and is_equal_approx(ready_highlight.modulate.b, expected_highlight.b), "charge ready highlight uses the active player accent", failures)
+			_expect(ready_opaque_on_cap, "charge ready highlight holds fully opaque when the cap is first reached", failures)
 		var charge_grey_set := animation.frames_by_palette.get("grey", {}) as Dictionary
 		var charge_grey := charge_grey_set.get("between") as Texture2D
 		var base_mp_material := gameplay.get("mp_desaturation_material") as ShaderMaterial

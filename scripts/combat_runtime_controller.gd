@@ -16,6 +16,11 @@ const BOSS_XP_MULTIPLIER := 5
 const SOUL_DROP_VALUE := 1
 const RESOURCE_DROP_LATERAL_OFFSET := 3.0
 
+## Enemy max health is static for the life of a room, but the per-frame health
+## UI reads it several times per slime. Cache it for the frame to avoid repeated
+## CombatStatSnapshot allocations. Cleared at the start of each slime frame.
+var _enemy_max_health_frame_cache: Dictionary = {}
+
 
 static func enemy_health_factor(completed_runs: int, encounter_scale: float = 1.0) -> float:
 	var run_count := maxi(completed_runs, 0)
@@ -197,7 +202,13 @@ func player_max_health(root: Object) -> float:
 	return max_health_for_stats(root, root.get("player_stats") as StatsComponent)
 
 
+func clear_enemy_max_health_frame_cache() -> void:
+	_enemy_max_health_frame_cache.clear()
+
+
 func enemy_max_health(root: Object, slime: Sprite2D) -> float:
+	if _enemy_max_health_frame_cache.has(slime):
+		return float(_enemy_max_health_frame_cache[slime])
 	var health := max_health_for_stats(root, root.call("_slime_stats", slime) as StatsComponent)
 	var profile := root.get("player_profile") as PlayerProfile
 	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
@@ -207,6 +218,7 @@ func enemy_max_health(root: Object, slime: Sprite2D) -> float:
 	health *= enemy_health_factor(completed_runs, encounter_scale)
 	if encounter_scale > 1.0:
 		health *= encounter_scale * BOSS_ENCOUNTER_HEALTH_FACTOR
+	_enemy_max_health_frame_cache[slime] = health
 	return health
 
 
@@ -238,6 +250,7 @@ func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int =
 	if not is_popcorn:
 		requested += run_enemy_level_bonus(root) + (run.difficulty_bonus if run != null else 0)
 	stats.level = maxi(requested, 1) if is_popcorn else clampi(requested, 1, enemy_level_cap_for_run(root))
+	_enemy_max_health_frame_cache.clear()
 
 
 func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> void:
@@ -254,6 +267,7 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 	if stats != null:
 		stats.apply_enemy_variant_profile(definition["base_stats"] as Dictionary, definition["growth_weights"] as Dictionary, StringName(palette))
 	root.call("_configure_slime_ambush", slime, palette)
+	_enemy_max_health_frame_cache.clear()
 
 
 func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true) -> void:
