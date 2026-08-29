@@ -35,6 +35,7 @@ Related docs:
 - [x] Focused tracker, touch-provider, and router smoke coverage
 - [x] Web-scoped occlusion fallback and repeatable OGG conversion pipeline
 - [x] Audio payload/performance hardening
+- [x] Responsive landscape presentation frame and closed-entrance seam guards
 - [ ] Browser/device matrix and production Pages deployment verification
 
 ## 1. Goal and non-goals

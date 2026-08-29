@@ -1,7 +1,8 @@
 # Tiny Demons — Modular Display and Settings Plan
 
-Status: implementation complete; automated verification green; responsive and
-exclusive-menu-route correction pass verified 2026-08-28
+Status: implementation complete locally; responsive presentation and closed-
+entrance seam correction implemented; automated verification green through
+2026-08-29; physical browser/device matrix pending
 
 Date: 2026-08-27
 
@@ -410,6 +411,42 @@ All exit criteria are met: the focused smoke tests for each row pass,
 passes through web export and the headless main-scene boot. Manual wide-mode
 visual checks remain useful after the code gate, particularly on a physical
 16:9 phone where integer scaling can choose a smaller vertical scale.
+
+## 14. Responsive presentation and entrance-seam follow-up — 2026-08-29
+
+Testing the browser-style landscape surface exposed two integration gaps that
+belong to this plan rather than to individual menus:
+
+- A fixed aspect frame could remain at logical x=0 while the engine exposed a
+  wider logical viewport. The map camera was centered correctly, so the stage
+  and UI appeared to disagree about the device center. Physical resize events
+  also did not always cause the menus to reflow.
+- Hidden lower entrance art left a narrow walkability seam. Because player
+  movement previously validated only the foot point, the actor could scrub a
+  body edge into that seam or briefly stand on the unrendered placeholder.
+
+The correction contract is:
+
+1. `DisplayController` measures the visible logical surface on every resize,
+   selects `KEEP_HEIGHT` only when the surface can preserve the selected frame's
+   height, and centers the active fixed frame through the interface
+   `CanvasLayer` offset. `FULL` remains adaptive; fixed desktop presets restore
+   the pre-preset window when returning to `FULL`; web/mobile never resize the
+   device surface.
+2. The void background follows the measured visible logical width, while bars,
+   HUD, menus, transitions, and loading overlays remain sized to the active
+   frame. The world camera and all collision/saved-position data remain in
+   authored coordinates. Web CSS now gives the canvas and its containing page
+   the full landscape surface without a competing viewport size.
+3. Both lower authored sockets declare their return trigger as part of the
+   closed blocker fence. Walkability uses a small seam exclusion margin, and
+   movable non-slime actors validate their collision-rectangle samples rather
+   than only a single foot point. Open connection state still removes the
+   corresponding blocker before traversal.
+
+Coverage is in `display_layout_smoke`, `display_responsive_scene_smoke`, and
+`wall_socket_geometry_smoke`; the remaining verification item is the manual
+desktop/browser/iPhone landscape matrix at 4:3, 16:10, 16:9, and `FULL`.
 
 ## 13. Charge-pose Chroma regression — 2026-08-27
 

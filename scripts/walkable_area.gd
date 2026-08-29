@@ -8,7 +8,10 @@ var polygons: Array[PackedVector2Array] = []
 var outline := PackedVector2Array()
 var points: Array[Vector2] = []
 var entrance_block_polygons: Array[PackedVector2Array] = []
-const ENTRANCE_BLOCK_EDGE_MARGIN := 0.5
+# Closed doorway polygons are authored against low-resolution tile seams. Keep
+# a small, explicit exclusion band around them so a four-pixel actor cannot
+# bridge a one-pixel gap by approaching the seam at a diagonal.
+const ENTRANCE_BLOCK_EDGE_MARGIN := 1.5
 var edge_margin := 0.35
 var slime_edge_padding := 0.0
 

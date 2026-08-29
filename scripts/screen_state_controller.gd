@@ -2315,14 +2315,18 @@ func _position_settings_controls() -> void:
 		settings_right_buttons[index].position = Vector2(option_start + 68.0, y)
 		if index < settings_option_buttons.size():
 			var option_x := option_start
+			var option_gap := 1.0 if index >= 3 else 2.0
 			for option_index in settings_option_buttons[index].size():
 				var option_button := settings_option_buttons[index][option_index] as Button
-				var option_width := 14.0 if index >= 3 else maxf(26.0, str(settings_option_labels[index][option_index]).length() * 6.0 + 8.0)
+				# Compact the ten-point volume ticks enough for the native 240px
+				# frame; their labels remain centered and readable while the wider
+				# frames retain the same left-aligned option column.
+				var option_width := 12.0 if index >= 3 else maxf(26.0, str(settings_option_labels[index][option_index]).length() * 6.0 + 8.0)
 				option_button.position = Vector2(option_x, y)
 				option_button.size = Vector2(option_width, 12)
 				var option_text := option_button.get_child(0) as Sprite2D
 				if option_text != null: option_text.position = option_button.size * 0.5
-				option_x += option_width + 2.0
+				option_x += option_width + option_gap
 	if settings_back_button != null:
 		settings_back_button.position = Vector2(display_view_size.x - 68.0, display_view_size.y - 19.0)
 	if settings_description_text != null: settings_description_text.position = Vector2(14, display_view_size.y - 32.0)
