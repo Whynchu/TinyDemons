@@ -5,6 +5,7 @@ signal effect_requested(kind: StringName, position: Vector2)
 var damage_number_texture_cache: Dictionary = {}
 var critical_outline_texture_cache: Dictionary = {}
 var name_texture_cache: Dictionary = {}
+var keyboard_prompt_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
@@ -272,6 +273,27 @@ func critical_outline_texture(text: String, pixel_number: Callable) -> Texture2D
 
 func prompt_texture(text: String, color: Color) -> Texture2D:
 	return name_texture(text.to_upper(), color)
+
+
+func keyboard_prompt_texture(text: String) -> Texture2D:
+	var normalized := text.to_upper()
+	if keyboard_prompt_texture_cache.has(normalized):
+		return keyboard_prompt_texture_cache[normalized]
+	var glyph_texture := name_texture(normalized, Color.WHITE)
+	if glyph_texture == null:
+		return null
+	var glyph_image := glyph_texture.get_image()
+	var padding := 2
+	var image := Image.create(glyph_image.get_width() + padding * 2, glyph_image.get_height() + padding * 2, false, Image.FORMAT_RGBA8)
+	image.fill(Color.BLACK)
+	for y in glyph_image.get_height():
+		for x in glyph_image.get_width():
+			var glyph_color := glyph_image.get_pixel(x, y)
+			if glyph_color.a > 0.0:
+				image.set_pixel(x + padding, y + padding, glyph_color)
+	var texture := ImageTexture.create_from_image(image)
+	keyboard_prompt_texture_cache[normalized] = texture
+	return texture
 
 
 func name_texture(text: String, color: Color) -> Texture2D:

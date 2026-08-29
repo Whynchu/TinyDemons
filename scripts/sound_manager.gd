@@ -75,6 +75,7 @@ var _chatter_player: AudioStreamPlayer = null
 var _chatter_requested_volume_db := -12.0
 var _music_player: AudioStreamPlayer = null
 var _music_fade_tween: Tween = null
+var _music_fade_active := false
 var _music_stream_path := ""
 var _music_mix_key: StringName = &""
 var _music_fallback_volume_db := TITLE_MUSIC_VOLUME_DB
@@ -162,6 +163,7 @@ func _exit_tree() -> void:
 	if _music_fade_tween != null and _music_fade_tween.is_valid():
 		_music_fade_tween.kill()
 		_music_fade_tween = null
+	_music_fade_active = false
 	if _music_player != null:
 		_music_player.stop()
 		_music_player.stream = null
@@ -191,6 +193,7 @@ func _start_music_track(track_path: String, volume_linear: float) -> void:
 	if _music_fade_tween != null and _music_fade_tween.is_valid():
 		_music_fade_tween.kill()
 		_music_fade_tween = null
+	_music_fade_active = false
 	if _music_stream_path != resolved_track_path:
 		_music_player.stop()
 		_music_player.stream = null
@@ -210,25 +213,36 @@ func _start_music_track(track_path: String, volume_linear: float) -> void:
 
 
 func fade_out_music(duration: float = 1.0) -> void:
-	if _music_player == null or not _music_player.playing:
-		return
 	if _music_fade_tween != null and _music_fade_tween.is_valid():
 		_music_fade_tween.kill()
-	_music_fade_tween = create_tween()
-	_music_fade_tween.tween_property(_music_player, "volume_db", -80.0, duration)
-	_music_fade_tween.tween_callback(func() -> void:
-		if _music_player != null:
-			_music_player.stop()
 		_music_fade_tween = null
-	)
+	_music_fade_active = false
+	if _music_player == null or _music_player.stream == null or not _music_player.playing:
+		return
+	_music_fade_active = true
+	_music_fade_tween = create_tween()
+	_music_fade_tween.tween_property(_music_player, "volume_db", -80.0, maxf(duration, 0.0))
+	_music_fade_tween.tween_callback(_finish_music_fade)
+
+
+func _finish_music_fade() -> void:
+	if _music_player != null:
+		_music_player.stop()
+		_music_player.volume_db = -80.0
+	_music_fade_active = false
+	_music_fade_tween = null
 
 
 func _replay_music() -> void:
-	if _music_player != null and _music_player.stream != null:
+	if not _music_fade_active and _music_player != null and _music_player.stream != null:
 		_music_player.play()
 
 
 func stop_music() -> void:
+	if _music_fade_tween != null and _music_fade_tween.is_valid():
+		_music_fade_tween.kill()
+		_music_fade_tween = null
+	_music_fade_active = false
 	if _music_player != null:
 		_music_player.stop()
 		_music_stream_path = ""
@@ -364,7 +378,11 @@ func _refresh_audio_volumes() -> void:
 		player.volume_db = requested_volume_db + _profile_trim_db(StringName(sound_name)) + _settings_volume_db(_sfx_volume_percent)
 	if _chatter_player != null:
 		_chatter_player.volume_db = _chatter_requested_volume_db + _profile_trim_db(&"chatter") + _settings_volume_db(_sfx_volume_percent)
-	if _music_player != null and not _music_mix_key.is_empty():
+	# A live fade owns the music player's volume until it finishes. Reapplying
+	# the profile value here would snap the track back to full volume on the
+	# next settings/profile poll and make the result-screen fade sound like a
+	# hard stop.
+	if _music_player != null and not _music_mix_key.is_empty() and not _music_fade_active:
 		_music_player.volume_db = _profile_music_volume_db(_music_mix_key, _music_fallback_volume_db) + _settings_volume_db(_music_volume_percent)
 
 

@@ -91,6 +91,11 @@ func _initialize() -> void:
 	_expect(_has_opaque_pixel(touch_prompt) and touch_prompt.get_height() == 7, "touch prompt uses the readable name glyph height", failures)
 	_expect(touch_prompt.get_width() > compact_prompt.get_width(), "touch prompt uses the wider readable glyph set", failures)
 	_expect(touch_prompt.get_image().get_pixel(0, 0) == Color.BLACK, "touch prompt uses black glyph fill for a white outline", failures)
+	var keyboard_prompt := glyphs.keyboard_prompt_texture("E") as Texture2D
+	var keyboard_image := keyboard_prompt.get_image() if keyboard_prompt != null else null
+	_expect(keyboard_prompt != null and keyboard_prompt.get_width() > 5 and keyboard_prompt.get_height() == 11, "keyboard prompt adds a readable keycap", failures)
+	_expect(keyboard_image != null and keyboard_image.get_pixel(0, 0) == Color.BLACK, "keyboard prompt keycap has a black background", failures)
+	_expect(keyboard_image != null and keyboard_image.get_pixel(2, 2) == Color.WHITE, "keyboard prompt keycap keeps white lettering", failures)
 	glyphs.free()
 	_finished = true
 	call_deferred("_finish", failures)
