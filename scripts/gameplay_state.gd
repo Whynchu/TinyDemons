@@ -177,6 +177,7 @@ var orb_knockback_animation_grace := false
 var orb_knockback_attack_cancelled := false
 var player_footstep_cooldown := 0.0
 var player_is_moving := false
+var player_is_running := false
 var player_is_attacking := false
 var player_is_magic_casting := false
 var player_is_rolling := false
@@ -185,6 +186,12 @@ var last_player_input_direction := Vector2.RIGHT
 var last_player_facing_left := false
 var roll_dust_spawned_this_roll := false
 var player_roll_input_was_down := false
+## Whether the roll button is held this frame. The player runs while holding it
+## (after a roll during the same hold) and moving.
+var player_roll_input_held := false
+## Latched true for the current roll-button hold when a roll dodge actually
+## started. Released with the button so running is only a roll continuation.
+var player_roll_hold_armed := false
 var roll_dust_frames: Array[Texture2D] = []
 var roll_dust_flipped_frames: Array[Texture2D] = []
 var player_attack_input_was_down := false

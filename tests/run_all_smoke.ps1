@@ -19,6 +19,7 @@ $tests += "six_stat_menu_scene_smoke"
 $tests += "demon_hub_menu_scene_smoke"
 $tests += "imbue_intelligence_smoke"
 $tests += "menu_route_scene_smoke"
+$tests += "run_locomotion_smoke"
 $failed = $false
 foreach ($test in $tests) {
 	Write-Host "=== $test ==="

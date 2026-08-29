@@ -17,18 +17,23 @@ const HORIZONTAL_FACING_DEADZONE := 0.1
 
 func move_player(root: Object, delta: float) -> void:
 	var controller := root.get("player_controller") as PlayerController
-	if controller != null and not controller.can_receive_input(): root.set("player_is_moving", false); return
-	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0: root.set("player_is_moving", false); return
+	if controller != null and not controller.can_receive_input(): root.set("player_is_moving", false); root.set("player_is_running", false); return
+	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0: root.set("player_is_moving", false); root.set("player_is_running", false); return
 	var input: Vector2 = root.call("_movement_input")
 	if input.length_squared() > 0.0:
 		root.set("last_player_input_direction", input.normalized())
 	var moving := input.length_squared() > 0.0; root.set("player_is_moving", moving)
+	# Running is a roll continuation: hold the roll button after a dodge (the
+	# frame controller latches player_roll_hold_armed) and keep moving.
+	var running := moving and bool(root.get("player_roll_input_held")) and bool(root.get("player_roll_hold_armed")) and not bool(root.get("player_is_defending"))
+	root.set("player_is_running", running)
 	if not moving: return
 	update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0
 	var speed_multiplier := float(root.get("player_speed_multiplier"))
-	request_motion(root.call("_perspective_movement", input.normalized() * tuning.speed * guard_speed_scale * speed_multiplier * delta))
+	var base_speed := tuning.run_speed if running else tuning.speed
+	request_motion(root.call("_perspective_movement", input.normalized() * base_speed * guard_speed_scale * speed_multiplier * delta))
 
 
 func update_horizontal_facing(root: Object, direction: Vector2, update_visual: bool = true) -> void:
