@@ -84,6 +84,9 @@ func _initialize() -> void:
 		gameplay.set("player_is_targeting", false)
 		motor.move_player(gameplay, 0.5)
 		_expect(bool(gameplay.get("player_is_running")), "releasing the lock-on restores the run", failures)
+		router.set("_movement", Vector2.DOWN)
+		motor.move_player(gameplay, 0.5)
+		_expect(bool(gameplay.get("player_is_running")), "changing direction without releasing movement keeps the run armed", failures)
 		gameplay.set("player_roll_input_held", false)
 		motor.move_player(gameplay, 0.5)
 		_expect(not bool(gameplay.get("player_is_running")), "releasing the roll button returns to walking", failures)
@@ -91,6 +94,43 @@ func _initialize() -> void:
 		gameplay.set("player_roll_input_held", true)
 		motor.move_player(gameplay, 0.5)
 		_expect(not bool(gameplay.get("player_is_running")), "roll held without movement does not run", failures)
+		router.set("_movement", Vector2.RIGHT)
+		motor.move_player(gameplay, 0.5)
+		_expect(not bool(gameplay.get("player_is_running")), "resuming movement after a true stop requires another roll", failures)
+
+		var attack := gameplay.get("player_attack_component") as PlayerAttackComponent
+		_expect(attack != null, "attack component is composed for running attack coverage", failures)
+		if attack != null:
+			gameplay.set("player_is_attacking", false)
+			gameplay.set("player_is_running", true)
+			var started_running_attack := attack.start_player_attack(gameplay, 1)
+			var running_lunge_speed := attack.lunge_velocity.length()
+			_expect(started_running_attack and attack.running_attack_active, "Attack 1 captures the active run state", failures)
+			attack.finish()
+			gameplay.set("player_is_attacking", false)
+			gameplay.set("player_is_running", false)
+			var started_normal_attack := attack.start_player_attack(gameplay, 1)
+			var normal_lunge_speed := attack.lunge_velocity.length()
+			_expect(started_normal_attack and running_lunge_speed > normal_lunge_speed, "a running Attack 1 gets extra forward lunge velocity", failures)
+			attack.finish()
+			gameplay.set("player_is_attacking", false)
+			gameplay.set("player_is_running", true)
+			attack.start_player_attack(gameplay, 1)
+			attack.buffer_combo(tuning.combo_window)
+			attack.finish()
+			gameplay.set("player_is_attacking", false)
+			gameplay.set("player_is_running", false)
+			var started_running_followup := attack.start_player_attack(gameplay, 2)
+			var running_followup_lunge_speed := attack.lunge_velocity.length()
+			_expect(started_running_followup and attack.running_attack_active, "Attack 2 inherits the running attack state through the combo", failures)
+			attack.consume_combo()
+			attack.finish()
+			gameplay.set("player_is_attacking", false)
+			var started_normal_followup := attack.start_player_attack(gameplay, 2)
+			var normal_followup_lunge_speed := attack.lunge_velocity.length()
+			_expect(started_normal_followup and running_followup_lunge_speed > normal_followup_lunge_speed, "a running Attack 2 gets extra forward lunge velocity", failures)
+			attack.finish()
+			gameplay.set("player_is_attacking", false)
 		motor.motion_requested.disconnect(on_motion)
 
 	# Roll-input latch: an accepted roll arms the hold, releasing disarms it.
@@ -110,7 +150,9 @@ func _initialize() -> void:
 
 	# Backflip: the target-lock retreat dodge with i-frames and a landing step.
 	var backflip_frames := anim.backflip_frames as Array[Texture2D]
-	_expect(backflip_frames.size() == 8, "TinyDemon-backflip sheet slices into eight 36x36 frames", failures)
+	_expect(backflip_frames.size() == 7, "TinyDemon-backflip sheet slices into seven 36x36 frames", failures)
+	var player_tuning := gameplay.get("player_tuning") as PlayerTuning
+	_expect(player_tuning != null and is_equal_approx(player_tuning.backflip_frame_time, 0.065), "backflip uses the slightly faster authored cadence", failures)
 	var roll := gameplay.get("player_roll_component") as PlayerRollComponent
 	_expect(roll != null, "roll component is composed for the backflip", failures)
 	if roll != null and not backflip_frames.is_empty():

@@ -17,8 +17,20 @@ const HORIZONTAL_FACING_DEADZONE := 0.1
 
 func move_player(root: Object, delta: float) -> void:
 	var controller := root.get("player_controller") as PlayerController
-	if controller != null and not controller.can_receive_input(): root.set("player_is_moving", false); root.set("player_is_running", false); return
-	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0: root.set("player_is_moving", false); root.set("player_is_running", false); return
+	if controller != null and not controller.can_receive_input():
+		root.set("player_is_moving", false)
+		root.set("player_is_running", false)
+		root.set("player_roll_hold_armed", false)
+		return
+	if bool(root.get("player_death_pending")) or bool(root.get("player_is_attacking")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or is_in_knockback() or float(root.get("player_hitstun_timer")) > 0.0:
+		root.set("player_is_moving", false)
+		root.set("player_is_running", false)
+		# A roll/backflip is the movement that arms the continuation. Other
+		# action locks are a true stop, so holding Roll through them cannot
+		# silently resume running afterward.
+		if not bool(root.get("player_is_rolling")) and not bool(root.get("player_is_backflipping")):
+			root.set("player_roll_hold_armed", false)
+		return
 	var input: Vector2 = root.call("_movement_input")
 	if input.length_squared() > 0.0:
 		root.set("last_player_input_direction", input.normalized())
@@ -29,7 +41,9 @@ func move_player(root: Object, delta: float) -> void:
 	# walk speed while circling a target.
 	var running := moving and bool(root.get("player_roll_input_held")) and bool(root.get("player_roll_hold_armed")) and not bool(root.get("player_is_defending")) and not bool(root.get("player_is_targeting"))
 	root.set("player_is_running", running)
-	if not moving: return
+	if not moving:
+		root.set("player_roll_hold_armed", false)
+		return
 	update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0

@@ -77,9 +77,9 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var charged_attack2_knockback_multiplier := 1.50
 @export var roll_frame_time := 0.05
 ## Backflip uses a steady cadence instead of the roll's landing-frame hold.
-## Backflip reads at a slower 13.3 FPS cadence so the full pose sequence is
+## Backflip reads at a measured 15.4 FPS cadence so the full pose sequence is
 ## easy to follow without changing the dodge's movement speed or i-frames.
-@export var backflip_frame_time := 0.075
+@export var backflip_frame_time := 0.065
 @export var roll_distance := 24.3
 @export var roll_duration := 0.30
 @export var death_particle_lifetime := 1.8
@@ -89,6 +89,10 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var death_observe_time := 1.4
 @export var attack_lunge_distance := 6.0
 @export var attack_lunge_duration := 0.18
+@export_group("Running attack")
+@export var run_attack_lunge_multiplier := 1.25
+@export var run_attack_damage_multiplier := 1.10
+@export var run_attack_hitstop_multiplier := 1.20
 @export var attack_knockback := 16.0
 @export var attack1_knockback_multiplier := 0.60
 @export var attack2_damage_multiplier := 1.25

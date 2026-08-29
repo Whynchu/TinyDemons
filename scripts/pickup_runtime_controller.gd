@@ -17,13 +17,17 @@ const CHROMA_LIGHT_SIZE := 32
 const CHROMA_LIGHT_ENERGY := 0.12
 const CHROMA_LIGHT_TEXTURE_SCALE := 0.70
 const SOUL_COLOR := Color8(211, 167, 255)
-const SOUL_PICKUP_GRAVITY := 92.0
+const RESOURCE_PICKUP_GRAVITY := 72.0
+const RESOURCE_PICKUP_AIR_DRAG := 1.8
+const RESOURCE_PICKUP_WALL_BOUNCE := 0.38
+const RESOURCE_PICKUP_BOUNCE_STOP_SPEED := 2.5
+const RESOURCE_PICKUP_MIN_SEPARATION := 4.0
 const SOUL_BOB_SPEED := 4.5
 const SOUL_BOB_AMPLITUDE := 1.5
 const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
 const SOUL_PICKUP_AIR_TIME := 0.38
-const SOUL_PICKUP_LAUNCH_SPEED := 30.0
-const SOUL_PICKUP_LAUNCH_SPREAD := 18.0
+const SOUL_PICKUP_LAUNCH_SPEED := 18.0
+const SOUL_PICKUP_LAUNCH_SPREAD := 10.0
 const ITEM_DROP_TEXTURE_PATHS := {
 	&"weapon": "res://assets/artwork/sword_pickup.png",
 	&"armor": "res://assets/artwork/armor_pickup.png",
@@ -108,6 +112,43 @@ func _safe_drop_position(root: Object, point: Vector2) -> Vector2:
 	return candidate
 
 
+func _safe_resource_drop_position(root: Object, point: Vector2, avoid_position: Variant = null) -> Vector2:
+	var candidate := _safe_drop_position(root, point)
+	if not (avoid_position is Vector2):
+		return candidate
+	var avoid := avoid_position as Vector2
+	if candidate.distance_to(avoid) >= RESOURCE_PICKUP_MIN_SEPARATION:
+		return candidate
+	var away_direction := point - avoid
+	if away_direction.length_squared() < 0.01:
+		away_direction = Vector2.RIGHT
+	away_direction = away_direction.normalized()
+	# A failed offset may have been sanitized to the same nearest floor sample as
+	# the other currency. Search nearby valid samples and preserve a readable gap.
+	for radius_value in [4.0, 6.0, 8.0, 10.0, 12.0, 16.0]:
+		var radius: float = radius_value
+		for direction_index in 24:
+			var direction := away_direction.rotated(TAU * float(direction_index) / 24.0)
+			var nearby_candidate := point + direction * radius
+			if _drop_position_is_walkable(root, nearby_candidate) and nearby_candidate.distance_to(avoid) >= RESOURCE_PICKUP_MIN_SEPARATION:
+				return nearby_candidate
+	var area := root.get("walkable_area") as WalkableArea
+	if area != null:
+		var best := candidate
+		var best_distance := INF
+		for area_point in area.points:
+			var valid_point: Vector2 = area_point
+			if not area.is_slime_walkable(valid_point) or valid_point.distance_to(avoid) < RESOURCE_PICKUP_MIN_SEPARATION:
+				continue
+			var distance := point.distance_squared_to(valid_point)
+			if distance < best_distance:
+				best = valid_point
+				best_distance = distance
+		if best_distance < INF:
+			return best
+	return candidate
+
+
 func _drop_position_is_walkable(root: Object, point: Vector2) -> bool:
 	return bool(root.call("_is_slime_walkable_point", point))
 
@@ -133,6 +174,34 @@ func _advance_drop_position(root: Object, current_position: Vector2, velocity: V
 			resolved_position.y = vertical_position.y
 		else:
 			resolved_velocity.y = 0.0
+	return {"position": resolved_position, "velocity": resolved_velocity}
+
+
+func _advance_resource_drop_position(root: Object, current_position: Vector2, velocity: Vector2, delta: float) -> Dictionary:
+	# Resource drops use a soft, short launch rather than stopping dead when a
+	# wall is reached. The small restitution keeps pickups inside the room while
+	# making edge hits feel playful instead of turning into a teleport or snap.
+	var step_delta := maxf(delta, 0.0)
+	var damped_velocity := velocity * exp(-RESOURCE_PICKUP_AIR_DRAG * step_delta)
+	damped_velocity.y += RESOURCE_PICKUP_GRAVITY * step_delta
+	var resolved_position := current_position
+	var resolved_velocity := damped_velocity
+	var horizontal_position := resolved_position + Vector2(damped_velocity.x * step_delta, 0.0)
+	if absf(damped_velocity.x) > 0.0001:
+		if _drop_position_is_walkable(root, horizontal_position):
+			resolved_position.x = horizontal_position.x
+		else:
+			resolved_velocity.x = -damped_velocity.x * RESOURCE_PICKUP_WALL_BOUNCE
+	var vertical_position := resolved_position + Vector2(0.0, damped_velocity.y * step_delta)
+	if absf(damped_velocity.y) > 0.0001:
+		if _drop_position_is_walkable(root, vertical_position):
+			resolved_position.y = vertical_position.y
+		else:
+			resolved_velocity.y = -damped_velocity.y * RESOURCE_PICKUP_WALL_BOUNCE
+	if absf(resolved_velocity.x) < RESOURCE_PICKUP_BOUNCE_STOP_SPEED:
+		resolved_velocity.x = 0.0
+	if absf(resolved_velocity.y) < RESOURCE_PICKUP_BOUNCE_STOP_SPEED:
+		resolved_velocity.y = 0.0
 	return {"position": resolved_position, "velocity": resolved_velocity}
 
 
@@ -473,7 +542,7 @@ func collect_world_item_drop(root: Object) -> bool:
 	return true
 
 
-func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
+func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
 	var launch_rng := RandomNumberGenerator.new()
 	var root_rng := root.get("rng") as RandomNumberGenerator
 	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
@@ -483,7 +552,7 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false
 	sprite.modulate = Color.WHITE
-	var spawn_position := _safe_drop_position(root, position)
+	var spawn_position := _safe_resource_drop_position(root, position, avoid_position)
 	sprite.global_position = spawn_position
 	sprite.set_meta("chroma_bob_phase", launch_rng.randf_range(0.0, TAU))
 	sprite.set_meta("chroma_bob_time", 0.0)
@@ -504,6 +573,7 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	if launch_direction.length_squared() > 0.001:
 		velocity = launch_direction.normalized() * tuning.pickup_launch_speed
 	root.chroma_pickup_controller.add_pickup(sprite, value, velocity, tuning.pickup_air_time)
+	return spawn_position
 
 
 func restore_chroma_pickups(root: Object, saved_pickups: Array) -> void:
@@ -527,11 +597,10 @@ func update_chroma_pickups(root: Object, delta: float) -> void:
 		if root.chroma_pickup_controller.air_times[index] > 0.0:
 			root.chroma_pickup_controller.air_times[index] = maxf(root.chroma_pickup_controller.air_times[index] - delta, 0.0)
 			var velocity: Vector2 = root.chroma_pickup_controller.velocities[index]
-			velocity.y += 92.0 * delta
 			var last_valid_position: Vector2 = pickup.get_meta("chroma_last_valid_position", pickup.global_position) as Vector2
 			if not _drop_position_is_walkable(root, last_valid_position):
 				last_valid_position = _safe_drop_position(root, pickup.global_position)
-			var airborne_step := _advance_drop_position(root, last_valid_position, velocity, delta)
+			var airborne_step := _advance_resource_drop_position(root, last_valid_position, velocity, delta)
 			last_valid_position = airborne_step["position"] as Vector2
 			velocity = airborne_step["velocity"] as Vector2
 			root.chroma_pickup_controller.velocities[index] = velocity
@@ -586,7 +655,7 @@ func clear_chroma_pickups(root: Object) -> void:
 	root.chroma_pickup_controller.clear()
 
 
-func spawn_soul_pickup(root: Object, position: Vector2, value: int = 1, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO) -> void:
+func spawn_soul_pickup(root: Object, position: Vector2, value: int = 1, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
 	var launch_rng := RandomNumberGenerator.new()
 	var root_rng := root.get("rng") as RandomNumberGenerator
 	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
@@ -596,7 +665,7 @@ func spawn_soul_pickup(root: Object, position: Vector2, value: int = 1, launch_s
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false
 	sprite.modulate = Color.WHITE
-	var spawn_position := _safe_drop_position(root, position)
+	var spawn_position := _safe_resource_drop_position(root, position, avoid_position)
 	sprite.global_position = spawn_position
 	sprite.set_meta("soul_bob_phase", launch_rng.randf_range(0.0, TAU))
 	sprite.set_meta("soul_bob_time", 0.0)
@@ -607,6 +676,7 @@ func spawn_soul_pickup(root: Object, position: Vector2, value: int = 1, launch_s
 	if launch_direction.length_squared() > 0.001:
 		velocity = launch_direction.normalized() * SOUL_PICKUP_LAUNCH_SPEED
 	root.soul_pickup_controller.add_pickup(sprite, value, velocity, SOUL_PICKUP_AIR_TIME)
+	return spawn_position
 
 
 func update_soul_pickups(root: Object, delta: float) -> void:
@@ -620,11 +690,10 @@ func update_soul_pickups(root: Object, delta: float) -> void:
 		if root.soul_pickup_controller.air_times[index] > 0.0:
 			root.soul_pickup_controller.air_times[index] = maxf(root.soul_pickup_controller.air_times[index] - delta, 0.0)
 			var velocity: Vector2 = root.soul_pickup_controller.velocities[index]
-			velocity.y += SOUL_PICKUP_GRAVITY * delta
 			var last_valid_position: Vector2 = pickup.get_meta("soul_last_valid_position", pickup.global_position) as Vector2
 			if not _drop_position_is_walkable(root, last_valid_position):
 				last_valid_position = _safe_drop_position(root, pickup.global_position)
-			var airborne_step := _advance_drop_position(root, last_valid_position, velocity, delta)
+			var airborne_step := _advance_resource_drop_position(root, last_valid_position, velocity, delta)
 			last_valid_position = airborne_step["position"] as Vector2
 			velocity = airborne_step["velocity"] as Vector2
 			root.soul_pickup_controller.velocities[index] = velocity
