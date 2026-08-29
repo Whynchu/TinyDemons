@@ -13,6 +13,7 @@ const ENEMY_HEALTH_MAX_FACTOR := 1.0
 const R1_BOSS_HEALTH_FACTOR := 0.50
 const BOSS_ENCOUNTER_HEALTH_FACTOR := 0.90
 const BOSS_XP_MULTIPLIER := 5
+const XP_REWARD_MULTIPLIER := 2.0
 const SOUL_DROP_VALUE := 1
 const RESOURCE_DROP_LATERAL_OFFSET := 3.0
 
@@ -621,7 +622,8 @@ func xp_reward_for_slime(root: Object, slime: Sprite2D) -> int:
 	var difficulty_modifier := pow(1.15, float(level_difference)) if level_difference >= 0 else pow(0.72, float(-level_difference))
 	var regular_reward := maxi(1, roundi(base_reward * clampf(difficulty_modifier, 0.2, 2.0)))
 	var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
-	return regular_reward * BOSS_XP_MULTIPLIER if is_boss else regular_reward
+	var reward := regular_reward * BOSS_XP_MULTIPLIER if is_boss else regular_reward
+	return maxi(1, roundi(float(reward) * XP_REWARD_MULTIPLIER))
 
 
 func award_slime_xp(root: Object, slime: Sprite2D) -> void:
