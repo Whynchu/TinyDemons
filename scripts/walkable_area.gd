@@ -8,6 +8,13 @@ var polygons: Array[PackedVector2Array] = []
 var outline := PackedVector2Array()
 var points: Array[Vector2] = []
 var entrance_block_polygons: Array[PackedVector2Array] = []
+# A bounds box per entrance block (grown by the edge margin) plus a union box.
+# The per-frame slime walkability path calls is_in_entrance_block for every
+# polygon sample, so cheap rect rejects avoid looping every entrance block with
+# per-edge checks for points nowhere near a doorway seam.
+var entrance_block_bounds: Array[Rect2] = []
+var entrance_block_union := Rect2()
+var entrance_block_bounds_valid := false
 # Closed doorway polygons are authored against low-resolution tile seams. Keep
 # only the original half-pixel edge tolerance so the fence seals the seam
 # without making the surrounding room edge feel wider than the art.
@@ -82,6 +89,7 @@ func build_outline(use_polygon_direct: bool) -> void:
 
 func set_entrance_blocks(new_blocks: Array[PackedVector2Array]) -> void:
 	entrance_block_polygons = new_blocks.duplicate()
+	entrance_block_bounds_valid = false
 
 
 func is_empty() -> bool:
@@ -107,20 +115,44 @@ func is_walkable(point: Vector2) -> bool:
 		return false
 	if outline.is_empty():
 		return false
-	return Geometry2D.is_point_in_polygon(point, outline) or distance_to_polygon_edge(point, outline) <= edge_margin
+	return Geometry2D.is_point_in_polygon(point, outline) or is_point_too_close_to_polygon_edge(point, outline, edge_margin)
 
 
 func is_slime_walkable(point: Vector2) -> bool:
 	if is_in_entrance_block(point) or outline.is_empty():
 		return false
-	return Geometry2D.is_point_in_polygon(point, outline) and distance_to_polygon_edge(point, outline) >= slime_edge_padding
+	if not Geometry2D.is_point_in_polygon(point, outline):
+		return false
+	return not is_point_too_close_to_polygon_edge(point, outline, slime_edge_padding)
 
 
 func is_in_entrance_block(point: Vector2) -> bool:
-	for polygon in entrance_block_polygons:
-		if Geometry2D.is_point_in_polygon(point, polygon) or distance_to_polygon_edge(point, polygon) <= ENTRANCE_BLOCK_EDGE_MARGIN:
+	if entrance_block_polygons.is_empty():
+		return false
+	if not entrance_block_bounds_valid:
+		_ensure_entrance_block_bounds()
+	if not entrance_block_union.has_point(point):
+		return false
+	for index in entrance_block_polygons.size():
+		if not (entrance_block_bounds[index] as Rect2).has_point(point):
+			continue
+		var polygon := entrance_block_polygons[index]
+		if Geometry2D.is_point_in_polygon(point, polygon) or is_point_too_close_to_polygon_edge(point, polygon, ENTRANCE_BLOCK_EDGE_MARGIN):
 			return true
 	return false
+
+
+func _ensure_entrance_block_bounds() -> void:
+	entrance_block_bounds.clear()
+	entrance_block_union = Rect2()
+	for polygon in entrance_block_polygons:
+		var block_bounds := Rect2()
+		for point in polygon:
+			block_bounds = block_bounds.expand(point)
+			entrance_block_union = entrance_block_union.expand(point)
+		entrance_block_bounds.append(block_bounds.grow(ENTRANCE_BLOCK_EDGE_MARGIN))
+	entrance_block_union = entrance_block_union.grow(ENTRANCE_BLOCK_EDGE_MARGIN)
+	entrance_block_bounds_valid = true
 
 
 func nearest_walkable_point(point: Vector2) -> Vector2:
@@ -194,3 +226,24 @@ func distance_to_polygon_edge(point: Vector2, polygon: PackedVector2Array) -> fl
 			candidate += segment * amount
 		nearest_distance = minf(nearest_distance, point.distance_to(candidate))
 	return nearest_distance
+
+
+## Squared-distance edge check with early exit. The walkability padding checks
+## only need to know whether a point is closer than `threshold` to any polygon
+## edge, so they can avoid the per-edge sqrt and stop at the first close edge.
+## This is the hot path for every slime movement frame, so it must stay cheap.
+func is_point_too_close_to_polygon_edge(point: Vector2, polygon: PackedVector2Array, threshold: float) -> bool:
+	if threshold <= 0.0:
+		return false
+	var threshold_squared := threshold * threshold
+	for index in polygon.size():
+		var next_index := (index + 1) % polygon.size()
+		var segment := polygon[next_index] - polygon[index]
+		var length_squared := segment.length_squared()
+		var candidate := polygon[index]
+		if length_squared > 0.0:
+			var amount := clampf((point - polygon[index]).dot(segment) / length_squared, 0.0, 1.0)
+			candidate += segment * amount
+		if point.distance_squared_to(candidate) < threshold_squared:
+			return true
+	return false
