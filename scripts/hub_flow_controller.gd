@@ -332,6 +332,9 @@ func shift_hub_gear_candidate(root: Object, direction: int) -> void:
 
 func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 	if root.screen_state_controller.hub_page != 1: return
+	var locked_slot: StringName = ItemCatalog.SLOTS[clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)]
+	if locked_slot == &"head" and root.player_profile._head_locked_by_body(ItemCatalog.new()):
+		return
 	root.screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
 	root.screen_state_controller.hub_content_focus = true
 	root.screen_state_controller.hub_equipment_action_focus = false

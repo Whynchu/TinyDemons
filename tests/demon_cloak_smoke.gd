@@ -51,13 +51,28 @@ func _initialize() -> void:
 		_expect(second_cloak != null and second_cloak.instance_id != first_cloak.instance_id, "repeated purchases never share an instance", failures)
 		_expect(profile.gold == 400 and profile.demon_cloak_price() == 700, "second purchase costs 600G and raises to 700G", failures)
 		_expect(profile.demon_cloak_price() == 700, "price escalates per purchase", failures)
+		var catalog := ItemCatalog.new()
+		var cloak_bonuses := catalog.bonuses(first_cloak)
+		_expect(float(cloak_bonuses.get("agi", 0.0)) >= 4.0 and float(cloak_bonuses.get("mnd", 0.0)) >= 2.0, "Demon Cloak carries the buffed Body + Head package", failures)
+		var head_item := ItemInstance.new()
+		head_item.instance_id = "test-head"
+		head_item.definition_id = &"iron_helm"
+		head_item.rarity = &"common"
+		profile.grant_item(head_item)
+		_expect(profile.equip_item(head_item.instance_id), "a head item equips before the cloak", failures)
+		_expect(not profile.get_equipped_instance_id(&"head").is_empty(), "head slot holds the head item", failures)
 		if first_cloak != null:
 			_expect(profile.equip_item(first_cloak.instance_id), "Demon Cloak equips into the body slot", failures)
+		_expect(profile.get_equipped_instance_id(&"head").is_empty(), "equipping the cloak auto-unequips the head slot", failures)
+		_expect(profile._head_locked_by_body(catalog), "the cloak locks the head slot", failures)
+		_expect(not profile.equip_item(head_item.instance_id), "a head item cannot be equipped while the cloak is worn", failures)
 		gameplay.call("_refresh_player_cloak_visual")
 		await process_frame
 		_expect(anim.cloaked, "equipping the Demon Cloak swaps the player sheet", failures)
 		if profile != null:
 			_expect(profile.unequip_slot(&"body"), "Demon Cloak unequips", failures)
+		_expect(not profile._head_locked_by_body(catalog), "removing the cloak unlocks the head slot", failures)
+		_expect(profile.equip_item(head_item.instance_id), "a head item equips again after the cloak is removed", failures)
 		gameplay.call("_refresh_player_cloak_visual")
 		await process_frame
 		_expect(not anim.cloaked, "removing the Demon Cloak reverts the player sheet", failures)

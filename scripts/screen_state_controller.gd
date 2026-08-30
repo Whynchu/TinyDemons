@@ -2251,6 +2251,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 		if hub_gear_stat_panel != null:
 			hub_gear_stat_panel.visible = false
 		return
+	var head_locked := profile._head_locked_by_body(catalog) if profile != null else false
 	for row in item_list.size():
 		if row >= ItemCatalog.SLOTS.size():
 			item_list[row].texture = null
@@ -2268,7 +2269,15 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			if shown_mastery > 0: shown_name += " +%d" % shown_mastery
 			shown_color = catalog.rarity_color(shown_item.rarity)
 		var row_color := highlight_color if row == selected_slot_index else shown_color
-		item_list[row].texture = pixel_texture.call("%s: %s" % [slot_name, shown_name], row_color) as Texture2D
+		var slot_locked := slot == &"head" and head_locked
+		if slot_locked:
+			# The Demon Cloak occupies Body + Head; the Head slot is greyed out.
+			item_list[row].texture = pixel_texture.call("%s: LOCKED" % slot_name, Color8(88, 92, 102)) as Texture2D
+		else:
+			item_list[row].texture = pixel_texture.call("%s: %s" % [slot_name, shown_name], row_color) as Texture2D
+		if row < hub_gear_slot_buttons.size():
+			hub_gear_slot_buttons[row].disabled = slot_locked
+			hub_gear_slot_buttons[row].visible = not action_state
 	if hub_slot_cursor != null:
 		hub_slot_cursor.visible = not action_state and selected_slot_index >= 0 and selected_slot_index < item_list.size()
 		if hub_slot_cursor.visible:
