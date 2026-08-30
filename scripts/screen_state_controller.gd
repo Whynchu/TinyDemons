@@ -4,11 +4,28 @@ class_name ScreenStateController
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.16"
+const GAME_VERSION := "0.1.17"
+const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
+const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/pause_menu.tscn")
+const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/demon_hub_menu.tscn")
+## Shared left gutter for the hand cursor sprite. Menu buttons, slots, and
+## prompts are targeted with their left edge this many pixels from the cursor's
+## sprite origin, so the 16x16 hand's fingertip points at the item instead of
+## floating far away from it.
+const CURSOR_LEFT_GAP := 10.0
+## Shifts the cursor sprite up this many pixels from the anchor callers pass,
+## so the hand's fingertip sits 2px higher on the item.
+const CURSOR_VERTICAL_RAISE := 2.0
+## Horizontal idle bob for the hand cursor: it glides this many pixels to the
+## right of its resting spot, then flicks back left, looping.
+const CURSOR_BOB_AMOUNT := 3.0
+const CURSOR_BOB_SLIDE_TIME := 0.36
+const CURSOR_BOB_SNAP_TIME := 0.07
 const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
 const HUB_ITEM_DETAIL_TOP := 105.0
 const HUB_ITEM_DETAIL_PITCH := 7.0
@@ -137,6 +154,11 @@ var pause_page_roots: Dictionary = {}
 var pause_menu_row := 0
 var pause_player_card_panel: Panel = null
 var pause_player_card_texts: Array[Sprite2D] = []
+var pause_player_portrait: Sprite2D = null
+var pause_gold_icon: Sprite2D = null
+var pause_gold_text: Sprite2D = null
+var pause_soul_text: Sprite2D = null
+var pause_resource_icon: Sprite2D = null
 var pause_status_texts: Array[Sprite2D] = []
 var pause_equipment_texts: Array[Sprite2D] = []
 var pause_description_text: Sprite2D = null
@@ -275,9 +297,14 @@ func apply_display_layout(root: Object) -> void:
 		run_complete_overlay.position = Vector2.ZERO
 		run_complete_overlay.size = display_view_size
 		_position_run_complete_controls()
-	if title_overlay != null and title_cursor_text != null:
-		var focused := root.get_viewport().gui_get_focus_owner() as Button
-		if focused != null: title_cursor_text.position = Vector2(focused.position.x - 8.0, focused.position.y + 4.0)
+	if title_overlay != null and title_cursor_text != null and title_start_button != null:
+		# Title buttons never take Control focus (retro-styled), so drive the
+		# cursor from the active row's static base y instead of the focus owner.
+		var row_buttons: Array[Button] = [title_start_button, title_continue_button, title_settings_button]
+		var row_selected := row_buttons[clampi(title_menu_row, 0, row_buttons.size() - 1)] if not row_buttons.is_empty() else null
+		if row_selected != null:
+			var base_y: float = row_selected.get_meta("title_base_y") as float if row_selected.has_meta("title_base_y") else row_selected.position.y
+			move_menu_cursor(title_cursor_text, Vector2(row_selected.position.x - CURSOR_LEFT_GAP, base_y + 4.0), false)
 	if archetype_overlay != null:
 		var cover := archetype_overlay.get_node_or_null("ArchetypeHoldCover") as ColorRect
 		if cover != null: cover.size = display_view_size
@@ -299,6 +326,7 @@ func apply_display_layout(root: Object) -> void:
 	if pause_overlay != null:
 		pause_overlay.position = Vector2.ZERO
 		pause_overlay.size = display_view_size
+		_resize_menu_frame(pause_overlay, display_view_size)
 		_position_pause_controls()
 	var game_over_button := root.get("game_over_button") as Button
 	var game_over_title_button := root.get("game_over_title_button") as Button
@@ -311,7 +339,7 @@ func apply_display_layout(root: Object) -> void:
 	if game_over_cursor_text != null:
 		var selected_game_over := game_over_title_button if game_over_row == 1 else game_over_button
 		if selected_game_over != null:
-			game_over_cursor_text.position = Vector2(selected_game_over.position.x - 8.0, selected_game_over.position.y + 3.0)
+			move_menu_cursor(game_over_cursor_text, Vector2(selected_game_over.position.x - CURSOR_LEFT_GAP, selected_game_over.position.y + 3.0), false)
 	if run_complete_footer_text != null:
 		run_complete_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 	if save_select_footer_text != null:
@@ -428,8 +456,12 @@ func update_title_flow(root: Object, delta: float) -> void:
 	var cursor := title_cursor_text
 	if cursor != null and selected != null:
 		cursor.visible = true
-		cursor.position = Vector2(selected.position.x - 8, selected.position.y + 4)
-		cursor.texture = root.call("_pixel_text_texture", ">", Color.WHITE) as Texture2D
+		# The title buttons float up/down every frame (retro bob); anchor the
+		# cursor to the button's static base row so it stays put and bobs like the
+		# other menus instead of chasing the animated position.
+		var base_y: float = selected.get_meta("title_base_y") as float if selected.has_meta("title_base_y") else selected.position.y
+		move_menu_cursor(cursor, Vector2(selected.position.x - CURSOR_LEFT_GAP, base_y + 4.0))
+		cursor.texture = MENU_CURSOR_TEXTURE
 	if bool(root.call("_is_menu_confirm_just_pressed")) and selected != null and not selected.disabled:
 		root.call("_play_sound", "enemy_death", -6.0, 0.95)
 		selected.pressed.emit()
@@ -599,8 +631,8 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 			game_over_row = 1 if selected == title else 0
 		if game_over_cursor_text != null:
 			game_over_cursor_text.visible = selected != null
-			if selected != null: game_over_cursor_text.position = Vector2(selected.position.x - 8, selected.position.y + 3)
-			game_over_cursor_text.texture = root.call("_pixel_text_texture", ">", Color.WHITE) as Texture2D
+			if selected != null: move_menu_cursor(game_over_cursor_text, Vector2(selected.position.x - CURSOR_LEFT_GAP, selected.position.y + 3.0), false)
+			game_over_cursor_text.texture = MENU_CURSOR_TEXTURE
 		if game_over_footer_text != null:
 			game_over_footer_text.visible = true
 			game_over_footer_text.texture = _pixel_prompt_texture(Callable(root, "_pixel_text_texture"), _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
@@ -634,7 +666,7 @@ func update_game_over_input(root: Object) -> void:
 		game_over_row = 1 if selected == title else 0
 		if game_over_cursor_text != null:
 			game_over_cursor_text.visible = true
-			game_over_cursor_text.position = Vector2(selected.position.x - 8.0, selected.position.y + 3.0)
+			move_menu_cursor(game_over_cursor_text, Vector2(selected.position.x - CURSOR_LEFT_GAP, selected.position.y + 3.0))
 	if game_over_footer_text != null:
 		game_over_footer_text.visible = true
 		game_over_footer_text.texture = _pixel_prompt_texture(Callable(root, "_pixel_text_texture"), _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
@@ -815,7 +847,7 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 	title_button.name = "GameOverTitle"
 	overlay.add_child(restart_button)
 	overlay.add_child(title_button)
-	var cursor := create_sprite(overlay, "GameOverCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 42.0) * 0.5 - 8.0, 108), false)
+	var cursor := create_sprite(overlay, "GameOverCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 42.0) * 0.5 - 8.0, 108), false)
 	var footer := create_sprite(overlay, "GameOverFooter", pixel_texture.call("A BACK", Color8(148, 220, 255)) as Texture2D, Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0), false)
 	game_over_footer_text = footer
 	return {"overlay": overlay, "restart": restart_button, "title": title_button, "cursor": cursor, "footer": footer}
@@ -838,7 +870,7 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	return_button.focus_mode = Control.FOCUS_NONE
 	return_button.pressed.connect(return_to_hub)
 	overlay.add_child(return_button)
-	var cursor := create_sprite(overlay, "RunCompleteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2(content_x - 4.0, 144), false)
+	var cursor := create_sprite(overlay, "RunCompleteCursor", MENU_CURSOR_TEXTURE, Vector2(content_x - 4.0, 144), false)
 	var footer := create_sprite(overlay, "RunCompleteFooter", pixel_texture.call("A BACK", Color8(148, 220, 255)) as Texture2D, Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0), false)
 	run_complete_footer_text = footer
 	return {"overlay": overlay, "lines": lines, "return": return_button, "cursor": cursor, "footer": footer}
@@ -902,7 +934,7 @@ func _position_run_complete_controls() -> void:
 	if run_complete_button != null:
 		run_complete_button.position = Vector2(content_x + 4.0, 141)
 	if run_complete_cursor != null:
-		run_complete_cursor.position = Vector2(content_x - 4.0, 144)
+		move_menu_cursor(run_complete_cursor, Vector2((run_complete_button.position.x if run_complete_button != null else content_x) - CURSOR_LEFT_GAP, 144))
 	var title_rule := run_complete_overlay.get_node_or_null("RunCompleteTitleRule") as ColorRect
 	if title_rule != null:
 		title_rule.size = Vector2(maxf(display_view_size.x - 16.0, 16.0), 1.0)
@@ -961,17 +993,34 @@ func _make_transparent_touch_button(parent: Node, button_name: String, button_po
 
 func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable(), pause_status: Callable = Callable(), pause_equipment: Callable = Callable(), pause_back_callback: Callable = Callable(), equipment_remove: Callable = Callable(), equipment_remove_all: Callable = Callable(), hub_back: Callable = Callable()) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
-	var overlay := create_view_overlay(parent, "HubOverlay", Color(0.015, 0.02, 0.035, 1.0), 3, false)
+	var overlay := DEMON_HUB_MENU_SCENE.instantiate() as ColorRect
+	if overlay == null:
+		return {}
+	overlay.name = "HubOverlay"
+	overlay.position = Vector2.ZERO
+	overlay.size = display_view_size
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	_add_menu_frame(overlay, display_view_size)
-	_add_menu_title(overlay, "HubTitle", "DEMON HUB", pixel_texture)
+	overlay.z_index = 3
+	overlay.visible = false
+	overlay.set_meta("display_full_view", true)
+	parent.add_child(overlay)
 
-	var root_page := _make_menu_page(overlay, "HubRootPage")
+	var root_page := overlay.get_node_or_null("HubRootPage") as Control
 	hub_root_page = root_page
-	var status_page := _make_menu_page(overlay, "HubStatusPage")
-	var allocate_page := _make_menu_page(overlay, "HubAllocatePage")
-	var items_page := _make_menu_page(overlay, "HubItemsPage")
-	var bind_page := _make_menu_page(overlay, "HubBindPage")
+	var status_page := overlay.get_node_or_null("HubStatusPage") as Control
+	var allocate_page := overlay.get_node_or_null("HubAllocatePage") as Control
+	var items_page := overlay.get_node_or_null("HubItemsPage") as Control
+	var bind_page := overlay.get_node_or_null("HubBindPage") as Control
+	var root_title := root_page.get_node_or_null("Title") as Sprite2D
+	var status_title := status_page.get_node_or_null("Title") as Sprite2D
+	var allocate_title := allocate_page.get_node_or_null("Title") as Sprite2D
+	var items_title := items_page.get_node_or_null("Title") as Sprite2D
+	var bind_title := bind_page.get_node_or_null("Title") as Sprite2D
+	if root_title != null: root_title.texture = pixel_texture.call("DEMON HUB", Color.WHITE) as Texture2D
+	if status_title != null: status_title.texture = pixel_texture.call("STATUS", Color.WHITE) as Texture2D
+	if allocate_title != null: allocate_title.texture = pixel_texture.call("ALLOCATE", Color.WHITE) as Texture2D
+	if items_title != null: items_title.texture = pixel_texture.call("EQUIPMENT", Color.WHITE) as Texture2D
+	if bind_title != null: bind_title.texture = pixel_texture.call("BIND", Color.WHITE) as Texture2D
 	hub_page_roots = {
 		HUB_PAGE_STATUS: status_page,
 		HUB_PAGE_ALLOCATE: allocate_page,
@@ -1017,7 +1066,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var pages: Array[Button] = []
 	var page_labels := ["STATUS", "ALLOCATE", "EQUIPMENT", "SHOP", "FUSION", "BIND"]
 	for command_index in page_labels.size():
-		var page_button := make_menu_command_button(page_labels[command_index], Vector2(display_view_size.x - 76.0, 29 + command_index * 14), Vector2(68, 12), pixel_texture)
+		var page_button := make_menu_command_button(page_labels[command_index], PauseMenuLayoutScript.command_button_position(display_view_size, command_index), PauseMenuLayoutScript.COMMAND_BUTTON_SIZE, pixel_texture)
 		page_button.name = "HubCommand%s" % page_labels[command_index].capitalize()
 		page_button.focus_mode = Control.FOCUS_NONE
 		page_button.set_meta("hub_command_index", command_index)
@@ -1025,7 +1074,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		page_button.pressed.connect(set_page.bind(HUB_COMMAND_PAGE_TARGETS[command_index]))
 		root_page.add_child(page_button)
 		pages.append(page_button)
-	var back_button := make_menu_command_button("BACK", Vector2(display_view_size.x - 76.0, display_view_size.y - 19.0), Vector2(68, 13), pixel_texture)
+	var back_button := make_menu_command_button("BACK", PauseMenuLayoutScript.back_button_position(display_view_size), PauseMenuLayoutScript.BACK_BUTTON_SIZE, pixel_texture)
 	back_button.name = "HubBack"
 	back_button.focus_mode = Control.FOCUS_NONE
 	if hub_back.is_valid(): back_button.pressed.connect(hub_back)
@@ -1157,7 +1206,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	binding_action_button.focus_mode = Control.FOCUS_NONE
 	if bind_element.is_valid(): binding_action_button.pressed.connect(bind_element)
 	bind_page.add_child(binding_action_button)
-	var cursor := create_sprite(root_page, "HubCursor", null, Vector2.ZERO, false); cursor.visible = false
+	var cursor := create_sprite(root_page, "HubCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); cursor.visible = false
 	hub_item_list_panel = item_list_panel
 	hub_item_content_clip = item_content_clip
 	hub_gear_choice_panel = gear_choice_panel
@@ -1201,54 +1250,68 @@ func _add_menu_title(overlay: ColorRect, title_name: String, label: String, pixe
 	return title
 
 
-func _build_pause_overlay(parent: Node, pixel_texture: Callable, pause_resume: Callable, pause_settings: Callable, pause_quit: Callable, pause_status: Callable, pause_equipment: Callable, pause_back_callback: Callable) -> Dictionary:
+func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: Callable, pause_settings: Callable, pause_quit: Callable, pause_status: Callable, pause_equipment: Callable, pause_back_callback: Callable) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
-	var overlay := create_view_overlay(parent, "PauseOverlay", Color(0.015, 0.02, 0.035, 1.0), 4, false)
+	var overlay := PAUSE_MENU_SCENE.instantiate() as ColorRect
+	if overlay == null:
+		return {}
+	overlay.name = "PauseOverlay"
+	overlay.position = Vector2.ZERO
+	overlay.size = display_view_size
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	_add_menu_frame(overlay, display_view_size)
-	var title := _add_menu_title(overlay, "PauseTitle", "PAUSE", pixel_texture)
-	pause_root_page = _make_menu_page(overlay, "PauseRootPage")
-	var status_page := _make_menu_page(overlay, "PauseStatusPage")
-	var equipment_page := _make_menu_page(overlay, "PauseEquipmentPage")
+	overlay.z_index = 4
+	overlay.visible = false
+	overlay.set_meta("display_full_view", true)
+	parent.add_child(overlay)
+	var title := overlay.get_node_or_null("PauseTitle") as Sprite2D
+	pause_root_page = overlay.get_node_or_null("PauseRootPage") as Control
+	var status_page := overlay.get_node_or_null("PauseStatusPage") as Control
+	var equipment_page := overlay.get_node_or_null("PauseEquipmentPage") as Control
+	var status_title := status_page.get_node_or_null("Title") as Sprite2D
+	var equipment_title := equipment_page.get_node_or_null("Title") as Sprite2D
+	if status_title != null: status_title.texture = pixel_texture.call("STATUS", Color.WHITE) as Texture2D
+	if equipment_title != null: equipment_title.texture = pixel_texture.call("EQUIPMENT", Color.WHITE) as Texture2D
 	pause_page_roots = {0: pause_root_page, 1: status_page, 2: equipment_page}
-	status_page.visible = false
-	equipment_page.visible = false
-	var card := _make_menu_card(pause_root_page, "PausePlayerCard", Vector2(10, 27), Vector2(136, 72))
-	pause_player_card_panel = card
+	pause_player_card_panel = null
+	pause_player_portrait = overlay.get_node_or_null("PauseRootPage/PausePlayerPortrait") as Sprite2D
+	pause_gold_icon = overlay.get_node_or_null("PauseGoldIcon") as Sprite2D
+	pause_resource_icon = overlay.get_node_or_null("PauseResourceIcon") as Sprite2D
 	var card_texts: Array[Sprite2D] = []
-	for index in 7: card_texts.append(create_sprite(pause_root_page, "PauseCardText%d" % index, null, Vector2(16, 33 + index * 10), false))
+	for index in PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.size():
+		card_texts.append(create_sprite(pause_root_page, "PauseCardText%d" % index, null, PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[index], false))
 	var status_texts: Array[Sprite2D] = []
 	for index in 16:
 		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
 		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
-		status_texts.append(create_sprite(status_page, "PauseStatus%d" % index, null, Vector2(14 + column * (display_view_size.x * 0.5), 42 + row * 10), false))
+		status_texts.append(create_sprite(status_page, "PauseStatus%d" % index, null, Vector2(14 + column * 108, 28 + row * 10), false))
 	var equipment_texts: Array[Sprite2D] = []
 	for index in 8:
-		equipment_texts.append(create_sprite(equipment_page, "PauseEquipment%d" % index, null, Vector2(14, 42 + index * 12), false))
-	var description := create_sprite(overlay, "PauseDescription", null, Vector2(14, display_view_size.y - 25.0), false)
+		equipment_texts.append(create_sprite(equipment_page, "PauseEquipment%d" % index, null, Vector2(14, 28 + index * 12), false))
+	var description := create_sprite(overlay, "PauseDescription", null, PauseMenuLayoutScript.select_prompt_position(display_view_size), false)
+	pause_gold_text = create_sprite(overlay, "PauseGoldText", null, PauseMenuLayoutScript.resource_text_position(display_view_size, 0.0, false), false)
+	pause_soul_text = create_sprite(overlay, "PauseSoulText", null, PauseMenuLayoutScript.resource_text_position(display_view_size, 0.0, true), false)
 	var buttons: Array[Button] = []
-	var labels := ["RESUME", "STATUS", "EQUIPMENT", "SETTINGS", "QUIT TITLE"]
+	var labels := ["STATUS", "EQUIPMENT", "SETTINGS", "QUIT TITLE"]
 	for index in labels.size():
-		var button := make_menu_command_button(labels[index], Vector2(display_view_size.x - 76.0, 29 + index * 14), Vector2(68, 12), pixel_texture)
+		var button := make_menu_command_button(labels[index], PauseMenuLayoutScript.command_button_position(display_view_size, index), PauseMenuLayoutScript.COMMAND_BUTTON_SIZE, pixel_texture)
 		button.name = "Pause%s" % labels[index].replace(" ", "").capitalize()
 		button.focus_mode = Control.FOCUS_NONE
-		if index == 0 and pause_resume.is_valid(): button.pressed.connect(pause_resume)
-		elif index == 1:
+		if index == 0:
 			if pause_status.is_valid(): button.pressed.connect(pause_status)
 			else: button.pressed.connect(set_pause_page.bind(1))
-		elif index == 2:
+		elif index == 1:
 			if pause_equipment.is_valid(): button.pressed.connect(pause_equipment)
 			else: button.pressed.connect(set_pause_page.bind(2))
-		elif index == 3 and pause_settings.is_valid(): button.pressed.connect(pause_settings)
-		elif index == 4 and pause_quit.is_valid(): button.pressed.connect(pause_quit)
+		elif index == 2 and pause_settings.is_valid(): button.pressed.connect(pause_settings)
+		elif index == 3 and pause_quit.is_valid(): button.pressed.connect(pause_quit)
 		pause_root_page.add_child(button); buttons.append(button)
-	var back := make_menu_command_button("BACK", Vector2(display_view_size.x - 76.0, display_view_size.y - 19.0), Vector2(68, 13), pixel_texture)
+	var back := make_menu_command_button("BACK", PauseMenuLayoutScript.back_button_position(display_view_size), PauseMenuLayoutScript.BACK_BUTTON_SIZE, pixel_texture)
 	back.name = "PauseBack"
 	back.focus_mode = Control.FOCUS_NONE
 	if pause_back_callback.is_valid(): back.pressed.connect(pause_back_callback)
 	overlay.add_child(back)
-	var cursor := create_sprite(pause_root_page, "PauseCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2.ZERO, false); cursor.visible = false
-	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "description": description, "back": back, "status_button": buttons[1], "equipment_button": buttons[2]}
+	var cursor := create_sprite(pause_root_page, "PauseCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); cursor.visible = false
+	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "description": description, "back": back, "status_button": buttons[0], "equipment_button": buttons[1]}
 
 
 func _position_hub_controls() -> void:
@@ -1257,6 +1320,10 @@ func _position_hub_controls() -> void:
 	var width := display_view_size.x
 	hub_overlay.position = Vector2.ZERO
 	hub_overlay.size = display_view_size
+	var root_panel := hub_overlay.get_node_or_null("HubPanel8Piece") as Control
+	if root_panel != null:
+		root_panel.position = Vector2.ZERO
+		root_panel.size = display_view_size
 	if hub_currency_text != null:
 		hub_currency_text.position = Vector2(maxf(14.0, width - 76.0), 23)
 	if hub_currency_icon != null:
@@ -1264,12 +1331,15 @@ func _position_hub_controls() -> void:
 	for page_root: Control in hub_page_roots.values():
 		page_root.position = Vector2.ZERO
 		page_root.size = display_view_size
-	var rule := hub_overlay.get_node_or_null("HubTitleRule") as ColorRect
-	if rule != null: rule.size = Vector2(maxf(width - 16.0, 16.0), 1.0)
-	var rail_x := maxf(162.0, width - 76.0)
+		var page_background := page_root.get_node_or_null("Background") as NinePatchRect
+		if page_background != null: page_background.size = display_view_size
+		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect
+		if page_title_rule != null: page_title_rule.size.x = maxf(width - 16.0, 16.0)
+	var root_title_rule := hub_root_page.get_node_or_null("TitleRule") as ColorRect if hub_root_page != null else null
+	if root_title_rule != null: root_title_rule.size.x = maxf(PauseMenuLayoutScript.divider_x(width) - 16.0, 16.0)
 	for index in hub_page_buttons.size():
-		hub_page_buttons[index].position = Vector2(rail_x, 29.0 + index * 14.0)
-	if hub_back_button != null: hub_back_button.position = Vector2(rail_x, display_view_size.y - 19.0)
+		hub_page_buttons[index].position = PauseMenuLayoutScript.command_button_position(display_view_size, index)
+	if hub_back_button != null: hub_back_button.position = PauseMenuLayoutScript.back_button_position(display_view_size)
 	if hub_player_card_panel != null:
 		hub_player_card_panel.position = Vector2(10, 27)
 		hub_player_card_panel.size = Vector2(minf(150.0, maxf(136.0, width - 100.0)), 72)
@@ -1370,36 +1440,61 @@ func _position_hub_controls() -> void:
 	if hub_binding_action_button != null: hub_binding_action_button.position = Vector2(width - 78.0, 119)
 	if hub_cursor_text != null and not hub_page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, hub_page_buttons.size() - 1)
-		hub_cursor_text.position = Vector2(hub_page_buttons[cursor_index].position.x - 7.0, hub_page_buttons[cursor_index].position.y + 4.0)
+		move_menu_cursor(hub_cursor_text, Vector2(hub_page_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, hub_page_buttons[cursor_index].position.y + 3.0), false)
 
 
 func _position_pause_controls() -> void:
 	if pause_overlay == null:
 		return
 	var width := display_view_size.x
+	var height := display_view_size.y
 	pause_overlay.position = Vector2.ZERO
 	pause_overlay.size = display_view_size
+	_resize_menu_frame(pause_overlay, display_view_size)
 	for page_root: Control in pause_page_roots.values():
 		page_root.position = Vector2.ZERO
 		page_root.size = display_view_size
-	var rule := pause_overlay.get_node_or_null("PauseTitleRule") as ColorRect
-	if rule != null: rule.size = Vector2(maxf(width - 16.0, 16.0), 1.0)
-	var rail_x := maxf(162.0, width - 76.0)
-	for index in pause_menu_buttons.size(): pause_menu_buttons[index].position = Vector2(rail_x, 29.0 + index * 14.0)
-	if pause_back_button != null: pause_back_button.position = Vector2(rail_x, display_view_size.y - 19.0)
-	if pause_player_card_panel != null:
-		pause_player_card_panel.position = Vector2(10, 27)
-		pause_player_card_panel.size = Vector2(minf(150.0, maxf(136.0, width - 100.0)), 72)
-	for index in pause_player_card_texts.size(): pause_player_card_texts[index].position = Vector2(16, 33 + index * 10)
+		var page_background := page_root.get_node_or_null("Background") as NinePatchRect
+		if page_background != null: page_background.size = display_view_size
+		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect
+		if page_title_rule != null: page_title_rule.size.x = maxf(width - 16.0, 16.0)
+	var divider_x := PauseMenuLayoutScript.divider_x(width)
+	var panel_root := pause_overlay.get_node_or_null("PausePanel8Piece") as Control
+	if panel_root != null:
+		panel_root.position = Vector2.ZERO
+		panel_root.size = display_view_size
+	var command_divider := pause_overlay.get_node_or_null("CommandDivider") as ColorRect
+	if command_divider != null:
+		command_divider.position = Vector2(divider_x - 1.0, 2.0)
+		command_divider.size = Vector2(1.0, maxf(PauseMenuLayoutScript.upper_rail_height(height) - 2.0, 1.0))
+	var resource_divider := pause_overlay.get_node_or_null("ResourceDivider") as ColorRect
+	if resource_divider != null:
+		resource_divider.position = Vector2(divider_x, height - PauseMenuLayoutScript.RESOURCE_PANEL_HEIGHT)
+		resource_divider.size = Vector2(maxf(width - divider_x - 1.0, 1.0), 1.0)
+	for index in pause_menu_buttons.size(): pause_menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(display_view_size, index)
+	if pause_back_button != null: pause_back_button.position = PauseMenuLayoutScript.back_button_position(display_view_size)
+	if pause_player_portrait != null: pause_player_portrait.position = PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION
+	for index in pause_player_card_texts.size():
+		pause_player_card_texts[index].position = PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[index] if index < PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.size() else PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.back()
 	for index in pause_status_texts.size():
 		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
 		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
-		pause_status_texts[index].position = Vector2(14 + column * width * 0.5, 42 + row * 10)
-	for index in pause_equipment_texts.size(): pause_equipment_texts[index].position = Vector2(14, 42 + index * 12)
-	if pause_description_text != null: pause_description_text.position = Vector2(14, display_view_size.y - 25.0)
+		pause_status_texts[index].position = Vector2(14 + column * maxf((width - 28.0) * 0.5, 108.0), 28 + row * 10)
+	for index in pause_equipment_texts.size(): pause_equipment_texts[index].position = Vector2(14, 28 + index * 12)
+	if pause_description_text != null: pause_description_text.position = PauseMenuLayoutScript.select_prompt_position(display_view_size)
+	if pause_gold_icon != null: pause_gold_icon.position = PauseMenuLayoutScript.resource_icon_position(display_view_size, false)
+	if pause_resource_icon != null: pause_resource_icon.position = PauseMenuLayoutScript.resource_icon_position(display_view_size, true)
+	_position_pause_resource_texts()
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
-		pause_cursor_text.position = Vector2(pause_menu_buttons[cursor_index].position.x - 7.0, pause_menu_buttons[cursor_index].position.y + 4.0)
+		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0), false)
+
+
+func _position_pause_resource_texts() -> void:
+	if pause_gold_text != null and pause_gold_text.texture != null:
+		pause_gold_text.position = PauseMenuLayoutScript.resource_text_position(display_view_size, pause_gold_text.texture.get_width(), false)
+	if pause_soul_text != null and pause_soul_text.texture != null:
+		pause_soul_text.position = PauseMenuLayoutScript.resource_text_position(display_view_size, pause_soul_text.texture.get_width(), true)
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
@@ -1416,6 +1511,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	else:
 		var active_page := hub_page_roots.get(hub_page) as Control
 		if active_page != null: active_page.visible = true
+	var root_panel := hub_overlay.get_node_or_null("HubPanel8Piece") as Control
+	if root_panel != null: root_panel.visible = showing_root
 	var points := hub_points_text
 	_update_player_card(root, pixel_texture, hub_player_card_texts)
 	var page := hub_page
@@ -1436,10 +1533,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		_set_menu_button_icon(page_buttons[page_index], null, false)
 	if hub_cursor_text != null and not page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
-		hub_cursor_text.texture = pixel_texture.call(">", highlight_color) as Texture2D
+		hub_cursor_text.texture = MENU_CURSOR_TEXTURE
 		hub_cursor_text.visible = showing_root
-		hub_cursor_text.position = Vector2(page_buttons[cursor_index].position.x - 7.0, page_buttons[cursor_index].position.y + 4.0)
-	var title := hub_overlay.get_node_or_null("HubTitle") as Sprite2D
+		move_menu_cursor(hub_cursor_text, Vector2(page_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, page_buttons[cursor_index].position.y + 3.0))
+	var title_page := hub_root_page if showing_root else hub_page_roots.get(page) as Control
+	var title := title_page.get_node_or_null("Title") as Sprite2D if title_page != null else null
 	if title != null:
 		var title_label: String = "DEMON HUB" if showing_root else ["ALLOCATE", "EQUIPMENT", "SHOP", "FUSION", "BIND", "STATUS"][clampi(page, 0, 5)]
 		var title_texture := pixel_texture.call(title_label, Color.WHITE) as Texture2D
@@ -1597,10 +1695,10 @@ func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Spr
 		return
 	var profile := root.get("player_profile") as PlayerProfile
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
-	var element := "GRAY"
+	var element := "NORMAL"
 	var chroma_component := root.get("player_chroma_component") as Node
 	if chroma_component != null and chroma_component.has_method("aspect_name"):
-		element = String(chroma_component.call("aspect_name")).to_upper()
+		element = ASPECT_CATALOG_SCRIPT.display_name(chroma_component.call("aspect_name") as StringName)
 	var max_health := CombatCalculator.max_health_for_snapshot(snapshot, root.get("combat_tuning") as CombatTuning)
 	var health := max_health
 	var health_component := root.get("player_health_component") as Node
@@ -1719,6 +1817,68 @@ func _update_hub_allocation_preview(root: Object, pixel_texture: Callable, curre
 		hub_allocate_preview_texts[index].texture = pixel_texture.call(value_text, value_color) as Texture2D
 
 
+func _update_pause_player_info(root: Object, pixel_texture: Callable) -> void:
+	if pause_player_card_texts.is_empty():
+		return
+	var profile := root.get("player_profile") as PlayerProfile
+	if profile == null:
+		return
+	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
+	if snapshot == null:
+		return
+	var tuning := root.get("combat_tuning") as CombatTuning
+	var max_health := roundi(CombatCalculator.max_health_for_snapshot(snapshot, tuning))
+	var health := max_health
+	var health_component := root.get("player_health_component") as Node
+	if health_component != null:
+		health = roundi(float(health_component.get("current_health")))
+	var chroma_component := root.get("player_chroma_component") as Node
+	var chroma := int(chroma_component.get("current_chroma")) if chroma_component != null else 0
+	var element := "NORMAL"
+	if chroma_component != null and chroma_component.has_method("aspect_name"):
+		element = ASPECT_CATALOG_SCRIPT.display_name(chroma_component.call("aspect_name") as StringName)
+	var palette_value: Variant = root.get("current_player_palette_name")
+	var palette_name: StringName = StringName(str(palette_value)) if palette_value != null else &"blue"
+	var values := [
+		PlayerProfile.normalize_player_name(profile.player_name),
+		element,
+		"HP",
+		"%d/%d" % [health, max_health],
+		"CHR",
+		"%d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA],
+		"LV %d" % profile.level,
+	]
+	for index in pause_player_card_texts.size():
+		var text := pause_player_card_texts[index]
+		text.visible = true
+		var label: String = str(values[index]) if index < values.size() else ""
+		var label_color := PauseMenuLayoutScript.MUTED_TEXT_COLOR if index == 1 else Color.WHITE
+		text.texture = pixel_texture.call(label, label_color) as Texture2D
+	if pause_player_portrait != null and root.has_method("_save_portrait_texture"):
+		var portrait_texture := root.call("_save_portrait_texture", String(palette_name)) as Texture2D
+		if portrait_texture != null:
+			pause_player_portrait.texture = portrait_texture
+	_update_pause_resources(root, pixel_texture)
+
+
+func _update_pause_resources(root: Object, pixel_texture: Callable) -> void:
+	var profile := root.get("player_profile") as PlayerProfile
+	if profile == null:
+		return
+	if pause_gold_icon != null:
+		pause_gold_icon.visible = true
+	if pause_resource_icon != null:
+		pause_resource_icon.visible = true
+		pause_resource_icon.texture = SoulVisualsScript.texture()
+	if pause_gold_text != null:
+		var gold_texture := pixel_texture.call(str(profile.gold), PauseMenuLayoutScript.GOLD_TEXT_COLOR) as Texture2D
+		pause_gold_text.texture = gold_texture
+	if pause_soul_text != null:
+		var soul_texture := pixel_texture.call(str(profile.souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D
+		pause_soul_text.texture = soul_texture
+	_position_pause_resource_texts()
+
+
 func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if pause_overlay == null or not pause_overlay.visible:
 		return
@@ -1726,7 +1886,10 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	for page_root: Control in pause_page_roots.values(): page_root.visible = false
 	var active_page := pause_page_roots.get(pause_page) as Control
 	if active_page != null: active_page.visible = true
-	_update_player_card(root, pixel_texture, pause_player_card_texts)
+	var showing_root := pause_page == 0
+	var root_panel := pause_overlay.get_node_or_null("PausePanel8Piece") as Control
+	if root_panel != null: root_panel.visible = showing_root
+	_update_pause_player_info(root, pixel_texture)
 	for index in pause_menu_buttons.size():
 		var button := pause_menu_buttons[index]
 		button.visible = pause_page == 0
@@ -1739,12 +1902,16 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		set_archetype_button_state(pause_back_button, false, highlight)
 	var back_prompt := _menu_back_prompt_for(root)
 	var confirm_prompt := _menu_confirm_prompt_for(root)
-	_set_button_text(pause_back_button, back_prompt, pixel_texture, highlight)
+	_set_button_text(pause_back_button, back_prompt, pixel_texture, PauseMenuLayoutScript.MUTED_TEXT_COLOR)
 	for node in pause_status_texts: node.visible = pause_page == 1
 	for node in pause_equipment_texts: node.visible = pause_page == 2
 	if pause_description_text != null:
 		pause_description_text.visible = true
-		pause_description_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, Color8(148, 220, 255)) as Texture2D
+		pause_description_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, PauseMenuLayoutScript.MUTED_TEXT_COLOR) as Texture2D
+	if pause_gold_icon != null: pause_gold_icon.visible = showing_root
+	if pause_resource_icon != null: pause_resource_icon.visible = showing_root
+	if pause_gold_text != null: pause_gold_text.visible = showing_root
+	if pause_soul_text != null: pause_soul_text.visible = showing_root
 	if pause_page == 1:
 		_update_pause_status(root, pixel_texture)
 	elif pause_page == 2:
@@ -1752,7 +1919,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
 		pause_cursor_text.visible = pause_page == 0
-		pause_cursor_text.position = Vector2(pause_menu_buttons[cursor_index].position.x - 7.0, pause_menu_buttons[cursor_index].position.y + 4.0)
+		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0))
 
 
 func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
@@ -1817,11 +1984,12 @@ func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: Pl
 	if hub_binding_texts.size() < 5 or profile == null:
 		return
 	var chroma := root.get("player_chroma_component") as Node
-	var current := "GRAY"
+	var current_aspect := &"gray"
 	var current_is_bound := false
 	if chroma != null:
-		current = String(chroma.call("aspect_name")).to_upper()
+		current_aspect = chroma.call("aspect_name") as StringName
 		current_is_bound = bool(chroma.call("current_is_bound"))
+	var current := ASPECT_CATALOG_SCRIPT.display_name(current_aspect)
 	var bound := "NONE"
 	if profile.has_bound_element:
 		bound = String(profile.bound_element).to_upper()
@@ -1836,7 +2004,7 @@ func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: Pl
 	hub_binding_texts[3].texture = pixel_texture.call("COST %d SOULS" % cost, Color8(255, 205, 117)) as Texture2D
 	var status := hub_binding_message
 	if status.is_empty():
-		if current == "GRAY":
+		if current_aspect == &"gray":
 			status = "ATTUNE FIRST"
 		elif current_is_bound:
 			status = "ALREADY BOUND"
@@ -1844,12 +2012,12 @@ func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: Pl
 			status = "NEED %d SOULS" % cost
 		else:
 			status = "READY TO BIND"
-	hub_binding_texts[4].texture = pixel_texture.call(status, Color8(255, 105, 105) if not action_enabled and current != "GRAY" and not current_is_bound else Color8(167, 240, 112)) as Texture2D
+	hub_binding_texts[4].texture = pixel_texture.call(status, Color8(255, 105, 105) if not action_enabled and current_aspect != &"gray" and not current_is_bound else Color8(167, 240, 112)) as Texture2D
 	if hub_binding_action_button != null:
 		hub_binding_action_button.disabled = not action_enabled
 		var action_label := hub_binding_action_button.get_child(0) as Sprite2D
 		if action_label != null:
-			var label := "BIND" if action_enabled else "BOUND" if current_is_bound else "NONE" if current == "GRAY" else "NEED 50S"
+			var label := "BIND" if action_enabled else "BOUND" if current_is_bound else "NONE" if current_aspect == &"gray" else "NEED 50S"
 			action_label.texture = pixel_texture.call(label, action_color) as Texture2D
 		set_archetype_button_state(hub_binding_action_button, action_enabled, highlight_color)
 
@@ -2398,19 +2566,22 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((display_view_size.x - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
 	var version_text := create_sprite(overlay, "TitleVersion", pixel_texture.call(GAME_VERSION, Color8(148, 220, 255)) as Texture2D, Vector2(4, display_view_size.y - 8.0), false)
 	var new_game_button := make_retro_button("NEW GAME", Vector2((display_view_size.x - 64.0) * 0.5, 102), Vector2(64, 14), pixel_texture)
+	new_game_button.set_meta("title_base_y", 102.0)
 	new_game_button.focus_mode = Control.FOCUS_NONE
 	new_game_button.pressed.connect(new_game_callback)
 	overlay.add_child(new_game_button)
 	var continue_button := make_retro_button("CONTINUE", Vector2((display_view_size.x - 64.0) * 0.5, 120), Vector2(64, 14), pixel_texture)
+	continue_button.set_meta("title_base_y", 120.0)
 	continue_button.focus_mode = Control.FOCUS_NONE
 	continue_button.pressed.connect(continue_callback)
 	continue_button.disabled = not has_profile
 	overlay.add_child(continue_button)
 	var settings_button := make_retro_button("SETTINGS", Vector2((display_view_size.x - 64.0) * 0.5, 138), Vector2(64, 14), pixel_texture)
+	settings_button.set_meta("title_base_y", 138.0)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	if settings_callback.is_valid(): settings_button.pressed.connect(settings_callback)
 	overlay.add_child(settings_button)
-	var cursor := create_sprite(overlay, "TitleCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 106 if not has_profile else 124), false)
+	var cursor := create_sprite(overlay, "TitleCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 106 if not has_profile else 124), false)
 	title_menu_row = 1 if has_profile else 0
 	return {"overlay": overlay, "text": title_text, "version": version_text, "new_game": new_game_button, "continue": continue_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
 
@@ -2475,7 +2646,7 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 	back.focus_mode = Control.FOCUS_NONE
 	back.pressed.connect(close_callback)
 	overlay.add_child(back)
-	var cursor := create_sprite(overlay, "SettingsCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2.ZERO, false)
+	var cursor := create_sprite(overlay, "SettingsCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false)
 	settings_row_labels = labels
 	settings_value_buttons = values
 	settings_left_buttons = left_buttons
@@ -2665,7 +2836,7 @@ func _update_settings_cursor() -> void:
 	if selected == null:
 		return
 	settings_cursor_text.visible = true
-	settings_cursor_text.position = Vector2(selected.position.x - 8.0, selected.position.y + 4.0)
+	move_menu_cursor(settings_cursor_text, Vector2(selected.position.x - CURSOR_LEFT_GAP, selected.position.y + 4.0))
 
 
 func _set_button_text(button: Button, label: String, pixel_texture: Callable, color: Color = Color.WHITE) -> void:
@@ -2859,10 +3030,10 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 	var overlay := create_view_overlay(parent, "SaveSelectOverlay", Color.BLACK, 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	var _title := create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 64.0) * 0.5, 42), false)
-	var _cursor := create_sprite(overlay, "SaveSelectCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 130.0) * 0.5, 70), false)
+	var _cursor := create_sprite(overlay, "SaveSelectCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 130.0) * 0.5, 70), false)
 	var prompt := create_sprite(overlay, "OverwritePrompt", pixel_texture.call("OVERWRITE?  YES / NO", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 100.0) * 0.5, 126), false)
 	prompt.visible = false
-	var prompt_cursor := create_sprite(overlay, "OverwriteCursor", pixel_texture.call(">", Color.WHITE) as Texture2D, Vector2((display_view_size.x - 42.0) * 0.5, 140), false); prompt_cursor.visible = false
+	var prompt_cursor := create_sprite(overlay, "OverwriteCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 42.0) * 0.5, 140), false); prompt_cursor.visible = false
 	var yes := make_retro_button("YES", Vector2((display_view_size.x - 30.0) * 0.5, 137), Vector2(24, 12), pixel_texture); yes.name = "OverwriteYes"; yes.visible = false; yes.pressed.connect(overwrite_yes); overlay.add_child(yes)
 	var no := make_retro_button("NO", Vector2((display_view_size.x + 30.0) * 0.5, 137), Vector2(20, 12), pixel_texture); no.name = "OverwriteNo"; no.visible = false; no.pressed.connect(overwrite_no); overlay.add_child(no)
 	for slot in ProfileSaveService.SLOT_COUNT:
@@ -2914,7 +3085,7 @@ func build_name_entry(parent: Node, pixel_texture: Callable, finish_callback: Ca
 	name_entry_actions_text = create_sprite(overlay, "NameEntryActions", null, Vector2(14, 134), false)
 	name_entry_confirm_text = create_sprite(overlay, "NameEntryConfirm", null, Vector2(14, 145), false)
 	name_entry_back_text = create_sprite(overlay, "NameEntryBack", null, Vector2(78, 145), false)
-	name_entry_cursor_text = create_sprite(overlay, "NameEntryCursor", null, Vector2.ZERO, false)
+	name_entry_cursor_text = create_sprite(overlay, "NameEntryCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false)
 
 	var preview_panel := _make_menu_card(overlay, "NameEntryPreviewPanel", Vector2(166, 62), Vector2(62, 54))
 	preview_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3002,7 +3173,7 @@ func _position_name_entry_controls() -> void:
 	if name_entry_preview != null: name_entry_preview.position = Vector2(origin_x + 197.0, 82.0)
 	if name_entry_cursor_text != null:
 		var current_index := name_entry_row * NAME_ENTRY_COLUMNS + name_entry_column
-		name_entry_cursor_text.position = grid_origin + Vector2((current_index % NAME_ENTRY_COLUMNS) * 17.0 - 6.0, int(float(current_index) / float(NAME_ENTRY_COLUMNS)) * 12.0 + 4.0)
+		move_menu_cursor(name_entry_cursor_text, grid_origin + Vector2((current_index % NAME_ENTRY_COLUMNS) * 17.0 - CURSOR_LEFT_GAP, int(float(current_index) / float(NAME_ENTRY_COLUMNS)) * 12.0 + 4.0))
 
 
 func show_name_entry(root: Object, pending_slot: int) -> void:
@@ -3071,7 +3242,7 @@ func update_name_entry_ui(root: Object, pixel_texture: Callable) -> void:
 			var cell_color := highlight if index == selected_index else Color.WHITE
 			label.texture = pixel_texture.call(_name_entry_cell_label(characters[index]), cell_color) as Texture2D
 	if name_entry_cursor_text != null:
-		name_entry_cursor_text.texture = pixel_texture.call(">", highlight) as Texture2D
+		name_entry_cursor_text.texture = MENU_CURSOR_TEXTURE
 		name_entry_cursor_text.visible = not characters.is_empty()
 	_position_name_entry_controls()
 
@@ -3256,12 +3427,61 @@ func create_overlay(parent: Node, overlay_name: String, size: Vector2, color: Co
 
 func create_sprite(parent: Node, sprite_name: String, texture: Texture2D, sprite_position: Vector2, centered: bool, scale: Vector2 = Vector2.ONE, z_index: int = 0) -> Sprite2D:
 	var sprite := Sprite2D.new()
+	if sprite_name.contains("Cursor"):
+		var cursor_script := load("res://scripts/menu_cursor.gd") as Script
+		if cursor_script != null:
+			sprite.set_script(cursor_script)
 	sprite.name = sprite_name
 	sprite.texture = texture
 	sprite.centered = centered
 	sprite.position = sprite_position
 	sprite.scale = scale
-	sprite.z_index = z_index
+	sprite.z_index = 4095 if sprite_name.contains("Cursor") else z_index
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	parent.add_child(sprite)
 	return sprite
+
+
+func move_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = true) -> void:
+	if cursor == null:
+		return
+	target = Vector2(target.x, target.y - CURSOR_VERTICAL_RAISE)
+	if cursor.has_method("move_to"):
+		cursor.call("move_to", target, animate)
+		return
+	var previous_target := Vector2.INF
+	if cursor.has_meta("cursor_target"):
+		previous_target = cursor.get_meta("cursor_target") as Vector2
+	if previous_target.is_equal_approx(target):
+		return
+	cursor.set_meta("cursor_target", target)
+	_kill_cursor_tween(cursor)
+	if not animate:
+		cursor.position = target
+		_start_cursor_bob(cursor)
+		return
+	var tween := create_tween()
+	cursor.set_meta("cursor_tween", tween)
+	tween.tween_property(cursor, "position", target, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(_start_cursor_bob.bind(cursor))
+
+
+## Resting idle for the hand cursor: it glides a few pixels to the right, then
+## quickly flicks back left, looping forever. Horizontal only.
+func _start_cursor_bob(cursor: Sprite2D) -> void:
+	if cursor == null:
+		return
+	_kill_cursor_tween(cursor)
+	var rest: Vector2 = cursor.get_meta("cursor_target") as Vector2 if cursor.has_meta("cursor_target") else cursor.position
+	cursor.position = rest
+	var bob := create_tween()
+	cursor.set_meta("cursor_tween", bob)
+	bob.set_loops()
+	bob.tween_property(cursor, "position", rest + Vector2(CURSOR_BOB_AMOUNT, 0.0), CURSOR_BOB_SLIDE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	bob.tween_property(cursor, "position", rest, CURSOR_BOB_SNAP_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
+
+func _kill_cursor_tween(cursor: Sprite2D) -> void:
+	var previous_tween: Tween = cursor.get_meta("cursor_tween") as Tween if cursor.has_meta("cursor_tween") else null
+	if previous_tween != null and previous_tween.is_valid():
+		previous_tween.kill()

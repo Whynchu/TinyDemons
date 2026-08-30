@@ -175,22 +175,20 @@ The bold cells are the intentional weakness/immunity moments. This means:
 - Ice is strong against Grass and Ground, and is resisted by Fire, Water, and
   Ice.
 - Neutral attacks cannot damage Shadow.
-- Shadow attacks cannot damage Neutral.
+- Shadow attacks damage Neutral at full `1.0x`.
 - Shadow is weak to Shadow, matching Ghost attacking Ghost.
 - The four elemental types have no special interaction with Shadow in this
   first slice.
 
-The Neutral ↔ Shadow immunities are approved. Rationale: Shadow slimes are
-already a rare, high-pressure ambush variant (`room_controller.gd:22-23`,
-`SHADOW_ENEMY_WEIGHT 0.12`, `SHADOW_BOSS_CHANCE 0.04`), so making them immune
-to the neutral sword creates a deliberate "use an elemental Triangle" moment
-without affecting the common room curve. Shadow's own bite being unable to
-hurt a Neutral-aspect player would be a player-side immunity — but since the
-player defends as Neutral in this slice (§2), a Shadow slime's bite deals
-`0.0x` to the player. That is intentional: Shadow pressure comes from its
-speed/attack profile and ambush, and its low damage-into-player output is
-offset by its rarity. If playtesting shows Purple feels toothless, the first
-balance lever is its STR/SPD stats, not removing the immunity.
+The Neutral → Shadow immunity and Shadow → Neutral normal damage are approved.
+Rationale: Shadow slimes are already a rare, high-pressure ambush variant
+(`room_controller.gd:22-23`, `SHADOW_ENEMY_WEIGHT 0.12`, `SHADOW_BOSS_CHANCE
+0.04`), so keeping the neutral sword unable to damage them creates a deliberate
+"use an elemental Triangle" moment without affecting the common room curve.
+Shadow's own bite deals `1.0x` to a Neutral-aspect player, so a Shadow slime's
+ambush stays a real threat; its low per-hit output is still offset by its
+rarity. If playtesting shows Purple feels toothless, the first balance lever is
+its STR/SPD stats, not restoring the damage immunity.
 
 ## 5. Damage formula integration
 
@@ -541,7 +539,7 @@ create an accidental early-game difficulty spike.
   Grass → Electric = `1.00` (the review correction).
 - Neutral damage is unchanged at `1.0x`.
 - Fire/Water/Electric/Grass use `0.8x` and `1.25x`, not `0.5x` and `2.0x`.
-- Shadow ↔ Neutral is immune in both directions.
+- Neutral → Shadow is immune; Shadow → Neutral is `1.0x`.
 - Shadow → Shadow is `1.25x`.
 - Immunity produces zero even when the old minimum-damage rule would produce
   one.

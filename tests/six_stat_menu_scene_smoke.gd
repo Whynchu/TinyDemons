@@ -25,7 +25,7 @@ func _initialize() -> void:
 		_expect(screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.state == &"hub", "Cloaked Demon opens the preparation hub", failures)
 		_expect(screens.hub_page_buttons.size() == 6 and screens.hub_page_buttons[0].name == "HubCommandStatus" and screens.hub_page_buttons[1].name == "HubCommandAllocate" and screens.hub_page_buttons[2].name == "HubCommandEquipment" and screens.hub_page_buttons[3].name == "HubCommandShop" and screens.hub_page_buttons[4].name == "HubCommandFusion" and screens.hub_page_buttons[5].name == "HubCommandBind", "hub exposes the approved six-command order", failures)
 		_expect(screens.hub_start_button == null, "Demon Hub has no Start Run control", failures)
-		_expect(screens.hub_overlay.get_node_or_null("FrameOuter") != null and screens.hub_overlay.get_node_or_null("FrameInner") != null, "hub uses the double-border menu frame", failures)
+		_expect(screens.hub_overlay.get_node_or_null("HubPanel8Piece") != null and screens.hub_overlay.get_node_or_null("FrameOuter") != null and screens.hub_overlay.get_node_or_null("FrameInner") != null, "hub uses the scene-authored eight-piece menu frame", failures)
 
 		screens.hub_page_buttons[0].pressed.emit()
 		await process_frame

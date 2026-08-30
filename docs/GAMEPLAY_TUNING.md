@@ -108,7 +108,8 @@ into the seed.
 
 `scripts/element_catalog.gd` owns the eight-element matchup matrix. Neutral is
 the player defender in this slice. Weakness is `1.25x`, resistance is `0.8x`,
-and Neutral/Shadow are mutually immune; Shadow into Shadow is `1.25x`. Ground
+and Neutral is immune to Shadow while Shadow damages Neutral at `1.0x`;
+Shadow into Shadow is `1.25x`. Ground
 is immune to Electric, while Ice is strong against Ground and Grass.
 Regular encounters include Gray at weight 1.0 immediately; Yellow joins at
 room depth 2 with weight 1.0, Ground joins at depth 3, and Ice joins at depth 4.
