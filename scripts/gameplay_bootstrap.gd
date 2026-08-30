@@ -19,6 +19,8 @@ const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_control
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/touch_controls_layer.gd")
+const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/cloud_save_service.gd")
+const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/cloud_save_panel.gd")
 const SLIME_ROSTER_SIZE := 13
 
 
@@ -52,6 +54,9 @@ func initialize(root: GameplayState) -> void:
 	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as Node
 	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
 	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")
+	root.cloud_save_service = _add_runtime_node(root, CLOUD_SAVE_SERVICE_SCRIPT, "CloudSaveService") as CloudSaveService
+	root.cloud_save_panel = _add_runtime_node(root, CLOUD_SAVE_PANEL_SCRIPT, "CloudSavePanel") as CloudSavePanel
+	root.cloud_save_panel.configure(root, root.cloud_save_service)
 	root.room_puzzle_controller = _add_runtime_node(root, ROOM_PUZZLE_CONTROLLER_SCRIPT, "RoomPuzzleController")
 	root.magic_runtime_controller = _add_runtime_node(root, MAGIC_RUNTIME_CONTROLLER_SCRIPT, "MagicRuntimeController")
 	root.targeting_runtime_controller = _add_runtime_node(root, TARGETING_RUNTIME_CONTROLLER_SCRIPT, "TargetingRuntimeController")
@@ -154,7 +159,7 @@ func initialize(root: GameplayState) -> void:
 	root.set("boot_active", true)
 	await root.get_tree().process_frame
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	root.call("_refresh_player_cloak_visual")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
@@ -221,6 +226,7 @@ func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> vo
 	if screens.title_start_button != null: screens.title_start_button.visible = true
 	if screens.title_continue_button != null: screens.title_continue_button.visible = not screens.title_continue_button.disabled
 	if screens.title_settings_button != null: screens.title_settings_button.visible = true
+	if screens.title_cloud_button != null: screens.title_cloud_button.visible = true
 	if screens.title_cursor_text != null: screens.title_cursor_text.visible = true
 	screens.title_transition_active = false
 	screens.pending_title_destination = ""

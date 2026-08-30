@@ -7,6 +7,15 @@ const CURRENT_SCHEMA_VERSION := 11
 const LEGACY_DEMON_CLOAK_SCHEMA_VERSION := 10
 const LEGACY_SIX_STAT_SCHEMA_VERSION := 9
 const LEGACY_SPEED_SCHEMA_VERSION := 8
+
+
+static func supports_schema_version(value: int) -> bool:
+	return value in [
+		CURRENT_SCHEMA_VERSION,
+		LEGACY_DEMON_CLOAK_SCHEMA_VERSION,
+		LEGACY_SIX_STAT_SCHEMA_VERSION,
+		LEGACY_SPEED_SCHEMA_VERSION,
+	]
 const MAX_LEVEL := 99
 const MAX_FAMILY_MASTERY := 3
 const MAX_ITEM_ENHANCEMENT := 10
@@ -522,7 +531,7 @@ func load_dictionary(data: Dictionary) -> void:
 	var saved_schema := int(data.get("schema_version", 0))
 	# Chroma changes the meaning of file identity. Older files are intentionally
 	# allowed to die out instead of being guessed into the new model.
-	if saved_schema not in [CURRENT_SCHEMA_VERSION, LEGACY_DEMON_CLOAK_SCHEMA_VERSION, LEGACY_SIX_STAT_SCHEMA_VERSION, LEGACY_SPEED_SCHEMA_VERSION]:
+	if not supports_schema_version(saved_schema):
 		schema_version = CURRENT_SCHEMA_VERSION
 		return
 	var is_schema_8 := saved_schema == LEGACY_SPEED_SCHEMA_VERSION

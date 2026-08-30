@@ -54,6 +54,7 @@ process exits nonzero or a test reports failure.
 | Touch controls | `touch_controls_layer.gd`, `input_router.gd` |
 | Actor occlusion and visual effects | `occlusion_renderer.gd`, `effects_spawner.gd` |
 | Persistent profile data | `player_profile.gd`, `profile_save_service.gd` |
+| Encrypted cloud saves | `cloud_save_service.gd`, `web_save_crypto.gd`, `cloud_save_panel.gd` |
 
 ## Extension rules
 

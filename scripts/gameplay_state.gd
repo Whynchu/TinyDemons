@@ -139,6 +139,8 @@ var pickup_runtime_controller: Node = null
 var run_flow_controller: Node = null
 var hub_flow_controller: Node = null
 var save_flow_controller: Node = null
+var cloud_save_service: CloudSaveService = null
+var cloud_save_panel: CloudSavePanel = null
 var room_puzzle_controller: Node = null
 var magic_runtime_controller: Node = null
 var targeting_runtime_controller: Node = null
@@ -783,6 +785,7 @@ func _show_game_over() -> void:
 	if game_over_button != null: game_over_button.release_focus()
 	if game_over_title_button != null: game_over_title_button.release_focus()
 func _build_title_screen() -> void: save_flow_controller.call("build_title_screen", self)
+func _open_cloud_save() -> void: cloud_save_panel.open()
 func _build_archetype_screen() -> void: save_flow_controller.call("build_archetype_screen", self)
 func _update_title_screen(delta: float) -> void: save_flow_controller.call("update_title_screen", self, delta)
 func _start_new_game() -> void: save_flow_controller.call("start_new_game", self)

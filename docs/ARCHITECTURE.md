@@ -33,6 +33,9 @@ migration keeps one explicit frame schedule while replacing shared-state reach-i
 and string dispatch one feature slice at a time. See
 [`refactor-route.md`](refactor-route.md).
 
+Encrypted-vault deployment and operational verification are documented in
+[`cloud-save-deployment.md`](cloud-save-deployment.md).
+
 ## Scripts by responsibility
 
 - **Player**: `player_controller`, `actor_motor`, `player_roll_component`,
@@ -52,6 +55,10 @@ and string dispatch one feature slice at a time. See
   `run_state`, `run_grade`, `run_settlement`, `item_catalog`,
   `item_instance`, `equipment_component`, `equipment_transmutation_component`,
   `stats_component`, `combat_stat_snapshot`, `combat_calculator`.
+- **Save durability**: `profile_save_service` owns validated local slot
+  serialization; `web_save_crypto` owns browser HKDF/AES-GCM operations;
+  `cloud_save_service` owns recovery-vault transport; `cloud_save_panel` owns the
+  title-screen recovery workflow. Supabase receives ciphertext, never profile JSON.
 - **Presentation**: `hud_controller`, `effects_spawner`,
   `screen_state_controller`, `sprite_frame_library`, `display_controller`,
   `display_layout`.
