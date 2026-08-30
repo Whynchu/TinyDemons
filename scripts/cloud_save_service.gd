@@ -33,7 +33,7 @@ func create_backup(envelope: Dictionary) -> void:
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
 	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
-	JavaScriptBridge.eval("window.__tdVaultCrypto.create(%s,%s)" % [JSON.stringify(JSON.stringify(envelope)), _crypto_callback])
+	JavaScriptBridge.eval("window.__tdGodotCryptoCallback=%s; window.__tdVaultCrypto.create(%s)" % [_crypto_callback, JSON.stringify(JSON.stringify(envelope))])
 
 func restore_backup(key: String) -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
@@ -42,7 +42,7 @@ func restore_backup(key: String) -> void:
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
 	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
-	JavaScriptBridge.eval("window.__tdVaultCrypto.encrypt(%s,%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify("{}"), _crypto_callback])
+	JavaScriptBridge.eval("window.__tdGodotCryptoCallback=%s; window.__tdVaultCrypto.encrypt(%s,%s)" % [_crypto_callback, JSON.stringify(recovery_key), JSON.stringify("{}")])
 
 func sync_backup(envelope: Dictionary) -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
@@ -51,7 +51,7 @@ func sync_backup(envelope: Dictionary) -> void:
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
 	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
-	JavaScriptBridge.eval("window.__tdVaultCrypto.encrypt(%s,%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify(JSON.stringify(envelope)), _crypto_callback])
+	JavaScriptBridge.eval("window.__tdGodotCryptoCallback=%s; window.__tdVaultCrypto.encrypt(%s,%s)" % [_crypto_callback, JSON.stringify(recovery_key), JSON.stringify(JSON.stringify(envelope))])
 
 func delete_backup() -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
@@ -86,7 +86,7 @@ func _on_request_completed(_result: int, code: int, _headers: PackedStringArray,
 	if _pending_action == "read":
 		revision = int(parsed.get("revision", 0)); _pending_action = "decrypt_read"
 		_crypto_callback = JavaScriptBridge.create_callback(_on_decrypt_completed)
-		JavaScriptBridge.eval("window.__tdVaultCrypto.decrypt(%s,%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify(str(parsed.get("ciphertext", ""))), _crypto_callback]); return
+		JavaScriptBridge.eval("window.__tdGodotCryptoCallback=%s; window.__tdVaultCrypto.decrypt(%s,%s)" % [_crypto_callback, JSON.stringify(recovery_key), JSON.stringify(str(parsed.get("ciphertext", "")))]); return
 	revision = int(parsed.get("revision", revision))
 	if _pending_action == "delete":
 		recovery_key = ""; vault_id = ""; write_proof = ""; revision = 0
