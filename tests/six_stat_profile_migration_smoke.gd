@@ -6,6 +6,11 @@ var _finished := false
 func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
+	_expect(PlayerProfile.supports_schema_version(8), "save service accepts the oldest supported migration schema", failures)
+	_expect(PlayerProfile.supports_schema_version(9), "save service accepts the six-stat migration schema", failures)
+	_expect(PlayerProfile.supports_schema_version(10), "save service accepts the demon-cloak migration schema", failures)
+	_expect(PlayerProfile.supports_schema_version(PlayerProfile.CURRENT_SCHEMA_VERSION), "save service accepts the current schema", failures)
+	_expect(not PlayerProfile.supports_schema_version(PlayerProfile.CURRENT_SCHEMA_VERSION + 1), "save service rejects an unknown future schema", failures)
 	var legacy_data := {
 		"schema_version": 8,
 		"has_started": true,

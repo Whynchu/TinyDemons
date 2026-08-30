@@ -60,6 +60,47 @@ static func load_profile() -> PlayerProfile:
 	return profile if profile != null else PlayerProfile.new()
 
 
+static func export_cloud_envelope() -> Dictionary:
+	var slots: Array[Dictionary] = []
+	for slot in SLOT_COUNT:
+		var profile := load_profile_for_slot(slot)
+		if profile != null:
+			slots.append({"slot": slot, "profile": profile.to_dictionary()})
+	return {"format": "tiny-demons-cloud-save", "format_version": 1, "profile_schema": PlayerProfile.CURRENT_SCHEMA_VERSION, "slots": slots}
+
+
+static func import_cloud_envelope(envelope: Dictionary) -> bool:
+	if str(envelope.get("format", "")) != "tiny-demons-cloud-save" or int(envelope.get("format_version", 0)) != 1:
+		return false
+	var values: Variant = envelope.get("slots", [])
+	if not values is Array:
+		return false
+	var validated: Array[Dictionary] = []
+	var used_slots: Dictionary = {}
+	for value: Variant in values:
+		if not value is Dictionary:
+			return false
+		var entry := value as Dictionary
+		var slot := int(entry.get("slot", -1))
+		var data: Variant = entry.get("profile", {})
+		if slot < 0 or slot >= SLOT_COUNT or used_slots.has(slot) or not data is Dictionary:
+			return false
+		if not PlayerProfile.supports_schema_version(int(data.get("schema_version", 0))):
+			return false
+		var profile := PlayerProfile.new()
+		profile.load_dictionary(data as Dictionary)
+		validated.append({"slot": slot, "profile": profile})
+		used_slots[slot] = true
+	var original_slot := current_slot()
+	for entry in validated:
+		select_slot(int(entry["slot"]))
+		if not save_profile(entry["profile"] as PlayerProfile):
+			select_slot(original_slot)
+			return false
+	select_slot(original_slot)
+	return true
+
+
 static func save_profile(profile: PlayerProfile) -> bool:
 	if profile == null:
 		return false
@@ -162,7 +203,7 @@ static func _parse_profile_json(json: String) -> PlayerProfile:
 		return null
 	var data := parsed as Dictionary
 	var schema_version := int(data.get("schema_version", 0))
-	if schema_version != PlayerProfile.CURRENT_SCHEMA_VERSION and schema_version != PlayerProfile.CURRENT_SCHEMA_VERSION - 1:
+	if not PlayerProfile.supports_schema_version(schema_version):
 		return null
 	var profile := PlayerProfile.new()
 	profile.load_dictionary(data)

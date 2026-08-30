@@ -9,7 +9,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.19"
+const GAME_VERSION := "0.1.20"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/pause_menu.tscn")
 const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/demon_hub_menu.tscn")
@@ -184,6 +184,7 @@ var title_overlay: ColorRect = null
 var title_start_button: Button = null
 var title_continue_button: Button = null
 var title_settings_button: Button = null
+var title_cloud_button: Button = null
 var title_frame_timer := 0.0
 var title_screen_text: Sprite2D = null
 var title_start_text: Sprite2D = null
@@ -294,6 +295,7 @@ func apply_display_layout(root: Object) -> void:
 		if title_start_button != null: title_start_button.position.x = title_x
 		if title_continue_button != null: title_continue_button.position.x = title_x
 		if title_settings_button != null: title_settings_button.position.x = title_x
+		if title_cloud_button != null: title_cloud_button.position.x = title_x
 	if hub_overlay != null:
 		hub_overlay.position = (display_view_size - hub_overlay.size) * 0.5
 	if pause_overlay != null:
@@ -305,7 +307,7 @@ func apply_display_layout(root: Object) -> void:
 	if title_overlay != null and title_cursor_text != null and title_start_button != null:
 		# Title buttons never take Control focus (retro-styled), so drive the
 		# cursor from the active row's static base y instead of the focus owner.
-		var row_buttons: Array[Button] = [title_start_button, title_continue_button, title_settings_button]
+		var row_buttons: Array[Button] = [title_start_button, title_continue_button, title_cloud_button, title_settings_button]
 		var row_selected := row_buttons[clampi(title_menu_row, 0, row_buttons.size() - 1)] if not row_buttons.is_empty() else null
 		if row_selected != null:
 			var base_y: float = row_selected.get_meta("title_base_y") as float if row_selected.has_meta("title_base_y") else row_selected.position.y
@@ -325,6 +327,8 @@ func apply_display_layout(root: Object) -> void:
 	if settings_overlay != null:
 		settings_overlay.size = display_view_size
 		_position_settings_controls()
+	var cloud_panel := root.get("cloud_save_panel") as CloudSavePanel
+	if cloud_panel != null: cloud_panel.apply_layout(display_view_size)
 	if name_entry_overlay != null:
 		name_entry_overlay.size = display_view_size
 		_position_name_entry_controls()
@@ -397,6 +401,10 @@ func set_state(new_state: StringName) -> void:
 
 
 func update_title_flow(root: Object, delta: float) -> void:
+	var cloud_panel := root.get("cloud_save_panel") as CloudSavePanel
+	if cloud_panel != null and cloud_panel.overlay != null and cloud_panel.overlay.visible:
+		cloud_panel.update_input()
+		return
 	if settings_overlay != null and settings_overlay.visible:
 		root.call("_update_settings_input")
 		return
@@ -440,10 +448,12 @@ func update_title_flow(root: Object, delta: float) -> void:
 	var new_game := title_start_button
 	var continue_button := title_continue_button
 	var settings_button := title_settings_button
-	if new_game != null: new_game.modulate.a = retro_button_alpha(frame_timer); new_game.position.y = 102.0 + retro_button_bob(frame_timer)
-	if continue_button != null: continue_button.modulate.a = retro_button_alpha(frame_timer + 0.4); continue_button.position.y = 120.0 + retro_button_bob(frame_timer + 0.4)
-	if settings_button != null: settings_button.modulate.a = retro_button_alpha(frame_timer + 0.8); settings_button.position.y = 138.0 + retro_button_bob(frame_timer + 0.8)
-	var title_buttons: Array[Button] = [new_game, continue_button, settings_button]
+	var cloud_button := title_cloud_button
+	if new_game != null: new_game.modulate.a = retro_button_alpha(frame_timer); new_game.position.y = 93.0 + retro_button_bob(frame_timer)
+	if continue_button != null: continue_button.modulate.a = retro_button_alpha(frame_timer + 0.3); continue_button.position.y = 109.0 + retro_button_bob(frame_timer + 0.3)
+	if cloud_button != null: cloud_button.modulate.a = retro_button_alpha(frame_timer + 0.6); cloud_button.position.y = 125.0 + retro_button_bob(frame_timer + 0.6)
+	if settings_button != null: settings_button.modulate.a = retro_button_alpha(frame_timer + 0.9); settings_button.position.y = 141.0 + retro_button_bob(frame_timer + 0.9)
+	var title_buttons: Array[Button] = [new_game, continue_button, cloud_button, settings_button]
 	var available_rows: Array[int] = []
 	for index in title_buttons.size():
 		if title_buttons[index] != null and not title_buttons[index].disabled: available_rows.append(index)
@@ -566,6 +576,7 @@ func start_new_game(root: Object) -> void:
 	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
 	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
 	if title_settings_button != null: title_settings_button.visible = false; title_settings_button.release_focus()
+	if title_cloud_button != null: title_cloud_button.visible = false; title_cloud_button.release_focus()
 	if title_cursor_text != null: title_cursor_text.visible = false
 	archetype_overlay.visible = true; set_state(&"archetype")
 	archetype_overlay.modulate.a = 1.0
@@ -590,6 +601,7 @@ func start_save_select(root: Object, mode: String) -> void:
 	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
 	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
 	if title_settings_button != null: title_settings_button.visible = false; title_settings_button.release_focus()
+	if title_cloud_button != null: title_cloud_button.visible = false; title_cloud_button.release_focus()
 	if title_cursor_text != null: title_cursor_text.visible = false
 
 
@@ -2606,31 +2618,35 @@ func update_hub_input(root: Object) -> void:
 		if action != null and not action.disabled: action.pressed.emit()
 
 
-func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool, settings_callback: Callable = Callable()) -> Dictionary:
+func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool, settings_callback: Callable = Callable(), cloud_callback: Callable = Callable()) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := create_view_overlay(parent, "TitleOverlay", Color.BLACK, 2)
 	var title_texture := pixel_texture.call("TINY DEMONS", Color.WHITE) as Texture2D
 	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((display_view_size.x - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
 	var version_text := create_sprite(overlay, "TitleVersion", pixel_texture.call(GAME_VERSION, Color8(148, 220, 255)) as Texture2D, Vector2(4, display_view_size.y - 8.0), false)
-	var new_game_button := make_retro_button("NEW GAME", Vector2((display_view_size.x - 64.0) * 0.5, 102), Vector2(64, 14), pixel_texture)
-	new_game_button.set_meta("title_base_y", 102.0)
+	var new_game_button := make_retro_button("NEW GAME", Vector2((display_view_size.x - 64.0) * 0.5, 93), Vector2(64, 14), pixel_texture)
+	new_game_button.set_meta("title_base_y", 93.0)
 	new_game_button.focus_mode = Control.FOCUS_NONE
 	new_game_button.pressed.connect(new_game_callback)
 	overlay.add_child(new_game_button)
-	var continue_button := make_retro_button("CONTINUE", Vector2((display_view_size.x - 64.0) * 0.5, 120), Vector2(64, 14), pixel_texture)
-	continue_button.set_meta("title_base_y", 120.0)
+	var continue_button := make_retro_button("CONTINUE", Vector2((display_view_size.x - 64.0) * 0.5, 109), Vector2(64, 14), pixel_texture)
+	continue_button.set_meta("title_base_y", 109.0)
 	continue_button.focus_mode = Control.FOCUS_NONE
 	continue_button.pressed.connect(continue_callback)
 	continue_button.disabled = not has_profile
 	overlay.add_child(continue_button)
-	var settings_button := make_retro_button("SETTINGS", Vector2((display_view_size.x - 64.0) * 0.5, 138), Vector2(64, 14), pixel_texture)
-	settings_button.set_meta("title_base_y", 138.0)
+	var cloud_button := make_retro_button("CLOUD SAVE", Vector2((display_view_size.x - 64.0) * 0.5, 125), Vector2(64, 14), pixel_texture)
+	cloud_button.set_meta("title_base_y", 125.0); cloud_button.focus_mode = Control.FOCUS_NONE
+	if cloud_callback.is_valid(): cloud_button.pressed.connect(cloud_callback)
+	overlay.add_child(cloud_button)
+	var settings_button := make_retro_button("SETTINGS", Vector2((display_view_size.x - 64.0) * 0.5, 141), Vector2(64, 14), pixel_texture)
+	settings_button.set_meta("title_base_y", 141.0)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	if settings_callback.is_valid(): settings_button.pressed.connect(settings_callback)
 	overlay.add_child(settings_button)
-	var cursor := create_sprite(overlay, "TitleCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 106 if not has_profile else 124), false)
+	var cursor := create_sprite(overlay, "TitleCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 97 if not has_profile else 113), false)
 	title_menu_row = 1 if has_profile else 0
-	return {"overlay": overlay, "text": title_text, "version": version_text, "new_game": new_game_button, "continue": continue_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
+	return {"overlay": overlay, "text": title_text, "version": version_text, "new_game": new_game_button, "continue": continue_button, "cloud": cloud_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
 
 
 func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable, select_option_callback: Callable = Callable()) -> Dictionary:
@@ -2777,6 +2793,7 @@ func close_settings(root: Object) -> void:
 		set_state(&"title")
 		title_menu_row = 2
 		if title_settings_button != null: title_settings_button.visible = true
+		if title_cloud_button != null: title_cloud_button.visible = true
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 

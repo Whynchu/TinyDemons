@@ -1,0 +1,4 @@
+project_id = "pzmrtzypkkxpoimwbgcs"
+
+[functions.recovery-vault]
+verify_jwt = false

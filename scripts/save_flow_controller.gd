@@ -5,12 +5,13 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
 
 func build_title_screen(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_title(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_start_new_game"), Callable(root, "_continue_game"), root.has_persistent_profile, Callable(root, "_open_settings_from_title"))
+	var controls: Dictionary = root.screen_state_controller.build_title(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_start_new_game"), Callable(root, "_continue_game"), root.has_persistent_profile, Callable(root, "_open_settings_from_title"), Callable(root, "_open_cloud_save"))
 	root.screen_state_controller.title_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.title_screen_text = controls["text"] as Sprite2D
 	root.screen_state_controller.title_start_button = controls["new_game"] as Button
 	root.screen_state_controller.title_continue_button = controls["continue"] as Button
 	root.screen_state_controller.title_settings_button = controls["settings"] as Button
+	root.screen_state_controller.title_cloud_button = controls["cloud"] as Button
 	root.screen_state_controller.title_start_text = controls["start_text"] as Sprite2D
 	root.screen_state_controller.title_settings_text = controls["settings_text"] as Sprite2D
 	root.screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D
@@ -225,6 +226,7 @@ func close_save_select(root: Object) -> void:
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
 	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
 	if root.screen_state_controller.title_settings_button != null: root.screen_state_controller.title_settings_button.visible = true
+	if root.screen_state_controller.title_cloud_button != null: root.screen_state_controller.title_cloud_button.visible = true
 	if root.screen_state_controller.title_cursor_text != null: root.screen_state_controller.title_cursor_text.visible = true
 	root.screen_state_controller.title_transition_active = false
 	root.screen_state_controller.pending_title_destination = ""
@@ -243,6 +245,7 @@ func cancel_character_creation(root: Object) -> void:
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
 	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
 	if root.screen_state_controller.title_settings_button != null: root.screen_state_controller.title_settings_button.visible = true
+	if root.screen_state_controller.title_cloud_button != null: root.screen_state_controller.title_cloud_button.visible = true
 	if root.screen_state_controller.title_cursor_text != null: root.screen_state_controller.title_cursor_text.visible = true
 	root.screen_state_controller.title_transition_active = false
 	root.screen_state_controller.pending_title_destination = ""
