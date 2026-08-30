@@ -169,7 +169,47 @@ func door_display_color(requirement: StringName) -> Color:
 
 
 func active_environment_palette() -> String:
-	return palette_for_requirement(state.active_puzzle_color)
+	# The shared Orb Room palette is the room-wide presentation state. Ordinary
+	# puzzle colors and mixed elemental charges both flow through this value, so
+	# an Orb hit changes the environment even when it is not one of the four
+	# strategic puzzle-color keys.
+	return state.shared_orb_palette if not state.shared_orb_palette.is_empty() else palette_for_requirement(state.active_puzzle_color)
+
+
+func element_requirement_for_palette(palette: String) -> StringName:
+	var normalized_palette := palette.to_lower()
+	if normalized_palette == "gray":
+		normalized_palette = "grey"
+	var element := ELEMENT_CATALOG_SCRIPT.element_for_palette(normalized_palette)
+	if element == ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL:
+		return &""
+	return ELEMENT_CATALOG_SCRIPT.id(element)
+
+
+func connection_gate_type(connection) -> StringName:
+	if connection == null:
+		return DungeonGraph.GATE_NONE
+	var explicit_type: StringName = connection.gate_type
+	if not explicit_type.is_empty() and explicit_type != DungeonGraph.GATE_NONE:
+		return explicit_type
+	if not connection.orb_element_requirement.is_empty():
+		return DungeonGraph.GATE_ENTRANCE_ORB
+	if not connection.element_requirement.is_empty():
+		return DungeonGraph.GATE_ELEMENT
+	if not connection.color_requirement.is_empty():
+		return DungeonGraph.GATE_PUZZLE_COLOR
+	return DungeonGraph.GATE_NONE
+
+
+func connection_display_requirement(connection) -> StringName:
+	match connection_gate_type(connection):
+		DungeonGraph.GATE_PUZZLE_COLOR:
+			return connection.color_requirement
+		DungeonGraph.GATE_ELEMENT:
+			return connection.element_requirement
+		DungeonGraph.GATE_ENTRANCE_ORB:
+			return connection.orb_element_requirement
+	return &""
 
 
 func puzzle_color_for_palette(palette: String) -> StringName:
@@ -238,11 +278,13 @@ func change_orb_from_room(room_id: StringName, next_puzzle_color: StringName = &
 		return false
 	var puzzle_color_was_current: bool = state.active_puzzle_color == next_puzzle_color
 	var room_was_complete: bool = state.is_room_completed(room_id)
-	state.shared_orb_palette = next_palette
+	var orb_element_requirement := element_requirement_for_palette(next_palette)
+	var orb_state_changed := state.set_shared_orb_state(next_palette, orb_element_requirement, false)
 	if not state.set_puzzle_color(next_puzzle_color):
 		return false
+	var orb_gate_changed := _activate_orb_connections(orb_element_requirement)
 	on_room_completed(room_id)
-	if puzzle_color_was_current and room_was_complete:
+	if room_was_complete and (orb_state_changed or puzzle_color_was_current or orb_gate_changed):
 		# A direct fusion charge may have changed the shared presentation while the
 		# strategic Puzzle Color key stayed the same. Emit the missing refresh event.
 		state.changed.emit()
@@ -262,19 +304,48 @@ func change_orb_from_palette(room_id: StringName, palette: String) -> bool:
 	if normalized_palette not in PaletteLibrary.PALETTE_NAMES:
 		return false
 	# Earned starter flames retain their strategic Puzzle Color behavior. Any
-	# other valid elemental palette (including fusion results) still charges the
-	# shared Orb Room presentation, but must not invalidate the puzzle-key state
-	# used by ordinary color-gated doors.
+	# other valid elemental palette is an exclusive fusion result: it charges the
+	# shared Orb Room presentation and clears the ordinary Puzzle Color key. A
+	# mixed result therefore cannot continue to satisfy either input color door.
 	var requested_color := puzzle_color_for_palette(normalized_palette)
 	if not requested_color.is_empty():
 		return change_orb_from_room(room_id, requested_color)
 	var palette_changed: bool = state.shared_orb_palette != normalized_palette
-	state.shared_orb_palette = normalized_palette
+	var orb_element_requirement := element_requirement_for_palette(normalized_palette)
+	var orb_element_changed: bool = state.shared_orb_element != orb_element_requirement
+	var puzzle_key_changed: bool = state.active_puzzle_color != MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL or state.shared_orb_puzzle_color != MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL
+	var orb_state_changed := state.set_shared_orb_state(normalized_palette, orb_element_requirement, false)
+	if puzzle_key_changed:
+		# Keep the ordinary key separate from the mixed Orb presentation. The
+		# optional count flag makes this one Orb charge even though two state
+		# fields are being updated.
+		state.set_puzzle_color(MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL, false)
+	if orb_state_changed or puzzle_key_changed:
+		state.orb_change_count += 1
+	var orb_gate_changed := _activate_orb_connections(orb_element_requirement)
 	var room_was_complete: bool = state.is_room_completed(room_id)
 	on_room_completed(room_id)
-	if palette_changed and room_was_complete:
+	if room_was_complete and (orb_state_changed or palette_changed or orb_element_changed or puzzle_key_changed or orb_gate_changed):
 		state.changed.emit()
 	return true
+
+
+func _activate_orb_connections(element_requirement: StringName) -> bool:
+	if graph == null or element_requirement.is_empty():
+		return false
+	var changed_value := false
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room == null:
+			continue
+		for connection_value in room.outgoing_connections.values():
+			var connection := connection_value as DungeonGraph.ConnectionRecord
+			if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_ENTRANCE_ORB:
+				continue
+			if connection.orb_element_requirement != element_requirement:
+				continue
+			changed_value = state.mark_orb_connection_solved(connection, false) or changed_value
+	return changed_value
 
 
 func current_color() -> StringName:
@@ -285,11 +356,15 @@ func shared_orb_puzzle_color() -> StringName:
 	return state.shared_orb_puzzle_color
 
 
+func shared_orb_element() -> StringName:
+	return state.shared_orb_element
+
+
 func orb_display_palette() -> StringName:
 	# Orb Rooms are light blue only on the minimap. Their in-world orb starts
 	# grey, then mirrors the shared elemental charge after activation. The
-	# strategic puzzle key remains separate so a fusion palette cannot make
-	# ordinary starter-color doors invalid.
+	# strategic puzzle key is cleared for an exclusive fusion palette, so a
+	# fusion result cannot make either input color door valid by accident.
 	return StringName(state.shared_orb_palette if not state.shared_orb_palette.is_empty() else palette_for_requirement(state.shared_orb_puzzle_color))
 
 
@@ -337,11 +412,21 @@ func completed_run_room_count() -> int:
 
 
 func is_connection_color_locked(connection: DungeonGraph.ConnectionRecord) -> bool:
-	return connection != null and not connection.color_requirement.is_empty() and (connection.color_requirement != state.active_puzzle_color or connection.color_requirement not in available_puzzle_colors())
+	if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_PUZZLE_COLOR:
+		return false
+	if state.is_color_connection_solved(connection):
+		return false
+	return connection.color_requirement != state.active_puzzle_color or connection.color_requirement not in available_puzzle_colors()
+
+
+func is_connection_orb_locked(connection: DungeonGraph.ConnectionRecord) -> bool:
+	if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_ENTRANCE_ORB or connection.orb_element_requirement.is_empty():
+		return false
+	return not state.is_orb_connection_solved(connection)
 
 
 func is_connection_element_locked(connection: DungeonGraph.ConnectionRecord) -> bool:
-	if connection == null or connection.element_requirement.is_empty() or state.is_element_connection_solved(connection):
+	if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_ELEMENT or connection.element_requirement.is_empty() or state.is_element_connection_solved(connection):
 		return false
 	return current_element != ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)
 
@@ -362,6 +447,7 @@ func is_room_engaged(room_id: StringName) -> bool:
 func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entrance: bool = false) -> bool:
 	if connection == null:
 		return false
+	var gate_type: StringName = connection_gate_type(connection)
 	var source_room := graph.get_room(connection.source_room_id) if graph != null else null
 	var destination_room := graph.get_room(connection.destination_room_id) if graph != null else null
 	# Once the boss is defeated, its arrival route is a guaranteed way back out.
@@ -374,7 +460,9 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		return false
 	if is_connection_color_locked(connection):
 		return false
-	if not connection.element_requirement.is_empty():
+	if is_connection_orb_locked(connection):
+		return false
+	if gate_type == DungeonGraph.GATE_ELEMENT:
 		if is_connection_element_locked(connection):
 			return false
 	if source_room == null:
@@ -396,11 +484,16 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		# Once the source side is valid, the destination remains escapable until
 		# the player lands the first hit there.
 		var entrance_available := destination_room == null or not (connection.locks_entry_on_destination_engagement and requires_room_clear(destination_room) and state.is_room_engaged(destination_room.id) and not state.is_room_completed(destination_room.id))
-		if entrance_available and not connection.element_requirement.is_empty():
-			state.mark_element_connection_solved(connection)
+		if entrance_available:
+			if gate_type == DungeonGraph.GATE_ELEMENT:
+				state.mark_element_connection_solved(connection)
+			elif gate_type == DungeonGraph.GATE_PUZZLE_COLOR:
+				state.mark_color_connection_solved(connection)
 		return entrance_available
-	if not connection.element_requirement.is_empty():
+	if gate_type == DungeonGraph.GATE_ELEMENT:
 		state.mark_element_connection_solved(connection)
+	elif gate_type == DungeonGraph.GATE_PUZZLE_COLOR:
+		state.mark_color_connection_solved(connection)
 	return true
 
 
@@ -420,6 +513,8 @@ func connection_visual_state(connection: DungeonGraph.ConnectionRecord, is_entra
 	if connection == null:
 		return &"hidden"
 	if is_connection_color_locked(connection):
+		return &"orb_locked"
+	if is_connection_orb_locked(connection):
 		return &"orb_locked"
 	if is_connection_element_locked(connection):
 		return &"element_locked"

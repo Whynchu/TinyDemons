@@ -25,16 +25,24 @@ func _initialize() -> void:
 	_expect(graph != null and map != null and chroma != null, "R6 scene composes map and Chroma owners", failures)
 	if graph != null and map != null and chroma != null:
 		map.call("begin_run", graph, 607001, 5, &"fire")
-		var gate: DungeonGraph.ConnectionRecord = _first_element_gate(graph)
-		_expect(gate != null, "Run 6 scene graph contains a fusion-element gate", failures)
+		map.call("set_starter_flame_attuned", true)
+		var gate: DungeonGraph.ConnectionRecord = _first_orb_gate(graph)
+		_expect(gate != null, "Run 6 scene graph contains a fusion entrance-orb gate", failures)
 		if gate != null:
-			var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(gate.element_requirement)
+			var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(gate.orb_element_requirement)
+			var required_palette := ELEMENT_CATALOG_SCRIPT.palette_key(required_element)
 			_expect(required_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL, "R6 gate has a valid non-neutral element", failures)
 			map.call("set_current_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)
-			_expect(map.call("connection_visual_state", gate, false) == &"element_locked", "R6 fusion gate is visibly locked before its result is active", failures)
+			_expect(map.call("connection_visual_state", gate, false) == &"orb_locked", "R6 entrance-orb gate is visibly locked before its orb is charged", failures)
 			chroma.call("attune", required_element)
 			gameplay.call("_sync_current_element_state")
-			_expect(map.call("connection_visual_state", gate, false) == &"open", "active unbound fusion result opens the R6 scene gate", failures)
+			_expect(map.call("connection_visual_state", gate, false) == &"orb_locked", "active unbound fusion result does not bypass the R6 scene gate", failures)
+			var orb_room_id: StringName = _first_orb_room(graph)
+			_expect(not orb_room_id.is_empty(), "R6 scene graph exposes an Orb Room", failures)
+			if not orb_room_id.is_empty():
+				map.call("on_room_entered", orb_room_id)
+				_expect(map.call("change_orb_from_palette", orb_room_id, required_palette), "R6 scene Orb Room accepts the matching result", failures)
+			_expect(map.call("connection_visual_state", gate, false) == &"open", "matching Orb charge opens the R6 scene gate", failures)
 			chroma.call("spend_chroma", 100)
 			gameplay.call("_sync_current_element_state")
 			_expect(map.call("connection_visual_state", gate, false) == &"open", "opened R6 fusion gate remains latched after Chroma depletion", failures)
@@ -43,16 +51,24 @@ func _initialize() -> void:
 	_finish(failures)
 
 
-func _first_element_gate(graph: DungeonGraph) -> DungeonGraph.ConnectionRecord:
+func _first_orb_gate(graph: DungeonGraph) -> DungeonGraph.ConnectionRecord:
 	for room_id in graph.get_room_ids():
 		var room := graph.get_room(room_id)
 		if room == null:
 			continue
 		for connection_value in room.outgoing_connections.values():
 			var connection := connection_value as DungeonGraph.ConnectionRecord
-			if connection != null and not connection.element_requirement.is_empty():
+			if connection != null and connection.resolved_gate_type() == DungeonGraph.GATE_ENTRANCE_ORB:
 				return connection
 	return null
+
+
+func _first_orb_room(graph: DungeonGraph) -> StringName:
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room != null and room.room_type == DungeonGraph.ROOM_ORB:
+			return room.id
+	return &""
 
 
 func _watchdog() -> void:

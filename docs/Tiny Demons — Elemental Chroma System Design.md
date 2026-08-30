@@ -175,10 +175,13 @@ Early progression should intentionally function like an elemental training curri
   presentation, fusion input, and elemental door checks.
 - The **bound aspect** is the persistent identity used by zero-Chroma recovery,
   save data, and the hub flame.
-- A current unbound fusion can open a required elemental door without first
-  paying the 50-Soul Binding cost.
-- Once an elemental door is solved, it remains unlocked and does not re-check
-  Binding or Chroma later.
+- A current unbound fusion can open a required current-element door without
+  first paying the 50-Soul Binding cost. An entrance-orb gate instead requires
+  the matching result to charge the shared Orb; changing form alone is not
+  enough.
+- Fusion results are exclusive to their resulting element and clear the
+  ordinary Puzzle Color key. Once any required gate is solved, it remains
+  unlocked and does not re-check Binding or Chroma later.
 
 ## Color System
 Start with three named base aspects mapped to primary-color identities:

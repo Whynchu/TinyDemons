@@ -38,6 +38,20 @@ func _initialize() -> void:
 	_expect(treasure_count >= 3, "generated layout contains optional Treasure branches", failures)
 	_expect(boss_depth == 13, "Run 2 extends the boss depth beyond the authored Run 1 route", failures)
 	_expect(_special_routes_have_progression_and_option_routes(first), "each generated Special Room has a progression route and a valid optional route", failures)
+	var pacing_run_numbers: Array[int] = [3, 4, 5, 9, 10, 11, 12]
+	var pacing_targets: Array[int] = [22, 23, 24, 24, 25, 25, 26]
+	var pacing_boss_depths: Array[int] = [13, 14, 15, 15, 16, 16, 17]
+	for pacing_index in pacing_run_numbers.size():
+		var pacing_run_number := pacing_run_numbers[pacing_index]
+		var pacing_layout = GENERATOR_SCRIPT.build(600000 + pacing_run_number, pacing_run_number - 1, &"fire")
+		var pacing_boss_depth := -1
+		for pacing_room in pacing_layout.rooms:
+			if pacing_room.room_type == GRAPH_SCRIPT.ROOM_BOSS:
+				pacing_boss_depth = pacing_room.coordinate.y
+		_expect(GENERATOR_SCRIPT.generated_room_target_for_run(pacing_run_number) == pacing_targets[pacing_index], "generated room target stays on the approved soft curve at Run %d" % pacing_run_number, failures)
+		_expect(pacing_boss_depth == pacing_boss_depths[pacing_index], "generated boss depth stays on the approved soft curve at Run %d" % pacing_run_number, failures)
+		_expect(pacing_layout.rooms.size() >= pacing_targets[pacing_index], "generated route reaches its soft room target at Run %d" % pacing_run_number, failures)
+		_expect(pacing_layout.rooms.size() <= pacing_targets[pacing_index] + 2, "generated optional branches do not run away from the room target at Run %d" % pacing_run_number, failures)
 	var two_primary_special_found := false
 	var detour_orb_count := 0
 	var generated_fire_flames: Array[StringName] = []

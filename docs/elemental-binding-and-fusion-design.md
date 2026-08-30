@@ -1,6 +1,6 @@
 # Tiny Demons — Elemental Binding and Flame Fusion Design
 
-Status: approved design and implemented core; R6+ fusion-gate curriculum included
+Status: approved design and implemented core; R6+ entrance-orb fusion-gate curriculum included
 
 This document is the canonical player-facing and systems-facing specification
 for elemental swapping, fusion, and permanent Binding. It records the design
@@ -25,8 +25,9 @@ The design therefore separates three jobs:
 1. **Flames** provide temporary elemental actions: swapping and fusion.
 2. **The Cloaked Demon** records a permanent elemental commitment through
    Binding.
-3. **Elemental doors** inspect the player's current active element, not the
-   permanent save-file binding.
+3. **Dungeon gates** have explicit puzzle-color, current-element, or
+   entrance-orb requirements. Entrance-orb gates inspect the shared Orb Room
+   state, not the player's current form alone.
 
 This preserves the excitement of elemental routing while ensuring that a
 required Ice, Ground, Grass, or Shadow door can be solved inside the dungeon
@@ -45,7 +46,8 @@ It is the element used by:
 
 - the current Triangle ability;
 - elemental class presentation and combat-element mapping;
-- elemental door checks;
+- current-element door checks;
+- charging a matching entrance Orb;
 - the first input to a flame fusion;
 - the player's current color while Chroma is active.
 
@@ -267,10 +269,21 @@ normal Swap-only flame interaction, not an error and not an automatic blend.
 
 ## 7. Door and puzzle contract
 
-Elemental doors read the **current active element**, including an unbound
-fusion result. They do not require the element to be saved or bound.
+Every connection declares one gate type:
 
-When the current element satisfies a required door:
+- **Puzzle-color gates** read `active_puzzle_color`, which is changed by the
+  ordinary shared Orb color flow. A fusion result is exclusive: charging a
+  mixed palette clears the ordinary Puzzle Color key, so it cannot satisfy
+  either input-color door. A color gate that was already opened is latched and
+  remains open.
+- **Current-element gates** read the player's active element, including an
+  unbound fusion result. They do not require the element to be saved or bound.
+- **Entrance-orb gates** require the player to strike a shared Orb Room orb
+  with the named elemental result. The orb charge updates the shared room
+  palette/state and latches the matching connection. Merely changing into the
+  required element never satisfies this gate.
+
+When a gate's requirement is satisfied:
 
 1. The door opens or the puzzle accepts the interaction.
 2. The door's solved/unlocked state is latched for the applicable run/profile.
@@ -282,7 +295,9 @@ Binding cost merely to pass. A generated or authored route must guarantee:
 
 - the input flame needed for the recipe is reachable;
 - the recipe's second flame is reachable;
-- the required door is reachable after the fusion;
+- a matching entrance Orb is reachable before each mandatory fusion gate;
+- the required Orb Room and door are reachable after the fusion, without
+  inheriting an unrelated ordinary color key;
 - the route does not depend on an unbound element surviving an arbitrary
   resource depletion event;
 - a failed or cancelled interaction leaves a recoverable route.
@@ -301,9 +316,12 @@ not always teach the same hybrid first.
 
 Run 8 and later teach the chained Water + Electric → Grass, then Grass + Water
 → Ice sequence. The Grass and Ice gates are each placed after their required
-input flames. Layout validation performs a reachability pass for every
-generated fusion gate, and the solved state is latched when the current element
-opens the route.
+input flames. The player charges the shared Orb Room with each result before
+passing its corresponding entrance-orb gate. The second Orb is placed beside
+the depth-10 Water fire room, before the Ice gate, rather than behind that
+gate. Layout validation performs a reachability pass for every generated
+fusion gate, including reaching an Orb Room with the required result, and the
+solved state is latched when the Orb charge opens the route.
 
 ## 8. Chroma and zero-MP behavior
 
@@ -407,7 +425,8 @@ Binding is not a second combat typing layer.
 - The bound element supplies persistence/recovery behavior, not an additional
   damage type.
 - Player damage maps the current aspect to the existing combat element catalog.
-- Elemental doors use current aspect identity, not damage effectiveness.
+- Current-element gates use current aspect identity, not damage effectiveness;
+  entrance-orb gates use their latched shared Orb state.
 - Equipment fusion remains unrelated to elemental fusion.
 
 Any future dual-element attack, passive inheritance, or bound/current stat
@@ -430,10 +449,11 @@ holding the interaction button through the short fusion threshold performs
 Fuse. A flame encounter cannot infer fusion from the presence of a bound
 element or from the player's current color alone.
 
-### A required door becomes a resource trap
+### A required gate becomes a resource trap
 
-Door validation must operate on current active element and latch completion.
-Generation must prove the flame/recipe/door sequence before accepting a layout.
+Gate validation must prove the flame/recipe/Orb/door sequence before accepting
+a layout. Current-element and entrance-orb gates must both latch completion so
+later Chroma changes cannot invalidate progress.
 
 ### Temporary elements become confusing
 
@@ -469,7 +489,8 @@ Use Water flame for 5 Souls
 → current Grass, unbound
 → use Water flame and choose FUSE for 5 Souls
 → current Ice, unbound
-→ Ice door opens and remains unlocked
+→ charge the shared Orb with Ice
+→ Ice entrance-orb door opens and remains unlocked
 → optionally bind Ice at the Demon for 50 Souls
 ```
 
@@ -493,7 +514,9 @@ The design is ready for implementation when the following are accepted:
 - Fusion works without any bound element;
 - every permanent Bind occurs at the Cloaked Demon and costs 50 Souls;
 - Fusion results remain unbound until the Demon confirms Binding;
-- required elemental doors accept current unbound elements and latch open;
+- current-element gates accept current unbound elements and latch open;
+- entrance-orb gates require the matching mixed result to charge an Orb and
+  latch open;
 - the four initial recipes are data-driven and commutative;
 - save/hub identity changes only after successful Binding;
 - zero-Chroma behavior is covered for bound, unbound, and current/bound-mismatch

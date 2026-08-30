@@ -84,8 +84,10 @@ The flame Binding/Fusion extension adds these separate transaction rules:
   current plus the contacted flame.
 - Fusion results are immediately current but remain unbound.
 - Bind/Rebind occurs only at the Cloaked Demon and costs 50 Souls.
-- Required elemental doors check current active element, including unbound
-  fusion results, and latch open without requiring Binding.
+- Current-element doors check current active element, including unbound fusion
+  results, and latch open without requiring Binding. Entrance-orb doors require
+  the matching shared Orb charge; a fusion result is exclusive and clears the
+  ordinary Puzzle Color key while preserving already-solved color doors.
 
 ### 1.4 Triangle and Gray
 
@@ -332,9 +334,11 @@ Validation must prove:
 - backtracking remains available;
 - mandatory depletion rooms cannot receive random Chroma or enemies;
 - spent Chroma cannot make the run permanently unsolvable;
-- current unbound fusion can reach and solve its required elemental door;
+- current unbound fusion can reach and solve its required current-element or
+  entrance-orb gate;
 - required doors never require a return to the Demon solely to pay Binding;
-- solved elemental doors latch and cannot re-lock after Chroma/element changes;
+- solved color, current-element, and entrance-orb doors latch and cannot
+  re-lock after Chroma/element changes;
 - puzzles can reset safely;
 - an unexpected requirement creates rerouting rather than a dead run.
 
@@ -380,9 +384,9 @@ Validation must prove:
 - All three Run 1 curriculum variants are solvable.
 - Forced depletion cannot be invalidated by random encounters or pickups.
 - Run 2 flame/gate ordering passes deterministic reachability validation.
-- A mandatory Ice door is solvable through current unbound fusion without a
-  prior permanent Bind.
-- A solved elemental door remains open after current/Chroma changes.
+- A mandatory Ice entrance-orb gate is solvable through current unbound fusion
+  without a prior permanent Bind, with its Orb reachable before the gate.
+- A solved gate remains open after current/Chroma changes.
 
 Continue running the existing headless suite after every slice:
 

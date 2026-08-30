@@ -106,7 +106,7 @@ func _initialize() -> void:
 		for elemental_palette in ["green", "aquamarine", "orange", "purple"]:
 			_expect(controller.change_orb_from_palette(first_orb_id, elemental_palette), "%s elemental energy can charge an Orb Room" % elemental_palette, failures)
 			_expect(controller.orb_display_palette() == StringName(elemental_palette), "%s elemental charge persists as the shared Orb Room presentation" % elemental_palette, failures)
-		_expect(controller.current_color() == &"puzzle_b", "direct elemental orb charges do not corrupt the puzzle-color key", failures)
+		_expect(controller.current_color() == MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL and controller.shared_orb_puzzle_color() == MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL, "direct mixed orb charges clear the puzzle-color key", failures)
 
 	controller.set_starter_flame(&"water")
 	_expect(controller.starter_palette() == "blue", "water starter flame resolves to the blue palette", failures)

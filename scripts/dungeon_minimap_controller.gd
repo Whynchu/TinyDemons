@@ -3,8 +3,9 @@ class_name DungeonMinimapController
 
 ## Presentation-only renderer for complete dungeon layouts.
 ##
-## Both light-blue Orb Room pixels and the blue/green door pixels are
-## reference-map swatches. Runtime gate logic is read from puzzle_a/puzzle_b.
+## Orb Room pixels remain light-blue markers. Door pixels resolve their display
+## color from the same gate requirement data used by runtime traversal, so
+## puzzle, elemental, and mixed entrance-orb doors stay visually consistent.
 
 const MAP_SIZE := Vector2i(16, 23)
 const DISPLAY_SCALE := 2.0
@@ -142,8 +143,10 @@ func layout_is_empty() -> bool:
 
 func _draw_connection(connection) -> void:
 	var color := COLOR_DOOR
-	if not connection.color_requirement.is_empty():
-		color = _door_color(connection.color_requirement)
+	if map_controller != null:
+		var requirement: StringName = map_controller.call("connection_display_requirement", connection) as StringName
+		if not requirement.is_empty():
+			color = _door_color(requirement)
 	_set_map_pixel(connection.minimap_coordinate, color)
 
 

@@ -145,8 +145,9 @@ The interaction should be treated as a map-state event that is only available in
    while any other valid elemental energy (including Grass, Ice, Ground, and
    Shadow fusion results) is accepted as a shared elemental orb charge.
 4. A Puzzle Color key and its shared orb palette change together. An unkeyed
-   elemental charge changes the shared orb palette while preserving the current
-   Puzzle Color key used by ordinary color-gated doors.
+   elemental charge changes the shared orb palette and clears the current
+   Puzzle Color key; it cannot satisfy an ordinary color-gated door. A color
+   gate already opened before that charge remains latched.
 5. Every Orb Room orb synchronizes to the new elemental color.
 6. Every color-gated connection reevaluates when the Puzzle Color key changed.
 7. The environment palette and minimap update from the same strategic state.
@@ -172,7 +173,7 @@ When a room becomes complete, the map-state owner may reveal any connections who
 
 ## Global environment color
 
-`active_puzzle_color` is run state, not room-local puzzle state. It starts as Puzzle Color B, changes only when an Orb Room changes its shared orb, and persists while the run continues. The two identical Orb Rooms always reflect this same state. Puzzle Color B and the legacy neutral value resolve to grey environment presentation; Puzzle Color A resolves to the selected starter flame palette.
+`active_puzzle_color` is run state, not room-local puzzle state. It starts as Puzzle Color B, changes only when an Orb Room changes its shared orb, and persists while the run continues. A mixed elemental Orb charge sets the ordinary key to `neutral` while retaining its own shared presentation palette. The two identical Orb Rooms always reflect this same state. Puzzle Color B and the legacy neutral value resolve to grey environment presentation; Puzzle Color A resolves to the selected starter flame palette.
 
 On room load, the room presentation applies the active puzzle-color state to the intended environmental surfaces. This should include the room's floor, wall, and door/entrance art that is meant to react to the map state. It should exclude the background layer, UI, actor sprites, collision guides, and hidden/unrendered surfaces unless explicitly included by the art direction.
 
@@ -261,9 +262,10 @@ The design is considered correctly implemented when:
 3. Run 1 begins grey; changing either identical Orb Room orb changes one shared
    `active_puzzle_color` state to Puzzle Color A or Puzzle Color B, with A
    resolving to the selected starter flame and B resolving to grey. Grass, Ice,
-   Ground, Shadow, and other valid elemental charges also recolor the shared
-   orb presentation without replacing the strategic Puzzle Color key.
-4. Color-gated doors open only when their requirement matches that state.
+   Ground, Shadow, and other valid elemental charges recolor the shared orb
+   presentation and clear the ordinary Puzzle Color key.
+4. Color-gated doors open only when their requirement matches that state, or
+   when that individual door was already solved and latched.
 5. Ordinary doors are not accidentally color locked.
 6. Enemy defeat opens Treasure Room exits even if its single chest remains unopened.
 7. Completed rooms can reveal their authored additional entrances.

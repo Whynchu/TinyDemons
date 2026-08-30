@@ -101,11 +101,13 @@ The approved recipes are:
 | Water | Electric | Grass |
 | Grass | Water | Ice |
 
-Elemental doors check the current active element, including an unbound fusion
-result. Required doors must not require Binding or the 50-Soul fee, and a
-solved door remains unlocked after later Chroma or element changes. The full
-state, interaction, persistence, and verification contract is in the linked
-Binding/Fusion design document.
+Current-element doors check the current active element, including an unbound
+fusion result. Entrance-orb doors require the matching result to charge the
+shared Orb Room; changing into that element alone is not sufficient. Required
+doors must not require Binding or the 50-Soul fee. A mixed result is exclusive:
+it clears the ordinary Puzzle Color key, while any ordinary door already opened
+before the fusion remains latched. The full state, interaction, persistence,
+and verification contract is in the linked Binding/Fusion design document.
 
 ## 3. Triangle ability rules
 
@@ -266,9 +268,11 @@ source of truth.
 - Add the 50-Soul Cloaked Demon Binding menu and profile persistence.
 - Add the four approved recipes and unbound fusion chaining.
 - Preserve bound aspect identity at zero Chroma.
-- Make required elemental doors accept current unbound elements and latch open.
-- Add mandatory fusion-element gates to generated Run 6+ layouts, with the
-  chained Grass/Ice curriculum beginning on Run 8.
+- Make current-element doors accept current unbound elements and latch open.
+- Add mandatory entrance-orb fusion gates to generated Run 6+ layouts, with
+  the chained Grass/Ice curriculum beginning on Run 8.
+- Keep fusion results exclusive to their resulting element, latch opened
+  Puzzle Color doors, and guarantee each chained fusion Orb before its gate.
 - Implement weakened non-elemental variants only where the ability contract
   approves them.
 - Follow [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)
@@ -348,6 +352,8 @@ Before the first slice is complete, add tests covering:
 - Fusion results remain unbound until the Cloaked Demon confirms Binding;
 - Binding costs exactly 50 Souls and updates save/hub identity atomically;
 - required doors accept unbound current elements and remain solved;
+- mixed Orb charges clear the ordinary Puzzle Color key without re-locking
+  already-solved color doors;
 - stat, passive, and ability identity derive from the selected flame;
 - HUD and visual saturation reflect the same Chroma value.
 

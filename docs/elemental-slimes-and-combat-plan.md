@@ -390,7 +390,7 @@ All rows verified against the current tree:
 | Slime element storage | None | `SlimeActor` field set by `configure_slime_variant`; also extend the `@export_enum` at `slime_actor.gd:4` with `grey`/`yellow` |
 | Health application | `SlimeActor.damage_actor` (`slime_actor.gd:113`), `HealthComponent.apply_damage` | Unchanged amount-only API; typed event flows to feedback in parallel |
 | Damage number color | `CombatRuntimeController.spawn_damage_number` (`combat_runtime_controller.gd:395`), `spawn_player_damage_number` (`:406`), `EffectsSpawner.spawn_health_number` (`effects_spawner.gd:323`) | Optional color parameter forwarded through the existing `healing_color` override channel; no `EffectsSpawner` signature change |
-| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare, Shadow encounters guarantee a Normal Slime popcorn slot, boss rooms scale from two supports by run up to six, popcorn levels stay `max(1, player level - 5)`, and popcorn slots respawn while the Shadow/scaled boss remains alive |
+| Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare, Shadow encounters guarantee a Normal Slime popcorn slot, boss rooms use two supports through R2, three through R6, and four thereafter, while mixed minors grow in steps from R5; popcorn levels stay `max(1, player level - 5)`, and popcorn slots respawn while the Shadow/scaled boss remains alive |
 | Visual source selection | `build_slime_direction_textures` (`actor_presentation_runtime_controller.gd:64-77`), `SlimeVisualComponent` frame libraries | Generalized fallback recoloring plus `grey`/`yellow` frame entries |
 
 The `ElementCatalog` must not become an alias for `PaletteLibrary`, and
@@ -501,17 +501,19 @@ feedback without reading a debug label.
   `1.0`, so their interactions are introduced after the existing roster.
   Purple's constants are untouched.
 - Boss tables keep the lead/minor selection rules (lead never Purple; minors
-  blue/green/red with the 4% Purple conversion) and add two guaranteed Normal
-  Slime popcorn support slots on Run 1, adding one per run up to six. Every
-  popcorn support uses `max(1, player level - 5)` rather than the ordinary
-  encounter cap or run difficulty bonus so these slots remain deliberately
-  weak.
+  blue/green/red with the 4% Purple conversion) and add guaranteed Normal
+  Slime popcorn support slots on Run 1. The boss uses two neutral supports on
+  Runs 1–2, three on Runs 3–6, and four from Run 7 onward. Mixed minor slimes
+  begin with one slot on Run 5, two on Run 6, and then add one slot every three
+  runs from Run 7 onward. Every popcorn support uses `max(1, player level - 5)`
+  rather than the ordinary encounter cap or run difficulty bonus so these
+  slots remain deliberately weak.
 - Update `GAMEPLAY_TUNING.md`: final stat/matchup weights, the two new
   catalog scripts, and fix the verified stale claim that there are five
   tuning resources — `chroma_tuning.gd` exists and is unindexed.
 - Encounter tests: Normal Slime appears in generated pools; Shadow encounters
-  guarantee popcorn slots for Normal Slimes; boss rooms scale from two supports
-  upward by run; Yellow never appears
+  guarantee popcorn slots for Normal Slimes; boss rooms use the staged
+  2/3/4-support curve with mixed minors added gradually; Yellow never appears
   below depth 2; Purple rarity bounds from `rogue_slime_smoke.gd:24-40,63-74`
   still hold.
 - Run the full smoke suite and compare early-room time-to-kill and

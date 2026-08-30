@@ -49,7 +49,7 @@ All feel and balance values live on `scripts/player_tuning.gd`:
   `0.28s`.
 - Spin uses `0.075s` frame timing, slows to `0.14s` from frame 6, applies
   `0.90x` damage and `1.10x` knockback, and does not split damage across
-  multiple enemies. Its `12.0`-pixel `spin_lunge_distance` eases out from
+  multiple enemies. Its `14.0`-pixel `spin_lunge_distance` eases out from
   peak speed through frame 5 of the eight-frame animation, leaving the final
   two recovery frames stationary. This makes its single-target hit slightly
   weaker than a normal Attack 1 while rewarding a clean multi-target spin.

@@ -32,7 +32,7 @@ func _initialize() -> void:
 			var variants := encounter["variants"] as Array
 			var scales := encounter["scales"] as Array
 			var popcorn := encounter["popcorn"] as Array
-			var expected_minor_count := 0 if rank < 5 else 4 if rank <= 5 else 6
+			var expected_minor_count := 0 if rank < 5 else 1 if rank == 5 else 2 if rank == 6 else 2 + floori(float(rank - 7) / 3.0)
 			_expect(String(variants[0]) != "purple", "scaled lead boss excludes the purple variant at rank %d seed %d" % [rank, seed], failures)
 			_expect(variants.size() == scales.size() and variants.size() == popcorn.size(), "boss support slots keep encounter arrays aligned at rank %d seed %d" % [rank, seed], failures)
 			_expect(variants.size() == 1 + expected_minor_count + rooms._boss_support_popcorn_count(), "boss encounter uses the expected mixed-support roster at Run %d" % rank, failures)
@@ -45,7 +45,7 @@ func _initialize() -> void:
 			for popcorn_value in popcorn:
 				if bool(popcorn_value):
 					support_count += 1
-			var expected_support_count := mini(2 + maxi(rank - 1, 0), 6)
+			var expected_support_count := 2 if rank <= 2 else 3 if rank <= 6 else 4
 			_expect(support_count == expected_support_count and support_count == rooms._boss_support_popcorn_count() and support_count >= 2, "boss encounter scales to %d Normal Slime popcorn supports at Run %d" % [expected_support_count, rank], failures)
 			boss_minor_slot_count += variants.size() - 1
 			for variant_index in range(1, variants.size()):
