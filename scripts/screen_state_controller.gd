@@ -109,6 +109,11 @@ var hub_page := 0
 var hub_root_page: Control = null
 var hub_page_roots: Dictionary = {}
 var hub_item_index := 0
+var hub_list_scroll := 0.0
+var hub_choice_scroll := 0.0
+var hub_list_cursor: Sprite2D = null
+var hub_slot_cursor: Sprite2D = null
+var hub_choice_cursor: Sprite2D = null
 var hub_gear_candidate_indices := {"weapon": 0, "head": 0, "body": 0, "arm": 0, "shield": 0, "accessory": 0}
 var hub_gear_browsing := false
 var hub_fusion_candidates: Array[ItemInstance] = []
@@ -1207,6 +1212,9 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	if bind_element.is_valid(): binding_action_button.pressed.connect(bind_element)
 	bind_page.add_child(binding_action_button)
 	var cursor := create_sprite(root_page, "HubCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); cursor.visible = false
+	var list_cursor := create_sprite(items_page, "HubListCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); list_cursor.visible = false
+	var slot_cursor := create_sprite(items_page, "HubSlotCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); slot_cursor.visible = false
+	var choice_cursor := create_sprite(items_page, "HubChoiceCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); choice_cursor.visible = false
 	hub_item_list_panel = item_list_panel
 	hub_item_content_clip = item_content_clip
 	hub_gear_choice_panel = gear_choice_panel
@@ -1214,7 +1222,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	hub_item_detail_panel = item_detail_panel
 
 	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back_callback)
-	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": currency_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "allocate_preview_panel": allocate_preview_panel, "allocate_preview_title": hub_allocate_preview_title, "allocate_preview": hub_allocate_preview_texts, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
+	return {"overlay": overlay, "summary": summary, "points": points, "stats": stats, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": currency_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "list_cursor": list_cursor, "slot_cursor": slot_cursor, "choice_cursor": choice_cursor, "allocate_preview_panel": allocate_preview_panel, "allocate_preview_title": hub_allocate_preview_title, "allocate_preview": hub_allocate_preview_texts, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
 
 
 func _make_menu_page(parent: Node, page_name: String) -> Control:
@@ -2060,7 +2068,12 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		else:
 			hub_item_name_text.texture = pixel_texture.call("0/0 NO ITEMS", Color8(140, 145, 160)) as Texture2D
 		hub_item_name_text.visible = true
-	var window_start := clampi(selected - 2, 0, maxi(count - item_list.size(), 0))
+	var item_pitch := 10.0
+	var visible_rows := item_list.size()
+	hub_list_scroll = clampf(hub_list_scroll, 0.0, maxf(0.0, float(count - visible_rows)))
+	_apply_hub_item_scroll(item_pitch)
+	var window_start := int(hub_list_scroll)
+	var scroll_frac: float = hub_list_scroll - float(window_start)
 	for row in item_list.size():
 		var source_index := window_start + row
 		if source_index >= count:
@@ -2083,9 +2096,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 				item_list[row].texture = null; continue
 			row_item = fusion_items[source_index]
 		var definition: Dictionary = catalog.definition_data(row_item.definition_id)
-		var prefix := ">" if source_index == selected else " "
 		var rarity_mark := catalog.rarity_letter_grade(row_item.rarity)
-		var row_label := "%s%s %s" % [prefix, rarity_mark, str(definition.get("name", "ITEM"))]
+		var row_label := "%s %s" % [rarity_mark, str(definition.get("name", "ITEM"))]
 		var row_mastery := row_item.enhancement_level
 		if row_mastery > 0 and page != 3: row_label += " +%d" % row_mastery
 		if page == 2 and row_sold: row_label += " SOLD"
@@ -2098,6 +2110,15 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		item_list[row].texture = pixel_texture.call(row_label, row_color) as Texture2D
 		if page == 2 and row < shop_prices.size():
 			shop_prices[row].texture = pixel_texture.call("SOLD" if row_sold else "%dG" % row_price, highlight_color if source_index == selected else Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
+	# The hand cursor marks the selected row and moves with the scrolled content.
+	if hub_list_cursor != null:
+		var selected_visible_slot := selected - window_start
+		if selected_visible_slot >= 0 and selected_visible_slot < item_list.size() and item != null:
+			hub_list_cursor.visible = true
+			var cursor_row_y := 35.0 + 4.0 + float(selected_visible_slot) * item_pitch - scroll_frac * item_pitch
+			move_menu_cursor(hub_list_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, cursor_row_y + 3.0), false)
+		else:
+			hub_list_cursor.visible = false
 	if item == null:
 		if not item_list.is_empty():
 			var empty_text := hub_fusion_message if page == 3 and not hub_fusion_message.is_empty() else ("NO FUSE / SALVAGE" if page == 3 else "NO ITEMS")
@@ -2246,26 +2267,39 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			var shown_mastery := shown_item.enhancement_level
 			if shown_mastery > 0: shown_name += " +%d" % shown_mastery
 			shown_color = catalog.rarity_color(shown_item.rarity)
-		var prefix := ">" if row == selected_slot_index else " "
 		var row_color := highlight_color if row == selected_slot_index else shown_color
-		item_list[row].texture = pixel_texture.call("%s%s: %s" % [prefix, slot_name, shown_name], row_color) as Texture2D
+		item_list[row].texture = pixel_texture.call("%s: %s" % [slot_name, shown_name], row_color) as Texture2D
+	if hub_slot_cursor != null:
+		hub_slot_cursor.visible = not action_state and selected_slot_index >= 0 and selected_slot_index < item_list.size()
+		if hub_slot_cursor.visible:
+			move_menu_cursor(hub_slot_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, 35.0 + 4.0 + float(selected_slot_index) * 10.0 + 3.0), false)
 	for choice in choices: choice.texture = null
 	if browsing:
 		var current_index := posmod(int(candidate_indices.get(String(selected_slot), 0)), maxi(slot_candidates.size(), 1))
 		if not slot_candidates.is_empty(): selected_candidate = slot_candidates[current_index]
-		var window_start := clampi(current_index - 1, 0, maxi(slot_candidates.size() - choices.size(), 0))
+		var choice_pitch := 10.0
+		var visible_choices := choices.size()
+		hub_choice_scroll = clampf(hub_choice_scroll, 0.0, maxf(0.0, float(slot_candidates.size() - visible_choices)))
+		_apply_hub_choice_scroll(choice_pitch)
+		var window_start := int(hub_choice_scroll)
+		var choice_frac: float = hub_choice_scroll - float(window_start)
 		for choice_row in choices.size():
 			var choice_index := window_start + choice_row
 			if choice_index >= slot_candidates.size(): break
 			if choice_row < hub_gear_choice_buttons.size(): hub_gear_choice_buttons[choice_row].visible = true
 			var choice_item := slot_candidates[choice_index]
-			var choice_prefix := ">" if choice_index == current_index else " "
 			var is_unequip := choice_item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID
-			var choice_label := "%s%s" % [choice_prefix, "UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), str(catalog.definition_data(choice_item.definition_id).get("name", "ITEM"))]]
+			var choice_label := "%s" % ("UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), str(catalog.definition_data(choice_item.definition_id).get("name", "ITEM"))])
 			var choice_mastery := choice_item.enhancement_level
 			if choice_mastery > 0: choice_label += " +%d" % choice_mastery
 			var choice_color := highlight_color if choice_index == current_index else Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)
 			choices[choice_row].texture = pixel_texture.call(choice_label, choice_color) as Texture2D
+		if hub_choice_cursor != null:
+			var choice_visible_slot := current_index - window_start
+			hub_choice_cursor.visible = choice_visible_slot >= 0 and choice_visible_slot < choices.size()
+			if hub_choice_cursor.visible:
+				var choice_cursor_y := 91.0 + 4.0 + float(choice_visible_slot) * choice_pitch - choice_frac * choice_pitch
+				move_menu_cursor(hub_choice_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, choice_cursor_y + 3.0), false)
 		action.visible = false
 		if hub_item_detail_panel != null: hub_item_detail_panel.visible = true
 		if not details.is_empty():
@@ -2465,6 +2499,10 @@ func update_pause_input(root: Object) -> void:
 
 func update_hub_input(root: Object) -> void:
 	var page := hub_page
+	var touch_scroll := root.call("_input_touch_scroll_y") as float
+	if not is_zero_approx(touch_scroll):
+		scroll_hub_content(root, touch_scroll)
+		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	if bool(root.call("_is_menu_back_just_pressed")):
 		if page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
 			# Item picker -> slot list.
@@ -3464,6 +3502,76 @@ func move_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = true) -
 	cursor.set_meta("cursor_tween", tween)
 	tween.tween_property(cursor, "position", target, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.tween_callback(_start_cursor_bob.bind(cursor))
+
+
+## Browser-style list scrolling: a touch drag moves the list CONTENT, never the
+## cursor. Positive delta is finger movement downward (content follows the
+## finger, revealing earlier rows).
+func scroll_hub_content(root: Object, delta_px: float) -> void:
+	if is_zero_approx(delta_px) or hub_page < 0:
+		return
+	var pitch := 10.0
+	var count := _hub_active_list_count(root)
+	if count <= 0:
+		return
+	if hub_page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+		var visible := maxi(hub_gear_choice_texts.size(), 1)
+		hub_choice_scroll = clampf(hub_choice_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - visible)))
+	else:
+		var visible := maxi(hub_item_list_texts.size(), 1)
+		hub_list_scroll = clampf(hub_list_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - visible)))
+
+
+func _hub_active_list_count(root: Object) -> int:
+	if hub_page == HUB_PAGE_SHOP:
+		var run_state := root.get("run_state") as RunState
+		if run_state == null:
+			return 0
+		run_state.ensure_shop_stock(root.get("player_profile"))
+		return run_state.shop_stock.size()
+	if hub_page == HUB_PAGE_FUSION:
+		return (root.call("_hub_fusion_candidates") as Array).size()
+	if hub_page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+		var selected_slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
+		return (root.call("_hub_gear_candidates", selected_slot) as Array).size()
+	return 0
+
+
+## Controller/confirm selection changes re-center the content so the selected
+## row stays visible; touch drags leave the cursor where it is.
+func snap_hub_list_scroll_to_selection(root: Object) -> void:
+	if hub_page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+		var selected_slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
+		var candidates := root.call("_hub_gear_candidates", selected_slot) as Array
+		var current_index := int(hub_gear_candidate_indices.get(String(selected_slot), 0))
+		var visible := maxi(hub_gear_choice_texts.size(), 1)
+		hub_choice_scroll = clampf(float(current_index - 1), 0.0, maxf(0.0, float(candidates.size() - visible)))
+		return
+	var count := _hub_active_list_count(root)
+	if count <= 0:
+		return
+	var visible := maxi(hub_item_list_texts.size(), 1)
+	hub_list_scroll = clampf(float(hub_item_index - 2), 0.0, maxf(0.0, float(count - visible)))
+
+
+## Applies the fractional item-list scroll to the row/button/price y positions.
+func _apply_hub_item_scroll(pitch: float) -> void:
+	var frac: float = hub_list_scroll - floor(hub_list_scroll)
+	for index in hub_item_list_texts.size():
+		hub_item_list_texts[index].position.y = 4 + index * pitch - frac * pitch
+		if index < hub_item_row_buttons.size():
+			hub_item_row_buttons[index].position.y = index * pitch - frac * pitch
+		if index < hub_shop_price_texts.size():
+			hub_shop_price_texts[index].position.y = 39 + index * pitch - frac * pitch
+
+
+## Applies the fractional gear-choice scroll to the picker row positions.
+func _apply_hub_choice_scroll(pitch: float) -> void:
+	var frac: float = hub_choice_scroll - floor(hub_choice_scroll)
+	for index in hub_gear_choice_texts.size():
+		hub_gear_choice_texts[index].position.y = 4 + index * pitch - frac * pitch
+		if index < hub_gear_choice_buttons.size():
+			hub_gear_choice_buttons[index].position.y = index * pitch - frac * pitch
 
 
 ## Resting idle for the hand cursor: it glides a few pixels to the right, then
