@@ -91,7 +91,7 @@ CombatStatSnapshot
   `attack_hit_frame := 2`; on finish, `between_attack_time` / `attack2_cooldown`
   gate the next swing. `gameplay_frame_controller.gd:131-145` also sets the
   between-timer on attack end.
-- **Attack lunge:** `player_tuning.gd:25-26` (`attack_lunge_distance=6`,
+- **Attack lunge:** `player_tuning.gd:25-26` (`attack_lunge_distance=8`,
   `attack_lunge_duration=0.18`) drives forward momentum during a swing via
   `player_attack_component.start_lunge` (line 28).
 

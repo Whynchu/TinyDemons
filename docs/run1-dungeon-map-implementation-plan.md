@@ -65,7 +65,7 @@ Likely new files:
 
 - `scripts/dungeon_layout_definition.gd`: authored room and connection definitions.
 - `scripts/dungeon_layout_run1.gd`: the exact Run 1 room list, coordinates, categories, and edges.
-- `scripts/dungeon_map_state.gd`: neutral/`PUZZLE_COLOR_A`/`PUZZLE_COLOR_B` active puzzle-color state, shared orb state, discovered rooms, completed rooms, and revealed connections.
+- `scripts/dungeon_map_state.gd`: neutral/`PUZZLE_COLOR_A`/`PUZZLE_COLOR_B` active puzzle-color state, shared orb state, discovered rooms, completed rooms, revealed connections, and per-connection solved latches.
 - `scripts/dungeon_connection_state.gd` or an equivalent value type: base availability, room-clear rule, color requirement, and effective state.
 - `scripts/dungeon_map_controller.gd`: initializes the layout, answers gate queries, and emits state-change signals.
 
@@ -127,7 +127,8 @@ Add explicit tests for:
 - grey Puzzle Color B state leaving ordinary dark-grey connectors available;
 - Puzzle Color A doors opening only in Puzzle Color A state;
 - Puzzle Color B doors opening only in Puzzle Color B state;
-- changing the shared orb from Puzzle Color A to Puzzle Color B relocking A and unlocking B for both identical Orb Rooms;
+- changing the shared orb from Puzzle Color A to Puzzle Color B relocking unsolved A doors and unlocking unsolved B doors for both identical Orb Rooms, while preserving already-solved doors;
+- mixed Orb charges clearing the ordinary Puzzle Color key without re-locking a color door already solved;
 - room-clear gates opening after enemies die;
 - chest collection not being required;
 - event-revealed entrances appearing only after their event.
@@ -138,6 +139,7 @@ Replace the current two-entry-orb `ROOM_PUZZLE` implementation for Run 1 with th
 
 - one central orb per room;
 - Puzzle Color A and Puzzle Color B are authored door/state options, while the displayed orb state is shared;
+- mixed elemental charges use an exclusive result palette and clear the ordinary Puzzle Color key;
 - activation event routed to `DungeonMapController`;
 - changing either orb synchronizes the other orb and `active_puzzle_color`;
 - no local two-orb door puzzle;

@@ -475,9 +475,9 @@ func activate_puzzle_torch(root: Object, torch: Sprite2D, world_position: Vector
 
 func activate_orb_room_orb(root: Object, orb: Sprite2D, world_position: Vector2, palette: String, apply_player_reaction: bool = true) -> void:
 	# The Orb Room is a single shared-state object, not a local two-orb puzzle.
-	# Starter/earned palettes still update the strategic puzzle-color key. Every
-	# other valid elemental palette, including fusion results, now persists as
-	# the shared orb's elemental presentation without changing that key.
+	# Starter/earned palettes update the strategic puzzle-color key. Mixed
+	# elemental palettes update the shared room presentation, clear the ordinary
+	# puzzle key, and latch any matching entrance-orb doors.
 	var changed_shared_orb := bool(root.call("_change_orb_palette_from_room", palette))
 	if changed_shared_orb:
 		# Changing the shared map state rebuilds this orb immediately. Feedback
@@ -614,9 +614,10 @@ func _color_locked_door_texture(root: Object, base_texture: Texture2D, connectio
 	if base_texture == null or connection == null:
 		return base_texture
 	var palette_name := ""
-	var requirement := connection.element_requirement if not connection.element_requirement.is_empty() else connection.color_requirement
+	var requirement: StringName = connection.color_requirement
 	var map_controller := root.get("dungeon_map_controller") as Node
 	if map_controller != null:
+		requirement = map_controller.call("connection_display_requirement", connection) as StringName
 		palette_name = str(map_controller.call("palette_for_requirement", requirement))
 	if palette_name.is_empty():
 		palette_name = "blue" if requirement == &"puzzle_a" else "grey" if requirement == &"puzzle_b" else ""
@@ -635,9 +636,10 @@ func _entrance_lock_modulate(root: Object, connection: DungeonGraph.ConnectionRe
 	if visual_state != &"orb_locked" and visual_state != &"element_locked":
 		return Color(0.5, 0.5, 0.5, 1.0)
 	var palette_name := "grey"
-	var requirement := connection.element_requirement if connection != null and not connection.element_requirement.is_empty() else connection.color_requirement if connection != null else &""
+	var requirement: StringName = connection.color_requirement if connection != null else &""
 	var map_controller := root.get("dungeon_map_controller") as Node
 	if map_controller != null and connection != null:
+		requirement = map_controller.call("connection_display_requirement", connection) as StringName
 		palette_name = str(map_controller.call("palette_for_requirement", requirement))
 	if palette_name.is_empty():
 		palette_name = "blue" if requirement == &"puzzle_a" else "grey"

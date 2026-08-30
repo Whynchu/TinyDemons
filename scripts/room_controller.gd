@@ -35,7 +35,7 @@ const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.16
 const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
-const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
+const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 4
 const BOSS_MIXED_SUPPORT_START_RANK: int = 5
 
 
@@ -188,9 +188,10 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var boss_level := _generated_enemy_base_level(room_depth)
 	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
 	# Normal/elemental minor slimes join the roster starting with Run 5.
-	# Run 5 is the first mixed-support boss encounter; keep its introduction
-	# readable instead of spawning the full later-run pressure immediately.
-	var minor_count := 0 if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK else 2 if progression_run_rank == 5 else 6
+	# Run 5 is the first mixed-support boss encounter. Add only one minor at
+	# first, then grow the mixed roster in steps so later runs do not create a
+	# sudden multi-enemy pressure spike.
+	var minor_count := _boss_minor_count()
 	# Purple is a rare supporting encounter. It is never the scaled lead boss,
 	# and it is not guaranteed as a minor, because its pressure is much higher
 	# than the ordinary slime variants.
@@ -251,11 +252,25 @@ func _popcorn_enemy_level_for_root(root: Object) -> int:
 
 
 func _boss_support_popcorn_count() -> int:
-	# Run 1 starts at two supports, then adds one more each run until the room
-	# reaches a readable six-support ceiling that fits the expanded actor roster.
-	if progression_run_rank == 5:
-		return 3
-	return mini(BOSS_SUPPORT_POPCORN_BASE_COUNT + maxi(progression_run_rank - 1, 0), BOSS_SUPPORT_POPCORN_MAX_COUNT)
+	# Keep two low-level recovery supports through the authored opening, add one
+	# more for the first mixed encounters, then hold at four while mixed minors
+	# provide the slower late-run growth.
+	if progression_run_rank <= 2:
+		return BOSS_SUPPORT_POPCORN_BASE_COUNT
+	if progression_run_rank <= 6:
+		return BOSS_SUPPORT_POPCORN_BASE_COUNT + 1
+	return BOSS_SUPPORT_POPCORN_MAX_COUNT
+
+
+func _boss_minor_count() -> int:
+	if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK:
+		return 0
+	if progression_run_rank == BOSS_MIXED_SUPPORT_START_RANK:
+		return 1
+	if progression_run_rank == BOSS_MIXED_SUPPORT_START_RANK + 1:
+		return 2
+	# After the first two mixed-support steps, add one minor every three runs.
+	return 2 + floori(float(progression_run_rank - 7) / 3.0)
 
 func _normal_enemy_cap() -> int:
 	if progression_run_rank <= 2: return 2

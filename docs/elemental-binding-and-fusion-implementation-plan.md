@@ -24,12 +24,16 @@ The implementation must preserve these rules:
 6. Every permanent Bind happens at the Cloaked Demon and costs 50 Souls.
 7. Binding the already-bound element is a free no-op.
 8. A flame never writes the persistent bound element.
-9. Elemental doors check current active element, including an unbound fusion
-   result; required doors must not require the 50-Soul Bind fee.
-10. A solved door remains solved and cannot re-lock because Chroma, current
+9. Current-element doors check the current active element, while entrance-orb
+   doors require a matching shared Orb charge from an unbound fusion result;
+   neither required door type may require the 50-Soul Bind fee.
+10. A fusion result is exclusive. It clears the ordinary Puzzle Color key and
+    cannot satisfy either input-color door; any color door already opened is
+    latched and remains solved.
+11. A solved door remains solved and cannot re-lock because Chroma, current
     element, or Binding state changed later.
-11. The existing one-use flame behavior remains explicit and non-passive.
-12. Equipment fusion keeps its existing independent Soul-cost ladder.
+12. The existing one-use flame behavior remains explicit and non-passive.
+13. Equipment fusion keeps its existing independent Soul-cost ladder.
 
 ## 2. Target state model
 
@@ -218,27 +222,42 @@ Exit condition: a scene-backed test covers the normal Demon-to-Hub flow, the
 Binding page, cost display, disabled states, confirmation/cancellation, profile
 update, and hub-flame refresh.
 
-### Phase 6 — Door and authored-curriculum integration
+### Phase 6 — Gate, Orb, and authored-curriculum integration
 
-Make elemental puzzles use current identity rather than persistent Binding.
+Make every required connection declare whether it reads puzzle color, current
+element, or a shared entrance-Orb charge.
 
-- Add a door requirement resolver for current active element.
-- Accept unbound current fusion results.
-- Latch a solved door's state so it cannot re-lock after Chroma depletion,
+- Add explicit gate metadata for puzzle-color, current-element, and
+  entrance-orb requirements.
+- Accept unbound current fusion results as valid Orb charges.
+- Persist the shared Orb palette/element state and latch each matching
+  entrance-orb connection.
+- Latch puzzle-color connections when their active requirement is actually
+  available, so a later exclusive fusion charge cannot re-lock a door already
+  opened by the player.
+- Clear both ordinary Puzzle Color fields when a mixed palette is charged; the
+  mixed palette remains the shared Orb presentation and active result only.
+- Keep current-element gates dependent on the active element, while ensuring
+  an entrance-orb gate cannot be opened by changing form alone.
+- Latch every solved gate so it cannot re-lock after Chroma depletion,
   swapping, death recovery, or profile changes.
-- Keep required doors free of the 50-Soul Binding requirement.
+- Keep required gates free of the 50-Soul Binding requirement.
+- Resolve the same requirement key for world socket art and minimap pixels.
 - Validate authored/procedural routes before accepting them:
   - each required input flame is reachable;
   - each fusion's second flame is reachable;
-  - the door is reachable immediately after the intended action;
+  - a matching Orb is reachable before every mandatory fusion gate;
+  - the required Orb Room and door are reachable immediately after the
+    intended action, with no prerequisite placed behind that gate;
   - no route requires returning to the Demon just to pass a mandatory door;
   - room transitions do not discard the current fusion before the door;
   - an interrupted interaction leaves a recoverable route.
 - Reserve permanently-bound-element checks for explicitly optional secret or
   mastery content.
 
-Exit condition: a headless route test solves a mandatory Ice door by reaching
-Ice without Binding it, and the door remains open after current/Chroma changes.
+Exit condition: a route test solves mandatory Shadow, Ground, Grass, and Ice
+entrance-orb gates by charging the shared Orb without Binding them, and every
+door remains open after current/Chroma changes.
 
 ### Phase 7 — Chroma pickup, Triangle, and presentation integration
 
@@ -288,7 +307,7 @@ The first implementation pass should inspect these existing seams:
 | Aspect recipes | `scripts/element_catalog.gd` or new fusion catalog | Stable element IDs and recipes |
 | Hub identity | Save-flow/hub flame setup | Bound-first, starter-fallback flame presentation |
 | Triangle behavior | `scripts/magic_runtime_controller.gd` and aspect ability boundary | Current/effective aspect resolution |
-| Door requirements | Room/puzzle controllers and `scripts/dungeon_graph.gd` | Current-element checks and latched unlocks |
+| Door requirements | Room/puzzle controllers, `scripts/dungeon_graph.gd`, and `scripts/dungeon_map_state.gd` | Explicit gate types, current-element checks, shared Orb charges, and latched unlocks |
 | HUD | `scripts/hud_controller.gd` / player HUD | Costs, current/bound labels, feedback |
 
 The exact controller split may change during the composition-root work, but
@@ -324,10 +343,16 @@ the ownership boundaries must remain stable.
 
 ### Door and curriculum tests
 
-- A current unbound element opens the matching door.
+- A current unbound element opens a current-element gate.
+- A matching unbound fusion result charges the shared Orb and opens its
+  entrance-orb gate; the player form alone does not.
 - The matching door does not require Binding or an additional Soul payment.
+- A mixed Orb charge clears the ordinary Puzzle Color key and does not open an
+  unsolved input-color door.
+- A color door opened before fusion remains open after the exclusive charge.
 - Solved doors remain open after Chroma depletion and swapping.
-- A generated Ice route does not put the Water/Electric/Grass prerequisite
+- A generated Ice route places the second Orb beside the Water fire room before
+  the Ice door, rather than putting the Water/Electric/Grass prerequisite
   behind the Ice door itself.
 - A player can cancel Swap, Fuse, or Bind and recover normally.
 
@@ -411,12 +436,17 @@ composition root:
   collected.
 - Flames use a quick-press Swap and hold-to-Fuse gesture at 5 Souls per action.
   Fusion never mutates the profile by itself.
-- Elemental doors accept the current element, including unbound results, and
-  latch their solved state in the run map.
-- Generated Run 6+ layouts contain validated mandatory fusion gates. Run 8+
-  adds the chained Grass and Ice gates.
+- Gate records distinguish puzzle-color, current-element, and entrance-orb
+  requirements; solved color, elemental, and entrance-orb gates latch in the
+  run map.
+- Generated Run 6+ layouts contain validated mandatory entrance-orb fusion
+  gates. Run 8+ adds the chained Grass and Ice gates, with the second Orb
+  guaranteed before the Ice gate.
+- The shared Orb palette/element state drives room tint, door activation, and
+  minimap door color through one resolver.
 - `tests/elemental_binding_smoke.gd` covers recipes, economy, state separation,
-  unbound door access, and generated Run 6–9 curriculum validation.
+  unbound Orb charging, gate latching, and generated Run 6–9 curriculum
+  validation.
 - `tests/generated_fusion_gate_scene_smoke.gd` verifies the R6 gate in the
   composed scene, including its locked/open/latching presentation states.
 

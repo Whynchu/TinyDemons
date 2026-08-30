@@ -108,7 +108,7 @@ func _initialize() -> void:
 			var running_cooldown := attack.attack2_cooldown_duration(tuning)
 			_expect(started_running_attack and attack.running_attack_active and attack.variant == 2 and StringName(gameplay.get("player_anim_name")) == &"attack2", "running input skips Attack 1 and starts the special Attack 2", failures)
 			_expect(not bool(gameplay.get("player_is_running")), "running Attack 2 consumes the roll-continuation run state", failures)
-			_expect(is_equal_approx(tuning.run_attack_lunge_multiplier * tuning.attack_lunge_distance, 14.0), "running Attack 2 travels fourteen pixels", failures)
+			_expect(is_equal_approx(tuning.run_attack_lunge_multiplier * tuning.attack_lunge_distance, 16.0), "running Attack 2 travels sixteen pixels", failures)
 			attack.finish()
 			gameplay.set("player_is_attacking", false)
 			gameplay.set("player_is_running", false)

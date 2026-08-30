@@ -57,6 +57,8 @@ class ConnectionSpec extends RefCounted:
 	var locks_entry_on_destination_engagement := true
 	var route_role: StringName = &"main"
 	var element_requirement: StringName = &""
+	var gate_type: StringName = &""
+	var orb_element_requirement: StringName = &""
 
 	func _init(
 		new_source_room_id: StringName,
@@ -71,7 +73,9 @@ class ConnectionSpec extends RefCounted:
 		new_locks_entry_on_destination_engagement: bool = true,
 		new_route_role: StringName = &"main",
 		new_allow_entry_before_source_clear: bool = false,
-		new_element_requirement: StringName = &""
+		new_element_requirement: StringName = &"",
+		new_gate_type: StringName = &"",
+		new_orb_element_requirement: StringName = &""
 	) -> void:
 		source_room_id = new_source_room_id
 		exit_socket = new_exit_socket
@@ -86,6 +90,27 @@ class ConnectionSpec extends RefCounted:
 		route_role = new_route_role
 		allow_entry_before_source_clear = new_allow_entry_before_source_clear
 		element_requirement = new_element_requirement
+		gate_type = new_gate_type
+		orb_element_requirement = new_orb_element_requirement
+		if gate_type.is_empty() or gate_type == DungeonGraph.GATE_NONE:
+			if not orb_element_requirement.is_empty():
+				gate_type = DungeonGraph.GATE_ENTRANCE_ORB
+			elif not element_requirement.is_empty():
+				gate_type = DungeonGraph.GATE_ELEMENT
+			elif not color_requirement.is_empty():
+				gate_type = DungeonGraph.GATE_PUZZLE_COLOR
+
+
+	func resolved_gate_type() -> StringName:
+		if not gate_type.is_empty() and gate_type != DungeonGraph.GATE_NONE:
+			return gate_type
+		if not orb_element_requirement.is_empty():
+			return DungeonGraph.GATE_ENTRANCE_ORB
+		if not element_requirement.is_empty():
+			return DungeonGraph.GATE_ELEMENT
+		if not color_requirement.is_empty():
+			return DungeonGraph.GATE_PUZZLE_COLOR
+		return DungeonGraph.GATE_NONE
 
 
 var layout_id: StringName = &""
@@ -175,9 +200,11 @@ func make_connection_spec(
 	new_locks_entry_on_destination_engagement: bool = true,
 	new_route_role: StringName = &"main",
 	new_allow_entry_before_source_clear: bool = false,
-	new_element_requirement: StringName = &""
+	new_element_requirement: StringName = &"",
+	new_gate_type: StringName = &"",
+	new_orb_element_requirement: StringName = &""
 ) -> ConnectionSpec:
-	return ConnectionSpec.new(new_source_room_id, new_exit_socket, new_destination_room_id, new_destination_entry, new_color_requirement, new_hidden_until_clear, new_hidden_until_event, new_minimap_coordinate, new_requires_source_room_clear, new_locks_entry_on_destination_engagement, new_route_role, new_allow_entry_before_source_clear, new_element_requirement)
+	return ConnectionSpec.new(new_source_room_id, new_exit_socket, new_destination_room_id, new_destination_entry, new_color_requirement, new_hidden_until_clear, new_hidden_until_event, new_minimap_coordinate, new_requires_source_room_clear, new_locks_entry_on_destination_engagement, new_route_role, new_allow_entry_before_source_clear, new_element_requirement, new_gate_type, new_orb_element_requirement)
 
 
 func add_decorative_door(pixel: Vector2i, color_requirement: StringName = &"", source_room_id: StringName = &"") -> void:
@@ -254,6 +281,23 @@ func validate() -> Array[String]:
 			errors.append("unknown puzzle-color door key: %s" % spec.color_requirement)
 		if not spec.element_requirement.is_empty() and not ElementCatalogScript.is_valid_id(spec.element_requirement):
 			errors.append("unknown elemental door key: %s" % spec.element_requirement)
+		if not spec.orb_element_requirement.is_empty() and not ElementCatalogScript.is_valid_id(spec.orb_element_requirement):
+			errors.append("unknown entrance-orb door key: %s" % spec.orb_element_requirement)
+		var resolved_gate_type := spec.resolved_gate_type()
+		if resolved_gate_type not in DungeonGraph.VALID_GATE_TYPES:
+			errors.append("unknown connection gate type: %s" % resolved_gate_type)
+		if resolved_gate_type == DungeonGraph.GATE_ENTRANCE_ORB and spec.orb_element_requirement.is_empty():
+			errors.append("entrance-orb gate is missing its elemental requirement: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if resolved_gate_type == DungeonGraph.GATE_PUZZLE_COLOR and spec.color_requirement.is_empty():
+			errors.append("puzzle-color gate is missing its color requirement: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if resolved_gate_type != DungeonGraph.GATE_PUZZLE_COLOR and not spec.color_requirement.is_empty():
+			errors.append("non-puzzle-color gate carries a puzzle-color requirement: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if resolved_gate_type != DungeonGraph.GATE_ENTRANCE_ORB and not spec.orb_element_requirement.is_empty():
+			errors.append("non-entrance-orb gate carries an orb requirement: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if resolved_gate_type == DungeonGraph.GATE_ELEMENT and spec.element_requirement.is_empty():
+			errors.append("element gate is missing its elemental requirement: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if resolved_gate_type != DungeonGraph.GATE_ELEMENT and not spec.element_requirement.is_empty():
+			errors.append("non-element gate carries an elemental requirement: %s:%s" % [spec.source_room_id, spec.exit_socket])
 		if spec.route_role.is_empty():
 			errors.append("connection route role is empty: %s:%s" % [spec.source_room_id, spec.exit_socket])
 	for decorative_door in decorative_door_pixels:

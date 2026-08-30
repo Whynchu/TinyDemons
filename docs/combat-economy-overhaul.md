@@ -81,8 +81,8 @@ Three problems were confirmed during the repo audit (see
   (`combat_runtime_controller.gd:enemy_level_cap_for_rank`).
 - `_run_enemy_level_bonus()` adds only late-run pressure after the early cap
   curve has established itself (`combat_runtime_controller.gd`).
-- Boss depth: `target_boss_depth = 12 + min(completed_runs, 8)`
-  (`dungeon_graph.gd:132`).
+- Generated boss depth: `13` on R3, `14` on R4, `15` on R5–R9, then
+  `16 + floor((run - 10) / 2)` from R10 (`dungeon_layout_generator.gd`).
 - Slime archetypes: blue = FAVOR_DEF, red = FAVOR_STR, green = FAVOR_VIT
   (`gameplay.gd:972-976`).
 

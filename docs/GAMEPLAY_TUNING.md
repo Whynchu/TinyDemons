@@ -21,12 +21,12 @@ game reads them at runtime with no code change.
 | Idle/walk/run | `idle_frame_time` 0.22, `walk_frame_time` 0.18, `run_frame_time` 0.10 |
 | Attack | `attack_frame_time` 0.09, `attack_hit_frame` 2, `attack2_hit_frame` 2, `combo_window` 0.18, `between_attack_time` 0.12, `attack2_cooldown` 0.16 |
 | Spin gesture / timing | `spin_circle_min_magnitude` 0.55, `spin_circle_max_duration` 0.50, `spin_circle_required_turn` 0.80τ, `spin_circle_arm_duration` 0.28, `spin_frame_time` 0.075, `spin_recovery_frame_time` 0.14, active frames 3–6 |
-| Spin balance | `spin_damage_multiplier` 0.90, `spin_knockback_multiplier` 1.10, `spin_lunge_distance` 12.0, `spin_lunge_duration` 0.73; travel eases out through frame 5, spin uses eight authored body frames, snapshots input direction, and does not split damage across multiple targets |
+| Spin balance | `spin_damage_multiplier` 0.90, `spin_knockback_multiplier` 2.0, `spin_lunge_distance` 14.0, `spin_lunge_duration` 0.73; travel eases out through frame 5, spin uses eight authored body frames, snapshots input direction, and does not split damage across multiple targets |
 | Charge balance | `charge_minimum_time` 0.25, `charge_maximum_time` 0.65, `charged_attack2_frame_time_multiplier` 0.90, `charged_attack2_damage_multiplier` 1.60, `charged_attack2_knockback_multiplier` 1.50 |
 | Charge aura | `charge_aura_start_interval` 0.16 -> `charge_aura_peak_interval` 0.055, launch speed 8 -> 24, rise 12 -> 26, spread 2 -> 7, curl 8 -> 52, `charge_aura_particle_lifetime` 0.28; foot-level pixels ramp into short air streaks at the charge cap |
 | Roll | `roll_frame_time` 0.05, `roll_distance` 24.3, `roll_duration` 0.30 |
-| Lunge/knockback | `attack_lunge_distance` 6, `attack_lunge_duration` 0.18, `charged_attack_lunge_multiplier` 2.0 (12px), `attack_knockback` 16, `attack1_knockback_multiplier` 0.60 |
-| Running attack | `run_attack_lunge_multiplier` 2.3333333 (14px from the 6px base), original `attack_lunge_duration`, `run_attack_damage_multiplier` 1.10, `run_attack_knockback_multiplier` 1.25, `run_attack_hitstop_multiplier` 1.20, `run_attack_extra_cooldown_frames` 1.5; a live run starts directly at Attack 2 and consumes the run state |
+| Lunge/knockback | `attack_lunge_distance` 8, `attack_lunge_duration` 0.18, `charged_attack_lunge_multiplier` 1.75 (14px), `attack_knockback` 16, `attack1_knockback_multiplier` 0.60 |
+| Running attack | `run_attack_lunge_multiplier` 2.0 (16px from the 8px base), original `attack_lunge_duration`, `run_attack_damage_multiplier` 1.10, `run_attack_knockback_multiplier` 1.25, `run_attack_hitstop_multiplier` 1.20, `run_attack_extra_cooldown_frames` 1.5; a live run starts directly at Attack 2 and consumes the run state |
 | Damage | `attack2_damage_multiplier` 1.25, `attack2_multi_target_damage_multiplier` 1.10 |
 | Regen | `regen_delay` 2.0, `regen_interval` 1.0, `regen_amount` 1.0 |
 | Death/hitstop | `death_particle_lifetime` 1.8, `death_fade_time` 0.7, `death_particle_delay` 0.7, `hitstop_duration` 1/40, `death_observe_time` 1.4, `health_damage_hang_time` 0.14 |
@@ -36,7 +36,7 @@ game reads them at runtime with no code change.
 | Group | Fields |
 | --- | --- |
 | Movement | `scoot_distance` 5, `scoot_duration` 0.34, `steering_direction_count` 8, `steering_approach_weight` 1.0, `steering_orbit_weight` 0.42, `steering_ally_danger_weight` 1.25, `steering_blocked_danger_weight` 4.0, `steering_clearance` 7.0 |
-| Attack | `attack_frame_time` 0.08, `attack_hit_frame` 5, `attack_range` 14, `attack_hit_range` 16, `attack_vertical_hit_range` 10, `attack_lunge_distance` 10, `attack_cooldown` 1.0 |
+| Attack | `attack_frame_time` 0.08, `attack_hit_frame` 5, `attack_range` 14, `attack_hit_range` 16, `attack_vertical_hit_range` 10, `attack_lunge_distance` 8, `attack_cooldown` 1.0 |
 | Aggro/repаth | `aggro_range` 28, `repath_min` 0.7, `repath_max` 1.8, `hold_min` 0.22, `hold_max` 0.48, `aggro_hold_min` 0.08, `aggro_hold_max` 0.16, `chill_chance` 0.22, `chill_min` 1.0, `chill_max` 2.2, `idle_breath_time` 1.4 |
 | Boss | `boss_attack_cooldown_multiplier` 1.6, `boss_attack_frame_time_multiplier` 1.5, `boss_movement_speed_multiplier` 0.7 |
 | Regen | `regen_delay` 5.0, `regen_interval` 0.75, `regen_amount` 1.0 |
@@ -176,14 +176,15 @@ These affect dungeon generation and room behavior and are `const` in
 | Generated enemy level caps | `3` on R1, `5` on R2, then +1/run | `room_controller.gd:_enemy_level_cap`, `combat_runtime_controller.gd:enemy_level_cap_for_rank` |
 | Run 2 popcorn chance | `0.40` level-1 roll; later runs `0.16` | `room_controller.gd:_popcorn_enemy_chance` |
 | Popcorn enemy level | `max(1, player level - 5)`; deliberately ignores the normal run cap/bonus | `room_controller.gd:_popcorn_enemy_level`, `_spawn_enemy_slot` |
-| Shadow/boss popcorn safety | Shadow encounters guarantee at least one Normal Slime popcorn slot; boss rooms use only the scaled boss plus neutral popcorn support on R1–R4, then add normal/elemental minors from R5; boss popcorn starts at 2 and adds 1 per run up to 6; defeated popcorn slots respawn until the Shadow/scaled boss is gone | `room_controller.gd:_generate_enemy_encounter`, `_generate_boss_encounter`, `_boss_support_popcorn_count`, `record_popcorn_enemy_death`, `update_popcorn_respawns` |
+| Shadow/boss roster safety | Shadow encounters guarantee at least one Normal Slime popcorn slot; boss rooms use 2 neutral popcorn supports on R1–R2, 3 on R3–R6, and 4 from R7 onward; mixed minor slimes begin with 1 on R5, 2 on R6–R9, then add 1 every 3 runs from R10; defeated popcorn slots respawn until the Shadow/scaled boss is gone | `room_controller.gd:_generate_enemy_encounter`, `_generate_boss_encounter`, `_boss_minor_count`, `_boss_support_popcorn_count`, `record_popcorn_enemy_death`, `update_popcorn_respawns` |
 | Popcorn respawn delay | 5.0 seconds before a defeated support slime returns; temporary blocked spawns retry after 0.25 seconds | `room_controller.gd:POPCORN_RESPAWN_DELAY`, `POPCORN_RESPAWN_RETRY_DELAY` |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
 | Encounter progression rank | `completed_runs + 1` | `gameplay_state.gd:_ensure_current_room_layout`, `combat_runtime_controller.gd:encounter_run_rank` |
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
 | Late-run difficulty bonus | `max(0, encounter_rank - 8)` | `combat_runtime_controller.gd:run_enemy_level_bonus` |
 | Performance-over-baseline bonus | `max(0, difficulty_rank - (completed_runs + 1))` | `run_flow_controller.gd:run_difficulty_bonus` |
-| Boss depth | `12 + min(runs, 8)` | `dungeon_graph.gd:target_boss_depth` |
+| Generated room pacing | Authored R1/R2 remain 18/24 rooms; generated targets are 22 on R3, 23 on R4, 24 on R5–R9, then `25 + floor((run - 10) / 2)` from R10; optional branches stay within a small variance budget | `dungeon_layout_generator.gd:generated_room_target_for_run` |
+| Generated boss depth | `13` on R3, `14` on R4, `15` on R5–R9, then `16 + floor((run - 10) / 2)` from R10 | `dungeon_layout_generator.gd:generated_boss_depth_for_run` |
 | Chest interact distance | 16.0 | `gameplay_state.gd:CHEST_INTERACT_DISTANCE` |
 | NPC interact distance | 24.0 | `gameplay_state.gd:NPC_INTERACT_DISTANCE` |
 | Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |

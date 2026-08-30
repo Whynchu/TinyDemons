@@ -28,8 +28,9 @@ is never selected as a popcorn roll, so the pressure enemy remains present
 while the low-level mana-recovery opportunity stays readable. Boss rooms also
 add guaranteed Normal Slime popcorn slots beside the scaled boss: Runs 1–4
 use only that neutral popcorn support, while normal/elemental minor slimes
-join the boss roster starting on Run 5. The popcorn group starts at two slots
-on Run 1 and adds one more support slot per run up to six.
+join the boss roster starting on Run 5. The popcorn group uses two slots on
+Runs 1–2, three on Runs 3–6, and four from Run 7 onward; mixed minor slots
+grow one at a time rather than jumping to the full late-run roster.
 
 Each popcorn slot returns five seconds after defeat while a Shadow or scaled boss remains alive;
 the respawn queue is cleared as soon as that big threat is defeated.
@@ -79,9 +80,11 @@ The next elemental flame design changes the action surface as follows:
 - Binding the element that is already bound is a free no-op.
 - Binding updates the save-file elemental identity and hub flame, and makes the
   identity available for the approved zero-Chroma recovery behavior.
-- Required elemental doors check the current element, including an unbound
-  fusion result; they do not require the 50-Soul Binding payment and remain
-  unlocked after being solved.
+- Current-element doors check the current element, including an unbound fusion
+  result. Entrance-orb doors require the matching mixed result to charge the
+  shared Orb. A mixed result is exclusive to its resulting element: it does
+  not inherit either input color door, while any required door already solved
+  remains unlocked. Neither gate type requires the 50-Soul Binding payment.
 - The approved recipes are Fire + Water → Shadow, Fire + Electric → Ground,
   Water + Electric → Grass, and Grass + Water → Ice. Pairs are unordered.
 

@@ -6,6 +6,7 @@ const PROFILE_SCRIPT = preload("res://scripts/player_profile.gd")
 const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
+const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 
 
@@ -64,11 +65,11 @@ func _initialize() -> void:
 		if room.room_type == GRAPH_SCRIPT.ROOM_FIRE:
 			fire_depths.append(room.coordinate.y)
 	for connection in layout.connections:
-		if not connection.element_requirement.is_empty():
+		if connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
 			gate_count += 1
 			if gate_connection == null:
 				gate_connection = connection
-	_expect(gate_count >= 1, "Run 6 has a mandatory fusion-element gate", failures)
+	_expect(gate_count >= 1, "Run 6 has a mandatory fusion entrance-orb gate", failures)
 	_expect(5 in fire_depths and 6 in fire_depths, "Run 6 places both fusion input flames before its gate", failures)
 	for completed_runs in [5, 6, 7, 8]:
 		for starter in [&"fire", &"water", &"electric"]:
@@ -77,10 +78,29 @@ func _initialize() -> void:
 			_expect(sampled_errors.is_empty(), "Run %d %s fusion curriculum validates" % [completed_runs + 1, starter], failures)
 			var sampled_gate_count := 0
 			for sampled_connection in sampled_layout.connections:
-				if not sampled_connection.element_requirement.is_empty():
+				if sampled_connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
 					sampled_gate_count += 1
 			var expected_gate_count := 1 if completed_runs < 7 else 2
 			_expect(sampled_gate_count == expected_gate_count, "Run %d %s has its expected fusion gate count" % [completed_runs + 1, starter], failures)
+			if completed_runs >= 7:
+				var late_gate_source_id: StringName = &""
+				for sampled_connection in sampled_layout.connections:
+					if sampled_connection.resolved_gate_type() != GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+						continue
+					var sampled_source = sampled_layout.room_by_id(sampled_connection.source_room_id)
+					if sampled_source != null and sampled_source.coordinate.y == 10:
+						late_gate_source_id = sampled_connection.source_room_id
+						break
+				var late_gate_has_pre_gate_orb := false
+				if not late_gate_source_id.is_empty():
+					for side_connection in sampled_layout.connections:
+						if side_connection.source_room_id != late_gate_source_id:
+							continue
+						var side_destination = sampled_layout.room_by_id(side_connection.destination_room_id)
+						if side_destination != null and side_destination.room_type == GRAPH_SCRIPT.ROOM_ORB:
+							late_gate_has_pre_gate_orb = true
+							break
+				_expect(late_gate_has_pre_gate_orb, "Run %d %s places its second Orb beside the room before the Ice gate" % [completed_runs + 1, starter], failures)
 
 	var graph := GRAPH_SCRIPT.new()
 	var map := MAP_CONTROLLER_SCRIPT.new()
@@ -88,11 +108,71 @@ func _initialize() -> void:
 	map.set_starter_flame_attuned(true)
 	if gate_connection != null:
 		var runtime_gate = graph.get_connection(gate_connection.source_room_id, gate_connection.exit_socket)
-		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(runtime_gate.element_requirement)
+		var required_element_id: StringName = runtime_gate.orb_element_requirement
+		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(required_element_id)
+		var required_palette := ELEMENT_CATALOG_SCRIPT.palette_key(required_element)
+		var solved_color_gate := _find_color_connection(graph, &"puzzle_b")
+		var unsolved_color_gate = null
+		if solved_color_gate != null:
+			map.on_room_completed(solved_color_gate.source_room_id)
+			_expect(map.connection_visual_state(solved_color_gate) == &"open", "the active ordinary puzzle-color door opens before fusion", failures)
+			unsolved_color_gate = _find_color_connection(graph, &"", "%s:%s" % [solved_color_gate.source_room_id, solved_color_gate.exit_socket])
 		map.set_current_element(required_element)
-		_expect(map.is_connection_available(runtime_gate), "unbound fusion result opens the required door", failures)
+		_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "matching current fusion result does not bypass the entrance orb", failures)
 		map.set_current_element(ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)
-		_expect(map.is_connection_available(runtime_gate), "solved fusion door stays open after the element changes", failures)
+		_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "R6 entrance-orb gate remains locked before its orb is charged", failures)
+		var orb_room_id: StringName = &""
+		for room_id in graph.get_room_ids():
+			var room := graph.get_room(room_id)
+			if room != null and room.room_type == GRAPH_SCRIPT.ROOM_ORB:
+				orb_room_id = room.id
+				break
+		_expect(not orb_room_id.is_empty(), "R6 exposes an Orb Room for the fusion gate", failures)
+		if not orb_room_id.is_empty():
+			map.on_room_entered(orb_room_id)
+			_expect(map.change_orb_from_palette(orb_room_id, "green"), "R6 Orb Room accepts a wrong elemental charge without opening Shadow", failures)
+			_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "wrong mixed result does not open the Shadow entrance gate", failures)
+			_expect(map.change_orb_from_palette(orb_room_id, required_palette), "R6 Orb Room accepts the matching mixed result", failures)
+			_expect(map.shared_orb_element() == required_element_id, "shared Orb Room state records the mixed result element", failures)
+			_expect(map.connection_visual_state(runtime_gate) == &"open", "matching Orb charge opens the R6 entrance gate", failures)
+			_expect(map.current_color() == MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL and map.shared_orb_puzzle_color() == MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL, "mixed Orb charge clears the ordinary puzzle-color key", failures)
+			if solved_color_gate != null:
+				_expect(map.connection_visual_state(solved_color_gate) == &"open", "an ordinary door solved before fusion stays open", failures)
+			if unsolved_color_gate != null:
+				_expect(map.connection_visual_state(unsolved_color_gate) == &"orb_locked", "an unsolved ordinary door does not inherit the mixed result", failures)
+			map.set_current_element(ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)
+			_expect(map.is_connection_available(runtime_gate), "solved entrance-orb door stays open after the element changes", failures)
+	for completed_runs in [5, 6, 7]:
+		var curriculum_graph := GRAPH_SCRIPT.new()
+		var curriculum_map := MAP_CONTROLLER_SCRIPT.new()
+		curriculum_map.begin_run(curriculum_graph, 712000 + completed_runs, completed_runs, &"fire")
+		curriculum_map.set_starter_flame_attuned(true)
+		var orb_room_id: StringName = &""
+		for room_id in curriculum_graph.get_room_ids():
+			var room := curriculum_graph.get_room(room_id)
+			if room != null and room.room_type == GRAPH_SCRIPT.ROOM_ORB:
+				orb_room_id = room.id
+				break
+		if not orb_room_id.is_empty():
+			curriculum_map.on_room_entered(orb_room_id)
+		for room_id in curriculum_graph.get_room_ids():
+			var room := curriculum_graph.get_room(room_id)
+			if room == null:
+				continue
+			for connection_value in room.outgoing_connections.values():
+				var connection := connection_value as DungeonGraph.ConnectionRecord
+				if connection == null or connection.resolved_gate_type() != GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+					continue
+				var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)
+				var required_palette := ELEMENT_CATALOG_SCRIPT.palette_key(required_element)
+				curriculum_map.set_current_element(required_element)
+				_expect(curriculum_map.connection_visual_state(connection) == &"orb_locked", "Run %d elemental form does not bypass its entrance orb" % (completed_runs + 1), failures)
+				if not orb_room_id.is_empty():
+					_expect(curriculum_map.change_orb_from_palette(orb_room_id, required_palette), "%s Orb Room accepts its Run %d mixed result" % [required_palette, completed_runs + 1], failures)
+				_expect(curriculum_map.connection_visual_state(connection) == &"open", "%s entrance orb opens its Run %d door" % [required_palette, completed_runs + 1], failures)
+				curriculum_map.set_current_element(ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)
+				_expect(curriculum_map.is_connection_available(connection), "%s entrance door remains open after returning to neutral" % required_palette, failures)
+		curriculum_map.free()
 	map.free()
 	chroma.free()
 	_finish(failures)
@@ -111,3 +191,20 @@ func _finish(failures: Array[String]) -> void:
 	for failure in failures:
 		push_error(failure)
 	quit(1)
+
+
+func _find_color_connection(graph: DungeonGraph, requirement: StringName = &"", excluded_key: String = "") -> DungeonGraph.ConnectionRecord:
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room == null:
+			continue
+		for connection_value in room.outgoing_connections.values():
+			var connection := connection_value as DungeonGraph.ConnectionRecord
+			if connection == null or connection.resolved_gate_type() != GRAPH_SCRIPT.GATE_PUZZLE_COLOR:
+				continue
+			if not requirement.is_empty() and connection.color_requirement != requirement:
+				continue
+			if not excluded_key.is_empty() and "%s:%s" % [connection.source_room_id, connection.exit_socket] == excluded_key:
+				continue
+			return connection
+	return null

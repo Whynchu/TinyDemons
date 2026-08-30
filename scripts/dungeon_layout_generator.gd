@@ -14,8 +14,6 @@ const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
-const BASE_BOSS_DEPTH := 12
-const MAX_EXTRA_BOSS_DEPTH := 4
 const FIRST_ORB_DEPTH := 3
 const FIRST_SPECIAL_DEPTH := 4
 
@@ -75,7 +73,9 @@ class LayoutBuilder extends RefCounted:
 		route_role: StringName = ROUTE_MAIN,
 		requires_source_room_clear: bool = true,
 		locks_entry_on_destination_engagement: bool = true,
-		element_requirement: StringName = &""
+		element_requirement: StringName = &"",
+		gate_type: StringName = DungeonGraph.GATE_NONE,
+		orb_element_requirement: StringName = &""
 	) -> void:
 		var key := "%s:%s" % [source_room_id, exit_socket]
 		if connection_keys.has(key):
@@ -102,16 +102,20 @@ class LayoutBuilder extends RefCounted:
 			locks_entry_on_destination_engagement,
 			route_role,
 			false,
-			element_requirement
+			element_requirement,
+			gate_type,
+			orb_element_requirement
 		))
 		connection_keys[key] = true
 
 
 static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire"):
+	var run_number := maxi(completed_runs + 1, 1)
 	var run_index := maxi(completed_runs, 1)
 	var starter_flame := selected_starter_flame if ASPECT_CATALOG_SCRIPT.is_starter_flame(selected_starter_flame) else &"fire"
 	var alternate_flames: Array[StringName] = ASPECT_CATALOG_SCRIPT.alternate_flames_for_run(completed_runs, starter_flame)
-	var boss_depth := BASE_BOSS_DEPTH + mini(run_index, MAX_EXTRA_BOSS_DEPTH)
+	var boss_depth := generated_boss_depth_for_run(run_number)
+	var room_target := generated_room_target_for_run(run_number)
 	var generator_rng := RandomNumberGenerator.new()
 	generator_rng.seed = int(dungeon_seed) ^ (run_index * 104729) ^ 0x47E2
 	var layout = LAYOUT_DEFINITION_SCRIPT.new(GENERATED_LAYOUT_ID, Vector2i(96, boss_depth + 3))
@@ -129,15 +133,18 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	builder.link(left_id, DungeonGraph.WALL_RIGHT, merge_id, &"", ROUTE_FORK)
 	builder.link(right_id, DungeonGraph.WALL_LEFT, merge_id, &"", ROUTE_FORK)
 
-	var second_orb_depth := boss_depth - 4
 	var second_special_depth := boss_depth - 2
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
 	var fire_depth := clampi(boss_depth - 6, 6, boss_depth - 5)
 	var first_alternate_fire_depth := -1
 	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame)
+	# The chained Ice gate is placed at source depth 10. Its Orb must be a side
+	# room reached from that same depth-10 Water fire room; the old depth-12
+	# placement put the only Ice charge behind its own mandatory gate.
+	var second_orb_depth: int = int(fusion_plan.get("second_orb_depth", boss_depth - 4))
 	var fusion_fire_flames: Dictionary = fusion_plan.get("fire_flames", {}) as Dictionary
-	var fusion_gate_requirements: Dictionary = fusion_plan.get("gate_requirements", {}) as Dictionary
-	var off_route_orbs := _off_route_orb_depths(dungeon_seed, run_index, FIRST_ORB_DEPTH, second_orb_depth)
+	var fusion_gate_requirements: Dictionary = fusion_plan.get("entrance_orb_requirements", {}) as Dictionary
+	var off_route_orbs := _off_route_orb_depths(dungeon_seed, run_index, FIRST_ORB_DEPTH, second_orb_depth, fusion_plan.has("second_orb_depth"))
 	if fire_depth == cloaked_depth:
 		fire_depth = mini(fire_depth + 1, boss_depth - 5)
 	if alternate_flames.size() >= 2:
@@ -156,8 +163,10 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		var destination_room_id := builder.add_room(destination_coordinate, room_type, 0, respawn_color, fire_flame)
 		var forward_requirement := _special_forward_requirement(source_depth, second_special_depth, completed_runs, starter_flame, alternate_flames)
 		var forward_role: StringName = ROUTE_KEY_PROGRESSION if not forward_requirement.is_empty() else ROUTE_MAIN
-		var element_requirement := StringName(fusion_gate_requirements.get(source_depth, ""))
-		builder.link(current_room_id, main_socket, destination_room_id, forward_requirement, forward_role, true, true, element_requirement)
+		var orb_element_requirement := StringName(fusion_gate_requirements.get(source_depth, ""))
+		var gate_type: StringName = DungeonGraph.GATE_ENTRANCE_ORB if not orb_element_requirement.is_empty() else DungeonGraph.GATE_NONE
+		var connection_color_requirement: StringName = &"" if gate_type == DungeonGraph.GATE_ENTRANCE_ORB else forward_requirement
+		builder.link(current_room_id, main_socket, destination_room_id, connection_color_requirement, forward_role, true, true, &"", gate_type, orb_element_requirement)
 		var detour_type: StringName = &""
 		var detour_flame: StringName = &""
 		if off_route_orbs.get(destination_depth, false):
@@ -165,12 +174,66 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		elif destination_depth == first_alternate_fire_depth:
 			detour_type = ROUTE_DETOUR_FIRE
 			detour_flame = alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
-		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement)
+		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement, room_target)
 		current_room_id = destination_room_id
 		current_coordinate = destination_coordinate
+	_fill_room_target(builder, room_target, boss_depth)
 	_normalize_color_gate_requirements(layout, completed_runs, starter_flame)
 	LAYOUT_DEFINITION_SCRIPT.apply_rare_enemy_branch_entry_exceptions(layout)
 	return layout
+
+
+static func generated_room_target_for_run(run_number: int) -> int:
+	var normalized_run := maxi(run_number, 1)
+	if normalized_run == 1:
+		return 18
+	if normalized_run == 2:
+		return 24
+	if normalized_run == 3:
+		return 22
+	if normalized_run == 4:
+		return 23
+	if normalized_run <= 9:
+		return 24
+	return 25 + floori(float(normalized_run - 10) / 2.0)
+
+
+static func generated_boss_depth_for_run(run_number: int) -> int:
+	var normalized_run := maxi(run_number, 1)
+	if normalized_run <= 3:
+		return 13
+	if normalized_run == 4:
+		return 14
+	if normalized_run <= 9:
+		return 15
+	return 16 + floori(float(normalized_run - 10) / 2.0)
+
+
+static func _fill_room_target(builder: LayoutBuilder, room_target: int, boss_depth: int) -> void:
+	if room_target <= 0:
+		return
+	# The target is a soft floor for the route, not a permanent hard cap. If
+	# seeded optional branches leave the layout short, add deterministic reward
+	# branches from spare combat exits so the approved pacing curve is reliable.
+	for source in builder.layout.rooms:
+		if builder.layout.rooms.size() >= room_target:
+			return
+		var source_id: StringName = source.id
+		var source_coordinate: Vector2i = source.coordinate
+		var source_room_type: StringName = source.room_type
+		if source_room_type != DungeonGraph.ROOM_COMBAT or source_coordinate.y < 3 or source_coordinate.y >= boss_depth:
+			continue
+		var side_socket_ids: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]
+		for side_socket_id: StringName in side_socket_ids:
+			var connection_key := "%s:%s" % [source_id, side_socket_id]
+			if builder.connection_keys.has(connection_key):
+				continue
+			var side_coordinate: Vector2i = source_coordinate + _exit_offset(side_socket_id)
+			if builder.room_ids_by_coordinate.has(side_coordinate):
+				continue
+			var branch_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_TREASURE, 1)
+			builder.link(source_id, side_socket_id, branch_id, &"", ROUTE_OPTIONAL_TREASURE)
+			break
 
 
 static func validate(layout, completed_runs: int = 1, selected_starter_flame: StringName = &"fire") -> Array[String]:
@@ -275,7 +338,7 @@ static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName
 		var result_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(result_flame))
 		return {
 			"fire_flames": {5: first_flame, 6: second_flame},
-			"gate_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(result_element)},
+			"entrance_orb_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(result_element)},
 			"results": [result_flame],
 		}
 	# The Water + Electric -> Grass gate is followed by a Water fire and an Ice
@@ -285,7 +348,8 @@ static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName
 	var ice_element := ELEMENT_CATALOG_SCRIPT.element_for_palette("aquamarine")
 	return {
 		"fire_flames": {5: &"water", 6: &"electric", 10: &"water"},
-		"gate_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(grass_element), 10: ELEMENT_CATALOG_SCRIPT.id(ice_element)},
+		"entrance_orb_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(grass_element), 10: ELEMENT_CATALOG_SCRIPT.id(ice_element)},
+		"second_orb_depth": 11,
 		"results": [&"grass", &"ice"],
 	}
 
@@ -315,7 +379,11 @@ static func _choose_alternate_fire_depth(
 	return -1
 
 
-static func _off_route_orb_depths(dungeon_seed: int, run_index: int, first_orb_depth: int, second_orb_depth: int) -> Dictionary:
+static func _off_route_orb_depths(dungeon_seed: int, run_index: int, first_orb_depth: int, second_orb_depth: int, force_second_detour: bool = false) -> Dictionary:
+	if force_second_detour:
+		# Keep the first Orb on the spine and put the second Orb beside the fire
+		# room immediately before the chained fusion gate.
+		return {first_orb_depth: false, second_orb_depth: true}
 	# Exactly one Orb Room is deliberately placed off the spine. The seed decides
 	# which one, preserving variety without ever making both progression anchors
 	# detours in the same run.
@@ -394,7 +462,8 @@ static func _add_side_route(
 	alternate_flames: Array[StringName],
 	detour_type: StringName = &"",
 	detour_flame: StringName = &"",
-	forward_requirement: StringName = &""
+	forward_requirement: StringName = &"",
+	room_target: int = -1
 ) -> void:
 	var source = builder.room_spec(source_room_id)
 	if source == null:
@@ -421,7 +490,7 @@ static func _add_side_route(
 	# deterministic side routes so higher runs feel broader without losing the
 	# readable spine of Run 1.
 	var guaranteed_treasure: bool = source_depth == boss_depth - 8 or source_depth == boss_depth - 5
-	var random_side_route: bool = source.room_type == DungeonGraph.ROOM_COMBAT and source_depth >= 5 and source_depth < second_special_depth and generator_rng.randf() < 0.30
+	var random_side_route: bool = source.room_type == DungeonGraph.ROOM_COMBAT and source_depth >= 5 and source_depth < second_special_depth and (room_target < 0 or builder.layout.rooms.size() < room_target) and generator_rng.randf() < 0.30
 	if not guaranteed_treasure and not random_side_route:
 		return
 	var room_type: StringName = DungeonGraph.ROOM_TREASURE if guaranteed_treasure or generator_rng.randf() < 0.72 else DungeonGraph.ROOM_FIRE
@@ -529,19 +598,19 @@ static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_
 	if not reachable_boss:
 		errors.append("generated fusion curriculum leaves the boss unreachable")
 	for connection in layout.connections:
-		if connection.element_requirement.is_empty():
+		if connection.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
 			continue
-		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)
+		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)
 		var gate_reachable := false
 		for state in states:
 			if state.get("room_id", &"") != connection.source_room_id:
 				continue
-			var elements: Array = state.get("elements", []) as Array
-			if elements.has(required_element):
+			var orb_elements: Array = state.get("orb_elements", []) as Array
+			if orb_elements.has(required_element):
 				gate_reachable = true
 				break
 		if not gate_reachable:
-			errors.append("generated fusion gate has no reachable matching result: %s:%s requires %s" % [connection.source_room_id, connection.exit_socket, connection.element_requirement])
+			errors.append("generated entrance-orb gate has no reachable matching result: %s:%s requires %s" % [connection.source_room_id, connection.exit_socket, connection.orb_element_requirement])
 	return errors
 
 
@@ -559,6 +628,7 @@ static func _element_reachable_states(layout, start_id: StringName, _completed_r
 		var room = rooms_by_id.get(room_id)
 		var flames: Array = (state.get("flames", []) as Array).duplicate()
 		var elements: Array = (state.get("elements", []) as Array).duplicate()
+		var orb_elements: Array = (state.get("orb_elements", []) as Array).duplicate()
 		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and not flames.has(room.fire_flame):
 			flames.append(room.fire_flame)
 		# Every discovered flame can be revisited. This closure models a player
@@ -579,6 +649,10 @@ static func _element_reachable_states(layout, start_id: StringName, _completed_r
 				var result_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(result_flame))
 				if result_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and not elements.has(result_element):
 					elements.append(result_element)
+		if room != null and room.room_type == DungeonGraph.ROOM_ORB:
+			for element in elements:
+				if not orb_elements.has(element):
+					orb_elements.append(element)
 		var sorted_flames: Array[String] = []
 		for flame in flames:
 			sorted_flames.append(String(flame))
@@ -587,19 +661,26 @@ static func _element_reachable_states(layout, start_id: StringName, _completed_r
 		for element in elements:
 			sorted_elements.append(int(element))
 		sorted_elements.sort()
-		var state_key := "%s:%s:%s" % [room_id, ",".join(sorted_flames), ",".join(sorted_elements.map(func(value: int) -> String: return str(value)))]
+		var sorted_orb_elements: Array[int] = []
+		for element in orb_elements:
+			sorted_orb_elements.append(int(element))
+		sorted_orb_elements.sort()
+		var state_key := "%s:%s:%s:%s" % [room_id, ",".join(sorted_flames), ",".join(sorted_elements.map(func(value: int) -> String: return str(value))), ",".join(sorted_orb_elements.map(func(value: int) -> String: return str(value)))]
 		if visited.has(state_key):
 			continue
 		visited[state_key] = true
-		var normalized_state := {"room_id": room_id, "elements": elements, "flames": flames}
+		var normalized_state := {"room_id": room_id, "elements": elements, "flames": flames, "orb_elements": orb_elements}
 		reachable_states.append(normalized_state)
 		for connection in layout.connections:
 			if connection.source_room_id != room_id and connection.destination_room_id != room_id:
 				continue
-			if not connection.element_requirement.is_empty() and not elements.has(ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)):
+			var gate_type: StringName = connection.resolved_gate_type()
+			if gate_type == DungeonGraph.GATE_ELEMENT and not elements.has(ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)):
+				continue
+			if gate_type == DungeonGraph.GATE_ENTRANCE_ORB and not orb_elements.has(ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)):
 				continue
 			var next_room: StringName = connection.destination_room_id if connection.source_room_id == room_id else connection.source_room_id
-			pending.append({"room_id": next_room, "elements": elements.duplicate(), "flames": flames.duplicate()})
+			pending.append({"room_id": next_room, "elements": elements.duplicate(), "flames": flames.duplicate(), "orb_elements": orb_elements.duplicate()})
 	return reachable_states
 
 

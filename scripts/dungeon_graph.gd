@@ -31,6 +31,12 @@ const ROOM_CLOAKED: StringName = ROOM_NPC
 const ROOM_BOSS: StringName = ROOM_DOWNSTAIRS
 const ROOM_ORB: StringName = &"ORB"
 
+const GATE_NONE: StringName = &"none"
+const GATE_PUZZLE_COLOR: StringName = &"puzzle_color"
+const GATE_ELEMENT: StringName = &"element"
+const GATE_ENTRANCE_ORB: StringName = &"entrance_orb"
+const VALID_GATE_TYPES: Array[StringName] = [GATE_NONE, GATE_PUZZLE_COLOR, GATE_ELEMENT, GATE_ENTRANCE_ORB]
+
 const START_ROOM_ID: StringName = &"room_0_0"
 const DUNGEON_NAME := "SLIMEY DEPTHS"
 
@@ -49,6 +55,8 @@ class ConnectionRecord extends RefCounted:
 	var locks_entry_on_destination_engagement := true
 	var route_role: StringName = &"main"
 	var element_requirement: StringName = &""
+	var gate_type: StringName = &""
+	var orb_element_requirement: StringName = &""
 
 
 	func _init(
@@ -61,6 +69,18 @@ class ConnectionRecord extends RefCounted:
 		exit_socket = new_exit_socket
 		destination_room_id = new_destination_room_id
 		destination_entry = new_destination_entry
+
+
+	func resolved_gate_type() -> StringName:
+		if not gate_type.is_empty() and gate_type != GATE_NONE:
+			return gate_type
+		if not orb_element_requirement.is_empty():
+			return GATE_ENTRANCE_ORB
+		if not element_requirement.is_empty():
+			return GATE_ELEMENT
+		if not color_requirement.is_empty():
+			return GATE_PUZZLE_COLOR
+		return GATE_NONE
 
 
 	func to_dictionary() -> Dictionary:
@@ -78,6 +98,8 @@ class ConnectionRecord extends RefCounted:
 			"locks_entry_on_destination_engagement": locks_entry_on_destination_engagement,
 			"route_role": route_role,
 			"element_requirement": element_requirement,
+			"gate_type": resolved_gate_type(),
+			"orb_element_requirement": orb_element_requirement,
 		}
 
 
@@ -210,6 +232,8 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		connection.locks_entry_on_destination_engagement = spec.locks_entry_on_destination_engagement
 		connection.route_role = spec.route_role
 		connection.element_requirement = spec.element_requirement
+		connection.gate_type = spec.resolved_gate_type()
+		connection.orb_element_requirement = spec.orb_element_requirement
 		source_room.outgoing_connections[connection.exit_socket] = connection
 		destination_room.incoming_connections[connection.destination_entry] = connection
 		_connections[_connection_key(connection.source_room_id, connection.exit_socket)] = connection

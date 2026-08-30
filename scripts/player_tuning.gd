@@ -68,8 +68,8 @@ func charge_multiplier_for_agi(agi: float) -> float:
 ## Spin trades single-target power for reliable area coverage. It is deliberately
 ## below a normal Attack 1, but it does not use the normal multi-target split.
 @export var spin_damage_multiplier := 0.90
-@export var spin_knockback_multiplier := 1.10
-@export var spin_lunge_distance := 12.0
+@export var spin_knockback_multiplier := 2.0
+@export var spin_lunge_distance := 14.0
 @export var spin_lunge_duration := 0.73
 @export_group("Charge attack")
 @export var charge_minimum_time := 0.25
@@ -101,11 +101,11 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var death_particle_delay := 0.7
 @export var hitstop_duration := 1.0 / 40.0
 @export var death_observe_time := 1.4
-@export var attack_lunge_distance := 6.0
+@export var attack_lunge_distance := 8.0
 @export var attack_lunge_duration := 0.18
-@export var charged_attack_lunge_multiplier := 2.0
+@export var charged_attack_lunge_multiplier := 1.75
 @export_group("Running attack")
-@export var run_attack_lunge_multiplier := 2.3333333
+@export var run_attack_lunge_multiplier := 2.0
 @export var run_attack_damage_multiplier := 1.10
 @export var run_attack_knockback_multiplier := 1.25
 @export var run_attack_hitstop_multiplier := 1.20
