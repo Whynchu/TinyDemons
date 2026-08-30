@@ -11,6 +11,7 @@ var frames_built := false
 const BAKED_ROOT := "res://assets/baked/player"
 const CLOAKED_BAKED_ROOT := "res://assets/baked/player_cloaked"
 const CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet_cloaked.png"
+const CLOAKED_DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend-Cloaked.png"
 const CLOAKED_SHEET_ROWS := {
 	"idle": 0,
 	"walk": 1,
@@ -95,15 +96,14 @@ func _slice_base_sources(library: SpriteFrameLibrary, size: Vector2i, attack_siz
 
 
 ## Slices the authored cloaked fullsheet into the same animation groups as the
-## base player sheet. Defend is intentionally not authored on the cloaked sheet,
-## so base_defend_frames remains the fallback for that animation.
+## base player sheet. Defend is authored as its own strip, matching the base set.
 func _slice_cloaked_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
-	idle_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["idle"], size, CLOAKED_FRAME_COUNTS["idle"]); walk_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["walk"], size, CLOAKED_FRAME_COUNTS["walk"]); run_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["run"], size, CLOAKED_FRAME_COUNTS["run"]); backflip_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["backflip"], size, CLOAKED_FRAME_COUNTS["backflip"]); roll_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["roll"], size, CLOAKED_FRAME_COUNTS["roll"]); magic_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["magic"], size, CLOAKED_FRAME_COUNTS["magic"])
+	idle_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["idle"], size, CLOAKED_FRAME_COUNTS["idle"]); walk_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["walk"], size, CLOAKED_FRAME_COUNTS["walk"]); run_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["run"], size, CLOAKED_FRAME_COUNTS["run"]); backflip_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["backflip"], size, CLOAKED_FRAME_COUNTS["backflip"]); defend_frames = library.slice_frames(CLOAKED_DEFEND_SHEET_PATH, size); roll_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["roll"], size, CLOAKED_FRAME_COUNTS["roll"]); magic_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["magic"], size, CLOAKED_FRAME_COUNTS["magic"])
 	attack_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["attack"], attack_size, CLOAKED_FRAME_COUNTS["attack"]); attack2_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["attack2"], attack_size, CLOAKED_FRAME_COUNTS["attack2"]); spin_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["spin"], attack_size, CLOAKED_FRAME_COUNTS["spin"])
 	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames)
 	var between_frames := library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["between"], size, 1); var after_frames := library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["after"], size, 1)
 	between_attack_texture = between_frames[0] if not between_frames.is_empty() else null; after_attack2_texture = after_frames[0] if not after_frames.is_empty() else null
-	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
+	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
 	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
 
 

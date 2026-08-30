@@ -14,6 +14,7 @@ const CLOAKED_OUT_ROOT := "res://assets/baked/player_cloaked"
 const FULL_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet.png"
 const CLOAKED_FULL_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet_cloaked.png"
 const DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend.png"
+const DEFEND_CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend-Cloaked.png"
 const PLAYER_FRAME := Vector2i(36, 36)
 const ATTACK_FRAME := Vector2i(36, 36)
 
@@ -50,8 +51,8 @@ func _watchdog() -> void:
 func _bake() -> void:
 	var failures: Array[String] = []
 	var library := SpriteFrameLibrary.new()
-	_bake_sheet(library, FULL_SHEET_PATH, OUT_ROOT, true, failures)
-	_bake_sheet(library, CLOAKED_FULL_SHEET_PATH, CLOAKED_OUT_ROOT, false, failures)
+	_bake_sheet(library, FULL_SHEET_PATH, OUT_ROOT, DEFEND_SHEET_PATH, failures)
+	_bake_sheet(library, CLOAKED_FULL_SHEET_PATH, CLOAKED_OUT_ROOT, DEFEND_CLOAKED_SHEET_PATH, failures)
 	_finished = true
 	if failures.is_empty():
 		print("BAKE_OK")
@@ -63,7 +64,7 @@ func _bake() -> void:
 		quit(1)
 
 
-func _bake_sheet(library: SpriteFrameLibrary, full_sheet_path: String, out_root: String, include_defend: bool, failures: Array[String]) -> void:
+func _bake_sheet(library: SpriteFrameLibrary, full_sheet_path: String, out_root: String, defend_sheet_path: String, failures: Array[String]) -> void:
 	var base: Dictionary = {}
 	var full_sheet := load(full_sheet_path) as Texture2D
 	if full_sheet == null:
@@ -71,8 +72,8 @@ func _bake_sheet(library: SpriteFrameLibrary, full_sheet_path: String, out_root:
 		return
 	for key: String in FULL_SHEET_ROWS:
 		base[key] = _slice_sheet_row(full_sheet, int(FULL_SHEET_ROWS[key]))
-	if include_defend:
-		base["defend"] = _slice_file(DEFEND_SHEET_PATH, PLAYER_FRAME)
+	if not defend_sheet_path.is_empty():
+		base["defend"] = _slice_file(defend_sheet_path, PLAYER_FRAME)
 	# Left-facing variants are horizontal flips of the attack frames.
 	base["attack_left"] = library.flip_frames(base.get("attack", []))
 	base["attack2_left"] = library.flip_frames(base.get("attack2", []))

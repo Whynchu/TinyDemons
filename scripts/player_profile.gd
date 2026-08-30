@@ -124,9 +124,23 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	var slot := items.definition_slot(item.definition_id)
 	if slot not in ItemCatalog.SLOTS:
 		return false
+	if slot == &"head" and _head_locked_by_body(items):
+		return false
 	equipped_instance_ids[String(slot)] = instance_id
+	if slot == &"body" and item.definition_id == &"demon_cloak":
+		# The Demon Cloak is a Body + Head gacha piece: wearing it occupies the
+		# Head slot and auto-unequips whatever headgear was there.
+		equipped_instance_ids["head"] = ""
 	_sync_body_alias()
 	return true
+
+
+func _head_locked_by_body(catalog: ItemCatalog) -> bool:
+	var body_id := get_equipped_instance_id(&"body")
+	if body_id.is_empty():
+		return false
+	var body_item := find_item(body_id)
+	return body_item != null and body_item.definition_id == &"demon_cloak"
 
 
 func unequip_slot(slot: StringName, _catalog: ItemCatalog = null) -> bool:
