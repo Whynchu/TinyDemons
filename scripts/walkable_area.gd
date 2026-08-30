@@ -15,6 +15,17 @@ var entrance_block_polygons: Array[PackedVector2Array] = []
 var entrance_block_bounds: Array[Rect2] = []
 var entrance_block_union := Rect2()
 var entrance_block_bounds_valid := false
+# Prebaked convex floor test. When the outline is convex, these packed half-planes
+# let a walkability sample reduce to a handful of dot products over C++-backed
+# arrays instead of point-in-polygon plus a per-edge GDScript distance scan.
+var outline_planes_ready := false
+var outline_plane_normals := PackedVector2Array()
+var outline_plane_offsets := PackedFloat32Array()
+# Per-entrance-block convex half-planes (packed); a block is tested with dots when
+# convex, else falls back to the polygon/edge scan.
+var entrance_plane_normals: Array[PackedVector2Array] = []
+var entrance_plane_offsets: Array[PackedFloat32Array] = []
+var entrance_planes_convex: Array[bool] = []
 # Closed doorway polygons are authored against low-resolution tile seams. Keep
 # only the original half-pixel edge tolerance so the fence seals the seam
 # without making the surrounding room edge feel wider than the art.
@@ -30,6 +41,7 @@ func set_geometry(new_polygons: Array[PackedVector2Array], new_outline: PackedVe
 	for polygon in polygons:
 		for point in polygon:
 			points.append(point)
+	_prepare_floor_planes()
 
 
 func collect_geometry(node: Node, tile_polygon: Callable) -> void:
@@ -76,20 +88,24 @@ func collect_floor_collision_guide(node: Node) -> bool:
 func build_outline(use_polygon_direct: bool) -> void:
 	if polygons.is_empty():
 		outline = PackedVector2Array()
+		_prepare_floor_planes()
 		return
 	if use_polygon_direct:
 		outline = polygons[0]
+		_prepare_floor_planes()
 		return
 	var all_points := PackedVector2Array()
 	for polygon in polygons:
 		for point in polygon:
 			all_points.append(point)
 	outline = Geometry2D.convex_hull(all_points)
+	_prepare_floor_planes()
 
 
 func set_entrance_blocks(new_blocks: Array[PackedVector2Array]) -> void:
 	entrance_block_polygons = new_blocks.duplicate()
 	entrance_block_bounds_valid = false
+	_prepare_floor_planes()
 
 
 func is_empty() -> bool:
@@ -115,15 +131,13 @@ func is_walkable(point: Vector2) -> bool:
 		return false
 	if outline.is_empty():
 		return false
-	return Geometry2D.is_point_in_polygon(point, outline) or is_point_too_close_to_polygon_edge(point, outline, edge_margin)
+	return point_inside_outline_with_padding(point, -edge_margin)
 
 
 func is_slime_walkable(point: Vector2) -> bool:
 	if is_in_entrance_block(point) or outline.is_empty():
 		return false
-	if not Geometry2D.is_point_in_polygon(point, outline):
-		return false
-	return not is_point_too_close_to_polygon_edge(point, outline, slime_edge_padding)
+	return point_inside_outline_with_padding(point, slime_edge_padding)
 
 
 func is_in_entrance_block(point: Vector2) -> bool:
@@ -136,10 +150,21 @@ func is_in_entrance_block(point: Vector2) -> bool:
 	for index in entrance_block_polygons.size():
 		if not (entrance_block_bounds[index] as Rect2).has_point(point):
 			continue
-		var polygon := entrance_block_polygons[index]
-		if Geometry2D.is_point_in_polygon(point, polygon) or is_point_too_close_to_polygon_edge(point, polygon, ENTRANCE_BLOCK_EDGE_MARGIN):
+		if _entrance_block_contains_with_margin(point, index):
 			return true
 	return false
+
+
+func _entrance_block_contains_with_margin(point: Vector2, block_index: int) -> bool:
+	if entrance_planes_convex[block_index]:
+		var normals := entrance_plane_normals[block_index]
+		var offsets := entrance_plane_offsets[block_index]
+		for i in normals.size():
+			if normals[i].dot(point) - offsets[i] < -ENTRANCE_BLOCK_EDGE_MARGIN:
+				return false
+		return true
+	var polygon := entrance_block_polygons[block_index]
+	return Geometry2D.is_point_in_polygon(point, polygon) or is_point_too_close_to_polygon_edge(point, polygon, ENTRANCE_BLOCK_EDGE_MARGIN)
 
 
 func _ensure_entrance_block_bounds() -> void:
@@ -153,6 +178,81 @@ func _ensure_entrance_block_bounds() -> void:
 		entrance_block_bounds.append(block_bounds.grow(ENTRANCE_BLOCK_EDGE_MARGIN))
 	entrance_block_union = entrance_block_union.grow(ENTRANCE_BLOCK_EDGE_MARGIN)
 	entrance_block_bounds_valid = true
+
+
+## True when `point` is inside the outline by at least `padding` (a negative
+## padding allows points just outside, for the player edge tolerance).
+func point_inside_outline_with_padding(point: Vector2, padding: float) -> bool:
+	if outline_planes_ready:
+		for i in outline_plane_offsets.size():
+			if outline_plane_normals[i].dot(point) - outline_plane_offsets[i] < padding:
+				return false
+		return true
+	if not Geometry2D.is_point_in_polygon(point, outline):
+		return false
+	return not is_point_too_close_to_polygon_edge(point, outline, padding)
+
+
+func _prepare_floor_planes() -> void:
+	outline_planes_ready = false
+	outline_plane_normals = PackedVector2Array()
+	outline_plane_offsets = PackedFloat32Array()
+	if outline.size() >= 3 and _is_convex_polygon(outline):
+		var outline_planes := _convex_planes_for(outline)
+		outline_plane_normals = outline_planes[0] as PackedVector2Array
+		outline_plane_offsets = outline_planes[1] as PackedFloat32Array
+		outline_planes_ready = true
+	entrance_plane_normals.clear()
+	entrance_plane_offsets.clear()
+	entrance_planes_convex.clear()
+	for block in entrance_block_polygons:
+		if block.size() >= 3 and _is_convex_polygon(block):
+			var block_planes := _convex_planes_for(block)
+			entrance_plane_normals.append(block_planes[0] as PackedVector2Array)
+			entrance_plane_offsets.append(block_planes[1] as PackedFloat32Array)
+			entrance_planes_convex.append(true)
+		else:
+			entrance_plane_normals.append(PackedVector2Array())
+			entrance_plane_offsets.append(PackedFloat32Array())
+			entrance_planes_convex.append(false)
+
+
+func _is_convex_polygon(polygon: PackedVector2Array) -> bool:
+	var sign_value := 0
+	for index in polygon.size():
+		var a := polygon[index]
+		var b := polygon[(index + 1) % polygon.size()]
+		var c := polygon[(index + 2) % polygon.size()]
+		var cross_value := (b - a).cross(c - b)
+		if absf(cross_value) < 0.0001:
+			continue
+		var current_sign := 1 if cross_value > 0.0 else -1
+		if sign_value == 0:
+			sign_value = current_sign
+		elif sign_value != current_sign:
+			return false
+	return true
+
+
+func _convex_planes_for(polygon: PackedVector2Array) -> Array:
+	var center := Vector2.ZERO
+	for point in polygon:
+		center += point
+	center /= float(polygon.size())
+	var normals := PackedVector2Array()
+	var offsets := PackedFloat32Array()
+	for index in polygon.size():
+		var a := polygon[index]
+		var b := polygon[(index + 1) % polygon.size()]
+		var edge := b - a
+		if edge.length_squared() < 0.0001:
+			continue
+		var normal := Vector2(-edge.y, edge.x).normalized()
+		if normal.dot(center - a) < 0.0:
+			normal = -normal
+		normals.append(normal)
+		offsets.append(normal.dot(a))
+	return [normals, offsets]
 
 
 func nearest_walkable_point(point: Vector2) -> Vector2:

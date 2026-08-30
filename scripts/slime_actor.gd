@@ -62,7 +62,7 @@ func tick_components(delta: float) -> void:
 		ambush.tick(self, delta)
 
 
-func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable) -> void:
+func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable, allow_movement: bool = true) -> void:
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null or is_dead.call(self):
 		return
@@ -73,6 +73,11 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	if combat.hitstun_timer > 0.0:
 		return
 	if update_attack.call(self, delta):
+		return
+	# Movement is the expensive per-frame cost (walkability sampling). The frame
+	# controller rotates a movement budget across the crowd, so a slime can be
+	# asked to skip its scoot this frame while combat/knockback stay live.
+	if not allow_movement:
 		return
 	var brain := get_node_or_null("Brain") as SlimeBrain
 	if is_aggroed.call(self):
@@ -87,7 +92,7 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	update_scoot.call(self, delta)
 
 
-static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable) -> void:
+static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable, allow_movement: bool = true) -> void:
 	if bool(is_dead.call(actor)):
 		return
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
@@ -98,6 +103,8 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 		return
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 	if combat.hitstun_timer > 0.0 or bool(update_attack.call(actor, delta)):
+		return
+	if not allow_movement:
 		return
 	var brain := actor.get_node_or_null("Brain") as SlimeBrain
 	if bool(is_aggroed.call(actor)):

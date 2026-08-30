@@ -10,6 +10,13 @@ var keyboard_prompt_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
+
+## Caps for transient combat effects. A packed crowd trading hits can otherwise
+## spawn hundreds of numbers/particles per second; dropping the newest visual
+## (rather than the oldest) keeps the hottest frames bounded while the older,
+## already-visible effects finish their life.
+const MAX_DAMAGE_NUMBERS := 20
+const MAX_PIXEL_PARTICLES := 90
 var slime_notice_effects: Array[Dictionary] = []
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
@@ -636,7 +643,16 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	sprite.z_index = 4092
 	sprite.position = world_position
 	parent.add_child(sprite)
+	if damage_numbers.size() >= MAX_DAMAGE_NUMBERS:
+		_discard_damage_number(damage_numbers[0])
 	damage_numbers.append({"sprite": sprite, "shadow": shadow, "outline": outline, "timer": lifetime, "pop_timer": pop_time, "velocity": velocity})
+
+
+func _discard_damage_number(damage_number: Dictionary) -> void:
+	for key in [&"sprite", &"shadow", &"outline"]:
+		var node := damage_number.get(key) as Node
+		if node != null and is_instance_valid(node):
+			node.queue_free()
 
 
 func _rgb_key(color: Color) -> String:
@@ -662,6 +678,13 @@ func clear_effect_particles(effect_tag: StringName) -> void:
 
 
 func update_pixel_particles(delta: float, snap_position: Callable, default_lifetime: float) -> void:
+	# Hard cap: drop the oldest particles first so a crowd trading hits cannot
+	# grow the per-frame particle update (and node) count without bound.
+	while pixel_particles.size() > MAX_PIXEL_PARTICLES:
+		var oldest := pixel_particles.pop_front() as Dictionary
+		var oldest_sprite := oldest.get("sprite") as Node
+		if oldest_sprite != null and is_instance_valid(oldest_sprite):
+			oldest_sprite.queue_free()
 	for index in range(pixel_particles.size() - 1, -1, -1):
 		var particle_data := pixel_particles[index]
 		var particle := particle_data["sprite"] as Sprite2D

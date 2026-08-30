@@ -188,7 +188,9 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var boss_level := _generated_enemy_base_level(room_depth)
 	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
 	# Normal/elemental minor slimes join the roster starting with Run 5.
-	var minor_count := 0 if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK else 4 if progression_run_rank <= 5 else 6
+	# Run 5 is the first mixed-support boss encounter; keep its introduction
+	# readable instead of spawning the full later-run pressure immediately.
+	var minor_count := 0 if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK else 2 if progression_run_rank == 5 else 6
 	# Purple is a rare supporting encounter. It is never the scaled lead boss,
 	# and it is not guaranteed as a minor, because its pressure is much higher
 	# than the ordinary slime variants.
@@ -251,6 +253,8 @@ func _popcorn_enemy_level_for_root(root: Object) -> int:
 func _boss_support_popcorn_count() -> int:
 	# Run 1 starts at two supports, then adds one more each run until the room
 	# reaches a readable six-support ceiling that fits the expanded actor roster.
+	if progression_run_rank == 5:
+		return 3
 	return mini(BOSS_SUPPORT_POPCORN_BASE_COUNT + maxi(progression_run_rank - 1, 0), BOSS_SUPPORT_POPCORN_MAX_COUNT)
 
 func _normal_enemy_cap() -> int:

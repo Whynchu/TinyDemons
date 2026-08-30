@@ -10,6 +10,11 @@ class_name ActorCollisionSystem
 ## cells instead of scanning the whole room, keeping crowd work bounded by local
 ## density rather than the total enemy count.
 const SLIME_GRID_CELL_SIZE := 24.0
+## Caps how many slime-slime separation attempts run per frame. A packed crowd
+## can otherwise spend the whole frame budget pushing overlapping slimes apart;
+## the budget bounds that work so the worst frame stays near the steady-state
+## cost. Slimes not separated this frame retry next frame.
+const MAX_SLIME_SEPARATION_BUDGET := 28
 
 var _slime_grid: Dictionary = {}
 var _slime_grid_index: Dictionary = {}
@@ -55,6 +60,7 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 	# resolver stays correct for direct callers.
 	if not _slime_grid_valid:
 		build_slime_grid(slimes, Callable(root, "_actor_foot"))
+	var separation_attempts := 0
 	for _separation_pass in max_passes:
 		var resolved_this_pass := false
 		for actor_index in slimes.size():
@@ -67,6 +73,9 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 					continue
 				if slime_grid_position(other) <= actor_index:
 					continue
+				if separation_attempts >= MAX_SLIME_SEPARATION_BUDGET:
+					return resolved_pairs
+				separation_attempts += 1
 				var push := actor_contact_push_vector(root, actor, other)
 				if push == Vector2.ZERO:
 					continue
@@ -145,15 +154,10 @@ func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: 
 	var other_valid := _position_is_valid(root, other)
 	if actor_valid and other_valid:
 		return true
+	# The 50/50 split was the cheap, always-valid-in-open-space resolve. In a
+	# packed crowd a side can be blocked; skip the expensive full-push fallback
+	# revalidations and leave the overlap for the next frame's pass instead.
 	actor.position = actor_start
-	other.position = other_start
-	actor.position += push
-	if _position_is_valid(root, actor):
-		return true
-	actor.position = actor_start
-	other.position -= push
-	if _position_is_valid(root, other):
-		return true
 	other.position = other_start
 	return false
 
@@ -161,7 +165,7 @@ func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: 
 func _move_regular_away_from_boss(root: Object, regular: Sprite2D, preferred_direction: Vector2) -> bool:
 	if preferred_direction.length_squared() <= 0.0001:
 		return false
-	var directions := [preferred_direction, preferred_direction.rotated(PI * 0.5), preferred_direction.rotated(-PI * 0.5)]
+	var directions := [preferred_direction, preferred_direction.rotated(PI * 0.5)]
 	for direction in directions:
 		var original := regular.position
 		regular.position += direction.normalized() * 0.75
