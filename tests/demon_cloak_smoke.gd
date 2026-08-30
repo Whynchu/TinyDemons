@@ -54,6 +54,11 @@ func _initialize() -> void:
 		var catalog := ItemCatalog.new()
 		var cloak_bonuses := catalog.bonuses(first_cloak)
 		_expect(float(cloak_bonuses.get("agi", 0.0)) >= 4.0 and float(cloak_bonuses.get("mnd", 0.0)) >= 2.0, "Demon Cloak carries the buffed Body + Head package", failures)
+		var mythic_cloak := ItemInstance.from_dictionary(first_cloak.to_dictionary())
+		mythic_cloak.rarity = &"mythic"
+		mythic_cloak.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+		var scaled_bonuses := catalog.bonuses(mythic_cloak)
+		_expect(float(scaled_bonuses.get("agi", 0.0)) > float(cloak_bonuses.get("agi", 0.0)) and float(scaled_bonuses.get("defense", 0.0)) > float(cloak_bonuses.get("defense", 0.0)), "both AGI and DEF scale with rarity and enhancement", failures)
 		var head_item := ItemInstance.new()
 		head_item.instance_id = "test-head"
 		head_item.definition_id = &"iron_helm"
