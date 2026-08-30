@@ -74,6 +74,14 @@ func _initialize() -> void:
 			generated_rare_exception_found = generated_rare_exception_found or bool(rare_result[0])
 			if _has_two_primary_special_room(sampled):
 				two_primary_special_found = true
+	for fusion_completed_runs in [5, 6, 7, 8]:
+		for seed_value in range(8):
+			var fusion_layout = GENERATOR_SCRIPT.build(700000 + seed_value * 7919, fusion_completed_runs, &"fire")
+			var fusion_errors: Array[String] = GENERATOR_SCRIPT.validate(fusion_layout, fusion_completed_runs, &"fire")
+			_expect(fusion_errors.is_empty(), "fusion Run %d validates across sampled seeds" % (fusion_completed_runs + 1), failures)
+			var gate_count := _entrance_orb_gate_count(fusion_layout)
+			var prerequisite_orb_count := _fusion_prerequisite_orb_count(fusion_layout)
+			_expect(prerequisite_orb_count >= gate_count, "fusion Run %d gives every entrance-Orb gate a dedicated pre-gate Orb" % (fusion_completed_runs + 1), failures)
 	_expect(generated_rare_exception_found, "seeded generated maps exercise the rare enemy-branch entry rule", failures)
 	_expect(two_primary_special_found, "generated Special Rooms sometimes offer two distinct primary-color doors", failures)
 
@@ -188,6 +196,26 @@ func _has_two_primary_special_room(layout) -> bool:
 		if primary_requirements.size() >= 2:
 			return true
 	return false
+
+
+func _entrance_orb_gate_count(layout) -> int:
+	var count := 0
+	for connection in layout.connections:
+		if connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+			count += 1
+	return count
+
+
+func _fusion_prerequisite_orb_count(layout) -> int:
+	var count := 0
+	for connection in layout.connections:
+		if connection.route_role != &"fusion_prerequisite_orb":
+			continue
+		for room in layout.rooms:
+			if room.id == connection.destination_room_id and room.room_type == GRAPH_SCRIPT.ROOM_ORB:
+				count += 1
+				break
+	return count
 
 
 func _rare_entry_exceptions_are_marked(layout, found_out) -> bool:
