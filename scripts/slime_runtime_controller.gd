@@ -2,6 +2,15 @@ extends Node
 class_name SlimeRuntimeController
 
 
+## Per-frame movement budget for the slime crowd. Only this many slimes run their
+## expensive movement/steering pass per frame (rotating round-robin); combat,
+## knockback, and attack stay at full rate. Rooms with fewer slimes are
+## unaffected. This bounds the worst frame in packed boss rooms.
+const SLIME_AI_MOVEMENT_BUDGET := 10
+
+var _slime_movement_cursor := 0
+
+
 ## Owns the enemy runtime loop: aggro, attacks, scooting, knockback, and the
 ## collision geometry queries used by those systems. GameplayState keeps only
 ## the stable callback surface that the other runtime components depend on.
@@ -81,15 +90,31 @@ func move_slimes(root: Object, delta: float) -> void:
 	# Spatial broad-phase for the crowd: built once per frame so slime-slime
 	# contact and AI steering only examine spatially local slimes.
 	(root.get("actor_collision_system") as ActorCollisionSystem).build_slime_grid(slimes, Callable(root, "_actor_foot"))
-	for slime in slimes:
+	# Per-frame movement budget: only a rotating subset of the crowd runs its
+	# expensive movement/steering pass each frame, so a packed room cannot spend
+	# the whole frame on enemy walkability. Combat, knockback, and attack stay at
+	# full rate.
+	var movement_left := SLIME_AI_MOVEMENT_BUDGET
+	var count := slimes.size()
+	var cursor := _slime_movement_cursor
+	var last_movement_index := -1
+	for offset in count:
+		var index := (cursor + offset) % count
+		var slime := slimes[index]
 		if bool(root.call("_is_slime_dead", slime)):
 			continue
+		var allow_movement := movement_left > 0
+		if allow_movement:
+			last_movement_index = index
+			movement_left -= 1
 		var slime_actor := slime as SlimeActor
 		if slime_actor != null:
 			slime_actor.tick_components(delta)
-			slime_actor.tick_runtime(delta, Callable(root, "_is_slime_dead"), Callable(root, "_update_slime_knockback"), Callable(root, "_update_slime_attack"), Callable(root, "_is_slime_aggroed"), Callable(root, "_aggro_slime_target"), Callable(root, "_update_slime_scoot"))
+			slime_actor.tick_runtime(delta, Callable(root, "_is_slime_dead"), Callable(root, "_update_slime_knockback"), Callable(root, "_update_slime_attack"), Callable(root, "_is_slime_aggroed"), Callable(root, "_aggro_slime_target"), Callable(root, "_update_slime_scoot"), allow_movement)
 			continue
-		SlimeActor.tick_legacy_runtime(slime, delta, Callable(root, "_is_slime_dead"), Callable(root, "_update_slime_knockback"), Callable(root, "_update_slime_attack"), Callable(root, "_is_slime_aggroed"), Callable(root, "_aggro_slime_target"), Callable(root, "_update_slime_scoot"))
+		SlimeActor.tick_legacy_runtime(slime, delta, Callable(root, "_is_slime_dead"), Callable(root, "_update_slime_knockback"), Callable(root, "_update_slime_attack"), Callable(root, "_is_slime_aggroed"), Callable(root, "_aggro_slime_target"), Callable(root, "_update_slime_scoot"), allow_movement)
+	if last_movement_index >= 0:
+		_slime_movement_cursor = (last_movement_index + 1) % maxi(count, 1)
 	var separation_passes := 1 if slimes.size() >= 5 else 2
 	(root.get("actor_collision_system") as ActorCollisionSystem).resolve_slime_contacts(slimes, root, separation_passes)
 	if not bool(root.get("player_dead")):

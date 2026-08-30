@@ -513,7 +513,7 @@ func update_enemy_health(root: Object, delta: float) -> void:
 	var tuning := root.get("slime_tuning") as SlimeTuning
 	for slime in root.get("slimes") as Array[Sprite2D]:
 		if not is_slime_dead(root, slime):
-			(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).update(delta, root.call("_slime_health", slime) as HealthComponent, float(root.call("_enemy_max_health", slime)), tuning)
+			(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).update(delta, root.call("_slime_health", slime) as HealthComponent, float(root.call("_enemy_max_health", slime)), tuning, bool(root.call("_is_slime_aggroed", slime)))
 
 
 func spawn_damage_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
