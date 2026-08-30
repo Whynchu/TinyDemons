@@ -52,6 +52,9 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_binding_texts = controls["binding_texts"] as Array[Sprite2D]
 	root.screen_state_controller.hub_binding_action_button = controls["binding_action"] as Button
 	root.screen_state_controller.hub_cursor_text = controls["cursor"] as Sprite2D
+	root.screen_state_controller.hub_list_cursor = controls["list_cursor"] as Sprite2D
+	root.screen_state_controller.hub_slot_cursor = controls["slot_cursor"] as Sprite2D
+	root.screen_state_controller.hub_choice_cursor = controls["choice_cursor"] as Sprite2D
 	root.screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_action_button = controls["item_action"] as Button
 	root.screen_state_controller.hub_equipment_action_buttons = controls["equipment_actions"] as Array[Button]
@@ -181,6 +184,8 @@ func set_hub_page(root: Object, page: int) -> void:
 	var command_index: int = int(HUB_COMMAND_PAGE_TARGETS.find(screen.hub_page))
 	if command_index >= 0: _set_screen_property_if_available(screen, &"hub_menu_row", command_index)
 	screen.hub_item_index = 0
+	screen.hub_list_scroll = 0.0
+	screen.hub_choice_scroll = 0.0
 	# Equipment has a deliberate three-step route. Entering the page always
 	# lands on its top command row; Equip then descends into slots and finally
 	# into the item list. Other transaction pages retain their normal content
@@ -269,6 +274,7 @@ func shift_hub_item(root: Object, direction: int) -> void:
 		count = hub_fusion_candidates(root).size()
 		root.screen_state_controller.hub_fusion_count = 1
 	if count > 0: root.screen_state_controller.hub_item_index = posmod(root.screen_state_controller.hub_item_index + direction, count)
+	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -285,8 +291,7 @@ func select_hub_item_row(root: Object, row: int) -> void:
 	if count <= 0:
 		return
 	var visible_rows := maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
-	var selected := clampi(root.screen_state_controller.hub_item_index, 0, count - 1)
-	var window_start := clampi(selected - 2, 0, maxi(count - visible_rows, 0))
+	var window_start := int(root.screen_state_controller.hub_list_scroll)
 	var target := window_start + row
 	if row < 0 or row >= visible_rows or target < 0 or target >= count:
 		return
@@ -321,6 +326,7 @@ func shift_hub_gear_candidate(root: Object, direction: int) -> void:
 	if candidates.is_empty(): return
 	var key := String(slot)
 	root.screen_state_controller.hub_gear_candidate_indices[key] = posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
+	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -341,6 +347,7 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 			if candidates[index].instance_id == equipped_id:
 				root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
 				break
+	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -354,7 +361,7 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 		return
 	var visible_choice_count := maxi(root.screen_state_controller.hub_gear_choice_buttons.size(), 1)
 	var current_index := posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
-	var window_start := clampi(current_index - 1, 0, maxi(candidates.size() - visible_choice_count, 0))
+	var window_start := int(root.screen_state_controller.hub_choice_scroll)
 	var candidate_index := window_start + choice_row
 	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
 		return

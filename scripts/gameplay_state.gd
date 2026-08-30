@@ -402,6 +402,7 @@ func _is_menu_confirm_just_pressed() -> bool: return input_router != null and in
 func _is_menu_back_pressed() -> bool: return input_router != null and input_router.menu_back_pressed()
 func _is_menu_back_just_pressed() -> bool: return input_router != null and input_router.menu_back_just_pressed()
 func _is_menu_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.menu_direction_just_pressed(direction)
+func _input_touch_scroll_y() -> float: return input_router.touch_scroll_y() if input_router != null else 0.0
 func _menu_confirm_prompt() -> String: return input_device_tracker.menu_confirm_prompt() if input_device_tracker != null else "ENTER SELECT"
 func _menu_back_prompt() -> String: return input_device_tracker.menu_back_prompt() if input_device_tracker != null else "ESC BACK"
 func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)

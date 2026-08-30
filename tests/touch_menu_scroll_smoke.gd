@@ -14,7 +14,8 @@ func _initialize() -> void:
 	get_root().add_child(router)
 	router.set_touch_provider(layer)
 
-	# Blank hub drag scrolls the list down and up.
+	# Blank hub drag reports a pixel scroll delta (the menu translates its content
+# rather than moving the cursor).
 	var scroll_down := InputEventScreenTouch.new()
 	scroll_down.device = 0; scroll_down.index = 1; scroll_down.pressed = true; scroll_down.position = Vector2(120.0, 120.0)
 	layer._input(scroll_down)
@@ -23,17 +24,17 @@ func _initialize() -> void:
 		drag.device = 0; drag.index = 1; drag.position = Vector2(120.0, 120.0 + 10.0 * float(i + 1))
 		layer._input(drag)
 	router.poll(InputRouter.Context.HUB)
-	_expect(router.menu_direction_just_pressed(&"ui_down"), "blank hub drag scrolls the list down", failures)
+	_expect(router.touch_scroll_y() > 20.0, "blank hub drag down reports a downward scroll delta", failures)
 	var scroll_up := InputEventScreenDrag.new()
 	scroll_up.device = 0; scroll_up.index = 1; scroll_up.position = Vector2(120.0, 90.0)
 	layer._input(scroll_up)
 	router.poll(InputRouter.Context.HUB)
-	_expect(router.menu_direction_just_pressed(&"ui_up"), "blank hub drag scrolls the list up", failures)
+	_expect(router.touch_scroll_y() < -20.0, "blank hub drag up reports an upward scroll delta", failures)
 	var scroll_release := InputEventScreenTouch.new()
 	scroll_release.device = 0; scroll_release.index = 1; scroll_release.pressed = false; scroll_release.position = Vector2(120.0, 90.0)
 	layer._input(scroll_release)
 	router.poll(InputRouter.Context.HUB)
-	_expect(not router.menu_direction_just_pressed(&"ui_up") and not router.menu_direction_just_pressed(&"ui_down"), "scroll edges stop after release", failures)
+	_expect(router.touch_scroll_y() == 0.0, "scroll delta stops after release", failures)
 
 	# A missed touchend leaves a ghost accept finger that holds interact/accept
 	# pressed and blocks dialogue and menu advancement. The stale-hold timeout

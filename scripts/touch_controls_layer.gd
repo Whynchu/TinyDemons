@@ -26,7 +26,6 @@ const STICK_MIN := 50.0
 const STICK_MAX := 160.0
 const MARGIN_FRACTION := 0.03
 const TAP_INTERACT_ACTION := &"tap_interact"
-const MENU_SCROLL_ROW_PX := 10.0
 const MENU_SCROLL_DRAG_PX := 6.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
 
@@ -53,7 +52,7 @@ var _menu_button_origins: Dictionary = {}
 var _menu_accept_fingers: Dictionary = {}
 var _menu_accept_latch := false
 var _menu_scroll_fingers: Dictionary = {}
-var _menu_scroll_edges: Array = []
+var _menu_scroll_y := 0.0
 var _target_toggle_active := false
 var _stick_vector := Vector2.ZERO
 var _stick_pointer_id := -1
@@ -159,12 +158,11 @@ func snapshot() -> Dictionary:
 	if _menu_accept_latch:
 		just_pressed[&"interact"] = true
 		just_pressed[&"ui_accept"] = true
-	for direction in _menu_scroll_edges:
-		just_pressed[direction] = true
-	_menu_scroll_edges.clear()
+	var scroll_y := _menu_scroll_y
+	_menu_scroll_y = 0.0
 	_press_latches.clear()
 	_menu_accept_latch = false
-	return {"active": true, "movement": _stick_vector, "actions": actions, "just_pressed": just_pressed}
+	return {"active": true, "movement": _stick_vector, "actions": actions, "just_pressed": just_pressed, "scroll_y": scroll_y}
 
 
 ## Testable input-provider seams. Real GUI events use the same methods.
@@ -337,6 +335,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		_finger_actions.clear()
 		_tap_interact_origins.clear()
 		_menu_scroll_fingers.clear()
+		_menu_scroll_y = 0.0
 		_pressed_actions.clear()
 		_press_latches.clear()
 		_target_toggle_active = false
@@ -444,7 +443,8 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 			if absf(position.y - origin.y) >= MENU_SCROLL_DRAG_PX:
 				_menu_touch_buttons.erase(finger_id)
 				_menu_button_origins.erase(finger_id)
-				_menu_scroll_fingers[finger_id] = {"accum": position.y - origin.y, "last_y": position.y}
+				_menu_scroll_fingers[finger_id] = {"last_y": position.y}
+				_menu_scroll_y += position.y - origin.y
 				_update_touch_capture_filter()
 				return
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
@@ -528,17 +528,8 @@ func _clear_stale_menu_accepts() -> void:
 func _accumulate_menu_scroll(finger_id: int, y: float) -> void:
 	var data: Dictionary = _menu_scroll_fingers[finger_id]
 	var last_y := float(data.get("last_y", y))
-	var accum := float(data.get("accum", 0.0))
-	var dy := y - last_y
+	_menu_scroll_y += y - last_y
 	data["last_y"] = y
-	accum += dy
-	while accum >= MENU_SCROLL_ROW_PX:
-		_menu_scroll_edges.append(&"ui_down")
-		accum -= MENU_SCROLL_ROW_PX
-	while accum <= -MENU_SCROLL_ROW_PX:
-		_menu_scroll_edges.append(&"ui_up")
-		accum += MENU_SCROLL_ROW_PX
-	data["accum"] = accum
 	_menu_scroll_fingers[finger_id] = data
 
 
@@ -834,7 +825,7 @@ func _clear_transient_input() -> void:
 	_menu_accept_fingers.clear()
 	_menu_accept_latch = false
 	_menu_scroll_fingers.clear()
-	_menu_scroll_edges.clear()
+	_menu_scroll_y = 0.0
 	_pressed_actions.clear()
 	_target_toggle_active = false
 	_press_latches.clear()

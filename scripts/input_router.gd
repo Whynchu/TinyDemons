@@ -153,6 +153,12 @@ func ui_direction_just_pressed(direction: StringName) -> bool:
 	return just_pressed(direction)
 
 
+func touch_scroll_y() -> float:
+	## Accumulated touch drag in logical pixels since the last poll. Menus use
+	## this to scroll their list content on a swipe without moving the cursor.
+	return float(_touch_snapshot.get("scroll_y", 0.0))
+
+
 func _read_movement() -> Vector2:
 	var value := Vector2.ZERO
 	if pressed(&"move_left"): value.x -= 1.0
