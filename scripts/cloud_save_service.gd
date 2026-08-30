@@ -17,6 +17,7 @@ var revision := 0
 var _crypto_callback: JavaScriptObject = null
 var _pending_action := ""
 var _http: HTTPRequest = null
+var _crypto_request_serial := 0
 
 func _ready() -> void:
 	_http = HTTPRequest.new(); add_child(_http)
@@ -29,6 +30,8 @@ func configured() -> bool:
 func create_backup(envelope: Dictionary) -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
 	_pending_action = "create_crypto"
+	_crypto_request_serial += 1
+	_start_crypto_timeout(_crypto_request_serial)
 	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
 	JavaScriptBridge.eval("window.__tdVaultCrypto.create(%s,%s)" % [JSON.stringify(JSON.stringify(envelope)), _crypto_callback])
 
@@ -36,6 +39,8 @@ func restore_backup(key: String) -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
 	recovery_key = key.strip_edges()
 	_pending_action = "derive_for_read"
+	_crypto_request_serial += 1
+	_start_crypto_timeout(_crypto_request_serial)
 	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
 	JavaScriptBridge.eval("window.__tdVaultCrypto.encrypt(%s,%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify("{}"), _crypto_callback])
 
@@ -43,6 +48,8 @@ func sync_backup(envelope: Dictionary) -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
 	if recovery_key.is_empty(): operation_completed.emit({"ok": false, "error": "Enter or create a recovery key first."}); return
 	_pending_action = "update_crypto"
+	_crypto_request_serial += 1
+	_start_crypto_timeout(_crypto_request_serial)
 	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
 	JavaScriptBridge.eval("window.__tdVaultCrypto.encrypt(%s,%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify(JSON.stringify(envelope)), _crypto_callback])
 
@@ -52,7 +59,10 @@ func delete_backup() -> void:
 	_request({"action":"delete", "vault_id":vault_id, "write_proof":write_proof}, "delete")
 
 func _on_crypto_completed(args: Array) -> void:
-	var raw := str(args[0]) if not args.is_empty() else ""
+	_crypto_request_serial = 0
+	var raw_variant: Variant = args[0] if not args.is_empty() else ""
+	if raw_variant is Array and not (raw_variant as Array).is_empty(): raw_variant = (raw_variant as Array)[0]
+	var raw := str(raw_variant)
 	var parsed: Variant = JSON.parse_string(raw)
 	if not parsed is Dictionary or not bool(parsed.get("ok", false)):
 		operation_completed.emit({"ok":false, "error":str(parsed.get("error", "Cryptography failed.")) if parsed is Dictionary else "Cryptography failed."}); return
@@ -86,7 +96,9 @@ func _on_request_completed(_result: int, code: int, _headers: PackedStringArray,
 	operation_completed.emit({"ok":true, "action":_pending_action, "recovery_key":recovery_key, "revision":revision})
 
 func _on_decrypt_completed(args: Array) -> void:
-	var parsed: Variant = JSON.parse_string(str(args[0]) if not args.is_empty() else "")
+	var raw_variant: Variant = args[0] if not args.is_empty() else ""
+	if raw_variant is Array and not (raw_variant as Array).is_empty(): raw_variant = (raw_variant as Array)[0]
+	var parsed: Variant = JSON.parse_string(str(raw_variant))
 	if not parsed is Dictionary or not bool(parsed.get("ok", false)):
 		operation_completed.emit({"ok":false, "error":"Recovery key is invalid or the backup was damaged."}); return
 	var envelope: Variant = JSON.parse_string(str(parsed.get("plaintext", "")))
@@ -105,6 +117,13 @@ func _load_config() -> void:
 	if config.load(path) == OK:
 		project_url = str(config.get_value("supabase", "project_url", "")).trim_suffix("/")
 		publishable_key = str(config.get_value("supabase", "publishable_key", ""))
+
+func _start_crypto_timeout(serial: int) -> void:
+	get_tree().create_timer(10.0).timeout.connect(func() -> void:
+		if _crypto_request_serial == serial:
+			_crypto_request_serial = 0
+			operation_completed.emit({"ok": false, "error": "Browser encryption did not respond. Refresh the page and try again."})
+	)
 
 func _load_state() -> void:
 	var config := ConfigFile.new()
