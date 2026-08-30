@@ -81,7 +81,7 @@ second Accessory with a general gold, Souls, or drop-rate multiplier.
 | `chainmail` | CHAINMAIL | New | Mail | P: VIT or DEF; S: balanced package | Is a dependable middle path better than a sharp specialization? |
 | `ash_mantle` | ASH MANTLE | New | Mantle | P: INT or MND; Fire Ward/Imbue utility | Can elemental protection be useful without overriding Chroma? |
 | `rootplate` | ROOTPLATE | New | Heavy plate | P: DEF; S: knockback resistance and AGI penalty | Can the player hold ground against forceful enemies? |
-| `demon_cloak` | DEMON CLOAK | New | Cloak | P: AGI; S: DEF, VIT, MND; occupies Body + Head | Can a premium merchant cloak become the best-in-slot body at mythic without ever dropping? |
+| `demon_cloak` | DEMON CLOAK | New | Cloak | P: AGI + DEF (both scale); S: VIT, MND; occupies Body + Head | Can a premium merchant cloak become the best-in-slot body at mythic without ever dropping? |
 
 Existing Body transmutation:
 
@@ -209,7 +209,7 @@ in the balance pass.
 | chainmail | Body | New | P VIT; S DEF | Stat snapshot only, COMMON+ | SHOP, CHEST, CLEAR | A dependable middle path with no sharp action requirement. |
 | ash_mantle | Body | New | P MND; S INT | Imbue Resonance FIRE, future, RARE+ | CHEST, CLEAR, BOSS | A Fire-attuned layer that improves matching Imbue without assigning Fire to the demon. |
 | rootplate | Body | New | P DEF; S VIT; AGI - | Knockback resistance, future | CHEST, CLEAR, BOSS | Holds ground against forceful enemies at a clear mobility cost. |
-| demon_cloak | Body | New | P AGI; S DEF, VIT, MND | Stat snapshot only; sold Common-only by the Cloaked Demon with an escalating price; never drops; occupies Body + Head and locks the Head slot while worn | CLOAKED DEMON SHOP | A living cloak only the Cloaked Demon sells, one price step dearer each time; at Mythic it out-stats every other Body item and carries Head-slot MND too. |
+| demon_cloak | Body | New | P AGI + DEF (both tier-scaled); S VIT, MND | Stat snapshot only; sold Common-only by the Cloaked Demon with an escalating price; never drops; occupies Body + Head and locks the Head slot while worn | CLOAKED DEMON SHOP | A living cloak only the Cloaked Demon sells, one price step dearer each time; at Mythic both AGI and DEF out-stat every other Body item, and it carries Head-slot MND too. |
 | cloth_wraps | Arm | New | P none; zero power | No effect; starter-only | STARTER ONLY | Fills the Arm slot without adding free combat power. |
 | iron_gauntlets | Arm | New | P STR; S AGI - | Charge profile, future, RARE+ | SHOP, CHEST, CLEAR | Put weight behind charged attacks and accept a handling cost. |
 | duelist_gloves | Arm | New | P AGI; S STR | Running Attack profile, future, RARE+ | CHEST, CLEAR | Reward the timing between a roll, a run, and the next attack without awarding Style. |

@@ -68,7 +68,7 @@ const DEFINITIONS := {
 	&"chainmail": {"name": "CHAINMAIL", "slot": &"body", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "defense": 1.0}, "price": 95},
 	&"ash_mantle": {"name": "ASH MANTLE", "slot": &"body", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 140},
 	&"rootplate": {"name": "ROOTPLATE", "slot": &"body", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 1.0, "agility": -1.0}, "price": 150},
-	&"demon_cloak": {"name": "DEMON CLOAK", "slot": &"body", "tier_stat": "agility", "bonuses": {"defense": 3.0, "vitality": 2.0, "mnd": 2.0, "agility": 4.0}, "price": 200},
+	&"demon_cloak": {"name": "DEMON CLOAK", "slot": &"body", "tier_stat": "agility", "tier_stats": ["defense"], "bonuses": {"defense": 3.0, "vitality": 2.0, "mnd": 2.0, "agility": 4.0}, "price": 200},
 
 	# Arm — the second new slot is action-facing, not a second accessory.
 	&"cloth_wraps": {"name": "CLOTH WRAPS", "slot": &"arm", "tier_stat": "", "bonuses": {}, "price": 1},
@@ -626,13 +626,24 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var base_bonuses: Dictionary = definition.get("bonuses", {})
 	var flat_points := float(rarity_flat_points(item.rarity)) + enhancement_flat_points(item.enhancement_level)
 	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
+	# The primary `tier_stat` scales with rarity/enhancement. `tier_stats`
+	# lists additional stats that scale alongside it (premium dual-lane items).
+	var scaled_stats: Array = []
+	for raw_stat: Variant in definition.get("tier_stats", []):
+		scaled_stats.append(_normalize_stat_key(str(raw_stat)))
+	if tier_stat.is_empty():
+		pass
+	elif scaled_stats.is_empty():
+		scaled_stats.append(tier_stat)
+	elif tier_stat not in scaled_stats:
+		scaled_stats.append(tier_stat)
 	for stat: String in base_bonuses:
 		var base_value := float(base_bonuses[stat])
 		var normalized_stat: String = _normalize_stat_key(str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat)))
 		if normalized_stat in ["health_rate", "damage_rate"]:
 			continue
 		var flat_value := base_value
-		if normalized_stat == tier_stat:
+		if normalized_stat in scaled_stats:
 			flat_value += flat_points
 		# Legacy affixes remain serialized for save compatibility, but the new
 		# tier package is deterministic and no longer adds hidden stat points.
