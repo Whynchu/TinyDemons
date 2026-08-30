@@ -28,12 +28,13 @@ func _initialize() -> void:
 
 	var shop := RunState.new()
 	shop.begin(777)
-	shop.ensure_shop_stock(12)
+	var shop_profile := PlayerProfile.new()
+	shop.ensure_shop_stock(shop_profile)
 	var shop_slots := {}
 	for entry: Dictionary in shop.shop_stock:
 		var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 		shop_slots[catalog.definition_slot(item.definition_id)] = true
-	_expect(shop.shop_stock.size() == ItemCatalog.SLOTS.size() + 1, "shop keeps one baseline per slot plus one premium", failures)
+	_expect(shop.shop_stock.size() == ItemCatalog.SLOTS.size() + 2, "shop keeps one baseline per slot plus a premium and the Demon Cloak", failures)
 	_expect(shop_slots.size() == ItemCatalog.SLOTS.size(), "shop stock covers every approved slot", failures)
 	_expect(shop.shop_stock.all(func(entry: Dictionary) -> bool: return entry.get("source", "") == "shop" and not str(entry.get("role", "")).is_empty() and entry.has("primary_stat") and entry.has("description")), "shop entries carry source and authored presentation metadata", failures)
 

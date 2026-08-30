@@ -3,6 +3,40 @@ class_name PlayerAnimationComponent
 
 var coordinator_root: Object = null
 var using_baked := false
+var baked_root := "res://assets/baked/player"
+var cloaked := false
+var cloaked_requested := false
+var frames_built := false
+
+const BAKED_ROOT := "res://assets/baked/player"
+const CLOAKED_BAKED_ROOT := "res://assets/baked/player_cloaked"
+const CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet_cloaked.png"
+const CLOAKED_SHEET_ROWS := {
+	"idle": 0,
+	"walk": 1,
+	"run": 2,
+	"attack": 3,
+	"between": 4,
+	"attack2": 5,
+	"after": 6,
+	"roll": 7,
+	"backflip": 8,
+	"magic": 9,
+	"spin": 10,
+}
+const CLOAKED_FRAME_COUNTS := {
+	"idle": 5,
+	"walk": 4,
+	"run": 4,
+	"attack": 4,
+	"between": 1,
+	"attack2": 4,
+	"after": 1,
+	"roll": 6,
+	"backflip": 7,
+	"magic": 4,
+	"spin": 9,
+}
 var idle_frames: Array[Texture2D] = []
 var walk_frames: Array[Texture2D] = []
 var run_frames: Array[Texture2D] = []
@@ -40,14 +74,69 @@ var frames_by_palette: Dictionary = {}
 func build_frames(root: Object) -> void:
 	coordinator_root = root
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary; var size := Vector2i(36, 36)
-	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_frames("res://assets/artwork/TinyDemon-Magic.png", size)
+	cloaked = false
+	cloaked_requested = false
+	_slice_base_sources(library, size, _anim_frame_size("attack"))
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
 	for index in raw_dust.size(): dust.append(library.dither_roll_dust_frame(raw_dust[index], float(index) / float(maxi(raw_dust.size(), 1))))
 	root.set("roll_dust_frames", dust); root.set("roll_dust_flipped_frames", library.flip_effect_frames(dust, Vector2i(16, 16)))
-	var attack_size: Vector2i = root.get("PLAYER_ATTACK_FRAME_SIZE") if root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(32, 32); attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
-	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
+	baked_root = BAKED_ROOT
+	using_baked = _detect_baked(); apply_palette(root, "blue"); precache_all_palettes(); warm_all_palette_caches(root)
+	frames_built = true
+	_apply_cloaked_state()
+
+
+func _slice_base_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
+	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_frames("res://assets/artwork/TinyDemon-Magic.png", size)
+	attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
+	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = coordinator_root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = coordinator_root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
 	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
-	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture; using_baked = _detect_baked(); apply_palette(root, "blue"); precache_all_palettes(); warm_all_palette_caches(root)
+	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
+
+
+## Slices the authored cloaked fullsheet into the same animation groups as the
+## base player sheet. Defend is intentionally not authored on the cloaked sheet,
+## so base_defend_frames remains the fallback for that animation.
+func _slice_cloaked_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
+	idle_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["idle"], size, CLOAKED_FRAME_COUNTS["idle"]); walk_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["walk"], size, CLOAKED_FRAME_COUNTS["walk"]); run_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["run"], size, CLOAKED_FRAME_COUNTS["run"]); backflip_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["backflip"], size, CLOAKED_FRAME_COUNTS["backflip"]); roll_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["roll"], size, CLOAKED_FRAME_COUNTS["roll"]); magic_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["magic"], size, CLOAKED_FRAME_COUNTS["magic"])
+	attack_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["attack"], attack_size, CLOAKED_FRAME_COUNTS["attack"]); attack2_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["attack2"], attack_size, CLOAKED_FRAME_COUNTS["attack2"]); spin_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["spin"], attack_size, CLOAKED_FRAME_COUNTS["spin"])
+	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames)
+	var between_frames := library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["between"], size, 1); var after_frames := library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["after"], size, 1)
+	between_attack_texture = between_frames[0] if not between_frames.is_empty() else null; after_attack2_texture = after_frames[0] if not after_frames.is_empty() else null
+	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
+	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
+
+
+## Requests the cloaked art variant. Before the frames are built this only
+## records the request; build_frames() applies it once the sources exist.
+func set_cloaked(root: Object, enabled: bool) -> void:
+	coordinator_root = root
+	cloaked_requested = enabled
+	if not frames_built:
+		return
+	_apply_cloaked_state()
+
+
+func _apply_cloaked_state() -> void:
+	if cloaked == cloaked_requested:
+		return
+	cloaked = cloaked_requested
+	var library := coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary
+	var size := Vector2i(36, 36)
+	var attack_size := _anim_frame_size("attack")
+	if cloaked:
+		_slice_cloaked_sources(library, size, attack_size)
+		baked_root = CLOAKED_BAKED_ROOT
+	else:
+		_slice_base_sources(library, size, attack_size)
+		baked_root = BAKED_ROOT
+	using_baked = _detect_baked()
+	frames_by_palette.clear()
+	var palette := String(coordinator_root.get("current_player_palette_name")) if coordinator_root.get("current_player_palette_name") != null else "blue"
+	apply_palette(coordinator_root, palette)
+	precache_all_palettes()
+	warm_all_palette_caches(coordinator_root)
+	apply_frame(coordinator_root)
 
 
 ## Resolves the locomotion animation name from shared root state so every
@@ -206,7 +295,7 @@ func _detect_baked() -> bool:
 func _baked_or_recolor(palette_name: String, anim: String, source_frames: Array[Texture2D]) -> Array[Texture2D]:
 	if not using_baked:
 		return recolor_frames(source_frames, palette_name)
-	var sheet_path := "res://assets/baked/player/%s/%s.png" % [palette_name, anim]
+	var sheet_path := "%s/%s/%s.png" % [baked_root, palette_name, anim]
 	if not ResourceLoader.exists(sheet_path):
 		return recolor_frames(source_frames, palette_name)
 	var frame_size := _anim_frame_size(anim)
@@ -219,7 +308,7 @@ func _baked_or_recolor(palette_name: String, anim: String, source_frames: Array[
 func _baked_or_recolor_texture(palette_name: String, anim: String, source_texture: Texture2D) -> Texture2D:
 	if not using_baked:
 		return recolor_texture(source_texture, palette_name)
-	var texture_path := "res://assets/baked/player/%s/%s.png" % [palette_name, anim]
+	var texture_path := "%s/%s/%s.png" % [baked_root, palette_name, anim]
 	if not ResourceLoader.exists(texture_path):
 		return recolor_texture(source_texture, palette_name)
 	var texture := load(texture_path) as Texture2D

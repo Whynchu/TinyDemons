@@ -155,6 +155,7 @@ func initialize(root: GameplayState) -> void:
 	await root.get_tree().process_frame
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+	root.call("_refresh_player_cloak_visual")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
 	_initialize_walkable_area(root, root.EDGE_MARGIN, root.SLIME_EDGE_PADDING)

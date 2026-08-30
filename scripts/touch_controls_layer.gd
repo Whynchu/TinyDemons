@@ -18,14 +18,17 @@ const EMULATED_DEVICE_ID := -1
 const MOUSE_FINGER_ID := -2
 
 const BASE_CONTENT_SIZE := Vector2(240.0, 160.0)
-const BUTTON_FRACTION := 0.115
-const BUTTON_MIN := 18.0
-const BUTTON_MAX := 64.0
-const STICK_FRACTION := 0.26
-const STICK_MIN := 44.0
-const STICK_MAX := 140.0
+const BUTTON_FRACTION := 0.15
+const BUTTON_MIN := 20.0
+const BUTTON_MAX := 80.0
+const STICK_FRACTION := 0.30
+const STICK_MIN := 50.0
+const STICK_MAX := 160.0
 const MARGIN_FRACTION := 0.03
 const TAP_INTERACT_ACTION := &"tap_interact"
+const MENU_SCROLL_ROW_PX := 10.0
+const MENU_SCROLL_DRAG_PX := 6.0
+const MENU_ACCEPT_MAX_HOLD_MS := 800
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
 const BUTTON_GRID_POSITIONS := {
@@ -46,8 +49,11 @@ var _press_latches: Dictionary = {}
 var _finger_actions: Dictionary = {}
 var _tap_interact_origins: Dictionary = {}
 var _menu_touch_buttons: Dictionary = {}
+var _menu_button_origins: Dictionary = {}
 var _menu_accept_fingers: Dictionary = {}
 var _menu_accept_latch := false
+var _menu_scroll_fingers: Dictionary = {}
+var _menu_scroll_edges: Array = []
 var _target_toggle_active := false
 var _stick_vector := Vector2.ZERO
 var _stick_pointer_id := -1
@@ -135,6 +141,7 @@ func action_pressed(action: StringName) -> bool:
 func snapshot() -> Dictionary:
 	if not _touch_input_enabled:
 		return {"active": false, "movement": Vector2.ZERO, "actions": {}, "just_pressed": {}}
+	_clear_stale_menu_accepts()
 	var actions: Dictionary = {}
 	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard"]:
 		actions[action] = action_pressed(action)
@@ -152,6 +159,9 @@ func snapshot() -> Dictionary:
 	if _menu_accept_latch:
 		just_pressed[&"interact"] = true
 		just_pressed[&"ui_accept"] = true
+	for direction in _menu_scroll_edges:
+		just_pressed[direction] = true
+	_menu_scroll_edges.clear()
 	_press_latches.clear()
 	_menu_accept_latch = false
 	return {"active": true, "movement": _stick_vector, "actions": actions, "just_pressed": just_pressed}
@@ -189,12 +199,12 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictiona
 	var unit := minf(viewport_size.x, viewport_size.y)
 	var margin := clampf(unit * MARGIN_FRACTION, 2.0, 8.0)
 	var button := clampf(unit * BUTTON_FRACTION, BUTTON_MIN, BUTTON_MAX)
-	var gap := maxf(2.0, margin * 0.75)
+	var gap := maxf(5.0, button * 0.30)
 	var stick_diameter := clampf(unit * STICK_FRACTION, STICK_MIN, STICK_MAX)
 	# Keep the stick in the lower-left corner and the action cluster in the
 	# lower-right corner. These are deliberately inside the viewport: the
 	# stretch transform maps both the visuals and touch positions together.
-	var stick_width := minf(maxf(stick_diameter * 1.65, 68.0), viewport_size.x * 0.46)
+	var stick_width := minf(maxf(stick_diameter * 1.4, 60.0), viewport_size.x * 0.40)
 	var stick_zone := Rect2(Vector2(margin, viewport_size.y - margin - stick_diameter), Vector2(maxf(stick_width, stick_diameter), stick_diameter))
 	var stick_home := stick_zone.position + stick_zone.size * 0.5
 	var cluster_origin := Vector2.ZERO
@@ -317,11 +327,28 @@ func _input(event: InputEvent) -> void:
 func _finger_down(finger_id: int, position: Vector2) -> void:
 	if not _touch_input_enabled:
 		return
+	# Menu and dialogue input is single-finger. A new touch supersedes any ghost
+	# left by a missed touchend, which would otherwise hold interact/accept
+	# pressed and permanently suppress the rising edge that advances dialogue
+	# and menus (pausing and reopening cleared it by wiping this state).
+	if _is_menu_context() or _input_context == CONTEXT_DIALOGUE:
+		_menu_accept_fingers.clear()
+		_menu_accept_latch = false
+		_finger_actions.clear()
+		_tap_interact_origins.clear()
+		_menu_scroll_fingers.clear()
+		_pressed_actions.clear()
+		_press_latches.clear()
+		_target_toggle_active = false
+		for action in _button_nodes:
+			_update_button_visual(action)
+		_update_touch_capture_filter()
 	var cancel: Rect2 = _layout.get("cancel", Rect2())
 	if _is_menu_context():
 		var menu_button := _menu_button_at(position)
 		if menu_button != null:
 			_menu_touch_buttons[finger_id] = menu_button
+			_menu_button_origins[finger_id] = position
 			_update_touch_capture_filter()
 			return
 		# A disabled native button still owns its visual hit area. Reserve that
@@ -335,11 +362,11 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 			_update_touch_capture_filter()
 			return
 		# Hub pages expose their actionable controls as native Buttons. A blank
-		# touch must stay inert; falling through to generic accept moves the
-		# controller cursor even though no visible control was selected.
+		# touch stays inert unless it drags, which scrolls the visible list.
 		if _input_context == CONTEXT_HUB or _input_context == CONTEXT_PAUSE:
+			_menu_scroll_fingers[finger_id] = {"accum": 0.0, "last_y": position.y}
 			return
-		_menu_accept_fingers[finger_id] = true
+		_menu_accept_fingers[finger_id] = Time.get_ticks_msec()
 		_menu_accept_latch = true
 		_update_touch_capture_filter()
 		return
@@ -361,7 +388,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# advance even when the floating gameplay controls overlap the prompt.
 		var dialogue_rect := _dialogue_touch_rect()
 		if dialogue_rect.has_point(position):
-			_menu_accept_fingers[finger_id] = true
+			_menu_accept_fingers[finger_id] = Time.get_ticks_msec()
 			_menu_accept_latch = true
 			_update_touch_capture_filter()
 			return
@@ -370,7 +397,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		var dialogue_buttons: Dictionary = _layout.get("buttons", {})
 		var dialogue_pause: Rect2 = _layout.get("pause", Rect2())
 		if not _rect_dictionary_contains(dialogue_buttons, position) and not dialogue_pause.has_point(position):
-			_menu_accept_fingers[finger_id] = true
+			_menu_accept_fingers[finger_id] = Time.get_ticks_msec()
 			_menu_accept_latch = true
 			_update_touch_capture_filter()
 			return
@@ -412,10 +439,22 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 
 func _finger_moved(finger_id: int, position: Vector2) -> void:
 	if _menu_touch_buttons.has(finger_id):
+		if _is_scrollable_menu() and _menu_button_origins.has(finger_id):
+			var origin := _menu_button_origins[finger_id] as Vector2
+			if absf(position.y - origin.y) >= MENU_SCROLL_DRAG_PX:
+				_menu_touch_buttons.erase(finger_id)
+				_menu_button_origins.erase(finger_id)
+				_menu_scroll_fingers[finger_id] = {"accum": position.y - origin.y, "last_y": position.y}
+				_update_touch_capture_filter()
+				return
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
 		if menu_button == null or not is_instance_valid(menu_button) or not menu_button.get_global_rect().grow(3.0).has_point(position):
 			_menu_touch_buttons.erase(finger_id)
+			_menu_button_origins.erase(finger_id)
 			_update_touch_capture_filter()
+		return
+	if _menu_scroll_fingers.has(finger_id):
+		_accumulate_menu_scroll(finger_id, position.y)
 		return
 	if _menu_accept_fingers.has(finger_id):
 		return
@@ -447,8 +486,13 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 	if _menu_touch_buttons.has(finger_id):
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
 		_menu_touch_buttons.erase(finger_id)
+		_menu_button_origins.erase(finger_id)
 		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and menu_button.get_global_rect().grow(3.0).has_point(position):
 			menu_button.pressed.emit()
+		_update_touch_capture_filter()
+		return
+	if _menu_scroll_fingers.has(finger_id):
+		_menu_scroll_fingers.erase(finger_id)
 		_update_touch_capture_filter()
 		return
 	if _menu_accept_fingers.has(finger_id):
@@ -466,6 +510,40 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 		elif action != &"target":
 			set_button_state(action, false)
 	_update_touch_capture_filter()
+
+
+func _clear_stale_menu_accepts() -> void:
+	if _menu_accept_fingers.is_empty():
+		return
+	var now := Time.get_ticks_msec()
+	for finger_id: int in _menu_accept_fingers.keys():
+		var down_time := int(_menu_accept_fingers[finger_id])
+		if now - down_time > MENU_ACCEPT_MAX_HOLD_MS:
+			_menu_accept_fingers.erase(finger_id)
+			if _menu_accept_fingers.is_empty():
+				_menu_accept_latch = false
+			_update_touch_capture_filter()
+
+
+func _accumulate_menu_scroll(finger_id: int, y: float) -> void:
+	var data: Dictionary = _menu_scroll_fingers[finger_id]
+	var last_y := float(data.get("last_y", y))
+	var accum := float(data.get("accum", 0.0))
+	var dy := y - last_y
+	data["last_y"] = y
+	accum += dy
+	while accum >= MENU_SCROLL_ROW_PX:
+		_menu_scroll_edges.append(&"ui_down")
+		accum -= MENU_SCROLL_ROW_PX
+	while accum <= -MENU_SCROLL_ROW_PX:
+		_menu_scroll_edges.append(&"ui_up")
+		accum += MENU_SCROLL_ROW_PX
+	data["accum"] = accum
+	_menu_scroll_fingers[finger_id] = data
+
+
+func _is_scrollable_menu() -> bool:
+	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_PAUSE
 
 
 func _rect_dictionary_contains(rectangles: Dictionary, position: Vector2) -> bool:
@@ -541,7 +619,7 @@ func _collect_menu_buttons(node: Node, output: Array) -> void:
 
 
 func _has_real_touch_capture() -> bool:
-	return _stick_pointer_id >= 0 or not _finger_actions.is_empty() or not _menu_touch_buttons.is_empty() or not _menu_accept_fingers.is_empty()
+	return _stick_pointer_id >= 0 or not _finger_actions.is_empty() or not _menu_touch_buttons.is_empty() or not _menu_accept_fingers.is_empty() or not _menu_scroll_fingers.is_empty()
 
 
 func _update_touch_capture_filter() -> void:
@@ -657,6 +735,7 @@ func _apply_layout() -> void:
 	_stick_base.size = Vector2(diameter, diameter)
 	var knob_side := diameter * 0.4
 	_stick_knob.size = Vector2(knob_side, knob_side)
+	_stick_knob.add_theme_stylebox_override("panel", _panel_style(Color(0.82, 0.86, 1.0, 0.82), Color.WHITE, 2, int(knob_side * 0.5)))
 	_stick_base.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.10, 0.15, 0.62), Color(0.52, 0.58, 0.72, 0.78), 2, int(diameter * 0.5)))
 	_update_stick_visuals()
 	for action in _button_nodes:
@@ -688,7 +767,7 @@ func _update_button_visual(action: StringName) -> void:
 	var node := _button_nodes[action] as Panel
 	var pressed := bool(_pressed_actions.get(action, false))
 	var diameter := float(_layout.get("button_size", 20.0))
-	var corner := int(clampf(diameter * 0.18, 2.0, 8.0))
+	var corner := int(diameter * 0.5)
 	if pressed:
 		node.add_theme_stylebox_override("panel", _panel_style(Color(0.38, 0.42, 0.58, 0.95), Color.WHITE, 2, corner))
 	else:
@@ -751,8 +830,11 @@ func _clear_transient_input() -> void:
 	_finger_actions.clear()
 	_tap_interact_origins.clear()
 	_menu_touch_buttons.clear()
+	_menu_button_origins.clear()
 	_menu_accept_fingers.clear()
 	_menu_accept_latch = false
+	_menu_scroll_fingers.clear()
+	_menu_scroll_edges.clear()
 	_pressed_actions.clear()
 	_target_toggle_active = false
 	_press_latches.clear()

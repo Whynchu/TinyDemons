@@ -33,6 +33,7 @@ func apply_profile_to_runtime(root: Object) -> void:
 		root.player_stats.manual_allocation_enabled = false
 	root.call("_configure_equipment_transmutations")
 	root.call("_recompute_player_speed_multiplier")
+	root.call("_refresh_player_cloak_visual")
 
 
 func reapply_equipment_preserving_health(root: Object) -> void:
@@ -41,6 +42,7 @@ func reapply_equipment_preserving_health(root: Object) -> void:
 	var health_ratio := clampf(current_health / old_max, 0.0, 1.0) if old_max > 0.0 else 1.0
 	root.player_equipment.configure_from_profile(root.player_profile)
 	root.call("_configure_equipment_transmutations")
+	root.call("_refresh_player_cloak_visual")
 	var new_max := float(root.call("_player_max_health"))
 	if root.player_health_component != null:
 		root.player_health_component.maximum_health = new_max

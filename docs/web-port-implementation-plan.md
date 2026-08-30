@@ -57,8 +57,10 @@ on-screen UI following the **last device that produced deliberate input**.
   mobile story.
 - Threaded web export. Single-threaded is the target (§3); threads are a
   later optimization if profiling demands them.
-- Touch gestures (pinch, pan, double-tap). They are flaky on mobile browsers
-  (§11) and nothing in the game needs them.
+- Gesture *events* (pinch, pan, double-tap). They are flaky on mobile browsers
+  (§11). Menu lists instead scroll through reliable `InputEventScreenDrag`
+  swipe-to-scroll in the touch layer, which drives the same `ui_up`/`ui_down`
+  navigation the controller uses.
 - Mouse-driven gameplay changes. Desktop mouse behavior is unchanged; menus
   already accept clicks via real `Button` nodes.
 - In-game input remapping UI. The Input Map stays the binding authority.
@@ -121,9 +123,12 @@ Researched 2026-08-26 (sources in §11):
   manual checklist verifies no console autoplay warnings.
 - **Fullscreen**: browsers allow entering fullscreen only from within an
   input-event callback (`_input`/`_unhandled_input`), never from polling.
-- **Saves**: `user://` persists to IndexedDB. Writes flush asynchronously —
-  a tab closed in the same instant as a save can lose it. Verify timing; add
-  a flush-on-visibility-change later only if testing shows real loss.
+- **Saves**: `user://` persists to IndexedDB. Because writes flush
+  asynchronously, the web build additionally mirrors every save to
+  `localStorage` (`ProfileSaveService`, synchronous and durable across reloads,
+  app updates, and tab evictions) and prefers that copy on load. Saves are also
+  flushed on window focus-out and on JS `pagehide`/`visibilitychange` hidden so
+  the latest state survives an abrupt reload.
 
 ## 4. Coexistence rules (the "still in development" contract)
 
@@ -410,7 +415,7 @@ the full loop with prompts swapping to gamepad.
 | Gamepad mapping wrong in some browser | Medium | Test matrix (Phase 5); standard-mapping devices (Backbone/Xbox/PS) first; document fallback |
 | Gamepad invisible until first button press | Certain (platform rule) | "Press a controller button" affordance; prompt defaults to touch/keyboard until then |
 | 70 MB WAV first load | Certain unless addressed | OGG re-encode (Phase 4); measure and record |
-| IndexedDB save lost on instant tab-close | Low | Verify timing; flush-on-hide only if observed |
+| IndexedDB save lost on instant tab-close | Low | Addressed: saves mirror to `localStorage` synchronously and flush on focus-out and JS `pagehide`/`visibilitychange` |
 | Emulated mouse echo misclassifies touch as mouse | Certain if unhandled | Ignore emulated mouse plus active/recent touch echoes in the classifier; covered by tests |
 | Joypad drift flips device to gamepad | Certain if unhandled | 0.5 classifier threshold; covered by tests |
 | Focus-only menus untappable | Medium | Phase 3 tap audit; tap-to-activate on the Button, no navigation rework |

@@ -3,7 +3,8 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 10
+const CURRENT_SCHEMA_VERSION := 11
+const LEGACY_DEMON_CLOAK_SCHEMA_VERSION := 10
 const LEGACY_SIX_STAT_SCHEMA_VERSION := 9
 const LEGACY_SPEED_SCHEMA_VERSION := 8
 const MAX_LEVEL := 99
@@ -16,6 +17,8 @@ const ELEMENT_BIND_SOUL_COST := 50
 const MAX_PLAYER_NAME_LENGTH := 8
 const DEFAULT_PLAYER_NAME := "DEMON"
 const CLEAR_REWARD_SLOT_HISTORY_LIMIT := 3
+const DEMON_CLOAK_BASE_PRICE := 500
+const DEMON_CLOAK_PRICE_STEP := 100
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var has_started := false
@@ -57,6 +60,7 @@ var allocated_spd:
 var gold := 0
 var souls := 0
 var starter_soul_gift_claimed := false
+var demon_cloak_purchases := 0
 var inventory: Array[Dictionary] = []
 ## Canonical state has six slots. The `armor` key is retained as a synchronized
 ## load/save alias so older menu/test callers do not lose the Body item during
@@ -170,6 +174,25 @@ func purchase_item(item: ItemInstance, cost: int) -> bool:
 	gold -= cost
 	inventory.append(item.to_dictionary())
 	return true
+
+
+func demon_cloak_price() -> int:
+	return DEMON_CLOAK_BASE_PRICE + DEMON_CLOAK_PRICE_STEP * demon_cloak_purchases
+
+
+func purchase_demon_cloak() -> ItemInstance:
+	var price := demon_cloak_price()
+	if gold < price:
+		return null
+	var item := ItemInstance.new()
+	item.instance_id = "demon-cloak-%d" % (demon_cloak_purchases + 1)
+	item.definition_id = &"demon_cloak"
+	item.rarity = &"common"
+	item.quality = 1.0
+	if not purchase_item(item, price):
+		return null
+	demon_cloak_purchases += 1
+	return item
 
 
 func add_souls(amount: int) -> void:
@@ -468,6 +491,7 @@ func to_dictionary() -> Dictionary:
 		"gold": gold,
 		"souls": souls,
 		"starter_soul_gift_claimed": starter_soul_gift_claimed,
+		"demon_cloak_purchases": demon_cloak_purchases,
 		"inventory": inventory.duplicate(true),
 		"equipped_instance_ids": equipped_instance_ids.duplicate(true),
 		"family_mastery": family_mastery.duplicate(true),
@@ -484,7 +508,7 @@ func load_dictionary(data: Dictionary) -> void:
 	var saved_schema := int(data.get("schema_version", 0))
 	# Chroma changes the meaning of file identity. Older files are intentionally
 	# allowed to die out instead of being guessed into the new model.
-	if saved_schema not in [CURRENT_SCHEMA_VERSION, LEGACY_SIX_STAT_SCHEMA_VERSION, LEGACY_SPEED_SCHEMA_VERSION]:
+	if saved_schema not in [CURRENT_SCHEMA_VERSION, LEGACY_DEMON_CLOAK_SCHEMA_VERSION, LEGACY_SIX_STAT_SCHEMA_VERSION, LEGACY_SPEED_SCHEMA_VERSION]:
 		schema_version = CURRENT_SCHEMA_VERSION
 		return
 	var is_schema_8 := saved_schema == LEGACY_SPEED_SCHEMA_VERSION
@@ -522,6 +546,7 @@ func load_dictionary(data: Dictionary) -> void:
 	gold = maxi(int(data.get("gold", 0)), 0)
 	souls = maxi(int(data.get("souls", 0)), 0)
 	starter_soul_gift_claimed = bool(data.get("starter_soul_gift_claimed", false))
+	demon_cloak_purchases = maxi(int(data.get("demon_cloak_purchases", 0)), 0)
 	var saved_inventory: Variant = data.get("inventory", [])
 	inventory.assign(saved_inventory if saved_inventory is Array else [])
 	equipped_instance_ids = {"weapon": "", "head": "", "body": "", "armor": "", "arm": "", "shield": "", "accessory": ""}

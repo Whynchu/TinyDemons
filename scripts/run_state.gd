@@ -259,9 +259,10 @@ func record_gear_reward(source: StringName, item: ItemInstance, run_rank: int, p
 	})
 
 
-func ensure_shop_stock(level: int) -> void:
+func ensure_shop_stock(profile: PlayerProfile) -> void:
 	if not shop_stock.is_empty():
 		return
+	var level := profile.level if profile != null else 1
 	var catalog := ItemCatalog.new()
 	for slot_index in ItemCatalog.SLOTS.size():
 		var slot := ItemCatalog.SLOTS[slot_index]
@@ -275,6 +276,14 @@ func ensure_shop_stock(level: int) -> void:
 	if not premium.definition_id.is_empty():
 		premium.instance_id = "shop-%s-premium" % run_id
 		shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))
+	if profile != null:
+		var cloak := ItemInstance.new()
+		cloak.definition_id = &"demon_cloak"
+		cloak.rarity = &"common"
+		cloak.quality = 1.0
+		var cloak_entry := _shop_entry(catalog, cloak, &"body", profile.demon_cloak_price())
+		cloak_entry["permanent"] = true
+		shop_stock.append(cloak_entry)
 
 
 func _shop_entry(catalog: ItemCatalog, item: ItemInstance, slot: StringName, shop_price: int) -> Dictionary:
