@@ -23,6 +23,7 @@ const ROUTE_OPTIONAL_TREASURE: StringName = &"optional_treasure"
 const ROUTE_KEY_PROGRESSION: StringName = &"key_progression"
 const ROUTE_DETOUR_ORB: StringName = &"detour_orb"
 const ROUTE_DETOUR_FIRE: StringName = &"detour_fire"
+const ROUTE_FUSION_PREREQUISITE_ORB: StringName = &"fusion_prerequisite_orb"
 
 
 class LayoutBuilder extends RefCounted:
@@ -175,6 +176,8 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 			detour_type = ROUTE_DETOUR_FIRE
 			detour_flame = alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
 		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement, room_target)
+		if fusion_gate_requirements.has(source_depth):
+			_add_fusion_prerequisite_orb(builder, current_room_id, current_coordinate, main_socket)
 		current_room_id = destination_room_id
 		current_coordinate = destination_coordinate
 	_fill_room_target(builder, room_target, boss_depth)
@@ -272,8 +275,8 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 		errors.append("generated layout is missing a start room")
 	if boss_id.is_empty():
 		errors.append("generated layout is missing a boss room")
-	if orb_count != 2:
-		errors.append("generated layout requires exactly two Orb Rooms")
+	if orb_count < 2:
+		errors.append("generated layout requires at least two Orb Rooms")
 	if special_count < 2:
 		errors.append("generated layout requires at least two Special Enemy Rooms")
 	if treasure_count < 3:
@@ -297,6 +300,8 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 		if completed_runs >= 5:
 			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame)
 			errors.append_array(fusion_gate_errors)
+			var fusion_orb_route_errors := _fusion_orb_route_errors(layout)
+			errors.append_array(fusion_orb_route_errors)
 	return errors
 
 
@@ -446,6 +451,27 @@ static func _special_side_requirement(
 	if alternate_requirements.is_empty() or generator_rng.randf() >= 0.50:
 		return &"puzzle_b"
 	return alternate_requirements[generator_rng.randi_range(0, alternate_requirements.size() - 1)]
+
+
+static func _add_fusion_prerequisite_orb(
+	builder: LayoutBuilder,
+	source_room_id: StringName,
+	source_coordinate: Vector2i,
+	main_socket: StringName
+) -> void:
+	var candidate_sockets: Array[StringName] = [
+		DungeonGraph.WALL_RIGHT if main_socket == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT,
+		main_socket,
+	]
+	for candidate_socket in candidate_sockets:
+		var connection_key := "%s:%s" % [source_room_id, candidate_socket]
+		var candidate_coordinate := source_coordinate + _exit_offset(candidate_socket)
+		if builder.connection_keys.has(connection_key) or builder.room_ids_by_coordinate.has(candidate_coordinate):
+			continue
+		var orb_id := builder.add_room(candidate_coordinate, DungeonGraph.ROOM_ORB)
+		builder.link(source_room_id, candidate_socket, orb_id, &"", ROUTE_FUSION_PREREQUISITE_ORB)
+		return
+	push_error("Generated fusion tier has no free Orb branch at %s." % source_room_id)
 
 
 static func _add_side_route(
@@ -611,6 +637,28 @@ static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_
 				break
 		if not gate_reachable:
 			errors.append("generated entrance-orb gate has no reachable matching result: %s:%s requires %s" % [connection.source_room_id, connection.exit_socket, connection.orb_element_requirement])
+	return errors
+
+
+static func _fusion_orb_route_errors(layout) -> Array[String]:
+	var errors: Array[String] = []
+	for gate in layout.connections:
+		if gate.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
+			continue
+		var prerequisite_orb_found := false
+		for candidate in layout.connections:
+			if candidate.source_room_id != gate.source_room_id:
+				continue
+			var destination = null
+			for room in layout.rooms:
+				if room.id == candidate.destination_room_id:
+					destination = room
+					break
+			if destination != null and destination.room_type == DungeonGraph.ROOM_ORB and candidate.route_role == ROUTE_FUSION_PREREQUISITE_ORB:
+				prerequisite_orb_found = true
+				break
+		if not prerequisite_orb_found:
+			errors.append("generated entrance-orb gate lacks a pre-gate prerequisite Orb branch: %s:%s" % [gate.source_room_id, gate.exit_socket])
 	return errors
 
 

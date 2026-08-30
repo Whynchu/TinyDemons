@@ -37,8 +37,8 @@ func _initialize() -> void:
 			chroma.call("attune", required_element)
 			gameplay.call("_sync_current_element_state")
 			_expect(map.call("connection_visual_state", gate, false) == &"orb_locked", "active unbound fusion result does not bypass the R6 scene gate", failures)
-			var orb_room_id: StringName = _first_orb_room(graph)
-			_expect(not orb_room_id.is_empty(), "R6 scene graph exposes an Orb Room", failures)
+			var orb_room_id: StringName = _prerequisite_orb_room(graph, gate)
+			_expect(not orb_room_id.is_empty(), "R6 scene graph exposes a pre-gate prerequisite Orb", failures)
 			if not orb_room_id.is_empty():
 				map.call("on_room_entered", orb_room_id)
 				_expect(map.call("change_orb_from_palette", orb_room_id, required_palette), "R6 scene Orb Room accepts the matching result", failures)
@@ -63,11 +63,18 @@ func _first_orb_gate(graph: DungeonGraph) -> DungeonGraph.ConnectionRecord:
 	return null
 
 
-func _first_orb_room(graph: DungeonGraph) -> StringName:
+func _prerequisite_orb_room(graph: DungeonGraph, gate: DungeonGraph.ConnectionRecord) -> StringName:
+	if gate == null:
+		return &""
 	for room_id in graph.get_room_ids():
 		var room := graph.get_room(room_id)
-		if room != null and room.room_type == DungeonGraph.ROOM_ORB:
-			return room.id
+		if room == null or room.id != gate.source_room_id:
+			continue
+		for connection_value in room.outgoing_connections.values():
+			var connection := connection_value as DungeonGraph.ConnectionRecord
+			var destination := graph.get_room(connection.destination_room_id) if connection != null else null
+			if connection != null and destination != null and destination.room_type == DungeonGraph.ROOM_ORB and connection.route_role == &"fusion_prerequisite_orb":
+				return destination.id
 	return &""
 
 

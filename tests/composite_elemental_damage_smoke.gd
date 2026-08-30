@@ -67,6 +67,8 @@ func _initialize() -> void:
 	var immune_result := CombatCalculator.calculate_request(immune, attacker, defender, rng, tuning)
 	_expect(immune_result.category == CombatDamageRequestScript.DamageCategory.ELEMENTAL_SLIME and immune_result.contract_id == CombatDamageRequestScript.CONTRACT_ELEMENTAL_SLIME, "elemental slimes use their separate composite contract", failures)
 	_expect(immune_result.physical_raw > 0.0 and immune_result.magic_raw > 0.0 and immune_result.immune and is_zero_approx(immune_result.amount), "elemental immunity zeros the full composite packet", failures)
+	_expect(is_equal_approx(ElementCatalogScript.effectiveness(ElementCatalogScript.Element.SHADOW, ElementCatalogScript.Element.NEUTRAL), 1.0), "Shadow damages normal slimes", failures)
+	_expect(is_zero_approx(ElementCatalogScript.effectiveness(ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.SHADOW)), "normal damage remains ineffective against Shadow slimes", failures)
 
 	var root := CombatRoot.new()
 	root.player_stats = StatsComponent.new()
