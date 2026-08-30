@@ -6,6 +6,8 @@ signal operation_completed(result: Dictionary)
 const LOCAL_CONFIG_PATH := "res://config/supabase.local.cfg"
 const PUBLIC_CONFIG_PATH := "res://config/supabase.cfg"
 const STATE_PATH := "user://tiny_demons_cloud_state.cfg"
+const PUBLIC_PROJECT_URL := "https://pzmrtzypkkxpoimwbgcs.supabase.co"
+const PUBLIC_PUBLISHABLE_KEY := "sb_publishable_LAJZcaVHAtSRZe8BQ4YpcA_hz8g_OY8"
 var project_url := ""
 var publishable_key := ""
 var recovery_key := ""
@@ -94,6 +96,10 @@ func _on_decrypt_completed(args: Array) -> void:
 	operation_completed.emit({"ok":true, "action":"restore", "envelope":envelope, "revision":revision})
 
 func _load_config() -> void:
+	# The identifiers are client-public. Keep a code fallback because some Godot
+	# Web export templates omit standalone .cfg files despite all_resources.
+	project_url = PUBLIC_PROJECT_URL
+	publishable_key = PUBLIC_PUBLISHABLE_KEY
 	var config := ConfigFile.new()
 	var path := LOCAL_CONFIG_PATH if FileAccess.file_exists(LOCAL_CONFIG_PATH) else PUBLIC_CONFIG_PATH
 	if config.load(path) == OK:
