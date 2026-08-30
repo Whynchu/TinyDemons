@@ -201,10 +201,11 @@ func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, i
 		return bool(is_walkable.call(foot.call(actor)))
 	var polygon: PackedVector2Array = collision_polygon.call(actor)
 	if polygon.size() >= 3:
+		# Sample each vertex and the center. The authored slime foot polygons are
+		# convex, so checking the full vertex set already bounds the whole shape;
+		# edge midpoints would double the walkability cost for no extra coverage.
 		for index: int in polygon.size():
-			var point := polygon[index]
-			var next_point := polygon[(index + 1) % polygon.size()]
-			if not bool(is_slime_walkable.call(point)) or not bool(is_slime_walkable.call((point + next_point) * 0.5)):
+			if not bool(is_slime_walkable.call(polygon[index])):
 				return false
 		return bool(is_slime_walkable.call(_polygon_center(polygon)))
 	var rect: Rect2 = collision_rect.call(actor)

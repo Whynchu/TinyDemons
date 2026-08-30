@@ -575,8 +575,9 @@ func is_slime_collision_polygon_walkable(root: Object, polygon: PackedVector2Arr
 	var center := Vector2.ZERO
 	for index in polygon.size():
 		var point := polygon[index]
-		var next_point := polygon[(index + 1) % polygon.size()]
-		if not is_slime_walkable_point(root, point) or not is_slime_walkable_point(root, (point + next_point) * 0.5):
+		# The authored slime foot polygons are convex; vertices + center bound the
+		# whole shape, so edge midpoints are skipped to halve the per-scoot cost.
+		if not is_slime_walkable_point(root, point):
 			return false
 		center += point
 	return is_slime_walkable_point(root, center / float(polygon.size()))

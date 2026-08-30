@@ -7,6 +7,11 @@ var attack_left_frames: Array[Texture2D] = []
 var attack_right_frames: Array[Texture2D] = []
 var shocked_frames: Array[Texture2D] = []
 
+## Palette recolor results keyed by "<source RID>:<palette>". The source Images
+## are cached by the caller, but the per-pixel recolor itself was recomputed on
+## every room entry and popcorn respawn; the result is deterministic, so cache it.
+static var recolor_cache: Dictionary = {}
+
 
 static func build_direction_textures(slimes: Array[Sprite2D], paths: Dictionary, load_texture: Callable) -> void:
 	for slime in slimes:
@@ -36,6 +41,9 @@ static func recolor_direction_textures(slimes: Array[Sprite2D], palette: String,
 
 
 static func recolor_direction_texture(source: Texture2D, palette: String, texture_cache: Dictionary) -> Texture2D:
+	var cache_key := "%d:%s" % [source.get_rid().get_id(), palette]
+	if recolor_cache.has(cache_key):
+		return recolor_cache[cache_key] as Texture2D
 	var image: Image = texture_cache.get(source, source.get_image()).duplicate()
 	for y in image.get_height():
 		for x in image.get_width():
@@ -45,7 +53,9 @@ static func recolor_direction_texture(source: Texture2D, palette: String, textur
 			var key := "%02X%02X%02X" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0)]
 			var mapped := _palette_color(color, key, palette)
 			image.set_pixel(x, y, Color(mapped.r, mapped.g, mapped.b, color.a))
-	return ImageTexture.create_from_image(image)
+	var result := ImageTexture.create_from_image(image)
+	recolor_cache[cache_key] = result
+	return result
 
 
 static func build_attack_frames(slimes: Array[Sprite2D], frame_library: SpriteFrameLibrary, frame_size: Vector2i, cache: Dictionary, warm_texture: Callable) -> void:
