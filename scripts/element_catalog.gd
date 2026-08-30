@@ -30,7 +30,7 @@ const IDS := {
 }
 
 const DISPLAY_NAMES := {
-	Element.NEUTRAL: "GRAY",
+	Element.NEUTRAL: "NORMAL",
 	Element.FIRE: "FIRE",
 	Element.WATER: "WATER",
 	Element.ELECTRIC: "ELECTRIC",

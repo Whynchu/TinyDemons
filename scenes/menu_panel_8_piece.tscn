@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="1_frame"]
+[ext_resource type="Script" path="res://scripts/menu_panel_8_piece.gd" id="4_layout"]
+
+[node name="MenuPanel8Piece" type="Control"]
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture_filter = 1
+script = ExtResource("4_layout")
+metadata/pause_source_left = "res://assets/artwork/PAUSE MENU LEFT.png"
+metadata/pause_source_right = "res://assets/artwork/PAUSE MENU RIGHT.png"
+metadata/pause_source_resources = "res://assets/artwork/PAUSE MENU gold_soulspanel.png"
+metadata/source_layout = "240x160: left 176x160, right 64x136, resource 64x24"
+
+[node name="LeftPanel" type="NinePatchRect" parent="."]
+offset_right = 176.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("1_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="RightPanel" type="NinePatchRect" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_right = 240.0
+offset_bottom = 136.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("1_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="GoldSoulsPanel" type="NinePatchRect" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 136.0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("1_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1

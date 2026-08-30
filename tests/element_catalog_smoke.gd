@@ -15,7 +15,7 @@ func _initialize() -> void:
 		[1.0, 1.25, 0.8, 1.0, 0.8, 1.0, 1.25, 1.0],
 		[1.0, 1.0, 1.25, 0.8, 0.8, 1.0, 0.0, 1.0],
 		[1.0, 0.8, 1.25, 1.0, 0.8, 1.0, 1.25, 1.0],
-		[0.0, 1.0, 1.0, 1.0, 1.0, 1.25, 1.0, 1.0],
+		[1.0, 1.0, 1.0, 1.0, 1.0, 1.25, 1.0, 1.0],
 		[1.0, 1.25, 1.0, 1.25, 0.8, 1.0, 0.8, 1.0],
 		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.25, 0.8],
 	]
@@ -23,7 +23,7 @@ func _initialize() -> void:
 		for defender in ElementCatalogScript.ELEMENT_COUNT:
 			_expect(is_equal_approx(ElementCatalogScript.effectiveness(attacker, defender), expected[attacker][defender]), "matchup %d -> %d" % [attacker, defender], failures)
 	_expect(ElementCatalogScript.effectiveness(e.NEUTRAL, e.SHADOW) == 0.0, "Neutral is immune into Shadow", failures)
-	_expect(ElementCatalogScript.effectiveness(e.SHADOW, e.NEUTRAL) == 0.0, "Shadow is immune into Neutral", failures)
+	_expect(ElementCatalogScript.effectiveness(e.SHADOW, e.NEUTRAL) == 1.0, "Shadow damages Normal slimes", failures)
 	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.SHADOW, e.SHADOW), 1.25), "Shadow is weak to Shadow", failures)
 	_expect(ElementCatalogScript.element_for_aspect(0) == e.NEUTRAL, "Gray aspect maps to Neutral", failures)
 	_expect(ElementCatalogScript.element_for_aspect(1) == e.FIRE, "Fire aspect maps to Fire", failures)
@@ -39,6 +39,7 @@ func _initialize() -> void:
 	_expect(ElementCatalogScript.element_for_palette("orange") == e.GROUND, "orange palette maps to Ground", failures)
 	_expect(ElementCatalogScript.element_for_palette("aquamarine") == e.ICE, "aquamarine palette maps to Ice", failures)
 	_expect(ElementCatalogScript.palette_key(e.NEUTRAL) == "grey", "Neutral uses grey palette", failures)
+	_expect(ElementCatalogScript.display_name(e.NEUTRAL) == "NORMAL", "Neutral displays as Normal", failures)
 	_expect(ElementCatalogScript.palette_key(e.SHADOW) == "purple", "Shadow uses purple palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.GROUND) == "orange", "Ground uses orange palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.ICE) == "aquamarine", "Ice uses aquamarine palette", failures)

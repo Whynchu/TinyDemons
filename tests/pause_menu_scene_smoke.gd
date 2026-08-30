@@ -25,22 +25,62 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.pause_overlay != null and screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.hub_pause_mode, "pause opens its own overlay", failures)
 		_expect(screens.state == &"pause", "pause owns a distinct screen state", failures)
-		_expect(screens.pause_menu_buttons.size() == 5, "pause exposes Resume, Status, Equipment, Settings, and Quit to Title", failures)
+		var pause_frame := screens.pause_overlay.get_node_or_null("FrameOuter") as Panel
+		var pause_inner_frame := screens.pause_overlay.get_node_or_null("FrameInner") as Panel
+		var pause_divider := screens.pause_overlay.get_node_or_null("CommandDivider") as ColorRect
+		var pause_resource_divider := screens.pause_overlay.get_node_or_null("ResourceDivider") as ColorRect
+		var pause_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece") as Control
+		var pause_left_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece/LeftPanel") as NinePatchRect
+		var pause_right_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece/RightPanel") as NinePatchRect
+		var pause_gold_souls_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece/GoldSoulsPanel") as NinePatchRect
+		var pause_gold_icon := screens.pause_overlay.get_node_or_null("PauseGoldIcon") as Sprite2D
+		var pause_soul_icon := screens.pause_overlay.get_node_or_null("PauseResourceIcon") as Sprite2D
+		var pause_gold_text := screens.pause_overlay.get_node_or_null("PauseGoldText") as Sprite2D
+		var pause_soul_text := screens.pause_overlay.get_node_or_null("PauseSoulText") as Sprite2D
+		_expect(pause_frame != null and pause_inner_frame != null and pause_divider != null and pause_resource_divider != null and pause_panel != null, "pause scene owns its frame and rail geometry", failures)
+		_expect(pause_left_panel != null and pause_right_panel != null and pause_gold_souls_panel != null and pause_left_panel.texture != null and pause_right_panel.texture != null and pause_gold_souls_panel.texture != null, "pause uses the three authored panel layers", failures)
+		_expect(pause_gold_icon != null and pause_gold_icon.texture != null and pause_gold_icon.region_enabled and pause_soul_icon != null and pause_soul_icon.texture != null, "pause shows separate gold and soul icons", failures)
+		_expect(pause_gold_text != null and pause_soul_text != null and pause_gold_text.texture != null and pause_soul_text.texture != null, "pause shows both resource counts", failures)
+		_expect(pause_frame != null and pause_frame.size == screens.display_view_size and pause_divider != null and pause_divider.position.x == screens.display_view_size.x - 65.0, "pause frame follows the logical viewport with a fixed command rail", failures)
+		if pause_left_panel != null and pause_right_panel != null and pause_gold_souls_panel != null and pause_gold_icon != null and pause_soul_icon != null:
+			var expected_divider_x := maxf(screens.display_view_size.x - 64.0, 176.0)
+			_expect(pause_left_panel.position == Vector2.ZERO and pause_left_panel.size == Vector2(expected_divider_x, screens.display_view_size.y), "pause left panel keeps authored origin and expands from the divider", failures)
+			_expect(pause_right_panel.position == Vector2(expected_divider_x, 0.0) and pause_right_panel.size == Vector2(maxf(screens.display_view_size.x - expected_divider_x, 1.0), maxf(screens.display_view_size.y - 24.0, 1.0)), "pause right panel stays anchored to the fixed rail", failures)
+			_expect(pause_gold_souls_panel.position == Vector2(expected_divider_x, maxf(screens.display_view_size.y - 24.0, 0.0)) and pause_gold_souls_panel.size == Vector2(maxf(screens.display_view_size.x - expected_divider_x, 1.0), 24.0), "pause resource panel stays in the rail footer", failures)
+			_expect(pause_gold_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 18.0) and pause_soul_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 11.0), "pause resource icons use the authored three-pixel inner margin", failures)
+			if pause_gold_text != null and pause_soul_text != null and pause_gold_text.texture != null and pause_soul_text.texture != null:
+				_expect(pause_gold_text.position == Vector2(screens.display_view_size.x - pause_gold_text.texture.get_width() - 6.0, screens.display_view_size.y - 18.0) and pause_soul_text.position == Vector2(screens.display_view_size.x - pause_soul_text.texture.get_width() - 6.0, screens.display_view_size.y - 11.0), "pause resource counts use the authored right margin", failures)
+		_expect(screens.pause_menu_buttons.size() == 4, "pause exposes Status, Equipment, Settings, and Quit to Title", failures)
+		if screens.pause_menu_buttons.size() >= 4:
+			_expect(screens.pause_menu_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.pause_menu_buttons[3].position.y == 49.0, "pause command rail uses the authored x and y positions", failures)
+		_expect(screens.pause_back_button != null and screens.pause_back_button.position == Vector2(128.0, screens.display_view_size.y - 15.0), "pause back prompt uses the authored footer row", failures)
 		for button in screens.pause_menu_buttons:
 			_expect(button.visible, "pause menu action is visible", failures)
-		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null, "pause shows the player card with XP and ready state", failures)
+		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null and screens.pause_player_card_texts[6].texture != null and screens.pause_player_card_texts[6].visible, "pause shows the player info block and level", failures)
+		if screens.pause_player_card_texts.size() >= 7:
+			_expect(screens.pause_player_card_texts[0].position == Vector2(43.0, 29.0) and screens.pause_player_card_texts[1].position == Vector2(88.0, 29.0) and screens.pause_player_card_texts[2].position == Vector2(88.0, 37.0) and screens.pause_player_card_texts[6].position == Vector2(138.0, 29.0), "pause player card uses the authored three-column top row", failures)
+		var pause_portrait := screens.pause_overlay.get_node_or_null("PauseRootPage/PausePlayerPortrait") as Sprite2D
+		_expect(pause_portrait != null and pause_portrait.texture != null, "pause shows the palette-aware player portrait", failures)
+		_expect(screens.pause_cursor_text != null and screens.pause_cursor_text.z_index >= 4095 and screens.pause_cursor_text.has_method("move_to"), "pause cursor owns top draw order and unified motion", failures)
 		_expect(screens.pause_status_texts.size() >= 16 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()
+		var status_background := screens.pause_page_roots[1].get_node_or_null("Background") as NinePatchRect
+		var status_title := screens.pause_page_roots[1].get_node_or_null("Title") as Sprite2D
 		_expect(screens.pause_page == 1 and screens.pause_status_texts[0].visible and not screens.hub_overlay.visible, "pause Status opens a read-only page without hub controls", failures)
+		_expect(status_background != null and status_background.size == screens.display_view_size and status_title != null and status_title.texture != null, "pause Status owns a full-screen background and upper-left title card", failures)
 		if screens.pause_equipment_button != null:
 			screens.pause_equipment_button.pressed.emit()
+		var equipment_background := screens.pause_page_roots[2].get_node_or_null("Background") as NinePatchRect
+		var equipment_title := screens.pause_page_roots[2].get_node_or_null("Title") as Sprite2D
 		_expect(screens.pause_page == 2 and screens.pause_equipment_texts[0].visible, "pause Equipment opens a read-only page", failures)
-		if screens.pause_resume_button != null:
-			screens.pause_resume_button.pressed.emit()
+		_expect(equipment_background != null and equipment_background.size == screens.display_view_size and equipment_title != null and equipment_title.texture != null, "pause Equipment owns a full-screen background and upper-left title card", failures)
+		if screens.pause_back_button != null:
+			screens.pause_back_button.pressed.emit()
+			screens.pause_back_button.pressed.emit()
 		await process_frame
-		_expect(not screens.pause_overlay.visible and not screens.hub_overlay.visible and not screens.hub_pause_mode, "Resume returns to gameplay", failures)
-		_expect(screens.state == &"gameplay", "Resume restores gameplay state", failures)
+		_expect(not screens.pause_overlay.visible and not screens.hub_overlay.visible and not screens.hub_pause_mode, "BACK from the pause root returns to gameplay", failures)
+		_expect(screens.state == &"gameplay", "pause cancellation restores gameplay state", failures)
 		gameplay.call("_open_pause_menu")
 		await process_frame
 		var pause_quit := screens.pause_quit_button

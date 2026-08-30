@@ -23,14 +23,27 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.hub_pause_mode == false, "Demon interaction opens only the preparation overlay", failures)
 		_expect(screens.hub_overlay.size == screens.display_view_size and screens.hub_overlay.position == Vector2.ZERO and screens.hub_overlay.get_node_or_null("HubRootPage/HubPlayerCard") != null, "Demon Hub owns the full-screen player card shell", failures)
+		var hub_panel := screens.hub_overlay.get_node_or_null("HubPanel8Piece") as Control
+		var hub_title := screens.hub_overlay.get_node_or_null("HubRootPage/Title") as Sprite2D
+		_expect(hub_panel != null and hub_panel.size == screens.display_view_size and hub_title != null and hub_title.texture != null, "Demon Hub root uses the scene-authored eight-piece shell and upper-left title card", failures)
 		_expect(screens.hub_overlay.get_node_or_null("HubCommandStart") == null, "Demon Hub does not construct a hidden Start Run button", failures)
 		_expect(screens.hub_page_buttons.all(func(button: Button) -> bool: return button.get_meta("hub_page_target", -1) >= 0), "hub commands use explicit page targets", failures)
+		_expect(screens.hub_page_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.hub_page_buttons[5].position.y == 77.0, "Demon Hub commands share the pause rail geometry", failures)
+		for command_button in screens.hub_page_buttons:
+			command_button.pressed.emit()
+			await process_frame
+			var route_page := screens.hub_page_roots.get(screens.hub_page) as Control
+			var route_background := route_page.get_node_or_null("Background") as NinePatchRect if route_page != null else null
+			var route_title := route_page.get_node_or_null("Title") as Sprite2D if route_page != null else null
+			_expect(route_background != null and route_background.size == screens.display_view_size and route_title != null and route_title.texture != null, "Demon Hub route %d owns a full-screen background and title card" % screens.hub_page, failures)
+			gameplay.call("_hub_back_or_close")
+			await process_frame
 		gameplay.call("_close_hub_to_run")
 
 		gameplay.call("_open_pause_menu")
 		await process_frame
 		_expect(screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "pause opens a distinct overlay and state", failures)
-		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 5, "pause uses its own full-screen command shell", failures)
+		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 4, "pause uses its own four-command full-screen shell", failures)
 		_expect(gameplay.call("_input_context") == InputRouter.Context.PAUSE, "pause routes through the dedicated input context", failures)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()

@@ -2,6 +2,7 @@ extends Node
 class_name HubFlowController
 
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
 const HUB_PAGE_COUNT := 6
 const HUB_PAGE_ALLOCATE := 0
@@ -67,10 +68,10 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.pause_back_button = controls["pause_back"] as Button
 	root.screen_state_controller.pause_status_button = controls["pause_status_button"] as Button
 	root.screen_state_controller.pause_equipment_button = controls["pause_equipment_button"] as Button
-	if root.screen_state_controller.pause_menu_buttons.size() >= 5:
-		root.screen_state_controller.pause_resume_button = root.screen_state_controller.pause_menu_buttons[0]
-		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[3]
-		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[4]
+	root.screen_state_controller.pause_resume_button = null
+	if root.screen_state_controller.pause_menu_buttons.size() >= 4:
+		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[2]
+		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[3]
 
 
 func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) -> void:
@@ -247,12 +248,13 @@ func hub_bind_current_element(root: Object) -> bool:
 	if root.player_profile == null:
 		return false
 	var chroma := root.get("player_chroma_component") as Node
-	var current := String(chroma.call("aspect_name")).to_upper() if chroma != null else "GRAY"
+	var current_aspect := chroma.call("aspect_name") as StringName if chroma != null else &"gray"
+	var current := AspectCatalogScript.display_name(current_aspect)
 	var success := bool(root.call("_bind_current_element"))
 	if success:
 		root.screen_state_controller.hub_binding_message = "BOUND %s" % current
 	else:
-		root.screen_state_controller.hub_binding_message = "NEED 50 SOULS" if current != "GRAY" and root.player_profile.souls < PlayerProfile.ELEMENT_BIND_SOUL_COST else "BIND UNAVAILABLE"
+		root.screen_state_controller.hub_binding_message = "NEED 50 SOULS" if current_aspect != &"gray" and root.player_profile.souls < PlayerProfile.ELEMENT_BIND_SOUL_COST else "BIND UNAVAILABLE"
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	return success
 

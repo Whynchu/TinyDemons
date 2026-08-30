@@ -78,7 +78,7 @@ func update_save_select_cursor(root: Object) -> void:
 	if cursor != null:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		cursor.position = Vector2((view_width - 130.0) * 0.5, 70 + root.screen_state_controller.save_select_index * 20)
+		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 130.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 70 + root.screen_state_controller.save_select_index * 20))
 
 
 func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
@@ -130,7 +130,7 @@ func set_overwrite_prompt(root: Object, active: bool) -> void:
 		cursor.visible = active
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		cursor.position = Vector2((view_width - 42.0) * 0.5, 140)
+		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
 
 
 func cancel_overwrite(root: Object) -> void:
@@ -210,7 +210,8 @@ func update_overwrite_cursor(root: Object) -> void:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
 		var base_x := (view_width - 42.0) * 0.5
-		cursor.position = Vector2(base_x if root.screen_state_controller.save_overwrite_choice == 0 else base_x + 30.0, 140)
+		var gap: float = root.screen_state_controller.CURSOR_LEFT_GAP
+		root.screen_state_controller.move_menu_cursor(cursor, Vector2((base_x if root.screen_state_controller.save_overwrite_choice == 0 else base_x + 30.0) - gap, 140))
 
 
 func close_save_select(root: Object) -> void:

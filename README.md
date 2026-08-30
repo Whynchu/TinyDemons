@@ -52,6 +52,11 @@ six manually allocated attributes (STR/AGI/VIT/INT/MND/DEF), typed physical and
 magic combat paths, INT-driven Imbue strength, save migration, and
 FFIII-inspired menu layouts using Tiny Demons' own visual language.
 
+The staged menu visual migration starts with the scene-authored pause screen;
+its 240x160 geometry, fixed command rail, responsive anchors, and migration
+order are tracked in
+[`docs/menu-ui-migration-plan.md`](docs/menu-ui-migration-plan.md).
+
 The next progression content slice is the approved six-slot equipment
 catalogue. Its documentation-first boundary is in
 [`docs/gear-catalogue-spec.md`](docs/gear-catalogue-spec.md), with the authored
@@ -121,7 +126,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.1.16**. Every push to `main` must increment the
+Current game version: **0.1.17**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

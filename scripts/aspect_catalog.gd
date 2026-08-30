@@ -45,7 +45,7 @@ static func palette_for_flame(flame: StringName) -> String:
 
 
 static func display_name(flame: StringName) -> String:
-	return str(DISPLAY_NAMES.get(flame, "GRAY"))
+	return str(DISPLAY_NAMES.get(flame, "NORMAL"))
 
 
 static func flame_for_palette(palette: String) -> StringName:

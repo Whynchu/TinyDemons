@@ -33,6 +33,9 @@ grant or imply third-party licensing.
   `Artwork/`; the matching PNG runtime copies under `assets/artwork/` are the
   imported shipping resources. The generated 4×7 level-number atlas follows the
   same source/runtime split.
+- The pause menu exports under `Artwork/` define the authored placement
+  reference; the matching runtime panel tile under `assets/artwork/` is used
+  by `scenes/menu_panel_8_piece.tscn` to compose the exact eight-piece frame.
 
 ## Fresh-clone acceptance checks
 
