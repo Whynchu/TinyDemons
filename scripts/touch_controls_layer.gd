@@ -573,7 +573,7 @@ func _active_menu_root() -> Node:
 	match _input_context:
 		CONTEXT_HUB: preferred_names = [&"HubOverlay"]
 		CONTEXT_PAUSE: preferred_names = [&"PauseOverlay"]
-		CONTEXT_MENU: preferred_names = [&"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"TitleOverlay"]
+		CONTEXT_MENU: preferred_names = [&"CloudSaveOverlay", &"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"TitleOverlay"]
 		CONTEXT_DIALOGUE: preferred_names = [&"NpcDialogueBox"]
 	for target_name in preferred_names:
 		var found := _find_visible_control(host, target_name)
@@ -583,7 +583,7 @@ func _active_menu_root() -> Node:
 	# one. Use visible-overlay discovery as a same-frame fallback so a touch
 	# released during that transition cannot search the gameplay host or a stale
 	# source menu.
-	var visible_fallbacks: Array[StringName] = [&"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"PauseOverlay", &"HubOverlay", &"NpcDialogueBox", &"TitleOverlay"]
+	var visible_fallbacks: Array[StringName] = [&"CloudSaveOverlay", &"SettingsOverlay", &"SaveSelectOverlay", &"ArchetypeOverlay", &"RunCompleteOverlay", &"GameOverOverlay", &"PauseOverlay", &"HubOverlay", &"NpcDialogueBox", &"TitleOverlay"]
 	for target_name in visible_fallbacks:
 		if preferred_names.has(target_name):
 			continue
