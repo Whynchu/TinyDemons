@@ -196,7 +196,7 @@ func set_hub_page(root: Object, page: int) -> void:
 	if screen.hub_page == HUB_PAGE_FUSION:
 		invalidate_hub_fusion_candidates(root)
 	if root.run_state != null and screen.hub_page == HUB_PAGE_SHOP:
-		root.run_state.ensure_shop_stock(root.player_profile.level)
+		root.run_state.ensure_shop_stock(root.player_profile)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_hover", -6.0, 1.0)
 
@@ -278,7 +278,7 @@ func select_hub_item_row(root: Object, row: int) -> void:
 		return
 	var count := 0
 	if page == 2 and root.run_state != null:
-		root.run_state.ensure_shop_stock(root.player_profile.level)
+		root.run_state.ensure_shop_stock(root.player_profile)
 		count = root.run_state.shop_stock.size()
 	elif page == 3:
 		count = hub_fusion_candidates(root).size()
@@ -469,7 +469,19 @@ func hub_item_action(root: Object) -> void:
 	elif root.screen_state_controller.hub_page == 2 and root.run_state != null and not root.run_state.shop_stock.is_empty():
 		var index: int = clampi(root.screen_state_controller.hub_item_index, 0, root.run_state.shop_stock.size() - 1)
 		var entry: Dictionary = root.run_state.shop_stock[index]
-		if not bool(entry.get("sold", false)):
+		if bool(entry.get("permanent", false)):
+			# Demon Cloak: always in stock, never sold out, price escalates per purchase.
+			var cloak_item := root.player_profile.purchase_demon_cloak() as ItemInstance
+			if cloak_item != null:
+				var cloak_catalog := ItemCatalog.new()
+				var body_was_empty := cloak_catalog.slot_needs_introduction(root.player_profile, &"body")
+				if root.run_state != null:
+					root.run_state.record_gear_reward(&"shop", cloak_item, root.player_profile.difficulty_rank, root.player_profile.level, -1, "", body_was_empty, false, &"purchased")
+				entry["price"] = root.player_profile.demon_cloak_price()
+				root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+			else:
+				root.call("_play_sound", "ui_denied", 0.0, 1.0)
+		elif not bool(entry.get("sold", false)):
 			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 			var catalog := ItemCatalog.new()
 			var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, catalog.definition_slot(item.definition_id))

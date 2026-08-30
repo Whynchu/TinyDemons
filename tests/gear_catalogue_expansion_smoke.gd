@@ -19,7 +19,7 @@ func _initialize() -> void:
 		counts[slot] = int(counts.get(slot, 0)) + 1
 		for required_key in ["family", "role", "primary_stat", "base_bonuses", "tradeoffs", "derived_effects", "source_tags", "rarity_floor", "rarity_ceiling", "minimum_run_rank", "minimum_player_level", "shop_eligible", "fusion_group", "visual_id", "player_description"]:
 			_expect(definition.has(required_key), "%s has authored field %s" % [String(definition_id), required_key], failures)
-	_expect(counts.get(&"weapon", 0) == 10 and counts.get(&"head", 0) == 6 and counts.get(&"body", 0) == 8 and counts.get(&"arm", 0) == 6 and counts.get(&"shield", 0) == 6 and counts.get(&"accessory", 0) == 8, "catalogue contains the approved 44 bases by slot", failures)
+	_expect(counts.get(&"weapon", 0) == 10 and counts.get(&"head", 0) == 6 and counts.get(&"body", 0) == 9 and counts.get(&"arm", 0) == 6 and counts.get(&"shield", 0) == 6 and counts.get(&"accessory", 0) == 8, "catalogue contains the approved 45 bases by slot", failures)
 
 	var hood := catalog.starter_item(&"head")
 	var wraps := catalog.starter_item(&"arm")

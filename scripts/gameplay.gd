@@ -5,6 +5,19 @@ func _add_runtime_node(script: Script, node_name: StringName, parent: Node = sel
 	var node := script.new() as Node; node.name = node_name; parent.add_child(node); return node
 func _ready() -> void:
 	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self)
+	if OS.has_feature("web"):
+		var flush_callback := JavaScriptBridge.create_callback(_flush_save_from_js)
+		JavaScriptBridge.eval("window.__tdFlushSave = %s" % flush_callback)
+func _flush_save_from_js(_args: Array) -> void:
+	if player_profile != null:
+		ProfileSaveService.save_profile(player_profile)
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		# The browser flush-on-hide is a web durability feature; the JS
+		# pagehide hook also calls the same save. Desktop tests and editor runs
+		# must not mutate the persistent save just by losing window focus.
+		if OS.has_feature("web") and player_profile != null:
+			ProfileSaveService.save_profile(player_profile)
 func _grant_chest_item_reward() -> bool:
 	if player_profile == null or run_state == null:
 		return false

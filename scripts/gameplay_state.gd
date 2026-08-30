@@ -494,6 +494,12 @@ func _apply_profile_to_runtime() -> void:
 	profile_runtime_controller.call("apply_profile_to_runtime", self)
 func _reapply_equipment_preserving_health() -> void:
 	profile_runtime_controller.call("reapply_equipment_preserving_health", self)
+func _refresh_player_cloak_visual() -> void:
+	if player_profile == null or player_animation_component == null:
+		return
+	var body_instance_id := player_profile.get_equipped_instance_id(&"body")
+	var body_item := player_profile.find_item(body_instance_id)
+	player_animation_component.set_cloaked(self, body_item != null and body_item.definition_id == &"demon_cloak")
 func _equip_profile_item(instance_id: String) -> bool:
 	return bool(profile_runtime_controller.call("equip_profile_item", self, instance_id))
 func _unequip_profile_slot(slot: StringName) -> bool:

@@ -6,6 +6,8 @@ const TEMP_PATH := "user://tiny_demons_profile.tmp"
 const BACKUP_PATH := "user://tiny_demons_profile.backup.json"
 const ACTIVE_SLOT_PATH := "user://tiny_demons_active_slot.txt"
 const SLOT_COUNT := 3
+const WEB_ACTIVE_SLOT_KEY := "td_active_slot"
+const WEB_SLOT_KEY_PREFIX := "td_profile_"
 static var active_slot := -1
 
 static func select_slot(slot: int) -> void:
@@ -14,6 +16,7 @@ static func select_slot(slot: int) -> void:
 	if file != null:
 		file.store_string(str(active_slot))
 		file.close()
+	_web_set_item(WEB_ACTIVE_SLOT_KEY, str(active_slot))
 
 static func current_slot() -> int:
 	if active_slot >= 0:
@@ -24,10 +27,12 @@ static func current_slot() -> int:
 		if file != null:
 			active_slot = clampi(int(file.get_as_text()), 0, SLOT_COUNT - 1)
 			file.close()
+	elif _is_web():
+		active_slot = clampi(int(_web_get_item(WEB_ACTIVE_SLOT_KEY)), 0, SLOT_COUNT - 1)
 	return active_slot
 
 static func slot_has_profile(slot: int) -> bool:
-	return _read_profile(_save_path(slot)) != null or _read_profile(_backup_path(slot)) != null
+	return _read_profile(_save_path(slot)) != null or _read_profile(_backup_path(slot)) != null or _web_has_profile(slot)
 
 static func has_any_profile_save() -> bool:
 	for slot in SLOT_COUNT:
@@ -36,6 +41,10 @@ static func has_any_profile_save() -> bool:
 	return false
 
 static func load_profile_for_slot(slot: int) -> PlayerProfile:
+	if _is_web():
+		var web_profile := _parse_profile_json(_web_get_item(_web_slot_key(slot)))
+		if web_profile != null:
+			return web_profile
 	var profile := _read_profile(_save_path(slot))
 	if profile != null:
 		return profile
@@ -55,13 +64,15 @@ static func save_profile(profile: PlayerProfile) -> bool:
 	if profile == null:
 		return false
 	var slot := current_slot()
+	var json := JSON.stringify(profile.to_dictionary())
+	_web_set_item(_web_slot_key(slot), json)
 	var temp_path := _temp_path(slot)
 	var save_path := _save_path(slot)
 	var backup_path := _backup_path(slot)
 	var file := FileAccess.open(temp_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	file.store_string(JSON.stringify(profile.to_dictionary()))
+	file.store_string(json)
 	file.close()
 	if _read_profile(temp_path) == null:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
@@ -90,6 +101,8 @@ static func clear_slot(slot: int) -> void:
 	for path in [_save_path(safe_slot), _backup_path(safe_slot), _temp_path(safe_slot)]:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	if _is_web():
+		_web_remove_item(_web_slot_key(safe_slot))
 
 static func _save_path(slot: int) -> String:
 	return SAVE_PATH if slot == 0 else "user://tiny_demons_profile_%d.json" % (slot + 1)
@@ -101,14 +114,50 @@ static func _temp_path(slot: int) -> String:
 	return TEMP_PATH if slot == 0 else "user://tiny_demons_profile_%d.tmp" % (slot + 1)
 
 
+static func _is_web() -> bool:
+	return OS.has_feature("web")
+
+
+static func _web_slot_key(slot: int) -> String:
+	return WEB_SLOT_KEY_PREFIX + str(slot)
+
+
+static func _web_set_item(key: String, value: String) -> void:
+	if not _is_web():
+		return
+	JavaScriptBridge.eval("localStorage.setItem(%s, %s)" % [JSON.stringify(key), JSON.stringify(value)])
+
+
+static func _web_get_item(key: String) -> String:
+	if not _is_web():
+		return ""
+	var result: Variant = JavaScriptBridge.eval("localStorage.getItem(%s)" % JSON.stringify(key))
+	return str(result) if result != null else ""
+
+
+static func _web_remove_item(key: String) -> void:
+	if not _is_web():
+		return
+	JavaScriptBridge.eval("localStorage.removeItem(%s)" % JSON.stringify(key))
+
+
+static func _web_has_profile(slot: int) -> bool:
+	return _parse_profile_json(_web_get_item(_web_slot_key(slot))) != null
+
+
 static func _read_profile(path: String) -> PlayerProfile:
 	if not FileAccess.file_exists(path):
 		return null
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return null
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var parsed := _parse_profile_json(file.get_as_text())
 	file.close()
+	return parsed
+
+
+static func _parse_profile_json(json: String) -> PlayerProfile:
+	var parsed: Variant = JSON.parse_string(json)
 	if not parsed is Dictionary:
 		return null
 	var data := parsed as Dictionary

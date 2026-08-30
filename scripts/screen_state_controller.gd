@@ -9,7 +9,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.17"
+const GAME_VERSION := "0.1.18"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/pause_menu.tscn")
 const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/demon_hub_menu.tscn")
@@ -2042,7 +2042,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	elif page == 2:
 		var run_state := root.get("run_state") as RunState
 		if run_state != null:
-			run_state.ensure_shop_stock(profile.level); count = run_state.shop_stock.size()
+			run_state.ensure_shop_stock(profile); count = run_state.shop_stock.size()
 			if count > 0:
 				var entry: Dictionary = run_state.shop_stock[clampi(index, 0, count - 1)]
 				item = ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary); price = int(entry.get("price", 0)); sold = bool(entry.get("sold", false))

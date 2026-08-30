@@ -32,6 +32,29 @@ func slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
 	return frames
 
 
+## Slices a horizontal run of `frame_count` frames from one 36-px-tall row of a
+## multi-row animation sheet (the authored player fullsheet layout). Attack rows
+## may pass a smaller `frame_size.y` to mirror the per-animation strip slicing.
+func slice_sheet_row(path: String, row: int, frame_size: Vector2i, frame_count: int) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	if not ResourceLoader.exists(path):
+		return frames
+	var texture := load(path) as Texture2D
+	if texture == null:
+		return frames
+	var sheet := _cached_image(texture)
+	var row_origin_y := row * 36
+	for frame_index in range(frame_count):
+		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
+		frame.blit_rect(
+			sheet,
+			Rect2i(frame_index * frame_size.x, row_origin_y, frame_size.x, frame_size.y),
+			Vector2i.ZERO
+		)
+		frames.append(ImageTexture.create_from_image(frame))
+	return frames
+
+
 func dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
 	var source_image := _cached_image(source)
 	var image := source_image.duplicate()
