@@ -11,22 +11,24 @@ var buttons: Array[Button] = []
 var selected_row := 0
 var restore_armed := false
 var delete_armed := false
+var _paste_poll_timer: Timer
 
 func configure(game_root: Object, cloud_service: CloudSaveService) -> void:
 	root = game_root; service = cloud_service
 	service.operation_completed.connect(_on_operation_completed)
+	_paste_poll_timer = Timer.new(); _paste_poll_timer.wait_time = 0.15; _paste_poll_timer.timeout.connect(_poll_pasted_key); add_child(_paste_poll_timer)
 
 func build(parent: Node) -> void:
 	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 1); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
 	var title := Label.new(); title.text = "CLOUD SAVE"; title.position = Vector2(12, 7); title.add_theme_font_size_override("font_size", 14); overlay.add_child(title)
-	var help := Label.new(); help.text = "No account needed. Keep your recovery key safe."; help.position = Vector2(12, 27); help.size = Vector2(216, 22); help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; help.add_theme_font_size_override("font_size", 8); overlay.add_child(help)
-	key_input = LineEdit.new(); key_input.placeholder_text = "TD1 recovery key"; key_input.position = Vector2(12, 51); key_input.size = Vector2(216, 20); key_input.add_theme_font_size_override("font_size", 8); key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
-	var labels := ["CREATE", "COPY KEY", "RESTORE", "SYNC", "DELETE", "BACK"]
+	var help := Label.new(); help.text = "No account needed. Keep your recovery key safe."; help.position = Vector2(12, 25); help.size = Vector2(216, 20); help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; help.add_theme_font_size_override("font_size", 8); overlay.add_child(help)
+	key_input = LineEdit.new(); key_input.placeholder_text = "TD1 recovery key"; key_input.position = Vector2(12, 48); key_input.size = Vector2(216, 20); key_input.add_theme_font_size_override("font_size", 8); key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
+	var labels := ["CREATE", "COPY KEY", "PASTE", "RESTORE", "SYNC", "DELETE", "BACK"]
 	for index in labels.size():
-		var button := Button.new(); button.text = labels[index]; button.position = Vector2(12 + (index % 3) * 73, 77 + (index / 3) * 22); button.size = Vector2(68, 18); button.focus_mode = Control.FOCUS_NONE; overlay.add_child(button); buttons.append(button)
-	buttons[0].pressed.connect(_create); buttons[1].pressed.connect(_copy_key); buttons[2].pressed.connect(_restore); buttons[3].pressed.connect(_sync); buttons[4].pressed.connect(_delete); buttons[5].pressed.connect(close)
-	key_label = Label.new(); key_label.position = Vector2(12, 122); key_label.size = Vector2(216, 15); key_label.add_theme_font_size_override("font_size", 7); key_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; overlay.add_child(key_label)
-	status_label = Label.new(); status_label.position = Vector2(12, 138); status_label.size = Vector2(216, 18); status_label.add_theme_font_size_override("font_size", 7); status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; overlay.add_child(status_label)
+		var button := Button.new(); button.text = labels[index]; button.position = Vector2(12 + (index % 3) * 73, 71 + (index / 3) * 19); button.size = Vector2(68, 17); button.focus_mode = Control.FOCUS_NONE; overlay.add_child(button); buttons.append(button)
+	buttons[0].pressed.connect(_create); buttons[1].pressed.connect(_copy_key); buttons[2].pressed.connect(_paste); buttons[3].pressed.connect(_restore); buttons[4].pressed.connect(_sync); buttons[5].pressed.connect(_delete); buttons[6].pressed.connect(close)
+	key_label = Label.new(); key_label.position = Vector2(12, 130); key_label.size = Vector2(216, 13); key_label.add_theme_font_size_override("font_size", 7); key_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; overlay.add_child(key_label)
+	status_label = Label.new(); status_label.position = Vector2(12, 144); status_label.size = Vector2(216, 15); status_label.add_theme_font_size_override("font_size", 7); status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; overlay.add_child(status_label)
 	for child in overlay.get_children():
 		if child is Control: (child as Control).set_meta("cloud_base_x", (child as Control).position.x)
 	apply_layout(root.screen_state_controller.layout_view_size())
@@ -47,6 +49,7 @@ func open() -> void:
 
 func close() -> void:
 	if overlay != null: overlay.visible = false
+	if key_input != null and key_input.has_focus(): key_input.release_focus()
 	restore_armed = false; delete_armed = false
 	if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").menu_input_release_lock = true
 
@@ -69,6 +72,33 @@ func _copy_key() -> void:
 	_clear_confirmations()
 	if key_input.text.strip_edges().is_empty(): status_label.text = "Create or enter a recovery key first."; return
 	DisplayServer.clipboard_set(key_input.text.strip_edges()); status_label.text = "Recovery key copied. Store it somewhere safe."
+
+func _paste() -> void:
+	_clear_confirmations()
+	if OS.has_feature("web"):
+		# Godot's canvas LineEdit has no native paste menu on iOS. Read the
+		# clipboard through the browser API and poll for the result.
+		status_label.text = "Reading clipboard..."
+		JavaScriptBridge.eval("navigator.clipboard.readText().then(function(t){window.__tdPastedKey=t||'';window.__tdPastedKeyDone=true},function(){window.__tdPastedKey='';window.__tdPastedKeyDone=true})")
+		_paste_poll_timer.start()
+		return
+	var text := DisplayServer.clipboard_get().strip_edges()
+	if text.is_empty():
+		status_label.text = "Clipboard is empty. Copy the key first."
+		return
+	key_input.text = text
+	status_label.text = "Recovery key pasted. You can now RESTORE."
+
+func _poll_pasted_key() -> void:
+	if not bool(JavaScriptBridge.eval("window.__tdPastedKeyDone || false")):
+		return
+	_paste_poll_timer.stop()
+	var text := str(JavaScriptBridge.eval("window.__tdPastedKey || ''"))
+	if text.is_empty():
+		status_label.text = "Clipboard is empty or blocked. Copy the key on the device first."
+		return
+	key_input.text = text
+	status_label.text = "Recovery key pasted. You can now RESTORE."
 func _restore() -> void:
 	delete_armed = false
 	if not restore_armed: restore_armed = true; status_label.text = "RESTORE replaces matching local slots. Press RESTORE again."; return
