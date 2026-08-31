@@ -153,7 +153,7 @@ func _set_status(message: String) -> void:
 	var words := message.to_upper().split(" ")
 	var lines: Array[String] = [""]
 	for word in words:
-		var candidate := str(word) if lines.back().is_empty() else lines.back() + " " + str(word)
+		var candidate: String = str(word) if lines.back().is_empty() else lines.back() + " " + str(word)
 		if candidate.length() <= 35 or lines.size() >= 2:
 			lines[lines.size() - 1] = candidate
 		else:
