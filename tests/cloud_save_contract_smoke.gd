@@ -19,6 +19,12 @@ func _initialize() -> void:
 	_expect(service_source.contains("if _pending_action == \"decrypt_read\"") and service_source.contains("_on_decrypt_completed([result])"), "decrypt results route to the restore handler", failures)
 	var panel_source := FileAccess.get_file_as_string("res://scripts/cloud_save_panel.gd")
 	_expect(panel_source.contains("Vector2(106, 22)") and panel_source.contains("virtual_keyboard_enabled = true"), "cloud panel exposes mobile-sized controls", failures)
+	_expect(panel_source.contains("ClearRecoveryKey") and panel_source.contains("_clear_key_input"), "recovery key has a dedicated touch clear control", failures)
+	var save_flow_source := FileAccess.get_file_as_string("res://scripts/save_flow_controller.gd")
+	_expect(save_flow_source.contains("touch_move_save_slot") and save_flow_source.contains("touch_confirm_save_slot"), "save selection exposes touch navigation", failures)
+	_expect(panel_source.contains("ClearRecoveryKey") and panel_source.contains("_clear_key_input"), "recovery key has a dedicated touch clear control", failures)
+	var save_flow_source := FileAccess.get_file_as_string("res://scripts/save_flow_controller.gd")
+	_expect(save_flow_source.contains("touch_move_save_slot") and save_flow_source.contains("touch_confirm_save_slot"), "save selection exposes touch navigation", failures)
 	if failures.is_empty(): print("CLOUD_SAVE_CONTRACT_SMOKE_OK"); quit(0); return
 	for failure in failures: push_error("FAILED: %s" % failure)
 	quit(1)
