@@ -25,15 +25,17 @@ func _initialize() -> void:
 		layer.set_last_input_device(InputDeviceTracker.Device.TOUCH)
 		layer.set_input_context(InputRouter.Context.MENU)
 		await process_frame
-		var back_button: Button = panel.buttons[5]
+		var back_button: Button = panel.buttons[6]
 		_expect(back_button.is_visible_in_tree(), "cloud BACK button is a live touch target", failures)
 		_tap(layer, back_button.get_global_rect().get_center(), 5)
 		await process_frame
 		_expect(not panel.overlay.visible, "tapping BACK closes the cloud overlay on touch", failures)
+		# Closing then reopening works without leaving the menu.
+		gameplay.call("_open_cloud_save")
+		await process_frame
+		_expect(panel.overlay.visible, "cloud panel reopens after being closed", failures)
 		# CREATE must never hang the panel: with no Web build it reports the
 		# not-configured error and stays closable.
-		panel.open()
-		await process_frame
 		_tap(layer, panel.buttons[0].get_global_rect().get_center(), 6)
 		await process_frame
 		_expect(panel.overlay.visible, "cloud panel stays open after CREATE without crashing", failures)
@@ -49,6 +51,14 @@ func _initialize() -> void:
 		await process_frame
 		_expect(panel.key_input.has_focus(), "tapping the key field focuses it for paste", failures)
 		_expect(panel.overlay.visible, "focusing the key field does not trigger a button", failures)
+		# PASTE reads the clipboard into the key field. Headless runs have no
+		# real clipboard, so assert the button fires the read path (status
+		# changes) rather than the pasted contents.
+		DisplayServer.clipboard_set("TD1-abcdefghijklmnopqrstuvwxyz123456")
+		var paste_status_before := panel.status_label.text
+		_tap(layer, panel.buttons[2].get_global_rect().get_center(), 9)
+		await process_frame
+		_expect(panel.status_label.text != paste_status_before, "PASTE button fires the clipboard read", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
