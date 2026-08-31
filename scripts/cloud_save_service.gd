@@ -14,7 +14,6 @@ var recovery_key := ""
 var vault_id := ""
 var write_proof := ""
 var revision := 0
-var _crypto_callback: JavaScriptObject = null
 var _pending_action := ""
 var _http: HTTPRequest = null
 var _crypto_request_serial := 0
@@ -34,7 +33,6 @@ func create_backup(envelope: Dictionary) -> void:
 	_pending_action = "create_crypto"
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
-	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
 	_start_crypto_bridge("window.__tdVaultCrypto.create(%s)" % JSON.stringify(JSON.stringify(envelope)))
 
 func restore_backup(key: String) -> void:
@@ -43,7 +41,6 @@ func restore_backup(key: String) -> void:
 	_pending_action = "derive_for_read"
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
-	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
 	_start_crypto_bridge("window.__tdVaultCrypto.encrypt(%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify("{}")])
 
 func sync_backup(envelope: Dictionary) -> void:
@@ -52,7 +49,6 @@ func sync_backup(envelope: Dictionary) -> void:
 	_pending_action = "update_crypto"
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
-	_crypto_callback = JavaScriptBridge.create_callback(_on_crypto_completed)
 	_start_crypto_bridge("window.__tdVaultCrypto.encrypt(%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify(JSON.stringify(envelope))])
 
 func delete_backup() -> void:
@@ -87,7 +83,8 @@ func _on_request_completed(_result: int, code: int, _headers: PackedStringArray,
 		operation_completed.emit({"ok":false, "error":str(parsed.get("error", "Cloud request failed.")) if parsed is Dictionary else "Cloud request failed."}); return
 	if _pending_action == "read":
 		revision = int(parsed.get("revision", 0)); _pending_action = "decrypt_read"
-		_crypto_callback = JavaScriptBridge.create_callback(_on_decrypt_completed)
+		_crypto_request_serial += 1
+		_start_crypto_timeout(_crypto_request_serial)
 		_start_crypto_bridge("window.__tdVaultCrypto.decrypt(%s,%s)" % [JSON.stringify(recovery_key), JSON.stringify(str(parsed.get("ciphertext", "")))]); return
 	revision = int(parsed.get("revision", revision))
 	if _pending_action == "delete":
@@ -98,6 +95,7 @@ func _on_request_completed(_result: int, code: int, _headers: PackedStringArray,
 	operation_completed.emit({"ok":true, "action":_pending_action, "recovery_key":recovery_key, "revision":revision})
 
 func _on_decrypt_completed(args: Array) -> void:
+	_crypto_request_serial = 0
 	var raw_variant: Variant = args[0] if not args.is_empty() else ""
 	if raw_variant is Array and not (raw_variant as Array).is_empty(): raw_variant = (raw_variant as Array)[0]
 	var parsed: Variant = JSON.parse_string(str(raw_variant))
@@ -129,7 +127,13 @@ func _start_crypto_timeout(serial: int) -> void:
 	)
 
 func _start_crypto_bridge(expression: String) -> void:
-	JavaScriptBridge.eval("window.__tdGodotCryptoResult=null; window.__tdGodotCryptoCallback=%s; %s" % [_crypto_callback, expression])
+	# The crypto JS functions take a callback argument. Wrap it so the result is
+	# stored in a window slot that Godot polls. This avoids the async
+	# JavaScriptBridge callback object, which Safari can drop, and it guarantees
+	# a request always lands somewhere the poll can see.
+	var store_result := "function(r){window.__tdGodotCryptoResult=(typeof r==='string'?r:JSON.stringify(r))}"
+	var wrapped := expression.substr(0, expression.length() - 1) + ", " + store_result + ")"
+	JavaScriptBridge.eval("window.__tdGodotCryptoResult=null; " + wrapped)
 	_crypto_poll_timer.start()
 
 func _poll_crypto_result() -> void:
