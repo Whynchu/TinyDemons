@@ -25,6 +25,12 @@ func _initialize() -> void:
 			if cloud_panel != null: cloud_panel.close()
 		var version := screens.title_overlay.get_node_or_null("TitleVersion") as Sprite2D
 		_expect(version != null and version.texture != null and version.position.is_equal_approx(Vector2(4, screens.display_view_size.y - 8.0)), "title screen shows the game version in the bottom-left", failures)
+		screens.refresh_title_menu_layout(false)
+		_expect(not screens.title_continue_button.visible, "fresh title hides Continue instead of leaving an empty row", failures)
+		_expect(is_equal_approx(screens.title_cloud_button.position.y, 109.0) and is_equal_approx(screens.title_settings_button.position.y, 125.0), "fresh title compacts visible menu cards", failures)
+		screens.refresh_title_menu_layout(true)
+		_expect(screens.title_continue_button.visible and not screens.title_continue_button.disabled, "restored profile reveals Continue immediately", failures)
+		_expect(is_equal_approx(screens.title_continue_button.position.y, 109.0) and is_equal_approx(screens.title_settings_button.position.y, 141.0), "profile title lays out all visible cards without gaps", failures)
 		_expect(screens.state == &"title", "screen state settles on title after boot", failures)
 	_expect(not bool(gameplay.get("boot_active")), "boot sequence completes", failures)
 	var loading := gameplay.get("loading_screen_overlay") as CanvasItem

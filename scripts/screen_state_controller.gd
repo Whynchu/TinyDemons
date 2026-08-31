@@ -9,7 +9,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.40"
+const GAME_VERSION := "0.1.41"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/pause_menu.tscn")
 const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/demon_hub_menu.tscn")
@@ -449,11 +449,15 @@ func update_title_flow(root: Object, delta: float) -> void:
 	var continue_button := title_continue_button
 	var settings_button := title_settings_button
 	var cloud_button := title_cloud_button
-	if new_game != null: new_game.modulate.a = retro_button_alpha(frame_timer); new_game.position.y = 93.0 + retro_button_bob(frame_timer)
-	if continue_button != null: continue_button.modulate.a = retro_button_alpha(frame_timer + 0.3); continue_button.position.y = 109.0 + retro_button_bob(frame_timer + 0.3)
-	if cloud_button != null: cloud_button.modulate.a = retro_button_alpha(frame_timer + 0.6); cloud_button.position.y = 125.0 + retro_button_bob(frame_timer + 0.6)
-	if settings_button != null: settings_button.modulate.a = retro_button_alpha(frame_timer + 0.9); settings_button.position.y = 141.0 + retro_button_bob(frame_timer + 0.9)
 	var title_buttons: Array[Button] = [new_game, continue_button, cloud_button, settings_button]
+	var visible_index := 0
+	for button in title_buttons:
+		if button == null or button.disabled or not button.visible: continue
+		var phase := visible_index * 0.3
+		button.modulate.a = retro_button_alpha(frame_timer + phase)
+		var base_y := float(button.get_meta("title_base_y", 93.0 + visible_index * 16.0))
+		button.position.y = base_y + retro_button_bob(frame_timer + phase)
+		visible_index += 1
 	var available_rows: Array[int] = []
 	for index in title_buttons.size():
 		if title_buttons[index] != null and not title_buttons[index].disabled: available_rows.append(index)
@@ -566,12 +570,12 @@ func start_selected_archetype(root: Object) -> void:
 func start_new_game(root: Object) -> void:
 	if title_overlay == null or not title_overlay.visible:
 		return
-	root.call("_spawn_title_pixel_breakup", title_screen_text)
-	root.call("_spawn_title_pixel_breakup", title_start_text)
-	root.call("_spawn_title_button_frame_breakup")
+	root.call("_spawn_title_ui_breakup")
 	title_overlay.visible = true; title_overlay.modulate.a = 1.0
 	title_transition_active = true; title_transition_timer = 0.0
 	if title_screen_text != null: title_screen_text.visible = false
+	var version := title_overlay.get_node_or_null("TitleVersion") as Sprite2D
+	if version != null: version.visible = false
 	if title_start_text != null: title_start_text.visible = false
 	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
 	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
@@ -589,14 +593,14 @@ func start_save_select(root: Object, mode: String) -> void:
 		return
 	save_select_mode = mode
 	pending_title_destination = "save_select"
-	root.call("_spawn_title_pixel_breakup", title_screen_text)
-	root.call("_spawn_title_pixel_breakup", title_start_text)
-	root.call("_spawn_title_button_frame_breakup")
+	root.call("_spawn_title_ui_breakup")
 	title_overlay.visible = true
 	title_overlay.modulate.a = 1.0
 	title_transition_active = true
 	title_transition_timer = 0.0
 	if title_screen_text != null: title_screen_text.visible = false
+	var version := title_overlay.get_node_or_null("TitleVersion") as Sprite2D
+	if version != null: version.visible = false
 	if title_start_text != null: title_start_text.visible = false
 	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
 	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
@@ -2634,6 +2638,7 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	continue_button.focus_mode = Control.FOCUS_NONE
 	continue_button.pressed.connect(continue_callback)
 	continue_button.disabled = not has_profile
+	continue_button.visible = has_profile
 	overlay.add_child(continue_button)
 	var cloud_button := make_retro_button("CLOUD SAVE", Vector2((display_view_size.x - 64.0) * 0.5, 125), Vector2(64, 14), pixel_texture)
 	cloud_button.set_meta("title_base_y", 125.0); cloud_button.focus_mode = Control.FOCUS_NONE
@@ -2647,6 +2652,25 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	var cursor := create_sprite(overlay, "TitleCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 97 if not has_profile else 113), false)
 	title_menu_row = 1 if has_profile else 0
 	return {"overlay": overlay, "text": title_text, "version": version_text, "new_game": new_game_button, "continue": continue_button, "cloud": cloud_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
+
+
+func refresh_title_menu_layout(has_profile: bool) -> void:
+	if title_continue_button != null:
+		title_continue_button.disabled = not has_profile
+		title_continue_button.visible = has_profile
+	var ordered: Array[Button] = [title_start_button, title_continue_button, title_cloud_button, title_settings_button]
+	var visible_row := 0
+	var available_rows: Array[int] = []
+	for index in ordered.size():
+		var button := ordered[index]
+		if button == null or button.disabled or not button.visible: continue
+		var base_y := 93.0 + visible_row * 16.0
+		button.position.y = base_y
+		button.set_meta("title_base_y", base_y)
+		available_rows.append(index)
+		visible_row += 1
+	if not available_rows.is_empty() and not available_rows.has(title_menu_row):
+		title_menu_row = available_rows[0]
 
 
 func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable, select_option_callback: Callable = Callable()) -> Dictionary:
