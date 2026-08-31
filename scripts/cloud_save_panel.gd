@@ -23,7 +23,9 @@ func build(parent: Node) -> void:
 	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 0.96); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
 	var title := Label.new(); title.text = "CLOUD SAVE"; title.position = Vector2(12, 6); title.add_theme_font_size_override("font_size", 12); title.add_theme_color_override("font_color", Color8(148, 220, 255)); overlay.add_child(title)
 	var help := Label.new(); help.text = "KEEP YOUR RECOVERY KEY SAFE"; help.position = Vector2(12, 23); help.size = Vector2(216, 12); help.add_theme_font_size_override("font_size", 7); help.add_theme_color_override("font_color", Color8(150, 156, 170)); overlay.add_child(help)
-	key_input = LineEdit.new(); key_input.placeholder_text = "PASTE OR TYPE TD1- KEY"; key_input.position = Vector2(12, 36); key_input.size = Vector2(216, 23); key_input.add_theme_font_size_override("font_size", 8); key_input.virtual_keyboard_enabled = true; key_input.select_all_on_focus = false; key_input.clear_button_enabled = true; key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
+	key_input = LineEdit.new(); key_input.placeholder_text = "PASTE OR TYPE TD1- KEY"; key_input.position = Vector2(12, 36); key_input.size = Vector2(188, 23); key_input.add_theme_font_size_override("font_size", 8); key_input.virtual_keyboard_enabled = true; key_input.select_all_on_focus = false; key_input.clear_button_enabled = false; key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
+	var clear_key := Button.new(); clear_key.name = "ClearRecoveryKey"; clear_key.text = "X"; clear_key.position = Vector2(204, 36); clear_key.size = Vector2(24, 23); clear_key.focus_mode = Control.FOCUS_NONE; clear_key.add_theme_font_size_override("font_size", 8); clear_key.pressed.connect(_clear_key_input); overlay.add_child(clear_key)
+	if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").set_archetype_button_state(clear_key, false, Color8(239, 125, 87))
 	var labels := ["CREATE BACKUP", "COPY KEY", "PASTE KEY", "RESTORE", "SYNC NOW", "DELETE CLOUD", "BACK"]
 	for index in labels.size():
 		var button := Button.new(); button.text = labels[index]; button.focus_mode = Control.FOCUS_NONE; button.add_theme_font_size_override("font_size", 8)
@@ -71,6 +73,11 @@ func update_input() -> void:
 
 func _on_key_submitted(_text: String) -> void:
 	_restore()
+
+func _clear_key_input() -> void:
+	key_input.clear()
+	service.recovery_key = ""
+	status_label.text = "Recovery key cleared."
 
 func _update_selection() -> void:
 	for index in buttons.size():

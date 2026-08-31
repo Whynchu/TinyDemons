@@ -58,7 +58,7 @@ func continue_game(root: Object) -> void:
 
 func open_save_select_after_title_transition(root: Object) -> void:
 	if root.screen_state_controller.save_select_overlay == null:
-		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_cancel_overwrite"), Callable(root, "_save_portrait_texture"))
+		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_cancel_overwrite"), Callable(root, "_save_portrait_texture"), Callable(root, "_save_select_touch_move"), Callable(root, "_save_select_touch_confirm"), Callable(root, "_close_save_select"))
 	root.screen_state_controller.save_select_index = 0
 	root.screen_state_controller.menu_input_release_lock = true
 	# Keep the opaque title cover behind the save menu so the gameplay scene is
@@ -80,6 +80,17 @@ func update_save_select_cursor(root: Object) -> void:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
 		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 130.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 70 + root.screen_state_controller.save_select_index * 20))
+
+
+func touch_move_save_slot(root: Object, direction: int) -> void:
+	root.screen_state_controller.save_select_index = posmod(root.screen_state_controller.save_select_index + direction, ProfileSaveService.SLOT_COUNT)
+	update_save_select_cursor(root)
+	root.call("_play_sound", "ui_hover", -6.0, 1.0)
+
+
+func touch_confirm_save_slot(root: Object) -> void:
+	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	select_save_slot(root, root.screen_state_controller.save_select_index)
 
 
 func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
@@ -126,6 +137,9 @@ func set_overwrite_prompt(root: Object, active: bool) -> void:
 	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
 		var node: CanvasItem = root.screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
 		if node != null: node.visible = active
+	for node_name in ["SaveNavUp", "SaveNavDown", "SaveNavSelect", "SaveNavBack"]:
+		var nav := root.screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
+		if nav != null: nav.visible = not active
 	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null:
 		cursor.visible = active
