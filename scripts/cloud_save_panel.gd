@@ -20,7 +20,7 @@ func build(parent: Node) -> void:
 	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 1); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
 	var title := Label.new(); title.text = "CLOUD SAVE"; title.position = Vector2(12, 7); title.add_theme_font_size_override("font_size", 14); overlay.add_child(title)
 	var help := Label.new(); help.text = "No account needed. Keep your recovery key safe."; help.position = Vector2(12, 27); help.size = Vector2(216, 22); help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; help.add_theme_font_size_override("font_size", 8); overlay.add_child(help)
-	key_input = LineEdit.new(); key_input.placeholder_text = "TD1 recovery key"; key_input.position = Vector2(12, 51); key_input.size = Vector2(216, 20); key_input.add_theme_font_size_override("font_size", 8); overlay.add_child(key_input)
+	key_input = LineEdit.new(); key_input.placeholder_text = "TD1 recovery key"; key_input.position = Vector2(12, 51); key_input.size = Vector2(216, 20); key_input.add_theme_font_size_override("font_size", 8); key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
 	var labels := ["CREATE", "COPY KEY", "RESTORE", "SYNC", "DELETE", "BACK"]
 	for index in labels.size():
 		var button := Button.new(); button.text = labels[index]; button.position = Vector2(12 + (index % 3) * 73, 77 + (index / 3) * 22); button.size = Vector2(68, 18); button.focus_mode = Control.FOCUS_NONE; overlay.add_child(button); buttons.append(button)
@@ -57,7 +57,10 @@ func update_input() -> void:
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_right")): selected_row = posmod(selected_row + 1, buttons.size()); _update_selection()
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): selected_row = posmod(selected_row - 3, buttons.size()); _update_selection()
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): selected_row = posmod(selected_row + 3, buttons.size()); _update_selection()
-	elif bool(root.call("_is_menu_confirm_just_pressed")): buttons[selected_row].pressed.emit()
+	elif bool(root.call("_is_menu_confirm_just_pressed")) and not key_input.has_focus(): buttons[selected_row].pressed.emit()
+
+func _on_key_submitted(_text: String) -> void:
+	_restore()
 
 func _update_selection() -> void:
 	for index in buttons.size(): buttons[index].modulate = Color8(148, 220, 255) if index == selected_row else Color.WHITE

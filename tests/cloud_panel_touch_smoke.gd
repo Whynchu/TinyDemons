@@ -40,6 +40,15 @@ func _initialize() -> void:
 		_tap(layer, back_button.get_global_rect().get_center(), 7)
 		await process_frame
 		_expect(not panel.overlay.visible, "cloud overlay remains closable after CREATE", failures)
+		# Tapping the recovery key field focuses it for paste instead of
+		# confirming whatever button is highlighted.
+		panel.open()
+		await process_frame
+		var key_rect := panel.key_input.get_global_rect()
+		_tap(layer, key_rect.get_center(), 8)
+		await process_frame
+		_expect(panel.key_input.has_focus(), "tapping the key field focuses it for paste", failures)
+		_expect(panel.overlay.visible, "focusing the key field does not trigger a button", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
