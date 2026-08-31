@@ -133,7 +133,7 @@ func _start_crypto_bridge(expression: String) -> void:
 
 func _poll_crypto_result() -> void:
 	if _crypto_request_serial == 0: _crypto_poll_timer.stop(); return
-	var result := str(JavaScriptBridge.eval("window.__tdGodotCryptoResult || ''", true))
+	var result := str(JavaScriptBridge.eval("window.__tdGodotCryptoResult || ''"))
 	if not result.is_empty():
 		_crypto_poll_timer.stop(); _on_crypto_completed([result])
 
