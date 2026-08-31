@@ -142,7 +142,11 @@ func _poll_crypto_result() -> void:
 	if _crypto_request_serial == 0: _crypto_poll_timer.stop(); return
 	var result := str(JavaScriptBridge.eval("window.__tdGodotCryptoResult || ''"))
 	if not result.is_empty():
-		_crypto_poll_timer.stop(); _on_crypto_completed([result])
+		_crypto_poll_timer.stop()
+		if _pending_action == "decrypt_read":
+			_on_decrypt_completed([result])
+		else:
+			_on_crypto_completed([result])
 
 func _load_state() -> void:
 	var config := ConfigFile.new()

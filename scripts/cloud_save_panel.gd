@@ -21,16 +21,21 @@ func configure(game_root: Object, cloud_service: CloudSaveService) -> void:
 
 func build(parent: Node) -> void:
 	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 0.96); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
-	var title := Label.new(); title.text = "CLOUD SAVE"; title.position = Vector2(12, 7); title.add_theme_font_size_override("font_size", 12); title.add_theme_color_override("font_color", Color8(148, 220, 255)); overlay.add_child(title)
-	var help := Label.new(); help.text = "No account needed. Keep your recovery key safe."; help.position = Vector2(12, 25); help.size = Vector2(216, 20); help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; help.add_theme_font_size_override("font_size", 8); overlay.add_child(help)
-	key_input = LineEdit.new(); key_input.placeholder_text = "TD1 recovery key"; key_input.position = Vector2(12, 48); key_input.size = Vector2(216, 20); key_input.add_theme_font_size_override("font_size", 8); key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
-	var labels := ["CREATE", "COPY KEY", "PASTE", "RESTORE", "SYNC", "DELETE", "BACK"]
+	var title := Label.new(); title.text = "CLOUD SAVE"; title.position = Vector2(12, 6); title.add_theme_font_size_override("font_size", 12); title.add_theme_color_override("font_color", Color8(148, 220, 255)); overlay.add_child(title)
+	var help := Label.new(); help.text = "KEEP YOUR RECOVERY KEY SAFE"; help.position = Vector2(12, 23); help.size = Vector2(216, 12); help.add_theme_font_size_override("font_size", 7); help.add_theme_color_override("font_color", Color8(150, 156, 170)); overlay.add_child(help)
+	key_input = LineEdit.new(); key_input.placeholder_text = "PASTE OR TYPE TD1- KEY"; key_input.position = Vector2(12, 36); key_input.size = Vector2(216, 23); key_input.add_theme_font_size_override("font_size", 8); key_input.virtual_keyboard_enabled = true; key_input.select_all_on_focus = false; key_input.clear_button_enabled = true; key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
+	var labels := ["CREATE BACKUP", "COPY KEY", "PASTE KEY", "RESTORE", "SYNC NOW", "DELETE CLOUD", "BACK"]
 	for index in labels.size():
-		var button := Button.new(); button.text = labels[index]; button.position = Vector2(12 + (index % 3) * 73, 71 + (index / 3) * 19); button.size = Vector2(68, 17); button.focus_mode = Control.FOCUS_NONE; button.add_theme_font_size_override("font_size", 8); overlay.add_child(button); buttons.append(button)
+		var button := Button.new(); button.text = labels[index]; button.focus_mode = Control.FOCUS_NONE; button.add_theme_font_size_override("font_size", 8)
+		if index < 6:
+			button.position = Vector2(12 + (index % 2) * 110, 78 + (index / 2) * 24); button.size = Vector2(106, 22)
+		else:
+			button.position = Vector2(176, 5); button.size = Vector2(52, 20)
+		overlay.add_child(button); buttons.append(button)
 		if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").set_archetype_button_state(button, false, Color8(148, 220, 255))
 	buttons[0].pressed.connect(_create); buttons[1].pressed.connect(_copy_key); buttons[2].pressed.connect(_paste); buttons[3].pressed.connect(_restore); buttons[4].pressed.connect(_sync); buttons[5].pressed.connect(_delete); buttons[6].pressed.connect(close)
-	key_label = Label.new(); key_label.position = Vector2(12, 130); key_label.size = Vector2(216, 13); key_label.add_theme_font_size_override("font_size", 7); key_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; overlay.add_child(key_label)
-	status_label = Label.new(); status_label.position = Vector2(12, 144); status_label.size = Vector2(216, 15); status_label.add_theme_font_size_override("font_size", 7); status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; overlay.add_child(status_label)
+	key_label = Label.new(); key_label.visible = false; overlay.add_child(key_label)
+	status_label = Label.new(); status_label.position = Vector2(12, 61); status_label.size = Vector2(216, 15); status_label.add_theme_font_size_override("font_size", 7); status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; overlay.add_child(status_label)
 	for child in overlay.get_children():
 		if child is Control: (child as Control).set_meta("cloud_base_x", (child as Control).position.x)
 	apply_layout(root.screen_state_controller.layout_view_size())
@@ -58,10 +63,10 @@ func close() -> void:
 func update_input() -> void:
 	if overlay == null or not overlay.visible: return
 	if bool(root.call("_is_menu_back_just_pressed")): close(); return
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")): selected_row = posmod(selected_row - 1, buttons.size()); _update_selection()
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_right")): selected_row = posmod(selected_row + 1, buttons.size()); _update_selection()
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): selected_row = posmod(selected_row - 3, buttons.size()); _update_selection()
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): selected_row = posmod(selected_row + 3, buttons.size()); _update_selection()
+	if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")): selected_row = 6 if selected_row == 0 else selected_row - 1; _update_selection()
+	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_right")): selected_row = 0 if selected_row == 6 else selected_row + 1; _update_selection()
+	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): selected_row = 6 if selected_row < 2 else selected_row - 2; _update_selection()
+	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): selected_row = selected_row + 2 if selected_row < 4 else 6; _update_selection()
 	elif bool(root.call("_is_menu_confirm_just_pressed")) and not key_input.has_focus(): buttons[selected_row].pressed.emit()
 
 func _on_key_submitted(_text: String) -> void:
@@ -109,9 +114,9 @@ func _poll_pasted_key() -> void:
 		_paste_poll_timer.stop()
 		status_label.text = "Clipboard read timed out. Allow clipboard access or type the key."
 func _restore() -> void:
-	delete_armed = false
-	if not restore_armed: restore_armed = true; status_label.text = "RESTORE replaces matching local slots. Press RESTORE again."; return
-	restore_armed = false; status_label.text = "Finding encrypted backup..."; service.restore_backup(key_input.text)
+	_clear_confirmations()
+	if key_input.text.strip_edges().is_empty(): status_label.text = "Paste or type your recovery key first."; return
+	status_label.text = "Finding encrypted backup..."; service.restore_backup(key_input.text)
 func _sync() -> void:
 	_clear_confirmations()
 	if not key_input.text.strip_edges().is_empty(): service.recovery_key = key_input.text.strip_edges()
