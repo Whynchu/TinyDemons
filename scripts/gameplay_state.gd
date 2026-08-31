@@ -794,10 +794,6 @@ func _open_save_select_after_title_transition() -> void:
 	save_flow_controller.call("open_save_select_after_title_transition", self)
 func _update_save_select_cursor() -> void:
 	save_flow_controller.call("update_save_select_cursor", self)
-func _save_select_touch_move(direction: int) -> void:
-	save_flow_controller.call("touch_move_save_slot", self, direction)
-func _save_select_touch_confirm() -> void:
-	save_flow_controller.call("touch_confirm_save_slot", self)
 func _save_preview_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_preview_texture", self, palette_name) as Texture2D
 

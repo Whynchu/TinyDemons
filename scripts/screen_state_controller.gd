@@ -9,7 +9,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.38"
+const GAME_VERSION := "0.1.39"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/pause_menu.tscn")
 const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/demon_hub_menu.tscn")
@@ -3089,7 +3089,7 @@ func update_settings_input(root: Object) -> void:
 		elif settings_row >= 0 and settings_row < settings_value_buttons.size():
 			settings_value_buttons[settings_row].pressed.emit()
 
-func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), portrait_texture: Callable = Callable(), navigate_callback: Callable = Callable(), confirm_callback: Callable = Callable(), back_callback: Callable = Callable()) -> ColorRect:
+func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), portrait_texture: Callable = Callable(), back_callback: Callable = Callable()) -> ColorRect:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := create_view_overlay(parent, "SaveSelectOverlay", Color.BLACK, 4, false)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -3128,18 +3128,6 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 			portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			portrait.z_index = 1
 			button.add_child(portrait)
-	var nav_up := make_retro_button("UP", Vector2(display_view_size.x - 54.0, 66), Vector2(42, 18), pixel_texture)
-	nav_up.name = "SaveNavUp"; nav_up.focus_mode = Control.FOCUS_NONE
-	if navigate_callback.is_valid(): nav_up.pressed.connect(navigate_callback.bind(-1))
-	overlay.add_child(nav_up)
-	var nav_select := make_retro_button("SELECT", Vector2(display_view_size.x - 54.0, 86), Vector2(42, 18), pixel_texture)
-	nav_select.name = "SaveNavSelect"; nav_select.focus_mode = Control.FOCUS_NONE
-	if confirm_callback.is_valid(): nav_select.pressed.connect(confirm_callback)
-	overlay.add_child(nav_select)
-	var nav_down := make_retro_button("DOWN", Vector2(display_view_size.x - 54.0, 106), Vector2(42, 18), pixel_texture)
-	nav_down.name = "SaveNavDown"; nav_down.focus_mode = Control.FOCUS_NONE
-	if navigate_callback.is_valid(): nav_down.pressed.connect(navigate_callback.bind(1))
-	overlay.add_child(nav_down)
 	var nav_back := make_retro_button("BACK", Vector2(12, display_view_size.y - 23.0), Vector2(42, 18), pixel_texture)
 	nav_back.name = "SaveNavBack"; nav_back.focus_mode = Control.FOCUS_NONE
 	if back_callback.is_valid(): nav_back.pressed.connect(back_callback)
