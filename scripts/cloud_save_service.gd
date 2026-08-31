@@ -37,7 +37,7 @@ func create_backup(envelope: Dictionary) -> void:
 
 func restore_backup(key: String) -> void:
 	if not configured(): operation_completed.emit({"ok": false, "error": "Cloud backup is available in the Web build."}); return
-	recovery_key = key.strip_edges()
+	recovery_key = _normalize_recovery_key(key)
 	_pending_action = "derive_for_read"
 	_crypto_request_serial += 1
 	_start_crypto_timeout(_crypto_request_serial)
@@ -140,3 +140,10 @@ func _persist_state() -> void:
 	config.set_value("vault", "write_proof", write_proof)
 	config.set_value("vault", "revision", revision)
 	config.save(STATE_PATH)
+
+func _normalize_recovery_key(raw: String) -> String:
+	var key := raw.strip_edges()
+	var marker := key.find("TD1-")
+	if marker >= 0:
+		key = key.substr(marker).split(" ")[0].split("\n")[0].split("\r")[0]
+	return key
