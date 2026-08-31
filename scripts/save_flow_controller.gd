@@ -15,6 +15,7 @@ func build_title_screen(root: Object) -> void:
 	root.screen_state_controller.title_start_text = controls["start_text"] as Sprite2D
 	root.screen_state_controller.title_settings_text = controls["settings_text"] as Sprite2D
 	root.screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D
+	root.screen_state_controller.refresh_title_menu_layout(root.has_persistent_profile)
 	build_archetype_screen(root)
 	var name_controls: Dictionary = root.screen_state_controller.build_name_entry(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_finish_name_entry"), Callable(root, "_cancel_name_entry"), Callable(root, "_save_preview_texture"))
 	root.screen_state_controller.name_entry_overlay = name_controls["overlay"] as ColorRect
@@ -225,6 +226,8 @@ func close_save_select(root: Object) -> void:
 		root.screen_state_controller.title_overlay.visible = true
 		root.screen_state_controller.title_overlay.modulate.a = 1.0
 	if root.screen_state_controller.title_screen_text != null: root.screen_state_controller.title_screen_text.visible = true
+	var title_version := root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
+	if title_version != null: title_version.visible = true
 	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
 	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
@@ -244,6 +247,8 @@ func cancel_character_creation(root: Object) -> void:
 		root.screen_state_controller.title_overlay.visible = true
 		root.screen_state_controller.title_overlay.modulate.a = 1.0
 	if root.screen_state_controller.title_screen_text != null: root.screen_state_controller.title_screen_text.visible = true
+	var title_version := root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
+	if title_version != null: title_version.visible = true
 	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
 	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled

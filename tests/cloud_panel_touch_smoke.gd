@@ -22,6 +22,8 @@ func _initialize() -> void:
 		gameplay.call("_open_cloud_save")
 		await process_frame
 		_expect(panel.overlay.visible, "Cloud Save button opens the management window", failures)
+		_expect(panel.status_texts.size() == 2 and panel.status_texts[1].position.y < panel.buttons[0].position.y, "cloud status has a dedicated non-overlapping two-line region", failures)
+		_expect(panel.buttons[0].text.is_empty() and panel.buttons[0].get_child(0) is Sprite2D, "cloud actions use the shared pixel-text button treatment", failures)
 		layer.set_last_input_device(InputDeviceTracker.Device.TOUCH)
 		layer.set_input_context(InputRouter.Context.MENU)
 		await process_frame
@@ -55,10 +57,17 @@ func _initialize() -> void:
 		# real clipboard, so assert the button fires the read path (status
 		# changes) rather than the pasted contents.
 		DisplayServer.clipboard_set("TD1-abcdefghijklmnopqrstuvwxyz123456")
-		var paste_status_before := panel.status_label.text
+		var paste_status_before := panel.status_texts[0].texture
 		_tap(layer, panel.buttons[2].get_global_rect().get_center(), 9)
 		await process_frame
-		_expect(panel.status_label.text != paste_status_before, "PASTE button fires the clipboard read", failures)
+		_expect(panel.status_texts[0].texture != paste_status_before, "PASTE button fires the clipboard read", failures)
+		panel.key_input.text = "TD1-test-key"
+		var clear_key := panel.overlay.get_node_or_null("ClearRecoveryKey") as Button
+		_expect(clear_key != null, "cloud panel exposes a dedicated key clear button", failures)
+		if clear_key != null:
+			_tap(layer, clear_key.get_global_rect().get_center(), 10)
+			await process_frame
+			_expect(panel.key_input.text.is_empty(), "touch X clears the recovery key field", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

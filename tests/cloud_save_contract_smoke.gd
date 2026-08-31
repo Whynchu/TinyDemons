@@ -20,8 +20,11 @@ func _initialize() -> void:
 	var panel_source := FileAccess.get_file_as_string("res://scripts/cloud_save_panel.gd")
 	_expect(panel_source.contains("Vector2(106, 22)") and panel_source.contains("virtual_keyboard_enabled = true"), "cloud panel exposes mobile-sized controls", failures)
 	_expect(panel_source.contains("ClearRecoveryKey") and panel_source.contains("_clear_key_input"), "recovery key has a dedicated touch clear control", failures)
+	_expect(not panel_source.contains("Label.new") and panel_source.contains("CloudSaveStatus"), "cloud panel uses pixel-text sprites outside the editable field", failures)
 	var screen_source := FileAccess.get_file_as_string("res://scripts/screen_state_controller.gd")
 	_expect(screen_source.contains("SaveNavBack") and not screen_source.contains("SaveNavSelect"), "save selection exposes only the needed touch back control", failures)
+	var gameplay_source := FileAccess.get_file_as_string("res://scripts/gameplay_state.gd")
+	_expect(gameplay_source.contains("_spawn_title_ui_breakup") and gameplay_source.contains("title_cloud_button") and gameplay_source.contains("title_settings_button"), "title transition fizzle includes all title menu cards", failures)
 	if failures.is_empty(): print("CLOUD_SAVE_CONTRACT_SMOKE_OK"); quit(0); return
 	for failure in failures: push_error("FAILED: %s" % failure)
 	quit(1)
