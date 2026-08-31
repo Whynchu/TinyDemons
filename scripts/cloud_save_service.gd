@@ -20,7 +20,7 @@ var _crypto_request_serial := 0
 var _crypto_poll_timer: Timer
 
 func _ready() -> void:
-	_http = HTTPRequest.new(); add_child(_http)
+	_http = HTTPRequest.new(); _http.timeout = 15.0; add_child(_http)
 	_crypto_poll_timer = Timer.new(); _crypto_poll_timer.wait_time = 0.1; _crypto_poll_timer.timeout.connect(_poll_crypto_result); add_child(_crypto_poll_timer)
 	_http.request_completed.connect(_on_request_completed)
 	_load_config(); _load_state(); WebSaveCrypto.install()
