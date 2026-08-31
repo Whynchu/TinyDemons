@@ -124,7 +124,8 @@ func _start_crypto_timeout(serial: int) -> void:
 	get_tree().create_timer(10.0).timeout.connect(func() -> void:
 		if _crypto_request_serial == serial:
 			_crypto_request_serial = 0
-			operation_completed.emit({"ok": false, "error": "Browser encryption did not respond. Refresh the page and try again."})
+			var diag := str(JavaScriptBridge.eval("JSON.stringify({crypto:typeof crypto, subtle:typeof crypto?.subtle, bridge:typeof window.__tdVaultCrypto, result:!!window.__tdGodotCryptoResult})"))
+			operation_completed.emit({"ok": false, "error": "Browser encryption did not respond. Refresh the page and try again. [" + diag + "]"})
 	)
 
 func _start_crypto_bridge(expression: String) -> void:
