@@ -2,7 +2,7 @@ extends RefCounted
 class_name WebSaveCrypto
 
 const SCRIPT := """
-if (!window.__tdVaultCrypto) {
+{
  const te=new TextEncoder(), td=new TextDecoder();
  const b64=b=>{let s='';b.forEach(x=>s+=String.fromCharCode(x));return btoa(s).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'')};
  const unb64=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
