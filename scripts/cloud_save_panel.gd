@@ -12,6 +12,7 @@ var selected_row := 0
 var restore_armed := false
 var delete_armed := false
 var _paste_poll_timer: Timer
+var _paste_poll_started := 0
 
 func configure(game_root: Object, cloud_service: CloudSaveService) -> void:
 	root = game_root; service = cloud_service
@@ -77,9 +78,12 @@ func _paste() -> void:
 	_clear_confirmations()
 	if OS.has_feature("web"):
 		# Godot's canvas LineEdit has no native paste menu on iOS. Read the
-		# clipboard through the browser API and poll for the result.
+		# clipboard through the browser API and poll for the result. The done
+		# flag is set on every path (success, rejection, or synchronous throw)
+		# so the panel can never hang on "Reading clipboard...".
 		status_label.text = "Reading clipboard..."
-		JavaScriptBridge.eval("navigator.clipboard.readText().then(function(t){window.__tdPastedKey=t||'';window.__tdPastedKeyDone=true},function(){window.__tdPastedKey='';window.__tdPastedKeyDone=true})")
+		_paste_poll_started = Time.get_ticks_msec()
+		JavaScriptBridge.eval("window.__tdPastedKeyDone=false;try{if(!navigator.clipboard||!navigator.clipboard.readText)throw Error('no_clipboard');navigator.clipboard.readText().then(function(t){window.__tdPastedKey=t||'';window.__tdPastedKeyDone=true},function(){window.__tdPastedKey='';window.__tdPastedKeyDone=true})}catch(e){window.__tdPastedKey='';window.__tdPastedKeyDone=true}")
 		_paste_poll_timer.start()
 		return
 	var text := DisplayServer.clipboard_get().strip_edges()
@@ -90,15 +94,18 @@ func _paste() -> void:
 	status_label.text = "Recovery key pasted. You can now RESTORE."
 
 func _poll_pasted_key() -> void:
-	if not bool(JavaScriptBridge.eval("window.__tdPastedKeyDone || false")):
+	if bool(JavaScriptBridge.eval("window.__tdPastedKeyDone || false")):
+		_paste_poll_timer.stop()
+		var text := str(JavaScriptBridge.eval("window.__tdPastedKey || ''"))
+		if text.is_empty():
+			status_label.text = "Clipboard is empty or blocked. Copy the key on this device first."
+			return
+		key_input.text = text
+		status_label.text = "Recovery key pasted. You can now RESTORE."
 		return
-	_paste_poll_timer.stop()
-	var text := str(JavaScriptBridge.eval("window.__tdPastedKey || ''"))
-	if text.is_empty():
-		status_label.text = "Clipboard is empty or blocked. Copy the key on the device first."
-		return
-	key_input.text = text
-	status_label.text = "Recovery key pasted. You can now RESTORE."
+	if Time.get_ticks_msec() - _paste_poll_started > 3000:
+		_paste_poll_timer.stop()
+		status_label.text = "Clipboard read timed out. Allow clipboard access or type the key."
 func _restore() -> void:
 	delete_armed = false
 	if not restore_armed: restore_armed = true; status_label.text = "RESTORE replaces matching local slots. Press RESTORE again."; return

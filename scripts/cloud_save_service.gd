@@ -133,7 +133,9 @@ func _start_crypto_bridge(expression: String) -> void:
 	# a request always lands somewhere the poll can see.
 	var store_result := "function(r){window.__tdGodotCryptoResult=(typeof r==='string'?r:JSON.stringify(r))}"
 	var wrapped := expression.substr(0, expression.length() - 1) + ", " + store_result + ")"
-	JavaScriptBridge.eval("window.__tdGodotCryptoResult=null; " + wrapped)
+	# Guard the call so a missing or failing bridge settles the request with an
+	# error instead of leaving the panel stuck on "Finding encrypted backup...".
+	JavaScriptBridge.eval("window.__tdGodotCryptoResult=null; try{ " + wrapped + " }catch(e){ window.__tdGodotCryptoResult=JSON.stringify({ok:false,error:'crypto bridge failed'}) }")
 	_crypto_poll_timer.start()
 
 func _poll_crypto_result() -> void:
