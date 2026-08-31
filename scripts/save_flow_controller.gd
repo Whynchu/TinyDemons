@@ -226,7 +226,7 @@ func close_save_select(root: Object) -> void:
 		root.screen_state_controller.title_overlay.visible = true
 		root.screen_state_controller.title_overlay.modulate.a = 1.0
 	if root.screen_state_controller.title_screen_text != null: root.screen_state_controller.title_screen_text.visible = true
-	var title_version := root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
+	var title_version: Sprite2D = root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
 	if title_version != null: title_version.visible = true
 	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
@@ -247,7 +247,7 @@ func cancel_character_creation(root: Object) -> void:
 		root.screen_state_controller.title_overlay.visible = true
 		root.screen_state_controller.title_overlay.modulate.a = 1.0
 	if root.screen_state_controller.title_screen_text != null: root.screen_state_controller.title_screen_text.visible = true
-	var title_version := root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
+	var title_version: Sprite2D = root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
 	if title_version != null: title_version.visible = true
 	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
 	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true

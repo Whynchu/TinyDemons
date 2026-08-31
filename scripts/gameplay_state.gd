@@ -844,12 +844,12 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_ui_breakup() -> void:
 	_spawn_title_pixel_breakup(screen_state_controller.title_screen_text)
-	var version := screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if screen_state_controller.title_overlay != null else null
+	var version: Sprite2D = screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if screen_state_controller.title_overlay != null else null
 	_spawn_title_pixel_breakup(version)
 	var buttons: Array[Button] = [screen_state_controller.title_start_button, screen_state_controller.title_continue_button, screen_state_controller.title_cloud_button, screen_state_controller.title_settings_button]
 	for button in buttons:
 		if button == null or button.disabled or not button.visible: continue
-		var label := button.get_child(0) as Sprite2D if button.get_child_count() > 0 else null
+		var label: Sprite2D = button.get_child(0) as Sprite2D if button.get_child_count() > 0 else null
 		_spawn_title_pixel_breakup(label)
 		screen_state_controller.spawn_button_frame_breakup(button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 	if screen_state_controller.title_cursor_text != null and screen_state_controller.title_cursor_text.visible:
