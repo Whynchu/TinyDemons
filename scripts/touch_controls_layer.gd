@@ -355,6 +355,13 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# control at the bottom-right of the compact hub panel.
 		if _menu_button_at(position, true) != null:
 			return
+		# Text fields (recovery key, etc.) must receive focus so the on-screen
+		# keyboard appears; treat them as their own touch target instead of a
+		# generic accept that would confirm a highlighted button.
+		var editable := _menu_editable_at(position)
+		if editable != null:
+			editable.grab_focus()
+			return
 		if cancel.has_point(position) and _cancel_control_visible():
 			_finger_actions[finger_id] = &"cancel"
 			set_button_state(&"cancel", true)
@@ -563,6 +570,28 @@ func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseB
 		if button.get_global_rect().has_point(position):
 			return button
 	return null
+
+
+func _menu_editable_at(position: Vector2) -> Control:
+	var search_root := _active_menu_root()
+	if search_root == null:
+		return null
+	var nodes: Array = []
+	_collect_menu_editables(search_root, nodes)
+	for index in range(nodes.size() - 1, -1, -1):
+		var editable := nodes[index] as Control
+		if editable == null or not is_instance_valid(editable) or not editable.is_visible_in_tree() or editable.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+			continue
+		if editable.get_global_rect().has_point(position):
+			return editable
+	return null
+
+
+func _collect_menu_editables(node: Node, output: Array) -> void:
+	for child in node.get_children():
+		if child is LineEdit or child is TextEdit:
+			output.append(child)
+		_collect_menu_editables(child, output)
 
 
 func _active_menu_root() -> Node:
