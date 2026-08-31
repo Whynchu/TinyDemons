@@ -22,9 +22,6 @@ func _initialize() -> void:
 	_expect(panel_source.contains("ClearRecoveryKey") and panel_source.contains("_clear_key_input"), "recovery key has a dedicated touch clear control", failures)
 	var screen_source := FileAccess.get_file_as_string("res://scripts/screen_state_controller.gd")
 	_expect(screen_source.contains("SaveNavBack") and not screen_source.contains("SaveNavSelect"), "save selection exposes only the needed touch back control", failures)
-	_expect(panel_source.contains("ClearRecoveryKey") and panel_source.contains("_clear_key_input"), "recovery key has a dedicated touch clear control", failures)
-	var save_flow_source := FileAccess.get_file_as_string("res://scripts/save_flow_controller.gd")
-	_expect(save_flow_source.contains("touch_move_save_slot") and save_flow_source.contains("touch_confirm_save_slot"), "save selection exposes touch navigation", failures)
 	if failures.is_empty(): print("CLOUD_SAVE_CONTRACT_SMOKE_OK"); quit(0); return
 	for failure in failures: push_error("FAILED: %s" % failure)
 	quit(1)
