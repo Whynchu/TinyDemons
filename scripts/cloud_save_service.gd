@@ -125,6 +125,7 @@ func _start_crypto_timeout(serial: int) -> void:
 		if _crypto_request_serial == serial:
 			_crypto_request_serial = 0
 			operation_completed.emit({"ok": false, "error": "Browser encryption did not respond. Refresh the page and try again."})
+	)
 
 func _start_crypto_bridge(expression: String) -> void:
 	JavaScriptBridge.eval("window.__tdGodotCryptoResult=null; window.__tdGodotCryptoCallback=%s; %s" % [_crypto_callback, expression])
@@ -135,7 +136,6 @@ func _poll_crypto_result() -> void:
 	var result := str(JavaScriptBridge.eval("window.__tdGodotCryptoResult || ''", true))
 	if not result.is_empty():
 		_crypto_poll_timer.stop(); _on_crypto_completed([result])
-	)
 
 func _load_state() -> void:
 	var config := ConfigFile.new()
