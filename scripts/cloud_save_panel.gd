@@ -21,16 +21,16 @@ func configure(game_root: Object, cloud_service: CloudSaveService) -> void:
 func build(parent: Node) -> void:
 	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 0.96); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
 	var pixel_texture := Callable(root, "_pixel_text_texture")
-	var title := root.screen_state_controller.create_sprite(overlay, "CloudSaveTitle", pixel_texture.call("CLOUD SAVE", Color8(148, 220, 255)) as Texture2D, Vector2(12, 7), false)
-	var help := root.screen_state_controller.create_sprite(overlay, "CloudSaveHelp", pixel_texture.call("KEEP YOUR RECOVERY KEY SAFE", Color8(150, 156, 170)) as Texture2D, Vector2(12, 24), false)
+	var title: Sprite2D = root.screen_state_controller.create_sprite(overlay, "CloudSaveTitle", pixel_texture.call("CLOUD SAVE", Color8(148, 220, 255)) as Texture2D, Vector2(12, 7), false) as Sprite2D
+	var help: Sprite2D = root.screen_state_controller.create_sprite(overlay, "CloudSaveHelp", pixel_texture.call("KEEP YOUR RECOVERY KEY SAFE", Color8(150, 156, 170)) as Texture2D, Vector2(12, 24), false) as Sprite2D
 	key_input = LineEdit.new(); key_input.placeholder_text = "PASTE OR TYPE TD1- KEY"; key_input.position = Vector2(12, 36); key_input.size = Vector2(188, 23); key_input.add_theme_font_size_override("font_size", 8); key_input.virtual_keyboard_enabled = true; key_input.select_all_on_focus = false; key_input.clear_button_enabled = false; key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
-	var clear_key := root.screen_state_controller.make_retro_button("X", Vector2(204, 36), Vector2(24, 23), pixel_texture); clear_key.name = "ClearRecoveryKey"; clear_key.focus_mode = Control.FOCUS_NONE; clear_key.pressed.connect(_clear_key_input); overlay.add_child(clear_key)
+	var clear_key: Button = root.screen_state_controller.make_retro_button("X", Vector2(204, 36), Vector2(24, 23), pixel_texture) as Button; clear_key.name = "ClearRecoveryKey"; clear_key.focus_mode = Control.FOCUS_NONE; clear_key.pressed.connect(_clear_key_input); overlay.add_child(clear_key)
 	if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").set_archetype_button_state(clear_key, false, Color8(239, 125, 87))
 	var labels := ["CREATE BACKUP", "COPY KEY", "PASTE KEY", "RESTORE", "SYNC NOW", "DELETE CLOUD", "BACK"]
 	for index in labels.size():
-		var button_position := Vector2(12 + (index % 2) * 110, 78 + (index / 2) * 24) if index < 6 else Vector2(176, 5)
-		var button_size := Vector2(106, 22) if index < 6 else Vector2(52, 20)
-		var button := root.screen_state_controller.make_retro_button(labels[index], button_position, button_size, pixel_texture); button.focus_mode = Control.FOCUS_NONE
+		var button_position: Vector2 = Vector2(12 + (index % 2) * 110, 78 + (index / 2) * 24) if index < 6 else Vector2(176, 5)
+		var button_size: Vector2 = Vector2(106, 22) if index < 6 else Vector2(52, 20)
+		var button: Button = root.screen_state_controller.make_retro_button(labels[index], button_position, button_size, pixel_texture) as Button; button.focus_mode = Control.FOCUS_NONE
 		if index < 6:
 			button.position = button_position; button.size = button_size
 		overlay.add_child(button); buttons.append(button)
