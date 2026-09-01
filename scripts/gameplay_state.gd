@@ -668,12 +668,16 @@ func _set_hub_page(page: int) -> void:
 	hub_flow_controller.call("set_hub_page", self, page)
 func _shift_hub_item(direction: int) -> void:
 	hub_flow_controller.call("shift_hub_item", self, direction)
+func _shift_hub_slot_grid(column_direction: int, row_direction: int) -> void:
+	hub_flow_controller.call("shift_hub_slot_grid", self, column_direction, row_direction)
 func _select_hub_item_row(row: int) -> void:
 	hub_flow_controller.call("select_hub_item_row", self, row)
 func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
 	return hub_flow_controller.call("hub_gear_candidates", self, slot) as Array[ItemInstance]
 func _shift_hub_gear_candidate(direction: int) -> void:
 	hub_flow_controller.call("shift_hub_gear_candidate", self, direction)
+func _shift_hub_gear_candidate_grid(column_direction: int, row_direction: int) -> void:
+	hub_flow_controller.call("shift_hub_gear_candidate_grid", self, column_direction, row_direction)
 func _select_hub_gear_slot(slot_index: int) -> void:
 	hub_flow_controller.call("select_hub_gear_slot", self, slot_index)
 func _select_hub_gear_candidate(choice_row: int) -> void:
@@ -698,6 +702,8 @@ func _remove_hub_gear() -> void:
 	hub_flow_controller.call("remove_hub_gear", self)
 func _remove_all_hub_gear() -> void:
 	hub_flow_controller.call("remove_all_hub_gear", self)
+func _cancel_hub_remove_all() -> void:
+	hub_flow_controller.call("cancel_remove_all_hub_gear", self)
 func _select_hub_menu_row(row: int) -> void:
 	hub_flow_controller.call("select_hub_menu_row", self, row)
 func _select_hub_stat_row(row: int) -> void:
@@ -708,6 +714,8 @@ func _set_pause_equipment_page() -> void:
 	screen_state_controller.set_pause_page(self, 2)
 func _pause_back() -> void:
 	screen_state_controller.pause_back(self)
+func _pause_equipment_back() -> void:
+	screen_state_controller.pause_equipment_back(self)
 func _shift_hub_action_column(direction: int) -> void:
 	hub_flow_controller.call("shift_hub_action_column", self, direction)
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:

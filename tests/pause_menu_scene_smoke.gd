@@ -1,5 +1,7 @@
 extends SceneTree
 
+const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
+
 var _finished := false
 
 
@@ -53,7 +55,7 @@ func _initialize() -> void:
 		_expect(screens.pause_menu_buttons.size() == 4, "pause exposes Status, Equipment, Settings, and Quit to Title", failures)
 		if screens.pause_menu_buttons.size() >= 4:
 			_expect(screens.pause_menu_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.pause_menu_buttons[3].position.y == 49.0, "pause command rail uses the authored x and y positions", failures)
-		_expect(screens.pause_back_button != null and screens.pause_back_button.position == Vector2(128.0, screens.display_view_size.y - 15.0), "pause back prompt uses the authored footer row", failures)
+		_expect(screens.pause_back_button != null and screens.pause_back_button.position == PauseMenuLayoutScript.back_button_position(screens.display_view_size), "pause back prompt uses the authored rail-anchored footer row", failures)
 		for button in screens.pause_menu_buttons:
 			_expect(button.visible, "pause menu action is visible", failures)
 		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null and screens.pause_player_card_texts[6].texture != null and screens.pause_player_card_texts[6].visible, "pause shows the player info block and level", failures)
@@ -73,8 +75,13 @@ func _initialize() -> void:
 			screens.pause_equipment_button.pressed.emit()
 		var equipment_background := screens.pause_page_roots[2].get_node_or_null("Background") as NinePatchRect
 		var equipment_title := screens.pause_page_roots[2].get_node_or_null("Title") as Sprite2D
-		_expect(screens.pause_page == 2 and screens.pause_equipment_texts[0].visible, "pause Equipment opens a read-only page", failures)
+		var authored_equipment := screens.pause_equipment_menu as EquipmentMenuLayout
+		_expect(screens.pause_page == 2 and authored_equipment != null and authored_equipment.visible and not authored_equipment.read_only, "pause Equipment opens the shared interactive authored page", failures)
 		_expect(equipment_background != null and equipment_background.size == screens.display_view_size and equipment_title != null and equipment_title.texture != null, "pause Equipment owns a full-screen background and upper-left title card", failures)
+		if authored_equipment != null and not authored_equipment.command_buttons.is_empty():
+			authored_equipment.command_buttons[0].pressed.emit()
+			await process_frame
+			_expect(screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP and authored_equipment.slot_cursor.visible, "pause Equipment command buttons enter the live slot flow", failures)
 		if screens.pause_back_button != null:
 			screens.pause_back_button.pressed.emit()
 			screens.pause_back_button.pressed.emit()

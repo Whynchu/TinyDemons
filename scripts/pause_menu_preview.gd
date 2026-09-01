@@ -52,10 +52,12 @@ func _rebuild_preview() -> void:
 		var command := _add_texture("PreviewCommand%d" % index, texture, PauseMenuLayoutScript.command_label_position(size, index, texture.get_width()))
 		command.z_index = 0
 
-	_add_texture("PreviewSelectIcon", MENU_CIRCLE_TEXTURE, Vector2(PauseMenuLayoutScript.SELECT_PROMPT_X, size.y - PauseMenuLayoutScript.FOOTER_TEXT_BOTTOM_INSET))
-	_add_pixel_text(renderer, "PreviewSelect", "SELECT", Vector2(PauseMenuLayoutScript.SELECT_PROMPT_X + 6.0, size.y - PauseMenuLayoutScript.FOOTER_TEXT_BOTTOM_INSET), PauseMenuLayoutScript.MUTED_TEXT_COLOR)
-	_add_texture("PreviewBackIcon", MENU_X_TEXTURE, Vector2(PauseMenuLayoutScript.BACK_BUTTON_POSITION_X + 13.0, size.y - PauseMenuLayoutScript.BACK_BUTTON_BOTTOM_INSET + 4.0))
-	_add_pixel_text(renderer, "PreviewBack", "BACK", Vector2(PauseMenuLayoutScript.BACK_BUTTON_POSITION_X + 21.0, size.y - PauseMenuLayoutScript.BACK_BUTTON_BOTTOM_INSET + 4.0), PauseMenuLayoutScript.MUTED_TEXT_COLOR)
+	var select_position := PauseMenuLayoutScript.select_prompt_position(size)
+	_add_texture("PreviewSelectIcon", MENU_CIRCLE_TEXTURE, Vector2(select_position.x, select_position.y))
+	_add_pixel_text(renderer, "PreviewSelect", "SELECT", Vector2(select_position.x + 6.0, select_position.y), PauseMenuLayoutScript.MUTED_TEXT_COLOR)
+	var back_position := PauseMenuLayoutScript.back_button_position(size)
+	_add_texture("PreviewBackIcon", MENU_X_TEXTURE, Vector2(back_position.x + 13.0, back_position.y + 4.0))
+	_add_pixel_text(renderer, "PreviewBack", "BACK", Vector2(back_position.x + 21.0, back_position.y + 4.0), PauseMenuLayoutScript.MUTED_TEXT_COLOR)
 
 	var gold_icon := _add_texture("PreviewGoldIcon", GOLD_TEXTURE, PauseMenuLayoutScript.resource_icon_position(size, false))
 	gold_icon.region_enabled = true

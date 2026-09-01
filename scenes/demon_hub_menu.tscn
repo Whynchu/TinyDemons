@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/menu_panel_8_piece.tscn" id="1_panel"]
 [ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Script" path="res://scripts/demon_hub_menu_preview.gd" id="3_preview"]
+[ext_resource type="PackedScene" path="res://scenes/equipment_menu.tscn" id="4_equipment"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_title"]
 bg_color = Color(0.035, 0.045, 0.075, 1)
@@ -177,6 +178,9 @@ offset_right = 232.0
 offset_bottom = 18.0
 mouse_filter = 2
 color = Color(0.36, 0.4, 0.52, 0.85)
+
+[node name="EquipmentMenu" parent="HubItemsPage" instance=ExtResource("4_equipment")]
+visible = false
 
 [node name="HubBindPage" type="Control" parent="."]
 visible = false
