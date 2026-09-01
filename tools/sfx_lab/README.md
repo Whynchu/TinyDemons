@@ -48,6 +48,33 @@ Validate a recipe:
 & $py -m sfxlab.cli validate --recipe "tools\sfx_lab\workspaces\ui_confirm\<run>\recipes\reconstruction.recipe.json"
 ```
 
+## Mutate
+
+Turn a measured recipe into a family of variants with named, typed operations.
+Every operation has declared parameter bounds and a compatible component-type
+set; applying a plan never modifies the source recipe — it produces a new recipe
+chained via `parent_recipe_id` and appends a provenance record per operation.
+
+```powershell
+# plan: examples\mutation_plans\brighter-confirm.json
+& $py -m sfxlab.cli mutate `
+  --recipe "tools\sfx_lab\workspaces\ui_confirm\<run>\recipes\reconstruction.recipe.json" `
+  --plan "tools\sfx_lab\examples\mutation_plans\brighter-confirm.json" `
+  --output "variants\brighter-confirm.recipe.json" `
+  --output-wav "variants\brighter-confirm.wav"
+
+# dry-run: validate the plan and report distance without rendering
+& $py -m sfxlab.cli mutate --recipe <recipe> --plan <plan> --dry-run
+```
+
+Operations: `transpose_component`, `stretch_component`, `shift_component`,
+`scale_component_gain`, `scale_partial`, `remove_partial`,
+`change_partial_ratio`, `reverse_pitch_contour`, `warp_pitch_contour`,
+`scale_inharmonicity`, `move_noise_band`, `change_decay`,
+`duplicate_component`, `replace_transient`. Each returns a new recipe and a
+`mutation_distance` navigation aid (a normalized engineering distance, not a
+legal guarantee of originality).
+
 ## Tests
 
 ```powershell

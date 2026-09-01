@@ -1,0 +1,20 @@
+{
+  "name": "brighter-confirm",
+  "operations": [
+    {
+      "operation": "transpose_component",
+      "target": "tonal-000",
+      "arguments": {"cents": 200}
+    },
+    {
+      "operation": "change_decay",
+      "target": "tonal-000",
+      "arguments": {"factor": 1.4}
+    },
+    {
+      "operation": "scale_component_gain",
+      "target": "tonal-000",
+      "arguments": {"db": 3.0}
+    }
+  ]
+}
