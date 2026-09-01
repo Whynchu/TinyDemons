@@ -1,0 +1,9 @@
+numpy
+scipy
+soundfile
+matplotlib
+pydantic
+jsonschema
+rich
+PyYAML
+pytest
