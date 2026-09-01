@@ -10,7 +10,7 @@ const LEFT_PANEL_WIDTH: float = 176.0
 const FIXED_RAIL_WIDTH: float = 64.0
 const RESOURCE_PANEL_HEIGHT: float = 24.0
 
-const PLAYER_PORTRAIT_POSITION := Vector2(19.0, 26.0)
+const PLAYER_PORTRAIT_POSITION := Vector2(10.0, 26.0)
 const PLAYER_CARD_TEXT_POSITIONS: Array[Vector2] = [
 	Vector2(43.0, 29.0),
 	Vector2(88.0, 29.0),
@@ -31,6 +31,12 @@ const FOOTER_TEXT_BOTTOM_INSET: float = 11.0
 const BACK_BUTTON_SIZE := Vector2(48.0, 13.0)
 const BACK_BUTTON_POSITION_X: float = 128.0
 const BACK_BUTTON_BOTTOM_INSET: float = 15.0
+## The bottom prompt pair is anchored to the right rail (divider) so it keeps
+## its native relative spacing as the logical width widens. SELECT sits on the
+## left and the framed BACK button on the right, matching the mockup, and the
+## pair stays just left of the resource rail.
+const SELECT_LEFT_OF_RAIL: float = 72.0
+const BACK_LEFT_OF_RAIL: float = 48.0
 
 const RESOURCE_ICON_INSET_X: float = 6.0
 const RESOURCE_TEXT_RIGHT_INSET: float = 6.0
@@ -67,11 +73,12 @@ static func command_label_position(view_size: Vector2, index: int, texture_width
 
 
 static func select_prompt_position(view_size: Vector2) -> Vector2:
-	return Vector2(SELECT_PROMPT_X, view_size.y - FOOTER_TEXT_BOTTOM_INSET)
+	return Vector2(divider_x(view_size.x) - SELECT_LEFT_OF_RAIL, view_size.y - FOOTER_TEXT_BOTTOM_INSET)
 
 
 static func back_button_position(view_size: Vector2) -> Vector2:
-	return Vector2(BACK_BUTTON_POSITION_X, view_size.y - BACK_BUTTON_BOTTOM_INSET)
+	var divider := divider_x(view_size.x)
+	return Vector2(divider - BACK_LEFT_OF_RAIL, view_size.y - BACK_BUTTON_BOTTOM_INSET)
 
 
 static func resource_icon_position(view_size: Vector2, soul: bool) -> Vector2:

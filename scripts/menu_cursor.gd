@@ -7,6 +7,8 @@ const MOVE_TIME := 0.10
 
 var _motion_tween: Tween = null
 var _target := Vector2.INF
+var _locked := false
+var _bobbing := false
 
 
 func _ready() -> void:
@@ -16,7 +18,10 @@ func _ready() -> void:
 
 
 func move_to(target: Vector2, animate: bool = true) -> void:
+	_locked = false
 	if _target.is_equal_approx(target):
+		if animate and not _bobbing:
+			_start_bob()
 		return
 	_target = target
 	_kill_motion()
@@ -36,12 +41,13 @@ func _on_arrived() -> void:
 
 
 func _start_bob() -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or _locked:
 		return
 	_kill_motion()
 	position = _target
 	var bob := create_tween()
 	_motion_tween = bob
+	_bobbing = true
 	bob.set_loops()
 	bob.tween_property(self, "position", _target + Vector2(BOB_AMOUNT, 0.0), BOB_SLIDE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	bob.tween_property(self, "position", _target, BOB_SNAP_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
@@ -51,6 +57,31 @@ func _kill_motion() -> void:
 	if _motion_tween != null and _motion_tween.is_valid():
 		_motion_tween.kill()
 	_motion_tween = null
+	_bobbing = false
+
+
+## Leave a previous cursor visible as a static, dimmed breadcrumb while a
+## nested equipment state owns the active cursor.  This intentionally kills
+## the bob tween, preventing duplicate motion callbacks when routes change.
+func lock_at(target: Vector2) -> void:
+	_locked = true
+	_target = target
+	_kill_motion()
+	position = target
+
+
+func unlock() -> void:
+	_locked = false
+	_start_bob()
+
+
+func stop_motion() -> void:
+	_locked = true
+	_kill_motion()
+
+
+func is_locked() -> bool:
+	return _locked
 
 
 func _exit_tree() -> void:

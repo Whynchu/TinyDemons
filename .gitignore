@@ -16,6 +16,12 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+# Copyrighted reference audio (Square Enix Final Fantasy recordings) — never commit
+assets/sounds/FFsounds/
+
+# Browser probe scratch
+.chrome-probe*/
+
 # Workspace files
 previous session.txt
 
