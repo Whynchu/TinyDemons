@@ -26,7 +26,7 @@ const STICK_MIN := 50.0
 const STICK_MAX := 160.0
 const MARGIN_FRACTION := 0.03
 const TAP_INTERACT_ACTION := &"tap_interact"
-const MENU_SCROLL_DRAG_PX := 6.0
+const MENU_SCROLL_DRAG_PX := 14.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
