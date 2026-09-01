@@ -16,6 +16,7 @@ $tests += "six_stat_calculator_smoke"
 $tests += "composite_elemental_damage_smoke"
 $tests += "six_stat_equipment_smoke"
 $tests += "six_stat_menu_scene_smoke"
+$tests += "generated_bound_reachability_smoke"
 $tests += "equipment_menu_scene_smoke"
 $tests += "name_entry_scene_smoke"
 $tests += "demon_hub_menu_scene_smoke"
@@ -41,6 +42,16 @@ foreach ($test in $tests) {
 	} else {
 		Write-Host "PASSED: $test" -ForegroundColor Green
 	}
+}
+Write-Host "=== sfx lab pytest ==="
+$sfxLabPy = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_reconstruction\.venv311\Scripts\python.exe"
+$sfxLabTests = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_lab\tests"
+& $sfxLabPy -m pytest $sfxLabTests -q
+if ($LASTEXITCODE -ne 0) {
+	Write-Host "FAILED: sfx lab pytest (exit $LASTEXITCODE)" -ForegroundColor Red
+	$failed = $true
+} else {
+	Write-Host "PASSED: sfx lab pytest" -ForegroundColor Green
 }
 Write-Host "=== web export smoke ==="
 $webSmoke = Join-Path $PSScriptRoot "web_export_smoke.ps1"
