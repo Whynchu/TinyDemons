@@ -21,6 +21,13 @@ def _build_parser() -> argparse.ArgumentParser:
     validate = subparsers.add_parser("validate", help="validate a recipe JSON file")
     validate.add_argument("--recipe", required=True)
 
+    mutate = subparsers.add_parser("mutate", help="apply a mutation plan to a recipe")
+    mutate.add_argument("--recipe", required=True)
+    mutate.add_argument("--plan", required=True)
+    mutate.add_argument("--dry-run", action="store_true", help="validate and report without rendering")
+    mutate.add_argument("--output", default=None, help="output mutated recipe JSON path")
+    mutate.add_argument("--output-wav", default=None, help="output rendered variant WAV path")
+
     return parser
 
 
@@ -43,6 +50,33 @@ def main() -> None:
 
         recipe = load_recipe(args.recipe)
         print(f"recipe {recipe.recipe_id} valid (schema {recipe.schema_version})")
+        return
+    if args.command == "mutate":
+        from .mutate.operations import apply_mutation_plan, mutation_distance
+        from .mutate.plans import load_plan
+        from .recipe.validate_io import dump_recipe, load_recipe
+        from .recipe.models import validate_recipe
+        from .synthesis.renderer import render_recipe
+
+        recipe = load_recipe(args.recipe)
+        plan = load_plan(args.plan)
+        mutated = apply_mutation_plan(recipe, plan)
+        validate_recipe(mutated)
+        distance = mutation_distance(recipe, mutated)
+        if args.dry_run:
+            print(json.dumps({"dry_run": True, "recipe_id": mutated.recipe_id, "operations": len(mutated.operations), "distance": distance}, indent=2, sort_keys=True))
+            return
+        if args.output:
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.output).write_text(json.dumps(dump_recipe(mutated), indent=2, sort_keys=True), encoding="utf-8")
+            print(f"wrote recipe -> {args.output}")
+        if args.output_wav:
+            render = render_recipe(mutated)
+            from .audio.io import write_wav
+
+            write_wav(args.output_wav, render["mix"], mutated.sample_rate_hz)
+            print(f"wrote wav -> {args.output_wav}")
+        print(f"mutated recipe {mutated.recipe_id} (parent {mutated.parent_recipe_id}) distance={distance}")
         return
     parser.print_help()
     sys.exit(2)
