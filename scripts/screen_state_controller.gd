@@ -1260,6 +1260,10 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		# and touch all share the same transaction semantics.
 		if equipment_menu.has_signal("command_pressed"):
 			equipment_menu.command_pressed.connect(func(index: int):
+				# A touch command tap is an explicit selection: move the command
+				# cursor to the tapped column so the highlighted action and the
+				# interacted button always agree.
+				hub_action_column = index
 				if index == 0 and item_action.is_valid(): item_action.call()
 				elif index == 1 and equipment_remove.is_valid(): equipment_remove.call()
 				elif index == 2 and equipment_remove_all.is_valid(): equipment_remove_all.call())
@@ -1344,6 +1348,10 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 			elif pause_back_callback.is_valid(): pause_equipment_menu.navigation_back_pressed.connect(pause_back_callback)
 		if pause_equipment_menu.has_signal("command_pressed"):
 			pause_equipment_menu.command_pressed.connect(func(index: int):
+				# A touch command tap is an explicit selection: move the command
+				# cursor to the tapped column so the highlighted action and the
+				# interacted button always agree.
+				hub_action_column = index
 				if index == 0 and equipment_equip.is_valid(): equipment_equip.call()
 				elif index == 1 and equipment_remove.is_valid(): equipment_remove.call()
 				elif index == 2 and equipment_remove_all.is_valid(): equipment_remove_all.call())
