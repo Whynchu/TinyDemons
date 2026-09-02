@@ -23,21 +23,23 @@ func _initialize() -> void:
 		gameplay.call("_show_hub", true, false)
 		await process_frame
 		_expect(screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.state == &"hub", "Cloaked Demon opens the preparation hub", failures)
-		_expect(screens.hub_page_buttons.size() == 6 and screens.hub_page_buttons[0].name == "HubCommandStatus" and screens.hub_page_buttons[1].name == "HubCommandAllocate" and screens.hub_page_buttons[2].name == "HubCommandEquipment" and screens.hub_page_buttons[3].name == "HubCommandShop" and screens.hub_page_buttons[4].name == "HubCommandFusion" and screens.hub_page_buttons[5].name == "HubCommandBind", "hub exposes the approved six-command order", failures)
+		_expect(screens.hub_page_buttons.size() == 4 and screens.hub_page_buttons[0].name == "HubCommandStats" and screens.hub_page_buttons[1].name == "HubCommandShop" and screens.hub_page_buttons[2].name == "HubCommandFusion" and screens.hub_page_buttons[3].name == "HubCommandBind", "hub exposes the four-command rework order", failures)
 		_expect(screens.hub_start_button == null, "Demon Hub has no Start Run control", failures)
 		_expect(screens.hub_overlay.get_node_or_null("HubPanel8Piece") != null and screens.hub_overlay.get_node_or_null("FrameOuter") != null and screens.hub_overlay.get_node_or_null("FrameInner") != null, "hub uses the scene-authored eight-piece menu frame", failures)
+		_expect(screens.hub_overlay.get_node_or_null("HubPreviewCommandStats") != null and screens.hub_overlay.get_node_or_null("HubPreviewVit") != null and screens.hub_overlay.get_node_or_null("HubPreviewDerivedRec") != null and screens.hub_overlay.get_node_or_null("HubPreviewAdd") != null and screens.hub_overlay.get_node_or_null("HubPreviewStatCursor") != null, "hub scene persistently authors its movable editor presentation", failures)
+		_expect(screens.hub_overlay.get_children().filter(func(node: Node) -> bool: return String(node.name).begins_with("HubPreview")).all(func(node: Node) -> bool: return not (node as CanvasItem).visible), "runtime hides editor authoring guides", failures)
 
 		screens.hub_page_buttons[0].pressed.emit()
 		await process_frame
-		_expect(screens.hub_page == screens.HUB_PAGE_STATUS and screens.hub_status_texts.size() == 16 and screens.hub_status_texts[0].visible and screens.hub_status_texts[0].texture != null, "Status is read-only and shows level, XP, and the six-stat/derived block", failures)
-		_expect(not screens.hub_stat_buttons[0].visible and not screens.hub_apply_button.visible, "Status does not expose allocation controls", failures)
-
-		screens.hub_page_buttons[1].pressed.emit()
-		await process_frame
-		_expect(screens.hub_page == screens.HUB_PAGE_ALLOCATE and screens.hub_stat_texts.size() == 6 and screens.hub_stat_buttons.size() == 12 and screens.hub_stat_row_buttons.size() == 6, "Allocate exposes six rows, twelve arrows, and full-row targets", failures)
-		_expect(screens.hub_allocate_panel != null and screens.hub_allocate_panel.visible, "Allocate groups its adjustable rows inside a dedicated card", failures)
-		_expect(screens.hub_allocate_preview_panel != null and screens.hub_allocate_preview_panel.visible and screens.hub_allocate_preview_texts.size() == 7 and screens.hub_allocate_preview_texts.all(func(text: Sprite2D) -> bool: return text.texture != null), "Allocate shows the seven effective combat previews in a separate right card", failures)
+		_expect(screens.hub_page == screens.HUB_PAGE_STATS and screens.hub_stat_texts.size() == 6 and screens.hub_stat_buttons.size() == 12 and screens.hub_stat_row_buttons.size() == 6, "STATS exposes six rows, twelve arrows, and full-row targets", failures)
+		_expect(screens.hub_stat_add_marker != null and screens.hub_stat_subtract_marker != null and screens.hub_stat_add_marker.visible and screens.hub_stat_subtract_marker.visible, "STATS renders the selected-row 5x5 adjustment markers", failures)
+		_expect(screens.hub_overlay.get_node_or_null("HubContentPanel") != null and screens.hub_overlay.get_node("HubContentPanel").visible and screens.hub_allocate_panel != null and not screens.hub_allocate_panel.visible, "STATS uses the single authored content frame", failures)
+		_expect(screens.hub_derived_texts.size() == 7 and screens.hub_derived_texts.all(func(text: Sprite2D) -> bool: return text.texture != null), "STATS shows the seven effective combat previews in the right column", failures)
 		_expect(screens.hub_stat_left_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)) and screens.hub_stat_row_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)), "Allocate keeps each arrow and row target inside its stat lane", failures)
+		_expect(screens.hub_stat_texts[0].position == Vector2(63, 44) and screens.hub_stat_texts[1].position.y - screens.hub_stat_texts[0].position.y == 10.0, "Allocate matches the reference stat origin and six-pixel glyph gap", failures)
+		_expect(screens.hub_stat_value_texts.all(func(text: Sprite2D) -> bool: return text.position.x + text.texture.get_width() == 93.0), "Allocate right-hangs every stat value from the authored edge", failures)
+		_expect(screens.hub_derived_texts[0].position.y == 47.0, "Allocate raises the derived-stat column two pixels", failures)
+		_expect(screens.hub_stat_buttons.all(func(button: Button) -> bool: return is_zero_approx(button.modulate.a)), "Allocate hides the legacy arrow artwork while retaining touch targets", failures)
 		_expect(screens.hub_stat_right_buttons.all(func(button: Button) -> bool: return button.position.x < screens.hub_allocate_preview_panel.position.x), "Allocate keeps adjustment arrows inside the left stat card", failures)
 		screens.hub_stat_row_buttons[4].pressed.emit()
 		screens.hub_stat_right_buttons[4].pressed.emit()
@@ -47,7 +49,7 @@ func _initialize() -> void:
 		_expect(screens.hub_pending_mnd == 1 and gameplay.call("_hub_points_remaining") == 0, "Allocate routes an MND row adjustment without losing point accounting", failures)
 		gameplay.call("_hub_cancel_stats")
 
-		screens.hub_page_buttons[2].pressed.emit()
+		gameplay.call("_set_hub_page", screens.HUB_PAGE_EQUIPMENT)
 		await process_frame
 		var equipment_view := screens.hub_equipment_menu as EquipmentMenuLayout
 		_expect(screens.hub_page == screens.HUB_PAGE_EQUIPMENT and equipment_view != null and equipment_view.visible and equipment_view.command_buttons.size() == 3, "Equipment exposes its authored Equip/Remove/Remove All action row", failures)
@@ -120,12 +122,12 @@ func _initialize() -> void:
 		_set_menu_edge(input_router, false, true)
 		screens.update_hub_input(gameplay)
 		_expect(screens.hub_is_root and screens.hub_overlay.get_node_or_null("HubRootPage").visible, "equipment BACK from the command row returns to Demon Hub", failures)
-		screens.hub_page_buttons[3].pressed.emit()
+		screens.hub_page_buttons[1].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 6 and screens.hub_equipment_menu != null and not screens.hub_equipment_menu.visible, "Shop remains a six-slot transaction page inside the shell", failures)
 		_expect(screens.hub_item_row_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_STOP), "Shop restores its shared item-row touch targets after Equipment", failures)
-		screens.hub_page_buttons[4].pressed.emit()
+		screens.hub_page_buttons[2].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_FUSION and screens.hub_fusion_decrease_button.visible and screens.hub_fusion_increase_button.visible, "Fusion remains a transaction page inside the shell", failures)
-		screens.hub_page_buttons[5].pressed.emit()
+		screens.hub_page_buttons[3].pressed.emit()
 		_expect(screens.hub_page == screens.HUB_PAGE_BIND and screens.hub_binding_panel.visible and screens.hub_binding_action_button.visible, "Bind remains the persistent Cloaked Demon action", failures)
 		gameplay.call("_close_hub_to_run")
 		_expect(not screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.state == &"gameplay", "hub BACK returns to the world", failures)

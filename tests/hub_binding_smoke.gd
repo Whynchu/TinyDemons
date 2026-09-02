@@ -42,7 +42,7 @@ func _initialize() -> void:
 		var binding_action := screen.get("hub_binding_action_button") as Button
 		var page_buttons := screen.get("hub_page_buttons") as Array[Button]
 		_expect(bool(screen.get("hub_overlay").visible), "Demon interaction opens the Hub", failures)
-		_expect(page_buttons.size() == 6, "Hub exposes Status, Allocate, Equipment, Shop, Fusion, and Bind commands", failures)
+		_expect(page_buttons.size() == 4 and page_buttons[0].name == "HubCommandStats" and page_buttons[1].name == "HubCommandShop" and page_buttons[2].name == "HubCommandFusion" and page_buttons[3].name == "HubCommandBind", "Hub exposes only Stats, Shop, Fusion, and Bind commands", failures)
 		_expect(binding_panel != null and binding_panel.visible, "Binding panel is visible on the BIND tab", failures)
 		_expect(binding_action != null and not binding_action.disabled, "eligible current element enables Binding", failures)
 		if binding_action != null:

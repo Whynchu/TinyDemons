@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dom0q11vn6y2r"
+path="res://.godot/imported/Blip.wav-47406845a64bfba3c9f4aa302966acb7.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Reverb/Blip.wav"
+dest_files=["res://.godot/imported/Blip.wav-47406845a64bfba3c9f4aa302966acb7.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

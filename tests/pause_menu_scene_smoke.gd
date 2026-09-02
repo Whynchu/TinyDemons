@@ -56,6 +56,19 @@ func _initialize() -> void:
 		if screens.pause_menu_buttons.size() >= 4:
 			_expect(screens.pause_menu_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.pause_menu_buttons[3].position.y == 49.0, "pause command rail uses the authored x and y positions", failures)
 		_expect(screens.pause_back_button != null and screens.pause_back_button.position == PauseMenuLayoutScript.back_button_position(screens.display_view_size), "pause back prompt uses the authored rail-anchored footer row", failures)
+		# The native card remains the visual reference, while a wider logical
+		# surface spreads authored left-field groups toward (but never through) the
+		# fixed command rail. Restore the native size immediately so the remaining
+		# route assertions continue against the approved mockup geometry.
+		var native_pause_size := screens.display_view_size
+		var wide_pause_size := Vector2(284.0, native_pause_size.y)
+		screens.display_view_size = wide_pause_size
+		screens.call("_position_pause_controls")
+		var expected_wide_portrait_x := PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, wide_pause_size.x)
+		var expected_wide_card_x := PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[6].x, wide_pause_size.x)
+		_expect(screens.pause_player_portrait.position.x == expected_wide_portrait_x and screens.pause_player_card_texts[6].position.x == expected_wide_card_x and screens.pause_menu_buttons[0].position == PauseMenuLayoutScript.command_button_position(wide_pause_size, 0), "pause spreads player groups while keeping the command rail edge-anchored on wide layouts", failures)
+		screens.display_view_size = native_pause_size
+		screens.call("_position_pause_controls")
 		for button in screens.pause_menu_buttons:
 			_expect(button.visible, "pause menu action is visible", failures)
 		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null and screens.pause_player_card_texts[6].texture != null and screens.pause_player_card_texts[6].visible, "pause shows the player info block and level", failures)
@@ -82,6 +95,19 @@ func _initialize() -> void:
 			authored_equipment.command_buttons[0].pressed.emit()
 			await process_frame
 			_expect(screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP and authored_equipment.slot_cursor.visible, "pause Equipment command buttons enter the live slot flow", failures)
+			if not authored_equipment.slot_buttons.is_empty():
+				authored_equipment.slot_buttons[0].pressed.emit()
+				await process_frame
+				var pause_input_tracker := gameplay.get("input_device_tracker") as InputDeviceTracker
+				var pause_equipped_before_touch := profile.get_equipped_instance_id(&"weapon")
+				if pause_input_tracker != null: pause_input_tracker.set_device(InputDeviceTracker.Device.TOUCH)
+				gameplay.call("_select_hub_gear_candidate", 0)
+				await process_frame
+				_expect(profile.get_equipped_instance_id(&"weapon") == pause_equipped_before_touch and screens.hub_touch_candidate_index == 0, "pause Equipment first touch previews a candidate without committing", failures)
+				gameplay.call("_select_hub_gear_candidate", 0)
+				await process_frame
+				_expect(screens.hub_touch_candidate_index == -1, "pause Equipment second touch commits and clears the preview arm", failures)
+				if pause_input_tracker != null: pause_input_tracker.set_device(InputDeviceTracker.Device.KEYBOARD_MOUSE)
 		if screens.pause_back_button != null:
 			screens.pause_back_button.pressed.emit()
 			screens.pause_back_button.pressed.emit()

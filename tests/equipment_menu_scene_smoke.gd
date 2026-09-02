@@ -22,7 +22,10 @@ func _initialize() -> void:
 		profile.ensure_starter_items()
 		gameplay.call("_show_hub", true, false)
 		await process_frame
-		screens.hub_page_buttons[2].pressed.emit()
+		# Equipment is now a Pause-only route; exercise the shared Hub presenter
+		# through its compatibility entry so this test remains focused on the
+		# authored equipment interaction itself.
+		gameplay.call("_set_hub_page", screens.HUB_PAGE_EQUIPMENT)
 		await process_frame
 		var view := screens.hub_equipment_menu as EquipmentMenuLayout
 		_expect(view != null and view.visible, "hub uses the authored equipment scene", failures)
@@ -33,7 +36,12 @@ func _initialize() -> void:
 			view.size = Vector2(240, 160)
 			await process_frame
 			var top_panel := view.get_node("TopPanel") as NinePatchRect
-			_expect(top_panel != null and top_panel.patch_margin_left == 3 and top_panel.patch_margin_top == 3 and top_panel.patch_margin_right == 3 and top_panel.patch_margin_bottom == 3 and top_panel.position == Vector2(1, 1) and top_panel.size == Vector2(88, 19) and view.get_node("CommandPanel").position == Vector2(90, 1) and view.get_node("CommandPanel").size == Vector2(149, 19) and view.get_node("SummaryPanel").position == Vector2(1, 22) and view.get_node("SummaryPanel").size == Vector2(238, 61) and view.get_node("DescriptionPanel").position == Vector2(1, 85) and view.get_node("DescriptionPanel").size == Vector2(238, 47) and view.get_node("StatPanel").position == Vector2(1, 134) and view.get_node("StatPanel").size == Vector2(158, 25) and view.get_node("NavigationPanel").position == Vector2(161, 134) and view.get_node("NavigationPanel").size == Vector2(78, 25), "equipment panels retain the corrected 3px-edge/15px-fill 240x160 mockup proportions", failures)
+			_expect(top_panel != null and top_panel.patch_margin_left == 3 and top_panel.patch_margin_top == 3 and top_panel.patch_margin_right == 3 and top_panel.patch_margin_bottom == 3 and top_panel.position == Vector2(0, 0) and top_panel.size == Vector2(89, 21) and view.get_node("CommandPanel").position == Vector2(90, 0) and view.get_node("CommandPanel").size == Vector2(150, 21) and view.get_node("SummaryPanel").position == Vector2(0, 21) and view.get_node("SummaryPanel").size == Vector2(240, 63) and view.get_node("DescriptionPanel").position == Vector2(0, 84) and view.get_node("DescriptionPanel").size == Vector2(240, 49) and view.get_node("StatPanel").position == Vector2(0, 133) and view.get_node("StatPanel").size == Vector2(159, 26) and view.get_node("NavigationPanel").position == Vector2(161, 133) and view.get_node("NavigationPanel").size == Vector2(79, 26), "equipment panels retain the authored 3px-edge/15px-fill 240x160 mockup proportions", failures)
+			view.size = responsive_size
+			await process_frame
+			view.size = Vector2(284, 160)
+			await process_frame
+			_expect((view.get_node("CommandPanel") as Control).position.x == 107.0 and view.command_buttons[0].position.x == 108.0 and (view.get_node("SlotIcon3") as Sprite2D).position.x == 176.0 and (view.get_node("NavigationPanel") as Control).position.x == 205.0, "equipment distributes authored groups across the 16:9 logical width", failures)
 			view.size = responsive_size
 			await process_frame
 			_expect(view.navigation_back_button != null and view.navigation_text != null and view.navigation_text.texture != null, "equipment renders the select/back navigation prompt with a touch Back target", failures)
@@ -55,7 +63,7 @@ func _initialize() -> void:
 		view.navigation_back_button.pressed.emit()
 		await process_frame
 		_expect(screens.hub_is_root and not view.visible, "the navigation-cell Back prompt unwinds Equipment through the normal touch route", failures)
-		screens.hub_page_buttons[2].pressed.emit()
+		gameplay.call("_set_hub_page", screens.HUB_PAGE_EQUIPMENT)
 		await process_frame
 		view = screens.hub_equipment_menu as EquipmentMenuLayout
 
@@ -67,6 +75,15 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_equipment_mode == 3 and view.candidate_cursor.visible and view.get_node("CandidateText0").texture != null and (view.get_node("CandidateText0") as Sprite2D).visible and not (view.get_node("DescriptionText0") as Sprite2D).visible, "selecting a populated slot opens the two-column candidate grid", failures)
 		_expect((view.get_node("SlotIcon0") as Sprite2D).visible and view.slot_cursor.modulate == EquipmentMenuLayout.DIM_CURSOR_MODULATE, "the six equipped icons persist and the previous cursor dims by fifty percent", failures)
+		var input_tracker := gameplay.get("input_device_tracker") as InputDeviceTracker
+		var equipped_before_touch := profile.get_equipped_instance_id(&"weapon")
+		if input_tracker != null: input_tracker.set_device(InputDeviceTracker.Device.TOUCH)
+		gameplay.call("_select_hub_gear_candidate", 0)
+		await process_frame
+		_expect(profile.get_equipped_instance_id(&"weapon") == equipped_before_touch and screens.hub_touch_candidate_index == 0, "first touch on a candidate previews without committing equipment", failures)
+		gameplay.call("_select_hub_gear_candidate", 0)
+		await process_frame
+		_expect(screens.hub_touch_candidate_index == -1, "second touch on the same candidate commits and clears the touch arm", failures)
 		gameplay.call("_close_hub_gear_browse")
 		await process_frame
 
@@ -96,6 +113,18 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_equipment_mode == 0 and not view.confirm_cursor.visible, "Back cancels Remove All without changing the loadout route", failures)
 
+		# Confirm is direct once the grey locked cursor is active; there is no
+		# visible Yes/No prompt or second navigation mode.
+		screens.hub_equipment_action_focus = true
+		screens.hub_equipment_mode = 0
+		screens.hub_action_column = 2
+		screens.update_hub_ui(gameplay, Callable(gameplay, "_pixel_text_texture"))
+		gameplay.call("_remove_all_hub_gear")
+		await process_frame
+		gameplay.call("_remove_all_hub_gear")
+		await process_frame
+		_expect(screens.hub_equipment_mode == 0 and profile.equipped_instance_ids.values().all(func(id: String) -> bool: return str(id).is_empty()), "Confirm on the Remove All cursor clears every equipped slot", failures)
+
 		gameplay.call("_close_hub_to_run")
 		gameplay.call("_open_pause_menu")
 		await process_frame
@@ -111,7 +140,7 @@ func _initialize() -> void:
 		gameplay.call("_close_hub_to_run")
 		gameplay.call("_show_hub", true, false)
 		await process_frame
-		screens.hub_page_buttons[3].pressed.emit()
+		screens.hub_page_buttons[1].pressed.emit()
 		await process_frame
 		_expect(screens.hub_list_cursor.visible and not screens.hub_slot_cursor.visible and not screens.hub_choice_cursor.visible, "Shop receives a clean list cursor after Equipment", failures)
 	gameplay.queue_free()

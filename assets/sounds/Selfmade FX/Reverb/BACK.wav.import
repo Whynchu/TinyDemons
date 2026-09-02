@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://peg0seu4cbq3"
+path="res://.godot/imported/BACK.wav-ef35789e9190059b14a28e02a8fea920.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Reverb/BACK.wav"
+dest_files=["res://.godot/imported/BACK.wav-ef35789e9190059b14a28e02a8fea920.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

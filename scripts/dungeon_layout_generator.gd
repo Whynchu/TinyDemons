@@ -110,10 +110,11 @@ class LayoutBuilder extends RefCounted:
 		connection_keys[key] = true
 
 
-static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire"):
+static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &""):
 	var run_number := maxi(completed_runs + 1, 1)
 	var run_index := maxi(completed_runs, 1)
 	var starter_flame := selected_starter_flame if ASPECT_CATALOG_SCRIPT.is_starter_flame(selected_starter_flame) else &"fire"
+	var bound_flame := selected_bound_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_bound_flame) else &""
 	var alternate_flames: Array[StringName] = ASPECT_CATALOG_SCRIPT.alternate_flames_for_run(completed_runs, starter_flame)
 	var boss_depth := generated_boss_depth_for_run(run_number)
 	var room_target := generated_room_target_for_run(run_number)
@@ -159,8 +160,18 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		var room_type := _room_type_for_depth(destination_depth, boss_depth, second_orb_depth, second_special_depth, cloaked_depth, fire_depth, off_route_orbs)
 		if fusion_fire_flames.has(destination_depth):
 			room_type = DungeonGraph.ROOM_FIRE
+		# Run 3's first alternate flame is reached immediately after the first
+		# Special Room. Keep that Special Room's grey alternate door intact while
+		# making the flame a real, reachable main-route Fire Room; later seeds can
+		# still place the same curriculum beat as a side detour.
+		var source_spec = builder.room_spec(current_room_id)
+		var alternate_fire_on_main: bool = destination_depth == first_alternate_fire_depth and not alternate_flames.is_empty() and source_spec != null and source_spec.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+		if alternate_fire_on_main:
+			room_type = DungeonGraph.ROOM_FIRE
 		var respawn_color: StringName = &"puzzle_a" if destination_depth == FIRST_SPECIAL_DEPTH else _special_forward_requirement(second_special_depth, second_special_depth, completed_runs, starter_flame, alternate_flames) if destination_depth == second_special_depth else &""
 		var fire_flame := StringName(fusion_fire_flames.get(destination_depth, _fire_flame_for_main_room(destination_depth, fire_depth, starter_flame, alternate_flames)))
+		if alternate_fire_on_main:
+			fire_flame = alternate_flames[0]
 		var destination_room_id := builder.add_room(destination_coordinate, room_type, 0, respawn_color, fire_flame)
 		var forward_requirement := _special_forward_requirement(source_depth, second_special_depth, completed_runs, starter_flame, alternate_flames)
 		var forward_role: StringName = ROUTE_KEY_PROGRESSION if not forward_requirement.is_empty() else ROUTE_MAIN
@@ -172,16 +183,22 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		var detour_flame: StringName = &""
 		if off_route_orbs.get(destination_depth, false):
 			detour_type = ROUTE_DETOUR_ORB
-		elif destination_depth == first_alternate_fire_depth:
+		elif destination_depth == first_alternate_fire_depth and not alternate_fire_on_main:
 			detour_type = ROUTE_DETOUR_FIRE
 			detour_flame = alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
-		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement, room_target)
 		if fusion_gate_requirements.has(source_depth):
+			# Reserve the side socket for the prerequisite Orb before optional
+			# rewards are considered.  Late chained-fusion gates often share the
+			# guaranteed treasure depth; adding the reward first can consume both
+			# available sockets and leave the mandatory Orb without a route.
 			_add_fusion_prerequisite_orb(builder, current_room_id, current_coordinate, main_socket)
+		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement, room_target)
 		current_room_id = destination_room_id
 		current_coordinate = destination_coordinate
 	_fill_room_target(builder, room_target, boss_depth)
-	_normalize_color_gate_requirements(layout, completed_runs, starter_flame)
+	var progression_repairs := repair_progression(layout, completed_runs, starter_flame, bound_flame)
+	for repair in progression_repairs:
+		push_warning("Generated progression repair (run %d seed %d starter=%s bound=%s): %s" % [run_number, dungeon_seed, starter_flame, bound_flame if not bound_flame.is_empty() else "none", repair])
 	LAYOUT_DEFINITION_SCRIPT.apply_rare_enemy_branch_entry_exceptions(layout)
 	return layout
 
@@ -239,7 +256,7 @@ static func _fill_room_target(builder: LayoutBuilder, room_target: int, boss_dep
 			break
 
 
-static func validate(layout, completed_runs: int = 1, selected_starter_flame: StringName = &"fire") -> Array[String]:
+static func validate(layout, completed_runs: int = 1, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = layout.validate()
 	var start_id: StringName = &""
 	var boss_id: StringName = &""
@@ -291,18 +308,158 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 			errors.append("generated layout contains unreachable rooms")
 		if not boss_id.is_empty() and not reachable.has(boss_id):
 			errors.append("generated layout boss is unreachable")
-		elif not boss_id.is_empty() and not _boss_is_color_reachable(layout, start_id, boss_id, completed_runs, selected_starter_flame):
+		elif not boss_id.is_empty() and not _boss_is_color_reachable(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame):
 			errors.append("generated layout boss requires an impossible puzzle-color state")
-		var gated_route_errors := _color_gate_reachability_errors(layout, start_id, completed_runs, selected_starter_flame)
+		var gated_route_errors := _color_gate_reachability_errors(layout, start_id, completed_runs, selected_starter_flame, selected_bound_flame)
 		errors.append_array(gated_route_errors)
-		var side_flame_errors := _color_gate_side_flame_errors(layout, completed_runs, selected_starter_flame)
+		var side_flame_errors := _color_gate_side_flame_errors(layout, completed_runs, selected_starter_flame, selected_bound_flame)
 		errors.append_array(side_flame_errors)
 		if completed_runs >= 5:
-			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame)
+			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame)
 			errors.append_array(fusion_gate_errors)
 			var fusion_orb_route_errors := _fusion_orb_route_errors(layout)
 			errors.append_array(fusion_orb_route_errors)
 	return errors
+
+
+static func repair_progression(layout, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &"") -> Array[String]:
+	## Repair only progression requirements; topology and room pacing remain
+	## seed-owned.  This is intentionally callable by continue/load recovery as
+	## well as by build(), so an already-created generated layout gets the same
+	## safety treatment before the player is restored to it.
+	var repairs: Array[String] = []
+	if layout == null:
+		return repairs
+	var starter_flame := selected_starter_flame if ASPECT_CATALOG_SCRIPT.is_starter_flame(selected_starter_flame) else &"fire"
+	var bound_flame := selected_bound_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_bound_flame) else &""
+	var before_color_requirements: Dictionary = {}
+	for connection in layout.connections:
+		before_color_requirements[_layout_connection_key(connection)] = connection.color_requirement
+	_normalize_color_gate_requirements(layout, completed_runs, starter_flame, bound_flame)
+	for connection in layout.connections:
+		var key := _layout_connection_key(connection)
+		var previous: StringName = before_color_requirements.get(key, &"") as StringName
+		if previous != connection.color_requirement:
+			repairs.append("color gate %s:%s changed %s -> %s" % [connection.source_room_id, connection.exit_socket, previous, connection.color_requirement])
+	var start_id := _layout_start_room_id(layout)
+	if start_id.is_empty():
+		return repairs
+	var color_repairs := _repair_unreachable_color_gates(layout, start_id, completed_runs, starter_flame, bound_flame)
+	repairs.append_array(color_repairs)
+	var orb_repairs := _repair_unreachable_entrance_orb_gates(layout, start_id, completed_runs, starter_flame, bound_flame)
+	repairs.append_array(orb_repairs)
+	return repairs
+
+
+static func _layout_start_room_id(layout) -> StringName:
+	if layout == null:
+		return &""
+	for room in layout.rooms:
+		if room.room_type == DungeonGraph.ROOM_START:
+			return room.id
+	return &""
+
+
+static func _repair_unreachable_color_gates(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName) -> Array[String]:
+	var repairs: Array[String] = []
+	for connection in layout.connections:
+		if connection.color_requirement.is_empty():
+			continue
+		# Optional treasure/detour doors are allowed to be restrictive. Only
+		# repair gates that form the critical route; changing an optional branch
+		# would unnecessarily alter the seed's intended variety.
+		if connection.route_role != ROUTE_MAIN and connection.route_role != ROUTE_KEY_PROGRESSION:
+			continue
+		var states := _color_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
+		if _color_gate_has_reachable_state(states, connection, starter_flame, completed_runs):
+			continue
+		var previous: StringName = connection.color_requirement
+		var replacement: StringName = _first_reachable_color_requirement(states, connection.source_room_id, starter_flame, completed_runs)
+		connection.color_requirement = replacement
+		repairs.append("color gate %s:%s changed %s -> %s for the bound start state" % [connection.source_room_id, connection.exit_socket, previous, replacement])
+	return repairs
+
+
+static func _color_gate_has_reachable_state(states: Array[Dictionary], connection, starter_flame: StringName, completed_runs: int) -> bool:
+	var required_flame := _flame_for_puzzle_color(connection.color_requirement, starter_flame, completed_runs)
+	if connection.color_requirement == &"puzzle_b":
+		required_flame = &"grey"
+	for state in states:
+		if state.get("room_id", &"") != connection.source_room_id or state.get("color", &"") != connection.color_requirement:
+			continue
+		if required_flame == &"grey" or (state.get("flames", []) as Array).has(required_flame):
+			return true
+	return false
+
+
+static func _first_reachable_color_requirement(states: Array[Dictionary], source_room_id: StringName, starter_flame: StringName, completed_runs: int) -> StringName:
+	var candidates: Array[StringName] = [&"puzzle_b", &"puzzle_a", &"puzzle_c", &"puzzle_d"]
+	for candidate in candidates:
+		var required_flame := _flame_for_puzzle_color(candidate, starter_flame, completed_runs)
+		if candidate == &"puzzle_b":
+			required_flame = &"grey"
+		for state in states:
+			if state.get("room_id", &"") != source_room_id or state.get("color", &"") != candidate:
+				continue
+			if required_flame == &"grey" or (state.get("flames", []) as Array).has(required_flame):
+				return candidate
+	return &"puzzle_b"
+
+
+static func _repair_unreachable_entrance_orb_gates(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName) -> Array[String]:
+	var repairs: Array[String] = []
+	for connection in layout.connections:
+		if connection.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
+			continue
+		var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
+		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)
+		var matching := false
+		for state in states:
+			if state.get("room_id", &"") != connection.source_room_id:
+				continue
+			if (state.get("orb_elements", []) as Array).has(required_element):
+				matching = true
+				break
+		if matching:
+			continue
+		var replacement: int = _first_reachable_orb_element(states, connection.source_room_id, starter_flame, bound_flame)
+		if replacement == ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL:
+			# The generated curriculum should never need this fallback, but keeping
+			# the gate on the initial element is safer than leaving an impossible
+			# opaque requirement in a continued save.
+			replacement = _initial_run_element(starter_flame, bound_flame)
+		if replacement == ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL:
+			continue
+		var previous: StringName = connection.orb_element_requirement
+		connection.orb_element_requirement = ELEMENT_CATALOG_SCRIPT.id(replacement)
+		repairs.append("entrance Orb gate %s:%s changed %s -> %s for the bound start state" % [connection.source_room_id, connection.exit_socket, previous, connection.orb_element_requirement])
+	return repairs
+
+
+static func _first_reachable_orb_element(states: Array[Dictionary], source_room_id: StringName, _starter_flame: StringName, _bound_flame: StringName) -> int:
+	var candidates: Array[int] = []
+	for state in states:
+		if state.get("room_id", &"") != source_room_id:
+			continue
+		for element in state.get("orb_elements", []) as Array:
+			var normalized := ELEMENT_CATALOG_SCRIPT.normalize(int(element))
+			if normalized != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and normalized not in candidates:
+				candidates.append(normalized)
+	if candidates.is_empty():
+		for state in states:
+			if state.get("room_id", &"") != source_room_id:
+				continue
+			for element in state.get("elements", []) as Array:
+				var normalized := ELEMENT_CATALOG_SCRIPT.normalize(int(element))
+				if normalized != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and normalized not in candidates:
+					candidates.append(normalized)
+	candidates.sort()
+	return candidates[0] if not candidates.is_empty() else ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
+
+
+static func _initial_run_element(starter_flame: StringName, bound_flame: StringName) -> int:
+	var initial_flame := _initial_run_flame(starter_flame, bound_flame)
+	return ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(initial_flame))
 
 
 static func _room_type_for_depth(
@@ -495,15 +652,20 @@ static func _add_side_route(
 	if source == null:
 		return
 	var side_socket := DungeonGraph.WALL_RIGHT if main_socket == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT
+	var side_connection_key := "%s:%s" % [source_room_id, side_socket]
 	var side_coordinate := source_coordinate + _exit_offset(side_socket)
-	if source.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
-		# Every Special Room offers an optional side reward. The first beat and
-		# most later seeds use a grey gate; some later seeds use the starter color
-		# so the room can present two distinct primary choices.
-		var requirement: StringName = _special_side_requirement(source_depth, second_special_depth, completed_runs, alternate_flames, forward_requirement, generator_rng)
-		var treasure_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_TREASURE, 1)
-		builder.link(source_room_id, side_socket, treasure_id, requirement, ROUTE_OPTIONAL_TREASURE)
+	# A mandatory prerequisite (or an earlier deterministic branch) may already
+	# own this socket.  Optional rewards must yield instead of asking
+	# LayoutBuilder to reuse an exit and emitting a malformed duplicate edge.
+	# Reusing an existing room coordinate is still valid: LayoutBuilder returns
+	# that room's stable id and the authored graph can have two doors converge on
+	# it, which preserves the seeded Special Room choice on crossing layouts.
+	if builder.connection_keys.has(side_connection_key):
 		return
+	# A deterministic detour takes precedence over the generic Special Room
+	# reward.  The first alternate flame is intentionally staged from a Special
+	# Room, so handling Special first would silently replace the required Fire
+	# Room with a treasure branch and make the flame progression disappear.
 	if detour_type == ROUTE_DETOUR_ORB:
 		var orb_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_ORB)
 		builder.link(source_room_id, side_socket, orb_id, &"", ROUTE_DETOUR_ORB)
@@ -511,6 +673,14 @@ static func _add_side_route(
 	if detour_type == ROUTE_DETOUR_FIRE:
 		var fire_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_FIRE, 0, &"", detour_flame)
 		builder.link(source_room_id, side_socket, fire_id, &"", ROUTE_DETOUR_FIRE)
+		return
+	if source.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
+		# Every Special Room offers an optional side reward. The first beat and
+		# most later seeds use a grey gate; some later seeds use the starter color
+		# so the room can present two distinct primary choices.
+		var requirement: StringName = _special_side_requirement(source_depth, second_special_depth, completed_runs, alternate_flames, forward_requirement, generator_rng)
+		var treasure_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_TREASURE, 1)
+		builder.link(source_room_id, side_socket, treasure_id, requirement, ROUTE_OPTIONAL_TREASURE)
 		return
 	# Guarantee a third optional reward branch, then add a small number of
 	# deterministic side routes so higher runs feel broader without losing the
@@ -543,7 +713,13 @@ static func _reachable_rooms(layout, start_id: StringName) -> Dictionary:
 	return reachable
 
 
-static func _normalize_color_gate_requirements(layout, completed_runs: int, starter_flame: StringName) -> void:
+static func _initial_run_flame(starter_flame: StringName, bound_flame: StringName) -> StringName:
+	if ASPECT_CATALOG_SCRIPT.is_elemental_flame(bound_flame):
+		return bound_flame
+	return starter_flame if ASPECT_CATALOG_SCRIPT.is_starter_flame(starter_flame) else &"fire"
+
+
+static func _normalize_color_gate_requirements(layout, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> void:
 	# Color doors are impasses even when their requirement is grey. Keep the
 	# original set of impasses fixed while repairing requirements so one repair
 	# cannot make a later gate appear to be on a different side.
@@ -554,8 +730,14 @@ static func _normalize_color_gate_requirements(layout, completed_runs: int, star
 	for connection in layout.connections:
 		if connection.color_requirement.is_empty() or connection.color_requirement == &"puzzle_b":
 			continue
+		# Optional Treasure doors are authored as alternate choices. Their
+		# restriction should remain seed-owned so a late Special Room can expose
+		# the intended puzzle_c/puzzle_d pair; only the critical route is repaired
+		# for reachability below.
+		if connection.route_role != ROUTE_MAIN and connection.route_role != ROUTE_KEY_PROGRESSION:
+			continue
 		var required_flame := _flame_for_puzzle_color(connection.color_requirement, starter_flame, completed_runs)
-		var side_flames := _side_flames_for_connection(layout, connection.source_room_id, blocked_connections, completed_runs, starter_flame)
+		var side_flames := _side_flames_for_connection(layout, connection.source_room_id, blocked_connections, completed_runs, starter_flame, bound_flame)
 		if not required_flame.is_empty() and side_flames.has(required_flame):
 			continue
 		connection.color_requirement = _first_side_puzzle_requirement(side_flames, completed_runs, starter_flame)
@@ -578,7 +760,8 @@ static func _side_flames_for_connection(
 	source_room_id: StringName,
 	blocked_connections: Dictionary,
 	completed_runs: int,
-	starter_flame: StringName
+	starter_flame: StringName,
+	bound_flame: StringName = &""
 ) -> Array[StringName]:
 	var available := ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs, starter_flame)
 	var visited: Dictionary = {}
@@ -602,9 +785,11 @@ static func _side_flames_for_connection(
 	for room in layout.rooms:
 		if not visited.has(room.id):
 			continue
-		if room.room_type == DungeonGraph.ROOM_START and not side_flames.has(starter_flame):
-			side_flames.append(starter_flame)
-		if room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and room.fire_flame in available and not side_flames.has(room.fire_flame):
+		if room.room_type == DungeonGraph.ROOM_START:
+			var starting_flame := _initial_run_flame(starter_flame, bound_flame)
+			if not side_flames.has(starting_flame):
+				side_flames.append(starting_flame)
+		if room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and (room.fire_flame in available or room.fire_flame == bound_flame) and not side_flames.has(room.fire_flame):
 			side_flames.append(room.fire_flame)
 	return side_flames
 
@@ -613,9 +798,9 @@ static func _layout_connection_key(connection) -> String:
 	return "%s:%s" % [connection.source_room_id, connection.exit_socket]
 
 
-static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName) -> Array[String]:
+static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = []
-	var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame)
+	var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
 	var reachable_boss := false
 	for state in states:
 		if state.get("room_id", &"") == boss_id:
@@ -662,12 +847,14 @@ static func _fusion_orb_route_errors(layout) -> Array[String]:
 	return errors
 
 
-static func _element_reachable_states(layout, start_id: StringName, _completed_runs: int, starter_flame: StringName) -> Array[Dictionary]:
+static func _element_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[Dictionary]:
 	var rooms_by_id: Dictionary = {}
 	for room in layout.rooms:
 		rooms_by_id[room.id] = room
-	var starter_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(starter_flame))
-	var pending: Array[Dictionary] = [{"room_id": start_id, "elements": [starter_element], "flames": [starter_flame]}]
+	var initial_flame := _initial_run_flame(starter_flame, bound_flame)
+	var initial_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(initial_flame))
+	var pending: Array[Dictionary] = [{"room_id": start_id, "elements": [initial_element], "flames": [initial_flame]}]
+	var available := ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs, starter_flame)
 	var visited: Dictionary = {}
 	var reachable_states: Array[Dictionary] = []
 	while not pending.is_empty():
@@ -677,7 +864,7 @@ static func _element_reachable_states(layout, start_id: StringName, _completed_r
 		var flames: Array = (state.get("flames", []) as Array).duplicate()
 		var elements: Array = (state.get("elements", []) as Array).duplicate()
 		var orb_elements: Array = (state.get("orb_elements", []) as Array).duplicate()
-		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and not flames.has(room.fire_flame):
+		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and not flames.has(room.fire_flame) and (room.fire_flame in available or room.fire_flame == bound_flame):
 			flames.append(room.fire_flame)
 		# Every discovered flame can be revisited. This closure models a player
 		# swapping to an input and then explicitly fusing it at a later fire.
@@ -732,18 +919,23 @@ static func _element_reachable_states(layout, start_id: StringName, _completed_r
 	return reachable_states
 
 
-static func _boss_is_color_reachable(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName) -> bool:
-	for state in _color_reachable_states(layout, start_id, completed_runs, starter_flame):
+static func _boss_is_color_reachable(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> bool:
+	for state in _color_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame):
 		if state.get("room_id", &"") == boss_id:
 			return true
 	return false
 
 
-static func _color_gate_reachability_errors(layout, start_id: StringName, completed_runs: int, starter_flame: StringName) -> Array[String]:
+static func _color_gate_reachability_errors(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = []
-	var states := _color_reachable_states(layout, start_id, completed_runs, starter_flame)
+	var states := _color_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
 	for connection in layout.connections:
 		if connection.color_requirement.is_empty():
+			continue
+		# Optional Treasure doors are alternate rewards, not progression gates.
+		# They may intentionally remain locked until a later flame is earned; the
+		# safety contract applies to the main/key route only.
+		if connection.route_role != ROUTE_MAIN and connection.route_role != ROUTE_KEY_PROGRESSION:
 			continue
 		var required_flame := _flame_for_puzzle_color(connection.color_requirement, starter_flame, completed_runs)
 		if connection.color_requirement == &"puzzle_b":
@@ -766,7 +958,7 @@ static func _color_gate_reachability_errors(layout, start_id: StringName, comple
 	return errors
 
 
-static func _color_gate_side_flame_errors(layout, completed_runs: int, starter_flame: StringName) -> Array[String]:
+static func _color_gate_side_flame_errors(layout, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = []
 	var blocked_connections: Dictionary = {}
 	for connection in layout.connections:
@@ -775,10 +967,14 @@ static func _color_gate_side_flame_errors(layout, completed_runs: int, starter_f
 	for connection in layout.connections:
 		if connection.color_requirement.is_empty() or connection.color_requirement == &"puzzle_b":
 			continue
+		# See _color_gate_reachability_errors: an optional reward can be
+		# unavailable from the current side without making the run unsolvable.
+		if connection.route_role != ROUTE_MAIN and connection.route_role != ROUTE_KEY_PROGRESSION:
+			continue
 		var required_flame := _flame_for_puzzle_color(connection.color_requirement, starter_flame, completed_runs)
 		if required_flame.is_empty():
 			continue
-		var side_flames := _side_flames_for_connection(layout, connection.source_room_id, blocked_connections, completed_runs, starter_flame)
+		var side_flames := _side_flames_for_connection(layout, connection.source_room_id, blocked_connections, completed_runs, starter_flame, bound_flame)
 		if not side_flames.has(required_flame):
 			errors.append("generated color gate requires %s but its source side has no matching flame: %s:%s" % [connection.color_requirement, connection.source_room_id, connection.exit_socket])
 	return errors
@@ -797,11 +993,12 @@ static func _flame_for_puzzle_color(color: StringName, starter_flame: StringName
 	return &""
 
 
-static func _color_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName) -> Array[Dictionary]:
+static func _color_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[Dictionary]:
 	var rooms_by_id: Dictionary = {}
 	for room in layout.rooms:
 		rooms_by_id[room.id] = room
-	var pending: Array[Dictionary] = [{"room_id": start_id, "color": &"puzzle_b", "flames": [starter_flame]}]
+	var initial_flame := _initial_run_flame(starter_flame, bound_flame)
+	var pending: Array[Dictionary] = [{"room_id": start_id, "color": &"puzzle_b", "flames": [initial_flame]}]
 	var visited: Dictionary = {}
 	var reachable_states: Array[Dictionary] = []
 	while not pending.is_empty():
@@ -812,7 +1009,11 @@ static func _color_reachable_states(layout, start_id: StringName, completed_runs
 		var room = rooms_by_id.get(room_id)
 		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and not flames.has(room.fire_flame):
 			var available := ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs, starter_flame)
-			if room.fire_flame in available:
+			# A bound fusion flame is the player's real persistent identity even
+			# when it is not one of the starter curriculum flames.  Treat its Fire
+			# Room exactly like an available starter room for the color solver; the
+			# element solver below already follows this same rule.
+			if room.fire_flame in available or room.fire_flame == bound_flame:
 				flames.append(room.fire_flame)
 		var flame_names: Array[String] = []
 		for flame in flames:

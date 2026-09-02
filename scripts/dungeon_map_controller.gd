@@ -52,8 +52,14 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		for error in run2_errors:
 			push_error("Run 2 layout: %s" % error)
 	else:
-		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame)
-		var generated_errors: Array[String] = LAYOUT_GENERATOR_SCRIPT.validate(layout, completed_runs, starter_flame)
+		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, bound_flame)
+		# Continue/load paths can hand us an already-created generated layout. Run
+		# the same deterministic requirement repair here as build() so recovery is
+		# not dependent on whether this map was generated this frame.
+		var recovery_repairs: Array[String] = LAYOUT_GENERATOR_SCRIPT.repair_progression(layout, completed_runs, starter_flame, bound_flame)
+		for repair in recovery_repairs:
+			push_warning("Generated progression recovery (run %d seed %d starter=%s bound=%s): %s" % [completed_runs + 1, dungeon_seed, starter_flame, bound_flame if not bound_flame.is_empty() else "none", repair])
+		var generated_errors: Array[String] = LAYOUT_GENERATOR_SCRIPT.validate(layout, completed_runs, starter_flame, bound_flame)
 		for error in generated_errors:
 			push_error("Generated layout: %s" % error)
 	graph.initialize_from_layout(dungeon_seed, layout)

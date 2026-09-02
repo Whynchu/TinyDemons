@@ -22,20 +22,20 @@ func _initialize() -> void:
 		gameplay.call("_show_hub", true, false)
 		await process_frame
 		_expect(screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.hub_pause_mode == false, "Demon interaction opens only the preparation overlay", failures)
-		_expect(screens.hub_overlay.size == screens.display_view_size and screens.hub_overlay.position == Vector2.ZERO and screens.hub_overlay.get_node_or_null("HubRootPage/HubPlayerCard") != null, "Demon Hub owns the full-screen player card shell", failures)
-		var hub_panel := screens.hub_overlay.get_node_or_null("HubPanel8Piece") as Control
+		_expect(screens.hub_overlay.size == screens.display_view_size and screens.hub_overlay.position == Vector2.ZERO and screens.hub_overlay.get_node_or_null("HubRootPage/HubPlayerCard") != null, "Demon Hub owns the full-screen authored shell", failures)
+		var hub_panel := screens.hub_overlay.get_node_or_null("HubContentPanel") as Control
 		var hub_title := screens.hub_overlay.get_node_or_null("HubRootPage/Title") as Sprite2D
-		_expect(hub_panel != null and hub_panel.size == screens.display_view_size and hub_title != null and hub_title.texture != null, "Demon Hub root uses the scene-authored eight-piece shell and upper-left title card", failures)
+		_expect(hub_panel != null and hub_panel.size == Vector2(240, 115) and hub_title != null and hub_title.texture != null, "Demon Hub root uses the scene-authored content frame and upper-left title card", failures)
 		_expect(screens.hub_overlay.get_node_or_null("HubCommandStart") == null, "Demon Hub does not construct a hidden Start Run button", failures)
 		_expect(screens.hub_page_buttons.all(func(button: Button) -> bool: return button.get_meta("hub_page_target", -1) >= 0), "hub commands use explicit page targets", failures)
-		_expect(screens.hub_page_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.hub_page_buttons[5].position.y == 77.0, "Demon Hub commands share the pause rail geometry", failures)
+		_expect(screens.hub_page_buttons.size() == 4 and screens.hub_page_buttons[0].name == "HubCommandStats" and screens.hub_page_buttons[3].name == "HubCommandBind", "Demon Hub exposes only STATS, SHOP, FUSION, and BIND", failures)
 		for command_button in screens.hub_page_buttons:
 			command_button.pressed.emit()
 			await process_frame
 			var route_page := screens.hub_page_roots.get(screens.hub_page) as Control
 			var route_background := route_page.get_node_or_null("Background") as NinePatchRect if route_page != null else null
 			var route_title := route_page.get_node_or_null("Title") as Sprite2D if route_page != null else null
-			_expect(route_background != null and route_background.size == screens.display_view_size and route_title != null and route_title.texture != null, "Demon Hub route %d owns a full-screen background and title card" % screens.hub_page, failures)
+			_expect(screens.hub_root_page.visible and route_background != null and route_title != null, "Demon Hub route %d keeps the shared shell and content owner" % screens.hub_page, failures)
 			gameplay.call("_hub_back_or_close")
 			await process_frame
 		gameplay.call("_close_hub_to_run")

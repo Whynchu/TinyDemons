@@ -2,13 +2,15 @@ extends RefCounted
 class_name PauseMenuLayout
 
 ## Canonical 240x160 pause-menu geometry. The display system may widen the
-## logical surface in FULL mode, but the left content and the 64px right rail
-## retain these authored margins and rows.
+## logical surface in FULL mode. The right rail remains edge-anchored; authored
+## content in the expandable left field spreads proportionally without scaling
+## its pixel artwork.
 const NATIVE_WIDTH: float = 240.0
 const NATIVE_HEIGHT: float = 160.0
 const LEFT_PANEL_WIDTH: float = 176.0
 const FIXED_RAIL_WIDTH: float = 64.0
 const RESOURCE_PANEL_HEIGHT: float = 24.0
+const RESPONSIVE_LAYOUT_SCRIPT = preload("res://scripts/menu_responsive_layout.gd")
 
 const PLAYER_PORTRAIT_POSITION := Vector2(10.0, 26.0)
 const PLAYER_CARD_TEXT_POSITIONS: Array[Vector2] = [
@@ -49,6 +51,10 @@ const GOLD_TEXT_COLOR := Color8(255, 205, 117)
 
 static func divider_x(view_width: float) -> float:
 	return maxf(view_width - FIXED_RAIL_WIDTH, LEFT_PANEL_WIDTH)
+
+
+static func left_field_x(native_x: float, view_width: float) -> float:
+	return RESPONSIVE_LAYOUT_SCRIPT.proportional_x(native_x, divider_x(view_width), LEFT_PANEL_WIDTH)
 
 
 static func rail_width(view_width: float) -> float:

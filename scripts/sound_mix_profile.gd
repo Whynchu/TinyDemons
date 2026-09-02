@@ -30,6 +30,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	&"ui_hover": &"ui_hover_db",
 	&"ui_confirm": &"ui_confirm_db",
 	&"ui_decline": &"ui_decline_db",
+	&"ui_no_input": &"ui_no_input_db",
 	&"ui_denied": &"ui_denied_db",
 	&"ui_use_item": &"ui_use_item_db",
 	&"ui_equip": &"ui_equip_db",
@@ -88,6 +89,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_hover_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_confirm_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_decline_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_no_input_db := -2.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_denied_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_use_item_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_equip_db := 0.0

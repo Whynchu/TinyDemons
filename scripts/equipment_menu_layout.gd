@@ -21,6 +21,7 @@ const EDITOR_MUTED_COLOR := Color8(140, 145, 160)
 const EDITOR_PROMPT_COLOR := Color.WHITE
 
 const EffectsSpawnerScript = preload("res://scripts/effects_spawner.gd")
+const RESPONSIVE_LAYOUT_SCRIPT = preload("res://scripts/menu_responsive_layout.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 
@@ -145,45 +146,83 @@ func _cache_nodes() -> void:
 
 
 func _apply_layout() -> void:
+	_cache_nodes()
 	var width := maxf(size.x, NATIVE_SIZE.x)
 	var height := maxf(size.y, NATIVE_SIZE.y)
 	for panel in _panels:
 		if panel == get_node_or_null("StatPanel") or panel == get_node_or_null("NavigationPanel"):
 			continue
-		panel.size.x = width - panel.position.x - 1.0
+		panel.size.x = width - panel.position.x
 	var fill := get_node_or_null("Fill") as ColorRect
 	if fill != null:
 		fill.size = Vector2(width, height)
 	var top := get_node_or_null("TopPanel") as Control
 	if top != null:
-		# The source render is 19 pixels tall: its 3-pixel NinePatch edge
-		# treatment leaves the requested 15-pixel interior fill.
-		top.position = Vector2(1.0, 1.0)
-		top.size = Vector2(88.0, 19.0)
+		# The source render is 21 pixels tall: three pixels of NinePatch edge
+		# treatment plus the requested fifteen-pixel interior fill.
+		top.position = Vector2(0.0, 0.0)
+		var top_right := _responsive_x(89.0, width)
+		top.size = Vector2(maxf(top_right - top.position.x, 1.0), 21.0)
 	var command_panel := get_node_or_null("CommandPanel") as Control
 	if command_panel != null:
-		command_panel.position = Vector2(90.0, 1.0)
-		command_panel.size = Vector2(maxf(width - 91.0, 1.0), 19.0)
+		command_panel.position = Vector2(_responsive_x(90.0, width), 0.0)
+		command_panel.size = Vector2(maxf(width - command_panel.position.x, 1.0), 21.0)
 	var summary := get_node_or_null("SummaryPanel") as Control
 	if summary != null:
-		summary.position = Vector2(1.0, 22.0)
-		summary.size = Vector2(width - 2.0, 61.0)
+		summary.position = Vector2(0.0, 21.0)
+		summary.size = Vector2(width, 63.0)
 	var description := get_node_or_null("DescriptionPanel") as Control
-	if description != null: description.size = Vector2(width - 2.0, 47.0)
+	if description != null:
+		description.position = Vector2(0.0, 84.0)
+		description.size = Vector2(width, 49.0)
 	var stat := get_node_or_null("StatPanel") as Control
 	if stat != null:
-		stat.position = Vector2(1.0, 134.0)
-		stat.size = Vector2(maxf(width - 82.0, 1.0), 25.0)
+		stat.position = Vector2(0.0, 133.0)
+		stat.size = Vector2(maxf(width - 81.0, 1.0), 26.0)
 	var navigation := get_node_or_null("NavigationPanel") as Control
 	if navigation != null:
-		navigation.position = Vector2(maxf(width - 79.0, 0.0), 134.0)
-		navigation.size = Vector2(78.0, 25.0)
+		navigation.position = Vector2(maxf(width - 79.0, 0.0), 133.0)
+		navigation.size = Vector2(79.0, 26.0)
 	if navigation_text != null:
 		var text_width := float(navigation_text.texture.get_width()) if navigation_text.texture != null else 0.0
 		navigation_text.position = Vector2(navigation.position.x + floorf(maxf((navigation.size.x - text_width) * 0.5, 4.0)), 144.0)
 	if navigation_back_button != null and navigation != null:
 		navigation_back_button.position = Vector2(navigation.position.x + 44.0, 135.0)
 		navigation_back_button.size = Vector2(34.0, 23.0)
+	_apply_responsive_content(width)
+
+
+func _responsive_x(native_x: float, width: float) -> float:
+	return RESPONSIVE_LAYOUT_SCRIPT.proportional_x(native_x, width, NATIVE_SIZE.x)
+
+
+func _apply_responsive_content(width: float) -> void:
+	# Sprites keep their native pixel size; only their logical x origin spreads.
+	# Metadata preserves the authored origin across repeated resize callbacks.
+	var sprites: Array[Sprite2D] = []
+	sprites.append_array(_command_texts)
+	sprites.append_array(_summary_texts)
+	sprites.append_array(_slot_texts)
+	sprites.append_array(_slot_icons)
+	sprites.append_array(_candidate_texts)
+	sprites.append_array(_description_texts)
+	sprites.append_array(_bonus_texts)
+	var portrait := get_node_or_null("Portrait") as Sprite2D
+	if portrait != null: sprites.append(portrait)
+	for sprite in sprites:
+		if sprite == null or sprite.has_meta("equipment_cursor"): continue
+		if not sprite.has_meta("equipment_native_position"):
+			sprite.set_meta("equipment_native_position", sprite.position)
+		var native_position := sprite.get_meta("equipment_native_position") as Vector2
+		sprite.position.x = _responsive_x(native_position.x, width)
+	for button in command_buttons + slot_buttons + candidate_buttons + confirm_buttons:
+		if button == null: continue
+		if not button.has_meta("equipment_native_rect"):
+			button.set_meta("equipment_native_rect", Rect2(button.position, button.size))
+		var native_rect := button.get_meta("equipment_native_rect") as Rect2
+		var resolved_rect := RESPONSIVE_LAYOUT_SCRIPT.map_rect(native_rect, width, NATIVE_SIZE.x)
+		button.position.x = resolved_rect.position.x
+		button.size.x = resolved_rect.size.x
 
 
 func _apply_button_style() -> void:
@@ -443,9 +482,14 @@ func render_cursors(mode: int, action_index: int, slot_index: int, candidate_ind
 			# Slot hand: four pixels farther left and three pixels higher than the
 			# previous placement, aligned to the slot-type gutter.
 			slot_target = slot_button.position - Vector2(7.0, 0.0)
-	var candidate_row := clampi(candidate_index / 2, 0, 3)
-	var candidate_col := posmod(candidate_index, 2)
-	var candidate_target := Vector2(23.0 + float(candidate_col) * 108.0, 90.0 + float(candidate_row) * 9.0)
+	var candidate_target := Vector2(23.0, 90.0)
+	if not candidate_buttons.is_empty():
+		var candidate_button := candidate_buttons[clampi(candidate_index, 0, candidate_buttons.size() - 1)] as Button
+		if candidate_button != null:
+			# Candidate columns spread with their hit rectangles. Anchor the hand
+			# from that resolved rectangle instead of a native 108px column stride,
+			# otherwise wide layouts leave the cursor over the old left column.
+			candidate_target = candidate_button.position + Vector2(9.0, 1.0)
 	# Remove All confirmation reuses the command's existing position: the
 	# grey locked cursor and the live bobbing cursor stack there in place.
 	var confirm_target := command_target if mode == MODE_REMOVE_ALL_CONFIRM else Vector2(74.0 if confirm_index == 0 else 110.0, 110.0)
@@ -473,8 +517,12 @@ func render_mode(mode: int, action_index: int, slot_index: int, candidate_index:
 		button.visible = slot_visible and not read_only
 	for button in candidate_buttons:
 		button.visible = candidate_visible and not read_only and button.visible
+	# Remove All communicates its modal state entirely through the grey locked
+	# cursor plus the live cursor stacked above it.  Keep the legacy signal
+	# buttons allocated for callers, but do not expose invisible Yes/No hitboxes
+	# over the description panel.
 	for button in confirm_buttons:
-		button.visible = mode == MODE_REMOVE_ALL_CONFIRM and not read_only
+		button.visible = false
 	if navigation_panel != null:
 		navigation_panel.visible = true
 	if navigation_back_button != null:

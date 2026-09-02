@@ -197,6 +197,7 @@ func begin_charge(root: Object) -> bool:
 	if not should_enter_charge():
 		return false
 	attack_kind = AttackKind.CHARGING
+	root.call("_play_sound", "charge_attack", 0.0, 1.0)
 	charge_elapsed = 0.0
 	combo_buffered = false
 	combo_timer = 0.0

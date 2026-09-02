@@ -23,6 +23,7 @@ slot-focus and candidate-focus pixel targets.
 Related boundaries:
 
 - [`menu-ui-migration-plan.md`](menu-ui-migration-plan.md)
+- [`responsive-menus-touch-and-progression-safety-plan.md`](responsive-menus-touch-and-progression-safety-plan.md)
 - [`ffiii-inspired-stats-and-menu-implementation-plan.md`](ffiii-inspired-stats-and-menu-implementation-plan.md)
 - [`gear-catalogue-spec.md`](gear-catalogue-spec.md)
 - [`gear-catalogue.md`](gear-catalogue.md)
@@ -113,17 +114,17 @@ nearest-neighbour nine-slice. Stable geometry belongs to the scene and layout
 script; dynamic text, item data, and cursor state do not.
 
 At native resolution the authored frame stack is exact: the split top row is
-`x=1..88` and `x=90..238`, `y=1..19` (the frame's three-pixel edge treatment
-leaves the intended 15-pixel fill), with a two-pixel gutter before the summary
-at `y=22..82`; the description is `y=85..131`; and the bottom strip is
-`y=134..158`, split at `x=159` with the navigation cell beginning at `x=161`.
+`x=0..88` and `x=90..239`, `y=0..20` (three-pixel edges plus the intended
+fifteen-pixel interior fill), with the summary at `y=21..83`; the description
+is `y=84..132`; and the bottom strip is `y=133..158`, split at `x=159..160`
+with the navigation cell beginning at `x=161` and ending at `x=239`.
 
 The native 240x160 render is the parity target. Wider logical modes stretch
 panel widths and distribute the two content columns through layout anchors;
 they do not scale the font, cursor, portrait, borders, or row pitch. Logical
 height remains 160.
 
-The navigation cell keeps its 78-pixel native width at wider logical widths and
+The navigation cell keeps its 79-pixel native width at wider logical widths and
 right-anchors to the active canvas. Its prompt composes the current device's
 SELECT and BACK face/button glyphs using the same pixel-art prompt builder as
 the rest of the menu; it is not a second command rail.

@@ -44,7 +44,10 @@ func _rebuild_preview() -> void:
 	_add_pixel_text(renderer, "PreviewChromaValue", "0/100", PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[5], Color.WHITE)
 	_add_pixel_text(renderer, "PreviewLevel", "LV 1", PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[6], Color.WHITE)
 
-	var command_labels := ["RESUME", "STATUS", "EQUIPMENT", "SETTINGS", "QUIT TITLE"]
+	# Runtime pause navigation has four entries. Closing is handled by the
+	# footer BACK prompt, so the editor preview must not resurrect the removed
+	# RESUME row (Status remains the first real pause destination).
+	var command_labels := ["STATUS", "EQUIPMENT", "SETTINGS", "QUIT TITLE"]
 	for index in command_labels.size():
 		var texture := renderer.call("number_texture", command_labels[index], Color.WHITE) as Texture2D
 		if texture == null:

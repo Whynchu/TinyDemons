@@ -99,15 +99,17 @@ func _initialize() -> void:
 		# full-screen menu frame must follow it instead of retaining old geometry.
 		var orientation_screens := gameplay.get("screen_state_controller") as ScreenStateController
 		gameplay.get_window().size = Vector2i(720, 960)
-		await process_frame
-		await process_frame
+		# Window.size_changed queues a deferred refresh that itself waits for two
+		# settled frames; allow that complete cycle before asserting orientation.
+		for _settle_frame in 4:
+			await process_frame
 		var portrait_expected := Vector2i(240, 160)
 		_expect(display.view_size_value() == portrait_expected, "portrait orientation clamps FULL to the native logical width", failures)
 		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "portrait orientation switches to crop-safe keep scaling", failures)
 		_expect(orientation_screens != null and (orientation_screens.settings_overlay as ColorRect).size == Vector2(portrait_expected), "portrait orientation resizes settings overlay", failures)
 		gameplay.get_window().size = Vector2i(960, 540)
-		await process_frame
-		await process_frame
+		for _settle_frame in 4:
+			await process_frame
 		var landscape_expected := Vector2i(284, 160)
 		_expect(display.view_size_value() == landscape_expected, "landscape orientation restores FULL logical width", failures)
 		_expect(orientation_screens != null and (orientation_screens.run_complete_overlay as ColorRect).size == Vector2(landscape_expected), "landscape orientation resizes result overlay", failures)

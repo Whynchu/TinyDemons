@@ -9,6 +9,8 @@ const SOUNDS_PATH := "res://assets/sounds/"
 const BATTLE_PATH := SOUNDS_PATH + "10_Free_RPG_Battle_SFX/"
 const UI_PATH := SOUNDS_PATH + "10_ui_sfx_free_samples/"
 const KH_UI_PATH := SOUNDS_PATH + "reconstructed_ui/"
+const SELFMADE_PATH := SOUNDS_PATH + "Selfmade FX/"
+const SELFMADE_REVERB_PATH := SELFMADE_PATH + "Reverb/"
 const SOUND_MIX_PROFILE_PATH := SOUNDS_PATH + "sound_mix_profile.tres"
 const SOUND_MIX_PROFILE_POLL_INTERVAL := 0.20
 # digital_forever is intentionally kept well below the old theme's default
@@ -37,15 +39,20 @@ const CLIPS := {
 	"claw": BATTLE_PATH + "03_Claw_03.wav",
 	"magic_cast": BATTLE_PATH + "55_Encounter_02.wav",
 	"magic_hit": BATTLE_PATH + "15_Impact_flesh_02.wav",
-	"ui_hover": KH_UI_PATH + "sys-click.sms-real.wav",
-	"ui_confirm": KH_UI_PATH + "sys-click104b.sms-real.wav",
-	"ui_decline": KH_UI_PATH + "sys-cansel.sms-real.wav",
+	# The menu vocabulary is authored in the self-made set. Keep the stable
+	# semantic keys so existing callers across the hub, pause, save, and title
+	# menus all pick up the new cues without duplicating routing logic.
+	"ui_hover": SELFMADE_REVERB_PATH + "CursorMove.wav",
+	"ui_confirm": SELFMADE_REVERB_PATH + "Confirm.wav",
+	"ui_decline": SELFMADE_REVERB_PATH + "BACK.wav",
+	"ui_no_input": SELFMADE_PATH + "NOINPUT.wav",
 	"ui_denied": UI_PATH + "033_Denied_03.wav",
 	"ui_use_item": UI_PATH + "051_use_item_01.wav",
 	"ui_equip": UI_PATH + "070_Equip_10.wav",
 	"ui_unequip": UI_PATH + "071_Unequip_01.wav",
 	"ui_buy_sell": UI_PATH + "079_Buy_sell_01.wav",
-	"ui_pause": KH_UI_PATH + "sys-saveload.sms-real.wav",
+	"ui_pause": SELFMADE_REVERB_PATH + "Blip.wav",
+	"charge_attack": SELFMADE_REVERB_PATH + "ChargedAttackwav.wav",
 	"ui_unpause": KH_UI_PATH + "sys-close.sms-real.wav",
 	"enemy_alert": KH_UI_PATH + "sys-chagef1.sms-real.wav",
 	"item_pickup": KH_UI_PATH + "sys-itemget.sms-real.wav",
@@ -139,7 +146,7 @@ func _ready() -> void:
 	_ensure_mix_profile()
 	# Load frequently-used menu cues before the first menu transition. Loading
 	# an imported WAV on the exact frame a page opens causes a visible hitch.
-	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_unpause"]:
+	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "ui_unpause"]:
 		_player(sound_name)
 
 
