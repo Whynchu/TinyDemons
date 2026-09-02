@@ -28,6 +28,7 @@ var lunge_ease_out := false
 var attack_element := ElementCatalogScript.Element.NEUTRAL
 var attack_button_held := false
 var charge_elapsed := 0.0
+var charge_release_pending := false
 var hit_sound_played := false
 ## Captured when the current swing starts. Movement is locked during attacks, so
 ## this latch keeps a running attack's bonuses stable through the hit frame.
@@ -197,6 +198,7 @@ func begin_charge(root: Object) -> bool:
 	if not should_enter_charge():
 		return false
 	attack_kind = AttackKind.CHARGING
+	charge_release_pending = false
 	root.call("_play_sound", "charge_attack", 0.0, 1.0)
 	charge_elapsed = 0.0
 	combo_buffered = false
@@ -227,12 +229,20 @@ func tick_charge(root: Object, delta: float) -> void:
 	charge_elapsed = minf(charge_elapsed + maxf(delta, 0.0) * charge_multiplier, tuning.charge_maximum_time if tuning != null else 1.0)
 	if attack_button_held:
 		return
-	if tuning != null and charge_elapsed >= tuning.charge_minimum_time:
-		start_charged_attack(root)
-	else:
+	if tuning == null or charge_elapsed < tuning.charge_minimum_time:
 		# A release before the threshold is a canceled charge, not an accidental
 		# weak finisher. The shared interrupt path restores all visual layers.
 		root.call("_interrupt_player_attack")
+		return
+	# Releasing arms the finisher, but it cannot fire until the charge reaches its
+	# cap and the outline's opaque ready flash has completed.
+	charge_release_pending = true
+	if charge_elapsed < tuning.charge_maximum_time:
+		return
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	if effects != null and not effects.charge_ready_flash_complete():
+		return
+	start_charged_attack(root)
 
 
 func apply_hitbox(root: Object) -> void:
@@ -421,6 +431,7 @@ func finish() -> void:
 	running_attack_active = false
 	attack_kind = AttackKind.NONE
 	charge_elapsed = 0.0
+	charge_release_pending = false
 	hit_targets.clear()
 	cancel_lunge()
 
