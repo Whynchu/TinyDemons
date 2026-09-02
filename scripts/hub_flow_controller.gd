@@ -6,12 +6,16 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
 const HUB_PAGE_COUNT := 6
 const HUB_PAGE_ALLOCATE := 0
+const HUB_PAGE_STATS := HUB_PAGE_ALLOCATE
 const HUB_PAGE_EQUIPMENT := 1
 const HUB_PAGE_SHOP := 2
 const HUB_PAGE_FUSION := 3
 const HUB_PAGE_BIND := 4
 const HUB_PAGE_STATUS := 5
-const HUB_COMMAND_PAGE_TARGETS := [5, 0, 1, 2, 3, 4]
+# The reworked hub exposes only the four authored command cells.  Equipment is
+# still a private Pause route, and STATUS remains a Pause-only page; neither
+# should be reachable from the Demon Hub command rail.
+const HUB_COMMAND_PAGE_TARGETS := [HUB_PAGE_STATS, HUB_PAGE_SHOP, HUB_PAGE_FUSION, HUB_PAGE_BIND]
 
 const EQUIPMENT_MODE_COMMAND := 0
 const EQUIPMENT_MODE_SLOT_EQUIP := 1
@@ -34,6 +38,12 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
+	root.screen_state_controller.hub_stat_add_marker = controls.get("stat_add_marker") as Sprite2D
+	root.screen_state_controller.hub_stat_subtract_marker = controls.get("stat_subtract_marker") as Sprite2D
+	root.screen_state_controller.hub_gold_text = controls.get("gold_text") as Sprite2D
+	root.screen_state_controller.hub_soul_text = controls.get("soul_text") as Sprite2D
+	root.screen_state_controller.hub_gold_icon = controls.get("gold_icon") as Sprite2D
+	root.screen_state_controller.hub_soul_icon = controls.get("soul_icon") as Sprite2D
 	root.screen_state_controller.hub_stat_texts = controls["stats"] as Array[Sprite2D]
 	root.screen_state_controller.hub_stat_buttons = controls["stat_buttons"] as Array[Button]
 	root.screen_state_controller.hub_stat_left_buttons = controls["stat_left"] as Array[Button]
@@ -117,12 +127,18 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	if root.game_over_overlay != null: root.game_over_overlay.visible = false
 	root.screen_state_controller.hub_overlay.visible = true
 	if root.screen_state_controller.pause_overlay != null: root.screen_state_controller.pause_overlay.visible = false
-	root.screen_state_controller.hub_page = root.screen_state_controller.HUB_PAGE_STATUS
+	# STATS is the first (and default) command in the reworked hub. STATUS is
+	# retained only as a compatibility page alias for older callers.
+	root.screen_state_controller.hub_page = root.screen_state_controller.HUB_PAGE_STATS
 	root.screen_state_controller.hub_item_index = 0
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.hub_content_focus = false
 	root.screen_state_controller.hub_binding_message = ""
-	root.call("_hub_cancel_stats")
-	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	root.call("_hub_cancel_stats", false)
+	# Opening either full-screen menu uses the same authored Blip cue. Confirm is
+	# reserved for actions taken after the Demon Hub is already open.
+	root.call("_play_sound", "ui_pause", 0.0, 1.0)
 	root.screen_state_controller.set_state(&"hub")
 	root.call("_select_hub_menu_row", 0)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
@@ -134,6 +150,8 @@ func open_pause_menu(root: Object) -> void:
 	root.screen_state_controller.pause_input_was_down = true
 	root.screen_state_controller.hub_pause_mode = true
 	root.screen_state_controller.hub_item_index = 0
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_COMMAND)
 	root.screen_state_controller.pause_page = 0
 	root.screen_state_controller.hub_is_root = true
@@ -167,7 +185,7 @@ func close_hub_to_run(root: Object) -> void:
 	if root.screen_state_controller.hub_overlay == null and root.screen_state_controller.pause_overlay == null:
 		return
 	var was_pause: bool = bool(root.screen_state_controller.hub_pause_mode) or (root.screen_state_controller.pause_overlay != null and root.screen_state_controller.pause_overlay.visible)
-	root.call("_hub_cancel_stats")
+	root.call("_hub_cancel_stats", false)
 	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_COMMAND)
 	root.screen_state_controller.menu_input_release_lock = bool(root.call("_is_menu_cancel_input_pressed"))
 	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false
@@ -176,11 +194,16 @@ func close_hub_to_run(root: Object) -> void:
 	root.screen_state_controller.hub_pause_mode = false
 	root.screen_state_controller.hub_is_root = true
 	root.screen_state_controller.pause_page = 0
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.pause_interact_input_was_down = false
 	root.screen_state_controller.pause_cancel_input_was_down = false
 	root.interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
 	root.screen_state_controller.set_state(&"gameplay")
-	root.call("_play_sound", "ui_unpause", 0.0, 1.0)
+	# Pause uses the same explicit BACK affordance as every other menu route.
+	# Keep the legacy unpause cue for the preparation hub, which is opened from
+	# the Cloaked Demon rather than from the pause action.
+	root.call("_play_sound", "ui_decline" if was_pause else "ui_unpause", 0.0, 1.0)
 	if was_pause:
 		return
 
@@ -195,13 +218,22 @@ func set_hub_page(root: Object, page: int) -> void:
 		_set_screen_property_if_available(screen, &"hub_is_root", true)
 		screen.hub_content_focus = false
 		_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND)
+		screen.hub_touch_candidate_slot = ""
+		screen.hub_touch_candidate_index = -1
 		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		return
 	_set_screen_property_if_available(screen, &"hub_is_root", false)
-	screen.hub_page = posmod(page, HUB_PAGE_COUNT)
+	# The old STATUS route is now represented by the merged STATS page. Keep
+	# accepting the numeric alias so older callers do not land on a blank page.
+	var requested_page := posmod(page, HUB_PAGE_COUNT)
+	if requested_page == HUB_PAGE_STATUS:
+		requested_page = HUB_PAGE_STATS
+	screen.hub_page = requested_page
 	var command_index: int = int(HUB_COMMAND_PAGE_TARGETS.find(screen.hub_page))
 	if command_index >= 0: _set_screen_property_if_available(screen, &"hub_menu_row", command_index)
 	screen.hub_item_index = 0
+	screen.hub_touch_candidate_slot = ""
+	screen.hub_touch_candidate_index = -1
 	screen.hub_list_scroll = 0.0
 	screen.hub_choice_scroll = 0.0
 	# Equipment has a deliberate three-step route. Entering the page always
@@ -209,7 +241,17 @@ func set_hub_page(root: Object, page: int) -> void:
 	# into the item list. Other transaction pages retain their normal content
 	# focus behavior.
 	var equipment_page: bool = screen.hub_page == HUB_PAGE_EQUIPMENT
-	_set_screen_property_if_available(screen, &"hub_content_focus", equipment_page)
+	# Every command confirm enters its content. Equipment's first content level
+	# is still its command row; the other three routes enter their list/stat
+	# focus directly.
+	# Confirming a command enters its content. STATS enters the allocation list
+	# directly with its cursor on the first row (VIT). Equipment keeps its own
+	# command-rail entry behavior.
+	if screen.hub_page == HUB_PAGE_ALLOCATE:
+		_set_screen_property_if_available(screen, &"hub_content_focus", true)
+		_set_screen_property_if_available(screen, &"hub_stat_row", 0)
+	else:
+		_set_screen_property_if_available(screen, &"hub_content_focus", true)
 	_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND if equipment_page else EQUIPMENT_MODE_SLOT_EQUIP)
 	_set_screen_property_if_available(screen, &"hub_action_column", 0)
 	screen.hub_fusion_message = ""
@@ -231,12 +273,18 @@ func back_to_hub_root(root: Object) -> void:
 		close_hub_to_run(root)
 		return
 	screen.hub_is_root = true
-	# Keep the page state consistent with the visible root. Otherwise Cancel
-	# enters the stale submenu branch before the root-state branch can close the
-	# hub, producing one or more phantom presses after nested menus.
-	screen.hub_page = screen.HUB_PAGE_STATUS
+	# Keep the selected command preview when returning to the top shell. This is
+	# important for the reworked hub: backing out of SHOP/FUSION/BIND should show
+	# that command's content again, not reset the player to a stale STATUS page.
+	if screen.hub_page == screen.HUB_PAGE_EQUIPMENT or screen.hub_page == screen.HUB_PAGE_STATUS:
+		screen.hub_page = screen.HUB_PAGE_STATS
+	var command_index := int(HUB_COMMAND_PAGE_TARGETS.find(screen.hub_page))
+	if command_index >= 0:
+		screen.hub_menu_row = command_index
 	screen.hub_content_focus = false
 	_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND)
+	screen.hub_touch_candidate_slot = ""
+	screen.hub_touch_candidate_index = -1
 	screen.hub_binding_message = ""
 	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
@@ -257,6 +305,8 @@ func back_from_hub_route(root: Object) -> void:
 		if not screen.hub_equipment_action_focus:
 			_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND)
 			screen.hub_content_focus = true
+			screen.hub_touch_candidate_slot = ""
+			screen.hub_touch_candidate_index = -1
 			screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 			root.call("_play_sound", "ui_decline", 0.0, 1.0)
 			return
@@ -294,11 +344,15 @@ func shift_hub_item(root: Object, direction: int) -> void:
 	elif root.screen_state_controller.hub_page == 3:
 		count = hub_fusion_candidates(root).size()
 		root.screen_state_controller.hub_fusion_count = 1
+	var on_equipment_page: bool = root.screen_state_controller.hub_page == 1 or root.screen_state_controller.is_pause_equipment_active()
 	if count > 0:
 		var target := posmod(root.screen_state_controller.hub_item_index + direction, count)
-		if root.player_profile != null and ItemCatalog.SLOTS[target] == &"head" and root.player_profile._head_locked_by_body(ItemCatalog.new()):
+		if on_equipment_page and root.player_profile != null and ItemCatalog.SLOTS[target] == &"head" and root.player_profile._head_locked_by_body(ItemCatalog.new()):
 			target = posmod(target + (1 if direction >= 0 else -1), count)
 		root.screen_state_controller.hub_item_index = target
+		if root.screen_state_controller.hub_page == 1 or root.screen_state_controller.is_pause_equipment_active():
+			root.screen_state_controller.hub_touch_candidate_slot = ""
+			root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
 	root.screen_state_controller.refresh_equipment_menu(root)
 
@@ -320,6 +374,8 @@ func shift_hub_slot_grid(root: Object, column_direction: int, row_direction: int
 		row = posmod(row + (1 if row_direction >= 0 else -1), 3)
 		target = column * 3 + row
 	root.screen_state_controller.hub_item_index = target
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.refresh_equipment_menu(root)
 
 
@@ -371,6 +427,8 @@ func shift_hub_gear_candidate(root: Object, direction: int) -> void:
 	if candidates.is_empty(): return
 	var key := String(slot)
 	root.screen_state_controller.hub_gear_candidate_indices[key] = posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(key, 0)) + direction, candidates.size())
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
@@ -396,6 +454,8 @@ func shift_hub_gear_candidate_grid(root: Object, column_direction: int, row_dire
 	if target >= candidates.size():
 		target = candidates.size() - 1
 	root.screen_state_controller.hub_gear_candidate_indices[key] = target
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	var max_start := maxi(0, int(ceil(float(candidates.size()) / 2.0)) * 2 - 8)
 	var start := int(root.screen_state_controller.hub_choice_scroll)
 	start = clampi(start - (start % 2), 0, max_start)
@@ -411,6 +471,8 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 	if locked_slot == &"head" and root.player_profile._head_locked_by_body(ItemCatalog.new()):
 		return
 	root.screen_state_controller.hub_item_index = clampi(slot_index, 0, ItemCatalog.SLOTS.size() - 1)
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.hub_content_focus = true
 	var remove_mode: bool = root.screen_state_controller.hub_equipment_mode == EQUIPMENT_MODE_SLOT_REMOVE
 	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_REMOVE if remove_mode else EQUIPMENT_MODE_SLOT_EQUIP)
@@ -432,7 +494,7 @@ func select_hub_gear_slot(root: Object, slot_index: int) -> void:
 				break
 	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
 	root.screen_state_controller.refresh_equipment_menu(root)
-	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	root.call("_play_sound", "ui_confirm" if not candidates.is_empty() else "ui_no_input", 0.0, 1.0)
 
 
 func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
@@ -448,15 +510,29 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 	var candidate_index := window_start + choice_row
 	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
 		return
-	# A touch row is an explicit selection, so commit it immediately. Controller
-	# navigation still keeps the browse-then-accept flow for precise selection.
 	root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = candidate_index
+	# Touch needs a visible preview pass before committing so the player can read
+	# the item description and green/red stat comparison. Keyboard/controller
+	# navigation keeps its existing single-Confirm transaction behavior.
+	if root.call("_is_touch_input_device"):
+		var screen: ScreenStateController = root.screen_state_controller
+		var same_candidate: bool = screen.hub_touch_candidate_slot == String(slot) and screen.hub_touch_candidate_index == candidate_index
+		if not same_candidate:
+			screen.hub_touch_candidate_slot = String(slot)
+			screen.hub_touch_candidate_index = candidate_index
+			screen.refresh_equipment_menu(root)
+			root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			return
+		screen.hub_touch_candidate_slot = ""
+		screen.hub_touch_candidate_index = -1
 	hub_item_action(root)
 
 
 func close_hub_gear_browse(root: Object) -> void:
 	# BACK from the item list returns to the slot list, not the top command row.
 	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_EQUIP)
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.refresh_equipment_menu(root)
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
@@ -518,7 +594,9 @@ func salvage_profile_overflow(root: Object, instance_id: String) -> int:
 
 
 func hub_item_action(root: Object) -> void:
-	if root.player_profile == null: return
+	if root.player_profile == null:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
 	if root.screen_state_controller.hub_page == 1 or root.screen_state_controller.is_pause_equipment_active():
 		# The visible EQUIP command is a route transition. It must not silently
 		# select the first slot or open an item picker beneath the command row.
@@ -531,57 +609,85 @@ func hub_item_action(root: Object) -> void:
 			return
 		var slot: StringName = ItemCatalog.SLOTS[clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var candidates := hub_gear_candidates(root, slot)
-		if not candidates.is_empty():
-			var candidate_index: int = posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
-			if root.screen_state_controller.hub_equipment_mode != EQUIPMENT_MODE_CANDIDATE and not root.screen_state_controller.hub_gear_browsing:
-				var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
-				for index in candidates.size():
-					if candidates[index].instance_id == equipped_id:
-						root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
-						break
-				_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_CANDIDATE)
+		if candidates.is_empty():
+			# Empty equipment slots are intentionally selectable, but confirming
+			# one cannot descend into an item picker.
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			return
+		var candidate_index: int = posmod(int(root.screen_state_controller.hub_gear_candidate_indices.get(String(slot), 0)), candidates.size())
+		if root.screen_state_controller.hub_equipment_mode != EQUIPMENT_MODE_CANDIDATE and not root.screen_state_controller.hub_gear_browsing:
+			var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
+			for index in candidates.size():
+				if candidates[index].instance_id == equipped_id:
+					root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = index
+					break
+			_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_CANDIDATE)
+		else:
+			var selected: ItemInstance = candidates[candidate_index]
+			var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
+			if selected.instance_id == equipped_id and not equipped_id.is_empty():
+				# Confirming the item already occupying this slot has no state change.
+				# Close the picker as a completed browse, but use the explicit no-op
+				# cue instead of replaying the equip transaction sound.
+				_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_EQUIP)
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+				root.screen_state_controller.hub_touch_candidate_slot = ""
+				root.screen_state_controller.hub_touch_candidate_index = -1
+				root.screen_state_controller.refresh_equipment_menu(root)
+				return
+			var changed := false
+			if selected.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID or (slot == &"shield" and selected.instance_id == equipped_id):
+				changed = bool(root.call("_unequip_profile_slot", slot))
 			else:
-				var selected: ItemInstance = candidates[candidate_index]
-				var equipped_id: String = root.player_profile.get_equipped_instance_id(slot)
-				if selected.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID or (slot == &"shield" and selected.instance_id == equipped_id):
-					root.call("_unequip_profile_slot", slot)
-				else:
-					root.call("_equip_profile_item", selected.instance_id)
+				changed = bool(root.call("_equip_profile_item", selected.instance_id))
+			if not changed:
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			else:
 				# Equipping or unequipping changes which copies may be used as
 				# materials, so the cached target list must be rebuilt.
 				invalidate_hub_fusion_candidates(root)
 				# Confirming an item returns to the slot list. The selected slot and
 				# candidate cursor are preserved for quick successive changes.
 				_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_EQUIP)
-			root.screen_state_controller.refresh_equipment_menu(root)
+		root.screen_state_controller.hub_touch_candidate_slot = ""
+		root.screen_state_controller.hub_touch_candidate_index = -1
+		root.screen_state_controller.refresh_equipment_menu(root)
 		return
-	elif root.screen_state_controller.hub_page == 2 and root.run_state != null and not root.run_state.shop_stock.is_empty():
-		var index: int = clampi(root.screen_state_controller.hub_item_index, 0, root.run_state.shop_stock.size() - 1)
-		var entry: Dictionary = root.run_state.shop_stock[index]
-		if bool(entry.get("permanent", false)):
-			# Demon Cloak: always in stock, never sold out, price escalates per purchase.
-			var cloak_item := root.player_profile.purchase_demon_cloak() as ItemInstance
-			if cloak_item != null:
-				var cloak_catalog := ItemCatalog.new()
-				var body_was_empty := cloak_catalog.slot_needs_introduction(root.player_profile, &"body")
-				if root.run_state != null:
+	elif root.screen_state_controller.hub_page == 2:
+		if root.run_state == null or root.run_state.shop_stock.is_empty():
+			# Shop can be opened before its stock is generated. Confirming an empty
+			# shop has no transaction to perform.
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		else:
+			var index: int = clampi(root.screen_state_controller.hub_item_index, 0, root.run_state.shop_stock.size() - 1)
+			var entry: Dictionary = root.run_state.shop_stock[index]
+			if bool(entry.get("permanent", false)):
+				# Demon Cloak: always in stock, never sold out, price escalates per purchase.
+				var cloak_item := root.player_profile.purchase_demon_cloak() as ItemInstance
+				if cloak_item != null:
+					var cloak_catalog := ItemCatalog.new()
+					var body_was_empty := cloak_catalog.slot_needs_introduction(root.player_profile, &"body")
 					root.run_state.record_gear_reward(&"shop", cloak_item, root.player_profile.difficulty_rank, root.player_profile.level, -1, "", body_was_empty, false, &"purchased")
-				entry["price"] = root.player_profile.demon_cloak_price()
-				root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
-			else:
-				root.call("_play_sound", "ui_denied", 0.0, 1.0)
-		elif not bool(entry.get("sold", false)):
-			var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
-			var catalog := ItemCatalog.new()
-			var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, catalog.definition_slot(item.definition_id))
-			if root.player_profile.purchase_item(item, int(entry.get("price", 0))):
-				if root.run_state != null:
+					entry["price"] = root.player_profile.demon_cloak_price()
+					root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+				else:
+					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			elif not bool(entry.get("sold", false)):
+				var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+				var catalog := ItemCatalog.new()
+				var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, catalog.definition_slot(item.definition_id))
+				if root.player_profile.purchase_item(item, int(entry.get("price", 0))):
 					root.run_state.record_gear_reward(&"shop", item, root.player_profile.difficulty_rank, root.player_profile.level, -1, "", slot_was_empty, false, &"purchased")
-				entry["sold"] = true; root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+					entry["sold"] = true; root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+				else:
+					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 			else:
-				root.call("_play_sound", "ui_denied", 0.0, 1.0)
+				# Reconfirming a sold item has no transaction to perform.
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 	elif root.screen_state_controller.hub_page == 3:
 		var fusion_candidates := hub_fusion_candidates(root)
+		var fusion_changed := false
+		var fusion_feedback_played := false
 		if not fusion_candidates.is_empty():
 			var index: int = clampi(root.screen_state_controller.hub_item_index, 0, fusion_candidates.size() - 1)
 			var target: ItemInstance = fusion_candidates[index]
@@ -591,30 +697,50 @@ func hub_item_action(root: Object) -> void:
 				var batch_cost: int = root.player_profile.fusion_batch_cost(target, count)
 				if root.player_profile.souls < batch_cost:
 					root.screen_state_controller.hub_fusion_message = "NEED %dS" % batch_cost
-					root.call("_play_sound", "ui_denied", 0.0, 1.0)
+					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+					fusion_feedback_played = true
 				else:
 					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))
 					if fuse_profile_target(root, target.instance_id, count):
 						root.screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
+						fusion_changed = true
 						root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 						root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+					else:
+						root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+						fusion_feedback_played = true
 			elif root.player_profile.can_salvage_overflow(target.instance_id):
 				var salvage_value: int = salvage_profile_overflow(root, target.instance_id)
 				if salvage_value > 0:
 					root.screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value
+					fusion_changed = true
 					root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
-			if not root.screen_state_controller.hub_fusion_message.is_empty():
-				invalidate_hub_fusion_candidates(root)
-				root.screen_state_controller.hub_item_index = clampi(root.screen_state_controller.hub_item_index, 0, maxi(hub_fusion_candidates(root).size() - 1, 0))
+				else:
+					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+					fusion_feedback_played = true
+			else:
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+				fusion_feedback_played = true
+		if not fusion_feedback_played and not fusion_changed:
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		if not root.screen_state_controller.hub_fusion_message.is_empty():
+			invalidate_hub_fusion_candidates(root)
+			root.screen_state_controller.hub_item_index = clampi(root.screen_state_controller.hub_item_index, 0, maxi(hub_fusion_candidates(root).size() - 1, 0))
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func remove_hub_gear(root: Object) -> void:
 	if root.player_profile == null or (root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_EQUIPMENT and not root.screen_state_controller.is_pause_equipment_active()):
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
-	if root.screen_state_controller.hub_equipment_mode == EQUIPMENT_MODE_COMMAND or root.screen_state_controller.hub_equipment_action_focus:
+	# The command row is the entry point.  Once the modal cursor is active, a
+	# second Confirm must perform the transaction; checking action_focus here
+	# would reopen the modal forever because that flag intentionally stays true.
+	if root.screen_state_controller.hub_equipment_mode == EQUIPMENT_MODE_COMMAND:
 		# REMOVE descends into the same six-panel slot grid as EQUIP. A second
 		# confirm on a slot performs the actual unequip.
+		root.screen_state_controller.hub_touch_candidate_slot = ""
+		root.screen_state_controller.hub_touch_candidate_index = -1
 		_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_REMOVE)
 		root.screen_state_controller.hub_content_focus = true
 		root.screen_state_controller.refresh_equipment_menu(root)
@@ -626,15 +752,32 @@ func remove_hub_gear(root: Object) -> void:
 		invalidate_hub_fusion_candidates(root)
 		root.call("_save_player_profile")
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	else:
+		# The slot grid remains navigable when a slot is empty. Confirming that
+		# cell has no transaction to perform.
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 	root.screen_state_controller.refresh_equipment_menu(root)
 
 
 func remove_all_hub_gear(root: Object) -> void:
 	if root.player_profile == null or (root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_EQUIPMENT and not root.screen_state_controller.is_pause_equipment_active()):
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
 	if root.screen_state_controller.hub_equipment_mode == EQUIPMENT_MODE_COMMAND or root.screen_state_controller.hub_equipment_action_focus:
+		var any_equipped := false
+		for slot in ItemCatalog.SLOTS:
+			if not root.player_profile.get_equipped_instance_id(slot).is_empty():
+				any_equipped = true
+				break
+		if not any_equipped:
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			return
+		root.screen_state_controller.hub_touch_candidate_slot = ""
+		root.screen_state_controller.hub_touch_candidate_index = -1
 		_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_REMOVE_ALL_CONFIRM)
-		root.screen_state_controller.hub_remove_all_confirm_index = 1
+		# Confirmation is direct: Confirm accepts and Back cancels.  The index is
+		# retained only for compatibility with the old hidden Yes/No controls.
+		root.screen_state_controller.hub_remove_all_confirm_index = 0
 		root.screen_state_controller.hub_content_focus = true
 		root.screen_state_controller.refresh_equipment_menu(root)
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
@@ -643,11 +786,15 @@ func remove_all_hub_gear(root: Object) -> void:
 	for slot in ItemCatalog.SLOTS:
 		changed = bool(root.call("_unequip_profile_slot", slot)) or changed
 	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_COMMAND)
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.hub_action_column = 2
 	if changed:
 		invalidate_hub_fusion_candidates(root)
 		root.call("_save_player_profile")
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	else:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 	root.screen_state_controller.refresh_equipment_menu(root)
 
 
@@ -655,24 +802,47 @@ func cancel_remove_all_hub_gear(root: Object) -> void:
 	if root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_EQUIPMENT and not root.screen_state_controller.is_pause_equipment_active():
 		return
 	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_COMMAND)
+	root.screen_state_controller.hub_touch_candidate_slot = ""
+	root.screen_state_controller.hub_touch_candidate_index = -1
 	root.screen_state_controller.hub_action_column = 2
 	root.screen_state_controller.refresh_equipment_menu(root)
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
 func select_hub_menu_row(root: Object, row: int) -> void:
-	root.screen_state_controller.hub_menu_row = posmod(row, 6)
+	var screen: Object = root.screen_state_controller
+	screen.hub_menu_row = posmod(row, HUB_COMMAND_PAGE_TARGETS.size())
+	# The top shell is a live preview: moving across STATS/SHOP/FUSION/BIND
+	# swaps the framed content underneath without entering it. Confirm is still
+	# the only operation that changes hub_content_focus.
+	var target_page: int = HUB_COMMAND_PAGE_TARGETS[screen.hub_menu_row]
+	screen.hub_page = target_page
+	screen.hub_item_index = 0
+	screen.hub_stat_row = 0
+	screen.hub_action_column = 0
+	screen.hub_touch_candidate_slot = ""
+	screen.hub_touch_candidate_index = -1
+	screen.hub_fusion_message = ""
+	screen.hub_binding_message = ""
+	if target_page == HUB_PAGE_FUSION:
+		invalidate_hub_fusion_candidates(root)
+	if target_page == HUB_PAGE_SHOP and root.run_state != null:
+		root.run_state.ensure_shop_stock(root.player_profile)
+	screen.hub_is_root = true
 	root.screen_state_controller.hub_content_focus = false
-	root.screen_state_controller.hub_equipment_action_focus = false
+	_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_COMMAND)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func select_hub_stat_row(root: Object, row: int) -> void:
 	if root.screen_state_controller.hub_page != root.screen_state_controller.HUB_PAGE_ALLOCATE:
 		return
+	var previous_row: int = root.screen_state_controller.hub_stat_row
 	root.screen_state_controller.hub_stat_row = posmod(row, 6)
 	root.screen_state_controller.hub_content_focus = true
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	if root.screen_state_controller.hub_stat_row != previous_row:
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 
 
 func shift_hub_action_column(root: Object, direction: int) -> void:
@@ -713,7 +883,13 @@ func hub_points_remaining(root: Object) -> int:
 
 
 func hub_confirm_stats(root: Object) -> void:
-	if root.player_profile == null: return
+	if root.player_profile == null:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
+	var pending_total: int = int(root.screen_state_controller.hub_pending_vit) + int(root.screen_state_controller.hub_pending_str) + int(root.screen_state_controller.hub_pending_def) + int(root.screen_state_controller.hub_pending_agi) + int(root.screen_state_controller.hub_pending_int) + int(root.screen_state_controller.hub_pending_mnd)
+	if pending_total <= 0:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	ProgressionControllerScript.allocate_stats(root.player_profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "AGI": root.screen_state_controller.hub_pending_agi, "INT": root.screen_state_controller.hub_pending_int, "MND": root.screen_state_controller.hub_pending_mnd})
 	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_agi = 0; root.screen_state_controller.hub_pending_int = 0; root.screen_state_controller.hub_pending_mnd = 0
@@ -721,13 +897,17 @@ func hub_confirm_stats(root: Object) -> void:
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
-func hub_cancel_stats(root: Object) -> void:
+func hub_cancel_stats(root: Object, play_feedback: bool = true) -> void:
 	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_agi = 0; root.screen_state_controller.hub_pending_int = 0; root.screen_state_controller.hub_pending_mnd = 0
 	if root.screen_state_controller != null and root.screen_state_controller.hub_overlay != null: root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	if play_feedback:
+		root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
 func hub_auto_allocate(root: Object) -> void:
-	if root.player_profile == null: return
+	if root.player_profile == null or hub_points_remaining(root) <= 0:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
 	var patterns: Array = [[&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"AGI", &"MND"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"AGI", &"INT"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"MND", &"AGI"], [&"STR", &"DEF", &"STR", &"DEF", &"AGI", &"INT", &"MND"]]
 	var pattern: Array = patterns[clampi(root.player_profile.allocation_profile, 0, patterns.size() - 1)]
 	var index: int = 0
@@ -744,8 +924,12 @@ func hub_auto_allocate(root: Object) -> void:
 
 
 func hub_respec(root: Object) -> void:
-	hub_cancel_stats(root)
-	if int(root.call("_respec_player_stats")) > 0: root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	hub_cancel_stats(root, false)
+	var refunded := int(root.call("_respec_player_stats"))
+	if refunded > 0:
+		root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	else:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 
 
 func start_from_hub(root: Object) -> void:

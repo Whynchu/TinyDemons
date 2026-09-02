@@ -26,6 +26,25 @@ func _initialize() -> void:
 	manager.play("ui_hover")
 	var hover_player := manager.get_node_or_null("SFX_ui_hover") as AudioStreamPlayer
 	_expect(hover_player != null and profile != null and is_equal_approx(hover_player.volume_db, float(profile.get("ui_hover_db"))), "hover cue uses the editor profile level", failures)
+	var expected_menu_clips := {
+		"ui_pause": "Blip.wav",
+		"ui_hover": "CursorMove.wav",
+		"ui_confirm": "Confirm.wav",
+		"ui_decline": "BACK.wav",
+		"ui_no_input": "NOINPUT.wav",
+		"charge_attack": "ChargedAttackwav.wav",
+	}
+	for sound_name in expected_menu_clips:
+		var expected_filename: String = String(expected_menu_clips[sound_name])
+		var clip_path: String = String(SoundManager.CLIPS.get(sound_name, ""))
+		_expect(clip_path.ends_with(expected_filename), "%s routes to %s" % [sound_name, expected_filename], failures)
+		if sound_name != "ui_no_input":
+			_expect(clip_path.contains("Selfmade FX/Reverb/"), "%s routes through the reverb selfmade set" % sound_name, failures)
+		manager.play(sound_name)
+		var player := manager.get_node_or_null("SFX_%s" % sound_name) as AudioStreamPlayer
+		_expect(player != null and player.stream != null, "%s loads its selfmade stream" % sound_name, failures)
+		if profile != null and profile.has_method("get") and profile.get("%s_db" % sound_name) != null:
+			_expect(player != null and is_equal_approx(player.volume_db, float(profile.get("%s_db" % sound_name))), "%s uses the editor profile level" % sound_name, failures)
 	manager.free()
 	_finish(failures)
 

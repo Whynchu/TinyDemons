@@ -113,6 +113,7 @@ func select_save_slot(root: Object, slot: int) -> void:
 		select_continue_slot(root, slot)
 		return
 	if ProfileSaveService.slot_has_profile(slot):
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		root.screen_state_controller.save_overwrite_slot = slot
 		set_overwrite_prompt(root, true)
 		return
@@ -142,11 +143,13 @@ func cancel_overwrite(root: Object) -> void:
 	root.screen_state_controller.save_overwrite_prompt_active = false
 	set_overwrite_prompt(root, false)
 	update_save_select_cursor(root)
+	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
 func confirm_overwrite(root: Object) -> void:
 	root.screen_state_controller.save_overwrite_prompt_active = false
 	set_overwrite_prompt(root, false)
+	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	var selected_slot: int = int(root.screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(root.screen_state_controller.save_overwrite_slot) else root.screen_state_controller.save_select_index)
 	ProfileSaveService.select_slot(selected_slot)
 	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
@@ -261,13 +264,19 @@ func cancel_character_creation(root: Object) -> void:
 
 
 func select_continue_slot(root: Object, slot: int) -> void:
-	if not ProfileSaveService.slot_has_profile(slot): return
+	if not ProfileSaveService.slot_has_profile(slot):
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
 	ProfileSaveService.select_slot(slot)
-	root.player_profile = ProfileSaveService.load_profile()
-	if not root.player_profile.has_started: return
+	var loaded_profile := ProfileSaveService.load_profile()
+	if loaded_profile == null or not loaded_profile.has_started:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
+	root.player_profile = loaded_profile
 	root.player_profile.pending_route = "run"
 	ProfileSaveService.save_profile(root.player_profile)
 	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
+	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	root.call("_begin_scene_transition")
 
 

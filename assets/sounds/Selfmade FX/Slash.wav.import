@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bv0nsalkuk3xg"
+path="res://.godot/imported/Slash.wav-92b3a3f8c06295ef30d6c48d0a578e8f.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Slash.wav"
+dest_files=["res://.godot/imported/Slash.wav-92b3a3f8c06295ef30d6c48d0a578e8f.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

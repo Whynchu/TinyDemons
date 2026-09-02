@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://c5p86tq1i8b3d"
+path="res://.godot/imported/Hit1.wav-5ee3107af98ba4d987e0ffbc452dc1dd.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Hit1.wav"
+dest_files=["res://.godot/imported/Hit1.wav-5ee3107af98ba4d987e0ffbc452dc1dd.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

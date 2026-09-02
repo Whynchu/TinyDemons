@@ -38,7 +38,7 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 					if not target_palette.is_empty():
 						feedback_color = root.call("_health_feedback_color", target_palette) as Color
 					root.call("_show_fire_exchange_text", "NO FUSION", feedback_color)
-					root.call("_play_sound", "ui_denied", 0.0, 1.0)
+					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 				flame_action_resolved = true
 		root.set("interact_input_was_down", interact_input_down)
 		return

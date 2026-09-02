@@ -1,5 +1,12 @@
 # Menu UI migration
 
+Responsive-layout amendment:
+
+- [`responsive-menus-touch-and-progression-safety-plan.md`](responsive-menus-touch-and-progression-safety-plan.md)
+  supersedes the older wide-screen rule that only expanded the left field while
+  leaving its internal content at native x coordinates. The 240x160 geometry
+  below remains authoritative; wider compositions now distribute added width.
+
 The menu migration uses the authored `Mockups/PAUSE MENU.png` render as the
 first visual contract. The pause screen is authored in the game's canonical
 240x160 logical coordinate space and then resized by the display layout code.
@@ -87,16 +94,19 @@ The Demon Hub should share the pause menu's visual grammar without becoming a
 copy of the pause layout:
 
 1. The stable hub shell now lives in `scenes/demon_hub_menu.tscn` so its frame,
-   player summary, command rail, title card, cursor layer, and footer prompts
-   can be inspected independently in the editor.
+   title card, four-command header, stat content frame, cursor layer, and
+   footer/resource cells can be inspected independently in the editor.
 2. Use the same 16x16 eight-piece frame, upper-left title-card proportions,
    muted prompt color, nearest-neighbour filtering, and top-draw cursor contract
    as the pause menu.
-3. Keep the Demon Hub's six root commands and transactional data ownership.
-   Status, Allocate, Equipment, Shop, Fusion, and Bind remain distinct routes;
-   shared visual components do not merge their behavior.
-4. Each hub child route now has a full-screen background and route-specific
-   title card, matching the pause Status/Equipment replacement-page behavior.
+3. The Demon Hub root exposes exactly four commands in the authored order:
+   `STATS`, `SHOP`, `FUSION`, and `BIND`. `STATS` is the merged allocation page;
+   the old hub Status page is not a visible route, and Equipment remains a
+   Pause-only route while its transaction presenter stays reusable internally.
+   Pause keeps its separate `STATUS` page and its `EQUIPMENT` entry.
+4. The hub keeps its title/header shell visible while the selected command
+   previews content underneath it. Confirm enters that content; Back returns
+   to the header without losing the selected preview.
 5. Keep hub-only presentation modular: soul balance and shop costs, allocation
    panels, equipment inventory/detail panes, fusion controls, and binding state
    stay scene-authored anchors populated by `screen_state_controller.gd`.

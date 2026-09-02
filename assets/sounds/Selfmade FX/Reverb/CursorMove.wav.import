@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bbecsx5sa0y4d"
+path="res://.godot/imported/CursorMove.wav-ede2d1b4ad3a8ed76532aa368287d8b3.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Reverb/CursorMove.wav"
+dest_files=["res://.godot/imported/CursorMove.wav-ede2d1b4ad3a8ed76532aa368287d8b3.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

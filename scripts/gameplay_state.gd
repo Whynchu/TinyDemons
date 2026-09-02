@@ -405,6 +405,7 @@ func _is_menu_back_pressed() -> bool: return input_router != null and input_rout
 func _is_menu_back_just_pressed() -> bool: return input_router != null and input_router.menu_back_just_pressed()
 func _is_menu_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.menu_direction_just_pressed(direction)
 func _input_touch_scroll_y() -> float: return input_router.touch_scroll_y() if input_router != null else 0.0
+func _is_touch_input_device() -> bool: return input_device_tracker != null and int(input_device_tracker.get("current_device")) == InputDeviceTracker.Device.TOUCH
 func _menu_confirm_prompt() -> String: return input_device_tracker.menu_confirm_prompt() if input_device_tracker != null else "ENTER SELECT"
 func _menu_back_prompt() -> String: return input_device_tracker.menu_back_prompt() if input_device_tracker != null else "ESC BACK"
 func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)
@@ -454,10 +455,11 @@ func _bind_current_element() -> bool:
 		return false
 	if bool(player_chroma_component.call("current_is_bound")):
 		_show_fire_exchange_text("%s ALREADY BOUND" % String(current).to_upper(), _health_feedback_color(AspectCatalogScript.palette_for_flame(current)))
+		_play_sound("ui_no_input", 0.0, 1.0)
 		return true
 	if not player_profile.bind_element(current):
 		_show_fire_exchange_text("NEED %d SOULS" % ELEMENT_BIND_SOUL_COST, Color8(255, 105, 105))
-		_play_sound("ui_denied", 0.0, 1.0)
+		_play_sound("ui_no_input", 0.0, 1.0)
 		return false
 	player_chroma_component.call("set_bound_flame", current)
 	var palette := AspectCatalogScript.palette_for_flame(current)
@@ -725,8 +727,8 @@ func _hub_allocate_stat(stat_name: StringName) -> void:
 func _hub_points_remaining() -> int: return int(hub_flow_controller.call("hub_points_remaining", self))
 func _hub_confirm_stats() -> void:
 	hub_flow_controller.call("hub_confirm_stats", self)
-func _hub_cancel_stats() -> void:
-	hub_flow_controller.call("hub_cancel_stats", self)
+func _hub_cancel_stats(play_feedback: bool = true) -> void:
+	hub_flow_controller.call("hub_cancel_stats", self, play_feedback)
 func _hub_auto_allocate() -> void:
 	hub_flow_controller.call("hub_auto_allocate", self)
 func _hub_respec() -> void:
@@ -1027,7 +1029,7 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 		return false
 	if player_profile == null or not player_profile.spend_souls(cost):
 		_show_fire_exchange_text("NEED %d SOULS" % cost, Color8(255, 105, 105))
-		_play_sound("ui_denied", 0.0, 1.0)
+		_play_sound("ui_no_input", 0.0, 1.0)
 		return false
 	var applied := false
 	if is_fusion:
@@ -1040,6 +1042,7 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 		player_profile.add_souls(cost)
 		call("_save_player_profile")
 		_update_soul_indicator()
+		_play_sound("ui_no_input", 0.0, 1.0)
 		return false
 	var target_palette := AspectCatalogScript.palette_for_flame(flame)
 	var result_flame := StringName(player_chroma_component.call("aspect_name"))

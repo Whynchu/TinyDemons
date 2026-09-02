@@ -5,6 +5,9 @@ Status: implemented core plan; final polish and future content remain open
 Source of truth:
 
 - [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
+- [`responsive-menus-touch-and-progression-safety-plan.md`](responsive-menus-touch-and-progression-safety-plan.md)
+  records the generated-door reachability amendment for profiles whose actual
+  run-start element is a permanent Bind rather than their starter flame.
 
 This plan turns the Binding/Fusion design into ordered implementation slices.
 It is intentionally separate from the existing elemental combat-matchup work

@@ -27,19 +27,19 @@ func _initialize() -> void:
 		_expect(screens.hub_root_page.is_visible_in_tree() and screens.hub_page_buttons.all(func(button: Button) -> bool: return button.is_visible_in_tree()), "hub root exposes only its command rail", failures)
 		_expect(touch.call("_active_menu_root") == screens.hub_overlay, "touch hit-testing is scoped to the active hub overlay", failures)
 
-		# Every command replaces the root page. Equipment, Shop, and Fusion share
-		# an item-page container, but only that container is active for each route.
+		# The four commands keep the authored top shell visible while replacing the
+		# content preview underneath it.
 		for command_button in screens.hub_page_buttons:
 			var target_page := int(command_button.get_meta("hub_page_target", -1))
 			command_button.pressed.emit()
 			await process_frame
 			var active_page := screens.hub_page_roots.get(target_page) as Control
-			_expect(not screens.hub_root_page.is_visible_in_tree(), "hub root hides while child page %d is active" % target_page, failures)
+			_expect(screens.hub_root_page.is_visible_in_tree(), "hub shell remains visible while child page %d is active" % target_page, failures)
 			_expect(active_page != null and active_page.is_visible_in_tree(), "hub child page %d replaces the root" % target_page, failures)
 			for page_root: Control in screens.hub_page_roots.values():
 				if page_root != active_page:
 					_expect(not page_root.is_visible_in_tree(), "inactive hub page stays hidden", failures)
-			_expect(not screens.hub_page_buttons.any(func(button: Button) -> bool: return button.is_visible_in_tree()), "hub command rail is unavailable on child pages", failures)
+			_expect(screens.hub_page_buttons.all(func(button: Button) -> bool: return button.is_visible_in_tree()), "hub command rail remains available on child pages", failures)
 			_expect(touch.call("_active_menu_root") == screens.hub_overlay, "child hub touch hit-testing remains on the hub route", failures)
 			_set_menu_edge(router, false, true)
 			gameplay.call("_update_hub_input")
