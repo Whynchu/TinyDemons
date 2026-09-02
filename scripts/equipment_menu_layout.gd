@@ -36,6 +36,12 @@ signal navigation_back_pressed
 var _pixel_texture: Callable = Callable()
 var _cached := false
 var _buttons_bound := false
+var _has_render_state := false
+var _last_render_mode := MODE_COMMAND
+var _last_render_action_index := 0
+var _last_render_slot_index := 0
+var _last_render_candidate_index := 0
+var _last_render_confirm_index := 1
 
 var command_buttons: Array[Button] = []
 var slot_buttons: Array[Button] = []
@@ -73,6 +79,8 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_apply_layout()
+		if _has_render_state:
+			render_cursors(_last_render_mode, _last_render_action_index, _last_render_slot_index, _last_render_candidate_index, _last_render_confirm_index)
 
 
 func _cache_nodes() -> void:
@@ -456,6 +464,12 @@ func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible :
 
 
 func render_cursors(mode: int, action_index: int, slot_index: int, candidate_index: int, confirm_index: int = 1) -> void:
+	_has_render_state = true
+	_last_render_mode = mode
+	_last_render_action_index = action_index
+	_last_render_slot_index = slot_index
+	_last_render_candidate_index = candidate_index
+	_last_render_confirm_index = confirm_index
 	if read_only:
 		for cursor in [command_cursor, slot_cursor, candidate_cursor, confirm_cursor, confirm_locked_cursor]:
 			if cursor != null: cursor.visible = false
@@ -533,3 +547,17 @@ func render_mode(mode: int, action_index: int, slot_index: int, candidate_index:
 	var confirm_panel := get_node_or_null("ConfirmPanel") as Control
 	if confirm_panel != null: confirm_panel.visible = mode == MODE_REMOVE_ALL_CONFIRM
 	render_cursors(mode, action_index, slot_index, candidate_index, confirm_index)
+
+
+func refresh_layout_preserving_state(mode: int = -1, action_index: int = -1, slot_index: int = -1, candidate_index: int = -1, confirm_index: int = -1) -> void:
+	_cache_nodes()
+	_apply_layout()
+	# Re-resolve cursor targets from the resized hit rectangles. The mode and
+	# selected indices are route state, so this only changes geometry; active
+	# cursors glide to their new anchors and their existing bobbing resumes.
+	var resolved_mode: int = _last_render_mode if mode < 0 and _has_render_state else MODE_COMMAND if mode < 0 else mode
+	var resolved_action: int = _last_render_action_index if action_index < 0 and _has_render_state else 0 if action_index < 0 else action_index
+	var resolved_slot: int = _last_render_slot_index if slot_index < 0 and _has_render_state else 0 if slot_index < 0 else slot_index
+	var resolved_candidate: int = _last_render_candidate_index if candidate_index < 0 and _has_render_state else 0 if candidate_index < 0 else candidate_index
+	var resolved_confirm: int = _last_render_confirm_index if confirm_index < 0 and _has_render_state else 1 if confirm_index < 0 else confirm_index
+	render_cursors(resolved_mode, resolved_action, resolved_slot, resolved_candidate, resolved_confirm)

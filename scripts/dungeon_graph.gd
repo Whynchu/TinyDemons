@@ -115,6 +115,7 @@ class RoomRecord extends RefCounted:
 	var milestone_dead_end := false
 	var minimap_coordinate := Vector2i.ZERO
 	var chest_count := 0
+	var chest_position := Vector2.ZERO
 	var special_respawn_required_color: StringName = &""
 	var fire_flame: StringName = &""
 	var authored := false
@@ -161,6 +162,7 @@ class RoomRecord extends RefCounted:
 			"milestone_dead_end": milestone_dead_end,
 			"minimap_coordinate": minimap_coordinate,
 			"chest_count": chest_count,
+			"chest_position": chest_position,
 			"special_respawn_required_color": special_respawn_required_color,
 			"fire_flame": fire_flame,
 			"authored": authored,
@@ -169,6 +171,7 @@ class RoomRecord extends RefCounted:
 
 var dungeon_seed: int = 0
 var start_room_id: StringName = START_ROOM_ID
+var layout_id: StringName = &""
 var completed_run_count := 0
 var target_boss_depth := 12
 var tutorial_starter_puzzle_depth := -1
@@ -176,6 +179,7 @@ var tutorial_gray_puzzle_depth := -1
 var authored_run1 := false
 
 var _rooms: Dictionary = {}
+var _rooms_by_coordinate: Dictionary = {}
 var _connections: Dictionary = {}
 var _milestone_rooms: Dictionary = {}
 
@@ -184,9 +188,11 @@ var _milestone_rooms: Dictionary = {}
 func initialize(new_seed: int) -> RoomRecord:
 	dungeon_seed = new_seed
 	authored_run1 = false
+	layout_id = &""
 	_configure_tutorial_puzzle_depths()
 	start_room_id = START_ROOM_ID
 	_rooms.clear()
+	_rooms_by_coordinate.clear()
 	_connections.clear()
 	_milestone_rooms.clear()
 	return _ensure_room(Vector2i.ZERO, ROOM_START)
@@ -196,10 +202,12 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 	if layout == null:
 		return initialize(new_seed)
 	dungeon_seed = new_seed
+	layout_id = layout.layout_id
 	authored_run1 = layout.layout_id == &"RUN1"
 	tutorial_starter_puzzle_depth = -1
 	tutorial_gray_puzzle_depth = -1
 	_rooms.clear()
+	_rooms_by_coordinate.clear()
 	_connections.clear()
 	_milestone_rooms.clear()
 	for spec in layout.rooms:
@@ -208,10 +216,12 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		room.display_number = room.depth
 		room.minimap_coordinate = spec.minimap_coordinate
 		room.chest_count = spec.chest_count
+		room.chest_position = spec.chest_position
 		room.special_respawn_required_color = spec.special_respawn_required_color
 		room.fire_flame = spec.fire_flame
 		room.authored = true
 		_rooms[room.id] = room
+		_rooms_by_coordinate[room.coordinate] = room.id
 		if room.room_type == ROOM_START:
 			start_room_id = room.id
 	for spec in layout.connections:
@@ -287,6 +297,11 @@ func get_room(room_id: StringName) -> RoomRecord:
 	return _rooms.get(room_id) as RoomRecord
 
 
+func get_room_at_coordinate(room_coordinate: Vector2i) -> RoomRecord:
+	var room_id: StringName = _rooms_by_coordinate.get(room_coordinate, &"")
+	return get_room(room_id) if not room_id.is_empty() else null
+
+
 ## Creates a stable connection once, then returns that same record on revisits.
 func ensure_connection(
 	room_id: StringName,
@@ -337,7 +352,35 @@ func get_room_ids() -> Array[StringName]:
 	var room_ids: Array[StringName] = []
 	for room_id: StringName in _rooms:
 		room_ids.append(room_id)
+	room_ids.sort()
 	return room_ids
+
+
+func to_dictionary() -> Dictionary:
+	var room_data: Array[Dictionary] = []
+	for room_id in get_room_ids():
+		var room := get_room(room_id)
+		if room != null:
+			room_data.append(room.to_dictionary())
+	var connection_data: Array[Dictionary] = []
+	var connection_keys: Array[String] = []
+	for key in _connections.keys():
+		connection_keys.append(String(key))
+	connection_keys.sort()
+	for key in connection_keys:
+		var connection := _connections.get(key) as ConnectionRecord
+		if connection != null:
+			connection_data.append(connection.to_dictionary())
+	return {
+		"dungeon_seed": dungeon_seed,
+		"layout_id": layout_id,
+		"start_room_id": start_room_id,
+		"completed_run_count": completed_run_count,
+		"target_boss_depth": target_boss_depth,
+		"authored_run1": authored_run1,
+		"rooms": room_data,
+		"connections": connection_data,
+	}
 
 
 func _ensure_room(room_coordinate: Vector2i, room_type: StringName = ROOM_COMBAT) -> RoomRecord:
@@ -362,6 +405,7 @@ func _ensure_room(room_coordinate: Vector2i, room_type: StringName = ROOM_COMBAT
 	)
 	room.milestone_dead_end = is_milestone and _milestone_rooms[room_coordinate.y] != room_id
 	_rooms[room_id] = room
+	_rooms_by_coordinate[room_coordinate] = room_id
 	return room
 
 

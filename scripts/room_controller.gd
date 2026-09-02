@@ -979,7 +979,7 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 
 func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 	var rest_fire := root.get("rest_fire") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var chest := root.get("chest") as Sprite2D
-	rest_fire.visible = false; var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); demon.visible = false; chest.position = root.get("chest_start_position"); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = show_chest; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false)
+	rest_fire.visible = false; var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); demon.visible = false; chest.position = _chest_position_for_room(root); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = show_chest; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false)
 	var unlock_overlay := root.get("chest_unlock_overlay") as Sprite2D; if unlock_overlay != null: unlock_overlay.queue_free(); root.set("chest_unlock_overlay", null)
 	var flash_overlay := root.get("chest_flash_overlay") as Sprite2D; if flash_overlay != null: flash_overlay.queue_free(); root.set("chest_flash_overlay", null)
 	var collision := root.get("collision_sprites") as Array[Sprite2D]
@@ -990,6 +990,16 @@ func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 	else:
 		collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
 	(root.get("occlusion_renderer") as OcclusionRenderer).sprite_images[chest] = (root.get("occlusion_renderer") as OcclusionRenderer).cached_texture_image(chest.texture)
+
+
+func _chest_position_for_room(root: Object) -> Vector2:
+	var default_position: Vector2 = root.get("chest_start_position")
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var room_id: StringName = StringName(root.get("current_room_id"))
+	var room: DungeonGraph.RoomRecord = graph.get_room(room_id) if graph != null else null
+	if room != null and room.chest_position != Vector2.ZERO:
+		return room.chest_position
+	return default_position
 
 
 func hide_chest_presentation(root: Object) -> void:

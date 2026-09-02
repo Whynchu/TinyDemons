@@ -26,7 +26,7 @@ static func _add_rooms(layout) -> void:
 	_room(layout, &"room_-1_1", Vector2i(-1, 1), Vector2i(6, 19), DungeonGraph.ROOM_ORB)
 	_room(layout, &"room_1_1", Vector2i(1, 1), Vector2i(10, 19), DungeonGraph.ROOM_COMBAT)
 
-	_room(layout, &"room_-2_2", Vector2i(-2, 2), Vector2i(4, 17), DungeonGraph.ROOM_TREASURE, 1)
+	_room(layout, &"room_-2_2", Vector2i(-2, 2), Vector2i(4, 17), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(104, 69))
 	_room(layout, &"room_0_3", Vector2i(0, 3), Vector2i(8, 17), DungeonGraph.ROOM_COMBAT)
 
 	_room(layout, &"room_1_4", Vector2i(1, 4), Vector2i(10, 15), DungeonGraph.ROOM_COMBAT)
@@ -39,13 +39,13 @@ static func _add_rooms(layout) -> void:
 	_room(layout, &"room_0_7", Vector2i(0, 7), Vector2i(8, 9), DungeonGraph.ROOM_COMBAT)
 	_room(layout, &"room_2_7", Vector2i(2, 7), Vector2i(12, 9), DungeonGraph.ROOM_COMBAT)
 
-	_room(layout, &"room_-3_8", Vector2i(-3, 8), Vector2i(4, 9), DungeonGraph.ROOM_TREASURE, 1)
+	_room(layout, &"room_-3_8", Vector2i(-3, 8), Vector2i(4, 9), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(157, 69))
 
 	_room(layout, &"room_-1_9", Vector2i(-1, 9), Vector2i(6, 7), DungeonGraph.ROOM_COMBAT)
 	_room(layout, &"room_1_9", Vector2i(1, 9), Vector2i(10, 7), DungeonGraph.ROOM_COMBAT)
 
 	_room(layout, &"room_-2_11", Vector2i(-2, 11), Vector2i(4, 5), DungeonGraph.ROOM_BOSS)
-	_room(layout, &"room_0_11", Vector2i(0, 11), Vector2i(8, 5), DungeonGraph.ROOM_TREASURE, 1)
+	_room(layout, &"room_0_11", Vector2i(0, 11), Vector2i(8, 5), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(128, 82))
 	_room(layout, &"room_2_11", Vector2i(2, 11), Vector2i(12, 5), DungeonGraph.ROOM_ORB)
 
 
@@ -92,9 +92,10 @@ static func _room(
 	room_type: StringName,
 	chest_count: int = 0,
 	respawn_color: StringName = &"",
-	fire_flame: StringName = &""
+	fire_flame: StringName = &"",
+	chest_position: Vector2 = Vector2.ZERO
 ) -> void:
-	layout.add_room(layout.make_room_spec(id, coordinate, minimap_coordinate, room_type, chest_count, respawn_color, 0, fire_flame))
+	layout.add_room(layout.make_room_spec(id, coordinate, minimap_coordinate, room_type, chest_count, respawn_color, 0, fire_flame, chest_position))
 
 
 static func _link(

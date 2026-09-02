@@ -30,12 +30,27 @@ func _initialize() -> void:
 	_expect(actual_door_pixels == expected_door_pixels, "Run 1 connections use exactly the dark-grey and colored door pixels from the sketch: %s" % str(actual_door_pixels), failures)
 
 	var orb_rooms: Array = []
+	var treasure_rooms: Array = []
 	for room in layout.rooms:
 		if room.room_type == GRAPH_SCRIPT.ROOM_ORB:
 			orb_rooms.append(room)
+		if room.room_type == GRAPH_SCRIPT.ROOM_TREASURE:
+			treasure_rooms.append(room)
 	_expect(orb_rooms.size() == 2, "Run 1 has two Orb Room instances", failures)
 	if orb_rooms.size() == 2:
 		_expect(orb_rooms[0].room_type == orb_rooms[1].room_type, "Orb Room locations share one runtime room type", failures)
+	_expect(treasure_rooms.size() == 3, "Run 1 has three authored Treasure Rooms", failures)
+	var treasure_positions: Dictionary = {}
+	for room in treasure_rooms:
+		_expect(room.chest_count == 1, "each Run 1 Treasure Room declares exactly one chest: %s" % room.id, failures)
+		_expect(room.chest_position != Vector2.ZERO, "each Run 1 Treasure Room has an authored chest position: %s" % room.id, failures)
+		treasure_positions[room.chest_position] = true
+		_expect(layout.room_by_coordinate(room.coordinate).id == room.id, "layout coordinate lookup resolves %s" % room.id, failures)
+		_expect(layout.room_by_minimap_coordinate(room.minimap_coordinate).id == room.id, "layout minimap lookup resolves %s" % room.id, failures)
+	_expect(treasure_positions.size() == treasure_rooms.size(), "Run 1 Treasure Room chest placements are intentionally distinct", failures)
+	var layout_snapshot: Dictionary = layout.to_dictionary()
+	_expect((layout_snapshot.get("rooms", []) as Array).size() == layout.rooms.size(), "layout serialization includes every authored room", failures)
+	_expect((layout_snapshot.get("connections", []) as Array).size() == layout.connections.size(), "layout serialization includes every authored connection", failures)
 
 	var requirements: Dictionary = {}
 	for connection in layout.connections:
@@ -72,6 +87,10 @@ func _initialize() -> void:
 	var graph = GRAPH_SCRIPT.new()
 	var controller = MAP_CONTROLLER_SCRIPT.new()
 	controller.begin_run(graph, 90210, 0)
+	_expect(graph.get_room_at_coordinate(Vector2i(-2, 2)).id == &"room_-2_2", "runtime graph coordinate lookup resolves authored rooms", failures)
+	var graph_snapshot: Dictionary = graph.to_dictionary()
+	_expect((graph_snapshot.get("rooms", []) as Array).size() == layout.rooms.size(), "runtime graph serialization includes every room", failures)
+	_expect((graph_snapshot.get("connections", []) as Array).size() == layout.connections.size(), "runtime graph serialization includes every connection", failures)
 	_expect(controller.current_color() == MAP_STATE_SCRIPT.PUZZLE_COLOR_B, "Run 1 begins in the grey puzzle state", failures)
 	_expect(controller.shared_orb_puzzle_color() == MAP_STATE_SCRIPT.PUZZLE_COLOR_B, "both Orb Rooms begin with the grey shared state", failures)
 	_expect(controller.orb_display_palette() == &"grey", "Orb Rooms begin with grey in-world orbs", failures)

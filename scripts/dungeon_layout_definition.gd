@@ -16,6 +16,10 @@ class RoomSpec extends RefCounted:
 	var minimap_coordinate := Vector2i.ZERO
 	var room_type: StringName = DungeonGraph.ROOM_COMBAT
 	var chest_count := 0
+	## Local room-space placement for the authored chest. A zero vector means
+	## that the runtime prefab default should be used (the generated grammar does
+	## not need bespoke placement for every optional reward branch).
+	var chest_position := Vector2.ZERO
 	var special_respawn_required_color: StringName = &""
 	var fire_flame: StringName = &""
 	var seed_salt := 0
@@ -28,16 +32,32 @@ class RoomSpec extends RefCounted:
 		new_chest_count: int = 0,
 		new_respawn_color: StringName = &"",
 		new_seed_salt: int = 0,
-		new_fire_flame: StringName = &""
+		new_fire_flame: StringName = &"",
+		new_chest_position: Vector2 = Vector2.ZERO
 	) -> void:
 		id = new_id
 		coordinate = new_coordinate
 		minimap_coordinate = new_minimap_coordinate
 		room_type = new_room_type
 		chest_count = new_chest_count
+		chest_position = new_chest_position
 		special_respawn_required_color = new_respawn_color
 		seed_salt = new_seed_salt
 		fire_flame = new_fire_flame
+
+
+	func to_dictionary() -> Dictionary:
+		return {
+			"id": id,
+			"coordinate": coordinate,
+			"minimap_coordinate": minimap_coordinate,
+			"room_type": room_type,
+			"chest_count": chest_count,
+			"chest_position": chest_position,
+			"special_respawn_required_color": special_respawn_required_color,
+			"fire_flame": fire_flame,
+			"seed_salt": seed_salt,
+		}
 
 
 class ConnectionSpec extends RefCounted:
@@ -113,6 +133,26 @@ class ConnectionSpec extends RefCounted:
 		return DungeonGraph.GATE_NONE
 
 
+	func to_dictionary() -> Dictionary:
+		return {
+			"source_room_id": source_room_id,
+			"exit_socket": exit_socket,
+			"destination_room_id": destination_room_id,
+			"destination_entry": destination_entry,
+			"color_requirement": color_requirement,
+			"hidden_until_clear": hidden_until_clear,
+			"hidden_until_event": hidden_until_event,
+			"minimap_coordinate": minimap_coordinate,
+			"requires_source_room_clear": requires_source_room_clear,
+			"allow_entry_before_source_clear": allow_entry_before_source_clear,
+			"locks_entry_on_destination_engagement": locks_entry_on_destination_engagement,
+			"route_role": route_role,
+			"element_requirement": element_requirement,
+			"gate_type": resolved_gate_type(),
+			"orb_element_requirement": orb_element_requirement,
+		}
+
+
 var layout_id: StringName = &""
 var map_size := Vector2i(16, 23)
 var rooms: Array[RoomSpec] = []
@@ -138,9 +178,10 @@ func make_room_spec(
 	new_chest_count: int = 0,
 	new_respawn_color: StringName = &"",
 	new_seed_salt: int = 0,
-	new_fire_flame: StringName = &""
+	new_fire_flame: StringName = &"",
+	new_chest_position: Vector2 = Vector2.ZERO
 ) -> RoomSpec:
-	return RoomSpec.new(new_id, new_coordinate, new_minimap_coordinate, new_room_type, new_chest_count, new_respawn_color, new_seed_salt, new_fire_flame)
+	return RoomSpec.new(new_id, new_coordinate, new_minimap_coordinate, new_room_type, new_chest_count, new_respawn_color, new_seed_salt, new_fire_flame, new_chest_position)
 
 
 func add_connection(spec: ConnectionSpec) -> ConnectionSpec:
@@ -222,6 +263,36 @@ func room_by_id(room_id: StringName) -> RoomSpec:
 	return null
 
 
+func room_by_coordinate(room_coordinate: Vector2i) -> RoomSpec:
+	for spec in rooms:
+		if spec.coordinate == room_coordinate:
+			return spec
+	return null
+
+
+func room_by_minimap_coordinate(map_coordinate: Vector2i) -> RoomSpec:
+	for spec in rooms:
+		if spec.minimap_coordinate == map_coordinate:
+			return spec
+	return null
+
+
+func to_dictionary() -> Dictionary:
+	var room_data: Array[Dictionary] = []
+	for spec in rooms:
+		room_data.append(spec.to_dictionary())
+	var connection_data: Array[Dictionary] = []
+	for spec in connections:
+		connection_data.append(spec.to_dictionary())
+	return {
+		"layout_id": layout_id,
+		"map_size": map_size,
+		"rooms": room_data,
+		"connections": connection_data,
+		"decorative_door_pixels": decorative_door_pixels.duplicate(true),
+	}
+
+
 func validate() -> Array[String]:
 	var errors: Array[String] = []
 	var room_ids: Dictionary = {}
@@ -231,10 +302,14 @@ func validate() -> Array[String]:
 	var cloaked_count := 0
 	var orb_room_count := 0
 	var connection_sockets: Dictionary = {}
+	var coordinates: Dictionary = {}
 	for spec in rooms:
 		if room_ids.has(spec.id):
 			errors.append("duplicate room id: %s" % spec.id)
 		room_ids[spec.id] = true
+		if coordinates.has(spec.coordinate):
+			errors.append("duplicate room coordinate: %s" % spec.coordinate)
+		coordinates[spec.coordinate] = true
 		if minimap_coordinates.has(spec.minimap_coordinate):
 			errors.append("duplicate minimap coordinate: %s" % spec.minimap_coordinate)
 		minimap_coordinates[spec.minimap_coordinate] = true
@@ -246,6 +321,12 @@ func validate() -> Array[String]:
 			cloaked_count += 1
 		if spec.room_type == DungeonGraph.ROOM_ORB:
 			orb_room_count += 1
+		if spec.chest_count < 0:
+			errors.append("room has a negative chest count: %s" % spec.id)
+		if spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_count != 1:
+			errors.append("Treasure Room must contain exactly one chest: %s" % spec.id)
+		if layout_id == &"RUN1" and spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_position == Vector2.ZERO:
+			errors.append("Run 1 Treasure Room is missing an authored chest placement: %s" % spec.id)
 		if spec.room_type == DungeonGraph.ROOM_FIRE and layout_id == &"RUN_GENERATED" and spec.fire_flame.is_empty():
 			errors.append("generated Fire Room is missing a flame: %s" % spec.id)
 		if spec.room_type == DungeonGraph.ROOM_FIRE and not spec.fire_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(spec.fire_flame):
@@ -258,6 +339,29 @@ func validate() -> Array[String]:
 		errors.append("expected exactly one Cloaked room")
 	if layout_id == &"RUN1" and orb_room_count != 2:
 		errors.append("Run 1 expects exactly two identical Orb Rooms")
+	if not rooms.is_empty() and start_count == 1:
+		var reachable: Dictionary = {}
+		var pending: Array[StringName] = []
+		for spec in rooms:
+			if spec.room_type == DungeonGraph.ROOM_START:
+				reachable[spec.id] = true
+				pending.append(spec.id)
+		while not pending.is_empty():
+			var room_id: StringName = pending.pop_back() as StringName
+			for connection in connections:
+				var adjacent_id: StringName = &""
+				if connection.source_room_id == room_id:
+					adjacent_id = connection.destination_room_id
+				elif connection.destination_room_id == room_id:
+					adjacent_id = connection.source_room_id
+				if adjacent_id.is_empty() or reachable.has(adjacent_id):
+					continue
+				reachable[adjacent_id] = true
+				pending.append(adjacent_id)
+		if reachable.size() != room_ids.size():
+			for room_id in room_ids:
+				if not reachable.has(room_id):
+					errors.append("room is unreachable from the Hub: %s" % room_id)
 	for spec in connections:
 		if not room_ids.has(spec.source_room_id):
 			errors.append("connection source is missing: %s" % spec.source_room_id)

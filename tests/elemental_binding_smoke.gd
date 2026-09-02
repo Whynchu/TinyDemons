@@ -75,12 +75,12 @@ func _initialize() -> void:
 		for starter in [&"fire", &"water", &"electric"]:
 			var sampled_layout = GENERATOR_SCRIPT.build(607001 + completed_runs * 13 + String(starter).hash(), completed_runs, starter)
 			var sampled_errors: Array[String] = GENERATOR_SCRIPT.validate(sampled_layout, completed_runs, starter)
-			_expect(sampled_errors.is_empty(), "Run %d %s fusion curriculum validates" % [completed_runs + 1, starter], failures)
+			_expect(sampled_errors.is_empty(), "Run %d %s fusion curriculum validates: %s" % [completed_runs + 1, starter, "; ".join(sampled_errors)], failures)
 			var sampled_gate_count := 0
 			for sampled_connection in sampled_layout.connections:
 				if sampled_connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
 					sampled_gate_count += 1
-			var expected_gate_count := 1 if completed_runs < 7 else 2
+			var expected_gate_count := 1
 			_expect(sampled_gate_count == expected_gate_count, "Run %d %s has its expected fusion gate count" % [completed_runs + 1, starter], failures)
 			if completed_runs >= 7:
 				var late_gate_source_id: StringName = &""
@@ -130,6 +130,15 @@ func _initialize() -> void:
 		_expect(not orb_room_id.is_empty(), "R6 exposes an Orb Room for the fusion gate", failures)
 		if not orb_room_id.is_empty():
 			map.on_room_entered(orb_room_id)
+			var starter_color_gate := _find_color_connection(graph, &"puzzle_a")
+			if solved_color_gate != null and starter_color_gate != null:
+				map.on_room_completed(starter_color_gate.source_room_id)
+				_expect(map.change_orb_from_palette(orb_room_id, "red"), "magic changes the shared Orb state to the starter element", failures)
+				_expect(map.connection_visual_state(starter_color_gate) == &"open", "the matching elemental color door opens", failures)
+				_expect(map.connection_visual_state(solved_color_gate) == &"orb_locked", "the Grey door closes while the elemental state is active", failures)
+				_expect(map.change_orb_from_palette(orb_room_id, "grey"), "a normal sword strike restores the Grey world state", failures)
+				_expect(map.connection_visual_state(solved_color_gate) == &"open", "the Grey door opens after the normal reset", failures)
+				_expect(map.connection_visual_state(starter_color_gate) == &"orb_locked", "the elemental door relocks after the normal reset", failures)
 			_expect(map.change_orb_from_palette(orb_room_id, "green"), "R6 Orb Room accepts a wrong elemental charge without opening Shadow", failures)
 			_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "wrong mixed result does not open the Shadow entrance gate", failures)
 			_expect(map.change_orb_from_palette(orb_room_id, required_palette), "R6 Orb Room accepts the matching mixed result", failures)
@@ -137,12 +146,12 @@ func _initialize() -> void:
 			_expect(map.connection_visual_state(runtime_gate) == &"open", "matching Orb charge opens the R6 entrance gate", failures)
 			_expect(map.current_color() == MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL and map.shared_orb_puzzle_color() == MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL, "mixed Orb charge clears the ordinary puzzle-color key", failures)
 			if solved_color_gate != null:
-				_expect(map.connection_visual_state(solved_color_gate) == &"open", "an ordinary door solved before fusion stays open", failures)
+				_expect(map.connection_visual_state(solved_color_gate) == &"orb_locked", "an ordinary color door relocks when its world state is no longer active", failures)
 			if unsolved_color_gate != null:
 				_expect(map.connection_visual_state(unsolved_color_gate) == &"orb_locked", "an unsolved ordinary door does not inherit the mixed result", failures)
-			_expect(map.change_orb_from_palette(orb_room_id, "green"), "Orb Room can change to another world state", failures)
+			_expect(map.change_orb_from_palette(orb_room_id, "red"), "Orb Room can change from Shadow to its Fire ingredient", failures)
 			_expect(not map.is_connection_available(runtime_gate), "entrance-orb door relocks when the shared Orb state changes", failures)
-			_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "entrance-orb door shows locked after the shared Orb state changes", failures)
+			_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "a fusion ingredient cannot satisfy the distinct Shadow world state", failures)
 			_expect(map.change_orb_from_palette(orb_room_id, required_palette), "Orb Room can restore the required world state", failures)
 			_expect(map.is_connection_available(runtime_gate), "entrance-orb door reopens when its required world state returns", failures)
 	for completed_runs in [5, 6, 7]:

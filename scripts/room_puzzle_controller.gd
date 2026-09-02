@@ -477,7 +477,7 @@ func activate_orb_room_orb(root: Object, orb: Sprite2D, world_position: Vector2,
 	# The Orb Room is a single shared-state object, not a local two-orb puzzle.
 	# Starter/earned palettes update the strategic puzzle-color key. Mixed
 	# elemental palettes update the shared room presentation, clear the ordinary
-	# puzzle key, and latch any matching entrance-orb doors.
+	# puzzle key. Entrance-orb doors read this exact live state; they never latch.
 	var changed_shared_orb := bool(root.call("_change_orb_palette_from_room", palette))
 	if changed_shared_orb:
 		# Changing the shared map state rebuilds this orb immediately. Feedback
