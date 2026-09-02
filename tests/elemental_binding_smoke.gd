@@ -140,8 +140,11 @@ func _initialize() -> void:
 				_expect(map.connection_visual_state(solved_color_gate) == &"open", "an ordinary door solved before fusion stays open", failures)
 			if unsolved_color_gate != null:
 				_expect(map.connection_visual_state(unsolved_color_gate) == &"orb_locked", "an unsolved ordinary door does not inherit the mixed result", failures)
-			map.set_current_element(ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)
-			_expect(map.is_connection_available(runtime_gate), "solved entrance-orb door stays open after the element changes", failures)
+			_expect(map.change_orb_from_palette(orb_room_id, "green"), "Orb Room can change to another world state", failures)
+			_expect(not map.is_connection_available(runtime_gate), "entrance-orb door relocks when the shared Orb state changes", failures)
+			_expect(map.connection_visual_state(runtime_gate) == &"orb_locked", "entrance-orb door shows locked after the shared Orb state changes", failures)
+			_expect(map.change_orb_from_palette(orb_room_id, required_palette), "Orb Room can restore the required world state", failures)
+			_expect(map.is_connection_available(runtime_gate), "entrance-orb door reopens when its required world state returns", failures)
 	for completed_runs in [5, 6, 7]:
 		var curriculum_graph := GRAPH_SCRIPT.new()
 		var curriculum_map := MAP_CONTROLLER_SCRIPT.new()

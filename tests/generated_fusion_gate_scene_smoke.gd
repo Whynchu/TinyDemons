@@ -45,7 +45,11 @@ func _initialize() -> void:
 			_expect(map.call("connection_visual_state", gate, false) == &"open", "matching Orb charge opens the R6 scene gate", failures)
 			chroma.call("spend_chroma", 100)
 			gameplay.call("_sync_current_element_state")
-			_expect(map.call("connection_visual_state", gate, false) == &"open", "opened R6 fusion gate remains latched after Chroma depletion", failures)
+			_expect(map.call("connection_visual_state", gate, false) == &"open", "entrance-orb gate remains open while its world state is unchanged", failures)
+			map.call("change_orb_from_palette", orb_room_id, "green")
+			_expect(map.call("connection_visual_state", gate, false) == &"orb_locked", "entrance-orb gate relocks when the world state changes", failures)
+			map.call("change_orb_from_palette", orb_room_id, required_palette)
+			_expect(map.call("connection_visual_state", gate, false) == &"open", "entrance-orb gate reopens when its required world state returns", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
