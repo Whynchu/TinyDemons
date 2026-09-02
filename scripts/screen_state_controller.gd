@@ -317,6 +317,7 @@ var settings_row := 0
 var settings_origin := &"title"
 var settings_interact_input_was_down := false
 var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
+var _display_layout_refreshing := false
 
 
 func apply_display_layout(root: Object) -> void:
@@ -368,7 +369,7 @@ func apply_display_layout(root: Object) -> void:
 	if hub_overlay != null:
 		hub_overlay.position = Vector2.ZERO
 		hub_overlay.size = display_view_size
-		_position_hub_controls()
+		_position_hub_controls(true)
 	if settings_overlay != null:
 		settings_overlay.size = display_view_size
 		_position_settings_controls()
@@ -381,7 +382,8 @@ func apply_display_layout(root: Object) -> void:
 		pause_overlay.position = Vector2.ZERO
 		pause_overlay.size = display_view_size
 		_resize_menu_frame(pause_overlay, display_view_size)
-		_position_pause_controls()
+		_position_pause_controls(true)
+	_refresh_active_menu_layout(root)
 	var game_over_button := root.get("game_over_button") as Button
 	var game_over_title_button := root.get("game_over_title_button") as Button
 	if game_over_button != null:
@@ -414,6 +416,25 @@ func _view_size_for_parent(parent: Node) -> Vector2:
 
 func layout_view_size() -> Vector2:
 	return display_view_size
+
+
+func _hub_left_field_x(native_x: float) -> float:
+	return PauseMenuLayoutScript.left_field_x(native_x, display_view_size.x)
+
+
+func _refresh_active_menu_layout(root: Object) -> void:
+	if _display_layout_refreshing:
+		return
+	_display_layout_refreshing = true
+	# apply_display_layout has already moved every static hub/pause node. The
+	# active Hub cursors are re-anchored by _position_hub_controls; no
+	# presenter is rebuilt, so scroll offsets, selected rows, draft allocations,
+	# and in-progress animations survive an orientation change.
+	if hub_overlay != null and hub_overlay.visible and hub_equipment_menu != null and hub_equipment_menu.visible and hub_equipment_menu.has_method("refresh_layout_preserving_state"):
+		hub_equipment_menu.call("refresh_layout_preserving_state")
+	if pause_overlay != null and pause_overlay.visible and pause_equipment_menu != null and pause_equipment_menu.visible and pause_equipment_menu.has_method("refresh_layout_preserving_state"):
+		pause_equipment_menu.call("refresh_layout_preserving_state")
+	_display_layout_refreshing = false
 
 
 func create_view_overlay(parent: Node, overlay_name: String, color: Color, z_index: int, visible: bool = true) -> ColorRect:
@@ -1509,7 +1530,7 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "equipment_menu": pause_equipment_menu, "description": description, "back": back, "status_button": buttons[0], "equipment_button": buttons[1]}
 
 
-func _position_hub_controls() -> void:
+func _position_hub_controls(animate_cursor: bool = false) -> void:
 	if hub_overlay == null:
 		return
 	var width := display_view_size.x
@@ -1571,22 +1592,22 @@ func _position_hub_controls() -> void:
 		hub_page_buttons[index].size = Vector2(authored_width, 12.0)
 	if hub_back_button != null: hub_back_button.position = PauseMenuLayoutScript.back_button_position(display_view_size)
 	if hub_player_card_panel != null:
-		hub_player_card_panel.position = Vector2(10, 27)
+		hub_player_card_panel.position = Vector2(_hub_left_field_x(10.0), 27)
 		hub_player_card_panel.size = Vector2(minf(150.0, maxf(136.0, width - 100.0)), 72)
 	for index in hub_player_card_texts.size():
-		hub_player_card_texts[index].position = Vector2(16, 33 + index * 10)
+		hub_player_card_texts[index].position = Vector2(_hub_left_field_x(16.0), 33 + index * 10)
 	var summary := hub_overlay.get_node_or_null("HubRootPage/HubSummary") as Sprite2D
 	if summary != null:
-		summary.position = Vector2(16, 106)
+		summary.position = Vector2(_hub_left_field_x(16.0), 106)
 		summary.texture = null
 		summary.visible = false
-	if hub_points_text != null: hub_points_text.position = Vector2(14, 27)
-	if hub_back_prompt_text != null: hub_back_prompt_text.position = Vector2(136, 141)
-	if hub_context_text != null: hub_context_text.position = Vector2(136, 151)
+	if hub_points_text != null: hub_points_text.position = Vector2(_hub_left_field_x(14.0), 27)
+	if hub_back_prompt_text != null: hub_back_prompt_text.position = Vector2(_hub_left_field_x(136.0), 141)
+	if hub_context_text != null: hub_context_text.position = Vector2(_hub_left_field_x(136.0), 151)
 	var allocation_preview_x := maxf(132.0, width - 108.0)
 	var allocation_left_width := maxf(108.0, allocation_preview_x - 24.0)
 	if hub_allocate_panel != null:
-		hub_allocate_panel.position = Vector2(14, 35)
+		hub_allocate_panel.position = Vector2(_hub_left_field_x(14.0), 35)
 		hub_allocate_panel.size = Vector2(allocation_left_width, 72)
 	if hub_allocate_preview_panel != null:
 		hub_allocate_preview_panel.position = Vector2(allocation_preview_x, 35)
@@ -1594,40 +1615,45 @@ func _position_hub_controls() -> void:
 	if hub_allocate_preview_title != null: hub_allocate_preview_title.position = Vector2(allocation_preview_x + 6.0, 40)
 	for index in hub_allocate_preview_texts.size(): hub_allocate_preview_texts[index].position = Vector2(allocation_preview_x + 6.0, 47 + index * 8)
 	for index in hub_derived_texts.size():
-		hub_derived_texts[index].position = Vector2(DERIVED_LABEL_X, DERIVED_LABEL_TOP + index * DERIVED_ROW_PITCH)
+		hub_derived_texts[index].position = Vector2(_hub_left_field_x(DERIVED_LABEL_X), DERIVED_LABEL_TOP + index * DERIVED_ROW_PITCH)
 		if index < hub_derived_value_texts.size():
-			hub_derived_value_texts[index].position = Vector2(DERIVED_VALUE_RIGHT_ANCHOR - 40.0, DERIVED_LABEL_TOP + index * DERIVED_ROW_PITCH)
+			var derived_texture_width: float = float(hub_derived_value_texts[index].texture.get_width()) if hub_derived_value_texts[index].texture != null else 40.0
+			hub_derived_value_texts[index].position = Vector2(_hub_left_field_x(DERIVED_VALUE_RIGHT_ANCHOR) - derived_texture_width, DERIVED_LABEL_TOP + index * DERIVED_ROW_PITCH)
 	for index in hub_stat_texts.size():
 		var y := STAT_LABEL_TOP + index * STAT_ROW_PITCH
-		hub_stat_texts[index].position = Vector2(STAT_LABEL_X, y)
-		if index < hub_stat_value_texts.size(): hub_stat_value_texts[index].position = Vector2(STAT_VALUE_RIGHT_ANCHOR - 4.0, y)
+		hub_stat_texts[index].position = Vector2(_hub_left_field_x(STAT_LABEL_X), y)
+		if index < hub_stat_value_texts.size():
+			var stat_texture_width: float = float(hub_stat_value_texts[index].texture.get_width()) if hub_stat_value_texts[index].texture != null else 4.0
+			hub_stat_value_texts[index].position = Vector2(_hub_left_field_x(STAT_VALUE_RIGHT_ANCHOR) - stat_texture_width, y)
 		if index < hub_stat_row_buttons.size():
-			hub_stat_row_buttons[index].position = Vector2(STAT_CURSOR_X, y - 5.0)
-			hub_stat_row_buttons[index].size = Vector2(maxf(18.0, STAT_ROW_RIGHT_ARROW_X + 9.0 - STAT_CURSOR_X), 12)
-		if index < hub_stat_left_buttons.size(): hub_stat_left_buttons[index].position = Vector2(STAT_ROW_LEFT_ARROW_X, y - 5.0)
-		if index < hub_stat_right_buttons.size(): hub_stat_right_buttons[index].position = Vector2(STAT_ROW_RIGHT_ARROW_X, y - 5.0)
+			hub_stat_row_buttons[index].position = Vector2(_hub_left_field_x(STAT_CURSOR_X), y - 5.0)
+			hub_stat_row_buttons[index].size = Vector2(maxf(18.0, _hub_left_field_x(STAT_ROW_RIGHT_ARROW_X + 9.0) - _hub_left_field_x(STAT_CURSOR_X)), 12)
+		if index < hub_stat_left_buttons.size(): hub_stat_left_buttons[index].position = Vector2(_hub_left_field_x(STAT_ROW_LEFT_ARROW_X), y - 5.0)
+		if index < hub_stat_right_buttons.size(): hub_stat_right_buttons[index].position = Vector2(_hub_left_field_x(STAT_ROW_RIGHT_ARROW_X), y - 5.0)
 	var utility_x := [44.0, 79.0, 114.0, 149.0]
 	var utility_buttons: Array[Button] = [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button]
 	for index in utility_buttons.size():
-		if utility_buttons[index] != null: utility_buttons[index].position = Vector2(utility_x[index], STAT_UTILITY_Y)
+		if utility_buttons[index] != null: utility_buttons[index].position = Vector2(_hub_left_field_x(utility_x[index]), STAT_UTILITY_Y)
 	for index in hub_status_texts.size():
 		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
 		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
-		hub_status_texts[index].position = Vector2(14 + column * width * 0.5, 42 + row * 10)
+		var authored_x: float = 14.0 if column == 0 else 122.0
+		hub_status_texts[index].position = Vector2(_hub_left_field_x(authored_x), 42 + row * 10)
 	# The item labels and their touch rows share a bounded left column. The
 	# previous width calculation grew from the viewport width independently of
 	# the stat card, so a wide display could let item text/buttons enter the
 	# card's space. Keep a ten-pixel gutter between the two regions.
-	var gear_x := maxf(174.0, width * 0.58)
-	var list_width := maxf(120.0, gear_x - 24.0)
+	var gear_x: float = maxf(_hub_left_field_x(174.0), width * 0.58)
+	var list_left: float = _hub_left_field_x(14.0)
+	var list_width: float = maxf(120.0, gear_x - list_left - 10.0)
 	var equipment_page := hub_page == HUB_PAGE_EQUIPMENT
 	var list_height := 54.0 if equipment_page else 62.0
 	var item_row_pitch := 9.0 if equipment_page else 10.0
 	if hub_item_list_panel != null:
-		hub_item_list_panel.position = Vector2(14, 35)
+		hub_item_list_panel.position = Vector2(_hub_left_field_x(14.0), 35)
 		hub_item_list_panel.size = Vector2(list_width, list_height)
 	if hub_item_content_clip != null:
-		hub_item_content_clip.position = Vector2(14, 35)
+		hub_item_content_clip.position = Vector2(_hub_left_field_x(14.0), 35)
 		hub_item_content_clip.size = Vector2(list_width, list_height)
 	for index in hub_item_list_texts.size():
 		hub_item_list_texts[index].position = Vector2(6, 4 + index * item_row_pitch)
@@ -1645,10 +1671,10 @@ func _position_hub_controls() -> void:
 			hub_gear_choice_buttons[index].position = Vector2(0, index * 10)
 			hub_gear_choice_buttons[index].size = Vector2(list_width, 10)
 	if hub_gear_choice_panel != null:
-		hub_gear_choice_panel.position = Vector2(14, 91)
+		hub_gear_choice_panel.position = Vector2(_hub_left_field_x(14.0), 91)
 		hub_gear_choice_panel.size = Vector2(list_width, 42)
 	if hub_gear_choice_content_clip != null:
-		hub_gear_choice_content_clip.position = Vector2(14, 91)
+		hub_gear_choice_content_clip.position = Vector2(_hub_left_field_x(14.0), 91)
 		hub_gear_choice_content_clip.size = Vector2(list_width, 42)
 	if hub_gear_stat_panel != null:
 		hub_gear_stat_panel.position = Vector2(gear_x, 35)
@@ -1661,27 +1687,50 @@ func _position_hub_controls() -> void:
 		hub_item_detail_panel.position = Vector2(14, HUB_GEAR_BROWSE_DETAIL_TOP - 2.0 if gear_browse_details else HUB_ITEM_DETAIL_PANEL_TOP)
 		hub_item_detail_panel.size = Vector2(maxf(width - 28.0, 80.0), 11.0 if gear_browse_details else HUB_ITEM_DETAIL_PANEL_HEIGHT)
 	var detail_top := HUB_GEAR_BROWSE_DETAIL_TOP if gear_browse_details else HUB_ITEM_DETAIL_TOP
-	for index in hub_item_detail_texts.size(): hub_item_detail_texts[index].position = Vector2(20, detail_top + index * HUB_ITEM_DETAIL_PITCH)
-	if hub_item_name_text != null: hub_item_name_text.position = Vector2(14, 25)
+	if hub_item_detail_panel != null:
+		hub_item_detail_panel.position.x = list_left
+		hub_item_detail_panel.size.x = maxf(width - list_left - 14.0, 80.0)
+	for index in hub_item_detail_texts.size(): hub_item_detail_texts[index].position = Vector2(_hub_left_field_x(20.0), detail_top + index * HUB_ITEM_DETAIL_PITCH)
+	if hub_item_name_text != null: hub_item_name_text.position = Vector2(_hub_left_field_x(14.0), 25)
 	if hub_item_action_button != null: hub_item_action_button.position = Vector2(maxf(96.0, width - 144.0), 21)
 	for index in hub_equipment_action_buttons.size():
-		hub_equipment_action_buttons[index].position = Vector2([14.0, 64.0, 122.0][mini(index, 2)], 22)
-	if hub_fusion_decrease_button != null: hub_fusion_decrease_button.position = Vector2(14, 119)
-	if hub_fusion_increase_button != null: hub_fusion_increase_button.position = Vector2(39, 119)
+		hub_equipment_action_buttons[index].position = Vector2(_hub_left_field_x([14.0, 64.0, 122.0][mini(index, 2)]), 22)
+	if hub_fusion_decrease_button != null: hub_fusion_decrease_button.position = Vector2(_hub_left_field_x(14.0), 119)
+	if hub_fusion_increase_button != null: hub_fusion_increase_button.position = Vector2(_hub_left_field_x(39.0), 119)
 	if hub_binding_panel != null:
-		hub_binding_panel.position = Vector2(14, 33)
-		hub_binding_panel.size = Vector2(maxf(width - 28.0, 80.0), 72)
-	for index in hub_binding_texts.size(): hub_binding_texts[index].position = Vector2(22, 41 + index * (12 if index < 4 else 14))
+		hub_binding_panel.position = Vector2(_hub_left_field_x(14.0), 33)
+		hub_binding_panel.size = Vector2(maxf(width - hub_binding_panel.position.x - 14.0, 80.0), 72)
+	for index in hub_binding_texts.size(): hub_binding_texts[index].position = Vector2(_hub_left_field_x(22.0), 41 + index * (12 if index < 4 else 14))
 	if hub_binding_action_button != null: hub_binding_action_button.position = Vector2(width - 78.0, 119)
 	if hub_equipment_menu != null:
 		hub_equipment_menu.position = Vector2.ZERO
 		hub_equipment_menu.size = display_view_size
 	if hub_cursor_text != null and not hub_page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, hub_page_buttons.size() - 1)
-		move_menu_cursor(hub_cursor_text, Vector2(hub_page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, hub_page_buttons[cursor_index].position.y + 3.0), false)
+		move_menu_cursor(hub_cursor_text, Vector2(hub_page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, hub_page_buttons[cursor_index].position.y + 3.0), animate_cursor)
+	_reanchor_hub_legacy_cursors(animate_cursor)
 
 
-func _position_pause_controls() -> void:
+func _reanchor_hub_legacy_cursors(animate_cursor: bool = false) -> void:
+	if hub_stat_cursor_text != null and hub_stat_cursor_text.visible:
+		if hub_stat_row < 6:
+			move_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(STAT_CURSOR_X), STAT_LABEL_TOP - 1.0 + hub_stat_row * STAT_ROW_PITCH), animate_cursor)
+		else:
+			var utility_x: Array[float] = [44.0, 79.0, 114.0, 149.0]
+			var utility_index: int = clampi(hub_action_column, 0, utility_x.size() - 1)
+			move_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(utility_x[utility_index]) - 16.0, 119.0), animate_cursor)
+	var list_cursor_x: float = _hub_left_field_x(20.0) - CURSOR_LEFT_GAP
+	for cursor in [hub_list_cursor, hub_slot_cursor, hub_choice_cursor]:
+		if cursor == null or not cursor.visible:
+			continue
+		# Their vertical targets are calculated by the active presenter and do not
+		# change with orientation. Preserve the current y while replacing the
+		# stale native x origin; the +2 compensates for move_menu_cursor's shared
+		# vertical raise so an in-progress bob is not shifted vertically.
+		move_menu_cursor(cursor, Vector2(list_cursor_x, cursor.position.y + CURSOR_VERTICAL_RAISE), animate_cursor)
+
+
+func _position_pause_controls(animate_cursor: bool = false) -> void:
 	if pause_overlay == null:
 		return
 	var width := display_view_size.x
@@ -1731,7 +1780,7 @@ func _position_pause_controls() -> void:
 	_position_pause_resource_texts()
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
-		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0), false)
+		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor)
 
 
 func _position_pause_resource_texts() -> void:
@@ -1897,9 +1946,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 			if hub_stat_row < 6:
 				# The stat-row hand sits one pixel above its previous alignment so its
 				# fingertip centers on the five-pixel stat glyphs from the reference.
-				move_menu_cursor(hub_stat_cursor_text, Vector2(STAT_CURSOR_X, STAT_LABEL_TOP - 1.0 + hub_stat_row * STAT_ROW_PITCH))
+				move_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(STAT_CURSOR_X), STAT_LABEL_TOP - 1.0 + hub_stat_row * STAT_ROW_PITCH))
 			else:
-				move_menu_cursor(hub_stat_cursor_text, Vector2([44.0, 79.0, 114.0, 149.0][hub_action_column] - 16.0, 119.0))
+				var utility_x: Array[float] = [44.0, 79.0, 114.0, 149.0]
+				var utility_index: int = clampi(hub_action_column, 0, utility_x.size() - 1)
+				move_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(utility_x[utility_index]) - 16.0, 119.0))
 	var title := hub_root_page.get_node_or_null("Title") as Sprite2D if hub_root_page != null else null
 	if title != null:
 		var title_texture := pixel_texture.call("DEMON HUB", Color.WHITE) as Texture2D
@@ -2081,7 +2132,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 			# Match the derived-stat column: values hang from a shared right edge.
 			# The edge is six pixels farther right than the previous layout.
 			if value_sprite.texture != null:
-				value_sprite.position = Vector2(STAT_VALUE_RIGHT_ANCHOR - float(value_sprite.texture.get_width()), STAT_LABEL_TOP + index * STAT_ROW_PITCH)
+				value_sprite.position = Vector2(_hub_left_field_x(STAT_VALUE_RIGHT_ANCHOR) - float(value_sprite.texture.get_width()), STAT_LABEL_TOP + index * STAT_ROW_PITCH)
 	# Position +/- markers on the selected row and hide the arrows on that row
 	# The +/- glyphs replace the left/right arrows on the selected row. They are
 	# centered vertically on the stat row text and horizontally in the arrow
@@ -2091,11 +2142,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_stat_subtract_marker != null:
 		hub_stat_subtract_marker.visible = marker_visible
 		hub_stat_subtract_marker.centered = true
-		hub_stat_subtract_marker.position = Vector2(STAT_SUBTRACT_MARKER_X, marker_center_y)
+		hub_stat_subtract_marker.position = Vector2(_hub_left_field_x(STAT_SUBTRACT_MARKER_X), marker_center_y)
 	if hub_stat_add_marker != null:
 		hub_stat_add_marker.visible = marker_visible
 		hub_stat_add_marker.centered = true
-		hub_stat_add_marker.position = Vector2(STAT_ADD_MARKER_X, marker_center_y)
+		hub_stat_add_marker.position = Vector2(_hub_left_field_x(STAT_ADD_MARKER_X), marker_center_y)
 	var stat_buttons := hub_stat_buttons
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
@@ -2268,7 +2319,7 @@ func _update_hub_allocation_preview(root: Object, pixel_texture: Callable, curre
 			derived_value.texture = value_texture
 			# Right-anchor the derived value at a fixed column.
 			if value_texture != null:
-				derived_value.position = Vector2(DERIVED_VALUE_RIGHT_ANCHOR - float(value_texture.get_width()), DERIVED_LABEL_TOP + index * DERIVED_ROW_PITCH)
+				derived_value.position = Vector2(_hub_left_field_x(DERIVED_VALUE_RIGHT_ANCHOR) - float(value_texture.get_width()), DERIVED_LABEL_TOP + index * DERIVED_ROW_PITCH)
 		# Keep the compatibility preview array populated even though its old card
 		# is hidden by the rework shell.
 		if index < hub_allocate_preview_texts.size(): hub_allocate_preview_texts[index].texture = value_texture

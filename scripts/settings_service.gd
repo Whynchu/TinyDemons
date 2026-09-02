@@ -53,7 +53,7 @@ func save_settings() -> bool:
 
 func get_setting(key: StringName, fallback: Variant = null) -> Variant:
 	_ensure_loaded()
-	var string_key := String(key)
+	var string_key: String = String(key)
 	if _values.has(string_key):
 		return _values[string_key]
 	return fallback
@@ -61,7 +61,7 @@ func get_setting(key: StringName, fallback: Variant = null) -> Variant:
 
 func set_setting(key: StringName, value: Variant) -> Variant:
 	_ensure_loaded()
-	var string_key := String(key)
+	var string_key: String = String(key)
 	if not DEFAULTS.has(string_key):
 		return value
 	var normalized: Variant = _normalize_value(key, value)

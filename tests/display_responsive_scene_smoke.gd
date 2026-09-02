@@ -1,6 +1,7 @@
 extends SceneTree
 
 const TEST_PATH := "res://.godot_user/display_responsive_scene_smoke.cfg"
+const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
 
 var _finished := false
 
@@ -94,10 +95,33 @@ func _initialize() -> void:
 		_expect(display.visible_view_size_value().is_equal_approx(Vector2(expected_full)), "FULL uses the complete active logical frame", failures)
 		_expect(display.presentation_origin_value().is_equal_approx(Vector2.ZERO), "FULL has no extra presentation offset", failures)
 		_expect((gameplay.get_node("Map/FloorTiles/FloorLayer") as Node2D).global_position.is_equal_approx(stable_floor), "FULL preserves authored collision geometry", failures)
+		# Exercise the live Demon Hub while FULL is using a wide landscape frame.
+		# Orientation changes must reflow its authored content and active cursor from
+		# route state instead of rebuilding the menu or leaving native x positions
+		# behind.
+		gameplay.get_window().size = Vector2i(960, 540)
+		for _settle_frame in 4:
+			await process_frame
+		var orientation_screens := gameplay.get("screen_state_controller") as ScreenStateController
+		_expect(display.view_size_value() == Vector2i(284, 160), "wide landscape frame is active before hub reflow coverage", failures)
+		gameplay.call("_show_hub", true, false)
+		await process_frame
+		if orientation_screens != null:
+			orientation_screens.hub_content_focus = true
+			orientation_screens.hub_stat_row = 2
+			orientation_screens.update_hub_ui(gameplay, Callable(gameplay, "_pixel_text_texture"))
+		await process_frame
+		var saved_hub_page: int = orientation_screens.hub_page if orientation_screens != null else -1
+		var saved_hub_row: int = orientation_screens.hub_stat_row if orientation_screens != null else -1
+		var saved_hub_focus: bool = orientation_screens.hub_content_focus if orientation_screens != null else false
+		if orientation_screens != null:
+			var wide_hub_stat_x := PauseMenuLayoutScript.left_field_x(63.0, display.view_size.x)
+			var wide_hub_cursor_x := PauseMenuLayoutScript.left_field_x(30.0, display.view_size.x)
+			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == wide_hub_stat_x and orientation_screens.hub_stat_cursor_text.position.x == wide_hub_cursor_x, "wide hub maps stat text and active cursor into the expandable content field", failures)
+			_expect(orientation_screens.hub_context_text.position.x == PauseMenuLayoutScript.left_field_x(136.0, display.view_size_as_vector().x), "wide hub repositions its confirmation prompt with the content field", failures)
 		# Simulate a live mobile orientation change while FULL is active. The
 		# logical frame must be recalculated after the viewport settles, and the
 		# full-screen menu frame must follow it instead of retaining old geometry.
-		var orientation_screens := gameplay.get("screen_state_controller") as ScreenStateController
 		gameplay.get_window().size = Vector2i(720, 960)
 		# Window.size_changed queues a deferred refresh that itself waits for two
 		# settled frames; allow that complete cycle before asserting orientation.
@@ -107,12 +131,23 @@ func _initialize() -> void:
 		_expect(display.view_size_value() == portrait_expected, "portrait orientation clamps FULL to the native logical width", failures)
 		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "portrait orientation switches to crop-safe keep scaling", failures)
 		_expect(orientation_screens != null and (orientation_screens.settings_overlay as ColorRect).size == Vector2(portrait_expected), "portrait orientation resizes settings overlay", failures)
+		if orientation_screens != null:
+			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_overlay.size == Vector2(portrait_expected), "portrait orientation keeps the active hub overlay sized to the native frame", failures)
+			_expect(orientation_screens.hub_page == saved_hub_page and orientation_screens.hub_stat_row == saved_hub_row and orientation_screens.hub_content_focus == saved_hub_focus, "portrait orientation preserves hub route and selection state", failures)
+			var portrait_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
+			var portrait_value_aligned := portrait_value != null and portrait_value.texture != null and is_equal_approx(portrait_value.position.x + portrait_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))
+			_expect(orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and orientation_screens.hub_stat_cursor_text.position.x == PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x) and portrait_value_aligned, "portrait orientation reflows hub labels, value anchors, and the active cursor", failures)
+			_expect(not bool(orientation_screens.hub_stat_cursor_text.call("is_locked")), "portrait orientation keeps the active hub cursor animated", failures)
 		gameplay.get_window().size = Vector2i(960, 540)
 		for _settle_frame in 4:
 			await process_frame
 		var landscape_expected := Vector2i(284, 160)
 		_expect(display.view_size_value() == landscape_expected, "landscape orientation restores FULL logical width", failures)
 		_expect(orientation_screens != null and (orientation_screens.run_complete_overlay as ColorRect).size == Vector2(landscape_expected), "landscape orientation resizes result overlay", failures)
+		if orientation_screens != null:
+			var landscape_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
+			var landscape_value_aligned := landscape_value != null and landscape_value.texture != null and is_equal_approx(landscape_value.position.x + landscape_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))
+			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and orientation_screens.hub_stat_cursor_text.position.x == PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x) and landscape_value_aligned, "landscape orientation reflows the active hub back to the wide content field", failures)
 		gameplay.get_window().size = original_window_size
 	gameplay.queue_free()
 	await process_frame

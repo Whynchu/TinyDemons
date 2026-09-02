@@ -24,6 +24,7 @@ var discovered_rooms: Dictionary = {}
 var completed_rooms: Dictionary = {}
 var engaged_rooms: Dictionary = {}
 var revealed_connections: Dictionary = {}
+var revealed_events: Dictionary = {}
 var solved_color_connections: Dictionary = {}
 var solved_element_connections: Dictionary = {}
 var solved_orb_connections: Dictionary = {}
@@ -43,6 +44,7 @@ func begin(start_room_id: StringName) -> void:
 	completed_rooms.clear()
 	engaged_rooms.clear()
 	revealed_connections.clear()
+	revealed_events.clear()
 	solved_color_connections.clear()
 	solved_element_connections.clear()
 	solved_orb_connections.clear()
@@ -143,6 +145,18 @@ func is_connection_revealed(connection: DungeonGraph.ConnectionRecord) -> bool:
 	return connection != null and bool(revealed_connections.get(connection_key(connection.source_room_id, connection.exit_socket), false))
 
 
+func reveal_event(event_id: StringName) -> bool:
+	if event_id.is_empty() or revealed_events.has(event_id):
+		return false
+	revealed_events[event_id] = true
+	changed.emit()
+	return true
+
+
+func is_event_revealed(event_id: StringName) -> bool:
+	return not event_id.is_empty() and bool(revealed_events.get(event_id, false))
+
+
 func mark_element_connection_solved(connection: DungeonGraph.ConnectionRecord) -> bool:
 	if connection == null:
 		return false
@@ -203,6 +217,7 @@ func to_dictionary() -> Dictionary:
 		"completed_rooms": completed_rooms.duplicate(),
 		"engaged_rooms": engaged_rooms.duplicate(),
 		"revealed_connections": revealed_connections.duplicate(),
+		"revealed_events": revealed_events.duplicate(),
 		"solved_color_connections": solved_color_connections.duplicate(),
 		"solved_element_connections": solved_element_connections.duplicate(),
 		"solved_orb_connections": solved_orb_connections.duplicate(),

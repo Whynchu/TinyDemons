@@ -249,7 +249,7 @@ func on_room_entered(room_id: StringName) -> void:
 		on_room_completed(room_id)
 	for connection_value in room.outgoing_connections.values():
 		var connection := connection_value as DungeonGraph.ConnectionRecord
-		if connection != null and (state.is_room_completed(room_id) or not requires_room_clear(room)):
+		if connection != null and (state.is_room_completed(room_id) or not requires_room_clear(room)) and _event_reveal_satisfied(connection):
 			state.reveal_connection(connection)
 	for connection_value in room.incoming_connections.values():
 		var incoming := connection_value as DungeonGraph.ConnectionRecord
@@ -268,7 +268,34 @@ func on_room_completed(room_id: StringName) -> void:
 	if room == null:
 		return
 	for connection_value in room.outgoing_connections.values():
-		state.reveal_connection(connection_value as DungeonGraph.ConnectionRecord)
+		var connection := connection_value as DungeonGraph.ConnectionRecord
+		if _event_reveal_satisfied(connection):
+			state.reveal_connection(connection)
+
+
+func reveal_event(event_id: StringName) -> bool:
+	if event_id.is_empty():
+		return false
+	if not state.reveal_event(event_id):
+		return false
+	if graph != null:
+		for room_id in graph.get_room_ids():
+			var room := graph.get_room(room_id)
+			if room == null:
+				continue
+			for connection_value in room.outgoing_connections.values():
+				var connection := connection_value as DungeonGraph.ConnectionRecord
+				if connection != null and connection.hidden_until_event == event_id:
+					state.reveal_connection(connection)
+	return true
+
+
+func is_event_revealed(event_id: StringName) -> bool:
+	return state.is_event_revealed(event_id)
+
+
+func _event_reveal_satisfied(connection: DungeonGraph.ConnectionRecord) -> bool:
+	return connection != null and (connection.hidden_until_event.is_empty() or state.is_event_revealed(connection.hidden_until_event))
 
 
 func change_orb_from_room(room_id: StringName, next_puzzle_color: StringName = &"") -> bool:
@@ -288,9 +315,8 @@ func change_orb_from_room(room_id: StringName, next_puzzle_color: StringName = &
 	var orb_state_changed := state.set_shared_orb_state(next_palette, orb_element_requirement, false)
 	if not state.set_puzzle_color(next_puzzle_color):
 		return false
-	var orb_gate_changed := _activate_orb_connections(orb_element_requirement)
 	on_room_completed(room_id)
-	if room_was_complete and (orb_state_changed or puzzle_color_was_current or orb_gate_changed):
+	if room_was_complete and (orb_state_changed or puzzle_color_was_current):
 		# A direct fusion charge may have changed the shared presentation while the
 		# strategic Puzzle Color key stayed the same. Emit the missing refresh event.
 		state.changed.emit()
@@ -328,30 +354,11 @@ func change_orb_from_palette(room_id: StringName, palette: String) -> bool:
 		state.set_puzzle_color(MAP_STATE_SCRIPT.MAP_COLOR_NEUTRAL, false)
 	if orb_state_changed or puzzle_key_changed:
 		state.orb_change_count += 1
-	var orb_gate_changed := _activate_orb_connections(orb_element_requirement)
 	var room_was_complete: bool = state.is_room_completed(room_id)
 	on_room_completed(room_id)
-	if room_was_complete and (orb_state_changed or palette_changed or orb_element_changed or puzzle_key_changed or orb_gate_changed):
+	if room_was_complete and (orb_state_changed or palette_changed or orb_element_changed or puzzle_key_changed):
 		state.changed.emit()
 	return true
-
-
-func _activate_orb_connections(element_requirement: StringName) -> bool:
-	if graph == null or element_requirement.is_empty():
-		return false
-	var changed_value := false
-	for room_id in graph.get_room_ids():
-		var room := graph.get_room(room_id)
-		if room == null:
-			continue
-		for connection_value in room.outgoing_connections.values():
-			var connection := connection_value as DungeonGraph.ConnectionRecord
-			if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_ENTRANCE_ORB:
-				continue
-			if connection.orb_element_requirement != element_requirement:
-				continue
-			changed_value = state.mark_orb_connection_solved(connection, false) or changed_value
-	return changed_value
 
 
 func current_color() -> StringName:
@@ -420,8 +427,6 @@ func completed_run_room_count() -> int:
 func is_connection_color_locked(connection: DungeonGraph.ConnectionRecord) -> bool:
 	if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_PUZZLE_COLOR:
 		return false
-	if state.is_color_connection_solved(connection):
-		return false
 	return connection.color_requirement != state.active_puzzle_color or connection.color_requirement not in available_puzzle_colors()
 
 
@@ -478,7 +483,7 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		return false
 	if connection.hidden_until_clear and not state.is_room_completed(source_room.id):
 		return false
-	if not connection.hidden_until_event.is_empty():
+	if not connection.hidden_until_event.is_empty() and not state.is_event_revealed(connection.hidden_until_event):
 		return false
 	var source_clear_satisfied := not connection.requires_source_room_clear or not requires_room_clear(source_room) or state.is_room_completed(source_room.id)
 	if is_entrance and connection.allow_entry_before_source_clear:
@@ -493,16 +498,11 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		# Once the source side is valid, the destination remains escapable until
 		# the player lands the first hit there.
 		var entrance_available := destination_room == null or not (connection.locks_entry_on_destination_engagement and requires_room_clear(destination_room) and state.is_room_engaged(destination_room.id) and not state.is_room_completed(destination_room.id))
-		if entrance_available:
-			if gate_type == DungeonGraph.GATE_ELEMENT:
-				state.mark_element_connection_solved(connection)
-			elif gate_type == DungeonGraph.GATE_PUZZLE_COLOR:
-				state.mark_color_connection_solved(connection)
+		if entrance_available and gate_type == DungeonGraph.GATE_ELEMENT:
+			state.mark_element_connection_solved(connection)
 		return entrance_available
 	if gate_type == DungeonGraph.GATE_ELEMENT:
 		state.mark_element_connection_solved(connection)
-	elif gate_type == DungeonGraph.GATE_PUZZLE_COLOR:
-		state.mark_color_connection_solved(connection)
 	return true
 
 

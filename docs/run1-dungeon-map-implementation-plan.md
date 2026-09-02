@@ -1,6 +1,6 @@
 # Run 1 Dungeon Map and Global Orb-State Implementation Plan
 
-Status: Implementation in progress; semantic map contract is locked, room/content integration is ongoing.  
+Status: Implemented; targeted contract, runtime, and responsive-layout verification is complete. The full standalone smoke runner remains an environment-limited check because Godot's headless renderer is crashing in this workspace.
 Design authority: [`run1-dungeon-map-design.md`](run1-dungeon-map-design.md)  
 Visual authority: [`Artwork/minimap- rough draftR1.png`](../Artwork/minimap-%20rough%20draftR1.png)
 
@@ -12,7 +12,7 @@ Replace the current procedural-first room flow with an authored Run 1 map contra
 
 Completed in the first integration slice:
 
-- `DungeonLayoutDefinition` and `DungeonLayoutRun1` encode the 24-room Run 1 topology from the mockup.
+- `DungeonLayoutDefinition` and `DungeonLayoutRun1` encode the 18-room Run 1 topology from the mockup.
 - Both Orb Room locations use the single runtime type `ORB`; both use the same light-blue map marker, while blue/green swatches are authoring placeholders for the two semantic door keys.
 - Door requirements use only `puzzle_a` and `puzzle_b`; no flame palette names are used as topology keys.
 - `DungeonMapState` starts in Puzzle Color B, whose authored presentation is grey, and owns the shared puzzle-color state.
@@ -22,9 +22,13 @@ Completed in the first integration slice:
 - Puzzle Color A doors resolve to the selected starter flame palette; Puzzle Color B doors resolve to grey. The map environment follows the same mapping.
 - The hub uses `DoorRightFlameshut.png` until the starter flame is attuned on the tutorial run.
 - `scenes/basic_room.tscn` and `scenes/orb_room.tscn` provide editable room and single-orb authoring templates.
-- `run1_map_contract_smoke.gd` and `run1_minimap_smoke.gd` cover the semantic contract and pixel placement.
+- `run1_map_contract_smoke.gd`, `dungeon_map_event_smoke.gd`, and `run1_minimap_smoke.gd` cover the semantic contract, event-revealed entrance state, and pixel placement.
+- Authored Treasure Rooms carry one distinct chest position each, and graph/layout snapshots expose coordinates, connections, gates, and room content metadata.
+- Event-revealed connections are owned by `DungeonMapState`/`DungeonMapController` and are included in the active map-state serialization.
+- The Demon Hub now uses the same expandable left-field/right-rail geometry contract as Pause and Equipment. Its labels, dynamic value anchors, prompts, hit targets, and active cursors reflow against the visible logical width.
+- Mobile orientation changes settle through `DisplayController` and reapply menu geometry without rebuilding route state, selected rows, scroll offsets, pending allocations, text textures, or cursor bobbing. Responsive scene coverage exercises the active Hub in wide landscape, portrait, and wide landscape again.
 
-Still pending: authored treasure-room content polish, visual placement review of the new room templates, and the remaining full-run playtest pass. Special-room respawns now use independent 45-second slot timers and need in-game timing confirmation.
+Remaining review: authored treasure-room content polish, visual placement review of the new room templates, and a supervised full standalone smoke pass when the local Godot headless renderer is stable. Special-room respawns use independent 45-second slot timers and still benefit from in-game timing confirmation.
 
 ## Non-goals for the first pass
 
@@ -206,6 +210,11 @@ Integration order:
 6. Mount the minimap under the HUD/UI layer.
 7. Remove old Run 1 two-orb puzzle assumptions and room-local tint calls.
 8. Keep compatibility wrappers narrow and document ownership in `ARCHITECTURE.md` if the new owners become canonical.
+9. Apply the shared responsive layout contract to the Demon Hub. On every settled
+   display/orientation change, reflow the full-width frame, expandable left field,
+   right-side resource rail, dynamic text/value anchors, touch hit targets, and
+   active cursors while preserving the current menu route, selection, scroll, and
+   animation state.
 
 Required verification:
 
@@ -218,6 +227,8 @@ Required verification:
 - starter-flame hub-gate and delayed special-respawn tests;
 - minimap logical-pixel snapshot test;
 - title boot, main scene, boss geometry, and full smoke suite.
+- active Hub landscape-to-portrait-to-landscape reflow, including preserved route
+  state, dynamic text placement, value right anchors, and animated cursor state.
 
 ## Handoff checklist
 

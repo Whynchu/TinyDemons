@@ -317,6 +317,8 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 		if completed_runs >= 5:
 			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame)
 			errors.append_array(fusion_gate_errors)
+			var fusion_softlock_errors := _fusion_orb_softlock_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame)
+			errors.append_array(fusion_softlock_errors)
 			var fusion_orb_route_errors := _fusion_orb_route_errors(layout)
 			errors.append_array(fusion_orb_route_errors)
 	return errors
@@ -417,7 +419,7 @@ static func _repair_unreachable_entrance_orb_gates(layout, start_id: StringName,
 		for state in states:
 			if state.get("room_id", &"") != connection.source_room_id:
 				continue
-			if (state.get("orb_elements", []) as Array).has(required_element):
+			if int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)) == required_element:
 				matching = true
 				break
 		if matching:
@@ -441,18 +443,16 @@ static func _first_reachable_orb_element(states: Array[Dictionary], source_room_
 	for state in states:
 		if state.get("room_id", &"") != source_room_id:
 			continue
-		for element in state.get("orb_elements", []) as Array:
-			var normalized := ELEMENT_CATALOG_SCRIPT.normalize(int(element))
-			if normalized != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and normalized not in candidates:
-				candidates.append(normalized)
+		var normalized := ELEMENT_CATALOG_SCRIPT.normalize(int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)))
+		if normalized != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and normalized not in candidates:
+			candidates.append(normalized)
 	if candidates.is_empty():
 		for state in states:
 			if state.get("room_id", &"") != source_room_id:
 				continue
-			for element in state.get("elements", []) as Array:
-				var normalized := ELEMENT_CATALOG_SCRIPT.normalize(int(element))
-				if normalized != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and normalized not in candidates:
-					candidates.append(normalized)
+			var normalized := ELEMENT_CATALOG_SCRIPT.normalize(int(state.get("element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)))
+			if normalized != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and normalized not in candidates:
+				candidates.append(normalized)
 	candidates.sort()
 	return candidates[0] if not candidates.is_empty() else ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
 
@@ -503,14 +503,14 @@ static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName
 			"entrance_orb_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(result_element)},
 			"results": [result_flame],
 		}
-	# The Water + Electric -> Grass gate is followed by a Water fire and an Ice
-	# gate. Depth 10 is already the generated utility fire slot, so reusing it
-	# keeps the late spine compact and leaves the Cloaked Demon room untouched.
-	var grass_element := ELEMENT_CATALOG_SCRIPT.element_for_palette("green")
+	# Later runs still teach the complete Water + Electric -> Grass, then
+	# Grass + Water -> Ice chain. Only the final Ice state gates progression.
+	# Nesting a Grass gate around an ingredient needed to recreate Grass made a
+	# later Orb change capable of permanently cutting off the return route.
 	var ice_element := ELEMENT_CATALOG_SCRIPT.element_for_palette("aquamarine")
 	return {
 		"fire_flames": {5: &"water", 6: &"electric", 10: &"water"},
-		"entrance_orb_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(grass_element), 10: ELEMENT_CATALOG_SCRIPT.id(ice_element)},
+		"entrance_orb_requirements": {10: ELEMENT_CATALOG_SCRIPT.id(ice_element)},
 		"second_orb_depth": 11,
 		"results": [&"grass", &"ice"],
 	}
@@ -816,8 +816,7 @@ static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_
 		for state in states:
 			if state.get("room_id", &"") != connection.source_room_id:
 				continue
-			var orb_elements: Array = state.get("orb_elements", []) as Array
-			if orb_elements.has(required_element):
+			if int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)) == required_element:
 				gate_reachable = true
 				break
 		if not gate_reachable:
@@ -847,75 +846,92 @@ static func _fusion_orb_route_errors(layout) -> Array[String]:
 	return errors
 
 
-static func _element_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[Dictionary]:
+static func _fusion_orb_softlock_errors(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
+	var errors: Array[String] = []
+	var reachable_states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
+	var required_by_orb: Dictionary = {}
+	for orb_connection in layout.connections:
+		if orb_connection.route_role != ROUTE_FUSION_PREREQUISITE_ORB:
+			continue
+		var requirements: Array = required_by_orb.get(orb_connection.destination_room_id, []) as Array
+		for gate in layout.connections:
+			if gate.source_room_id != orb_connection.source_room_id or gate.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
+				continue
+			var requirement := ELEMENT_CATALOG_SCRIPT.element_for_id(gate.orb_element_requirement)
+			if requirement != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and requirement not in requirements:
+				requirements.append(requirement)
+		required_by_orb[orb_connection.destination_room_id] = requirements
+	var checked: Dictionary = {}
+	for state in reachable_states:
+		var room_id: StringName = state.get("room_id", &"") as StringName
+		var orb_element := int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL))
+		var current_element := int(state.get("element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL))
+		var requirements: Array = required_by_orb.get(room_id, []) as Array
+		# The mandatory action is charging a gate's dedicated Orb with that gate's
+		# exact element. Validate each such post-activation state once. This catches
+		# nested-lock traps without repeatedly exploring unrelated optional colors.
+		if orb_element != current_element or orb_element not in requirements:
+			continue
+		var state_key := "%s:%s:%d" % [room_id, state.get("flame", &""), orb_element]
+		if checked.has(state_key):
+			continue
+		checked[state_key] = true
+		var continuation := _element_reachable_states(layout, room_id, completed_runs, starter_flame, bound_flame, state)
+		var reaches_boss := false
+		for next_state in continuation:
+			if next_state.get("room_id", &"") == boss_id:
+				reaches_boss = true
+				break
+		if not reaches_boss:
+			errors.append("activating Orb %s as %s creates an unrecoverable world state" % [room_id, ELEMENT_CATALOG_SCRIPT.id(orb_element)])
+	return errors
+
+
+static func _element_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", starting_state: Dictionary = {}) -> Array[Dictionary]:
 	var rooms_by_id: Dictionary = {}
 	for room in layout.rooms:
 		rooms_by_id[room.id] = room
 	var initial_flame := _initial_run_flame(starter_flame, bound_flame)
-	var initial_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(initial_flame))
-	var pending: Array[Dictionary] = [{"room_id": start_id, "elements": [initial_element], "flames": [initial_flame]}]
 	var available := ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs, starter_flame)
+	var pending: Array[Dictionary] = [starting_state.duplicate() if not starting_state.is_empty() else {"room_id": start_id, "flame": initial_flame, "orb_element": ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL}]
 	var visited: Dictionary = {}
 	var reachable_states: Array[Dictionary] = []
 	while not pending.is_empty():
 		var state: Dictionary = pending.pop_back()
 		var room_id: StringName = state.get("room_id", &"") as StringName
 		var room = rooms_by_id.get(room_id)
-		var flames: Array = (state.get("flames", []) as Array).duplicate()
-		var elements: Array = (state.get("elements", []) as Array).duplicate()
-		var orb_elements: Array = (state.get("orb_elements", []) as Array).duplicate()
-		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and not flames.has(room.fire_flame) and (room.fire_flame in available or room.fire_flame == bound_flame):
-			flames.append(room.fire_flame)
-		# Every discovered flame can be revisited. This closure models a player
-		# swapping to an input and then explicitly fusing it at a later fire.
-		for flame in flames:
-			var flame_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(flame as StringName))
-			if flame_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and not elements.has(flame_element):
-				elements.append(flame_element)
-		var element_inputs: Array = elements.duplicate()
-		for first_element in element_inputs:
-			var first_flame := ASPECT_CATALOG_SCRIPT.flame_for_palette(ELEMENT_CATALOG_SCRIPT.palette_key(int(first_element)))
-			if first_flame.is_empty():
-				continue
-			for second_flame in flames:
-				var result_flame := ASPECT_CATALOG_SCRIPT.fusion_result(first_flame, second_flame as StringName)
-				if result_flame.is_empty():
-					continue
-				var result_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(result_flame))
-				if result_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and not elements.has(result_element):
-					elements.append(result_element)
-		if room != null and room.room_type == DungeonGraph.ROOM_ORB:
-			for element in elements:
-				if not orb_elements.has(element):
-					orb_elements.append(element)
-		var sorted_flames: Array[String] = []
-		for flame in flames:
-			sorted_flames.append(String(flame))
-		sorted_flames.sort()
-		var sorted_elements: Array[int] = []
-		for element in elements:
-			sorted_elements.append(int(element))
-		sorted_elements.sort()
-		var sorted_orb_elements: Array[int] = []
-		for element in orb_elements:
-			sorted_orb_elements.append(int(element))
-		sorted_orb_elements.sort()
-		var state_key := "%s:%s:%s:%s" % [room_id, ",".join(sorted_flames), ",".join(sorted_elements.map(func(value: int) -> String: return str(value))), ",".join(sorted_orb_elements.map(func(value: int) -> String: return str(value)))]
+		var current_flame: StringName = state.get("flame", initial_flame) as StringName
+		var orb_element := ELEMENT_CATALOG_SCRIPT.normalize(int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)))
+		var state_key := "%s:%s:%d" % [room_id, current_flame, orb_element]
 		if visited.has(state_key):
 			continue
 		visited[state_key] = true
-		var normalized_state := {"room_id": room_id, "elements": elements, "flames": flames, "orb_elements": orb_elements}
+		var current_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(current_flame))
+		var normalized_state := {"room_id": room_id, "flame": current_flame, "element": current_element, "orb_element": orb_element}
 		reachable_states.append(normalized_state)
+		# A Fire Room is the only place the carried element can change. Model the
+		# real swap and fusion actions as explicit states at this exact room.
+		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and (room.fire_flame in available or room.fire_flame == bound_flame):
+			if room.fire_flame != current_flame:
+				pending.append({"room_id": room_id, "flame": room.fire_flame, "orb_element": orb_element})
+			var fusion_flame := ASPECT_CATALOG_SCRIPT.fusion_result(current_flame, room.fire_flame)
+			if not fusion_flame.is_empty() and fusion_flame != current_flame:
+				pending.append({"room_id": room_id, "flame": fusion_flame, "orb_element": orb_element})
+		# An Orb Room accepts only the element the player physically carried there.
+		# Historical flames and fusion ingredients are not remotely selectable.
+		if room != null and room.room_type == DungeonGraph.ROOM_ORB:
+			if current_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and current_element != orb_element:
+				pending.append({"room_id": room_id, "flame": current_flame, "orb_element": current_element})
 		for connection in layout.connections:
 			if connection.source_room_id != room_id and connection.destination_room_id != room_id:
 				continue
 			var gate_type: StringName = connection.resolved_gate_type()
-			if gate_type == DungeonGraph.GATE_ELEMENT and not elements.has(ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)):
+			if gate_type == DungeonGraph.GATE_ELEMENT and current_element != ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement):
 				continue
-			if gate_type == DungeonGraph.GATE_ENTRANCE_ORB and not orb_elements.has(ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)):
+			if gate_type == DungeonGraph.GATE_ENTRANCE_ORB and orb_element != ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement):
 				continue
 			var next_room: StringName = connection.destination_room_id if connection.source_room_id == room_id else connection.source_room_id
-			pending.append({"room_id": next_room, "elements": elements.duplicate(), "flames": flames.duplicate(), "orb_elements": orb_elements.duplicate()})
+			pending.append({"room_id": next_room, "flame": current_flame, "orb_element": orb_element})
 	return reachable_states
 
 
