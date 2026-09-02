@@ -196,7 +196,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
 | Triangle spell cooldown | 2.0s elemental / 2.5s grey | `gameplay_state.gd:MAGIC_COOLDOWN`, `gameplay_state.gd:GREY_MAGIC_COOLDOWN` |
 | Triangle knockback | `0.25x` normal attack knockback | `magic_runtime_controller.gd:MAGIC_KNOCKBACK_MULTIPLIER` |
-| Enemy Soul drop | 1 Soul per defeated enemy | `combat_runtime_controller.gd:SOUL_DROP_VALUE` |
+| Enemy Soul drop | 1 Soul per defeated ordinary enemy; scaled bosses drop 5 Souls on Run 1 and +2 Souls per completed run, with +1 per encounter-scale step above the authored 3.0 boss scale | `combat_runtime_controller.gd:soul_drop_value_for_slime` |
 | Soul pickup | Authored 5x5 `Souls.png` sprite with `#A73BA7` soul-purple body (matching the Square-button icon) and a lighter highlight outline derived from that base; 10.0 collection distance, 0.38s launch arc | `soul_visuals.gd`, `pickup_runtime_controller.gd`, `gameplay_state.gd` |
 | Fire use / Swap | Full HP, full active Chroma, and earned element attunement for 5 Souls; first starter use is also paid | `gameplay_state.gd:FLAME_SWAP_SOUL_COST` |
 | Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `combat_runtime_controller.gd:update_player_health_regen`, `gameplay_state.gd:_interact_with_fire` |
