@@ -211,6 +211,12 @@ func _hide_charge_ready_highlight() -> void:
 		charge_ready_highlight.visible = false
 
 
+func charge_ready_flash_complete() -> bool:
+	# The finisher may only leave the charge pose after the opaque outline flash
+	# has finished its authored hold.
+	return charge_ready_was_maxed and is_zero_approx(charge_ready_opaque_timer)
+
+
 func spawn_slime_notice(root: Object, slime: Sprite2D, duration: float) -> void:
 	var marker := Sprite2D.new()
 	marker.name = "SlimeNotice"

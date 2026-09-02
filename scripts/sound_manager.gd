@@ -53,6 +53,7 @@ const CLIPS := {
 	"ui_buy_sell": UI_PATH + "079_Buy_sell_01.wav",
 	"ui_pause": SELFMADE_REVERB_PATH + "Blip.wav",
 	"charge_attack": SELFMADE_REVERB_PATH + "ChargedAttackwav.wav",
+	"use_flame": SELFMADE_PATH + "UseFlame.wav",
 	"ui_unpause": KH_UI_PATH + "sys-close.sms-real.wav",
 	"enemy_alert": KH_UI_PATH + "sys-chagef1.sms-real.wav",
 	"item_pickup": KH_UI_PATH + "sys-itemget.sms-real.wav",
@@ -73,6 +74,7 @@ const CLIPS := {
 }
 
 var _players: Dictionary = {}
+var _sfx_fade_tweens: Dictionary = {}
 var _mix_profile: Resource = null
 var _mix_profile_file_signature := 0
 var _mix_profile_value_signature := 0
@@ -287,6 +289,22 @@ func stop(sound_name: String) -> void:
 	var player := _player(sound_name)
 	if player != null:
 		player.stop()
+
+
+func fade_out(sound_name: String, duration: float = 0.08) -> void:
+	var player := _player(sound_name)
+	if player == null or not player.playing:
+		return
+	var previous: Variant = _sfx_fade_tweens.get(sound_name)
+	if previous is Tween and (previous as Tween).is_valid():
+		(previous as Tween).kill()
+	var tween := create_tween()
+	_sfx_fade_tweens[sound_name] = tween
+	tween.tween_property(player, "volume_db", -80.0, maxf(duration, 0.01))
+	tween.tween_callback(func() -> void:
+		player.stop()
+		_sfx_fade_tweens.erase(sound_name)
+	)
 
 
 func _chatter_blip() -> AudioStreamWAV:

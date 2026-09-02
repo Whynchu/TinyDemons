@@ -471,7 +471,7 @@ func _bind_current_element() -> bool:
 		run_start_palette_name = palette
 		call("_apply_rest_fire_palette", palette)
 	_show_fire_exchange_text("BOUND %s" % String(current).to_upper(), _health_feedback_color(palette))
-	_play_sound("ui_confirm", 0.0, 1.0)
+	_play_sound("use_flame", 0.0, 1.0)
 	return true
 
 
@@ -1068,7 +1068,7 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 	_update_soul_indicator()
 	var action_name := "FUSED %s" % String(result_flame).to_upper() if is_fusion else "%s USED" % String(flame).to_upper()
 	_show_fire_exchange_text(action_name, _health_feedback_color(result_palette if not result_palette.is_empty() else target_palette))
-	_play_sound("ui_confirm", 0.0, 1.0)
+	_play_sound("use_flame", 0.0, 1.0)
 	return true
 
 

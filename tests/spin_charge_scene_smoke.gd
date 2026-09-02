@@ -151,6 +151,12 @@ func _initialize() -> void:
 		attack.tick_charge(gameplay, tuning.charge_minimum_time)
 		attack.set_attack_input_held(false)
 		attack.tick_charge(gameplay, 0.01)
+		# Release arms the finisher, but the outline's opaque ready flash must
+		# complete before charged Attack 2 is allowed to start.
+		for _flash_frame in 6:
+			if effects != null:
+				effects.update_charge_aura_from_root(gameplay, 0.05)
+			attack.tick_charge(gameplay, 0.05)
 		if effects != null:
 			effects.update_charge_aura_from_root(gameplay, 0.0)
 			_expect(_charge_aura_count(effects) == 0, "charge aura clears when the hold becomes charged Attack 2", failures)
