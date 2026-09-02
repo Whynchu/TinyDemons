@@ -37,6 +37,8 @@ const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 4
 const BOSS_MIXED_SUPPORT_START_RANK: int = 5
+const PLAYER_DOOR_REPOSITION_RADII := [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0, 48.0]
+const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
@@ -372,8 +374,14 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	player.global_position = _arrival_player_position(root, arrival_socket)
 	if not bool(root.call("_can_actor_stand_at_current_position", player)):
 		var requested_foot: Vector2 = root.call("_actor_foot", player)
-		var nearest_foot: Vector2 = root.call("_nearest_slime_walkable_point", requested_foot)
-		player.global_position = nearest_foot - root.get("ACTOR_FOOT_OFFSET")
+		var nearest_foot := nearest_player_walkable_point(root, requested_foot)
+		if nearest_foot != Vector2.INF:
+			player.global_position += nearest_foot - requested_foot
+		else:
+			# Preserve the old sampled-point fallback for partially initialized test
+			# scenes that do not yet have a usable player collision context.
+			var fallback_foot: Vector2 = root.call("_nearest_slime_walkable_point", requested_foot)
+			player.global_position = fallback_foot - root.get("ACTOR_FOOT_OFFSET")
 	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
 	root.set("last_player_facing_left", player.flip_h)
 	root.set("player_is_attacking", false)
@@ -514,6 +522,116 @@ func build_entrance_blocks(root: Object) -> void:
 			if trigger_block.size() >= 3:
 				blocks.append(trigger_block)
 	root.set("entrance_block_polygons", blocks)
+	eject_player_from_closed_sockets(root)
+
+
+func eject_player_from_closed_sockets(root: Object) -> bool:
+	var player := root.get("player") as Sprite2D
+	if player == null or not is_instance_valid(player) or bool(root.get("room_transition_locked")):
+		return false
+	var feet := _player_door_feet_rect(root, player)
+	if not feet.has_area():
+		return false
+	var closed_triggers: Array[PackedVector2Array] = []
+	var occupies_closed_socket := false
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	if graph == null:
+		return false
+	for socket_id in dungeon_sockets.keys():
+		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
+		if socket == null:
+			continue
+		var is_entrance := active_entrance_sockets.has(socket_id)
+		if not is_entrance and not active_door_sockets.has(socket_id):
+			continue
+		var connection := graph.get_connection_for_entry(root.get("current_room_id"), socket_id) if is_entrance else graph.get_connection(root.get("current_room_id"), socket_id)
+		if connection == null or bool(root.call("_map_connection_available", connection, is_entrance)):
+			continue
+		var trigger := _socket_trigger_polygon(socket)
+		if trigger.size() < 3:
+			continue
+		closed_triggers.append(trigger)
+		occupies_closed_socket = occupies_closed_socket or _rect_touches_polygon(feet, trigger)
+	if not occupies_closed_socket:
+		return false
+	var requested_foot: Vector2 = root.call("_actor_foot", player)
+	var nearest_foot := nearest_player_walkable_point(root, requested_foot, closed_triggers)
+	if nearest_foot == Vector2.INF:
+		return false
+	var original_position := player.global_position
+	player.global_position += nearest_foot - requested_foot
+	var relocated_feet := _player_door_feet_rect(root, player)
+	var valid := bool(root.call("_can_actor_stand_at_current_position", player)) and not bool(root.call("_collides_with_static", player))
+	for trigger in closed_triggers:
+		if _rect_touches_polygon(relocated_feet, trigger):
+			valid = false
+			break
+	if not valid:
+		player.global_position = original_position
+		return false
+	root.call("_update_depth_sorting")
+	return true
+
+
+func nearest_player_walkable_point(root: Object, requested_foot: Vector2, forbidden_triggers: Array[PackedVector2Array] = []) -> Vector2:
+	var area := root.get("walkable_area") as WalkableArea
+	var player := root.get("player") as Sprite2D
+	if area == null or area.is_empty() or player == null:
+		return Vector2.INF
+	var candidates: Array[Vector2] = [area.nearest_walkable_point(requested_foot)]
+	for point in area.points:
+		candidates.append(point)
+	for radius in PLAYER_DOOR_REPOSITION_RADII:
+		for direction_index in PLAYER_DOOR_REPOSITION_DIRECTIONS:
+			candidates.append(requested_foot + Vector2.RIGHT.rotated(TAU * float(direction_index) / float(PLAYER_DOOR_REPOSITION_DIRECTIONS)) * float(radius))
+	var best := Vector2.INF
+	var best_distance := INF
+	for candidate in candidates:
+		if not area.is_walkable(candidate) or not _player_foot_clear_of_triggers(root, player, candidate, forbidden_triggers):
+			continue
+		var distance := requested_foot.distance_squared_to(candidate)
+		if distance >= best_distance:
+			continue
+		if not _player_position_is_valid_at_foot(root, player, candidate, forbidden_triggers):
+			continue
+		best = candidate
+		best_distance = distance
+	return best
+
+
+func _player_position_is_valid_at_foot(root: Object, player: Sprite2D, foot: Vector2, forbidden_triggers: Array[PackedVector2Array]) -> bool:
+	var original_position := player.global_position
+	var original_foot: Vector2 = root.call("_actor_foot", player)
+	player.global_position += foot - original_foot
+	var valid := bool(root.call("_can_actor_stand_at_current_position", player)) and not bool(root.call("_collides_with_static", player))
+	valid = valid and _player_foot_clear_of_triggers(root, player, foot, forbidden_triggers)
+	player.global_position = original_position
+	return valid
+
+
+func _player_foot_clear_of_triggers(root: Object, player: Sprite2D, foot: Vector2, forbidden_triggers: Array[PackedVector2Array]) -> bool:
+	if forbidden_triggers.is_empty():
+		return true
+	var original_position := player.global_position
+	var original_foot: Vector2 = root.call("_actor_foot", player)
+	player.global_position += foot - original_foot
+	var feet := _player_door_feet_rect(root, player)
+	var clear := true
+	for trigger in forbidden_triggers:
+		if _rect_touches_polygon(feet, trigger):
+			clear = false
+			break
+	player.global_position = original_position
+	return clear
+
+
+func _player_door_feet_rect(root: Object, player: Sprite2D) -> Rect2:
+	var feet: Rect2 = root.call("_collision_guide_rect_by_name", player, "DoorFeetGuide") as Rect2
+	if feet.has_area():
+		return feet
+	var foot: Vector2 = root.call("_actor_foot", player)
+	var size: Vector2 = root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") if root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") != null else Vector2(4, 2)
+	return Rect2(foot - size * 0.5, size)
 
 
 func try_enter_active_socket(root: Object, door_active: bool, entrance_open: bool, transition_lock: bool) -> bool:

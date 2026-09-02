@@ -15,6 +15,10 @@ const BOSS_ENCOUNTER_HEALTH_FACTOR := 0.90
 const BOSS_XP_MULTIPLIER := 5
 const XP_REWARD_MULTIPLIER := 2.0
 const SOUL_DROP_VALUE := 1
+const BOSS_SOUL_DROP_BASE_VALUE := 5
+const BOSS_SOUL_DROP_RUN_STEP := 2
+const BOSS_SOUL_DROP_SCALE_STEP := 1
+const BOSS_BASE_ENCOUNTER_SCALE := 3.0
 const RESOURCE_DROP_LATERAL_OFFSET := 3.0
 
 ## Enemy max health is static for the life of a room, but the per-frame health
@@ -241,6 +245,18 @@ func encounter_run_rank(root: Object) -> int:
 	return maxi(1, profile.completed_runs + 1 if profile != null else 1)
 
 
+func soul_drop_value_for_slime(root: Object, slime: Sprite2D) -> int:
+	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0)) if slime != null else 1.0
+	if encounter_scale <= 1.0:
+		return SOUL_DROP_VALUE
+	# Boss health, level, and support pressure all rise with the encounter/run
+	# curve. Keep the reward on that same rank so a late-run boss pays for the
+	# larger progression costs without changing ordinary enemy drops.
+	var run_rank := encounter_run_rank(root)
+	var scale_steps := maxi(0, ceili(encounter_scale - BOSS_BASE_ENCOUNTER_SCALE))
+	return BOSS_SOUL_DROP_BASE_VALUE + (run_rank - 1) * BOSS_SOUL_DROP_RUN_STEP + scale_steps * BOSS_SOUL_DROP_SCALE_STEP
+
+
 func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int = 0) -> void:
 	var stats := root.call("_slime_stats", slime) as StatsComponent
 	if stats == null:
@@ -317,16 +333,18 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 	var chroma_tuning := root.get("chroma_tuning") as ChromaTuning
 	var drop_origin: Vector2 = root.call("_actor_foot", slime) as Vector2
 	var drop_direction: Vector2 = root.call("_slime_knockback_direction", slime) as Vector2
+	var soul_drop_value := soul_drop_value_for_slime(root, slime)
 	# Souls are the persistent exchange currency. Every defeated enemy drops one
-	# so the fire and equipment-fusion economy does not depend on a lucky roll.
+	# so the fire and equipment-fusion economy does not depend on a lucky roll;
+	# scaled bosses use the run-ranked value above.
 	if chroma_tuning != null and drop_rng.randf() < chroma_tuning.enemy_drop_chance:
 		# Give the two currencies a small lateral fan so their first frames do not
 		# occupy the same pixel when an enemy drops both.
 		var drop_tangent := Vector2(-drop_direction.y, drop_direction.x)
 		var chroma_position: Vector2 = root.call("_spawn_chroma_pickup", drop_origin + drop_tangent * RESOURCE_DROP_LATERAL_OFFSET, chroma_tuning.pickup_value, seed_value, drop_direction) as Vector2
-		root.call("_spawn_soul_pickup", drop_origin - drop_tangent * RESOURCE_DROP_LATERAL_OFFSET, SOUL_DROP_VALUE, seed_value ^ 0x51A7, drop_direction, chroma_position)
+		root.call("_spawn_soul_pickup", drop_origin - drop_tangent * RESOURCE_DROP_LATERAL_OFFSET, soul_drop_value, seed_value ^ 0x51A7, drop_direction, chroma_position)
 	else:
-		root.call("_spawn_soul_pickup", drop_origin, SOUL_DROP_VALUE, seed_value ^ 0x51A7, drop_direction)
+		root.call("_spawn_soul_pickup", drop_origin, soul_drop_value, seed_value ^ 0x51A7, drop_direction)
 	(root.get("effects_spawner") as EffectsSpawner).spawn_slime_death_from_root(root, slime)
 	var room_controller := root.get("room_controller") as RoomController
 	room_controller.record_special_enemy_death(root, slime)
