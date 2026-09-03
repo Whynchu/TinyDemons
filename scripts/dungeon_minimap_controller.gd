@@ -1,6 +1,8 @@
 extends Node2D
 class_name DungeonMinimapController
 
+const REVIEW_EXPORTER_SCRIPT = preload("res://tools/export_dungeon_maps.gd")
+
 ## Presentation-only renderer for complete dungeon layouts.
 ##
 ## Orb Room pixels remain light-blue markers. Door pixels resolve their display
@@ -244,3 +246,10 @@ func _door_color(requirement: StringName) -> Color:
 
 func snapshot_image() -> Image:
 	return map_image
+
+
+func export_review_maps(output_directory: String = "res://screenshots/dungeon_maps") -> Dictionary:
+	## Write complete authored and generated topology diagrams for design review.
+	## This is deliberately separate from the discovered-room minimap display.
+	var exporter = REVIEW_EXPORTER_SCRIPT.new()
+	return exporter.export_all(output_directory)

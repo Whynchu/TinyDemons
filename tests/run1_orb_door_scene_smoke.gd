@@ -1,5 +1,6 @@
 extends SceneTree
 
+const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 const TARGET_ROOM: StringName = &"room_-1_1"
 
 
@@ -64,7 +65,9 @@ func _initialize() -> void:
 			player.global_position += left_center - (gameplay.call("_actor_foot", player) as Vector2)
 			_expect(bool(gameplay.call("_try_enter_any_active_socket")), "recolored first Orb opens the Puzzle A treasure doorway", failures)
 			_expect(gameplay.get("current_room_id") == &"room_-2_2", "Puzzle A doorway lands in the authored Treasure room", failures)
-			_expect(bool(gameplay.get("chest").get("visible")), "authored Treasure room presents its center-floor chest", failures)
+			var treasure_chest := gameplay.get("chest") as Sprite2D
+			_expect(treasure_chest != null and bool(treasure_chest.get("visible")), "authored Treasure room presents its chest", failures)
+			_expect(treasure_chest != null and treasure_chest.position == LAYOUT_DEFINITION_SCRIPT.TREASURE_CHEST_POSITION, "authored Treasure room uses the shared back-right chest placement", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

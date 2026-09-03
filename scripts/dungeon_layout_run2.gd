@@ -114,7 +114,7 @@ static func _link(
 	var destination: Variant = layout.room_by_id(destination_room_id)
 	if source == null or destination == null:
 		return
-	var destination_entry := DungeonGraph.BOTTOM_RIGHT if exit_socket == DungeonGraph.WALL_LEFT else DungeonGraph.BOTTOM_LEFT
+	var destination_entry := DungeonGraph.paired_socket(exit_socket)
 	var midpoint_sum: Vector2i = source.minimap_coordinate + destination.minimap_coordinate
 	var midpoint: Vector2i = Vector2i(int(float(midpoint_sum.x) / 2.0), int(float(midpoint_sum.y) / 2.0))
 	layout.add_connection(layout.make_connection_spec(source_room_id, exit_socket, destination_room_id, destination_entry, color_requirement, false, &"", midpoint))

@@ -3,6 +3,10 @@ class_name DungeonLayoutDefinition
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+## Shared local-room anchor for every single-chest Treasure Room. Keeping this
+## in the layout contract makes authored and generated rooms resolve to the
+## same rear-wall placement without per-map coordinate drift.
+const TREASURE_CHEST_POSITION := Vector2(157, 69)
 const RUN1_CHEST_CENTER_REFERENCE := Vector2(120, 88)
 const RUN1_CHEST_MIN_CENTER_DISTANCE := 20.0
 
@@ -18,9 +22,8 @@ class RoomSpec extends RefCounted:
 	var minimap_coordinate := Vector2i.ZERO
 	var room_type: StringName = DungeonGraph.ROOM_COMBAT
 	var chest_count := 0
-	## Local room-space placement for the authored chest. A zero vector means
-	## that the runtime prefab default should be used (the generated grammar does
-	## not need bespoke placement for every optional reward branch).
+	## Local room-space placement for the chest. Single-chest Treasure Rooms use
+	## the shared contract anchor so authored and generated rooms stay aligned.
 	var chest_position := Vector2.ZERO
 	var special_respawn_required_color: StringName = &""
 	var fire_flame: StringName = &""
@@ -183,7 +186,10 @@ func make_room_spec(
 	new_fire_flame: StringName = &"",
 	new_chest_position: Vector2 = Vector2.ZERO
 ) -> RoomSpec:
-	return RoomSpec.new(new_id, new_coordinate, new_minimap_coordinate, new_room_type, new_chest_count, new_respawn_color, new_seed_salt, new_fire_flame, new_chest_position)
+	var resolved_chest_position := new_chest_position
+	if new_room_type == DungeonGraph.ROOM_TREASURE and new_chest_count > 0 and resolved_chest_position == Vector2.ZERO:
+		resolved_chest_position = TREASURE_CHEST_POSITION
+	return RoomSpec.new(new_id, new_coordinate, new_minimap_coordinate, new_room_type, new_chest_count, new_respawn_color, new_seed_salt, new_fire_flame, resolved_chest_position)
 
 
 func add_connection(spec: ConnectionSpec) -> ConnectionSpec:
@@ -304,6 +310,7 @@ func validate() -> Array[String]:
 	var cloaked_count := 0
 	var orb_room_count := 0
 	var connection_sockets: Dictionary = {}
+	var destination_sockets: Dictionary = {}
 	var coordinates: Dictionary = {}
 	for spec in rooms:
 		if room_ids.has(spec.id):
@@ -327,6 +334,8 @@ func validate() -> Array[String]:
 			errors.append("room has a negative chest count: %s" % spec.id)
 		if spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_count != 1:
 			errors.append("Treasure Room must contain exactly one chest: %s" % spec.id)
+		if spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_count == 1 and spec.chest_position != TREASURE_CHEST_POSITION:
+			errors.append("Treasure Room must use the shared rear-wall chest placement: %s" % spec.id)
 		if layout_id == &"RUN1" and spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_position == Vector2.ZERO:
 			errors.append("Run 1 Treasure Room is missing an authored chest placement: %s" % spec.id)
 		if layout_id == &"RUN1" and spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_position.distance_to(RUN1_CHEST_CENTER_REFERENCE) < RUN1_CHEST_MIN_CENTER_DISTANCE:
@@ -375,7 +384,18 @@ func validate() -> Array[String]:
 		if connection_sockets.has(socket_key):
 			errors.append("duplicate authored exit socket: %s" % socket_key)
 		connection_sockets[socket_key] = true
-		if layout_id == &"RUN1" and room_ids.has(spec.source_room_id) and room_ids.has(spec.destination_room_id):
+		if not DungeonGraph.is_exit_socket(spec.exit_socket):
+			errors.append("unknown authored exit socket: %s:%s" % [spec.source_room_id, spec.exit_socket])
+		if not spec.destination_room_id.is_empty():
+			var destination_socket_key := "%s:%s" % [spec.destination_room_id, spec.destination_entry]
+			if destination_sockets.has(destination_socket_key):
+				errors.append("duplicate authored destination entry: %s" % destination_socket_key)
+			destination_sockets[destination_socket_key] = true
+			if not DungeonGraph.is_exit_socket(spec.destination_entry):
+				errors.append("unknown authored destination entry: %s:%s" % [spec.destination_room_id, spec.destination_entry])
+			elif DungeonGraph.paired_socket(spec.exit_socket) != spec.destination_entry:
+				errors.append("authored connection sockets are not paired: %s:%s -> %s:%s" % [spec.source_room_id, spec.exit_socket, spec.destination_room_id, spec.destination_entry])
+		if layout_id == &"RUN1" and room_ids.has(spec.source_room_id) and room_ids.has(spec.destination_room_id) and (spec.exit_socket == DungeonGraph.WALL_LEFT or spec.exit_socket == DungeonGraph.WALL_RIGHT):
 			var source_spec := room_by_id(spec.source_room_id)
 			var destination_spec := room_by_id(spec.destination_room_id)
 			var map_delta: Vector2i = destination_spec.minimap_coordinate - source_spec.minimap_coordinate

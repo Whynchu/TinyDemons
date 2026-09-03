@@ -5,10 +5,10 @@ const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definitio
 
 ## Deterministic, in-memory dungeon topology.
 ##
-## Rooms occupy a branching lattice. A left-wall exit leads down-left into the
-## destination's bottom-right entrance; a right-wall exit leads down-right into
-## its bottom-left entrance. Coordinate-derived room IDs make the result stable
-## regardless of the order in which connections are discovered.
+## Rooms occupy a branching lattice. Upper wall exits move toward the boss and
+## lower exits move back toward the Hub; each uses the opposite socket on the
+## destination. Coordinate-derived room IDs make the result stable regardless
+## of the order in which connections are discovered.
 
 const WALL_LEFT: StringName = &"WALL_LEFT"
 const WALL_RIGHT: StringName = &"WALL_RIGHT"
@@ -426,13 +426,48 @@ func _connection_key(room_id: StringName, exit_socket: StringName) -> String:
 	return "%s:%s" % [room_id, exit_socket]
 
 
+## Every room prefab exposes two upper wall exits and two lower exits.  The
+## lower sockets used to be treated as arrival-only because generated routes
+## only moved toward the boss.  Keeping the pairing and lattice offsets here
+## makes authored backtracking and four-way hubs use the same contract as
+## ordinary forward travel.
+static func is_exit_socket(socket: StringName) -> bool:
+	return socket == WALL_LEFT or socket == WALL_RIGHT or socket == BOTTOM_LEFT or socket == BOTTOM_RIGHT
+
+
+static func paired_socket(socket: StringName) -> StringName:
+	match socket:
+		WALL_LEFT:
+			return BOTTOM_RIGHT
+		WALL_RIGHT:
+			return BOTTOM_LEFT
+		BOTTOM_LEFT:
+			return WALL_RIGHT
+		BOTTOM_RIGHT:
+			return WALL_LEFT
+	return &""
+
+
+static func exit_offset(exit_socket: StringName) -> Vector2i:
+	match exit_socket:
+		WALL_LEFT:
+			return Vector2i(-1, 1)
+		WALL_RIGHT:
+			return Vector2i(1, 1)
+		BOTTOM_LEFT:
+			return Vector2i(-1, -1)
+		BOTTOM_RIGHT:
+			return Vector2i(1, -1)
+	return Vector2i.ZERO
+
+
 func _is_exit_socket(socket: StringName) -> bool:
-	return socket == WALL_LEFT or socket == WALL_RIGHT
+	return is_exit_socket(socket)
 
 
 func _exit_offset(exit_socket: StringName) -> Vector2i:
-	return Vector2i(-1, 1) if exit_socket == WALL_LEFT else Vector2i(1, 1)
+	return exit_offset(exit_socket)
 
 
 func _entry_for_exit(exit_socket: StringName) -> StringName:
-	return BOTTOM_RIGHT if exit_socket == WALL_LEFT else BOTTOM_LEFT
+	return paired_socket(exit_socket)
