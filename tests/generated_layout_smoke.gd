@@ -57,7 +57,7 @@ func _initialize() -> void:
 	_expect(boss_depth == 13, "Run 2 extends the boss depth beyond the authored Run 1 route", failures)
 	_expect(_special_routes_have_progression_and_option_routes(first), "each generated Special Room has a progression route and a valid optional route", failures)
 	var pacing_run_numbers: Array[int] = [3, 4, 5, 9, 10, 11, 12]
-	var pacing_targets: Array[int] = [22, 23, 24, 24, 25, 25, 26]
+	var pacing_targets: Array[int] = [26, 27, 28, 28, 29, 29, 30]
 	var pacing_boss_depths: Array[int] = [13, 14, 15, 15, 16, 16, 17]
 	for pacing_index in pacing_run_numbers.size():
 		var pacing_run_number := pacing_run_numbers[pacing_index]

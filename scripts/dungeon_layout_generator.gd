@@ -131,17 +131,27 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var start_id := builder.add_room(Vector2i(0, 0), DungeonGraph.ROOM_START)
 	var left_id := builder.add_room(Vector2i(-1, 1), DungeonGraph.ROOM_COMBAT)
 	var right_id := builder.add_room(Vector2i(1, 1), DungeonGraph.ROOM_COMBAT)
-	# The Hub is deliberately four-way.  These lower branches are scoutable
-	# dig rooms: their entrance is available immediately, but the normal
-	# engagement lock still commits the player after the first attack.  The
-	# Treasure endpoint gives the riskier lower route a clear payoff.
+	# The Hub is deliberately four-way. These lower branches are scoutable dig
+	# paths: their entrance is available immediately, but the normal engagement
+	# lock still commits the player after the first attack. Each lower branch is
+	# a full branching corridor, not a single dead-end room, so descending from
+	# the Hub meaningfully expands the dungeon.
 	var lower_left_dig_id := builder.add_room(Vector2i(-1, -1), DungeonGraph.ROOM_COMBAT)
-	var lower_right_treasure_id := builder.add_room(Vector2i(1, -1), DungeonGraph.ROOM_TREASURE, 1)
+	var lower_left_mid_id := builder.add_room(Vector2i(-2, -2), DungeonGraph.ROOM_COMBAT)
+	var lower_left_end_id := builder.add_room(Vector2i(-3, -3), DungeonGraph.ROOM_TREASURE, 1)
+	var lower_right_dig_id := builder.add_room(Vector2i(1, -1), DungeonGraph.ROOM_TREASURE, 1)
+	var lower_right_mid_id := builder.add_room(Vector2i(2, -2), DungeonGraph.ROOM_COMBAT)
+	var lower_right_utility_flame := alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
+	var lower_right_end_id := builder.add_room(Vector2i(3, -3), DungeonGraph.ROOM_REST, 0, &"", lower_right_utility_flame)
 	var merge_id := builder.add_room(Vector2i(0, 2), DungeonGraph.ROOM_COMBAT)
 	builder.link(start_id, DungeonGraph.WALL_LEFT, left_id, &"", ROUTE_FORK, false)
 	builder.link(start_id, DungeonGraph.WALL_RIGHT, right_id, &"", ROUTE_FORK, false)
 	builder.link(start_id, DungeonGraph.BOTTOM_LEFT, lower_left_dig_id, &"", ROUTE_DIG, false, true)
-	builder.link(start_id, DungeonGraph.BOTTOM_RIGHT, lower_right_treasure_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
+	builder.link(lower_left_dig_id, DungeonGraph.BOTTOM_LEFT, lower_left_mid_id, &"", ROUTE_DIG, false, true)
+	builder.link(lower_left_mid_id, DungeonGraph.BOTTOM_LEFT, lower_left_end_id, &"", ROUTE_DIG, false, true)
+	builder.link(start_id, DungeonGraph.BOTTOM_RIGHT, lower_right_dig_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
+	builder.link(lower_right_dig_id, DungeonGraph.BOTTOM_RIGHT, lower_right_mid_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
+	builder.link(lower_right_mid_id, DungeonGraph.BOTTOM_RIGHT, lower_right_end_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
 	builder.link(left_id, DungeonGraph.WALL_RIGHT, merge_id, &"", ROUTE_FORK)
 	builder.link(right_id, DungeonGraph.WALL_LEFT, merge_id, &"", ROUTE_FORK)
 
@@ -220,12 +230,12 @@ static func generated_room_target_for_run(run_number: int) -> int:
 	if normalized_run == 2:
 		return 24
 	if normalized_run == 3:
-		return 22
+		return 26
 	if normalized_run == 4:
-		return 23
+		return 27
 	if normalized_run <= 9:
-		return 24
-	return 25 + floori(float(normalized_run - 10) / 2.0)
+		return 28
+	return 29 + floori(float(normalized_run - 10) / 2.0)
 
 
 static func generated_boss_depth_for_run(run_number: int) -> int:

@@ -3,7 +3,9 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 12
+const CURRENT_SCHEMA_VERSION := 13
+const EVEN_BASELINE_SCHEMA_VERSION := 13
+const LEGACY_EVEN_BASELINE_SCHEMA_VERSION := 12
 const LEGACY_GEAR_REWORK_SCHEMA_VERSION := 11
 const LEGACY_DEMON_CLOAK_SCHEMA_VERSION := 10
 const LEGACY_SIX_STAT_SCHEMA_VERSION := 9
@@ -13,6 +15,7 @@ const LEGACY_SPEED_SCHEMA_VERSION := 8
 static func supports_schema_version(value: int) -> bool:
 	return value in [
 		CURRENT_SCHEMA_VERSION,
+		LEGACY_EVEN_BASELINE_SCHEMA_VERSION,
 		LEGACY_GEAR_REWORK_SCHEMA_VERSION,
 		LEGACY_DEMON_CLOAK_SCHEMA_VERSION,
 		LEGACY_SIX_STAT_SCHEMA_VERSION,
@@ -546,6 +549,7 @@ func load_dictionary(data: Dictionary) -> void:
 		schema_version = CURRENT_SCHEMA_VERSION
 		return
 	var is_schema_8 := saved_schema == LEGACY_SPEED_SCHEMA_VERSION
+	var is_pre_even_baseline := saved_schema < EVEN_BASELINE_SCHEMA_VERSION
 	schema_version = CURRENT_SCHEMA_VERSION
 	has_started = bool(data.get("has_started", false))
 	open_hub_on_load = bool(data.get("open_hub_on_load", false))
@@ -566,15 +570,28 @@ func load_dictionary(data: Dictionary) -> void:
 	xp = maxi(int(data.get("xp", 0)), 0)
 	unspent_stat_points = maxi(int(data.get("unspent_stat_points", 0)), 0)
 	var legacy_magic_base_default := 1 if is_schema_8 else 2
-	base_vit = maxi(int(data.get("base_vit", 2)), 0)
-	base_str = maxi(int(data.get("base_str", 2)), 0)
-	base_def = maxi(int(data.get("base_def", 2)), 0)
-	base_agi = maxi(int(data.get("base_spd", 2) if is_schema_8 else data.get("base_agi", data.get("base_spd", 2))), 0)
-	# Schema 8 did not serialize INT/MND. Keep its historical one-point
-	# defaults while using the even two-point baseline for new profiles and later
-	# schemas that omitted neither field intentionally.
-	base_int = maxi(int(data.get("base_int", legacy_magic_base_default)), 0)
-	base_mnd = maxi(int(data.get("base_mnd", legacy_magic_base_default)), 0)
+	if is_pre_even_baseline:
+		# The gear rework moved every character to the same even two-point
+		# baseline. Pre-rework schemas stored the old archetype-shaped base
+		# values (for example VIT 3 / AGI 1 / INT 1 / MND 1), so reset only the
+		# base line to 2/2/2/2/2/2 here; allocated points and level progress are
+		# preserved untouched below.
+		base_vit = 2
+		base_str = 2
+		base_def = 2
+		base_agi = 2
+		base_int = 2
+		base_mnd = 2
+	else:
+		base_vit = maxi(int(data.get("base_vit", 2)), 0)
+		base_str = maxi(int(data.get("base_str", 2)), 0)
+		base_def = maxi(int(data.get("base_def", 2)), 0)
+		base_agi = maxi(int(data.get("base_spd", 2) if is_schema_8 else data.get("base_agi", data.get("base_spd", 2))), 0)
+		# Schema 8 did not serialize INT/MND. Keep its historical one-point
+		# defaults while using the even two-point baseline for new profiles and later
+		# schemas that omitted neither field intentionally.
+		base_int = maxi(int(data.get("base_int", legacy_magic_base_default)), 0)
+		base_mnd = maxi(int(data.get("base_mnd", legacy_magic_base_default)), 0)
 	allocated_vit = maxi(int(data.get("allocated_vit", 0)), 0)
 	allocated_str = maxi(int(data.get("allocated_str", 0)), 0)
 	allocated_def = maxi(int(data.get("allocated_def", 0)), 0)
