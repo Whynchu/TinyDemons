@@ -392,6 +392,24 @@ encounter the local renderer crash.
   special-room door assertions select the room that actually carries both door
   colors instead of assuming the first special room does.
 
+### 2026-09-03 — Four-way hub polish, even-stat baseline, and branch depth
+
+- Downward branches: the generated Hub's lower-left Combat and lower-right
+  Treasure dig paths are now full branching corridors (three rooms each) instead
+  of single dead-end rooms, so descending from the Hub expands the dungeon. The
+  lower-right path ends in a REST (Fire) room carrying a real flame. Room-target
+  curve and `generated_layout_smoke` pacing expectations updated to match.
+- Locked-path visuals: `apply_puzzle_environment_tint` no longer greys wall-socket
+  doorways inside the D0 dig rooms (their shut/locked door art already conveys the
+  state); the Hub's lower footpaths stay grey at dungeon start until the starter
+  flame opens them.
+- Stat baseline: profile schema 13 migrates every pre-baseline save (schemas 8-12)
+  to the even 2/2/2/2/2/2 base line while preserving allocated points, level, and
+  progression. `gear_system_rework_smoke` and `six_stat_profile_migration_smoke`
+  updated to assert the even-baseline migration.
+- Verification: generated/authored layout smokes, socket smokes, profile migration
+  smokes, and the slime/sound regression smokes all pass headless.
+
 ### 2026-09-02 — Gear rework and Run 1 treasure placement
 
 - Owner/API introduced: `ItemCatalog` owns the live gear catalogue and flat

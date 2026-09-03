@@ -81,15 +81,15 @@ func _initialize() -> void:
 
 	var legacy_profile := PlayerProfile.new()
 	legacy_profile.load_dictionary({"schema_version": 11, "base_vit": 4, "base_str": 3, "base_def": 1, "base_agi": 1, "base_int": 1, "base_mnd": 1})
-	_expect(legacy_profile.base_vit == 4 and legacy_profile.base_str == 3 and legacy_profile.base_def == 1 and legacy_profile.base_agi == 1, "legacy saved base stats remain readable during the schema bump", failures)
+	_expect(legacy_profile.base_vit == 2 and legacy_profile.base_str == 2 and legacy_profile.base_def == 2 and legacy_profile.base_agi == 2 and legacy_profile.base_int == 2 and legacy_profile.base_mnd == 2, "pre-baseline saves migrate to the even 2/2/2/2/2/2 base during the schema bump", failures)
 
-	plus_item.free()
-	clamped_plus.free()
-	common_growth.free()
-	rare_growth.free()
-	enhanced_growth.free()
-	fusion_target.free()
-	fusion_material.free()
+	plus_item = null
+	clamped_plus = null
+	common_growth = null
+	rare_growth = null
+	enhanced_growth = null
+	fusion_target = null
+	fusion_material = null
 	fused_target = null
 	_finished = true
 	call_deferred("_finish", failures)

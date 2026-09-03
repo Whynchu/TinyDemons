@@ -197,6 +197,14 @@ func apply_puzzle_environment_tint(root: Object, tint: Color) -> void:
 		var entrance_visual := entrance_socket.visual()
 		if entrance_visual == null:
 			continue
+		# Wall sockets are doorways; their shut/locked door art already conveys the
+		# state, so never grey them here. Floor walkway entrances grey out while
+		# the route is closed so a locked lower path does not look open.
+		var is_wall_socket: bool = entrance_socket.socket_id() == DungeonGraph.WALL_LEFT or entrance_socket.socket_id() == DungeonGraph.WALL_RIGHT
+		if is_wall_socket:
+			if not starter_gate_locked and tint != Color.WHITE:
+				set_puzzle_surface_tint(entrance_visual, presentation_tint)
+			continue
 		# Reapply the state after the global reset so both the authored entrance
 		# tile and its Tile 2 child receive the same presentation color.
 		var boss_entrance_closed: bool = root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and not bool(root.get("entrance_open"))

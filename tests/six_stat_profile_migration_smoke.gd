@@ -33,17 +33,17 @@ func _initialize() -> void:
 	}
 	var profile := PlayerProfile.new()
 	profile.load_dictionary(legacy_data)
-	_expect(profile.schema_version == PlayerProfile.CURRENT_SCHEMA_VERSION, "schema 8 loads as schema 9", failures)
-	_expect(profile.base_vit == 5 and profile.base_str == 4 and profile.base_def == 3 and profile.base_agi == 6, "schema 8 core bases retain their values", failures)
+	_expect(profile.schema_version == PlayerProfile.CURRENT_SCHEMA_VERSION, "schema 8 loads as schema 13", failures)
+	_expect(profile.base_vit == 2 and profile.base_str == 2 and profile.base_def == 2 and profile.base_agi == 2 and profile.base_int == 2 and profile.base_mnd == 2, "pre-baseline saves migrate to the even 2/2/2/2/2/2 base", failures)
 	_expect(profile.allocated_vit == 2 and profile.allocated_str == 4 and profile.allocated_def == 1 and profile.allocated_agi == 3, "schema 8 allocations retain every invested point", failures)
-	_expect(profile.base_int == 1 and profile.base_mnd == 1 and profile.allocated_int == 0 and profile.allocated_mnd == 0, "migrated profiles receive the approved INT/MND baseline", failures)
+	_expect(profile.allocated_int == 0 and profile.allocated_mnd == 0, "schema 8 INT/MND carry no invested points", failures)
 	_expect(profile.unspent_stat_points == 9 and profile.level == 12 and profile.xp == 7, "schema 8 banked points and progression are preserved", failures)
 
 	var saved := profile.to_dictionary()
 	_expect(saved.get("schema_version") == PlayerProfile.CURRENT_SCHEMA_VERSION and saved.has("base_agi") and saved.has("base_int") and saved.has("base_mnd"), "normal save emits canonical six-stat fields", failures)
 	var round_trip := PlayerProfile.new()
 	round_trip.load_dictionary(saved)
-	_expect(round_trip.base_agi == 6 and round_trip.allocated_agi == 3 and round_trip.base_int == 1 and round_trip.base_mnd == 1, "schema 9 round trip preserves canonical stats", failures)
+	_expect(round_trip.base_agi == 2 and round_trip.allocated_agi == 3 and round_trip.base_int == 2 and round_trip.base_mnd == 2, "schema 13 round trip preserves canonical stats on the even baseline", failures)
 	_expect(round_trip.unspent_stat_points == 9, "schema 9 round trip preserves banked points", failures)
 
 	var allocation_profile := PlayerProfile.new()
