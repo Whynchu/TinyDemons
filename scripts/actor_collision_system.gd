@@ -45,6 +45,8 @@ func resolve_motion_contacts(actor: Sprite2D, movement: Vector2, candidates: Arr
 	for other in candidates:
 		if other == actor or not is_instance_valid(other) or not other.visible:
 			continue
+		if slimes.has(other) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other)):
+			continue
 		if actor_is_slime and slimes.has(other):
 			continue
 		if actor.global_position.distance_squared_to(other.global_position) > contact_distance * contact_distance:
@@ -59,17 +61,17 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 	# The frame cache normally builds the broad-phase grid; build it lazily so the
 	# resolver stays correct for direct callers.
 	if not _slime_grid_valid:
-		build_slime_grid(slimes, Callable(root, "_actor_foot"))
+		build_slime_grid(slimes, Callable(root, "_actor_foot"), Callable(root, "_is_slime_spawn_locked") if root.has_method("_is_slime_spawn_locked") else Callable())
 	var separation_attempts := 0
 	for _separation_pass in max_passes:
 		var resolved_this_pass := false
 		for actor_index in slimes.size():
 			var actor := slimes[actor_index]
-			if not is_instance_valid(actor) or not actor.visible:
+			if not is_instance_valid(actor) or not actor.visible or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))):
 				continue
 			var nearby := slime_grid_candidates(root.call("_actor_foot", actor), contact_distance)
 			for other in nearby:
-				if other == actor or not is_instance_valid(other) or not other.visible:
+				if other == actor or not is_instance_valid(other) or not other.visible or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
 					continue
 				if slime_grid_position(other) <= actor_index:
 					continue
@@ -87,12 +89,12 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 	return resolved_pairs
 
 
-func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable) -> void:
+func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable, is_spawn_locked: Callable = Callable()) -> void:
 	_slime_grid.clear()
 	_slime_grid_index.clear()
 	for index in slimes.size():
 		var slime := slimes[index]
-		if slime == null or not is_instance_valid(slime) or not slime.visible:
+		if slime == null or not is_instance_valid(slime) or not slime.visible or (is_spawn_locked.is_valid() and bool(is_spawn_locked.call(slime))):
 			continue
 		var cell := _grid_cell(actor_foot.call(slime) as Vector2)
 		var bucket: Variant = _slime_grid.get(cell)
@@ -228,6 +230,9 @@ func _polygon_center(polygon: PackedVector2Array) -> Vector2:
 
 
 func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, root: Object) -> void:
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	if (slimes.has(actor) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))) or (slimes.has(other) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
+		return
 	if other == actor or not actors_are_in_contact(root, actor, other): return
 	var chest := root.get("chest") as Sprite2D
 	var rest_fire := root.get("rest_fire") as Sprite2D

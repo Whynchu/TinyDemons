@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://mq46xu1yvw4p"
+path="res://.godot/imported/SlimeSpawn.wav-5c82d2537b6805c5a931e4e17a1c3ab0.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/SlimeSpawn.wav"
+dest_files=["res://.godot/imported/SlimeSpawn.wav-5c82d2537b6805c5a931e4e17a1c3ab0.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

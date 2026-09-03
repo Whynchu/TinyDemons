@@ -550,6 +550,8 @@ func magic_attack_element(palette: String, ability_mode: int) -> int:
 
 
 func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
+	if slime == null or not is_instance_valid(slime) or not bool(root.call("_is_slime_targetable", slime)):
+		return
 	var attack_element := magic_attack_element(palette, ability_mode)
 	var combat_tuning := root.get("combat_tuning") as CombatTuning
 	var magic_base_bonus := combat_tuning.elemental_magic_bonus if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL and combat_tuning != null else 0.0

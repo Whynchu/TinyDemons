@@ -101,6 +101,19 @@ func build_slime_shocked_frames(root: Object) -> void:
 	SlimeVisualComponent.assign_shocked_frames(root.get("slimes") as Array[Sprite2D], frames)
 
 
+func build_slime_spawn_frames(root: Object) -> void:
+	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
+	var frame_size: Vector2i = root.get("SLIME_ATTACK_FRAME_SIZE")
+	var frames := SlimeVisualComponent.build_spawn_frame_library(library, frame_size, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
+	root.set("slime_spawn_frames_by_palette", frames)
+	SlimeVisualComponent.assign_spawn_frames(root.get("slimes") as Array[Sprite2D], frames)
+
+
+func assign_slime_spawn_frames(root: Object) -> void:
+	SlimeVisualComponent.assign_spawn_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_spawn_frames_by_palette") as Dictionary)
+
+
 func assign_slime_shocked_frames(root: Object) -> void:
 	SlimeVisualComponent.assign_shocked_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_shocked_frames_by_palette") as Dictionary)
 

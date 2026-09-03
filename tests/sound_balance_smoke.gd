@@ -34,12 +34,14 @@ func _initialize() -> void:
 		"ui_no_input": "NOINPUT.wav",
 		"charge_attack": "ChargedAttackwav.wav",
 		"use_flame": "UseFlame.wav",
+		"slime_spawn": "SlimeSpawn.wav",
+		"slime_move": "SlimeMove.wav",
 	}
 	for sound_name in expected_menu_clips:
 		var expected_filename: String = String(expected_menu_clips[sound_name])
 		var clip_path: String = String(SoundManager.CLIPS.get(sound_name, ""))
 		_expect(clip_path.ends_with(expected_filename), "%s routes to %s" % [sound_name, expected_filename], failures)
-		if sound_name not in ["ui_no_input", "use_flame"]:
+		if sound_name not in ["ui_no_input", "use_flame", "slime_spawn", "slime_move"]:
 			_expect(clip_path.contains("Selfmade FX/Reverb/"), "%s routes through the reverb selfmade set" % sound_name, failures)
 		manager.play(sound_name)
 		var player := manager.get_node_or_null("SFX_%s" % sound_name) as AudioStreamPlayer

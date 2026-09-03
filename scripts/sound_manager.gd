@@ -5,73 +5,24 @@ class_name SoundManager
 ## assets/sounds/. Missing clips no-op so the game runs before audio is added.
 ## Each sound gets its own AudioStreamPlayer so overlapping effects mix.
 
-const SOUNDS_PATH := "res://assets/sounds/"
-const BATTLE_PATH := SOUNDS_PATH + "10_Free_RPG_Battle_SFX/"
-const UI_PATH := SOUNDS_PATH + "10_ui_sfx_free_samples/"
-const KH_UI_PATH := SOUNDS_PATH + "reconstructed_ui/"
-const SELFMADE_PATH := SOUNDS_PATH + "Selfmade FX/"
-const SELFMADE_REVERB_PATH := SELFMADE_PATH + "Reverb/"
+const SoundClipCatalogScript = preload("res://scripts/sound_clip_catalog.gd")
+const SOUNDS_PATH := SoundClipCatalogScript.SOUNDS_PATH
 const SOUND_MIX_PROFILE_PATH := SOUNDS_PATH + "sound_mix_profile.tres"
 const SOUND_MIX_PROFILE_POLL_INTERVAL := 0.20
 # digital_forever is intentionally kept well below the old theme's default
 # level. The source mix is mastered hot, so -16 dB keeps it underneath the
 # title UI and gameplay cues instead of making the menu overpowering.
-const TITLE_MUSIC_PATH := SOUNDS_PATH + "Soundtrack/digital_forever.mp3"
+const TITLE_MUSIC_PATH := SoundClipCatalogScript.TITLE_MUSIC_PATH
 # Keep the old name as a compatibility alias for callers that treat the title
 # theme as the default music track.
 const MUSIC_PATH := TITLE_MUSIC_PATH
-const RUN_MUSIC_PATH := SOUNDS_PATH + "Soundtrack/Dungeon-Crawl.wav"
+const RUN_MUSIC_PATH := SoundClipCatalogScript.RUN_MUSIC_PATH
 const TITLE_MUSIC_VOLUME_DB := -16.0
 const RUN_MUSIC_VOLUME_DB := -10.0
 const TITLE_MUSIC_VOLUME_LINEAR := 0.15848932
 const RUN_MUSIC_VOLUME_LINEAR := 0.31622776
 
-const CLIPS := {
-	"slash": BATTLE_PATH + "22_Slash_04.wav",
-	"miss": BATTLE_PATH + "35_Miss_Evade_02.wav",
-	"flesh": BATTLE_PATH + "77_flesh_02.wav",
-	"bite": BATTLE_PATH + "08_Bite_04.wav",
-	"block": BATTLE_PATH + "39_Block_03.wav",
-	"flee": BATTLE_PATH + "51_Flee_02.wav",
-	"enemy_death": BATTLE_PATH + "69_Enemy_death_01.wav",
-	"impact_flesh": BATTLE_PATH + "15_Impact_flesh_02.wav",
-	"encounter": BATTLE_PATH + "55_Encounter_02.wav",
-	"claw": BATTLE_PATH + "03_Claw_03.wav",
-	"magic_cast": BATTLE_PATH + "55_Encounter_02.wav",
-	"magic_hit": BATTLE_PATH + "15_Impact_flesh_02.wav",
-	# The menu vocabulary is authored in the self-made set. Keep the stable
-	# semantic keys so existing callers across the hub, pause, save, and title
-	# menus all pick up the new cues without duplicating routing logic.
-	"ui_hover": SELFMADE_REVERB_PATH + "CursorMove.wav",
-	"ui_confirm": SELFMADE_REVERB_PATH + "Confirm.wav",
-	"ui_decline": SELFMADE_REVERB_PATH + "BACK.wav",
-	"ui_no_input": SELFMADE_PATH + "NOINPUT.wav",
-	"ui_denied": UI_PATH + "033_Denied_03.wav",
-	"ui_use_item": UI_PATH + "051_use_item_01.wav",
-	"ui_equip": UI_PATH + "070_Equip_10.wav",
-	"ui_unequip": UI_PATH + "071_Unequip_01.wav",
-	"ui_buy_sell": UI_PATH + "079_Buy_sell_01.wav",
-	"ui_pause": SELFMADE_REVERB_PATH + "Blip.wav",
-	"charge_attack": SELFMADE_REVERB_PATH + "ChargedAttackwav.wav",
-	"use_flame": SELFMADE_PATH + "UseFlame.wav",
-	"ui_unpause": KH_UI_PATH + "sys-close.sms-real.wav",
-	"enemy_alert": KH_UI_PATH + "sys-chagef1.sms-real.wav",
-	"item_pickup": KH_UI_PATH + "sys-itemget.sms-real.wav",
-	"chest_unlock": KH_UI_PATH + "sys-tresure.sms-real.wav",
-	"chest_reward": KH_UI_PATH + "sys-money-get.sms-real.wav",
-	"run_clear": KH_UI_PATH + "sys-money-get.sms-real.wav",
-	"level_up": KH_UI_PATH + "ef-mon-up.sms-real.wav",
-	"enemy_hit_1": KH_UI_PATH + "BTL-MON-HIT01.sms-real.wav",
-	"enemy_hit_2": KH_UI_PATH + "BTL-MON-HIT02.sms-real.wav",
-	"enemy_hit_3": KH_UI_PATH + "BTL-MON-HIT03.sms-real.wav",
-	"enemy_hit_4": KH_UI_PATH + "BTL-MON-HIT04.sms-real.wav",
-	"orb_hit": KH_UI_PATH + "BTL-MON-HIT04.sms-real.wav",
-	"enemy_hit_5": KH_UI_PATH + "BTL-MON-HIT05.sms-real.wav",
-	"enemy_hit_6": KH_UI_PATH + "BTL-MON-HIT06.sms-real.wav",
-	"target_release": KH_UI_PATH + "sys-cansel.sms-real.wav",
-	"foot_left": KH_UI_PATH + "sys-sr-footl.sms-real.wav",
-	"foot_right": KH_UI_PATH + "sys-sr-footr.sms-real.wav",
-}
+const CLIPS: Dictionary = SoundClipCatalogScript.CLIPS
 
 var _players: Dictionary = {}
 var _sfx_fade_tweens: Dictionary = {}
@@ -148,7 +99,7 @@ func _ready() -> void:
 	_ensure_mix_profile()
 	# Load frequently-used menu cues before the first menu transition. Loading
 	# an imported WAV on the exact frame a page opens causes a visible hitch.
-	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "ui_unpause"]:
+	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "ui_unpause", "slime_spawn", "slime_move"]:
 		_player(sound_name)
 
 
@@ -353,8 +304,7 @@ func _load_stream(sound_name: String) -> AudioStream:
 
 
 func _preferred_audio_path(path: String) -> String:
-	var ogg_path := path.get_basename() + ".ogg"
-	return ogg_path if ResourceLoader.exists(ogg_path) else path
+	return SoundClipCatalogScript.preferred_audio_path(path)
 
 
 func get_mix_profile() -> Resource:

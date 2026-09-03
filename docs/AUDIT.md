@@ -341,13 +341,56 @@ rarity without requiring the same `+` package, and random lanes grow with the
 primary ladder. The catalogue schema is version 12 and preserves legacy saved
 values.
 
-The Run 1 authored Treasure Rooms now keep their chests away from the floor
-center. `DungeonLayoutDefinition.validate()` and the Run 1 contract smoke guard
-that placement so a center-anchor regression fails before playtesting.
+The Run 1 authored Treasure Rooms now use one shared back-right chest anchor.
+`DungeonLayoutDefinition.validate()` and the Run 1 contract smoke guard that
+placement so a center-anchor or per-room drift regression fails before
+playtesting.
 
 Follow-up verification is recorded below; the MCP-connected Godot editor is the
 preferred path for runtime checks, while standalone headless checks may still
 encounter the local renderer crash.
+
+### 2026-09-03 — Four-way Hub and reversible dig branches
+
+- Topology: generated layouts now expose all four Hub sockets. The lower-left
+  Combat branch and lower-right Treasure branch are intentional scoutable dig
+  endpoints; lower entries remain available until the destination room is
+  engaged, then reopen after clear.
+- Contract: graph socket pairing/offsets are shared by authored and generated
+  layouts, and authored validation rejects duplicate or mismatched arrival
+  sockets.
+- Verification: modified scripts pass MCP `script_check`; the live generated
+  layout validates with no errors, exposes all four Hub exits, and the runtime
+  engagement sequence passed (enter, retreat, engage/lock, clear/return).
+- Socket visuals: `room_puzzle_controller.refresh_room_socket_visuals` now keys
+  socket art on socket kind instead of travel role. Wall sockets always render
+  the DoorRight* doorway; floor sockets always render the two-tile walkway. This
+  stops four-way Hub lower exits from drawing a 1-tile back-wall door on the
+  floor path and stops rooms reached below from showing a walkway tile where the
+  arrival doorway belongs. Boss arrivals keep the walkway treatment. Verified by
+  a scene-backed socket-visual probe plus the wall/entrance socket smokes.
+
+### 2026-09-03 — Slime spawn audio and animation pass
+
+- Audio: `SoundClipCatalog` is the single source of truth for clip paths used by
+  both `SoundManager` and the editor preview. `SlimeSpawn.wav`/`SlimeMove.wav`
+  are routed through the Selfmade FX set and warm at boot. `SoundMixProfile`
+  gained `slime_spawn_db`/`slime_move_db` sliders plus a reusable preview-cue
+  picker and Play Preview tool button.
+- Animation: a new `SlimeSpawnComponent` owns the short first-entry frame strip
+  (`SlimeGreenSpawn.png`, sliced per palette) on each slime actor. While active
+  the actor is excluded from collisions, knockback, attacks, magic hits, and
+  targeting; the runtime controller advances frames on the explicit gameplay
+  schedule and restores the idle texture on completion.
+- Persistence: room state now captures alive positions and remaining health, and
+  re-entry restores those values instead of replaying the intro or respawning
+  defeated slimes. Spawn audio plays once per first-entry batch.
+- Verification: `slime_spawn_smoke`, `sound_mix_profile_smoke`,
+  `sound_balance_smoke`, the sound live-reload smokes, and the slime/room
+  regression smokes all pass headless. `generated_layout_smoke` was repaired:
+  it no longer hangs on a script error or a `RefCounted.free()` call, and its
+  special-room door assertions select the room that actually carries both door
+  colors instead of assuming the first special room does.
 
 ### 2026-09-02 — Gear rework and Run 1 treasure placement
 
