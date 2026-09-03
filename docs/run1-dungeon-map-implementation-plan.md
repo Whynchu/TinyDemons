@@ -23,12 +23,47 @@ Completed in the first integration slice:
 - The hub uses `DoorRightFlameshut.png` until the starter flame is attuned on the tutorial run.
 - `scenes/basic_room.tscn` and `scenes/orb_room.tscn` provide editable room and single-orb authoring templates.
 - `run1_map_contract_smoke.gd`, `dungeon_map_event_smoke.gd`, and `run1_minimap_smoke.gd` cover the semantic contract, event-revealed entrance state, and pixel placement.
-- Authored Treasure Rooms carry one distinct chest position each, and graph/layout snapshots expose coordinates, connections, gates, and room content metadata.
+- Authored and generated Treasure Rooms resolve to one shared back-right chest position, and graph/layout snapshots expose coordinates, connections, gates, and room content metadata.
 - Event-revealed connections are owned by `DungeonMapState`/`DungeonMapController` and are included in the active map-state serialization.
 - The Demon Hub now uses the same expandable left-field/right-rail geometry contract as Pause and Equipment. Its labels, dynamic value anchors, prompts, hit targets, and active cursors reflow against the visible logical width.
 - Mobile orientation changes settle through `DisplayController` and reapply menu geometry without rebuilding route state, selected rows, scroll offsets, pending allocations, text textures, or cursor bobbing. Responsive scene coverage exercises the active Hub in wide landscape, portrait, and wide landscape again.
 
 Remaining review: authored treasure-room content polish, visual placement review of the new room templates, and a supervised full standalone smoke pass when the local Godot headless renderer is stable. Special-room respawns use independent 45-second slot timers and still benefit from in-game timing confirmation.
+
+## Future authored-layout boundary
+
+The current Run 3+ generator must remain replaceable by complete authored
+layouts. When handmade puzzle maps arrive, they should describe the entire run
+contract rather than only overriding a puzzle node: room order and categories,
+all connections, gate requirements, Fire/Orb/fusion dependencies, encounter
+content, Treasure Room metadata, and the valid starter/bound-flame combinations.
+
+`DungeonMapController` should eventually select a reviewed full-layout variant
+from an authored layout catalog before falling back to the generator. A seed
+may choose among reviewed variants and safe optional branches, but it must not
+silently substitute procedural critical-route rooms into an authored run. Each
+variant should be checked by a stateful solver that models room engagement,
+entrance locks, room completion, elemental changes, Orb charges, and fusion
+actions. This lets complete maps be reconstructed for every combination that
+has no handmade puzzle yet, while preserving the existing layout contract and
+leaving authored puzzle data easy to add incrementally.
+
+### Four-way Hub and backtracking extension
+
+The shared graph contract supports all four room sockets. Generated and future
+authored layouts may expose `WALL_LEFT`, `WALL_RIGHT`, `BOTTOM_LEFT`, and
+`BOTTOM_RIGHT` as outgoing connections; each must resolve to its paired arrival
+socket. A canonical four-way Hub uses the upper exits for progression/forks and
+the lower exits for scoutable dig branches. Lower Combat and Treasure branches
+remain optional endpoints unless a complete authored layout gives them a
+deliberate rejoin or state-change purpose.
+
+The engagement rule is intentional: entering does not lock a Combat room;
+the first hit does. A branch connection may therefore be entered before its
+encounter is committed, while `locks_entry_on_destination_engagement` keeps
+the existing combat commitment after engagement. Required backtracking must be
+validated as a stateful route through Orb/Fire changes, not inferred from an
+undirected topology check alone.
 
 ## Non-goals for the first pass
 

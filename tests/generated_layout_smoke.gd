@@ -4,6 +4,7 @@ const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
 const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const ROOM_CONTROLLER_SCRIPT = preload("res://scripts/room_controller.gd")
+const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 
 
 func _initialize() -> void:
@@ -13,6 +14,21 @@ func _initialize() -> void:
 	var different_seed = GENERATOR_SCRIPT.build(24681358, 1, &"fire")
 	var first_validation: Array[String] = GENERATOR_SCRIPT.validate(first, 1, &"fire")
 	_expect(first_validation.is_empty(), "generated Run 2 layout satisfies topology and color-route invariants", failures)
+	var generated_hub = first.room_by_id(&"room_0_0")
+	var lower_left_hub_connection = null
+	var lower_right_hub_connection = null
+	var hub_exit_sockets: Dictionary = {}
+	for connection in first.connections:
+		if connection.source_room_id != &"room_0_0":
+			continue
+		hub_exit_sockets[connection.exit_socket] = true
+		if connection.exit_socket == GRAPH_SCRIPT.BOTTOM_LEFT:
+			lower_left_hub_connection = connection
+		elif connection.exit_socket == GRAPH_SCRIPT.BOTTOM_RIGHT:
+			lower_right_hub_connection = connection
+	_expect(generated_hub != null and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_LEFT) and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_RIGHT) and hub_exit_sockets.has(GRAPH_SCRIPT.BOTTOM_LEFT) and hub_exit_sockets.has(GRAPH_SCRIPT.BOTTOM_RIGHT), "generated Hub exposes all four directional exits", failures)
+	_expect(lower_left_hub_connection != null and lower_left_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_RIGHT and lower_left_hub_connection.route_role == &"dig" and not lower_left_hub_connection.requires_source_room_clear and lower_left_hub_connection.locks_entry_on_destination_engagement, "down-left Hub dig branch is scoutable and engagement-lockable", failures)
+	_expect(lower_right_hub_connection != null and lower_right_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_LEFT and lower_right_hub_connection.route_role == &"optional_treasure" and not lower_right_hub_connection.requires_source_room_clear and lower_right_hub_connection.locks_entry_on_destination_engagement, "down-right Hub branch is an optional scoutable Treasure route", failures)
 	var generated_rare_exception_found := false
 	var first_rare_result := [false]
 	_expect(_rare_entry_exceptions_are_marked(first, first_rare_result), "generated layout marks rare lower-side enemy entrances without opening their top exits", failures)
@@ -33,6 +49,8 @@ func _initialize() -> void:
 			treasure_count += 1
 		elif room.room_type == GRAPH_SCRIPT.ROOM_BOSS:
 			boss_depth = room.coordinate.y
+		if room.room_type == GRAPH_SCRIPT.ROOM_TREASURE:
+			_expect(room.chest_position == LAYOUT_DEFINITION_SCRIPT.TREASURE_CHEST_POSITION, "generated Treasure Rooms use the shared back-right chest position", failures)
 	_expect(orb_count == 2, "generated layout contains two shared-state Orb Rooms", failures)
 	_expect(special_count >= 2, "generated layout contains both Special Room route beats", failures)
 	_expect(treasure_count >= 3, "generated layout contains optional Treasure branches", failures)
@@ -95,6 +113,35 @@ func _initialize() -> void:
 	_expect(graph.get_room_ids().size() == rooms_before, "generated room entry consumes the complete layout without lazily adding topology", failures)
 	rooms.free()
 
+	# Lower sockets are valid generated exits as well as authored arrival points.
+	var four_way_graph = GRAPH_SCRIPT.new()
+	four_way_graph.initialize(314159)
+	var lower_left_connection = four_way_graph.ensure_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_LEFT, GRAPH_SCRIPT.ROOM_COMBAT)
+	var lower_right_connection = four_way_graph.ensure_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_RIGHT, GRAPH_SCRIPT.ROOM_TREASURE)
+	_expect(lower_left_connection != null and lower_left_connection.destination_entry == GRAPH_SCRIPT.WALL_RIGHT and four_way_graph.get_room(lower_left_connection.destination_room_id).coordinate == Vector2i(-1, -1), "runtime graph derives the down-left socket pair and offset", failures)
+	_expect(lower_right_connection != null and lower_right_connection.destination_entry == GRAPH_SCRIPT.WALL_LEFT and four_way_graph.get_room(lower_right_connection.destination_room_id).coordinate == Vector2i(1, -1), "runtime graph derives the down-right socket pair and offset", failures)
+	four_way_graph = null
+
+	# A side branch can be inspected and abandoned before the first attack, then
+	# becomes committed only after engagement and is escapable again when clear.
+	var branch_graph = GRAPH_SCRIPT.new()
+	var branch_map = MAP_CONTROLLER_SCRIPT.new()
+	branch_map.begin_run(branch_graph, 24681357, 2, &"fire")
+	branch_map.set_starter_flame_attuned(true)
+	var branch_connection := branch_graph.get_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_LEFT)
+	if branch_connection != null:
+		var branch_room_id: StringName = branch_connection.destination_room_id
+		_expect(branch_map.is_connection_available(branch_connection, false), "four-way Hub can enter its lower dig branch", failures)
+		branch_map.on_room_entered(branch_room_id)
+		_expect(branch_map.is_connection_available(branch_connection, true), "unengaged lower dig branch allows immediate retreat", failures)
+		_expect(branch_map.mark_room_engaged(branch_room_id), "first attack engages the lower dig branch", failures)
+		_expect(not branch_map.is_connection_available(branch_connection, true), "engaged lower dig branch locks its entrance", failures)
+		branch_map.on_room_completed(branch_room_id)
+		_expect(branch_map.is_connection_available(branch_connection, true), "cleared lower dig branch restores its return entrance", failures)
+	else:
+		_expect(false, "generated map exposes a lower dig branch for engagement testing", failures)
+	branch_map.free()
+
 	var run_graph = GRAPH_SCRIPT.new()
 	var map = MAP_CONTROLLER_SCRIPT.new()
 	map.begin_run(run_graph, 24681357, 2, &"water")
@@ -122,10 +169,20 @@ func _initialize() -> void:
 	var door_graph = GRAPH_SCRIPT.new()
 	var door_map = MAP_CONTROLLER_SCRIPT.new()
 	door_map.begin_run(door_graph, 24681357, 2, &"water")
+	# The generated run exposes multiple Special Rooms with different door
+	# colors; find the one that carries the puzzle_a/puzzle_b pair this section
+	# asserts on rather than assuming the first special room is that room.
 	var special_room: DungeonGraph.RoomRecord = null
 	for room_id in door_graph.get_room_ids():
 		var room := door_graph.get_room(room_id)
-		if room != null and room.room_type == GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY:
+		if room == null or room.room_type != GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY:
+			continue
+		var has_puzzle_a := false
+		var has_puzzle_b := false
+		for connection in room.outgoing_connections.values():
+			if connection.color_requirement == &"puzzle_a": has_puzzle_a = true
+			if connection.color_requirement == &"puzzle_b": has_puzzle_b = true
+		if has_puzzle_a and has_puzzle_b:
 			special_room = room
 			break
 	if special_room != null:
@@ -141,6 +198,8 @@ func _initialize() -> void:
 		_expect(special_b != null and door_map.connection_visual_state(special_b) == &"orb_locked", "generated grey door remains color-locked for the other map state", failures)
 		door_state.set_puzzle_color(&"puzzle_b")
 		_expect(special_b != null and door_map.connection_visual_state(special_b) == &"open", "generated grey door opens when Puzzle B is active", failures)
+	else:
+		_expect(false, "generated layout exposes a Special Room with both door colors", failures)
 	door_map.free()
 
 	# The early fork rejoins at room_0_2. Its second incoming entrance must not

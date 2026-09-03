@@ -9,6 +9,7 @@ class_name DungeonLayoutRun1
 
 const MAP_SIZE := Vector2i(16, 23)
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
+const TREASURE_CHEST_POSITION := LAYOUT_DEFINITION_SCRIPT.TREASURE_CHEST_POSITION
 
 
 static func build():
@@ -27,7 +28,7 @@ static func _add_rooms(layout) -> void:
 	_room(layout, &"room_1_1", Vector2i(1, 1), Vector2i(10, 19), DungeonGraph.ROOM_COMBAT)
 
 	# Preserve the original back-right wall placement in the first Treasure Room.
-	_room(layout, &"room_-2_2", Vector2i(-2, 2), Vector2i(4, 17), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(157, 69))
+	_room(layout, &"room_-2_2", Vector2i(-2, 2), Vector2i(4, 17), DungeonGraph.ROOM_TREASURE, 1, &"", &"", TREASURE_CHEST_POSITION)
 	_room(layout, &"room_0_3", Vector2i(0, 3), Vector2i(8, 17), DungeonGraph.ROOM_COMBAT)
 
 	_room(layout, &"room_1_4", Vector2i(1, 4), Vector2i(10, 15), DungeonGraph.ROOM_COMBAT)
@@ -40,16 +41,14 @@ static func _add_rooms(layout) -> void:
 	_room(layout, &"room_0_7", Vector2i(0, 7), Vector2i(8, 9), DungeonGraph.ROOM_COMBAT)
 	_room(layout, &"room_2_7", Vector2i(2, 7), Vector2i(12, 9), DungeonGraph.ROOM_COMBAT)
 
-	_room(layout, &"room_-3_8", Vector2i(-3, 8), Vector2i(4, 9), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(157, 69))
+	_room(layout, &"room_-3_8", Vector2i(-3, 8), Vector2i(4, 9), DungeonGraph.ROOM_TREASURE, 1, &"", &"", TREASURE_CHEST_POSITION)
 
 	_room(layout, &"room_-1_9", Vector2i(-1, 9), Vector2i(6, 7), DungeonGraph.ROOM_COMBAT)
 	_room(layout, &"room_1_9", Vector2i(1, 9), Vector2i(10, 7), DungeonGraph.ROOM_COMBAT)
 
 	_room(layout, &"room_-2_11", Vector2i(-2, 11), Vector2i(4, 5), DungeonGraph.ROOM_BOSS)
-	# Keep the reward on the rear half of the room. The floor center is around
-	# (120, 88); a center anchor can leave the chest in the player's path and
-	# makes the authored treasure placement look like a generated fallback.
-	_room(layout, &"room_0_11", Vector2i(0, 11), Vector2i(8, 5), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(128, 62))
+	# Every Treasure Room uses the same back-right wall anchor as the first room.
+	_room(layout, &"room_0_11", Vector2i(0, 11), Vector2i(8, 5), DungeonGraph.ROOM_TREASURE, 1, &"", &"", TREASURE_CHEST_POSITION)
 	_room(layout, &"room_2_11", Vector2i(2, 11), Vector2i(12, 5), DungeonGraph.ROOM_ORB)
 
 
@@ -114,7 +113,7 @@ static func _link(
 	var destination: Variant = layout.room_by_id(destination_room_id)
 	if source == null or destination == null:
 		return
-	var destination_entry := DungeonGraph.BOTTOM_RIGHT if exit_socket == DungeonGraph.WALL_LEFT else DungeonGraph.BOTTOM_LEFT
+	var destination_entry := DungeonGraph.paired_socket(exit_socket)
 	layout.add_connection(layout.make_connection_spec(
 		source_room_id,
 		exit_socket,

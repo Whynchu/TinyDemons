@@ -231,6 +231,25 @@ branches, and room variants:
 - deterministic coordinates, socket pairs, route roles, clear requirements,
   engagement-entry locks, and color requirements for every connection.
 
+### Four-way Hubs and reversible dig branches
+
+The reusable grammar is not a one-way staircase. A Hub may expose all four
+socket directions: upper-left, upper-right, down-left, and down-right. The
+upper exits normally carry progression or a fork that later rejoins; lower
+exits are well-suited to optional Combat, Treasure, Fire, or Orb dig branches.
+
+Entering a Combat branch is deliberately scoutable. Arrival alone does not
+engage the room, so the player can inspect it and retreat without starting the
+fight. The first player hit engages the room and applies its entrance lock;
+clearing the encounter restores the return entrance. This preserves combat
+dead ends as intentional risk/reward choices while keeping backtracking safe.
+
+Connections should carry explicit route roles such as `progression`, `fork`,
+`dig`, `return`, `rejoin`, or `state_change`. A required backtrack should be
+caused by a meaningful state change—usually an Orb or Fire room—not by an
+unmarked missing forward edge. Every such route must retain a reachable neutral
+return path so changing the global state cannot strand the player.
+
 ### Generated flame progression
 
 Run 1 begins grey and has only the selected starter flame as its elemental
@@ -272,6 +291,8 @@ The design is considered correctly implemented when:
 8. The environment uses the global puzzle-color state rather than a local Orb Room tint.
 9. The revealed portions of the minimap are pixel-identical in layout and palette to the mockup before status overlays are added.
 10. The graph, runtime map state, room controller, and minimap can be tested independently of `gameplay.gd`.
+11. Generated and future authored Hubs can expose all four socket directions with correctly paired arrival sockets.
+12. Entering an uncleared Combat dig branch leaves its return entrance open until the first player hit engages the room; clearing it restores that entrance.
 
 ## Authoring prefabs
 

@@ -4,6 +4,7 @@ const LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run1.gd")
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
 const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
+const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 
 
 func _initialize() -> void:
@@ -41,16 +42,12 @@ func _initialize() -> void:
 		_expect(orb_rooms[0].room_type == orb_rooms[1].room_type, "Orb Room locations share one runtime room type", failures)
 	_expect(treasure_rooms.size() == 3, "Run 1 has three authored Treasure Rooms", failures)
 	var first_treasure_room = layout.room_by_id(&"room_-2_2")
-	_expect(first_treasure_room != null and first_treasure_room.chest_position == Vector2(157, 69), "the first Run 1 Treasure Room keeps its original back-right chest position", failures)
-	var treasure_positions: Dictionary = {}
+	_expect(first_treasure_room != null and first_treasure_room.chest_position == LAYOUT_DEFINITION_SCRIPT.TREASURE_CHEST_POSITION, "the first Run 1 Treasure Room keeps its original back-right chest position", failures)
 	for room in treasure_rooms:
 		_expect(room.chest_count == 1, "each Run 1 Treasure Room declares exactly one chest: %s" % room.id, failures)
-		_expect(room.chest_position != Vector2.ZERO, "each Run 1 Treasure Room has an authored chest position: %s" % room.id, failures)
-		_expect(room.chest_position.distance_to(Vector2(120, 88)) >= 20.0, "each Run 1 Treasure Room keeps its chest out of the floor center: %s" % room.id, failures)
-		treasure_positions[room.chest_position] = true
+		_expect(room.chest_position == LAYOUT_DEFINITION_SCRIPT.TREASURE_CHEST_POSITION, "each Run 1 Treasure Room uses the shared back-right chest position: %s" % room.id, failures)
 		_expect(layout.room_by_coordinate(room.coordinate).id == room.id, "layout coordinate lookup resolves %s" % room.id, failures)
 		_expect(layout.room_by_minimap_coordinate(room.minimap_coordinate).id == room.id, "layout minimap lookup resolves %s" % room.id, failures)
-	_expect(treasure_positions.size() == treasure_rooms.size(), "Run 1 Treasure Room chest placements are intentionally distinct", failures)
 	var layout_snapshot: Dictionary = layout.to_dictionary()
 	_expect((layout_snapshot.get("rooms", []) as Array).size() == layout.rooms.size(), "layout serialization includes every authored room", failures)
 	_expect((layout_snapshot.get("connections", []) as Array).size() == layout.connections.size(), "layout serialization includes every authored connection", failures)

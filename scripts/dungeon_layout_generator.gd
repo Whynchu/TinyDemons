@@ -24,6 +24,7 @@ const ROUTE_KEY_PROGRESSION: StringName = &"key_progression"
 const ROUTE_DETOUR_ORB: StringName = &"detour_orb"
 const ROUTE_DETOUR_FIRE: StringName = &"detour_fire"
 const ROUTE_FUSION_PREREQUISITE_ORB: StringName = &"fusion_prerequisite_orb"
+const ROUTE_DIG: StringName = &"dig"
 
 
 class LayoutBuilder extends RefCounted:
@@ -76,7 +77,8 @@ class LayoutBuilder extends RefCounted:
 		locks_entry_on_destination_engagement: bool = true,
 		element_requirement: StringName = &"",
 		gate_type: StringName = DungeonGraph.GATE_NONE,
-		orb_element_requirement: StringName = &""
+		orb_element_requirement: StringName = &"",
+		allow_entry_before_source_clear: bool = false
 	) -> void:
 		var key := "%s:%s" % [source_room_id, exit_socket]
 		if connection_keys.has(key):
@@ -87,7 +89,7 @@ class LayoutBuilder extends RefCounted:
 		if source == null or destination == null:
 			push_error("Generated layout attempted to link a missing room.")
 			return
-		var destination_entry := DungeonGraph.BOTTOM_RIGHT if exit_socket == DungeonGraph.WALL_LEFT else DungeonGraph.BOTTOM_LEFT
+		var destination_entry := DungeonGraph.paired_socket(exit_socket)
 		var midpoint_sum: Vector2i = source.minimap_coordinate + destination.minimap_coordinate
 		var midpoint: Vector2i = Vector2i(int(float(midpoint_sum.x) / 2.0), int(float(midpoint_sum.y) / 2.0))
 		layout.add_connection(layout.make_connection_spec(
@@ -102,7 +104,7 @@ class LayoutBuilder extends RefCounted:
 			requires_source_room_clear,
 			locks_entry_on_destination_engagement,
 			route_role,
-			false,
+			allow_entry_before_source_clear,
 			element_requirement,
 			gate_type,
 			orb_element_requirement
@@ -129,9 +131,17 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var start_id := builder.add_room(Vector2i(0, 0), DungeonGraph.ROOM_START)
 	var left_id := builder.add_room(Vector2i(-1, 1), DungeonGraph.ROOM_COMBAT)
 	var right_id := builder.add_room(Vector2i(1, 1), DungeonGraph.ROOM_COMBAT)
+	# The Hub is deliberately four-way.  These lower branches are scoutable
+	# dig rooms: their entrance is available immediately, but the normal
+	# engagement lock still commits the player after the first attack.  The
+	# Treasure endpoint gives the riskier lower route a clear payoff.
+	var lower_left_dig_id := builder.add_room(Vector2i(-1, -1), DungeonGraph.ROOM_COMBAT)
+	var lower_right_treasure_id := builder.add_room(Vector2i(1, -1), DungeonGraph.ROOM_TREASURE, 1)
 	var merge_id := builder.add_room(Vector2i(0, 2), DungeonGraph.ROOM_COMBAT)
 	builder.link(start_id, DungeonGraph.WALL_LEFT, left_id, &"", ROUTE_FORK, false)
 	builder.link(start_id, DungeonGraph.WALL_RIGHT, right_id, &"", ROUTE_FORK, false)
+	builder.link(start_id, DungeonGraph.BOTTOM_LEFT, lower_left_dig_id, &"", ROUTE_DIG, false, true)
+	builder.link(start_id, DungeonGraph.BOTTOM_RIGHT, lower_right_treasure_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
 	builder.link(left_id, DungeonGraph.WALL_RIGHT, merge_id, &"", ROUTE_FORK)
 	builder.link(right_id, DungeonGraph.WALL_LEFT, merge_id, &"", ROUTE_FORK)
 
@@ -651,6 +661,12 @@ static func _add_side_route(
 	var source = builder.room_spec(source_room_id)
 	if source == null:
 		return
+	# Four-way Hubs add two intentional lower dig rooms before the normal
+	# progression branches are filled. Reserve one additional slot for a
+	# mandatory prerequisite Orb that may be added immediately before this
+	# optional route, keeping the final layout within the target + 2 ceiling.
+	if room_target >= 0 and builder.layout.rooms.size() >= room_target + 1:
+		return
 	var side_socket := DungeonGraph.WALL_RIGHT if main_socket == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT
 	var side_connection_key := "%s:%s" % [source_room_id, side_socket]
 	var side_coordinate := source_coordinate + _exit_offset(side_socket)
@@ -697,7 +713,7 @@ static func _add_side_route(
 
 
 static func _exit_offset(socket_id: StringName) -> Vector2i:
-	return Vector2i(-1, 1) if socket_id == DungeonGraph.WALL_LEFT else Vector2i(1, 1)
+	return DungeonGraph.exit_offset(socket_id)
 
 
 static func _reachable_rooms(layout, start_id: StringName) -> Dictionary:

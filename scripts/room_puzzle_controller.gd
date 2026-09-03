@@ -555,59 +555,82 @@ func refresh_room_socket_visuals(root: Object, is_unlocked: bool) -> void:
 	var entrance_walkway_texture: Texture2D = root.call("_load_texture_or_null", "res://assets/artwork/Tile.png")
 	var starter_gate_locked := starter_flame_gate_locked(root)
 	var is_boss_room: bool = root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS
+	# Socket art is owned by the socket kind, not by whether the player is leaving
+	# or arriving. Wall sockets (WALL_LEFT/WALL_RIGHT) are back-wall doorways and
+	# always render DoorRight* art; floor sockets (BOTTOM_LEFT/BOTTOM_RIGHT) are
+	# the lower walkway entrances and always render the walkway tile. Four-way
+	# hubs use lower sockets as exits and wall sockets as entrances on the room
+	# they lead to, so keying on role would draw a back-wall door on the floor
+	# path and a floor tile on the arrival wall.
 	for socket_value in root.room_controller.active_door_sockets.values():
 		var socket := socket_value as DungeonSocket
 		var visual := socket.visual() as Sprite2D
 		if visual == null: continue
 		var connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection(root.current_room_id, socket.socket_id())
-		var destination_room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(connection.destination_room_id) if connection != null else null
-		var leads_downstairs: bool = destination_room != null and destination_room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
-		var visual_state: StringName = root.call("_map_connection_visual_state", connection, false) as StringName
-		var authored_open: bool = root.dungeon_map_controller != null and root.dungeon_map_controller.is_authored_run1()
-		visual.visible = true
-		var is_orb_locked := visual_state == &"orb_locked"
-		var is_element_locked := visual_state == &"element_locked"
-		var is_starter_gate: bool = starter_gate_locked and root.current_room_type == DungeonGraph.ROOM_START
-		# The map controller is the source of truth for authored/generated runs.
-		# Do not let the legacy room-wide flag keep an effectively open connection
-		# looking shut (or vice versa), especially after a shared orb recolors the
-		# active puzzle state.
-		var connection_is_open := visual_state == &"open" and (root.dungeon_map_controller != null or is_unlocked or authored_open)
-		visual.texture = starter_flame_shut_texture if is_starter_gate and starter_flame_shut_texture != null else stairs_up_texture if root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs and connection_is_open else _color_locked_door_texture(root, orb_shut_texture, connection) if is_orb_locked or is_element_locked else open_texture if connection_is_open else shut_texture
-		if is_orb_locked or is_element_locked or is_starter_gate:
-			# The locked texture already contains the complete semantic color. Do
-			# not multiply it by the room's global environment tint.
-			visual.self_modulate = Color.WHITE
-		visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
+		var is_wall_socket := socket.socket_id() == DungeonGraph.WALL_LEFT or socket.socket_id() == DungeonGraph.WALL_RIGHT
+		if is_wall_socket:
+			_apply_door_socket_visual(root, socket, visual, connection, false, is_unlocked, starter_gate_locked, starter_flame_shut_texture, orb_shut_texture, open_texture, shut_texture, stairs_down_texture, stairs_up_texture)
+		else:
+			_apply_walkway_socket_visual(root, socket, visual, connection, false, is_boss_room, entrance_walkway_texture)
 	for socket_value in root.room_controller.active_entrance_sockets.values():
 		var socket := socket_value as DungeonSocket
 		var visual := socket.visual() as Sprite2D
 		if visual == null: continue
 		var connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection_for_entry(root.current_room_id, socket.socket_id())
-		var visual_state: StringName = root.call("_map_connection_visual_state", connection, true) as StringName
-		visual.visible = true
-		if is_boss_room:
-			# Boss arrivals use the same lower-room entrance treatment as every other
-			# room. The fight closes the route with a gray walkway, not a back-wall
-			# DoorRight* asset; victory then restores the same walkway at full color.
-			visual.texture = entrance_walkway_texture
-			visual.self_modulate = _entrance_lock_modulate(root, connection, visual_state)
-			var boss_extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
-			if boss_extra_tile != null:
-				boss_extra_tile.visible = true
-			continue
-		# DoorRight* art is authored for the back wall. Entrance sockets instead
-		# use the authored walkway tile; its existing orientation is preserved.
-		if entrance_walkway_texture != null:
-			visual.texture = entrance_walkway_texture
-		var extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
-		if extra_tile != null:
-			extra_tile.visible = true
-		visual.self_modulate = _entrance_lock_modulate(root, connection, visual_state)
+		var is_wall_socket := socket.socket_id() == DungeonGraph.WALL_LEFT or socket.socket_id() == DungeonGraph.WALL_RIGHT
+		if is_wall_socket:
+			_apply_door_socket_visual(root, socket, visual, connection, true, is_unlocked, starter_gate_locked, starter_flame_shut_texture, orb_shut_texture, open_texture, shut_texture, stairs_down_texture, stairs_up_texture)
+		else:
+			_apply_walkway_socket_visual(root, socket, visual, connection, true, is_boss_room, entrance_walkway_texture)
 	# Socket refreshes can happen after the map color changes (for example when
 	# an orb rebuilds the room). Reapply the recursive surface tint last so both
 	# authored entrance tiles agree instead of leaving one tile white.
 	apply_puzzle_environment_tint(root, _environment_tint(root))
+
+
+func _apply_door_socket_visual(root: Object, socket: DungeonSocket, visual: Sprite2D, connection: DungeonGraph.ConnectionRecord, is_entrance: bool, is_unlocked: bool, starter_gate_locked: bool, starter_flame_shut_texture: Texture2D, orb_shut_texture: Texture2D, open_texture: Texture2D, shut_texture: Texture2D, stairs_down_texture: Texture2D, stairs_up_texture: Texture2D) -> void:
+	var destination_room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(connection.destination_room_id) if connection != null else null
+	var leads_downstairs: bool = destination_room != null and destination_room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
+	var visual_state: StringName = root.call("_map_connection_visual_state", connection, is_entrance) as StringName
+	var authored_open: bool = root.dungeon_map_controller != null and root.dungeon_map_controller.is_authored_run1()
+	visual.visible = true
+	var is_orb_locked := visual_state == &"orb_locked"
+	var is_element_locked := visual_state == &"element_locked"
+	var is_starter_gate: bool = starter_gate_locked and root.current_room_type == DungeonGraph.ROOM_START
+	# The map controller is the source of truth for authored/generated runs.
+	# Do not let the legacy room-wide flag keep an effectively open connection
+	# looking shut (or vice versa), especially after a shared orb recolors the
+	# active puzzle state.
+	var connection_is_open := visual_state == &"open" and (root.dungeon_map_controller != null or is_unlocked or authored_open)
+	visual.texture = starter_flame_shut_texture if is_starter_gate and starter_flame_shut_texture != null else stairs_up_texture if root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS else stairs_down_texture if leads_downstairs and connection_is_open else _color_locked_door_texture(root, orb_shut_texture, connection) if is_orb_locked or is_element_locked else open_texture if connection_is_open else shut_texture
+	if is_orb_locked or is_element_locked or is_starter_gate:
+		# The locked texture already contains the complete semantic color. Do
+		# not multiply it by the room's global environment tint.
+		visual.self_modulate = Color.WHITE
+	visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
+
+
+func _apply_walkway_socket_visual(root: Object, socket: DungeonSocket, visual: Sprite2D, connection: DungeonGraph.ConnectionRecord, is_entrance: bool, is_boss_room: bool, entrance_walkway_texture: Texture2D) -> void:
+	var visual_state: StringName = root.call("_map_connection_visual_state", connection, is_entrance) as StringName
+	visual.visible = true
+	if is_boss_room:
+		# Boss arrivals use the same lower-room entrance treatment as every other
+		# room. The fight closes the route with a gray walkway, not a back-wall
+		# DoorRight* asset; victory then restores the same walkway at full color.
+		visual.texture = entrance_walkway_texture
+		visual.self_modulate = _entrance_lock_modulate(root, connection, visual_state)
+		var boss_extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
+		if boss_extra_tile != null:
+			boss_extra_tile.visible = true
+		return
+	# DoorRight* art is authored for the back wall. Floor walkway sockets use the
+	# authored walkway tile; its existing orientation is preserved.
+	if entrance_walkway_texture != null:
+		visual.texture = entrance_walkway_texture
+	var extra_tile := visual.get_node_or_null("Tile 2") as CanvasItem
+	if extra_tile != null:
+		extra_tile.visible = true
+	visual.self_modulate = _entrance_lock_modulate(root, connection, visual_state)
 
 
 func _color_locked_door_texture(root: Object, base_texture: Texture2D, connection: DungeonGraph.ConnectionRecord) -> Texture2D:
