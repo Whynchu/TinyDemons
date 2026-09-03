@@ -171,8 +171,25 @@ func apply_puzzle_environment_tint(root: Object, tint: Color) -> void:
 	var starter_gate_locked := starter_flame_gate_locked(root)
 	for socket_value in root.room_controller.active_door_sockets.values():
 		var door_socket := socket_value as DungeonSocket
+		if door_socket == null:
+			continue
+		var door_visual := door_socket.visual()
+		if door_visual == null:
+			continue
+		# Floor walkway exits (four-way Hub lower branches) reset to WHITE above;
+		# reapply the lock grey when the destination is engaged or color-locked so
+		# a closed dig path does not look like an open footpath.
+		var is_floor_walkway: bool = door_socket.socket_id() == DungeonGraph.BOTTOM_LEFT or door_socket.socket_id() == DungeonGraph.BOTTOM_RIGHT
+		if is_floor_walkway:
+			if not starter_gate_locked and _socket_is_open(root, door_socket, false):
+				set_puzzle_surface_tint(door_visual, presentation_tint)
+			else:
+				var walkway_connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection(root.current_room_id, door_socket.socket_id())
+				var walkway_state: StringName = root.call("_map_connection_visual_state", walkway_connection, false) as StringName
+				set_puzzle_surface_tint(door_visual, _entrance_lock_modulate(root, walkway_connection, walkway_state))
+			continue
 		if not starter_gate_locked and tint != Color.WHITE and not _socket_is_color_locked(root, door_socket, false):
-			set_puzzle_surface_tint(door_socket.visual() if door_socket != null else null, presentation_tint)
+			set_puzzle_surface_tint(door_visual, presentation_tint)
 	for socket_value in root.room_controller.active_entrance_sockets.values():
 		var entrance_socket := socket_value as DungeonSocket
 		if entrance_socket == null:
