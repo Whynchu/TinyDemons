@@ -119,6 +119,10 @@ func _initialize() -> void:
 			var wide_hub_cursor_x := PauseMenuLayoutScript.left_field_x(30.0, display.view_size.x)
 			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == wide_hub_stat_x and orientation_screens.hub_stat_cursor_text.position.x == wide_hub_cursor_x, "wide hub maps stat text and active cursor into the expandable content field", failures)
 			_expect(orientation_screens.hub_context_text.position.x == PauseMenuLayoutScript.left_field_x(136.0, display.view_size_as_vector().x), "wide hub repositions its confirmation prompt with the content field", failures)
+			var wide_add_marker := orientation_screens.hub_stat_add_marker as Sprite2D
+			var wide_stat_right := orientation_screens.hub_stat_right_buttons[2] as Button
+			_expect(wide_add_marker != null and wide_stat_right != null and is_equal_approx(wide_stat_right.get_global_rect().get_center().x, wide_add_marker.position.x), "wide hub keeps the selected stat plus hitbox centered on its marker", failures)
+			_expect(bool(orientation_screens.hub_stat_cursor_text.call("is_bobbing")), "active Hub cursor is bobbing before orientation reflow", failures)
 		# Simulate a live mobile orientation change while FULL is active. The
 		# logical frame must be recalculated after the viewport settles, and the
 		# full-screen menu frame must follow it instead of retaining old geometry.
@@ -137,7 +141,10 @@ func _initialize() -> void:
 			var portrait_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
 			var portrait_value_aligned := portrait_value != null and portrait_value.texture != null and is_equal_approx(portrait_value.position.x + portrait_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))
 			_expect(orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and orientation_screens.hub_stat_cursor_text.position.x == PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x) and portrait_value_aligned, "portrait orientation reflows hub labels, value anchors, and the active cursor", failures)
-			_expect(not bool(orientation_screens.hub_stat_cursor_text.call("is_locked")), "portrait orientation keeps the active hub cursor animated", failures)
+			var portrait_add_marker := orientation_screens.hub_stat_add_marker as Sprite2D
+			var portrait_stat_right := orientation_screens.hub_stat_right_buttons[2] as Button
+			_expect(portrait_add_marker != null and portrait_stat_right != null and is_equal_approx(portrait_stat_right.get_global_rect().get_center().x, portrait_add_marker.position.x), "portrait orientation keeps the selected stat plus hitbox aligned", failures)
+			_expect(not bool(orientation_screens.hub_stat_cursor_text.call("is_locked")) and bool(orientation_screens.hub_stat_cursor_text.call("is_bobbing")), "portrait orientation preserves the active Hub cursor animation", failures)
 		gameplay.get_window().size = Vector2i(960, 540)
 		for _settle_frame in 4:
 			await process_frame

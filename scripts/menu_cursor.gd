@@ -9,6 +9,14 @@ var _motion_tween: Tween = null
 var _target := Vector2.INF
 var _locked := false
 var _bobbing := false
+var _bob_offset_value := Vector2.ZERO
+var _bob_offset: Vector2:
+	get:
+		return _bob_offset_value
+	set(value):
+		_bob_offset_value = value
+		if not _locked and _target.is_finite():
+			position = _target + value
 
 
 func _ready() -> void:
@@ -25,6 +33,10 @@ func move_to(target: Vector2, animate: bool = true) -> void:
 		return
 	_target = target
 	_kill_motion()
+	# A normal route move starts from the cursor's current position. Reset the
+	# bob offset without invoking its position-following setter so an animated
+	# move does not snap to the new target before its glide begins.
+	_bob_offset_value = Vector2.ZERO
 	if not animate:
 		position = target
 		_start_bob()
@@ -43,14 +55,19 @@ func _on_arrived() -> void:
 func _start_bob() -> void:
 	if not is_inside_tree() or _locked:
 		return
+	if not _target.is_finite():
+		return
 	_kill_motion()
-	position = _target
+	_bob_offset = Vector2.ZERO
 	var bob := create_tween()
 	_motion_tween = bob
 	_bobbing = true
 	bob.set_loops()
-	bob.tween_property(self, "position", _target + Vector2(BOB_AMOUNT, 0.0), BOB_SLIDE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	bob.tween_property(self, "position", _target, BOB_SNAP_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	# Animate an offset rather than an absolute position. A responsive reflow can
+	# then change _target while this tween keeps its current phase and bobbing
+	# continues from the same point on the glove's motion cycle.
+	bob.tween_property(self, "_bob_offset", Vector2(BOB_AMOUNT, 0.0), BOB_SLIDE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	bob.tween_property(self, "_bob_offset", Vector2.ZERO, BOB_SNAP_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 
 func _kill_motion() -> void:
@@ -67,11 +84,47 @@ func lock_at(target: Vector2) -> void:
 	_locked = true
 	_target = target
 	_kill_motion()
+	_bob_offset_value = Vector2.ZERO
 	position = target
 
 
 func unlock() -> void:
 	_locked = false
+	_start_bob()
+
+
+func reanchor_preserving_motion(target: Vector2) -> void:
+	"""Move a cursor's anchor during responsive reflow without restarting its bob."""
+	if not _target.is_finite():
+		move_to(target, false)
+		return
+	if _target.is_equal_approx(target):
+		return
+	var previous_target := _target
+	_target = target
+	if _locked:
+		_kill_motion()
+		_bob_offset_value = Vector2.ZERO
+		position = target
+		return
+	if _bobbing:
+		# The bob tween animates _bob_offset, so only the anchor changes here.
+		position = _target + _bob_offset_value
+		return
+	if _motion_tween != null and _motion_tween.is_valid():
+		# A resize can arrive during a short route glide. Preserve the current
+		# relative point, then finish the glide at the new anchor.
+		var relative_position := position + target - previous_target
+		_kill_motion()
+		_bob_offset_value = Vector2.ZERO
+		position = relative_position
+		var tween := create_tween()
+		_motion_tween = tween
+		tween.tween_property(self, "position", target, MOVE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tween.tween_callback(_on_arrived)
+		return
+	_bob_offset_value = Vector2.ZERO
+	position = target
 	_start_bob()
 
 
@@ -82,6 +135,10 @@ func stop_motion() -> void:
 
 func is_locked() -> bool:
 	return _locked
+
+
+func is_bobbing() -> bool:
+	return _bobbing
 
 
 func _exit_tree() -> void:
