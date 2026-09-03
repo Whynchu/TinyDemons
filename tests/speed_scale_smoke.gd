@@ -16,6 +16,8 @@ func _initialize() -> void:
 	_expect(tuning.attack_multiplier(-10) < 1.0, "negative SPD lowers attack", failures)
 	_expect(is_equal_approx(tuning.attack_multiplier(200), 1.0 + tuning.attack_scale * 100.0), "attack multiplier clamps at max", failures)
 	_expect(is_equal_approx(tuning.speed_multiplier(-200), 0.5), "move multiplier clamps at min", failures)
+	_expect(tuning.agi_multiplier(0.0) < tuning.agi_multiplier(1.0) and tuning.agi_multiplier(1.0) < tuning.agi_multiplier(2.0), "AGI movement is a strict reward curve from zero", failures)
+	_expect(tuning.agi_multiplier(2.0) < 1.0 and is_equal_approx(tuning.agi_multiplier(tuning.movement_agi_reference), 1.0), "AGI movement specs off the reference and starts below neutral", failures)
 
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items()

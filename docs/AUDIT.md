@@ -410,6 +410,16 @@ encounter the local renderer crash.
 - Verification: generated/authored layout smokes, socket smokes, profile migration
   smokes, and the slime/sound regression smokes all pass headless.
 
+### 2026-09-03 — AGI movement is a real investment
+
+- `player_tuning.gd` movement now specs off `movement_agi_reference` (10 AGI =
+  neutral). A new character's starting AGI 2 sits at 0.84x move speed and 0 AGI
+  at 0.80x, so dumping agility is a genuine slowdown while investing past the
+  reference gives a modest reward. Attack and roll timing keep their separate
+  lower reference and are unchanged.
+- Verification: `six_stat_calculator_smoke` and `speed_scale_smoke` assert the
+  reference neutral point, the below-neutral start, and the strict reward curve.
+
 ### 2026-09-02 — Gear rework and Run 1 treasure placement
 
 - Owner/API introduced: `ItemCatalog` owns the live gear catalogue and flat

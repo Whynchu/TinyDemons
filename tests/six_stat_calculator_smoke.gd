@@ -55,7 +55,9 @@ func _initialize() -> void:
 	_expect(is_equal_approx(high_mnd_result.physical_after_mitigation, low_mnd_result.physical_after_mitigation) and high_mnd_result.magic_after_mitigation < low_mnd_result.magic_after_mitigation, "MND-derived M.DEF mitigates only the magic composite portion", failures)
 
 	var player_tuning := PlayerTuning.new()
-	_expect(is_equal_approx(player_tuning.agi_multiplier(1.0), 1.0) and player_tuning.agi_multiplier(21.0) > 1.0, "AGI is the time-scale reference stat", failures)
+	_expect(is_equal_approx(player_tuning.agi_multiplier(player_tuning.movement_agi_reference), 1.0) and player_tuning.agi_multiplier(21.0) > 1.0, "AGI movement specs off the reference value", failures)
+	_expect(player_tuning.agi_multiplier(0.0) < 1.0 and player_tuning.agi_multiplier(0.0) < player_tuning.agi_multiplier(1.0), "zero AGI is clearly slower than the neutral reference", failures)
+	_expect(player_tuning.agi_multiplier(2.0) < 1.0, "a starting 2-AGI build is below neutral movement", failures)
 	_expect(is_equal_approx(tuning.knockback_multiplier_for_strength(5.0), 1.0) and tuning.knockback_multiplier_for_strength(20.0) > 1.0, "STR is the knockback reference stat", failures)
 
 	var player_stats := StatsComponent.new()
