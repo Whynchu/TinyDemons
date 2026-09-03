@@ -26,7 +26,8 @@ static func _add_rooms(layout) -> void:
 	_room(layout, &"room_-1_1", Vector2i(-1, 1), Vector2i(6, 19), DungeonGraph.ROOM_ORB)
 	_room(layout, &"room_1_1", Vector2i(1, 1), Vector2i(10, 19), DungeonGraph.ROOM_COMBAT)
 
-	_room(layout, &"room_-2_2", Vector2i(-2, 2), Vector2i(4, 17), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(104, 69))
+	# Preserve the original back-right wall placement in the first Treasure Room.
+	_room(layout, &"room_-2_2", Vector2i(-2, 2), Vector2i(4, 17), DungeonGraph.ROOM_TREASURE, 1, &"", &"", Vector2(157, 69))
 	_room(layout, &"room_0_3", Vector2i(0, 3), Vector2i(8, 17), DungeonGraph.ROOM_COMBAT)
 
 	_room(layout, &"room_1_4", Vector2i(1, 4), Vector2i(10, 15), DungeonGraph.ROOM_COMBAT)
