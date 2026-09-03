@@ -3,6 +3,7 @@ class_name SlimeTuning
 
 @export var scoot_distance := 5.0
 @export var scoot_duration := 0.34
+@export var spawn_frame_time := 0.08
 @export var attack_frame_time := 0.08
 @export var attack_hit_frame := 5
 @export var attack_range := 14.0

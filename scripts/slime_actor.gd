@@ -31,6 +31,7 @@ func ensure_components() -> void:
 	_ensure_component("Tactics", EnemyTacticsComponent)
 	_ensure_component("Animation", SlimeAnimationComponent)
 	_ensure_component("Visual", SlimeVisualComponent)
+	_ensure_component("Spawn", load("res://scripts/slime_spawn_component.gd"))
 	_ensure_component("HealthPresenter", SlimeHealthPresenter)
 
 
@@ -62,9 +63,32 @@ func tick_components(delta: float) -> void:
 		ambush.tick(self, delta)
 
 
+func begin_spawn(spawn_frames: Array[Texture2D], frame_time: float) -> void:
+	var spawn := get_node_or_null("Spawn") as Node
+	if spawn == null:
+		spawn = _ensure_component("Spawn", load("res://scripts/slime_spawn_component.gd"))
+	spawn.call("begin", spawn_frames, frame_time)
+
+
+func tick_spawn(delta: float, set_frame: Callable, finish: Callable) -> bool:
+	var spawn := get_node_or_null("Spawn") as Node
+	return spawn != null and bool(spawn.call("tick", delta, set_frame, finish))
+
+
+func cancel_spawn() -> void:
+	var spawn := get_node_or_null("Spawn") as Node
+	if spawn != null:
+		spawn.call("cancel")
+
+
+func is_spawn_locked() -> bool:
+	var spawn := get_node_or_null("Spawn") as Node
+	return spawn != null and bool(spawn.call("is_active"))
+
+
 func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable, allow_movement: bool = true) -> void:
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
-	if combat == null or is_dead.call(self):
+	if combat == null or is_dead.call(self) or is_spawn_locked():
 		return
 	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
 	if update_knockback.call(self, delta):
@@ -93,7 +117,8 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 
 
 static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable, allow_movement: bool = true) -> void:
-	if bool(is_dead.call(actor)):
+	var spawn := actor.get_node_or_null("Spawn") as Node
+	if bool(is_dead.call(actor)) or (spawn != null and bool(spawn.call("is_active"))):
 		return
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null:
@@ -121,7 +146,7 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 
 
 static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, show_damage_number := true) -> void:
-	if bool(root.call("_is_slime_dead", slime)): return
+	if bool(root.call("_is_slime_dead", slime)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime))): return
 	root.call("_mark_player_in_combat")
 	if immune:
 		if show_damage_number:
@@ -146,6 +171,8 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 
 
 static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
+	if root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime)):
+		return
 	var player := root.get("player") as Sprite2D
 	var direction: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime)
 	var face_left := direction.x < 0.0
@@ -164,6 +191,8 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 
 
 static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
+	if root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime)):
+		return
 	var player := root.get("player") as Sprite2D
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 	if root.has_method("_play_sound"):
@@ -223,6 +252,7 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 
 
 func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_delay: float, hold_delay: float, idle_breath_delay: float, attack_cooldown_delay: float) -> void:
+	cancel_spawn()
 	var brain := get_node_or_null("Brain") as SlimeBrain
 	if brain != null:
 		brain.start_position = start_pos

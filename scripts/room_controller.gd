@@ -852,6 +852,10 @@ func apply_finished_state(root: Object) -> void:
 
 func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent; combat.dead = true; combat.active = false; slime.visible = false; combat.timer = 0.0; combat.frame = 0; combat.hit_done = false
+	if root.has_method("_slime_spawn"):
+		var spawn := root.call("_slime_spawn", slime) as Node
+		if spawn != null:
+			spawn.call("cancel")
 	var brain := root.call("_slime_brain", slime) as SlimeBrain; if brain != null: brain.attack_cooldown = 0.0; brain.aggroed = false
 	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent; if tactics != null: tactics.reset()
 	(root.get("collision_sprites") as Array[Sprite2D]).erase(slime); (root.get("depth_sprites") as Array[Sprite2D]).erase(slime); (root.get("occluder_sprites") as Array[Sprite2D]).erase(slime); (root.get("actor_sprites") as Array[Sprite2D]).erase(slime)
@@ -859,6 +863,46 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 	(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).display_health = 0.0
 	var hud := root.get("hud_controller") as HudController
 	for item in [hud.target_overhead_frames.get(slime), hud.target_overhead_damage_fills.get(slime), hud.target_overhead_fills.get(slime)]: if item != null: (item as Sprite2D).visible = false
+
+
+func save_enemy_runtime_state(root: Object) -> void:
+	var room_id: StringName = StringName(root.get("current_room_id"))
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var active_variants := state.get("enemy_variants", []) as Array
+	if active_variants.is_empty():
+		state.erase("enemy_runtime")
+		room_states[room_id] = state
+		return
+	var runtime: Dictionary = {}
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	for slot in active_variants.size():
+		if slot >= slimes.size():
+			continue
+		var slime := slimes[slot]
+		if slime == null or not is_instance_valid(slime):
+			continue
+		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+		var health := root.call("_slime_health", slime) as HealthComponent
+		runtime[str(slot)] = {
+			"alive": slime.visible and combat != null and not combat.dead and (health == null or health.current_health > 0.0),
+			"position": slime.global_position,
+			"health": health.current_health if health != null else 0.0,
+		}
+	state["enemy_runtime"] = runtime
+	room_states[room_id] = state
+
+
+func _restore_enemy_runtime_state(root: Object, slime: Sprite2D, runtime_entry: Dictionary) -> void:
+	var health := root.call("_slime_health", slime) as HealthComponent
+	if health == null:
+		return
+	var maximum := health.maximum_health
+	var current := clampf(float(runtime_entry.get("health", maximum)), 0.0, maximum)
+	health.reset(current)
+	var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter
+	if presenter != null:
+		presenter.display_health = current
+		presenter.damage_fill_hold_timer = 0.0
 
 
 func record_special_enemy_death(root: Object, slime: Sprite2D) -> void:
@@ -1153,10 +1197,11 @@ func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
 	root.call("_build_slime_direction_textures")
 	root.call("_assign_slime_attack_frames")
 	root.call("_assign_slime_shocked_frames")
+	root.call("_assign_slime_spawn_frames")
 	root.call("_refresh_enemy_palette_textures")
 
 
-func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2) -> bool:
+func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2, animate_spawn: bool = false) -> bool:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	if slime_index < 0 or slime_index >= slimes.size():
 		return false
@@ -1244,6 +1289,10 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 		depth_sprites.append(slime)
 	if not occluder_sprites.has(slime):
 		occluder_sprites.append(slime)
+	if animate_spawn and bool(root.call("_begin_slime_spawn", slime)):
+		# The actor remains rendered and depth-sorted during the intro, but it is
+		# excluded from collisions and all combat queries until the final frame.
+		collision.erase(slime)
 	return true
 
 
@@ -1255,6 +1304,8 @@ func reset_slimes_for_room(root: Object) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	state.erase("popcorn_respawn_slots")
 	var active_variants := state.get("enemy_variants", []) as Array
+	var runtime_states := state.get("enemy_runtime", {}) as Dictionary
+	var first_entry := not bool(state.get("enemy_spawned", false))
 	var spawn_positions: Dictionary
 	if state.has("enemy_spawn_positions"):
 		spawn_positions = state["enemy_spawn_positions"] as Dictionary
@@ -1269,17 +1320,38 @@ func reset_slimes_for_room(root: Object) -> void:
 	var occupied: Array[Vector2] = []
 	var special_timers := state.get("special_respawn_timers", {}) as Dictionary
 	var hide_special_enemies := _special_room_hides_enemies(root, state)
+	var spawned_slots := 0
+	var animated_spawn_started := false
+	var spawn_audio_played := false
 	for slime_index in active_variants.size():
 		if slime_index >= slimes.size(): continue
 		var timer_key := str(slime_index)
 		if hide_special_enemies or (root.get("current_room_type") == DungeonGraph.ROOM_SPECIAL_ENEMY and special_timers.has(timer_key) and float(special_timers[timer_key]) > 0.0):
 			continue
-		_spawn_enemy_slot(root, state, slime_index, occupied, layout_rng, player_foot, chest_rect)
+		var has_runtime_entry := runtime_states.has(timer_key) or runtime_states.has(slime_index)
+		var runtime_entry := runtime_states.get(timer_key, runtime_states.get(slime_index, {})) as Dictionary
+		if has_runtime_entry and not bool(runtime_entry.get("alive", false)):
+			continue
+		if has_runtime_entry and runtime_entry.get("position") is Vector2:
+			spawn_positions[slime_index] = runtime_entry["position"]
+		var animate_spawn := first_entry and not has_runtime_entry
+		if _spawn_enemy_slot(root, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
+			spawned_slots += 1
+			if has_runtime_entry:
+				_restore_enemy_runtime_state(root, slimes[slime_index], runtime_entry)
+			if animate_spawn and root.call("_is_slime_spawn_locked", slimes[slime_index]):
+				animated_spawn_started = true
+				if not spawn_audio_played:
+					var spawn_rng := root.get("rng") as RandomNumberGenerator
+					root.call("_play_sound", "slime_spawn", -6.0, 0.98 + spawn_rng.randf_range(-0.03, 0.03))
+					spawn_audio_played = true
+	if first_entry and spawned_slots > 0:
+		state["enemy_spawned"] = true
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state
 	var run_state := root.get("run_state") as RunState
 	if run_state != null and run_state.active:
 		run_state.register_room_enemies(room_id, active_variants.size())
-	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
+	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS and not animated_spawn_started:
 		for slime in slimes:
 			if slime.visible:
 				root.call("_trigger_slime_notice", slime)

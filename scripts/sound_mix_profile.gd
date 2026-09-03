@@ -2,6 +2,10 @@
 class_name SoundMixProfile
 extends Resource
 
+const SoundClipCatalogScript = preload("res://scripts/sound_clip_catalog.gd")
+
+static var _preview_player: AudioStreamPlayer = null
+
 ## Editor-facing per-cue mix trims.
 ##
 ## Select `assets/sounds/sound_mix_profile.tres` in the FileSystem dock. Every
@@ -54,7 +58,28 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	&"target_release": &"target_release_db",
 	&"foot_left": &"foot_left_db",
 	&"foot_right": &"foot_right_db",
+	&"charge_attack": &"charge_attack_db",
+	&"use_flame": &"use_flame_db",
+	&"slime_spawn": &"slime_spawn_db",
+	&"slime_move": &"slime_move_db",
 }
+
+@export_category("Preview")
+@export_enum(
+	"slime_spawn", "slime_move", "slash", "miss", "flesh", "bite", "block",
+	"flee", "enemy_death", "impact_flesh", "encounter", "claw", "magic_cast",
+	"magic_hit", "ui_hover", "ui_confirm", "ui_decline", "ui_no_input",
+	"ui_denied", "ui_use_item", "ui_equip", "ui_unequip", "ui_buy_sell",
+	"ui_pause", "charge_attack", "use_flame", "ui_unpause", "enemy_alert",
+	"item_pickup", "chest_unlock", "chest_reward", "run_clear", "level_up",
+	"enemy_hit_1", "enemy_hit_2", "enemy_hit_3", "enemy_hit_4", "orb_hit",
+	"enemy_hit_5", "enemy_hit_6", "target_release", "foot_left", "foot_right",
+	"title_music", "run_music"
+)
+var preview_cue := "slime_spawn"
+
+@export_tool_button("Play Preview")
+var play_preview_action: Callable = _play_preview
 
 @export_category("Music")
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var title_music_db := -16.0
@@ -84,6 +109,10 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var enemy_hit_5_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var enemy_hit_6_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var orb_hit_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var charge_attack_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var use_flame_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var slime_spawn_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var slime_move_db := 0.0
 
 @export_category("UI and Items")
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_hover_db := 0.0
@@ -123,3 +152,50 @@ func value_signature() -> int:
 	for sound_name in VOLUME_PROPERTY_BY_KEY:
 		values.append("%s=%s" % [sound_name, volume_db_for(sound_name)])
 	return "|".join(values).hash()
+
+
+func _play_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	var sound_name := StringName(preview_cue)
+	var source_path := SoundClipCatalogScript.path_for(sound_name)
+	if source_path.is_empty():
+		push_warning("SoundMixProfile preview has no clip for '%s'." % preview_cue)
+		return
+	var preferred_path := SoundClipCatalogScript.preferred_audio_path(source_path)
+	if not ResourceLoader.exists(preferred_path):
+		push_warning("SoundMixProfile preview clip is missing: %s" % preferred_path)
+		return
+	var stream := load(preferred_path) as AudioStream
+	if stream == null:
+		push_warning("SoundMixProfile preview could not load: %s" % preferred_path)
+		return
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null:
+		push_warning("SoundMixProfile preview requires the Godot editor scene tree.")
+		return
+	_stop_preview()
+	var player := AudioStreamPlayer.new()
+	player.name = "SoundMixProfilePreview"
+	player.bus = "Master"
+	player.process_mode = Node.PROCESS_MODE_ALWAYS
+	player.stream = stream
+	player.volume_db = volume_db_for(sound_name)
+	player.finished.connect(_on_preview_finished.bind(player))
+	tree.root.add_child(player)
+	_preview_player = player
+	player.play()
+
+
+static func _stop_preview() -> void:
+	if _preview_player != null and is_instance_valid(_preview_player):
+		_preview_player.stop()
+		_preview_player.queue_free()
+	_preview_player = null
+
+
+func _on_preview_finished(player: AudioStreamPlayer) -> void:
+	if _preview_player == player:
+		_preview_player = null
+	if is_instance_valid(player):
+		player.queue_free()

@@ -170,6 +170,7 @@ var screen_state_controller: Node = null
 var gameplay_frame_controller: GameplayFrameController = null
 var slime_attack_frames_by_palette: Dictionary = {}
 var slime_shocked_frames_by_palette: Dictionary = {}
+var slime_spawn_frames_by_palette: Dictionary = {}
 var player_just_finished_attack2 := false
 var player_between_timer := 0.0
 var player_anim_name := "idle"
@@ -1280,6 +1281,8 @@ func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: S
 func _release_room_transition_lock() -> void: room_transition_locked = false; if room_controller != null: room_controller.end_transition()
 func _save_current_room_state() -> void:
 	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
+	room_controller.save_enemy_runtime_state(self)
+	state = room_controller.room_states.get(current_room_id, state) as Dictionary
 	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
 	if current_room_type == DungeonGraph.ROOM_PUZZLE:
 		var required_aspect := StringName(state.get("puzzle_required_flame", _puzzle_required_aspect(room)))
@@ -1332,6 +1335,11 @@ func _try_knockback_slime(slime: Sprite2D, movement: Vector2) -> bool: return bo
 func _separate_slime_from_player(slime: Sprite2D) -> void: slime_runtime_controller.call("separate_slime_from_player", self, slime)
 func _configure_slime_ambush(slime: Sprite2D, palette: String) -> void: slime_runtime_controller.call("configure_slime_ambush", self, slime, palette)
 func _slime_ambush(slime: Sprite2D) -> SlimeAmbushComponent: return slime_runtime_controller.call("slime_ambush", self, slime) as SlimeAmbushComponent
+func _slime_spawn(slime: Sprite2D) -> Node: return slime_runtime_controller.call("slime_spawn", self, slime) as Node
+func _is_slime_spawn_locked(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_spawn_locked", self, slime))
+func _begin_slime_spawn(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("begin_slime_spawn", self, slime))
+func _set_slime_spawn_frame(slime: Sprite2D, frame_index: int) -> void: slime_runtime_controller.call("set_slime_spawn_frame", self, slime, frame_index)
+func _finish_slime_spawn(slime: Sprite2D) -> void: slime_runtime_controller.call("finish_slime_spawn", self, slime)
 func _is_slime_hidden(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_hidden", self, slime))
 func _is_slime_targetable(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_targetable", self, slime))
 func _is_target_actor_dead(target: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_target_actor_dead", self, target))
@@ -1417,6 +1425,8 @@ func _build_slime_direction_textures() -> void: actor_presentation_runtime_contr
 func _build_slime_attack_frames() -> void: actor_presentation_runtime_controller.call("build_slime_attack_frames", self)
 func _assign_slime_attack_frames() -> void: actor_presentation_runtime_controller.call("assign_slime_attack_frames", self)
 func _build_slime_shocked_frames() -> void: actor_presentation_runtime_controller.call("build_slime_shocked_frames", self)
+func _build_slime_spawn_frames() -> void: actor_presentation_runtime_controller.call("build_slime_spawn_frames", self)
+func _assign_slime_spawn_frames() -> void: actor_presentation_runtime_controller.call("assign_slime_spawn_frames", self)
 func _assign_slime_shocked_frames() -> void: actor_presentation_runtime_controller.call("assign_slime_shocked_frames", self)
 func _build_enemy_health_ui() -> void: actor_presentation_runtime_controller.call("build_enemy_health_ui", self)
 func _refresh_enemy_palette_textures() -> void: actor_presentation_runtime_controller.call("refresh_enemy_palette_textures", self)

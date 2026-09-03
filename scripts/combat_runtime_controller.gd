@@ -47,7 +47,7 @@ func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bo
 func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
 	# Projectile callbacks can survive one frame past a scene transition. Do not
 	# dereference a freed target while resolving late contact.
-	if slime == null or not is_instance_valid(slime) or bool(root.call("_is_slime_dead", slime)):
+	if slime == null or not is_instance_valid(slime) or bool(root.call("_is_slime_dead", slime)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime))):
 		return
 	if root.has_method("_mark_current_room_engaged"):
 		# A room locks only after a real player hit. Empty swings and passive

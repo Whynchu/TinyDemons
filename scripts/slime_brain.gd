@@ -112,7 +112,7 @@ func start_random_hold(tuning: SlimeTuning, random_source: RandomNumberGenerator
 	idle_breath_timer = 0.0
 
 
-func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumberGenerator, actor_foot: Callable, aggro_target_callable: Callable, random_point: Callable, perspective: Callable, set_facing: Callable) -> void:
+func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumberGenerator, actor_foot: Callable, aggro_target_callable: Callable, random_point: Callable, perspective: Callable, set_facing: Callable) -> bool:
 	var target_position: Vector2 = target
 	var foot: Vector2 = actor_foot.call(actor)
 	var is_aggroed := aggroed
@@ -136,7 +136,7 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 			direction = Vector2.RIGHT
 		else:
 			start_random_hold(tuning, random_source)
-			return
+			return false
 	var steering_direction := direction.normalized()
 	if is_aggroed:
 		steering_direction = context_steering_direction(actor, tuning, random_source, actor_foot, perspective)
@@ -149,6 +149,7 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 	scoot_start = actor.position
 	scoot_target = actor.position + movement
 	scoot_timer = tuning.scoot_duration
+	return true
 
 
 func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumberGenerator, actor_foot: Callable, perspective: Callable) -> Vector2:

@@ -6,6 +6,7 @@ var right_texture: Texture2D = null
 var attack_left_frames: Array[Texture2D] = []
 var attack_right_frames: Array[Texture2D] = []
 var shocked_frames: Array[Texture2D] = []
+var spawn_frames: Array[Texture2D] = []
 
 ## Palette recolor results keyed by "<source RID>:<palette>". The source Images
 ## are cached by the caller, but the per-pixel recolor itself was recomputed on
@@ -126,6 +127,37 @@ static func assign_shocked_frames(slimes: Array[Sprite2D], frames_by_palette: Di
 		if not frames_by_palette.has(palette):
 			palette = "green"
 		visual.shocked_frames = frames_by_palette[palette] as Array[Texture2D]
+
+
+static func build_spawn_frame_library(frame_library: SpriteFrameLibrary, frame_size: Vector2i, cache: Dictionary, warm_texture: Callable) -> Dictionary:
+	var green_frames := frame_library.slice_frames("res://assets/artwork/SlimeGreenSpawn.png", frame_size)
+	var frames_by_palette := {
+		"green": green_frames,
+		"blue": recolor_attack_frame_set(green_frames, "blue", cache),
+		"red": recolor_attack_frame_set(green_frames, "red", cache),
+		"grey": recolor_attack_frame_set(green_frames, "grey", cache),
+		"yellow": recolor_attack_frame_set(green_frames, "yellow", cache),
+		"purple": recolor_attack_frame_set(green_frames, "purple", cache),
+		"orange": recolor_attack_frame_set(green_frames, "orange", cache),
+		"aquamarine": recolor_attack_frame_set(green_frames, "aquamarine", cache),
+	}
+	for palette_frames in frames_by_palette.values():
+		for texture in palette_frames as Array[Texture2D]:
+			warm_texture.call(texture)
+	return frames_by_palette
+
+
+static func assign_spawn_frames(slimes: Array[Sprite2D], frames_by_palette: Dictionary) -> void:
+	for slime in slimes:
+		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			visual = SlimeVisualComponent.new()
+			visual.name = "Visual"
+			slime.add_child(visual)
+		var palette := String(slime.get("variant"))
+		if not frames_by_palette.has(palette):
+			palette = "green"
+		visual.spawn_frames = frames_by_palette[palette] as Array[Texture2D]
 
 
 static func recolor_attack_frame_set(source_frames: Array[Texture2D], palette: String, texture_cache: Dictionary) -> Array[Texture2D]:
