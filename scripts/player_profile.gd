@@ -3,7 +3,8 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 11
+const CURRENT_SCHEMA_VERSION := 12
+const LEGACY_GEAR_REWORK_SCHEMA_VERSION := 11
 const LEGACY_DEMON_CLOAK_SCHEMA_VERSION := 10
 const LEGACY_SIX_STAT_SCHEMA_VERSION := 9
 const LEGACY_SPEED_SCHEMA_VERSION := 8
@@ -12,6 +13,7 @@ const LEGACY_SPEED_SCHEMA_VERSION := 8
 static func supports_schema_version(value: int) -> bool:
 	return value in [
 		CURRENT_SCHEMA_VERSION,
+		LEGACY_GEAR_REWORK_SCHEMA_VERSION,
 		LEGACY_DEMON_CLOAK_SCHEMA_VERSION,
 		LEGACY_SIX_STAT_SCHEMA_VERSION,
 		LEGACY_SPEED_SCHEMA_VERSION,
@@ -42,12 +44,12 @@ var allocation_profile := 0
 var level := 1
 var xp := 0
 var unspent_stat_points := 0
-var base_vit := 3
+var base_vit := 2
 var base_str := 2
 var base_def := 2
-var base_agi := 1
-var base_int := 1
-var base_mnd := 1
+var base_agi := 2
+var base_int := 2
+var base_mnd := 2
 ## Temporary compatibility alias for schema-8 callers.
 var base_spd:
 	get:
@@ -306,7 +308,7 @@ func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = nu
 		var candidate := ItemInstance.from_dictionary(data)
 		if candidate.instance_id == target_instance_id:
 			continue
-		if candidate.definition_id != target.definition_id or candidate.rarity != target.rarity:
+		if not _is_fusion_match(target, candidate):
 			continue
 		if candidate.instance_id in equipped_instance_ids.values():
 			continue
@@ -357,7 +359,7 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 		var candidate := ItemInstance.from_dictionary(inventory[index])
 		if candidate.instance_id == target_instance_id:
 			continue
-		if candidate.definition_id != target.definition_id or candidate.rarity != target.rarity:
+		if not _is_fusion_match(target, candidate):
 			continue
 		if candidate.instance_id in equipped_instance_ids.values():
 			continue
@@ -386,6 +388,15 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 	inventory[target_index] = working.to_dictionary()
 	souls -= cost
 	return true
+
+
+func _is_fusion_match(target: ItemInstance, candidate: ItemInstance) -> bool:
+	if target == null or candidate == null:
+		return false
+	# Fusion matches the base definition and rarity only. Random `+` stat rolls,
+	# legacy affixes, transmutations, and the target's fusion level are not part
+	# of the material identity, so a + item can fuse with a no-plus item.
+	return candidate.definition_id == target.definition_id and candidate.rarity == target.rarity
 
 
 func can_salvage_overflow(instance_id: String, catalog: ItemCatalog = null) -> bool:
@@ -554,12 +565,16 @@ func load_dictionary(data: Dictionary) -> void:
 	level = clampi(int(data.get("level", 1)), 1, MAX_LEVEL)
 	xp = maxi(int(data.get("xp", 0)), 0)
 	unspent_stat_points = maxi(int(data.get("unspent_stat_points", 0)), 0)
-	base_vit = maxi(int(data.get("base_vit", 3)), 0)
+	var legacy_magic_base_default := 1 if is_schema_8 else 2
+	base_vit = maxi(int(data.get("base_vit", 2)), 0)
 	base_str = maxi(int(data.get("base_str", 2)), 0)
 	base_def = maxi(int(data.get("base_def", 2)), 0)
-	base_agi = maxi(int(data.get("base_spd", 1) if is_schema_8 else data.get("base_agi", data.get("base_spd", 1))), 0)
-	base_int = maxi(int(data.get("base_int", 1)), 0)
-	base_mnd = maxi(int(data.get("base_mnd", 1)), 0)
+	base_agi = maxi(int(data.get("base_spd", 2) if is_schema_8 else data.get("base_agi", data.get("base_spd", 2))), 0)
+	# Schema 8 did not serialize INT/MND. Keep its historical one-point
+	# defaults while using the even two-point baseline for new profiles and later
+	# schemas that omitted neither field intentionally.
+	base_int = maxi(int(data.get("base_int", legacy_magic_base_default)), 0)
+	base_mnd = maxi(int(data.get("base_mnd", legacy_magic_base_default)), 0)
 	allocated_vit = maxi(int(data.get("allocated_vit", 0)), 0)
 	allocated_str = maxi(int(data.get("allocated_str", 0)), 0)
 	allocated_def = maxi(int(data.get("allocated_def", 0)), 0)
@@ -587,9 +602,10 @@ func load_dictionary(data: Dictionary) -> void:
 	var saved_mastery: Variant = data.get("family_mastery", {})
 	family_mastery.clear()
 	if saved_mastery is Dictionary:
+		var catalog := ItemCatalog.new()
 		for family_key: Variant in saved_mastery:
 			var definition_id := StringName(str(family_key))
-			if ItemCatalog.DEFINITIONS.has(definition_id):
+			if catalog.definition_exists(definition_id):
 				family_mastery[String(definition_id)] = clampi(int(saved_mastery[family_key]), 0, MAX_FAMILY_MASTERY)
 	next_item_sequence = maxi(int(data.get("next_item_sequence", 1)), 1)
 	completed_runs = maxi(int(data.get("completed_runs", 0)), 0)

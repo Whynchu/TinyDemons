@@ -118,43 +118,46 @@ conversion.
 
 ## Item / stat economy
 
-The implemented six-slot content expansion is documented in
-[`gear-catalogue-spec.md`](gear-catalogue-spec.md),
-[`gear-catalogue.md`](gear-catalogue.md), and
-[`gear-drop-tables.md`](gear-drop-tables.md). The runtime currently uses the
-six canonical slots, with `armor` retained only as a Body save alias. Head and
-Arm use zero-power starters; future effect rows remain gated until their
-action contracts land. Do not add catalogue values here without also adding
-the corresponding authored definition, source rule, effect contract, and smoke
-coverage.
+The live six-slot gear model is documented in
+[`gear-system-rework.md`](gear-system-rework.md). It contains 12 Plain/Basic
+baseline pieces and 54 pieces across nine complete sets. The older catalogue
+records remain loadable for save compatibility but are excluded from new drops,
+shop stock, and authored gear choices. `armor` remains a Body save alias.
 
 These are code values (not inspector-exposed) that drive gear value:
 
 | Knob | Value | Location |
 | --- | --- | --- |
-| Gear primary-stat contribution | Definition package + 2 flat points per rarity rank + 0.1 tier-stat point per enhancement level | `item_catalog.gd:bonuses` |
-| Rarity player-stat buff | Common 0% / Rare 5% / Epic 15% / Legendary 45% / Mythic 80%, per positive affected stat | `item_catalog.gd:RARITY_PLAYER_STAT_RATES`, `equipment_component.gd` |
-| Starter loadout totals | +3 VIT / +3 STR / +3 DEF / 0 SPD | `item_catalog.gd` definitions |
-| Non-basic package allowance | Each non-basic definition may carry at most one extra positive base point over its slot's basic package | `item_catalog.gd:DEFINITIONS` |
+| Gear primary-stat contribution | Authored package + 2 flat points per rarity rank + 0.1 tier-stat point per fusion enhancement | `item_catalog.gd:bonuses` |
+| Rarity player-stat buff | Retired from live gear; all live gear uses flat points | `item_catalog.gd:RARITY_PLAYER_STAT_RATES`, `equipment_component.gd` |
+| Starter loadout | Six Basic pieces; every new character starts at VIT/STR/DEF/AGI/INT/MND 2/2/2/2/2/2 | `item_catalog.gd:starter_item`, `screen_state_controller.gd` |
+| Drop tier weights | Plain 6.0, Basic 5.0, Set 0.5; Plain and Basic are the common majority | `item_catalog.gd:_gear_drop_weight` |
+| Random `+` package | Common 0–1 (8% chance of +1), Rare 0–2, Epic 0–3, Legendary 1–3, Mythic 2–3; any of six stats | `item_catalog.gd:_roll_random_stat_points`, `item_instance.gd` |
+| Live catalogue | 66 definitions: 12 Plain/Basic baseline pieces plus 54 set pieces | `item_catalog.gd:live_definition_ids` |
+| Set scope | Swift, Soldier, Guard, Blood, Arcane, Soul, Edge, Oath, Rune; one Weapon/Head/Body/Arm/Shield/Accessory each | `item_catalog.gd:SET_DEFINITIONS` |
+| Weapon scope | Swords and Blades only | `item_catalog.gd:SET_DEFINITIONS`, `LIVE_BASE_DEFINITIONS` |
 | Shield primary trade-offs | SPD penalties are part of the visible flat package; no hidden STR/SPD subtraction | `item_catalog.gd:DEFINITIONS`, `equipment_component.gd` |
-| Shield guard package | Guard values use the rarity player-stat rate as their tier scalar; enhancement remains the guard-specific +10%/level | `item_catalog.gd:shield_bonuses` |
+| Shield guard package | Guard values are fixed by the definition and grow only with the +10%/fusion enhancement factor | `item_catalog.gd:shield_bonuses` |
 | Gear scaling floor | Not used by the current flat-point model | `combat_stat_snapshot.gd` |
 | Health/damage rate package | Not currently part of the primary gear snapshot | `combat_stat_snapshot.gd` |
 | Enhancement flat point | 0.1 tier-stat point per level; 1 point at +10 | `item_catalog.gd:enhancement_flat_points` |
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity flat points | 0 / 2 / 4 / 6 / 8 for common through mythic | `item_catalog.gd:RARITY_FLAT_POINTS_PER_RANK` |
-| Random primary affixes | Retired from effective/generated gear; legacy fields remain loadable | `item_catalog.gd:bonuses`, `item_instance.gd` |
-| Approved catalogue size | 44 authored bases across Weapon/Head/Body/Arm/Shield/Accessory; values are implementation baseline pending balance review | `docs/gear-catalogue.md` |
-| Initial gear economy exclusions | No direct Souls, gold, global drop-rate, or Style multipliers | `docs/gear-effect-contracts.md`, `docs/gear-drop-tables.md` |
+| Random primary affixes | Retired; random `+` points are independent, visible, and capped at three total | `item_catalog.gd:bonuses`, `item_instance.gd` |
+| Legacy catalogue | 44 authored records remain readable for old saves but are not live drop candidates | `item_catalog.gd:DEFINITIONS`, `item_catalog.gd:definitions_for_slot` |
+| Initial gear economy exclusions | No direct Souls, gold, global drop-rate, or Style multipliers in live gear | `docs/gear-system-rework.md` |
 | Fusion common +0 step | 1 Soul for +0 -> +1 | `player_profile.gd:FUSION_START_COST` |
 | Fusion cost progression | +1 Soul per enhancement; each rarity adds 10 Souls; common +10 -> rare costs 10 and rare +0 -> +1 costs 11 | `player_profile.gd:fusion_step_cost` |
-| Base stats (archetype) | VIT/STR/DEF sum to 7 | `stats_component.gd:_base_profile_values` |
+| Fusion matching | Same base definition and rarity; random `+` package, affixes, transmutations, and target fusion level do not block a match | `player_profile.gd:_is_fusion_match` |
+| Base stats | VIT/STR/DEF/AGI/INT/MND all start at 2 for new players; old saved values are preserved | `player_profile.gd`, `stats_component.gd`, `screen_state_controller.gd` |
 | SPD scale | 0.012 per point (see player_tuning) | `player_tuning.gd` |
 
-The flat ladder is `definition base + (rarity rank × 2) + (enhancement × 0.1)`
-on each item's authored tier stat. For the basic sword that is STR 2.0 at
-common `+0`, STR 2.1 at common `+1`, STR 3.0 at common `+10`, STR 4.0 at rare
-`+0`, STR 5.0 at rare `+10`, and STR 6.0 at epic `+0`.
+The flat ladder is `definition base + (rarity rank × 2) + (fusion enhancement ×
+0.1)` on the authored tier stat. Each random `+` point is an additional stat
+lane that receives the same rarity and fusion growth. For the Basic Sword,
+that is STR 2.0 at Common F0, STR 2.1 at Common F1, STR 3.0 at Common F10,
+STR 4.0 at Rare F0, STR 5.0 at Rare F10, and STR 6.0 at Epic F0. The `+` marker
+is the random drop package; `F` is the separate fusion level.
 
 ## Display and settings (not gameplay tuning)
 

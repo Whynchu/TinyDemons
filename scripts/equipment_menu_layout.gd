@@ -319,7 +319,7 @@ func _apply_editor_preview() -> void:
 	var summary := ["SAM", "VIT 15", "STR 15", "DEF 8", "AGI 7", "INT 6", "MND 5"]
 	for index in _summary_texts.size():
 		set_text(_summary_texts[index], summary[index] if index < summary.size() else "")
-	var slots := ["SOLDIER SWORD", "HEAD", "SOLDIER ARMOR", "SOLDIER GLOVE", "WOOD SHIELD", "CHROMA TALISMAN +1"]
+	var slots := ["SOLDIER SWORD", "SOLDIER HELM", "SOLDIER MAIL", "SOLDIER GLOVES", "SOLDIER SHIELD", "SOLDIER CHARM +"]
 	for index in _slot_texts.size():
 		set_text(_slot_texts[index], slots[index] if index < slots.size() else "", EDITOR_MUTED_COLOR if index == 1 else EDITOR_PREVIEW_COLOR)
 	var description := ["Attack 1 against several targets", "improves the same-target shape of", "Attack."]

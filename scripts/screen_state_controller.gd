@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.49"
+const GAME_VERSION := "0.1.50"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -610,17 +610,15 @@ func start_selected_archetype(root: Object) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile != null and not profile.has_started:
 		var stats := root.get("player_stats") as StatsComponent
-		stats.manual_allocation_enabled = false
-		# Flame owns the small class identity package. Exact flame bonuses are
-		# intentionally deferred; the initial profile uses the balanced baseline.
-		stats.allocation_profile = StatsComponent.AllocationProfile.BALANCED
-		var initial_stats := stats.get_stats()
-		profile.base_vit = int(initial_stats["VIT"])
-		profile.base_str = int(initial_stats["STR"])
-		profile.base_def = int(initial_stats["DEF"])
-		profile.base_agi = int(initial_stats.get("AGI", initial_stats.get("SPD", 1)))
-		profile.base_int = int(initial_stats.get("INT", 1))
-		profile.base_mnd = int(initial_stats.get("MND", 1))
+		stats.manual_allocation_enabled = true
+		# Starter aspect selection is presentation/element identity only. Every
+		# new player starts from the same even two-point baseline.
+		profile.base_vit = 2
+		profile.base_str = 2
+		profile.base_def = 2
+		profile.base_agi = 2
+		profile.base_int = 2
+		profile.base_mnd = 2
 		var starter_flame: StringName = ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[starter_flame_index]
 		profile.starter_flame = starter_flame
 		profile.allocation_profile = int(StatsComponent.AllocationProfile.BALANCED)
@@ -2482,8 +2480,8 @@ func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
 		var item := profile.find_item(profile.get_equipped_instance_id(slot))
 		var item_name := "EMPTY"
 		if item != null:
-			item_name = str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
-			if item.enhancement_level > 0: item_name += " +%d" % item.enhancement_level
+			item_name = catalog.gear_name(item)
+			if item.enhancement_level > 0: item_name += " F%d" % item.enhancement_level
 		pause_equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], item_name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
 	for index in range(slot_labels.size(), pause_equipment_texts.size()):
 		pause_equipment_texts[index].texture = null
@@ -2611,15 +2609,18 @@ func _equipment_bonus_lines(catalog: ItemCatalog, item: ItemInstance) -> Array[S
 		var shown := "%d" % roundi(value) if is_equal_approx(value, round(value)) else "%.1f" % value
 		if value > 0.0: shown = "+%s" % shown
 		parts.append("%s: %s" % [str(labels.get(key, key.to_upper())), shown])
-	var lines: Array[String] = []
+	# The authored stat strip has three columns. Keep each column to two
+	# newline-separated stats so a multi-stat item cannot run into its neighbor.
+	var lines: Array[String] = ["", "", ""]
 	for index in parts.size():
-		var line_index := index / 3
-		if line_index >= 3:
+		var column_index := index % 3
+		var row_index := index / 3
+		if row_index >= 2:
 			break
-		if lines.size() <= line_index:
-			lines.append(parts[index])
+		if lines[column_index].is_empty():
+			lines[column_index] = parts[index]
 		else:
-			lines[line_index] = "%s  %s" % [lines[line_index], parts[index]]
+			lines[column_index] += "\n%s" % parts[index]
 	return lines
 
 
@@ -2627,6 +2628,9 @@ func _equipment_item_description(catalog: ItemCatalog, item: ItemInstance) -> Ar
 	if item == null:
 		return []
 	var lines: Array[String] = []
+	var random_text := catalog.random_stat_text(item)
+	if not random_text.is_empty():
+		lines.append(random_text)
 	var description := catalog.player_description(item)
 	if not description.is_empty():
 		lines.append_array(_wrap_gear_text(description, 34))
@@ -2639,10 +2643,9 @@ func _equipment_item_description(catalog: ItemCatalog, item: ItemInstance) -> Ar
 func _equipment_item_label(catalog: ItemCatalog, item: ItemInstance) -> String:
 	if item == null:
 		return "EMPTY"
-	var definition := catalog.definition_data(item.definition_id)
-	var label := str(definition.get("name", "ITEM"))
+	var label: String = catalog.gear_name(item)
 	if item.enhancement_level > 0:
-		label += " +%d" % item.enhancement_level
+		label += " F%d" % item.enhancement_level
 	return label
 
 
@@ -2735,7 +2738,7 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 		if source_index >= candidates.size():
 			break
 		var item := candidates[source_index]
-		var label := "UNEQUIP SHIELD" if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else _equipment_item_label(catalog, item)
+		var label: String = "UNEQUIP SHIELD" if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else _equipment_item_label(catalog, item)
 		candidate_labels.append(label)
 		candidate_colors.append(highlight_color if source_index == selected_candidate_index else catalog.rarity_color(item.rarity))
 	view.set_candidates(candidate_labels, candidate_colors, selected_candidate_index)
@@ -2856,8 +2859,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var selected := clampi(index, 0, maxi(count - 1, 0))
 	if hub_item_name_text != null:
 		if item != null:
-			var header_name := str(catalog.definition_data(item.definition_id).get("name", "ITEM"))
-			if item.enhancement_level > 0: header_name += " +%d" % item.enhancement_level
+			var header_name: String = catalog.gear_name(item)
+			if item.enhancement_level > 0: header_name += " F%d" % item.enhancement_level
 			hub_item_name_text.texture = pixel_texture.call("%d/%d %s" % [selected + 1, count, header_name], catalog.rarity_color(item.rarity)) as Texture2D
 		else:
 			hub_item_name_text.texture = pixel_texture.call("0/0 NO ITEMS", Color8(140, 145, 160)) as Texture2D
@@ -2893,11 +2896,11 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			row_item = fusion_items[source_index]
 		var definition: Dictionary = catalog.definition_data(row_item.definition_id)
 		var rarity_mark := catalog.rarity_letter_grade(row_item.rarity)
-		var row_label := "%s %s" % [rarity_mark, str(definition.get("name", "ITEM"))]
+		var row_label := "%s %s" % [rarity_mark, catalog.gear_name(row_item)]
 		var row_mastery := row_item.enhancement_level
-		if row_mastery > 0 and page != 3: row_label += " +%d" % row_mastery
+		if row_mastery > 0 and page != 3: row_label += " F%d" % row_mastery
 		if page == 2 and row_sold: row_label += " SOLD"
-		elif page == 3: row_label += "  +%d" % row_mastery
+		elif page == 3: row_label += "  F%d" % row_mastery
 		if page == 3:
 			var row_slot := catalog.definition_slot(row_item.definition_id)
 			if profile.get_equipped_instance_id(row_slot) == row_item.instance_id:
@@ -2928,6 +2931,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	var bonuses := catalog.bonuses(item, mastery); var bonus_parts: Array[String] = []
 	if page != 3:
 		for stat: String in bonuses:
+			if stat == "speed":
+				continue
 			var bonus_label: String = str({"health_rate": "HP", "damage_rate": "DMG"}.get(stat, stat.to_upper()))
 			var value := float(bonuses[stat])
 			bonus_parts.append("%s %s%.1f" % [bonus_label, "+" if value > 0 else "", value])
@@ -2987,6 +2992,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 				preview_stats[row_index].visible = false
 	else:
 		var item_info: Array[String] = []
+		var random_text := catalog.random_stat_text(item)
+		if not random_text.is_empty(): item_info.append(random_text)
 		var player_rate_text := catalog.player_stat_rate_text(item)
 		if not player_rate_text.is_empty(): item_info.append(player_rate_text)
 		if not selected_transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % selected_transmutation_name)
@@ -3057,12 +3064,12 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 		if row == selected_slot_index:
 			selected_candidate = shown_item
 		var slot_name: String = slot_labels[row]
-		var shown_name := "EMPTY"
+		var shown_name: String = "EMPTY"
 		var shown_color := Color8(140, 145, 160)
 		if shown_item != null:
-			shown_name = str(catalog.definition_data(shown_item.definition_id).get("name", "ITEM"))
+			shown_name = catalog.gear_name(shown_item)
 			var shown_mastery := shown_item.enhancement_level
-			if shown_mastery > 0: shown_name += " +%d" % shown_mastery
+			if shown_mastery > 0: shown_name += " F%d" % shown_mastery
 			shown_color = catalog.rarity_color(shown_item.rarity)
 		var row_color := highlight_color if row == selected_slot_index else shown_color
 		var slot_locked := slot == &"head" and head_locked
@@ -3094,9 +3101,9 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			if choice_row < hub_gear_choice_buttons.size(): hub_gear_choice_buttons[choice_row].visible = true
 			var choice_item := slot_candidates[choice_index]
 			var is_unequip := choice_item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID
-			var choice_label := "%s" % ("UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), str(catalog.definition_data(choice_item.definition_id).get("name", "ITEM"))])
+			var choice_label := "%s" % ("UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), catalog.gear_name(choice_item)])
 			var choice_mastery := choice_item.enhancement_level
-			if choice_mastery > 0: choice_label += " +%d" % choice_mastery
+			if choice_mastery > 0: choice_label += " F%d" % choice_mastery
 			var choice_color := highlight_color if choice_index == current_index else Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)
 			choices[choice_row].texture = pixel_texture.call(choice_label, choice_color) as Texture2D
 		if hub_choice_cursor != null:
@@ -3133,6 +3140,8 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	details[0].visible = true
 	var transmutation_name := catalog.transmutation_name(selected_candidate.transmutation_id)
 	var item_info: Array[String] = []
+	var random_text := catalog.random_stat_text(selected_candidate)
+	if not random_text.is_empty(): item_info.append(random_text)
 	var player_rate_text := catalog.player_stat_rate_text(selected_candidate)
 	if not player_rate_text.is_empty(): item_info.append(player_rate_text)
 	if not transmutation_name.is_empty(): item_info.append("SPECIAL: %s" % transmutation_name)

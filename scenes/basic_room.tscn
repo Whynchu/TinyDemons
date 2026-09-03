@@ -103,7 +103,7 @@ position = Vector2(105, 95)
 color = Color(0.1, 1, 0.35, 0.28)
 polygon = PackedVector2Array(-49, -6, -49, -7, 13, -38, 17, -38, 79, -7, 79, -6, 67, -1, 67, 0, 75, 3, 75, 4, 65, 9, 61, 9, 55, 6, 17, 25, 13, 25, -25, 6, -31, 9, -35, 9, -45, 4, -45, 3, -37, 0, -37, -1)
 
-[node name="FloorUnderlay" type="Polygon2D" parent="Map/FloorTiles"]
+[node name="FloorUnderlay" type="Polygon2D" parent="Map/FloorTiles" unique_id=1182832524]
 z_index = -1
 color = Color(0.580392, 0.690196, 0.760784, 1)
 polygon = PackedVector2Array(118, 57, 122, 57, 184, 88, 184, 89, 122, 120, 118, 120, 56, 89, 56, 88)

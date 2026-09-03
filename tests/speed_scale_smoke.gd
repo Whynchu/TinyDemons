@@ -22,7 +22,7 @@ func _initialize() -> void:
 	var catalog := ItemCatalog.new()
 	var gear := EquipmentComponent.new()
 	gear.configure_from_profile(profile, catalog)
-	_expect(is_equal_approx(gear.speed_bonus, 0.0), "starter gear nets 0 flat SPD", failures)
+	_expect(is_equal_approx(gear.speed_bonus, -1.0), "starter Basic gear exposes its flat shield trade-off", failures)
 
 	var dagger := ItemInstance.new(); dagger.instance_id = "dagger-test"; dagger.definition_id = &"quick_dagger"; dagger.rarity = &"common"
 	var cloak := ItemInstance.new(); cloak.instance_id = "cloak-test"; cloak.definition_id = &"feather_cloak"; cloak.rarity = &"common"
@@ -39,13 +39,13 @@ func _initialize() -> void:
 	var base_stats := StatsComponent.new()
 	base_stats.configure_manual_growth(4, 3, 3, 2, 1, 0, 0, 0)
 	var base_snapshot := CombatStatSnapshot.from_components(base_stats, gear)
-	_expect(base_snapshot.speed == 2, "starter shield trade-off offsets the bangle SPD", failures)
+	_expect(base_snapshot.speed == 1, "starter shield trade-off is visible in the flat snapshot", failures)
 	var tall_stats := StatsComponent.new()
 	tall_stats.configure_manual_growth(4, 3, 3, 40, 1, 0, 0, 0)
 	var tall_snapshot := CombatStatSnapshot.from_components(tall_stats, gear)
 	var tall_speed_snapshot := CombatStatSnapshot.from_components(tall_stats, speed_gear)
 	_expect(tall_speed_snapshot.speed > tall_snapshot.speed, "speed gear raises effective SPD at scale", failures)
-	_expect(tall_speed_snapshot.speed - tall_snapshot.speed == 9, "9-point speed set grants +9 SPD over starter", failures)
+	_expect(tall_speed_snapshot.speed - tall_snapshot.speed == 10, "speed gear replaces the starter shield trade-off with a 9-point legacy package", failures)
 
 	var heavy_sword := ItemInstance.new(); heavy_sword.instance_id = "heavy-test"; heavy_sword.definition_id = &"soldier_sword"; heavy_sword.rarity = &"common"
 	var cuirass := ItemInstance.new(); cuirass.instance_id = "cuirass-test"; cuirass.definition_id = &"iron_cuirass"; cuirass.rarity = &"common"
@@ -59,27 +59,27 @@ func _initialize() -> void:
 	var heavy_snapshot := CombatStatSnapshot.from_components(base_stats, heavy_gear)
 	_expect(heavy_snapshot.speed < base_snapshot.speed, "STR gear penalty lowers effective SPD below base", failures)
 
-	var dagger_found := false
-	var cloak_found := false
-	var boots_found := false
-	var buckler_found := false
+	var legacy_dagger_found := false
+	var legacy_cloak_found := false
+	var legacy_boots_found := false
+	var legacy_buckler_found := false
+	var live_set_found := false
 	for seed in 512:
 		var generated_weapon := catalog.generate_item(&"weapon", seed, 20, &"epic")
+		live_set_found = live_set_found or str(catalog.definition_data(generated_weapon.definition_id).get("gear_tier", "")) == "set"
 		if generated_weapon.definition_id == &"quick_dagger":
-			dagger_found = true
+			legacy_dagger_found = true
 		var generated_armor := catalog.generate_item(&"armor", seed, 20, &"epic")
 		if generated_armor.definition_id == &"feather_cloak":
-			cloak_found = true
+			legacy_cloak_found = true
 		var generated_accessory := catalog.generate_item(&"accessory", seed, 20, &"epic")
 		if generated_accessory.definition_id == &"swift_boots":
-			boots_found = true
+			legacy_boots_found = true
 		var generated_shield := catalog.generate_item(&"shield", seed, 20, &"epic")
 		if generated_shield.definition_id == &"parry_buckler":
-			buckler_found = true
-	_expect(dagger_found, "seed sample reaches Quick Dagger", failures)
-	_expect(cloak_found, "seed sample reaches Feather Cloak", failures)
-	_expect(boots_found, "seed sample reaches Swift Boots", failures)
-	_expect(buckler_found, "seed sample reaches Parry Buckler", failures)
+			legacy_buckler_found = true
+	_expect(live_set_found, "seed sample reaches a live set piece", failures)
+	_expect(not legacy_dagger_found and not legacy_cloak_found and not legacy_boots_found and not legacy_buckler_found, "new generation excludes retired legacy gear names", failures)
 
 	base_stats.free()
 	tall_stats.free()

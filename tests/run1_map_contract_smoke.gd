@@ -44,6 +44,7 @@ func _initialize() -> void:
 	for room in treasure_rooms:
 		_expect(room.chest_count == 1, "each Run 1 Treasure Room declares exactly one chest: %s" % room.id, failures)
 		_expect(room.chest_position != Vector2.ZERO, "each Run 1 Treasure Room has an authored chest position: %s" % room.id, failures)
+		_expect(room.chest_position.distance_to(Vector2(120, 88)) >= 20.0, "each Run 1 Treasure Room keeps its chest out of the floor center: %s" % room.id, failures)
 		treasure_positions[room.chest_position] = true
 		_expect(layout.room_by_coordinate(room.coordinate).id == room.id, "layout coordinate lookup resolves %s" % room.id, failures)
 		_expect(layout.room_by_minimap_coordinate(room.minimap_coordinate).id == room.id, "layout minimap lookup resolves %s" % room.id, failures)

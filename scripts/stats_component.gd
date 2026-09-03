@@ -57,12 +57,12 @@ var speed:
 	set(value):
 		agi = maxi(int(value), 0)
 var manual_allocation_enabled := false
-var manual_base_vit := 3
+var manual_base_vit := 2
 var manual_base_str := 2
 var manual_base_def := 2
-var manual_base_agi := 1
-var manual_base_int := 1
-var manual_base_mnd := 1
+var manual_base_agi := 2
+var manual_base_int := 2
+var manual_base_mnd := 2
 var manual_vit := 0
 var manual_str := 0
 var manual_def := 0
@@ -124,7 +124,7 @@ func get_stats() -> Dictionary:
 	}
 
 
-func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, base_agi_value: int, vit_points: int, str_points: int, def_points: int, agi_points: int, base_int_value: int = 1, base_mnd_value: int = 1, int_points: int = 0, mnd_points: int = 0) -> void:
+func configure_manual_growth(base_vit_value: int, base_str_value: int, base_def_value: int, base_agi_value: int, vit_points: int, str_points: int, def_points: int, agi_points: int, base_int_value: int = 2, base_mnd_value: int = 2, int_points: int = 0, mnd_points: int = 0) -> void:
 	manual_allocation_enabled = true
 	manual_base_vit = maxi(base_vit_value, 0)
 	manual_base_str = maxi(base_str_value, 0)
@@ -275,12 +275,12 @@ func _base_profile_values() -> Dictionary:
 			}
 		_:
 			return {
-				Stat.VIT: 3,
+				Stat.VIT: 2,
 				Stat.STR: 2,
 				Stat.DEF: 2,
-				Stat.AGI: 1,
-				Stat.INT: 1,
-				Stat.MND: 1,
+				Stat.AGI: 2,
+				Stat.INT: 2,
+				Stat.MND: 2,
 			}
 
 

@@ -3,6 +3,8 @@ class_name DungeonLayoutDefinition
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const RUN1_CHEST_CENTER_REFERENCE := Vector2(120, 88)
+const RUN1_CHEST_MIN_CENTER_DISTANCE := 20.0
 
 ## Immutable authored topology input for a run.
 ##
@@ -327,6 +329,8 @@ func validate() -> Array[String]:
 			errors.append("Treasure Room must contain exactly one chest: %s" % spec.id)
 		if layout_id == &"RUN1" and spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_position == Vector2.ZERO:
 			errors.append("Run 1 Treasure Room is missing an authored chest placement: %s" % spec.id)
+		if layout_id == &"RUN1" and spec.room_type == DungeonGraph.ROOM_TREASURE and spec.chest_position.distance_to(RUN1_CHEST_CENTER_REFERENCE) < RUN1_CHEST_MIN_CENTER_DISTANCE:
+			errors.append("Run 1 Treasure Room chest is too close to the floor center: %s" % spec.id)
 		if spec.room_type == DungeonGraph.ROOM_FIRE and layout_id == &"RUN_GENERATED" and spec.fire_flame.is_empty():
 			errors.append("generated Fire Room is missing a flame: %s" % spec.id)
 		if spec.room_type == DungeonGraph.ROOM_FIRE and not spec.fire_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(spec.fire_flame):

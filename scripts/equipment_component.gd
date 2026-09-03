@@ -43,16 +43,16 @@ var elemental_resonances: Array[Dictionary] = []
 var elemental_wards: Array[Dictionary] = []
 
 var weapon_name := "BASIC SWORD"
-var head_name := "PLAIN HOOD"
+var head_name := "BASIC HOOD"
 var body_name := "BASIC TUNIC"
-var arm_name := "CLOTH WRAPS"
+var arm_name := "BASIC WRAPS"
 var armor_name:
 	get:
 		return body_name
 	set(value):
 		body_name = str(value)
 var shield_name := "BASIC SHIELD"
-var accessory_name := "BANGLE"
+var accessory_name := "BASIC CHARM"
 var equipped_transmutations: Dictionary = {}
 
 
@@ -120,11 +120,11 @@ func _reset_runtime_state() -> void:
 	elemental_wards.clear()
 	equipped_transmutations.clear()
 	weapon_name = "BASIC SWORD"
-	head_name = "PLAIN HOOD"
+	head_name = "BASIC HOOD"
 	body_name = "BASIC TUNIC"
-	arm_name = "CLOTH WRAPS"
+	arm_name = "BASIC WRAPS"
 	shield_name = "NO SHIELD"
-	accessory_name = "BANGLE"
+	accessory_name = "BASIC CHARM"
 
 
 func _apply_equipped_instance(slot: StringName, instance: ItemInstance, items: ItemCatalog) -> void:
@@ -159,7 +159,7 @@ func _apply_equipped_instance(slot: StringName, instance: ItemInstance, items: I
 		_register_effects(slot, instance, transmutation_effects, items, "transmutation")
 		core_health_rate_bonus += float(transmutation_effects.get("core_health_rate", 0.0))
 		vit_health_multiplier_bonus += float(transmutation_effects.get("vit_health_multiplier", 0.0))
-	var shown_name := str(items.definition_data(instance.definition_id).get("name", ""))
+	var shown_name: String = str(items.gear_name(instance))
 	match slot:
 		&"weapon": weapon_name = shown_name
 		&"head": head_name = shown_name

@@ -28,15 +28,117 @@ const RARITY_COLORS := {
 const RARITY_FLAT_POINTS_PER_RANK := 2
 const RARITY_PLAYER_STAT_RATES := {
 	&"common": 0.0,
-	&"rare": 0.05,
-	&"epic": 0.15,
-	&"legendary": 0.45,
-	&"mythic": 0.80,
+	&"rare": 0.0,
+	&"epic": 0.0,
+	&"legendary": 0.0,
+	&"mythic": 0.0,
 }
 const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
 
+const PLAIN_GEAR_DROP_WEIGHT := 6.0
 const BASIC_GEAR_DROP_WEIGHT := 5.0
+const SET_GEAR_DROP_WEIGHT := 0.5
+const RANDOM_STAT_KEYS: Array[String] = ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]
+const SET_IDS: Array[StringName] = [&"swift", &"soldier", &"guard", &"blood", &"arcane", &"soul", &"edge", &"oath", &"rune"]
+
+## The live catalogue is intentionally small and explicit. The older catalogue
+## below remains readable for save compatibility, but only these records can be
+## generated, bought, fused, or shown as current design data.
+const LIVE_BASE_DEFINITIONS := {
+	&"plain_blade": {"name": "PLAIN BLADE", "slot": &"weapon", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain blade."},
+	&"plain_hood": {"name": "PLAIN HOOD", "slot": &"head", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain hood."},
+	&"plain_tunic": {"name": "PLAIN TUNIC", "slot": &"body", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain tunic."},
+	&"plain_wraps": {"name": "PLAIN WRAPS", "slot": &"arm", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "Plain hand wraps."},
+	&"plain_shield": {"name": "PLAIN SHIELD", "slot": &"shield", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "shield": {"guard_durability": 1.0, "guard_reduction": 0.0}, "price": 8, "description": "A plain shield."},
+	&"plain_ring": {"name": "PLAIN RING", "slot": &"accessory", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain ring."},
+	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "gear_tier": "basic", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 25, "description": "A dependable sword."},
+	&"basic_hood": {"name": "BASIC HOOD", "slot": &"head", "gear_tier": "basic", "tier_stat": "vitality", "bonuses": {"vitality": 1.0}, "price": 25, "description": "A dependable hood."},
+	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"body", "gear_tier": "basic", "tier_stat": "vitality", "bonuses": {"vitality": 1.0, "defense": 1.0}, "price": 30, "description": "A dependable tunic."},
+	&"basic_wraps": {"name": "BASIC WRAPS", "slot": &"arm", "gear_tier": "basic", "tier_stat": "strength", "bonuses": {"strength": 1.0}, "price": 25, "description": "A dependable pair of wraps."},
+	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "gear_tier": "basic", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "defense": 2.0, "agi": -1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 30, "description": "A dependable shield."},
+	&"basic_charm": {"name": "BASIC CHARM", "slot": &"accessory", "gear_tier": "basic", "tier_stat": "vitality", "bonuses": {"vitality": 1.0, "strength": 1.0}, "price": 25, "description": "A dependable charm."},
+}
+
+## Every set has one item in every slot. Secondary stats and penalties are
+## deliberately visible in the flat package; only the authored primary lane
+## and independent random `+` lanes receive the rarity/fusion ladder.
+const SET_DEFINITIONS := {
+	&"swift": {
+		&"weapon": {"name": "SWIFT BLADE", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 70, "description": "Movement first."},
+		&"head": {"name": "SWIFT CAP", "tier_stat": "agi", "bonuses": {"agi": 2.0}, "price": 60, "description": "Light and quick."},
+		&"body": {"name": "SWIFT CLOAK", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 75, "description": "Move through danger."},
+		&"arm": {"name": "SWIFT GLOVES", "tier_stat": "agi", "bonuses": {"agi": 2.0}, "price": 60, "description": "Keep your hands light."},
+		&"shield": {"name": "SWIFT BUCKLER", "tier_stat": "agi", "bonuses": {"agi": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 65, "description": "A shield for active fighters."},
+		&"accessory": {"name": "SWIFT BOOTS", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 70, "description": "Movement is the job."},
+	},
+	&"soldier": {
+		&"weapon": {"name": "SOLDIER SWORD", "tier_stat": "strength", "bonuses": {"strength": 3.0}, "price": 80, "description": "Force with a hard mobility cost."},
+		&"head": {"name": "SOLDIER HELM", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0}, "price": 70, "description": "A helm for the front line."},
+		&"body": {"name": "SOLDIER MAIL", "tier_stat": "strength", "bonuses": {"strength": 3.0, "vitality": 1.0, "agi": -2.0}, "price": 85, "description": "Heavy force, poor mobility."},
+		&"arm": {"name": "SOLDIER GLOVES", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 70, "description": "Built for committed blows."},
+		&"shield": {"name": "SOLDIER SHIELD", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0, "agi": -2.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 80, "description": "Power with a real speed loss."},
+		&"accessory": {"name": "SOLDIER CHARM", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 70, "description": "A simple soldier's charm."},
+	},
+	&"guard": {
+		&"weapon": {"name": "GUARD BLADE", "tier_stat": "defense", "bonuses": {"defense": 2.0, "strength": 1.0}, "price": 80, "description": "Turn defense into pressure."},
+		&"head": {"name": "GUARD HELM", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 1.0, "agi": -1.0}, "price": 75, "description": "Protection with a small speed loss."},
+		&"body": {"name": "GUARD PLATE", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 2.0, "agi": -1.0}, "price": 90, "description": "Hold the line."},
+		&"arm": {"name": "GUARD BRACERS", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "price": 70, "description": "Steady defense."},
+		&"shield": {"name": "GUARD SHIELD", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 1.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0}, "price": 95, "description": "The strongest guard."},
+		&"accessory": {"name": "GUARD RING", "tier_stat": "defense", "bonuses": {"defense": 1.0, "vitality": 1.0}, "price": 70, "description": "Reliable protection."},
+	},
+	&"blood": {
+		&"weapon": {"name": "BLOOD BLADE", "tier_stat": "vitality", "bonuses": {"vitality": 3.0, "strength": 1.0, "agi": -1.0}, "price": 80, "description": "Health first."},
+		&"head": {"name": "BLOOD HOOD", "tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "price": 65, "description": "A deep reserve of health."},
+		&"body": {"name": "BLOOD TUNIC", "tier_stat": "vitality", "bonuses": {"vitality": 3.0, "agi": -1.0}, "price": 85, "description": "A sturdy life pool."},
+		&"arm": {"name": "BLOOD WRAPS", "tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "price": 65, "description": "Endure the exchange."},
+		&"shield": {"name": "BLOOD SHIELD", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "defense": 1.0, "agi": -1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 80, "description": "Health with a speed cost."},
+		&"accessory": {"name": "BLOOD RING", "tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "price": 70, "description": "Wear the extra life."},
+	},
+	&"arcane": {
+		&"weapon": {"name": "ARCANE SWORD", "tier_stat": "intelligence", "bonuses": {"intelligence": 3.0}, "price": 80, "description": "Spell power in a blade."},
+		&"head": {"name": "ARCANE HOOD", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 70, "description": "A clear magical focus."},
+		&"body": {"name": "ARCANE ROBE", "tier_stat": "intelligence", "bonuses": {"intelligence": 3.0, "mnd": 1.0, "defense": -1.0}, "price": 90, "description": "Power over physical cover."},
+		&"arm": {"name": "ARCANE SLEEVES", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 70, "description": "Guide the spell."},
+		&"shield": {"name": "ARCANE SHIELD", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 80, "description": "A shield for a caster."},
+		&"accessory": {"name": "ARCANE CHARM", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 75, "description": "More magic, less steel."},
+	},
+	&"soul": {
+		&"weapon": {"name": "SOUL BLADE", "tier_stat": "mnd", "bonuses": {"mnd": 3.0, "intelligence": 1.0}, "price": 80, "description": "Mind over force."},
+		&"head": {"name": "SOUL HOOD", "tier_stat": "mnd", "bonuses": {"mnd": 2.0}, "price": 70, "description": "A quiet mind."},
+		&"body": {"name": "SOUL CLOAK", "tier_stat": "mnd", "bonuses": {"mnd": 3.0, "defense": 1.0, "strength": -1.0}, "price": 90, "description": "Magic defense over physical force."},
+		&"arm": {"name": "SOUL WRAPS", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 70, "description": "Keep the mind steady."},
+		&"shield": {"name": "SOUL BUCKLER", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 80, "description": "A small ward of will."},
+		&"accessory": {"name": "SOUL SEAL", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 75, "description": "A seal for the inner fight."},
+	},
+	&"edge": {
+		&"weapon": {"name": "EDGE BLADE", "tier_stat": "agi", "bonuses": {"agi": 3.0, "strength": 1.0}, "price": 80, "description": "Speed with a sharp finish."},
+		&"head": {"name": "EDGE CAP", "tier_stat": "agi", "bonuses": {"agi": 2.0}, "price": 65, "description": "Light and precise."},
+		&"body": {"name": "EDGE CLOAK", "tier_stat": "agi", "bonuses": {"agi": 3.0, "strength": 1.0, "defense": -2.0}, "price": 85, "description": "Precision over protection."},
+		&"arm": {"name": "EDGE GLOVES", "tier_stat": "agi", "bonuses": {"agi": 2.0, "strength": 1.0}, "price": 70, "description": "Keep the attack clean."},
+		&"shield": {"name": "EDGE BUCKLER", "tier_stat": "agi", "bonuses": {"agi": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 70, "description": "A shield that stays out of the way."},
+		&"accessory": {"name": "EDGE BOOTS", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 75, "description": "Take the opening."},
+	},
+	&"oath": {
+		&"weapon": {"name": "OATH SWORD", "tier_stat": "defense", "bonuses": {"strength": 2.0, "defense": 1.0}, "price": 80, "description": "A balanced combat promise."},
+		&"head": {"name": "OATH HELM", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "price": 70, "description": "Stand firm."},
+		&"body": {"name": "OATH MAIL", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 2.0}, "price": 85, "description": "A broad middle path."},
+		&"arm": {"name": "OATH BRACERS", "tier_stat": "defense", "bonuses": {"defense": 1.0, "strength": 1.0}, "price": 70, "description": "Force and guard together."},
+		&"shield": {"name": "OATH SHIELD", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 2.0}, "price": 85, "description": "A dependable shield."},
+		&"accessory": {"name": "OATH CHARM", "tier_stat": "defense", "bonuses": {"strength": 1.0, "vitality": 1.0}, "price": 70, "description": "A little of everything useful."},
+	},
+	&"rune": {
+		&"weapon": {"name": "RUNE BLADE", "tier_stat": "strength", "bonuses": {"strength": 3.0, "intelligence": 1.0}, "price": 90, "description": "A brutal battle mage's blade."},
+		&"head": {"name": "RUNE HOOD", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0, "mnd": -1.0}, "price": 75, "description": "Power without calm."},
+		&"body": {"name": "RUNE ROBE", "tier_stat": "strength", "bonuses": {"strength": 2.0, "intelligence": 2.0, "defense": -2.0, "mnd": -1.0}, "price": 95, "description": "A brutal robe with poor defense."},
+		&"arm": {"name": "RUNE GLOVES", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0}, "price": 75, "description": "Strike through the spell."},
+		&"shield": {"name": "RUNE SHIELD", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0, "defense": -1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 85, "description": "A battle mage's compromise."},
+		&"accessory": {"name": "RUNE CHARM", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0, "mnd": -1.0}, "price": 80, "description": "More power, less restraint."},
+	},
+}
+
+const LIVE_BASE_IDS: Array[StringName] = [&"plain_blade", &"plain_hood", &"plain_tunic", &"plain_wraps", &"plain_shield", &"plain_ring", &"basic_sword", &"basic_hood", &"basic_tunic", &"basic_wraps", &"basic_shield", &"basic_charm"]
 
 const DEFINITIONS := {
 	# Weapon — the original six bases plus the approved expansion identities.
@@ -202,13 +304,69 @@ func slot_label(slot: Variant) -> String:
 	return str(SLOT_LABELS.get(canonical_slot(slot), "ITEM"))
 
 
+func live_definition_ids() -> Array[StringName]:
+	var result: Array[StringName] = LIVE_BASE_IDS.duplicate()
+	for set_id: StringName in SET_IDS:
+		for slot: StringName in SLOTS:
+			result.append(StringName("%s_%s" % [String(set_id), String(slot)]))
+	return result
+
+
+func definition_exists(definition_id: StringName) -> bool:
+	return not definition_data(definition_id).is_empty()
+
+
+func _is_live_set_definition(definition_id: StringName) -> bool:
+	var value := String(definition_id)
+	for set_id: StringName in SET_IDS:
+		if value.begins_with("%s_" % String(set_id)):
+			var slot_text := value.substr(String(set_id).length() + 1)
+			return canonical_slot(slot_text) in SLOTS
+	return false
+
+
+func _live_set_definition(definition_id: StringName) -> Dictionary:
+	var value := String(definition_id)
+	for set_id: StringName in SET_IDS:
+		var prefix := "%s_" % String(set_id)
+		if not value.begins_with(prefix):
+			continue
+		var slot := canonical_slot(value.substr(prefix.length()))
+		var set_records: Dictionary = SET_DEFINITIONS.get(set_id, {})
+		var record: Dictionary = set_records.get(slot, {}).duplicate(true)
+		if record.is_empty():
+			return {}
+		record["slot"] = slot
+		record["gear_tier"] = "set"
+		record["set_id"] = String(set_id)
+		record["set_name"] = String(set_id).to_upper()
+		record["source_tags"] = ["shop", "chest", "clear_reward", "boss"]
+		record["minimum_run_rank"] = 1
+		record["minimum_player_level"] = 1
+		record["rarity_floor"] = "common"
+		record["rarity_ceiling"] = "mythic"
+		record["shop_eligible"] = true
+		record["family"] = String(set_id)
+		record["role_tags"] = [String(set_id), str(record.get("tier_stat", "stat"))]
+		record["primary_stat"] = str(record.get("tier_stat", ""))
+		record["effects"] = {}
+		record["fusion_group"] = String(set_id)
+		record["visual_id"] = String(set_id)
+		return record
+	return {}
+
+
 func definition_data(definition_id: StringName) -> Dictionary:
-	var base: Dictionary = DEFINITIONS.get(definition_id, {}).duplicate(true)
+	var is_live := LIVE_BASE_DEFINITIONS.has(definition_id) or _is_live_set_definition(definition_id)
+	var base: Dictionary = LIVE_BASE_DEFINITIONS.get(definition_id, {}).duplicate(true) if LIVE_BASE_DEFINITIONS.has(definition_id) else _live_set_definition(definition_id)
+	if base.is_empty() and DEFINITIONS.has(definition_id):
+		base = DEFINITIONS.get(definition_id, {}).duplicate(true)
 	if base.is_empty():
 		return {}
-	var metadata: Dictionary = DEFINITION_METADATA.get(definition_id, {})
-	for key: Variant in metadata:
-		base[key] = metadata[key]
+	if not is_live:
+		var metadata: Dictionary = DEFINITION_METADATA.get(definition_id, {})
+		for key: Variant in metadata:
+			base[key] = metadata[key]
 	base["slot"] = canonical_slot(base.get("slot", &""))
 	if not base.has("primary_stat"):
 		base["primary_stat"] = base.get("tier_stat", "")
@@ -238,7 +396,7 @@ func definition_data(definition_id: StringName) -> Dictionary:
 	if not base.has("elemental_behavior"):
 		base["elemental_behavior"] = _infer_elemental_behavior(base.get("effects", {}))
 	if not base.has("source_tags"):
-		base["source_tags"] = []
+		base["source_tags"] = ["shop", "chest", "clear_reward", "boss"] if is_live else []
 	if not base.has("minimum_run_rank"):
 		base["minimum_run_rank"] = 1
 	if not base.has("minimum_player_level"):
@@ -256,6 +414,12 @@ func definition_data(definition_id: StringName) -> Dictionary:
 	if not base.has("description"):
 		base["description"] = ""
 	base["id"] = String(definition_id)
+	if not base.has("gear_tier"):
+		base["gear_tier"] = "legacy"
+	if not base.has("set_id"):
+		base["set_id"] = ""
+	if not base.has("set_name"):
+		base["set_name"] = ""
 	base["display_name"] = str(base.get("name", "UNKNOWN ITEM"))
 	base["designer_notes"] = str(base.get("designer_notes", ""))
 	base["salvage_policy"] = str(base.get("salvage_policy", "price * %.0f%%" % (OVERFLOW_SALVAGE_RATE * 100.0)))
@@ -268,7 +432,7 @@ func definition_data(definition_id: StringName) -> Dictionary:
 func definitions_for_slot(slot: StringName, source_tag: StringName = &"", run_rank: int = 1, player_level: int = 1, include_starter_only := false, include_future_effects := false) -> Array[StringName]:
 	var canonical := canonical_slot(slot)
 	var result: Array[StringName] = []
-	for definition_id: StringName in DEFINITIONS:
+	for definition_id: StringName in live_definition_ids():
 		if definition_slot(definition_id) != canonical:
 			continue
 		var definition := definition_data(definition_id)
@@ -324,6 +488,8 @@ func definition_effects(definition_id: StringName) -> Dictionary:
 
 
 func definition_is_runtime_ready(definition_id: StringName) -> bool:
+	if LIVE_BASE_DEFINITIONS.has(definition_id) or _is_live_set_definition(definition_id):
+		return true
 	if not DEFINITIONS.has(definition_id):
 		return false
 	var base: Dictionary = DEFINITIONS.get(definition_id, {})
@@ -459,7 +625,7 @@ func source_eligible(definition_id: StringName, source_tag: StringName, run_rank
 
 func starter_item(slot: StringName) -> ItemInstance:
 	var canonical := canonical_slot(slot)
-	var ids := {&"weapon": &"basic_sword", &"head": &"plain_hood", &"body": &"basic_tunic", &"arm": &"cloth_wraps", &"shield": &"basic_shield", &"accessory": &"bangle"}
+	var ids := {&"weapon": &"basic_sword", &"head": &"basic_hood", &"body": &"basic_tunic", &"arm": &"basic_wraps", &"shield": &"basic_shield", &"accessory": &"basic_charm"}
 	var item := ItemInstance.new()
 	if canonical.is_empty():
 		return item
@@ -479,7 +645,7 @@ func generate_item(slot: StringName, generation_seed: int, level: int = 1, minim
 		if prefer_non_basic and _is_basic_gear(definition_id):
 			continue
 		candidates.append(definition_id)
-		weights.append(BASIC_GEAR_DROP_WEIGHT if _is_basic_gear(definition_id) else 1.0)
+		weights.append(_gear_drop_weight(definition_id))
 	var item := ItemInstance.new()
 	if candidates.is_empty():
 		return item
@@ -487,7 +653,8 @@ func generate_item(slot: StringName, generation_seed: int, level: int = 1, minim
 	item.rarity = minimum_rarity if not minimum_rarity.is_empty() else roll_run_rarity(rng.randf(), level)
 	item.rarity = _clamp_rarity_to_definition(item.rarity, item.definition_id)
 	item.quality = snappedf(rng.randf_range(0.9, 1.1), 0.01)
-	if item.rarity in [&"epic", &"legendary", &"mythic"]:
+	item.random_stat_points = _roll_random_stat_points(item.rarity, rng)
+	if item.rarity in [&"epic", &"legendary", &"mythic"] and not _is_live_definition(item.definition_id):
 		var available_transmutations := transmutations_for_definition(item.definition_id)
 		if not available_transmutations.is_empty():
 			var eligible: Array[StringName] = []
@@ -514,7 +681,36 @@ func _clamp_rarity_to_definition(rarity: StringName, definition_id: StringName) 
 
 
 func _is_basic_gear(definition_id: StringName) -> bool:
-	return definition_id in [&"basic_sword", &"basic_tunic", &"basic_shield", &"bangle", &"plain_hood", &"cloth_wraps"]
+	var tier := str(definition_data(definition_id).get("gear_tier", "legacy"))
+	return tier == "plain" or tier == "basic"
+
+
+func _is_live_definition(definition_id: StringName) -> bool:
+	return LIVE_BASE_DEFINITIONS.has(definition_id) or _is_live_set_definition(definition_id)
+
+
+func _gear_drop_weight(definition_id: StringName) -> float:
+	var tier := str(definition_data(definition_id).get("gear_tier", "legacy"))
+	match tier:
+		"plain": return PLAIN_GEAR_DROP_WEIGHT
+		"basic": return BASIC_GEAR_DROP_WEIGHT
+		"set": return SET_GEAR_DROP_WEIGHT
+	return 0.0
+
+
+func _roll_random_stat_points(rarity: StringName, rng: RandomNumberGenerator) -> Dictionary:
+	var plus_count := 0
+	match rarity:
+		&"common": plus_count = 1 if rng.randf() < 0.08 else 0
+		&"rare": plus_count = rng.randi_range(0, 2)
+		&"epic": plus_count = rng.randi_range(0, 3)
+		&"legendary": plus_count = rng.randi_range(1, 3)
+		&"mythic": plus_count = rng.randi_range(2, 3)
+	var result: Dictionary = {}
+	for _roll_index in plus_count:
+		var stat := RANDOM_STAT_KEYS[rng.randi_range(0, RANDOM_STAT_KEYS.size() - 1)]
+		result[stat] = int(result.get(stat, 0)) + 1
+	return result
 
 
 func _pick_weighted_definition(candidates: Array[StringName], weights: Array[float], rng: RandomNumberGenerator) -> StringName:
@@ -562,7 +758,10 @@ func rarity_color(rarity: StringName) -> Color:
 	return RARITY_COLORS.get(rarity, Color.WHITE)
 
 func rarity_stat_rate(rarity: StringName) -> float:
-	return float(RARITY_PLAYER_STAT_RATES.get(rarity, 0.0))
+	# Kept as a compatibility seam for old callers. The reworked model is flat;
+	# rarity and fusion growth are folded into bonuses() instead of multiplying
+	# the player's complete stat sheet.
+	return 0.0
 
 func rarity_flat_points(rarity: StringName) -> int:
 	return _rarity_rank(rarity) * RARITY_FLAT_POINTS_PER_RANK
@@ -584,46 +783,65 @@ func definition_slot(definition_id: StringName) -> StringName:
 	return canonical_slot(definition_data(definition_id).get("slot", &""))
 
 
-func display_name(item: ItemInstance) -> String:
+func random_plus_count(item: ItemInstance) -> int:
+	if item == null:
+		return 0
+	var count := 0
+	for value: Variant in item.random_stat_points.values():
+		count += maxi(int(value), 0)
+	return count
+
+
+func plus_marker(item: ItemInstance) -> String:
+	var count := mini(random_plus_count(item), 3)
+	var marker := ""
+	for _index in count:
+		marker += "+"
+	return marker
+
+
+func gear_name(item: ItemInstance) -> String:
 	if item == null:
 		return "UNKNOWN ITEM"
 	var definition: Dictionary = definition_data(item.definition_id)
-	return "%s %s" % [RARITY_NAMES.get(item.rarity, "COMMON"), definition.get("name", "UNKNOWN ITEM")]
+	var name := str(definition.get("name", "UNKNOWN ITEM"))
+	var marker := plus_marker(item)
+	return "%s %s" % [name, marker] if not marker.is_empty() else name
+
+
+func random_stat_text(item: ItemInstance) -> String:
+	if item == null or random_plus_count(item) <= 0:
+		return ""
+	var labels := {"vitality": "VIT", "strength": "STR", "defense": "DEF", "agi": "AGI", "intelligence": "INT", "mnd": "MND"}
+	var parts: Array[String] = []
+	for stat: String in RANDOM_STAT_KEYS:
+		var points := maxi(int(item.random_stat_points.get(stat, 0)), 0)
+		if points > 0:
+			parts.append("%s +%d" % [labels[stat], points])
+	return "RANDOM %s" % " ".join(parts) if not parts.is_empty() else ""
+
+
+func display_name(item: ItemInstance) -> String:
+	if item == null:
+		return "UNKNOWN ITEM"
+	return "%s %s" % [RARITY_NAMES.get(item.rarity, "COMMON"), gear_name(item)]
+
 
 func player_stat_rates(item: ItemInstance) -> Dictionary:
-	if item == null:
-		return {}
-	var rate := rarity_stat_rate(item.rarity)
-	if is_zero_approx(rate):
-		return {}
-	var result: Dictionary = {}
-	var package := bonuses(item)
-	# A rarity rate is a buff to a stat the item positively supplies. Negative
-	# trade-offs remain flat so a higher rarity never turns a penalty into a
-	# hidden bonus.
-	for stat: String in ["strength", "vitality", "defense", "agi", "intelligence", "mnd"]:
-		if float(package.get(stat, 0.0)) > 0.0:
-			result[stat] = rate
-			if stat == "agi":
-				result["speed"] = rate
-	return result
+	# The old percentage-affix API remains readable by callers, but the new gear
+	# system intentionally has no hidden player-stat multipliers.
+	return {}
 
 func player_stat_rate_text(item: ItemInstance) -> String:
-	var labels := {"strength": "STR", "vitality": "VIT", "defense": "DEF", "agi": "AGI", "intelligence": "INT", "mnd": "MND"}
-	var parts: Array[String] = []
-	var rates := player_stat_rates(item)
-	if rates.is_empty() and item != null:
-		return "PLAYER +%d%%" % roundi(rarity_stat_rate(item.rarity) * 100.0)
-	for stat: String in ["strength", "vitality", "defense", "agi", "intelligence", "mnd"]:
-		if rates.has(stat):
-			parts.append("%s +%d%%" % [labels[stat], roundi(float(rates[stat]) * 100.0)])
-	return " ".join(parts)
+	return ""
 
 
 func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
+	if item == null:
+		return {}
 	var definition: Dictionary = definition_data(item.definition_id)
 	var result: Dictionary = {}
-	var base_bonuses: Dictionary = definition.get("bonuses", {})
+	var base_bonuses: Dictionary = definition.get("bonuses", {}).duplicate(true)
 	var flat_points := float(rarity_flat_points(item.rarity)) + enhancement_flat_points(item.enhancement_level)
 	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
 	# The primary `tier_stat` scales with rarity/enhancement. `tier_stats`
@@ -637,20 +855,32 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 		scaled_stats.append(tier_stat)
 	elif tier_stat not in scaled_stats:
 		scaled_stats.append(tier_stat)
-	for stat: String in base_bonuses:
-		var base_value := float(base_bonuses[stat])
-		var normalized_stat: String = _normalize_stat_key(str({"health": "health_rate", "damage": "damage_rate"}.get(stat, stat)))
-		if normalized_stat in ["health_rate", "damage_rate"]:
-			continue
-		var flat_value := base_value
-		if normalized_stat in scaled_stats:
+	var random_points: Dictionary = item.random_stat_points if item.random_stat_points is Dictionary else {}
+	var stat_keys: Array[String] = []
+	for stat: Variant in base_bonuses.keys():
+		var normalized := _normalize_stat_key(str(stat))
+		if normalized not in ["health_rate", "damage_rate"] and normalized not in stat_keys:
+			stat_keys.append(normalized)
+	for stat: Variant in random_points.keys():
+		var normalized := _normalize_stat_key(str(stat))
+		if normalized in RANDOM_STAT_KEYS and normalized not in stat_keys:
+			stat_keys.append(normalized)
+	for normalized_stat: String in stat_keys:
+		var authored_value := float(base_bonuses.get(normalized_stat, base_bonuses.get(_legacy_stat_key(normalized_stat), 0.0)))
+		var random_value := maxi(int(random_points.get(normalized_stat, 0)), 0)
+		var flat_value := authored_value + float(random_value)
+		# A random lane is a real stat lane: it grows at the same additive pace as
+		# the authored primary, even when its roll lands on a secondary stat.
+		if normalized_stat in scaled_stats or random_value > 0:
 			flat_value += flat_points
-		# Legacy affixes remain serialized for save compatibility, but the new
-		# tier package is deterministic and no longer adds hidden stat points.
 		result[normalized_stat] = flat_value
 		if normalized_stat == "agi":
 			result["speed"] = flat_value
 	return result
+
+
+static func _legacy_stat_key(normalized_stat: String) -> String:
+	return {"agi": "agility", "intelligence": "int", "mnd": "mind"}.get(normalized_stat, normalized_stat)
 
 
 func combat_primary_points(item: ItemInstance) -> Dictionary:
@@ -678,14 +908,14 @@ func shield_bonuses(item: ItemInstance) -> Dictionary:
 		return {}
 	var definition: Dictionary = definition_data(item.definition_id)
 	var shield_values: Dictionary = definition.get("shield", {})
-	var rarity_multiplier := 1.0 + rarity_stat_rate(item.rarity)
 	var enhancement_factor := 1.0 + MASTERY_BONUS_PER_LEVEL * float(clampi(item.enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT))
 	var result: Dictionary = {}
 	for stat: String in shield_values:
-		# Guard strength improves with enhancement; primary-stat trade-offs live
-		# in the visible bonuses package and are handled separately.
+		# Guard values are the shield's simple fixed package. Fusion may improve
+		# them with the same small additive enhancement factor, but rarity adds no
+		# hidden percentage multiplier.
 		var mastery_multiplier := enhancement_factor if stat in ["guard_durability", "guard_reduction"] else 1.0
-		result[stat] = float(shield_values[stat]) * rarity_multiplier * mastery_multiplier
+		result[stat] = float(shield_values[stat]) * mastery_multiplier
 	return result
 
 

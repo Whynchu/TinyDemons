@@ -9,14 +9,12 @@ is being prepared on the feature/gear-catalogue-expansion branch.
 
 Branch: `refactor/2026-08-18`
 
-Current content handoff (2026-08-29): the six-stat/menu, elemental composite
-combat, responsive display, input work, and six-slot catalogue foundation are
-landed on this feature branch. See
-[`gear-catalogue-spec.md`](gear-catalogue-spec.md) for the six-slot taxonomy,
-[`gear-catalogue.md`](gear-catalogue.md) for the 44 authored bases, and
-[`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md)
-for the implementation boundary. Future behavior effects remain explicitly
-gated; existing stat, shield, and transmutation contracts remain active.
+Current content handoff (2026-09-02): the six-stat/menu, elemental composite
+combat, responsive display, input work, and simplified six-slot gear model are
+landed on this working tree. See [`gear-system-rework.md`](gear-system-rework.md)
+for the live Plain/Basic/Set taxonomy, independent random `+` stats, fusion
+matching, and legacy-save boundary. The older catalogue documents remain useful
+for compatibility context only.
 
 Detailed execution route: [`refactor-route.md`](refactor-route.md)
 
@@ -333,21 +331,35 @@ change and its listed evidence; line movement alone does not advance status.
   boss/add displacement, and vertical attack reach.
 - Verification: the complete 17-test smoke suite and main-scene headless boot pass.
 
-### Current active route — Gear catalogue effect batches and balance
+### Current content route — Simplified gear and Run 1 placement
 
-The refactor audit, six-stat/menu slice, and six-slot catalogue foundation are
-complete. The remaining bounded work is to implement and tune the explicitly
-gated action/elemental effects, then run six-slot balance simulations. Head and
-Arm use zero-power starter items; old Armor data migrates to Body; future
-weapon families remain documentation-only until their action contracts exist.
+The live catalogue now has six slots, six even player baseline stats, twelve
+Plain/Basic baseline pieces, and nine complete themed sets. Plain and Basic are
+weighted as the common drops; any tier may receive an independent random `+`
+package on any of the six stats. Fusion matches the same base definition and
+rarity without requiring the same `+` package, and random lanes grow with the
+primary ladder. The catalogue schema is version 12 and preserves legacy saved
+values.
 
-The current equipment handoff is [`gear-catalogue-spec.md`](gear-catalogue-spec.md)
-with [`gear-catalogue.md`](gear-catalogue.md),
-[`gear-effect-contracts.md`](gear-effect-contracts.md),
-[`gear-drop-tables.md`](gear-drop-tables.md), and
-[`gear-catalogue-implementation-plan.md`](gear-catalogue-implementation-plan.md).
-Elemental Chroma and elemental-slime documents remain authoritative for flame,
-binding, matchup, and slime contracts; the gear documents do not replace them.
+The Run 1 authored Treasure Rooms now keep their chests away from the floor
+center. `DungeonLayoutDefinition.validate()` and the Run 1 contract smoke guard
+that placement so a center-anchor regression fails before playtesting.
+
+Follow-up verification is recorded below; the MCP-connected Godot editor is the
+preferred path for runtime checks, while standalone headless checks may still
+encounter the local renderer crash.
+
+### 2026-09-02 — Gear rework and Run 1 treasure placement
+
+- Owner/API introduced: `ItemCatalog` owns the live gear catalogue and flat
+  random-plus ladder; `PlayerProfile` owns fusion identity and schema 12.
+- State moved: new `random_stat_points` item field, live tier/set definitions,
+  even new-player baseline, and the authored Run 1 chest placement guard.
+- Compatibility: legacy item definitions, affixes, transmutations, and saved
+  base stats remain readable but are excluded from new generated gear.
+- Verification: changed scripts parse cleanly through MCP; the new gear and Run 1
+  smoke scripts are registered. A standalone Run 1 smoke invocation hit the
+  known Godot 4.7.1 local renderer crash before test initialization.
 
 ---
 
