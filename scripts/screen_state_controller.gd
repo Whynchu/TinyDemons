@@ -369,7 +369,9 @@ func apply_display_layout(root: Object) -> void:
 	if hub_overlay != null:
 		hub_overlay.position = Vector2.ZERO
 		hub_overlay.size = display_view_size
-		_position_hub_controls(true)
+		# Orientation changes are geometry reflows, not route transitions. Keep
+		# active cursor/glove motion alive while the anchors move.
+		_position_hub_controls(false, true)
 	if settings_overlay != null:
 		settings_overlay.size = display_view_size
 		_position_settings_controls()
@@ -382,7 +384,7 @@ func apply_display_layout(root: Object) -> void:
 		pause_overlay.position = Vector2.ZERO
 		pause_overlay.size = display_view_size
 		_resize_menu_frame(pause_overlay, display_view_size)
-		_position_pause_controls(true)
+		_position_pause_controls(false, true)
 	_refresh_active_menu_layout(root)
 	var game_over_button := root.get("game_over_button") as Button
 	var game_over_title_button := root.get("game_over_title_button") as Button
@@ -1248,8 +1250,12 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		hub_stat_value_texts.append(stat_value)
 		var row_button := _make_transparent_touch_button(allocate_page, "HubStatRow%d" % index, Vector2(STAT_CURSOR_X, y), Vector2(STAT_ROW_RIGHT_ARROW_X + 9.0 - STAT_CURSOR_X, 12), select_stat_row, index)
 		stat_rows.append(row_button)
-		var left := make_archetype_arrow(allocate_page, -1, Vector2(STAT_ROW_LEFT_ARROW_X, y), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
-		var right := make_archetype_arrow(allocate_page, 104, Vector2(STAT_ROW_RIGHT_ARROW_X, y), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
+		# The artwork is centered on the selected row's +/- lanes. Build each
+		# transparent hitbox around that same center so the touch target cannot
+		# drift left from the visible glyph during a responsive reflow.
+		var marker_y := STAT_LABEL_TOP + 2.5 + index * STAT_ROW_PITCH
+		var left := make_archetype_arrow(allocate_page, -1, Vector2(STAT_SUBTRACT_MARKER_X - stat_arrow_size.x * 0.5, marker_y - stat_arrow_size.y * 0.5), adjust_stat.bind(stat_names[index], -1), pixel_texture, stat_arrow_size)
+		var right := make_archetype_arrow(allocate_page, 104, Vector2(STAT_ADD_MARKER_X - stat_arrow_size.x * 0.5, marker_y - stat_arrow_size.y * 0.5), adjust_stat.bind(stat_names[index], 1), pixel_texture, stat_arrow_size)
 		left.set_meta("hub_stat_direction", -1); right.set_meta("hub_stat_direction", 1)
 		left.set_meta("hub_stat_index", index); right.set_meta("hub_stat_index", index)
 		stat_left.append(left); stat_right.append(right); stat_buttons.append(left); stat_buttons.append(right)
@@ -1528,7 +1534,37 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "equipment_menu": pause_equipment_menu, "description": description, "back": back, "status_button": buttons[0], "equipment_button": buttons[1]}
 
 
-func _position_hub_controls(animate_cursor: bool = false) -> void:
+func _position_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = false, preserve_motion: bool = false) -> void:
+	if cursor == null:
+		return
+	if preserve_motion and cursor.has_method("reanchor_preserving_motion"):
+		cursor.call("reanchor_preserving_motion", Vector2(target.x, target.y - CURSOR_VERTICAL_RAISE))
+	else:
+		move_menu_cursor(cursor, target, animate)
+
+
+func _position_hub_stat_markers(selected_row: int, marker_visible: bool) -> void:
+	var valid_row := selected_row >= 0 and selected_row < 6
+	var marker_center_y := STAT_LABEL_TOP + 2.5 + selected_row * STAT_ROW_PITCH if valid_row else 0.0
+	if hub_stat_subtract_marker != null:
+		hub_stat_subtract_marker.centered = true
+		hub_stat_subtract_marker.visible = marker_visible and valid_row
+		hub_stat_subtract_marker.position = Vector2(_hub_left_field_x(STAT_SUBTRACT_MARKER_X), marker_center_y)
+	if hub_stat_add_marker != null:
+		hub_stat_add_marker.centered = true
+		hub_stat_add_marker.visible = marker_visible and valid_row
+		hub_stat_add_marker.position = Vector2(_hub_left_field_x(STAT_ADD_MARKER_X), marker_center_y)
+
+
+func _set_hub_stat_adjustment_targets(selected_row: int, enabled: bool) -> void:
+	for button in hub_stat_buttons:
+		var stat_index := int(button.get_meta("hub_stat_index", 0))
+		var active := enabled and stat_index == selected_row
+		button.visible = active
+		button.mouse_filter = Control.MOUSE_FILTER_STOP if active else Control.MOUSE_FILTER_IGNORE
+
+
+func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
 	if hub_overlay == null:
 		return
 	var width := display_view_size.x
@@ -1626,8 +1662,14 @@ func _position_hub_controls(animate_cursor: bool = false) -> void:
 		if index < hub_stat_row_buttons.size():
 			hub_stat_row_buttons[index].position = Vector2(_hub_left_field_x(STAT_CURSOR_X), y - 5.0)
 			hub_stat_row_buttons[index].size = Vector2(maxf(18.0, _hub_left_field_x(STAT_ROW_RIGHT_ARROW_X + 9.0) - _hub_left_field_x(STAT_CURSOR_X)), 12)
-		if index < hub_stat_left_buttons.size(): hub_stat_left_buttons[index].position = Vector2(_hub_left_field_x(STAT_ROW_LEFT_ARROW_X), y - 5.0)
-		if index < hub_stat_right_buttons.size(): hub_stat_right_buttons[index].position = Vector2(_hub_left_field_x(STAT_ROW_RIGHT_ARROW_X), y - 5.0)
+		var marker_center_y := STAT_LABEL_TOP + 2.5 + index * STAT_ROW_PITCH
+		if index < hub_stat_left_buttons.size():
+			var left_button := hub_stat_left_buttons[index]
+			left_button.position = Vector2(_hub_left_field_x(STAT_SUBTRACT_MARKER_X) - left_button.size.x * 0.5, marker_center_y - left_button.size.y * 0.5)
+		if index < hub_stat_right_buttons.size():
+			var right_button := hub_stat_right_buttons[index]
+			right_button.position = Vector2(_hub_left_field_x(STAT_ADD_MARKER_X) - right_button.size.x * 0.5, marker_center_y - right_button.size.y * 0.5)
+	_position_hub_stat_markers(hub_stat_row, hub_page == HUB_PAGE_ALLOCATE and hub_content_focus)
 	var utility_x := [44.0, 79.0, 114.0, 149.0]
 	var utility_buttons: Array[Button] = [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button]
 	for index in utility_buttons.size():
@@ -1705,18 +1747,18 @@ func _position_hub_controls(animate_cursor: bool = false) -> void:
 		hub_equipment_menu.size = display_view_size
 	if hub_cursor_text != null and not hub_page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, hub_page_buttons.size() - 1)
-		move_menu_cursor(hub_cursor_text, Vector2(hub_page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, hub_page_buttons[cursor_index].position.y + 3.0), animate_cursor)
-	_reanchor_hub_legacy_cursors(animate_cursor)
+		_position_menu_cursor(hub_cursor_text, Vector2(hub_page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, hub_page_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
+	_reanchor_hub_legacy_cursors(animate_cursor, preserve_cursor_motion)
 
 
-func _reanchor_hub_legacy_cursors(animate_cursor: bool = false) -> void:
+func _reanchor_hub_legacy_cursors(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
 	if hub_stat_cursor_text != null and hub_stat_cursor_text.visible:
 		if hub_stat_row < 6:
-			move_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(STAT_CURSOR_X), STAT_LABEL_TOP - 1.0 + hub_stat_row * STAT_ROW_PITCH), animate_cursor)
+			_position_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(STAT_CURSOR_X), STAT_LABEL_TOP - 1.0 + hub_stat_row * STAT_ROW_PITCH), animate_cursor, preserve_cursor_motion)
 		else:
 			var utility_x: Array[float] = [44.0, 79.0, 114.0, 149.0]
 			var utility_index: int = clampi(hub_action_column, 0, utility_x.size() - 1)
-			move_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(utility_x[utility_index]) - 16.0, 119.0), animate_cursor)
+			_position_menu_cursor(hub_stat_cursor_text, Vector2(_hub_left_field_x(utility_x[utility_index]) - 16.0, 119.0), animate_cursor, preserve_cursor_motion)
 	var list_cursor_x: float = _hub_left_field_x(20.0) - CURSOR_LEFT_GAP
 	for cursor in [hub_list_cursor, hub_slot_cursor, hub_choice_cursor]:
 		if cursor == null or not cursor.visible:
@@ -1725,10 +1767,10 @@ func _reanchor_hub_legacy_cursors(animate_cursor: bool = false) -> void:
 		# change with orientation. Preserve the current y while replacing the
 		# stale native x origin; the +2 compensates for move_menu_cursor's shared
 		# vertical raise so an in-progress bob is not shifted vertically.
-		move_menu_cursor(cursor, Vector2(list_cursor_x, cursor.position.y + CURSOR_VERTICAL_RAISE), animate_cursor)
+		_position_menu_cursor(cursor, Vector2(list_cursor_x, cursor.position.y + CURSOR_VERTICAL_RAISE), animate_cursor, preserve_cursor_motion)
 
 
-func _position_pause_controls(animate_cursor: bool = false) -> void:
+func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
 	if pause_overlay == null:
 		return
 	var width := display_view_size.x
@@ -1778,7 +1820,7 @@ func _position_pause_controls(animate_cursor: bool = false) -> void:
 	_position_pause_resource_texts()
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
-		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor)
+		_position_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
 
 
 func _position_pause_resource_texts() -> void:
@@ -1996,9 +2038,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_allocate_preview_panel != null: hub_allocate_preview_panel.visible = false
 	if hub_allocate_preview_title != null: hub_allocate_preview_title.visible = false
 	for preview_text in hub_allocate_preview_texts: preview_text.visible = false
-	for stat_button in hub_stat_buttons:
-		stat_button.visible = page == HUB_PAGE_ALLOCATE and hub_content_focus
-		stat_button.mouse_filter = Control.MOUSE_FILTER_STOP if stat_button.visible else Control.MOUSE_FILTER_IGNORE
+	_set_hub_stat_adjustment_targets(hub_stat_row, page == HUB_PAGE_ALLOCATE and hub_content_focus)
 	for row_button in hub_stat_row_buttons:
 		row_button.visible = page == HUB_PAGE_ALLOCATE and hub_content_focus
 		row_button.mouse_filter = Control.MOUSE_FILTER_STOP if row_button.visible else Control.MOUSE_FILTER_IGNORE
@@ -2136,24 +2176,16 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	# centered vertically on the stat row text and horizontally in the arrow
 	# lanes so they occupy exactly where the arrows were.
 	var marker_visible := hub_content_focus and selected_row >= 0 and selected_row < stat_texts.size()
-	var marker_center_y := STAT_LABEL_TOP + 2.5 + selected_row * STAT_ROW_PITCH if selected_row < 6 else 0.0
-	if hub_stat_subtract_marker != null:
-		hub_stat_subtract_marker.visible = marker_visible
-		hub_stat_subtract_marker.centered = true
-		hub_stat_subtract_marker.position = Vector2(_hub_left_field_x(STAT_SUBTRACT_MARKER_X), marker_center_y)
-	if hub_stat_add_marker != null:
-		hub_stat_add_marker.visible = marker_visible
-		hub_stat_add_marker.centered = true
-		hub_stat_add_marker.position = Vector2(_hub_left_field_x(STAT_ADD_MARKER_X), marker_center_y)
+	_position_hub_stat_markers(selected_row, marker_visible)
+	_set_hub_stat_adjustment_targets(selected_row, marker_visible)
 	var stat_buttons := hub_stat_buttons
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
 		var stat_index := int(button.get_meta("hub_stat_index", 0))
 		button.disabled = remaining <= 0 if direction > 0 else int(pending[stat_index]) <= 0
-		# The authored menu uses only the selected row's 5x5 +/- markers. Keep the
-		# transparent arrow hit regions for touch adjustment, but draw no arrows.
-		button.visible = hub_content_focus
-		button.mouse_filter = Control.MOUSE_FILTER_STOP if hub_content_focus else Control.MOUSE_FILTER_IGNORE
+		# The authored menu uses only the selected row's 5x5 +/- markers. Keep
+		# only that row's transparent hit regions active; invisible arrows must not
+		# remain able to allocate a different stat through touch.
 		set_archetype_button_state(button, false, highlight_color)
 		button.modulate.a = 0.0
 	for derived_text in hub_derived_texts:
@@ -2708,7 +2740,9 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 			slot_colors.append(Color8(140, 145, 160))
 		else:
 			slot_labels.append(_equipment_item_label(catalog, item))
-			slot_colors.append(highlight_color if mode != EquipmentMenuLayout.MODE_COMMAND and index == selected_slot_index else catalog.rarity_color(item.rarity))
+			# Gear identity is communicated by rarity color. Selection belongs to
+			# the cursor layer, so the selected item must not lose its rarity color.
+			slot_colors.append(catalog.rarity_color(item.rarity))
 	view.set_slot_grid(slot_labels, slot_colors, slot_locked)
 	view.set_command_enabled(0, true)
 	# REMOVE always opens the six-slot grid, even when the currently highlighted
@@ -2740,7 +2774,7 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 		var item := candidates[source_index]
 		var label: String = "UNEQUIP SHIELD" if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else _equipment_item_label(catalog, item)
 		candidate_labels.append(label)
-		candidate_colors.append(highlight_color if source_index == selected_candidate_index else catalog.rarity_color(item.rarity))
+		candidate_colors.append(Color8(140, 145, 160) if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else catalog.rarity_color(item.rarity))
 	view.set_candidates(candidate_labels, candidate_colors, selected_candidate_index)
 	# The six-stat summary only tints while the player is choosing a different
 	# item (candidate depth). A stat turns green when the candidate raises it
@@ -3071,7 +3105,9 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			var shown_mastery := shown_item.enhancement_level
 			if shown_mastery > 0: shown_name += " F%d" % shown_mastery
 			shown_color = catalog.rarity_color(shown_item.rarity)
-		var row_color := highlight_color if row == selected_slot_index else shown_color
+		# Selection is represented by the slot cursor. Keep the gear's rarity color
+		# intact even in the compatibility presenter used by older callers.
+		var row_color := shown_color
 		var slot_locked := slot == &"head" and head_locked
 		if slot_locked:
 			# The Demon Cloak occupies Body + Head; the Head slot is greyed out.
@@ -3104,7 +3140,9 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			var choice_label := "%s" % ("UNEQUIP SHIELD" if is_unequip else "%s %s" % [String(choice_item.rarity).substr(0, 1).to_upper(), catalog.gear_name(choice_item)])
 			var choice_mastery := choice_item.enhancement_level
 			if choice_mastery > 0: choice_label += " F%d" % choice_mastery
-			var choice_color := highlight_color if choice_index == current_index else Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)
+			# Candidate selection belongs to the cursor; the candidate name keeps its
+			# rarity color so the equipment route has one consistent visual language.
+			var choice_color := Color8(140, 145, 160) if is_unequip else catalog.rarity_color(choice_item.rarity)
 			choices[choice_row].texture = pixel_texture.call(choice_label, choice_color) as Texture2D
 		if hub_choice_cursor != null:
 			var choice_visible_slot := current_index - window_start

@@ -455,7 +455,7 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 				_update_touch_capture_filter()
 				return
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
-		if menu_button == null or not is_instance_valid(menu_button) or not menu_button.get_global_rect().grow(3.0).has_point(position):
+		if menu_button == null or not is_instance_valid(menu_button) or not _menu_control_contains(menu_button, position, 3.0):
 			_menu_touch_buttons.erase(finger_id)
 			_menu_button_origins.erase(finger_id)
 			_update_touch_capture_filter()
@@ -494,7 +494,7 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
 		_menu_touch_buttons.erase(finger_id)
 		_menu_button_origins.erase(finger_id)
-		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and menu_button.get_global_rect().grow(3.0).has_point(position):
+		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and _menu_control_contains(menu_button, position, 3.0):
 			menu_button.pressed.emit()
 		_update_touch_capture_filter()
 		return
@@ -555,6 +555,17 @@ func _is_menu_context() -> bool:
 	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU or _input_context == CONTEXT_PAUSE
 
 
+func _menu_control_contains(control: Control, viewport_position: Vector2, padding: float = 0.0) -> bool:
+	if control == null or not is_instance_valid(control):
+		return false
+	# Screen touch positions are reported in viewport coordinates. Resolve the
+	# point through the control's full canvas transform so CanvasLayer offsets,
+	# responsive presentation origins, and nested controls share one hit-test
+	# space instead of relying on get_global_rect's untransformed approximation.
+	var local_position := control.get_global_transform_with_canvas().affine_inverse() * viewport_position
+	return Rect2(Vector2.ZERO, control.size).grow(padding).has_point(local_position)
+
+
 func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseButton:
 	var search_root := _active_menu_root()
 	if search_root == null:
@@ -567,7 +578,7 @@ func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseB
 			continue
 		if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
 			continue
-		if button.get_global_rect().has_point(position):
+		if _menu_control_contains(button, position):
 			return button
 	return null
 
@@ -582,7 +593,7 @@ func _menu_editable_at(position: Vector2) -> Control:
 		var editable := nodes[index] as Control
 		if editable == null or not is_instance_valid(editable) or not editable.is_visible_in_tree() or editable.mouse_filter == Control.MOUSE_FILTER_IGNORE:
 			continue
-		if editable.get_global_rect().has_point(position):
+		if _menu_control_contains(editable, position):
 			return editable
 	return null
 

@@ -1,6 +1,7 @@
 extends SceneTree
 
 var stat_touch_count := 0
+var stat_touch_names: Array[StringName] = []
 var stat_row_touch_count := 0
 var item_row_touch_count := 0
 var fusion_count_touch_count := 0
@@ -110,9 +111,13 @@ func _initialize() -> void:
 		if child is BaseButton:
 			(child as BaseButton).visible = false
 	for stat_button in hub_controls["stat_buttons"] as Array[Button]:
-		stat_button.visible = true
+		stat_button.visible = false
 	for stat_row in hub_controls["stat_rows"] as Array[Button]:
 		stat_row.visible = true
+	hub_builder.hub_stat_buttons = hub_controls["stat_buttons"] as Array[Button]
+	hub_builder.hub_stat_row = 0
+	hub_builder.hub_content_focus = true
+	hub_builder._set_hub_stat_adjustment_targets(0, true)
 	await process_frame
 	layer.set_input_context(InputRouter.Context.HUB)
 	_expect(layer.is_active(), "touch input remains available behind hub/menu overlays", failures)
@@ -127,13 +132,23 @@ func _initialize() -> void:
 	hub_blank_up.device = 0; hub_blank_up.index = 13; hub_blank_up.pressed = false; hub_blank_up.position = hub_blank_down.position
 	layer._input(hub_blank_up)
 	var stat_right := (hub_controls["stat_right"] as Array[Button])[0]
+	var stat_add_marker := hub_controls["stat_add_marker"] as Sprite2D
+	_expect(stat_add_marker != null and is_equal_approx(stat_right.get_global_rect().get_center().x, stat_add_marker.position.x), "hub stat plus hitbox is centered on its visible glyph", failures)
 	var stat_down := InputEventScreenTouch.new()
 	stat_down.device = 0; stat_down.index = 14; stat_down.pressed = true; stat_down.position = stat_right.get_global_rect().get_center()
 	layer._input(stat_down)
 	var stat_up := InputEventScreenTouch.new()
 	stat_up.device = 0; stat_up.index = 14; stat_up.pressed = false; stat_up.position = stat_down.position
 	layer._input(stat_up)
-	_expect(stat_touch_count == 1, "touching a hub stat arrow activates its enlarged hit target", failures)
+	_expect(stat_touch_count == 1 and stat_touch_names[0] == &"VIT", "touching the selected hub stat plus activates its hit target", failures)
+	var nonselected_stat_right := (hub_controls["stat_right"] as Array[Button])[2]
+	var nonselected_down := InputEventScreenTouch.new()
+	nonselected_down.device = 0; nonselected_down.index = 20; nonselected_down.pressed = true; nonselected_down.position = nonselected_stat_right.get_global_rect().get_center()
+	layer._input(nonselected_down)
+	var nonselected_up := InputEventScreenTouch.new()
+	nonselected_up.device = 0; nonselected_up.index = 20; nonselected_up.pressed = false; nonselected_up.position = nonselected_down.position
+	layer._input(nonselected_up)
+	_expect(stat_touch_count == 1, "a non-selected hub stat cannot be adjusted by touch", failures)
 	var stat_rows := hub_controls["stat_rows"] as Array[Button]
 	_expect(stat_rows.size() == 6 and stat_rows[0].size.x >= 80.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets for six stats", failures)
 	var stat_row_down := InputEventScreenTouch.new()
@@ -143,6 +158,8 @@ func _initialize() -> void:
 	stat_row_up.device = 0; stat_row_up.index = 15; stat_row_up.pressed = false; stat_row_up.position = stat_row_down.position
 	layer._input(stat_row_up)
 	_expect(stat_row_touch_count == 1, "touching a hub stat row selects it directly", failures)
+	hub_builder.hub_stat_row = 2
+	hub_builder._set_hub_stat_adjustment_targets(2, true)
 	# The first touch regression was caused by a one-shot cursor advance. A
 	# second arrow touch must still reach its own button after the row touch.
 	var stat_down_again := InputEventScreenTouch.new()
@@ -151,7 +168,15 @@ func _initialize() -> void:
 	var stat_up_again := InputEventScreenTouch.new()
 	stat_up_again.device = 0; stat_up_again.index = 16; stat_up_again.pressed = false; stat_up_again.position = stat_down_again.position
 	layer._input(stat_up_again)
-	_expect(stat_touch_count == 2, "repeated hub stat touches remain responsive", failures)
+	_expect(stat_touch_count == 1, "the old selected hub stat does not remain touch-active after row selection", failures)
+	var selected_stat_right := (hub_controls["stat_right"] as Array[Button])[2]
+	var selected_stat_down := InputEventScreenTouch.new()
+	selected_stat_down.device = 0; selected_stat_down.index = 21; selected_stat_down.pressed = true; selected_stat_down.position = selected_stat_right.get_global_rect().get_center()
+	layer._input(selected_stat_down)
+	var selected_stat_up := InputEventScreenTouch.new()
+	selected_stat_up.device = 0; selected_stat_up.index = 21; selected_stat_up.pressed = false; selected_stat_up.position = selected_stat_down.position
+	layer._input(selected_stat_up)
+	_expect(stat_touch_count == 2 and stat_touch_names[1] == &"DEF", "the newly selected hub stat owns the plus touch target", failures)
 	for child in hub_overlay.get_children():
 		if child is BaseButton:
 			(child as BaseButton).visible = false
@@ -311,8 +336,9 @@ func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 		failures.append(label)
 
 
-func _record_stat_touch(_stat_name: StringName, _direction: int) -> void:
+func _record_stat_touch(stat_name: StringName, _direction: int) -> void:
 	stat_touch_count += 1
+	stat_touch_names.append(stat_name)
 
 
 func _record_hub_row(_row: int) -> void:

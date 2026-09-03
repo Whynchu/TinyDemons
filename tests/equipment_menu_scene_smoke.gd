@@ -41,6 +41,7 @@ func _initialize() -> void:
 			await process_frame
 			view.size = Vector2(284, 160)
 			await process_frame
+			_expect(bool(view.command_cursor.call("is_bobbing")), "Hub equipment keeps its cursor animation during responsive reflow", failures)
 			_expect((view.get_node("CommandPanel") as Control).position.x == 107.0 and view.command_buttons[0].position.x == 108.0 and (view.get_node("SlotIcon3") as Sprite2D).position.x == 176.0 and (view.get_node("NavigationPanel") as Control).position.x == 205.0, "equipment distributes authored groups across the 16:9 logical width", failures)
 			view.size = responsive_size
 			await process_frame
@@ -59,6 +60,7 @@ func _initialize() -> void:
 				var icon := view.get_node("SlotIcon%d" % index) as Sprite2D
 				_expect(icon != null and icon.texture != null and icon.texture.get_width() == 5 and icon.texture.get_height() == 5, "equipment slot %d renders its 5x5 icon" % index, failures)
 		_expect(screens.hub_equipment_mode == 0 and view.command_cursor.visible, "equipment opens on its command row", failures)
+		_expect(bool(view.command_cursor.call("is_bobbing")), "Hub equipment command cursor starts its idle animation", failures)
 		_expect((view.get_node("DescriptionText0") as Sprite2D).texture == null and (view.get_node("BonusText0") as Sprite2D).texture == null and not (view.get_node("CandidateText0") as Sprite2D).visible, "command row clears item description and final bonus strip before slot selection", failures)
 		view.navigation_back_button.pressed.emit()
 		await process_frame

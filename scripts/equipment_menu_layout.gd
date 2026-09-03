@@ -80,7 +80,9 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_apply_layout()
 		if _has_render_state:
-			render_cursors(_last_render_mode, _last_render_action_index, _last_render_slot_index, _last_render_candidate_index, _last_render_confirm_index)
+			# A resize is geometry reflow, not a route transition. Keep the active
+			# cursor's motion phase while its anchor follows the new layout.
+			render_cursors(_last_render_mode, _last_render_action_index, _last_render_slot_index, _last_render_candidate_index, _last_render_confirm_index, true)
 
 
 func _cache_nodes() -> void:
@@ -440,7 +442,7 @@ func set_confirm_prompt(lines: Array[String], selected_index: int = 1) -> void:
 		set_text(_confirm_texts[index], lines[index] if index < lines.size() else "", Color.WHITE if index == selected_index else DIM_CURSOR_MODULATE)
 
 
-func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible := true) -> void:
+func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible := true, preserve_motion: bool = false) -> void:
 	if cursor == null:
 		return
 	cursor.visible = visible
@@ -455,7 +457,9 @@ func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible :
 	if Engine.is_editor_hint():
 		cursor.position = target
 		return
-	if cursor.has_method("move_to"):
+	if active and preserve_motion and cursor.has_method("reanchor_preserving_motion"):
+		cursor.call("reanchor_preserving_motion", target)
+	elif cursor.has_method("move_to"):
 		cursor.call("move_to", target, active)
 		if not active and cursor.has_method("lock_at"):
 			cursor.call("lock_at", target)
@@ -463,7 +467,7 @@ func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible :
 		cursor.position = target
 
 
-func render_cursors(mode: int, action_index: int, slot_index: int, candidate_index: int, confirm_index: int = 1) -> void:
+func render_cursors(mode: int, action_index: int, slot_index: int, candidate_index: int, confirm_index: int = 1, preserve_motion: bool = false) -> void:
 	_has_render_state = true
 	_last_render_mode = mode
 	_last_render_action_index = action_index
@@ -507,11 +511,11 @@ func render_cursors(mode: int, action_index: int, slot_index: int, candidate_ind
 	# Remove All confirmation reuses the command's existing position: the
 	# grey locked cursor and the live bobbing cursor stack there in place.
 	var confirm_target := command_target if mode == MODE_REMOVE_ALL_CONFIRM else Vector2(74.0 if confirm_index == 0 else 110.0, 110.0)
-	_position_cursor(command_cursor, command_target, mode == MODE_COMMAND, mode != MODE_REMOVE_ALL_CONFIRM)
-	_position_cursor(slot_cursor, slot_target, mode == MODE_SLOT_EQUIP or mode == MODE_SLOT_REMOVE, mode == MODE_SLOT_EQUIP or mode == MODE_SLOT_REMOVE or mode == MODE_CANDIDATE)
-	_position_cursor(candidate_cursor, candidate_target, mode == MODE_CANDIDATE, mode == MODE_CANDIDATE)
-	_position_cursor(confirm_locked_cursor, confirm_target, false, mode == MODE_REMOVE_ALL_CONFIRM)
-	_position_cursor(confirm_cursor, confirm_target, true, mode == MODE_REMOVE_ALL_CONFIRM)
+	_position_cursor(command_cursor, command_target, mode == MODE_COMMAND, mode != MODE_REMOVE_ALL_CONFIRM, preserve_motion)
+	_position_cursor(slot_cursor, slot_target, mode == MODE_SLOT_EQUIP or mode == MODE_SLOT_REMOVE, mode == MODE_SLOT_EQUIP or mode == MODE_SLOT_REMOVE or mode == MODE_CANDIDATE, preserve_motion)
+	_position_cursor(candidate_cursor, candidate_target, mode == MODE_CANDIDATE, mode == MODE_CANDIDATE, preserve_motion)
+	_position_cursor(confirm_locked_cursor, confirm_target, false, mode == MODE_REMOVE_ALL_CONFIRM, preserve_motion)
+	_position_cursor(confirm_cursor, confirm_target, true, mode == MODE_REMOVE_ALL_CONFIRM, preserve_motion)
 
 
 func render_mode(mode: int, action_index: int, slot_index: int, candidate_index: int, confirm_index: int = 1) -> void:
@@ -554,10 +558,10 @@ func refresh_layout_preserving_state(mode: int = -1, action_index: int = -1, slo
 	_apply_layout()
 	# Re-resolve cursor targets from the resized hit rectangles. The mode and
 	# selected indices are route state, so this only changes geometry; active
-	# cursors glide to their new anchors and their existing bobbing resumes.
+	# cursors keep their existing bobbing phase while following their anchors.
 	var resolved_mode: int = _last_render_mode if mode < 0 and _has_render_state else MODE_COMMAND if mode < 0 else mode
 	var resolved_action: int = _last_render_action_index if action_index < 0 and _has_render_state else 0 if action_index < 0 else action_index
 	var resolved_slot: int = _last_render_slot_index if slot_index < 0 and _has_render_state else 0 if slot_index < 0 else slot_index
 	var resolved_candidate: int = _last_render_candidate_index if candidate_index < 0 and _has_render_state else 0 if candidate_index < 0 else candidate_index
 	var resolved_confirm: int = _last_render_confirm_index if confirm_index < 0 and _has_render_state else 1 if confirm_index < 0 else confirm_index
-	render_cursors(resolved_mode, resolved_action, resolved_slot, resolved_candidate, resolved_confirm)
+	render_cursors(resolved_mode, resolved_action, resolved_slot, resolved_candidate, resolved_confirm, true)
