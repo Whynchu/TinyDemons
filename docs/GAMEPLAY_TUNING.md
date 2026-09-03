@@ -16,7 +16,7 @@ game reads them at runtime with no code change.
 
 | Group | Fields |
 | --- | --- |
-| Movement | `speed` 36, `run_speed` 64.8, `speed_scale` 0.012, `roll_scale` 0.015, `attack_scale` 0.010, `speed_effect_min` -0.5, `speed_effect_max` 1.0 |
+| Movement | `speed` 36, `run_speed` 64.8, `speed_scale` 0.012, `speed_low_scale` 0.15 (below-AGI-reference penalty), `roll_scale` 0.015, `attack_scale` 0.010, `speed_effect_min` -0.5, `speed_effect_max` 1.0 |
 | Hit reaction | `hit_flash_time` 0.12, `hitstun_time` 1/30, `hit_knockback` 10, `hit_knockback_duration` 0.12 |
 | Idle/walk/run | `idle_frame_time` 0.22, `walk_frame_time` 0.18, `run_frame_time` 0.10 |
 | Attack | `attack_frame_time` 0.09, `attack_hit_frame` 2, `attack2_hit_frame` 2, `combo_window` 0.18, `between_attack_time` 0.12, `attack2_cooldown` 0.16 |

@@ -5,8 +5,19 @@ class_name PlayerTuning
 ## Hold-to-run movement speed reached by continuing to hold the roll button
 ## after a roll dodge. Almost as fast as rolling (roll_distance / roll_duration).
 @export var run_speed := 64.8
+## AGI movement specs off this value: this many AGI equals neutral move speed.
+## New characters start at 2, which is deliberately below neutral so agility is
+## a real early investment rather than a free dump stat.
+@export var movement_agi_reference := 10.0
+## Attack and roll timing spec off a separate (lower) reference so movement is
+## the only curve that pushes starting players below neutral.
 @export var agi_reference := 1.0
 @export var speed_scale := 0.012
+## Below the movement AGI reference, each missing point penalizes movement much
+## harder than the reward per point above it. This makes 0-AGI builds feel
+## genuinely slow (the classic dump-stat trap) while keeping high AGI a modest
+## upgrade.
+@export var speed_low_scale := 0.02
 @export var roll_scale := 0.015
 @export var attack_scale := 0.010
 @export var speed_effect_min := -0.5
@@ -18,7 +29,8 @@ func speed_multiplier(spd: float) -> float:
 
 
 func agi_multiplier(agi: float) -> float:
-	return 1.0 + clampf((float(agi) - agi_reference) * speed_scale, speed_effect_min, speed_effect_max)
+	var delta := float(agi) - movement_agi_reference
+	return 1.0 + clampf(delta * (speed_low_scale if delta < 0.0 else speed_scale), speed_effect_min, speed_effect_max)
 
 
 func roll_multiplier(spd: float) -> float:
