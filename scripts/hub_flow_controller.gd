@@ -700,7 +700,7 @@ func hub_item_action(root: Object) -> void:
 					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 					fusion_feedback_played = true
 				else:
-					var family_name := str(ItemCatalog.DEFINITIONS.get(target.definition_id, {}).get("name", "ITEM"))
+					var family_name := str(ItemCatalog.new().definition_data(target.definition_id).get("name", "ITEM"))
 					if fuse_profile_target(root, target.instance_id, count):
 						root.screen_state_controller.hub_fusion_message = "%s ENHANCED" % family_name
 						fusion_changed = true

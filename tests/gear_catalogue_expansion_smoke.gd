@@ -23,22 +23,22 @@ func _initialize() -> void:
 
 	var hood := catalog.starter_item(&"head")
 	var wraps := catalog.starter_item(&"arm")
-	_expect(hood.definition_id == &"plain_hood" and wraps.definition_id == &"cloth_wraps", "new slots use the approved zero-power starters", failures)
-	_expect(catalog.bonuses(hood).is_empty() and catalog.bonuses(wraps).is_empty(), "Head and Arm starters add no combat stats", failures)
-	_expect(bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "zero-power starters are protected from random drops", failures)
+	_expect(hood.definition_id == &"basic_hood" and wraps.definition_id == &"basic_wraps", "new slots use the Basic starter pieces", failures)
+	_expect(catalog.bonuses(hood).get("vitality", 0.0) == 1.0 and catalog.bonuses(wraps).get("strength", 0.0) == 1.0, "Head and Arm starters use the small Basic packages", failures)
+	_expect(not bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and not bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "Basic starters remain eligible for ordinary drops", failures)
 
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(catalog)
 	var equipment := EquipmentComponent.new()
 	equipment.configure_from_profile(profile, catalog)
 	_expect(profile.get_equipped_instance_id(&"head") == "starter-head" and profile.get_equipped_instance_id(&"arm") == "starter-arm", "new profiles equip both visible starter slots", failures)
-	_expect(equipment.head_name == "PLAIN HOOD" and equipment.arm_name == "CLOTH WRAPS" and equipment.armor_name == "BASIC TUNIC", "runtime presentation names use Head/Arm/Body with armor compatibility", failures)
+	_expect(equipment.head_name == "BASIC HOOD" and equipment.arm_name == "BASIC WRAPS" and equipment.armor_name == "BASIC TUNIC", "runtime presentation names use Head/Arm/Body with armor compatibility", failures)
 
 	var generated_head := catalog.generate_item(&"head", 1001, 1, &"common", false, &"shop", 1)
 	var generated_arm := catalog.generate_item(&"arm", 1002, 1, &"common", false, &"shop", 1)
 	_expect(not generated_head.definition_id.is_empty() and catalog.definition_slot(generated_head.definition_id) == &"head", "shop generation can produce a legal Head", failures)
 	_expect(not generated_arm.definition_id.is_empty() and catalog.definition_slot(generated_arm.definition_id) == &"arm", "shop generation can produce a legal Arm", failures)
-	_expect(not bool(catalog.definition_data(generated_head.definition_id).get("starter_only", false)) and not bool(catalog.definition_data(generated_arm.definition_id).get("starter_only", false)), "shop generation excludes starter-only definitions", failures)
+	_expect(str(catalog.definition_data(generated_head.definition_id).get("gear_tier", "")) in ["basic", "set"] and str(catalog.definition_data(generated_arm.definition_id).get("gear_tier", "")) in ["basic", "set"], "shop generation returns live Basic or Set definitions", failures)
 
 	var ember := ItemInstance.new()
 	ember.definition_id = &"emberbrand"

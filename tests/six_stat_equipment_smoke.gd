@@ -22,20 +22,20 @@ func _initialize() -> void:
 
 	var equipment := EquipmentComponent.new()
 	equipment.configure_from_profile(profile, catalog)
-	_expect(is_equal_approx(equipment.intelligence_bonus, 5.0) and is_equal_approx(equipment.mnd_bonus, 3.0), "equipment exposes authored INT/MND flat bonuses", failures)
-	_expect(is_equal_approx(equipment.intelligence_rate_bonus, 0.05) and is_equal_approx(equipment.mnd_rate_bonus, 0.05), "rarity rates apply independently to positive supplied stats", failures)
+	_expect(is_equal_approx(equipment.intelligence_bonus, 4.0) and is_equal_approx(equipment.mnd_bonus, 3.0), "equipment exposes authored INT/MND flat bonuses", failures)
+	_expect(is_equal_approx(equipment.intelligence_rate_bonus, 0.0) and is_equal_approx(equipment.mnd_rate_bonus, 0.0), "live gear has no hidden INT/MND percentage rates", failures)
 	var stats := StatsComponent.new()
 	stats.configure_manual_growth(3, 2, 2, 1, 0, 0, 0, 0, 1, 1, 0, 0)
 	var snapshot := CombatStatSnapshot.from_components(stats, equipment)
-	_expect(is_equal_approx(snapshot.intelligence, 6.3) and is_equal_approx(snapshot.mnd, 4.2), "snapshot applies flat INT/MND gear before additive rates", failures)
-	_expect(is_equal_approx(snapshot.gear_intelligence, 5.0) and is_equal_approx(snapshot.gear_mnd, 3.0), "snapshot retains canonical INT/MND gear contributions", failures)
-	_expect(is_equal_approx(snapshot.agi, 0.0) and is_equal_approx(snapshot.vit, 4.0), "existing six-stat snapshot channels remain independent", failures)
+	_expect(is_equal_approx(snapshot.intelligence, 5.0) and is_equal_approx(snapshot.mnd, 4.0), "snapshot applies flat INT/MND gear", failures)
+	_expect(is_equal_approx(snapshot.gear_intelligence, 4.0) and is_equal_approx(snapshot.gear_mnd, 3.0), "snapshot retains canonical INT/MND gear contributions", failures)
+	_expect(is_equal_approx(snapshot.agi, 0.0) and is_equal_approx(snapshot.vit, 5.0), "existing six-stat snapshot channels remain independent", failures)
 
 	var talisman_bonuses := catalog.bonuses(talisman)
 	var robe_bonuses := catalog.bonuses(robe)
 	_expect(is_equal_approx(float(talisman_bonuses.get("intelligence", 0.0)), 4.0) and is_equal_approx(float(talisman_bonuses.get("mnd", 0.0)), 1.0), "talisman preview reports its INT/MND package", failures)
 	_expect(is_equal_approx(float(robe_bonuses.get("mnd", 0.0)), 2.0) and is_equal_approx(float(robe_bonuses.get("intelligence", 0.0)), 1.0), "robe preview reports its MND/INT package", failures)
-	_expect(catalog.player_stat_rate_text(talisman).contains("INT +5%"), "INT rarity rate is visible in item presentation", failures)
+	_expect(catalog.player_stat_rate_text(talisman).is_empty(), "percentage rarity rates are absent from item presentation", failures)
 
 	var draft := HubProgressionDraft.new()
 	draft.intelligence = 2

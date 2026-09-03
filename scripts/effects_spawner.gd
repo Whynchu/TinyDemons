@@ -1,6 +1,9 @@
 extends Node
 class_name EffectsSpawner
 
+const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.png")
+# The supplied 3x5 plus artwork is reused for every pixel-text plus glyph.
+
 signal effect_requested(kind: StringName, position: Vector2)
 const CHARGE_AURA_TAG := &"charge_aura"
 var damage_number_texture_cache: Dictionary = {}
@@ -368,9 +371,18 @@ func number_texture(text: String, color: Color) -> Texture2D:
 	image_width = maxi(image_width - 1, 1)
 	var image := Image.create(image_width, 5, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
+	var plus_image := GEAR_PLUS_TEXTURE.get_image()
 	var x_offset := 0
 	for digit in text:
 		var pattern: Array = compact_patterns.get(digit, compact_patterns[" "])
+		if digit == "+" and plus_image.get_width() == pattern[0].length() and plus_image.get_height() == 5:
+			for y in plus_image.get_height():
+				for x in plus_image.get_width():
+					var source_pixel := plus_image.get_pixel(x, y)
+					if source_pixel.a > 0.0:
+						image.set_pixel(x_offset + x, y, Color(color.r, color.g, color.b, color.a * source_pixel.a))
+			x_offset += (pattern[0] as String).length() + 1
+			continue
 		for y in 5:
 			var row := pattern[y] as String
 			for x in row.length():

@@ -70,21 +70,21 @@ func _initialize() -> void:
 	var equipment := EquipmentComponent.new()
 	equipment.equip_default_loadout()
 	var snapshot := CombatStatSnapshot.from_components(stats, equipment)
-	_expect(snapshot.vit == 8, "starter gear grants 3 flat VIT", failures)
-	_expect(snapshot.strength == 6, "starter gear grants 3 flat STR", failures)
+	_expect(snapshot.vit == 8, "starter Basic gear grants 4 flat VIT", failures)
+	_expect(snapshot.strength == 7, "starter Basic gear grants 4 flat STR", failures)
 	_expect(snapshot.def == 6, "starter gear grants 3 DEF", failures)
-	_expect(snapshot.speed == 1, "starter shield speed trade-off is flat", failures)
-	_expect(snapshot.gear_vit == 3 and snapshot.gear_strength == 3 and snapshot.gear_def == 3 and snapshot.gear_speed == 0, "starter flat primary gear snapshot", failures)
+	_expect(snapshot.speed == 0, "starter shield speed trade-off is flat", failures)
+	_expect(snapshot.gear_vit == 4 and snapshot.gear_strength == 4 and snapshot.gear_def == 3 and snapshot.gear_speed == -1, "starter flat primary gear snapshot", failures)
 	var tall_stats := StatsComponent.new()
 	tall_stats.configure_manual_growth(50, 50, 50, 50, 0, 0, 0, 0)
 	var tall_snapshot := CombatStatSnapshot.from_components(tall_stats, equipment)
-	_expect(tall_snapshot.gear_vit == 3, "gear VIT remains flat at scale", failures)
-	_expect(tall_snapshot.gear_strength == 3, "gear STR remains flat at scale", failures)
+	_expect(tall_snapshot.gear_vit == 4, "gear VIT remains flat at scale", failures)
+	_expect(tall_snapshot.gear_strength == 4, "gear STR remains flat at scale", failures)
 	_expect(tall_snapshot.gear_def == 3, "gear DEF remains flat at scale", failures)
-	_expect(tall_snapshot.gear_speed == 0, "gear SPD remains flat at scale", failures)
-	_expect(tall_snapshot.strength == 53, "flat equipment STR enters effective snapshot", failures)
+	_expect(tall_snapshot.gear_speed == -1, "gear SPD remains flat at scale", failures)
+	_expect(tall_snapshot.strength == 54, "flat equipment STR enters effective snapshot", failures)
 	_expect(tall_snapshot.def == 53, "flat shield DEF enters effective snapshot", failures)
-	_expect(tall_snapshot.speed == 50, "equipment SPD enters effective snapshot", failures)
+	_expect(tall_snapshot.speed == 49, "equipment SPD enters effective snapshot", failures)
 
 	var health_tuning := CombatTuning.new()
 	var level_one_health_snapshot := CombatStatSnapshot.new()
@@ -133,31 +133,18 @@ func _initialize() -> void:
 	var bloodwoven_health := CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot)
 	_expect(bloodwoven_health > plain_health, "bloodwoven raises real maximum health", failures)
 	_expect(is_equal_approx(CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot), bloodwoven_health), "ordinary gear does not add HP rate", failures)
-	var generated_bloodwoven_found := false
+	var generated_legacy_found := false
 	var catalog := ItemCatalog.new()
 	for seed in 256:
 		var generated_armor := catalog.generate_item(&"armor", seed, 20, &"epic")
-		if generated_armor.definition_id == &"bloodwoven_tunic":
-			generated_bloodwoven_found = true
-			_expect(generated_armor.transmutation_id == &"bloodwoven_core", "epic Bloodwoven generates its authored transmutation", failures)
-			break
-	_expect(generated_bloodwoven_found, "seed sample reaches Bloodwoven definition", failures)
-	var generated_duelist_found := false
-	for seed in 256:
-		var generated_accessory := catalog.generate_item(&"accessory", seed, 20, &"epic")
-		if generated_accessory.definition_id == &"duelist_seal":
-			generated_duelist_found = true
-			_expect(generated_accessory.transmutation_id == &"duelist_focus", "epic Duelist Seal generates its authored transmutation", failures)
-			break
-	_expect(generated_duelist_found, "seed sample reaches Duelist Seal definition", failures)
-	var generated_gathering_found := false
+		generated_legacy_found = generated_legacy_found or generated_armor.definition_id in [&"bloodwoven_tunic", &"feather_cloak", &"iron_cuirass", &"mindweave_robe"]
+	_expect(not generated_legacy_found, "new armor generation excludes legacy catalogue definitions", failures)
+	var generated_set_found := false
 	for seed in 256:
 		var generated_weapon := catalog.generate_item(&"weapon", seed, 20, &"epic")
-		if generated_weapon.definition_id == &"soldier_sword":
-			generated_gathering_found = true
-			_expect(generated_weapon.transmutation_id == &"gathering_edge", "epic Soldier Sword generates its authored transmutation", failures)
-			break
-	_expect(generated_gathering_found, "seed sample reaches Soldier Sword definition", failures)
+		var generated_definition := catalog.definition_data(generated_weapon.definition_id)
+		generated_set_found = generated_set_found or str(generated_definition.get("gear_tier", "")) == "set"
+	_expect(generated_set_found, "seed sample reaches the live set catalogue", failures)
 	stats.free()
 	tall_stats.free()
 	equipment.free()

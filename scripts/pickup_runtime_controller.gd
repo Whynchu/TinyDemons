@@ -314,10 +314,12 @@ func spawn_chest_item_drops(root: Object, items: Array[ItemInstance]) -> void:
 		sprite.z_as_relative = false
 		sprite.z_index = root.chest.z_index + 3
 		root.add_child(sprite)
-		var label := Sprite2D.new()
+		var label: Sprite2D = Sprite2D.new()
 		label.name = "ChestItemDropLabel%d" % (index + 1)
-		var item_name := str(ItemCatalog.DEFINITIONS.get(item.definition_id, {}).get("name", "ITEM"))
-		label.texture = root.call("_pixel_text_texture", "%s %s +%d" % [catalog.rarity_letter_grade(item.rarity), item_name, item.enhancement_level], rarity_color)
+		var pickup_name: String = catalog.gear_name(item)
+		if item.enhancement_level > 0:
+			pickup_name += " F%d" % item.enhancement_level
+		label.texture = root.call("_pixel_text_texture", "%s %s" % [catalog.rarity_letter_grade(item.rarity), pickup_name], rarity_color)
 		label.set_meta("item_type", item_type_label(item))
 		label.centered = true
 		label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

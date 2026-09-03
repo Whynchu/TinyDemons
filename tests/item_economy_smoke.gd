@@ -14,7 +14,7 @@ func _initialize() -> void:
 	var first := catalog.generate_item(&"weapon", 12345, 10, &"epic")
 	var second := catalog.generate_item(&"weapon", 12345, 10, &"epic")
 	_expect(first.to_dictionary() == second.to_dictionary(), "seeded item generation is stable", failures)
-	_expect(first.affixes.is_empty(), "generated gear uses the deterministic tier package", failures)
+	_expect(first.affixes.is_empty() and catalog.random_plus_count(first) <= 3, "generated gear uses the flat package and capped random-plus data", failures)
 	var legendary := catalog.generate_item(&"weapon", 90210, 20, &"legendary")
 	var mythic := catalog.generate_item(&"weapon", 90211, 20, &"mythic")
 	_expect(legendary.affixes.is_empty() and mythic.affixes.is_empty(), "high-rarity gear has no hidden random stat points", failures)
@@ -32,7 +32,7 @@ func _initialize() -> void:
 	_expect(is_equal_approx(catalog.bonuses(rare_sword)["strength"], 4.0), "rare sword starts at STR 4", failures)
 	_expect(is_equal_approx(catalog.bonuses(rare_sword_plus_ten)["strength"], 5.0), "rare +10 sword reaches STR 5", failures)
 	_expect(is_equal_approx(catalog.bonuses(epic_sword)["strength"], 6.0), "epic sword starts at STR 6", failures)
-	_expect(is_equal_approx(catalog.rarity_stat_rate(&"common"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"rare"), 0.05) and is_equal_approx(catalog.rarity_stat_rate(&"epic"), 0.15) and is_equal_approx(catalog.rarity_stat_rate(&"legendary"), 0.45) and is_equal_approx(catalog.rarity_stat_rate(&"mythic"), 0.80), "rarity player-stat rates are fixed", failures)
+	_expect(is_equal_approx(catalog.rarity_stat_rate(&"common"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"rare"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"epic"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"legendary"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"mythic"), 0.0), "live gear has no hidden rarity percentage rates", failures)
 	var basic_tunic := ItemInstance.new(); basic_tunic.definition_id = &"basic_tunic"
 	var basic_shield := ItemInstance.new(); basic_shield.definition_id = &"basic_shield"
 	var bangle := ItemInstance.new(); bangle.definition_id = &"bangle"
@@ -70,10 +70,10 @@ func _initialize() -> void:
 	var rare_starter_sword := ItemInstance.new(); rare_starter_sword.instance_id = "rare-starter-sword"; rare_starter_sword.definition_id = &"basic_sword"; rare_starter_sword.rarity = &"rare"
 	_expect(rate_profile.grant_item(rare_starter_sword) and rate_profile.equip_item(rare_starter_sword.instance_id, catalog), "rare starter sword equips", failures)
 	var rate_equipment := EquipmentComponent.new(); rate_equipment.configure_from_profile(rate_profile, catalog)
-	_expect(is_equal_approx(rate_equipment.strength_rate_bonus, 0.05), "rare positive STR package grants a 5% player STR rate", failures)
+	_expect(is_equal_approx(rate_equipment.strength_rate_bonus, 0.0), "rare positive STR package has no hidden player STR rate", failures)
 	var rate_stats := StatsComponent.new(); rate_stats.configure_manual_growth(3, 2, 2, 1, 0, 0, 0, 0)
 	var rate_snapshot := CombatStatSnapshot.from_components(rate_stats, rate_equipment)
-	_expect(is_equal_approx(rate_snapshot.gear_strength, 5.0) and is_equal_approx(rate_snapshot.strength, 7.35), "rarity rate buffs the affected player stat after flat gear", failures)
+	_expect(is_equal_approx(rate_snapshot.gear_strength, 4.0) and is_equal_approx(rate_snapshot.strength, 7.0), "rarity adds flat points to the affected stat", failures)
 	var restored := PlayerProfile.new()
 	profile.souls = 7
 	restored.load_dictionary(profile.to_dictionary())

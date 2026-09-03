@@ -71,6 +71,23 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.hub_equipment_mode == 1 and view.slot_cursor.visible and not view.candidate_cursor.visible, "Equip descends into the slot grid", failures)
 		_expect((view.get_node("DescriptionText0") as Sprite2D).texture != null and (view.get_node("BonusText0") as Sprite2D).texture != null, "slot selection restores equipped item description and final bonuses", failures)
+		var catalog := ItemCatalog.new()
+		var demon_cloak := ItemInstance.new()
+		demon_cloak.definition_id = &"demon_cloak"
+		demon_cloak.rarity = &"mythic"
+		demon_cloak.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+		var cloak_bonus_lines := screens._equipment_bonus_lines(catalog, demon_cloak)
+		_expect(cloak_bonus_lines.size() == 3 and cloak_bonus_lines[0].count("\n") <= 1 and cloak_bonus_lines[1].count("\n") <= 1 and cloak_bonus_lines[2].count("\n") <= 1, "multi-stat equipment bonuses stay within the three-column two-row grid", failures)
+		view.set_pixel_texture(Callable(gameplay, "_pixel_text_texture"))
+		view.set_bonuses(cloak_bonus_lines)
+		await process_frame
+		var stat_panel := view.get_node("StatPanel") as Control
+		for index in 3:
+			var bonus_text := view.get_node("BonusText%d" % index) as Sprite2D
+			if bonus_text == null or bonus_text.texture == null:
+				continue
+			var next_x := float(stat_panel.size.x) if index == 2 else float((view.get_node("BonusText%d" % (index + 1)) as Sprite2D).position.x)
+			_expect(bonus_text.position.x + bonus_text.texture.get_width() <= next_x and bonus_text.texture.get_height() <= 12, "Demon Cloak stat column %d does not overlap" % index, failures)
 		gameplay.call("_select_hub_gear_slot", 0)
 		await process_frame
 		_expect(screens.hub_equipment_mode == 3 and view.candidate_cursor.visible and view.get_node("CandidateText0").texture != null and (view.get_node("CandidateText0") as Sprite2D).visible and not (view.get_node("DescriptionText0") as Sprite2D).visible, "selecting a populated slot opens the two-column candidate grid", failures)
