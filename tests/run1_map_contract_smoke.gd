@@ -40,6 +40,8 @@ func _initialize() -> void:
 	if orb_rooms.size() == 2:
 		_expect(orb_rooms[0].room_type == orb_rooms[1].room_type, "Orb Room locations share one runtime room type", failures)
 	_expect(treasure_rooms.size() == 3, "Run 1 has three authored Treasure Rooms", failures)
+	var first_treasure_room = layout.room_by_id(&"room_-2_2")
+	_expect(first_treasure_room != null and first_treasure_room.chest_position == Vector2(157, 69), "the first Run 1 Treasure Room keeps its original back-right chest position", failures)
 	var treasure_positions: Dictionary = {}
 	for room in treasure_rooms:
 		_expect(room.chest_count == 1, "each Run 1 Treasure Room declares exactly one chest: %s" % room.id, failures)
