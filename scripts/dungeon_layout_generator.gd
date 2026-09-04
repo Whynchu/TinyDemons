@@ -149,10 +149,11 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	# available immediately, while the normal engagement lock commits the player
 	# after the first attack.
 	var hub_degree := _hub_degree(generator_rng)
-	if hub_degree >= 4:
-		_append_hub_dig_branch(builder, start_id, -1, alternate_flames, starter_flame)
+	var first_dig_side := -1 if generator_rng.randi_range(0, 1) == 0 else 1
 	if hub_degree >= 3:
-		_append_hub_dig_branch(builder, start_id, 1, alternate_flames, starter_flame)
+		_append_hub_dig_branch(builder, start_id, first_dig_side, alternate_flames, starter_flame, generator_rng)
+	if hub_degree >= 4:
+		_append_hub_dig_branch(builder, start_id, -first_dig_side, alternate_flames, starter_flame, generator_rng)
 
 	var second_special_depth := boss_depth - 2
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
@@ -667,31 +668,56 @@ static func _append_hub_dig_branch(
 	start_id: StringName,
 	side: int,
 	alternate_flames: Array[StringName],
-	starter_flame: StringName
+	starter_flame: StringName,
+	generator_rng: RandomNumberGenerator
 ) -> void:
-	# side -1 is the lower-left dig corridor (BOTTOM_LEFT sockets, ends at a
-	# single-chest Treasure); side +1 is the lower-right corridor (BOTTOM_RIGHT
-	# sockets, ends at a flame Rest). Both are scoutable: their entrance is open
-	# immediately, but engagement still commits the player on the first hit.
-	if side <= 0:
-		var socket_id := DungeonGraph.BOTTOM_LEFT
-		var route_role: StringName = ROUTE_DIG
-		var depth_one := builder.add_room(Vector2i(-1, -1), DungeonGraph.ROOM_COMBAT)
-		var depth_two := builder.add_room(Vector2i(-2, -2), DungeonGraph.ROOM_COMBAT)
-		var depth_three := builder.add_room(Vector2i(-3, -3), DungeonGraph.ROOM_TREASURE, 1)
-		builder.link(start_id, socket_id, depth_one, &"", route_role, false, true)
-		builder.link(depth_one, socket_id, depth_two, &"", route_role, false, true)
-		builder.link(depth_two, socket_id, depth_three, &"", route_role, false, true)
-		return
-	var socket_id := DungeonGraph.BOTTOM_RIGHT
-	var route_role: StringName = ROUTE_OPTIONAL_TREASURE
-	var depth_one := builder.add_room(Vector2i(1, -1), DungeonGraph.ROOM_TREASURE, 1)
-	var depth_two := builder.add_room(Vector2i(2, -2), DungeonGraph.ROOM_COMBAT)
-	var utility_flame := alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
-	var depth_three := builder.add_room(Vector2i(3, -3), DungeonGraph.ROOM_REST, 0, &"", utility_flame)
-	builder.link(start_id, socket_id, depth_one, &"", route_role, false, true)
-	builder.link(depth_one, socket_id, depth_two, &"", route_role, false, true)
-	builder.link(depth_two, socket_id, depth_three, &"", route_role, false, true)
+	# Dig routes are seeded walks rather than fixed three-room diagonals. They can
+	# bend toward or away from the Hub, vary from two to four rooms, and end in a
+	# Treasure or utility Fire room. The first edge remains freely scoutable;
+	# later enemy-room exits use the ordinary clear contract.
+	var route_role: StringName = ROUTE_DIG if side <= 0 else ROUTE_OPTIONAL_TREASURE
+	var current_id := start_id
+	var current_coordinate := Vector2i.ZERO
+	var next_side := -1 if side <= 0 else 1
+	var branch_length := generator_rng.randi_range(2, 4)
+	for branch_index in branch_length:
+		var candidate_sides: Array[int] = [next_side, -next_side]
+		if generator_rng.randf() < 0.42:
+			candidate_sides.reverse()
+		var socket_id: StringName = &""
+		var destination_coordinate := Vector2i.ZERO
+		for candidate_side in candidate_sides:
+			var candidate_socket := DungeonGraph.BOTTOM_LEFT if candidate_side < 0 else DungeonGraph.BOTTOM_RIGHT
+			var candidate_coordinate := current_coordinate + _exit_offset(candidate_socket)
+			var key := "%s:%s" % [current_id, candidate_socket]
+			if builder.connection_keys.has(key) or builder.room_ids_by_coordinate.has(candidate_coordinate):
+				continue
+			socket_id = candidate_socket
+			destination_coordinate = candidate_coordinate
+			next_side = candidate_side
+			break
+		if socket_id.is_empty():
+			break
+		var is_terminal := branch_index == branch_length - 1
+		var room_type: StringName = DungeonGraph.ROOM_COMBAT
+		var chest_count := 0
+		var fire_flame: StringName = &""
+		if is_terminal:
+			if generator_rng.randf() < 0.68:
+				room_type = DungeonGraph.ROOM_TREASURE
+				chest_count = 1
+			else:
+				room_type = DungeonGraph.ROOM_FIRE
+				fire_flame = alternate_flames[generator_rng.randi_range(0, alternate_flames.size() - 1)] if not alternate_flames.is_empty() else starter_flame
+		elif branch_index > 0 and generator_rng.randf() < 0.24:
+			room_type = DungeonGraph.ROOM_TREASURE
+			chest_count = 1
+		var destination_id := builder.add_room(destination_coordinate, room_type, chest_count, &"", fire_flame)
+		builder.link(current_id, socket_id, destination_id, &"", route_role, branch_index > 0, true)
+		current_id = destination_id
+		current_coordinate = destination_coordinate
+		if generator_rng.randf() < 0.38:
+			next_side = -next_side
 
 
 static func _add_fusion_prerequisite_orb(
