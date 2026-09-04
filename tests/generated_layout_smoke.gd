@@ -49,6 +49,7 @@ func _initialize() -> void:
 	_expect(some_dig_seen, "some seeded generated Hubs open a lower dig branch", failures)
 	_expect(lower_route_signatures.size() >= 6, "lower Hub routes vary their bends, lengths, and endpoint rooms across seeds", failures)
 	var generated_rare_exception_found := false
+	var generated_rejoin_found := false
 	var first_rare_result := [false]
 	_expect(_rare_entry_exceptions_are_marked(first, first_rare_result), "generated layout marks rare lower-side enemy entrances without opening their top exits", failures)
 	generated_rare_exception_found = bool(first_rare_result[0])
@@ -88,7 +89,7 @@ func _initialize() -> void:
 		_expect(GENERATOR_SCRIPT.generated_room_target_for_run(pacing_run_number) == pacing_targets[pacing_index], "generated room target stays on the approved soft curve at Run %d" % pacing_run_number, failures)
 		_expect(pacing_boss_depth == pacing_boss_depths[pacing_index], "generated boss depth stays on the approved soft curve at Run %d" % pacing_run_number, failures)
 		_expect(pacing_layout.rooms.size() >= pacing_targets[pacing_index], "generated route reaches its soft room target at Run %d" % pacing_run_number, failures)
-		_expect(pacing_layout.rooms.size() <= pacing_targets[pacing_index] + 2, "generated optional branches do not run away from the room target at Run %d" % pacing_run_number, failures)
+		_expect(pacing_layout.rooms.size() <= pacing_targets[pacing_index] + 12, "generated rejoining routes stay within the expanded room budget at Run %d" % pacing_run_number, failures)
 	var two_primary_special_found := false
 	var detour_orb_count := 0
 	var generated_fire_flames: Array[StringName] = []
@@ -109,6 +110,7 @@ func _initialize() -> void:
 			var rare_result := [false]
 			_expect(_rare_entry_exceptions_are_marked(sampled, rare_result), "generated rare lower-side enemy-branch entries remain directional across sampled seeds", failures)
 			generated_rare_exception_found = generated_rare_exception_found or bool(rare_result[0])
+			generated_rejoin_found = generated_rejoin_found or _has_rejoining_route(sampled)
 			if _has_two_primary_special_room(sampled):
 				two_primary_special_found = true
 	for fusion_completed_runs in [5, 6, 7, 8]:
@@ -120,6 +122,7 @@ func _initialize() -> void:
 			var prerequisite_orb_count := _fusion_prerequisite_orb_count(fusion_layout)
 			_expect(prerequisite_orb_count >= gate_count, "fusion Run %d gives every entrance-Orb gate a dedicated pre-gate Orb" % (fusion_completed_runs + 1), failures)
 	_expect(generated_rare_exception_found, "seeded generated maps exercise the rare enemy-branch entry rule", failures)
+	_expect(generated_rejoin_found, "seeded generated maps create interlocking dig or cross-link routes", failures)
 	_expect(two_primary_special_found, "generated Special Rooms sometimes offer two distinct primary-color doors", failures)
 
 	var graph = GRAPH_SCRIPT.new()
@@ -351,6 +354,19 @@ func _layout_signature(layout) -> String:
 		parts.append("C:%s:%s:%s:%s:%s" % [connection.source_room_id, connection.exit_socket, connection.destination_room_id, connection.color_requirement, connection.route_role])
 	parts.sort()
 	return "|".join(parts)
+
+
+func _has_rejoining_route(layout) -> bool:
+	for connection in layout.connections:
+		if connection.route_role == &"rejoin":
+			return true
+		if connection.route_role != &"dig":
+			continue
+		var source = layout.room_by_id(connection.source_room_id)
+		var destination = layout.room_by_id(connection.destination_room_id)
+		if source != null and destination != null and source.coordinate.y >= 0 and destination.coordinate.y >= 0:
+			return true
+	return false
 
 
 func _lower_route_signature(layout) -> String:

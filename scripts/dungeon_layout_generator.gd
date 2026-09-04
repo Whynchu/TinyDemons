@@ -25,6 +25,7 @@ const ROUTE_DETOUR_ORB: StringName = &"detour_orb"
 const ROUTE_DETOUR_FIRE: StringName = &"detour_fire"
 const ROUTE_FUSION_PREREQUISITE_ORB: StringName = &"fusion_prerequisite_orb"
 const ROUTE_DIG: StringName = &"dig"
+const ROUTE_REJOIN: StringName = &"rejoin"
 
 
 class LayoutBuilder extends RefCounted:
@@ -150,10 +151,11 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	# after the first attack.
 	var hub_degree := _hub_degree(generator_rng)
 	var first_dig_side := -1 if generator_rng.randi_range(0, 1) == 0 else 1
+	var hub_dig_routes: Array[Dictionary] = []
 	if hub_degree >= 3:
-		_append_hub_dig_branch(builder, start_id, first_dig_side, alternate_flames, starter_flame, generator_rng)
+		hub_dig_routes.append(_append_hub_dig_branch(builder, start_id, first_dig_side, alternate_flames, starter_flame, generator_rng))
 	if hub_degree >= 4:
-		_append_hub_dig_branch(builder, start_id, -first_dig_side, alternate_flames, starter_flame, generator_rng)
+		hub_dig_routes.append(_append_hub_dig_branch(builder, start_id, -first_dig_side, alternate_flames, starter_flame, generator_rng))
 
 	var second_special_depth := boss_depth - 2
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
@@ -173,6 +175,7 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		first_alternate_fire_depth = _choose_alternate_fire_depth(boss_depth, fire_depth, second_orb_depth, second_special_depth, cloaked_depth)
 	var current_room_id := merge_id
 	var current_coordinate := Vector2i(0, 2)
+	var spine_rooms_by_depth: Dictionary = {2: merge_id}
 	# The critical path wanders laterally instead of climbing a straight column.
 	# A momentum-dominated walk keeps the spine readable while letting the boss
 	# arrive at a varied free lateral position; the boss is always approached
@@ -230,7 +233,10 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement, room_target)
 		current_room_id = destination_room_id
 		current_coordinate = destination_coordinate
+		spine_rooms_by_depth[destination_depth] = destination_room_id
+	_connect_hub_dig_routes(builder, hub_dig_routes, spine_rooms_by_depth, generator_rng)
 	_fill_room_target(builder, room_target, boss_depth)
+	_add_safe_cross_links(builder, generator_rng)
 	var progression_repairs := repair_progression(layout, completed_runs, starter_flame, bound_flame)
 	for repair in progression_repairs:
 		push_warning("Generated progression repair (run %d seed %d starter=%s bound=%s): %s" % [run_number, dungeon_seed, starter_flame, bound_flame if not bound_flame.is_empty() else "none", repair])
@@ -670,7 +676,7 @@ static func _append_hub_dig_branch(
 	alternate_flames: Array[StringName],
 	starter_flame: StringName,
 	generator_rng: RandomNumberGenerator
-) -> void:
+) -> Dictionary:
 	# Dig routes are seeded walks rather than fixed three-room diagonals. They can
 	# bend toward or away from the Hub, vary from two to four rooms, and end in a
 	# Treasure or utility Fire room. The first edge remains freely scoutable;
@@ -718,6 +724,155 @@ static func _append_hub_dig_branch(
 		current_coordinate = destination_coordinate
 		if generator_rng.randf() < 0.38:
 			next_side = -next_side
+	return {"room_id": current_id, "coordinate": current_coordinate, "side": side}
+
+
+static func _connect_hub_dig_routes(
+	builder: LayoutBuilder,
+	dig_routes: Array[Dictionary],
+	spine_rooms_by_depth: Dictionary,
+	generator_rng: RandomNumberGenerator
+) -> void:
+	if dig_routes.is_empty() or not spine_rooms_by_depth.has(FIRST_ORB_DEPTH):
+		return
+	# Always rejoin one lower route; a four-way Hub may rejoin both. The join lands
+	# at the first pre-gate spine room, so it creates a genuine alternate boss
+	# approach without bypassing the first Special Room's progression door.
+	var target_id: StringName = spine_rooms_by_depth[FIRST_ORB_DEPTH] as StringName
+	for route_index in dig_routes.size():
+		if route_index > 0 and generator_rng.randf() >= 0.55:
+			continue
+		var route: Dictionary = dig_routes[route_index]
+		_append_rejoin_path(builder, route.get("room_id", &"") as StringName, route.get("coordinate", Vector2i.ZERO) as Vector2i, target_id, generator_rng)
+
+
+static func _append_rejoin_path(
+	builder: LayoutBuilder,
+	source_id: StringName,
+	source_coordinate: Vector2i,
+	target_id: StringName,
+	generator_rng: RandomNumberGenerator
+) -> bool:
+	var target = builder.room_spec(target_id)
+	if source_id.is_empty() or target == null:
+		return false
+	var target_sockets: Array[StringName] = [DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]
+	if generator_rng.randi_range(0, 1) == 1:
+		target_sockets.reverse()
+	for target_entry in target_sockets:
+		if _destination_entry_used(builder, target_id, target_entry):
+			continue
+		var final_exit := DungeonGraph.WALL_RIGHT if target_entry == DungeonGraph.BOTTOM_LEFT else DungeonGraph.WALL_LEFT
+		var approach_coordinate: Vector2i = target.coordinate - _exit_offset(final_exit)
+		var path := _upward_path(builder, source_coordinate, approach_coordinate, generator_rng)
+		if path.is_empty() and source_coordinate != approach_coordinate:
+			continue
+		var current_id := source_id
+		var current_coordinate := source_coordinate
+		for path_coordinate in path:
+			var step_x: int = path_coordinate.x - current_coordinate.x
+			var socket_id := DungeonGraph.WALL_LEFT if step_x < 0 else DungeonGraph.WALL_RIGHT
+			var next_id := builder.add_room(path_coordinate, DungeonGraph.ROOM_COMBAT)
+			builder.link(current_id, socket_id, next_id, &"", ROUTE_DIG)
+			current_id = next_id
+			current_coordinate = path_coordinate
+		builder.link(current_id, final_exit, target_id, &"", ROUTE_DIG)
+		return true
+	return false
+
+
+static func _upward_path(
+	builder: LayoutBuilder,
+	start: Vector2i,
+	goal: Vector2i,
+	generator_rng: RandomNumberGenerator
+) -> Array[Vector2i]:
+	if goal.y < start.y:
+		return []
+	var pending: Array[Vector2i] = [start]
+	var previous: Dictionary = {start: start}
+	while not pending.is_empty():
+		var current: Vector2i = pending.pop_front()
+		if current == goal:
+			break
+		if current.y >= goal.y:
+			continue
+		var directions: Array[int] = [-1, 1]
+		if generator_rng.randi_range(0, 1) == 1:
+			directions.reverse()
+		for direction in directions:
+			var candidate := current + Vector2i(direction, 1)
+			var steps_left: int = goal.y - candidate.y
+			if abs(goal.x - candidate.x) > steps_left or posmod(abs(goal.x - candidate.x), 2) != posmod(steps_left, 2):
+				continue
+			if previous.has(candidate) or (candidate != goal and builder.room_ids_by_coordinate.has(candidate)):
+				continue
+			previous[candidate] = current
+			pending.append(candidate)
+	if not previous.has(goal):
+		return []
+	var reversed_path: Array[Vector2i] = []
+	var cursor := goal
+	while cursor != start:
+		reversed_path.append(cursor)
+		cursor = previous[cursor] as Vector2i
+	reversed_path.reverse()
+	return reversed_path
+
+
+static func _destination_entry_used(builder: LayoutBuilder, room_id: StringName, entry_socket: StringName) -> bool:
+	for connection in builder.layout.connections:
+		if connection.destination_room_id == room_id and connection.destination_entry == entry_socket:
+			return true
+	return false
+
+
+static func _add_safe_cross_links(builder: LayoutBuilder, generator_rng: RandomNumberGenerator) -> void:
+	# Cross-link only layers without a progression gate. The result creates loops
+	# throughout naturally adjacent branches without routing around a color,
+	# element, or entrance-Orb requirement.
+	var gated_source_depths: Dictionary = {}
+	for connection in builder.layout.connections:
+		if connection.resolved_gate_type() == DungeonGraph.GATE_NONE:
+			continue
+		var gated_source = builder.room_spec(connection.source_room_id)
+		if gated_source != null:
+			gated_source_depths[gated_source.coordinate.y] = true
+	var candidates: Array[Dictionary] = []
+	for source in builder.layout.rooms:
+		if source.room_type == DungeonGraph.ROOM_START or source.room_type == DungeonGraph.ROOM_BOSS or gated_source_depths.has(source.coordinate.y):
+			continue
+		for direction in [-1, 1]:
+			var destination_coordinate: Vector2i = source.coordinate + Vector2i(direction, 1)
+			var destination_id: StringName = builder.room_ids_by_coordinate.get(destination_coordinate, &"") as StringName
+			if destination_id.is_empty():
+				continue
+			var destination = builder.room_spec(destination_id)
+			if destination == null or destination.room_type == DungeonGraph.ROOM_BOSS:
+				continue
+			var exit_socket := DungeonGraph.WALL_LEFT if direction < 0 else DungeonGraph.WALL_RIGHT
+			var entry_socket := DungeonGraph.paired_socket(exit_socket)
+			if builder.connection_keys.has("%s:%s" % [source.id, exit_socket]) or _destination_entry_used(builder, destination_id, entry_socket):
+				continue
+			if _rooms_are_connected(builder, source.id, destination_id):
+				continue
+			candidates.append({"source": source.id, "socket": exit_socket, "destination": destination_id})
+	for candidate in candidates:
+		if generator_rng.randf() >= 0.45:
+			continue
+		var source_id: StringName = candidate["source"] as StringName
+		var socket_id: StringName = candidate["socket"] as StringName
+		var destination_id: StringName = candidate["destination"] as StringName
+		if builder.connection_keys.has("%s:%s" % [source_id, socket_id]) or _destination_entry_used(builder, destination_id, DungeonGraph.paired_socket(socket_id)):
+			continue
+		builder.link(source_id, socket_id, destination_id, &"", ROUTE_REJOIN)
+
+
+static func _rooms_are_connected(builder: LayoutBuilder, first_id: StringName, second_id: StringName) -> bool:
+	for connection in builder.layout.connections:
+		if (connection.source_room_id == first_id and connection.destination_room_id == second_id) or (connection.source_room_id == second_id and connection.destination_room_id == first_id):
+			return true
+	return false
 
 
 static func _add_fusion_prerequisite_orb(

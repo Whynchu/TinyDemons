@@ -1,8 +1,8 @@
 # Procedural Dungeon Design — Generated Run 3+
 
-Status: Implemented in part — flat difficulty, RNG Hub degree, wandering critical
-path, varied lower-route templates, and free boss lateral position are live;
-mid-run loops/shortcuts remain open.
+Status: Implemented — flat difficulty, RNG Hub degree, wandering critical path,
+interlocking lower routes, ungated cross-links, and free boss lateral position
+are live; event-revealed shortcuts remain an optional future extension.
 Design authority: this document
 Related: [`run1-dungeon-map-design.md`](run1-dungeon-map-design.md), [`run1-dungeon-map-implementation-plan.md`](run1-dungeon-map-implementation-plan.md), [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md), [`gear-system-rework.md`](gear-system-rework.md)
 
@@ -82,6 +82,12 @@ Implemented lower-route variation is seed-owned: a branch varies between two
 and four rooms, can bend toward or away from the Hub, and ends at Treasure or a
 utility Fire room. A three-way Hub also seed-chooses which lower side opens, so
 different seeds do not merely hide one of two fixed diagonal corridors.
+
+Each available lower route attempts a seeded climb back into the first pre-gate
+boss approach. This forms a real Hub-to-spine loop without bypassing the first
+Special gate. The assembler also adds seed-selected `rejoin` edges wherever two
+rooms naturally touch across an ungated lattice layer; any layer containing a
+puzzle-color, element, or entrance-Orb gate is excluded from cross-linking.
 
 ### 4. The Hub as a return center is optional
 

@@ -394,6 +394,12 @@ encounter the local renderer crash.
   connection open. Changing a later Orb can no longer strand the player behind
   an earlier gate. `generated_fusion_gate_scene_smoke` now exercises Run 8 and
   verifies the required return traversal after changing the shared Orb state.
+- Lower branches now climb back into the first pre-gate boss approach rather
+  than ending exclusively at their reward room. Seeded `rejoin` edges also link
+  naturally adjacent rooms throughout ungated map layers. Cross-link generation
+  excludes every layer carrying a puzzle-color, element, or entrance-Orb gate,
+  preserving the no-gate-bypass invariant. Generated-layout tests now require
+  interlocking routes across sampled seeds and allow the expanded loop budget.
 
 ### 2026-09-03 — Four-way Hub and reversible dig branches
 
