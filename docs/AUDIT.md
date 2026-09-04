@@ -350,6 +350,18 @@ Follow-up verification is recorded below; the MCP-connected Godot editor is the
 preferred path for runtime checks, while standalone headless checks may still
 encounter the local renderer crash.
 
+### 2026-09-03 — Procedural dungeon redesign (design doc)
+
+- New [`procedural-dungeon-design.md`](procedural-dungeon-design.md) records the
+  approved direction for generated Run 3+: flat per-run difficulty keyed off
+  `difficulty_rank` (not room depth), the boss as a "northern door" rather than a
+  northern position, RNG-chosen Hub degree, and shortcuts that shorten required
+  backtracks. Folded dungeon topology/difficulty ownership into
+  `ARCHITECTURE.md`.
+- Removed the player-facing "D-number" room label: the HUD room indicator now
+  shows only landmark names (START, REST, CLOAKED, BOSS) and nothing for ordinary
+  rooms.
+
 ### 2026-09-03 — Four-way Hub and reversible dig branches
 
 - Topology: generated layouts now expose all four Hub sockets. The lower-left

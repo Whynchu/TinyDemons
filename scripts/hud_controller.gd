@@ -406,13 +406,15 @@ func update_run_timer(root: Object) -> void:
 func update_room_number(root: Object) -> void:
 	var indicator := room_number_indicator
 	if indicator == null: return
-	var room_label := "D%d" % int(root.get("current_room_display_number")); var room_type: StringName = root.get("current_room_type")
+	# The room indicator shows landmark names only; the numeric D-label was removed
+	# with the depth-as-difficulty model. Ordinary rooms render no label.
+	var room_label := ""; var room_type: StringName = root.get("current_room_type")
 	if room_type == DungeonGraph.ROOM_START: room_label = "START"
 	elif room_type == DungeonGraph.ROOM_REST: room_label = "REST"
 	elif room_type == DungeonGraph.ROOM_TRADER: room_label = "TRADER"
 	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS: room_label = "BOSS"
-	indicator.texture = root.call("_pixel_text_texture", room_label, Color8(244, 244, 244))
+	indicator.texture = root.call("_pixel_text_texture", room_label, Color8(244, 244, 244)) as Texture2D if not room_label.is_empty() else null
 	var run_indicator := dungeon_run_indicator
 	if run_indicator != null:
 		var profile := root.get("player_profile") as PlayerProfile
