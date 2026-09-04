@@ -437,6 +437,10 @@ encounter the local renderer crash.
   `helm_pickup.png`/`hand_pickup.png` icons instead of sharing armor/acc.
 - Verification: `gear_drop_policy_smoke` gained premium-slot plus-rarity and
   price-scaling assertions; gear/reward/demon-cloak smokes pass headless.
+- Drop-art regression guard: new `drop_art_smoke` verifies every catalogue
+  definition resolves to its per-slot pickup icon (`sword_pickup`, `helm_pickup`,
+  `armor_pickup`, `hand_pickup`, `shield_pickup`, `acc_pickup`) and that no gear
+  drops fall back to the white placeholder. Registered in the smoke runner.
 
 ### 2026-09-02 — Gear rework and Run 1 treasure placement
 
