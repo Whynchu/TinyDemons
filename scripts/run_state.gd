@@ -272,7 +272,9 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 		item.instance_id = "shop-%s-basic-%s" % [run_id, String(slot)]
 		shop_stock.append(_shop_entry(catalog, item, slot, roundi(catalog.price(item) * 2.5)))
 	var premium_slot := ItemCatalog.SLOTS[posmod(dungeon_seed, ItemCatalog.SLOTS.size())]
-	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true, &"shop", level)
+	# The Cloaked Demon's premium slot favors its rare floor but keeps + gear
+	# uncommon: a ++/+++ find here should be a memorable luxury, not a routine.
+	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true, &"shop", level, 0.35)
 	if not premium.definition_id.is_empty():
 		premium.instance_id = "shop-%s-premium" % run_id
 		shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))

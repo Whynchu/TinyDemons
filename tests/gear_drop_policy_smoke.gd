@@ -38,6 +38,31 @@ func _initialize() -> void:
 	_expect(shop_slots.size() == ItemCatalog.SLOTS.size(), "shop stock covers every approved slot", failures)
 	_expect(shop.shop_stock.all(func(entry: Dictionary) -> bool: return entry.get("source", "") == "shop" and not str(entry.get("role", "")).is_empty() and entry.has("primary_stat") and entry.has("description")), "shop entries carry source and authored presentation metadata", failures)
 
+	# The Cloaked Demon's premium slot keeps + gear uncommon: sampled across seeds,
+	# a plain (no-plus) find must be the majority so ++/+++ reads as a luxury.
+	var premium_plus_counts := {0: 0, 1: 0, 2: 0, 3: 0}
+	for premium_seed in 120:
+		var premium_item := catalog.generate_item(&"weapon", 700000 + premium_seed, 12, &"rare", true, &"shop", 12, 0.35)
+		var premium_plus := catalog.random_plus_count(premium_item)
+		premium_plus_counts[premium_plus] = int(premium_plus_counts.get(premium_plus, 0)) + 1
+	_expect(int(premium_plus_counts[0]) > int(premium_plus_counts[1]) + int(premium_plus_counts[2]), "premium slot plus gear is rarer than plain", failures)
+	var normal_plus_counts := {0: 0, 1: 0, 2: 0, 3: 0}
+	for normal_seed in 120:
+		var normal_item := catalog.generate_item(&"weapon", 500000 + normal_seed, 12, &"rare", false, &"chest", 12)
+		var normal_plus := catalog.random_plus_count(normal_item)
+		normal_plus_counts[normal_plus] = int(normal_plus_counts.get(normal_plus, 0)) + 1
+	_expect(int(premium_plus_counts[0]) / 120.0 > int(normal_plus_counts[0]) / 120.0, "premium slot is more likely plain than normal loot", failures)
+
+	# + packages scale price steeply: ++ is clearly more valuable than +, and
+	# +++ on a rare item is a premium purchase.
+	var plain_sword := ItemInstance.new(); plain_sword.definition_id = &"soldier_sword"; plain_sword.rarity = &"common"; plain_sword.quality = 1.0
+	var plus_sword := ItemInstance.new(); plus_sword.definition_id = &"soldier_sword"; plus_sword.rarity = &"common"; plus_sword.quality = 1.0; plus_sword.random_stat_points = {"strength": 1}
+	var double_plus_sword := ItemInstance.new(); double_plus_sword.definition_id = &"soldier_sword"; double_plus_sword.rarity = &"common"; double_plus_sword.quality = 1.0; double_plus_sword.random_stat_points = {"strength": 2}
+	var triple_rare := ItemInstance.new(); triple_rare.definition_id = &"soldier_sword"; triple_rare.rarity = &"rare"; triple_rare.quality = 1.0; triple_rare.random_stat_points = {"strength": 3}
+	_expect(catalog.price(plus_sword) > catalog.price(plain_sword), "+ gear costs more than plain gear", failures)
+	_expect(catalog.price(double_plus_sword) > catalog.price(plus_sword), "++ costs meaningfully more than +", failures)
+	_expect(catalog.price(triple_rare) > catalog.price(plain_sword) * 3, "+++ on rare gear is a very expensive premium find", failures)
+
 	var old_profile := PlayerProfile.new()
 	old_profile.ensure_starter_items(catalog)
 	var real_head := catalog.generate_item(&"head", 55, 12, &"rare", true, &"chest", 12)

@@ -109,20 +109,27 @@ fusion. This applies equally to Plain, Basic, and Set gear.
 
 ## Rarity and fusion
 
-Rarity controls the likely plus grade, while the plus grade remains visible:
+Rarity controls the likely plus grade, while the plus grade remains visible.
+Within each range the roll is weighted toward the low end, so a `++` or `+++`
+is genuinely rarer than a plain drop of the same rarity:
 
-| Rarity | Expected plus range |
-| --- | --- |
-| Common | 0–1 |
-| Rare | 0–2 |
-| Epic | 0–3 |
-| Legendary | 1–3 |
-| Mythic | 2–3 |
+| Rarity | Expected plus range | Bias |
+| --- | --- | --- |
+| Common | 0–1 | Mostly plain; ~6% gain a single `+` |
+| Rare | 0–2 | ~60% plain, ~32% `+`, ~8% `++` |
+| Epic | 0–3 | ~38% plain, ~34% `+`, ~21% `++`, ~7% `+++` |
+| Legendary | 1–3 | No plain; ~45% `+`, ~37% `++`, ~18% `+++` |
+| Mythic | 2–3 | No plain/`+`; ~55% `++`, ~45% `+++` |
 
 Every assigned random stat grows at the same pace as the item's authored
 primary stat through rarity and fusion. The growth is additive, never a
 separate multiplier. A `++` item that rolled `STR +1, MND +1` keeps those same
 two lanes and advances both on the primary-stat ladder.
+
+Shop pricing also scales with the `+` package and enhancement level, not just
+rarity. A single `+` is a meaningful surcharge; `++` and especially `+++` are
+premium purchases, and the Cloaked Demon's premium slot deliberately rolls
+pluses more rarely than normal loot so a plussed find there feels special.
 
 Fusion matches items by base definition and rarity. It ignores the random `+`
 package, legacy affixes, transmutations, and the target's fusion level. A

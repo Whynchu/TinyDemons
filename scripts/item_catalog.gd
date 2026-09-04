@@ -634,7 +634,7 @@ func starter_item(slot: StringName) -> ItemInstance:
 	return item
 
 
-func generate_item(slot: StringName, generation_seed: int, level: int = 1, minimum_rarity: StringName = &"", prefer_non_basic: bool = false, source_tag: StringName = &"", run_rank: int = -1) -> ItemInstance:
+func generate_item(slot: StringName, generation_seed: int, level: int = 1, minimum_rarity: StringName = &"", prefer_non_basic: bool = false, source_tag: StringName = &"", run_rank: int = -1, plus_rarity_scale: float = 1.0) -> ItemInstance:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = generation_seed
 	var candidates: Array[StringName] = []
@@ -653,7 +653,7 @@ func generate_item(slot: StringName, generation_seed: int, level: int = 1, minim
 	item.rarity = minimum_rarity if not minimum_rarity.is_empty() else roll_run_rarity(rng.randf(), level)
 	item.rarity = _clamp_rarity_to_definition(item.rarity, item.definition_id)
 	item.quality = snappedf(rng.randf_range(0.9, 1.1), 0.01)
-	item.random_stat_points = _roll_random_stat_points(item.rarity, rng)
+	item.random_stat_points = _roll_random_stat_points(item.rarity, rng, plus_rarity_scale)
 	if item.rarity in [&"epic", &"legendary", &"mythic"] and not _is_live_definition(item.definition_id):
 		var available_transmutations := transmutations_for_definition(item.definition_id)
 		if not available_transmutations.is_empty():
@@ -698,14 +698,46 @@ func _gear_drop_weight(definition_id: StringName) -> float:
 	return 0.0
 
 
-func _roll_random_stat_points(rarity: StringName, rng: RandomNumberGenerator) -> Dictionary:
+func _roll_random_stat_points(rarity: StringName, rng: RandomNumberGenerator, plus_rarity_scale: float = 1.0) -> Dictionary:
+	var roll := rng.randf()
 	var plus_count := 0
 	match rarity:
-		&"common": plus_count = 1 if rng.randf() < 0.08 else 0
-		&"rare": plus_count = rng.randi_range(0, 2)
-		&"epic": plus_count = rng.randi_range(0, 3)
-		&"legendary": plus_count = rng.randi_range(1, 3)
-		&"mythic": plus_count = rng.randi_range(2, 3)
+		&"common":
+			plus_count = 1 if roll < 0.06 else 0
+		&"rare":
+			if roll < 0.60:
+				plus_count = 0
+			elif roll < 0.92:
+				plus_count = 1
+			else:
+				plus_count = 2
+		&"epic":
+			if roll < 0.38:
+				plus_count = 0
+			elif roll < 0.72:
+				plus_count = 1
+			elif roll < 0.93:
+				plus_count = 2
+			else:
+				plus_count = 3
+		&"legendary":
+			if roll < 0.45:
+				plus_count = 1
+			elif roll < 0.82:
+				plus_count = 2
+			else:
+				plus_count = 3
+		&"mythic":
+			if roll < 0.55:
+				plus_count = 2
+			else:
+				plus_count = 3
+	# Special sources (for example the Cloaked Demon's premium slot) may pass a
+	# scale below 1.0 to make + gear genuinely rare instead of the default
+	# distribution. Rolling a fresh uniform threshold keeps the distribution
+	# stable when the source is the normal loot path.
+	if plus_rarity_scale < 1.0 and plus_count > 0:
+		plus_count = rng.randi_range(0, plus_count) if rng.randf() >= plus_rarity_scale else plus_count
 	var result: Dictionary = {}
 	for _roll_index in plus_count:
 		var stat := RANDOM_STAT_KEYS[rng.randi_range(0, RANDOM_STAT_KEYS.size() - 1)]
@@ -922,7 +954,14 @@ func shield_bonuses(item: ItemInstance) -> Dictionary:
 func price(item: ItemInstance) -> int:
 	var base := int(definition_data(item.definition_id).get("price", 50))
 	var multiplier: float = float({&"common": 1.0, &"rare": 1.8, &"epic": 3.2, &"legendary": 5.2, &"mythic": 8.0}.get(item.rarity, 1.0))
-	return maxi(1, roundi(base * multiplier * item.quality))
+	# The + package and enhancement are the real investment in a piece of gear.
+	# A single + is a meaningful surcharge; ++ and +++ escalate steeply so an
+	# enhanced drop or shop find reads as a genuinely premium purchase.
+	var plus_count := mini(random_plus_count(item), 3)
+	var plus_multiplier := 1.0 + float(plus_count) * (1.6 if plus_count <= 1 else 2.2 if plus_count == 2 else 3.4)
+	var enhancement := clampi(item.enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
+	var enhancement_multiplier := 1.0 + float(enhancement) * 0.22
+	return maxi(1, roundi(base * multiplier * plus_multiplier * enhancement_multiplier * item.quality))
 
 
 func overflow_salvage_value(item: ItemInstance) -> int:
