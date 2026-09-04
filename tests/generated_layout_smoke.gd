@@ -26,9 +26,25 @@ func _initialize() -> void:
 			lower_left_hub_connection = connection
 		elif connection.exit_socket == GRAPH_SCRIPT.BOTTOM_RIGHT:
 			lower_right_hub_connection = connection
-	_expect(generated_hub != null and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_LEFT) and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_RIGHT) and hub_exit_sockets.has(GRAPH_SCRIPT.BOTTOM_LEFT) and hub_exit_sockets.has(GRAPH_SCRIPT.BOTTOM_RIGHT), "generated Hub exposes all four directional exits", failures)
-	_expect(lower_left_hub_connection != null and lower_left_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_RIGHT and lower_left_hub_connection.route_role == &"dig" and not lower_left_hub_connection.requires_source_room_clear and lower_left_hub_connection.locks_entry_on_destination_engagement, "down-left Hub dig branch is scoutable and engagement-lockable", failures)
-	_expect(lower_right_hub_connection != null and lower_right_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_LEFT and lower_right_hub_connection.route_role == &"optional_treasure" and not lower_right_hub_connection.requires_source_room_clear and lower_right_hub_connection.locks_entry_on_destination_engagement, "down-right Hub branch is an optional scoutable Treasure route", failures)
+	_expect(generated_hub != null and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_LEFT) and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_RIGHT), "generated Hub always exposes its two progression fork exits", failures)
+	_expect(hub_exit_sockets.size() >= 2 and hub_exit_sockets.size() <= 4, "generated Hub degree stays in the seed-chosen 2/3/4 range", failures)
+	_expect(lower_left_hub_connection == null or (lower_left_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_RIGHT and lower_left_hub_connection.route_role == &"dig" and not lower_left_hub_connection.requires_source_room_clear and lower_left_hub_connection.locks_entry_on_destination_engagement), "down-left Hub dig branch is scoutable and engagement-lockable when present", failures)
+	_expect(lower_right_hub_connection == null or (lower_right_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_LEFT and lower_right_hub_connection.route_role == &"optional_treasure" and not lower_right_hub_connection.requires_source_room_clear and lower_right_hub_connection.locks_entry_on_destination_engagement), "down-right Hub branch is an optional scoutable Treasure route when present", failures)
+	var all_degrees_seen: Dictionary = {}
+	var some_dig_seen := false
+	for degree_seed in range(32):
+		var degree_layout = GENERATOR_SCRIPT.build(90000 + degree_seed, 2, &"fire")
+		var degree_count := 0
+		var has_lower := false
+		for connection in degree_layout.connections:
+			if connection.source_room_id == &"room_0_0":
+				degree_count += 1
+				if connection.exit_socket == GRAPH_SCRIPT.BOTTOM_LEFT or connection.exit_socket == GRAPH_SCRIPT.BOTTOM_RIGHT:
+					has_lower = true
+		all_degrees_seen[degree_count] = true
+		some_dig_seen = some_dig_seen or has_lower
+	_expect(all_degrees_seen.size() >= 2, "seeded generated Hubs vary their degree across seeds", failures)
+	_expect(some_dig_seen, "some seeded generated Hubs open a lower dig branch", failures)
 	var generated_rare_exception_found := false
 	var first_rare_result := [false]
 	_expect(_rare_entry_exceptions_are_marked(first, first_rare_result), "generated layout marks rare lower-side enemy entrances without opening their top exits", failures)
@@ -124,22 +140,39 @@ func _initialize() -> void:
 
 	# A side branch can be inspected and abandoned before the first attack, then
 	# becomes committed only after engagement and is escapable again when clear.
+	# The Hub degree is seed-chosen, so scan for a seed that opens a lower dig
+	# branch rather than assuming a fixed four-way Hub.
 	var branch_graph = GRAPH_SCRIPT.new()
 	var branch_map = MAP_CONTROLLER_SCRIPT.new()
-	branch_map.begin_run(branch_graph, 24681357, 2, &"fire")
-	branch_map.set_starter_flame_attuned(true)
-	var branch_connection := branch_graph.get_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_LEFT)
-	if branch_connection != null:
-		var branch_room_id: StringName = branch_connection.destination_room_id
-		_expect(branch_map.is_connection_available(branch_connection, false), "four-way Hub can enter its lower dig branch", failures)
-		branch_map.on_room_entered(branch_room_id)
-		_expect(branch_map.is_connection_available(branch_connection, true), "unengaged lower dig branch allows immediate retreat", failures)
-		_expect(branch_map.mark_room_engaged(branch_room_id), "first attack engages the lower dig branch", failures)
-		_expect(not branch_map.is_connection_available(branch_connection, true), "engaged lower dig branch locks its entrance", failures)
-		branch_map.on_room_completed(branch_room_id)
-		_expect(branch_map.is_connection_available(branch_connection, true), "cleared lower dig branch restores its return entrance", failures)
-	else:
-		_expect(false, "generated map exposes a lower dig branch for engagement testing", failures)
+	var found_dig_seed := -1
+	for dig_seed in range(0, 64):
+		var probe_graph = GRAPH_SCRIPT.new()
+		var probe_layout = GENERATOR_SCRIPT.build(24681300 + dig_seed, 2, &"fire")
+		var has_lower_dig := false
+		for connection in probe_layout.connections:
+			if connection.source_room_id == &"room_0_0" and (connection.exit_socket == GRAPH_SCRIPT.BOTTOM_LEFT or connection.exit_socket == GRAPH_SCRIPT.BOTTOM_RIGHT):
+				has_lower_dig = true
+		if has_lower_dig:
+			found_dig_seed = dig_seed
+			break
+	_expect(found_dig_seed >= 0, "some generated seed opens a lower dig branch for engagement testing", failures)
+	if found_dig_seed >= 0:
+		branch_map.begin_run(branch_graph, 24681300 + found_dig_seed, 2, &"fire")
+		branch_map.set_starter_flame_attuned(true)
+		var branch_connection := branch_graph.get_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_LEFT)
+		if branch_connection == null:
+			branch_connection = branch_graph.get_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_RIGHT)
+		if branch_connection != null:
+			var branch_room_id: StringName = branch_connection.destination_room_id
+			_expect(branch_map.is_connection_available(branch_connection, false), "variable-degree Hub can enter its lower dig branch", failures)
+			branch_map.on_room_entered(branch_room_id)
+			_expect(branch_map.is_connection_available(branch_connection, true), "unengaged lower dig branch allows immediate retreat", failures)
+			_expect(branch_map.mark_room_engaged(branch_room_id), "first attack engages the lower dig branch", failures)
+			_expect(not branch_map.is_connection_available(branch_connection, true), "engaged lower dig branch locks its entrance", failures)
+			branch_map.on_room_completed(branch_room_id)
+			_expect(branch_map.is_connection_available(branch_connection, true), "cleared lower dig branch restores its return entrance", failures)
+		else:
+			_expect(false, "generated map exposes a lower dig branch for engagement testing", failures)
 	branch_map.free()
 
 	var run_graph = GRAPH_SCRIPT.new()
