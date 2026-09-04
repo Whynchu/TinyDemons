@@ -228,7 +228,10 @@ func enemy_max_health(root: Object, slime: Sprite2D) -> float:
 
 
 func enemy_level_for_room(root: Object) -> int:
-	return maxi(1, ceili(float(root.get("current_room_depth")) / 4.0))
+	# Flat per-run difficulty: the per-room depth term is gone. The live spawn
+	# fallback mirrors RoomController's rank base; the run/cap bonuses applied by
+	# apply_enemy_room_level continue to carry the rank growth.
+	return maxi(1, encounter_run_rank(root) - 1)
 
 
 func enemy_level_cap_for_run(root: Object) -> int:

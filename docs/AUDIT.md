@@ -361,6 +361,14 @@ encounter the local renderer crash.
 - Removed the player-facing "D-number" room label: the HUD room indicator now
   shows only landmark names (START, REST, CLOAKED, BOSS) and nothing for ordinary
   rooms.
+- Flat per-run difficulty landed: `RoomController` now derives enemy level,
+  count, and variant pool from `difficulty_rank` (fed from
+  `player_profile.difficulty_rank`) rather than room depth. The
+  `ceil(depth/4)` level term and depth-scaled count/variant gates are removed;
+  variant unlocks map to rank milestones (yellow 2, ground 3, ice 4, shadow 3).
+  `combat_runtime_controller.enemy_level_for_room` mirrors the rank base. Updated
+  the `rogue_slime_smoke`/`slime_variant_smoke` characterizations to the flat
+  model.
 
 ### 2026-09-03 — Four-way Hub and reversible dig branches
 

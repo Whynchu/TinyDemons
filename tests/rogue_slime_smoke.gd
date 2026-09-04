@@ -60,6 +60,9 @@ func _initialize() -> void:
 		var expected_popcorn_level := maxi(1, tested_player_level - 5)
 		_expect(rooms._popcorn_enemy_level() == expected_popcorn_level, "player level %d produces level %d popcorn enemies" % [tested_player_level, expected_popcorn_level], failures)
 	rooms.player_level = 1
+	# Flat difficulty: enemy level no longer grows with room depth. The
+	# generated base level is rank - 1 with a +/-20% spread (min spread 1), so
+	# a rank N encounter peaks at level N (never at the depth-scaled cap).
 	for rank in [1, 2, 3, 4]:
 		rooms.progression_run_rank = rank
 		var maximum_seen := 0
@@ -72,9 +75,8 @@ func _initialize() -> void:
 				maximum_seen = maxi(maximum_seen, level)
 				level_one_count += 1 if level == 1 else 0
 				level_count += 1
-		_expect(maximum_seen <= int(expected_caps[rank]), "Run %d enemy levels stay at or below cap %d" % [rank, int(expected_caps[rank])], failures)
-		if rank > 1:
-			_expect(maximum_seen == int(expected_caps[rank]), "Run %d encounter generation reaches level cap %d" % [rank, int(expected_caps[rank])], failures)
+		_expect(maximum_seen <= rank, "Run %d flat enemy levels stay at or below rank %d" % [rank, rank], failures)
+		_expect(maximum_seen == rank, "Run %d flat encounter generation peaks at level %d" % [rank, rank], failures)
 		if rank == 2:
 			_expect(float(level_one_count) / float(maxi(level_count, 1)) >= 0.30, "Run 2 keeps a substantial level 1 popcorn population", failures)
 	rooms.progression_run_rank = 8

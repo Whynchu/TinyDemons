@@ -70,34 +70,41 @@ func _initialize() -> void:
 
 	var rooms := RoomController.new()
 	var gray_seen := false
-	var yellow_seen_at_depth_two := false
-	var yellow_seen_before_depth_two := false
-	var ground_seen_at_depth_three := false
-	var ground_seen_before_depth_three := false
-	var ice_seen_at_depth_four := false
-	var ice_seen_before_depth_four := false
+	var yellow_seen_at_rank_two := false
+	var yellow_seen_before_rank_two := false
+	var ground_seen_at_rank_three := false
+	var ground_seen_before_rank_three := false
+	var ice_seen_at_rank_four := false
+	var ice_seen_before_rank_four := false
+	rooms.progression_run_rank = 1
 	for seed in 256:
 		for variant in rooms._generate_enemy_encounter(seed, 0, false, false)["variants"] as Array:
 			gray_seen = gray_seen or String(variant) == "grey"
-		for variant in rooms._generate_enemy_encounter(seed + 2000, 1, false, false)["variants"] as Array:
-			yellow_seen_before_depth_two = yellow_seen_before_depth_two or String(variant) == "yellow"
-		for variant in rooms._generate_enemy_encounter(seed + 4000, 2, false, false)["variants"] as Array:
-			yellow_seen_at_depth_two = yellow_seen_at_depth_two or String(variant) == "yellow"
-		for variant in rooms._generate_enemy_encounter(seed + 6000, 2, false, false)["variants"] as Array:
-			ground_seen_before_depth_three = ground_seen_before_depth_three or String(variant) == "orange"
-		for variant in rooms._generate_enemy_encounter(seed + 8000, 3, false, false)["variants"] as Array:
-			ground_seen_at_depth_three = ground_seen_at_depth_three or String(variant) == "orange"
-		for variant in rooms._generate_enemy_encounter(seed + 10000, 3, false, false)["variants"] as Array:
-			ice_seen_before_depth_four = ice_seen_before_depth_four or String(variant) == "aquamarine"
-		for variant in rooms._generate_enemy_encounter(seed + 12000, 4, false, false)["variants"] as Array:
-			ice_seen_at_depth_four = ice_seen_at_depth_four or String(variant) == "aquamarine"
+			yellow_seen_before_rank_two = yellow_seen_before_rank_two or String(variant) == "yellow"
+			ground_seen_before_rank_three = ground_seen_before_rank_three or String(variant) == "orange"
+			ice_seen_before_rank_four = ice_seen_before_rank_four or String(variant) == "aquamarine"
+	rooms.progression_run_rank = 2
+	for seed in 256:
+		for variant in rooms._generate_enemy_encounter(seed + 4000, 0, false, false)["variants"] as Array:
+			yellow_seen_at_rank_two = yellow_seen_at_rank_two or String(variant) == "yellow"
+			ground_seen_before_rank_three = ground_seen_before_rank_three or String(variant) == "orange"
+			ice_seen_before_rank_four = ice_seen_before_rank_four or String(variant) == "aquamarine"
+	rooms.progression_run_rank = 3
+	for seed in 256:
+		for variant in rooms._generate_enemy_encounter(seed + 8000, 0, false, false)["variants"] as Array:
+			ground_seen_at_rank_three = ground_seen_at_rank_three or String(variant) == "orange"
+			ice_seen_before_rank_four = ice_seen_before_rank_four or String(variant) == "aquamarine"
+	rooms.progression_run_rank = 4
+	for seed in 256:
+		for variant in rooms._generate_enemy_encounter(seed + 12000, 0, false, false)["variants"] as Array:
+			ice_seen_at_rank_four = ice_seen_at_rank_four or String(variant) == "aquamarine"
 	_expect(gray_seen, "Gray can appear in base encounters", failures)
-	_expect(not yellow_seen_before_depth_two, "Yellow is gated below room depth two", failures)
-	_expect(yellow_seen_at_depth_two, "Yellow can appear from room depth two", failures)
-	_expect(not ground_seen_before_depth_three, "Ground is gated below room depth three", failures)
-	_expect(ground_seen_at_depth_three, "Ground can appear from room depth three", failures)
-	_expect(not ice_seen_before_depth_four, "Ice is gated below room depth four", failures)
-	_expect(ice_seen_at_depth_four, "Ice can appear from room depth four", failures)
+	_expect(not yellow_seen_before_rank_two, "Yellow is gated below run rank two", failures)
+	_expect(yellow_seen_at_rank_two, "Yellow can appear from run rank two", failures)
+	_expect(not ground_seen_before_rank_three, "Ground is gated below run rank three", failures)
+	_expect(ground_seen_at_rank_three, "Ground can appear from run rank three", failures)
+	_expect(not ice_seen_before_rank_four, "Ice is gated below run rank four", failures)
+	_expect(ice_seen_at_rank_four, "Ice can appear from run rank four", failures)
 	rooms.free()
 
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D
