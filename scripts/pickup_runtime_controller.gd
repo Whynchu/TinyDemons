@@ -30,9 +30,9 @@ const SOUL_PICKUP_LAUNCH_SPEED := 18.0
 const SOUL_PICKUP_LAUNCH_SPREAD := 10.0
 const ITEM_DROP_TEXTURE_PATHS := {
 	&"weapon": "res://assets/artwork/sword_pickup.png",
-	&"head": "res://assets/artwork/armor_pickup.png",
+	&"head": "res://assets/artwork/helm_pickup.png",
 	&"body": "res://assets/artwork/armor_pickup.png",
-	&"arm": "res://assets/artwork/acc_pickup.png",
+	&"arm": "res://assets/artwork/hand_pickup.png",
 	&"shield": "res://assets/artwork/shield_pickup.png",
 	&"accessory": "res://assets/artwork/acc_pickup.png",
 }

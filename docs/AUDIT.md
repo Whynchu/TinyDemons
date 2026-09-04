@@ -420,6 +420,24 @@ encounter the local renderer crash.
 - Verification: `six_stat_calculator_smoke` and `speed_scale_smoke` assert the
   reference neutral point, the below-neutral start, and the strict reward curve.
 
+### 2026-09-03 — Gear plus rarity and premium pricing
+
+- Plus distribution is now weighted toward the low end so a `++`/`+++` is a
+  rarer find at every rarity: Common ~6% `+`, Rare ~60/32/8, Epic ~38/34/21/7,
+  Legendary ~45/37/18, Mythic ~55/45.
+- The Cloaked Demon's premium shop slot passes `plus_rarity_scale` 0.35, so
+  plussed gear there is meaningfully rarer than normal loot; a `++` find from
+  the demon now reads as a memorable luxury.
+- Shop value now scales with the `+` package and enhancement level, not just
+  rarity: `+` ~1.6x, `++` ~4.4x, `+++` ~8.8x (before rarity), enhancement +22%
+  per level. `++`/`+++` are intentionally premium purchases.
+- Drop artwork: verified all 66 live definitions resolve to a real per-slot
+  pickup icon so no gear drop falls back to the white placeholder; rarity
+  tinting is applied at spawn. Head and Arm now use dedicated
+  `helm_pickup.png`/`hand_pickup.png` icons instead of sharing armor/acc.
+- Verification: `gear_drop_policy_smoke` gained premium-slot plus-rarity and
+  price-scaling assertions; gear/reward/demon-cloak smokes pass headless.
+
 ### 2026-09-02 — Gear rework and Run 1 treasure placement
 
 - Owner/API introduced: `ItemCatalog` owns the live gear catalogue and flat
