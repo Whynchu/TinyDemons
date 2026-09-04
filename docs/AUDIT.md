@@ -385,6 +385,15 @@ encounter the local renderer crash.
   (unused so far) for the still-open shortcut work.
 - Updated `generated_layout_smoke` to characterize variable-degree Hubs and
   scan for a dig branch instead of assuming four-way.
+- Lower Hub routes now use seeded two-to-four-room walks with bends and varied
+  Treasure/Fire endpoints instead of fixed three-room diagonals. The generated
+  layout smoke samples route signatures to require meaningful structural
+  variety across seeds.
+- Fixed the Run 8 shared-Orb impasse: after a matching entrance-Orb gate is
+  successfully traversed, its existing persisted solved record now latches the
+  connection open. Changing a later Orb can no longer strand the player behind
+  an earlier gate. `generated_fusion_gate_scene_smoke` now exercises Run 8 and
+  verifies the required return traversal after changing the shared Orb state.
 
 ### 2026-09-03 — Four-way Hub and reversible dig branches
 

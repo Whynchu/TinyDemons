@@ -1,7 +1,8 @@
 # Procedural Dungeon Design — Generated Run 3+
 
 Status: Implemented in part — flat difficulty, RNG Hub degree, wandering critical
-path, and free boss lateral position are live; loops/shortcuts remain open.
+path, varied lower-route templates, and free boss lateral position are live;
+mid-run loops/shortcuts remain open.
 Design authority: this document
 Related: [`run1-dungeon-map-design.md`](run1-dungeon-map-design.md), [`run1-dungeon-map-implementation-plan.md`](run1-dungeon-map-implementation-plan.md), [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md), [`gear-system-rework.md`](gear-system-rework.md)
 
@@ -77,6 +78,11 @@ Lower (`BOTTOM_LEFT`/`BOTTOM_RIGHT`) exits are scoutable dig branches: entering
 does not engage the room; the first landed hit does. A dig branch may rejoin
 the spine later instead of dead-ending.
 
+Implemented lower-route variation is seed-owned: a branch varies between two
+and four rooms, can bend toward or away from the Hub, and ends at Treasure or a
+utility Fire room. A three-way Hub also seed-chooses which lower side opens, so
+different seeds do not merely hide one of two fixed diagonal corridors.
+
 ### 4. The Hub as a return center is optional
 
 A loop that returns to the Hub is generated only when it makes a good route or
@@ -146,6 +152,10 @@ hold for every connection:
 2. **No stranding** — changing the shared state (orb/fire) may relock doors, but
    it must never strand the player without a valid exit. The existing color
    solvers already model this; the shortcut/link generator must preserve it.
+
+Entrance-Orb gates latch after a legitimate matching traversal. This keeps the
+shared Orb state meaningful for unopened gates while guaranteeing that changing
+a later Orb cannot relock an already-crossed gate behind the player.
 
 ## Validation contract
 

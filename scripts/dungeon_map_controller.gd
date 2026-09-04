@@ -433,9 +433,11 @@ func is_connection_color_locked(connection: DungeonGraph.ConnectionRecord) -> bo
 func is_connection_orb_locked(connection: DungeonGraph.ConnectionRecord) -> bool:
 	if connection == null or connection_gate_type(connection) != DungeonGraph.GATE_ENTRANCE_ORB or connection.orb_element_requirement.is_empty():
 		return false
-	# Entrance-orb doors are a live reflection of the shared Orb Room state.
-	# The solved table is retained for save compatibility/history, but must not
-	# permanently unlock a door after the world changes to another element.
+	# Crossing a correctly charged entrance-Orb door permanently solves that
+	# connection. Without this latch, charging a later Orb can relock the route
+	# behind the player and strand them on the wrong side of an earlier gate.
+	if state.is_orb_connection_solved(connection):
+		return false
 	return state.shared_orb_element != connection.orb_element_requirement
 
 
@@ -500,9 +502,13 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		var entrance_available := destination_room == null or not (connection.locks_entry_on_destination_engagement and requires_room_clear(destination_room) and state.is_room_engaged(destination_room.id) and not state.is_room_completed(destination_room.id))
 		if entrance_available and gate_type == DungeonGraph.GATE_ELEMENT:
 			state.mark_element_connection_solved(connection)
+		if entrance_available and gate_type == DungeonGraph.GATE_ENTRANCE_ORB:
+			state.mark_orb_connection_solved(connection)
 		return entrance_available
 	if gate_type == DungeonGraph.GATE_ELEMENT:
 		state.mark_element_connection_solved(connection)
+	elif gate_type == DungeonGraph.GATE_ENTRANCE_ORB:
+		state.mark_orb_connection_solved(connection)
 	return true
 
 

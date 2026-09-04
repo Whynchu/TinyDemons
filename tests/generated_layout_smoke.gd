@@ -28,9 +28,10 @@ func _initialize() -> void:
 			lower_right_hub_connection = connection
 	_expect(generated_hub != null and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_LEFT) and hub_exit_sockets.has(GRAPH_SCRIPT.WALL_RIGHT), "generated Hub always exposes its two progression fork exits", failures)
 	_expect(hub_exit_sockets.size() >= 2 and hub_exit_sockets.size() <= 4, "generated Hub degree stays in the seed-chosen 2/3/4 range", failures)
-	_expect(lower_left_hub_connection == null or (lower_left_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_RIGHT and lower_left_hub_connection.route_role == &"dig" and not lower_left_hub_connection.requires_source_room_clear and lower_left_hub_connection.locks_entry_on_destination_engagement), "down-left Hub dig branch is scoutable and engagement-lockable when present", failures)
-	_expect(lower_right_hub_connection == null or (lower_right_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_LEFT and lower_right_hub_connection.route_role == &"optional_treasure" and not lower_right_hub_connection.requires_source_room_clear and lower_right_hub_connection.locks_entry_on_destination_engagement), "down-right Hub branch is an optional scoutable Treasure route when present", failures)
+	_expect(lower_left_hub_connection == null or (lower_left_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_RIGHT and lower_left_hub_connection.route_role in [&"dig", &"optional_treasure"] and not lower_left_hub_connection.requires_source_room_clear and lower_left_hub_connection.locks_entry_on_destination_engagement), "down-left Hub dig branch is scoutable and engagement-lockable when present", failures)
+	_expect(lower_right_hub_connection == null or (lower_right_hub_connection.destination_entry == GRAPH_SCRIPT.WALL_LEFT and lower_right_hub_connection.route_role in [&"dig", &"optional_treasure"] and not lower_right_hub_connection.requires_source_room_clear and lower_right_hub_connection.locks_entry_on_destination_engagement), "down-right Hub dig branch is scoutable and engagement-lockable when present", failures)
 	var all_degrees_seen: Dictionary = {}
+	var lower_route_signatures: Dictionary = {}
 	var some_dig_seen := false
 	for degree_seed in range(32):
 		var degree_layout = GENERATOR_SCRIPT.build(90000 + degree_seed, 2, &"fire")
@@ -43,8 +44,10 @@ func _initialize() -> void:
 					has_lower = true
 		all_degrees_seen[degree_count] = true
 		some_dig_seen = some_dig_seen or has_lower
+		lower_route_signatures[_lower_route_signature(degree_layout)] = true
 	_expect(all_degrees_seen.size() >= 2, "seeded generated Hubs vary their degree across seeds", failures)
 	_expect(some_dig_seen, "some seeded generated Hubs open a lower dig branch", failures)
+	_expect(lower_route_signatures.size() >= 6, "lower Hub routes vary their bends, lengths, and endpoint rooms across seeds", failures)
 	var generated_rare_exception_found := false
 	var first_rare_result := [false]
 	_expect(_rare_entry_exceptions_are_marked(first, first_rare_result), "generated layout marks rare lower-side enemy entrances without opening their top exits", failures)
@@ -346,6 +349,19 @@ func _layout_signature(layout) -> String:
 		parts.append("R:%s:%s:%s:%s:%s" % [room.id, room.coordinate, room.room_type, room.special_respawn_required_color, room.fire_flame])
 	for connection in layout.connections:
 		parts.append("C:%s:%s:%s:%s:%s" % [connection.source_room_id, connection.exit_socket, connection.destination_room_id, connection.color_requirement, connection.route_role])
+	parts.sort()
+	return "|".join(parts)
+
+
+func _lower_route_signature(layout) -> String:
+	var parts: Array[String] = []
+	for room in layout.rooms:
+		if room.coordinate.y < 0:
+			parts.append("R:%s:%s" % [room.coordinate, room.room_type])
+	for connection in layout.connections:
+		var destination = layout.room_by_id(connection.destination_room_id)
+		if destination != null and destination.coordinate.y < 0:
+			parts.append("C:%s:%s:%s" % [connection.source_room_id, connection.exit_socket, connection.destination_room_id])
 	parts.sort()
 	return "|".join(parts)
 
