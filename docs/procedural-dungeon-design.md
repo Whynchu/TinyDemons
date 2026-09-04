@@ -173,6 +173,22 @@ Enemy level, count, and variant pool all derive from `difficulty_rank`
 `_generate_boss_encounter`, scaling with `difficulty_rank` rather than depth.
 Popcorn (recovery fodder) stays keyed to player level, unchanged.
 
+Concrete mapping (implemented):
+
+- `RoomController.progression_run_rank` is now fed `player_profile.difficulty_rank`
+  (see `gameplay_state.gd::_ensure_current_room_layout`) instead of
+  `completed_run_count + 1`, so the existing rank milestones keep their 1:1
+  meaning while the difficulty source is rank-only.
+- Enemy level: `_generated_enemy_base_level` = `maxi(rank - 1, 0)` (capped);
+  the `ceil(depth/4)` term is removed, so a rank N encounter peaks at level N.
+- Enemy count: base 1→2 roll with no depth multiplier; `_normal_enemy_cap()` and
+  `_late_enemy_add_chance()` (both rank-based) still bound the roster.
+- Variant pool: unlocked by rank — yellow at rank 2
+  (`YELLOW_MIN_RANK`), ground at rank 3 (`GROUND_MIN_RANK`), ice at rank 4
+  (`ICE_MIN_RANK`), shadow at rank 3.
+- Runtime fallback `enemy_level_for_room` mirrors rank base
+  (`maxi(1, rank - 1)`) instead of `ceil(depth/4)`.
+
 Consequence: a shortcut no longer reads as "skipping danger", because no zone is
 intrinsically more dangerous than another. Exploration and traversal are pure.
 

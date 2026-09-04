@@ -1153,10 +1153,11 @@ func _finalize_run_enemy_total() -> void:
 func _ensure_current_room_layout() -> void:
 	var room := dungeon_graph.get_room(current_room_id)
 	if room == null: return
-	# Encounter composition follows completed dungeon runs, not the separate
-	# grade/loot rank. A strong Run 1 grade should not turn the first rooms of
-	# Run 2 into an immediate difficulty spike.
-	room_controller.progression_run_rank = maxi(1, dungeon_graph.completed_run_count + 1)
+	# Flat per-run difficulty: enemy level, count, and variant pool all key off
+	# the profile's difficulty_rank. room_controller.progression_run_rank mirrors
+	# the completed-run curve so rank milestones (boss minors, popcorn, etc.)
+	# keep their 1:1 meaning without any per-room (depth) difficulty.
+	room_controller.progression_run_rank = maxi(1, player_profile.difficulty_rank if player_profile != null else dungeon_graph.completed_run_count + 1)
 	room_controller.player_level = maxi(1, player_profile.level if player_profile != null else player_stats.level)
 	_apply_room_geometry()
 	_collect_walkable_tiles(floor_tiles)

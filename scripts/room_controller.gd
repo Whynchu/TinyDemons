@@ -24,11 +24,11 @@ const POPCORN_RESPAWN_DELAY := 5.0
 const POPCORN_RESPAWN_RETRY_DELAY := 0.25
 const GREY_ENEMY_WEIGHT: float = 1.0
 const YELLOW_ENEMY_WEIGHT: float = 1.0
-const YELLOW_MIN_DEPTH := 2
+const YELLOW_MIN_RANK := 2
 const GROUND_ENEMY_WEIGHT: float = 1.0
-const GROUND_MIN_DEPTH := 3
+const GROUND_MIN_RANK := 3
 const ICE_ENEMY_WEIGHT: float = 1.0
-const ICE_MIN_DEPTH := 4
+const ICE_MIN_RANK := 4
 const SHADOW_ENEMY_WEIGHT: float = 0.12
 const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
@@ -103,17 +103,10 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 101
 	var count := 1
-	var depth := maxi(room_depth, 0)
-	if encounter_rng.randf() < clampf(0.38 + float(depth) * 0.04, 0.38, 0.68):
+	# Flat difficulty: encounter count keys off run rank via the iteration
+	# thresholds below, not room depth. Base count is still the simple 1->2 roll.
+	if encounter_rng.randf() < 0.38:
 		count = 2
-		if encounter_rng.randf() < clampf(0.35 + float(depth) * 0.04, 0.35, 0.67):
-			count = 3
-			if encounter_rng.randf() < clampf(float(depth - 2) * 0.10, 0.0, 0.60):
-				count = 4
-				if encounter_rng.randf() < clampf(float(depth - 4) * 0.07, 0.0, 0.45):
-					count = 5
-					if encounter_rng.randf() < clampf(float(depth - 8) * 0.03, 0.0, 0.08):
-						count = 6
 	var count_cap := _normal_enemy_cap()
 	count = mini(count, count_cap)
 	# Late ranks may exceed the former six-slime ceiling, but only after the
@@ -130,13 +123,13 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	]
 	if special_room:
 		count = maxi(count + 1, 2)
-	if room_depth >= YELLOW_MIN_DEPTH:
+	if progression_run_rank >= YELLOW_MIN_RANK:
 		variant_pool.append({"variant": "yellow", "weight": YELLOW_ENEMY_WEIGHT})
-	if room_depth >= GROUND_MIN_DEPTH:
+	if progression_run_rank >= GROUND_MIN_RANK:
 		variant_pool.append({"variant": "orange", "weight": GROUND_ENEMY_WEIGHT})
-	if room_depth >= ICE_MIN_DEPTH:
+	if progression_run_rank >= ICE_MIN_RANK:
 		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
-	if allow_shadow and room_depth >= 3:
+	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK:
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
@@ -232,8 +225,10 @@ func _enemy_level_cap() -> int:
 
 
 func _generated_enemy_base_level(room_depth: int) -> int:
-	var depth_level := maxi(1, ceili(float(room_depth) / 4.0))
-	return mini(depth_level + maxi(progression_run_rank - 1, 0), _enemy_level_cap())
+	# Flat difficulty: enemy level derives from run rank, not room depth. The
+	# depth parameter is retained only so callers (boss/encounter) keep an
+	# unchanged signature while the difficulty source is rank-only.
+	return mini(maxi(progression_run_rank - 1, 0), _enemy_level_cap())
 
 
 func _popcorn_enemy_chance() -> float:
