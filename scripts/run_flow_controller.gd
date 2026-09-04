@@ -35,7 +35,6 @@ func sync_current_room_metadata(root: Object) -> void:
 	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(root.current_room_id)
 	if room != null:
 		root.current_room_depth = room.depth
-		root.current_room_display_number = room.display_number
 		root.current_room_type = room.room_type
 		if root.current_room_depth >= 1 and root.run_state != null and root.run_state.active:
 			root.run_state.start_timer()

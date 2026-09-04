@@ -2,7 +2,6 @@ extends SceneTree
 
 
 class FakeRoot extends Node:
-	var current_room_display_number := 1
 	var current_room_type: StringName = DungeonGraph.ROOM_COMBAT
 	var player_profile := PlayerProfile.new()
 	var last_pixel_text := ""

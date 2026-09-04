@@ -48,8 +48,7 @@ Encrypted-vault deployment and operational verification are documented in
   `enemy_tactics_component`.
 - **World**: `room_controller`, `dungeon_graph`, `dungeon_socket`,
   `isometric_room_layer`, `walkable_area`, `actor_collision_system`,
-  `depth_sorter`, `shadow_controller`, `occlusion_renderer`.
-- **Interaction**: `interaction_component`, `chest_controller`,
+  `depth_sorter`, `shadow_controller`, `occlusion_renderer`.- **Interaction**: `interaction_component`, `chest_controller`,
   `npc_controller`, `rest_fire_controller`, `attack_hitbox_guide`.
 - **Meta/progression**: `player_profile`, `profile_save_service`,
   `run_state`, `run_grade`, `run_settlement`, `item_catalog`,
@@ -79,6 +78,16 @@ instances and equipped IDs; `equipment_component` produces the runtime
 snapshot; and combat/effect owners consume that snapshot. New slot, drop, or
 passive behavior must not be implemented as an item-name branch in
 `gameplay.gd`.
+
+Dungeon topology and difficulty authority are documented in
+[`procedural-dungeon-design.md`](procedural-dungeon-design.md) and
+[`run1-dungeon-map-design.md`](run1-dungeon-map-design.md). `dungeon_graph`
+owns the in-memory topology and socket pairing; `dungeon_layout_definition`
+plus the run/generated layout builders own the authored and procedural room
+sets; `dungeon_map_controller` owns gates, engagement, and shared orb/fire
+state; `room_controller` owns per-room content and enemy encounter generation.
+Generated (Run 3+) difficulty is flat per run and keyed off `difficulty_rank`,
+not room depth.
 
 ## Tuning resources (all `@export`-driven, in-editor editable)
 

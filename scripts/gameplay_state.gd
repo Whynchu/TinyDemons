@@ -278,7 +278,6 @@ var entrance_open := false
 var dungeon_graph := DungeonGraph.new()
 var current_room_id: StringName = DungeonGraph.START_ROOM_ID
 var current_room_depth := 0
-var current_room_display_number := 1
 var current_room_type: StringName = DungeonGraph.ROOM_START
 var room_transition_locked := false
 var normal_room_geometry: Dictionary = {}
