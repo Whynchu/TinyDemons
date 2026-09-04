@@ -12,6 +12,7 @@ var affixes: Dictionary = {}
 var random_stat_points: Dictionary = {}
 var transmutation_id: StringName = &""
 var enhancement_level := 0
+var fusion_count := 0
 
 
 func to_dictionary() -> Dictionary:
@@ -24,6 +25,7 @@ func to_dictionary() -> Dictionary:
 		"random_stat_points": random_stat_points.duplicate(true),
 		"transmutation_id": String(transmutation_id),
 		"enhancement_level": enhancement_level,
+		"fusion_count": fusion_count,
 	}
 
 
@@ -51,6 +53,7 @@ static func from_dictionary(data: Dictionary) -> ItemInstance:
 				remaining_points -= points
 	item.transmutation_id = StringName(str(data.get("transmutation_id", "")))
 	item.enhancement_level = clampi(int(data.get("enhancement_level", 0)), 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
+	item.fusion_count = maxi(int(data.get("fusion_count", 0)), 0)
 	return item
 
 

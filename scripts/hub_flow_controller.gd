@@ -561,13 +561,14 @@ func invalidate_hub_fusion_candidates(root: Object) -> void:
 func sell_profile_item(root: Object, instance_id: String) -> bool:
 	if root.player_profile == null:
 		return false
-	var value: int = root.player_profile.sell_item(instance_id, ItemCatalog.new())
-	if value <= 0:
+	var sale: Dictionary = root.player_profile.sell_item(instance_id, ItemCatalog.new())
+	if sale.is_empty():
 		return false
 	root.player_equipment.configure_from_profile(root.player_profile)
 	root.call("_configure_equipment_transmutations")
 	root.call("_save_player_profile")
 	root.call("_update_gold_indicator")
+	root.call("_update_soul_indicator")
 	invalidate_hub_fusion_candidates(root)
 	return true
 
