@@ -542,14 +542,34 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 	root.screen_state_controller.hub_fusion_candidates_dirty = false
 	if root.player_profile == null: return
 	var catalog := ItemCatalog.new()
+	var equipped_candidates: Array[ItemInstance] = []
+	var unequipped_candidates: Array[ItemInstance] = []
 	for data: Dictionary in root.player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
 		if root.player_profile.fusion_material_count(item.instance_id, catalog) > 0 or root.player_profile.can_salvage_overflow(item.instance_id, catalog):
-			root.screen_state_controller.hub_fusion_candidates.append(item)
+			var slot := catalog.definition_slot(item.definition_id)
+			var equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
+			(equipped_candidates if equipped else unequipped_candidates).append(item)
+	root.screen_state_controller.hub_fusion_candidates.append_array(equipped_candidates)
+	root.screen_state_controller.hub_fusion_candidates.append_array(unequipped_candidates)
 
 
 func invalidate_hub_fusion_candidates(root: Object) -> void:
 	root.screen_state_controller.hub_fusion_candidates_dirty = true
+
+
+func sell_profile_item(root: Object, instance_id: String) -> bool:
+	if root.player_profile == null:
+		return false
+	var value: int = root.player_profile.sell_item(instance_id, ItemCatalog.new())
+	if value <= 0:
+		return false
+	root.player_equipment.configure_from_profile(root.player_profile)
+	root.call("_configure_equipment_transmutations")
+	root.call("_save_player_profile")
+	root.call("_update_gold_indicator")
+	invalidate_hub_fusion_candidates(root)
+	return true
 
 
 func hub_fusion_candidates(root: Object) -> Array[ItemInstance]:

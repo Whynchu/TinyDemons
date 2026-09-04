@@ -3,7 +3,7 @@ class_name ProgressionTuning
 
 @export var xp_base := 100.0
 @export var xp_scale := 20.0
-@export var xp_exponent := 1.5
+@export var xp_exponent := 1.4
 @export var point_band_max_levels := PackedInt32Array([5, 10, 20, 35, 99])
 @export var point_band_awards := PackedInt32Array([1, 2, 3, 4, 5])
 

@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.59"
+const GAME_VERSION := "0.1.60"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -3335,6 +3335,10 @@ func update_pause_input(root: Object) -> void:
 	if pause_overlay == null or not pause_overlay.visible:
 		return
 	if pause_page == 2 and is_pause_equipment_active():
+		var touch_scroll := root.call("_input_touch_scroll_y") as float
+		if not is_zero_approx(touch_scroll):
+			scroll_hub_content(root, touch_scroll)
+			refresh_equipment_menu(root)
 		_update_pause_equipment_input(root)
 		return
 	if bool(root.call("_is_menu_back_just_pressed")):
@@ -4503,13 +4507,14 @@ func move_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = true) -
 ## cursor. Positive delta is finger movement downward (content follows the
 ## finger, revealing earlier rows).
 func scroll_hub_content(root: Object, delta_px: float) -> void:
-	if is_zero_approx(delta_px) or hub_page < 0:
+	var equipment_active := hub_page == HUB_PAGE_EQUIPMENT or is_pause_equipment_active()
+	if is_zero_approx(delta_px) or (hub_page < 0 and not equipment_active):
 		return
 	var pitch := 10.0
 	var count := _hub_active_list_count(root)
 	if count <= 0:
 		return
-	if hub_page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+	if equipment_active and hub_gear_browsing:
 		var visible := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
 		var max_start := maxi(0, int(ceil(float(count) / 2.0)) * 2 - visible) if hub_equipment_menu != null else maxi(0, count - visible)
 		hub_choice_scroll = clampf(hub_choice_scroll - delta_px / pitch, 0.0, float(max_start))
@@ -4533,7 +4538,7 @@ func _hub_active_list_count(root: Object) -> int:
 		return run_state.shop_stock.size()
 	if hub_page == HUB_PAGE_FUSION:
 		return (root.call("_hub_fusion_candidates") as Array).size()
-	if hub_page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+	if (hub_page == HUB_PAGE_EQUIPMENT or is_pause_equipment_active()) and hub_gear_browsing:
 		var selected_slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		return (root.call("_hub_gear_candidates", selected_slot) as Array).size()
 	return 0
@@ -4542,7 +4547,7 @@ func _hub_active_list_count(root: Object) -> int:
 ## Controller/confirm selection changes re-center the content so the selected
 ## row stays visible; touch drags leave the cursor where it is.
 func snap_hub_list_scroll_to_selection(root: Object) -> void:
-	if hub_page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
+	if (hub_page == HUB_PAGE_EQUIPMENT or is_pause_equipment_active()) and hub_gear_browsing:
 		var selected_slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var candidates := root.call("_hub_gear_candidates", selected_slot) as Array
 		var current_index := int(hub_gear_candidate_indices.get(String(selected_slot), 0))
