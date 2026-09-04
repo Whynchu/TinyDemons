@@ -35,6 +35,7 @@ const RARITY_PLAYER_STAT_RATES := {
 }
 const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
+const SELL_RATE := 0.35
 
 const PLAIN_GEAR_DROP_WEIGHT := 6.0
 const BASIC_GEAR_DROP_WEIGHT := 5.0
@@ -966,6 +967,10 @@ func price(item: ItemInstance) -> int:
 
 func overflow_salvage_value(item: ItemInstance) -> int:
 	return maxi(1, roundi(price(item) * OVERFLOW_SALVAGE_RATE))
+
+
+func sell_value(item: ItemInstance) -> int:
+	return maxi(1, roundi(price(item) * SELL_RATE))
 
 
 func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:

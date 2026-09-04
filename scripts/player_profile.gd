@@ -204,6 +204,24 @@ func purchase_item(item: ItemInstance, cost: int) -> bool:
 	return true
 
 
+func sell_item(instance_id: String, catalog: ItemCatalog = null) -> int:
+	var item := find_item(instance_id)
+	if item == null:
+		return 0
+	var items := catalog if catalog != null else ItemCatalog.new()
+	var slot := items.definition_slot(item.definition_id)
+	if get_equipped_instance_id(slot) == instance_id:
+		return 0
+	var value: int = items.sell_value(item)
+	for index in inventory.size():
+		if str(inventory[index].get("instance_id", "")) != instance_id:
+			continue
+		inventory.remove_at(index)
+		gold += value
+		return value
+	return 0
+
+
 func demon_cloak_price() -> int:
 	return DEMON_CLOAK_BASE_PRICE + DEMON_CLOAK_PRICE_STEP * demon_cloak_purchases
 

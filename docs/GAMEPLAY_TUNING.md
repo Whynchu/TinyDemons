@@ -223,7 +223,7 @@ exposed or indexed. Candidates to export into the tuning resources:
 | Chest gold roll range | 0.55 - 1.15, mult 0.06/0.04, clamp [0.80, 1.90] | `gameplay.gd:183-185` |
 | Run-reward rarity odds | 0.0005 / 0.003 / 0.015 / 0.120 + caps | `gameplay.gd:600-603` |
 | Run-clear reward | `45 + score*3 + variety*8`; drop `0.30 + score*0.0065` clamp [0.30,0.95] | `gameplay.gd:618-622` |
-| XP formula | `2 + 2*lvl^0.85`, x1.15/x0.72, clamp [0.2, 2] | `gameplay.gd:1698-1701` |
+ | XP formula | `2 + 2*lvl^0.85`, x1.15/x0.72, clamp [0.30, 2], global x2 | `combat_runtime_controller.gd:xp_reward_for_slime` |
 | World-drop physics | launch +-18/-30, air 0.38, gravity 92, pickup 10, push 18 | `gameplay.gd:116-150` |
 | Slime detour radii / slide | [12, 18, 24], detour 0.42, repath 0.10-0.18, slide x0.72 | `gameplay.gd:1773-1813` |
 | Run-metric color thresholds | 0.95 / 0.85 / 0.70 / 0.50 | `gameplay.gd:666-674` |

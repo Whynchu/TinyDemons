@@ -11,6 +11,9 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var tuning := ProgressionTuning.new()
+	_expect(tuning.xp_required_for_level(1) == 100, "level 1 XP threshold remains 100", failures)
+	_expect(tuning.xp_required_for_level(10) < 3400, "late XP curve is less steep after pacing pass", failures)
+	_expect(tuning.xp_required_for_level(20) < 9000, "high-level XP curve remains attainable", failures)
 	var draft = HubProgressionDraftScript.new()
 	draft.vit = 2
 	_expect(draft.as_dictionary()["VIT"] == 2, "hub draft owns ephemeral stat edits", failures)
