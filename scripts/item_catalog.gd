@@ -126,7 +126,7 @@ const SET_DEFINITIONS := {
 		&"body": {"name": "OATH MAIL", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 2.0}, "price": 85, "description": "A broad middle path."},
 		&"arm": {"name": "OATH BRACERS", "tier_stat": "defense", "bonuses": {"defense": 1.0, "strength": 1.0}, "price": 70, "description": "Force and guard together."},
 		&"shield": {"name": "OATH SHIELD", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 2.0}, "price": 85, "description": "A dependable shield."},
-		&"accessory": {"name": "OATH CHARM", "tier_stat": "defense", "bonuses": {"strength": 1.0, "vitality": 1.0}, "price": 70, "description": "A little of everything useful."},
+		&"accessory": {"name": "OATH CHARM", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 2.0, "strength": 1.0}, "price": 80, "description": "A little of everything, built around standing firm."},
 	},
 	&"rune": {
 		&"weapon": {"name": "RUNE BLADE", "tier_stat": "strength", "bonuses": {"strength": 3.0, "intelligence": 1.0}, "price": 90, "description": "A brutal battle mage's blade."},

@@ -38,6 +38,18 @@ func _initialize() -> void:
 		observed_tiers[str(catalog.definition_data(generated.definition_id).get("gear_tier", ""))] = true
 	_expect(observed_tiers.has("plain") and observed_tiers.has("basic") and observed_tiers.has("set"), "chest generation reaches every live gear tier", failures)
 
+	# A set accessory must beat the flexible basic bangle, not copy or trail it.
+	var oath_charm := ItemInstance.new(); oath_charm.definition_id = &"oath_accessory"; oath_charm.rarity = &"common"
+	var bangle := ItemInstance.new(); bangle.definition_id = &"bangle"; bangle.rarity = &"common"
+	var oath_bonuses := catalog.bonuses(oath_charm)
+	var bangle_bonuses := catalog.bonuses(bangle)
+	var oath_sum := 0.0
+	for value in oath_bonuses.values(): oath_sum += float(value)
+	var bangle_sum := 0.0
+	for value in bangle_bonuses.values(): bangle_sum += float(value)
+	_expect(oath_bonuses.has("defense") and oath_sum > bangle_sum, "Oath Charm is a stronger defense-tier set accessory than the bangle", failures)
+	_expect(catalog.price(oath_charm) > catalog.price(bangle), "Oath Charm prices above the basic bangle", failures)
+
 	var plus_item := ItemInstance.new()
 	plus_item.instance_id = "plus-display"
 	plus_item.definition_id = &"basic_sword"

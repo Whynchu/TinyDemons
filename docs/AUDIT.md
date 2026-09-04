@@ -441,6 +441,11 @@ encounter the local renderer crash.
   definition resolves to its per-slot pickup icon (`sword_pickup`, `helm_pickup`,
   `armor_pickup`, `hand_pickup`, `shield_pickup`, `acc_pickup`) and that no gear
   drops fall back to the white placeholder. Registered in the smoke runner.
+- Oath accessory: `oath_accessory` was a defense-tier set charm that carried no
+  defense and was strictly weaker than the basic bangle (STR 1/VIT 1/AGI 1).
+  It now reads DEF 2/VIT 2/STR 1 at 80G, a clear set upgrade that prices above
+  the bangle and scales its defense with rarity. `gear_system_rework_smoke`
+  guards that a set accessory outstats the flexible basic piece.
 
 ### 2026-09-02 — Gear rework and Run 1 treasure placement
 
