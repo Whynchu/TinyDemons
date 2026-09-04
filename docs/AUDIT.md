@@ -370,6 +370,22 @@ encounter the local renderer crash.
   the `rogue_slime_smoke`/`slime_variant_smoke` characterizations to the flat
   model.
 
+### 2026-09-04 — Dynamic generated topology
+
+- Hub degree is now seed-chosen (2/3/4 exits) instead of a fixed four-way: the
+  two progression forks are always present, while lower scoutable dig branches
+  appear at degree 3 (one) and 4 (two). A degree-2 Hub is a clean linear opening.
+- The critical path now wanders laterally with bounded momentum instead of
+  climbing a straight column, so the boss arrives through a wall socket at a
+  varied free lateral position (its door still reads as a northern stairs-up).
+  Difficulty stays flat within a run; `depth`/`y` is milestone ordering only.
+- Room-target backfill now loops and can emit lower dig branches, keeping the
+  approved pacing floor regardless of Hub degree.
+- `LayoutBuilder.link` gained `hidden_until_clear`/`hidden_until_event` params
+  (unused so far) for the still-open shortcut work.
+- Updated `generated_layout_smoke` to characterize variable-degree Hubs and
+  scan for a dig branch instead of assuming four-way.
+
 ### 2026-09-03 — Four-way Hub and reversible dig branches
 
 - Topology: generated layouts now expose all four Hub sockets. The lower-left
