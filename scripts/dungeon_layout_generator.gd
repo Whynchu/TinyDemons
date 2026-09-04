@@ -78,11 +78,16 @@ class LayoutBuilder extends RefCounted:
 		element_requirement: StringName = &"",
 		gate_type: StringName = DungeonGraph.GATE_NONE,
 		orb_element_requirement: StringName = &"",
-		allow_entry_before_source_clear: bool = false
+		allow_entry_before_source_clear: bool = false,
+		hidden_until_clear: bool = false,
+		hidden_until_event: StringName = &""
 	) -> void:
 		var key := "%s:%s" % [source_room_id, exit_socket]
 		if connection_keys.has(key):
 			push_error("Generated layout attempted to reuse exit socket %s." % key)
+			return
+		if allow_entry_before_source_clear and hidden_until_clear:
+			push_error("Generated layout combined a pre-clear entrant with a clear-gated shortcut.")
 			return
 		var source = room_spec(source_room_id)
 		var destination = room_spec(destination_room_id)
@@ -98,8 +103,8 @@ class LayoutBuilder extends RefCounted:
 			destination_room_id,
 			destination_entry,
 			color_requirement,
-			false,
-			&"",
+			hidden_until_clear,
+			hidden_until_event,
 			midpoint,
 			requires_source_room_clear,
 			locks_entry_on_destination_engagement,
@@ -131,29 +136,23 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var start_id := builder.add_room(Vector2i(0, 0), DungeonGraph.ROOM_START)
 	var left_id := builder.add_room(Vector2i(-1, 1), DungeonGraph.ROOM_COMBAT)
 	var right_id := builder.add_room(Vector2i(1, 1), DungeonGraph.ROOM_COMBAT)
-	# The Hub is deliberately four-way. These lower branches are scoutable dig
-	# paths: their entrance is available immediately, but the normal engagement
-	# lock still commits the player after the first attack. Each lower branch is
-	# a full branching corridor, not a single dead-end room, so descending from
-	# the Hub meaningfully expands the dungeon.
-	var lower_left_dig_id := builder.add_room(Vector2i(-1, -1), DungeonGraph.ROOM_COMBAT)
-	var lower_left_mid_id := builder.add_room(Vector2i(-2, -2), DungeonGraph.ROOM_COMBAT)
-	var lower_left_end_id := builder.add_room(Vector2i(-3, -3), DungeonGraph.ROOM_TREASURE, 1)
-	var lower_right_dig_id := builder.add_room(Vector2i(1, -1), DungeonGraph.ROOM_TREASURE, 1)
-	var lower_right_mid_id := builder.add_room(Vector2i(2, -2), DungeonGraph.ROOM_COMBAT)
-	var lower_right_utility_flame := alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
-	var lower_right_end_id := builder.add_room(Vector2i(3, -3), DungeonGraph.ROOM_REST, 0, &"", lower_right_utility_flame)
 	var merge_id := builder.add_room(Vector2i(0, 2), DungeonGraph.ROOM_COMBAT)
 	builder.link(start_id, DungeonGraph.WALL_LEFT, left_id, &"", ROUTE_FORK, false)
 	builder.link(start_id, DungeonGraph.WALL_RIGHT, right_id, &"", ROUTE_FORK, false)
-	builder.link(start_id, DungeonGraph.BOTTOM_LEFT, lower_left_dig_id, &"", ROUTE_DIG, false, true)
-	builder.link(lower_left_dig_id, DungeonGraph.BOTTOM_LEFT, lower_left_mid_id, &"", ROUTE_DIG, false, true)
-	builder.link(lower_left_mid_id, DungeonGraph.BOTTOM_LEFT, lower_left_end_id, &"", ROUTE_DIG, false, true)
-	builder.link(start_id, DungeonGraph.BOTTOM_RIGHT, lower_right_dig_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
-	builder.link(lower_right_dig_id, DungeonGraph.BOTTOM_RIGHT, lower_right_mid_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
-	builder.link(lower_right_mid_id, DungeonGraph.BOTTOM_RIGHT, lower_right_end_id, &"", ROUTE_OPTIONAL_TREASURE, false, true)
 	builder.link(left_id, DungeonGraph.WALL_RIGHT, merge_id, &"", ROUTE_FORK)
 	builder.link(right_id, DungeonGraph.WALL_LEFT, merge_id, &"", ROUTE_FORK)
+
+	# The Hub degree is seed-chosen, not a fixed four-way. Two progression forks
+	# are always present, but the number of lower scoutable dig branches varies:
+	# a degree-2 Hub is a clean linear opening, degree-3 adds one dig, and
+	# degree-4 exposes both. Lower branches are scoutable: their entrance is
+	# available immediately, while the normal engagement lock commits the player
+	# after the first attack.
+	var hub_degree := _hub_degree(generator_rng)
+	if hub_degree >= 4:
+		_append_hub_dig_branch(builder, start_id, -1, alternate_flames, starter_flame)
+	if hub_degree >= 3:
+		_append_hub_dig_branch(builder, start_id, 1, alternate_flames, starter_flame)
 
 	var second_special_depth := boss_depth - 2
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
@@ -173,9 +172,24 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		first_alternate_fire_depth = _choose_alternate_fire_depth(boss_depth, fire_depth, second_orb_depth, second_special_depth, cloaked_depth)
 	var current_room_id := merge_id
 	var current_coordinate := Vector2i(0, 2)
+	# The critical path wanders laterally instead of climbing a straight column.
+	# A momentum-dominated walk keeps the spine readable while letting the boss
+	# arrive at a varied free lateral position; the boss is always approached
+	# through a wall socket so its door still reads as a "northern" stairs-up.
+	var walk_direction := -1 if generator_rng.randi_range(0, 1) == 0 else 1
+	var wander_bound := 4
 	for destination_depth in range(3, boss_depth + 1):
 		var source_depth := current_coordinate.y
-		var main_socket := DungeonGraph.WALL_LEFT if generator_rng.randi_range(0, 1) == 0 else DungeonGraph.WALL_RIGHT
+		# Steer the walk: reverse with a fixed probability, and force a turn back
+		# toward the spine once the path drifts past its lateral bounds.
+		if generator_rng.randf() < 0.28:
+			walk_direction = -walk_direction
+		var current_x: int = current_coordinate.x
+		if current_x >= wander_bound:
+			walk_direction = -1
+		elif current_x <= -wander_bound:
+			walk_direction = 1
+		var main_socket := DungeonGraph.WALL_LEFT if walk_direction == -1 else DungeonGraph.WALL_RIGHT
 		var destination_coordinate := current_coordinate + _exit_offset(main_socket)
 		var room_type := _room_type_for_depth(destination_depth, boss_depth, second_orb_depth, second_special_depth, cloaked_depth, fire_depth, off_route_orbs)
 		if fusion_fire_flames.has(destination_depth):
@@ -252,28 +266,34 @@ static func generated_boss_depth_for_run(run_number: int) -> int:
 static func _fill_room_target(builder: LayoutBuilder, room_target: int, boss_depth: int) -> void:
 	if room_target <= 0:
 		return
-	# The target is a soft floor for the route, not a permanent hard cap. If
-	# seeded optional branches leave the layout short, add deterministic reward
-	# branches from spare combat exits so the approved pacing curve is reliable.
-	for source in builder.layout.rooms:
-		if builder.layout.rooms.size() >= room_target:
-			return
-		var source_id: StringName = source.id
-		var source_coordinate: Vector2i = source.coordinate
-		var source_room_type: StringName = source.room_type
-		if source_room_type != DungeonGraph.ROOM_COMBAT or source_coordinate.y < 3 or source_coordinate.y >= boss_depth:
-			continue
-		var side_socket_ids: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]
-		for side_socket_id: StringName in side_socket_ids:
-			var connection_key := "%s:%s" % [source_id, side_socket_id]
-			if builder.connection_keys.has(connection_key):
+	# The target is a soft floor for the route, not a permanent hard cap. If a
+	# variable Hub degree or seeded optional branches leave the layout short, add
+	# deterministic reward branches from spare exits. Upper wall sockets host
+	# treasure detours; lower sockets host scoutable dig branches so a thin Hub
+	# still reaches the approved pacing curve without a run-away tree.
+	var made_progress := true
+	while made_progress and builder.layout.rooms.size() < room_target:
+		made_progress = false
+		for source in builder.layout.rooms:
+			if builder.layout.rooms.size() >= room_target:
+				break
+			var source_id: StringName = source.id
+			var source_coordinate: Vector2i = source.coordinate
+			var source_room_type: StringName = source.room_type
+			if source_room_type != DungeonGraph.ROOM_COMBAT or source_coordinate.y < 3 or source_coordinate.y >= boss_depth:
 				continue
-			var side_coordinate: Vector2i = source_coordinate + _exit_offset(side_socket_id)
-			if builder.room_ids_by_coordinate.has(side_coordinate):
-				continue
-			var branch_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_TREASURE, 1)
-			builder.link(source_id, side_socket_id, branch_id, &"", ROUTE_OPTIONAL_TREASURE)
-			break
+			for side_socket_id: StringName in [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
+				var connection_key := "%s:%s" % [source_id, side_socket_id]
+				if builder.connection_keys.has(connection_key):
+					continue
+				var side_coordinate: Vector2i = source_coordinate + _exit_offset(side_socket_id)
+				if builder.room_ids_by_coordinate.has(side_coordinate):
+					continue
+				var is_dig := side_socket_id == DungeonGraph.BOTTOM_LEFT or side_socket_id == DungeonGraph.BOTTOM_RIGHT
+				var branch_id := builder.add_room(side_coordinate, DungeonGraph.ROOM_TREASURE, 1)
+				builder.link(source_id, side_socket_id, branch_id, &"", ROUTE_DIG if is_dig else ROUTE_OPTIONAL_TREASURE, true, true)
+				made_progress = true
+				break
 
 
 static func validate(layout, completed_runs: int = 1, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &"") -> Array[String]:
@@ -628,6 +648,50 @@ static func _special_side_requirement(
 	if alternate_requirements.is_empty() or generator_rng.randf() >= 0.50:
 		return &"puzzle_b"
 	return alternate_requirements[generator_rng.randi_range(0, alternate_requirements.size() - 1)]
+
+
+static func _hub_degree(generator_rng: RandomNumberGenerator) -> int:
+	# Seed-chosen Hub openness: 2 = clean linear opening, 3 = one lower dig,
+	# 4 = both lower dig branches. Four-way is fully supported but no longer a
+	# mandate; the assembler chooses based on the routes it wants to emit.
+	var roll := generator_rng.randf()
+	if roll < 0.34:
+		return 2
+	if roll < 0.72:
+		return 3
+	return 4
+
+
+static func _append_hub_dig_branch(
+	builder: LayoutBuilder,
+	start_id: StringName,
+	side: int,
+	alternate_flames: Array[StringName],
+	starter_flame: StringName
+) -> void:
+	# side -1 is the lower-left dig corridor (BOTTOM_LEFT sockets, ends at a
+	# single-chest Treasure); side +1 is the lower-right corridor (BOTTOM_RIGHT
+	# sockets, ends at a flame Rest). Both are scoutable: their entrance is open
+	# immediately, but engagement still commits the player on the first hit.
+	if side <= 0:
+		var socket_id := DungeonGraph.BOTTOM_LEFT
+		var route_role: StringName = ROUTE_DIG
+		var depth_one := builder.add_room(Vector2i(-1, -1), DungeonGraph.ROOM_COMBAT)
+		var depth_two := builder.add_room(Vector2i(-2, -2), DungeonGraph.ROOM_COMBAT)
+		var depth_three := builder.add_room(Vector2i(-3, -3), DungeonGraph.ROOM_TREASURE, 1)
+		builder.link(start_id, socket_id, depth_one, &"", route_role, false, true)
+		builder.link(depth_one, socket_id, depth_two, &"", route_role, false, true)
+		builder.link(depth_two, socket_id, depth_three, &"", route_role, false, true)
+		return
+	var socket_id := DungeonGraph.BOTTOM_RIGHT
+	var route_role: StringName = ROUTE_OPTIONAL_TREASURE
+	var depth_one := builder.add_room(Vector2i(1, -1), DungeonGraph.ROOM_TREASURE, 1)
+	var depth_two := builder.add_room(Vector2i(2, -2), DungeonGraph.ROOM_COMBAT)
+	var utility_flame := alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
+	var depth_three := builder.add_room(Vector2i(3, -3), DungeonGraph.ROOM_REST, 0, &"", utility_flame)
+	builder.link(start_id, socket_id, depth_one, &"", route_role, false, true)
+	builder.link(depth_one, socket_id, depth_two, &"", route_role, false, true)
+	builder.link(depth_two, socket_id, depth_three, &"", route_role, false, true)
 
 
 static func _add_fusion_prerequisite_orb(
