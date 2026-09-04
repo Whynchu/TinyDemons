@@ -1,6 +1,7 @@
 # Procedural Dungeon Design — Generated Run 3+
 
-Status: Proposed direction; awaiting review before implementation
+Status: Implemented in part — flat difficulty, RNG Hub degree, wandering critical
+path, and free boss lateral position are live; loops/shortcuts remain open.
 Design authority: this document
 Related: [`run1-dungeon-map-design.md`](run1-dungeon-map-design.md), [`run1-dungeon-map-implementation-plan.md`](run1-dungeon-map-implementation-plan.md), [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md), [`gear-system-rework.md`](gear-system-rework.md)
 
