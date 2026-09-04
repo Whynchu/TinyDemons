@@ -35,7 +35,7 @@ const RARITY_PLAYER_STAT_RATES := {
 }
 const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
-const SELL_RATE := 0.35
+const SELL_RATE := 0.25
 
 const PLAIN_GEAR_DROP_WEIGHT := 6.0
 const BASIC_GEAR_DROP_WEIGHT := 5.0
@@ -971,6 +971,14 @@ func overflow_salvage_value(item: ItemInstance) -> int:
 
 func sell_value(item: ItemInstance) -> int:
 	return maxi(1, roundi(price(item) * SELL_RATE))
+
+
+func sell_soul_value(item: ItemInstance) -> int:
+	if item == null or item.fusion_count <= 0:
+		return 0
+	# Return only a portion of fusion investment so selling cannot create a
+	# positive-soul loop, while still recognizing heavily fused gear.
+	return maxi(1, roundi(float(item.fusion_count) * 0.25))
 
 
 func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:

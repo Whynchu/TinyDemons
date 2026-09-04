@@ -204,22 +204,24 @@ func purchase_item(item: ItemInstance, cost: int) -> bool:
 	return true
 
 
-func sell_item(instance_id: String, catalog: ItemCatalog = null) -> int:
+func sell_item(instance_id: String, catalog: ItemCatalog = null) -> Dictionary:
 	var item := find_item(instance_id)
 	if item == null:
-		return 0
+		return {}
 	var items := catalog if catalog != null else ItemCatalog.new()
 	var slot := items.definition_slot(item.definition_id)
 	if get_equipped_instance_id(slot) == instance_id:
-		return 0
+		return {}
 	var value: int = items.sell_value(item)
+	var soul_value: int = items.sell_soul_value(item)
 	for index in inventory.size():
 		if str(inventory[index].get("instance_id", "")) != instance_id:
 			continue
 		inventory.remove_at(index)
 		gold += value
-		return value
-	return 0
+		souls += soul_value
+		return {"gold": value, "souls": soul_value}
+	return {}
 
 
 func demon_cloak_price() -> int:
