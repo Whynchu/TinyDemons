@@ -238,6 +238,8 @@ prompt for the newly selected item.
 The Shop uses a dedicated command state and cursor, matching the nested Equipment
 flow: BUY/SELL must be confirmed before the corresponding item list receives
 focus. SELL confirmation explicitly asks `ARE YOU SURE? CONFIRM / BACK`.
+The transaction button is docked at the bottom of the detail panel, while the
+BUY/SELL controls remain a separate command layer above the list.
 | World-drop physics | launch +-18/-30, air 0.38, gravity 92, pickup 10, push 18 | `gameplay.gd:116-150` |
 | Slime detour radii / slide | [12, 18, 24], detour 0.42, repath 0.10-0.18, slide x0.72 | `gameplay.gd:1773-1813` |
 | Run-metric color thresholds | 0.95 / 0.85 / 0.70 / 0.50 | `gameplay.gd:666-674` |
