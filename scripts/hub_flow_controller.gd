@@ -675,6 +675,29 @@ func hub_item_action(root: Object) -> void:
 		root.screen_state_controller.refresh_equipment_menu(root)
 		return
 	elif root.screen_state_controller.hub_page == 2:
+		if root.screen_state_controller.hub_shop_sell_mode:
+			var sellable: Array[ItemInstance] = []
+			var catalog := ItemCatalog.new()
+			for data: Dictionary in root.player_profile.inventory:
+				var owned := ItemInstance.from_dictionary(data)
+				if root.player_profile.get_equipped_instance_id(catalog.definition_slot(owned.definition_id)) != owned.instance_id:
+					sellable.append(owned)
+			if sellable.is_empty():
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+				return
+			var sell_index := clampi(root.screen_state_controller.hub_item_index, 0, sellable.size() - 1)
+			var selected_sell := sellable[sell_index]
+			if not root.screen_state_controller.hub_shop_sell_confirm_pending:
+				root.screen_state_controller.hub_shop_sell_confirm_pending = true
+				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+				return
+			if sell_profile_item(root, selected_sell.instance_id):
+				root.screen_state_controller.hub_shop_sell_confirm_pending = false
+				root.screen_state_controller.hub_item_index = clampi(sell_index, 0, maxi(sellable.size() - 2, 0))
+				root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+			else:
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			return
 		if root.run_state == null or root.run_state.shop_stock.is_empty():
 			# Shop can be opened before its stock is generated. Confirming an empty
 			# shop has no transaction to perform.

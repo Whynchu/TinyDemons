@@ -225,6 +225,10 @@ exposed or indexed. Candidates to export into the tuning resources:
 | Run-clear reward | `45 + score*3 + variety*8`; drop `0.30 + score*0.0065` clamp [0.30,0.95] | `gameplay.gd:618-622` |
  | XP formula | `2 + 2*lvl^0.85`, x1.15/x0.72, clamp [0.30, 2], global x2 | `combat_runtime_controller.gd:xp_reward_for_slime` |
 | Gear sale | 25% of `ItemCatalog.price()` plus 25% of recorded fusion steps as Souls | `item_catalog.gd`, `player_profile.gd` |
+
+Shop selling is nested under the Shop page: left/right switches BUY and SELL,
+SELL lists unequipped gear only, and the selected sale requires a second confirm
+press. BACK cancels a pending sale or returns from SELL to BUY.
 | World-drop physics | launch +-18/-30, air 0.38, gravity 92, pickup 10, push 18 | `gameplay.gd:116-150` |
 | Slime detour radii / slide | [12, 18, 24], detour 0.42, repath 0.10-0.18, slide x0.72 | `gameplay.gd:1773-1813` |
 | Run-metric color thresholds | 0.95 / 0.85 / 0.70 / 0.50 | `gameplay.gd:666-674` |

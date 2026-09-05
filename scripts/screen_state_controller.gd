@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.61"
+const GAME_VERSION := "0.1.62"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -141,6 +141,8 @@ var hub_root_page: Control = null
 var hub_page_roots: Dictionary = {}
 var hub_item_index := 0
 var hub_list_scroll := 0.0
+var hub_shop_sell_mode := false
+var hub_shop_sell_confirm_pending := false
 var hub_choice_scroll := 0.0
 var hub_list_cursor: Sprite2D = null
 var hub_slot_cursor: Sprite2D = null
@@ -2879,12 +2881,23 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		count = profile.inventory.size()
 		if count > 0: item = ItemInstance.from_dictionary(profile.inventory[clampi(index, 0, count - 1)])
 	elif page == 2:
-		var run_state := root.get("run_state") as RunState
-		if run_state != null:
-			run_state.ensure_shop_stock(profile); count = run_state.shop_stock.size()
+		if hub_shop_sell_mode:
+			var sellable: Array[ItemInstance] = []
+			for data: Dictionary in profile.inventory:
+				var owned := ItemInstance.from_dictionary(data)
+				if profile.get_equipped_instance_id(catalog.definition_slot(owned.definition_id)) != owned.instance_id:
+					sellable.append(owned)
+			count = sellable.size()
 			if count > 0:
-				var entry: Dictionary = run_state.shop_stock[clampi(index, 0, count - 1)]
-				item = ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary); price = int(entry.get("price", 0)); sold = bool(entry.get("sold", false))
+				item = sellable[clampi(index, 0, count - 1)]
+				price = catalog.sell_value(item)
+		else:
+			var run_state := root.get("run_state") as RunState
+			if run_state != null:
+				run_state.ensure_shop_stock(profile); count = run_state.shop_stock.size()
+				if count > 0:
+					var entry: Dictionary = run_state.shop_stock[clampi(index, 0, count - 1)]
+					item = ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary); price = int(entry.get("price", 0)); sold = bool(entry.get("sold", false))
 	else:
 		var fusion_items := root.call("_hub_fusion_candidates") as Array[ItemInstance]
 		count = fusion_items.size()
@@ -2920,9 +2933,18 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if page == 1:
 			row_item = ItemInstance.from_dictionary(profile.inventory[source_index])
 		elif page == 2:
-			var row_state := root.get("run_state") as RunState
-			var row_entry: Dictionary = row_state.shop_stock[source_index]
-			row_item = ItemInstance.from_dictionary(row_entry.get("item", {}) as Dictionary); row_sold = bool(row_entry.get("sold", false)); row_price = int(row_entry.get("price", 0))
+			if hub_shop_sell_mode:
+				var sellable_rows: Array[ItemInstance] = []
+				for data: Dictionary in profile.inventory:
+					var owned_row := ItemInstance.from_dictionary(data)
+					if profile.get_equipped_instance_id(catalog.definition_slot(owned_row.definition_id)) != owned_row.instance_id:
+						sellable_rows.append(owned_row)
+				row_item = sellable_rows[source_index]
+				row_price = catalog.sell_value(row_item)
+			else:
+				var row_state := root.get("run_state") as RunState
+				var row_entry: Dictionary = row_state.shop_stock[source_index]
+				row_item = ItemInstance.from_dictionary(row_entry.get("item", {}) as Dictionary); row_sold = bool(row_entry.get("sold", false)); row_price = int(row_entry.get("price", 0))
 		else:
 			var fusion_items := root.call("_hub_fusion_candidates") as Array[ItemInstance]
 			if source_index >= fusion_items.size():
@@ -2942,7 +2964,8 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		var row_color := highlight_color if source_index == selected else Color8(120, 120, 130) if row_sold else catalog.rarity_color(row_item.rarity)
 		item_list[row].texture = pixel_texture.call(row_label, row_color) as Texture2D
 		if page == 2 and row < shop_prices.size():
-			shop_prices[row].texture = pixel_texture.call("SOLD" if row_sold else "%dG" % row_price, highlight_color if source_index == selected else Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
+			var sell_text := "%dG + %dS" % [row_price, catalog.sell_soul_value(row_item)] if hub_shop_sell_mode else ("SOLD" if row_sold else "%dG" % row_price)
+			shop_prices[row].texture = pixel_texture.call(sell_text, highlight_color if source_index == selected else Color8(120, 120, 130) if row_sold else Color8(255, 205, 117)) as Texture2D
 	# The hand cursor marks the selected row and moves with the scrolled content.
 	if hub_list_cursor != null:
 		var selected_visible_slot := selected - window_start
@@ -3026,6 +3049,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 				preview_stats[row_index].visible = false
 	else:
 		var item_info: Array[String] = []
+		if page == 2 and hub_shop_sell_mode:
+			item_info.append("SELL FOR %dG + %dS" % [catalog.sell_value(item), catalog.sell_soul_value(item)])
+			if hub_shop_sell_confirm_pending:
+				item_info.append("CONFIRM SELL  BACK CANCEL")
 		var random_text := catalog.random_stat_text(item)
 		if not random_text.is_empty(): item_info.append(random_text)
 		var player_rate_text := catalog.player_stat_rate_text(item)
@@ -3037,7 +3064,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		var item_detail_lines := catalog.effect_display_lines(item)
 		item_detail_lines.append_array(_wrap_gear_text(catalog.player_description(item), HUB_ITEM_TEXT_WRAP_LENGTH))
 		_set_gear_detail_lines(details, pixel_texture, item_detail_lines, Color8(210, 220, 235))
-	action.disabled = sold or (page == 2 and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.souls < profile.fusion_batch_cost(item, fusion_count))))
+	action.disabled = (hub_shop_sell_mode and equipped) or (not hub_shop_sell_mode and sold) or (page == 2 and not hub_shop_sell_mode and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.souls < profile.fusion_batch_cost(item, fusion_count))))
 	if hub_fusion_decrease_button != null:
 		hub_fusion_decrease_button.disabled = page != 3 or not can_fuse or fusion_count <= 1
 		set_archetype_button_state(hub_fusion_decrease_button, not hub_fusion_decrease_button.disabled, highlight_color)
@@ -3045,7 +3072,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		hub_fusion_increase_button.disabled = page != 3 or not can_fuse or fusion_count >= material_count
 		set_archetype_button_state(hub_fusion_increase_button, not hub_fusion_increase_button.disabled, highlight_color)
 	var label := action.get_child(0) as Sprite2D
-	if label != null: label.texture = pixel_texture.call("BUY" if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
+	if label != null: label.texture = pixel_texture.call(("SELL" if hub_shop_sell_mode else "BUY") if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
 	set_archetype_button_state(action, true, highlight_color)
 	_set_menu_button_icon(action, MENU_CIRCLE_TEXTURE, _menu_uses_face_art(root) and not action.disabled)
 
@@ -3418,6 +3445,17 @@ func update_hub_input(root: Object) -> void:
 		scroll_hub_content(root, touch_scroll)
 		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	if bool(root.call("_is_menu_back_just_pressed")):
+		if page == HUB_PAGE_SHOP and hub_shop_sell_confirm_pending:
+			hub_shop_sell_confirm_pending = false
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			return
+		if page == HUB_PAGE_SHOP and hub_shop_sell_mode:
+			hub_shop_sell_mode = false
+			hub_shop_sell_confirm_pending = false
+			hub_item_index = 0
+			hub_list_scroll = 0.0
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			return
 		if page == HUB_PAGE_EQUIPMENT and hub_equipment_mode == EquipmentMenuLayout.MODE_REMOVE_ALL_CONFIRM:
 			root.call("_cancel_hub_remove_all")
 		elif page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
@@ -3554,6 +3592,13 @@ func update_hub_input(root: Object) -> void:
 			# Slot confirm descends into the candidate item menu. The candidate
 			# confirm is handled by the separate browsing branch above.
 			root.call("_select_hub_gear_slot", hub_item_index)
+		return
+	if page == HUB_PAGE_SHOP and (bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right"))):
+		hub_shop_sell_mode = not hub_shop_sell_mode
+		hub_shop_sell_confirm_pending = false
+		hub_item_index = 0
+		hub_list_scroll = 0.0
+		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
@@ -4527,6 +4572,8 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 	else:
 		var visible := maxi(hub_item_list_texts.size(), 1)
 		hub_list_scroll = clampf(hub_list_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - visible)))
+		if hub_page == HUB_PAGE_SHOP:
+			hub_shop_sell_confirm_pending = false
 
 
 func _hub_active_list_count(root: Object) -> int:
