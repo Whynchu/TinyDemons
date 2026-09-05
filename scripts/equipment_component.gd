@@ -86,10 +86,16 @@ func configure_preview_from_profile(profile: PlayerProfile, catalog: ItemCatalog
 	if profile == null:
 		return
 	var canonical_override := ItemCatalog.canonical_slot(override_slot)
+	var preview_locks_head := canonical_override == &"body" and override_item != null and override_item.definition_id == &"demon_cloak"
 	for slot: StringName in ItemCatalog.SLOTS:
 		var instance: ItemInstance
 		if slot == canonical_override:
 			instance = override_item
+		elif slot == &"head" and preview_locks_head:
+			# Demon Cloak occupies Body and Head together. Mirror PlayerProfile's
+			# equip rule in the temporary menu read model so its stat comparison does
+			# not incorrectly retain the equipped helm.
+			instance = null
 		else:
 			var instance_id := profile.get_equipped_instance_id(slot)
 			instance = profile.find_item(instance_id)

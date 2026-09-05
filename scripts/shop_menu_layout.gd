@@ -39,6 +39,14 @@ const SOUL_VISUALS_SCRIPT = preload("res://scripts/soul_visuals.gd")
 const GOLD_TEXTURE: Texture2D = preload("res://assets/artwork/GoldFresh2.png")
 const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
+const SLOT_ICONS := {
+	&"weapon": preload("res://assets/artwork/WEAPON5x5.png"),
+	&"head": preload("res://assets/artwork/HEAD5x5.png"),
+	&"body": preload("res://assets/artwork/BODY5x5.png"),
+	&"arm": preload("res://assets/artwork/HAND5x5.png"),
+	&"shield": preload("res://assets/artwork/SHIELD5x5.png"),
+	&"accessory": preload("res://assets/artwork/ACCESSORY5x5.png"),
+}
 
 signal mode_pressed(index: int)
 signal item_pressed(index: int)
@@ -79,6 +87,7 @@ var _responsive_buttons: Array[Button] = []
 var _responsive_sprites: Array[Sprite2D] = []
 
 var item_texts: Array[Sprite2D] = []
+var item_icons: Array[Sprite2D] = []
 var price_texts: Array[Sprite2D] = []
 var sell_row_gold_icons: Array[Sprite2D] = []
 var sell_row_soul_amounts: Array[Sprite2D] = []
@@ -133,6 +142,7 @@ func _cache_nodes() -> void:
 	for index in VISIBLE_ROWS:
 		var item_button := get_node_or_null("ListClip/ItemButton%d" % index) as Button
 		var item_text := get_node_or_null("ListClip/ItemText%d" % index) as Sprite2D
+		var item_icon := get_node_or_null("ListClip/ItemIcon%d" % index) as Sprite2D
 		var price_text := get_node_or_null("ListClip/PriceText%d" % index) as Sprite2D
 		var sell_gold_icon := get_node_or_null("ListClip/SellRowGoldIcon%d" % index) as Sprite2D
 		var sell_soul_amount := get_node_or_null("ListClip/SellRowSoulAmount%d" % index) as Sprite2D
@@ -141,6 +151,8 @@ func _cache_nodes() -> void:
 			item_buttons.append(item_button)
 		if item_text != null:
 			item_texts.append(item_text)
+		if item_icon != null:
+			item_icons.append(item_icon)
 		if price_text != null:
 			price_texts.append(price_text)
 		if sell_gold_icon != null:
@@ -171,6 +183,7 @@ func _cache_nodes() -> void:
 		if sprite != null:
 			_responsive_sprites.append(sprite)
 	_responsive_sprites.append_array(item_texts)
+	_responsive_sprites.append_array(item_icons)
 	_responsive_sprites.append_array(price_texts)
 	_responsive_sprites.append_array(sell_row_gold_icons)
 	_responsive_sprites.append_array(sell_row_soul_amounts)
@@ -458,7 +471,7 @@ func render_cursors(state: int, sell_mode: bool, selected_row: int, row_count: i
 	_position_cursor(amount_cursor, amount_target, nested_focus and state == SELL_AMOUNT and sell_mode, nested_focus and state == SELL_AMOUNT and sell_mode, preserve_motion)
 
 
-func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Array, row_colors: Array, row_prices: Array, row_soul_values: Array, stat_comparison: Array, owned_count: int, quantity: int, max_quantity: int, pixel_texture: Callable, scroll_fraction: float = 0.0, preserve_motion := false) -> void:
+func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Array, row_colors: Array, row_prices: Array, row_soul_values: Array, row_slots: Array, stat_comparison: Array, owned_count: int, quantity: int, max_quantity: int, pixel_texture: Callable, scroll_fraction: float = 0.0, preserve_motion := false) -> void:
 	_cache_nodes()
 	if pixel_texture.is_valid():
 		_pixel_texture = pixel_texture
@@ -484,15 +497,20 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 		# still uses state to decide which cursor is active.
 		_set_button_active(mode_button, true, true)
 
-	# BUY includes the rarity grade. SELL intentionally omits it, matching the
-	# authored sell reference and leaving more room for the owned item name.
-	var item_x := 21.0 if sell_mode else 27.0
+	var icon_x := 21.0
+	var item_x := 28.0
 	for index in item_texts.size():
 		var label := str(row_labels[index]) if index < row_labels.size() else ""
 		var color := row_colors[index] as Color if index < row_colors.size() else MUTED_TEXT_COLOR
-		_set_native_position(item_texts[index], Vector2(item_x, 5.0 + index * ITEM_ROW_PITCH))
+		var row_y := 5.0 + index * ITEM_ROW_PITCH
+		_set_native_position(item_texts[index], Vector2(item_x, row_y))
 		_set_text(item_texts[index], label, color)
 		var has_label := not label.is_empty()
+		if index < item_icons.size():
+			var slot := StringName(row_slots[index]) if index < row_slots.size() else &""
+			item_icons[index].texture = SLOT_ICONS.get(slot)
+			_set_native_position(item_icons[index], Vector2(icon_x, row_y))
+			item_icons[index].visible = has_label and item_icons[index].texture != null
 		if index < item_buttons.size():
 			# A visible row is a direct touch route into item browse, even from the
 			# mode selector or sell amount view. It never auto-confirms a sale.
@@ -648,7 +666,8 @@ func _apply_editor_preview() -> void:
 		prices = ["190", "190", "210", "143", "153", "188", "178", "187"]
 	var preview_quantity := clampi(editor_preview_quantity, 1, 9)
 	var soul_values: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0]
-	render_shop(state, editor_preview_sell, row, labels, colors, prices, soul_values, _editor_stat_data(), 1, preview_quantity, 3, _pixel_texture)
+	var row_slots: Array[StringName] = [&"head", &"head", &"body", &"body", &"arm", &"shield", &"accessory", &"weapon"]
+	render_shop(state, editor_preview_sell, row, labels, colors, prices, soul_values, row_slots, _editor_stat_data(), 1, preview_quantity, 3, _pixel_texture)
 	_pixel_texture = previous_texture
 	renderer.free()
 
