@@ -37,6 +37,10 @@ func _initialize() -> void:
 		"slime_spawn": "SlimeSpawn.wav",
 		"slime_move": "SlimeMove.wav",
 	}
+	var expected_combat_clips := {
+		"crit": "Crit.wav",
+		"imbue_impact": "IMBUEimpact.wav",
+	}
 	for sound_name in expected_menu_clips:
 		var expected_filename: String = String(expected_menu_clips[sound_name])
 		var clip_path: String = String(SoundManager.CLIPS.get(sound_name, ""))
@@ -46,6 +50,17 @@ func _initialize() -> void:
 		manager.play(sound_name)
 		var player := manager.get_node_or_null("SFX_%s" % sound_name) as AudioStreamPlayer
 		_expect(player != null and player.stream != null, "%s loads its selfmade stream" % sound_name, failures)
+		if profile != null and profile.has_method("get") and profile.get("%s_db" % sound_name) != null:
+			_expect(player != null and is_equal_approx(player.volume_db, float(profile.get("%s_db" % sound_name))), "%s uses the editor profile level" % sound_name, failures)
+	for sound_name in expected_combat_clips:
+		var expected_filename: String = String(expected_combat_clips[sound_name])
+		var clip_path: String = String(SoundManager.CLIPS.get(sound_name, ""))
+		_expect(clip_path.ends_with(expected_filename), "%s routes to %s" % [sound_name, expected_filename], failures)
+		_expect(clip_path.contains("Selfmade FX/"), "%s routes through the selfmade set" % sound_name, failures)
+		manager.play_with_perlin_pitch(sound_name, 0.0, 1.0, 0.03)
+		var player := manager.get_node_or_null("SFX_%s" % sound_name) as AudioStreamPlayer
+		_expect(player != null and player.stream != null, "%s loads its stream" % sound_name, failures)
+		_expect(player != null and player.pitch_scale >= 0.97 and player.pitch_scale <= 1.03, "%s uses bounded Perlin pitch variation" % sound_name, failures)
 		if profile != null and profile.has_method("get") and profile.get("%s_db" % sound_name) != null:
 			_expect(player != null and is_equal_approx(player.volume_db, float(profile.get("%s_db" % sound_name))), "%s uses the editor profile level" % sound_name, failures)
 	manager.free()

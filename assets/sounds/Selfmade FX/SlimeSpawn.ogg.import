@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://bku6ln1liou28"
+path="res://.godot/imported/SlimeSpawn.ogg-ba035b170d43c34ce205e72129b86c80.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/SlimeSpawn.ogg"
+dest_files=["res://.godot/imported/SlimeSpawn.ogg-ba035b170d43c34ce205e72129b86c80.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

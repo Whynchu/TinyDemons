@@ -55,6 +55,99 @@ var clear_summary: Dictionary = {}
 var gear_reward_telemetry: Array[Dictionary] = []
 
 
+func to_dictionary() -> Dictionary:
+	return {
+		"run_id": run_id, "dungeon_seed": dungeon_seed, "active": active,
+		"settled": settled, "result": String(result), "shop_stock": shop_stock.duplicate(true),
+		"difficulty_bonus": difficulty_bonus, "timer_started": timer_started,
+		"elapsed_time": elapsed_time, "starting_health": starting_health,
+		"damage_taken": damage_taken, "movement_time": movement_time,
+		"combat_time": combat_time, "combat_movement_time": combat_movement_time,
+		"attack_count": attack_count, "attack2_count": attack2_count,
+		"attack_hit_count": attack_hit_count, "attack2_hit_count": attack2_hit_count,
+		"attack_swing_hit_count": attack_swing_hit_count, "roll_count": roll_count,
+		"block_count": block_count, "chests_opened": chests_opened,
+		"encountered_enemy_count": encountered_enemy_count, "enemies_killed": enemies_killed,
+		"total_enemies": total_enemies, "registered_enemy_rooms": registered_enemy_rooms.duplicate(true),
+		"enemy_attack_attempts": enemy_attack_attempts, "dodge_count": dodge_count,
+		"attack_input_count": attack_input_count, "roll_input_count": roll_input_count,
+		"wasted_attack_inputs": wasted_attack_inputs, "wasted_roll_inputs": wasted_roll_inputs,
+		"map_discovered_rooms": map_discovered_rooms.duplicate(true), "map_room_count": map_room_count,
+		"completed_run_rooms": completed_run_rooms.duplicate(true), "run_room_count": run_room_count,
+		"style_actions": style_actions.duplicate(true), "max_combo_count": max_combo_count,
+		"combo_hit_count": combo_hit_count, "clear_summary": clear_summary.duplicate(true),
+		"gear_reward_telemetry": gear_reward_telemetry.duplicate(true),
+	}
+
+
+func restore_from_dictionary(data: Dictionary) -> bool:
+	if str(data.get("run_id", "")).is_empty() or not bool(data.get("active", false)):
+		return false
+	run_id = str(data.get("run_id", ""))
+	dungeon_seed = int(data.get("dungeon_seed", 0))
+	active = true
+	settled = bool(data.get("settled", false))
+	result = StringName(str(data.get("result", "")))
+	shop_stock = _dictionary_array(data.get("shop_stock", []))
+	difficulty_bonus = maxi(int(data.get("difficulty_bonus", 0)), 0)
+	timer_started = bool(data.get("timer_started", false))
+	elapsed_time = maxf(float(data.get("elapsed_time", 0.0)), 0.0)
+	starting_health = maxf(float(data.get("starting_health", 1.0)), 1.0)
+	damage_taken = maxf(float(data.get("damage_taken", 0.0)), 0.0)
+	movement_time = maxf(float(data.get("movement_time", 0.0)), 0.0)
+	combat_time = maxf(float(data.get("combat_time", 0.0)), 0.0)
+	combat_movement_time = maxf(float(data.get("combat_movement_time", 0.0)), 0.0)
+	attack_count = maxi(int(data.get("attack_count", 0)), 0)
+	attack2_count = maxi(int(data.get("attack2_count", 0)), 0)
+	attack_hit_count = maxi(int(data.get("attack_hit_count", 0)), 0)
+	attack2_hit_count = maxi(int(data.get("attack2_hit_count", 0)), 0)
+	attack_swing_hit_count = maxi(int(data.get("attack_swing_hit_count", 0)), 0)
+	roll_count = maxi(int(data.get("roll_count", 0)), 0)
+	block_count = maxi(int(data.get("block_count", 0)), 0)
+	chests_opened = maxi(int(data.get("chests_opened", 0)), 0)
+	encountered_enemy_count = maxi(int(data.get("encountered_enemy_count", 0)), 0)
+	enemies_killed = maxi(int(data.get("enemies_killed", 0)), 0)
+	total_enemies = maxi(int(data.get("total_enemies", 0)), enemies_killed)
+	registered_enemy_rooms = _string_name_dictionary(data.get("registered_enemy_rooms", {}))
+	enemy_attack_attempts = maxi(int(data.get("enemy_attack_attempts", 0)), 0)
+	dodge_count = maxi(int(data.get("dodge_count", 0)), 0)
+	attack_input_count = maxi(int(data.get("attack_input_count", 0)), 0)
+	roll_input_count = maxi(int(data.get("roll_input_count", 0)), 0)
+	wasted_attack_inputs = maxi(int(data.get("wasted_attack_inputs", 0)), 0)
+	wasted_roll_inputs = maxi(int(data.get("wasted_roll_inputs", 0)), 0)
+	map_discovered_rooms = _string_name_dictionary(data.get("map_discovered_rooms", {}))
+	map_room_count = maxi(int(data.get("map_room_count", 0)), map_discovered_rooms.size())
+	completed_run_rooms = _string_name_dictionary(data.get("completed_run_rooms", {}))
+	run_room_count = maxi(int(data.get("run_room_count", 0)), completed_run_rooms.size())
+	style_actions = _string_name_dictionary(data.get("style_actions", {}))
+	max_combo_count = maxi(int(data.get("max_combo_count", 0)), 0)
+	combo_hit_count = maxi(int(data.get("combo_hit_count", 0)), 0)
+	clear_summary = _dictionary(data.get("clear_summary", {}))
+	gear_reward_telemetry = _dictionary_array(data.get("gear_reward_telemetry", []))
+	return not settled
+
+
+static func _dictionary(value: Variant) -> Dictionary:
+	return value.duplicate(true) if value is Dictionary else {}
+
+
+static func _string_name_dictionary(value: Variant) -> Dictionary:
+	var result := {}
+	if value is Dictionary:
+		for key in (value as Dictionary).keys():
+			result[StringName(str(key))] = (value as Dictionary)[key]
+	return result
+
+
+static func _dictionary_array(value: Variant) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if value is Array:
+		for entry in value:
+			if entry is Dictionary:
+				result.append(entry.duplicate(true))
+	return result
+
+
 func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: float = 1.0) -> void:
 	dungeon_seed = generation_seed
 	run_id = "%d-%d" % [Time.get_unix_time_from_system(), generation_seed]

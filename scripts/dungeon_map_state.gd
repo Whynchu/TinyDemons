@@ -224,3 +224,47 @@ func to_dictionary() -> Dictionary:
 		"shared_orb_element": shared_orb_element,
 		"orb_change_count": orb_change_count,
 	}
+
+
+func restore_from_dictionary(data: Dictionary) -> bool:
+	if data.is_empty():
+		return false
+	var next_active := StringName(str(data.get("active_puzzle_color", MAP_COLOR_NEUTRAL)))
+	var next_shared := StringName(str(data.get("shared_orb_puzzle_color", MAP_COLOR_NEUTRAL)))
+	if next_active not in VALID_COLORS or next_shared not in VALID_COLORS:
+		return false
+	var next_palette := str(data.get("shared_orb_palette", DEFAULT_ORB_PALETTE)).to_lower()
+	if next_palette == "gray":
+		next_palette = DEFAULT_ORB_PALETTE
+	if next_palette not in PaletteLibrary.PALETTE_NAMES:
+		return false
+	var next_element := StringName(str(data.get("shared_orb_element", "")))
+	if not next_element.is_empty() and not ELEMENT_CATALOG_SCRIPT.is_valid_id(next_element):
+		return false
+	active_puzzle_color = next_active
+	shared_orb_puzzle_color = next_shared
+	shared_orb_palette = next_palette
+	current_room_id = StringName(str(data.get("current_room_id", "")))
+	discovered_rooms = _string_name_dictionary(data.get("discovered_rooms", {}))
+	completed_rooms = _string_name_dictionary(data.get("completed_rooms", {}))
+	engaged_rooms = _string_name_dictionary(data.get("engaged_rooms", {}))
+	revealed_connections = _dictionary(data.get("revealed_connections", {}))
+	revealed_events = _string_name_dictionary(data.get("revealed_events", {}))
+	solved_color_connections = _dictionary(data.get("solved_color_connections", {}))
+	solved_element_connections = _dictionary(data.get("solved_element_connections", {}))
+	solved_orb_connections = _dictionary(data.get("solved_orb_connections", {}))
+	shared_orb_element = next_element
+	orb_change_count = maxi(int(data.get("orb_change_count", 0)), 0)
+	return true
+
+
+static func _dictionary(value: Variant) -> Dictionary:
+	return value.duplicate(true) if value is Dictionary else {}
+
+
+static func _string_name_dictionary(value: Variant) -> Dictionary:
+	var result := {}
+	if value is Dictionary:
+		for key in (value as Dictionary).keys():
+			result[StringName(str(key))] = (value as Dictionary)[key]
+	return result

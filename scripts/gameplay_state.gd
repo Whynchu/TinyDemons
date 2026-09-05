@@ -3,6 +3,8 @@ class_name GameplayState
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
+const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
 
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
@@ -119,6 +121,7 @@ var display_controller: DisplayController = null
 var display_world_offset := Vector2.ZERO
 var run_state: RunState = null
 var current_dungeon_seed := 0
+var pending_run_restore := false
 var has_persistent_profile := false
 var player_health_component: HealthComponent = null
 var player_motor: ActorMotor = null
@@ -396,6 +399,9 @@ func _chroma_visual_saturation() -> float:
 func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
 	if sound_manager != null:
 		sound_manager.play(sound_name, volume_db, pitch_scale)
+func _play_sound_with_perlin_pitch(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0, variation: float = 0.03) -> void:
+	if sound_manager != null:
+		sound_manager.play_with_perlin_pitch(sound_name, volume_db, pitch_scale, variation)
 func _is_ui_accept_pressed() -> bool: return input_router != null and input_router.ui_accept_pressed()
 func _is_ui_accept_just_pressed() -> bool: return input_router != null and input_router.ui_accept_just_pressed()
 func _is_ui_cancel_just_pressed() -> bool: return input_router != null and input_router.menu_cancel_just_pressed()
@@ -753,6 +759,36 @@ func _apply_run_rank_grade(grade: String) -> void:
 	run_flow_controller.call("apply_run_rank_grade", self, grade)
 func _begin_new_run() -> void:
 	run_flow_controller.call("begin_new_run", self)
+func _save_active_run_checkpoint() -> bool:
+	if not OS.has_feature("web") or run_state == null or not run_state.active:
+		return false
+	var snapshot := ActiveRunSnapshotScript.create(self)
+	if snapshot.is_empty():
+		return false
+	var saved := bool(ActiveRunSaveServiceScript.save_snapshot(snapshot, ProfileSaveService.current_slot()))
+	if saved:
+		var diagnostics := get_node_or_null("WebRunDiagnostics")
+		if diagnostics != null and diagnostics.has_method("record_checkpoint"):
+			diagnostics.call("record_checkpoint", self)
+	return saved
+func _checkpoint_safe_run_state() -> bool:
+	if not OS.has_feature("web") or run_state == null or not run_state.active or room_transition_locked:
+		return false
+	# Assemble room state before writing the profile and active-run record so
+	# rewards, chest claims, defeated enemies, and drops share one boundary.
+	_save_current_room_state()
+	call("_save_player_profile")
+	return _save_active_run_checkpoint()
+func _on_room_cleared_for_checkpoint(room_id: StringName) -> void:
+	if room_id != current_room_id or room_transition_locked:
+		return
+	_checkpoint_safe_run_state()
+func _clear_active_run_checkpoint() -> void:
+	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
+func _has_active_run_checkpoint() -> bool:
+	return ActiveRunSaveServiceScript.has_valid_snapshot(ProfileSaveService.current_slot())
+func _restore_active_run_checkpoint() -> bool:
+	return bool(run_flow_controller.call("restore_active_run", self, ActiveRunSaveServiceScript.load_snapshot(ProfileSaveService.current_slot())))
 func _return_to_hub() -> void:
 	run_flow_controller.call("return_to_hub", self)
 func _settle_current_run(result: StringName) -> bool:
@@ -829,6 +865,11 @@ func _set_overwrite_prompt(active: bool) -> void:
 	save_flow_controller.call("set_overwrite_prompt", self, active)
 func _cancel_overwrite() -> void:
 	save_flow_controller.call("cancel_overwrite", self)
+func _save_overwrite_no() -> void:
+	if screen_state_controller.save_recovery_prompt_active:
+		save_flow_controller.call("confirm_recovery_discard", self)
+	else:
+		save_flow_controller.call("cancel_overwrite", self)
 func _confirm_overwrite() -> void:
 	save_flow_controller.call("confirm_overwrite", self)
 func _reset_runtime_for_new_save() -> void:
@@ -1075,6 +1116,7 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 		_set_door_active(true)
 		_set_entrance_open(true)
 	call("_save_player_profile")
+	_checkpoint_safe_run_state()
 	_update_soul_indicator()
 	var action_name := "FUSED %s" % String(result_flame).to_upper() if is_fusion else "%s USED" % String(flame).to_upper()
 	_show_fire_exchange_text(action_name, _health_feedback_color(result_palette if not result_palette.is_empty() else target_palette))

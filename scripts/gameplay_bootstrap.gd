@@ -9,6 +9,7 @@ const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/pickup_runtime_c
 const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/run_flow_controller.gd")
 const HUB_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/hub_flow_controller.gd")
 const SAVE_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/save_flow_controller.gd")
+const ACTIVE_RUN_SAVE_SERVICE_SCRIPT = preload("res://scripts/active_run_save_service.gd")
 const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/room_puzzle_controller.gd")
 const MAGIC_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/magic_runtime_controller.gd")
 const TARGETING_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/targeting_runtime_controller.gd")
@@ -82,6 +83,7 @@ func initialize(root: GameplayState) -> void:
 	occlusion.resolution_scale = 1 if OS.has_feature("web") else effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
 	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
 	root.room_controller.room_cleared.connect(Callable(root.dungeon_map_controller, "on_room_completed"))
+	root.room_controller.room_cleared.connect(Callable(root, "_on_room_cleared_for_checkpoint"))
 	root.dungeon_map_controller.connect(&"map_state_changed", Callable(root, "_on_dungeon_map_state_changed"))
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
@@ -180,7 +182,12 @@ func initialize(root: GameplayState) -> void:
 		profile.pending_route = "title"
 		profile.open_hub_on_load = false
 		if has_active_profile: root.call("_save_player_profile")
+		var has_recovery_checkpoint := ACTIVE_RUN_SAVE_SERVICE_SCRIPT.has_valid_snapshot(ProfileSaveService.current_slot())
 		if (route == "hub" or route == "run") and profile.has_started:
+			# A normal browser reload returns to the title screen so Continue can
+			# offer the explicit resume/discard choice. A confirmed Continue flow
+			# persists the "run" route and can enter directly on the next scene.
+			root.pending_run_restore = route == "run" and has_recovery_checkpoint
 			# Enter the room directly (not deferred) so the title screen never
 			# flashes before the hub/run; _enter_starting_room_from_menu hides the
 			# title and fades the loading screen out.

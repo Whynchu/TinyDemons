@@ -1,11 +1,14 @@
 extends "res://scripts/gameplay_state.gd"
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
+const WebRunDiagnosticsScript = preload("res://scripts/web_run_diagnostics.gd")
 func _add_runtime_node(script: Script, node_name: StringName, parent: Node = self) -> Node:
 	var node := script.new() as Node; node.name = node_name; parent.add_child(node); return node
 func _ready() -> void:
 	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self)
 	if OS.has_feature("web"):
+		var diagnostics := _add_runtime_node(WebRunDiagnosticsScript, "WebRunDiagnostics") as WebRunDiagnosticsScript
+		diagnostics.configure(self)
 		var flush_callback := JavaScriptBridge.create_callback(_flush_save_from_js)
 		JavaScriptBridge.eval("window.__tdFlushSave = %s" % flush_callback)
 func _flush_save_from_js(_args: Array) -> void:

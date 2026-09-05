@@ -466,11 +466,14 @@ func refresh_puzzle_torch_puzzle_state(root: Object) -> void:
 	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(root.current_room_id) if root.dungeon_graph != null else null
 	var required_aspect: StringName = StringName(state.get("puzzle_required_flame", puzzle_required_aspect(root, room)))
 	var required_palette: String = puzzle_palette_for_aspect(required_aspect)
+	var was_finished := bool(state.get("finished", false))
 	var solved: bool = puzzle_torches_solved(root, required_palette)
 	state["finished"] = solved
 	root.room_controller.room_states[root.current_room_id] = state
 	set_door_active(root, solved)
 	configure_room_sockets(root, solved)
+	if solved and not was_finished:
+		root.call("_checkpoint_safe_run_state")
 
 
 func activate_puzzle_torch(root: Object, torch: Sprite2D, world_position: Vector2, palette: String, apply_player_reaction: bool = true) -> void:
@@ -510,6 +513,7 @@ func activate_orb_room_orb(root: Object, orb: Sprite2D, world_position: Vector2,
 		root.call("_spawn_magic_impact", world_position, palette)
 		if apply_player_reaction:
 			_apply_entry_orb_player_reaction(root, world_position)
+		root.call("_checkpoint_safe_run_state")
 		return
 	_apply_orb_visual(root, orb, palette)
 	var state: Dictionary = root.room_controller.room_states.get(root.current_room_id, {}) as Dictionary

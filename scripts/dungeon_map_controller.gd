@@ -86,6 +86,13 @@ func has_complete_layout() -> bool:
 	return layout != null
 
 
+func restore_map_state(data: Dictionary) -> bool:
+	if state == null or not state.restore_from_dictionary(data):
+		return false
+	map_state_changed.emit()
+	return true
+
+
 func uses_global_orb_state() -> bool:
 	return layout != null
 

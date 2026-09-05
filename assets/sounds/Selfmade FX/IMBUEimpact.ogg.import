@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://c17fl61q7tk43"
+path="res://.godot/imported/IMBUEimpact.ogg-d2d86c1265354a760f88bbe7203888f2.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/IMBUEimpact.ogg"
+dest_files=["res://.godot/imported/IMBUEimpact.ogg-d2d86c1265354a760f88bbe7203888f2.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://8dovanr4lmk4"
+path="res://.godot/imported/IMBUEimpact.wav-619491ea37f8aec79309716def3c8af4.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/IMBUEimpact.wav"
+dest_files=["res://.godot/imported/IMBUEimpact.wav-619491ea37f8aec79309716def3c8af4.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

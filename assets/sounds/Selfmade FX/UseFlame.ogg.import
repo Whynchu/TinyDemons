@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://q2ryfbrina8w"
+path="res://.godot/imported/UseFlame.ogg-01dd7fd0e3bbd0f00cac1e2dfa1eb29f.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/UseFlame.ogg"
+dest_files=["res://.godot/imported/UseFlame.ogg-01dd7fd0e3bbd0f00cac1e2dfa1eb29f.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

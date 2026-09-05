@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://ddpvpbw1oe5k6"
+path="res://.godot/imported/Confirm.ogg-c290e3942723d9d1bb39f1269956d839.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Reverb/Confirm.ogg"
+dest_files=["res://.godot/imported/Confirm.ogg-c290e3942723d9d1bb39f1269956d839.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

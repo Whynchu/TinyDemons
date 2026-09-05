@@ -42,6 +42,8 @@ var _music_fallback_volume_db := TITLE_MUSIC_VOLUME_DB
 var _music_volume_percent := 100
 var _sfx_volume_percent := 100
 var _settings_service: SettingsService = null
+var _pitch_noise := FastNoiseLite.new()
+var _pitch_noise_cursor := 0.0
 
 
 func configure_settings(settings: SettingsService) -> void:
@@ -97,9 +99,12 @@ func _settings_volume_db(percent: int) -> float:
 
 func _ready() -> void:
 	_ensure_mix_profile()
-	# Load frequently-used menu cues before the first menu transition. Loading
-	# an imported WAV on the exact frame a page opens causes a visible hitch.
-	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "ui_unpause", "slime_spawn", "slime_move"]:
+	# Load frequently-used cues before the first menu transition. Loading an
+	# imported audio file on the exact frame a page opens causes a visible hitch.
+	_pitch_noise.seed = randi()
+	_pitch_noise.noise_type = FastNoiseLite.TYPE_PERLIN
+	_pitch_noise.frequency = 0.35
+	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "ui_unpause", "slime_spawn", "slime_move", "crit", "imbue_impact"]:
 		_player(sound_name)
 
 
@@ -218,6 +223,16 @@ func play(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) 
 	player.volume_db = volume_db + _profile_trim_db(StringName(sound_name)) + _settings_volume_db(_sfx_volume_percent)
 	player.pitch_scale = pitch_scale
 	player.play()
+
+
+## Plays a cue with a small Perlin-noise pitch offset. The noise cursor advances
+## between calls so repeated hits vary without introducing an independent
+## gameplay RNG stream or affecting combat outcomes.
+func play_with_perlin_pitch(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0, variation: float = 0.03) -> void:
+	var noise_value := _pitch_noise.get_noise_1d(_pitch_noise_cursor)
+	_pitch_noise_cursor += 0.73
+	var offset := clampf(noise_value, -1.0, 1.0) * maxf(variation, 0.0)
+	play(sound_name, volume_db, maxf(pitch_scale * (1.0 + offset), 0.01))
 
 
 func chatter(volume_db: float = -12.0) -> void:

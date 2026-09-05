@@ -161,13 +161,15 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
 	var fire_depth := clampi(boss_depth - 6, 6, boss_depth - 5)
 	var first_alternate_fire_depth := -1
-	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame)
+	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame, dungeon_seed)
 	# The chained Ice gate is placed at source depth 10. Its Orb must be a side
 	# room reached from that same depth-10 Water fire room; the old depth-12
 	# placement put the only Ice charge behind its own mandatory gate.
 	var second_orb_depth: int = int(fusion_plan.get("second_orb_depth", boss_depth - 4))
 	var fusion_fire_flames: Dictionary = fusion_plan.get("fire_flames", {}) as Dictionary
 	var fusion_gate_requirements: Dictionary = fusion_plan.get("entrance_orb_requirements", {}) as Dictionary
+	var fusion_gate_types: Dictionary = fusion_plan.get("gate_types", {}) as Dictionary
+	var fusion_gate_colors: Dictionary = fusion_plan.get("gate_colors", {}) as Dictionary
 	var off_route_orbs := _off_route_orb_depths(dungeon_seed, run_index, FIRST_ORB_DEPTH, second_orb_depth, fusion_plan.has("second_orb_depth"))
 	if fire_depth == cloaked_depth:
 		fire_depth = mini(fire_depth + 1, boss_depth - 5)
@@ -214,8 +216,10 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		var forward_requirement := _special_forward_requirement(source_depth, second_special_depth, completed_runs, starter_flame, alternate_flames)
 		var forward_role: StringName = ROUTE_KEY_PROGRESSION if not forward_requirement.is_empty() else ROUTE_MAIN
 		var orb_element_requirement := StringName(fusion_gate_requirements.get(source_depth, ""))
-		var gate_type: StringName = DungeonGraph.GATE_ENTRANCE_ORB if not orb_element_requirement.is_empty() else DungeonGraph.GATE_NONE
-		var connection_color_requirement: StringName = &"" if gate_type == DungeonGraph.GATE_ENTRANCE_ORB else forward_requirement
+		var planned_gate_type: StringName = StringName(fusion_gate_types.get(source_depth, ""))
+		var gate_type: StringName = planned_gate_type if not planned_gate_type.is_empty() else DungeonGraph.GATE_ENTRANCE_ORB if not orb_element_requirement.is_empty() else DungeonGraph.GATE_NONE
+		var planned_gate_color: StringName = StringName(fusion_gate_colors.get(source_depth, ""))
+		var connection_color_requirement: StringName = planned_gate_color if not planned_gate_color.is_empty() else &"" if gate_type == DungeonGraph.GATE_ENTRANCE_ORB else forward_requirement
 		builder.link(current_room_id, main_socket, destination_room_id, connection_color_requirement, forward_role, true, true, &"", gate_type, orb_element_requirement)
 		var detour_type: StringName = &""
 		var detour_flame: StringName = &""
@@ -531,7 +535,7 @@ static func _room_type_for_depth(
 	return DungeonGraph.ROOM_COMBAT
 
 
-static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName) -> Dictionary:
+static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName, dungeon_seed: int = 0) -> Dictionary:
 	# Run 6 is the first run whose critical path asks for a fused element. The
 	# first two fire rooms are deliberately placed before the gate so every
 	# starter choice has a reachable input pair. Later runs teach the two-step
@@ -550,16 +554,40 @@ static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName
 			"entrance_orb_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(result_element)},
 			"results": [result_flame],
 		}
-	# Later runs still teach the complete Water + Electric -> Grass, then
-	# Grass + Water -> Ice chain. Only the final Ice state gates progression.
-	# Nesting a Grass gate around an ingredient needed to recreate Grass made a
-	# later Orb change capable of permanently cutting off the return route.
-	var ice_element := ELEMENT_CATALOG_SCRIPT.element_for_palette("aquamarine")
+	# Later runs provide the ingredients for one valid fusion recipe and let the
+	# dungeon seed choose which result gates the route. The gate never dictates
+	# an unsolvable element: its matching ingredient flames are placed first.
+	var fusion_options: Array[Dictionary] = [
+		{"result": &"normal", "gate_type": DungeonGraph.GATE_PUZZLE_COLOR, "gate_color": &"puzzle_b", "fire_flames": {5: &"fire", 6: &"water"}},
+		{"first": &"fire", "second": &"water", "result": &"shadow"},
+		{"first": &"fire", "second": &"electric", "result": &"ground"},
+		{"first": &"water", "second": &"electric", "result": &"grass"},
+		{"first": &"grass", "second": &"water", "result": &"ice"},
+	]
+	var selected_fusion: Dictionary = fusion_options[posmod(dungeon_seed, fusion_options.size())]
+	if selected_fusion.get("result", &"") == &"normal":
+		return {
+			"fire_flames": selected_fusion["fire_flames"],
+			"gate_types": {10: selected_fusion["gate_type"]},
+			"gate_colors": {10: selected_fusion["gate_color"]},
+			"second_orb_depth": 11,
+			"results": [&"normal"],
+		}
+	var gate_flame: StringName = selected_fusion["result"] as StringName
+	var gate_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(gate_flame))
+	var fusion_fire_flames: Dictionary = {
+		5: selected_fusion["first"] as StringName,
+		6: selected_fusion["second"] as StringName,
+	}
+	if gate_flame == &"ice":
+		# Grass is produced by the first Orb from Water + Electric, then Water is
+		# supplied again for the second fusion at the gate approach.
+		fusion_fire_flames = {5: &"water", 6: &"electric", 10: &"water"}
 	return {
-		"fire_flames": {5: &"water", 6: &"electric", 10: &"water"},
-		"entrance_orb_requirements": {10: ELEMENT_CATALOG_SCRIPT.id(ice_element)},
+		"fire_flames": fusion_fire_flames,
+		"entrance_orb_requirements": {10: ELEMENT_CATALOG_SCRIPT.id(gate_element)},
 		"second_orb_depth": 11,
-		"results": [&"grass", &"ice"],
+		"results": [gate_flame],
 	}
 
 
@@ -881,9 +909,14 @@ static func _add_fusion_prerequisite_orb(
 	source_coordinate: Vector2i,
 	main_socket: StringName
 ) -> void:
+	# The opposite wall is the preferred visual placement, but a generated
+	# route can legitimately occupy that coordinate. Curriculum-critical Orbs
+	# must still get a connected branch, so fall back to lower exits rather than
+	# silently producing a gate with no way to charge it.
 	var candidate_sockets: Array[StringName] = [
 		DungeonGraph.WALL_RIGHT if main_socket == DungeonGraph.WALL_LEFT else DungeonGraph.WALL_LEFT,
-		main_socket,
+		DungeonGraph.BOTTOM_LEFT,
+		DungeonGraph.BOTTOM_RIGHT,
 	]
 	for candidate_socket in candidate_sockets:
 		var connection_key := "%s:%s" % [source_room_id, candidate_socket]

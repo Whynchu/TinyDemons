@@ -29,6 +29,8 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	&"impact_flesh": &"impact_flesh_db",
 	&"encounter": &"encounter_db",
 	&"claw": &"claw_db",
+	&"crit": &"crit_db",
+	&"imbue_impact": &"imbue_impact_db",
 	&"magic_cast": &"magic_cast_db",
 	&"magic_hit": &"magic_hit_db",
 	&"ui_hover": &"ui_hover_db",
@@ -68,6 +70,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 @export_enum(
 	"slime_spawn", "slime_move", "slash", "miss", "flesh", "bite", "block",
 	"flee", "enemy_death", "impact_flesh", "encounter", "claw", "magic_cast",
+	"crit", "imbue_impact",
 	"magic_hit", "ui_hover", "ui_confirm", "ui_decline", "ui_no_input",
 	"ui_denied", "ui_use_item", "ui_equip", "ui_unequip", "ui_buy_sell",
 	"ui_pause", "charge_attack", "use_flame", "ui_unpause", "enemy_alert",
@@ -99,6 +102,8 @@ var play_preview_action: Callable = _play_preview
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var impact_flesh_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var encounter_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var claw_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var crit_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var imbue_impact_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var magic_cast_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var magic_hit_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var enemy_alert_db := 0.0

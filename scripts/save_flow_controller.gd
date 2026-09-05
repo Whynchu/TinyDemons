@@ -2,6 +2,7 @@ extends Node
 class_name SaveFlowController
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
 
 
 func build_title_screen(root: Object) -> void:
@@ -59,7 +60,7 @@ func continue_game(root: Object) -> void:
 
 func open_save_select_after_title_transition(root: Object) -> void:
 	if root.screen_state_controller.save_select_overlay == null:
-		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_cancel_overwrite"), Callable(root, "_save_portrait_texture"), Callable(root, "_close_save_select"))
+		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_save_overwrite_no"), Callable(root, "_save_portrait_texture"), Callable(root, "_close_save_select"))
 	root.screen_state_controller.save_select_index = 0
 	root.screen_state_controller.menu_input_release_lock = true
 	# Keep the opaque title cover behind the save menu so the gameplay scene is
@@ -123,6 +124,7 @@ func select_save_slot(root: Object, slot: int) -> void:
 
 func set_overwrite_prompt(root: Object, active: bool) -> void:
 	root.screen_state_controller.save_overwrite_prompt_active = active
+	root.screen_state_controller.save_recovery_prompt_active = false
 	root.screen_state_controller.save_overwrite_choice = 0
 	root.screen_state_controller.menu_input_release_lock = active
 	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
@@ -137,9 +139,40 @@ func set_overwrite_prompt(root: Object, active: bool) -> void:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
 		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
+	var prompt := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwritePrompt") as Sprite2D
+	if prompt != null:
+		prompt.texture = root.call("_pixel_text_texture", "OVERWRITE?  YES / NO", Color.WHITE)
+
+
+func set_recovery_prompt(root: Object, active: bool) -> void:
+	root.screen_state_controller.save_overwrite_prompt_active = active
+	root.screen_state_controller.save_recovery_prompt_active = active
+	root.screen_state_controller.save_overwrite_choice = 0
+	root.screen_state_controller.menu_input_release_lock = active
+	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
+		var node: CanvasItem = root.screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
+		if node != null: node.visible = active
+	var nav := root.screen_state_controller.save_select_overlay.get_node_or_null("SaveNavBack") as CanvasItem
+	if nav != null: nav.visible = not active
+	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	if cursor != null:
+		cursor.visible = active
+		var display := root.get("display_controller") as DisplayController
+		var view_width := float(display.view_size_value().x) if display != null else 240.0
+		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
+	var prompt := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwritePrompt") as Sprite2D
+	if prompt != null:
+		prompt.texture = root.call("_pixel_text_texture", "RESUME RUN?  YES / NO", Color.WHITE)
 
 
 func cancel_overwrite(root: Object) -> void:
+	if root.screen_state_controller.save_recovery_prompt_active:
+		root.screen_state_controller.save_recovery_prompt_active = false
+		root.screen_state_controller.save_overwrite_prompt_active = false
+		set_recovery_prompt(root, false)
+		update_save_select_cursor(root)
+		root.call("_play_sound", "ui_decline", 0.0, 1.0)
+		return
 	root.screen_state_controller.save_overwrite_prompt_active = false
 	set_overwrite_prompt(root, false)
 	update_save_select_cursor(root)
@@ -147,6 +180,12 @@ func cancel_overwrite(root: Object) -> void:
 
 
 func confirm_overwrite(root: Object) -> void:
+	if root.screen_state_controller.save_recovery_prompt_active:
+		if root.screen_state_controller.save_overwrite_choice == 0:
+			confirm_recovery_resume(root)
+		else:
+			confirm_recovery_discard(root)
+		return
 	root.screen_state_controller.save_overwrite_prompt_active = false
 	set_overwrite_prompt(root, false)
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
@@ -165,6 +204,7 @@ func finish_name_entry(root: Object, player_name: String) -> void:
 		return
 	ProfileSaveService.select_slot(selected_slot)
 	ProfileSaveService.clear_slot(selected_slot)
+	ActiveRunSaveServiceScript.clear_snapshot(selected_slot)
 	root.player_profile = PlayerProfile.new()
 	root.player_profile.player_name = PlayerProfile.normalize_player_name(player_name)
 	reset_runtime_for_new_save(root)
@@ -272,8 +312,38 @@ func select_continue_slot(root: Object, slot: int) -> void:
 	if loaded_profile == null or not loaded_profile.has_started:
 		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
+	if ActiveRunSaveServiceScript.has_valid_snapshot(slot):
+		root.screen_state_controller.save_overwrite_slot = slot
+		set_recovery_prompt(root, true)
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+		return
+	_load_continue_slot(root, slot, loaded_profile)
+
+
+func confirm_recovery_resume(root: Object) -> void:
+	var slot: int = int(root.screen_state_controller.save_overwrite_slot)
+	var loaded_profile := ProfileSaveService.load_profile_for_slot(slot)
+	if loaded_profile == null or not loaded_profile.has_started:
+		set_recovery_prompt(root, false)
+		return
+	set_recovery_prompt(root, false)
+	_load_continue_slot(root, slot, loaded_profile)
+
+
+func confirm_recovery_discard(root: Object) -> void:
+	var slot: int = int(root.screen_state_controller.save_overwrite_slot)
+	ActiveRunSaveServiceScript.clear_snapshot(slot)
+	set_recovery_prompt(root, false)
+	_load_continue_slot(root, slot, ProfileSaveService.load_profile_for_slot(slot))
+
+
+func _load_continue_slot(root: Object, slot: int, loaded_profile: PlayerProfile) -> void:
+	if loaded_profile == null or not loaded_profile.has_started:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
 	root.player_profile = loaded_profile
 	root.player_profile.pending_route = "run"
+	root.pending_run_restore = ActiveRunSaveServiceScript.has_valid_snapshot(slot)
 	ProfileSaveService.save_profile(root.player_profile)
 	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
@@ -309,9 +379,31 @@ func enter_starting_room_from_menu(root: Object) -> void:
 	root.player.visible = true
 	root.call("_update_player_shadow")
 	root.call("_build_depth_lists")
-	root.call("_begin_new_run")
+	var requested_restore := bool(root.get("pending_run_restore"))
+	if requested_restore:
+		if not bool(root.call("_restore_active_run_checkpoint")):
+			# Keep the checkpoint and return to the title. The player can retry Resume
+			# or explicitly Discard it; a corrupt/unsupported run must never be
+			# silently replaced by a fresh dungeon.
+			show_active_run_restore_failure(root)
+			return
+	else:
+		root.call("_begin_new_run")
+		# The hub/start room is a safe initial boundary for an interrupted-free run.
+		root.call("_save_active_run_checkpoint")
 	root.loading_screen_fading = true
 	root.loading_screen_timer = 0.0
+
+
+func show_active_run_restore_failure(root: Object) -> void:
+	root.set("pending_run_restore", false)
+	var diagnostics := root.call("get_node_or_null", "WebRunDiagnostics") as Node
+	if diagnostics != null and diagnostics.has_method("record"):
+		diagnostics.call("record", "restore_failed", root)
+	push_error("Active run restore failed; checkpoint retained for Resume or Discard.")
+	# Reuse the normal title transition so the persisted checkpoint remains
+	# available to Continue without exposing a half-restored runtime.
+	root.call("_return_to_title")
 
 
 func place_player_at_hub_fire(root: Object) -> void:
