@@ -507,7 +507,10 @@ func render_cursors(mode: int, action_index: int, slot_index: int, candidate_ind
 			# Candidate columns spread with their hit rectangles. Anchor the hand
 			# from that resolved rectangle instead of a native 108px column stride,
 			# otherwise wide layouts leave the cursor over the old left column.
-			candidate_target = candidate_button.position + Vector2(9.0, 1.0)
+			# The candidate-name glyphs sit on a half-pixel higher native baseline
+			# than the hitbox. Keep the hand aligned to the rendered name, not the
+			# button's lower edge.
+			candidate_target = candidate_button.position + Vector2(9.0, 0.0)
 	# Remove All confirmation reuses the command's existing position: the
 	# grey locked cursor and the live bobbing cursor stack there in place.
 	var confirm_target := command_target if mode == MODE_REMOVE_ALL_CONFIRM else Vector2(74.0 if confirm_index == 0 else 110.0, 110.0)

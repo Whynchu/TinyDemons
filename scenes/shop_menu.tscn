@@ -1,0 +1,684 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/shop_menu_layout.gd" id="1_layout"]
+[ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
+[ext_resource type="Texture2D" path="res://assets/artwork/cursor.png" id="3_cursor"]
+[ext_resource type="Script" path="res://scripts/menu_cursor.gd" id="4_cursor_script"]
+[ext_resource type="Texture2D" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png" id="5_add"]
+[ext_resource type="Texture2D" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png" id="6_subtract"]
+[ext_resource type="Texture2D" path="res://assets/artwork/circle55.png" id="7_circle"]
+[ext_resource type="Texture2D" path="res://assets/artwork/x55.png" id="8_x"]
+[ext_resource type="Texture2D" path="res://assets/artwork/GoldFresh2.png" id="9_gold"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_transparent"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+
+[node name="ShopMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+script = ExtResource("1_layout")
+
+[node name="ShopModePanel" type="NinePatchRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_top = 21.0
+offset_right = 240.0
+offset_bottom = 42.0
+mouse_filter = 2
+texture = ExtResource("2_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="ShopListPanel" type="NinePatchRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_top = 42.0
+offset_right = 146.0
+offset_bottom = 136.0
+mouse_filter = 2
+texture = ExtResource("2_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="ShopStatsPanel" type="NinePatchRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_left = 148.0
+offset_top = 42.0
+offset_right = 240.0
+offset_bottom = 136.0
+mouse_filter = 2
+texture = ExtResource("2_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="ListClip" type="Control" parent="."]
+z_index = 1
+layout_mode = 0
+offset_top = 46.0
+offset_right = 146.0
+offset_bottom = 133.0
+mouse_filter = 2
+clip_contents = true
+
+[node name="ModeBuyText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(93, 29)
+centered = false
+
+[node name="ModeSellText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(133, 29)
+centered = false
+
+[node name="ModeBuyButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 88.0
+offset_top = 23.0
+offset_right = 128.0
+offset_bottom = 40.0
+focus_mode = 0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="ModeSellButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 128.0
+offset_top = 23.0
+offset_right = 170.0
+offset_bottom = 40.0
+focus_mode = 0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="ItemText0" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 5)
+centered = false
+[node name="PriceText0" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 5)
+centered = false
+[node name="ItemText1" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 15)
+centered = false
+[node name="PriceText1" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 15)
+centered = false
+[node name="ItemText2" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 25)
+centered = false
+[node name="PriceText2" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 25)
+centered = false
+[node name="ItemText3" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 35)
+centered = false
+[node name="PriceText3" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 35)
+centered = false
+[node name="ItemText4" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 45)
+centered = false
+[node name="PriceText4" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 45)
+centered = false
+[node name="ItemText5" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 55)
+centered = false
+[node name="PriceText5" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 55)
+centered = false
+[node name="ItemText6" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 65)
+centered = false
+[node name="PriceText6" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 65)
+centered = false
+[node name="ItemText7" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 75)
+centered = false
+[node name="PriceText7" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 75)
+centered = false
+
+[node name="SellRowGoldIcon0" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 5)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount0" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 5)
+centered = false
+[node name="SellRowSoulIcon0" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 5)
+centered = false
+[node name="SellRowGoldIcon1" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 15)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount1" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 15)
+centered = false
+[node name="SellRowSoulIcon1" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 15)
+centered = false
+[node name="SellRowGoldIcon2" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 25)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount2" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 25)
+centered = false
+[node name="SellRowSoulIcon2" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 25)
+centered = false
+[node name="SellRowGoldIcon3" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 35)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount3" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 35)
+centered = false
+[node name="SellRowSoulIcon3" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 35)
+centered = false
+[node name="SellRowGoldIcon4" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 45)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount4" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 45)
+centered = false
+[node name="SellRowSoulIcon4" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 45)
+centered = false
+[node name="SellRowGoldIcon5" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 55)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount5" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 55)
+centered = false
+[node name="SellRowSoulIcon5" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 55)
+centered = false
+[node name="SellRowGoldIcon6" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 65)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount6" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 65)
+centered = false
+[node name="SellRowSoulIcon6" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 65)
+centered = false
+[node name="SellRowGoldIcon7" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(115, 75)
+centered = false
+texture = ExtResource("9_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+[node name="SellRowSoulAmount7" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 75)
+centered = false
+[node name="SellRowSoulIcon7" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 75)
+centered = false
+
+[node name="ItemButton0" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 2.0
+offset_right = 146.0
+offset_bottom = 12.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton1" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 12.0
+offset_right = 146.0
+offset_bottom = 22.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton2" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 22.0
+offset_right = 146.0
+offset_bottom = 32.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton3" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 32.0
+offset_right = 146.0
+offset_bottom = 42.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton4" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 42.0
+offset_right = 146.0
+offset_bottom = 52.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton5" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 52.0
+offset_right = 146.0
+offset_bottom = 62.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton6" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 62.0
+offset_right = 146.0
+offset_bottom = 72.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+[node name="ItemButton7" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 72.0
+offset_right = 146.0
+offset_bottom = 82.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="StatLabel0" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(162, 54)
+centered = false
+[node name="StatBefore0" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(195, 54)
+centered = false
+[node name="StatArrow0" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(205, 54)
+centered = false
+[node name="StatAfter0" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(222, 54)
+centered = false
+[node name="StatLabel1" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(162, 67)
+centered = false
+[node name="StatBefore1" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(195, 67)
+centered = false
+[node name="StatArrow1" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(205, 67)
+centered = false
+[node name="StatAfter1" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(222, 67)
+centered = false
+[node name="StatLabel2" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(162, 80)
+centered = false
+[node name="StatBefore2" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(195, 80)
+centered = false
+[node name="StatArrow2" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(205, 80)
+centered = false
+[node name="StatAfter2" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(222, 80)
+centered = false
+[node name="StatLabel3" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(162, 93)
+centered = false
+[node name="StatBefore3" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(195, 93)
+centered = false
+[node name="StatArrow3" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(205, 93)
+centered = false
+[node name="StatAfter3" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(222, 93)
+centered = false
+[node name="StatLabel4" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(162, 106)
+centered = false
+[node name="StatBefore4" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(195, 106)
+centered = false
+[node name="StatArrow4" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(205, 106)
+centered = false
+[node name="StatAfter4" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(222, 106)
+centered = false
+[node name="StatLabel5" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(162, 119)
+centered = false
+[node name="StatBefore5" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(195, 119)
+centered = false
+[node name="StatArrow5" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(205, 119)
+centered = false
+[node name="StatAfter5" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(222, 119)
+centered = false
+
+[node name="OwnedText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(8, 145)
+centered = false
+[node name="FooterSelectGlyph" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(107, 146)
+texture = ExtResource("7_circle")
+centered = false
+[node name="FooterSelectText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(114, 146)
+centered = false
+[node name="FooterBackGlyph" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(146, 146)
+texture = ExtResource("8_x")
+centered = false
+[node name="FooterBackText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(153, 146)
+centered = false
+
+[node name="SellQuestionText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(8, 145)
+centered = false
+[node name="SellSubtractIcon" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(52, 145)
+texture = ExtResource("6_subtract")
+centered = false
+[node name="SellQuantityX" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(64, 145)
+centered = false
+[node name="SellQuantityValue" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(74, 145)
+centered = false
+[node name="SellAddIcon" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(85, 145)
+texture = ExtResource("5_add")
+centered = false
+[node name="SellConfirmGlyph" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(107, 145)
+texture = ExtResource("7_circle")
+centered = false
+[node name="SellConfirmText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(114, 145)
+centered = false
+[node name="SellCancelGlyph" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(146, 145)
+texture = ExtResource("8_x")
+centered = false
+[node name="SellCancelText" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(153, 145)
+centered = false
+
+[node name="ItemActionButton" type="Button" parent="."]
+layout_mode = 0
+offset_top = 136.0
+offset_right = 96.0
+offset_bottom = 160.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="ShopBackButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 137.0
+offset_top = 136.0
+offset_right = 175.0
+offset_bottom = 160.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="SellMinusButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 47.0
+offset_top = 138.0
+offset_right = 63.0
+offset_bottom = 160.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="SellPlusButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 138.0
+offset_right = 96.0
+offset_bottom = 160.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="SellConfirmButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 101.0
+offset_top = 138.0
+offset_right = 138.0
+offset_bottom = 160.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="SellCancelButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 138.0
+offset_right = 175.0
+offset_bottom = 160.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="ShopTopCursor" type="Sprite2D" parent="."]
+visible = false
+z_index = 4095
+texture_filter = 1
+position = Vector2(122, 5)
+texture = ExtResource("3_cursor")
+centered = false
+script = ExtResource("4_cursor_script")
+
+[node name="ShopModeCursor" type="Sprite2D" parent="."]
+visible = false
+z_index = 4095
+texture_filter = 1
+position = Vector2(75, 26)
+texture = ExtResource("3_cursor")
+centered = false
+script = ExtResource("4_cursor_script")
+
+[node name="ShopItemCursor" type="Sprite2D" parent="."]
+visible = false
+z_index = 4095
+texture_filter = 1
+position = Vector2(3, 59)
+texture = ExtResource("3_cursor")
+centered = false
+script = ExtResource("4_cursor_script")
+
+[node name="ShopAmountCursor" type="Sprite2D" parent="."]
+visible = false
+z_index = 4095
+texture_filter = 1
+position = Vector2(36, 142)
+texture = ExtResource("3_cursor")
+centered = false
+script = ExtResource("4_cursor_script")

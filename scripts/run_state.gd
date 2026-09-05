@@ -260,13 +260,17 @@ func record_gear_reward(source: StringName, item: ItemInstance, run_rank: int, p
 
 
 func ensure_shop_stock(profile: PlayerProfile) -> void:
-	if not shop_stock.is_empty():
-		return
 	var level := profile.level if profile != null else 1
 	var catalog := ItemCatalog.new()
+	var had_stock := not shop_stock.is_empty()
+	_ensure_plain_shop_stock(catalog)
+	if had_stock:
+		return
 	for slot_index in ItemCatalog.SLOTS.size():
 		var slot := ItemCatalog.SLOTS[slot_index]
-		var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common", false, &"shop", level)
+		# Plain entries are guaranteed above; the variable common roll should not
+		# duplicate them, so keep this additional stock on set/basic alternatives.
+		var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common", true, &"shop", level)
 		if item.definition_id.is_empty():
 			continue
 		item.instance_id = "shop-%s-basic-%s" % [run_id, String(slot)]
@@ -286,6 +290,34 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 		var cloak_entry := _shop_entry(catalog, cloak, &"body", profile.demon_cloak_price())
 		cloak_entry["permanent"] = true
 		shop_stock.append(cloak_entry)
+
+
+func _ensure_plain_shop_stock(catalog: ItemCatalog) -> void:
+	var plain_ids := {
+		&"weapon": &"plain_blade",
+		&"head": &"plain_hood",
+		&"body": &"plain_tunic",
+		&"arm": &"plain_wraps",
+		&"shield": &"plain_shield",
+		&"accessory": &"plain_ring",
+	}
+	for slot: StringName in ItemCatalog.SLOTS:
+		var definition_id: StringName = plain_ids[slot]
+		var already_present := false
+		for entry: Dictionary in shop_stock:
+			var existing := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+			if existing.definition_id == definition_id:
+				already_present = true
+				break
+		if already_present:
+			continue
+		var item := ItemInstance.new()
+		item.definition_id = definition_id
+		item.instance_id = "shop-%s-plain-%s" % [run_id, String(slot)]
+		item.rarity = &"common"
+		item.quality = 1.0
+		var price := maxi(1, roundi(catalog.price(item) * 2.5))
+		shop_stock.append(_shop_entry(catalog, item, slot, price))
 
 
 func _shop_entry(catalog: ItemCatalog, item: ItemInstance, slot: StringName, shop_price: int) -> Dictionary:

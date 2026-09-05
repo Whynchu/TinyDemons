@@ -11,10 +11,10 @@ const PAGE_TITLES := {
 }
 
 const PREVIEW_TEXT := {
-	"HubPreviewCommandStats": ["STATS", Vector2(99, 8), Color.WHITE],
-	"HubPreviewCommandShop": ["SHOP", Vector2(132, 8), Color.WHITE],
-	"HubPreviewCommandFusion": ["FUSION", Vector2(166, 8), Color.WHITE],
-	"HubPreviewCommandBind": ["BIND", Vector2(202, 8), Color.WHITE],
+	"HubPreviewCommandStats": ["STATS", Vector2(106, 8), Color.WHITE],
+	"HubPreviewCommandShop": ["SHOP", Vector2(139, 8), Color.WHITE],
+	"HubPreviewCommandFusion": ["FUSION", Vector2(168, 8), Color.WHITE],
+	"HubPreviewCommandBind": ["BIND", Vector2(206, 8), Color.WHITE],
 	"HubPreviewPoints": ["POINTS 2", Vector2(5, 27), Color8(255, 205, 117)],
 	"HubPreviewVit": ["VIT  15", Vector2(63, 44), Color.WHITE],
 	"HubPreviewStr": ["STR  12", Vector2(63, 54), Color.WHITE],

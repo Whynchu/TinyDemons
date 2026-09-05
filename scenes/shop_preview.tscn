@@ -1,0 +1,68 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/demon_hub_menu.tscn" id="1_hub"]
+[ext_resource type="Script" path="res://scripts/shop_preview.gd" id="2_preview"]
+[ext_resource type="Texture2D" path="res://Mockups/DEMON HUB REWORK_SHOP_Buy.png" id="3_buy"]
+[ext_resource type="Texture2D" path="res://Mockups/DEMON HUB REWORK_SHOP_Sell.png" id="4_sell"]
+[ext_resource type="Texture2D" path="res://assets/artwork/GoldFresh2.png" id="5_gold"]
+[ext_resource type="Texture2D" path="res://assets/artwork/Souls.png" id="6_soul"]
+
+[node name="ShopPreview" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 160.0
+script = ExtResource("2_preview")
+
+[node name="DemonHubOverlay" parent="." instance=ExtResource("1_hub")]
+layout_mode = 0
+
+[node name="ShopPreviewGoldIcon" type="Sprite2D" parent="DemonHubOverlay"]
+texture_filter = 1
+position = Vector2(182, 142)
+texture = ExtResource("5_gold")
+region_enabled = true
+region_rect = Rect2(0, 0, 5, 5)
+centered = false
+
+[node name="ShopPreviewSoulIcon" type="Sprite2D" parent="DemonHubOverlay"]
+texture_filter = 1
+position = Vector2(182, 149)
+texture = ExtResource("6_soul")
+centered = false
+
+[node name="ShopPreviewGoldText" type="Sprite2D" parent="DemonHubOverlay"]
+texture_filter = 1
+position = Vector2(218, 142)
+centered = false
+
+[node name="ShopPreviewSoulText" type="Sprite2D" parent="DemonHubOverlay"]
+texture_filter = 1
+position = Vector2(227, 149)
+centered = false
+
+[node name="BuyReference" type="TextureRect" parent="."]
+visible = false
+z_index = 4094
+layout_mode = 0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("3_buy")
+expand_mode = 1
+stretch_mode = 0
+modulate = Color(1, 1, 1, 0.55)
+
+[node name="SellReference" type="TextureRect" parent="."]
+visible = false
+z_index = 4094
+layout_mode = 0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("4_sell")
+expand_mode = 1
+stretch_mode = 0
+modulate = Color(1, 1, 1, 0.55)

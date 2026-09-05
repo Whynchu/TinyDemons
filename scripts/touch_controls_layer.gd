@@ -26,7 +26,8 @@ const STICK_MIN := 50.0
 const STICK_MAX := 160.0
 const MARGIN_FRACTION := 0.03
 const TAP_INTERACT_ACTION := &"tap_interact"
-const MENU_SCROLL_DRAG_PX := 14.0
+const MENU_SCROLL_DRAG_PX := 6.0
+const MENU_TOUCH_HIT_SLOP := 4.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
@@ -334,6 +335,12 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		_menu_accept_latch = false
 		_finger_actions.clear()
 		_tap_interact_origins.clear()
+		# Safari can omit a touch-end while the page is resizing or scrolling.
+		# Menus are single-finger, so discard any capture left by that gesture
+		# before classifying the new touch. Clearing only the scroll map left a
+		# stale row button in control of later drags.
+		_menu_touch_buttons.clear()
+		_menu_button_origins.clear()
 		_menu_scroll_fingers.clear()
 		_menu_scroll_y = 0.0
 		_pressed_actions.clear()
@@ -347,13 +354,17 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		var menu_button := _menu_button_at(position)
 		if menu_button != null:
 			_menu_touch_buttons[finger_id] = menu_button
-			_menu_button_origins[finger_id] = position
+			_menu_button_origins[finger_id] = _menu_scroll_coordinate(position)
 			_update_touch_capture_filter()
 			return
 		# A disabled native button still owns its visual hit area. Reserve that
 		# area so it cannot accidentally fall through to the overlapping cancel
-		# control at the bottom-right of the compact hub panel.
+		# control at the bottom-right of the compact hub panel. Scrollable hub and
+		# pause lists still accept a drag from that disabled/empty row area and keep the gesture inert.
 		if _menu_button_at(position, true) != null:
+			if _is_scrollable_menu():
+				_menu_scroll_fingers[finger_id] = {"accum": 0.0, "last_y": _menu_scroll_coordinate(position)}
+				_update_touch_capture_filter()
 			return
 		# Text fields (recovery key, etc.) must receive focus so the on-screen
 		# keyboard appears; treat them as their own touch target instead of a
@@ -370,7 +381,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# Hub pages expose their actionable controls as native Buttons. A blank
 		# touch stays inert unless it drags, which scrolls the visible list.
 		if _input_context == CONTEXT_HUB or _input_context == CONTEXT_PAUSE:
-			_menu_scroll_fingers[finger_id] = {"accum": 0.0, "last_y": position.y}
+			_menu_scroll_fingers[finger_id] = {"accum": 0.0, "last_y": _menu_scroll_coordinate(position)}
 			return
 		_menu_accept_fingers[finger_id] = Time.get_ticks_msec()
 		_menu_accept_latch = true
@@ -444,14 +455,15 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 
 
 func _finger_moved(finger_id: int, position: Vector2) -> void:
+	var menu_y: float = _menu_scroll_coordinate(position) if _is_scrollable_menu() else position.y
 	if _menu_touch_buttons.has(finger_id):
 		if _is_scrollable_menu() and _menu_button_origins.has(finger_id):
-			var origin := _menu_button_origins[finger_id] as Vector2
-			if absf(position.y - origin.y) >= MENU_SCROLL_DRAG_PX:
+			var origin_y := float(_menu_button_origins[finger_id])
+			if absf(menu_y - origin_y) >= MENU_SCROLL_DRAG_PX:
 				_menu_touch_buttons.erase(finger_id)
 				_menu_button_origins.erase(finger_id)
-				_menu_scroll_fingers[finger_id] = {"last_y": position.y}
-				_menu_scroll_y += position.y - origin.y
+				_menu_scroll_fingers[finger_id] = {"last_y": menu_y}
+				_menu_scroll_y += menu_y - origin_y
 				_update_touch_capture_filter()
 				return
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
@@ -461,7 +473,7 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 			_update_touch_capture_filter()
 		return
 	if _menu_scroll_fingers.has(finger_id):
-		_accumulate_menu_scroll(finger_id, position.y)
+		_accumulate_menu_scroll(finger_id, menu_y)
 		return
 	if _menu_accept_fingers.has(finger_id):
 		return
@@ -494,7 +506,7 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 		var menu_button := _menu_touch_buttons[finger_id] as BaseButton
 		_menu_touch_buttons.erase(finger_id)
 		_menu_button_origins.erase(finger_id)
-		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and _menu_control_contains(menu_button, position, 3.0):
+		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and _menu_control_contains(menu_button, position, MENU_TOUCH_HIT_SLOP):
 			menu_button.pressed.emit()
 		_update_touch_capture_filter()
 		return
@@ -558,12 +570,43 @@ func _is_menu_context() -> bool:
 func _menu_control_contains(control: Control, viewport_position: Vector2, padding: float = 0.0) -> bool:
 	if control == null or not is_instance_valid(control):
 		return false
+	var local_position := _menu_control_local_position(control, viewport_position)
+	return Rect2(Vector2.ZERO, control.size).grow(padding).has_point(local_position)
+
+
+func _menu_control_local_position(control: Control, viewport_position: Vector2) -> Vector2:
+	if control == null or not is_instance_valid(control):
+		return Vector2.INF
 	# Screen touch positions are reported in viewport coordinates. Resolve the
 	# point through the control's full canvas transform so CanvasLayer offsets,
 	# responsive presentation origins, and nested controls share one hit-test
 	# space instead of relying on get_global_rect's untransformed approximation.
-	var local_position := control.get_global_transform_with_canvas().affine_inverse() * viewport_position
-	return Rect2(Vector2.ZERO, control.size).grow(padding).has_point(local_position)
+	return control.get_global_transform_with_canvas().affine_inverse() * viewport_position
+
+
+func _menu_scroll_coordinate(viewport_position: Vector2) -> float:
+	# Drag deltas must be measured in the menu's logical coordinate space. Raw
+	# event y values are physical viewport coordinates on a stretched display,
+	# which made identical finger motion scroll by different amounts in portrait
+	# and landscape. The active overlay transform removes that scale and offset.
+	var root := _active_menu_root()
+	if root is Control:
+		return (_menu_control_local_position(root as Control, viewport_position)).y
+	return viewport_position.y
+
+
+func _menu_rect_distance_squared(rect: Rect2, point: Vector2) -> float:
+	var dx := 0.0
+	var dy := 0.0
+	if point.x < rect.position.x:
+		dx = rect.position.x - point.x
+	elif point.x > rect.end.x:
+		dx = point.x - rect.end.x
+	if point.y < rect.position.y:
+		dy = rect.position.y - point.y
+	elif point.y > rect.end.y:
+		dy = point.y - rect.end.y
+	return dx * dx + dy * dy
 
 
 func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseButton:
@@ -572,15 +615,26 @@ func _menu_button_at(position: Vector2, include_disabled: bool = false) -> BaseB
 		return null
 	var nodes: Array = []
 	_collect_menu_buttons(search_root, nodes)
+	var best_button: BaseButton = null
+	var best_inside := false
+	var best_distance := INF
 	for index in range(nodes.size() - 1, -1, -1):
 		var button := nodes[index] as BaseButton
 		if button == null or not is_instance_valid(button) or not button.is_visible_in_tree() or (button.disabled and not include_disabled):
 			continue
 		if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
 			continue
-		if _menu_control_contains(button, position):
-			return button
-	return null
+		var local_position := _menu_control_local_position(button, position)
+		var bounds := Rect2(Vector2.ZERO, button.size)
+		var inside := bounds.has_point(local_position)
+		if not bounds.grow(MENU_TOUCH_HIT_SLOP).has_point(local_position):
+			continue
+		var distance := _menu_rect_distance_squared(bounds, local_position)
+		if best_button == null or (inside and not best_inside) or (inside == best_inside and distance < best_distance):
+			best_button = button
+			best_inside = inside
+			best_distance = distance
+	return best_button
 
 
 func _menu_editable_at(position: Vector2) -> Control:

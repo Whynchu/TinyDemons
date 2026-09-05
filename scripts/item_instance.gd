@@ -13,6 +13,7 @@ var random_stat_points: Dictionary = {}
 var transmutation_id: StringName = &""
 var enhancement_level := 0
 var fusion_count := 0
+var fusion_souls_invested := 0
 
 
 func to_dictionary() -> Dictionary:
@@ -26,6 +27,7 @@ func to_dictionary() -> Dictionary:
 		"transmutation_id": String(transmutation_id),
 		"enhancement_level": enhancement_level,
 		"fusion_count": fusion_count,
+		"fusion_souls_invested": fusion_souls_invested,
 	}
 
 
@@ -54,6 +56,10 @@ static func from_dictionary(data: Dictionary) -> ItemInstance:
 	item.transmutation_id = StringName(str(data.get("transmutation_id", "")))
 	item.enhancement_level = clampi(int(data.get("enhancement_level", 0)), 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
 	item.fusion_count = maxi(int(data.get("fusion_count", 0)), 0)
+	# Older saves advanced enhancement_level but left fusion_count at zero.
+	if item.fusion_count == 0 and item.enhancement_level > 0:
+		item.fusion_count = item.enhancement_level
+	item.fusion_souls_invested = maxi(int(data.get("fusion_souls_invested", 0)), 0)
 	return item
 
 
