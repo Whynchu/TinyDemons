@@ -235,6 +235,8 @@ func set_hub_page(root: Object, page: int) -> void:
 	screen.hub_touch_candidate_slot = ""
 	screen.hub_touch_candidate_index = -1
 	screen.hub_list_scroll = 0.0
+	screen.hub_shop_sell_mode = false
+	screen.hub_shop_sell_confirm_pending = false
 	screen.hub_choice_scroll = 0.0
 	# Equipment has a deliberate three-step route. Entering the page always
 	# lands on its top command row; Equip then descends into slots and finally
@@ -250,6 +252,8 @@ func set_hub_page(root: Object, page: int) -> void:
 	if screen.hub_page == HUB_PAGE_ALLOCATE:
 		_set_screen_property_if_available(screen, &"hub_content_focus", true)
 		_set_screen_property_if_available(screen, &"hub_stat_row", 0)
+	elif screen.hub_page == HUB_PAGE_SHOP:
+		_set_screen_property_if_available(screen, &"hub_content_focus", false)
 	else:
 		_set_screen_property_if_available(screen, &"hub_content_focus", true)
 	_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND if equipment_page else EQUIPMENT_MODE_SLOT_EQUIP)
@@ -569,6 +573,9 @@ func sell_profile_item(root: Object, instance_id: String) -> bool:
 	root.call("_save_player_profile")
 	root.call("_update_gold_indicator")
 	root.call("_update_soul_indicator")
+	root.screen_state_controller.hub_item_index = 0
+	root.screen_state_controller.hub_list_scroll = 0.0
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	invalidate_hub_fusion_candidates(root)
 	return true
 
