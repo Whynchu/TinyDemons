@@ -80,6 +80,39 @@ offset_bottom = 133.0
 mouse_filter = 2
 clip_contents = true
 
+[node name="ItemIcon0" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 5)
+centered = false
+[node name="ItemIcon1" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 15)
+centered = false
+[node name="ItemIcon2" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 25)
+centered = false
+[node name="ItemIcon3" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 35)
+centered = false
+[node name="ItemIcon4" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 45)
+centered = false
+[node name="ItemIcon5" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 55)
+centered = false
+[node name="ItemIcon6" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 65)
+centered = false
+[node name="ItemIcon7" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 75)
+centered = false
+
 [node name="ModeBuyText" type="Sprite2D" parent="."]
 texture_filter = 1
 position = Vector2(93, 29)

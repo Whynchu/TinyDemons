@@ -2147,10 +2147,12 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	var prices: Array[String] = []
 	var soul_values: Array[int] = []
 	var sold_flags: Array[bool] = []
+	var item_slots: Array[StringName] = []
 	var sell_mode := hub_shop_sell_mode
 	if sell_mode:
 		items = root.call("_hub_shop_sellable_items") as Array[ItemInstance]
 		for item: ItemInstance in items:
+			item_slots.append(catalog.definition_slot(item.definition_id))
 			prices.append("%d" % catalog.sell_value(item))
 			soul_values.append(catalog.sell_soul_value(item))
 			sold_flags.append(false)
@@ -2162,6 +2164,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 				var item_data := entry.get("item", {}) as Dictionary
 				var item := ItemInstance.from_dictionary(item_data)
 				items.append(item)
+				item_slots.append(catalog.definition_slot(item.definition_id))
 				var sold := bool(entry.get("sold", false))
 				sold_flags.append(sold)
 				prices.append("SOLD" if sold else "%d" % int(entry.get("price", 0)))
@@ -2188,7 +2191,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 			continue
 		var item := items[source_index]
 		var fusion_suffix := " F%d" % item.enhancement_level if item.enhancement_level > 0 else ""
-		var label := (catalog.gear_name(item) + fusion_suffix) if sell_mode else "%s %s%s" % [catalog.rarity_letter_grade(item.rarity), catalog.gear_name(item), fusion_suffix]
+		var label := catalog.gear_name(item) + fusion_suffix
 		row_labels.append(label)
 		row_colors.append(Color8(120, 120, 130) if source_index < sold_flags.size() and sold_flags[source_index] else catalog.rarity_color(item.rarity))
 		row_prices.append(prices[source_index] if source_index < prices.size() else "")
@@ -2214,7 +2217,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	hub_shop_sell_amount = selected_quantity
 	hub_shop_sell_amount_max = max_quantity
 	var scroll_fraction: float = hub_list_scroll - floor(hub_list_scroll)
-	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
+	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, item_slots, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
