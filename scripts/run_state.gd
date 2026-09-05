@@ -357,6 +357,7 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 	var catalog := ItemCatalog.new()
 	var had_stock := not shop_stock.is_empty()
 	_ensure_basic_shop_stock(catalog)
+	_normalize_shop_stock_ids(profile)
 	if had_stock:
 		return
 	for slot_index in ItemCatalog.SLOTS.size():
@@ -429,6 +430,37 @@ func _ensure_basic_shop_stock(catalog: ItemCatalog) -> void:
 		item.quality = 1.0
 		var price := maxi(1, roundi(catalog.price(item) * 2.5))
 		shop_stock.append(_shop_entry(catalog, item, slot, price))
+
+
+func _normalize_shop_stock_ids(profile: PlayerProfile) -> void:
+	# Older saved runs were created before generated common stock received unique
+	# IDs. Repair only unsold entries that collide with another stock item or an
+	# owned inventory item; purchased entries must retain their identity.
+	var used_ids: Dictionary = {}
+	if profile != null:
+		for data: Dictionary in profile.inventory:
+			var inventory_id := str(data.get("instance_id", ""))
+			if not inventory_id.is_empty():
+				used_ids[inventory_id] = true
+	var seen_stock_ids: Dictionary = {}
+	for index in shop_stock.size():
+		var entry := shop_stock[index]
+		var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+		var item_id := item.instance_id
+		var sold := bool(entry.get("sold", false))
+		if not sold and (item_id.is_empty() or seen_stock_ids.has(item_id) or used_ids.has(item_id)):
+			var repaired_id := "shop-%s-repaired-%d" % [run_id, index]
+			var suffix := 0
+			while seen_stock_ids.has(repaired_id) or used_ids.has(repaired_id):
+				suffix += 1
+				repaired_id = "shop-%s-repaired-%d-%d" % [run_id, index, suffix]
+			item.instance_id = repaired_id
+			entry["item"] = item.to_dictionary()
+			shop_stock[index] = entry
+			item_id = repaired_id
+		if not item_id.is_empty():
+			seen_stock_ids[item_id] = true
+			used_ids[item_id] = true
 
 
 func _shop_entry(catalog: ItemCatalog, item: ItemInstance, slot: StringName, shop_price: int) -> Dictionary:
