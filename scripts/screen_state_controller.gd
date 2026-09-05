@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.67"
+const GAME_VERSION := "0.1.68"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -1342,7 +1342,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var item_details: Array[Sprite2D] = []
 	for detail_index in 6:
 		item_details.append(create_sprite(items_page, "HubItemDetail%d" % detail_index, null, Vector2(20, HUB_ITEM_DETAIL_TOP + detail_index * HUB_ITEM_DETAIL_PITCH), false))
-	var item_action_button := make_retro_button("BUY", Vector2(maxf(96.0, display_view_size.x - 144.0), 21), Vector2(52, 13), pixel_texture)
+	var item_action_button := make_retro_button("BUY", Vector2(maxf(96.0, display_view_size.x - 70.0), 119), Vector2(52, 13), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); items_page.add_child(item_action_button)
 	for mode_index in 2:
 		var mode_button := make_retro_button("BUY" if mode_index == 0 else "SELL", Vector2(132 + mode_index * 42, 21), Vector2(36, 13), pixel_texture)
@@ -3626,17 +3626,11 @@ func update_hub_input(root: Object) -> void:
 			# confirm is handled by the separate browsing branch above.
 			root.call("_select_hub_gear_slot", hub_item_index)
 		return
-	if page == HUB_PAGE_SHOP and not hub_shop_command_focus and (bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right"))):
-		hub_shop_sell_mode = not hub_shop_sell_mode
-		hub_shop_sell_confirm_pending = false
-		hub_item_index = 0
-		hub_list_scroll = 0.0
-		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
-		return
 	if page == HUB_PAGE_SHOP and hub_shop_command_focus:
 		if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
 			hub_action_column = 1 - hub_action_column
 			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_menu_confirm_just_pressed")):
 			hub_shop_sell_mode = hub_action_column == 1
 			hub_shop_sell_confirm_pending = false
@@ -3645,6 +3639,7 @@ func update_hub_input(root: Object) -> void:
 			hub_item_index = 0
 			hub_list_scroll = 0.0
 			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
 		hub_shop_sell_confirm_pending = false
@@ -4629,6 +4624,16 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 func _hub_active_list_count(root: Object) -> int:
 	if hub_page == HUB_PAGE_SHOP:
 		var run_state := root.get("run_state") as RunState
+		if hub_shop_sell_mode:
+			var profile := root.get("player_profile") as PlayerProfile
+			if profile == null:
+				return 0
+			var count := 0
+			for data: Dictionary in profile.inventory:
+				var item := ItemInstance.from_dictionary(data)
+				if not profile.equipped_instance_ids.values().has(item.instance_id):
+					count += 1
+			return count
 		if run_state == null:
 			return 0
 		run_state.ensure_shop_stock(root.get("player_profile"))

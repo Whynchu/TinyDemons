@@ -697,6 +697,7 @@ func hub_item_action(root: Object) -> void:
 			var selected_sell := sellable[sell_index]
 			if not root.screen_state_controller.hub_shop_sell_confirm_pending:
 				root.screen_state_controller.hub_shop_sell_confirm_pending = true
+				root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 				return
 			if sell_profile_item(root, selected_sell.instance_id):
