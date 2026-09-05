@@ -83,6 +83,11 @@ func _initialize() -> void:
 	var run := RunState.new(); run.begin(424242); run.ensure_shop_stock(restored)
 	var stock_copy := run.shop_stock.duplicate(true); run.ensure_shop_stock(restored)
 	_expect(run.shop_stock == stock_copy and run.shop_stock.size() == 8, "shop stock stable within run", failures)
+	var shop_ids: Dictionary = {}
+	for shop_entry: Dictionary in run.shop_stock:
+		var stock_item := ItemInstance.from_dictionary(shop_entry.get("item", {}) as Dictionary)
+		_expect(not shop_ids.has(stock_item.instance_id), "shop stock entries keep unique purchase IDs", failures)
+		shop_ids[stock_item.instance_id] = true
 	var entry: Dictionary = run.shop_stock[0]; var shop_item := ItemInstance.from_dictionary(entry["item"])
 	restored.gold = int(entry["price"])
 	_expect(restored.purchase_item(shop_item, int(entry["price"])), "purchase succeeds atomically", failures)

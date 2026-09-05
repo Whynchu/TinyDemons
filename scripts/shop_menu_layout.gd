@@ -303,6 +303,7 @@ func _apply_row_scroll() -> void:
 	var width := maxf(size.x, NATIVE_SIZE.x)
 	var row_sprites: Array[Sprite2D] = []
 	row_sprites.append_array(item_texts)
+	row_sprites.append_array(item_icons)
 	row_sprites.append_array(price_texts)
 	row_sprites.append_array(sell_row_gold_icons)
 	row_sprites.append_array(sell_row_soul_amounts)
