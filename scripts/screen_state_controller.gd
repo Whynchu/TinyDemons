@@ -11,7 +11,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.69"
+const GAME_VERSION := "0.1.70"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -1196,10 +1196,12 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var back_prompt := create_sprite(overlay, "HubBackPrompt", null, Vector2(136, 141), false)
 	hub_back_prompt_text = back_prompt
 	back_prompt.visible = false
-	hub_footer_select_glyph = create_sprite(overlay, "HubFooterSelectGlyph", MENU_CIRCLE_TEXTURE, Vector2(107, 145), false)
-	hub_footer_select_text = create_sprite(overlay, "HubFooterSelectText", null, Vector2(114, 145), false)
-	hub_footer_back_glyph = create_sprite(overlay, "HubFooterBackGlyph", MENU_X_TEXTURE, Vector2(146, 145), false)
-	hub_footer_back_text = create_sprite(overlay, "HubFooterBackText", null, Vector2(153, 145), false)
+	# Keep the shared hub footer on the same authored anchors as SHOP/STATS:
+	# horizontal spacing from SHOP, browsing baseline from SHOP (y=146).
+	hub_footer_select_glyph = create_sprite(overlay, "HubFooterSelectGlyph", MENU_CIRCLE_TEXTURE, Vector2(107, 146), false)
+	hub_footer_select_text = create_sprite(overlay, "HubFooterSelectText", null, Vector2(114, 146), false)
+	hub_footer_back_glyph = create_sprite(overlay, "HubFooterBackGlyph", MENU_X_TEXTURE, Vector2(146, 146), false)
+	hub_footer_back_text = create_sprite(overlay, "HubFooterBackText", null, Vector2(153, 146), false)
 	# The bottom-right cell always reserves both resources, matching the hub
 	# render instead of swapping one GOLD/SOUL label per transaction page.
 	var gold_icon := Sprite2D.new()
@@ -1703,10 +1705,10 @@ func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion
 	if hub_points_text != null: hub_points_text.position = Vector2(_hub_left_field_x(14.0), 27)
 	if hub_back_prompt_text != null: hub_back_prompt_text.position = Vector2(_hub_left_field_x(136.0), 141)
 	if hub_context_text != null: hub_context_text.position = Vector2(_hub_left_field_x(136.0), 151)
-	if hub_footer_select_glyph != null: hub_footer_select_glyph.position = Vector2(_hub_left_field_x(107.0), 145)
-	if hub_footer_select_text != null: hub_footer_select_text.position = Vector2(_hub_left_field_x(114.0), 145)
-	if hub_footer_back_glyph != null: hub_footer_back_glyph.position = Vector2(_hub_left_field_x(146.0), 145)
-	if hub_footer_back_text != null: hub_footer_back_text.position = Vector2(_hub_left_field_x(153.0), 145)
+	if hub_footer_select_glyph != null: hub_footer_select_glyph.position = Vector2(_hub_left_field_x(107.0), 146)
+	if hub_footer_select_text != null: hub_footer_select_text.position = Vector2(_hub_left_field_x(114.0), 146)
+	if hub_footer_back_glyph != null: hub_footer_back_glyph.position = Vector2(_hub_left_field_x(146.0), 146)
+	if hub_footer_back_text != null: hub_footer_back_text.position = Vector2(_hub_left_field_x(153.0), 146)
 	var allocation_preview_x := maxf(132.0, width - 108.0)
 	var allocation_left_width := maxf(108.0, allocation_preview_x - 24.0)
 	if hub_allocate_panel != null:

@@ -27,7 +27,7 @@ const STICK_MAX := 160.0
 const MARGIN_FRACTION := 0.03
 const TAP_INTERACT_ACTION := &"tap_interact"
 const MENU_SCROLL_DRAG_PX := 6.0
-const MENU_TOUCH_HIT_SLOP := 4.0
+const MENU_TOUCH_HIT_SLOP := 8.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
@@ -383,9 +383,9 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		if _input_context == CONTEXT_HUB or _input_context == CONTEXT_PAUSE:
 			_menu_scroll_fingers[finger_id] = {"accum": 0.0, "last_y": _menu_scroll_coordinate(position)}
 			return
-		_menu_accept_fingers[finger_id] = Time.get_ticks_msec()
-		_menu_accept_latch = true
-		_update_touch_capture_filter()
+		# Non-dialogue menus require an actual control tap. A blank tap must not
+		# act like controller confirm; that behavior is surprising on touch.
+		return
 		return
 	if _input_context == CONTEXT_DIALOGUE:
 		var dialogue_button := _menu_button_at(position)
@@ -507,6 +507,11 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 		_menu_touch_buttons.erase(finger_id)
 		_menu_button_origins.erase(finger_id)
 		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and _menu_control_contains(menu_button, position, MENU_TOUCH_HIT_SLOP):
+			var menu_root := menu_button.get_parent()
+			if menu_root != null and menu_root.name == &"TitleOverlay" and menu_button.name in [&"Button", &"TitleNewGame", &"TitleContinue"]:
+				var host := get_parent()
+				if host != null and host.has_method("_play_sound"):
+					host.call("_play_sound", "enemy_death", -6.0, 0.95)
 			menu_button.pressed.emit()
 		_update_touch_capture_filter()
 		return

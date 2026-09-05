@@ -263,13 +263,13 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 	var level := profile.level if profile != null else 1
 	var catalog := ItemCatalog.new()
 	var had_stock := not shop_stock.is_empty()
-	_ensure_plain_shop_stock(catalog)
+	_ensure_basic_shop_stock(catalog)
 	if had_stock:
 		return
 	for slot_index in ItemCatalog.SLOTS.size():
 		var slot := ItemCatalog.SLOTS[slot_index]
-		# Plain entries are guaranteed above; the variable common roll should not
-		# duplicate them, so keep this additional stock on set/basic alternatives.
+		# Basic entries are guaranteed above; the variable common roll should not
+		# duplicate them, so keep this additional stock on specialized alternatives.
 		var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common", true, &"shop", level)
 		if item.definition_id.is_empty():
 			continue
@@ -292,7 +292,15 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 		shop_stock.append(cloak_entry)
 
 
-func _ensure_plain_shop_stock(catalog: ItemCatalog) -> void:
+func _ensure_basic_shop_stock(catalog: ItemCatalog) -> void:
+	var basic_ids := {
+		&"weapon": &"basic_sword",
+		&"head": &"basic_hood",
+		&"body": &"basic_tunic",
+		&"arm": &"basic_wraps",
+		&"shield": &"basic_shield",
+		&"accessory": &"basic_charm",
+	}
 	var plain_ids := {
 		&"weapon": &"plain_blade",
 		&"head": &"plain_hood",
@@ -302,10 +310,20 @@ func _ensure_plain_shop_stock(catalog: ItemCatalog) -> void:
 		&"accessory": &"plain_ring",
 	}
 	for slot: StringName in ItemCatalog.SLOTS:
-		var definition_id: StringName = plain_ids[slot]
+		var definition_id: StringName = basic_ids[slot]
 		var already_present := false
-		for entry: Dictionary in shop_stock:
+		for entry_index in shop_stock.size():
+			var entry := shop_stock[entry_index]
 			var existing := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+			if existing.definition_id == plain_ids[slot]:
+				existing.definition_id = definition_id
+				existing.rarity = &"common"
+				existing.quality = 1.0
+				entry["item"] = existing.to_dictionary()
+				entry["price"] = maxi(1, roundi(catalog.price(existing) * 2.5))
+				shop_stock[entry_index] = entry
+				already_present = true
+				break
 			if existing.definition_id == definition_id:
 				already_present = true
 				break
@@ -313,7 +331,7 @@ func _ensure_plain_shop_stock(catalog: ItemCatalog) -> void:
 			continue
 		var item := ItemInstance.new()
 		item.definition_id = definition_id
-		item.instance_id = "shop-%s-plain-%s" % [run_id, String(slot)]
+		item.instance_id = "shop-%s-basic-%s" % [run_id, String(slot)]
 		item.rarity = &"common"
 		item.quality = 1.0
 		var price := maxi(1, roundi(catalog.price(item) * 2.5))

@@ -160,14 +160,16 @@ Make the Demon Hub root previews and nested SHOP, FUSION, and BIND menus behave 
 - Recompute responsive drag and row hit rectangles from the authored TSCN
   geometry so portrait and landscape use the same logical list bounds.
 
-### 4. Guarantee plain shop stock
+### 4. Guarantee basic shop stock
 
-- Define a canonical plain item for each of the six equipment slots and add one
-  deterministic shop entry for each slot on every run.
+- Define a canonical basic item for each of the six equipment slots and add one
+  deterministic shop entry for each slot on every run. Plain gear remains the
+  player's starter equipment and is not sold in the shop.
 - Keep the random common set, premium item, and Demon Cloak as additional stock;
-  guaranteed plain gear does not replace the shop's variable offerings.
-- Repair already-created run stock idempotently: append only missing plain slot
-  entries, never revive sold entries, duplicate IDs, or reorder existing stock.
+  guaranteed basic gear does not replace the shop's variable offerings.
+- Repair already-created run stock idempotently: convert legacy guaranteed plain
+  entries to their basic equivalents, then append only missing basic slot
+  entries. Preserve sold state, IDs, and existing stock order.
 - Give guaranteed entries stable run-scoped IDs and normal catalog-derived
   prices so save/load and sold-state behavior remain deterministic.
 - Because the expanded stock exceeds eight rows, verify controller, wheel, and
@@ -186,8 +188,9 @@ Make the Demon Hub root previews and nested SHOP, FUSION, and BIND menus behave 
 
 - Extend `demon_hub_menu_scene_smoke.gd` with cursor-anchor assertions against
   rendered labels/buttons at every depth and after two aspect-ratio changes.
-- Add stock tests proving all six `plain_*` definitions exist exactly once in a
-  fresh and a repaired nonempty shop stock.
+- Add stock tests proving all six `basic_*` definitions exist exactly once in a
+  fresh and a repaired nonempty shop stock, while starter inventory uses
+  `plain_*` definitions.
 - Add touch-route tests for direct command taps, BUY↔SELL switching from item and
   amount states, item selection sound, drag-without-tap, scroll bounds, and the
   last stock row.
@@ -212,9 +215,9 @@ Make the Demon Hub root previews and nested SHOP, FUSION, and BIND menus behave 
   active cursors.
 - Completed: visible SHOP mode tabs and item rows remain touch-reachable across
   route depths, and item taps play `ui_hover` through the hub flow owner.
-- Completed: fresh and existing shop stocks receive one stable plain item per
-  equipment slot; variable common entries avoid duplicating guaranteed plain
-  gear.
+- Completed: fresh shop stocks receive one stable basic item per equipment slot;
+  legacy guaranteed plain entries are migrated idempotently, while variable
+  common entries avoid duplicating guaranteed basic gear.
 - Completed: the shared hub breadcrumb cursor remains visible on nested SHOP,
   FUSION, and BIND routes and resolves from the active command page instead of
   defaulting to STATS.

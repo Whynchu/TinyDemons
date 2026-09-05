@@ -626,7 +626,7 @@ func source_eligible(definition_id: StringName, source_tag: StringName, run_rank
 
 func starter_item(slot: StringName) -> ItemInstance:
 	var canonical := canonical_slot(slot)
-	var ids := {&"weapon": &"basic_sword", &"head": &"basic_hood", &"body": &"basic_tunic", &"arm": &"basic_wraps", &"shield": &"basic_shield", &"accessory": &"basic_charm"}
+	var ids := {&"weapon": &"plain_blade", &"head": &"plain_hood", &"body": &"plain_tunic", &"arm": &"plain_wraps", &"shield": &"plain_shield", &"accessory": &"plain_ring"}
 	var item := ItemInstance.new()
 	if canonical.is_empty():
 		return item
