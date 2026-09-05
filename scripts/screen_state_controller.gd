@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.64"
+const GAME_VERSION := "0.1.65"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -1343,11 +1343,13 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var item_action_button := make_retro_button("BUY", Vector2(maxf(96.0, display_view_size.x - 144.0), 21), Vector2(52, 13), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); items_page.add_child(item_action_button)
 	for mode_index in 2:
-		var mode_button := make_retro_button("BUY" if mode_index == 0 else "SELL", Vector2(14 + mode_index * 42, 21), Vector2(36, 13), pixel_texture)
+		var mode_button := make_retro_button("BUY" if mode_index == 0 else "SELL", Vector2(14 + mode_index * 42, 8), Vector2(36, 13), pixel_texture)
 		mode_button.focus_mode = Control.FOCUS_NONE
 		mode_button.pressed.connect(func(selected_mode: int = mode_index):
 			hub_shop_sell_mode = selected_mode == 1
 			hub_shop_sell_confirm_pending = false
+			hub_action_column = selected_mode
+			hub_content_focus = true
 			hub_item_index = 0
 			hub_list_scroll = 0.0)
 		items_page.add_child(mode_button)
@@ -2122,9 +2124,9 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		item_action.mouse_filter = Control.MOUSE_FILTER_STOP if item_action.visible else Control.MOUSE_FILTER_IGNORE
 	for mode_index in hub_shop_mode_buttons.size():
 		var mode_button := hub_shop_mode_buttons[mode_index]
-		mode_button.visible = page == HUB_PAGE_SHOP and hub_content_focus
+		mode_button.visible = page == HUB_PAGE_SHOP
 		mode_button.mouse_filter = Control.MOUSE_FILTER_STOP if mode_button.visible else Control.MOUSE_FILTER_IGNORE
-		set_archetype_button_state(mode_button, true, highlight_color if (hub_shop_sell_mode == (mode_index == 1)) else Color8(100, 105, 120))
+		set_archetype_button_state(mode_button, true, highlight_color if (hub_action_column == mode_index and not hub_content_focus) else Color8(100, 105, 120))
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
 	for node in hub_binding_texts: node.visible = page == HUB_PAGE_BIND
 	if hub_binding_action_button != null:
@@ -3615,6 +3617,18 @@ func update_hub_input(root: Object) -> void:
 		hub_item_index = 0
 		hub_list_scroll = 0.0
 		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		return
+	if page == HUB_PAGE_SHOP and not hub_content_focus:
+		if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
+			hub_action_column = 1 - hub_action_column
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		elif bool(root.call("_is_menu_confirm_just_pressed")):
+			hub_shop_sell_mode = hub_action_column == 1
+			hub_shop_sell_confirm_pending = false
+			hub_content_focus = true
+			hub_item_index = 0
+			hub_list_scroll = 0.0
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
