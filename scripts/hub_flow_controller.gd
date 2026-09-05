@@ -713,7 +713,7 @@ func hub_item_action(root: Object) -> void:
 					var body_was_empty := cloak_catalog.slot_needs_introduction(root.player_profile, &"body")
 					root.run_state.record_gear_reward(&"shop", cloak_item, root.player_profile.difficulty_rank, root.player_profile.level, -1, "", body_was_empty, false, &"purchased")
 					entry["price"] = root.player_profile.demon_cloak_price()
-					root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+					root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
 				else:
 					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 			elif not bool(entry.get("sold", false)):
@@ -722,7 +722,7 @@ func hub_item_action(root: Object) -> void:
 				var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, catalog.definition_slot(item.definition_id))
 				if root.player_profile.purchase_item(item, int(entry.get("price", 0))):
 					root.run_state.record_gear_reward(&"shop", item, root.player_profile.difficulty_rank, root.player_profile.level, -1, "", slot_was_empty, false, &"purchased")
-					entry["sold"] = true; root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
+					entry["sold"] = true; root.run_state.shop_stock[index] = entry; invalidate_hub_fusion_candidates(root); root.call("_save_player_profile"); root.call("_update_gold_indicator"); root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_confirm", 0.0, 1.0); root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
 				else:
 					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 			else:
