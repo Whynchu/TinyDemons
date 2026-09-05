@@ -237,6 +237,7 @@ func set_hub_page(root: Object, page: int) -> void:
 	screen.hub_list_scroll = 0.0
 	screen.hub_shop_sell_mode = false
 	screen.hub_shop_sell_confirm_pending = false
+	screen.hub_shop_command_focus = screen.hub_page == HUB_PAGE_SHOP
 	screen.hub_choice_scroll = 0.0
 	# Equipment has a deliberate three-step route. Entering the page always
 	# lands on its top command row; Equip then descends into slots and finally
@@ -687,7 +688,7 @@ func hub_item_action(root: Object) -> void:
 			var catalog := ItemCatalog.new()
 			for data: Dictionary in root.player_profile.inventory:
 				var owned := ItemInstance.from_dictionary(data)
-				if root.player_profile.get_equipped_instance_id(catalog.definition_slot(owned.definition_id)) != owned.instance_id:
+				if not root.player_profile.equipped_instance_ids.values().has(owned.instance_id):
 					sellable.append(owned)
 			if sellable.is_empty():
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
