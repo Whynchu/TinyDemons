@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.65"
+const GAME_VERSION := "0.1.66"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -1343,7 +1343,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var item_action_button := make_retro_button("BUY", Vector2(maxf(96.0, display_view_size.x - 144.0), 21), Vector2(52, 13), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); items_page.add_child(item_action_button)
 	for mode_index in 2:
-		var mode_button := make_retro_button("BUY" if mode_index == 0 else "SELL", Vector2(14 + mode_index * 42, 8), Vector2(36, 13), pixel_texture)
+		var mode_button := make_retro_button("BUY" if mode_index == 0 else "SELL", Vector2(132 + mode_index * 42, 21), Vector2(36, 13), pixel_texture)
 		mode_button.focus_mode = Control.FOCUS_NONE
 		mode_button.pressed.connect(func(selected_mode: int = mode_index):
 			hub_shop_sell_mode = selected_mode == 1
@@ -1970,11 +1970,14 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_cursor_text != null and not page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
 		hub_cursor_text.texture = MENU_CURSOR_TEXTURE
-		hub_cursor_text.visible = hub_is_root or page == HUB_PAGE_ALLOCATE
+		hub_cursor_text.visible = hub_is_root or page == HUB_PAGE_ALLOCATE or (page == HUB_PAGE_SHOP and not hub_content_focus)
 		# The hand artwork's opaque pixels sit one row lower than the command text's
 		# visual center, so raise this top-rail cursor by one native pixel.
 		var command_target := Vector2(page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, page_buttons[cursor_index].position.y + 2.0)
-		var command_inactive := page == HUB_PAGE_ALLOCATE and hub_content_focus
+		if page == HUB_PAGE_SHOP and not hub_content_focus and not hub_shop_mode_buttons.is_empty():
+			var shop_button := hub_shop_mode_buttons[clampi(hub_action_column, 0, hub_shop_mode_buttons.size() - 1)]
+			command_target = Vector2(shop_button.position.x - CURSOR_LEFT_GAP, shop_button.position.y + 3.0)
+		var command_inactive := (page == HUB_PAGE_ALLOCATE and hub_content_focus) or (page == HUB_PAGE_SHOP and hub_content_focus)
 		hub_cursor_text.modulate = DIM_CURSOR_MODULATE if command_inactive else ACTIVE_CURSOR_MODULATE
 		if command_inactive:
 			# The inactive top cursor stops bobbing and rests at the rightmost
@@ -3630,8 +3633,12 @@ func update_hub_input(root: Object) -> void:
 			hub_list_scroll = 0.0
 			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 		return
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")): root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+		hub_shop_sell_confirm_pending = false
+		root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+		hub_shop_sell_confirm_pending = false
+		root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif page == HUB_PAGE_FUSION and bool(root.call("_is_menu_direction_just_pressed", &"ui_left")): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif page == HUB_PAGE_FUSION and bool(root.call("_is_menu_direction_just_pressed", &"ui_right")): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_confirm_just_pressed")):
