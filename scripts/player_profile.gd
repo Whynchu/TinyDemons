@@ -110,6 +110,15 @@ func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 				equipped_instance_ids["body"] = "starter-armor"
 			_sync_body_alias()
 			continue
+		var existing := find_item(starter.instance_id)
+		if existing != null and existing.definition_id != starter.definition_id:
+			# Preserve the stable starter ID and all saved item data while migrating
+			# legacy Basic starter definitions to the Plain set.
+			for index in inventory.size():
+				if str(inventory[index].get("instance_id", "")) == starter.instance_id:
+					existing.definition_id = starter.definition_id
+					inventory[index] = existing.to_dictionary()
+					break
 		grant_item(starter)
 		if get_equipped_instance_id(slot).is_empty():
 			equipped_instance_ids[String(slot)] = starter.instance_id

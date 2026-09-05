@@ -23,7 +23,7 @@ func _initialize() -> void:
 
 	var hood := catalog.starter_item(&"head")
 	var wraps := catalog.starter_item(&"arm")
-	_expect(hood.definition_id == &"basic_hood" and wraps.definition_id == &"basic_wraps", "new slots use the Basic starter pieces", failures)
+	_expect(hood.definition_id == &"plain_hood" and wraps.definition_id == &"plain_wraps", "new slots use the Plain starter pieces", failures)
 	_expect(catalog.bonuses(hood).get("vitality", 0.0) == 1.0 and catalog.bonuses(wraps).get("strength", 0.0) == 1.0, "Head and Arm starters use the small Basic packages", failures)
 	_expect(not bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and not bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "Basic starters remain eligible for ordinary drops", failures)
 
