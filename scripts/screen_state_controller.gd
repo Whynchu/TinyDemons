@@ -10,7 +10,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.63"
+const GAME_VERSION := "0.1.64"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -214,6 +214,7 @@ var hub_shop_price_texts: Array[Sprite2D] = []
 var hub_item_detail_texts: Array[Sprite2D] = []
 var hub_item_detail_panel: Panel = null
 var hub_item_action_button: Button = null
+var hub_shop_mode_buttons: Array[Button] = []
 var hub_equipment_action_buttons: Array[Button] = []
 ## The authored equipment view is shared by the hub transaction route and the
 ## read-only Pause Equipment page.  Its nodes are created once by the scenes;
@@ -1341,6 +1342,16 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		item_details.append(create_sprite(items_page, "HubItemDetail%d" % detail_index, null, Vector2(20, HUB_ITEM_DETAIL_TOP + detail_index * HUB_ITEM_DETAIL_PITCH), false))
 	var item_action_button := make_retro_button("BUY", Vector2(maxf(96.0, display_view_size.x - 144.0), 21), Vector2(52, 13), pixel_texture)
 	item_action_button.focus_mode = Control.FOCUS_NONE; item_action_button.pressed.connect(item_action); items_page.add_child(item_action_button)
+	for mode_index in 2:
+		var mode_button := make_retro_button("BUY" if mode_index == 0 else "SELL", Vector2(14 + mode_index * 42, 21), Vector2(36, 13), pixel_texture)
+		mode_button.focus_mode = Control.FOCUS_NONE
+		mode_button.pressed.connect(func(selected_mode: int = mode_index):
+			hub_shop_sell_mode = selected_mode == 1
+			hub_shop_sell_confirm_pending = false
+			hub_item_index = 0
+			hub_list_scroll = 0.0)
+		items_page.add_child(mode_button)
+		hub_shop_mode_buttons.append(mode_button)
 	var equipment_actions: Array[Button] = []
 	var equip_action := make_retro_button("EQUIP", Vector2(14, 22), Vector2(42, 12), pixel_texture)
 	equip_action.name = "HubEquipmentEquip"; equip_action.focus_mode = Control.FOCUS_NONE; equip_action.pressed.connect(item_action); items_page.add_child(equip_action); equipment_actions.append(equip_action)
@@ -2109,6 +2120,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if item_action != null:
 		item_action.visible = item_page and page != HUB_PAGE_EQUIPMENT and hub_content_focus
 		item_action.mouse_filter = Control.MOUSE_FILTER_STOP if item_action.visible else Control.MOUSE_FILTER_IGNORE
+	for mode_index in hub_shop_mode_buttons.size():
+		var mode_button := hub_shop_mode_buttons[mode_index]
+		mode_button.visible = page == HUB_PAGE_SHOP and hub_content_focus
+		mode_button.mouse_filter = Control.MOUSE_FILTER_STOP if mode_button.visible else Control.MOUSE_FILTER_IGNORE
+		set_archetype_button_state(mode_button, true, highlight_color if (hub_shop_sell_mode == (mode_index == 1)) else Color8(100, 105, 120))
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
 	for node in hub_binding_texts: node.visible = page == HUB_PAGE_BIND
 	if hub_binding_action_button != null:

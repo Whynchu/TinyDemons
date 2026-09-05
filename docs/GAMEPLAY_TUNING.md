@@ -229,6 +229,9 @@ exposed or indexed. Candidates to export into the tuning resources:
 Shop selling is nested under the Shop page: left/right switches BUY and SELL,
 SELL lists unequipped gear only, and the selected sale requires a second confirm
 press. BACK cancels a pending sale or returns from SELL to BUY.
+
+BUY and SELL are also shown as docked shop controls so the active mode is visible
+and touch-selectable rather than being a hidden cursor state.
 | World-drop physics | launch +-18/-30, air 0.38, gravity 92, pickup 10, push 18 | `gameplay.gd:116-150` |
 | Slime detour radii / slide | [12, 18, 24], detour 0.42, repath 0.10-0.18, slide x0.72 | `gameplay.gd:1773-1813` |
 | Run-metric color thresholds | 0.95 / 0.85 / 0.70 / 0.50 | `gameplay.gd:666-674` |
