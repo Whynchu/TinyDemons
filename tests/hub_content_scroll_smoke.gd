@@ -25,6 +25,15 @@ func _initialize() -> void:
 		screens.hub_page = screens.HUB_PAGE_SHOP
 		run_state.ensure_shop_stock(profile)
 		_expect(screens.hub_list_scroll == 0.0, "hub list starts at the top", failures)
+		if run_state.shop_stock.size() >= 9:
+			screens.hub_item_index = 7
+			screens.snap_hub_list_scroll_to_selection(gameplay)
+			_expect(screens.hub_list_scroll == 0.0, "controller keeps the first eight shop rows fixed", failures)
+			screens.hub_item_index = 8
+			screens.snap_hub_list_scroll_to_selection(gameplay)
+			_expect(screens.hub_list_scroll == 1.0, "controller starts shop scrolling on the ninth row", failures)
+			screens.hub_item_index = 0
+			screens.hub_list_scroll = 0.0
 		var index_before := screens.hub_item_index
 		# Dragging up scrolls the content (shows later rows); the cursor stays.
 		screens.scroll_hub_content(gameplay, -30.0)

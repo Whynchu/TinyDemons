@@ -3,6 +3,7 @@ class_name HubFlowController
 
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
 
 const HUB_PAGE_COUNT := 6
 const HUB_PAGE_ALLOCATE := 0
@@ -23,6 +24,10 @@ const EQUIPMENT_MODE_SLOT_REMOVE := 2
 const EQUIPMENT_MODE_CANDIDATE := 3
 const EQUIPMENT_MODE_REMOVE_ALL_CONFIRM := 4
 
+const SHOP_STATE_MODE_SELECT := ShopMenuLayoutScript.MODE_SELECT
+const SHOP_STATE_ITEM_BROWSE := ShopMenuLayoutScript.ITEM_BROWSE
+const SHOP_STATE_SELL_AMOUNT := ShopMenuLayoutScript.SELL_AMOUNT
+
 
 func _set_equipment_mode(screen: Object, mode: int) -> void:
 	## One transition point keeps the legacy booleans synchronized with the
@@ -34,7 +39,7 @@ func _set_equipment_mode(screen: Object, mode: int) -> void:
 
 
 func build_hub_ui(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_stat_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"), Callable(root, "_set_pause_status_page"), Callable(root, "_set_pause_equipment_page"), Callable(root, "_pause_back"), Callable(root, "_remove_hub_gear"), Callable(root, "_remove_all_hub_gear"), Callable(root, "_hub_back_or_close"), Callable(root, "_cancel_hub_remove_all"), Callable(root, "_pause_equipment_back"))
+	var controls: Dictionary = root.screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_hub_adjust_stat"), Callable(root, "_hub_confirm_stats"), Callable(root, "_hub_cancel_stats"), Callable(root, "_hub_auto_allocate"), Callable(root, "_hub_respec"), Callable(root, "_start_from_hub"), Callable(root, "_return_to_title"), Callable(root, "_set_hub_page"), Callable(root, "_hub_item_action"), Callable(root, "_select_hub_gear_slot"), Callable(root, "_hub_bind_current_element"), Callable(root, "_select_hub_gear_candidate"), Callable(root, "_select_hub_stat_row"), Callable(root, "_select_hub_item_row"), Callable(root, "_shift_hub_fusion_count"), Callable(root, "_close_hub_to_run"), Callable(root, "_open_settings_from_pause"), Callable(root, "_quit_to_title_from_pause"), Callable(root, "_set_pause_status_page"), Callable(root, "_set_pause_equipment_page"), Callable(root, "_pause_back"), Callable(root, "_remove_hub_gear"), Callable(root, "_remove_all_hub_gear"), Callable(root, "_hub_back_or_close"), Callable(root, "_cancel_hub_remove_all"), Callable(root, "_pause_equipment_back"), Callable(root, "_shop_mode_pressed"), Callable(root, "_shop_amount_changed"), Callable(root, "_shop_amount_cancelled"), Callable(root, "_shop_back_pressed"))
 	root.screen_state_controller.hub_overlay = controls["overlay"] as ColorRect
 	root.screen_state_controller.hub_summary_text = controls["summary"] as Sprite2D
 	root.screen_state_controller.hub_points_text = controls["points"] as Sprite2D
@@ -81,6 +86,7 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.hub_slot_cursor = controls["slot_cursor"] as Sprite2D
 	root.screen_state_controller.hub_choice_cursor = controls["choice_cursor"] as Sprite2D
 	root.screen_state_controller.hub_equipment_menu = controls.get("equipment_menu") as Control
+	root.screen_state_controller.hub_shop_menu = controls.get("shop_menu") as Control
 	root.screen_state_controller.hub_item_detail_texts = controls["item_details"] as Array[Sprite2D]
 	root.screen_state_controller.hub_item_action_button = controls["item_action"] as Button
 	root.screen_state_controller.hub_equipment_action_buttons = controls["equipment_actions"] as Array[Button]
@@ -193,6 +199,11 @@ func close_hub_to_run(root: Object) -> void:
 	root.screen_state_controller.hub_opened_from_npc = false
 	root.screen_state_controller.hub_pause_mode = false
 	root.screen_state_controller.hub_is_root = true
+	root.screen_state_controller.hub_shop_sell_mode = false
+	root.screen_state_controller.hub_shop_state = SHOP_STATE_MODE_SELECT
+	root.screen_state_controller.hub_shop_sell_amount = 1
+	root.screen_state_controller.hub_shop_sell_amount_max = 1
+	root.screen_state_controller.hub_action_column = 0
 	root.screen_state_controller.pause_page = 0
 	root.screen_state_controller.hub_touch_candidate_slot = ""
 	root.screen_state_controller.hub_touch_candidate_index = -1
@@ -216,6 +227,17 @@ func set_hub_page(root: Object, page: int) -> void:
 	var screen: Object = root.screen_state_controller
 	if page < 0:
 		_set_screen_property_if_available(screen, &"hub_is_root", true)
+		root.call("_hub_cancel_stats", false)
+		screen.hub_stat_row = 0
+		screen.hub_item_index = 0
+		screen.hub_list_scroll = 0.0
+		screen.hub_choice_scroll = 0.0
+		screen.hub_fusion_count = 1
+		screen.hub_fusion_message = ""
+		screen.hub_binding_message = ""
+		screen.hub_shop_state = SHOP_STATE_MODE_SELECT
+		screen.hub_shop_sell_amount = 1
+		screen.hub_shop_sell_amount_max = 1
 		screen.hub_content_focus = false
 		_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND)
 		screen.hub_touch_candidate_slot = ""
@@ -235,8 +257,10 @@ func set_hub_page(root: Object, page: int) -> void:
 	screen.hub_touch_candidate_slot = ""
 	screen.hub_touch_candidate_index = -1
 	screen.hub_list_scroll = 0.0
-	screen.hub_shop_sell_mode = false
 	screen.hub_shop_sell_confirm_pending = false
+	screen.hub_shop_state = SHOP_STATE_MODE_SELECT
+	screen.hub_shop_sell_amount = 1
+	screen.hub_shop_sell_amount_max = 1
 	screen.hub_shop_command_focus = screen.hub_page == HUB_PAGE_SHOP
 	screen.hub_choice_scroll = 0.0
 	# Equipment has a deliberate three-step route. Entering the page always
@@ -258,7 +282,9 @@ func set_hub_page(root: Object, page: int) -> void:
 	else:
 		_set_screen_property_if_available(screen, &"hub_content_focus", true)
 	_set_equipment_mode(screen, EQUIPMENT_MODE_COMMAND if equipment_page else EQUIPMENT_MODE_SLOT_EQUIP)
-	_set_screen_property_if_available(screen, &"hub_action_column", 0)
+	# SHOP remembers its last BUY/SELL choice while the hub stays open. A full
+	# hub close clears it below, so a new hub session still starts on BUY.
+	_set_screen_property_if_available(screen, &"hub_action_column", 1 if screen.hub_page == HUB_PAGE_SHOP and screen.hub_shop_sell_mode else 0)
 	screen.hub_fusion_message = ""
 	screen.hub_binding_message = ""
 	screen.hub_fusion_count = 1
@@ -278,6 +304,13 @@ func back_to_hub_root(root: Object) -> void:
 		close_hub_to_run(root)
 		return
 	screen.hub_is_root = true
+	root.call("_hub_cancel_stats", false)
+	screen.hub_stat_row = 0
+	screen.hub_item_index = 0
+	screen.hub_list_scroll = 0.0
+	screen.hub_choice_scroll = 0.0
+	screen.hub_fusion_count = 1
+	screen.hub_fusion_message = ""
 	# Keep the selected command preview when returning to the top shell. This is
 	# important for the reworked hub: backing out of SHOP/FUSION/BIND should show
 	# that command's content again, not reset the player to a stale STATUS page.
@@ -340,12 +373,152 @@ func hub_bind_current_element(root: Object) -> bool:
 	return success
 
 
+func shop_sellable_items(root: Object) -> Array[ItemInstance]:
+	var result: Array[ItemInstance] = []
+	var profile := root.player_profile as PlayerProfile
+	if profile == null:
+		return result
+	for data: Dictionary in profile.inventory:
+		var item := ItemInstance.from_dictionary(data)
+		if not profile.equipped_instance_ids.values().has(item.instance_id):
+			# SELL presents one row per identical item signature. The representative
+			# keeps its instance ID for the eventual quantity sale; shop_matching_count
+			# and sell_items still operate on the complete matching stack.
+			var already_grouped := false
+			for grouped_item: ItemInstance in result:
+				if shop_items_match(grouped_item, item):
+					already_grouped = true
+					break
+			if not already_grouped:
+				result.append(item)
+	var catalog := ItemCatalog.new()
+	result.sort_custom(func(left: ItemInstance, right: ItemInstance) -> bool:
+		var left_value := catalog.sell_value(left)
+		var right_value := catalog.sell_value(right)
+		if left_value != right_value:
+			return left_value < right_value
+		if left.definition_id != right.definition_id:
+			return String(left.definition_id) < String(right.definition_id)
+		return left.instance_id < right.instance_id
+	)
+	return result
+
+
+func shop_items_match(left: ItemInstance, right: ItemInstance) -> bool:
+	if left == null or right == null:
+		return false
+	var left_data := left.to_dictionary()
+	var right_data := right.to_dictionary()
+	left_data.erase("instance_id")
+	right_data.erase("instance_id")
+	return left_data == right_data
+
+
+func shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
+	var count := 0
+	for item: ItemInstance in items:
+		if shop_items_match(item, target):
+			count += 1
+	return count
+
+
+func shop_owned_matching_count(root: Object, target: ItemInstance) -> int:
+	if root == null or root.player_profile == null or target == null:
+		return 0
+	var count := 0
+	for data: Dictionary in root.player_profile.inventory:
+		var item := ItemInstance.from_dictionary(data)
+		if root.player_profile.equipped_instance_ids.values().has(item.instance_id):
+			continue
+		if shop_items_match(item, target):
+			count += 1
+	return count
+
+
+## Shop mode transitions are kept in the hub flow owner so every input path
+## reaches the same browse/sell transaction state.
+func shop_mode_pressed(root: Object, mode_index: int) -> void:
+	var screen: ScreenStateController = root.screen_state_controller
+	if screen.hub_page != HUB_PAGE_SHOP:
+		return
+	# Touch can enter BUY/SELL directly from the root preview. Controller flow
+	# still reaches this function only after explicitly entering SHOP.
+	screen.hub_is_root = false
+	screen.hub_action_column = clampi(mode_index, 0, 1)
+	screen.hub_shop_sell_mode = screen.hub_action_column == 1
+	screen.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+	screen.hub_shop_sell_confirm_pending = false
+	screen.hub_shop_sell_amount = 1
+	screen.hub_shop_sell_amount_max = 1
+	screen.hub_shop_command_focus = false
+	screen.hub_content_focus = true
+	screen.hub_item_index = 0
+	screen.hub_list_scroll = 0.0
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+
+
+func shop_amount_changed(root: Object, direction: int) -> void:
+	var screen: ScreenStateController = root.screen_state_controller
+	if screen.hub_page != HUB_PAGE_SHOP or not screen.hub_shop_sell_mode or screen.hub_shop_state != SHOP_STATE_SELL_AMOUNT:
+		return
+	var sellable := shop_sellable_items(root)
+	if sellable.is_empty():
+		return
+	var selected := sellable[clampi(screen.hub_item_index, 0, sellable.size() - 1)]
+	var maximum := shop_owned_matching_count(root, selected)
+	screen.hub_shop_sell_amount_max = maxi(maximum, 1)
+	var next_amount := clampi(int(screen.hub_shop_sell_amount) + direction, 1, screen.hub_shop_sell_amount_max)
+	if next_amount == screen.hub_shop_sell_amount:
+		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+		return
+	screen.hub_shop_sell_amount = next_amount
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_hover", -6.0, 1.0)
+
+
+func shop_amount_cancelled(root: Object) -> void:
+	var screen: ScreenStateController = root.screen_state_controller
+	if screen.hub_page != HUB_PAGE_SHOP or screen.hub_shop_state != SHOP_STATE_SELL_AMOUNT:
+		return
+	screen.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+	screen.hub_shop_sell_confirm_pending = false
+	screen.hub_shop_sell_amount = 1
+	screen.hub_shop_sell_amount_max = 1
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_decline", 0.0, 1.0)
+
+
+func shop_back_pressed(root: Object) -> void:
+	var screen: ScreenStateController = root.screen_state_controller
+	if screen.hub_page != HUB_PAGE_SHOP:
+		return
+	if screen.hub_shop_state == SHOP_STATE_SELL_AMOUNT:
+		shop_amount_cancelled(root)
+		return
+	if screen.hub_shop_state == SHOP_STATE_ITEM_BROWSE:
+		screen.hub_shop_state = SHOP_STATE_MODE_SELECT
+		screen.hub_shop_sell_confirm_pending = false
+		screen.hub_shop_sell_amount = 1
+		screen.hub_shop_sell_amount_max = 1
+		screen.hub_shop_command_focus = true
+		screen.hub_content_focus = false
+		screen.hub_action_column = 1 if screen.hub_shop_sell_mode else 0
+		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		root.call("_play_sound", "ui_decline", 0.0, 1.0)
+		return
+	back_to_hub_root(root)
+
+
 func shift_hub_item(root: Object, direction: int) -> void:
 	var count: int = 0
 	if root.screen_state_controller.hub_page == 1 or root.screen_state_controller.is_pause_equipment_active():
 		count = ItemCatalog.SLOTS.size()
 	elif root.screen_state_controller.hub_page == 2:
-		count = root.run_state.shop_stock.size() if root.run_state != null else 0
+		if root.screen_state_controller.hub_shop_sell_mode:
+			count = shop_sellable_items(root).size()
+		else:
+			count = root.run_state.shop_stock.size() if root.run_state != null else 0
 	elif root.screen_state_controller.hub_page == 3:
 		count = hub_fusion_candidates(root).size()
 		root.screen_state_controller.hub_fusion_count = 1
@@ -389,24 +562,42 @@ func select_hub_item_row(root: Object, row: int) -> void:
 	if page != 2 and page != 3:
 		return
 	var count := 0
-	if page == 2 and root.run_state != null:
-		root.run_state.ensure_shop_stock(root.player_profile)
-		count = root.run_state.shop_stock.size()
+	if page == 2:
+		if root.screen_state_controller.hub_shop_sell_mode:
+			count = shop_sellable_items(root).size()
+		elif root.run_state != null:
+			root.run_state.ensure_shop_stock(root.player_profile)
+			count = root.run_state.shop_stock.size()
 	elif page == 3:
 		count = hub_fusion_candidates(root).size()
 	if count <= 0:
 		return
-	var visible_rows := maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
+	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS if page == HUB_PAGE_SHOP and root.screen_state_controller.hub_shop_menu != null else maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
 	var window_start := int(root.screen_state_controller.hub_list_scroll)
 	var target := window_start + row
 	if row < 0 or row >= visible_rows or target < 0 or target >= count:
 		return
+	# A second touch on the already-selected row is the touch equivalent of
+	# pressing the controller action button. The first touch still only selects
+	# the row, including when entering from the SHOP root preview.
+	if page == HUB_PAGE_SHOP and not root.screen_state_controller.hub_is_root and root.screen_state_controller.hub_shop_state == SHOP_STATE_ITEM_BROWSE and target == root.screen_state_controller.hub_item_index:
+		root.call("_hub_item_action")
+		return
 	root.screen_state_controller.hub_item_index = target
+	if page == HUB_PAGE_SHOP:
+		# A visible item is a direct touch entry point from the SHOP root preview.
+		root.screen_state_controller.hub_is_root = false
 	root.screen_state_controller.hub_content_focus = true
 	root.screen_state_controller.hub_equipment_action_focus = false
+	if page == 2:
+		root.screen_state_controller.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+		root.screen_state_controller.hub_shop_sell_confirm_pending = false
+		root.screen_state_controller.hub_shop_sell_amount = 1
+		root.screen_state_controller.hub_shop_sell_amount_max = 1
 	if page == 3:
 		root.screen_state_controller.hub_fusion_count = 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	root.call("_play_sound", "ui_hover", -6.0, 1.0)
 
 
 func hub_gear_candidates(root: Object, slot: StringName) -> Array[ItemInstance]:
@@ -581,6 +772,57 @@ func sell_profile_item(root: Object, instance_id: String) -> bool:
 	return true
 
 
+func sell_profile_items(root: Object, selected: ItemInstance, quantity: int, selected_index: int) -> bool:
+	if root.player_profile == null or selected == null or quantity <= 0:
+		return false
+	var sellable := shop_sellable_items(root)
+	var previous_scroll: float = float(root.screen_state_controller.hub_list_scroll)
+	var matching_ids: Array[String] = []
+	for data: Dictionary in root.player_profile.inventory:
+		var item := ItemInstance.from_dictionary(data)
+		if root.player_profile.equipped_instance_ids.values().has(item.instance_id):
+			continue
+		if shop_items_match(item, selected):
+			matching_ids.append(item.instance_id)
+	if matching_ids.size() < quantity:
+		return false
+	matching_ids = matching_ids.slice(0, quantity)
+	var sale: Dictionary = root.player_profile.sell_items(matching_ids, ItemCatalog.new())
+	if sale.is_empty():
+		return false
+	root.player_equipment.configure_from_profile(root.player_profile)
+	root.call("_configure_equipment_transmutations")
+	root.call("_save_player_profile")
+	root.call("_update_gold_indicator")
+	root.call("_update_soul_indicator")
+	invalidate_hub_fusion_candidates(root)
+	var remaining_count := shop_sellable_items(root).size()
+	# Preserve the visible list position after the inventory rebuild. If a sold item
+	# duplicate was before the selected row, both the selected index and the
+	# logical window move left by the same amount; otherwise the next item slides
+	# into the exact row that was just sold. Do not reset a scrolled list to zero.
+	var removed_before := 0
+	for index in range(mini(selected_index, sellable.size())):
+		if matching_ids.has(sellable[index].instance_id):
+			removed_before += 1
+	var selected_after := selected_index - removed_before
+	root.screen_state_controller.hub_item_index = clampi(selected_after, 0, maxi(remaining_count - 1, 0))
+	var max_scroll := maxf(0.0, float(remaining_count - ShopMenuLayoutScript.VISIBLE_ROWS))
+	var restored_scroll := clampf(previous_scroll - float(removed_before), 0.0, max_scroll)
+	var restored_start := int(floor(restored_scroll))
+	if root.screen_state_controller.hub_item_index < restored_start:
+		restored_scroll = float(root.screen_state_controller.hub_item_index)
+	elif root.screen_state_controller.hub_item_index >= restored_start + ShopMenuLayoutScript.VISIBLE_ROWS:
+		restored_scroll = float(root.screen_state_controller.hub_item_index - ShopMenuLayoutScript.VISIBLE_ROWS + 1)
+	root.screen_state_controller.hub_list_scroll = clampf(restored_scroll, 0.0, max_scroll)
+	root.screen_state_controller.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+	root.screen_state_controller.hub_shop_sell_amount = 1
+	root.screen_state_controller.hub_shop_sell_amount_max = 1
+	root.screen_state_controller.hub_shop_sell_confirm_pending = false
+	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	return true
+
+
 func hub_fusion_candidates(root: Object) -> Array[ItemInstance]:
 	if root.screen_state_controller.hub_fusion_candidates_dirty:
 		refresh_hub_fusion_candidates(root)
@@ -684,25 +926,21 @@ func hub_item_action(root: Object) -> void:
 		return
 	elif root.screen_state_controller.hub_page == 2:
 		if root.screen_state_controller.hub_shop_sell_mode:
-			var sellable: Array[ItemInstance] = []
-			var catalog := ItemCatalog.new()
-			for data: Dictionary in root.player_profile.inventory:
-				var owned := ItemInstance.from_dictionary(data)
-				if not root.player_profile.equipped_instance_ids.values().has(owned.instance_id):
-					sellable.append(owned)
+			var sellable := shop_sellable_items(root)
 			if sellable.is_empty():
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 				return
 			var sell_index := clampi(root.screen_state_controller.hub_item_index, 0, sellable.size() - 1)
 			var selected_sell := sellable[sell_index]
-			if not root.screen_state_controller.hub_shop_sell_confirm_pending:
-				root.screen_state_controller.hub_shop_sell_confirm_pending = true
+			if root.screen_state_controller.hub_shop_state != SHOP_STATE_SELL_AMOUNT:
+				root.screen_state_controller.hub_shop_state = SHOP_STATE_SELL_AMOUNT
+				root.screen_state_controller.hub_shop_sell_amount = 1
+				root.screen_state_controller.hub_shop_sell_amount_max = maxi(shop_owned_matching_count(root, selected_sell), 1)
+				root.screen_state_controller.hub_shop_sell_confirm_pending = false
 				root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 				return
-			if sell_profile_item(root, selected_sell.instance_id):
-				root.screen_state_controller.hub_shop_sell_confirm_pending = false
-				root.screen_state_controller.hub_item_index = clampi(sell_index, 0, maxi(sellable.size() - 2, 0))
+			if sell_profile_items(root, selected_sell, root.screen_state_controller.hub_shop_sell_amount, sell_index):
 				root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
 			else:
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
@@ -872,7 +1110,10 @@ func select_hub_menu_row(root: Object, row: int) -> void:
 	screen.hub_page = target_page
 	screen.hub_item_index = 0
 	screen.hub_stat_row = 0
-	screen.hub_action_column = 0
+	# The command rail is a preview while the hub is at root. Preserve the last
+	# BUY/SELL choice instead of silently changing the action that Confirm will
+	# enter after the player returns to SHOP.
+	screen.hub_action_column = 1 if target_page == HUB_PAGE_SHOP and screen.hub_shop_sell_mode else 0
 	screen.hub_touch_candidate_slot = ""
 	screen.hub_touch_candidate_index = -1
 	screen.hub_fusion_message = ""

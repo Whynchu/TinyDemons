@@ -700,6 +700,16 @@ func _salvage_profile_overflow(instance_id: String) -> int:
 	return int(hub_flow_controller.call("salvage_profile_overflow", self, instance_id))
 func _hub_item_action() -> void:
 	hub_flow_controller.call("hub_item_action", self)
+func _hub_shop_sellable_items() -> Array[ItemInstance]:
+	return hub_flow_controller.call("shop_sellable_items", self) as Array[ItemInstance]
+func _shop_mode_pressed(mode_index: int) -> void:
+	hub_flow_controller.call("shop_mode_pressed", self, mode_index)
+func _shop_amount_changed(direction: int) -> void:
+	hub_flow_controller.call("shop_amount_changed", self, direction)
+func _shop_amount_cancelled() -> void:
+	hub_flow_controller.call("shop_amount_cancelled", self)
+func _shop_back_pressed() -> void:
+	hub_flow_controller.call("shop_back_pressed", self)
 func _remove_hub_gear() -> void:
 	hub_flow_controller.call("remove_hub_gear", self)
 func _remove_all_hub_gear() -> void:

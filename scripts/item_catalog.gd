@@ -974,11 +974,17 @@ func sell_value(item: ItemInstance) -> int:
 
 
 func sell_soul_value(item: ItemInstance) -> int:
-	if item == null or item.fusion_count <= 0:
+	if item == null or (item.fusion_count <= 0 and item.enhancement_level <= 0):
 		return 0
-	# Return most of the fusion history while keeping a small sink so selling
-	# cannot create a positive-soul loop.
-	return maxi(1, roundi(float(item.fusion_count) * 0.75))
+	var invested := item.fusion_souls_invested
+	if invested <= 0:
+		# Compatibility for enhanced items saved before the investment ledger was
+		# introduced. Their current rarity/enhancement reconstructs the minimum
+		# known investment without inventing promoted-rarity history.
+		var rarity_rank: int = int({&"common": 0, &"rare": 1, &"epic": 2, &"legendary": 3, &"mythic": 4}.get(item.rarity, 0))
+		for enhancement in item.enhancement_level:
+			invested += PlayerProfile.FUSION_START_COST + rarity_rank * PlayerProfile.FUSION_RARITY_STEP_COST + enhancement
+	return floori(float(invested) * 0.5)
 
 
 func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:

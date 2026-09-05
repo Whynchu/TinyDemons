@@ -224,6 +224,43 @@ func sell_item(instance_id: String, catalog: ItemCatalog = null) -> Dictionary:
 	return {}
 
 
+func sell_items(instance_ids: Array[String], catalog: ItemCatalog = null) -> Dictionary:
+	## Validate the complete sale before changing inventory or currency.  The shop
+	## uses this for a quantity sale so a stale UI selection cannot create a
+	## partially completed transaction.
+	if instance_ids.is_empty():
+		return {}
+	var items := catalog if catalog != null else ItemCatalog.new()
+	var unique_ids: Dictionary = {}
+	var selected: Array[ItemInstance] = []
+	for instance_id: String in instance_ids:
+		if instance_id.is_empty() or unique_ids.has(instance_id):
+			return {}
+		var item := find_item(instance_id)
+		if item == null:
+			return {}
+		var slot := items.definition_slot(item.definition_id)
+		if get_equipped_instance_id(slot) == instance_id or equipped_instance_ids.values().has(instance_id):
+			return {}
+		unique_ids[instance_id] = true
+		selected.append(item)
+	if selected.is_empty():
+		return {}
+	var total_gold := 0
+	var total_souls := 0
+	for item: ItemInstance in selected:
+		total_gold += items.sell_value(item)
+		total_souls += items.sell_soul_value(item)
+	var remaining: Array[Dictionary] = []
+	for data: Dictionary in inventory:
+		if not unique_ids.has(str(data.get("instance_id", ""))):
+			remaining.append(data)
+	inventory = remaining
+	gold += total_gold
+	souls += total_souls
+	return {"count": selected.size(), "gold": total_gold, "souls": total_souls}
+
+
 func demon_cloak_price() -> int:
 	return DEMON_CLOAK_BASE_PRICE + DEMON_CLOAK_PRICE_STEP * demon_cloak_purchases
 
@@ -392,6 +429,8 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 	if material_indices.size() < amount:
 		return false
 	var working := target
+	working.fusion_count += amount
+	working.fusion_souls_invested += cost
 	for step in amount:
 		if working.enhancement_level >= MAX_ITEM_ENHANCEMENT:
 			working.rarity = ItemCatalog.next_rarity(working.rarity)

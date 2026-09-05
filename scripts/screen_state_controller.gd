@@ -5,12 +5,13 @@ const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
+const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
 const ResponsiveLayoutScript = preload("res://scripts/menu_responsive_layout.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.68"
+const GAME_VERSION := "0.1.69"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -46,7 +47,14 @@ const STAT_ROW_LEFT_ARROW_X := 42.5
 const STAT_ROW_RIGHT_ARROW_X := 90.5
 const STAT_SUBTRACT_MARKER_X := 51.5
 const STAT_ADD_MARKER_X := 104.5
-const HUB_COMMAND_CURSOR_GAP := 16.0
+# Match EquipmentMenuLayout's command gutter: the cursor's resting origin is
+# 20 px left and 3 px above the rendered glyph. _position_menu_cursor applies
+# the shared 2 px vertical raise, so this helper supplies the remaining 1 px.
+# The ordinary menu-cursor idle animation remains enabled; only the resting
+# anchor is geometry-derived, so every command word uses the same relationship.
+const HUB_COMMAND_CURSOR_TEXT_OFFSET := Vector2(28.0, 3.5)
+const HUB_COMMAND_CURSOR_X_CORRECTIONS: Array[float] = [3.0, 0.0, 5.0, 2.0]
+const HUB_COMMAND_DIMMED_BOB_OFFSET := Vector2(3.0, 0.0)
 const DERIVED_LABEL_X := 143.0
 const DERIVED_LABEL_TOP := 47.0
 const DERIVED_ROW_PITCH := 8.0
@@ -144,6 +152,9 @@ var hub_list_scroll := 0.0
 var hub_shop_sell_mode := false
 var hub_shop_sell_confirm_pending := false
 var hub_shop_command_focus := false
+var hub_shop_state := ShopMenuLayoutScript.MODE_SELECT
+var hub_shop_sell_amount := 1
+var hub_shop_sell_amount_max := 1
 var hub_shop_cursor: Sprite2D = null
 var hub_choice_scroll := 0.0
 var hub_list_cursor: Sprite2D = null
@@ -175,6 +186,10 @@ var hub_stat_cursor_text: Sprite2D = null
 var hub_page_buttons: Array[Button] = []
 var hub_back_button: Button = null
 var hub_back_prompt_text: Sprite2D = null
+var hub_footer_select_glyph: Sprite2D = null
+var hub_footer_select_text: Sprite2D = null
+var hub_footer_back_glyph: Sprite2D = null
+var hub_footer_back_text: Sprite2D = null
 var hub_player_card_panel: Panel = null
 var hub_player_card_texts: Array[Sprite2D] = []
 var hub_status_texts: Array[Sprite2D] = []
@@ -217,6 +232,7 @@ var hub_item_detail_texts: Array[Sprite2D] = []
 var hub_item_detail_panel: Panel = null
 var hub_item_action_button: Button = null
 var hub_shop_mode_buttons: Array[Button] = []
+var hub_shop_menu: Control = null
 var hub_equipment_action_buttons: Array[Button] = []
 ## The authored equipment view is shared by the hub transaction route and the
 ## read-only Pause Equipment page.  Its nodes are created once by the scenes;
@@ -439,6 +455,8 @@ func _refresh_active_menu_layout(root: Object) -> void:
 	# and in-progress animations survive an orientation change.
 	if hub_overlay != null and hub_overlay.visible and hub_equipment_menu != null and hub_equipment_menu.visible and hub_equipment_menu.has_method("refresh_layout_preserving_state"):
 		hub_equipment_menu.call("refresh_layout_preserving_state")
+	if hub_overlay != null and hub_overlay.visible and hub_shop_menu != null and hub_shop_menu.visible and hub_shop_menu.has_method("refresh_layout_preserving_state"):
+		hub_shop_menu.call("refresh_layout_preserving_state")
 	if pause_overlay != null and pause_overlay.visible and pause_equipment_menu != null and pause_equipment_menu.visible and pause_equipment_menu.has_method("refresh_layout_preserving_state"):
 		pause_equipment_menu.call("refresh_layout_preserving_state")
 	_display_layout_refreshing = false
@@ -1089,7 +1107,7 @@ func _make_transparent_touch_button(parent: Node, button_name: String, button_po
 	return button
 
 
-func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable(), pause_status: Callable = Callable(), pause_equipment: Callable = Callable(), pause_back_callback: Callable = Callable(), equipment_remove: Callable = Callable(), equipment_remove_all: Callable = Callable(), hub_back: Callable = Callable(), equipment_remove_all_cancel: Callable = Callable(), pause_equipment_back_callback: Callable = Callable()) -> Dictionary:
+func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, apply_stats: Callable, cancel_stats: Callable, auto_allocate: Callable, respec: Callable, _start_run: Callable, _return_title: Callable, set_page: Callable, item_action: Callable, select_gear_slot: Callable, bind_element: Callable = Callable(), select_gear_candidate: Callable = Callable(), select_stat_row: Callable = Callable(), select_item_row: Callable = Callable(), adjust_fusion_count: Callable = Callable(), pause_resume: Callable = Callable(), pause_settings: Callable = Callable(), pause_quit: Callable = Callable(), pause_status: Callable = Callable(), pause_equipment: Callable = Callable(), pause_back_callback: Callable = Callable(), equipment_remove: Callable = Callable(), equipment_remove_all: Callable = Callable(), hub_back: Callable = Callable(), equipment_remove_all_cancel: Callable = Callable(), pause_equipment_back_callback: Callable = Callable(), shop_mode: Callable = Callable(), shop_amount: Callable = Callable(), shop_amount_cancel: Callable = Callable(), shop_back: Callable = Callable()) -> Dictionary:
 	display_view_size = _view_size_for_parent(parent)
 	var overlay := DEMON_HUB_MENU_SCENE.instantiate() as ColorRect
 	if overlay == null:
@@ -1115,8 +1133,10 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var allocate_page := overlay.get_node_or_null("HubAllocatePage") as Control
 	var items_page := overlay.get_node_or_null("HubItemsPage") as Control
 	var equipment_menu := items_page.get_node_or_null("EquipmentMenu") as EquipmentMenuLayout if items_page != null else null
+	var shop_menu := items_page.get_node_or_null("ShopMenu") as Control if items_page != null else null
 	hub_equipment_menu = equipment_menu
 	self.equipment_menu = equipment_menu
+	hub_shop_menu = shop_menu
 	if equipment_menu != null:
 		equipment_menu.visible = false
 		if equipment_menu.has_method("set_pixel_texture"):
@@ -1176,6 +1196,10 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var back_prompt := create_sprite(overlay, "HubBackPrompt", null, Vector2(136, 141), false)
 	hub_back_prompt_text = back_prompt
 	back_prompt.visible = false
+	hub_footer_select_glyph = create_sprite(overlay, "HubFooterSelectGlyph", MENU_CIRCLE_TEXTURE, Vector2(107, 145), false)
+	hub_footer_select_text = create_sprite(overlay, "HubFooterSelectText", null, Vector2(114, 145), false)
+	hub_footer_back_glyph = create_sprite(overlay, "HubFooterBackGlyph", MENU_X_TEXTURE, Vector2(146, 145), false)
+	hub_footer_back_text = create_sprite(overlay, "HubFooterBackText", null, Vector2(153, 145), false)
 	# The bottom-right cell always reserves both resources, matching the hub
 	# render instead of swapping one GOLD/SOUL label per transaction page.
 	var gold_icon := Sprite2D.new()
@@ -1226,7 +1250,11 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		var command_text := page_button.get_child(0) as Sprite2D
 		if command_text != null and command_text.texture != null:
 			command_text.centered = false
-			command_text.position = Vector2(floorf((command_width - command_text.texture.get_width()) * 0.5), 3.0)
+			# The command button's x is its touch rectangle. Paint each label at the
+			# exported mockup origin so different word widths do not move the hand
+			# by a different amount. These are native 240px coordinates.
+			var command_label_x: Array[float] = [106.0, 139.0, 168.0, 206.0]
+			command_text.position = Vector2(command_label_x[command_index] - command_x, 3.0)
 		page_button.pressed.connect(set_page.bind(HUB_COMMAND_PAGE_TARGETS[command_index]))
 		root_page.add_child(page_button)
 		pages.append(page_button)
@@ -1422,6 +1450,23 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		if equipment_menu.has_signal("navigation_back_pressed"):
 			if hub_back.is_valid(): equipment_menu.navigation_back_pressed.connect(hub_back)
 			elif pause_resume.is_valid(): equipment_menu.navigation_back_pressed.connect(pause_resume)
+	if shop_menu != null:
+		if shop_menu.has_method("set_pixel_texture"):
+			shop_menu.call("set_pixel_texture", pixel_texture)
+		if shop_mode.is_valid():
+			shop_menu.connect("mode_pressed", shop_mode)
+		if select_item_row.is_valid():
+			shop_menu.connect("item_pressed", select_item_row)
+		if item_action.is_valid():
+			shop_menu.connect("item_action_pressed", item_action)
+		if shop_amount.is_valid():
+			shop_menu.connect("sell_amount_changed", shop_amount)
+		if item_action.is_valid():
+			shop_menu.connect("sell_amount_confirmed", item_action)
+		if shop_amount_cancel.is_valid():
+			shop_menu.connect("sell_amount_cancelled", shop_amount_cancel)
+		if shop_back.is_valid():
+			shop_menu.connect("shop_back_pressed", shop_back)
 	hub_item_list_panel = item_list_panel
 	hub_item_content_clip = item_content_clip
 	hub_gear_choice_panel = gear_choice_panel
@@ -1429,7 +1474,7 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	hub_item_detail_panel = item_detail_panel
 
 	var pause_controls := _build_pause_overlay(parent, pixel_texture, pause_resume, pause_settings, pause_quit, pause_status, pause_equipment, pause_back_callback, item_action, select_gear_slot, select_gear_candidate, equipment_remove, equipment_remove_all, equipment_remove_all_cancel, pause_equipment_back_callback)
-	return {"overlay": overlay, "summary": summary, "points": points, "gold_text": gold_text, "soul_text": soul_text, "gold_icon": gold_icon, "soul_icon": soul_icon, "stats": stats, "stat_add_marker": hub_stat_add_marker, "stat_subtract_marker": hub_stat_subtract_marker, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": soul_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "list_cursor": list_cursor, "slot_cursor": slot_cursor, "choice_cursor": choice_cursor, "equipment_menu": equipment_menu, "allocate_preview_panel": allocate_preview_panel, "allocate_preview_title": hub_allocate_preview_title, "allocate_preview": hub_allocate_preview_texts, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_equipment_menu": pause_controls["equipment_menu"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
+	return {"overlay": overlay, "summary": summary, "points": points, "gold_text": gold_text, "soul_text": soul_text, "gold_icon": gold_icon, "soul_icon": soul_icon, "stats": stats, "stat_add_marker": hub_stat_add_marker, "stat_subtract_marker": hub_stat_subtract_marker, "stat_buttons": stat_buttons, "stat_left": stat_left, "stat_right": stat_right, "stat_rows": stat_rows, "derived": derived, "status": status_texts, "apply": apply_button, "cancel": cancel_button, "auto": auto_button, "respec": respec_button, "start": null, "title": null, "pages": pages, "back": back_button, "card": card_texts, "context": context, "currency_icon": soul_icon, "item_name": item_name, "item_list": item_list, "item_rows": item_row_buttons, "shop_prices": shop_prices, "gear_choices": gear_choices, "gear_choice_buttons": gear_choice_buttons, "gear_slot_buttons": gear_slot_buttons, "gear_stats": gear_stats, "gear_stat_panel": gear_stat_panel, "item_list_panel": item_list_panel, "item_content_clip": item_content_clip, "gear_choice_panel": gear_choice_panel, "gear_choice_content_clip": gear_choice_content_clip, "item_details": item_details, "item_action": item_action_button, "equipment_actions": equipment_actions, "fusion_decrease": fusion_decrease_button, "fusion_increase": fusion_increase_button, "binding_panel": binding_panel, "binding_texts": binding_texts, "binding_action": binding_action_button, "cursor": cursor, "list_cursor": list_cursor, "slot_cursor": slot_cursor, "choice_cursor": choice_cursor, "equipment_menu": equipment_menu, "shop_menu": shop_menu, "allocate_preview_panel": allocate_preview_panel, "allocate_preview_title": hub_allocate_preview_title, "allocate_preview": hub_allocate_preview_texts, "pause_overlay": pause_controls["overlay"], "pause_title": pause_controls["title"], "pause_buttons": pause_controls["buttons"], "pause_cursor": pause_controls["cursor"], "pause_card": pause_controls["card"], "pause_status": pause_controls["status"], "pause_equipment": pause_controls["equipment"], "pause_equipment_menu": pause_controls["equipment_menu"], "pause_description": pause_controls["description"], "pause_back": pause_controls["back"], "pause_status_button": pause_controls["status_button"], "pause_equipment_button": pause_controls["equipment_button"]}
 
 
 func _make_menu_page(parent: Node, page_name: String) -> Control:
@@ -1658,6 +1703,10 @@ func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion
 	if hub_points_text != null: hub_points_text.position = Vector2(_hub_left_field_x(14.0), 27)
 	if hub_back_prompt_text != null: hub_back_prompt_text.position = Vector2(_hub_left_field_x(136.0), 141)
 	if hub_context_text != null: hub_context_text.position = Vector2(_hub_left_field_x(136.0), 151)
+	if hub_footer_select_glyph != null: hub_footer_select_glyph.position = Vector2(_hub_left_field_x(107.0), 145)
+	if hub_footer_select_text != null: hub_footer_select_text.position = Vector2(_hub_left_field_x(114.0), 145)
+	if hub_footer_back_glyph != null: hub_footer_back_glyph.position = Vector2(_hub_left_field_x(146.0), 145)
+	if hub_footer_back_text != null: hub_footer_back_text.position = Vector2(_hub_left_field_x(153.0), 145)
 	var allocation_preview_x := maxf(132.0, width - 108.0)
 	var allocation_left_width := maxf(108.0, allocation_preview_x - 24.0)
 	if hub_allocate_panel != null:
@@ -1765,10 +1814,42 @@ func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion
 	if hub_equipment_menu != null:
 		hub_equipment_menu.position = Vector2.ZERO
 		hub_equipment_menu.size = display_view_size
+	if hub_shop_menu != null:
+		hub_shop_menu.position = Vector2.ZERO
+		hub_shop_menu.size = display_view_size
 	if hub_cursor_text != null and not hub_page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, hub_page_buttons.size() - 1)
-		_position_menu_cursor(hub_cursor_text, Vector2(hub_page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, hub_page_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
+		var command_target := _hub_command_cursor_target(cursor_index)
+		if not hub_is_root:
+			# Nested routes own the active cursor; the command cursor is a dimmed
+			# breadcrumb and must remain frozen at the bob's rightmost endpoint.
+			var breadcrumb_target := command_target + HUB_COMMAND_DIMMED_BOB_OFFSET - Vector2(0.0, CURSOR_VERTICAL_RAISE)
+			if hub_cursor_text.has_method("lock_at"):
+				hub_cursor_text.call("lock_at", breadcrumb_target)
+			else:
+				_position_menu_cursor(hub_cursor_text, command_target, false, preserve_cursor_motion)
+		else:
+			_position_menu_cursor(hub_cursor_text, command_target, animate_cursor, preserve_cursor_motion)
 	_reanchor_hub_legacy_cursors(animate_cursor, preserve_cursor_motion)
+
+
+func _hub_command_cursor_target(command_index: int) -> Vector2:
+	if hub_page_buttons.is_empty():
+		return Vector2.ZERO
+	var button := hub_page_buttons[clampi(command_index, 0, hub_page_buttons.size() - 1)] as Button
+	if button == null:
+		return Vector2.ZERO
+	var text_origin := button.position
+	if button.get_child_count() > 0:
+		var command_text := button.get_child(0) as Sprite2D
+		if command_text != null:
+			text_origin += command_text.position
+	# Cursor motion applies CURSOR_VERTICAL_RAISE after this helper. Derive this
+	# target from the painted glyph itself. Keep the authored half-pixel vertical
+	# offset; snapping here would erase the requested 2.5px correction.
+	var command_correction := HUB_COMMAND_CURSOR_X_CORRECTIONS[clampi(command_index, 0, HUB_COMMAND_CURSOR_X_CORRECTIONS.size() - 1)]
+	var target := text_origin - HUB_COMMAND_CURSOR_TEXT_OFFSET - Vector2(command_correction, 0.0)
+	return Vector2(roundf(target.x), target.y)
 
 
 func _reanchor_hub_legacy_cursors(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
@@ -1905,6 +1986,234 @@ func _hide_legacy_equipment_presenter() -> void:
 		button.focus_mode = Control.FOCUS_NONE
 
 
+func _hide_legacy_shop_presenter() -> void:
+	# Shop is rendered by the authored ShopMenu scene. The old dynamically-built
+	# labels, panels, buttons, and cursor remain available for compatibility
+	# callers, but none of them may draw or intercept a shop click underneath it.
+	var legacy_nodes: Array[CanvasItem] = []
+	legacy_nodes.append(hub_item_name_text)
+	legacy_nodes.append(hub_item_list_panel)
+	legacy_nodes.append(hub_item_content_clip)
+	legacy_nodes.append(hub_gear_choice_panel)
+	legacy_nodes.append(hub_gear_choice_content_clip)
+	legacy_nodes.append(hub_gear_stat_panel)
+	legacy_nodes.append(hub_item_detail_panel)
+	legacy_nodes.append(hub_item_action_button)
+	legacy_nodes.append_array(hub_item_list_texts)
+	legacy_nodes.append_array(hub_item_row_buttons)
+	legacy_nodes.append_array(hub_shop_price_texts)
+	legacy_nodes.append_array(hub_gear_slot_buttons)
+	legacy_nodes.append_array(hub_gear_choice_texts)
+	legacy_nodes.append_array(hub_gear_choice_buttons)
+	legacy_nodes.append_array(hub_gear_stat_texts)
+	legacy_nodes.append_array(hub_item_detail_texts)
+	legacy_nodes.append_array(hub_equipment_action_buttons)
+	legacy_nodes.append(hub_fusion_decrease_button)
+	legacy_nodes.append(hub_fusion_increase_button)
+	legacy_nodes.append_array(hub_shop_mode_buttons)
+	legacy_nodes.append(hub_list_cursor)
+	legacy_nodes.append(hub_slot_cursor)
+	legacy_nodes.append(hub_choice_cursor)
+	legacy_nodes.append(hub_shop_cursor)
+	for node in legacy_nodes:
+		if node == null:
+			continue
+		node.visible = false
+		if node is Control:
+			(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if hub_shop_cursor != null and hub_shop_cursor.has_method("stop_motion"):
+		hub_shop_cursor.call("stop_motion")
+
+
+func _shop_item_signature(item: ItemInstance) -> Dictionary:
+	if item == null:
+		return {}
+	var data := item.to_dictionary()
+	data.erase("instance_id")
+	return data
+
+
+func _shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
+	if target == null:
+		return 0
+	var target_signature := _shop_item_signature(target)
+	var count := 0
+	for item: ItemInstance in items:
+		if _shop_item_signature(item) == target_signature:
+			count += 1
+	return count
+
+
+func _shop_item_details(catalog: ItemCatalog, item: ItemInstance, sell_mode: bool) -> Array[String]:
+	if item == null:
+		return []
+	var lines: Array[String] = []
+	var bonuses := catalog.bonuses(item)
+	var stat_labels := {"vitality": "VIT", "strength": "STR", "defense": "DEF", "agi": "AGI", "speed": "AGI", "intelligence": "INT", "mnd": "MND"}
+	for key in ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]:
+		if not bonuses.has(key):
+			continue
+		var value := float(bonuses[key])
+		if is_zero_approx(value):
+			continue
+		var shown := "%d" % roundi(value) if is_equal_approx(value, round(value)) else "%.1f" % value
+		lines.append("%s %s%s" % [str(stat_labels[key]), "+" if value > 0.0 else "", shown])
+	if lines.is_empty():
+		lines.append("NO BONUS")
+	var random_text := catalog.random_stat_text(item)
+	if not random_text.is_empty():
+		# The full random-roll sentence is too wide for the authored detail card;
+		# the gear name already carries the + marker, so show only the compact roll.
+		lines.append(random_text.replace("RANDOM ", ""))
+	var description := catalog.player_description(item)
+	if not description.is_empty() and lines.size() < 4:
+		lines.append_array(_wrap_gear_text(description, 28))
+	if sell_mode and lines.size() < 4:
+		lines.append("SELL %dG" % catalog.sell_value(item))
+	return lines.slice(0, 4)
+
+
+func _shop_stat_comparison(root: Object, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
+	var fields := [
+		{"key": "vit", "label": "VIT"},
+		{"key": "strength", "label": "STR"},
+		{"key": "def", "label": "DEF"},
+		{"key": "agi", "label": "AGI"},
+		{"key": "intelligence", "label": "INT"},
+		{"key": "mnd", "label": "MND"},
+	]
+	var result: Array[Dictionary] = []
+	var live_snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
+	var preview_snapshot: CombatStatSnapshot = null
+	if live_snapshot != null and item != null:
+		var slot := catalog.definition_slot(item.definition_id)
+		var preview_equipment := EquipmentComponent.new()
+		var preview_item := item
+		if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
+			preview_item = null
+		preview_equipment.configure_preview_from_profile(profile, catalog, slot, preview_item)
+		var player_stats := root.get("player_stats") as StatsComponent
+		if player_stats != null:
+			preview_snapshot = CombatStatSnapshot.from_components(player_stats, preview_equipment)
+		preview_equipment.free()
+	if live_snapshot != null and preview_snapshot != null:
+		for field: Dictionary in fields:
+			var key := str(field["key"])
+			var before := float(live_snapshot.get(key))
+			var after := float(preview_snapshot.get(key))
+			var delta := after - before
+			result.append({
+				"label": str(field["label"]),
+				"before": before,
+				"after": after,
+				"after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244),
+			})
+		return result
+	var stats := root.get("player_stats") as StatsComponent
+	var base_values := [
+		float(stats.vit) if stats != null else 0.0,
+		float(stats.strength) if stats != null else 0.0,
+		float(stats.def) if stats != null else 0.0,
+		float(stats.agi) if stats != null else 0.0,
+		float(stats.intelligence) if stats != null else 0.0,
+		float(stats.mnd) if stats != null else 0.0,
+	]
+	var bonuses := catalog.bonuses(item) if item != null else {}
+	for index in fields.size():
+		var field: Dictionary = fields[index]
+		var key := str(field["key"])
+		var catalog_key := "vitality" if key == "vit" else "defense" if key == "def" else key
+		var after: float = base_values[index] + float(bonuses.get(catalog_key, 0.0))
+		var delta: float = after - base_values[index]
+		result.append({
+			"label": str(field["label"]),
+			"before": base_values[index],
+			"after": after,
+			"after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244),
+		})
+	return result
+
+
+func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+	if hub_shop_menu == null or profile == null:
+		return
+	var view := hub_shop_menu
+	view.call("set_pixel_texture", pixel_texture)
+	var catalog := ItemCatalog.new()
+	var items: Array[ItemInstance] = []
+	var prices: Array[String] = []
+	var soul_values: Array[int] = []
+	var sold_flags: Array[bool] = []
+	var sell_mode := hub_shop_sell_mode
+	if sell_mode:
+		items = root.call("_hub_shop_sellable_items") as Array[ItemInstance]
+		for item: ItemInstance in items:
+			prices.append("%d" % catalog.sell_value(item))
+			soul_values.append(catalog.sell_soul_value(item))
+			sold_flags.append(false)
+	else:
+		var run_state := root.get("run_state") as RunState
+		if run_state != null:
+			run_state.ensure_shop_stock(profile)
+			for entry: Dictionary in run_state.shop_stock:
+				var item_data := entry.get("item", {}) as Dictionary
+				var item := ItemInstance.from_dictionary(item_data)
+				items.append(item)
+				var sold := bool(entry.get("sold", false))
+				sold_flags.append(sold)
+				prices.append("SOLD" if sold else "%d" % int(entry.get("price", 0)))
+				soul_values.append(0)
+	var count := items.size()
+	var selected := clampi(hub_item_index, 0, maxi(count - 1, 0))
+	hub_item_index = selected
+	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS
+	var max_scroll := maxi(0, count - visible_rows)
+	hub_list_scroll = clampf(hub_list_scroll, 0.0, float(max_scroll))
+	var window_start := clampi(int(floor(hub_list_scroll)), 0, maxi(count - visible_rows, 0))
+	var visible_selected := selected - window_start
+	var row_labels: Array[String] = []
+	var row_colors: Array[Color] = []
+	var row_prices: Array[String] = []
+	var row_soul_values: Array[int] = []
+	for row in visible_rows:
+		var source_index := window_start + row
+		if source_index >= count:
+			row_labels.append("")
+			row_colors.append(Color8(140, 145, 160))
+			row_prices.append("")
+			row_soul_values.append(0)
+			continue
+		var item := items[source_index]
+		var fusion_suffix := " F%d" % item.enhancement_level if item.enhancement_level > 0 else ""
+		var label := (catalog.gear_name(item) + fusion_suffix) if sell_mode else "%s %s%s" % [catalog.rarity_letter_grade(item.rarity), catalog.gear_name(item), fusion_suffix]
+		row_labels.append(label)
+		row_colors.append(Color8(120, 120, 130) if source_index < sold_flags.size() and sold_flags[source_index] else catalog.rarity_color(item.rarity))
+		row_prices.append(prices[source_index] if source_index < prices.size() else "")
+		row_soul_values.append(soul_values[source_index] if source_index < soul_values.size() else 0)
+	var selected_item: ItemInstance = items[selected] if count > 0 else null
+	var stat_comparison := _shop_stat_comparison(root, profile, catalog, selected_item)
+	var owned_count := 0
+	var max_quantity := 1
+	if selected_item != null:
+		if sell_mode:
+			for data: Dictionary in profile.inventory:
+				var owned_item := ItemInstance.from_dictionary(data)
+				if profile.equipped_instance_ids.values().has(owned_item.instance_id):
+					continue
+				if _shop_item_signature(owned_item) == _shop_item_signature(selected_item):
+					owned_count += 1
+			max_quantity = maxi(owned_count, 1)
+		else:
+			for data: Dictionary in profile.inventory:
+				if _shop_item_signature(ItemInstance.from_dictionary(data)) == _shop_item_signature(selected_item):
+					owned_count += 1
+	var selected_quantity := clampi(hub_shop_sell_amount, 1, max_quantity)
+	hub_shop_sell_amount = selected_quantity
+	hub_shop_sell_amount_max = max_quantity
+	var scroll_fraction: float = hub_list_scroll - floor(hub_list_scroll)
+	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
+
+
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile == null: return
@@ -1941,6 +2250,18 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 			hub_equipment_menu.call("stop_cursor_motion")
 		if equipment_view_active and hub_equipment_menu.has_method("set_pixel_texture"):
 			hub_equipment_menu.call("set_pixel_texture", pixel_texture)
+	# The root keeps the selected command preview shell, but the nested Shop scene
+	# owns its cursors only after SHOP has been entered. This prevents a second
+	# shop cursor from appearing over the root command cursor.
+	var shop_view_active := page == HUB_PAGE_SHOP and hub_shop_menu != null
+	if hub_shop_menu != null:
+		hub_shop_menu.visible = shop_view_active
+		if not shop_view_active and hub_shop_menu.has_method("stop_cursor_motion"):
+			hub_shop_menu.call("stop_cursor_motion")
+		elif shop_view_active and hub_shop_menu.has_method("set_root_preview_mode"):
+			# The selected command's contents stay visible at the root, but its
+			# nested controls and cursors are not owned until the command is entered.
+			hub_shop_menu.call("set_root_preview_mode", hub_is_root)
 	var equipment_page_root := hub_page_roots.get(HUB_PAGE_EQUIPMENT) as Control
 	if equipment_page_root != null:
 		# The equipment scene carries its own full-width four-panel frame. Hide
@@ -1954,6 +2275,10 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		# prompt is rendered by hub_context_text, so no duplicate word is drawn.
 		hub_back_button.visible = true
 		hub_back_button.modulate.a = 0.0
+		# The authored Shop scene owns its own mode/list Back and sell-cancel
+		# regions. Leaving this older full-rail target active would intercept those
+		# touches before the scene can receive them. Keep the route owner explicit.
+		hub_back_button.mouse_filter = Control.MOUSE_FILTER_IGNORE if page == HUB_PAGE_SHOP else Control.MOUSE_FILTER_STOP
 	# Page changes alter the height of the shared inventory card (Equipment uses
 	# six compact slot rows; Shop/Fusion use the larger inventory rows).
 	_position_hub_controls()
@@ -1973,27 +2298,29 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	# focused (STATS rows), it stays on the command but dims exactly like the
 	# equipment menu's command cursor dims when descending into slots.
 	if hub_cursor_text != null and not page_buttons.is_empty():
-		var cursor_index := clampi(hub_menu_row, 0, page_buttons.size() - 1)
+		var page_command_index := HUB_COMMAND_PAGE_TARGETS.find(page)
+		var cursor_index := clampi(page_command_index if page_command_index >= 0 else hub_menu_row, 0, page_buttons.size() - 1)
 		hub_cursor_text.texture = MENU_CURSOR_TEXTURE
-		hub_cursor_text.visible = hub_is_root or page == HUB_PAGE_ALLOCATE or (page == HUB_PAGE_SHOP and not hub_content_focus)
-		# The hand artwork's opaque pixels sit one row lower than the command text's
-		# visual center, so raise this top-rail cursor by one native pixel.
-		var command_target := Vector2(page_buttons[cursor_index].position.x - HUB_COMMAND_CURSOR_GAP, page_buttons[cursor_index].position.y + 2.0)
-		if page == HUB_PAGE_SHOP and not hub_content_focus and not hub_shop_mode_buttons.is_empty():
-			var shop_button := hub_shop_mode_buttons[clampi(hub_action_column, 0, hub_shop_mode_buttons.size() - 1)]
-			command_target = Vector2(shop_button.position.x - CURSOR_LEFT_GAP, shop_button.position.y + 3.0)
-		var command_inactive := (page == HUB_PAGE_ALLOCATE and hub_content_focus) or (page == HUB_PAGE_SHOP and hub_content_focus)
+		# Keep the selected command as a dimmed breadcrumb while any nested hub
+		# route is open, matching Pause Equipment's locked command cursor.
+		hub_cursor_text.visible = true
+		# Anchor from the painted command glyph and snap to the logical pixel grid.
+		# This is the same source used during responsive reflow, so rotation cannot
+		# reintroduce the old button-relative half-pixel drift.
+		var command_target := _hub_command_cursor_target(cursor_index)
+		var command_inactive := not hub_is_root
 		hub_cursor_text.modulate = DIM_CURSOR_MODULATE if command_inactive else ACTIVE_CURSOR_MODULATE
 		if command_inactive:
-			# The inactive top cursor stops bobbing and rests at the rightmost
-			# point of its idle animation, matching the equipment menu's static
-			# dimmed breadcrumb treatment.
-			# move_menu_cursor normally applies CURSOR_VERTICAL_RAISE. Preserve that
-			# authored Y when changing to the dimmed, rightmost locked pose; otherwise
-			# the breadcrumb visibly drops two pixels and its lower art is clipped.
+			# Inactive breadcrumbs lock at the exact active anchor. Do not include a
+			# bob offset: Equipment's dimmed ancestors remain aligned with the label.
 			_kill_cursor_tween(hub_cursor_text)
-			hub_cursor_text.position = command_target + Vector2(CURSOR_BOB_AMOUNT, -CURSOR_VERTICAL_RAISE)
-			if hub_cursor_text.has_method("stop_motion"):
+			# A dimmed breadcrumb represents the cursor's resting/rightmost bob
+			# position, rather than its leftmost anchor.
+			var locked_target := command_target + HUB_COMMAND_DIMMED_BOB_OFFSET - Vector2(0.0, CURSOR_VERTICAL_RAISE)
+			if hub_cursor_text.has_method("lock_at"):
+				hub_cursor_text.call("lock_at", locked_target)
+			elif hub_cursor_text.has_method("stop_motion"):
+				hub_cursor_text.position = locked_target
 				hub_cursor_text.call("stop_motion")
 		else:
 			move_menu_cursor(hub_cursor_text, command_target)
@@ -2024,7 +2351,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		confirm_prompt = confirm_prompt.replace("SELECT", "EQUIP")
 	var back_prompt := _menu_back_prompt_for(root)
 	if hub_context_text != null:
-		hub_context_text.visible = true
+		hub_context_text.visible = page != HUB_PAGE_SHOP
 		# The confirm prompt is white per the mockup (not the blue used elsewhere).
 		hub_context_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, Color.WHITE) as Texture2D
 		if equipment_view_active:
@@ -2032,8 +2359,22 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_back_prompt_text != null:
 		# Render the visible Back prompt with its face glyph; the invisible touch
 		# button is no longer relied on to draw the label.
-		hub_back_prompt_text.visible = true
+		hub_back_prompt_text.visible = false
 		hub_back_prompt_text.texture = _pixel_prompt_texture(pixel_texture, back_prompt, Color.WHITE) as Texture2D
+	if hub_context_text != null:
+		hub_context_text.visible = false
+	if hub_footer_select_glyph != null:
+		hub_footer_select_glyph.visible = page != HUB_PAGE_SHOP
+		hub_footer_select_glyph.texture = MENU_CIRCLE_TEXTURE
+	if hub_footer_select_text != null:
+		hub_footer_select_text.visible = page != HUB_PAGE_SHOP
+		hub_footer_select_text.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
+	if hub_footer_back_glyph != null:
+		hub_footer_back_glyph.visible = page != HUB_PAGE_SHOP
+		hub_footer_back_glyph.texture = MENU_X_TEXTURE
+	if hub_footer_back_text != null:
+		hub_footer_back_text.visible = page != HUB_PAGE_SHOP
+		hub_footer_back_text.texture = pixel_texture.call("BACK", Color.WHITE) as Texture2D
 	if hub_currency_text != null:
 		# Legacy single-currency alias: the visible footer now has both rows.
 		hub_currency_text.visible = false
@@ -2052,8 +2393,23 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	_position_hub_controls()
 	var stat_nodes: Array[CanvasItem] = []
 	stat_nodes.append(hub_allocate_panel); stat_nodes.append(hub_allocate_preview_panel); stat_nodes.append(hub_allocate_preview_title); stat_nodes.append_array(hub_allocate_preview_texts); stat_nodes.append(hub_points_text); stat_nodes.append_array(hub_stat_texts); stat_nodes.append_array(hub_stat_value_texts); stat_nodes.append_array(hub_stat_row_buttons); stat_nodes.append_array(hub_stat_buttons); stat_nodes.append_array(hub_derived_texts); stat_nodes.append_array(hub_derived_value_texts); stat_nodes.append(hub_apply_button); stat_nodes.append(hub_cancel_button); stat_nodes.append(hub_auto_button); stat_nodes.append(hub_respec_button)
+	# This mixed CanvasItem list contains both Sprite2D labels and Button hit
+	# targets. Do not query the typed Sprite2D arrays with a Button value: Godot
+	# validates the argument type on every `has()` call and logs an error during
+	# every hub render. Instance IDs keep the membership check type-safe.
+	var root_preview_stat_ids: Dictionary = {}
+	for preview_stat: Sprite2D in hub_stat_texts:
+		root_preview_stat_ids[preview_stat.get_instance_id()] = true
+	for preview_stat: Sprite2D in hub_stat_value_texts:
+		root_preview_stat_ids[preview_stat.get_instance_id()] = true
+	for preview_stat: Sprite2D in hub_derived_texts:
+		root_preview_stat_ids[preview_stat.get_instance_id()] = true
+	for preview_stat: Sprite2D in hub_derived_value_texts:
+		root_preview_stat_ids[preview_stat.get_instance_id()] = true
 	for node in stat_nodes:
-		if node != null: node.visible = page == HUB_PAGE_ALLOCATE
+		if node != null:
+			var root_preview_stat: bool = root_preview_stat_ids.has(node.get_instance_id())
+			node.visible = page == HUB_PAGE_ALLOCATE and (not hub_is_root or root_preview_stat or node == hub_points_text)
 	# The two old card presenters are data-only now; the 240x160 HubContentPanel
 	# supplies the single frame. Utility labels stay visible in the preview, but
 	# their hit targets/arrows activate only after STATS is confirmed.
@@ -2065,11 +2421,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	for row_button in hub_stat_row_buttons:
 		row_button.visible = page == HUB_PAGE_ALLOCATE and hub_content_focus
 		row_button.mouse_filter = Control.MOUSE_FILTER_STOP if row_button.visible else Control.MOUSE_FILTER_IGNORE
-	if hub_stat_add_marker != null: hub_stat_add_marker.visible = page == HUB_PAGE_ALLOCATE
-	if hub_stat_subtract_marker != null: hub_stat_subtract_marker.visible = page == HUB_PAGE_ALLOCATE
+	if hub_stat_add_marker != null: hub_stat_add_marker.visible = page == HUB_PAGE_ALLOCATE and not hub_is_root
+	if hub_stat_subtract_marker != null: hub_stat_subtract_marker.visible = page == HUB_PAGE_ALLOCATE and not hub_is_root
 	for utility_button in [hub_apply_button, hub_cancel_button, hub_auto_button, hub_respec_button]:
 		if utility_button == null: continue
-		utility_button.visible = page == HUB_PAGE_ALLOCATE
+		utility_button.visible = page == HUB_PAGE_ALLOCATE and not hub_is_root
 		utility_button.mouse_filter = Control.MOUSE_FILTER_STOP if hub_content_focus else Control.MOUSE_FILTER_IGNORE
 	for node in hub_status_texts:
 		node.visible = page == HUB_PAGE_STATUS
@@ -2128,11 +2484,11 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_item_detail_panel != null: hub_item_detail_panel.visible = item_page and not equipment_action_state
 	for node in item_details: node.visible = item_page and not equipment_action_state
 	if item_action != null:
-		item_action.visible = item_page and page != HUB_PAGE_EQUIPMENT and hub_content_focus
+		item_action.visible = item_page and page != HUB_PAGE_EQUIPMENT and hub_content_focus and not hub_is_root
 		item_action.mouse_filter = Control.MOUSE_FILTER_STOP if item_action.visible else Control.MOUSE_FILTER_IGNORE
 	for mode_index in hub_shop_mode_buttons.size():
 		var mode_button := hub_shop_mode_buttons[mode_index]
-		mode_button.visible = page == HUB_PAGE_SHOP
+		mode_button.visible = page == HUB_PAGE_SHOP and hub_shop_menu == null
 		mode_button.mouse_filter = Control.MOUSE_FILTER_STOP if mode_button.visible else Control.MOUSE_FILTER_IGNORE
 		set_archetype_button_state(mode_button, true, highlight_color if (hub_action_column == mode_index and not hub_content_focus) else Color8(100, 105, 120))
 	if hub_shop_cursor != null:
@@ -2143,7 +2499,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_binding_panel != null: hub_binding_panel.visible = page == HUB_PAGE_BIND
 	for node in hub_binding_texts: node.visible = page == HUB_PAGE_BIND
 	if hub_binding_action_button != null:
-		hub_binding_action_button.visible = page == HUB_PAGE_BIND
+		hub_binding_action_button.visible = page == HUB_PAGE_BIND and not hub_is_root
 		hub_binding_action_button.mouse_filter = Control.MOUSE_FILTER_STOP if hub_content_focus else Control.MOUSE_FILTER_IGNORE
 	if page == HUB_PAGE_BIND:
 		_update_hub_binding_page(root, pixel_texture, profile, highlight_color)
@@ -2159,6 +2515,10 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		for cursor in [hub_list_cursor, hub_slot_cursor, hub_choice_cursor]:
 			if cursor != null: cursor.visible = false
 		_render_equipment_menu(root, pixel_texture, profile, highlight_color)
+		return
+	if page == HUB_PAGE_SHOP and hub_shop_menu != null:
+		_hide_legacy_shop_presenter()
+		_render_shop_menu(root, pixel_texture, profile, highlight_color)
 		return
 	if page != HUB_PAGE_ALLOCATE:
 		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
@@ -3472,22 +3832,12 @@ func _update_pause_equipment_input(root: Object) -> void:
 func update_hub_input(root: Object) -> void:
 	var page := hub_page
 	var touch_scroll := root.call("_input_touch_scroll_y") as float
-	if not is_zero_approx(touch_scroll):
+	if not is_zero_approx(touch_scroll) and not (page == HUB_PAGE_SHOP and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT):
 		scroll_hub_content(root, touch_scroll)
 		update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	if bool(root.call("_is_menu_back_just_pressed")):
-		if page == HUB_PAGE_SHOP and hub_shop_sell_confirm_pending:
-			hub_shop_sell_confirm_pending = false
-			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
-			return
-		if page == HUB_PAGE_SHOP and hub_shop_sell_mode:
-			hub_shop_sell_mode = false
-			hub_shop_sell_confirm_pending = false
-			hub_shop_command_focus = true
-			hub_content_focus = false
-			hub_item_index = 0
-			hub_list_scroll = 0.0
-			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		if page == HUB_PAGE_SHOP:
+			root.call("_shop_back_pressed")
 			return
 		if page == HUB_PAGE_EQUIPMENT and hub_equipment_mode == EquipmentMenuLayout.MODE_REMOVE_ALL_CONFIRM:
 			root.call("_cancel_hub_remove_all")
@@ -3626,26 +3976,41 @@ func update_hub_input(root: Object) -> void:
 			# confirm is handled by the separate browsing branch above.
 			root.call("_select_hub_gear_slot", hub_item_index)
 		return
-	if page == HUB_PAGE_SHOP and hub_shop_command_focus:
-		if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
-			hub_action_column = 1 - hub_action_column
+	if page == HUB_PAGE_SHOP and hub_shop_state == ShopMenuLayoutScript.MODE_SELECT:
+		if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")):
+			hub_action_column = 0
+			hub_shop_sell_mode = false
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
+			hub_action_column = 1
+			hub_shop_sell_mode = true
 			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 			root.call("_play_sound", "ui_hover", -6.0, 1.0)
 		elif bool(root.call("_is_menu_confirm_just_pressed")):
-			hub_shop_sell_mode = hub_action_column == 1
-			hub_shop_sell_confirm_pending = false
-			hub_content_focus = true
-			hub_shop_command_focus = false
-			hub_item_index = 0
-			hub_list_scroll = 0.0
-			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
-			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+			root.call("_shop_mode_pressed", hub_action_column)
+		return
+	if page == HUB_PAGE_SHOP and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT:
+		if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")):
+			root.call("_shop_amount_changed", -1)
+		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
+			root.call("_shop_amount_changed", 1)
+		elif bool(root.call("_is_menu_confirm_just_pressed")):
+			root.call("_hub_item_action")
+		return
+	if page == HUB_PAGE_SHOP and hub_shop_state == ShopMenuLayoutScript.ITEM_BROWSE:
+		# The authored ShopMenu has no hidden legacy action button. Controller
+		# confirm must always reach the shop transaction owner directly.
+		if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+			root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+			root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		elif bool(root.call("_is_menu_confirm_just_pressed")):
+			root.call("_hub_item_action")
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
-		hub_shop_sell_confirm_pending = false
 		root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
-		hub_shop_sell_confirm_pending = false
 		root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif page == HUB_PAGE_FUSION and bool(root.call("_is_menu_direction_just_pressed", &"ui_left")): root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif page == HUB_PAGE_FUSION and bool(root.call("_is_menu_direction_just_pressed", &"ui_right")): root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
@@ -4615,7 +4980,10 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 		hub_touch_candidate_slot = ""
 		hub_touch_candidate_index = -1
 	else:
-		var visible := maxi(hub_item_list_texts.size(), 1)
+		# The authored Shop scene has eight visible rows; the legacy presenter keeps
+		# its compatibility rows for other routes. Match the active presenter so a
+		# drag never leaves the selected row below the visible shop window.
+		var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else maxi(hub_item_list_texts.size(), 1)
 		hub_list_scroll = clampf(hub_list_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - visible)))
 		if hub_page == HUB_PAGE_SHOP:
 			hub_shop_sell_confirm_pending = false
@@ -4662,8 +5030,13 @@ func snap_hub_list_scroll_to_selection(root: Object) -> void:
 	var count := _hub_active_list_count(root)
 	if count <= 0:
 		return
-	var visible := maxi(hub_item_list_texts.size(), 1)
-	hub_list_scroll = clampf(float(hub_item_index - 2), 0.0, maxf(0.0, float(count - visible)))
+	var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else maxi(hub_item_list_texts.size(), 1)
+	# Controller browsing keeps the authored eight-row window fixed until the
+	# selection crosses its final visible row. The ninth item (index 8) is the
+	# first step that advances the window; moving back to row eight returns it to
+	# the top. Touch drags intentionally bypass this snap and remain continuous.
+	var selected_padding := (ShopMenuLayoutScript.VISIBLE_ROWS - 1) if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else 2
+	hub_list_scroll = clampf(float(hub_item_index - selected_padding), 0.0, maxf(0.0, float(count - visible)))
 
 
 ## Applies the fractional item-list scroll to the row/button/price y positions.
