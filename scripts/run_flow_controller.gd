@@ -3,6 +3,8 @@ class_name RunFlowController
 
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
+const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
 
 
 func loot_grade_bonus(root: Object, grade: String = "") -> float:
@@ -94,6 +96,8 @@ func apply_run_rank_grade(root: Object, grade: String) -> void:
 
 
 func begin_new_run(root: Object) -> void:
+	# A new run must never inherit a previous interrupted run's checkpoint.
+	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
 	# Every run begins at the hub in Gray. The selected starter flame is present
 	# at the fire, but the hub exits stay a real gate until the player attunes to
 	# it, just like the first run's tutorial gate.
@@ -128,6 +132,99 @@ func begin_new_run(root: Object) -> void:
 		root.call("_set_entrance_open", false)
 	if root.run_state != null:
 		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")))
+	root.set("pending_run_restore", false)
+
+
+func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
+	if root.player_profile == null or root.dungeon_graph == null or root.room_controller == null or root.dungeon_map_controller == null:
+		return false
+	var slot := ProfileSaveService.current_slot()
+	if not ActiveRunSnapshotScript.validate(snapshot, slot):
+		return false
+	var identity := snapshot.get("profile_identity", {}) as Dictionary
+	if str(identity.get("player_name", "")) != root.player_profile.player_name or not bool(identity.get("has_started", false)):
+		return false
+	var restored_run := RunState.new()
+	var run_data := snapshot.get("run_state", {}) as Dictionary
+	if not restored_run.restore_from_dictionary(run_data) or restored_run.dungeon_seed != int(snapshot.get("dungeon_seed", restored_run.dungeon_seed)):
+		return false
+	var map_controller := root.dungeon_map_controller as Node
+	var seed := int(snapshot.get("dungeon_seed", restored_run.dungeon_seed))
+	var bound_flame: StringName = root.player_profile.persistent_flame() if root.player_profile.has_bound_element else &""
+	map_controller.call("begin_run", root.dungeon_graph, seed, root.player_profile.completed_runs, root.player_profile.starter_flame, bound_flame)
+	var room_id := StringName(str(snapshot.get("current_room_id", "")))
+	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
+	if room == null:
+		return false
+	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
+		return false
+	root.run_state = restored_run
+	root.current_dungeon_seed = seed
+	root.current_room_id = room_id
+	root.call("_sync_current_room_metadata")
+	root.room_controller.room_states = ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
+	root.room_controller.progression_run_rank = maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
+	root.room_controller.set_current_room(room_id, root.current_room_type)
+	root.call("_ensure_current_room_layout")
+	root.call("_apply_room_state")
+	root.set("starter_flame_attuned_this_run", bool(snapshot.get("starter_flame_attuned_this_run", false)))
+	if map_controller.has_method("set_starter_flame_attuned"):
+		map_controller.call("set_starter_flame_attuned", root.starter_flame_attuned_this_run)
+	var chroma := root.player_chroma_component as Node
+	var chroma_state := snapshot.get("player_chroma_state", {}) as Dictionary
+	if chroma != null and chroma.has_method("restore_runtime_state"):
+		chroma.call("restore_runtime_state", int(chroma_state.get("current_aspect", 0)), int(chroma_state.get("current_chroma", 0)), int(chroma_state.get("bound_aspect", 0)))
+	root.call("_sync_current_element_state")
+	var active_palette: String = AspectCatalogScript.palette_for_flame(StringName(chroma.call("aspect_name"))) if chroma != null else root.player_profile.palette_name
+	if active_palette.is_empty():
+		active_palette = "grey"
+	root.set("current_player_palette_name", active_palette)
+	root.screen_state_controller.player_palette_name = active_palette
+	root.call("_apply_player_palette_async", active_palette)
+	var health := root.player_health_component as HealthComponent
+	if health != null:
+		health.maximum_health = float(root.call("_player_max_health"))
+		health.reset(clampf(float(snapshot.get("player_health", health.maximum_health)), 1.0, health.maximum_health))
+	root.set("player_display_health", health.current_health if health != null else root.get("player_display_health"))
+	var player := root.player as Sprite2D
+	root.set("last_player_facing_left", bool(snapshot.get("player_facing_left", false)))
+	player.flip_h = bool(snapshot.get("player_facing_left", false))
+	_place_player_at_recovery_arrival(root, player, StringName(str(snapshot.get("arrival_socket_id", ""))))
+	root.set("player_is_attacking", false)
+	root.set("player_is_magic_casting", false)
+	root.set("player_is_rolling", false)
+	root.set("player_is_backflipping", false)
+	root.set("player_is_defending", false)
+	root.set("room_transition_locked", false)
+	root.call("_cancel_magic_animation")
+	root.call("_reset_magic_runtime")
+	root.call("_clear_roll_dust")
+	root.call("_set_current_target", null)
+	root.call("_set_target_ui_visible", false)
+	root.call("_update_player_health_ui")
+	root.call("_update_player_mp_ui")
+	root.call("_update_room_number_indicator")
+	root.call("_build_depth_lists")
+	# Restoration itself establishes a new safe boundary. This also refreshes the
+	# checkpoint timestamp so diagnostics can distinguish a successful resume
+	# from the older interrupted boundary that led to it.
+	root.call("_save_active_run_checkpoint")
+	root.set("pending_run_restore", false)
+	return true
+
+
+func _place_player_at_recovery_arrival(root: Object, player: Sprite2D, arrival_socket_id: StringName) -> void:
+	var room_controller := root.room_controller as RoomController
+	var socket := room_controller.active_entrance_sockets.get(arrival_socket_id) as DungeonSocket if not arrival_socket_id.is_empty() else null
+	var requested: Vector2 = root.player_start_position
+	if socket != null:
+		requested = room_controller.call("_arrival_player_position", root, socket)
+	player.global_position = requested
+	if not bool(root.call("_can_actor_stand_at_current_position", player)):
+		var requested_foot: Vector2 = root.call("_actor_foot", player)
+		var nearest: Vector2 = room_controller.nearest_player_walkable_point(root, requested_foot)
+		if nearest != Vector2.INF:
+			player.global_position += nearest - requested_foot
 
 
 func _reset_dungeon_for_new_run(root: Object) -> void:
@@ -176,7 +273,10 @@ func settle_current_run(root: Object, result: StringName) -> bool:
 	if not RunSettlement.can_settle(root.run_state, result):
 		return false
 	root.call("_sync_runtime_progression_to_profile")
-	return RunSettlement.settle(root.player_profile, root.run_state, result)
+	var settled := RunSettlement.settle(root.player_profile, root.run_state, result)
+	if settled:
+		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
+	return settled
 
 
 func tick_run_telemetry(root: Object, delta: float) -> void:

@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://br77bbao8xeo7"
+path="res://.godot/imported/CursorMove.ogg-33b82bbf16420662c43f0a2d60b6017a.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Reverb/CursorMove.ogg"
+dest_files=["res://.godot/imported/CursorMove.ogg-33b82bbf16420662c43f0a2d60b6017a.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

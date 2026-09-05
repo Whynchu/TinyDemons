@@ -23,6 +23,8 @@ const CLIPS: Dictionary = {
 	"impact_flesh": BATTLE_PATH + "15_Impact_flesh_02.wav",
 	"encounter": BATTLE_PATH + "55_Encounter_02.wav",
 	"claw": BATTLE_PATH + "03_Claw_03.wav",
+	"crit": SELFMADE_PATH + "Crit.wav",
+	"imbue_impact": SELFMADE_PATH + "IMBUEimpact.wav",
 	"magic_cast": BATTLE_PATH + "55_Encounter_02.wav",
 	"magic_hit": BATTLE_PATH + "15_Impact_flesh_02.wav",
 	"ui_hover": SELFMADE_REVERB_PATH + "CursorMove.wav",

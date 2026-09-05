@@ -1,68 +1,88 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cg3k10q75v253"]
 
-[ext_resource type="PackedScene" path="res://scenes/demon_hub_menu.tscn" id="1_hub"]
-[ext_resource type="Script" path="res://scripts/shop_preview.gd" id="2_preview"]
-[ext_resource type="Texture2D" path="res://Mockups/DEMON HUB REWORK_SHOP_Buy.png" id="3_buy"]
-[ext_resource type="Texture2D" path="res://Mockups/DEMON HUB REWORK_SHOP_Sell.png" id="4_sell"]
-[ext_resource type="Texture2D" path="res://assets/artwork/GoldFresh2.png" id="5_gold"]
-[ext_resource type="Texture2D" path="res://assets/artwork/Souls.png" id="6_soul"]
+[ext_resource type="PackedScene" uid="uid://ukxfdr8udu7t" path="res://scenes/demon_hub_menu.tscn" id="1_hub"]
+[ext_resource type="Script" uid="uid://dg0uwrfb1but5" path="res://scripts/shop_preview.gd" id="2_preview"]
+[ext_resource type="Texture2D" uid="uid://cjlw60ovgvd7n" path="res://assets/artwork/GoldFresh2.png" id="5_gold"]
+[ext_resource type="Texture2D" uid="uid://ck41a0ppri3j0" path="res://assets/artwork/Souls.png" id="6_soul"]
 
-[node name="ShopPreview" type="Control"]
+[sub_resource type="Image" id="Image_uk82i"]
+data = {
+"data": PackedByteArray(255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255, 255, 255, 255, 0, 255, 205, 117, 255, 255, 205, 117, 255, 255, 205, 117, 255),
+"format": "RGBA8",
+"height": 5,
+"mipmaps": false,
+"width": 15
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_2hteh"]
+image = SubResource("Image_uk82i")
+
+[sub_resource type="Image" id="Image_pwltp"]
+data = {
+"data": PackedByteArray(234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 255, 255, 255, 0, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 234, 122, 197, 255, 255, 255, 255, 0, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 255, 255, 255, 0, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 255, 255, 255, 0, 255, 255, 255, 0, 234, 122, 197, 255, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255, 255, 255, 255, 0, 234, 122, 197, 255, 234, 122, 197, 255, 234, 122, 197, 255),
+"format": "RGBA8",
+"height": 5,
+"mipmaps": false,
+"width": 7
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_3jaai"]
+image = SubResource("Image_pwltp")
+
+[node name="ShopPreview" type="Control" unique_id=356018501]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 240.0
 offset_bottom = 160.0
 script = ExtResource("2_preview")
 
-[node name="DemonHubOverlay" parent="." instance=ExtResource("1_hub")]
+[node name="DemonHubOverlay" parent="." unique_id=758740773 instance=ExtResource("1_hub")]
 layout_mode = 0
 
-[node name="ShopPreviewGoldIcon" type="Sprite2D" parent="DemonHubOverlay"]
+[node name="ShopPreviewGoldIcon" type="Sprite2D" parent="DemonHubOverlay" unique_id=1519513967]
 texture_filter = 1
 position = Vector2(182, 142)
 texture = ExtResource("5_gold")
+centered = false
 region_enabled = true
 region_rect = Rect2(0, 0, 5, 5)
-centered = false
 
-[node name="ShopPreviewSoulIcon" type="Sprite2D" parent="DemonHubOverlay"]
+[node name="ShopPreviewSoulIcon" type="Sprite2D" parent="DemonHubOverlay" unique_id=450436794]
 texture_filter = 1
 position = Vector2(182, 149)
 texture = ExtResource("6_soul")
 centered = false
 
-[node name="ShopPreviewGoldText" type="Sprite2D" parent="DemonHubOverlay"]
+[node name="ShopPreviewGoldText" type="Sprite2D" parent="DemonHubOverlay" unique_id=1573952962]
 texture_filter = 1
 position = Vector2(218, 142)
+texture = SubResource("ImageTexture_2hteh")
 centered = false
 
-[node name="ShopPreviewSoulText" type="Sprite2D" parent="DemonHubOverlay"]
+[node name="ShopPreviewSoulText" type="Sprite2D" parent="DemonHubOverlay" unique_id=1392414333]
 texture_filter = 1
 position = Vector2(227, 149)
+texture = SubResource("ImageTexture_3jaai")
 centered = false
 
-[node name="BuyReference" type="TextureRect" parent="."]
+[node name="BuyReference" type="TextureRect" parent="." unique_id=452148168]
 visible = false
+modulate = Color(1, 1, 1, 0.55)
 z_index = 4094
+texture_filter = 1
 layout_mode = 0
 offset_right = 240.0
 offset_bottom = 160.0
 mouse_filter = 2
-texture_filter = 1
-texture = ExtResource("3_buy")
 expand_mode = 1
-stretch_mode = 0
-modulate = Color(1, 1, 1, 0.55)
 
-[node name="SellReference" type="TextureRect" parent="."]
+[node name="SellReference" type="TextureRect" parent="." unique_id=1202913103]
 visible = false
+modulate = Color(1, 1, 1, 0.55)
 z_index = 4094
+texture_filter = 1
 layout_mode = 0
 offset_right = 240.0
 offset_bottom = 160.0
 mouse_filter = 2
-texture_filter = 1
-texture = ExtResource("4_sell")
 expand_mode = 1
-stretch_mode = 0
-modulate = Color(1, 1, 1, 0.55)

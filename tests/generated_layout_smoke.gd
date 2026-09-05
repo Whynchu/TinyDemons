@@ -113,6 +113,7 @@ func _initialize() -> void:
 			generated_rejoin_found = generated_rejoin_found or _has_rejoining_route(sampled)
 			if _has_two_primary_special_room(sampled):
 				two_primary_special_found = true
+	var r8_gate_requirements_seen: Dictionary = {}
 	for fusion_completed_runs in [5, 6, 7, 8]:
 		for seed_value in range(8):
 			var fusion_layout = GENERATOR_SCRIPT.build(700000 + seed_value * 7919, fusion_completed_runs, &"fire")
@@ -121,6 +122,13 @@ func _initialize() -> void:
 			var gate_count := _entrance_orb_gate_count(fusion_layout)
 			var prerequisite_orb_count := _fusion_prerequisite_orb_count(fusion_layout)
 			_expect(prerequisite_orb_count >= gate_count, "fusion Run %d gives every entrance-Orb gate a dedicated pre-gate Orb" % (fusion_completed_runs + 1), failures)
+			if fusion_completed_runs >= 7:
+				for connection in fusion_layout.connections:
+					if connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+						r8_gate_requirements_seen[connection.orb_element_requirement] = true
+					elif connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_PUZZLE_COLOR and connection.color_requirement == &"puzzle_b":
+						r8_gate_requirements_seen[&"normal"] = true
+	_expect(r8_gate_requirements_seen.size() >= 5, "R8 varies its single fusion gate across Normal and every valid fusion result", failures)
 	_expect(generated_rare_exception_found, "seeded generated maps exercise the rare enemy-branch entry rule", failures)
 	_expect(generated_rejoin_found, "seeded generated maps create interlocking dig or cross-link routes", failures)
 	_expect(two_primary_special_found, "generated Special Rooms sometimes offer two distinct primary-color doors", failures)

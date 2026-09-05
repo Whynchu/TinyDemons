@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://c7adjr53cjqmy"
+path="res://.godot/imported/Crit.wav-b0e54c3463436dea6f480b9c398d32cc.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Crit.wav"
+dest_files=["res://.godot/imported/Crit.wav-b0e54c3463436dea6f480b9c398d32cc.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

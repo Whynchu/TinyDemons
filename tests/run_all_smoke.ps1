@@ -35,6 +35,7 @@ $tests += "drop_art_smoke"
 $tests += "gear_system_rework_smoke"
 $tests += "player_hud_scene_smoke"
 $tests += "cloud_save_contract_smoke"
+$tests += "active_run_recovery_contract_smoke"
 $failed = $false
 foreach ($test in $tests) {
 	Write-Host "=== $test ==="

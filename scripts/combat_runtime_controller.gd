@@ -66,6 +66,8 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 	var rng := root.get("rng") as RandomNumberGenerator
 	root.call("_play_sound", "slash", -15.0, 0.95 + rng.randf_range(-0.10, 0.10))
 	root.call("_play_sound", "enemy_hit", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
+	if was_critical and not immune and amount > 0.0 and root.has_method("_play_sound_with_perlin_pitch"):
+		root.call("_play_sound_with_perlin_pitch", "crit", 0.0, 1.0, 0.035)
 
 
 func player_attack_damage_result_against(root: Object, slime: Sprite2D, attack_element: int = ElementCatalogScript.Element.NEUTRAL) -> CombatCalculator.DamageResult:

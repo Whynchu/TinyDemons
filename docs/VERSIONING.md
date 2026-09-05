@@ -1,6 +1,6 @@
 # Tiny Demons Versioning
 
-The current game version is `0.1.56`.
+The current game version is `0.1.71`.
 
 Every commit pushed to `main` must include a version update of at least
 `0.0.01`. The version must be updated in both locations below in the same

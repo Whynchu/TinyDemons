@@ -48,6 +48,15 @@ func begin_new_run() -> void:
 	_set_chroma(0)
 
 
+func restore_runtime_state(saved_aspect: int, saved_chroma: int, saved_bound_aspect: int) -> void:
+	var next_aspect := clampi(saved_aspect, int(Aspect.NONE), int(Aspect.ICE)) as Aspect
+	var next_bound := clampi(saved_bound_aspect, int(Aspect.NONE), int(Aspect.ICE)) as Aspect
+	_set_aspect(next_aspect)
+	bound_aspect = next_bound
+	_sync_binding_state()
+	_set_chroma(saved_chroma)
+
+
 func attune(aspect: Aspect) -> bool:
 	if not _is_valid_elemental_aspect(aspect):
 		return false

@@ -285,6 +285,7 @@ func apply_hitbox(root: Object) -> void:
 		root.call("_activate_puzzle_torch", orb, orb.global_position, ElementCatalogScript.palette_key(attack_element))
 	for slime in slime_targets:
 		register_hit(slime)
+		var imbued_contact := active_imbued_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == ElementCatalogScript.normalize(active_imbued_element)
 		var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
 		var base_damage := damage_result.amount
 		var damage := base_damage
@@ -311,9 +312,11 @@ func apply_hitbox(root: Object) -> void:
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
 		root.call("_damage_slime", slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
+		if imbued_contact and root.has_method("_play_sound_with_perlin_pitch"):
+			root.call("_play_sound_with_perlin_pitch", "imbue_impact", 0.0, 1.0, 0.03)
 		if not damage_result.immune and damage_result.amount > 0.0:
 			successful_damage_count += 1
-			if active_imbued_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == ElementCatalogScript.normalize(active_imbued_element):
+			if imbued_contact:
 				used_imbue = true
 		if running_attack_active and not damage_result.immune and tuning != null:
 			root.set("hitstop_timer", maxf(float(root.get("hitstop_timer")), tuning.hitstop_duration * tuning.run_attack_hitstop_multiplier))

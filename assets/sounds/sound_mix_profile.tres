@@ -5,6 +5,8 @@
 [resource]
 script = ExtResource("1_sound_mix_profile")
 title_music_db = -16.5
+crit_db = -10.5
+imbue_impact_db = -12.0
 magic_cast_db = -4.0
 enemy_hit_1_db = -1.5
 enemy_hit_2_db = -1.5

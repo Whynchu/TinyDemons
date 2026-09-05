@@ -399,6 +399,11 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.call("_set_target_ui_visible", false)
 	root.call("_apply_room_state")
 	root.call("_build_depth_lists")
+	# The destination layout/state is now fully applied. Persist the profile first
+	# and then capture this safe boundary; a browser restart cannot resume from a
+	# half-applied room transition.
+	root.call("_save_player_profile")
+	root.call_deferred("_save_active_run_checkpoint")
 	root.call_deferred("_release_room_transition_lock")
 
 

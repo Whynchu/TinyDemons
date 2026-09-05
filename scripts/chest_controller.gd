@@ -58,6 +58,9 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			var current_gold := profile.gold if profile != null else 0
 			root.call("_set_gold_value", current_gold + scaled_gold)
 			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), scaled_gold)
+			# The claim is a safe, idempotent room-state boundary. Persist it before
+			# the presentation flash so a browser restart cannot replay the reward.
+			root.call("_checkpoint_safe_run_state")
 			root.call("_play_sound", "chest_reward", -3.0, 1.0)
 			print("Gold: %d" % (current_gold + scaled_gold))
 		elif near_fire:
