@@ -976,9 +976,9 @@ func sell_value(item: ItemInstance) -> int:
 func sell_soul_value(item: ItemInstance) -> int:
 	if item == null or item.fusion_count <= 0:
 		return 0
-	# Return only a portion of fusion investment so selling cannot create a
-	# positive-soul loop, while still recognizing heavily fused gear.
-	return maxi(1, roundi(float(item.fusion_count) * 0.25))
+	# Return most of the fusion history while keeping a small sink so selling
+	# cannot create a positive-soul loop.
+	return maxi(1, roundi(float(item.fusion_count) * 0.75))
 
 
 func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:

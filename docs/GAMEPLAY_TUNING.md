@@ -224,7 +224,7 @@ exposed or indexed. Candidates to export into the tuning resources:
 | Run-reward rarity odds | 0.0005 / 0.003 / 0.015 / 0.120 + caps | `gameplay.gd:600-603` |
 | Run-clear reward | `45 + score*3 + variety*8`; drop `0.30 + score*0.0065` clamp [0.30,0.95] | `gameplay.gd:618-622` |
  | XP formula | `2 + 2*lvl^0.85`, x1.15/x0.72, clamp [0.30, 2], global x2 | `combat_runtime_controller.gd:xp_reward_for_slime` |
-| Gear sale | 25% of `ItemCatalog.price()` plus 25% of recorded fusion steps as Souls | `item_catalog.gd`, `player_profile.gd` |
+| Gear sale | 25% of `ItemCatalog.price()` plus 75% of recorded fusion steps as Souls | `item_catalog.gd`, `player_profile.gd` |
 
 Shop selling is nested under the Shop page: left/right switches BUY and SELL,
 SELL lists unequipped gear only, and the selected sale requires a second confirm
