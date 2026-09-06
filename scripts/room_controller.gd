@@ -12,6 +12,9 @@ var transition_locked := false
 var room_states: Dictionary = {}
 var progression_run_rank := 1
 var player_level := 1
+var preferred_enemy_variant := "grey"
+var secondary_enemy_variant := "grey"
+var matchup_policy := "rank_default"
 var boss_slime_authoring_scene: PackedScene = null
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
@@ -20,19 +23,22 @@ const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0
 const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
-const POPCORN_RESPAWN_DELAY := 5.0
+const POPCORN_RESPAWN_MIN_DELAY := 30.0
+const POPCORN_RESPAWN_MAX_DELAY := 45.0
 const POPCORN_RESPAWN_RETRY_DELAY := 0.25
 const GREY_ENEMY_WEIGHT: float = 1.0
 const YELLOW_ENEMY_WEIGHT: float = 1.0
-const YELLOW_MIN_RANK := 2
+const YELLOW_MIN_RANK := 5
 const GROUND_ENEMY_WEIGHT: float = 1.0
-const GROUND_MIN_RANK := 3
+const GROUND_MIN_RANK := 5
 const ICE_ENEMY_WEIGHT: float = 1.0
-const ICE_MIN_RANK := 4
+const ICE_MIN_RANK := 5
 const SHADOW_ENEMY_WEIGHT: float = 0.12
 const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.24
+const ROOM_POPCORN := "ROOM_POPCORN"
+const ELITE_POPCORN := "ELITE_POPCORN"
 const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 4
@@ -77,10 +83,12 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			# difficulty comes from the color state and delayed respawns instead of
 			# an automatic level, count, or shadow-slime bonus.
 			var is_special_room := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
-			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth, false, not is_special_room)
+			var extra_room_enemy := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room_type == DungeonGraph.ROOM_TREASURE
+			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth, extra_room_enemy, not is_special_room)
 			state["enemy_variants"] = encounter["variants"]
 			state["enemy_levels"] = encounter["levels"]
 			state["enemy_popcorn"] = encounter["popcorn"]
+			state["enemy_popcorn_types"] = encounter["popcorn_types"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
 		room_states[room_id] = state
@@ -91,6 +99,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_levels"] = boss_encounter["levels"]
 			state["enemy_scales"] = boss_encounter["scales"]
 			state["enemy_popcorn"] = boss_encounter["popcorn"]
+			state["enemy_popcorn_types"] = boss_encounter["popcorn_types"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 909
 		room_states[room_id] = state
@@ -105,24 +114,39 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var count := 1
 	# Flat difficulty: encounter count keys off run rank via the iteration
 	# thresholds below, not room depth. Base count is still the simple 1->2 roll.
-	if encounter_rng.randf() < 0.38:
-		count = 2
 	var count_cap := _normal_enemy_cap()
 	count = mini(count, count_cap)
-	# Late ranks may exceed the former six-slime ceiling, but only after the
-	# player has had time to learn crowd control and defense.
-	while count < count_cap and encounter_rng.randf() < _late_enemy_add_chance():
+	# Every rank can technically roll all the way to seven enemies. Each extra
+	# slot is an independent weighted roll, with a heavier crowd tail later.
+	while count < count_cap and encounter_rng.randf() < _additional_enemy_chance(count):
 		count += 1
 	var variants: Array[String] = []
 	var levels: Array[int] = []
 	var variant_pool: Array[Dictionary] = [
-		{"variant": "blue", "weight": 1.0},
-		{"variant": "green", "weight": 1.0},
-		{"variant": "red", "weight": 1.0},
 		{"variant": "grey", "weight": GREY_ENEMY_WEIGHT},
 	]
+	# R1 is neutral-only. R2 teaches player advantage. R3 reverses that lesson.
+	# Authored R4 rooms may provide two explicit target families.
+	var primary_variant: String = preferred_enemy_variant if preferred_enemy_variant in ["blue", "green", "red", "yellow", "green"] else "grey"
+	var secondary_variant: String = secondary_enemy_variant if secondary_enemy_variant in ["blue", "green", "red", "yellow"] else "grey"
+	if matchup_policy == "base_advantage" or (matchup_policy == "rank_default" and progression_run_rank == 2):
+		if primary_variant != "grey":
+			variant_pool.append({"variant": primary_variant, "weight": 0.75})
+	elif matchup_policy == "base_counter":
+		if primary_variant != "grey":
+			variant_pool.append({"variant": primary_variant, "weight": 0.75})
+	elif matchup_policy == "flame_mixed":
+		for family_variant in [primary_variant, secondary_variant]:
+			if family_variant != "grey" and not _variant_pool_has(variant_pool, family_variant):
+				variant_pool.append({"variant": family_variant, "weight": 0.75})
+	elif matchup_policy == "rank_default" and progression_run_rank >= 3:
+		if primary_variant != "grey":
+			variant_pool.append({"variant": primary_variant, "weight": 0.75})
+		for elemental_variant in ["blue", "green", "red"]:
+			if elemental_variant != primary_variant:
+				variant_pool.append({"variant": elemental_variant, "weight": 0.35})
 	if special_room:
-		count = maxi(count + 1, 2)
+		count = mini(maxi(count + 1, 2), count_cap)
 	if progression_run_rank >= YELLOW_MIN_RANK:
 		variant_pool.append({"variant": "yellow", "weight": YELLOW_ENEMY_WEIGHT})
 	if progression_run_rank >= GROUND_MIN_RANK:
@@ -138,8 +162,9 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	# dungeon run curve. It is recovery fodder, so it should remain five levels
 	# below the player even when a high-level player revisits an early run.
 	var base_level := _generated_enemy_base_level(room_depth) + (1 if special_room else 0)
-	var level_spread := maxi(1, roundi(float(base_level) * 0.20))
+	var level_spread := 1 if progression_run_rank <= 3 else 2
 	var popcorn_flags: Array[bool] = []
+	var popcorn_types: Array[String] = []
 	for enemy_index in count:
 		var total_weight := 0.0
 		for entry in variant_pool:
@@ -157,8 +182,20 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		# shadow encounter is a Normal Slime.
 		var is_popcorn := selected != "purple" and encounter_rng.randf() < _popcorn_enemy_chance()
 		popcorn_flags.append(is_popcorn)
+		popcorn_types.append(ROOM_POPCORN if is_popcorn else "")
 		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
 		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, _enemy_level_cap()))
+	# Every replayable combat room keeps one ordinary room-popcorn slot so the
+	# 45-second respawn system is always observable, even when all random rolls
+	# missed the optional popcorn chance.
+	if not popcorn_flags.has(true):
+		for index in range(variants.size() - 1, -1, -1):
+			if variants[index] != "purple":
+				variants[index] = "grey"
+				levels[index] = _popcorn_enemy_level()
+				popcorn_flags[index] = true
+				popcorn_types[index] = ROOM_POPCORN
+				break
 	# Shadow encounters keep their low-level mana-recovery opportunity readable:
 	# every popcorn slot beside a Shadow Slime becomes a Normal Slime. If the
 	# normal popcorn roll produced no slot, add one so Shadow never removes the
@@ -174,10 +211,19 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				variants.append("grey")
 				levels.append(_popcorn_enemy_level())
 				popcorn_flags.append(true)
+				popcorn_types.append(ELITE_POPCORN)
 		for index in variants.size():
 			if popcorn_flags[index]:
 				variants[index] = "grey"
-	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags}
+				popcorn_types[index] = ELITE_POPCORN
+	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types}
+
+
+func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
+	for entry in pool:
+		if str(entry.get("variant", "")) == variant:
+			return true
+	return false
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := _generated_enemy_base_level(room_depth)
@@ -210,28 +256,35 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	# support slots. This is the boss counterpart to Shadow's guaranteed
 	# mana-recovery opportunity.
 	var popcorn_flags: Array[bool] = []
+	var popcorn_types: Array[String] = []
 	for index in variants.size():
 		popcorn_flags.append(false)
+		popcorn_types.append("")
 	for _support_index in _boss_support_popcorn_count():
 		variants.append("grey")
 		levels.append(_popcorn_enemy_level())
 		scales.append(1.0)
 		popcorn_flags.append(true)
-	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags}
+		popcorn_types.append(ELITE_POPCORN)
+	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types}
 
 
 func _enemy_level_cap() -> int:
-	return 3 if progression_run_rank <= 1 else progression_run_rank + 3
+	return progression_run_rank + 2 if progression_run_rank <= 3 else progression_run_rank + 4
 
 
 func _generated_enemy_base_level(room_depth: int) -> int:
 	# Flat difficulty: enemy level derives from run rank, not room depth. The
 	# depth parameter is retained only so callers (boss/encounter) keep an
 	# unchanged signature while the difficulty source is rank-only.
-	return mini(maxi(progression_run_rank - 1, 0), _enemy_level_cap())
+	# R1-R3 use compact three-level bands; from R4 onward the encounter band
+	# widens to five levels as the dungeon starts scaling more aggressively.
+	return progression_run_rank + 1 if progression_run_rank <= 3 else progression_run_rank + 2
 
 
 func _popcorn_enemy_chance() -> float:
+	if progression_run_rank <= 1:
+		return 0.25
 	if progression_run_rank == 2:
 		return RUN2_POPCORN_CHANCE
 	if progression_run_rank > 2:
@@ -270,16 +323,14 @@ func _boss_minor_count() -> int:
 	return 2 + floori(float(progression_run_rank - 7) / 3.0)
 
 func _normal_enemy_cap() -> int:
-	if progression_run_rank <= 2: return 2
-	if progression_run_rank <= 4: return 3
-	if progression_run_rank <= 6: return 5
-	if progression_run_rank <= 10: return 6
 	return 7
 
-func _late_enemy_add_chance() -> float:
-	if progression_run_rank <= 10:
-		return 0.0
-	return clampf(0.18 + float(progression_run_rank - 11) * 0.07, 0.18, 0.60)
+func _additional_enemy_chance(current_count: int) -> float:
+	var first_extra := clampf(0.50 + float(progression_run_rank - 1) * 0.05, 0.50, 0.78)
+	var rank_bonus := clampf(float(progression_run_rank - 1) * 0.015, 0.0, 0.10)
+	# The steep falloff keeps five-to-seven enemy rooms as rare tails rather
+	# than letting early and mid-rank rooms snowball past four too often.
+	return clampf(first_extra - float(current_count - 1) * 0.14 + rank_bonus, 0.01, 0.85)
 
 
 func enemy_count_for_room(room: DungeonGraph.RoomRecord) -> int:
@@ -290,7 +341,8 @@ func enemy_count_for_room(room: DungeonGraph.RoomRecord) -> int:
 	if room.room_type != DungeonGraph.ROOM_COMBAT and room.room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and room.room_type != DungeonGraph.ROOM_TREASURE:
 		return 0
 	var is_special_room := room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
-	return (_generate_enemy_encounter(room.generation_seed, room.depth, false, not is_special_room).get("variants", []) as Array).size()
+	var extra_room_enemy := is_special_room or room.room_type == DungeonGraph.ROOM_TREASURE
+	return (_generate_enemy_encounter(room.generation_seed, room.depth, extra_room_enemy, not is_special_room).get("variants", []) as Array).size()
 
 
 func configure_sockets(graph: DungeonGraph, room_id: StringName, _unlocked: bool, set_blocks: Callable) -> void:
@@ -360,7 +412,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 		root.call("_reset_combo")
 	root.call("_save_current_room_state")
 	root.set("current_room_id", destination_room_id)
-	root.call("_sync_current_room_metadata")
+	root.call("_sync_current_room_metadata", destination_socket_id)
 	enter_room(destination_room_id, root.get("current_room_type"), destination_socket_id)
 	_maybe_add_backtrack_popcorn(root)
 	root.call("_ensure_current_room_layout")
@@ -695,6 +747,7 @@ func mark_cleared(room_id: StringName) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	var was_finished := bool(state.get("finished", false))
 	state["finished"] = true
+	_schedule_room_popcorn_respawns(state, room_id)
 	var graph: DungeonGraph = get_parent().get("dungeon_graph") as DungeonGraph if get_parent() != null else null
 	var room := graph.get_room(room_id) if graph != null else null
 	if room != null and room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
@@ -703,6 +756,29 @@ func mark_cleared(room_id: StringName) -> void:
 	room_states[room_id] = state
 	if not was_finished:
 		room_cleared.emit(room_id)
+
+
+func _schedule_room_popcorn_respawns(state: Dictionary, room_id: StringName) -> void:
+	var waiting := state.get("popcorn_respawn_waiting", {}) as Dictionary
+	if waiting.is_empty():
+		return
+	var pending := state.get("popcorn_respawn_slots", {}) as Dictionary
+	var respawn_cycle := int(state.get("popcorn_respawn_cycle", 0)) + 1
+	state["popcorn_respawn_cycle"] = respawn_cycle
+	var random_source := RandomNumberGenerator.new()
+	random_source.seed = String(room_id).hash() ^ int(state.get("enemy_spawn_seed", 0)) ^ respawn_cycle * 7919 ^ 0x504F5043
+	for key in waiting.keys():
+		var entry := waiting[key] as Dictionary
+		var death_order := int(entry.get("death_order", 0))
+		var dead_before_clear := maxf(0.0, float(entry.get("dead_before_clear", 0.0)))
+		# Noise owns most of the result. Death order and time already spent dead
+		# provide a restrained stagger while the final deadline remains 30-45s.
+		var order_offset := minf(float(death_order) * 0.75, 4.0)
+		var age_offset := minf(dead_before_clear * 0.15, 4.0)
+		var delay := clampf(random_source.randf_range(POPCORN_RESPAWN_MIN_DELAY, POPCORN_RESPAWN_MAX_DELAY) + order_offset - age_offset, POPCORN_RESPAWN_MIN_DELAY, POPCORN_RESPAWN_MAX_DELAY)
+		pending[str(key)] = delay
+	state["popcorn_respawn_slots"] = pending
+	state.erase("popcorn_respawn_waiting")
 
 
 func is_cleared(room_id: StringName) -> bool:
@@ -928,56 +1004,24 @@ func _is_popcorn_respawn_room(root: Object) -> bool:
 
 
 func _maybe_add_backtrack_popcorn(root: Object) -> void:
-	var room_id: StringName = StringName(root.get("current_room_id"))
-	var room_type: StringName = StringName(root.get("current_room_type"))
-	if not _is_popcorn_respawn_room(root):
-		return
-	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
-	# A room is eligible only after it has already been materialized once.
-	# `ensure_layout()` stamps `room_type` on first materialization, so its
-	# presence is the stable first-entry/re-entry marker for combat room families.
-	var revisited := state.has("room_type") or bool(state.get("enemy_spawned", false)) or bool(state.get("finished", false)) or state.has("enemy_runtime")
-	if not revisited or bool(state.get("backtrack_popcorn_added", false)):
-		return
-	var seed_value := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303))
-	var roll_rng := RandomNumberGenerator.new()
-	roll_rng.seed = seed_value ^ 0x5EEDBEEF
-	if roll_rng.randf() > 0.35:
-		state["backtrack_popcorn_added"] = true
-		room_states[room_id] = state
-		return
-	# The room gets one backtracking-popcorn attempt per run, including a full
-	# actor pool. Record the attempt before checking capacity so a failed
-	# placement cannot reroll forever on every revisit.
-	state["backtrack_popcorn_added"] = true
-	var variants := state.get("enemy_variants", []) as Array
-	var levels := state.get("enemy_levels", []) as Array
-	var scales := state.get("enemy_scales", []) as Array
-	var popcorn := state.get("enemy_popcorn", []) as Array
-	var slimes := root.get("slimes") as Array[Sprite2D]
-	if variants.size() >= slimes.size():
-		room_states[room_id] = state
-		return
-	if not state.has("enemy_spawn_seed"):
-		state["enemy_spawn_seed"] = String(room_id).hash() + 303
-	variants.append("grey")
-	levels.append(_popcorn_enemy_level_for_root(root))
-	if scales.size() < variants.size() - 1:
-		while scales.size() < variants.size() - 1: scales.append(1.0)
-	scales.append(1.0)
-	popcorn.append(true)
-	state["enemy_variants"] = variants
-	state["enemy_levels"] = levels
-	state["enemy_scales"] = scales
-	state["enemy_popcorn"] = popcorn
-	state["backtrack_popcorn_pending"] = true
-	state["finished"] = false
-	room_states[room_id] = state
+	# Popcorn is tied to the original encounter slots. Do not inject a new slot
+	# merely because the player revisits a completed room; each popcorn slot gets
+	# its own 45-second timer when that slot dies.
+	return
 
 
 func _is_popcorn_slot(state: Dictionary, slot: int) -> bool:
 	var popcorn_flags := state.get("enemy_popcorn", []) as Array
 	return slot >= 0 and slot < popcorn_flags.size() and bool(popcorn_flags[slot])
+
+
+func _popcorn_type(state: Dictionary, slot: int) -> String:
+	var types := state.get("enemy_popcorn_types", []) as Array
+	if slot >= 0 and slot < types.size() and not str(types[slot]).is_empty():
+		return str(types[slot])
+	# Older room states only had the boolean flag. Treat those as room popcorn;
+	# elite support is authored by the new encounter data going forward.
+	return ROOM_POPCORN if _is_popcorn_slot(state, slot) else ""
 
 
 func _big_threat_is_alive(root: Object, state: Dictionary) -> bool:
@@ -1007,13 +1051,17 @@ func record_popcorn_enemy_death(root: Object, slime: Sprite2D) -> void:
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var slot := slimes.find(slime)
-	if not _is_popcorn_slot(state, slot):
+	if slot < 0 or slot >= (state.get("enemy_variants", []) as Array).size():
 		return
-	if not _big_threat_is_alive(root, state):
+	var room_type: StringName = StringName(root.get("current_room_type"))
+	# Ordinary encounters respawn from their complete initial roster. Boss and
+	# special encounters only respawn their explicitly-authored support slots.
+	if room_type in [DungeonGraph.ROOM_DOWNSTAIRS, DungeonGraph.ROOM_SPECIAL_ENEMY] and not _is_popcorn_slot(state, slot):
 		return
-	var pending := state.get("popcorn_respawn_slots", {}) as Dictionary
-	pending[str(slot)] = POPCORN_RESPAWN_DELAY
-	state["popcorn_respawn_slots"] = pending
+	var waiting := state.get("popcorn_respawn_waiting", {}) as Dictionary
+	if not waiting.has(str(slot)):
+		waiting[str(slot)] = {"death_order": waiting.size(), "dead_before_clear": 0.0}
+	state["popcorn_respawn_waiting"] = waiting
 	room_states[room_id] = state
 
 
@@ -1104,6 +1152,7 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 			current_room_timers[timer_key] = 0.25
 	current_room_state["special_respawn_timers"] = current_room_timers
 	if did_respawn:
+		_play_popcorn_spawn_sound(root)
 		current_room_state["finished"] = false
 		root.call("_set_door_active", false)
 		root.call("_set_entrance_open", true)
@@ -1112,9 +1161,29 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 
 
 func update_popcorn_respawns(root: Object, delta: float) -> void:
+	# Advance every room's clocks, including rooms outside the active scene. A
+	# ready off-room slot remains at zero until that room is visited again.
+	var step := maxf(delta, 0.0)
+	for room_key in room_states.keys():
+		var clock_state := room_states.get(room_key, {}) as Dictionary
+		var waiting := clock_state.get("popcorn_respawn_waiting", {}) as Dictionary
+		if not waiting.is_empty() and not bool(clock_state.get("finished", false)):
+			for waiting_key in waiting.keys():
+				var waiting_entry := waiting[waiting_key] as Dictionary
+				waiting_entry["dead_before_clear"] = float(waiting_entry.get("dead_before_clear", 0.0)) + step
+				waiting[waiting_key] = waiting_entry
+			clock_state["popcorn_respawn_waiting"] = waiting
+		var clock_pending := clock_state.get("popcorn_respawn_slots", {}) as Dictionary
+		if clock_pending.is_empty():
+			room_states[room_key] = clock_state
+			continue
+		for clock_key in clock_pending.keys():
+			clock_pending[clock_key] = maxf(0.0, float(clock_pending[clock_key]) - step)
+		clock_state["popcorn_respawn_slots"] = clock_pending
+		room_states[room_key] = clock_state
+	var room_id: StringName = StringName(root.get("current_room_id"))
 	if not _is_popcorn_respawn_room(root):
 		return
-	var room_id: StringName = StringName(root.get("current_room_id"))
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	var pending := state.get("popcorn_respawn_slots", {}) as Dictionary
 	if pending.is_empty():
@@ -1122,11 +1191,6 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 			state.erase("popcorn_respawn_slots")
 			room_states[room_id] = state
 		return
-	if not _big_threat_is_alive(root, state):
-		state.erase("popcorn_respawn_slots")
-		room_states[room_id] = state
-		return
-
 	var ready_slots: Array[int] = []
 	var active_variants := state.get("enemy_variants", []) as Array
 	for pending_key in pending.keys():
@@ -1134,9 +1198,7 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 		if slot < 0 or slot >= active_variants.size():
 			pending.erase(pending_key)
 			continue
-		var remaining := maxf(0.0, float(pending[pending_key]) - maxf(delta, 0.0))
-		pending[pending_key] = remaining
-		if remaining <= 0.0:
+		if float(pending[pending_key]) <= 0.0:
 			ready_slots.append(slot)
 	if ready_slots.is_empty():
 		if pending.is_empty():
@@ -1162,8 +1224,6 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 	var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary
 	var did_respawn := false
 	for slot in ready_slots:
-		if not _big_threat_is_alive(root, state):
-			break
 		var timer_key := str(slot)
 		var slimes := root.get("slimes") as Array[Sprite2D]
 		if slot < 0 or slot >= slimes.size():
@@ -1189,11 +1249,20 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 	else:
 		state["popcorn_respawn_slots"] = pending
 	if did_respawn:
+		_play_popcorn_spawn_sound(root)
 		state["finished"] = false
 		root.call("_set_door_active", false)
 		root.call("_set_entrance_open", false if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS else true)
 		root.call("_build_depth_lists")
 	room_states[room_id] = state
+
+
+func _play_popcorn_spawn_sound(root: Object) -> void:
+	var spawn_rng := root.get("rng") as RandomNumberGenerator
+	var pitch := 0.98
+	if spawn_rng != null:
+		pitch += spawn_rng.randf_range(-0.03, 0.03)
+	root.call("_play_sound", "slime_spawn", -6.0, pitch)
 
 
 func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
@@ -1276,6 +1345,7 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	var slime := slimes[slime_index]
 	var popcorn_flags := state.get("enemy_popcorn", []) as Array
 	var is_popcorn := slime_index < popcorn_flags.size() and bool(popcorn_flags[slime_index])
+	var popcorn_type := _popcorn_type(state, slime_index)
 	var spawn_level := int(active_levels[slime_index])
 	if is_popcorn:
 		# Recalculate on every spawn so a level-up during a run also keeps a
@@ -1283,6 +1353,7 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 		spawn_level = _popcorn_enemy_level_for_root(root)
 		active_levels[slime_index] = spawn_level
 	slime.set_meta("is_popcorn", is_popcorn)
+	slime.set_meta("popcorn_type", popcorn_type)
 	var tuning := root.get("slime_tuning") as SlimeTuning
 	var rng := root.get("rng") as RandomNumberGenerator
 	var actor_sprites := root.get("actor_sprites") as Array[Sprite2D]
@@ -1365,7 +1436,6 @@ func reset_slimes_for_room(root: Object) -> void:
 		return
 	var room_id: StringName = root.get("current_room_id")
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
-	state.erase("popcorn_respawn_slots")
 	var active_variants := state.get("enemy_variants", []) as Array
 	var runtime_states := state.get("enemy_runtime", {}) as Dictionary
 	var first_entry := not bool(state.get("enemy_spawned", false))
@@ -1386,7 +1456,10 @@ func reset_slimes_for_room(root: Object) -> void:
 	var spawned_slots := 0
 	var animated_spawn_started := false
 	var spawn_audio_played := false
-	var backtrack_popcorn_pending := bool(state.get("backtrack_popcorn_pending", false))
+	# Legacy saves may contain the removed revisit-injection flag. It must never
+	# create an immediate replacement on room entry.
+	state.erase("backtrack_popcorn_pending")
+	var backtrack_popcorn_pending := false
 	var backtrack_spawn_started := false
 	for slime_index in active_variants.size():
 		if slime_index >= slimes.size(): continue

@@ -10,15 +10,29 @@ class_name PuzzleMapLayoutCompiler
 
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 const GRID_SCRIPT = preload("res://scripts/puzzle_map_grid.gd")
+const R3_NEW_SCRIPT = preload("res://scripts/puzzle_map_r3_new.gd")
 const R3_SCRIPT = preload("res://scripts/puzzle_map_r3.gd")
+const R4_SCRIPT = preload("res://scripts/puzzle_map_r4.gd")
+const R5_SCRIPT = preload("res://scripts/puzzle_map_r5.gd")
 
-const R3_MAP_SIZE := Vector2i(35, 35)
-const R3_HUB_COORDINATE := Vector2i(17, 17)
+const MAP_SIZE := Vector2i(35, 35)
+const HUB_COORDINATE := Vector2i(17, 17)
 
 
 static func build_r3(starter_flame: StringName, run_flame: StringName):
-	var plan: PuzzleMapGrid.MapPlan = R3_SCRIPT.build()
-	var layout: DungeonLayoutDefinition = LAYOUT_DEFINITION_SCRIPT.new(&"RUN3", R3_MAP_SIZE)
+	return _build_authored(R3_NEW_SCRIPT.build(), &"RUN3", &"r3_room", starter_flame, run_flame)
+
+
+static func build_r4(starter_flame: StringName, run_flame: StringName):
+	return _build_authored(R3_SCRIPT.build(), &"RUN4", &"r4_room", starter_flame, run_flame)
+
+
+static func build_r5(starter_flame: StringName, run_flame: StringName):
+	return _build_authored(R5_SCRIPT.build(), &"RUN5", &"r5_room", starter_flame, run_flame)
+
+
+static func _build_authored(plan: PuzzleMapGrid.MapPlan, layout_id: StringName, room_prefix: StringName, starter_flame: StringName, run_flame: StringName):
+	var layout: DungeonLayoutDefinition = LAYOUT_DEFINITION_SCRIPT.new(layout_id, MAP_SIZE)
 	var active_coordinates: Dictionary = GRID_SCRIPT.active_room_coordinates(plan)
 	var marker_kinds: Dictionary = _room_marker_kinds(plan)
 	var room_distances: Dictionary = _room_distances(plan)
@@ -27,7 +41,7 @@ static func build_r3(starter_flame: StringName, run_flame: StringName):
 	var room_index := 0
 	var room_coordinates: Array[Vector2i] = _ordered_coordinates(active_coordinates)
 	for map_coordinate in room_coordinates:
-		var room_id: StringName = _room_id(map_coordinate)
+		var room_id: StringName = _room_id(map_coordinate, room_prefix)
 		var room_type: StringName = _room_type_for_marker(StringName(marker_kinds.get(map_coordinate, &"")))
 		var chest_count := 1 if room_type == DungeonGraph.ROOM_TREASURE else 0
 		var fire_flame: StringName = run_flame if room_type == DungeonGraph.ROOM_FIRE else &""
@@ -75,14 +89,11 @@ static func build_r3(starter_flame: StringName, run_flame: StringName):
 			&"",
 			marker.coordinate
 		)
-		# R3's authored color doors are the puzzle's route unlocks. They must open
-		# as soon as their Orb color requirement is satisfied, even when the room
-		# on the source side still contains an unengaged encounter. Lower exits use
-		# the same scoutable policy even when they are ordinary grey connections.
-		var is_lower_exit: bool = source_socket == DungeonGraph.BOTTOM_LEFT or source_socket == DungeonGraph.BOTTOM_RIGHT
-		if is_lower_exit or not color_requirement.is_empty():
-			connection.requires_source_room_clear = false
-			connection.locks_entry_on_destination_engagement = true
+		# Source/destination only orients the paired room sockets. Authored puzzle
+		# maps can be approached from any direction, so encounter locking belongs
+		# to the room currently occupied rather than this compiler-selected source.
+		connection.requires_source_room_clear = false
+		connection.locks_entry_on_destination_engagement = true
 		connection.door_display_requirement = &"grey_orb" if marker.kind == GRID_SCRIPT.MARKER_GATE_ORB_GREY else &""
 		layout.add_connection(connection)
 
@@ -99,8 +110,8 @@ static func _room_marker_kinds(plan: PuzzleMapGrid.MapPlan) -> Dictionary:
 
 
 static func _room_distances(plan: PuzzleMapGrid.MapPlan) -> Dictionary:
-	var distances: Dictionary = {R3_HUB_COORDINATE: 0}
-	var pending: Array[Vector2i] = [R3_HUB_COORDINATE]
+	var distances: Dictionary = {HUB_COORDINATE: 0}
+	var pending: Array[Vector2i] = [HUB_COORDINATE]
 	while not pending.is_empty():
 		var current: Vector2i = pending.pop_front()
 		var next_distance: int = int(distances[current]) + 1
@@ -133,31 +144,31 @@ static func _source_coordinate(endpoints: Array[Vector2i], distances: Dictionary
 
 static func _ordered_coordinates(active_coordinates: Dictionary) -> Array[Vector2i]:
 	var ordered: Array[Vector2i] = []
-	for y in range(R3_MAP_SIZE.y):
-		for x in range(R3_MAP_SIZE.x):
+	for y in range(MAP_SIZE.y):
+		for x in range(MAP_SIZE.x):
 			var coordinate := Vector2i(x, y)
 			if active_coordinates.has(coordinate):
 				ordered.append(coordinate)
 	return ordered
 
 
-static func _room_id(map_coordinate: Vector2i) -> StringName:
-	return StringName("r3_room_%d_%d" % [map_coordinate.x, map_coordinate.y])
+static func _room_id(map_coordinate: Vector2i, room_prefix: StringName) -> StringName:
+	return StringName("%s_%d_%d" % [room_prefix, map_coordinate.x, map_coordinate.y])
 
 
 static func _runtime_coordinate(map_coordinate: Vector2i, room_index: int, used: Dictionary) -> Vector2i:
-	if map_coordinate == R3_HUB_COORDINATE:
+	if map_coordinate == HUB_COORDINATE:
 		return Vector2i.ZERO
 	# The visual grid is a branching/cyclic puzzle lattice, not the runtime
 	# generator's one-direction depth lattice. Keep the authored image's x-axis,
 	# give every non-Hub room a positive depth, and repair the rare same-column
 	# collision deterministically without changing minimap coordinates.
-	var candidate := Vector2i(map_coordinate.x - R3_HUB_COORDINATE.x, map_coordinate.y + 1)
+	var candidate := Vector2i(map_coordinate.x - HUB_COORDINATE.x, map_coordinate.y + 1)
 	if not used.has(candidate):
 		return candidate
 	var collision_index := room_index + 1
 	while used.has(candidate):
-		candidate = Vector2i(map_coordinate.x - R3_HUB_COORDINATE.x + collision_index * R3_MAP_SIZE.x, map_coordinate.y + 1)
+		candidate = Vector2i(map_coordinate.x - HUB_COORDINATE.x + collision_index * MAP_SIZE.x, map_coordinate.y + 1)
 		collision_index += 1
 	return candidate
 

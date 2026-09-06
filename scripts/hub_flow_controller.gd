@@ -769,7 +769,7 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 		var slot := catalog.definition_slot(item.definition_id)
 		if slot not in ItemCatalog.SLOTS:
 			continue
-		var key := "%s|%s" % [str(item.definition_id), str(item.rarity)]
+		var key := "%s|%s|plus%d|enh%d" % [str(item.definition_id), str(item.rarity), catalog.random_plus_count(item), item.enhancement_level]
 		if not grouped.has(key):
 			grouped[key] = {"representative": item, "items": []}
 		var group: Dictionary = grouped[key]
@@ -784,14 +784,11 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 	for group_value: Variant in grouped.values():
 		var group: Dictionary = group_value
 		var item := group["representative"] as ItemInstance
-		var unequipped_count := 0
-		for candidate: ItemInstance in group["items"]:
-			if root.player_profile.get_equipped_instance_id(catalog.definition_slot(candidate.definition_id)) != candidate.instance_id:
-				unequipped_count += 1
 		var can_salvage: bool = root.player_profile.can_salvage_overflow(item.instance_id, catalog)
 		var representative_equipped: bool = root.player_profile.get_equipped_instance_id(catalog.definition_slot(item.definition_id)) == item.instance_id
 		var required_unequipped := 1 if representative_equipped else 2
-		if unequipped_count < required_unequipped and not can_salvage:
+		var valid_material_count: int = int(root.player_profile.fusion_material_count(item.instance_id, catalog))
+		if valid_material_count < required_unequipped and not can_salvage:
 			continue
 		var slot := catalog.definition_slot(item.definition_id)
 		var equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id

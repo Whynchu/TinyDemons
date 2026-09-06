@@ -12,7 +12,7 @@ func _initialize() -> void:
 	var minimap = MINIMAP_SCRIPT.new()
 	root.add_child(map)
 	root.add_child(minimap)
-	map.begin_run(graph, 864209, 3, &"fire")
+	map.begin_run(graph, 864209, 4, &"fire")
 	minimap.configure(map)
 	var layout = map.get("layout")
 	for room in layout.rooms:
@@ -20,8 +20,8 @@ func _initialize() -> void:
 	var image: Image = minimap.snapshot_image()
 	var full_image: Image = minimap.snapshot_full_image()
 	_expect(minimap.visible, "generated run exposes a minimap", failures)
-	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "generated minimap uses the fixed 22x22 display window", failures)
-	_expect(full_image != null and full_image.get_height() > MINIMAP_SCRIPT.MAP_SIZE.y, "generated Run 4 retains its expanded full-map geometry", failures)
+	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "generated minimap uses the fixed 25x25 circular display window", failures)
+	_expect(full_image != null and full_image.get_height() > MINIMAP_SCRIPT.MAP_SIZE.y, "generated Run 5 retains its expanded full-map geometry", failures)
 	if full_image != null:
 		var start = layout.room_by_id(graph.start_room_id)
 		var boss = null
@@ -40,8 +40,8 @@ func _initialize() -> void:
 		var map_state := map.get("state") as DungeonMapState
 		var current_room = layout.room_by_id(map_state.current_room_id) if map_state != null else null
 		var origin: Vector2i = minimap.get("map_origin") as Vector2i
-		_expect(current_room != null and current_room.minimap_coordinate - origin == Vector2i(11, 11), "generated minimap centers the occupied room in the display window", failures)
-		_expect(marker.position.is_equal_approx(MINIMAP_SCRIPT.MAP_POSITION + Vector2(11, 11) * MINIMAP_SCRIPT.DISPLAY_SCALE), "generated minimap marker stays at the display center", failures)
+		_expect(current_room != null and current_room.minimap_coordinate - origin == Vector2i(12, 12), "generated minimap centers the occupied room in the display window", failures)
+		_expect(marker.position.is_equal_approx(MINIMAP_SCRIPT.MAP_POSITION + Vector2(12, 12) * MINIMAP_SCRIPT.DISPLAY_SCALE), "generated minimap marker stays at the display center", failures)
 	var fusion_graph = GRAPH_SCRIPT.new()
 	var fusion_map = MAP_CONTROLLER_SCRIPT.new()
 	var fusion_minimap = MINIMAP_SCRIPT.new()

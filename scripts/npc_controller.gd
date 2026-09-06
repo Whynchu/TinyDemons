@@ -95,10 +95,10 @@ func show_dialogue(root: Object) -> void:
 		var fire_soul_cost := int(root.get("FIRE_SOUL_COST"))
 		if fire_soul_cost <= 0:
 			fire_soul_cost = PlayerProfile.ELEMENTAL_FLAME_COST
-		# The Cloaked Demon guarantees the player can always start a dive: it
-		# offers the flame cost for free whenever they are out of Souls. This is a
-		# conditional bailout on being broke, not a one-time start-of-game gift.
-		if profile.souls < fire_soul_cost:
+		# The bailout is only available before the starter flame has opened the
+		# dungeon doors. Once the flame is used, the demon must not offer the same
+		# souls again merely because the player's balance later reaches zero.
+		if not bool(root.get("starter_flame_attuned_this_run")) and profile.souls < fire_soul_cost:
 			profile.add_souls(fire_soul_cost)
 			profile.starter_soul_gift_claimed = true
 			root.call("_save_player_profile")
@@ -115,6 +115,9 @@ func show_dialogue(root: Object) -> void:
 	allocation_choice_pending = -1
 	begin_dialogue(message, Callable(root, "_pixel_text_texture"))
 	var player_was_idle := String(root.get("player_anim_name")) == "idle"
+	# Clear movement state too, so a run held on the interaction frame cannot
+	# restore the running pose on the next animation tick.
+	root.set("player_is_moving", false); root.set("player_is_running", false); root.set("player_roll_hold_armed", false)
 	dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE); dialogue_text.visible = true; dialogue_button.visible = false; dialogue_input_was_down = root.call("_is_interact_input_pressed"); dialogue_box.visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.set("player_is_backflipping", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	if not player_was_idle:
 		root.set("player_anim_name", "idle"); root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)

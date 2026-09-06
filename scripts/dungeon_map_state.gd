@@ -20,6 +20,7 @@ var active_puzzle_color: StringName = MAP_COLOR_NEUTRAL
 var shared_orb_puzzle_color: StringName = MAP_COLOR_NEUTRAL
 var shared_orb_palette := DEFAULT_ORB_PALETTE
 var current_room_id: StringName = &""
+var current_arrival_connection_key := ""
 var discovered_rooms: Dictionary = {}
 var completed_rooms: Dictionary = {}
 var engaged_rooms: Dictionary = {}
@@ -40,6 +41,7 @@ func begin(start_room_id: StringName) -> void:
 	shared_orb_puzzle_color = PUZZLE_COLOR_B
 	shared_orb_palette = DEFAULT_ORB_PALETTE
 	current_room_id = &""
+	current_arrival_connection_key = ""
 	discovered_rooms.clear()
 	completed_rooms.clear()
 	engaged_rooms.clear()
@@ -95,6 +97,18 @@ func mark_room_discovered(room_id: StringName) -> void:
 	discovered_rooms[room_id] = true
 	current_room_id = room_id
 	changed.emit()
+
+
+func set_current_arrival(connection: DungeonGraph.ConnectionRecord) -> void:
+	var next_key := connection_key(connection.source_room_id, connection.exit_socket) if connection != null else ""
+	if current_arrival_connection_key == next_key:
+		return
+	current_arrival_connection_key = next_key
+	changed.emit()
+
+
+func is_current_arrival(connection: DungeonGraph.ConnectionRecord) -> bool:
+	return connection != null and not current_arrival_connection_key.is_empty() and current_arrival_connection_key == connection_key(connection.source_room_id, connection.exit_socket)
 
 
 func mark_room_completed(room_id: StringName) -> void:
@@ -213,6 +227,7 @@ func to_dictionary() -> Dictionary:
 		"shared_orb_puzzle_color": shared_orb_puzzle_color,
 		"shared_orb_palette": shared_orb_palette,
 		"current_room_id": current_room_id,
+		"current_arrival_connection_key": current_arrival_connection_key,
 		"discovered_rooms": discovered_rooms.duplicate(),
 		"completed_rooms": completed_rooms.duplicate(),
 		"engaged_rooms": engaged_rooms.duplicate(),
@@ -245,6 +260,7 @@ func restore_from_dictionary(data: Dictionary) -> bool:
 	shared_orb_puzzle_color = next_shared
 	shared_orb_palette = next_palette
 	current_room_id = StringName(str(data.get("current_room_id", "")))
+	current_arrival_connection_key = str(data.get("current_arrival_connection_key", ""))
 	discovered_rooms = _string_name_dictionary(data.get("discovered_rooms", {}))
 	completed_rooms = _string_name_dictionary(data.get("completed_rooms", {}))
 	engaged_rooms = _string_name_dictionary(data.get("engaged_rooms", {}))

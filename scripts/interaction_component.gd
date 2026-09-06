@@ -62,11 +62,16 @@ func update_targeting(root: Object) -> void:
 	var player := root.get("player") as Sprite2D
 	if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")):
 		if target != null:
-			player.flip_h = target_facing_left(root, target)
+			var target_left := target_facing_left(root, target)
+			# Targeting owns the complete kit's horizontal facing, including while
+			# the player is holding shield and moving backwards. Keep the selected
+			# target direction as the persistent facing when lock-on is released.
+			player.flip_h = target_left
+			root.set("last_player_facing_left", target_left)
 		else:
 			# Lock the facing the player had when they pressed lock-on, even with
 			# no target to stare at, so the lock keeps them looking that way.
-			player.flip_h = root.get("player_facing_left_before_target") == true
+			player.flip_h = root.get("last_player_facing_left") == true
 	root.call("_update_target_ui")
 
 

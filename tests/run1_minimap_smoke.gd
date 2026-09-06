@@ -3,7 +3,7 @@ extends SceneTree
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
 const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const MINIMAP_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
-const VIEW_CENTER := Vector2i(11, 11)
+const VIEW_CENTER := Vector2i(12, 12)
 
 
 func _initialize() -> void:
@@ -20,12 +20,16 @@ func _initialize() -> void:
 	_expect(marker != null and marker.position.is_equal_approx(MINIMAP_SCRIPT.MAP_POSITION + Vector2(VIEW_CENTER) * MINIMAP_SCRIPT.DISPLAY_SCALE), "Run 1 marker stays centered on the Hub", failures)
 	var image: Image = minimap.snapshot_image()
 	var origin: Vector2i = Vector2i.ZERO
-	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "minimap uses the fixed 22x22 display window", failures)
+	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "minimap uses the fixed 25x25 circular display window", failures)
 	if image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE:
+		_expect(image.get_pixel(0, 0).a == 0.0 and image.get_pixel(24, 24).a == 0.0, "circular minimap mask clears pixels outside the authored ring", failures)
+		_expect(image.get_pixelv(VIEW_CENTER).a > 0.0, "circular minimap mask keeps the centered map visible", failures)
 		origin = minimap.get("map_origin") as Vector2i
 		_expect(image.get_pixelv(Vector2i(8, 21) - origin) == MINIMAP_SCRIPT.COLOR_HUB, "Hub pixel uses the reference white", failures)
 		_expect(image.get_pixelv(Vector2i(7, 20) - origin) == MINIMAP_SCRIPT.COLOR_DOOR, "Hub-to-Orb entry remains an ordinary connector", failures)
 		_expect(image.get_pixelv(Vector2i(6, 19) - origin) == MINIMAP_SCRIPT.COLOR_BACKGROUND, "undiscovered room remains hidden", failures)
+	var ring := minimap.get_node_or_null("DungeonMinimapRing") as Sprite2D
+	_expect(ring != null and ring.texture != null, "minimap displays the authored puzzle-map ring above the map", failures)
 	map_controller.on_room_entered(&"room_1_1")
 	_expect(marker != null and marker.position.is_equal_approx(MINIMAP_SCRIPT.MAP_POSITION + Vector2(VIEW_CENTER) * MINIMAP_SCRIPT.DISPLAY_SCALE), "Run 1 marker stays centered on the occupied enemy room", failures)
 	image = minimap.snapshot_image()

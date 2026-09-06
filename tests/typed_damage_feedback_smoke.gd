@@ -23,7 +23,7 @@ func _initialize() -> void:
 	var critical_sprite := critical_entry["sprite"] as Sprite2D
 	var critical_outline := critical_entry["outline"] as Sprite2D
 	_expect(critical_sprite != null and _contains_color(critical_sprite.texture, PaletteLibrary.accent("red")), "critical interior keeps the original Fire color", failures)
-	_expect(critical_outline != null and _contains_color(critical_outline.texture, Color.WHITE), "critical number creates a white outline", failures)
+	_expect(critical_outline != null and _contains_color(critical_outline.texture, Color.BLACK), "elemental critical number creates a black outline", failures)
 	_expect(critical_sprite != null and critical_outline != null and critical_sprite.texture.get_width() < critical_outline.texture.get_width(), "critical outline extends beyond the glyph", failures)
 
 	var normal_critical_color := ElementCatalogScript.damage_number_color(ElementCatalogScript.Element.NEUTRAL, true)

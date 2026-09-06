@@ -356,7 +356,9 @@ func validate() -> Array[String]:
 		errors.append("expected exactly one Hub room")
 	if boss_count != 1:
 		errors.append("expected exactly one Boss room")
-	if cloaked_count != 1:
+	# R3/R4/R5 are deliberately authored without a Cloaked room. Every other authored
+	# layout and the generated contract keep exactly one.
+	if layout_id not in [&"RUN3", &"RUN4", &"RUN5"] and cloaked_count != 1:
 		errors.append("expected exactly one Cloaked room")
 	if layout_id == &"RUN1" and orb_room_count != 2:
 		errors.append("Run 1 expects exactly two identical Orb Rooms")

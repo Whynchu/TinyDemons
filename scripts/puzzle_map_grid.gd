@@ -184,6 +184,10 @@ static func render_preview(plan: MapPlan, template: Image) -> Image:
 		return null
 	var map_image := template.duplicate()
 	var active_rooms: Dictionary = active_room_coordinates(plan)
+	var marker_coordinates: Dictionary = {}
+	for marker in plan.markers:
+		if marker != null:
+			marker_coordinates[marker.coordinate] = true
 	for y in map_image.get_height():
 		for x in map_image.get_width():
 			var pixel: Color = map_image.get_pixel(x, y)
@@ -192,6 +196,14 @@ static func render_preview(plan: MapPlan, template: Image) -> Image:
 			elif pixel == COLOR_COMBAT and not active_rooms.has(Vector2i(x, y)):
 				map_image.set_pixel(x, y, COLOR_INACTIVE_ROOM_DARK)
 	for coordinate in plan.active_tiles:
+		if _contains(map_image, coordinate):
+			map_image.set_pixelv(coordinate, COLOR_COMBAT)
+	# Active room slots that are not themselves authored markers are endpoints of
+	# an authored connection; they keep the original combat-grey swatch instead
+	# of the dimmed placeholder. Marker coordinates are drawn on top below.
+	for coordinate in active_rooms:
+		if marker_coordinates.has(coordinate):
+			continue
 		if _contains(map_image, coordinate):
 			map_image.set_pixelv(coordinate, COLOR_COMBAT)
 	for marker in plan.markers:

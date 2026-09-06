@@ -78,17 +78,23 @@ procedural generator until another authored map is ready.
 
 ## Door-state requirement
 
-R4 must use room-local encounter state rather than a global route lock:
+R4 must use room-local encounter state rather than a compiler-selected route
+direction:
 
-- exits from the current enemy room remain unavailable until that room is
-  cleared;
-- the doorway used to enter remains available while scouting;
-- that arrival doorway may lock once combat begins;
-- clearing the room reopens its exits;
-- the behavior must work regardless of which doorway was used to enter.
+- every doorway supports entry from either side;
+- only the doorway used for the current visit remains available for retreat
+  while an enemy room is unengaged;
+- entering the same uncleared room later through another doorway replaces the
+  previous visit's arrival doorway;
+- Flame and Grey Orb requirements remain enforced in both directions;
+- combat engagement locks every doorway in the occupied enemy room;
+- clearing the room reopens its valid doorways; and
+- compiler source/destination orientation remains a socket-geometry detail and
+  must never define puzzle progression.
 
-Tracking the actual arrival doorway is required before finalizing this part of
-the runtime integration.
+The current arrival is visit-local state, not permanent room metadata. This
+policy applies to the authored R3/R4 puzzle maps. Generated layouts retain their
+existing route-direction policy.
 
 ## Verification
 
@@ -96,3 +102,23 @@ Run the focused R4 grid/layout smoke tests first, then the full smoke suite in
 a standalone Godot process when no MCP editor/runtime peer is active. Record
 the final room/connection counts and any intentional R4 exceptions in
 `docs/AUDIT.md`.
+
+## Room Popcorn Requirement
+
+R3 and R4 normal combat rooms should remain active after their first clear by
+bringing back small popcorn encounters. This is separate from Shadow/boss
+support respawns.
+
+- Start the respawn timer when a normal combat room is completed.
+- Wait 45 seconds before spawning the next popcorn group.
+- Exclude Hub, Fire/Rest, Orb, and other non-combat utility rooms.
+- R3 should use a larger normal-room slime roster than earlier authored runs.
+- Roll a new popcorn cap each time the room is cleared. The cap may be lower
+  than the previous group, including one slime, and must not exceed the number
+  of normal enemies defeated in the latest encounter.
+- Once a popcorn group is defeated, another group may spawn up to that room's
+  current rolled cap. Do not duplicate groups while a prior group is alive.
+- Persist the timer, rolled cap, live/dead popcorn slots, and exclusions through
+  room re-entry and active-run recovery.
+- Add coverage for repeated clear rolls, the 45-second delay, re-entry, and the
+  Fire/Hub/Orb exclusions.
