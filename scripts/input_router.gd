@@ -12,15 +12,19 @@ var _previous: Dictionary = {}
 var _movement := Vector2.ZERO
 var _menu_directions: Dictionary = {}
 var _previous_menu_directions: Dictionary = {}
+var _menu_repeat_elapsed: Dictionary = {}
+var _menu_direction_events: Dictionary = {}
 var _target_axis := 0.0
 var _guard_axis := 0.0
 var touch_provider: Node = null
 var _touch_snapshot: Dictionary = {}
 
 const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard", &"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right", &"move_left", &"move_right", &"move_up", &"move_down"]
+const MENU_REPEAT_INITIAL_DELAY := 0.32
+const MENU_REPEAT_INTERVAL := 0.08
 
 
-func poll(next_context: int) -> void:
+func poll(next_context: int, delta: float = 1.0 / 60.0) -> void:
 	context = next_context as Context
 	if touch_provider != null and touch_provider.has_method("set_input_context"):
 		touch_provider.call("set_input_context", context)
@@ -43,6 +47,22 @@ func poll(next_context: int) -> void:
 		&"ui_left": bool(_current.get(&"ui_left", false)) or _movement.x < -0.65,
 		&"ui_right": bool(_current.get(&"ui_right", false)) or _movement.x > 0.65,
 	}
+	_menu_direction_events.clear()
+	for direction: StringName in [&"ui_up", &"ui_down", &"ui_left", &"ui_right"]:
+		var held: bool = bool(_menu_directions.get(direction, false))
+		if not held:
+			_menu_repeat_elapsed[direction] = 0.0
+			continue
+		var was_held: bool = bool(_previous_menu_directions.get(direction, false))
+		if not was_held:
+			_menu_repeat_elapsed[direction] = 0.0
+			_menu_direction_events[direction] = true
+			continue
+		var elapsed: float = float(_menu_repeat_elapsed.get(direction, 0.0)) + maxf(delta, 0.0)
+		if elapsed >= MENU_REPEAT_INITIAL_DELAY:
+			_menu_direction_events[direction] = true
+			elapsed -= MENU_REPEAT_INTERVAL
+		_menu_repeat_elapsed[direction] = elapsed
 	_target_axis = _strongest_axis(JOY_AXIS_RIGHT_X as JoyAxis)
 	_guard_axis = _strongest_trigger(JOY_AXIS_TRIGGER_LEFT as JoyAxis)
 
@@ -139,7 +159,7 @@ func menu_back_just_pressed() -> bool:
 
 
 func menu_direction_just_pressed(direction: StringName) -> bool:
-	return bool(_menu_directions.get(direction, false)) and not bool(_previous_menu_directions.get(direction, false))
+	return bool(_menu_direction_events.get(direction, false))
 
 
 func menu_cancel_just_pressed() -> bool:

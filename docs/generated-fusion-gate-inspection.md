@@ -1,6 +1,6 @@
 # Generated Fusion-Gate Inspection
 
-Status: inspection complete; implementation not started  
+Status: implementation complete; focused verification passed
 Inspected: 2026-08-30  
 Scope: generated R6+ room topology, entrance-Orb gates, shared Orb state, and validation
 
@@ -191,6 +191,8 @@ derive it from the generic Orb detour split.
 
 ## Out of scope for this inspection
 
-This record does not change generator code, map-state code, room counts, enemy
-balance, or version numbers. Those changes belong to the implementation pass after
-the topology and test contract are agreed.
+This section describes the original inspection boundary. The follow-up
+implementation now lives in `dungeon_layout_generator.gd`,
+`dungeon_map_controller.gd`, `room_puzzle_controller.gd`, and
+`room_controller.gd`, with focused regression coverage in the generated-layout,
+fusion-gate, binding, respawn, and backtracking smoke scripts.

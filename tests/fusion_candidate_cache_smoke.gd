@@ -29,13 +29,19 @@ func _initialize() -> void:
 	material.definition_id = &"basic_sword"
 	material.rarity = &"common"
 	root.player_profile.grant_item(material)
+	var material2 := ItemInstance.new()
+	material2.instance_id = "cache-material-2"
+	material2.definition_id = &"basic_sword"
+	material2.rarity = &"common"
+	root.player_profile.grant_item(material2)
 	_expect(controller.hub_fusion_candidates(root).is_empty(), "cached result stays stable until invalidated", failures)
 
 	controller.set_hub_page(root, 3)
 	var candidates := controller.hub_fusion_candidates(root)
-	_expect(candidates.size() == 1 and candidates[0].instance_id == target.instance_id, "entering FUSE refreshes a target made eligible by newly acquired gear", failures)
+	_expect(candidates.size() == 1 and candidates[0].instance_id == target.instance_id, "matching unequipped copies collapse into one FUSE row", failures)
 	_expect(root.screen_state_controller.hub_fusion_candidates_dirty == false, "refreshed fusion cache is clean", failures)
-	_expect(root.player_profile.fusion_material_count(target.instance_id, catalog) == 1, "matching basic sword is usable as material", failures)
+	_expect(root.player_profile.fusion_owned_count(target.instance_id, catalog) == 2, "collapsed FUSE row reports both unequipped copies as owned", failures)
+	_expect(root.player_profile.fusion_material_count(target.instance_id, catalog) == 2, "matching basic swords remain usable as materials", failures)
 
 	controller.queue_free()
 	_finished = true

@@ -9,8 +9,11 @@ void fragment() {
 	if (grey_mix <= 0.001) {
 		COLOR = source;
 	} else if (grey_mix >= 0.999) {
-		COLOR = grey;
+		// Keep alpha owned by the source texture. The source may be an
+		// occlusion/dither texture; taking grey.a here restores the covered
+		// pixels whenever the player's Chroma reaches zero.
+		COLOR = vec4(grey.rgb, source.a);
 	} else {
-		COLOR = mix(source, grey, grey_mix);
+		COLOR = vec4(mix(source.rgb, grey.rgb, grey_mix), source.a);
 	}
 }

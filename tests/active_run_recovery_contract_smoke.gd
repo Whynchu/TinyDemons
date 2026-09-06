@@ -28,6 +28,7 @@ func _initialize() -> void:
 		"created_at": 123.0,
 		"run_state": run.to_dictionary(),
 		"dungeon_seed": 424242,
+		"layout_bound_flame": "water",
 		"run_rank": 2,
 		"current_room_id": "room_start",
 		"current_room_type": "combat",
@@ -45,6 +46,7 @@ func _initialize() -> void:
 	if parsed is Dictionary:
 		var decoded := parsed as Dictionary
 		_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(decoded, 1), "valid snapshot passes schema and slot validation", failures)
+		_expect(String(decoded.get("layout_bound_flame", "")) == "water", "active-run recovery preserves the generated layout origin", failures)
 		var restored_run := RunState.new()
 		_expect(restored_run.restore_from_dictionary(decoded["run_state"] as Dictionary), "run state restores from snapshot data", failures)
 		_expect(restored_run.run_id == run.run_id and restored_run.shop_stock.size() == 1 and restored_run.gear_reward_telemetry.size() == 1, "run identity, shop state, and telemetry round-trip", failures)

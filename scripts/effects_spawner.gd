@@ -6,6 +6,7 @@ const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.p
 
 signal effect_requested(kind: StringName, position: Vector2)
 const CHARGE_AURA_TAG := &"charge_aura"
+const SWORD_BEAM_CHROMA_COST := 20
 var damage_number_texture_cache: Dictionary = {}
 var critical_outline_texture_cache: Dictionary = {}
 var name_texture_cache: Dictionary = {}
@@ -95,7 +96,9 @@ func update_pixel_particles_from_root(root: Object, delta: float) -> void:
 func update_charge_aura_from_root(root: Object, delta: float) -> void:
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	var player := root.get("player") as Sprite2D
-	if attack == null or player == null or not is_instance_valid(player) or not attack.is_charging():
+	var chroma := root.get("player_chroma_component") as Node
+	var beam_available: bool = chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
+	if attack == null or player == null or not is_instance_valid(player) or not attack.is_charging() or not beam_available:
 		if charge_aura_active:
 			clear_effect_particles(CHARGE_AURA_TAG)
 		charge_aura_active = false
@@ -198,7 +201,8 @@ func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: fl
 		player.add_child(charge_ready_highlight)
 	var renderer := root.get("occlusion_renderer") as OcclusionRenderer
 	if renderer != null:
-		charge_ready_highlight.texture = renderer.highlighted_texture(player.texture)
+		var palette := String(root.get("current_player_palette_name"))
+		charge_ready_highlight.texture = _colored_charge_highlight(renderer.highlighted_texture(player.texture), PaletteLibrary.accent(palette))
 	else:
 		charge_ready_highlight.texture = root.call("_white_texture", player.texture) as Texture2D
 	ActorGeometry.sync_overlay(charge_ready_highlight, player)
@@ -207,6 +211,25 @@ func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: fl
 	var alpha := 1.0 if charge_ready_opaque_timer > 0.0 else lerpf(0.12, 0.46, readiness) * lerpf(0.55, 1.0, blink)
 	charge_ready_highlight.modulate = Color(1.0, 1.0, 1.0, alpha)
 	charge_ready_highlight.visible = true
+
+
+func _colored_charge_highlight(source: Texture2D, color: Color) -> Texture2D:
+	if source == null:
+		return null
+	var key := "charge_highlight:%s:%s" % [source.get_rid(), color.to_html(false)]
+	if pixel_particle_texture_cache.has(key):
+		return pixel_particle_texture_cache[key] as Texture2D
+	var image := source.get_image()
+	for y in image.get_height():
+		for x in image.get_width():
+			var pixel := image.get_pixel(x, y)
+			if pixel.a > 0.0:
+				var tinted := color
+				tinted.a = pixel.a
+				image.set_pixel(x, y, tinted)
+	var texture := ImageTexture.create_from_image(image)
+	pixel_particle_texture_cache[key] = texture
+	return texture
 
 
 func _hide_charge_ready_highlight() -> void:

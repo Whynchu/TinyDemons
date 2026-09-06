@@ -29,6 +29,7 @@ const TAP_INTERACT_ACTION := &"tap_interact"
 const MENU_SCROLL_DRAG_PX := 6.0
 const MENU_TOUCH_HIT_SLOP := 8.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
+const FUSION_DOUBLE_TAP_MS := 350
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
 const BUTTON_GRID_POSITIONS := {
@@ -50,6 +51,8 @@ var _finger_actions: Dictionary = {}
 var _tap_interact_origins: Dictionary = {}
 var _menu_touch_buttons: Dictionary = {}
 var _menu_button_origins: Dictionary = {}
+var _last_menu_tap_button: BaseButton = null
+var _last_menu_tap_time := 0
 var _menu_accept_fingers: Dictionary = {}
 var _menu_accept_latch := false
 var _menu_scroll_fingers: Dictionary = {}
@@ -512,7 +515,17 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 				var host := get_parent()
 				if host != null and host.has_method("_play_sound"):
 					host.call("_play_sound", "enemy_death", -6.0, 0.95)
+			var now := Time.get_ticks_msec()
+			var host := get_parent()
+			var is_fusion_row: bool = _input_context == CONTEXT_HUB and menu_button.name.to_lower().begins_with("itembutton") and host != null and host.get("screen_state_controller") != null and host.screen_state_controller.hub_page == 3
+			var is_second_fusion_tap: bool = is_fusion_row and menu_button == _last_menu_tap_button and now - _last_menu_tap_time <= FUSION_DOUBLE_TAP_MS
 			menu_button.pressed.emit()
+			if is_fusion_row:
+				_last_menu_tap_button = menu_button
+				_last_menu_tap_time = now
+				if is_second_fusion_tap:
+					if host != null and host.has_method("_hub_item_action"):
+						host.call("_hub_item_action")
 		_update_touch_capture_filter()
 		return
 	if _menu_scroll_fingers.has(finger_id):

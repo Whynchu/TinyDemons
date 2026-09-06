@@ -385,6 +385,24 @@ func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = nu
 	return mini(matches, max_steps)
 
 
+func fusion_owned_count(target_instance_id: String, catalog: ItemCatalog = null) -> int:
+	var target := find_item(target_instance_id)
+	if target == null:
+		return 0
+	var items := catalog if catalog != null else ItemCatalog.new()
+	if items.definition_slot(target.definition_id) not in ItemCatalog.SLOTS:
+		return 0
+	var matches := 0
+	for data: Dictionary in inventory:
+		var candidate := ItemInstance.from_dictionary(data)
+		if not _is_fusion_match(target, candidate):
+			continue
+		if candidate.instance_id in equipped_instance_ids.values():
+			continue
+		matches += 1
+	return matches
+
+
 func fusion_step_cost(rarity: StringName, enhancement_level: int) -> int:
 	var rarity_rank: int = int({&"common": 0, &"rare": 1, &"epic": 2, &"legendary": 3, &"mythic": 4}.get(rarity, 0))
 	var enhancement := clampi(enhancement_level, 0, MAX_ITEM_ENHANCEMENT)
@@ -439,6 +457,7 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 		return false
 	var working := target
 	working.fusion_count += amount
+	working.fusion_stat_points += amount
 	working.fusion_souls_invested += cost
 	for step in amount:
 		if working.enhancement_level >= MAX_ITEM_ENHANCEMENT:

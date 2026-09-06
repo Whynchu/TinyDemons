@@ -11,6 +11,10 @@ func spawn(sprite: Sprite2D, outline: Sprite2D, direction: Vector2, lifetime: fl
 	projectiles.append({"sprite": sprite, "outline": outline, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": target, "ability_mode": ability_mode})
 
 
+func spawn_beam(sprite: Sprite2D, direction: Vector2, lifetime: float, palette: String, ability_mode: int) -> void:
+	projectiles.append({"sprite": sprite, "outline": null, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": null, "ability_mode": ability_mode, "beam": true})
+
+
 func remove(index: int) -> void:
 	if index >= 0 and index < projectiles.size():
 		projectiles.remove_at(index)
@@ -40,6 +44,9 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 			remove(index)
 			continue
 		var direction := data.get("direction") as Vector2
+		if bool(data.get("beam", false)) and sprite.hframes > 1:
+			var elapsed := maxf(float(data.get("initial_timer", timer)) - timer, 0.0)
+			sprite.frame = mini(int(elapsed / 0.045), sprite.hframes - 1)
 		var homing := _valid_sprite(data.get("target"))
 		if homing != null and is_instance_valid(homing) and bool(is_targetable.call(homing)):
 			var to_target: Vector2 = target_point.call(homing) - sprite.global_position
@@ -61,6 +68,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 				continue
 		trail.call(sprite.global_position, String(data.get("palette", "grey")))
 		data["timer"] = timer
+		data["initial_timer"] = float(data.get("initial_timer", timer + delta))
 		projectiles[index] = data
 
 

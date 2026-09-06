@@ -24,7 +24,7 @@ func _initialize() -> void:
 		"gear_slot_buttons": "hub_gear_slot_buttons", "gear_stats": "hub_gear_stat_texts",
 		"gear_stat_panel": "hub_gear_stat_panel", "item_details": "hub_item_detail_texts",
 		"item_action": "hub_item_action_button", "fusion_decrease": "hub_fusion_decrease_button", "fusion_increase": "hub_fusion_increase_button", "binding_panel": "hub_binding_panel",
-		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text",
+		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text", "fusion_menu": "hub_fusion_menu",
 	}
 	for key: String in built:
 		controller_instance.set(str(key_map.get(key, key)), built[key])
@@ -90,8 +90,12 @@ func _initialize() -> void:
 	controller_instance.hub_item_index = 0
 	controller_instance.hub_gear_browsing = false
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(gear_stats[0].texture != null, "fusion preview populates gear stat panel on FUSE page", failures)
-	_expect(details[0].texture == null, "gear tooltip not retained in details[0] when FUSE item has no transmutation", failures)
+	var fusion_view := built["fusion_menu"] as FusionMenuLayout
+	_expect(fusion_view != null and fusion_view.visible, "Fusion route uses its dedicated visible presenter", failures)
+	_expect(fusion_view.get_node("ShopListPanel").visible and fusion_view.get_node("ShopStatsPanel").visible, "Fusion keeps Shop's independent body panels", failures)
+	_expect((fusion_view.get_node("OwnedText") as Sprite2D).texture != null, "Fusion renders the owned footer", failures)
+	_expect((fusion_view.get_node("ListClip/SellRowSoulAmount0") as Sprite2D).texture != null and (fusion_view.get_node("ListClip/SellRowSoulIcon0") as Sprite2D).texture != null, "Fusion renders inline Soul amount and icon", failures)
+	_expect(not details[0].visible and not controller_instance.hub_item_detail_panel.visible, "legacy item detail presenter stays hidden on FUSE", failures)
 	root._set_page(2)
 	controller_instance.hub_page = 2
 	controller_instance.hub_item_index = 0
@@ -106,8 +110,7 @@ func _initialize() -> void:
 	controller_instance.hub_page = 3
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(details[0].texture == null, "shop bonus text cleared from details[0] on FUSE page", failures)
-	_expect(gear_stats[0].texture != null, "fusion preview repopulates gear stat panel after shop visit", failures)
+	_expect(fusion_view.visible and (fusion_view.get_node("StatLabel0") as Sprite2D).texture != null, "Fusion presenter remains authoritative after returning from Shop", failures)
 	controller_instance.hub_overlay.free()
 	host.free()
 	_finished = true

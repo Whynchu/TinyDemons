@@ -42,6 +42,7 @@ var _last_render_action_index := 0
 var _last_render_slot_index := 0
 var _last_render_candidate_index := 0
 var _last_render_confirm_index := 1
+var _candidate_scroll_fraction := 0.0
 
 var command_buttons: Array[Button] = []
 var slot_buttons: Array[Button] = []
@@ -66,6 +67,14 @@ var _panels: Array[Control] = []
 var navigation_panel: Control = null
 var navigation_text: Sprite2D = null
 var navigation_back_button: Button = null
+
+
+func set_portrait_texture(texture: Texture2D) -> void:
+	var portrait := get_node_or_null("Portrait") as Sprite2D
+	if portrait == null or texture == null:
+		return
+	portrait.texture = texture
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
 func _ready() -> void:
@@ -399,13 +408,26 @@ func set_slot_grid(labels: Array[String], colors: Array[Color] = [], locked: Arr
 			_slot_icons[index].modulate = DIM_CURSOR_MODULATE if index < locked.size() and locked[index] else Color.WHITE
 
 
-func set_candidates(labels: Array[String], colors: Array[Color] = [], selected_index: int = -1) -> void:
+func set_candidates(labels: Array[String], colors: Array[Color] = [], selected_index: int = -1, scroll_fraction: float = 0.0) -> void:
+	_candidate_scroll_fraction = clampf(scroll_fraction, 0.0, 1.999999)
 	for index in _candidate_texts.size():
 		var value := labels[index] if index < labels.size() else ""
 		var color := colors[index] if index < colors.size() else Color8(150, 156, 170)
 		set_text(_candidate_texts[index], value, color)
 		if index < candidate_buttons.size():
 			candidate_buttons[index].visible = not read_only and not value.is_empty()
+	_apply_candidate_scroll()
+
+
+func _apply_candidate_scroll() -> void:
+	var offset_y := _candidate_scroll_fraction * 9.0
+	for index in _candidate_texts.size():
+		_candidate_texts[index].position.y = 93.0 + floori(index / 2) * 9.0 - offset_y
+	for index in candidate_buttons.size():
+		var button := candidate_buttons[index]
+		var native_rect := button.get_meta("equipment_native_rect", Rect2(button.position, button.size)) as Rect2
+		button.position.y = native_rect.position.y - offset_y
+		button.size.y = native_rect.size.y
 
 
 func set_description(lines: Array[String], color: Color = Color.WHITE) -> void:

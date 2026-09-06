@@ -27,6 +27,9 @@ var starter_palette_name := "red"
 var completed_runs_for_layout := 0
 var starter_flame_attuned_this_run := false
 var bound_flame: StringName = &""
+## The flame used to generate the current layout. This stays fixed for the
+## active run even if the player binds a different flame from the Hub.
+var layout_bound_flame: StringName = &""
 var current_element := ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
 
 
@@ -37,6 +40,7 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		graph.configure_progression(completed_runs_for_layout)
 	set_starter_flame(selected_starter_flame)
 	set_bound_flame(selected_bound_flame)
+	layout_bound_flame = bound_flame
 	current_element = ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
 	starter_flame_attuned_this_run = false
 	authored_run1 = completed_runs == 0
@@ -52,7 +56,7 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		for error in run2_errors:
 			push_error("Run 2 layout: %s" % error)
 	else:
-		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, bound_flame)
+		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, layout_bound_flame)
 		# Continue/load paths can hand us an already-created generated layout. Run
 		# the same deterministic requirement repair here as build() so recovery is
 		# not dependent on whether this map was generated this frame.
@@ -103,7 +107,15 @@ func set_starter_flame(selected_flame: StringName) -> void:
 
 
 func set_bound_flame(selected_flame: StringName) -> void:
-	bound_flame = selected_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_flame) else &""
+	var next_bound := selected_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_flame) else &""
+	if bound_flame == next_bound:
+		return
+	bound_flame = next_bound
+	map_state_changed.emit()
+
+
+func layout_origin_flame() -> StringName:
+	return layout_bound_flame
 
 
 func set_current_element(element: int) -> void:
@@ -126,7 +138,14 @@ func set_starter_flame_attuned(attuned: bool) -> void:
 
 
 func available_flames() -> Array[StringName]:
-	return ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs_for_layout, starter_flame)
+	var available := ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs_for_layout, starter_flame)
+	if not bound_flame.is_empty() and not available.has(bound_flame):
+		available.append(bound_flame)
+	# A mid-run rebind must not make the Fire Room that generated this layout
+	# unusable. Keep the layout's origin available until the next run rebuilds it.
+	if not layout_bound_flame.is_empty() and not available.has(layout_bound_flame):
+		available.append(layout_bound_flame)
+	return available
 
 
 func alternate_flames() -> Array[StringName]:

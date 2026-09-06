@@ -436,6 +436,117 @@ theme_override_styles/pressed = SubResource("StyleBox_transparent")
 theme_override_styles/focus = SubResource("StyleBox_transparent")
 theme_override_styles/disabled = SubResource("StyleBox_transparent")
 
+[node name="ItemIcon8" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 80)
+centered = false
+
+[node name="ItemText8" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 80)
+centered = false
+
+[node name="PriceText8" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 80)
+centered = false
+
+[node name="SellRowSoulAmount8" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 80)
+centered = false
+[node name="SellRowSoulIcon8" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 80)
+centered = false
+
+[node name="ItemButton8" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 82.0
+offset_right = 146.0
+offset_bottom = 92.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="ItemIcon9" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 90)
+centered = false
+
+[node name="ItemText9" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 90)
+centered = false
+
+[node name="PriceText9" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 90)
+centered = false
+
+[node name="SellRowSoulAmount9" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 90)
+centered = false
+[node name="SellRowSoulIcon9" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 90)
+centered = false
+
+[node name="ItemButton9" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 92.0
+offset_right = 146.0
+offset_bottom = 102.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
+[node name="ItemIcon10" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(21, 100)
+centered = false
+
+[node name="ItemText10" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(27, 100)
+centered = false
+
+[node name="PriceText10" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(102, 100)
+centered = false
+
+[node name="SellRowSoulAmount10" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(124, 100)
+centered = false
+[node name="SellRowSoulIcon10" type="Sprite2D" parent="ListClip"]
+texture_filter = 1
+position = Vector2(130, 100)
+centered = false
+
+[node name="ItemButton10" type="Button" parent="ListClip"]
+layout_mode = 0
+offset_top = 102.0
+offset_right = 146.0
+offset_bottom = 112.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBox_transparent")
+theme_override_styles/hover = SubResource("StyleBox_transparent")
+theme_override_styles/pressed = SubResource("StyleBox_transparent")
+theme_override_styles/focus = SubResource("StyleBox_transparent")
+theme_override_styles/disabled = SubResource("StyleBox_transparent")
+
 [node name="StatLabel0" type="Sprite2D" parent="."]
 texture_filter = 1
 position = Vector2(162, 54)

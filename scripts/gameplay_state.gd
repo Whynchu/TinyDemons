@@ -468,6 +468,8 @@ func _bind_current_element() -> bool:
 		_play_sound("ui_no_input", 0.0, 1.0)
 		return false
 	player_chroma_component.call("set_bound_flame", current)
+	if dungeon_map_controller != null and dungeon_map_controller.has_method("set_bound_flame"):
+		dungeon_map_controller.call("set_bound_flame", current)
 	var palette := AspectCatalogScript.palette_for_flame(current)
 	player_profile.palette_name = palette
 	call("_save_player_profile")
@@ -855,6 +857,19 @@ func _save_preview_texture(palette_name: String) -> Texture2D:
 
 func _save_portrait_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_portrait_texture", self, palette_name) as Texture2D
+
+
+func _equipment_portrait_texture() -> Texture2D:
+	var palette_name := current_player_palette_name
+	if player_chroma_component != null and is_instance_valid(player_chroma_component):
+		var current_flame := StringName(player_chroma_component.call("aspect_name"))
+		if AspectCatalogScript.is_elemental_flame(current_flame):
+			palette_name = AspectCatalogScript.palette_for_flame(current_flame)
+		elif player_profile != null and player_profile.has_bound_element:
+			palette_name = AspectCatalogScript.palette_for_flame(player_profile.bound_element)
+	if palette_name.is_empty():
+		palette_name = "blue"
+	return _save_portrait_texture(palette_name)
 func _select_save_slot(slot: int) -> void:
 	save_flow_controller.call("select_save_slot", self, slot)
 func _finish_name_entry(player_name: String) -> void:
@@ -1548,6 +1563,7 @@ func _player_visual_center() -> Vector2: return magic_runtime_controller.call("p
 func _slime_visual_center(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("slime_visual_center", self, slime) as Vector2
 func _magic_target_point(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("magic_target_point", self, slime) as Vector2
 func _spawn_magic_projectile(origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = 0) -> void: magic_runtime_controller.call("spawn_magic_projectile", self, origin, direction, homing_target, ability_mode)
+func _spawn_sword_beam(origin: Vector2, direction: Vector2) -> void: magic_runtime_controller.call("spawn_sword_beam", self, origin, direction)
 func _magic_projectile_outline_texture(base_color: Color, accent_color: Color) -> Texture2D: return magic_runtime_controller.call("magic_projectile_outline_texture", self, base_color, accent_color) as Texture2D
 func _update_magic_projectiles(delta: float) -> void: magic_runtime_controller.call("update_magic_projectiles", self, delta)
 func _resolve_magic_projectile_hit(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0) -> void: magic_runtime_controller.call("resolve_magic_projectile_hit", self, target, world_position, palette, ability_mode)

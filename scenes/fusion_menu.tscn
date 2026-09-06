@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/shop_menu.tscn" id="1_shop"]
+[ext_resource type="Script" path="res://scripts/fusion_menu_layout.gd" id="2_layout"]
+
+[node name="FusionMenu" instance=ExtResource("1_shop")]
+script = ExtResource("2_layout")

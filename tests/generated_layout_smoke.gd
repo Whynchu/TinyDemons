@@ -113,7 +113,6 @@ func _initialize() -> void:
 			generated_rejoin_found = generated_rejoin_found or _has_rejoining_route(sampled)
 			if _has_two_primary_special_room(sampled):
 				two_primary_special_found = true
-	var r8_gate_requirements_seen: Dictionary = {}
 	for fusion_completed_runs in [5, 6, 7, 8]:
 		for seed_value in range(8):
 			var fusion_layout = GENERATOR_SCRIPT.build(700000 + seed_value * 7919, fusion_completed_runs, &"fire")
@@ -122,13 +121,28 @@ func _initialize() -> void:
 			var gate_count := _entrance_orb_gate_count(fusion_layout)
 			var prerequisite_orb_count := _fusion_prerequisite_orb_count(fusion_layout)
 			_expect(prerequisite_orb_count >= gate_count, "fusion Run %d gives every entrance-Orb gate a dedicated pre-gate Orb" % (fusion_completed_runs + 1), failures)
-			if fusion_completed_runs >= 7:
-				for connection in fusion_layout.connections:
-					if connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
-						r8_gate_requirements_seen[connection.orb_element_requirement] = true
-					elif connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_PUZZLE_COLOR and connection.color_requirement == &"puzzle_b":
-						r8_gate_requirements_seen[&"normal"] = true
-	_expect(r8_gate_requirements_seen.size() >= 5, "R8 varies its single fusion gate across Normal and every valid fusion result", failures)
+	for origin in [&"fire", &"water", &"electric"]:
+		for seed_value in range(4):
+			var origin_r8 = GENERATOR_SCRIPT.build(810000 + seed_value * 7919, 7, origin)
+			var origin_gates: Array = []
+			for connection in origin_r8.connections:
+				if connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+					origin_gates.append(connection)
+			_expect(origin_gates.size() == 2, "%s-origin R8 creates two ordered fusion gates" % origin, failures)
+			var has_gate_a := false
+			var has_gate_b := false
+			for gate in origin_gates:
+				for room in origin_r8.rooms:
+					if room.id != gate.source_room_id:
+						continue
+					has_gate_a = has_gate_a or room.depth == 6
+					has_gate_b = has_gate_b or room.depth == 10
+			_expect(has_gate_a and has_gate_b, "%s-origin R8 places fusion gates at the two curriculum tiers" % origin, failures)
+			_expect(_fusion_prerequisite_orb_count(origin_r8) >= origin_gates.size(), "%s-origin R8 gives both gates dedicated prerequisite Orbs" % origin, failures)
+	var bound_water_r8 = GENERATOR_SCRIPT.build(820000, 7, &"fire", &"water")
+	_expect(_fusion_curriculum_signature(bound_water_r8) == _fusion_curriculum_signature(GENERATOR_SCRIPT.build(820000, 7, &"water")), "a bound Water origin matches a Water-start R8 curriculum", failures)
+	var bound_electric_r8 = GENERATOR_SCRIPT.build(8207919, 7, &"fire", &"electric")
+	_expect(_fusion_curriculum_signature(bound_electric_r8) == _fusion_curriculum_signature(GENERATOR_SCRIPT.build(8207919, 7, &"electric")), "a bound Electric origin matches an Electric-start R8 curriculum", failures)
 	_expect(generated_rare_exception_found, "seeded generated maps exercise the rare enemy-branch entry rule", failures)
 	_expect(generated_rejoin_found, "seeded generated maps create interlocking dig or cross-link routes", failures)
 	_expect(two_primary_special_found, "generated Special Rooms sometimes offer two distinct primary-color doors", failures)
@@ -322,6 +336,18 @@ func _fusion_prerequisite_orb_count(layout) -> int:
 				count += 1
 				break
 	return count
+
+
+func _fusion_curriculum_signature(layout) -> String:
+	var parts: Array[String] = []
+	for connection in layout.connections:
+		if connection.resolved_gate_type() != GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+			continue
+		var source = layout.room_by_id(connection.source_room_id)
+		if source != null:
+			parts.append("%d:%s" % [source.depth, connection.orb_element_requirement])
+	parts.sort()
+	return "|".join(parts)
 
 
 func _rare_entry_exceptions_are_marked(layout, found_out) -> bool:

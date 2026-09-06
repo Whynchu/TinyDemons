@@ -362,6 +362,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.set("current_room_id", destination_room_id)
 	root.call("_sync_current_room_metadata")
 	enter_room(destination_room_id, root.get("current_room_type"), destination_socket_id)
+	_maybe_add_backtrack_popcorn(root)
 	root.call("_ensure_current_room_layout")
 	root.call("_update_room_number_indicator")
 	var arrival_socket := dungeon_sockets.get(destination_socket_id) as DungeonSocket
@@ -746,7 +747,6 @@ func refresh_special_enemy_color_policy(root: Object) -> void:
 
 func apply_rest_state(root: Object) -> void:
 	reset_slimes_for_room(root)
-	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D
 	var collision := root.get("collision_sprites") as Array[Sprite2D]
 	chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest)
@@ -791,7 +791,6 @@ func _assign_rest_fire_palette(root: Object) -> void:
 
 func apply_npc_state(root: Object) -> void:
 	reset_slimes_for_room(root)
-	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var chest := root.get("chest") as Sprite2D; var collision := root.get("collision_sprites") as Array[Sprite2D]; chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true); root.set("chest_evaporated", true); collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; collision.erase(firepit)
 	var demon := root.get("cloaked_demon") as Sprite2D; demon.visible = true; demon.position = root.get("cloaked_demon_start_position"); var npc := root.get("npc_controller") as NpcController; npc.demon_wander_origin = demon.position; npc.demon_wander_timer = 0.0; npc.demon_patrol_direction = -1.0; npc.demon_patrol_paused = false; npc.demon_patrol_pause_timer = 0.0; npc.demon_patrol_position_x = demon.position.x; root.call("_configure_cloaked_demon_patrol_route"); if not collision.has(demon): collision.append(demon)
 	root.call("_set_door_active", true); root.call("_set_entrance_open", true); _mark_finished(root)
@@ -823,7 +822,6 @@ func apply_orb_state(root: Object) -> void:
 
 func apply_finished_state(root: Object) -> void:
 	var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_slimes_for_room(root)
-	for slime in root.get("slimes") as Array[Sprite2D]: kill_slime_without_effects(root, slime)
 	var room: DungeonGraph.RoomRecord = (root.get("dungeon_graph") as DungeonGraph).get_room(root.get("current_room_id"))
 	var is_treasure := room != null and room.room_type == DungeonGraph.ROOM_TREASURE
 	var is_boss := room != null and room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
@@ -923,7 +921,58 @@ func record_special_enemy_death(root: Object, slime: Sprite2D) -> void:
 
 func _is_popcorn_respawn_room(root: Object) -> bool:
 	var room_type: StringName = StringName(root.get("current_room_type"))
-	return room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_TREASURE or room_type == DungeonGraph.ROOM_DOWNSTAIRS
+	# Backtracking popcorn belongs to replayable combat spaces. Flame/Rest,
+	# Cloaked/NPC, and Orb rooms are safe presentation or puzzle rooms and must
+	# never receive an injected enemy.
+	return room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_TREASURE or room_type == DungeonGraph.ROOM_DOWNSTAIRS or room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+
+
+func _maybe_add_backtrack_popcorn(root: Object) -> void:
+	var room_id: StringName = StringName(root.get("current_room_id"))
+	var room_type: StringName = StringName(root.get("current_room_type"))
+	if not _is_popcorn_respawn_room(root):
+		return
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	# A room is eligible only after it has already been materialized once.
+	# `ensure_layout()` stamps `room_type` on first materialization, so its
+	# presence is the stable first-entry/re-entry marker for combat room families.
+	var revisited := state.has("room_type") or bool(state.get("enemy_spawned", false)) or bool(state.get("finished", false)) or state.has("enemy_runtime")
+	if not revisited or bool(state.get("backtrack_popcorn_added", false)):
+		return
+	var seed_value := int(state.get("enemy_spawn_seed", String(room_id).hash() + 303))
+	var roll_rng := RandomNumberGenerator.new()
+	roll_rng.seed = seed_value ^ 0x5EEDBEEF
+	if roll_rng.randf() > 0.35:
+		state["backtrack_popcorn_added"] = true
+		room_states[room_id] = state
+		return
+	# The room gets one backtracking-popcorn attempt per run, including a full
+	# actor pool. Record the attempt before checking capacity so a failed
+	# placement cannot reroll forever on every revisit.
+	state["backtrack_popcorn_added"] = true
+	var variants := state.get("enemy_variants", []) as Array
+	var levels := state.get("enemy_levels", []) as Array
+	var scales := state.get("enemy_scales", []) as Array
+	var popcorn := state.get("enemy_popcorn", []) as Array
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	if variants.size() >= slimes.size():
+		room_states[room_id] = state
+		return
+	if not state.has("enemy_spawn_seed"):
+		state["enemy_spawn_seed"] = String(room_id).hash() + 303
+	variants.append("grey")
+	levels.append(_popcorn_enemy_level_for_root(root))
+	if scales.size() < variants.size() - 1:
+		while scales.size() < variants.size() - 1: scales.append(1.0)
+	scales.append(1.0)
+	popcorn.append(true)
+	state["enemy_variants"] = variants
+	state["enemy_levels"] = levels
+	state["enemy_scales"] = scales
+	state["enemy_popcorn"] = popcorn
+	state["backtrack_popcorn_pending"] = true
+	state["finished"] = false
+	room_states[room_id] = state
 
 
 func _is_popcorn_slot(state: Dictionary, slot: int) -> bool:
@@ -971,9 +1020,17 @@ func record_popcorn_enemy_death(root: Object, slime: Sprite2D) -> void:
 func _ensure_special_enemy_respawn_timers(state: Dictionary) -> void:
 	var timers := state.get("special_respawn_timers", {}) as Dictionary
 	var active_variants := state.get("enemy_variants", []) as Array
+	var runtime_states := state.get("enemy_runtime", {}) as Dictionary
 	for slot in active_variants.size():
 		var timer_key := str(slot)
-		if not timers.has(timer_key):
+		var runtime_entry := runtime_states.get(timer_key, runtime_states.get(slot, {})) as Dictionary
+		var enemy_alive := bool(runtime_entry.get("alive", false))
+		# Re-entry must not put a living special-room enemy into the respawn
+		# queue. Clear any stale timer if a saved live runtime entry wins; only
+		# defeated/unrecorded slots need a timer.
+		if enemy_alive:
+			timers.erase(timer_key)
+		elif not timers.has(timer_key):
 			timers[timer_key] = SPECIAL_ROOM_RESPAWN_DELAY
 	state["special_respawn_timers"] = timers
 
@@ -1038,7 +1095,7 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 	var did_respawn := false
 	for slot in ready_slots:
 		var timer_key := str(slot)
-		if _spawn_enemy_slot(root, current_room_state, slot, occupied, layout_rng, player_foot, chest_rect):
+		if _spawn_enemy_slot(root, current_room_state, slot, occupied, layout_rng, player_foot, chest_rect, true):
 			current_room_timers.erase(timer_key)
 			did_respawn = true
 		else:
@@ -1121,7 +1178,7 @@ func update_popcorn_respawns(root: Object, delta: float) -> void:
 		# currently active actors.
 		spawn_positions.erase(slot)
 		spawn_positions.erase(timer_key)
-		if _spawn_enemy_slot(root, state, slot, occupied, layout_rng, player_foot, chest_rect):
+		if _spawn_enemy_slot(root, state, slot, occupied, layout_rng, player_foot, chest_rect, true):
 			pending.erase(timer_key)
 			did_respawn = true
 		else:
@@ -1323,6 +1380,8 @@ func reset_slimes_for_room(root: Object) -> void:
 	var spawned_slots := 0
 	var animated_spawn_started := false
 	var spawn_audio_played := false
+	var backtrack_popcorn_pending := bool(state.get("backtrack_popcorn_pending", false))
+	var backtrack_spawn_started := false
 	for slime_index in active_variants.size():
 		if slime_index >= slimes.size(): continue
 		var timer_key := str(slime_index)
@@ -1334,12 +1393,13 @@ func reset_slimes_for_room(root: Object) -> void:
 			continue
 		if has_runtime_entry and runtime_entry.get("position") is Vector2:
 			spawn_positions[slime_index] = runtime_entry["position"]
-		var animate_spawn := first_entry and not has_runtime_entry
+		var animate_spawn := (first_entry and not has_runtime_entry) or (backtrack_popcorn_pending and not has_runtime_entry and slime_index == active_variants.size() - 1)
 		if _spawn_enemy_slot(root, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
 			spawned_slots += 1
 			if has_runtime_entry:
 				_restore_enemy_runtime_state(root, slimes[slime_index], runtime_entry)
 			if animate_spawn and root.call("_is_slime_spawn_locked", slimes[slime_index]):
+				backtrack_spawn_started = backtrack_popcorn_pending
 				animated_spawn_started = true
 				if not spawn_audio_played:
 					var spawn_rng := root.get("rng") as RandomNumberGenerator
@@ -1347,6 +1407,8 @@ func reset_slimes_for_room(root: Object) -> void:
 					spawn_audio_played = true
 	if first_entry and spawned_slots > 0:
 		state["enemy_spawned"] = true
+	if backtrack_spawn_started:
+		state.erase("backtrack_popcorn_pending")
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state
 	var run_state := root.get("run_state") as RunState
 	if run_state != null and run_state.active:

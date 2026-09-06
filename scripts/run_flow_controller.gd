@@ -18,10 +18,13 @@ func chest_item_drop_chance(root: Object) -> float:
 
 
 func chest_item_drop_count(root: Object, roll: float) -> int:
-	# Treasure rooms are less frequent now, so a successful gear reward can
-	# occasionally pay out as a two-item burst. Keep the second item uncommon
-	# enough that a chest still has a readable primary reward.
 	var double_drop_chance := clampf(0.35 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04, 0.25, 0.75)
+	var triple_drop_chance := clampf(0.01 + float(run_rank(root) - 1) * 0.0045 + loot_grade_bonus(root) * 0.006, 0.01, 0.15)
+	var quad_drop_chance := clampf(0.005 + float(run_rank(root) - 1) * 0.0035 + loot_grade_bonus(root) * 0.004, 0.005, 0.10)
+	if roll < quad_drop_chance:
+		return 4
+	if roll < triple_drop_chance:
+		return 3
 	return 2 if roll < double_drop_chance else 1
 
 
@@ -151,7 +154,13 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	var map_controller := root.dungeon_map_controller as Node
 	var seed := int(snapshot.get("dungeon_seed", restored_run.dungeon_seed))
 	var bound_flame: StringName = root.player_profile.persistent_flame() if root.player_profile.has_bound_element else &""
-	map_controller.call("begin_run", root.dungeon_graph, seed, root.player_profile.completed_runs, root.player_profile.starter_flame, bound_flame)
+	var layout_bound_flame := StringName(str(snapshot.get("layout_bound_flame", bound_flame)))
+	if not layout_bound_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(layout_bound_flame):
+		layout_bound_flame = bound_flame
+	map_controller.call("begin_run", root.dungeon_graph, seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame)
+	# The layout was generated from the saved origin, but the current persistent
+	# bind still controls the Hub and available flame presentation after restore.
+	map_controller.call("set_bound_flame", bound_flame)
 	var room_id := StringName(str(snapshot.get("current_room_id", "")))
 	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
 	if room == null:

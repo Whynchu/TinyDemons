@@ -34,6 +34,17 @@ func _initialize() -> void:
 	controller.room_states[room_id] = state
 	controller.schedule_special_enemy_respawns(fake)
 	_expect(is_equal_approx(float((controller.room_states[room_id] as Dictionary)["special_respawn_timers"]["0"]), 12.0), "rescheduling preserves an existing slot's death time", failures)
+	controller.room_states[room_id] = {
+		"room_type": GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY,
+		"enemy_variants": ["blue", "red"],
+		"enemy_runtime": {"0": {"alive": true, "health": 7.0}, "1": {"alive": false, "health": 0.0}},
+		"special_respawn_timers": {"0": 12.0},
+	}
+	controller.schedule_special_enemy_respawns(fake)
+	var persistent_state: Dictionary = controller.room_states[room_id]
+	var persistent_timers: Dictionary = persistent_state.get("special_respawn_timers", {}) as Dictionary
+	_expect(not persistent_timers.has("0"), "living special-room enemies do not receive a reset timer on re-entry", failures)
+	_expect(is_equal_approx(float(persistent_timers.get("1", -1.0)), 45.0), "defeated special-room enemies still receive their respawn timer", failures)
 	fake.current_room_type = GRAPH_SCRIPT.ROOM_COMBAT
 	controller.room_states[room_id] = {
 		"room_type": GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY,

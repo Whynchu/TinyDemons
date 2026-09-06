@@ -80,7 +80,7 @@ func _initialize() -> void:
 			for sampled_connection in sampled_layout.connections:
 				if sampled_connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
 					sampled_gate_count += 1
-			var expected_gate_count := 1
+			var expected_gate_count := 1 if completed_runs < 7 else 2
 			_expect(sampled_gate_count == expected_gate_count, "Run %d %s has its expected fusion gate count" % [completed_runs + 1, starter], failures)
 			if completed_runs >= 7:
 				var late_gate_source_id: StringName = &""

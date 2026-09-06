@@ -21,6 +21,22 @@ func _initialize() -> void:
 			var safety_errors := _progression_safety_errors(errors)
 			_expect(safety_errors.is_empty(), "R12 generated layout keeps required doors reachable from starter %s / bound flame %s: %s" % [starter, "none" if bound.is_empty() else bound, "; ".join(safety_errors)], failures)
 
+	# Regression fixtures from late-run play: these seeds previously exposed the
+	# shared-Orb latch omission and the missing primary Fire Room before the late
+	# Special Room color gate.
+	var reported_late_run_cases: Array[Dictionary] = [
+		{"seed": 2196629887, "starter": &"water", "bound": &"shadow"},
+		{"seed": 3217254121, "starter": &"water", "bound": &"shadow"},
+		{"seed": 2448781665, "starter": &"water", "bound": &"shadow"},
+	]
+	for case in reported_late_run_cases:
+		var case_seed: int = case["seed"]
+		var case_starter: StringName = case["starter"]
+		var case_bound: StringName = case["bound"]
+		var case_layout = GENERATOR_SCRIPT.build(case_seed, 10, case_starter, case_bound)
+		var case_errors: Array[String] = GENERATOR_SCRIPT.validate(case_layout, 10, case_starter, case_bound)
+		_expect(case_errors.is_empty(), "reported late-run seed %d stays fully valid for %s / %s: %s" % [case_seed, case_starter, case_bound, "; ".join(case_errors)], failures)
+
 	# Exercise the continue/load repair entry point with an intentionally unsafe
 	# critical gate. The topology remains seed-owned; recovery should only change
 	# the requirement and leave the repaired layout free of reachability errors.
@@ -46,6 +62,18 @@ func _initialize() -> void:
 	recovery_map.begin_run(recovery_graph, 910007, 11, &"fire", &"ice")
 	_expect(_progression_safety_errors(GENERATOR_SCRIPT.validate(recovery_map.layout, 11, &"fire", &"ice")).is_empty(), "map bootstrap validates the actual bound start state before play", failures)
 	recovery_map.free()
+
+	# A rebind during an active run changes the current Hub/flame presentation,
+	# but must not change the generated route or strand its original Fire Room.
+	var stable_graph := GRAPH_SCRIPT.new()
+	var stable_map := MAP_CONTROLLER_SCRIPT.new()
+	stable_map.begin_run(stable_graph, 910101, 11, &"fire", &"water")
+	var stable_signature := _fusion_curriculum_signature(stable_map.layout)
+	stable_map.set_bound_flame(&"electric")
+	_expect(stable_map.layout_origin_flame() == &"water", "mid-run rebinding keeps the existing layout origin", failures)
+	_expect(stable_map.available_flames().has(&"water"), "mid-run rebinding keeps the existing layout flame usable", failures)
+	_expect(_fusion_curriculum_signature(stable_map.layout) == stable_signature, "mid-run rebinding does not regenerate the active topology", failures)
+	stable_map.free()
 	_finish(failures)
 
 
@@ -78,3 +106,15 @@ func _progression_safety_errors(errors: Array[String]) -> Array[String]:
 		if error.contains("impossible puzzle-color") or error.contains("color gate has no reachable") or error.contains("entrance-orb gate has no reachable"):
 			safety_errors.append(error)
 	return safety_errors
+
+
+func _fusion_curriculum_signature(layout) -> String:
+	var parts: Array[String] = []
+	for connection in layout.connections:
+		if connection.resolved_gate_type() != GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+			continue
+		var source = layout.room_by_id(connection.source_room_id)
+		if source != null:
+			parts.append("%d:%s" % [source.depth, connection.orb_element_requirement])
+	parts.sort()
+	return "|".join(parts)

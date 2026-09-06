@@ -400,7 +400,15 @@ func white_effect_texture_for(texture: Texture2D, source_image: Image) -> ImageT
 
 func is_pixel_covered_by_occluder(world_pixel: Vector2, active_occluders: Array[Sprite2D], actor_screen_scale: Callable, actor_visual_offset: Callable) -> bool:
 	for occluder in active_occluders:
+		# Occluders can animate (the cloaked demon and rest fire do). Keep the
+		# alpha image paired with the texture currently being drawn instead of
+		# trusting the image registered during room bootstrap.
+		var current_texture := occluder.texture
 		var image := sprite_images.get(occluder) as Image
+		if current_texture != null and (image == null or occluder.get_meta("occlusion_texture_rid", RID()) != current_texture.get_rid()):
+			image = cached_texture_image(current_texture)
+			sprite_images[occluder] = image
+			occluder.set_meta("occlusion_texture_rid", current_texture.get_rid())
 		if image == null:
 			continue
 		var local_pixel := source_pixel_position(occluder, world_pixel, actor_screen_scale, actor_visual_offset)

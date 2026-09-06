@@ -8,6 +8,8 @@
 [ext_resource type="Texture2D" uid="uid://csu6pkyjhikq2" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png" id="6_subtract"]
 [ext_resource type="Texture2D" uid="uid://dkfm3tdkb50xv" path="res://assets/artwork/cursor.png" id="7_cursor"]
 [ext_resource type="PackedScene" path="res://scenes/shop_menu.tscn" id="8_shop"]
+[ext_resource type="PackedScene" path="res://scenes/fusion_menu.tscn" id="9_fusion"]
+[ext_resource type="PackedScene" path="res://scenes/bind_menu.tscn" id="10_bind"]
 
 [sub_resource type="Image" id="Image_5de60"]
 data = {
@@ -676,6 +678,10 @@ layout_mode = 0
 layout_mode = 0
 editor_preview_quantity = 1
 
+[node name="FusionMenu" parent="HubItemsPage" instance=ExtResource("9_fusion")]
+visible = false
+layout_mode = 0
+
 [node name="HubBindPage" type="Control" parent="." unique_id=1651536466]
 visible = false
 anchors_preset = 0
@@ -718,3 +724,7 @@ offset_right = 232.0
 offset_bottom = 18.0
 mouse_filter = 2
 color = Color(0.36, 0.4, 0.52, 0.85)
+
+[node name="BindMenu" parent="HubBindPage" instance=ExtResource("10_bind")]
+visible = false
+layout_mode = 0

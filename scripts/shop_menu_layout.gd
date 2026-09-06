@@ -106,6 +106,10 @@ func _list_clip() -> Control:
 	return get_node_or_null("ListClip") as Control
 
 
+func visible_row_capacity() -> int:
+	return VISIBLE_ROWS
+
+
 func _ready() -> void:
 	_cache_nodes()
 	_apply_button_style()
@@ -139,7 +143,7 @@ func _cache_nodes() -> void:
 		var mode_button := get_node_or_null(path) as Button
 		if mode_button != null:
 			mode_buttons.append(mode_button)
-	for index in VISIBLE_ROWS:
+	for index in visible_row_capacity():
 		var item_button := get_node_or_null("ListClip/ItemButton%d" % index) as Button
 		var item_text := get_node_or_null("ListClip/ItemText%d" % index) as Sprite2D
 		var item_icon := get_node_or_null("ListClip/ItemIcon%d" % index) as Sprite2D
@@ -237,6 +241,33 @@ func _cache_nodes() -> void:
 	for button in _responsive_buttons:
 		if button != null and not button.has_meta("shop_native_rect"):
 			button.set_meta("shop_native_rect", Rect2(button.position, button.size))
+	_hide_unused_row_nodes()
+
+
+func _hide_unused_row_nodes() -> void:
+	var list_clip := get_node_or_null("ListClip") as Control
+	if list_clip == null:
+		return
+	var capacity := visible_row_capacity()
+	var prefixes := ["ItemIcon", "ItemText", "PriceText", "SellRowGoldIcon", "SellRowSoulAmount", "SellRowSoulIcon", "ItemButton"]
+	for child in list_clip.get_children():
+		var child_name := str(child.name)
+		var matched_prefix := ""
+		for prefix: String in prefixes:
+			if child_name.begins_with(prefix):
+				matched_prefix = prefix
+				break
+		if matched_prefix.is_empty():
+			continue
+		var suffix := child_name.substr(matched_prefix.length())
+		if not suffix.is_valid_int() or int(suffix) < capacity:
+			continue
+		if child is CanvasItem:
+			(child as CanvasItem).visible = false
+		if child is Control:
+			(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+			if child is BaseButton:
+				(child as BaseButton).disabled = true
 
 
 func _apply_layout() -> void:
@@ -277,6 +308,7 @@ func _apply_layout() -> void:
 		var resolved := RESPONSIVE_LAYOUT_SCRIPT.map_rect(native_rect, width, NATIVE_SIZE.x)
 		button.position = resolved.position
 		button.size = resolved.size
+	_apply_footer_anchor(width)
 	_apply_row_scroll()
 
 
@@ -290,6 +322,29 @@ func _responsive_position(native_position: Vector2, width: float) -> Vector2:
 
 func _responsive_rect(native_rect: Rect2, width: float) -> Rect2:
 	return RESPONSIVE_LAYOUT_SCRIPT.map_rect(native_rect, width, NATIVE_SIZE.x)
+
+
+func _apply_footer_anchor(width: float) -> void:
+	# The authored 240px footer is right-anchored in the other hub menus. Keep
+	# its native positions unchanged at 240px, then move the complete prompt
+	# group—including touch hitboxes—by the extra viewport width.
+	var extra_width := maxf(width - NATIVE_SIZE.x, 0.0)
+	for path in [
+		"FooterSelectGlyph", "FooterSelectText", "FooterBackGlyph", "FooterBackText",
+		"SellConfirmGlyph", "SellConfirmText", "SellCancelGlyph", "SellCancelText",
+	]:
+		var sprite := get_node_or_null(path) as Sprite2D
+		if sprite == null:
+			continue
+		var native_position := _native_sprite_position(sprite)
+		sprite.position = Vector2(native_position.x + extra_width, native_position.y)
+	for path in ["ShopBackButton", "SellConfirmButton", "SellCancelButton"]:
+		var button := get_node_or_null(path) as Button
+		if button == null:
+			continue
+		var native_rect := button.get_meta("shop_native_rect", Rect2(button.position, button.size)) as Rect2
+		button.position = Vector2(native_rect.position.x + extra_width, native_rect.position.y)
+		button.size = native_rect.size
 
 
 func _apply_row_scroll() -> void:
@@ -345,6 +400,9 @@ func set_pixel_texture(pixel_texture: Callable) -> void:
 func _set_text(sprite: Sprite2D, value: String, color: Color = Color.WHITE) -> void:
 	if sprite == null:
 		return
+	# Textures are regenerated when the prompt changes. Always restore the
+	# authored pixel scale so a prior layout/animation cannot stretch labels.
+	sprite.scale = Vector2.ONE
 	if _pixel_texture.is_valid() and not value.is_empty():
 		sprite.texture = _pixel_texture.call(value, color) as Texture2D
 	else:
@@ -433,7 +491,7 @@ func render_cursors(state: int, sell_mode: bool, selected_row: int, row_count: i
 	_last_sell_mode = sell_mode
 	_last_selected_row = selected_row
 	_last_row_count = row_count
-	var has_item := row_count > 0 and selected_row >= 0 and selected_row < VISIBLE_ROWS
+	var has_item := row_count > 0 and selected_row >= 0 and selected_row < visible_row_capacity()
 	var mode_target := Vector2(75.0 + (40.0 if sell_mode else 0.0), 26.0)
 	var mode_text := get_node_or_null("ModeSellText" if sell_mode else "ModeBuyText") as Sprite2D
 	if mode_text != null:
@@ -447,7 +505,12 @@ func render_cursors(state: int, sell_mode: bool, selected_row: int, row_count: i
 		# Use the rendered item name rather than the row hitbox. This keeps the
 		# cursor immediately left of both BUY and SELL name columns and removes the
 		# half-pixel vertical drift caused by the old button-relative offset.
-		item_target = Vector2(0.0, 46.0) + _native_sprite_position(selected_item_text) + Vector2(-20.0, -3.0)
+		# The 5x5 equipment icon now occupies the name's left gutter, so move the
+		# item cursor three pixels farther left to keep it outside the icon.
+		# Item text positions are local to the clipped list. Use the clip's
+		# authored root position instead of hard-coding Shop's former y=46 origin;
+		# Fusion deliberately moves that clip upward when it removes the mode bar.
+		item_target = Vector2(list_clip.position.x, list_clip.position.y) + _native_sprite_position(selected_item_text) + Vector2(-26.0, -3.0)
 		item_target.y -= _last_scroll_fraction * ITEM_ROW_PITCH
 	var amount_target := Vector2(36.0, 142.0)
 	var decrease := get_node_or_null("SellMinusButton") as Button
@@ -498,8 +561,8 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 		# still uses state to decide which cursor is active.
 		_set_button_active(mode_button, true, true)
 
-	var icon_x := 21.0
-	var item_x := 28.0
+	var icon_x := 18.0
+	var item_x := 25.0
 	for index in item_texts.size():
 		var label := str(row_labels[index]) if index < row_labels.size() else ""
 		var color := row_colors[index] as Color if index < row_colors.size() else MUTED_TEXT_COLOR
@@ -613,7 +676,9 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 	# Keep the authored icon origins explicit after the text setter changes any
 	# texture width. Their positions are fixed lanes in the reference.
 	_set_native_position(owned_text, Vector2(8.0, 145.0))
-	var footer_y := 145.0 if amount_footer_visible else 146.0
+	# Keep the shared FUSE/SELECT and BACK labels anchored across browse and
+	# amount states; only the amount controls occupy their own fixed 145px lane.
+	var footer_y := 146.0
 	_set_native_position(get_node_or_null("FooterSelectGlyph") as Sprite2D, Vector2(107.0, footer_y))
 	_set_native_position(get_node_or_null("FooterSelectText") as Sprite2D, Vector2(114.0, footer_y))
 	_set_native_position(get_node_or_null("FooterBackGlyph") as Sprite2D, Vector2(146.0, footer_y))
@@ -627,6 +692,7 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 	_set_native_position(get_node_or_null("SellConfirmText") as Sprite2D, Vector2(114.0, 145.0))
 	_set_native_position(cancel_glyph, Vector2(146.0, 145.0))
 	_set_native_position(get_node_or_null("SellCancelText") as Sprite2D, Vector2(153.0, 145.0))
+	_apply_footer_anchor(maxf(size.x, NATIVE_SIZE.x))
 	render_cursors(state, sell_mode, selected_row, visible_item_count, preserve_motion)
 
 
@@ -653,7 +719,7 @@ func _apply_editor_preview() -> void:
 	var previous_texture := _pixel_texture
 	_pixel_texture = Callable(renderer, "number_texture")
 	var state := clampi(editor_preview_state, MODE_SELECT, SELL_AMOUNT)
-	var row := clampi(editor_preview_row, 0, VISIBLE_ROWS - 1)
+	var row := clampi(editor_preview_row, 0, visible_row_capacity() - 1)
 	var labels: Array[String]
 	var colors: Array[Color]
 	var prices: Array[String]

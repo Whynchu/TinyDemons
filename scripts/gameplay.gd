@@ -105,7 +105,7 @@ func _update_music_state() -> void:
 		_fade_out_music()
 func _physics_process(delta: float) -> void:
 	if input_router != null:
-		input_router.poll(_input_context())
+		input_router.poll(_input_context(), delta)
 		if input_device_tracker != null:
 			input_device_tracker.call("observe_polled_input")
 	gameplay_frame_controller.tick(self, delta)

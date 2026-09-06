@@ -161,7 +161,7 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
 	var fire_depth := clampi(boss_depth - 6, 6, boss_depth - 5)
 	var first_alternate_fire_depth := -1
-	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame, dungeon_seed)
+	var fusion_plan := _fusion_plan_for_run(completed_runs, starter_flame, bound_flame, dungeon_seed)
 	# The chained Ice gate is placed at source depth 10. Its Orb must be a side
 	# room reached from that same depth-10 Water fire room; the old depth-12
 	# placement put the only Ice charge behind its own mandatory gate.
@@ -170,6 +170,14 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	var fusion_gate_requirements: Dictionary = fusion_plan.get("entrance_orb_requirements", {}) as Dictionary
 	var fusion_gate_types: Dictionary = fusion_plan.get("gate_types", {}) as Dictionary
 	var fusion_gate_colors: Dictionary = fusion_plan.get("gate_colors", {}) as Dictionary
+	# A fused flame is the correct state for the second Orb, but it cannot satisfy
+	# the late Special Room's primary-color door. Give every fusion run one final
+	# primary Fire Room immediately before that Special Room so the player can
+	# restore the required color after the mandatory fusion tiers.
+	if completed_runs >= 5 and not fusion_plan.is_empty():
+		var late_recovery_depth := second_special_depth - 1
+		if late_recovery_depth > FIRST_SPECIAL_DEPTH and late_recovery_depth < boss_depth and not fusion_fire_flames.has(late_recovery_depth):
+			fusion_fire_flames[late_recovery_depth] = _late_special_recovery_flame(starter_flame, alternate_flames)
 	var off_route_orbs := _off_route_orb_depths(dungeon_seed, run_index, FIRST_ORB_DEPTH, second_orb_depth, fusion_plan.has("second_orb_depth"))
 	if fire_depth == cloaked_depth:
 		fire_depth = mini(fire_depth + 1, boss_depth - 5)
@@ -208,12 +216,12 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 		var alternate_fire_on_main: bool = destination_depth == first_alternate_fire_depth and not alternate_flames.is_empty() and source_spec != null and source_spec.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
 		if alternate_fire_on_main:
 			room_type = DungeonGraph.ROOM_FIRE
-		var respawn_color: StringName = &"puzzle_a" if destination_depth == FIRST_SPECIAL_DEPTH else _special_forward_requirement(second_special_depth, second_special_depth, completed_runs, starter_flame, alternate_flames) if destination_depth == second_special_depth else &""
+		var respawn_color: StringName = &"puzzle_a" if destination_depth == FIRST_SPECIAL_DEPTH else _special_forward_requirement(second_special_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, bound_flame) if destination_depth == second_special_depth else &""
 		var fire_flame := StringName(fusion_fire_flames.get(destination_depth, _fire_flame_for_main_room(destination_depth, fire_depth, starter_flame, alternate_flames)))
 		if alternate_fire_on_main:
 			fire_flame = alternate_flames[0]
 		var destination_room_id := builder.add_room(destination_coordinate, room_type, 0, respawn_color, fire_flame)
-		var forward_requirement := _special_forward_requirement(source_depth, second_special_depth, completed_runs, starter_flame, alternate_flames)
+		var forward_requirement := _special_forward_requirement(source_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, bound_flame)
 		var forward_role: StringName = ROUTE_KEY_PROGRESSION if not forward_requirement.is_empty() else ROUTE_MAIN
 		var orb_element_requirement := StringName(fusion_gate_requirements.get(source_depth, ""))
 		var planned_gate_type: StringName = StringName(fusion_gate_types.get(source_depth, ""))
@@ -359,12 +367,6 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 			errors.append("generated layout contains unreachable rooms")
 		if not boss_id.is_empty() and not reachable.has(boss_id):
 			errors.append("generated layout boss is unreachable")
-		elif not boss_id.is_empty() and not _boss_is_color_reachable(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame):
-			errors.append("generated layout boss requires an impossible puzzle-color state")
-		var gated_route_errors := _color_gate_reachability_errors(layout, start_id, completed_runs, selected_starter_flame, selected_bound_flame)
-		errors.append_array(gated_route_errors)
-		var side_flame_errors := _color_gate_side_flame_errors(layout, completed_runs, selected_starter_flame, selected_bound_flame)
-		errors.append_array(side_flame_errors)
 		if completed_runs >= 5:
 			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame)
 			errors.append_array(fusion_gate_errors)
@@ -372,6 +374,13 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 			errors.append_array(fusion_softlock_errors)
 			var fusion_orb_route_errors := _fusion_orb_route_errors(layout)
 			errors.append_array(fusion_orb_route_errors)
+		else:
+			if not boss_id.is_empty() and not _boss_is_color_reachable(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame):
+				errors.append("generated layout boss requires an impossible puzzle-color state")
+			var gated_route_errors := _color_gate_reachability_errors(layout, start_id, completed_runs, selected_starter_flame, selected_bound_flame)
+			errors.append_array(gated_route_errors)
+			var side_flame_errors := _color_gate_side_flame_errors(layout, completed_runs, selected_starter_flame, selected_bound_flame)
+			errors.append_array(side_flame_errors)
 	return errors
 
 
@@ -464,6 +473,11 @@ static func _repair_unreachable_entrance_orb_gates(layout, start_id: StringName,
 	for connection in layout.connections:
 		if connection.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
 			continue
+		# Mandatory fusion requirements are curriculum data, not a generic
+		# fallback. If their ordered proof fails, validation must report the bad
+		# topology instead of silently replacing the tier with another element.
+		if completed_runs >= 5 and (connection.route_role == ROUTE_MAIN or connection.route_role == ROUTE_KEY_PROGRESSION):
+			continue
 		var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
 		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)
 		var matching := false
@@ -535,7 +549,7 @@ static func _room_type_for_depth(
 	return DungeonGraph.ROOM_COMBAT
 
 
-static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName, dungeon_seed: int = 0) -> Dictionary:
+static func _fusion_plan_for_run(completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", dungeon_seed: int = 0) -> Dictionary:
 	# Run 6 is the first run whose critical path asks for a fused element. The
 	# first two fire rooms are deliberately placed before the gate so every
 	# starter choice has a reachable input pair. Later runs teach the two-step
@@ -554,46 +568,92 @@ static func _fusion_plan_for_run(completed_runs: int, _starter_flame: StringName
 			"entrance_orb_requirements": {6: ELEMENT_CATALOG_SCRIPT.id(result_element)},
 			"results": [result_flame],
 		}
-	# Later runs provide the ingredients for one valid fusion recipe and let the
-	# dungeon seed choose which result gates the route. The gate never dictates
-	# an unsolvable element: its matching ingredient flames are placed first.
-	var fusion_options: Array[Dictionary] = [
-		{"result": &"normal", "gate_type": DungeonGraph.GATE_PUZZLE_COLOR, "gate_color": &"puzzle_b", "fire_flames": {5: &"fire", 6: &"water"}},
-		{"first": &"fire", "second": &"water", "result": &"shadow"},
-		{"first": &"fire", "second": &"electric", "result": &"ground"},
-		{"first": &"water", "second": &"electric", "result": &"grass"},
-		{"first": &"grass", "second": &"water", "result": &"ice"},
-	]
-	var selected_fusion: Dictionary = fusion_options[posmod(dungeon_seed, fusion_options.size())]
-	if selected_fusion.get("result", &"") == &"normal":
+	# R8+ uses an explicit two-tier curriculum. The gate never dictates an
+	# unsolvable element: its matching ingredients are placed before its gate.
+	var origin_flame := bound_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(bound_flame) else starter_flame
+	# Water and Electric can both form Grass with the other starter, then Grass +
+	# Water forms Ice for the second tier.
+	if origin_flame == &"water" or origin_flame == &"electric":
+		var first_partner: StringName = &"electric" if origin_flame == &"water" else &"water"
+		var first_result := ASPECT_CATALOG_SCRIPT.fusion_result(origin_flame, first_partner)
+		var first_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(first_result))
+		var second_result := ASPECT_CATALOG_SCRIPT.fusion_result(first_result, &"water")
+		var second_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(second_result))
 		return {
-			"fire_flames": selected_fusion["fire_flames"],
-			"gate_types": {10: selected_fusion["gate_type"]},
-			"gate_colors": {10: selected_fusion["gate_color"]},
+			"fire_flames": {5: origin_flame, 6: first_partner, 10: &"water"},
+			"entrance_orb_requirements": {
+				6: ELEMENT_CATALOG_SCRIPT.id(first_element),
+				10: ELEMENT_CATALOG_SCRIPT.id(second_element),
+			},
 			"second_orb_depth": 11,
-			"results": [&"normal"],
+			"results": [first_result, second_result],
 		}
-	var gate_flame: StringName = selected_fusion["result"] as StringName
-	var gate_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(gate_flame))
-	var fusion_fire_flames: Dictionary = {
-		5: selected_fusion["first"] as StringName,
-		6: selected_fusion["second"] as StringName,
-	}
-	if gate_flame == &"ice":
-		# Grass is produced by the first Orb from Water + Electric, then Water is
-		# supplied again for the second fusion at the gate approach.
-		fusion_fire_flames = {5: &"water", 6: &"electric", 10: &"water"}
-	return {
-		"fire_flames": fusion_fire_flames,
-		"entrance_orb_requirements": {10: ELEMENT_CATALOG_SCRIPT.id(gate_element)},
-		"second_orb_depth": 11,
-		"results": [gate_flame],
-	}
+	if origin_flame == &"fire":
+		# Shadow has no recipe partner of its own. After the first Shadow gate,
+		# deliberately introduce Water and Electric again so the player can
+		# exchange out of Shadow and create the second-stage Grass result.
+		var first_result := ASPECT_CATALOG_SCRIPT.fusion_result(&"fire", &"water")
+		var second_result := ASPECT_CATALOG_SCRIPT.fusion_result(&"water", &"electric")
+		var first_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(first_result))
+		var second_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(second_result))
+		return {
+			"fire_flames": {5: &"fire", 6: &"water", 9: &"water", 10: &"electric"},
+			"entrance_orb_requirements": {
+				6: ELEMENT_CATALOG_SCRIPT.id(first_element),
+				10: ELEMENT_CATALOG_SCRIPT.id(second_element),
+			},
+			"second_orb_depth": 11,
+			"results": [first_result, second_result],
+		}
+	if origin_flame == &"grass":
+		# A bound Grass flame can immediately form Ice with Water. The second
+		# tier then starts a fresh Fire + Water recipe so both gates remain real
+		# two-input curriculum beats even when the player binds a fusion result.
+		var first_result := ASPECT_CATALOG_SCRIPT.fusion_result(&"grass", &"water")
+		var second_result := ASPECT_CATALOG_SCRIPT.fusion_result(&"fire", &"water")
+		var first_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(first_result))
+		var second_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(second_result))
+		return {
+			"fire_flames": {5: &"grass", 6: &"water", 9: &"fire", 10: &"water"},
+			"entrance_orb_requirements": {
+				6: ELEMENT_CATALOG_SCRIPT.id(first_element),
+				10: ELEMENT_CATALOG_SCRIPT.id(second_element),
+			},
+			"second_orb_depth": 11,
+			"results": [first_result, second_result],
+		}
+	if origin_flame != &"fire":
+		# Shadow, Ground, and Ice have no direct recipe partner. Exchange to the
+		# primary Water/Electric pair for tier A, then use its Grass result with
+		# Water for tier B.
+		var first_result := ASPECT_CATALOG_SCRIPT.fusion_result(&"water", &"electric")
+		var second_result := ASPECT_CATALOG_SCRIPT.fusion_result(&"grass", &"water")
+		var first_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(first_result))
+		var second_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(second_result))
+		return {
+			"fire_flames": {5: &"water", 6: &"electric", 10: &"water"},
+			"entrance_orb_requirements": {
+				6: ELEMENT_CATALOG_SCRIPT.id(first_element),
+				10: ELEMENT_CATALOG_SCRIPT.id(second_element),
+			},
+			"second_orb_depth": 11,
+			"results": [first_result, second_result],
+		}
+	# All valid elemental origins are handled above. Keep a safe empty plan for
+	# future catalog additions until their two-tier curriculum is defined.
+	return {}
 
 
 static func _fire_flame_for_main_room(depth: int, fire_depth: int, starter_flame: StringName, alternate_flames: Array[StringName]) -> StringName:
 	if depth != fire_depth:
 		return &""
+	return alternate_flames[alternate_flames.size() - 1] if not alternate_flames.is_empty() else starter_flame
+
+
+static func _late_special_recovery_flame(starter_flame: StringName, alternate_flames: Array[StringName]) -> StringName:
+	# _special_forward_requirement() uses the newest primary alternate for the
+	# late Special Room. Mirror that choice here so a fused state can always
+	# restore the exact color required by its door before entering the room.
 	return alternate_flames[alternate_flames.size() - 1] if not alternate_flames.is_empty() else starter_flame
 
 
@@ -643,10 +703,16 @@ static func _special_forward_requirement(
 	second_special_depth: int,
 	completed_runs: int,
 	starter_flame: StringName,
-	alternate_flames: Array[StringName]
+	alternate_flames: Array[StringName],
+	bound_flame: StringName = &""
 ) -> StringName:
 	if source_depth == FIRST_SPECIAL_DEPTH:
 		# First Special Room: player-color progression, grey optional Treasure.
+		# A bound flame that is not the selected starter is not represented by the
+		# primary Puzzle A key. Use the real Normal state until the first Fire Room
+		# makes the run's primary curriculum available.
+		if not bound_flame.is_empty() and bound_flame != starter_flame:
+			return &"puzzle_b"
 		return &"puzzle_a"
 	if source_depth == second_special_depth:
 		# The late Special Room introduces the newest flame available in this run.
@@ -1104,7 +1170,7 @@ static func _layout_connection_key(connection) -> String:
 
 static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = []
-	var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
+	var states := _curriculum_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
 	var reachable_boss := false
 	for state in states:
 		if state.get("room_id", &"") == boss_id:
@@ -1113,19 +1179,39 @@ static func _fusion_gate_reachability_errors(layout, start_id: StringName, boss_
 	if not reachable_boss:
 		errors.append("generated fusion curriculum leaves the boss unreachable")
 	for connection in layout.connections:
-		if connection.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
+		if connection.resolved_gate_type() == DungeonGraph.GATE_NONE:
 			continue
-		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)
+		if connection.route_role != ROUTE_MAIN and connection.route_role != ROUTE_KEY_PROGRESSION:
+			continue
+		var gate_key := _layout_connection_key(connection)
+		var pre_gate_states := _curriculum_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame, {}, gate_key)
 		var gate_reachable := false
-		for state in states:
+		for state in pre_gate_states:
 			if state.get("room_id", &"") != connection.source_room_id:
 				continue
-			if int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)) == required_element:
+			if _curriculum_state_satisfies_gate(state, connection):
 				gate_reachable = true
 				break
-		if not gate_reachable:
-			errors.append("generated entrance-orb gate has no reachable matching result: %s:%s requires %s" % [connection.source_room_id, connection.exit_socket, connection.orb_element_requirement])
+		if gate_reachable:
+			continue
+		var gate_type: StringName = connection.resolved_gate_type()
+		var requirement: StringName = connection.color_requirement if gate_type == DungeonGraph.GATE_PUZZLE_COLOR else connection.element_requirement if gate_type == DungeonGraph.GATE_ELEMENT else connection.orb_element_requirement
+		errors.append("generated %s gate has no reachable matching pre-gate state: %s:%s requires %s" % [gate_type, connection.source_room_id, connection.exit_socket, requirement])
 	return errors
+
+
+static func _curriculum_state_satisfies_gate(state: Dictionary, connection) -> bool:
+	match connection.resolved_gate_type():
+		DungeonGraph.GATE_PUZZLE_COLOR:
+			return state.get("puzzle_color", &"puzzle_b") == connection.color_requirement
+		DungeonGraph.GATE_ELEMENT:
+			return int(state.get("element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)) == ELEMENT_CATALOG_SCRIPT.element_for_id(connection.element_requirement)
+		DungeonGraph.GATE_ENTRANCE_ORB:
+			var solved_orb_connections: Array = state.get("solved_orb_connections", []) as Array
+			if _layout_connection_key(connection) in solved_orb_connections:
+				return true
+			return int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)) == ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)
+	return true
 
 
 static func _fusion_orb_route_errors(layout) -> Array[String]:
@@ -1152,7 +1238,7 @@ static func _fusion_orb_route_errors(layout) -> Array[String]:
 
 static func _fusion_orb_softlock_errors(layout, start_id: StringName, boss_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = []
-	var reachable_states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
+	var reachable_states := _curriculum_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
 	var required_by_orb: Dictionary = {}
 	for orb_connection in layout.connections:
 		if orb_connection.route_role != ROUTE_FUSION_PREREQUISITE_ORB:
@@ -1180,7 +1266,7 @@ static func _fusion_orb_softlock_errors(layout, start_id: StringName, boss_id: S
 		if checked.has(state_key):
 			continue
 		checked[state_key] = true
-		var continuation := _element_reachable_states(layout, room_id, completed_runs, starter_flame, bound_flame, state)
+		var continuation := _curriculum_reachable_states(layout, room_id, completed_runs, starter_flame, bound_flame, state)
 		var reaches_boss := false
 		for next_state in continuation:
 			if next_state.get("room_id", &"") == boss_id:
@@ -1191,7 +1277,96 @@ static func _fusion_orb_softlock_errors(layout, start_id: StringName, boss_id: S
 	return errors
 
 
-static func _element_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", starting_state: Dictionary = {}) -> Array[Dictionary]:
+static func _curriculum_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", starting_state: Dictionary = {}, blocked_connection_key: String = "") -> Array[Dictionary]:
+	var rooms_by_id: Dictionary = {}
+	for room in layout.rooms:
+		rooms_by_id[room.id] = room
+	var initial_flame := _initial_run_flame(starter_flame, bound_flame)
+	var available := ASPECT_CATALOG_SCRIPT.flames_available_for_run(completed_runs, starter_flame)
+	if not bound_flame.is_empty() and not available.has(bound_flame):
+		available.append(bound_flame)
+	var pending: Array[Dictionary] = [starting_state.duplicate() if not starting_state.is_empty() else {
+		"room_id": start_id,
+		"flame": initial_flame,
+		"orb_element": ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL,
+		"puzzle_color": &"puzzle_b",
+	}]
+	var visited: Dictionary = {}
+	var reachable_states: Array[Dictionary] = []
+	while not pending.is_empty():
+		var state: Dictionary = pending.pop_back()
+		var room_id: StringName = state.get("room_id", &"") as StringName
+		var room = rooms_by_id.get(room_id)
+		var current_flame: StringName = state.get("flame", initial_flame) as StringName
+		var orb_element := ELEMENT_CATALOG_SCRIPT.normalize(int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)))
+		var puzzle_color: StringName = state.get("puzzle_color", &"puzzle_b") as StringName
+		var solved_orb_connections: Array = (state.get("solved_orb_connections", []) as Array).duplicate()
+		var solved_orb_keys: Array[String] = []
+		for solved_connection in solved_orb_connections:
+			solved_orb_keys.append(String(solved_connection))
+		solved_orb_keys.sort()
+		var state_key := "%s:%s:%d:%s:%s" % [room_id, current_flame, orb_element, puzzle_color, ",".join(solved_orb_keys)]
+		if visited.has(state_key):
+			continue
+		visited[state_key] = true
+		var current_element := ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(current_flame))
+		reachable_states.append({
+			"room_id": room_id,
+			"flame": current_flame,
+			"element": current_element,
+			"orb_element": orb_element,
+			"puzzle_color": puzzle_color,
+			"solved_orb_connections": solved_orb_connections.duplicate(),
+		})
+
+		# Fire Rooms expose both the ordinary exchange and the fusion action. A
+		# fusion result clears the ordinary key only when it is charged into an Orb;
+		# until then the runtime map retains the current puzzle-color state.
+		if room != null and room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty() and room.fire_flame in available:
+			if room.fire_flame != current_flame:
+				pending.append({"room_id": room_id, "flame": room.fire_flame, "orb_element": orb_element, "puzzle_color": puzzle_color, "solved_orb_connections": solved_orb_connections.duplicate()})
+			var fusion_flame := ASPECT_CATALOG_SCRIPT.fusion_result(current_flame, room.fire_flame)
+			if not fusion_flame.is_empty() and fusion_flame != current_flame:
+				pending.append({"room_id": room_id, "flame": fusion_flame, "orb_element": orb_element, "puzzle_color": puzzle_color, "solved_orb_connections": solved_orb_connections.duplicate()})
+
+		# An Orb can charge the exact element physically carried there. Primary
+		# flames restore their strategic puzzle key; fused flames are exclusive and
+		# clear it so a mixed state cannot satisfy a Normal/color door.
+		if room != null and room.room_type == DungeonGraph.ROOM_ORB and current_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL:
+			var orb_color := _puzzle_color_for_curriculum_flame(current_flame, completed_runs, starter_flame)
+			pending.append({"room_id": room_id, "flame": current_flame, "orb_element": current_element, "puzzle_color": orb_color, "solved_orb_connections": solved_orb_connections.duplicate()})
+		# A normal strike can always restore the Grey/Normal world state without
+		# changing the player's carried flame. Keep this separate from a mixed
+		# charge so ordinary puzzle-color doors remain explicitly traversable.
+		if room != null and room.room_type == DungeonGraph.ROOM_ORB:
+			pending.append({"room_id": room_id, "flame": current_flame, "orb_element": ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL, "puzzle_color": &"puzzle_b", "solved_orb_connections": solved_orb_connections.duplicate()})
+
+		for connection in layout.connections:
+			if not blocked_connection_key.is_empty() and _layout_connection_key(connection) == blocked_connection_key:
+				continue
+			if connection.source_room_id != room_id and connection.destination_room_id != room_id:
+				continue
+			if not _curriculum_state_satisfies_gate({"element": current_element, "orb_element": orb_element, "puzzle_color": puzzle_color, "solved_orb_connections": solved_orb_connections}, connection):
+				continue
+			var next_room: StringName = connection.destination_room_id if connection.source_room_id == room_id else connection.source_room_id
+			var next_solved_orb_connections: Array = solved_orb_connections.duplicate()
+			if connection.resolved_gate_type() == DungeonGraph.GATE_ENTRANCE_ORB:
+				var connection_key := _layout_connection_key(connection)
+				if connection_key not in next_solved_orb_connections:
+					next_solved_orb_connections.append(connection_key)
+			pending.append({"room_id": next_room, "flame": current_flame, "orb_element": orb_element, "puzzle_color": puzzle_color, "solved_orb_connections": next_solved_orb_connections})
+	return reachable_states
+
+
+static func _puzzle_color_for_curriculum_flame(flame: StringName, completed_runs: int, starter_flame: StringName) -> StringName:
+	if flame == &"gray":
+		return &"puzzle_b"
+	var alternates := ASPECT_CATALOG_SCRIPT.alternate_flames_for_run(completed_runs, starter_flame)
+	var color := _puzzle_color_for_flame(flame, starter_flame, alternates)
+	return color if not color.is_empty() else &"neutral"
+
+
+static func _element_reachable_states(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", starting_state: Dictionary = {}, blocked_connection_key: String = "") -> Array[Dictionary]:
 	var rooms_by_id: Dictionary = {}
 	for room in layout.rooms:
 		rooms_by_id[room.id] = room
@@ -1227,6 +1402,8 @@ static func _element_reachable_states(layout, start_id: StringName, completed_ru
 			if current_element != ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL and current_element != orb_element:
 				pending.append({"room_id": room_id, "flame": current_flame, "orb_element": current_element})
 		for connection in layout.connections:
+			if not blocked_connection_key.is_empty() and _layout_connection_key(connection) == blocked_connection_key:
+				continue
 			if connection.source_room_id != room_id and connection.destination_room_id != room_id:
 				continue
 			var gate_type: StringName = connection.resolved_gate_type()
