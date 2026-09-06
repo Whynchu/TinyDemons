@@ -134,7 +134,7 @@ These are code values (not inspector-exposed) that drive gear value:
 | Drop tier weights | Plain 6.0, Basic 5.0, Set 0.5; Plain and Basic are the common majority | `item_catalog.gd:_gear_drop_weight` |
 | Random `+` package | Weighted: Common 0–1 (~6% +1), Rare 0–2 (~60/32/8), Epic 0–3 (~38/34/21/7), Legendary 1–3 (~45/37/18), Mythic 2–3 (~55/45); any of six stats | `item_catalog.gd:_roll_random_stat_points`, `item_instance.gd` |
 | Cloaked Demon premium slot | Rare floor with `plus_rarity_scale` 0.35, so plussed finds there are rarer than normal loot | `run_state.gd:ensure_shop_stock` |
-| Gear shop value | `price = base × rarity multiplier × plus multiplier × enhancement multiplier × quality`; `+` adds ~1.6x, `++` ~4.4x, `+++` ~8.8x before rarity, enhancement +22% per level | `item_catalog.gd:price` |
+| Gear shop value | `price = base × rarity multiplier × plus multiplier × enhancement multiplier × quality`; rarity multipliers are 1.0 / 2.2 / 4.84 / 10.65 / 23.43 from Common through Mythic; sell remains 25% | `item_catalog.gd:price` |
 | Live catalogue | 66 definitions: 12 Plain/Basic baseline pieces plus 54 set pieces | `item_catalog.gd:live_definition_ids` |
 | Set scope | Swift, Soldier, Guard, Blood, Arcane, Soul, Edge, Oath, Rune; one Weapon/Head/Body/Arm/Shield/Accessory each | `item_catalog.gd:SET_DEFINITIONS` |
 | Weapon scope | Swords and Blades only | `item_catalog.gd:SET_DEFINITIONS`, `LIVE_BASE_DEFINITIONS` |
@@ -224,7 +224,7 @@ exposed or indexed. Candidates to export into the tuning resources:
 | Run-reward rarity odds | 0.0005 / 0.003 / 0.015 / 0.120 + caps | `gameplay.gd:600-603` |
 | Run-clear reward | `45 + score*3 + variety*8`; drop `0.30 + score*0.0065` clamp [0.30,0.95] | `gameplay.gd:618-622` |
  | XP formula | `2 + 2*lvl^0.85`, x1.15/x0.72, clamp [0.30, 2], global x2 | `combat_runtime_controller.gd:xp_reward_for_slime` |
-| Gear sale | 25% of `ItemCatalog.price()` plus 75% of recorded fusion steps as Souls | `item_catalog.gd`, `player_profile.gd` |
+| Gear sale | 25% of `ItemCatalog.price()` plus 75% of recorded fusion steps as Souls; buy/sell rarity value uses the same rarity ladder | `item_catalog.gd`, `player_profile.gd` |
 
 Shop selling is nested under the Shop page: left/right switches BUY and SELL,
 SELL lists unequipped gear only, and the selected sale requires a second confirm

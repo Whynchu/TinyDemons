@@ -14,7 +14,6 @@ const FIRST_ORB_SQUARE_PROMPT_PATH := "res://assets/artwork/square55.png"
 const FIRST_ORB_PROMPT_OFFSET := Vector2(0, -12)
 const AUTHORED_MAP_TINT_STRENGTH := 0.50
 const AUTHORED_MAP_ART_LIGHTEN_STRENGTH := 0.20
-const ORB_AUTHORING_CENTER := Vector2(120, 80)
 const ORB_KNOCKBACK_DISTANCE := 5.0
 const ORB_KNOCKBACK_DURATION := 0.14
 
@@ -257,11 +256,14 @@ func build_orb_room_orb(root: Object, state: Dictionary) -> void:
 	if root.walkable_outline.is_empty():
 		clear_puzzle_torches(root)
 		return
-	var center_position: Vector2 = ORB_AUTHORING_CENTER
-	if root.map_root != null:
-		# The prefab position is authored relative to Map. Resolve the fallback
-		# through that same transform before adding the runtime orb to Main.
-		center_position = root.map_root.to_global(ORB_AUTHORING_CENTER)
+	# Generated rooms do not carry the OrbRoom authoring scene, so the fixed
+	# prefab coordinate is not a reliable runtime position (notably in R8,
+	# whose puzzle footprint is shifted). Derive the fallback from the actual
+	# loaded walkable bounds and only use the prefab marker when it exists.
+	var bounds := Rect2(root.walkable_outline[0], Vector2.ZERO)
+	for point in root.walkable_outline:
+		bounds = bounds.expand(point)
+	var center_position: Vector2 = bounds.get_center()
 	var authored_center: Marker2D = null
 	if root.map_root != null:
 		authored_center = root.map_root.get_node_or_null("OrbCenterGuide") as Marker2D

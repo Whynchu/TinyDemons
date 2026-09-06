@@ -4,6 +4,7 @@ class_name HubFlowController
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
+const FusionMenuLayoutScript = preload("res://scripts/fusion_menu_layout.gd")
 
 const HUB_PAGE_COUNT := 6
 const HUB_PAGE_ALLOCATE := 0
@@ -263,6 +264,11 @@ func set_hub_page(root: Object, page: int) -> void:
 	screen.hub_shop_sell_amount_max = 1
 	screen.hub_shop_command_focus = screen.hub_page == HUB_PAGE_SHOP
 	screen.hub_choice_scroll = 0.0
+	# Fusion opens on a non-selected target preview. Confirming the preview
+	# enters target browsing, where the footer becomes FUSE.
+	screen.hub_fusion_state = 1 if screen.hub_page == HUB_PAGE_FUSION else 0
+	screen.hub_fusion_item_selected = false
+	screen.hub_binding_state = 1 if screen.hub_page == HUB_PAGE_BIND else 0
 	# Equipment has a deliberate three-step route. Entering the page always
 	# lands on its top command row; Equip then descends into slots and finally
 	# into the item list. Other transaction pages retain their normal content
@@ -310,6 +316,9 @@ func back_to_hub_root(root: Object) -> void:
 	screen.hub_list_scroll = 0.0
 	screen.hub_choice_scroll = 0.0
 	screen.hub_fusion_count = 1
+	screen.hub_fusion_state = 0
+	screen.hub_fusion_item_selected = false
+	screen.hub_binding_state = 0
 	screen.hub_fusion_message = ""
 	# Keep the selected command preview when returning to the top shell. This is
 	# important for the reworked hub: backing out of SHOP/FUSION/BIND should show
@@ -324,6 +333,9 @@ func back_to_hub_root(root: Object) -> void:
 	screen.hub_touch_candidate_slot = ""
 	screen.hub_touch_candidate_index = -1
 	screen.hub_binding_message = ""
+	screen.hub_fusion_state = 0
+	screen.hub_fusion_item_selected = false
+	screen.hub_binding_state = 0
 	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
@@ -333,6 +345,12 @@ func back_from_hub_route(root: Object) -> void:
 	# as controller/keyboard input. Previously it always jumped to the hub root,
 	# which made touch navigation disagree with the visible menu hierarchy.
 	var screen: Object = root.screen_state_controller
+	if screen.hub_page == HUB_PAGE_FUSION and screen.hub_fusion_state == 2:
+		screen.hub_fusion_state = 1
+		screen.hub_fusion_item_selected = false
+		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		root.call("_play_sound", "ui_decline", 0.0, 1.0)
+		return
 	if screen.hub_page == HUB_PAGE_EQUIPMENT:
 		if screen.hub_equipment_mode == EQUIPMENT_MODE_REMOVE_ALL_CONFIRM:
 			cancel_remove_all_hub_gear(root)
@@ -407,11 +425,13 @@ func shop_sellable_items(root: Object) -> Array[ItemInstance]:
 func shop_items_match(left: ItemInstance, right: ItemInstance) -> bool:
 	if left == null or right == null:
 		return false
-	var left_data := left.to_dictionary()
-	var right_data := right.to_dictionary()
-	left_data.erase("instance_id")
-	right_data.erase("instance_id")
-	return left_data == right_data
+	# SELL rows stack by the name the player sees.  Comparing the serialized
+	# item dictionaries separates otherwise identical Plain gear when legacy or
+	# generated fields differ (quality, empty affixes, fusion metadata, etc.).
+	var catalog := ItemCatalog.new()
+	var left_name := str(catalog.definition_data(left.definition_id).get("name", "UNKNOWN ITEM"))
+	var right_name := str(catalog.definition_data(right.definition_id).get("name", "UNKNOWN ITEM"))
+	return left_name == right_name and left.enhancement_level == right.enhancement_level
 
 
 func shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -572,7 +592,7 @@ func select_hub_item_row(root: Object, row: int) -> void:
 		count = hub_fusion_candidates(root).size()
 	if count <= 0:
 		return
-	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS if page == HUB_PAGE_SHOP and root.screen_state_controller.hub_shop_menu != null else maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
+	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS if page == HUB_PAGE_SHOP and root.screen_state_controller.hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if page == HUB_PAGE_FUSION and root.screen_state_controller.hub_fusion_menu != null else maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
 	var window_start := int(root.screen_state_controller.hub_list_scroll)
 	var target := window_start + row
 	if row < 0 or row >= visible_rows or target < 0 or target >= count:
@@ -580,7 +600,9 @@ func select_hub_item_row(root: Object, row: int) -> void:
 	# A second touch on the already-selected row is the touch equivalent of
 	# pressing the controller action button. The first touch still only selects
 	# the row, including when entering from the SHOP root preview.
-	if page == HUB_PAGE_SHOP and not root.screen_state_controller.hub_is_root and root.screen_state_controller.hub_shop_state == SHOP_STATE_ITEM_BROWSE and target == root.screen_state_controller.hub_item_index:
+	var shop_row_is_confirm: bool = page == HUB_PAGE_SHOP and not root.screen_state_controller.hub_is_root and root.screen_state_controller.hub_shop_state == SHOP_STATE_ITEM_BROWSE
+	var fusion_row_is_confirm: bool = page == HUB_PAGE_FUSION and not root.screen_state_controller.hub_is_root and root.screen_state_controller.hub_fusion_state == 1
+	if (shop_row_is_confirm or fusion_row_is_confirm) and target == root.screen_state_controller.hub_item_index:
 		root.call("_hub_item_action")
 		return
 	root.screen_state_controller.hub_item_index = target
@@ -595,6 +617,9 @@ func select_hub_item_row(root: Object, row: int) -> void:
 		root.screen_state_controller.hub_shop_sell_amount = 1
 		root.screen_state_controller.hub_shop_sell_amount_max = 1
 	if page == 3:
+		root.screen_state_controller.hub_is_root = false
+		root.screen_state_controller.hub_fusion_state = 1
+		root.screen_state_controller.hub_fusion_item_selected = false
 		root.screen_state_controller.hub_fusion_count = 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_hover", -6.0, 1.0)
@@ -738,14 +763,39 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 	root.screen_state_controller.hub_fusion_candidates_dirty = false
 	if root.player_profile == null: return
 	var catalog := ItemCatalog.new()
-	var equipped_candidates: Array[ItemInstance] = []
-	var unequipped_candidates: Array[ItemInstance] = []
+	var grouped: Dictionary = {}
 	for data: Dictionary in root.player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
-		if root.player_profile.fusion_material_count(item.instance_id, catalog) > 0 or root.player_profile.can_salvage_overflow(item.instance_id, catalog):
-			var slot := catalog.definition_slot(item.definition_id)
-			var equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
-			(equipped_candidates if equipped else unequipped_candidates).append(item)
+		var slot := catalog.definition_slot(item.definition_id)
+		if slot not in ItemCatalog.SLOTS:
+			continue
+		var key := "%s|%s" % [str(item.definition_id), str(item.rarity)]
+		if not grouped.has(key):
+			grouped[key] = {"representative": item, "items": []}
+		var group: Dictionary = grouped[key]
+		(group["items"] as Array).append(item)
+		var item_equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
+		var current := group["representative"] as ItemInstance
+		var current_equipped: bool = root.player_profile.get_equipped_instance_id(slot) == current.instance_id
+		if item_equipped and not current_equipped:
+			group["representative"] = item
+	var equipped_candidates: Array[ItemInstance] = []
+	var unequipped_candidates: Array[ItemInstance] = []
+	for group_value: Variant in grouped.values():
+		var group: Dictionary = group_value
+		var item := group["representative"] as ItemInstance
+		var unequipped_count := 0
+		for candidate: ItemInstance in group["items"]:
+			if root.player_profile.get_equipped_instance_id(catalog.definition_slot(candidate.definition_id)) != candidate.instance_id:
+				unequipped_count += 1
+		var can_salvage: bool = root.player_profile.can_salvage_overflow(item.instance_id, catalog)
+		var representative_equipped: bool = root.player_profile.get_equipped_instance_id(catalog.definition_slot(item.definition_id)) == item.instance_id
+		var required_unequipped := 1 if representative_equipped else 2
+		if unequipped_count < required_unequipped and not can_salvage:
+			continue
+		var slot := catalog.definition_slot(item.definition_id)
+		var equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
+		(equipped_candidates if equipped else unequipped_candidates).append(item)
 	root.screen_state_controller.hub_fusion_candidates.append_array(equipped_candidates)
 	root.screen_state_controller.hub_fusion_candidates.append_array(unequipped_candidates)
 
@@ -976,6 +1026,12 @@ func hub_item_action(root: Object) -> void:
 				# Reconfirming a sold item has no transaction to perform.
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 	elif root.screen_state_controller.hub_page == 3:
+		if root.screen_state_controller.hub_fusion_state == 1:
+			root.screen_state_controller.hub_fusion_item_selected = true
+			root.screen_state_controller.hub_fusion_state = 2
+			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+			return
 		var fusion_candidates := hub_fusion_candidates(root)
 		var fusion_changed := false
 		var fusion_feedback_played := false
@@ -1118,6 +1174,9 @@ func select_hub_menu_row(root: Object, row: int) -> void:
 	screen.hub_touch_candidate_index = -1
 	screen.hub_fusion_message = ""
 	screen.hub_binding_message = ""
+	screen.hub_fusion_state = 1 if target_page == HUB_PAGE_FUSION else 0
+	screen.hub_fusion_item_selected = false
+	screen.hub_binding_state = 0
 	if target_page == HUB_PAGE_FUSION:
 		invalidate_hub_fusion_candidates(root)
 	if target_page == HUB_PAGE_SHOP and root.run_state != null:

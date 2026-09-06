@@ -30,6 +30,16 @@ func _initialize() -> void:
 	_expect(router.ui_accept_just_pressed(), "UI accept edge is available to menu consumers", failures)
 
 	Input.action_release(&"ui_accept")
+	Input.action_press(&"ui_down")
+	router.poll(InputRouter.Context.MENU)
+	_expect(router.menu_direction_just_pressed(&"ui_down"), "first menu direction press produces a navigation edge", failures)
+	router.poll(InputRouter.Context.MENU, 0.20)
+	_expect(not router.menu_direction_just_pressed(&"ui_down"), "held menu direction waits through the initial delay", failures)
+	router.poll(InputRouter.Context.MENU, 0.13)
+	_expect(router.menu_direction_just_pressed(&"ui_down"), "held menu direction repeats after the initial delay", failures)
+	Input.action_release(&"ui_down")
+	router.poll(InputRouter.Context.MENU)
+	_expect(not router.menu_direction_just_pressed(&"ui_down"), "released menu direction clears repeat state", failures)
 	router.free()
 	_finish(failures)
 

@@ -57,7 +57,9 @@ on-screen UI following the **last device that produced deliberate input**.
   mobile story.
 - Threaded web export. Single-threaded is the target (§3); threads are a
   later optimization if profiling demands them.
-- Gesture *events* (pinch, pan, double-tap). They are flaky on mobile browsers
+- Gesture *events* (pinch and pan). They are flaky on mobile browsers. Fusion
+  has a constrained same-row second-tap SELECT fallback; this is not a general
+  double-tap gesture contract.
   (§11). Menu lists instead scroll through reliable `InputEventScreenDrag`
   swipe-to-scroll in the touch layer, which drives the same `ui_up`/`ui_down`
   navigation the controller uses.

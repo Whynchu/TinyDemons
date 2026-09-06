@@ -6,12 +6,16 @@ const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.g
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
 const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
+const FusionMenuLayoutScript = preload("res://scripts/fusion_menu_layout.gd")
+const BindMenuLayoutScript = preload("res://scripts/bind_menu_layout.gd")
+const FusionMenuModelScript = preload("res://scripts/fusion_menu_model.gd")
+const BindMenuModelScript = preload("res://scripts/bind_menu_model.gd")
 const ResponsiveLayoutScript = preload("res://scripts/menu_responsive_layout.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.png")
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.73"
+const GAME_VERSION := "0.1.74"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -200,6 +204,11 @@ var hub_binding_panel: Panel = null
 var hub_binding_texts: Array[Sprite2D] = []
 var hub_binding_action_button: Button = null
 var hub_binding_message := ""
+var hub_fusion_state := 0
+var hub_fusion_item_selected := false
+var hub_binding_state := 0
+var hub_fusion_menu: Control = null
+var hub_bind_menu: Control = null
 var pause_resume_button: Button = null
 var pause_settings_button: Button = null
 var pause_quit_button: Button = null
@@ -416,10 +425,7 @@ func apply_display_layout(root: Object) -> void:
 		game_over_title_button.position.x = (display_view_size.x - game_over_title_button.size.x) * 0.5
 	if game_over_footer_text != null:
 		game_over_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
-	if game_over_cursor_text != null:
-		var selected_game_over := game_over_title_button if game_over_row == 1 else game_over_button
-		if selected_game_over != null:
-			move_menu_cursor(game_over_cursor_text, Vector2(selected_game_over.position.x - CURSOR_LEFT_GAP, selected_game_over.position.y + 3.0), false)
+	_position_game_over_controls(root, true)
 	if run_complete_footer_text != null:
 		run_complete_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 	if save_select_footer_text != null:
@@ -473,6 +479,27 @@ func retro_button_alpha(timer: float) -> float:
 	var phase := fmod(timer, 2.4); var pulse := lerpf(1.0, 0.45, (phase - 0.6) / 0.9) if phase >= 0.6 and phase < 1.5 else lerpf(0.45, 1.0, (phase - 1.5) / 0.6) if phase >= 1.5 and phase < 2.1 else 1.0; return snappedf(snappedf(pulse, 0.08), 0.125)
 
 func retro_button_bob(timer: float) -> float: return snappedf(sin(timer / 3.6 * TAU) * 1.5, 0.5)
+
+
+func _position_game_over_controls(root: Object, preserve_animation: bool = true) -> void:
+	var restart := root.get("game_over_button") as Button
+	var title := root.get("game_over_title_button") as Button
+	if restart != null:
+		restart.position.x = (display_view_size.x - restart.size.x) * 0.5
+		restart.position.y = 105.0
+	if title != null:
+		title.position.x = (display_view_size.x - title.size.x) * 0.5
+		title.position.y = 121.0
+	var game_over := root.get("game_over_overlay") as ColorRect
+	if preserve_animation and bool(root.get("player_death_particles_started")) and game_over != null and game_over.visible:
+		var fade_timer := float(root.get("game_over_fade_timer"))
+		if restart != null: restart.position.y = 105.0 + retro_button_bob(fade_timer)
+		if title != null: title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
+	var selected := title if game_over_row == 1 and title != null and not title.disabled else restart
+	if game_over_cursor_text != null:
+		game_over_cursor_text.visible = selected != null
+		if selected != null:
+			move_menu_cursor(game_over_cursor_text, Vector2(selected.position.x - CURSOR_LEFT_GAP, selected.position.y + 3.0), false)
 
 func set_archetype_button_state(button: Button, active: bool, color: Color) -> void:
 	if button == null: return
@@ -737,15 +764,13 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 		root.set("game_over_fade_timer", fade_timer); game_over.modulate.a = clampf(fade_timer / game_over_fade_time, 0.0, 1.0)
 		var restart := root.get("game_over_button") as Button
 		var title := root.get("game_over_title_button") as Button
-		if restart != null: restart.modulate.a = retro_button_alpha(fade_timer); restart.position.y = 105.0 + retro_button_bob(fade_timer)
-		if title != null: title.modulate.a = retro_button_alpha(fade_timer + 0.6); title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
+		if restart != null: restart.modulate.a = retro_button_alpha(fade_timer)
+		if title != null: title.modulate.a = retro_button_alpha(fade_timer + 0.6)
 		var selected := title if game_over_row == 1 and title != null and not title.disabled else restart
 		if selected != null:
 			game_over_row = 1 if selected == title else 0
-		if game_over_cursor_text != null:
-			game_over_cursor_text.visible = selected != null
-			if selected != null: move_menu_cursor(game_over_cursor_text, Vector2(selected.position.x - CURSOR_LEFT_GAP, selected.position.y + 3.0), false)
-			game_over_cursor_text.texture = MENU_CURSOR_TEXTURE
+		_position_game_over_controls(root)
+		if game_over_cursor_text != null: game_over_cursor_text.texture = MENU_CURSOR_TEXTURE
 		if game_over_footer_text != null:
 			game_over_footer_text.visible = true
 			game_over_footer_text.texture = _pixel_prompt_texture(Callable(root, "_pixel_text_texture"), _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
@@ -1135,9 +1160,11 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var items_page := overlay.get_node_or_null("HubItemsPage") as Control
 	var equipment_menu := items_page.get_node_or_null("EquipmentMenu") as EquipmentMenuLayout if items_page != null else null
 	var shop_menu := items_page.get_node_or_null("ShopMenu") as Control if items_page != null else null
+	var fusion_menu := items_page.get_node_or_null("FusionMenu") as Control if items_page != null else null
 	hub_equipment_menu = equipment_menu
 	self.equipment_menu = equipment_menu
 	hub_shop_menu = shop_menu
+	hub_fusion_menu = fusion_menu
 	if equipment_menu != null:
 		equipment_menu.visible = false
 		if equipment_menu.has_method("set_pixel_texture"):
@@ -1145,6 +1172,8 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 		if equipment_menu.has_method("set_read_only"):
 			equipment_menu.call("set_read_only", false)
 	var bind_page := overlay.get_node_or_null("HubBindPage") as Control
+	var bind_menu := bind_page.get_node_or_null("BindMenu") as Control if bind_page != null else null
+	hub_bind_menu = bind_menu
 	var root_title := root_page.get_node_or_null("Title") as Sprite2D
 	var status_title := status_page.get_node_or_null("Title") as Sprite2D
 	var allocate_title := allocate_page.get_node_or_null("Title") as Sprite2D
@@ -1470,6 +1499,16 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 			shop_menu.connect("sell_amount_cancelled", shop_amount_cancel)
 		if shop_back.is_valid():
 			shop_menu.connect("shop_back_pressed", shop_back)
+	if fusion_menu != null:
+		fusion_menu.set_pixel_texture(pixel_texture)
+		if select_item_row.is_valid(): fusion_menu.item_pressed.connect(select_item_row)
+		if adjust_fusion_count.is_valid(): fusion_menu.sell_amount_changed.connect(adjust_fusion_count)
+		if item_action.is_valid(): fusion_menu.item_action_pressed.connect(item_action)
+		if hub_back.is_valid(): fusion_menu.shop_back_pressed.connect(hub_back)
+	if bind_menu != null:
+		bind_menu.set_pixel_texture(pixel_texture)
+		if bind_element.is_valid(): bind_menu.action_pressed.connect(bind_element)
+		if hub_back.is_valid(): bind_menu.back_pressed.connect(hub_back)
 	hub_item_list_panel = item_list_panel
 	hub_item_content_clip = item_content_clip
 	hub_gear_choice_panel = gear_choice_panel
@@ -1820,6 +1859,12 @@ func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion
 	if hub_shop_menu != null:
 		hub_shop_menu.position = Vector2.ZERO
 		hub_shop_menu.size = display_view_size
+	if hub_fusion_menu != null:
+		hub_fusion_menu.position = Vector2.ZERO
+		hub_fusion_menu.size = display_view_size
+	if hub_bind_menu != null:
+		hub_bind_menu.position = Vector2.ZERO
+		hub_bind_menu.size = display_view_size
 	if hub_cursor_text != null and not hub_page_buttons.is_empty():
 		var cursor_index := clampi(hub_menu_row, 0, hub_page_buttons.size() - 1)
 		var command_target := _hub_command_cursor_target(cursor_index)
@@ -1968,6 +2013,7 @@ func _hide_legacy_equipment_presenter() -> void:
 	legacy_nodes.append_array(hub_gear_choice_texts)
 	legacy_nodes.append_array(hub_gear_choice_buttons)
 	legacy_nodes.append_array(hub_gear_stat_texts)
+	legacy_nodes.append_array(hub_gear_stat_texts)
 	legacy_nodes.append_array(hub_item_detail_texts)
 	legacy_nodes.append_array(hub_equipment_action_buttons)
 	for node in legacy_nodes:
@@ -2031,9 +2077,9 @@ func _hide_legacy_shop_presenter() -> void:
 func _shop_item_signature(item: ItemInstance) -> Dictionary:
 	if item == null:
 		return {}
-	var data := item.to_dictionary()
-	data.erase("instance_id")
-	return data
+	var catalog := ItemCatalog.new()
+	var name := str(catalog.definition_data(item.definition_id).get("name", "UNKNOWN ITEM"))
+	return {"name": name, "enhancement_level": item.enhancement_level}
 
 
 func _shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -2137,6 +2183,94 @@ func _shop_stat_comparison(root: Object, profile: PlayerProfile, catalog: ItemCa
 	return result
 
 
+func _fusion_stat_comparison(catalog: ItemCatalog, item: ItemInstance, count: int) -> Array[Dictionary]:
+	var projected := ItemInstance.from_dictionary(item.to_dictionary())
+	var projected_rarity := item.rarity
+	var projected_enhancement := item.enhancement_level
+	for step in count:
+		if projected_enhancement >= PlayerProfile.MAX_ITEM_ENHANCEMENT:
+			projected_rarity = ItemCatalog.next_rarity(projected_rarity)
+			projected_enhancement = 0
+		else:
+			projected_enhancement += 1
+	projected.rarity = projected_rarity
+	projected.enhancement_level = projected_enhancement
+	var before_bonuses := catalog.bonuses(item, 0)
+	var after_bonuses := catalog.bonuses(projected, 0)
+	var fields := [
+		{"key": "vitality", "label": "VIT"}, {"key": "strength", "label": "STR"},
+		{"key": "defense", "label": "DEF"}, {"key": "agi", "label": "AGI"},
+		{"key": "intelligence", "label": "INT"}, {"key": "mnd", "label": "MND"},
+	]
+	var result: Array[Dictionary] = []
+	for field: Dictionary in fields:
+		var before := float(before_bonuses.get(field["key"], 0.0))
+		var after := float(after_bonuses.get(field["key"], 0.0))
+		var delta := after - before
+		result.append({"label": field["label"], "before": before, "after": after, "after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244)})
+	return result
+
+
+func _render_fusion_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile) -> void:
+	if hub_fusion_menu == null or profile == null:
+		return
+	var view := hub_fusion_menu
+	var catalog := ItemCatalog.new()
+	var candidates := root.call("_hub_fusion_candidates") as Array
+	var model := FusionMenuModelScript.new()
+	model.state = 0 if hub_is_root else hub_fusion_state
+	model.item_selected = hub_fusion_item_selected
+	model.scroll_fraction = hub_list_scroll - floor(hub_list_scroll)
+	var window_start := int(floor(hub_list_scroll))
+	for row_index in FusionMenuLayoutScript.FUSION_VISIBLE_ROWS:
+		var item_index := window_start + row_index
+		if item_index >= candidates.size():
+			continue
+		var item := candidates[item_index] as ItemInstance
+		var data := catalog.definition_data(item.definition_id)
+		var label := str(data.get("name", "ITEM"))
+		if item.enhancement_level > 0:
+			label += " +%d" % item.enhancement_level
+		model.rows.append({"label": label, "slot": str(catalog.definition_slot(item.definition_id)), "color": catalog.rarity_color(item.rarity), "soul_cost": profile.fusion_batch_cost(item, 1)})
+	model.selected_row = clampi(hub_item_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
+	if not candidates.is_empty():
+		var selected_index := clampi(hub_item_index, 0, candidates.size() - 1)
+		var selected := candidates[selected_index] as ItemInstance
+		model.owned_count = profile.fusion_owned_count(selected.instance_id, catalog)
+		model.fusion_count_max = maxi(profile.fusion_material_count(selected.instance_id, catalog), 1)
+		model.fusion_count = clampi(hub_fusion_count, 1, model.fusion_count_max)
+		model.soul_cost = profile.fusion_batch_cost(selected, model.fusion_count) if model.owned_count > 0 else profile.fusion_batch_cost(selected, 1)
+		model.can_fuse = model.owned_count > 0 and profile.souls >= model.soul_cost
+		model.can_salvage = profile.can_salvage_overflow(selected.instance_id, catalog)
+		model.stat_comparison = _fusion_stat_comparison(catalog, selected, model.fusion_count)
+	model.message = hub_fusion_message
+	view.call("set_pixel_texture", pixel_texture)
+	view.call("render_fusion", model)
+
+
+func _render_bind_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+	if hub_bind_menu == null or profile == null:
+		return
+	var view := hub_bind_menu
+	var model := BindMenuModelScript.new()
+	model.state = 0 if hub_is_root else hub_binding_state
+	var chroma := root.get("player_chroma_component") as Node
+	var current_aspect := chroma.call("aspect_name") as StringName if chroma != null else &"gray"
+	model.current_element = ASPECT_CATALOG_SCRIPT.display_name(current_aspect)
+	model.current_is_bound = profile.has_bound_element and profile.bound_element == current_aspect
+	model.bound_element = ASPECT_CATALOG_SCRIPT.display_name(profile.bound_element) if profile.has_bound_element else "NONE"
+	model.soul_count = profile.souls
+	model.bind_cost = PlayerProfile.ELEMENT_BIND_SOUL_COST
+	model.can_bind = current_aspect != &"gray" and profile.can_bind_element(current_aspect) and not model.current_is_bound and profile.souls >= model.bind_cost
+	model.action_label = "BIND" if not model.current_is_bound else "BOUND"
+	model.action_color = highlight_color
+	model.status_message = hub_binding_message
+	if model.status_message.is_empty():
+		model.status_message = "READY TO BIND" if model.can_bind else "BIND UNAVAILABLE"
+	view.call("set_pixel_texture", pixel_texture)
+	view.call("render", model)
+
+
 func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
 	if hub_shop_menu == null or profile == null:
 		return
@@ -2181,6 +2315,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	var row_colors: Array[Color] = []
 	var row_prices: Array[String] = []
 	var row_soul_values: Array[int] = []
+	var visible_slots: Array[StringName] = []
 	for row in visible_rows:
 		var source_index := window_start + row
 		if source_index >= count:
@@ -2188,6 +2323,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 			row_colors.append(Color8(140, 145, 160))
 			row_prices.append("")
 			row_soul_values.append(0)
+			visible_slots.append(&"")
 			continue
 		var item := items[source_index]
 		var fusion_suffix := " F%d" % item.enhancement_level if item.enhancement_level > 0 else ""
@@ -2196,6 +2332,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 		row_colors.append(Color8(120, 120, 130) if source_index < sold_flags.size() and sold_flags[source_index] else catalog.rarity_color(item.rarity))
 		row_prices.append(prices[source_index] if source_index < prices.size() else "")
 		row_soul_values.append(soul_values[source_index] if source_index < soul_values.size() else 0)
+		visible_slots.append(item_slots[source_index] if source_index < item_slots.size() else &"")
 	var selected_item: ItemInstance = items[selected] if count > 0 else null
 	var stat_comparison := _shop_stat_comparison(root, profile, catalog, selected_item)
 	var owned_count := 0
@@ -2216,13 +2353,29 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	var selected_quantity := clampi(hub_shop_sell_amount, 1, max_quantity)
 	hub_shop_sell_amount = selected_quantity
 	hub_shop_sell_amount_max = max_quantity
+	# In the sell quantity view, show the transaction total for the selected
+	# row. Browse mode continues to show each item's unit value.
+	if sell_mode and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT and selected_item != null and selected < prices.size():
+		prices[selected] = "%d" % (catalog.sell_value(selected_item) * selected_quantity)
+		if selected < soul_values.size():
+			soul_values[selected] = catalog.sell_soul_value(selected_item) * selected_quantity
+		if visible_selected >= 0 and visible_selected < row_prices.size():
+			row_prices[visible_selected] = prices[selected]
+			row_soul_values[visible_selected] = soul_values[selected]
 	var scroll_fraction: float = hub_list_scroll - floor(hub_list_scroll)
-	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, item_slots, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
+	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, visible_slots, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
 
 
 func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile == null: return
+	# Fusion is a child of the shared Items page, so page-root visibility alone
+	# cannot hide it when another route returns early below (notably BIND).
+	# Reset this before any page-specific branch to prevent presenter bleed.
+	if hub_fusion_menu != null:
+		hub_fusion_menu.visible = hub_page == HUB_PAGE_FUSION
+		if hub_page != HUB_PAGE_FUSION and hub_fusion_menu.has_method("stop_cursor_motion"):
+			hub_fusion_menu.call("stop_cursor_motion")
 	_reset_hub_cursor_layer()
 	# The reworked hub keeps its title/command shell on screen while the
 	# selected command previews its content underneath. Entering a command only
@@ -2284,7 +2437,8 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 		# The authored Shop scene owns its own mode/list Back and sell-cancel
 		# regions. Leaving this older full-rail target active would intercept those
 		# touches before the scene can receive them. Keep the route owner explicit.
-		hub_back_button.mouse_filter = Control.MOUSE_FILTER_IGNORE if page == HUB_PAGE_SHOP else Control.MOUSE_FILTER_STOP
+		var authored_transaction_back := (page == HUB_PAGE_SHOP and hub_shop_menu != null) or (page == HUB_PAGE_FUSION and hub_fusion_menu != null)
+		hub_back_button.mouse_filter = Control.MOUSE_FILTER_IGNORE if authored_transaction_back else Control.MOUSE_FILTER_STOP
 	# Page changes alter the height of the shared inventory card (Equipment uses
 	# six compact slot rows; Shop/Fusion use the larger inventory rows).
 	_position_hub_controls()
@@ -2370,16 +2524,16 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_context_text != null:
 		hub_context_text.visible = false
 	if hub_footer_select_glyph != null:
-		hub_footer_select_glyph.visible = page != HUB_PAGE_SHOP
+		hub_footer_select_glyph.visible = page != HUB_PAGE_SHOP and page != HUB_PAGE_FUSION
 		hub_footer_select_glyph.texture = MENU_CIRCLE_TEXTURE
 	if hub_footer_select_text != null:
-		hub_footer_select_text.visible = page != HUB_PAGE_SHOP
-		hub_footer_select_text.texture = pixel_texture.call("SELECT", Color.WHITE) as Texture2D
+		hub_footer_select_text.visible = page != HUB_PAGE_SHOP and page != HUB_PAGE_FUSION
+		hub_footer_select_text.texture = pixel_texture.call("FUSE" if page == HUB_PAGE_FUSION else "SELECT", Color.WHITE) as Texture2D
 	if hub_footer_back_glyph != null:
-		hub_footer_back_glyph.visible = page != HUB_PAGE_SHOP
+		hub_footer_back_glyph.visible = page != HUB_PAGE_SHOP and page != HUB_PAGE_FUSION
 		hub_footer_back_glyph.texture = MENU_X_TEXTURE
 	if hub_footer_back_text != null:
-		hub_footer_back_text.visible = page != HUB_PAGE_SHOP
+		hub_footer_back_text.visible = page != HUB_PAGE_SHOP and page != HUB_PAGE_FUSION
 		hub_footer_back_text.texture = pixel_texture.call("BACK", Color.WHITE) as Texture2D
 	if hub_currency_text != null:
 		# Legacy single-currency alias: the visible footer now has both rows.
@@ -2507,7 +2661,20 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if hub_binding_action_button != null:
 		hub_binding_action_button.visible = page == HUB_PAGE_BIND and not hub_is_root
 		hub_binding_action_button.mouse_filter = Control.MOUSE_FILTER_STOP if hub_content_focus else Control.MOUSE_FILTER_IGNORE
+	if hub_bind_menu != null:
+		hub_bind_menu.visible = page == HUB_PAGE_BIND
+		if page != HUB_PAGE_BIND and hub_bind_menu.has_method("stop_cursor_motion"):
+			hub_bind_menu.call("stop_cursor_motion")
 	if page == HUB_PAGE_BIND:
+		if hub_binding_panel != null: hub_binding_panel.visible = false
+		for node in hub_binding_texts: node.visible = false
+		if hub_binding_action_button != null:
+			hub_binding_action_button.visible = false
+			hub_binding_action_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if hub_bind_menu != null:
+			hub_bind_menu.visible = true
+			_render_bind_menu(root, pixel_texture, profile, highlight_color)
+			return
 		_update_hub_binding_page(root, pixel_texture, profile, highlight_color)
 		return
 	if page == HUB_PAGE_STATUS:
@@ -2525,6 +2692,14 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	if page == HUB_PAGE_SHOP and hub_shop_menu != null:
 		_hide_legacy_shop_presenter()
 		_render_shop_menu(root, pixel_texture, profile, highlight_color)
+		return
+	if hub_fusion_menu != null:
+		hub_fusion_menu.visible = page == HUB_PAGE_FUSION
+		if page != HUB_PAGE_FUSION and hub_fusion_menu.has_method("stop_cursor_motion"):
+			hub_fusion_menu.call("stop_cursor_motion")
+	if page == HUB_PAGE_FUSION and hub_fusion_menu != null:
+		_hide_legacy_shop_presenter()
+		_render_fusion_menu(root, pixel_texture, profile)
 		return
 	if page != HUB_PAGE_ALLOCATE:
 		_update_hub_item_page(root, pixel_texture, profile, page, item_list, item_details, item_action, highlight_color)
@@ -3096,6 +3271,8 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 		return
 	view.set_pixel_texture(pixel_texture)
 	view.set_read_only(read_only)
+	if root.has_method("_equipment_portrait_texture"):
+		view.set_portrait_texture(root.call("_equipment_portrait_texture") as Texture2D)
 	view.set_command_labels(["EQUIPMENT", "EQUIP", "REMOVE", "REMOVE ALL"])
 	view.set_icons_visible(true)
 	# The corrected render reserves the lower-right framed cell for the device
@@ -3162,10 +3339,12 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 	if not candidates.is_empty():
 		candidate_item = candidates[selected_candidate_index]
 	var candidate_window_start := 0
+	var candidate_scroll_fraction := 0.0
 	if candidates.size() > 8:
 		var max_start := maxi(0, int(ceil(float(candidates.size()) / 2.0)) * 2 - 8)
-		candidate_window_start = clampi(int(hub_choice_scroll), 0, max_start)
-		candidate_window_start -= candidate_window_start % 2
+		var candidate_scroll := clampf(hub_choice_scroll, 0.0, float(max_start))
+		candidate_window_start = clampi(int(floor(candidate_scroll / 2.0)) * 2, 0, max_start)
+		candidate_scroll_fraction = candidate_scroll - float(candidate_window_start)
 	for index in 8:
 		var source_index := candidate_window_start + index
 		if source_index >= candidates.size():
@@ -3174,7 +3353,7 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 		var label: String = "UNEQUIP SHIELD" if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else _equipment_item_label(catalog, item)
 		candidate_labels.append(label)
 		candidate_colors.append(Color8(140, 145, 160) if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else catalog.rarity_color(item.rarity))
-	view.set_candidates(candidate_labels, candidate_colors, selected_candidate_index)
+	view.set_candidates(candidate_labels, candidate_colors, selected_candidate_index, candidate_scroll_fraction)
 	# The six-stat summary only tints while the player is choosing a different
 	# item (candidate depth). A stat turns green when the candidate raises it
 	# above the currently equipped item and red when it would be lower; stats the
@@ -3279,11 +3458,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if count > 0: item = ItemInstance.from_dictionary(profile.inventory[clampi(index, 0, count - 1)])
 	elif page == 2:
 		if hub_shop_sell_mode:
-			var sellable: Array[ItemInstance] = []
-			for data: Dictionary in profile.inventory:
-				var owned := ItemInstance.from_dictionary(data)
-				if not profile.equipped_instance_ids.values().has(owned.instance_id):
-					sellable.append(owned)
+			var sellable := root.call("_hub_shop_sellable_items") as Array[ItemInstance]
 			count = sellable.size()
 			if count > 0:
 				item = sellable[clampi(index, 0, count - 1)]
@@ -3331,11 +3506,10 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			row_item = ItemInstance.from_dictionary(profile.inventory[source_index])
 		elif page == 2:
 			if hub_shop_sell_mode:
-				var sellable_rows: Array[ItemInstance] = []
-				for data: Dictionary in profile.inventory:
-					var owned_row := ItemInstance.from_dictionary(data)
-					if not profile.equipped_instance_ids.values().has(owned_row.instance_id):
-						sellable_rows.append(owned_row)
+				# Keep the legacy list renderer on the same grouped sell rows as
+				# _render_shop_menu.  Rebuilding directly from inventory makes plain
+				# copies appear as separate rows and bypasses OWNED:x quantities.
+				var sellable_rows := root.call("_hub_shop_sellable_items") as Array[ItemInstance]
 				row_item = sellable_rows[source_index]
 				row_price = catalog.sell_value(row_item)
 			else:
@@ -3845,6 +4019,22 @@ func update_hub_input(root: Object) -> void:
 		if page == HUB_PAGE_SHOP:
 			root.call("_shop_back_pressed")
 			return
+		if page == HUB_PAGE_FUSION:
+			if hub_fusion_state == 2:
+				hub_fusion_state = 1
+				hub_fusion_item_selected = false
+				update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+				root.call("_play_sound", "ui_decline", 0.0, 1.0)
+			else:
+				root.call("_hub_back_or_close")
+			return
+		if page == HUB_PAGE_BIND and hub_binding_state == 1:
+			hub_binding_state = 0
+			hub_is_root = true
+			hub_content_focus = false
+			update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			root.call("_play_sound", "ui_decline", 0.0, 1.0)
+			return
 		if page == HUB_PAGE_EQUIPMENT and hub_equipment_mode == EquipmentMenuLayout.MODE_REMOVE_ALL_CONFIRM:
 			root.call("_cancel_hub_remove_all")
 		elif page == HUB_PAGE_EQUIPMENT and hub_gear_browsing:
@@ -3887,12 +4077,42 @@ func update_hub_input(root: Object) -> void:
 		return
 	if page == HUB_PAGE_BIND:
 		if bool(root.call("_is_menu_confirm_just_pressed")):
+			if hub_binding_state == 0:
+				hub_binding_state = 1
+				hub_content_focus = true
+				update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+				return
 			var binding_action := hub_binding_action_button
 			if binding_action != null and not binding_action.disabled:
 				binding_action.pressed.emit()
 			else:
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
+	if page == HUB_PAGE_FUSION:
+		if hub_fusion_state == 1:
+			if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+				root.call("_shift_hub_item", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+				root.call("_shift_hub_item", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_menu_confirm_just_pressed")):
+				var fusion_candidates := root.call("_hub_fusion_candidates") as Array
+				if fusion_candidates.is_empty():
+					root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+					return
+				if not hub_fusion_item_selected:
+					hub_fusion_item_selected = true
+					hub_fusion_state = 2
+				update_hub_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+			return
+		if hub_fusion_state == 2:
+			if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")):
+				root.call("_shift_hub_fusion_count", -1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
+				root.call("_shift_hub_fusion_count", 1); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+			elif bool(root.call("_is_menu_confirm_just_pressed")):
+				root.call("_hub_item_action")
+			return
 	if page == HUB_PAGE_ALLOCATE:
 		if hub_stat_row == 6:
 			if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
@@ -4540,6 +4760,8 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 			palette_name = AspectCatalog.palette_for_flame(flame)
 			if palette_name == "grey" and not profile.palette_name.is_empty():
 				palette_name = profile.palette_name
+			if profile.has_bound_element:
+				palette_name = AspectCatalog.palette_for_flame(profile.bound_element)
 		var button := make_retro_button(label, Vector2((display_view_size.x - 112.0) * 0.5, 66 + slot * 20), Vector2(112, 18), pixel_texture)
 		button.focus_mode = Control.FOCUS_NONE
 		button.disabled = false
@@ -4971,7 +5193,7 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 	var equipment_active := hub_page == HUB_PAGE_EQUIPMENT or is_pause_equipment_active()
 	if is_zero_approx(delta_px) or (hub_page < 0 and not equipment_active):
 		return
-	var pitch := 10.0
+	var pitch := 9.0 if equipment_active and hub_equipment_menu != null else 10.0
 	var count := _hub_active_list_count(root)
 	if count <= 0:
 		return
@@ -4979,7 +5201,6 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 		var visible := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
 		var max_start := maxi(0, int(ceil(float(count) / 2.0)) * 2 - visible) if hub_equipment_menu != null else maxi(0, count - visible)
 		hub_choice_scroll = clampf(hub_choice_scroll - delta_px / pitch, 0.0, float(max_start))
-		if hub_equipment_menu != null: hub_choice_scroll = floor(hub_choice_scroll / 2.0) * 2.0
 		# A drag can move the visible window without changing the selected
 		# candidate. Disarm the touch confirmation so a later tap cannot commit
 		# an item the player has not just previewed in the current window.
@@ -4989,7 +5210,7 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 		# The authored Shop scene has eight visible rows; the legacy presenter keeps
 		# its compatibility rows for other routes. Match the active presenter so a
 		# drag never leaves the selected row below the visible shop window.
-		var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else maxi(hub_item_list_texts.size(), 1)
+		var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if hub_page == HUB_PAGE_FUSION and hub_fusion_menu != null else maxi(hub_item_list_texts.size(), 1)
 		hub_list_scroll = clampf(hub_list_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - visible)))
 		if hub_page == HUB_PAGE_SHOP:
 			hub_shop_sell_confirm_pending = false
@@ -5036,13 +5257,18 @@ func snap_hub_list_scroll_to_selection(root: Object) -> void:
 	var count := _hub_active_list_count(root)
 	if count <= 0:
 		return
-	var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else maxi(hub_item_list_texts.size(), 1)
-	# Controller browsing keeps the authored eight-row window fixed until the
-	# selection crosses its final visible row. The ninth item (index 8) is the
-	# first step that advances the window; moving back to row eight returns it to
-	# the top. Touch drags intentionally bypass this snap and remain continuous.
-	var selected_padding := (ShopMenuLayoutScript.VISIBLE_ROWS - 1) if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else 2
-	hub_list_scroll = clampf(float(hub_item_index - selected_padding), 0.0, maxf(0.0, float(count - visible)))
+	var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if hub_page == HUB_PAGE_FUSION and hub_fusion_menu != null else maxi(hub_item_list_texts.size(), 1)
+	# Controller browsing keeps the viewport fixed until the selection crosses
+	# an edge: moving down past the final visible row advances the window, while
+	# moving up past the first visible row retreats it. This prevents the list
+	# from drifting as soon as the cursor moves away from the bottom.
+	var max_scroll := maxf(0.0, float(count - visible))
+	var window_start := int(floor(hub_list_scroll))
+	if hub_item_index >= window_start + visible:
+		window_start = hub_item_index - visible + 1
+	elif hub_item_index < window_start:
+		window_start = hub_item_index
+	hub_list_scroll = clampf(float(window_start), 0.0, max_scroll)
 
 
 ## Applies the fractional item-list scroll to the row/button/price y positions.

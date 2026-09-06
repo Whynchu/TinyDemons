@@ -36,6 +36,7 @@ const RARITY_PLAYER_STAT_RATES := {
 const MASTERY_BONUS_PER_LEVEL := 0.10
 const OVERFLOW_SALVAGE_RATE := 0.35
 const SELL_RATE := 0.25
+const PLUS_PACKAGE_THRESHOLDS := {"one": 0.90, "two": 0.97, "three": 0.995}
 
 const PLAIN_GEAR_DROP_WEIGHT := 6.0
 const BASIC_GEAR_DROP_WEIGHT := 5.0
@@ -699,40 +700,15 @@ func _gear_drop_weight(definition_id: StringName) -> float:
 	return 0.0
 
 
-func _roll_random_stat_points(rarity: StringName, rng: RandomNumberGenerator, plus_rarity_scale: float = 1.0) -> Dictionary:
+func _roll_random_stat_points(_rarity: StringName, rng: RandomNumberGenerator, plus_rarity_scale: float = 1.0) -> Dictionary:
 	var roll := rng.randf()
 	var plus_count := 0
-	match rarity:
-		&"common":
-			plus_count = 1 if roll < 0.06 else 0
-		&"rare":
-			if roll < 0.60:
-				plus_count = 0
-			elif roll < 0.92:
-				plus_count = 1
-			else:
-				plus_count = 2
-		&"epic":
-			if roll < 0.38:
-				plus_count = 0
-			elif roll < 0.72:
-				plus_count = 1
-			elif roll < 0.93:
-				plus_count = 2
-			else:
-				plus_count = 3
-		&"legendary":
-			if roll < 0.45:
-				plus_count = 1
-			elif roll < 0.82:
-				plus_count = 2
-			else:
-				plus_count = 3
-		&"mythic":
-			if roll < 0.55:
-				plus_count = 2
-			else:
-				plus_count = 3
+	if roll >= float(PLUS_PACKAGE_THRESHOLDS["one"]):
+		plus_count = 1
+		if roll >= float(PLUS_PACKAGE_THRESHOLDS["two"]):
+			plus_count = 2
+		if roll >= float(PLUS_PACKAGE_THRESHOLDS["three"]):
+			plus_count = 3
 	# Special sources (for example the Cloaked Demon's premium slot) may pass a
 	# scale below 1.0 to make + gear genuinely rare instead of the default
 	# distribution. Rolling a fresh uniform threshold keeps the distribution
@@ -801,8 +777,6 @@ func rarity_flat_points(rarity: StringName) -> int:
 
 func enhancement_flat_points(enhancement_level: int) -> float:
 	var level := clampi(enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
-	# Enhancements advance the authored tier stat by 0.1 each. This keeps the
-	# existing +1.0 total at +10 while making every fusion step meaningful.
 	return float(level) * MASTERY_BONUS_PER_LEVEL
 
 func rarity_letter_grade(rarity: StringName) -> String:
@@ -875,7 +849,7 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var definition: Dictionary = definition_data(item.definition_id)
 	var result: Dictionary = {}
 	var base_bonuses: Dictionary = definition.get("bonuses", {}).duplicate(true)
-	var flat_points := float(rarity_flat_points(item.rarity)) + enhancement_flat_points(item.enhancement_level)
+	var rarity_points := float(rarity_flat_points(item.rarity))
 	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
 	# The primary `tier_stat` scales with rarity/enhancement. `tier_stats`
 	# lists additional stats that scale alongside it (premium dual-lane items).
@@ -902,10 +876,16 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 		var authored_value := float(base_bonuses.get(normalized_stat, base_bonuses.get(_legacy_stat_key(normalized_stat), 0.0)))
 		var random_value := maxi(int(random_points.get(normalized_stat, 0)), 0)
 		var flat_value := authored_value + float(random_value)
+		if normalized_stat in scaled_stats:
+			flat_value += rarity_points
+			if normalized_stat == tier_stat:
+				flat_value += float(item.fusion_stat_points)
+		if random_value > 1:
+			flat_value += float(random_value - 1) * float(_rarity_rank(item.rarity))
 		# A random lane is a real stat lane: it grows at the same additive pace as
 		# the authored primary, even when its roll lands on a secondary stat.
-		if normalized_stat in scaled_stats or random_value > 0:
-			flat_value += flat_points
+		if random_value > 0 and normalized_stat not in scaled_stats:
+			flat_value += rarity_points + enhancement_flat_points(item.enhancement_level)
 		result[normalized_stat] = flat_value
 		if normalized_stat == "agi":
 			result["speed"] = flat_value
@@ -954,7 +934,7 @@ func shield_bonuses(item: ItemInstance) -> Dictionary:
 
 func price(item: ItemInstance) -> int:
 	var base := int(definition_data(item.definition_id).get("price", 50))
-	var multiplier: float = float({&"common": 1.0, &"rare": 1.8, &"epic": 3.2, &"legendary": 5.2, &"mythic": 8.0}.get(item.rarity, 1.0))
+	var multiplier: float = float({&"common": 1.0, &"rare": 2.2, &"epic": 4.84, &"legendary": 10.65, &"mythic": 23.43}.get(item.rarity, 1.0))
 	# The + package and enhancement are the real investment in a piece of gear.
 	# A single + is a meaningful surcharge; ++ and +++ escalate steeply so an
 	# enhanced drop or shop find reads as a genuinely premium purchase.
@@ -988,13 +968,20 @@ func sell_soul_value(item: ItemInstance) -> int:
 
 
 func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:
-	var rank_bonus := float(maxi(rank, 1) - 1)
-	# Every item-drop source has a real legendary/mythic chance at R1. Rank and
-	# performance improve the odds rather than acting as hard rarity gates.
-	var mythic_chance := clampf(0.0005 + rank_bonus * 0.0005 + performance_bonus * 0.0005, 0.0005, 0.010)
-	var legendary_chance := clampf(0.003 + rank_bonus * 0.0015 + performance_bonus * 0.0015, 0.003, 0.025)
-	var epic_chance := clampf(0.015 + rank_bonus * 0.004 + performance_bonus * 0.004, 0.015, 0.070)
-	var rare_chance := clampf(0.120 + rank_bonus * 0.012 + performance_bonus * 0.010, 0.120, 0.280)
+	var band_index := mini(maxi((maxi(rank, 1) - 1) / 10, 0), 5)
+	var band_progress := 0.0 if band_index == 0 else float((maxi(rank, 1) - 1) % 10) / 10.0
+	var rates: Array = [[0.12, 0.0075, 0.001, 0.00005], [0.12, 0.0125, 0.0015, 0.0001], [0.12, 0.0175, 0.003, 0.0002], [0.12, 0.025, 0.005, 0.0005], [0.12, 0.0325, 0.008, 0.001], [0.12, 0.04, 0.012, 0.002]]
+	var current: Array = rates[band_index]
+	var next: Array = rates[mini(band_index + 1, 5)]
+	var rare_chance := lerpf(float(current[0]), float(next[0]), band_progress)
+	var epic_chance := lerpf(float(current[1]), float(next[1]), band_progress)
+	var legendary_chance := lerpf(float(current[2]), float(next[2]), band_progress)
+	var mythic_chance := lerpf(float(current[3]), float(next[3]), band_progress)
+	# Quality is intentionally bounded to the current rank band.
+	var quality_shift := clampf(performance_bonus * 0.001, -0.002, 0.002)
+	epic_chance = maxf(0.0, epic_chance + quality_shift)
+	legendary_chance = maxf(0.0, legendary_chance + quality_shift * 0.35)
+	mythic_chance = maxf(0.0, mythic_chance + quality_shift * 0.1)
 	if roll < mythic_chance: return &"mythic"
 	if roll < mythic_chance + legendary_chance: return &"legendary"
 	if roll < mythic_chance + legendary_chance + epic_chance: return &"epic"

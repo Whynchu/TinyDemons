@@ -4,6 +4,8 @@ class_name PlayerAttackComponent
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CircularInputRecognizerScript = preload("res://scripts/circular_input_recognizer.gd")
 
+const SWORD_BEAM_CHROMA_COST := 20
+
 enum AttackKind { NONE, ATTACK1, ATTACK2, SPIN, CHARGING, CHARGED_ATTACK2 }
 
 signal attack_started(variant: int)
@@ -144,6 +146,13 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
 		equipment_visual.begin_attack_visual(root)
+	if new_kind == AttackKind.CHARGED_ATTACK2:
+		var chroma := root.get("player_chroma_component") as Node
+		if chroma != null and bool(chroma.call("spend_chroma", SWORD_BEAM_CHROMA_COST)):
+			var direction := root.call("_player_facing_vector") as Vector2
+			if direction.length_squared() <= 0.0001:
+				direction = Vector2.LEFT if bool(root.get("player_attack_flip_h")) else Vector2.RIGHT
+			root.call("_spawn_sword_beam", root.call("_player_visual_center"), direction.normalized())
 	var shadow_controller := root.get("shadow_controller") as ShadowController
 	if shadow_controller != null:
 		shadow_controller.sync_player_attack_shadow(root, float(root.get("DEPTH_Z_SCALE")))
@@ -240,7 +249,9 @@ func tick_charge(root: Object, delta: float) -> void:
 	if charge_elapsed < tuning.charge_maximum_time:
 		return
 	var effects := root.get("effects_spawner") as EffectsSpawner
-	if effects != null and not effects.charge_ready_flash_complete():
+	var chroma := root.get("player_chroma_component") as Node
+	var beam_available: bool = chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
+	if beam_available and effects != null and not effects.charge_ready_flash_complete():
 		return
 	start_charged_attack(root)
 

@@ -455,6 +455,46 @@ func spawn_magic_projectile(root: Object, origin: Vector2, direction: Vector2, h
 	controller.spawn(projectile, outline, direction, float(root.get("MAGIC_PROJECTILE_LIFETIME")), palette, homing_target, ability_mode)
 
 
+func spawn_sword_beam(root: Object, origin: Vector2, direction: Vector2) -> void:
+	var player := root.get("player") as Sprite2D
+	var palette := String(root.get("current_player_palette_name"))
+	root.call("_play_sound", "sword_beam", -2.0, 1.0)
+	var beam := Sprite2D.new()
+	beam.name = "SwordBeam"
+	beam.texture = sword_beam_texture(root, palette)
+	beam.hframes = 6
+	beam.frame = 0
+	beam.centered = true
+	beam.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	beam.flip_h = direction.x < 0.0
+	beam.z_as_relative = false
+	beam.z_index = player.z_index + 1
+	beam.global_position = origin
+	(root as Node).add_child(beam)
+	var controller := root.get("magic_projectile_controller") as MagicProjectileController
+	var ability_mode := int((root.get("player_chroma_component") as Node).call("ability_mode")) if root.get("player_chroma_component") != null else ChromaComponentScript.AbilityMode.GRAY
+	controller.spawn_beam(beam, direction, 0.45, palette, ability_mode)
+
+
+func sword_beam_texture(root: Object, palette: String) -> Texture2D:
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	var key := "sword_beam:%s" % palette
+	if effects.pixel_particle_texture_cache.has(key):
+		return effects.pixel_particle_texture_cache[key] as Texture2D
+	var source := root.call("_load_texture_or_null", "res://assets/artwork/SwordBeam.png") as Texture2D
+	if source == null:
+		return null
+	var image := source.get_image()
+	for y in image.get_height():
+		for x in image.get_width():
+			var color := image.get_pixel(x, y)
+			if color.a > 0.0:
+				image.set_pixel(x, y, Color(PaletteLibrary.accent(palette), color.a))
+	var texture := ImageTexture.create_from_image(image)
+	effects.pixel_particle_texture_cache[key] = texture
+	return texture
+
+
 func magic_projectile_outline_texture(root: Object, base_color: Color, accent_color: Color) -> Texture2D:
 	var effects := root.get("effects_spawner") as EffectsSpawner
 	var key := "magic_outline:%s:%s" % [base_color.to_html(false), accent_color.to_html(false)]

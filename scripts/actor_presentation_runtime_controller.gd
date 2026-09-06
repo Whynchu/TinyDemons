@@ -194,6 +194,19 @@ func update_depth_sorting(root: Object) -> void:
 			if player_depth >= depth_key(root, slime) - ACTOR_DEPTH_TIE_WINDOW:
 				player.z_index = maxi(player.z_index, slime.z_index + 1)
 
+		# The cloaked demon is also a depth-sorted actor, but unlike combat
+		# slimes it is not included in the tie correction above.  At this scale
+		# nearby foot positions can round to the same z index, allowing scene
+		# tree order (rather than front/back position) to decide which sprite is
+		# drawn on top.  Keep the pair strictly ordered by their actual feet.
+		var cloaked_demon := root.get("cloaked_demon") as Sprite2D
+		if cloaked_demon != null and is_instance_valid(cloaked_demon) and cloaked_demon.visible:
+			var demon_depth := depth_key(root, cloaked_demon)
+			if player_depth < demon_depth:
+				player.z_index = mini(player.z_index, cloaked_demon.z_index - 1)
+			elif player_depth > demon_depth:
+				player.z_index = maxi(player.z_index, cloaked_demon.z_index + 1)
+
 
 func update_actor_occlusion(root: Object, delta: float) -> void:
 	var player := root.get("player") as Sprite2D
