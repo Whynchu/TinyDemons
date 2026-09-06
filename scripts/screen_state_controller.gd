@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.74"
+const GAME_VERSION := "0.1.75"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2227,10 +2227,9 @@ func _render_fusion_menu(root: Object, pixel_texture: Callable, profile: PlayerP
 		if item_index >= candidates.size():
 			continue
 		var item := candidates[item_index] as ItemInstance
-		var data := catalog.definition_data(item.definition_id)
-		var label := str(data.get("name", "ITEM"))
+		var label := catalog.gear_name(item)
 		if item.enhancement_level > 0:
-			label += " +%d" % item.enhancement_level
+			label += " F%d" % item.enhancement_level
 		model.rows.append({"label": label, "slot": str(catalog.definition_slot(item.definition_id)), "color": catalog.rarity_color(item.rarity), "soul_cost": profile.fusion_batch_cost(item, 1)})
 	model.selected_row = clampi(hub_item_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
 	if not candidates.is_empty():

@@ -1205,10 +1205,10 @@ func _collect_dungeon_sockets() -> void:
 	room_controller.dungeon_sockets.clear()
 	if sockets_root == null: return
 	for child in sockets_root.get_children(): var socket := child as DungeonSocket; if socket != null: room_controller.dungeon_sockets[socket.socket_id()] = socket
-func _sync_current_room_metadata() -> void:
+func _sync_current_room_metadata(arrival_socket_id: StringName = &"") -> void:
 	run_flow_controller.call("sync_current_room_metadata", self)
 	if dungeon_map_controller != null:
-		dungeon_map_controller.on_room_entered(current_room_id)
+		dungeon_map_controller.on_room_entered(current_room_id, arrival_socket_id)
 func _finalize_run_metrics() -> void:
 	run_flow_controller.call("finalize_run_metrics", self)
 func _finalize_run_exploration() -> void:
@@ -1226,6 +1226,26 @@ func _ensure_current_room_layout() -> void:
 	# keep their 1:1 meaning without any per-room (depth) difficulty.
 	room_controller.progression_run_rank = maxi(1, player_profile.difficulty_rank if player_profile != null else dungeon_graph.completed_run_count + 1)
 	room_controller.player_level = maxi(1, player_profile.level if player_profile != null else player_stats.level)
+	var base_palette := run_start_palette_name if not run_start_palette_name.is_empty() else current_player_palette_name
+	var authored_r4 := dungeon_map_controller != null and bool(dungeon_map_controller.call("is_authored_run4"))
+	if authored_r4:
+		room_controller.matchup_policy = "flame_mixed"
+		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, false)
+		var alternate_flames := dungeon_map_controller.call("alternate_flames") as Array
+		var flame_b_palette := String(AspectCatalogScript.palette_for_flame(alternate_flames[0])) if not alternate_flames.is_empty() else base_palette
+		room_controller.secondary_enemy_variant = _matchup_variant(flame_b_palette, false)
+	elif room_controller.progression_run_rank == 2:
+		room_controller.matchup_policy = "base_advantage"
+		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, false)
+		room_controller.secondary_enemy_variant = "grey"
+	elif room_controller.progression_run_rank >= 3:
+		room_controller.matchup_policy = "base_counter"
+		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, true)
+		room_controller.secondary_enemy_variant = "grey"
+	else:
+		room_controller.matchup_policy = "neutral_only"
+		room_controller.preferred_enemy_variant = "grey"
+		room_controller.secondary_enemy_variant = "grey"
 	_apply_room_geometry()
 	_collect_walkable_tiles(floor_tiles)
 	_build_entrance_block_polygons()
@@ -1249,6 +1269,31 @@ func _ensure_current_room_layout() -> void:
 	_update_puzzle_room_tint(room if current_room_type == DungeonGraph.ROOM_PUZZLE else null, required_aspect)
 func _configure_room_sockets(is_unlocked: bool) -> void:
 	room_puzzle_controller.call("configure_room_sockets", self, is_unlocked)
+func _r2_counter_variant(player_palette: String) -> String:
+	match player_palette:
+		"blue":
+			return "red" # Water is answered by Fire.
+		"yellow":
+			return "blue" # Electric is answered by Water.
+		"red":
+			return "green" # Fire is answered by Grass.
+	return "grey"
+
+
+func _matchup_variant(player_palette: String, counter: bool) -> String:
+	if counter:
+		match player_palette:
+			"red": return "blue"
+			"blue": return "yellow"
+			"yellow": return "green"
+	else:
+		match player_palette:
+			"red": return "green"
+			"blue": return "red"
+			"yellow": return "blue"
+	return "grey"
+
+
 func _current_run_puzzle_flame() -> StringName:
 	return room_puzzle_controller.call("current_run_puzzle_flame", self) as StringName
 func _puzzle_required_aspect(room: DungeonGraph.RoomRecord) -> StringName:

@@ -9,6 +9,8 @@ signal puzzle_color_changed(color: StringName)
 const RUN1_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run1.gd")
 const RUN2_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
 const RUN3_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
+const RUN4_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run4.gd")
+const RUN5_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run5.gd")
 const LAYOUT_GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
@@ -24,6 +26,8 @@ var graph: DungeonGraph = null
 var authored_run1 := false
 var authored_run2 := false
 var authored_run3 := false
+var authored_run4 := false
+var authored_run5 := false
 var starter_flame: StringName = &"fire"
 var starter_palette_name := "red"
 var completed_runs_for_layout := 0
@@ -48,6 +52,8 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 	authored_run1 = completed_runs == 0
 	authored_run2 = completed_runs == 1
 	authored_run3 = completed_runs == 2
+	authored_run4 = completed_runs == 3
+	authored_run5 = completed_runs == 4
 	if authored_run1:
 		layout = RUN1_LAYOUT_SCRIPT.build()
 		var errors: Array[String] = layout.validate()
@@ -63,6 +69,16 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		var run3_errors: Array[String] = layout.validate()
 		for error in run3_errors:
 			push_error("Run 3 layout: %s" % error)
+	elif authored_run4:
+		layout = RUN4_LAYOUT_SCRIPT.build(starter_flame)
+		var run4_errors: Array[String] = layout.validate()
+		for error in run4_errors:
+			push_error("Run 4 layout: %s" % error)
+	elif authored_run5:
+		layout = RUN5_LAYOUT_SCRIPT.build(starter_flame)
+		var run5_errors: Array[String] = layout.validate()
+		for error in run5_errors:
+			push_error("Run 5 layout: %s" % error)
 	else:
 		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, layout_bound_flame)
 		# Continue/load paths can hand us an already-created generated layout. Run
@@ -94,8 +110,16 @@ func is_authored_run3() -> bool:
 	return authored_run3
 
 
+func is_authored_run4() -> bool:
+	return authored_run4
+
+
+func is_authored_run5() -> bool:
+	return authored_run5
+
+
 func is_authored_layout() -> bool:
-	return authored_run1 or authored_run2 or authored_run3
+	return authored_run1 or authored_run2 or authored_run3 or authored_run4 or authored_run5
 
 
 func has_complete_layout() -> bool:
@@ -276,10 +300,16 @@ func puzzle_color_for_palette(palette: String) -> StringName:
 	return &""
 
 
-func on_room_entered(room_id: StringName) -> void:
+func on_room_entered(room_id: StringName, arrival_socket_id: StringName = &"") -> void:
 	if graph == null:
 		return
 	state.mark_room_discovered(room_id)
+	var arrival_connection: DungeonGraph.ConnectionRecord = null
+	if not arrival_socket_id.is_empty():
+		arrival_connection = graph.get_connection(room_id, arrival_socket_id)
+		if arrival_connection == null:
+			arrival_connection = graph.get_connection_for_entry(room_id, arrival_socket_id)
+	state.set_current_arrival(arrival_connection)
 	room_discovered.emit(room_id)
 	var room := graph.get_room(room_id)
 	if room == null:
@@ -534,18 +564,17 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		return false
 	if not connection.hidden_until_event.is_empty() and not state.is_event_revealed(connection.hidden_until_event):
 		return false
+	if authored_run1 or authored_run2 or authored_run3 or authored_run4 or authored_run5:
+		var occupied_room := graph.get_room(state.current_room_id) if graph != null else null
+		if occupied_room != null and requires_room_clear(occupied_room) and not state.is_room_completed(occupied_room.id):
+			return state.is_current_arrival(connection) and not state.is_room_engaged(occupied_room.id)
+		return true
 	var source_clear_satisfied := not connection.requires_source_room_clear or not requires_room_clear(source_room) or state.is_room_completed(source_room.id)
 	if is_entrance and connection.allow_entry_before_source_clear:
 		# A rare lower-side enemy branch may be entered before its enemies are
 		# cleared. The source room's own upper exit still uses the normal clear gate.
 		source_clear_satisfied = true
 	if not source_clear_satisfied:
-		return false
-	# R3 color doors are scoutable until the current enemy encounter is
-	# committed. Once the first hit engages the source room, close that outgoing
-	# puzzle route until the room is cleared; incoming engagement locks continue
-	# to use the destination-side rule below.
-	if not is_entrance and not connection.requires_source_room_clear and connection_gate_type(connection) == DungeonGraph.GATE_PUZZLE_COLOR and state.is_room_engaged(source_room.id):
 		return false
 	if is_entrance:
 		# A reverse entrance must still honor the source room's forward gate; this

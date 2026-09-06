@@ -483,10 +483,11 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 func _is_fusion_match(target: ItemInstance, candidate: ItemInstance) -> bool:
 	if target == null or candidate == null:
 		return false
-	# Fusion matches the base definition and rarity only. Random `+` stat rolls,
-	# legacy affixes, transmutations, and the target's fusion level are not part
-	# of the material identity, so a + item can fuse with a no-plus item.
-	return candidate.definition_id == target.definition_id and candidate.rarity == target.rarity
+	# A target may consume equal-or-lower random-plus gear, but never a stronger
+	# item. This keeps a plain target from silently eating a Wraps++ item.
+	var target_plus := ItemCatalog.new().random_plus_count(target)
+	var candidate_plus := ItemCatalog.new().random_plus_count(candidate)
+	return candidate.definition_id == target.definition_id and candidate.rarity == target.rarity and candidate_plus <= target_plus
 
 
 func can_salvage_overflow(instance_id: String, catalog: ItemCatalog = null) -> bool:

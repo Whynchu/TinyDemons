@@ -401,6 +401,29 @@ encounter the local renderer crash.
   preserving the no-gate-bypass invariant. Generated-layout tests now require
   interlocking routes across sampled seeds and allow the expanded loop budget.
 
+### 2026-09-06 — Authored R4 and directionless puzzle traversal
+
+- Transcribed `Artwork/R4puzzle_map.png` into a reusable authored map plan and
+  compiled it as Run 4: 77 rooms and 88 connections, including 53 normal grey,
+  11 Grey Orb, 8 Flame A, and 16 Flame B doorways.
+- R3/R4 compiler source/destination orientation now selects socket geometry
+  only. Both authored puzzle maps support entry from either side; an uncleared
+  room retains only its current visit's arrival doorway for retreat, re-entry
+  from another side replaces that arrival, semantic color requirements remain
+  bidirectional, and engagement locks every doorway until clear.
+- Added regressions for the reported R3 top-down gates `(8,20)`, `(10,8)`, and
+  `(12,4)`, plus R4 layout, color-gate, ordinary-door engagement, and pixel-plan
+  coverage. Focused authored-map smokes and the editor import scan pass.
+- The minimap now uses the authored 25x25 circle inside
+  `Artwork/puzzle_map_ring.png` as both its visible frame and exact pixel mask.
+  The viewport expanded from 22x22 to 25x25, with exterior pixels transparent
+  and the current room centered at `(12,12)`. The enlarged 70x70 ring asset is
+  rendered at 1x while map pixels remain at their existing 2x display scale.
+- Generated layouts remain on their existing directional policy. Generated
+  runtime fixtures now begin at Run 5 after authored R4, and the stale
+  `RoomSpec.depth` test accesses use `RoomSpec.coordinate.y`. Focused generated
+  layout/minimap/runtime smokes pass.
+
 ### 2026-09-03 — Four-way Hub and reversible dig branches
 
 - Topology: generated layouts now expose all four Hub sockets. The lower-left

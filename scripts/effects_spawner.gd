@@ -442,11 +442,11 @@ func _multiline_number_texture(text: String, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
-func critical_outline_texture(text: String, pixel_number: Callable) -> Texture2D:
-	var cache_key := text
+func critical_outline_texture(text: String, pixel_number: Callable, outline_color: Color = Color.WHITE) -> Texture2D:
+	var cache_key := "%s:%s" % [text, _rgb_key(outline_color)]
 	if critical_outline_texture_cache.has(cache_key):
 		return critical_outline_texture_cache[cache_key]
-	var source := pixel_number.call(text, Color.WHITE) as Texture2D
+	var source := pixel_number.call(text, outline_color) as Texture2D
 	if source == null:
 		return null
 	var source_image := source.get_image()
@@ -458,7 +458,7 @@ func critical_outline_texture(text: String, pixel_number: Callable) -> Texture2D
 				continue
 			for offset_y in range(-1, 2):
 				for offset_x in range(-1, 2):
-					image.set_pixel(x + 1 + offset_x, y + 1 + offset_y, Color.WHITE)
+					image.set_pixel(x + 1 + offset_x, y + 1 + offset_y, outline_color)
 	var texture := ImageTexture.create_from_image(image)
 	critical_outline_texture_cache[cache_key] = texture
 	return texture
@@ -673,9 +673,10 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	parent.add_child(shadow)
 	var outline: Sprite2D = null
 	if was_critical:
+		var outline_color := Color.WHITE if color.is_equal_approx(Color.WHITE) or color.is_equal_approx(Color.BLACK) else Color.BLACK
 		outline = Sprite2D.new()
 		outline.name = "CriticalDamageOutline"
-		outline.texture = critical_outline_texture(number_text, pixel_number)
+		outline.texture = critical_outline_texture(number_text, pixel_number, outline_color)
 		outline.centered = false
 		outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		outline.z_as_relative = false
@@ -736,6 +737,13 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 		var particle_data := pixel_particles[index]
 		var particle := particle_data["sprite"] as Sprite2D
 		var timer := float(particle_data["timer"]) - delta
+		var delay := float(particle_data.get("delay", 0.0))
+		if delay > 0.0:
+			particle_data["delay"] = delay - delta
+			particle.visible = false
+			pixel_particles[index] = particle_data
+			continue
+		particle.visible = true
 		if particle == null or timer <= 0.0:
 			if particle != null:
 				particle.queue_free()
@@ -768,9 +776,12 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 func update_damage_numbers(delta: float, snap_position: Callable, default_lifetime: float) -> void:
 	for index in range(damage_numbers.size() - 1, -1, -1):
 		var damage_number := damage_numbers[index]
-		var sprite := damage_number["sprite"] as Sprite2D
-		var shadow := damage_number.get("shadow") as Sprite2D
-		var outline := damage_number.get("outline") as Sprite2D
+		var sprite_value: Variant = damage_number.get("sprite")
+		var shadow_value: Variant = damage_number.get("shadow")
+		var outline_value: Variant = damage_number.get("outline")
+		var sprite := sprite_value as Sprite2D if is_instance_valid(sprite_value) else null
+		var shadow := shadow_value as Sprite2D if is_instance_valid(shadow_value) else null
+		var outline := outline_value as Sprite2D if is_instance_valid(outline_value) else null
 		if sprite == null:
 			if shadow != null:
 				shadow.queue_free()

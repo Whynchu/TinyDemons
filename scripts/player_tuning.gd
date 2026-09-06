@@ -79,7 +79,7 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var spin_hit_end_frame := 6
 ## Spin trades single-target power for reliable area coverage. It is deliberately
 ## below a normal Attack 1, but it does not use the normal multi-target split.
-@export var spin_damage_multiplier := 0.90
+@export var spin_damage_multiplier := 0.70
 @export var spin_knockback_multiplier := 2.0
 @export var spin_lunge_distance := 14.0
 @export var spin_lunge_duration := 0.73

@@ -40,6 +40,9 @@ class_name SlimeTuning
 @export var hit_flash_time := 0.12
 @export var hitstun_time := 1.0 / 30.0
 @export var knockback_duration := 0.14
-@export var ambush_reveal_window := 0.5
-@export var ambush_block_stun := 1.0
-@export var ambush_hit_extension := 0.5
+## Shadow Slimes remain exposed longer after revealing, taking damage, and
+## being interrupted by a shield block. The block window is intentionally a
+## quarter-second longer than the ordinary extended reveal window.
+@export var ambush_reveal_window := 1.0
+@export var ambush_block_stun := 1.25
+@export var ambush_hit_extension := 1.0

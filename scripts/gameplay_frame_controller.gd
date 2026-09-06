@@ -83,7 +83,7 @@ func tick(root: Object, delta: float) -> void:
 	if aspect_ability != null:
 		aspect_ability.call("tick", delta)
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
-	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta)
+	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta); attack.tick_spin_hits(delta)
 	if (root.get("walkable_outline") as PackedVector2Array).is_empty(): return
 	# Entry Orb presentation is independent of input, dialogue, and hitstop so
 	# its bob/twinkle animation remains alive while the room is being taught.

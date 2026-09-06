@@ -170,7 +170,8 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	root.run_state = restored_run
 	root.current_dungeon_seed = seed
 	root.current_room_id = room_id
-	root.call("_sync_current_room_metadata")
+	var recovery_arrival_socket := StringName(str(snapshot.get("arrival_socket_id", "")))
+	root.call("_sync_current_room_metadata", recovery_arrival_socket)
 	root.room_controller.room_states = ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
 	root.room_controller.progression_run_rank = maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
 	root.room_controller.set_current_room(room_id, root.current_room_type)
@@ -198,7 +199,10 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	var player := root.player as Sprite2D
 	root.set("last_player_facing_left", bool(snapshot.get("player_facing_left", false)))
 	player.flip_h = bool(snapshot.get("player_facing_left", false))
-	_place_player_at_recovery_arrival(root, player, StringName(str(snapshot.get("arrival_socket_id", ""))))
+	var room_controller := root.room_controller as RoomController
+	if room_controller != null:
+		room_controller.arrival_socket_id = recovery_arrival_socket
+	_place_player_at_recovery_arrival(root, player, recovery_arrival_socket)
 	root.set("player_is_attacking", false)
 	root.set("player_is_magic_casting", false)
 	root.set("player_is_rolling", false)

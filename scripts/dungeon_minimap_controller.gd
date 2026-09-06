@@ -10,9 +10,11 @@ const REVIEW_EXPORTER_SCRIPT = preload("res://tools/export_dungeon_maps.gd")
 ## puzzle, elemental, and mixed entrance-orb doors stay visually consistent.
 
 const MAP_SIZE := Vector2i(16, 23)
-const MINIMAP_VIEW_SIZE := Vector2i(22, 22)
+const MINIMAP_VIEW_SIZE := Vector2i(25, 25)
 const DISPLAY_SCALE := 2.0
-const MAP_POSITION := Vector2(2, 24)
+const RING_DISPLAY_SCALE := 1.0
+const MAP_POSITION := Vector2(0, 14)
+const MAP_RING_PATH := "res://Artwork/puzzle_map_ring.png"
 
 const COLOR_BACKGROUND := Color8(17, 19, 24)
 const COLOR_HUB := Color8(244, 244, 244)
@@ -38,6 +40,10 @@ var full_map_origin: Vector2i = Vector2i.ZERO
 var player_marker: Sprite2D = null
 var player_marker_texture: ImageTexture = null
 var player_marker_timer := 0.0
+var ring_sprite: Sprite2D = null
+var ring_texture: ImageTexture = null
+var ring_bounds := Rect2i()
+var ring_mask := PackedByteArray()
 
 
 func configure(new_map_controller: Node) -> void:
@@ -71,6 +77,7 @@ func configure(new_map_controller: Node) -> void:
 		player_marker.scale = Vector2.ONE * DISPLAY_SCALE
 		player_marker.z_index = 21
 		add_child(player_marker)
+	_ensure_ring()
 	set_process(true)
 	_rebuild()
 
@@ -150,7 +157,87 @@ func _crop_to_viewport(source_image: Image, viewport_origin: Vector2i) -> Image:
 			var source_coordinate := viewport_origin + Vector2i(x, y)
 			if source_bounds.has_point(source_coordinate):
 				viewport.set_pixelv(Vector2i(x, y), source_image.get_pixelv(source_coordinate))
+	_apply_ring_mask(viewport)
 	return viewport
+
+
+func _ensure_ring() -> void:
+	if ring_sprite != null:
+		return
+	var ring_image := Image.load_from_file(ProjectSettings.globalize_path(MAP_RING_PATH))
+	if ring_image == null:
+		push_error("Dungeon minimap could not load %s." % MAP_RING_PATH)
+		return
+	ring_bounds = _opaque_bounds(ring_image)
+	var map_pixel_size := MINIMAP_VIEW_SIZE * int(DISPLAY_SCALE)
+	if ring_bounds.size.x > map_pixel_size.x or ring_bounds.size.y > map_pixel_size.y:
+		push_error("Dungeon minimap ring must fit inside %s map pixels, got %s." % [map_pixel_size, ring_bounds.size])
+		return
+	var ring_offset := (map_pixel_size - ring_bounds.size) / 2
+	ring_mask = _build_ring_mask(ring_image, ring_bounds, int(DISPLAY_SCALE), ring_offset)
+	ring_texture = ImageTexture.create_from_image(ring_image)
+	ring_sprite = Sprite2D.new()
+	ring_sprite.name = "DungeonMinimapRing"
+	ring_sprite.centered = false
+	ring_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring_sprite.texture = ring_texture
+	var ring_screen_offset := Vector2(map_pixel_size - ring_bounds.size) * 0.5
+	ring_sprite.position = MAP_POSITION + ring_screen_offset - Vector2(ring_bounds.position) * RING_DISPLAY_SCALE
+	ring_sprite.scale = Vector2.ONE * RING_DISPLAY_SCALE
+	ring_sprite.z_index = 22
+	add_child(ring_sprite)
+
+
+func _opaque_bounds(image: Image) -> Rect2i:
+	var minimum := image.get_size()
+	var maximum := Vector2i(-1, -1)
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a <= 0.0:
+				continue
+			minimum = minimum.min(Vector2i(x, y))
+			maximum = maximum.max(Vector2i(x, y))
+	return Rect2i() if maximum.x < 0 else Rect2i(minimum, maximum - minimum + Vector2i.ONE)
+
+
+func _build_ring_mask(image: Image, bounds: Rect2i, source_scale: int, ring_offset: Vector2i) -> PackedByteArray:
+	var exterior := PackedByteArray()
+	exterior.resize(bounds.size.x * bounds.size.y)
+	var pending: Array[Vector2i] = []
+	for y in bounds.size.y:
+		for x in bounds.size.x:
+			if x != 0 and y != 0 and x != bounds.size.x - 1 and y != bounds.size.y - 1:
+				continue
+			var coordinate := Vector2i(x, y)
+			if image.get_pixelv(bounds.position + coordinate).a <= 0.0:
+				pending.append(coordinate)
+	while not pending.is_empty():
+		var coordinate: Vector2i = pending.pop_back()
+		var index := coordinate.y * bounds.size.x + coordinate.x
+		if exterior[index] != 0 or image.get_pixelv(bounds.position + coordinate).a > 0.0:
+			continue
+		exterior[index] = 1
+		for offset: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var neighbor: Vector2i = coordinate + offset
+			if neighbor.x >= 0 and neighbor.y >= 0 and neighbor.x < bounds.size.x and neighbor.y < bounds.size.y:
+				pending.append(neighbor)
+	var mask := PackedByteArray()
+	mask.resize(MINIMAP_VIEW_SIZE.x * MINIMAP_VIEW_SIZE.y)
+	for y in MINIMAP_VIEW_SIZE.y:
+		for x in MINIMAP_VIEW_SIZE.x:
+			var sample := Vector2i(x * source_scale + source_scale / 2 - ring_offset.x, y * source_scale + source_scale / 2 - ring_offset.y)
+			var inside := sample.x >= 0 and sample.y >= 0 and sample.x < bounds.size.x and sample.y < bounds.size.y and exterior[sample.y * bounds.size.x + sample.x] == 0
+			mask[y * MINIMAP_VIEW_SIZE.x + x] = 1 if inside else 0
+	return mask
+
+
+func _apply_ring_mask(image: Image) -> void:
+	if image == null or ring_mask.size() != image.get_width() * image.get_height():
+		return
+	for y in image.get_height():
+		for x in image.get_width():
+			if ring_mask[y * image.get_width() + x] == 0:
+				image.set_pixel(x, y, Color.TRANSPARENT)
 
 
 func _update_player_marker() -> void:

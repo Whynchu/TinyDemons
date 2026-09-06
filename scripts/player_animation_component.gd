@@ -466,6 +466,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 				root.set("player_just_finished_attack2", false)
 				root.set("player_is_attacking", false)
 				if attack_component != null:
+					attack_component.release_spin_knockback(root)
 					attack_component.combo_buffered = false
 					attack_component.combo_timer = 0.0
 					attack_component.finish()

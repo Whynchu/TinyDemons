@@ -58,3 +58,11 @@ to the procedural generator.
 The light-grey transition pieces remain logically Puzzle B but carry the
 distinct `grey_orb` display key, so the in-game door texture and minimap stay
 light grey instead of becoming the ordinary grey entrance.
+
+Compiler source/destination orientation only selects paired runtime sockets; it
+does not define progression direction. R3 can be traversed through either side
+of every doorway. On each visit to an uncleared enemy room, only the doorway
+used to enter remains available for retreat; entering later from another side
+replaces that visit-local arrival. Puzzle-color requirements apply in both
+directions, combat engagement locks every doorway, and clearing the room opens
+all valid routes.

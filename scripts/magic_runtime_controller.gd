@@ -530,8 +530,8 @@ func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Ve
 	resolve_magic_projectile_hit(root, target, world_position, palette, ability_mode, is_beam)
 
 
-func _spawn_magic_trail_callback(world_position: Vector2, palette: String, root: Object) -> void:
-	spawn_magic_trail(root, world_position, palette)
+func _spawn_magic_trail_callback(world_position: Vector2, palette: String, is_beam: bool, facing_left: bool, root: Object) -> void:
+	spawn_magic_trail(root, world_position, palette, is_beam, facing_left)
 
 
 func resolve_magic_projectile_hit(root: Object, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false) -> void:
@@ -562,6 +562,11 @@ func magic_projectile_hit_target(root: Object, sprite: Sprite2D) -> Sprite2D:
 
 func magic_projectile_hit_targets(root: Object, sprite: Sprite2D) -> Array:
 	var radius := int(root.get("MAGIC_PROJECTILE_SIZE") * 0.5 + 2.0)
+	if sprite.texture != null and sprite.hframes > 1:
+		# The beam's collision follows its authored frame instead of the tiny
+		# magic-projectile radius. This makes the complete visible blade connect.
+		var frame_size := sprite.texture.get_size() / float(sprite.hframes)
+		radius = maxi(radius, int(maxf(frame_size.x, frame_size.y) * 0.5 + 3.0))
 	var hits: Array = []
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	for slime in slimes:
@@ -623,18 +628,39 @@ func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, pal
 	spawn_magic_impact(root, world_position, palette)
 
 
-func spawn_magic_trail(root: Object, world_position: Vector2, palette: String) -> void:
+func spawn_magic_trail(root: Object, world_position: Vector2, palette: String, is_beam: bool = false, facing_left: bool = false) -> void:
 	var player := root.get("player") as Sprite2D
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	var rng := root.get("rng") as RandomNumberGenerator
+	var color := PaletteLibrary.normal(palette)
+	# Keep the original restrained one-pixel trail for every projectile.
 	var particle := Sprite2D.new()
-	particle.texture = root.call("_pixel_particle_texture", PaletteLibrary.normal(palette), 1) as Texture2D
-	particle.centered = false
+	if is_beam:
+		# Beam trail stamps use the complete authored beam frame, not a single
+		# pixel, so the fading trail preserves the weapon's silhouette.
+		particle.texture = sword_beam_texture(root, palette)
+		particle.hframes = 6; particle.frame = 0; particle.centered = true; particle.flip_h = facing_left
+	else:
+		particle.texture = root.call("_pixel_particle_texture", color, 1) as Texture2D
+		particle.centered = false
 	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	particle.z_as_relative = false
-	particle.z_index = player.z_index + 1
-	particle.position = world_position
+	particle.z_as_relative = false; particle.z_index = player.z_index if is_beam else player.z_index + 1; particle.position = world_position
 	(root as Node).add_child(particle)
 	var lifetime := 0.35
-	(root.get("effects_spawner") as EffectsSpawner).pixel_particles.append({"sprite": particle, "velocity": Vector2.ZERO, "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+	effects.pixel_particles.append({"sprite": particle, "velocity": Vector2.ZERO, "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+	if is_beam:
+		# Beam-only end-cap: a delayed vertical fizzle, like the sword/shield
+		# put-away spark, without changing regular magic trails.
+		var fizzle_lifetime := 0.22
+		var fizzle := Sprite2D.new()
+		fizzle.texture = sword_beam_texture(root, palette)
+		fizzle.hframes = 6; fizzle.frame = 0; fizzle.centered = true; fizzle.flip_h = facing_left
+		fizzle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		fizzle.z_as_relative = false; fizzle.z_index = player.z_index
+		fizzle.position = world_position
+		(root as Node).add_child(fizzle)
+		var return_velocity := Vector2(24.0 if facing_left else -24.0, rng.randf_range(-3.0, 3.0))
+		effects.pixel_particles.append({"sprite": fizzle, "velocity": return_velocity, "timer": lifetime + fizzle_lifetime, "lifetime": fizzle_lifetime, "gravity": 0.0, "delay": lifetime})
 
 
 func spawn_magic_impact(root: Object, world_position: Vector2, palette: String) -> void:

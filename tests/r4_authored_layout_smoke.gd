@@ -9,7 +9,7 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var layout = RUN3_LAYOUT_SCRIPT.build(&"water")
 	var validation: Array[String] = layout.validate()
-	_expect(validation.is_empty(), "R3 compiles into a valid reachable authored layout: %s" % validation, failures)
+	_expect(validation.is_empty(), "R3 compiles into a valid reachable authored layout: %s" % ("ok" if validation.is_empty() else str(validation)), failures)
 	_expect(layout.layout_id == &"RUN3", "R3 layout is identified as RUN3", failures)
 	_expect(layout.map_size == Vector2i(35, 35), "R3 keeps the 35x35 authoring canvas", failures)
 	_expect(layout.rooms.size() == 39, "R3 compiles 39 active room points", failures)
@@ -67,6 +67,16 @@ func _initialize() -> void:
 	map.set_starter_flame_attuned(true)
 	_expect(map.is_authored_run3() and map.is_authored_layout(), "Run 3 selects the authored R3 layout", failures)
 	_expect(graph.get_room_ids().size() == 39, "Runtime graph consumes all R3 rooms without lazy topology", failures)
+	# Compiler source/destination orientation must not make top-down traversal
+	# require the lower room to have already been cleared. The room above has
+	# already been cleared, so its incoming socket can now enter the uncleared
+	# compiler source below.
+	for gate_coordinate in [Vector2i(8, 20), Vector2i(10, 8), Vector2i(12, 4)]:
+		var top_down_connection = _connection_at_runtime(graph, gate_coordinate)
+		if top_down_connection != null:
+			map.on_room_completed(top_down_connection.destination_room_id)
+			map.on_room_entered(top_down_connection.destination_room_id)
+		_expect(top_down_connection != null and map.is_connection_available(top_down_connection, true), "R3 gate %s permits top-down entry into its uncleared room" % gate_coordinate, failures)
 	var orb_room_id: StringName = &""
 	for room_id in graph.get_room_ids():
 		var room := graph.get_room(room_id)
@@ -111,7 +121,9 @@ func _initialize() -> void:
 	if scoutable_down_path != null and scoutable_source != null:
 		map.on_room_entered(scoutable_source.id)
 		_expect(map.is_connection_revealed(scoutable_down_path), "an unlocked R3 down path is revealed before its source encounter starts", failures)
-		_expect(map.is_connection_available(scoutable_down_path, false), "an unlocked R3 down path can be entered before its source encounter starts", failures)
+		_expect(not map.is_connection_available(scoutable_down_path, false), "an unrelated R3 down path stays locked in an uncleared room", failures)
+		map.on_room_entered(scoutable_source.id, scoutable_down_path.exit_socket)
+		_expect(map.is_connection_available(scoutable_down_path, false), "the same R3 down path opens when it is the current visit's arrival", failures)
 	var engagement_path: DungeonGraph.ConnectionRecord = null
 	var engagement_source: DungeonGraph.RoomRecord = null
 	for room_id in graph.get_room_ids():
@@ -130,8 +142,8 @@ func _initialize() -> void:
 	_expect(engagement_path != null, "R3 has a scoutable color door leaving an enemy room", failures)
 	if engagement_path != null and engagement_source != null and map_state != null:
 		map_state.set_puzzle_color(engagement_path.color_requirement)
-		map.on_room_entered(engagement_source.id)
-		_expect(map.is_connection_available(engagement_path, false), "R3 color door remains open before the source encounter starts", failures)
+		map.on_room_entered(engagement_source.id, engagement_path.exit_socket)
+		_expect(map.is_connection_available(engagement_path, false), "R3 color arrival remains open before the source encounter starts", failures)
 		_expect(map.mark_room_engaged(engagement_source.id), "R3 source encounter can commit after scouting the color door", failures)
 		_expect(not map.is_connection_available(engagement_path, false), "R3 color door locks after source combat begins", failures)
 		map.on_room_completed(engagement_source.id)

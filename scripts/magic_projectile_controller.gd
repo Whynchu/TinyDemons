@@ -77,7 +77,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 					continue
 				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), true)
 				beam_hit_counts[target_id] = int(beam_hit_counts.get(target_id, 0)) + 1
-				beam_hit_cooldowns[target_id] = 0.20
+				beam_hit_cooldowns[target_id] = 0.12
 			data["beam_hit_counts"] = beam_hit_counts
 			data["beam_hit_cooldowns"] = beam_hit_cooldowns
 		elif not bool(data.get("hit", false)):
@@ -88,7 +88,8 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 				if outline != null and is_instance_valid(outline): outline.queue_free()
 				remove(index)
 				continue
-		trail.call(sprite.global_position, String(data.get("palette", "grey")))
+		if not bool(data.get("beam", false)):
+			trail.call(sprite.global_position, String(data.get("palette", "grey")), false, false)
 		data["timer"] = timer
 		data["initial_timer"] = float(data.get("initial_timer", timer + delta))
 		projectiles[index] = data
