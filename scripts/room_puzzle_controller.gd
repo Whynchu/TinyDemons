@@ -8,6 +8,7 @@ const ENTRY_ORB_FRAME_SIZE := Vector2i(9, 9)
 const ENTRY_ORB_FRAME_TIME := 0.12
 const ENTRY_ORB_BOB_TIME := 2.8
 const ENTRY_ORB_BOB_DISTANCE := 1.0
+const ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)
 const STARTER_FLAME_SHUT_TEXTURE_PATH := "res://assets/artwork/DoorRightFlameshut.png"
 const FIRST_ORB_TRIANGLE_PROMPT_PATH := "res://assets/artwork/triangle55.png"
 const FIRST_ORB_SQUARE_PROMPT_PATH := "res://assets/artwork/square55.png"
@@ -175,19 +176,20 @@ func apply_puzzle_environment_tint(root: Object, tint: Color) -> void:
 		var door_visual := door_socket.visual()
 		if door_visual == null:
 			continue
+		var door_connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection(root.current_room_id, door_socket.socket_id()) if root.dungeon_graph != null else null
+		var door_is_native_grey := _is_native_grey_door_connection(door_connection)
 		# Floor walkway exits (four-way Hub lower branches) reset to WHITE above;
 		# reapply the lock grey when the destination is engaged or color-locked so
 		# a closed dig path does not look like an open footpath.
 		var is_floor_walkway: bool = door_socket.socket_id() == DungeonGraph.BOTTOM_LEFT or door_socket.socket_id() == DungeonGraph.BOTTOM_RIGHT
 		if is_floor_walkway:
 			if not starter_gate_locked and _socket_is_open(root, door_socket, false):
-				set_puzzle_surface_tint(door_visual, presentation_tint)
+				set_puzzle_surface_tint(door_visual, Color.WHITE if door_is_native_grey else presentation_tint)
 			else:
-				var walkway_connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection(root.current_room_id, door_socket.socket_id())
-				var walkway_state: StringName = root.call("_map_connection_visual_state", walkway_connection, false) as StringName
-				set_puzzle_surface_tint(door_visual, _entrance_lock_modulate(root, walkway_connection, walkway_state))
+				var walkway_state: StringName = root.call("_map_connection_visual_state", door_connection, false) as StringName
+				set_puzzle_surface_tint(door_visual, _entrance_lock_modulate(root, door_connection, walkway_state))
 			continue
-		if not starter_gate_locked and tint != Color.WHITE and not _socket_is_color_locked(root, door_socket, false):
+		if not starter_gate_locked and tint != Color.WHITE and not door_is_native_grey and not _socket_is_color_locked(root, door_socket, false):
 			set_puzzle_surface_tint(door_visual, presentation_tint)
 	for socket_value in root.room_controller.active_entrance_sockets.values():
 		var entrance_socket := socket_value as DungeonSocket
@@ -196,23 +198,24 @@ func apply_puzzle_environment_tint(root: Object, tint: Color) -> void:
 		var entrance_visual := entrance_socket.visual()
 		if entrance_visual == null:
 			continue
+		var entrance_connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection_for_entry(root.current_room_id, entrance_socket.socket_id()) if root.dungeon_graph != null else null
+		var entrance_is_native_grey := _is_native_grey_door_connection(entrance_connection)
 		# Wall sockets are doorways; their shut/locked door art already conveys the
 		# state, so never grey them here. Floor walkway entrances grey out while
 		# the route is closed so a locked lower path does not look open.
 		var is_wall_socket: bool = entrance_socket.socket_id() == DungeonGraph.WALL_LEFT or entrance_socket.socket_id() == DungeonGraph.WALL_RIGHT
 		if is_wall_socket:
-			if not starter_gate_locked and tint != Color.WHITE:
+			if not starter_gate_locked and tint != Color.WHITE and not entrance_is_native_grey and not _socket_is_color_locked(root, entrance_socket, true):
 				set_puzzle_surface_tint(entrance_visual, presentation_tint)
 			continue
 		# Reapply the state after the global reset so both the authored entrance
 		# tile and its Tile 2 child receive the same presentation color.
 		var boss_entrance_closed: bool = root.current_room_type == DungeonGraph.ROOM_DOWNSTAIRS and not bool(root.get("entrance_open"))
 		if not starter_gate_locked and not boss_entrance_closed and _socket_is_open(root, entrance_socket, true):
-			set_puzzle_surface_tint(entrance_visual, presentation_tint)
+			set_puzzle_surface_tint(entrance_visual, Color.WHITE if entrance_is_native_grey else presentation_tint)
 		else:
-			var connection: DungeonGraph.ConnectionRecord = root.dungeon_graph.get_connection_for_entry(root.current_room_id, entrance_socket.socket_id())
-			var visual_state: StringName = root.call("_map_connection_visual_state", connection, true) as StringName
-			set_puzzle_surface_tint(entrance_visual, _entrance_lock_modulate(root, connection, visual_state))
+			var visual_state: StringName = root.call("_map_connection_visual_state", entrance_connection, true) as StringName
+			set_puzzle_surface_tint(entrance_visual, _entrance_lock_modulate(root, entrance_connection, visual_state))
 	apply_chest_map_tint(root)
 
 
@@ -223,6 +226,16 @@ func set_puzzle_surface_tint(node: Node, tint: Color) -> void:
 		(node as CanvasItem).self_modulate = tint
 	for child in node.get_children():
 		set_puzzle_surface_tint(child, tint)
+
+
+func _is_native_grey_door_connection(connection: DungeonGraph.ConnectionRecord) -> bool:
+	if connection == null:
+		return false
+	# Only the explicitly authored Grey Orb presentation is intentionally
+	# neutral. Ordinary completion doors and ordinary room entrances still use
+	# the active room's elemental tint, even when their gameplay gate has no
+	# color requirement.
+	return connection.door_display_requirement == &"grey_orb"
 
 
 func _socket_is_color_locked(root: Object, socket: DungeonSocket, is_entrance: bool) -> bool:
@@ -269,7 +282,7 @@ func build_orb_room_orb(root: Object, state: Dictionary) -> void:
 		authored_center = root.map_root.get_node_or_null("OrbCenterGuide") as Marker2D
 	if authored_center != null:
 		center_position = authored_center.global_position
-	var positions: Array[Vector2] = [center_position]
+	var positions: Array[Vector2] = [center_position + ORB_ROOM_VISUAL_OFFSET]
 	var default_palette: String = str(root.call("_map_orb_display_palette"))
 	var saved_palette: String = default_palette
 	# Any complete map layout owns the shared orb color. A stale room-local value

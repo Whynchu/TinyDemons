@@ -209,12 +209,13 @@ The current project has:
 
 The new design should therefore add ownership around the graph and run-map state instead of expanding `gameplay.gd`. `GameplayState` should expose narrow compatibility calls while dedicated controllers own topology, gates, puzzle-color state, and minimap presentation.
 
-## Authored Run 2 and generated Run 3+ layouts
+## Authored Run 2, authored R3, and generated Run 4+ layouts
 
 Run 1 is the simplified authored teaching instance of a reusable dungeon
-grammar. The former complex authored map is preserved intact as Run 2. Run 3
-and later generate a complete `DungeonLayoutDefinition` from the run seed
-before the player enters the dungeon; room entry must never create new topology.
+grammar. The former complex authored map is preserved intact as Run 2. R3 is
+the first authored grid puzzle compiled from the 35×35 route plan. Run 4 and
+later generate a complete `DungeonLayoutDefinition` from the run seed before
+the player enters the dungeon; room entry must never create new topology.
 The generated layout retains the same core beats while varying placement,
 branches, and room variants:
 
@@ -254,9 +255,11 @@ return path so changing the global state cannot strand the player.
 
 Run 1 begins grey and has only the selected starter flame as its elemental
 source. Authored Run 2 adds the first remaining primary flame in the canonical
-`fire`, `water`, `electric` order; Generated Run 3 adds the final remaining
-flame. The selected starter is skipped when choosing that order, so every file
-eventually exposes all three primary flames without duplicating the starter.
+`fire`, `water`, `electric` order; authored R3 uses the first alternate primary
+flame as Flame B, and Generated Run 4 adds the remaining primary flame to the
+procedural curriculum. The selected starter is skipped when choosing that
+order, so every file eventually exposes all three primary flames without
+duplicating the starter.
 
 Every generated Fire Room declares the exact flame it provides. A later map may
 use `puzzle_c` for the first alternate flame and `puzzle_d` for the second, but

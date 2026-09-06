@@ -1357,6 +1357,12 @@ func reset_slimes_for_room(root: Object) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	(root.get("effects_spawner") as EffectsSpawner).clear_slime_notices()
 	for slime in slimes: kill_slime_without_effects(root, slime)
+	# Hub, rest, NPC, puzzle, and orb rooms are intentionally enemy-free. Keep
+	# the cleanup above, but do not interpret stale room-state data as an enemy
+	# encounter when one of those rooms is entered.
+	var current_room_type: StringName = root.get("current_room_type")
+	if current_room_type != DungeonGraph.ROOM_COMBAT and current_room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and current_room_type != DungeonGraph.ROOM_TREASURE and current_room_type != DungeonGraph.ROOM_DOWNSTAIRS:
+		return
 	var room_id: StringName = root.get("current_room_id")
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	state.erase("popcorn_respawn_slots")

@@ -10,8 +10,9 @@ const REVIEW_EXPORTER_SCRIPT = preload("res://tools/export_dungeon_maps.gd")
 ## puzzle, elemental, and mixed entrance-orb doors stay visually consistent.
 
 const MAP_SIZE := Vector2i(16, 23)
+const MINIMAP_VIEW_SIZE := Vector2i(22, 22)
 const DISPLAY_SCALE := 2.0
-const MAP_POSITION := Vector2(8, 24)
+const MAP_POSITION := Vector2(2, 24)
 
 const COLOR_BACKGROUND := Color8(17, 19, 24)
 const COLOR_HUB := Color8(244, 244, 244)
@@ -31,7 +32,9 @@ var map_controller: Node = null
 var map_sprite: Sprite2D = null
 var map_texture: ImageTexture = null
 var map_image: Image = null
-var map_origin := Vector2i.ZERO
+var map_origin: Vector2i = Vector2i.ZERO
+var full_map_image: Image = null
+var full_map_origin: Vector2i = Vector2i.ZERO
 var player_marker: Sprite2D = null
 var player_marker_texture: ImageTexture = null
 var player_marker_timer := 0.0
@@ -97,11 +100,13 @@ func _rebuild() -> void:
 		visible = false
 		return
 	var geometry := _map_image_geometry(layout)
-	map_origin = geometry["origin"] as Vector2i
+	var rendered_origin: Vector2i = geometry["origin"] as Vector2i
 	var image_size := geometry["size"] as Vector2i
 	visible = true
 	map_image = Image.create(image_size.x, image_size.y, false, Image.FORMAT_RGBA8)
 	map_image.fill(COLOR_BACKGROUND)
+	full_map_origin = rendered_origin
+	map_origin = rendered_origin
 	var graph := map_controller.get("graph") as DungeonGraph
 	for connection in layout.connections:
 		var runtime_connection := graph.get_connection(connection.source_room_id, connection.exit_socket) if graph != null else null
@@ -116,9 +121,36 @@ func _rebuild() -> void:
 		if source_room_id.is_empty() or bool(map_controller.call("is_room_discovered", source_room_id)):
 			var door_color := _door_color(StringName(decorative_door.get("color_requirement", &"")))
 			_set_map_pixel(decorative_door.get("coordinate", Vector2i.ZERO), door_color)
+	full_map_image = map_image
+	var viewport_origin: Vector2i = _viewport_origin(layout, rendered_origin, image_size)
+	map_image = _crop_to_viewport(full_map_image, viewport_origin)
+	map_origin = rendered_origin + viewport_origin
 	map_texture = ImageTexture.create_from_image(map_image)
 	map_sprite.texture = map_texture
 	_update_player_marker()
+
+
+func _viewport_origin(layout, rendered_origin: Vector2i, image_size: Vector2i) -> Vector2i:
+	var focus_coordinate := Vector2i(image_size.x / 2, image_size.y / 2)
+	var state := map_controller.get("state") as DungeonMapState
+	var current_room_id: StringName = state.current_room_id if state != null else &""
+	if not current_room_id.is_empty():
+		var current_room = layout.room_by_id(current_room_id)
+		if current_room != null:
+			focus_coordinate = current_room.minimap_coordinate - rendered_origin
+	return focus_coordinate - Vector2i(MINIMAP_VIEW_SIZE.x / 2, MINIMAP_VIEW_SIZE.y / 2)
+
+
+func _crop_to_viewport(source_image: Image, viewport_origin: Vector2i) -> Image:
+	var viewport := Image.create(MINIMAP_VIEW_SIZE.x, MINIMAP_VIEW_SIZE.y, false, Image.FORMAT_RGBA8)
+	viewport.fill(COLOR_BACKGROUND)
+	var source_bounds := Rect2i(Vector2i.ZERO, source_image.get_size())
+	for y in range(MINIMAP_VIEW_SIZE.y):
+		for x in range(MINIMAP_VIEW_SIZE.x):
+			var source_coordinate := viewport_origin + Vector2i(x, y)
+			if source_bounds.has_point(source_coordinate):
+				viewport.set_pixelv(Vector2i(x, y), source_image.get_pixelv(source_coordinate))
+	return viewport
 
 
 func _update_player_marker() -> void:
@@ -169,7 +201,7 @@ func _has_complete_layout() -> bool:
 
 func _map_image_geometry(layout) -> Dictionary:
 	if map_controller != null and map_controller.has_method("is_authored_layout") and bool(map_controller.call("is_authored_layout")):
-		return {"origin": Vector2i.ZERO, "size": MAP_SIZE}
+		return {"origin": Vector2i.ZERO, "size": layout.map_size if layout != null else MAP_SIZE}
 	var has_coordinate := false
 	var minimum := Vector2i.ZERO
 	var maximum := Vector2i.ZERO
@@ -246,6 +278,10 @@ func _door_color(requirement: StringName) -> Color:
 
 func snapshot_image() -> Image:
 	return map_image
+
+
+func snapshot_full_image() -> Image:
+	return full_map_image
 
 
 func export_review_maps(output_directory: String = "res://screenshots/dungeon_maps") -> Dictionary:

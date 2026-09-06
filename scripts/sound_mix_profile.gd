@@ -60,7 +60,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	&"target_release": &"target_release_db",
 	&"foot_left": &"foot_left_db",
 	&"foot_right": &"foot_right_db",
-	&"charge_attack": &"charge_attack_db",
+	&"sword_beam_charge": &"sword_beam_charge_db",
 	&"use_flame": &"use_flame_db",
 	&"slime_spawn": &"slime_spawn_db",
 	&"slime_move": &"slime_move_db",
@@ -73,7 +73,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	"crit", "imbue_impact",
 	"magic_hit", "ui_hover", "ui_confirm", "ui_decline", "ui_no_input",
 	"ui_denied", "ui_use_item", "ui_equip", "ui_unequip", "ui_buy_sell",
-	"ui_pause", "charge_attack", "use_flame", "ui_unpause", "enemy_alert",
+	"ui_pause", "sword_beam_charge", "use_flame", "ui_unpause", "enemy_alert",
 	"item_pickup", "chest_unlock", "chest_reward", "run_clear", "level_up",
 	"enemy_hit_1", "enemy_hit_2", "enemy_hit_3", "enemy_hit_4", "orb_hit",
 	"enemy_hit_5", "enemy_hit_6", "target_release", "foot_left", "foot_right",
@@ -114,7 +114,7 @@ var play_preview_action: Callable = _play_preview
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var enemy_hit_5_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var enemy_hit_6_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var orb_hit_db := 0.0
-@export_range(-80.0, 6.0, 0.5, "suffix:dB") var charge_attack_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var sword_beam_charge_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var use_flame_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var slime_spawn_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var slime_move_db := 0.0

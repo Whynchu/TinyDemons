@@ -97,7 +97,7 @@ func update_charge_aura_from_root(root: Object, delta: float) -> void:
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	var player := root.get("player") as Sprite2D
 	var chroma := root.get("player_chroma_component") as Node
-	var beam_available: bool = chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
+	var beam_available: bool = attack != null and attack.sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", PlayerAttackComponent.SWORD_BEAM_CHROMA_COST))
 	if attack == null or player == null or not is_instance_valid(player) or not attack.is_charging() or not beam_available:
 		if charge_aura_active:
 			clear_effect_particles(CHARGE_AURA_TAG)
@@ -148,9 +148,8 @@ func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerT
 	var origin := foot + Vector2(side * random_source.randf_range(0.0, spread), random_source.randf_range(-0.5, 0.5))
 	var horizontal_speed := side * launch_speed * random_source.randf_range(0.35, 0.90)
 	var vertical_speed := -rise_speed * random_source.randf_range(0.80, 1.15)
-	# The charge effect is deliberately neutral so it reads as compressed air,
-	# while the player outline below provides the neutral charge feedback.
-	var air_color := Color.WHITE
+	var palette := String(root.get("current_player_palette_name"))
+	var air_color := PaletteLibrary.accent(palette)
 	var pixel_size := 2 if progress >= 0.70 and random_source.randf() < 0.30 else 1
 	var particle := Sprite2D.new()
 	particle.name = "ChargeAuraParticle"
@@ -202,18 +201,24 @@ func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: fl
 	var renderer := root.get("occlusion_renderer") as OcclusionRenderer
 	if renderer != null:
 		var palette := String(root.get("current_player_palette_name"))
-		charge_ready_highlight.texture = _colored_charge_highlight(renderer.highlighted_texture(player.texture), PaletteLibrary.accent(palette))
+		charge_ready_highlight.texture = _colored_charge_highlight(renderer.highlighted_texture(player.texture), PaletteLibrary.accent(palette), player.texture.get_size())
 	else:
 		charge_ready_highlight.texture = root.call("_white_texture", player.texture) as Texture2D
-	ActorGeometry.sync_overlay(charge_ready_highlight, player)
+	# Keep the child overlay in the player's local frame. Copy the actor's
+	# authored offset so the outline lands on the same pixels as the actor.
+	charge_ready_highlight.position = Vector2.ZERO
+	charge_ready_highlight.offset = player.offset
+	charge_ready_highlight.scale = Vector2.ONE
+	charge_ready_highlight.flip_h = player.flip_h
 	var readiness := clampf((progress - 0.82) / 0.18, 0.0, 1.0)
 	var blink := 0.5 + 0.5 * sin(charge_ready_blink_timer / 0.20 * TAU)
 	var alpha := 1.0 if charge_ready_opaque_timer > 0.0 else lerpf(0.12, 0.46, readiness) * lerpf(0.55, 1.0, blink)
 	charge_ready_highlight.modulate = Color(1.0, 1.0, 1.0, alpha)
+	charge_ready_highlight.z_index = 2 if charge_ready_opaque_timer > 0.0 else -1
 	charge_ready_highlight.visible = true
 
 
-func _colored_charge_highlight(source: Texture2D, color: Color) -> Texture2D:
+func _colored_charge_highlight(source: Texture2D, color: Color, display_size: Vector2i) -> Texture2D:
 	if source == null:
 		return null
 	var key := "charge_highlight:%s:%s" % [source.get_rid(), color.to_html(false)]
@@ -228,6 +233,7 @@ func _colored_charge_highlight(source: Texture2D, color: Color) -> Texture2D:
 				tinted.a = pixel.a
 				image.set_pixel(x, y, tinted)
 	var texture := ImageTexture.create_from_image(image)
+	texture.set_size_override(Vector2(display_size))
 	pixel_particle_texture_cache[key] = texture
 	return texture
 

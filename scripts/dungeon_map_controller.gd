@@ -8,6 +8,7 @@ signal puzzle_color_changed(color: StringName)
 
 const RUN1_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run1.gd")
 const RUN2_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
+const RUN3_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
 const LAYOUT_GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
@@ -22,6 +23,7 @@ var state = MAP_STATE_SCRIPT.new()
 var graph: DungeonGraph = null
 var authored_run1 := false
 var authored_run2 := false
+var authored_run3 := false
 var starter_flame: StringName = &"fire"
 var starter_palette_name := "red"
 var completed_runs_for_layout := 0
@@ -45,6 +47,7 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 	starter_flame_attuned_this_run = false
 	authored_run1 = completed_runs == 0
 	authored_run2 = completed_runs == 1
+	authored_run3 = completed_runs == 2
 	if authored_run1:
 		layout = RUN1_LAYOUT_SCRIPT.build()
 		var errors: Array[String] = layout.validate()
@@ -55,6 +58,11 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		var run2_errors: Array[String] = layout.validate()
 		for error in run2_errors:
 			push_error("Run 2 layout: %s" % error)
+	elif authored_run3:
+		layout = RUN3_LAYOUT_SCRIPT.build(starter_flame)
+		var run3_errors: Array[String] = layout.validate()
+		for error in run3_errors:
+			push_error("Run 3 layout: %s" % error)
 	else:
 		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, layout_bound_flame)
 		# Continue/load paths can hand us an already-created generated layout. Run
@@ -82,8 +90,12 @@ func is_authored_run2() -> bool:
 	return authored_run2
 
 
+func is_authored_run3() -> bool:
+	return authored_run3
+
+
 func is_authored_layout() -> bool:
-	return authored_run1 or authored_run2
+	return authored_run1 or authored_run2 or authored_run3
 
 
 func has_complete_layout() -> bool:
@@ -180,6 +192,8 @@ func palette_for_requirement(requirement: StringName) -> String:
 	if ELEMENT_CATALOG_SCRIPT.is_valid_id(requirement):
 		return str(ELEMENT_CATALOG_SCRIPT.PALETTE_KEYS.get(ELEMENT_CATALOG_SCRIPT.element_for_id(requirement), "grey"))
 	match requirement:
+		&"grey_orb":
+			return "grey_orb"
 		PUZZLE_COLOR_A:
 			return starter_palette_name
 		PUZZLE_COLOR_B:
@@ -234,6 +248,8 @@ func connection_gate_type(connection) -> StringName:
 
 
 func connection_display_requirement(connection) -> StringName:
+	if connection != null and not connection.door_display_requirement.is_empty():
+		return connection.door_display_requirement
 	match connection_gate_type(connection):
 		DungeonGraph.GATE_PUZZLE_COLOR:
 			return connection.color_requirement
@@ -275,11 +291,16 @@ func on_room_entered(room_id: StringName) -> void:
 		on_room_completed(room_id)
 	for connection_value in room.outgoing_connections.values():
 		var connection := connection_value as DungeonGraph.ConnectionRecord
-		if connection != null and (state.is_room_completed(room_id) or not requires_room_clear(room)) and _event_reveal_satisfied(connection):
+		if connection == null:
+			continue
+		# Discovery is presentation state, not traversal availability. Show every
+		# physical doorway in the room when it is entered; combat/source-clear and
+		# puzzle requirements are evaluated separately by is_connection_available.
+		if _event_reveal_satisfied(connection):
 			state.reveal_connection(connection)
 	for connection_value in room.incoming_connections.values():
 		var incoming := connection_value as DungeonGraph.ConnectionRecord
-		if incoming != null and state.is_room_discovered(incoming.source_room_id):
+		if incoming != null and _event_reveal_satisfied(incoming):
 			state.reveal_connection(incoming)
 
 
@@ -519,6 +540,12 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		# cleared. The source room's own upper exit still uses the normal clear gate.
 		source_clear_satisfied = true
 	if not source_clear_satisfied:
+		return false
+	# R3 color doors are scoutable until the current enemy encounter is
+	# committed. Once the first hit engages the source room, close that outgoing
+	# puzzle route until the room is cleared; incoming engagement locks continue
+	# to use the destination-side rule below.
+	if not is_entrance and not connection.requires_source_room_clear and connection_gate_type(connection) == DungeonGraph.GATE_PUZZLE_COLOR and state.is_room_engaged(source_room.id):
 		return false
 	if is_entrance:
 		# A reverse entrance must still honor the source room's forward gate; this

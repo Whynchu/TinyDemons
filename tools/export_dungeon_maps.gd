@@ -9,6 +9,7 @@ class_name DungeonMapReviewExporter
 
 const RUN1_SCRIPT = preload("res://scripts/dungeon_layout_run1.gd")
 const RUN2_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
+const RUN3_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
 const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
 
@@ -47,8 +48,9 @@ func export_all(output_directory: String = OUTPUT_DIRECTORY) -> Dictionary:
 	var exports: Array[Dictionary] = [
 		{"file": "run1-authored", "title": "Run 1 — Authored Teaching Map", "layout": RUN1_SCRIPT.build()},
 		{"file": "run2-authored", "title": "Run 2 — Authored Expansion", "layout": RUN2_SCRIPT.build(&"fire")},
+		{"file": "run3-authored", "title": "Run 3 — Authored R3 Puzzle", "layout": RUN3_SCRIPT.build(&"fire")},
 	]
-	for completed_runs in range(2, 8):
+	for completed_runs in range(3, 8):
 		var run_number := completed_runs + 1
 		exports.append({
 			"file": "run%d-generated" % run_number,
@@ -245,6 +247,8 @@ func _point(coordinate: Vector2i, minimum: Vector2i) -> Vector2:
 
 
 func _connection_color(connection) -> String:
+	if connection.door_display_requirement == &"grey_orb":
+		return _svg_color(COLOR_SPECIAL)
 	var gate_type: StringName = connection.resolved_gate_type()
 	if gate_type == GRAPH_SCRIPT.GATE_PUZZLE_COLOR:
 		return _svg_color(COLOR_PUZZLE)
