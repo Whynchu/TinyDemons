@@ -6,7 +6,7 @@ const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
-	_expect(packed != null, "main scene loads for the generated Run 3 flow", failures)
+	_expect(packed != null, "main scene loads for the generated Run 4 flow", failures)
 	if packed == null:
 		_finish(failures)
 		return
@@ -20,7 +20,7 @@ func _initialize() -> void:
 	var minimap := gameplay.get("dungeon_minimap_controller") as Node
 	_expect(graph != null and map != null and rooms != null and minimap != null, "generated-run owners are composed", failures)
 	if graph != null and map != null and rooms != null and minimap != null:
-		map.call("begin_run", graph, 182736, 2, &"water")
+		map.call("begin_run", graph, 182736, 3, &"water")
 		rooms.room_states.clear()
 		# This test starts after the hub-fire lesson; hub gate behavior is covered
 		# separately by hub_door_scene_smoke.
@@ -35,8 +35,8 @@ func _initialize() -> void:
 		gameplay.call("_apply_room_state")
 		minimap.call("configure", map)
 		var room_count_before := graph.get_room_ids().size()
-		_expect(not bool(map.call("is_authored_layout")) and bool(map.call("has_complete_layout")), "Run 3 uses the generated complete-layout path after authored Run 2", failures)
-		_expect(bool(minimap.get("visible")), "generated Run 3 displays its generated minimap", failures)
+		_expect(not bool(map.call("is_authored_layout")) and bool(map.call("has_complete_layout")), "Run 4 uses the generated complete-layout path after authored Run 3", failures)
+		_expect(bool(minimap.get("visible")), "generated Run 4 displays its generated minimap", failures)
 		var connection := graph.get_connection(start_id, GRAPH_SCRIPT.WALL_LEFT)
 		var socket := rooms.dungeon_sockets.get(GRAPH_SCRIPT.WALL_LEFT) as DungeonSocket
 		_expect(connection != null and socket != null, "generated start contains a prebuilt left fork", failures)
@@ -65,7 +65,7 @@ func _initialize() -> void:
 			gameplay.call("_mark_current_room_engaged")
 			_expect(incoming != null and not bool(map.call("is_connection_available", incoming, true)), "generated combat arrival locks after engagement", failures)
 
-		# Run 3's alternate Fire Room must be a real palette source, not just a
+		# Run 4's alternate Fire Room must be a real palette source, not just a
 		# decorative room declaration. Use a water starter so the generated fire
 		# room exercises the first unchosen flame.
 		var alternate_fire_room: DungeonGraph.RoomRecord = null
@@ -74,7 +74,7 @@ func _initialize() -> void:
 			if candidate != null and candidate.room_type == GRAPH_SCRIPT.ROOM_FIRE and candidate.fire_flame == &"fire":
 				alternate_fire_room = candidate
 				break
-		_expect(alternate_fire_room != null, "generated Run 3 exposes a declared alternate Fire Room", failures)
+		_expect(alternate_fire_room != null, "generated Run 4 exposes a declared alternate Fire Room", failures)
 		if alternate_fire_room != null:
 			rooms.room_states.clear()
 			gameplay.set("current_room_id", alternate_fire_room.id)

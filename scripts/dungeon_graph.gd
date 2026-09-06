@@ -57,6 +57,7 @@ class ConnectionRecord extends RefCounted:
 	var element_requirement: StringName = &""
 	var gate_type: StringName = &""
 	var orb_element_requirement: StringName = &""
+	var door_display_requirement: StringName = &""
 
 
 	func _init(
@@ -100,6 +101,7 @@ class ConnectionRecord extends RefCounted:
 			"element_requirement": element_requirement,
 			"gate_type": resolved_gate_type(),
 			"orb_element_requirement": orb_element_requirement,
+			"door_display_requirement": door_display_requirement,
 		}
 
 
@@ -244,6 +246,7 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		connection.element_requirement = spec.element_requirement
 		connection.gate_type = spec.resolved_gate_type()
 		connection.orb_element_requirement = spec.orb_element_requirement
+		connection.door_display_requirement = spec.door_display_requirement
 		source_room.outgoing_connections[connection.exit_socket] = connection
 		destination_room.incoming_connections[connection.destination_entry] = connection
 		_connections[_connection_key(connection.source_room_id, connection.exit_socket)] = connection

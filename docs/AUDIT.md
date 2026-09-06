@@ -353,7 +353,7 @@ encounter the local renderer crash.
 ### 2026-09-03 — Procedural dungeon redesign (design doc)
 
 - New [`procedural-dungeon-design.md`](procedural-dungeon-design.md) records the
-  approved direction for generated Run 3+: flat per-run difficulty keyed off
+  approved direction for generated Run 4+: flat per-run difficulty keyed off
   `difficulty_rank` (not room depth), the boss as a "northern door" rather than a
   northern position, RNG-chosen Hub degree, and shortcuts that shorten required
   backtracks. Folded dungeon topology/difficulty ownership into

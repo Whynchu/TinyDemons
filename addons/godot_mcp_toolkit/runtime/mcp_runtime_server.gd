@@ -20,6 +20,7 @@ extends Node
 # would parse-fail this autoload in an export template (godot#91713) — GDScript
 # resolves identifiers at parse time, before any runtime guard can help.
 const Coerce := preload("res://addons/godot_mcp_toolkit/contract/coerce.gd")
+const MCPToolkitError := preload("res://addons/godot_mcp_toolkit/contract/mcp_toolkit_error.gd")
 const ExecuteHints := preload("res://addons/godot_mcp_toolkit/contract/execute_hints.gd")
 const Pagination := preload("res://addons/godot_mcp_toolkit/contract/pagination.gd")
 const PropertySetCheck := preload("res://addons/godot_mcp_toolkit/contract/property_set_check.gd")

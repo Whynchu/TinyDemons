@@ -191,7 +191,8 @@ func sync_chroma_presentation(root: Object) -> void:
 	if component == null:
 		return
 	var flame := String(component.call("aspect_name"))
-	var palette := "grey" if flame == "gray" else AspectCatalogScript.palette_for_flame(StringName(flame))
+	var chroma := int(component.get("current_chroma"))
+	var palette := "grey" if flame == "gray" or chroma <= 0 else AspectCatalogScript.palette_for_flame(StringName(flame))
 	if palette.is_empty() or palette == String(root.get("current_player_palette_name")):
 		return
 	root.call("_start_player_palette_flash", palette)
@@ -455,9 +456,9 @@ func spawn_magic_projectile(root: Object, origin: Vector2, direction: Vector2, h
 	controller.spawn(projectile, outline, direction, float(root.get("MAGIC_PROJECTILE_LIFETIME")), palette, homing_target, ability_mode)
 
 
-func spawn_sword_beam(root: Object, origin: Vector2, direction: Vector2) -> void:
+func spawn_sword_beam(root: Object, origin: Vector2, direction: Vector2, palette_override: String = "") -> void:
 	var player := root.get("player") as Sprite2D
-	var palette := String(root.get("current_player_palette_name"))
+	var palette := palette_override if not palette_override.is_empty() else String(root.get("current_player_palette_name"))
 	root.call("_play_sound", "sword_beam", -2.0, 1.0)
 	var beam := Sprite2D.new()
 	beam.name = "SwordBeam"
@@ -469,11 +470,11 @@ func spawn_sword_beam(root: Object, origin: Vector2, direction: Vector2) -> void
 	beam.flip_h = direction.x < 0.0
 	beam.z_as_relative = false
 	beam.z_index = player.z_index + 1
-	beam.global_position = origin
+	beam.global_position = origin + direction.normalized() * 10.0
 	(root as Node).add_child(beam)
 	var controller := root.get("magic_projectile_controller") as MagicProjectileController
 	var ability_mode := int((root.get("player_chroma_component") as Node).call("ability_mode")) if root.get("player_chroma_component") != null else ChromaComponentScript.AbilityMode.GRAY
-	controller.spawn_beam(beam, direction, 0.45, palette, ability_mode)
+	controller.spawn_beam(beam, direction, 0.75, palette, ability_mode)
 
 
 func sword_beam_texture(root: Object, palette: String) -> Texture2D:
@@ -521,24 +522,24 @@ func _magic_target_point_callback(slime: Sprite2D, root: Object) -> Vector2:
 	return magic_target_point(root, slime)
 
 
-func _magic_projectile_hit_target_callback(sprite: Sprite2D, root: Object) -> Sprite2D:
-	return magic_projectile_hit_target(root, sprite)
+func _magic_projectile_hit_target_callback(sprite: Sprite2D, is_beam: bool, root: Object) -> Variant:
+	return magic_projectile_hit_targets(root, sprite) if is_beam else magic_projectile_hit_target(root, sprite)
 
 
-func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int, root: Object) -> void:
-	resolve_magic_projectile_hit(root, target, world_position, palette, ability_mode)
+func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int, is_beam: bool, root: Object) -> void:
+	resolve_magic_projectile_hit(root, target, world_position, palette, ability_mode, is_beam)
 
 
 func _spawn_magic_trail_callback(world_position: Vector2, palette: String, root: Object) -> void:
 	spawn_magic_trail(root, world_position, palette)
 
 
-func resolve_magic_projectile_hit(root: Object, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
+func resolve_magic_projectile_hit(root: Object, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false) -> void:
 	var torches := root.get("puzzle_torches") as Array[Sprite2D]
 	if torches.has(target):
 		root.call("_activate_puzzle_torch", target, world_position, palette, false)
 	else:
-		root.call("_magic_hit_slime", target, world_position, palette, ability_mode)
+		root.call("_magic_hit_slime", target, world_position, palette, ability_mode, is_beam)
 
 
 func magic_projectile_hit_target(root: Object, sprite: Sprite2D) -> Sprite2D:
@@ -557,6 +558,16 @@ func magic_projectile_hit_target(root: Object, sprite: Sprite2D) -> Sprite2D:
 		if _circle_intersects_polygon(sprite.global_position, radius, root.call("_slime_body_polygon", slime) as PackedVector2Array):
 			return slime
 	return null
+
+
+func magic_projectile_hit_targets(root: Object, sprite: Sprite2D) -> Array:
+	var radius := int(root.get("MAGIC_PROJECTILE_SIZE") * 0.5 + 2.0)
+	var hits: Array = []
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	for slime in slimes:
+		if bool(root.call("_is_slime_targetable", slime)) and _circle_intersects_polygon(sprite.global_position, radius, root.call("_slime_body_polygon", slime) as PackedVector2Array):
+			hits.append(slime)
+	return hits
 
 
 func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool:
@@ -589,7 +600,7 @@ func magic_attack_element(palette: String, ability_mode: int) -> int:
 	return ElementCatalogScript.element_for_palette(palette)
 
 
-func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
+func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false) -> void:
 	if slime == null or not is_instance_valid(slime) or not bool(root.call("_is_slime_targetable", slime)):
 		return
 	var attack_element := magic_attack_element(palette, ability_mode)
@@ -597,6 +608,8 @@ func magic_hit_slime(root: Object, slime: Sprite2D, world_position: Vector2, pal
 	var magic_base_bonus := combat_tuning.elemental_magic_bonus if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL and combat_tuning != null else 0.0
 	var damage_result := root.call("_player_magic_damage_result_against", slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
 	var damage := 0.0 if damage_result == null or damage_result.immune else damage_result.amount
+	if is_beam and damage > 0.0:
+		damage = maxf(floorf(damage * 0.35), 1.0)
 	var was_critical := damage_result != null and damage_result.critical
 	var immune := damage_result != null and damage_result.immune
 	var resolved_element := damage_result.element if damage_result != null else attack_element

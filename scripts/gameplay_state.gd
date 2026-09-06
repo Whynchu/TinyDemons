@@ -1563,13 +1563,13 @@ func _player_visual_center() -> Vector2: return magic_runtime_controller.call("p
 func _slime_visual_center(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("slime_visual_center", self, slime) as Vector2
 func _magic_target_point(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("magic_target_point", self, slime) as Vector2
 func _spawn_magic_projectile(origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = 0) -> void: magic_runtime_controller.call("spawn_magic_projectile", self, origin, direction, homing_target, ability_mode)
-func _spawn_sword_beam(origin: Vector2, direction: Vector2) -> void: magic_runtime_controller.call("spawn_sword_beam", self, origin, direction)
+func _spawn_sword_beam(origin: Vector2, direction: Vector2, palette: String = "") -> void: magic_runtime_controller.call("spawn_sword_beam", self, origin, direction, palette)
 func _magic_projectile_outline_texture(base_color: Color, accent_color: Color) -> Texture2D: return magic_runtime_controller.call("magic_projectile_outline_texture", self, base_color, accent_color) as Texture2D
 func _update_magic_projectiles(delta: float) -> void: magic_runtime_controller.call("update_magic_projectiles", self, delta)
 func _resolve_magic_projectile_hit(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0) -> void: magic_runtime_controller.call("resolve_magic_projectile_hit", self, target, world_position, palette, ability_mode)
 func _magic_projectile_hit_target(sprite: Sprite2D) -> Sprite2D: return magic_runtime_controller.call("magic_projectile_hit_target", self, sprite) as Sprite2D
 func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool: return bool(magic_runtime_controller.call("_circle_intersects_polygon", center, radius, polygon))
-func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0) -> void: magic_runtime_controller.call("magic_hit_slime", self, slime, world_position, palette, ability_mode)
+func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0, is_beam: bool = false) -> void: magic_runtime_controller.call("magic_hit_slime", self, slime, world_position, palette, ability_mode, is_beam)
 func _player_weapon_element() -> int: return int(magic_runtime_controller.call("player_weapon_element", self))
 func _spawn_magic_trail(world_position: Vector2, palette: String) -> void: magic_runtime_controller.call("spawn_magic_trail", self, world_position, palette)
 func _spawn_magic_impact(world_position: Vector2, palette: String) -> void: magic_runtime_controller.call("spawn_magic_impact", self, world_position, palette)

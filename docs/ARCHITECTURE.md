@@ -89,7 +89,7 @@ owns the in-memory topology and socket pairing; `dungeon_layout_definition`
 plus the run/generated layout builders own the authored and procedural room
 sets; `dungeon_map_controller` owns gates, engagement, and shared orb/fire
 state; `room_controller` owns per-room content and enemy encounter generation.
-Generated (Run 3+) difficulty is flat per run and keyed off `difficulty_rank`,
+Generated (Run 4+) difficulty is flat per run and keyed off `difficulty_rank`,
 not room depth.
 
 ## Tuning resources (all `@export`-driven, in-editor editable)

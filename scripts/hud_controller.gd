@@ -41,8 +41,8 @@ var gold_animation_timer := 0.0
 var button_hud_sprites: Array[Sprite2D] = []
 var ability_prompt_hud: Array[Sprite2D] = []
 var cooldown_hud: Dictionary = {}
-var cooldown_flash_remaining := {&"magic": 0.0, &"imbue": 0.0}
-var cooldown_previous_remaining := {&"magic": -1.0, &"imbue": -1.0}
+var cooldown_flash_remaining := {&"magic": 0.0, &"imbue": 0.0, &"sword_beam": 0.0}
+var cooldown_previous_remaining := {&"magic": -1.0, &"imbue": -1.0, &"sword_beam": -1.0}
 var cooldown_timer_texture_cache: Dictionary = {}
 var last_combo_text := ""
 var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
@@ -82,7 +82,7 @@ func apply_display_layout(root: Object) -> void:
 	for button in button_hud_sprites:
 		_set_layout_position(button, &"input_prompts")
 	for prompt in ability_prompt_hud:
-		if prompt != null and prompt.get_parent() != null and prompt.get_parent().name not in ["AbilityIcons", "MagicCooldownIcon", "ImbueCooldownIcon"]:
+		if prompt != null and prompt.get_parent() != null and prompt.get_parent().name not in ["AbilityIcons", "MagicCooldownIcon", "ImbueCooldownIcon", "SwordBeamCooldownIcon"]:
 			_set_layout_position(prompt, &"ability_icons")
 	for key in cooldown_hud.keys():
 		var control := cooldown_hud[key] as Sprite2D
@@ -292,14 +292,21 @@ func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
 	var imbue_runtime := root.get("magic_runtime_controller") as Node
 	var imbue_remaining := float(imbue_runtime.get("imbue_cooldown_remaining")) if imbue_runtime != null else 0.0
 	var imbue_duration := float(root.get("IMBUE_COOLDOWN"))
+	var attack := root.get("player_attack_component") as PlayerAttackComponent
+	var beam_remaining := attack.sword_beam_cooldown_remaining if attack != null else 0.0
+	var beam_duration := PlayerAttackComponent.SWORD_BEAM_COOLDOWN
 	var regular_cooldown_ratio := clampf(regular_remaining / maxf(regular_duration, 0.001), 0.0, 1.0)
 	var imbue_cooldown_ratio := clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
+	var beam_cooldown_ratio := clampf(beam_remaining / maxf(beam_duration, 0.001), 0.0, 1.0)
 	_update_cooldown_flash(&"magic", regular_remaining, delta)
 	_update_cooldown_flash(&"imbue", imbue_remaining, delta)
+	_update_cooldown_flash(&"sword_beam", beam_remaining, delta)
 	var magic_available := _magic_cooldown_available(chroma)
 	var imbue_available := _imbue_cooldown_available(root, chroma)
+	var beam_available := beam_remaining <= 0.0001 and chroma != null and bool(chroma.call("can_spend_chroma", PlayerAttackComponent.SWORD_BEAM_CHROMA_COST))
 	_update_cooldown_icon(root, &"magic", regular_remaining, regular_cooldown_ratio, magic_available)
 	_update_cooldown_icon(root, &"imbue", imbue_remaining, imbue_cooldown_ratio, imbue_available)
+	_update_cooldown_icon(root, &"sword_beam", beam_remaining, beam_cooldown_ratio, beam_available)
 
 
 func _update_cooldown_flash(ability_key: StringName, remaining: float, delta: float) -> void:
@@ -500,13 +507,26 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 		# and an 18px pitch keep both 16px indicators aligned to its top edge.
 		{"name": "MagicCooldown", "key": "magic", "texture": "magic button 16x16.png", "position": Vector2(84, 0)},
 		{"name": "ImbueCooldown", "key": "imbue", "texture": "imbue button 16x16.png", "position": Vector2(102, 0)},
+		{"name": "SwordBeamCooldown", "key": "sword_beam", "texture": "res://Artwork/swordbeambutton 16x16.png", "position": Vector2(120, 0)},
 	]
 	for row in rows:
 		# Use a direct load first so a fresh clone can build the HUD before the
 		# editor has written the optional .import sidecar for a newly added PNG.
-		var source := load("res://assets/artwork/" + row["texture"]) as Texture2D
+		var texture_path := String(row["texture"])
+		if not texture_path.begins_with("res://"):
+			texture_path = "res://assets/artwork/" + texture_path
+		var source: Texture2D = null
+		# This newly supplied artwork may not have a Godot .import sidecar yet.
+		# Load that PNG through Image so startup does not emit a ResourceLoader
+		# failure before the editor has scanned it.
+		if texture_path.begins_with("res://Artwork/"):
+			var image := Image.load_from_file(ProjectSettings.globalize_path(texture_path))
+			if image != null and not image.is_empty():
+				source = ImageTexture.create_from_image(image)
+		else:
+			source = load(texture_path) as Texture2D
 		if source == null:
-			source = load_texture.call("res://assets/artwork/" + row["texture"]) as Texture2D
+			source = load_texture.call(texture_path) as Texture2D
 		var palette_textures: Dictionary = {}
 		for palette_name in PaletteLibrary.PALETTE_NAMES:
 			palette_textures[palette_name] = library.recolor_ability_icon(source, palette_name)
@@ -521,6 +541,17 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 		icon.position = row["position"]
 		icon.z_index = 1
 		icon.set_meta("cooldown_palette_textures", palette_textures)
+		if String(row["key"]) == "sword_beam":
+			var beam_prompt := icon.get_node_or_null("SquarePromptSwordBeam") as Sprite2D
+			if beam_prompt == null:
+				beam_prompt = Sprite2D.new()
+				beam_prompt.name = "SquarePromptSwordBeam"
+				icon.add_child(beam_prompt)
+			beam_prompt.texture = load_texture.call("res://assets/artwork/square55.png") as Texture2D
+			beam_prompt.centered = false
+			beam_prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			beam_prompt.position = Vector2(11, 11)
+			beam_prompt.z_index = 10
 		var material := ShaderMaterial.new()
 		material.shader = ABILITY_COOLDOWN_SHADER
 		material.set_shader_parameter("cooldown_ratio", 0.0)
@@ -693,8 +724,8 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		buttons.append(button)
 	var ability_prompts: Array[Sprite2D] = []
 	var ability_icons := hud_parent.get_node_or_null("AbilityIcons") as Node
-	var prompt_parents := ["MagicCooldownIcon", "ImbueCooldownIcon"]
-	var prompt_names := ["TrianglePromptMagic", "TrianglePromptImbue"]
+	var prompt_parents := ["MagicCooldownIcon", "ImbueCooldownIcon", "SwordBeamCooldownIcon"]
+	var prompt_names := ["TrianglePromptMagic", "TrianglePromptImbue", "SquarePromptSwordBeam"]
 	for index in prompt_names.size():
 		var prompt_parent := ability_icons.get_node_or_null(prompt_parents[index]) as Node if ability_icons != null else null
 		var prompt := prompt_parent.get_node_or_null(prompt_names[index]) as Sprite2D if prompt_parent != null else null

@@ -18,7 +18,7 @@ func _initialize() -> void:
 	for room in layout.rooms:
 		map_controller.on_room_entered(room.id)
 		map_controller.on_room_completed(room.id)
-	var actual: Image = minimap.snapshot_image()
+	var actual: Image = minimap.snapshot_full_image()
 	var reference := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/minimap- rough draftR1.png"))
 	_expect(reference != null and reference.get_size() == Vector2i(16, 23), "reference map is a 16x23 image", failures)
 	if actual != null and reference != null and actual.get_size() == reference.get_size():

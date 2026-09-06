@@ -5,6 +5,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CircularInputRecognizerScript = preload("res://scripts/circular_input_recognizer.gd")
 
 const SWORD_BEAM_CHROMA_COST := 20
+const SWORD_BEAM_COOLDOWN := 5.0
 
 enum AttackKind { NONE, ATTACK1, ATTACK2, SPIN, CHARGING, CHARGED_ATTACK2 }
 
@@ -22,6 +23,7 @@ var combo_buffered := false
 var combo_timer := 0.0
 var combo_movement := Vector2.ZERO
 var attack2_cooldown_timer := 0.0
+var sword_beam_cooldown_remaining := 0.0
 var lunge_velocity := Vector2.ZERO
 var lunge_remaining := 0.0
 var lunge_duration := 0.0
@@ -148,11 +150,14 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 		equipment_visual.begin_attack_visual(root)
 	if new_kind == AttackKind.CHARGED_ATTACK2:
 		var chroma := root.get("player_chroma_component") as Node
-		if chroma != null and bool(chroma.call("spend_chroma", SWORD_BEAM_CHROMA_COST)):
+		var beam_palette := String(root.get("current_player_palette_name"))
+		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", SWORD_BEAM_CHROMA_COST)):
+			root.call("_sync_chroma_presentation")
 			var direction := root.call("_player_facing_vector") as Vector2
 			if direction.length_squared() <= 0.0001:
 				direction = Vector2.LEFT if bool(root.get("player_attack_flip_h")) else Vector2.RIGHT
-			root.call("_spawn_sword_beam", root.call("_player_visual_center"), direction.normalized())
+			root.call("_spawn_sword_beam", root.call("_player_visual_center"), direction.normalized(), beam_palette)
+			sword_beam_cooldown_remaining = SWORD_BEAM_COOLDOWN
 	var shadow_controller := root.get("shadow_controller") as ShadowController
 	if shadow_controller != null:
 		shadow_controller.sync_player_attack_shadow(root, float(root.get("DEPTH_Z_SCALE")))
@@ -208,7 +213,9 @@ func begin_charge(root: Object) -> bool:
 		return false
 	attack_kind = AttackKind.CHARGING
 	charge_release_pending = false
-	root.call("_play_sound", "charge_attack", 0.0, 1.0)
+	var charge_chroma := root.get("player_chroma_component") as Node
+	if sword_beam_cooldown_remaining <= 0.0 and (charge_chroma == null or bool(charge_chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))):
+		root.call("_play_sound", "sword_beam_charge", 0.0, 1.0)
 	charge_elapsed = 0.0
 	combo_buffered = false
 	combo_timer = 0.0
@@ -250,7 +257,7 @@ func tick_charge(root: Object, delta: float) -> void:
 		return
 	var effects := root.get("effects_spawner") as EffectsSpawner
 	var chroma := root.get("player_chroma_component") as Node
-	var beam_available: bool = chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
+	var beam_available: bool = sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
 	if beam_available and effects != null and not effects.charge_ready_flash_complete():
 		return
 	start_charged_attack(root)
@@ -488,6 +495,7 @@ func consume_combo() -> bool:
 
 func tick_attack2_cooldown(delta: float) -> void:
 	attack2_cooldown_timer = maxf(attack2_cooldown_timer - delta, 0.0)
+	sword_beam_cooldown_remaining = maxf(sword_beam_cooldown_remaining - delta, 0.0)
 
 
 func can_start_attack2() -> bool:

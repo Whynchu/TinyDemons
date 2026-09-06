@@ -16,6 +16,7 @@ const SHADOW := {
 	"green": Color8(37, 113, 121), "red": Color8(93, 39, 93),
 	"yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82),
 	"purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116),
+	"grey_orb": Color8(86, 108, 134),
 }
 
 const NORMAL := {
@@ -23,6 +24,7 @@ const NORMAL := {
 	"green": Color8(56, 183, 100), "red": Color8(177, 62, 83),
 	"yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134),
 	"purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151),
+	"grey_orb": Color8(148, 176, 194),
 }
 
 const ACCENT := {
@@ -31,6 +33,7 @@ const ACCENT := {
 	"yellow": Color8(255, 240, 150),
 	"purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194),
 	"aquamarine": Color8(134, 203, 255),
+	"grey_orb": Color8(244, 244, 244),
 }
 
 const ARCHETYPE_HIGHLIGHTS := [

@@ -175,7 +175,7 @@ func _initialize() -> void:
 	var found_dig_seed := -1
 	for dig_seed in range(0, 64):
 		var probe_graph = GRAPH_SCRIPT.new()
-		var probe_layout = GENERATOR_SCRIPT.build(24681300 + dig_seed, 2, &"fire")
+		var probe_layout = GENERATOR_SCRIPT.build(24681300 + dig_seed, 3, &"fire")
 		var has_lower_dig := false
 		for connection in probe_layout.connections:
 			if connection.source_room_id == &"room_0_0" and (connection.exit_socket == GRAPH_SCRIPT.BOTTOM_LEFT or connection.exit_socket == GRAPH_SCRIPT.BOTTOM_RIGHT):
@@ -185,7 +185,7 @@ func _initialize() -> void:
 			break
 	_expect(found_dig_seed >= 0, "some generated seed opens a lower dig branch for engagement testing", failures)
 	if found_dig_seed >= 0:
-		branch_map.begin_run(branch_graph, 24681300 + found_dig_seed, 2, &"fire")
+		branch_map.begin_run(branch_graph, 24681300 + found_dig_seed, 3, &"fire")
 		branch_map.set_starter_flame_attuned(true)
 		var branch_connection := branch_graph.get_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_LEFT)
 		if branch_connection == null:
@@ -205,8 +205,8 @@ func _initialize() -> void:
 
 	var run_graph = GRAPH_SCRIPT.new()
 	var map = MAP_CONTROLLER_SCRIPT.new()
-	map.begin_run(run_graph, 24681357, 2, &"water")
-	_expect(not map.is_authored_layout() and map.has_complete_layout(), "Run 3 initializes from a generated complete layout after authored Run 2", failures)
+	map.begin_run(run_graph, 24681357, 3, &"water")
+	_expect(not map.is_authored_layout() and map.has_complete_layout(), "Run 4 initializes from a generated complete layout after authored Run 3", failures)
 	var first_orb_id: StringName = &""
 	for room_id in run_graph.get_room_ids():
 		var room := run_graph.get_room(room_id)
@@ -217,9 +217,9 @@ func _initialize() -> void:
 		map.on_room_entered(first_orb_id)
 		_expect(map.change_orb_from_room(first_orb_id, &"puzzle_a"), "generated Orb Room changes the shared map puzzle color", failures)
 		_expect(map.current_color() == &"puzzle_a", "generated map tracks the shared Orb Room color", failures)
-		_expect(map.available_puzzle_colors().has(&"puzzle_c") and map.available_puzzle_colors().has(&"puzzle_d"), "Run 3 exposes both alternate puzzle colors", failures)
-		_expect(map.puzzle_color_for_palette("red") == &"puzzle_c", "Run 3 maps the first alternate fire palette to Puzzle Color C", failures)
-		_expect(map.change_orb_from_room(first_orb_id, &"puzzle_c"), "Run 3 Orb Room accepts the first alternate puzzle color", failures)
+		_expect(map.available_puzzle_colors().has(&"puzzle_c") and map.available_puzzle_colors().has(&"puzzle_d"), "Run 4 exposes both alternate puzzle colors", failures)
+		_expect(map.puzzle_color_for_palette("red") == &"puzzle_c", "Run 4 maps the first alternate fire palette to Puzzle Color C", failures)
+		_expect(map.change_orb_from_room(first_orb_id, &"puzzle_c"), "Run 4 Orb Room accepts the first alternate puzzle color", failures)
 	else:
 		_expect(false, "generated layout exposes an Orb Room to the map controller", failures)
 	map.free()
@@ -229,7 +229,7 @@ func _initialize() -> void:
 	# unlock flag is still false.
 	var door_graph = GRAPH_SCRIPT.new()
 	var door_map = MAP_CONTROLLER_SCRIPT.new()
-	door_map.begin_run(door_graph, 24681357, 2, &"water")
+	door_map.begin_run(door_graph, 24681357, 3, &"water")
 	# The generated run exposes multiple Special Rooms with different door
 	# colors; find the one that carries the puzzle_a/puzzle_b pair this section
 	# asserts on rather than assuming the first special room is that room.
@@ -267,7 +267,7 @@ func _initialize() -> void:
 	# become a reverse-travel bypass into the uncleared sibling combat branch.
 	var merge_graph = GRAPH_SCRIPT.new()
 	var merge_map = MAP_CONTROLLER_SCRIPT.new()
-	merge_map.begin_run(merge_graph, 24681357, 2, &"water")
+	merge_map.begin_run(merge_graph, 24681357, 3, &"water")
 	var left_merge_connection = merge_graph.get_connection(&"room_-1_1", GRAPH_SCRIPT.WALL_RIGHT)
 	var right_merge_connection = merge_graph.get_connection(&"room_1_1", GRAPH_SCRIPT.WALL_LEFT)
 	merge_map.on_room_completed(&"room_-1_1")
