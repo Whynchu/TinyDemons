@@ -822,7 +822,7 @@ func _update_run_complete_input() -> void:
 	if screen_state_controller.run_complete_button == null:
 		return
 	if screen_state_controller.run_complete_footer_text != null:
-		screen_state_controller.run_complete_footer_text.texture = screen_state_controller._pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color8(148, 220, 255))
+		screen_state_controller.run_complete_footer_text.texture = screen_state_controller._pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color.WHITE)
 	if screen_state_controller.menu_input_release_lock:
 		var released := not _is_menu_confirm_pressed() and not _is_menu_back_pressed()
 		if released:
@@ -1427,9 +1427,10 @@ func _save_current_room_state() -> void:
 	if current_room_type == DungeonGraph.ROOM_PUZZLE:
 		var required_aspect := StringName(state.get("puzzle_required_flame", _puzzle_required_aspect(room)))
 		state["finished"] = _puzzle_torches_solved(_puzzle_palette_for_aspect(required_aspect))
-	elif room != null and room.room_type == DungeonGraph.ROOM_TREASURE:
+	elif room != null and (room.room_type == DungeonGraph.ROOM_TREASURE or bool(state.get("regular_room_treasure", false))):
 		# Treasure completion belongs to the enemy encounter. The chest is an
-		# optional reward and must not reopen or clear the room on a revisit.
+		# optional reward and must not reopen or clear the room on a revisit. This
+		# also persists the generated combat-room chest across room transitions.
 		state["chest_claimed"] = chest_claimed
 		state["chest_evaporated"] = chest_evaporated
 		state["finished"] = bool(state.get("finished", false)) or room_controller.is_cleared(current_room_id)

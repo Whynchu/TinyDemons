@@ -10,6 +10,7 @@ var shop_stock: Array[Dictionary] = []
 var difficulty_bonus := 0
 var timer_started := false
 var elapsed_time := 0.0
+var route_par_seconds := 0.0
 var starting_health := 1.0
 var damage_taken := 0.0
 var movement_time := 0.0
@@ -58,7 +59,7 @@ var gear_reward_telemetry: Array[Dictionary] = []
 func to_dictionary() -> Dictionary:
 	return {
 		"run_id": run_id, "dungeon_seed": dungeon_seed, "active": active,
-		"settled": settled, "result": String(result), "shop_stock": shop_stock.duplicate(true),
+		"settled": settled, "result": String(result), "shop_stock": shop_stock.duplicate(true), "route_par_seconds": route_par_seconds,
 		"difficulty_bonus": difficulty_bonus, "timer_started": timer_started,
 		"elapsed_time": elapsed_time, "starting_health": starting_health,
 		"damage_taken": damage_taken, "movement_time": movement_time,
@@ -92,6 +93,7 @@ func restore_from_dictionary(data: Dictionary) -> bool:
 	difficulty_bonus = maxi(int(data.get("difficulty_bonus", 0)), 0)
 	timer_started = bool(data.get("timer_started", false))
 	elapsed_time = maxf(float(data.get("elapsed_time", 0.0)), 0.0)
+	route_par_seconds = maxf(float(data.get("route_par_seconds", 0.0)), 0.0)
 	starting_health = maxf(float(data.get("starting_health", 1.0)), 1.0)
 	damage_taken = maxf(float(data.get("damage_taken", 0.0)), 0.0)
 	movement_time = maxf(float(data.get("movement_time", 0.0)), 0.0)
@@ -158,6 +160,7 @@ func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: 
 	difficulty_bonus = maxi(new_difficulty_bonus, 0)
 	timer_started = false
 	elapsed_time = 0.0
+	route_par_seconds = 0.0
 	starting_health = maxf(maximum_health, 1.0)
 	damage_taken = 0.0
 	movement_time = 0.0

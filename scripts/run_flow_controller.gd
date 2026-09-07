@@ -33,7 +33,10 @@ func chest_gold_reward(root: Object, base_gold: int) -> int:
 	reward_rng.seed = int(root.current_dungeon_seed) ^ String(root.current_room_id).hash() ^ 0x474F4C44
 	var rolled_gold: int = reward_rng.randi_range(roundi(base_gold * 0.75), roundi(base_gold * 1.30))
 	var multiplier: float = 1.0 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04
-	return maxi(1, roundi(float(rolled_gold) * clampf(multiplier, 0.80, 1.90)))
+	var reward := float(rolled_gold) * clampf(multiplier, 0.80, 1.90)
+	if bool(root.get("regular_room_treasure")):
+		reward *= 0.50
+	return maxi(1, roundi(reward))
 
 
 func sync_current_room_metadata(root: Object) -> void:
@@ -64,6 +67,34 @@ func finalize_run_metrics(root: Object) -> void:
 			root.run_state.record_room_completion(room.id)
 	root.run_state.set_map_room_count(total_rooms)
 	root.run_state.set_run_room_count(total_rooms)
+	root.run_state.route_par_seconds = _route_par_seconds(root)
+
+
+func _route_par_seconds(root: Object) -> float:
+	var graph := root.dungeon_graph as DungeonGraph
+	var boss_depth := graph.final_npc_depth() + 1
+	var total := 8.0
+	for depth in range(1, boss_depth + 1):
+		var best := INF
+		for room_id in graph.get_room_ids():
+			var room := graph.get_room(room_id)
+			if room == null or room.depth != depth:
+				continue
+			var cost := 5.0
+			match room.room_type:
+				DungeonGraph.ROOM_DOWNSTAIRS: cost = 20.0
+				DungeonGraph.ROOM_ORB: cost = 6.0
+				DungeonGraph.ROOM_REST, DungeonGraph.ROOM_FIRE: cost = 4.0
+				DungeonGraph.ROOM_PUZZLE: cost = 12.0
+				_: cost = 4.0 + float(graph_room_enemy_count(root, room)) * 4.0
+			best = minf(best, cost)
+		if best < INF:
+			total += best + 1.5
+	return total
+
+
+func graph_room_enemy_count(root: Object, room: DungeonGraph.RoomRecord) -> int:
+	return root.room_controller.enemy_count_for_room(room) if root.room_controller != null else 0
 
 
 func record_style_action(root: Object, action: StringName) -> void:
@@ -406,7 +437,7 @@ func complete_run(root: Object) -> void:
 	show_run_complete(root, drop_color)
 
 
-func show_run_complete(root: Object, drop_color: Color) -> void:
+func show_run_complete(root: Object, _drop_color: Color) -> void:
 	if root.screen_state_controller.run_complete_overlay == null or root.run_state == null:
 		return
 	# The player can reach the final exit while still holding the same input used
@@ -415,13 +446,12 @@ func show_run_complete(root: Object, drop_color: Color) -> void:
 	root.screen_state_controller.menu_input_release_lock = true
 	var summary: Dictionary = root.run_state.clear_summary
 	var elapsed: int = int(round(float(summary.get("time", 0.0))))
-	var map_quality := float(summary.get("map_completion_ratio", 0.0))
-	var room_quality := float(summary.get("room_completion_ratio", 0.0))
-	var time_quality := float(summary.get("time_quality", 0.0))
-	var style_quality := float(summary.get("style_quality", 0.0))
+	var route_par_seconds: int = int(round(float(summary.get("time_target", 0.0))))
+	var time_delta := route_par_seconds - elapsed
+	var time_comparison := "= PAR" if time_delta == 0 else ("▲%ds" % time_delta if time_delta > 0 else "▼%ds" % absi(time_delta))
 	var lines: Array[String] = [
-		"GRADE %s    SCORE %03d" % [str(summary.get("grade", "D")), int(summary.get("score", 0))],
-		"TIME %02d:%02d" % [floori(float(elapsed) / 60.0), elapsed % 60],
+		"SCORE %03d" % int(summary.get("score", 0)),
+		"TIME %02d:%02d  %s" % [floori(float(elapsed) / 60.0), elapsed % 60, time_comparison],
 		"MAP %d/%d" % [int(summary.get("map_discovered_rooms", 0)), int(summary.get("map_room_count", 0))],
 		"ROOMS %d/%d" % [int(summary.get("completed_rooms", 0)), int(summary.get("room_count", 0))],
 		"STYLE %d/%d" % [int(summary.get("style", 0)), int(summary.get("style_max", 10))],
@@ -430,7 +460,11 @@ func show_run_complete(root: Object, drop_color: Color) -> void:
 		"+%d GOLD" % int(summary.get("gold", 0)),
 		str(summary.get("drop", "NO GEAR DROP")),
 	]
-	var line_colors: Array[Color] = [Color8(255, 205, 117), metric_color(time_quality), metric_color(map_quality), metric_color(room_quality), metric_color(style_quality), metric_color(style_quality), Color8(255, 205, 117), Color8(255, 205, 117), drop_color]
+	var line_colors: Array[Color] = []
+	line_colors.resize(lines.size())
+	line_colors.fill(Color.WHITE)
+	if root.screen_state_controller.run_complete_grade_text != null:
+		root.screen_state_controller.run_complete_grade_text.texture = root.call("_pixel_text_texture", str(summary.get("grade", "D")), Color.WHITE)
 	for index in mini(root.screen_state_controller.run_complete_texts.size(), lines.size()):
 		root.screen_state_controller.run_complete_texts[index].texture = root.call("_pixel_text_texture", lines[index], line_colors[index])
 	root.screen_state_controller.run_complete_overlay.visible = true

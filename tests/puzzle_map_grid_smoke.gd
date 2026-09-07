@@ -13,8 +13,8 @@ func _initialize() -> void:
 	if template != null and reference != null:
 		var r3: PuzzleMapGrid.MapPlan = R3_SCRIPT.build()
 		_expect(GRID_SCRIPT.validate(r3, template).is_empty(), "R3 manifest has valid, non-overlapping grid points.", failures)
-		_expect(r3.markers.size() == 48, "R3 contains its 48 authored overlays.", failures)
-		_expect(r3.marker_count(GRID_SCRIPT.MARKER_GATE_GREY) == 14, "R3 contains 14 normal grey entrances.", failures)
+		_expect(r3.markers.size() == 49, "R3 contains its 49 authored overlays.", failures)
+		_expect(r3.marker_count(GRID_SCRIPT.MARKER_GATE_GREY) == 15, "R3 contains 15 normal grey entrances.", failures)
 		_expect(r3.has_marker(Vector2i(20, 24), GRID_SCRIPT.MARKER_GATE_GREY), "R3 includes its lower normal entrance.", failures)
 		_expect(r3.marker_count(GRID_SCRIPT.MARKER_GATE_ORB_GREY) == 14, "R3 contains 14 light-grey Orb doors.", failures)
 		_expect(r3.marker_count(GRID_SCRIPT.MARKER_GATE_FLAME_A) == 8, "R3 contains 8 Flame A doors.", failures)
@@ -32,7 +32,7 @@ func _initialize() -> void:
 		var variants: Array[PuzzleMapGrid.MapPlan] = R3_SCRIPT.build_validation_variants()
 		for variant in variants:
 			_expect(GRID_SCRIPT.validate(variant, template).is_empty(), "%s is a valid generated grid plan." % variant.id, failures)
-		_expect(variants[0].marker_count(GRID_SCRIPT.MARKER_GATE_GREY) == 14, "R3 validation preserves normal grey entrances.", failures)
+		_expect(variants[0].marker_count(GRID_SCRIPT.MARKER_GATE_GREY) == 15, "R3 validation preserves normal grey entrances.", failures)
 		_expect(GRID_SCRIPT.gate_requirement(GRID_SCRIPT.MARKER_GATE_ORB_GREY) == &"orb_grey", "Grey doors carry the Orb requirement metadata.", failures)
 		_expect(GRID_SCRIPT.gate_requirement(GRID_SCRIPT.MARKER_GATE_GREY).is_empty(), "Normal grey entrances do not carry an Orb requirement.", failures)
 	_finish(failures)
