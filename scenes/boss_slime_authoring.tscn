@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cu3pqqt5y700g"]
 
-[ext_resource type="Texture2D" uid="uid://cdoewhfovj1qi" path="res://assets/artwork/SlimeBlueRight.png" id="1_boss_texture"]
+[ext_resource type="Texture2D" path="res://assets/artwork/BOSSSlimeGreenRight.png" id="1_boss_texture"]
 [ext_resource type="Texture2D" uid="uid://ub5dtvrx1hsa" path="res://assets/artwork/HpOverhead.png" id="2_hp_overhead"]
 [ext_resource type="Texture2D" uid="uid://d1teh4nucgw4c" path="res://assets/artwork/HpOverheadBlueBar.png" id="3_hp_fill"]
 [ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="4_aggro"]
@@ -16,7 +16,7 @@
 [ext_resource type="Script" uid="uid://ca4korii2mjec" path="res://scripts/slime_health_presenter.gd" id="14_health_presenter"]
 
 [node name="BossSlime" type="Sprite2D" unique_id=1209613364]
-scale = Vector2(2, 2)
+scale = Vector2(1, 1)
 texture = ExtResource("1_boss_texture")
 centered = false
 script = ExtResource("5_slime_actor")
@@ -53,24 +53,24 @@ script = ExtResource("14_health_presenter")
 
 [node name="CollisionGuide" type="Node2D" parent="." unique_id=471084255]
 script = ExtResource("7_guide")
-rect_position = Vector2(3.5, 7.5)
-rect_size = Vector2(9, 4)
+rect_position = Vector2(7, 15)
+rect_size = Vector2(18, 8)
 fill_color = Color(0.1, 1, 0.35, 0.3)
 outline_color = Color(0.1, 1, 0.35, 1)
 
 [node name="CollisionPolygon" type="Polygon2D" parent="." unique_id=1449249226]
 color = Color(0.1, 1, 0.35, 0.16)
-polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+polygon = PackedVector2Array(6, 14, 26, 14, 26, 20, 24, 20, 24, 22, 22, 22, 22, 24, 10, 24, 10, 22, 8, 22, 8, 20, 6, 20)
 
 [node name="BodyHitbox" type="Polygon2D" parent="." unique_id=1189786596]
 position = Vector2(0, 0)
 scale = Vector2(1, 1)
 color = Color(1, 0.25, 0.2, 0.32)
-polygon = PackedVector2Array(5, 4, 11, 4, 13, 6, 13, 9, 11, 11, 9, 12, 6, 12, 4, 10, 3, 8, 3, 6)
+polygon = PackedVector2Array(10, 8, 22, 8, 26, 12, 26, 18, 22, 22, 18, 24, 12, 24, 8, 20, 6, 16, 6, 12)
 
 [node name="AttackGuideL" type="Node2D" parent="." unique_id=130032370]
 position = Vector2(0, 0)
-scale = Vector2(0.5, 0.5)
+scale = Vector2(1, 1)
 script = ExtResource("7_guide")
 rect_position = Vector2(5, 8)
 rect_size = Vector2(8.5, 16)
@@ -79,7 +79,7 @@ outline_color = Color(1, 0.7, 0.05, 0.95)
 
 [node name="AttackGuideR" type="Node2D" parent="." unique_id=1763195607]
 position = Vector2(0, 0)
-scale = Vector2(0.5, 0.5)
+scale = Vector2(1, 1)
 script = ExtResource("7_guide")
 rect_position = Vector2(14.5, 8)
 rect_size = Vector2(8.5, 16)

@@ -46,6 +46,8 @@ func try_knockback_slime(root: Object, slime: Sprite2D, movement: Vector2) -> bo
 func separate_slime_from_player(root: Object, slime: Sprite2D) -> void:
 	if is_slime_spawn_locked(root, slime):
 		return
+	if bool(slime.get_meta("boss_airborne", false)):
+		return
 	var player := root.get("player") as Sprite2D
 	var overlap_push := (root.get("actor_collision_system") as ActorCollisionSystem).overlap_push_vector(root, slime, player)
 	if overlap_push != Vector2.ZERO:
@@ -129,7 +131,10 @@ func set_slime_spawn_frame(root: Object, slime: Sprite2D, frame_index: int) -> v
 	var frames := spawn_frames_for(root, slime)
 	if frames.is_empty():
 		return
+	slime.set_meta("runtime_animation", "spawn")
+	slime.set_meta("runtime_animation_frame", frame_index)
 	root.call("_set_actor_base_texture", slime, frames[clampi(frame_index, 0, frames.size() - 1)])
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
 
 
 func finish_slime_spawn(root: Object, slime: Sprite2D) -> void:
@@ -151,7 +156,7 @@ func is_slime_targetable(root: Object, slime: Sprite2D) -> bool:
 	var puzzle_torches := root.get("puzzle_torches") as Array[Sprite2D]
 	if puzzle_torches.has(slime):
 		return is_instance_valid(slime) and slime.visible
-	return not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)) and not is_slime_hidden(root, slime)
+	return not bool(slime.get_meta("boss_airborne", false)) and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)) and not is_slime_hidden(root, slime)
 
 
 func is_target_actor_dead(root: Object, target: Sprite2D) -> bool:
@@ -196,7 +201,7 @@ func move_slimes(root: Object, delta: float) -> void:
 	if not bool(root.get("player_dead")):
 		var player := root.get("player") as Sprite2D
 		for slime in slimes:
-			if is_instance_valid(slime) and slime.visible and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)):
+			if is_instance_valid(slime) and slime.visible and not bool(slime.get_meta("boss_airborne", false)) and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)):
 				(root.get("actor_collision_system") as ActorCollisionSystem).resolve_contact_pair(slime, player, Vector2.ZERO, root)
 
 
@@ -269,6 +274,11 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 
 func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	var boss_jump_slam: BossJumpSlamComponent = slime.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
+	if boss_jump_slam != null:
+		var boss_phase_running: bool = boss_jump_slam.tick(root, slime, delta)
+		if boss_phase_running:
+			return true
 	var was_active := combat.active
 	var result: bool = combat.tick_attack(delta, slime, root.get("slime_tuning") as SlimeTuning, attack_frames_for(root, slime), bool(root.get("player_dead")), Callable(root, "_set_slime_attack_frame"), Callable(root, "_set_actor_base_texture"), Callable(root, "_apply_slime_attack_lunge"), Callable(root, "_apply_slime_attack_hit"), Callable(root, "_restore_slime_idle_texture"), Callable(root, "_can_slime_attack_player"), Callable(root, "_start_slime_attack"))
 	if was_active and not combat.active:
@@ -280,6 +290,9 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 
 func set_slime_attack_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:
 	(root.call("_slime_animation", slime) as SlimeAnimationComponent).set_attack_frame(frame_index)
+	slime.set_meta("runtime_animation", "attack")
+	slime.set_meta("runtime_animation_frame", frame_index)
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
 
 
 func start_slime_attack(root: Object, slime: Sprite2D) -> void:
@@ -301,14 +314,22 @@ func shocked_frames_for(root: Object, slime: Sprite2D) -> Array[Texture2D]:
 
 
 func set_slime_notice_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:
+	slime.set_meta("runtime_animation", "shocked")
+	slime.set_meta("runtime_animation_frame", frame_index)
 	var frames := shocked_frames_for(root, slime)
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	if visual != null and float(slime.get_meta("encounter_scale", 1.0)) > 1.0 and not visual.boss_shocked_frames.is_empty():
+		frames = visual.boss_shocked_frames
 	if frames.is_empty():
 		return
 	root.call("_set_actor_base_texture", slime, frames[clampi(frame_index, 0, frames.size() - 1)])
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
 
 
 func restore_slime_idle_texture(root: Object, slime: Sprite2D) -> void:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	slime.set_meta("runtime_animation", "idle")
+	slime.set_meta("runtime_animation_frame", 0)
 	root.call("_set_slime_facing", slime, -1.0 if combat.face_left else 1.0)
 
 
@@ -364,7 +385,11 @@ func slime_attack_reach(root: Object, slime: Sprite2D) -> float:
 	var direction := to_player.normalized() if to_player.length_squared() > 0.001 else Vector2.RIGHT
 	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
 	var tuning := root.get("slime_tuning") as SlimeTuning
-	return maxf(tuning.attack_hit_range, slime_attack_contact_gap(root, slime, direction)) + tuning.attack_lunge_distance * encounter_scale + 0.75
+	var max_lunge: float = tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	# Commit from the authored body contact gap plus a small preparation margin.
+	# Native 32px bosses can have a larger directional gap than the regular
+	# attack-hit range; using that fixed range leaves them circling forever.
+	return slime_attack_contact_gap(root, slime, direction) + tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else slime_attack_contact_gap(root, slime, direction) + tuning.attack_lunge_distance
 
 
 func slime_attack_contact_gap(root: Object, slime: Sprite2D, direction: Vector2) -> float:

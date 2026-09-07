@@ -49,7 +49,11 @@ func move_player(root: Object, delta: float) -> void:
 	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0
 	var speed_multiplier := float(root.get("player_speed_multiplier"))
 	var base_speed := tuning.run_speed if running else tuning.speed
-	request_motion(root.call("_perspective_movement", input.normalized() * base_speed * guard_speed_scale * speed_multiplier * delta))
+	var movement := root.call("_perspective_movement", input.normalized() * base_speed * guard_speed_scale * speed_multiplier * delta) as Vector2
+	var collision := root.get("actor_collision_system") as ActorCollisionSystem
+	if collision != null:
+		movement = collision.player_contact_movement(root, movement)
+	request_motion(movement)
 
 
 func update_horizontal_facing(root: Object, direction: Vector2, update_visual: bool = true) -> void:

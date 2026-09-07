@@ -28,6 +28,7 @@ func ensure_components() -> void:
 	_ensure_component("Health", HealthComponent)
 	_ensure_component("Brain", SlimeBrain)
 	_ensure_component("Combat", SlimeCombatComponent)
+	_ensure_component("BossJumpSlam", load("res://scripts/boss_jump_slam_component.gd"))
 	_ensure_component("Tactics", EnemyTacticsComponent)
 	_ensure_component("Animation", SlimeAnimationComponent)
 	_ensure_component("Visual", SlimeVisualComponent)
@@ -147,6 +148,11 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 
 static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, show_damage_number := true) -> void:
 	if bool(root.call("_is_slime_dead", slime)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime))): return
+	var phase_combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	if phase_combat != null and phase_combat.boss_jump_phase_invulnerable:
+		if show_damage_number:
+			root.call("_spawn_damage_number", slime, 0.0, false, attack_element, true)
+		return
 	root.call("_mark_player_in_combat")
 	if immune:
 		if show_damage_number:
@@ -162,7 +168,10 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	var slime_config := root.get("slime_tuning") as SlimeTuning
 	if health != null: health.regen_delay_timer = slime_config.regen_delay; health.regen_accumulator = 0.0
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
-	if combat != null: combat.flash_timer = slime_config.hit_flash_time; combat.hitstun_timer = slime_config.hitstun_time
+	if combat != null:
+		combat.flash_timer = slime_config.hit_flash_time
+		if not combat.boss_jump_phase_stun_resistant:
+			combat.hitstun_timer = slime_config.hitstun_time
 	root.call("_show_slime_hit_flash", slime)
 	if show_damage_number:
 		root.call("_spawn_damage_number", slime, amount, was_critical, attack_element, false)
@@ -177,14 +186,19 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 	var direction: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime)
 	var face_left := direction.x < 0.0
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
-	if combat != null: combat.face_left = face_left; combat.timer = 0.001; combat.begin(); combat.frame = 0; combat.hit_done = false
+	if combat != null:
+		combat.face_left = face_left; combat.timer = 0.001; combat.begin(); combat.frame = 0; combat.hit_done = false
+		combat.attack_target_point = root.call("_actor_foot", player)
+		combat.attack_lunge_vector = root.call("_slime_attack_lunge_vector", slime)
+		slime.set_meta("attack_target_point", combat.attack_target_point)
+		slime.set_meta("attack_lunge_vector", combat.attack_lunge_vector)
 	var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
 	if animation != null: animation.set_facing(face_left)
 	root.call("_set_slime_facing", slime, -1.0 if face_left else 1.0)
 	var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 	var frames: Array[Texture2D] = [] if visual == null else visual.attack_left_frames if face_left else visual.attack_right_frames
 	if frames.is_empty(): return
-	root.call("_set_actor_base_texture", slime, frames[0])
+	root.call("_set_slime_attack_frame", slime, 0)
 	var brain := slime.get_node_or_null("Brain") as SlimeBrain
 	if brain != null: brain.scoot_timer = 0.0; brain.scoot_start = slime.position; brain.scoot_target = slime.position
 	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
@@ -200,7 +214,31 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
 	var player_rect := (root.call("_collision_rect", player) as Rect2).grow(0.75)
 	var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
-	if slime_body.size() < 3 or Geometry2D.intersect_polygons(slime_body, player_body).is_empty(): return
+	if slime_body.size() < 3:
+		return
+	var overlaps_now := not Geometry2D.intersect_polygons(slime_body, player_body).is_empty()
+	if not overlaps_now and float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+		# Boss attack reach includes its lunge, but the lunge is animated after
+		# impact confirmation. Test the authored impact position as well so a
+		# stationary player cannot be missed at the edge of that reach.
+		var lunge: Vector2 = combat.attack_lunge_vector if combat != null and combat.attack_lunge_vector != Vector2.ZERO else root.call("_slime_attack_lunge_vector", slime)
+		var impact_body := PackedVector2Array()
+		for point in slime_body:
+			impact_body.append(point + lunge)
+		overlaps_now = not Geometry2D.intersect_polygons(impact_body, player_body).is_empty()
+	if not overlaps_now:
+		var strike_lunge: Vector2 = combat.attack_lunge_vector if combat != null and combat.attack_lunge_vector != Vector2.ZERO else root.call("_slime_attack_lunge_vector", slime)
+		var strike_point: Vector2 = (root.call("_actor_foot", slime) as Vector2) + strike_lunge
+		var player_foot: Vector2 = root.call("_actor_foot", player)
+		var strike_radius := 12.0 if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else 8.0
+		overlaps_now = strike_point.distance_to(player_foot) <= strike_radius
+	if not overlaps_now:
+		var committed_target: Vector2 = combat.attack_target_point if combat != null else slime.get_meta("attack_target_point", Vector2.ZERO)
+		if committed_target != Vector2.ZERO:
+			var committed_radius := 16.0 if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else 10.0
+			overlaps_now = (root.call("_actor_foot", player) as Vector2).distance_to(committed_target) <= committed_radius
+	if not overlaps_now:
+		return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
 		run_state.record_enemy_attack_attempt()
@@ -291,6 +329,16 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 	var tactics := get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics != null:
 		tactics.reset()
+	var boss_jump_slam := get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
+	if boss_jump_slam != null:
+		boss_jump_slam.state = BossJumpSlamComponent.State.READY
+		boss_jump_slam.cooldown = BossJumpSlamComponent.INITIAL_COOLDOWN_SECONDS
+		boss_jump_slam.elapsed = 0.0
+		boss_jump_slam.frame = -1
+		boss_jump_slam.launch_committed = false
+		boss_jump_slam.impact_resolved = false
+		set_meta("boss_airborne", false)
+		self_modulate.a = 1.0
 
 
 func _ensure_component(node_name: String, component_type: Variant) -> Node:

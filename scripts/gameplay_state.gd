@@ -8,6 +8,7 @@ const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_servic
 
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
+@export var debug_boss_variant: StringName = &""
 @export var debug_actor_geometry := false
 @export var debug_stat_breakdown := false
 
@@ -424,7 +425,7 @@ func _apply_player_palette_async(palette_name: String) -> void:
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
 		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name), PaletteLibrary.accent(palette_name))
-		player_hud.call("apply_portrait_palette", palette_name, sprite_frame_library)
+		player_hud.call("apply_portrait_palette", palette_name, sprite_frame_library, player_animation_component.cloaked)
 	_update_player_progression_ui()
 	_update_mp_desaturation()
 func _set_entrance_open(is_open: bool) -> void:
@@ -762,8 +763,8 @@ func _run_rank() -> int:
 	return int(run_flow_controller.call("run_rank", self))
 func _apply_run_rank_grade(grade: String) -> void:
 	run_flow_controller.call("apply_run_rank_grade", self, grade)
-func _begin_new_run() -> void:
-	run_flow_controller.call("begin_new_run", self)
+func _begin_new_run(preserve_current_dungeon := false) -> void:
+	run_flow_controller.call("begin_new_run", self, preserve_current_dungeon)
 func _save_active_run_checkpoint() -> bool:
 	if not OS.has_feature("web") or run_state == null or not run_state.active:
 		return false
@@ -864,7 +865,7 @@ func _save_preview_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_preview_texture", self, palette_name) as Texture2D
 
 func _save_portrait_texture(palette_name: String) -> Texture2D:
-	return save_flow_controller.call("save_portrait_texture", self, palette_name) as Texture2D
+	return save_flow_controller.call("save_portrait_texture", self, palette_name, player_animation_component.cloaked if player_animation_component != null else false) as Texture2D
 
 
 func _equipment_portrait_texture() -> Texture2D:
@@ -1498,6 +1499,10 @@ func _set_slime_notice_frame(slime: Sprite2D, frame_index: int) -> void: slime_r
 func _restore_slime_idle_texture(slime: Sprite2D) -> void: slime_runtime_controller.call("restore_slime_idle_texture", self, slime)
 func _can_slime_attack_player(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("can_slime_attack_player", self, slime))
 func _is_slime_aggroed(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_aggroed", self, slime))
+func _begin_boss_jump_phase_popcorn(boss: Sprite2D, anchor: Vector2) -> int: return int(room_controller.begin_boss_jump_phase_popcorn(self, boss, anchor))
+func _boss_jump_phase_popcorn_alive(boss: Sprite2D) -> bool: return bool(room_controller.boss_jump_phase_popcorn_alive(self, boss))
+func _clear_boss_jump_phase_popcorn(boss: Sprite2D) -> void: room_controller.clear_boss_jump_phase_popcorn(boss)
+func _apply_boss_jump_slam(boss: Sprite2D, anchor: Vector2) -> void: combat_runtime_controller.apply_boss_jump_slam(self, boss, anchor)
 func _is_any_slime_aggroed() -> bool: return bool(slime_runtime_controller.call("is_any_slime_aggroed", self))
 func _update_special_enemy_respawns(delta: float) -> void: room_controller.call("update_special_enemy_respawns", self, delta); room_controller.call("update_popcorn_respawns", self, delta)
 func _slime_attack_reach(slime: Sprite2D) -> float: return float(slime_runtime_controller.call("slime_attack_reach", self, slime))
@@ -1515,7 +1520,7 @@ func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void: combat_r
 func _on_slime_health_changed(_current: float, _maximum: float, slime: Sprite2D) -> void: combat_runtime_controller.call("on_slime_health_changed", self, slime)
 func _on_slime_health_healed(amount: float, slime: Sprite2D) -> void: combat_runtime_controller.call("on_slime_health_healed", self, slime, amount)
 func _update_player_health_regen(delta: float) -> void: combat_runtime_controller.call("update_player_health_regen", self, delta)
-func _apply_slime_attack_lunge(slime: Sprite2D) -> void: combat_runtime_controller.call("apply_slime_attack_lunge", self, slime)
+func _apply_slime_attack_lunge(slime: Sprite2D, fraction: float = 1.0) -> void: combat_runtime_controller.call("apply_slime_attack_lunge", self, slime, fraction)
 func _slime_attack_lunge_vector(slime: Sprite2D) -> Vector2: return combat_runtime_controller.call("slime_attack_lunge_vector", self, slime) as Vector2
 func _apply_player_hit_knockback(slime: Sprite2D) -> void: combat_runtime_controller.call("apply_player_hit_knockback", self, slime)
 func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool: return bool(combat_runtime_controller.call("update_slime_knockback", self, slime, delta))
@@ -1674,3 +1679,4 @@ func _slime_body_polygon(slime: Sprite2D) -> PackedVector2Array: return slime_ru
 func _is_slime_collision_polygon_walkable(polygon: PackedVector2Array) -> bool: return bool(slime_runtime_controller.call("is_slime_collision_polygon_walkable", self, polygon))
 func _is_point_near_other_slime(point: Vector2, ignored_slime: Sprite2D = null) -> bool: return bool(slime_runtime_controller.call("is_point_near_other_slime", self, point, ignored_slime))
 func _actor_foot(actor: Sprite2D) -> Vector2: return slime_runtime_controller.call("actor_foot", self, actor) as Vector2
+func _slime_shadow_anchor(slime: Sprite2D) -> Vector2: return ActorGeometry.slime_shadow_anchor(slime)

@@ -99,12 +99,13 @@ func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
 	return root.player_animation_component.recolor_texture(base_frames[0], palette_name)
 
 
-func save_portrait_texture(root: Object, palette_name: String) -> Texture2D:
+func save_portrait_texture(root: Object, palette_name: String, cloaked := false) -> Texture2D:
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	if library == null:
 		return null
-	var source := load("res://assets/artwork/player_UI_portrait.png") as Texture2D
-	return library.recolor_portrait_texture(source, palette_name)
+	var source_path := "res://assets/artwork/player_cloaked_UI_portrait.png" if cloaked else "res://assets/artwork/player_UI_portrait.png"
+	var source := load(source_path) as Texture2D
+	return library.recolor_cloaked_portrait_texture(source, palette_name) if cloaked else library.recolor_portrait_texture(source, palette_name)
 
 
 func select_save_slot(root: Object, slot: int) -> void:

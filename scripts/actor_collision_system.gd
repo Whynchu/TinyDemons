@@ -43,7 +43,7 @@ func resolve_motion_contacts(actor: Sprite2D, movement: Vector2, candidates: Arr
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var actor_is_slime := slimes.has(actor)
 	for other in candidates:
-		if other == actor or not is_instance_valid(other) or not other.visible:
+		if other == actor or not is_instance_valid(other) or not other.visible or bool(other.get_meta("boss_airborne", false)):
 			continue
 		if slimes.has(other) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other)):
 			continue
@@ -67,11 +67,11 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 		var resolved_this_pass := false
 		for actor_index in slimes.size():
 			var actor := slimes[actor_index]
-			if not is_instance_valid(actor) or not actor.visible or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))):
+			if not is_instance_valid(actor) or not actor.visible or bool(actor.get_meta("boss_airborne", false)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))):
 				continue
 			var nearby := slime_grid_candidates(root.call("_actor_foot", actor), contact_distance)
 			for other in nearby:
-				if other == actor or not is_instance_valid(other) or not other.visible or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
+				if other == actor or not is_instance_valid(other) or not other.visible or bool(other.get_meta("boss_airborne", false)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
 					continue
 				if slime_grid_position(other) <= actor_index:
 					continue
@@ -94,7 +94,7 @@ func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable, is_spawn_lo
 	_slime_grid_index.clear()
 	for index in slimes.size():
 		var slime := slimes[index]
-		if slime == null or not is_instance_valid(slime) or not slime.visible or (is_spawn_locked.is_valid() and bool(is_spawn_locked.call(slime))):
+		if slime == null or not is_instance_valid(slime) or not slime.visible or bool(slime.get_meta("boss_airborne", false)) or (is_spawn_locked.is_valid() and bool(is_spawn_locked.call(slime))):
 			continue
 		var cell := _grid_cell(actor_foot.call(slime) as Vector2)
 		var bucket: Variant = _slime_grid.get(cell)
@@ -283,6 +283,8 @@ func separate_actor(root: Object, actor: Sprite2D, other: Sprite2D) -> void:
 
 
 func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+	if (actor != null and bool(actor.get_meta("boss_airborne", false))) or (other != null and bool(other.get_meta("boss_airborne", false))):
+		return Vector2.ZERO
 	var chest := root.get("chest") as Sprite2D
 	var rest_fire := root.get("rest_fire") as Sprite2D
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
@@ -302,6 +304,8 @@ func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vect
 
 
 func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bool:
+	if (actor != null and bool(actor.get_meta("boss_airborne", false))) or (other != null and bool(other.get_meta("boss_airborne", false))):
+		return false
 	var chest := root.get("chest") as Sprite2D
 	var rest_fire := root.get("rest_fire") as Sprite2D
 	var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D if rest_fire != null else null
@@ -321,6 +325,23 @@ func actor_contact_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -
 	if distance >= min_distance: return Vector2.ZERO
 	if distance <= 0.001: delta = Vector2.RIGHT; distance = 1.0
 	return delta.normalized() * (min_distance - distance)
+
+
+func player_contact_movement(root: Object, movement: Vector2) -> Vector2:
+	var player := root.get("player") as Sprite2D
+	if player == null or movement.length_squared() <= 0.0001:
+		return movement
+	var result := movement
+	for slime in root.get("slimes") as Array[Sprite2D]:
+		if not is_instance_valid(slime) or not slime.visible or bool(slime.get_meta("boss_airborne", false)) or not actors_are_in_contact(root, player, slime):
+			continue
+		var away := (root.call("_actor_foot", player) as Vector2 - root.call("_actor_foot", slime) as Vector2).normalized()
+		var inward := maxf(-movement.normalized().dot(-away), 0.0)
+		var retained := 0.2 if _uses_body_contact(slime) else 0.78
+		var normal_part := away * movement.dot(away)
+		var tangent_part := movement - normal_part
+		result = tangent_part * 0.9 + normal_part * lerpf(1.0, retained, inward)
+	return result
 
 
 func _uses_body_contact(actor: Sprite2D) -> bool:

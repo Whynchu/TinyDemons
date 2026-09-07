@@ -15,7 +15,17 @@ var flash_timer := 0.0
 var hitstun_timer := 0.0
 var knockback_velocity := Vector2.ZERO
 var knockback_timer := 0.0
+var lunge_remaining := 0.0
+var lunge_total := 0.0
+var lunge_vector := Vector2.ZERO
+var attack_target_point := Vector2.ZERO
+var attack_lunge_vector := Vector2.ZERO
 var dead := false
+## Boss Jump Slam protection is split so the telegraph can take damage without
+## allowing hitstun, while the airborne/impact portion can reject damage too.
+var boss_jump_phase_active := false
+var boss_jump_phase_invulnerable := false
+var boss_jump_phase_stun_resistant := false
 
 
 func tick(delta: float) -> void:
@@ -26,6 +36,8 @@ func begin() -> void:
 	active = true
 	timer = 0.001
 	hit_done = false
+	attack_target_point = Vector2.ZERO
+	attack_lunge_vector = Vector2.ZERO
 	attack_started.emit()
 
 
@@ -41,8 +53,22 @@ func finish(next_cooldown: float) -> void:
 	active = false
 	timer = 0.0
 	hit_done = false
+	attack_target_point = Vector2.ZERO
+	attack_lunge_vector = Vector2.ZERO
 	cooldown = maxf(next_cooldown, 0.0)
 	attack_finished.emit()
+
+
+func begin_lunge(vector: Vector2, duration: float) -> void:
+	lunge_vector = vector
+	lunge_total = maxf(duration, 0.001)
+	lunge_remaining = lunge_total
+
+
+func clear_boss_jump_phase() -> void:
+	boss_jump_phase_active = false
+	boss_jump_phase_invulnerable = false
+	boss_jump_phase_stun_resistant = false
 
 
 func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Array[Texture2D], player_dead: bool, set_frame: Callable, set_texture: Callable, apply_lunge: Callable, apply_hit: Callable, restore_idle: Callable, can_attack: Callable, start_attack: Callable) -> bool:
@@ -62,9 +88,19 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 		frame = frame_index
 		set_frame.call(actor, frame_index)
 		set_texture.call(actor, frames[frame_index])
-		if frame_index == tuning.attack_hit_frame and not hit_done and confirm_hit():
-			apply_lunge.call(actor)
+		var hit_frame := tuning.boss_attack_hit_frame if is_boss else tuning.attack_hit_frame
+		if is_boss and frame_index >= hit_frame - 3 and attack_target_point == Vector2.ZERO:
+			attack_target_point = actor.get_meta("attack_target_point", Vector2.ZERO)
+			attack_lunge_vector = actor.get_meta("attack_lunge_vector", Vector2.ZERO)
+		if frame_index == hit_frame and not hit_done and confirm_hit():
+			lunge_total = tuning.boss_attack_lunge_duration if is_boss else 0.12
+			lunge_remaining = lunge_total
+			apply_lunge.call(actor, 0.0)
 			apply_hit.call(actor)
+		if lunge_remaining > 0.0:
+			var step := minf(delta, lunge_remaining)
+			lunge_remaining = maxf(lunge_remaining - delta, 0.0)
+			apply_lunge.call(actor, step / lunge_total)
 		if timer >= frame_time * float(frames.size()):
 			finish(cooldown_after)
 			restore_idle.call(actor)

@@ -44,7 +44,7 @@ slower recovery tail, with frame 7 being the clean recovery pose.
 
 All feel and balance values live on `scripts/player_tuning.gd`:
 
-- Spin requires at least `0.55` movement magnitude, approximately `288°` of
+- Spin requires at least `0.55` movement magnitude, approximately `270°` of
   signed turn, and must complete within `0.50s`. Recognition arms the move for
   `0.28s`.
 - Spin uses `0.075s` frame timing, slows to `0.14s` from frame 6, applies

@@ -6,10 +6,6 @@ const CircularInputRecognizerScript = preload("res://scripts/circular_input_reco
 
 const SWORD_BEAM_CHROMA_COST := 30
 const SWORD_BEAM_COOLDOWN := 8.0
-## Keep the two light-hit beats distinct. The final beat has its own animation
-## frame and is allowed through separately below, so it cannot get swallowed by
-## this cooldown when it follows the second light hit.
-const SPIN_HIT_COOLDOWN := 0.15
 const SPIN_HITSTUN_DURATION := 0.18
 
 enum AttackKind { NONE, ATTACK1, ATTACK2, SPIN, CHARGING, CHARGED_ATTACK2 }
@@ -24,9 +20,10 @@ var active := false
 var variant := 1
 var attack_kind := AttackKind.NONE
 var hit_targets: Array[Sprite2D] = []
-var spin_hit_counts: Dictionary = {}
-var spin_final_hit_counts: Dictionary = {}
-var spin_hit_cooldowns: Dictionary = {}
+## Each spin pulse owns its own target set. This makes the two contacts
+## deterministic instead of depending on a per-target cooldown between frames.
+var spin_pulse_targets: Dictionary = {}
+var spin_pulse_sounds: Dictionary = {}
 var spin_pending_knockback: Array[Sprite2D] = []
 var combo_buffered := false
 var combo_timer := 0.0
@@ -279,7 +276,17 @@ func apply_hitbox(root: Object) -> void:
 	var hitbox := attack_polygon(root)
 	if hitbox.size() < 3:
 		return
-	if not hit_sound_played and root.has_method("_play_sound"):
+	var tuning := root.get("player_tuning") as PlayerTuning
+	var spin_pulse := _spin_pulse_index(int(root.get("player_anim_frame")), tuning) if is_spin_attack() else -1
+	# Spin has two explicit pulse windows; never let the generic attack hit-frame
+	# fallback create an extra contact before pulse one.
+	if is_spin_attack() and spin_pulse < 0:
+		return
+	var should_play_spin_sound := spin_pulse >= 0 and not spin_pulse_sounds.has(spin_pulse)
+	if should_play_spin_sound and root.has_method("_play_sound"):
+		root.call("_play_sound", "miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
+		spin_pulse_sounds[spin_pulse] = true
+	elif not is_spin_attack() and not hit_sound_played and root.has_method("_play_sound"):
 		root.call("_play_sound", "miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 		hit_sound_played = true
 	var slimes := root.get("slimes") as Array[Sprite2D]
@@ -287,19 +294,21 @@ func apply_hitbox(root: Object) -> void:
 	var eligible_targets: Array[Sprite2D] = []
 	var slime_targets: Array[Sprite2D] = []
 	var orb_targets: Array[Sprite2D] = []
-	var tuning := root.get("player_tuning") as PlayerTuning
+	var pulse_targets: Dictionary = {}
+	if spin_pulse >= 0:
+		if not spin_pulse_targets.has(spin_pulse):
+			spin_pulse_targets[spin_pulse] = {}
+		pulse_targets = spin_pulse_targets[spin_pulse]
 	for slime in slimes:
 		var slime_id := slime.get_instance_id()
-		var final_spin_frame := false
-		if is_spin_attack() and tuning != null:
-			final_spin_frame = int(root.get("player_anim_frame")) == tuning.spin_hit_end_frame
-		var spin_cooldown_active: bool = not final_spin_frame and float(spin_hit_cooldowns.get(slime_id, 0.0)) > 0.0
-		var already_hit := hit_targets.has(slime) if not is_spin_attack() else ((int(spin_final_hit_counts.get(slime_id, 0)) >= 1 if final_spin_frame else int(spin_hit_counts.get(slime_id, 0)) >= 2) or spin_cooldown_active)
+		var already_hit := hit_targets.has(slime) if not is_spin_attack() else pulse_targets.has(slime_id)
 		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or already_hit:
 			continue
 		var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
 		if slime_body.size() < 3 or Geometry2D.intersect_polygons(hitbox, slime_body).is_empty():
 			continue
+		if is_spin_attack():
+			pulse_targets[slime_id] = true
 		eligible_targets.append(slime)
 		slime_targets.append(slime)
 	for orb in puzzle_torches:
@@ -336,8 +345,8 @@ func apply_hitbox(root: Object) -> void:
 			elif variant == 2:
 				damage = maxf(base_damage * tuning.attack2_damage_multiplier, base_damage + 1.0)
 			elif is_spin_attack():
-				var final_spin_frame := int(root.get("player_anim_frame")) == tuning.spin_hit_end_frame
-				damage = base_damage * (tuning.spin_damage_multiplier if final_spin_frame else 0.40)
+				var final_spin_pulse := spin_pulse == 1
+				damage = base_damage * (tuning.spin_damage_multiplier if final_spin_pulse else 0.40)
 			if target_count > 1 and variant == 2:
 				damage = maxf(damage * tuning.attack2_multi_target_damage_multiplier, damage + 1.0)
 			if running_attack_active:
@@ -364,20 +373,12 @@ func apply_hitbox(root: Object) -> void:
 				if slime_combat != null:
 					slime_combat.hitstun_timer = maxf(slime_combat.hitstun_timer, SPIN_HITSTUN_DURATION)
 			if is_spin_attack():
-				var slime_id := slime.get_instance_id()
-				var final_spin_frame := tuning != null and int(root.get("player_anim_frame")) == tuning.spin_hit_end_frame
-				if final_spin_frame:
+				if spin_pulse == 1:
 					root.call("_knockback_slime", slime, special_knockback_multiplier(tuning))
-					spin_final_hit_counts[slime_id] = int(spin_final_hit_counts.get(slime_id, 0)) + 1
 				else:
 					root.call("_knockback_slime", slime, special_knockback_multiplier(tuning) * 0.25)
-					spin_hit_counts[slime_id] = int(spin_hit_counts.get(slime_id, 0)) + 1
 			else:
 				root.call("_knockback_slime", slime, special_knockback_multiplier(tuning))
-		if is_spin_attack():
-			var slime_id := slime.get_instance_id()
-			spin_hit_counts[slime_id] = int(spin_hit_counts.get(slime_id, 0)) + 1
-			spin_hit_cooldowns[slime_id] = SPIN_HIT_COOLDOWN
 		if not damage_result.immune and root.has_method("_apply_player_lifesteal"):
 			root.call("_apply_player_lifesteal", maxf(divided_damage, 1.0))
 	if successful_damage_count > 0 and root.has_method("_record_run_style_action"):
@@ -433,7 +434,17 @@ func has_frame_hitboxes() -> bool:
 
 
 func frame_uses_hitbox(frame: int, tuning: PlayerTuning) -> bool:
-	return is_spin_attack() and tuning != null and frame >= tuning.spin_hit_start_frame and frame <= tuning.spin_hit_end_frame
+	return is_spin_attack() and _spin_pulse_index(frame, tuning) >= 0
+
+
+func _spin_pulse_index(frame: int, tuning: PlayerTuning) -> int:
+	if tuning == null or frame < tuning.spin_hit_start_frame or frame > tuning.spin_hit_start_frame + 2:
+		return -1
+	if frame == tuning.spin_hit_start_frame:
+		return 0
+	if frame == tuning.spin_hit_start_frame + 2:
+		return 1
+	return -1
 
 
 func attack_polygon(root: Object) -> PackedVector2Array:
@@ -472,9 +483,8 @@ func begin(new_variant: int, new_kind: int = -1) -> void:
 	variant = new_variant
 	attack_kind = (AttackKind.ATTACK2 if new_variant == 2 else AttackKind.ATTACK1) if new_kind < 0 else new_kind
 	hit_targets.clear()
-	spin_hit_counts.clear()
-	spin_final_hit_counts.clear()
-	spin_hit_cooldowns.clear()
+	spin_pulse_targets.clear()
+	spin_pulse_sounds.clear()
 	spin_pending_knockback.clear()
 	hit_sound_played = false
 	attack_started.emit(variant)
@@ -496,9 +506,8 @@ func finish() -> void:
 	charge_elapsed = 0.0
 	charge_release_pending = false
 	hit_targets.clear()
-	spin_hit_counts.clear()
-	spin_final_hit_counts.clear()
-	spin_hit_cooldowns.clear()
+	spin_pulse_targets.clear()
+	spin_pulse_sounds.clear()
 	cancel_lunge()
 
 
@@ -511,11 +520,9 @@ func release_spin_knockback(root: Object) -> void:
 	spin_pending_knockback.clear()
 
 
-func tick_spin_hits(delta: float) -> void:
-	if spin_hit_cooldowns.is_empty():
-		return
-	for target_id in spin_hit_cooldowns.keys():
-		spin_hit_cooldowns[target_id] = maxf(float(spin_hit_cooldowns[target_id]) - maxf(delta, 0.0), 0.0)
+func tick_spin_hits(_delta: float) -> void:
+	# Kept as a scheduler seam for callers; spin contacts are pulse-based now.
+	pass
 
 
 func cancel() -> void:

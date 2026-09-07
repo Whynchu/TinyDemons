@@ -184,7 +184,7 @@ func update_overhead_bars(
 		var aggro_marker := target_overhead_aggro_markers.get(slime) as Sprite2D
 		if frame == null or damage_fill == null or fill == null or aggro_marker == null:
 			continue
-		var hidden := is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))
+		var hidden := (is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))) or bool(slime.get_meta("boss_jump_ui_suppressed", false))
 		if is_dead_for.call(slime) or hidden:
 			frame.visible = false
 			damage_fill.visible = false
@@ -204,11 +204,14 @@ func update_overhead_bars(
 		if not should_show:
 			continue
 		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
-		var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
-		overhead_offset.y -= 15.0 * (encounter_scale - 1.0)
 		if not is_aggroed:
 			overhead_offset.x -= 2.0
 		var overhead_position := slime.global_position + overhead_offset + Vector2(0, -2)
+		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+			# Boss art is authored on a 32px canvas. Center the 13px bar over
+			# the authored floor anchor instead of inheriting the regular slime's
+			# top-left offset.
+			overhead_position = ActorGeometry.slime_shadow_anchor(slime) + Vector2(-6.5, -22.0)
 		frame.global_position = overhead_position
 		frame.global_scale = Vector2.ONE
 		frame.z_index = overwold_ui_z
@@ -220,8 +223,9 @@ func update_overhead_bars(
 		fill.z_index = overwold_ui_z + 2
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
-		aggro_offset.y -= 15.0 * (encounter_scale - 1.0)
 		aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
+		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+			aggro_marker.global_position = ActorGeometry.slime_shadow_anchor(slime) + Vector2(-1.0, -22.0)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2

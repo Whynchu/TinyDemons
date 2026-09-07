@@ -2,6 +2,7 @@ extends Node
 class_name RunFlowController
 
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
+const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
 const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
@@ -71,6 +72,11 @@ func finalize_run_metrics(root: Object) -> void:
 
 
 func _route_par_seconds(root: Object) -> float:
+	if root.dungeon_map_controller != null and bool(root.dungeon_map_controller.call("is_authored_run1")):
+		# R1 is the teaching route. Give players time to learn movement, room
+		# entry, and the first elemental interactions without making the par feel
+		# like a speedrun requirement.
+		return 150.0
 	var graph := root.dungeon_graph as DungeonGraph
 	var boss_depth := graph.final_npc_depth() + 1
 	var total := 8.0
@@ -90,7 +96,10 @@ func _route_par_seconds(root: Object) -> float:
 			best = minf(best, cost)
 		if best < INF:
 			total += best + 1.5
-	return total
+	# R1 calibration: the raw workload estimate was about 90 seconds, while
+	# play pacing supports a 150-second accepted par. Carry that same breathing
+	# room into every later route estimate.
+	return total * ROUTE_PAR_CALIBRATION_FACTOR
 
 
 func graph_room_enemy_count(root: Object, room: DungeonGraph.RoomRecord) -> int:
@@ -129,14 +138,15 @@ func apply_run_rank_grade(root: Object, grade: String) -> void:
 	ProgressionController.apply_run_grade(root.player_profile, grade)
 
 
-func begin_new_run(root: Object) -> void:
+func begin_new_run(root: Object, preserve_current_dungeon := false) -> void:
 	# A new run must never inherit a previous interrupted run's checkpoint.
 	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
 	# Every run begins at the hub in Gray. The selected starter flame is present
 	# at the fire, but the hub exits stay a real gate until the player attunes to
 	# it, just like the first run's tutorial gate.
 	root.starter_flame_attuned_this_run = false
-	_reset_dungeon_for_new_run(root)
+	if not preserve_current_dungeon:
+		_reset_dungeon_for_new_run(root)
 	root.call("_reset_magic_runtime", true)
 	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
 	if momentum != null:
@@ -448,7 +458,7 @@ func show_run_complete(root: Object, _drop_color: Color) -> void:
 	var elapsed: int = int(round(float(summary.get("time", 0.0))))
 	var route_par_seconds: int = int(round(float(summary.get("time_target", 0.0))))
 	var time_delta := route_par_seconds - elapsed
-	var time_comparison := "= PAR" if time_delta == 0 else ("▲%ds" % time_delta if time_delta > 0 else "▼%ds" % absi(time_delta))
+	var time_comparison := "= PAR" if time_delta == 0 else ("+%ds" % time_delta if time_delta > 0 else "-%ds" % absi(time_delta))
 	var lines: Array[String] = [
 		"SCORE %03d" % int(summary.get("score", 0)),
 		"TIME %02d:%02d  %s" % [floori(float(elapsed) / 60.0), elapsed % 60, time_comparison],
@@ -457,12 +467,13 @@ func show_run_complete(root: Object, _drop_color: Color) -> void:
 		"STYLE %d/%d" % [int(summary.get("style", 0)), int(summary.get("style_max", 10))],
 		"MAX COMBO x%d" % int(summary.get("max_combo", 0)),
 		"REWARDS",
-		"+%d GOLD" % int(summary.get("gold", 0)),
+		"+%d" % int(summary.get("gold", 0)),
 		str(summary.get("drop", "NO GEAR DROP")),
 	]
 	var line_colors: Array[Color] = []
 	line_colors.resize(lines.size())
 	line_colors.fill(Color.WHITE)
+	line_colors[7] = Color8(255, 205, 117)
 	if root.screen_state_controller.run_complete_grade_text != null:
 		root.screen_state_controller.run_complete_grade_text.texture = root.call("_pixel_text_texture", str(summary.get("grade", "D")), Color.WHITE)
 	for index in mini(root.screen_state_controller.run_complete_texts.size(), lines.size()):

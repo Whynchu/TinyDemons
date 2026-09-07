@@ -109,6 +109,9 @@ func update_target_ui(root: Object) -> void:
 	if (root.get("puzzle_torches") as Array[Sprite2D]).has(target):
 		update_puzzle_torch_target_ui(root, target)
 		return
+	if bool(target.get_meta("boss_jump_ui_suppressed", false)):
+		set_target_ui_visible(root, false)
+		return
 	set_target_ui_visible(root, true)
 	var hud := root.get("hud_controller") as HudController
 	var size: Vector2 = root.get("target_health_bar_size")

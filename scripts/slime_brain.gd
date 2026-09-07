@@ -116,9 +116,11 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 	var target_position: Vector2 = target
 	var foot: Vector2 = actor_foot.call(actor)
 	var is_aggroed := aggroed
+	var following_detour := false
 	if is_aggroed:
 		if detour_timer > 0.0 and foot.distance_to(detour_target) > 2.0:
 			target_position = detour_target
+			following_detour = true
 		else:
 			detour_timer = 0.0
 			target_position = aggro_target_callable.call(actor)
@@ -138,17 +140,18 @@ func start_scoot(actor: Sprite2D, tuning: SlimeTuning, random_source: RandomNumb
 			start_random_hold(tuning, random_source)
 			return false
 	var steering_direction := direction.normalized()
-	if is_aggroed:
+	if is_aggroed and not following_detour:
 		steering_direction = context_steering_direction(actor, tuning, random_source, actor_foot, perspective)
-	var movement_distance := tuning.scoot_distance if is_aggroed else minf(tuning.scoot_distance, direction.length())
-	if float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
-		movement_distance *= tuning.boss_movement_speed_multiplier
+	var is_boss := _is_boss(actor)
+	var movement_distance := tuning.boss_scoot_distance if is_boss and is_aggroed else tuning.scoot_distance
+	if not is_aggroed:
+		movement_distance = minf(movement_distance, direction.length())
 	movement_distance *= float(actor.get_meta("movement_speed_multiplier", 1.0))
 	var movement: Vector2 = perspective.call(steering_direction * movement_distance)
 	set_facing.call(actor, movement.x)
 	scoot_start = actor.position
 	scoot_target = actor.position + movement
-	scoot_timer = tuning.scoot_duration
+	scoot_timer = tuning.boss_scoot_duration if is_boss and is_aggroed else tuning.scoot_duration
 	return true
 
 
@@ -177,6 +180,8 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var distance := to_player.length()
 	var towards_player := to_player.normalized()
 	var desired_distance := tuning.attack_range * 0.72
+	if _is_boss(actor):
+		desired_distance = tuning.attack_range + tuning.boss_attack_lunge_distance * 0.25
 	var best_direction := towards_player
 	var best_score := -INF
 	var direction_count := maxi(tuning.steering_direction_count, 4)
@@ -189,7 +194,8 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	for index in direction_count:
 		var angle := TAU * float(index) / float(direction_count)
 		var candidate := Vector2(cos(angle), sin(angle))
-		var candidate_movement: Vector2 = perspective.call(candidate * tuning.scoot_distance)
+		var probe_distance := tuning.boss_scoot_distance if _is_boss(actor) else tuning.scoot_distance
+		var candidate_movement: Vector2 = perspective.call(candidate * probe_distance)
 		var candidate_foot := slime_foot + candidate_movement
 		var danger := 0.0
 		if not bool(root.call("_is_slime_collision_rect_walkable_at", actor, candidate_foot)):
@@ -198,8 +204,6 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		for buddy in nearby:
 			if buddy == actor or bool(root.call("_is_slime_dead", buddy)):
 				continue
-			if _is_boss(actor) and not _is_boss(buddy):
-				continue
 			var buddy_delta: Vector2 = slime_foot - actor_foot.call(buddy)
 			var buddy_distance := buddy_delta.length()
 			if buddy_distance > 0.01 and buddy_distance < tuning.steering_clearance:
@@ -207,13 +211,21 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 				var overlap := maxf(candidate.dot(-repulsion), 0.0)
 				danger += overlap * (tuning.steering_clearance - buddy_distance) / tuning.steering_clearance * tuning.steering_ally_danger_weight
 
-		var approach_interest := candidate.dot(towards_player)
+		# Candidate is expressed in input space, while the player delta is in
+		# projected world space. Compare after projection so the preferred attack
+		# lane follows the game's isometric mapping instead of screen axes.
+		var candidate_world := candidate_movement.normalized()
+		var approach_interest := candidate_world.dot(towards_player)
 		if distance < desired_distance:
 			approach_interest = -approach_interest
 		var orbit := Vector2(-towards_player.y, towards_player.x) * orbit_direction
 		var orbit_factor := clampf(1.0 - absf(distance - desired_distance) / tuning.attack_range, 0.0, 1.0)
 		var interest := approach_interest * tuning.steering_approach_weight
-		interest += candidate.dot(orbit) * orbit_factor * tuning.steering_orbit_weight
+		var cone_cosine := cos(deg_to_rad(tuning.steering_attack_cone_half_angle_degrees))
+		var cone_alignment := candidate_world.dot(towards_player)
+		var cone_preference := clampf((cone_alignment - cone_cosine) / maxf(1.0 - cone_cosine, 0.01), -1.0, 1.0)
+		interest += cone_preference * tuning.steering_attack_cone_weight
+		interest += candidate.dot(orbit) * orbit_factor * (tuning.boss_orbit_weight if _is_boss(actor) else tuning.steering_orbit_weight)
 		var score := interest - danger
 		if score > best_score:
 			best_score = score
@@ -232,9 +244,10 @@ static func _is_boss(actor: Sprite2D) -> bool:
 func tick_scoot(actor: Sprite2D, delta: float, tuning: SlimeTuning, is_aggroed: Callable, try_move: Callable, set_scale: Callable, repath: Callable, start_hold: Callable, start_next: Callable) -> void:
 	var timer := scoot_timer
 	if timer > 0.0:
-		var previous_progress := 1.0 - timer / tuning.scoot_duration
+		var duration := tuning.boss_scoot_duration if _is_boss(actor) and bool(is_aggroed.call(actor)) else tuning.scoot_duration
+		var previous_progress := 1.0 - timer / duration
 		timer = maxf(timer - delta, 0.0)
-		var progress := 1.0 - timer / tuning.scoot_duration
+		var progress := 1.0 - timer / duration
 		scoot_timer = timer
 		var movement: Vector2 = (scoot_target - scoot_start) * (scoot_ease(progress) - scoot_ease(previous_progress))
 		var did_move: bool = try_move.call(actor, movement)

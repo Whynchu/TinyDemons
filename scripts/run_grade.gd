@@ -1,9 +1,13 @@
 extends RefCounted
 class_name RunGrade
 
-const COMPLETION_WEIGHT := 60.0
+## Room completion remains visible and provides a small route-discipline bonus.
+## Map discovery is deliberately informational and does not affect the grade.
+const COMPLETION_WEIGHT := 10.0
 const TIME_WEIGHT := 30.0
-const STYLE_WEIGHT := 10.0
+const COMBAT_WEIGHT := 30.0
+const STYLE_WEIGHT := 20.0
+const COMBO_WEIGHT := 10.0
 const STYLE_MAX := 10
 
 # These are intentionally route-scaled rather than a single hard-coded clear
@@ -23,16 +27,16 @@ static func evaluate(run: RunState, _starting_health: float = 1.0) -> Dictionary
 	var room_completion_ratio := _ratio(completed_rooms, room_count)
 	var time_quality := time_quality_for(run)
 	var style := evaluate_style(run)
+	var combat_quality := combat_quality_for(run)
+	var combo_quality := combo_quality_for(run)
 	var completion_score := COMPLETION_WEIGHT * room_completion_ratio
 	var time_score := TIME_WEIGHT * time_quality
+	var combat_score := COMBAT_WEIGHT * combat_quality
 	var style_quality := float(style["style_score"]) / float(STYLE_MAX)
 	var style_score := STYLE_WEIGHT * style_quality
-	var score := clampi(roundi(completion_score + time_score + style_score), 0, 100)
+	var combo_score := COMBO_WEIGHT * combo_quality
+	var score := clampi(roundi(completion_score + time_score + combat_score + style_score + combo_score), 0, 100)
 	var grade := _grade_for_score(score)
-	# A run that leaves an objective behind is still a successful run, but it is
-	# never presented as an A/S clear. This keeps full completion meaningful.
-	if room_completion_ratio < 1.0 and (grade == "S" or grade == "A"):
-		grade = "B"
 	return {
 		"score": score,
 		"grade": grade,
@@ -46,6 +50,10 @@ static func evaluate(run: RunState, _starting_health: float = 1.0) -> Dictionary
 		"room_completion_ratio": room_completion_ratio,
 		"completion_score": roundi(completion_score),
 		"time_score": roundi(time_score),
+		"combat_score": roundi(combat_score),
+		"combat_quality": combat_quality,
+		"combo_score": roundi(combo_score),
+		"combo_quality": combo_quality,
 		"time_quality": time_quality,
 		"time_target": target_time_seconds(run),
 		"style_score": int(style["style_score"]),
@@ -60,6 +68,20 @@ static func evaluate(run: RunState, _starting_health: float = 1.0) -> Dictionary
 		"max_combo": run.max_combo_count,
 		"combo_hits": run.combo_hit_count,
 	}
+
+
+static func combat_quality_for(run: RunState) -> float:
+	# Combat quality measures how well the player trades damage, rather than
+	# whether the room eventually ended. Enemy damage uses a two-point base, so
+	# incoming damage is normalized against the pressure the run faced.
+	var incoming_attempts := maxi(run.enemy_attack_attempts, run.encountered_enemy_count)
+	var damage_quality := 1.0 if incoming_attempts <= 0 else 1.0 - clampf(run.damage_taken / float(incoming_attempts * 2), 0.0, 1.0)
+	var hit_quality := 1.0 if run.attack_count <= 0 else _ratio(run.attack_swing_hit_count, run.attack_count)
+	return clampf(damage_quality * 0.60 + hit_quality * 0.40, 0.0, 1.0)
+
+
+static func combo_quality_for(run: RunState) -> float:
+	return clampf(float(run.max_combo_count) / 10.0, 0.0, 1.0)
 
 
 static func evaluate_style(run: RunState) -> Dictionary:
