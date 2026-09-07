@@ -11,6 +11,7 @@ const RUN2_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
 const RUN3_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
 const RUN4_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run4.gd")
 const RUN5_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run5.gd")
+const RUN6_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run6.gd")
 const LAYOUT_GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
 const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
@@ -28,6 +29,7 @@ var authored_run2 := false
 var authored_run3 := false
 var authored_run4 := false
 var authored_run5 := false
+var authored_run6 := false
 var starter_flame: StringName = &"fire"
 var starter_palette_name := "red"
 var completed_runs_for_layout := 0
@@ -39,7 +41,7 @@ var layout_bound_flame: StringName = &""
 var current_element := ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL
 
 
-func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &"") -> StringName:
+func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &"", rotation_quarter_turns: int = 0) -> StringName:
 	graph = target_graph
 	completed_runs_for_layout = maxi(completed_runs, 0)
 	if graph != null:
@@ -54,6 +56,7 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 	authored_run3 = completed_runs == 2
 	authored_run4 = completed_runs == 3
 	authored_run5 = completed_runs == 4
+	authored_run6 = completed_runs == 5
 	if authored_run1:
 		layout = RUN1_LAYOUT_SCRIPT.build()
 		var errors: Array[String] = layout.validate()
@@ -65,20 +68,25 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		for error in run2_errors:
 			push_error("Run 2 layout: %s" % error)
 	elif authored_run3:
-		layout = RUN3_LAYOUT_SCRIPT.build(starter_flame)
+		layout = RUN3_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns)
 		var run3_errors: Array[String] = layout.validate()
 		for error in run3_errors:
 			push_error("Run 3 layout: %s" % error)
 	elif authored_run4:
-		layout = RUN4_LAYOUT_SCRIPT.build(starter_flame)
+		layout = RUN4_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns)
 		var run4_errors: Array[String] = layout.validate()
 		for error in run4_errors:
 			push_error("Run 4 layout: %s" % error)
 	elif authored_run5:
-		layout = RUN5_LAYOUT_SCRIPT.build(starter_flame)
+		layout = RUN5_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns)
 		var run5_errors: Array[String] = layout.validate()
 		for error in run5_errors:
 			push_error("Run 5 layout: %s" % error)
+	elif authored_run6:
+		layout = RUN6_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns)
+		var run6_errors: Array[String] = layout.validate()
+		for error in run6_errors:
+			push_error("Run 6 layout: %s" % error)
 	else:
 		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, layout_bound_flame)
 		# Continue/load paths can hand us an already-created generated layout. Run
@@ -118,8 +126,12 @@ func is_authored_run5() -> bool:
 	return authored_run5
 
 
+func is_authored_run6() -> bool:
+	return authored_run6
+
+
 func is_authored_layout() -> bool:
-	return authored_run1 or authored_run2 or authored_run3 or authored_run4 or authored_run5
+	return authored_run1 or authored_run2 or authored_run3 or authored_run4 or authored_run5 or authored_run6
 
 
 func has_complete_layout() -> bool:
@@ -564,7 +576,7 @@ func is_connection_available(connection: DungeonGraph.ConnectionRecord, is_entra
 		return false
 	if not connection.hidden_until_event.is_empty() and not state.is_event_revealed(connection.hidden_until_event):
 		return false
-	if authored_run1 or authored_run2 or authored_run3 or authored_run4 or authored_run5:
+	if authored_run1 or authored_run2 or authored_run3 or authored_run4 or authored_run5 or authored_run6:
 		var occupied_room := graph.get_room(state.current_room_id) if graph != null else null
 		if occupied_room != null and requires_room_clear(occupied_room) and not state.is_room_completed(occupied_room.id):
 			return state.is_current_arrival(connection) and not state.is_room_engaged(occupied_room.id)

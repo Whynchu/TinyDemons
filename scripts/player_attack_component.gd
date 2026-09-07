@@ -4,10 +4,13 @@ class_name PlayerAttackComponent
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CircularInputRecognizerScript = preload("res://scripts/circular_input_recognizer.gd")
 
-const SWORD_BEAM_CHROMA_COST := 20
-const SWORD_BEAM_COOLDOWN := 5.0
-const SPIN_HIT_COOLDOWN := 0.22
-const SPIN_HITSTUN_DURATION := 0.22
+const SWORD_BEAM_CHROMA_COST := 30
+const SWORD_BEAM_COOLDOWN := 8.0
+## Keep the two light-hit beats distinct. The final beat has its own animation
+## frame and is allowed through separately below, so it cannot get swallowed by
+## this cooldown when it follows the second light hit.
+const SPIN_HIT_COOLDOWN := 0.15
+const SPIN_HITSTUN_DURATION := 0.18
 
 enum AttackKind { NONE, ATTACK1, ATTACK2, SPIN, CHARGING, CHARGED_ATTACK2 }
 
@@ -287,7 +290,8 @@ func apply_hitbox(root: Object) -> void:
 		var final_spin_frame := false
 		if is_spin_attack() and tuning != null:
 			final_spin_frame = int(root.get("player_anim_frame")) == tuning.spin_hit_end_frame
-		var already_hit := hit_targets.has(slime) if not is_spin_attack() else ((int(spin_final_hit_counts.get(slime_id, 0)) >= 1 if final_spin_frame else int(spin_hit_counts.get(slime_id, 0)) >= 2) or float(spin_hit_cooldowns.get(slime_id, 0.0)) > 0.0)
+		var spin_cooldown_active: bool = not final_spin_frame and float(spin_hit_cooldowns.get(slime_id, 0.0)) > 0.0
+		var already_hit := hit_targets.has(slime) if not is_spin_attack() else ((int(spin_final_hit_counts.get(slime_id, 0)) >= 1 if final_spin_frame else int(spin_hit_counts.get(slime_id, 0)) >= 2) or spin_cooldown_active)
 		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or already_hit:
 			continue
 		var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array

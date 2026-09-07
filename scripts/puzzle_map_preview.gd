@@ -38,7 +38,7 @@ func _draw() -> void:
 	var rows := ceili(float(map_textures.size()) / float(columns))
 	draw_rect(Rect2(Vector2.ZERO, Vector2(origin_x * 2 + columns * MAP_SIZE.x + (columns - 1) * spacing, origin_y + rows * (label_height + MAP_SIZE.y + spacing) + 8.0)), PuzzleMapGrid.COLOR_BACKGROUND)
 	draw_string(ThemeDB.fallback_font, Vector2(5.0, 7.0), "PUZZLE MAP GENERATOR", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 6, Color8(239, 242, 247))
-	var labels: Array[String] = ["R3", "R4", "R5"]
+	var labels: Array[String] = ["R3", "R4", "R5", "R6"]
 	for index in map_textures.size():
 		var column := index % columns
 		var row := index / columns

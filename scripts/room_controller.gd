@@ -40,8 +40,8 @@ const LATER_POPCORN_CHANCE: float = 0.24
 const ROOM_POPCORN := "ROOM_POPCORN"
 const ELITE_POPCORN := "ELITE_POPCORN"
 const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
-const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 2
-const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 4
+const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 3
+const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
 const BOSS_MIXED_SUPPORT_START_RANK: int = 5
 const PLAYER_DOOR_REPOSITION_RADII := [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0, 48.0]
 const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
@@ -302,9 +302,9 @@ func _popcorn_enemy_level_for_root(root: Object) -> int:
 
 
 func _boss_support_popcorn_count() -> int:
-	# Keep two low-level recovery supports through the authored opening, add one
-	# more for the first mixed encounters, then hold at four while mixed minors
-	# provide the slower late-run growth.
+	# Bosses need a real support wave even in the opening ranks. Add one more
+	# support for the first mixed encounters, then grow the late-run wave while
+	# mixed minors provide additional elemental pressure.
 	if progression_run_rank <= 2:
 		return BOSS_SUPPORT_POPCORN_BASE_COUNT
 	if progression_run_rank <= 6:

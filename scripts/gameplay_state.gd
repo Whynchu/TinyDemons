@@ -238,6 +238,7 @@ var target_input_was_down := false
 var combat_momentum: CombatMomentumComponent = null
 var player_death_pending := false
 var player_dead := false
+var puzzle_attempt_rotation_quarter_turns: int = 0
 var player_death_timer := 0.0
 var player_death_particles_started := false
 var hitstop_timer := 0.0
@@ -832,6 +833,11 @@ func _return_from_run_complete() -> void:
 func _show_game_over() -> void:
 	if game_over_overlay == null or game_over_overlay.visible: return
 	_apply_run_rank_grade("F")
+	# Each failed attempt presents the authored puzzle from the next quarter-turn
+	# so the route cannot be memorized from the previous attempt.
+	puzzle_attempt_rotation_quarter_turns = posmod(puzzle_attempt_rotation_quarter_turns + 1, 4)
+	if player_profile != null:
+		player_profile.puzzle_attempt_rotation_quarter_turns = puzzle_attempt_rotation_quarter_turns
 	_settle_current_run(&"defeat")
 	game_over_overlay.visible = true
 	screen_state_controller.set_state(&"game_over")
@@ -1227,8 +1233,8 @@ func _ensure_current_room_layout() -> void:
 	room_controller.progression_run_rank = maxi(1, player_profile.difficulty_rank if player_profile != null else dungeon_graph.completed_run_count + 1)
 	room_controller.player_level = maxi(1, player_profile.level if player_profile != null else player_stats.level)
 	var base_palette := run_start_palette_name if not run_start_palette_name.is_empty() else current_player_palette_name
-	var authored_r4 := dungeon_map_controller != null and bool(dungeon_map_controller.call("is_authored_run4"))
-	if authored_r4:
+	var authored_mixed_route := dungeon_map_controller != null and (bool(dungeon_map_controller.call("is_authored_run4")) or bool(dungeon_map_controller.call("is_authored_run5")) or bool(dungeon_map_controller.call("is_authored_run6")))
+	if authored_mixed_route:
 		room_controller.matchup_policy = "flame_mixed"
 		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, false)
 		var alternate_flames := dungeon_map_controller.call("alternate_flames") as Array
