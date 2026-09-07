@@ -83,6 +83,8 @@ var equipped_instance_ids := {"weapon": "", "head": "", "body": "", "armor": "",
 var family_mastery: Dictionary = {}
 var next_item_sequence := 1
 var completed_runs := 0
+## Quarter-turn applied to the next authored puzzle attempt after a death.
+var puzzle_attempt_rotation_quarter_turns := 0
 var last_clear_score := 0
 var difficulty_rank := 1
 var last_run_grade := "D"
@@ -622,6 +624,7 @@ func to_dictionary() -> Dictionary:
 		"family_mastery": family_mastery.duplicate(true),
 		"next_item_sequence": next_item_sequence,
 		"completed_runs": completed_runs,
+		"puzzle_attempt_rotation_quarter_turns": puzzle_attempt_rotation_quarter_turns,
 		"last_clear_score": last_clear_score,
 		"difficulty_rank": difficulty_rank,
 		"last_run_grade": last_run_grade,
@@ -714,6 +717,7 @@ func load_dictionary(data: Dictionary) -> void:
 				family_mastery[String(definition_id)] = clampi(int(saved_mastery[family_key]), 0, MAX_FAMILY_MASTERY)
 	next_item_sequence = maxi(int(data.get("next_item_sequence", 1)), 1)
 	completed_runs = maxi(int(data.get("completed_runs", 0)), 0)
+	puzzle_attempt_rotation_quarter_turns = posmod(int(data.get("puzzle_attempt_rotation_quarter_turns", 0)), 4)
 	last_clear_score = clampi(int(data.get("last_clear_score", 0)), 0, 100)
 	difficulty_rank = clampi(int(data.get("difficulty_rank", 1)), 1, 20)
 	last_run_grade = str(data.get("last_run_grade", "D")).to_upper()

@@ -106,7 +106,7 @@ func initialize(root: GameplayState) -> void:
 	dungeon_graph.configure_progression(profile.completed_runs)
 	var dungeon_seed := rng.randi()
 	root.current_dungeon_seed = dungeon_seed
-	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"")
+	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
 	if root.debug_start_in_boss_room:
 		if root.dungeon_map_controller.has_complete_layout():
@@ -268,6 +268,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 		equipment = _ensure_player_component(player, EquipmentComponent, "Equipment") as EquipmentComponent; equipment.equip_default_loadout()
 	root.player_equipment = equipment
 	var profile := root.player_profile
+	root.puzzle_attempt_rotation_quarter_turns = profile.puzzle_attempt_rotation_quarter_turns
 	if profile != null:
 		profile.ensure_starter_items()
 		equipment.configure_from_profile(profile)

@@ -19,16 +19,41 @@ const MAP_SIZE := Vector2i(35, 35)
 const HUB_COORDINATE := Vector2i(17, 17)
 
 
-static func build_r3(starter_flame: StringName, run_flame: StringName):
-	return _build_authored(R3_NEW_SCRIPT.build(), &"RUN3", &"r3_room", starter_flame, run_flame)
+static func build_r3(starter_flame: StringName, run_flame: StringName, rotation_quarter_turns: int = 0):
+	return _build_authored(_rotated_plan(R3_NEW_SCRIPT.build(), rotation_quarter_turns), &"RUN3", &"r3_room", starter_flame, run_flame)
 
 
-static func build_r4(starter_flame: StringName, run_flame: StringName):
-	return _build_authored(R3_SCRIPT.build(), &"RUN4", &"r4_room", starter_flame, run_flame)
+static func build_r4(starter_flame: StringName, run_flame: StringName, rotation_quarter_turns: int = 0):
+	return _build_authored(_rotated_plan(R4_SCRIPT.build(), rotation_quarter_turns), &"RUN4", &"r4_room", starter_flame, run_flame)
 
 
-static func build_r5(starter_flame: StringName, run_flame: StringName):
-	return _build_authored(R5_SCRIPT.build(), &"RUN5", &"r5_room", starter_flame, run_flame)
+static func build_r5(starter_flame: StringName, run_flame: StringName, rotation_quarter_turns: int = 0):
+	return _build_authored(_rotated_plan(R5_SCRIPT.build(), rotation_quarter_turns), &"RUN5", &"r5_room", starter_flame, run_flame)
+
+
+static func build_r6(starter_flame: StringName, run_flame: StringName, rotation_quarter_turns: int = 0):
+	return _build_authored(_rotated_plan(R5_SCRIPT.build(), rotation_quarter_turns), &"RUN6", &"r6_room", starter_flame, run_flame)
+
+
+static func _rotated_plan(source: PuzzleMapGrid.MapPlan, rotation_quarter_turns: int) -> PuzzleMapGrid.MapPlan:
+	var turns := posmod(rotation_quarter_turns, 4)
+	if turns == 0:
+		return source
+	var rotated := PuzzleMapGrid.MapPlan.new(StringName("%s_rot%d" % [source.id, turns]))
+	for tile in source.active_tiles:
+		rotated.add_active_tile(_rotate_coordinate(tile, turns))
+	for marker in source.markers:
+		if marker != null:
+			rotated.add_marker(_rotate_coordinate(marker.coordinate, turns), marker.kind)
+	return rotated
+
+
+static func _rotate_coordinate(coordinate: Vector2i, turns: int) -> Vector2i:
+	var offset := coordinate - HUB_COORDINATE
+	for _turn in range(turns):
+		# Grid Y grows downward, so this is a visual clockwise turn.
+		offset = Vector2i(-offset.y, offset.x)
+	return HUB_COORDINATE + offset
 
 
 static func _build_authored(plan: PuzzleMapGrid.MapPlan, layout_id: StringName, room_prefix: StringName, starter_flame: StringName, run_flame: StringName):

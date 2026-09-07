@@ -14,6 +14,9 @@ const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
+## Keep candidate selection lightweight enough for a live run transition. The
+## preview can still vary its outer seeds for more visual samples.
+const GENERATED_CANDIDATE_COUNT := 4
 const FIRST_ORB_DEPTH := 3
 const FIRST_SPECIAL_DEPTH := 4
 
@@ -119,6 +122,24 @@ class LayoutBuilder extends RefCounted:
 
 
 static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &""):
+	# The expansion grammar is seed-driven, but one random walk is not enough to
+	# guarantee a readable puzzle. Generate a small deterministic candidate pool,
+	# validate each candidate's progression, and keep the best route for this
+	# seed. The selected result remains deterministic for saves and replays.
+	var best_layout = null
+	var best_score := -INF
+	for candidate_index in range(GENERATED_CANDIDATE_COUNT):
+		var candidate_seed := int(dungeon_seed) ^ (candidate_index * 104729) ^ 0x524F5554
+		var candidate = _build_candidate(candidate_seed, completed_runs, selected_starter_flame, selected_bound_flame)
+		var candidate_errors: Array[String] = validate(candidate, completed_runs, selected_starter_flame, selected_bound_flame)
+		var candidate_score := _candidate_score(candidate, candidate_errors, completed_runs)
+		if best_layout == null or candidate_score > best_score:
+			best_layout = candidate
+			best_score = candidate_score
+	return best_layout
+
+
+static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName, selected_bound_flame: StringName):
 	var run_number := maxi(completed_runs + 1, 1)
 	var run_index := maxi(completed_runs, 1)
 	var starter_flame := selected_starter_flame if ASPECT_CATALOG_SCRIPT.is_starter_flame(selected_starter_flame) else &"fire"
@@ -174,7 +195,7 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	# the late Special Room's primary-color door. Give every fusion run one final
 	# primary Fire Room immediately before that Special Room so the player can
 	# restore the required color after the mandatory fusion tiers.
-	if completed_runs >= 5 and not fusion_plan.is_empty():
+	if completed_runs >= 6 and not fusion_plan.is_empty():
 		var late_recovery_depth := second_special_depth - 1
 		if late_recovery_depth > FIRST_SPECIAL_DEPTH and late_recovery_depth < boss_depth and not fusion_fire_flames.has(late_recovery_depth):
 			fusion_fire_flames[late_recovery_depth] = _late_special_recovery_flame(starter_flame, alternate_flames)
@@ -269,6 +290,35 @@ static func generated_room_target_for_run(run_number: int) -> int:
 	if normalized_run <= 9:
 		return 28
 	return 29 + floori(float(normalized_run - 10) / 2.0)
+
+
+static func _candidate_score(layout, errors: Array[String], completed_runs: int) -> float:
+	var run_number := maxi(completed_runs + 1, 1)
+	var target := generated_room_target_for_run(run_number)
+	var score := -float(errors.size()) * 100000.0
+	score -= absf(float(layout.rooms.size() - target)) * 80.0
+	# A readable roguelike route has a few optional edges, but not a dense web
+	# where every room has several equally important exits.
+	var optional_edges := 0
+	var max_degree := 0
+	var degree_by_room: Dictionary = {}
+	for connection in layout.connections:
+		var role: StringName = connection.route_role
+		if role not in [ROUTE_MAIN, ROUTE_KEY_PROGRESSION]:
+			optional_edges += 1
+		degree_by_room[connection.source_room_id] = int(degree_by_room.get(connection.source_room_id, 0)) + 1
+		degree_by_room[connection.destination_room_id] = int(degree_by_room.get(connection.destination_room_id, 0)) + 1
+	for degree in degree_by_room.values():
+		max_degree = maxi(max_degree, int(degree))
+	score -= absf(float(optional_edges - 5)) * 4.0
+	score -= maxf(float(max_degree - 4), 0.0) * 18.0
+	# Prefer candidates with a few meaningful loops, but reject excessive cycles
+	# that make the active gate state hard to understand.
+	var cycle_count: int = layout.connections.size() - layout.rooms.size() + 1
+	score += clampf(float(cycle_count), 0.0, 4.0) * 5.0
+	if cycle_count > 7:
+		score -= float(cycle_count - 7) * 12.0
+	return score
 
 
 static func generated_boss_depth_for_run(run_number: int) -> int:
@@ -367,7 +417,7 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 			errors.append("generated layout contains unreachable rooms")
 		if not boss_id.is_empty() and not reachable.has(boss_id):
 			errors.append("generated layout boss is unreachable")
-		if completed_runs >= 5:
+		if completed_runs >= 6:
 			var fusion_gate_errors := _fusion_gate_reachability_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame)
 			errors.append_array(fusion_gate_errors)
 			var fusion_softlock_errors := _fusion_orb_softlock_errors(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame)
@@ -476,7 +526,7 @@ static func _repair_unreachable_entrance_orb_gates(layout, start_id: StringName,
 		# Mandatory fusion requirements are curriculum data, not a generic
 		# fallback. If their ordered proof fails, validation must report the bad
 		# topology instead of silently replacing the tier with another element.
-		if completed_runs >= 5 and (connection.route_role == ROUTE_MAIN or connection.route_role == ROUTE_KEY_PROGRESSION):
+		if completed_runs >= 6 and (connection.route_role == ROUTE_MAIN or connection.route_role == ROUTE_KEY_PROGRESSION):
 			continue
 		var states := _element_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame)
 		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(connection.orb_element_requirement)

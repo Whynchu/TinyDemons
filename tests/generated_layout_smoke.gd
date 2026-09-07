@@ -205,8 +205,8 @@ func _initialize() -> void:
 
 	var run_graph = GRAPH_SCRIPT.new()
 	var map = MAP_CONTROLLER_SCRIPT.new()
-	map.begin_run(run_graph, 24681357, 4, &"water")
-	_expect(not map.is_authored_layout() and map.has_complete_layout(), "Run 5 initializes from a generated complete layout after authored Run 4", failures)
+	map.begin_run(run_graph, 24681357, 6, &"water")
+	_expect(not map.is_authored_layout() and map.has_complete_layout(), "Run 7 initializes from a generated complete layout after authored Run 6", failures)
 	var first_orb_id: StringName = &""
 	for room_id in run_graph.get_room_ids():
 		var room := run_graph.get_room(room_id)
@@ -217,9 +217,9 @@ func _initialize() -> void:
 		map.on_room_entered(first_orb_id)
 		_expect(map.change_orb_from_room(first_orb_id, &"puzzle_a"), "generated Orb Room changes the shared map puzzle color", failures)
 		_expect(map.current_color() == &"puzzle_a", "generated map tracks the shared Orb Room color", failures)
-		_expect(map.available_puzzle_colors().has(&"puzzle_c") and map.available_puzzle_colors().has(&"puzzle_d"), "Run 5 exposes both alternate puzzle colors", failures)
-		_expect(map.puzzle_color_for_palette("red") == &"puzzle_c", "Run 5 maps the first alternate fire palette to Puzzle Color C", failures)
-		_expect(map.change_orb_from_room(first_orb_id, &"puzzle_c"), "Run 5 Orb Room accepts the first alternate puzzle color", failures)
+		_expect(map.available_puzzle_colors().has(&"puzzle_c") and map.available_puzzle_colors().has(&"puzzle_d"), "Run 7 exposes both alternate puzzle colors", failures)
+		_expect(map.puzzle_color_for_palette("red") == &"puzzle_c", "Run 7 maps the first alternate fire palette to Puzzle Color C", failures)
+		_expect(map.change_orb_from_room(first_orb_id, &"puzzle_c"), "Run 7 Orb Room accepts the first alternate puzzle color", failures)
 	else:
 		_expect(false, "generated layout exposes an Orb Room to the map controller", failures)
 	map.free()
@@ -229,7 +229,7 @@ func _initialize() -> void:
 	# unlock flag is still false.
 	var door_graph = GRAPH_SCRIPT.new()
 	var door_map = MAP_CONTROLLER_SCRIPT.new()
-	door_map.begin_run(door_graph, 24681357, 4, &"water")
+	door_map.begin_run(door_graph, 24681357, 6, &"water")
 	# The generated run exposes multiple Special Rooms with different door
 	# colors; find the one that carries the puzzle_a/puzzle_b pair this section
 	# asserts on rather than assuming the first special room is that room.
@@ -267,7 +267,7 @@ func _initialize() -> void:
 	# become a reverse-travel bypass into the uncleared sibling combat branch.
 	var merge_graph = GRAPH_SCRIPT.new()
 	var merge_map = MAP_CONTROLLER_SCRIPT.new()
-	merge_map.begin_run(merge_graph, 24681357, 4, &"water")
+	merge_map.begin_run(merge_graph, 24681357, 6, &"water")
 	var left_merge_connection = merge_graph.get_connection(&"room_-1_1", GRAPH_SCRIPT.WALL_RIGHT)
 	var right_merge_connection = merge_graph.get_connection(&"room_1_1", GRAPH_SCRIPT.WALL_LEFT)
 	merge_map.on_room_completed(&"room_-1_1")

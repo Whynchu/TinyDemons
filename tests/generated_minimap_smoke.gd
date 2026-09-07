@@ -12,7 +12,7 @@ func _initialize() -> void:
 	var minimap = MINIMAP_SCRIPT.new()
 	root.add_child(map)
 	root.add_child(minimap)
-	map.begin_run(graph, 864209, 4, &"fire")
+	map.begin_run(graph, 864209, 6, &"fire")
 	minimap.configure(map)
 	var layout = map.get("layout")
 	for room in layout.rooms:
@@ -21,7 +21,7 @@ func _initialize() -> void:
 	var full_image: Image = minimap.snapshot_full_image()
 	_expect(minimap.visible, "generated run exposes a minimap", failures)
 	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "generated minimap uses the fixed 25x25 circular display window", failures)
-	_expect(full_image != null and full_image.get_height() > MINIMAP_SCRIPT.MAP_SIZE.y, "generated Run 5 retains its expanded full-map geometry", failures)
+	_expect(full_image != null and full_image.get_height() > MINIMAP_SCRIPT.MAP_SIZE.y, "generated Run 7 retains its expanded full-map geometry", failures)
 	if full_image != null:
 		var start = layout.room_by_id(graph.start_room_id)
 		var boss = null
