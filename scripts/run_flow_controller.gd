@@ -323,9 +323,9 @@ func clear_reward_rarity(root: Object, score: int, roll: float) -> StringName:
 	return roll_run_loot_rarity(root, roll, clampf(float(score) / 100.0, 0.0, 1.0))
 
 
-func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0) -> StringName:
+func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
 	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else float(root.call("_loot_grade_bonus"))
-	return ItemCatalog.new().roll_run_rarity(roll, run_rank(root), performance_bonus)
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank(root), performance_bonus, rarity_multipliers)
 
 
 func complete_run(root: Object) -> void:

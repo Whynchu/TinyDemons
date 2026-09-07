@@ -262,6 +262,7 @@ var player_spd:
 		player_agi = float(value)
 var player_speed_multiplier := 1.0
 var final_exit_open := false
+var final_exit_socket: StringName = &""
 var settlement_room_active := false
 var scene_transition_overlay: ColorRect = null
 var scene_transition_timer := 0.0
@@ -275,6 +276,7 @@ var loading_screen_timer := 0.0
 var interact_input_was_down := false
 var chest_unlocked := false
 var chest_claimed := false
+var regular_room_treasure := false
 var chest_collect_flash_timer := 0.0
 var chest_evaporated := false
 var door_active := false
@@ -808,8 +810,8 @@ func _record_run_action_input(action: StringName, accepted: bool) -> void:
 	run_flow_controller.call("record_run_action_input", self, action, accepted)
 func _clear_reward_rarity(score: int, roll: float) -> StringName:
 	return run_flow_controller.call("clear_reward_rarity", self, score, roll) as StringName
-func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0) -> StringName:
-	return run_flow_controller.call("roll_run_loot_rarity", self, roll, score_quality) as StringName
+func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
+	return run_flow_controller.call("roll_run_loot_rarity", self, roll, score_quality, rarity_multipliers) as StringName
 func _complete_run() -> void:
 	run_flow_controller.call("complete_run", self)
 func _show_run_complete(drop_color: Color) -> void:
@@ -977,7 +979,7 @@ func _is_slime_dead(slime: Sprite2D) -> bool: return bool(combat_runtime_control
 func _are_all_slimes_dead() -> bool: return bool(combat_runtime_controller.call("are_all_slimes_dead", self))
 func _unlock_chest() -> void:
 	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
-	if room == null or room.room_type != DungeonGraph.ROOM_TREASURE:
+	if room == null or (room.room_type != DungeonGraph.ROOM_TREASURE and not regular_room_treasure):
 		return
 	if chest_unlocked: return
 	chest_unlocked = true; if chest_normal_texture != null: chest_controller.start_unlock_fade(self)
@@ -1030,13 +1032,27 @@ func _open_final_exit() -> void:
 	if settlement_room_active:
 		return
 	final_exit_open = true
-	var exit_socket := room_controller.dungeon_sockets.get(DungeonGraph.WALL_RIGHT) as DungeonSocket
+	# Boss rooms may be entered from either upper side. The settlement stairs
+	# must be the other side, never the socket the player just used to arrive.
+	var exit_candidates: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]
+	var arrival_side := DungeonGraph.paired_socket(room_controller.arrival_socket_id)
+	for candidate in exit_candidates:
+		if candidate == room_controller.arrival_socket_id or candidate == arrival_side:
+			continue
+		var candidate_socket := room_controller.dungeon_sockets.get(candidate) as DungeonSocket
+		if candidate_socket != null:
+			final_exit_socket = candidate
+			break
+	if final_exit_socket.is_empty():
+		final_exit_socket = DungeonGraph.WALL_RIGHT
+	room_controller.active_door_sockets.clear()
+	var exit_socket := room_controller.dungeon_sockets.get(final_exit_socket) as DungeonSocket
 	if exit_socket != null:
-		room_controller.active_door_sockets[DungeonGraph.WALL_RIGHT] = exit_socket
+		room_controller.active_door_sockets[final_exit_socket] = exit_socket
 		door_active = true
-	# Victory opens both choices: the right-side stairs complete the run, while
-	# the arrival entrance becomes a real reverse route back into the dungeon.
-	entrance_open = true
+	# The arrival stairs stay sealed after victory; only the opposite exit leads
+	# to settlement, preventing an accidental same-way return.
+	entrance_open = false
 	_refresh_room_socket_visuals(true)
 	_build_entrance_block_polygons()
 func _fire_target_palette() -> String:

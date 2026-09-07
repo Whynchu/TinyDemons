@@ -967,7 +967,7 @@ func sell_soul_value(item: ItemInstance) -> int:
 	return floori(float(invested) * 0.5)
 
 
-func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> StringName:
+func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0, rarity_multipliers: Array = []) -> StringName:
 	var band_index := mini(maxi((maxi(rank, 1) - 1) / 10, 0), 5)
 	var band_progress := 0.0 if band_index == 0 else float((maxi(rank, 1) - 1) % 10) / 10.0
 	var rates: Array = [[0.12, 0.0075, 0.001, 0.00005], [0.12, 0.0125, 0.0015, 0.0001], [0.12, 0.0175, 0.003, 0.0002], [0.12, 0.025, 0.005, 0.0005], [0.12, 0.0325, 0.008, 0.001], [0.12, 0.04, 0.012, 0.002]]
@@ -977,6 +977,11 @@ func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0) -> 
 	var epic_chance := lerpf(float(current[1]), float(next[1]), band_progress)
 	var legendary_chance := lerpf(float(current[2]), float(next[2]), band_progress)
 	var mythic_chance := lerpf(float(current[3]), float(next[3]), band_progress)
+	if rarity_multipliers.size() >= 4:
+		rare_chance *= clampf(float(rarity_multipliers[0]), 0.0, 1.0)
+		epic_chance *= clampf(float(rarity_multipliers[1]), 0.0, 1.0)
+		legendary_chance *= clampf(float(rarity_multipliers[2]), 0.0, 1.0)
+		mythic_chance *= clampf(float(rarity_multipliers[3]), 0.0, 1.0)
 	# Quality is intentionally bounded to the current rank band.
 	var quality_shift := clampf(performance_bonus * 0.001, -0.002, 0.002)
 	epic_chance = maxf(0.0, epic_chance + quality_shift)

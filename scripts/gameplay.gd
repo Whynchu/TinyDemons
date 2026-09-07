@@ -40,7 +40,8 @@ func _grant_chest_item_reward() -> bool:
 		var item_seed := generation_seed ^ (0x13579BDF + index * 0x2468ACE)
 		var slot := catalog.select_slot_for_source(player_profile, item_seed, player_profile.level, &"chest", _run_rank())
 		var slot_was_empty := catalog.slot_needs_introduction(player_profile, slot)
-		var rarity := _roll_run_loot_rarity(reward_rng.randf())
+		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if bool(get("regular_room_treasure")) else []
+		var rarity := _roll_run_loot_rarity(reward_rng.randf(), -1.0, rarity_multipliers)
 		var item := catalog.generate_item(slot, item_seed, player_profile.level, rarity, false, &"chest", _run_rank())
 		if item.definition_id.is_empty():
 			continue
@@ -154,7 +155,7 @@ func _set_rest_fire_frame(frame_index: int) -> void:
 	rest_fire_controller.frame_index = posmod(frame_index, rest_fire_frames.size()); rest_fire.texture = rest_fire_frames[rest_fire_controller.frame_index]; rest_fire.hframes = 1; rest_fire.frame = 0; occlusion_renderer.sprite_images[rest_fire] = occlusion_renderer.cached_texture_image(rest_fire.texture)
 func _cache_npc_texture(_actor: Sprite2D, texture: Texture2D) -> void: occlusion_renderer.sprite_images[cloaked_demon] = occlusion_renderer.cached_texture_image(texture)
 func _can_interact_with_chest() -> bool:
-	if chest == null or player == null or current_room_type != DungeonGraph.ROOM_TREASURE or not chest_unlocked or chest_claimed:
+	if chest == null or player == null or (current_room_type != DungeonGraph.ROOM_TREASURE and not bool(get("regular_room_treasure"))) or not chest_unlocked or chest_claimed:
 		return false
 	var chest_rect := _collision_rect(chest)
 	var player_foot := _actor_foot(player)

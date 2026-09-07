@@ -197,6 +197,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
 | Chest gold roll | `0.75x-1.30x` base before rank/grade multiplier | `run_flow_controller.gd:chest_gold_reward` |
 | Chest item drop chance | clamp to [0.30, 0.88], base 0.34 | `gameplay.gd:_chest_item_drop_chance` |
+| Regular enemy-room treasure | R3+ run ranks; 0.60 deterministic chance per combat room; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms | `room_controller.gd:REGULAR_ROOM_TREASURE_CHANCE`, `gameplay.gd:_grant_chest_item_reward` |
 | Chest second gear drop | 1 additional item, base 0.35 chance | `run_flow_controller.gd:chest_item_drop_count` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
