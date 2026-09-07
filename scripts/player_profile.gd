@@ -160,7 +160,7 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	return true
 
 
-func _head_locked_by_body(catalog: ItemCatalog) -> bool:
+func _head_locked_by_body(_catalog: ItemCatalog) -> bool:
 	var body_id := get_equipped_instance_id(&"body")
 	if body_id.is_empty():
 		return false

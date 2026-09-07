@@ -410,11 +410,11 @@ func _set_text(sprite: Sprite2D, value: String, color: Color = Color.WHITE) -> v
 	sprite.visible = not value.is_empty()
 
 
-func _set_button_active(button: Button, active: bool, visible := true) -> void:
+func _set_button_active(button: Button, active: bool, button_shown := true) -> void:
 	if button == null:
 		return
-	button.visible = visible
-	button.mouse_filter = Control.MOUSE_FILTER_STOP if active and visible else Control.MOUSE_FILTER_IGNORE
+	button.visible = button_shown
+	button.mouse_filter = Control.MOUSE_FILTER_STOP if active and button_shown else Control.MOUSE_FILTER_IGNORE
 	button.disabled = not active
 
 
@@ -448,11 +448,11 @@ func _native_button_position(button: Button) -> Vector2:
 	return native_rect.position
 
 
-func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible: bool, preserve_motion: bool) -> void:
+func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, cursor_shown: bool, preserve_motion: bool) -> void:
 	if cursor == null:
 		return
-	cursor.visible = visible
-	if visible:
+	cursor.visible = cursor_shown
+	if cursor_shown:
 		cursor.modulate = ACTIVE_CURSOR_MODULATE if active else DIM_CURSOR_MODULATE
 	var bob_endpoint := Vector2(3.0, 0.0) if not active else Vector2.ZERO
 	var resolved_target := _responsive_position(target + bob_endpoint, maxf(size.x, NATIVE_SIZE.x))
@@ -460,10 +460,10 @@ func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible: 
 	# placeholders, so never call lock/stop/tween methods from the @tool preview;
 	# visual visibility and dimming still apply in both contexts.
 	if Engine.is_editor_hint():
-		if visible:
+		if cursor_shown:
 			cursor.position = resolved_target
 		return
-	if not visible:
+	if not cursor_shown:
 		if cursor.has_method("stop_motion"):
 			cursor.call("stop_motion")
 		return

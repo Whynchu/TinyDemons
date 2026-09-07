@@ -81,8 +81,8 @@ func _set_page_title(renderer: Object, node_path: String, value: String) -> void
 		title.texture = renderer.call("number_texture", value, Color.WHITE) as Texture2D
 
 
-func _add_pixel_text(renderer: Object, sprite_name: String, value: String, sprite_position: Vector2, color: Color) -> void:
-	var texture := renderer.call("number_texture", value, color) as Texture2D
+func _add_pixel_text(renderer: Object, sprite_name: String, value: String, sprite_position: Vector2, text_color: Color) -> void:
+	var texture := renderer.call("number_texture", value, text_color) as Texture2D
 	if texture != null:
 		_add_texture(sprite_name, texture, sprite_position)
 

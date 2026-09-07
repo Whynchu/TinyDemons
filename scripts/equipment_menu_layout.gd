@@ -408,7 +408,7 @@ func set_slot_grid(labels: Array[String], colors: Array[Color] = [], locked: Arr
 			_slot_icons[index].modulate = DIM_CURSOR_MODULATE if index < locked.size() and locked[index] else Color.WHITE
 
 
-func set_candidates(labels: Array[String], colors: Array[Color] = [], selected_index: int = -1, scroll_fraction: float = 0.0) -> void:
+func set_candidates(labels: Array[String], colors: Array[Color] = [], _selected_index: int = -1, scroll_fraction: float = 0.0) -> void:
 	_candidate_scroll_fraction = clampf(scroll_fraction, 0.0, 1.999999)
 	for index in _candidate_texts.size():
 		var value := labels[index] if index < labels.size() else ""
@@ -422,7 +422,7 @@ func set_candidates(labels: Array[String], colors: Array[Color] = [], selected_i
 func _apply_candidate_scroll() -> void:
 	var offset_y := _candidate_scroll_fraction * 9.0
 	for index in _candidate_texts.size():
-		_candidate_texts[index].position.y = 93.0 + floori(index / 2) * 9.0 - offset_y
+		_candidate_texts[index].position.y = 93.0 + floori(float(index) / 2.0) * 9.0 - offset_y
 	for index in candidate_buttons.size():
 		var button := candidate_buttons[index]
 		var native_rect := button.get_meta("equipment_native_rect", Rect2(button.position, button.size)) as Rect2
@@ -464,11 +464,11 @@ func set_confirm_prompt(lines: Array[String], selected_index: int = 1) -> void:
 		set_text(_confirm_texts[index], lines[index] if index < lines.size() else "", Color.WHITE if index == selected_index else DIM_CURSOR_MODULATE)
 
 
-func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, visible := true, preserve_motion: bool = false) -> void:
+func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, cursor_shown := true, preserve_motion: bool = false) -> void:
 	if cursor == null:
 		return
-	cursor.visible = visible
-	if not visible:
+	cursor.visible = cursor_shown
+	if not cursor_shown:
 		return
 	cursor.modulate = ACTIVE_CURSOR_MODULATE if active else DIM_CURSOR_MODULATE
 	# The authored scene is @tool, but menu_cursor.gd intentionally remains a

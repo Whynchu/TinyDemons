@@ -292,7 +292,7 @@ func _enemy_level_cap() -> int:
 	return progression_run_rank + 2 if progression_run_rank <= 3 else progression_run_rank + 4
 
 
-func _generated_enemy_base_level(room_depth: int) -> int:
+func _generated_enemy_base_level(_room_depth: int) -> int:
 	# Flat difficulty: enemy level derives from run rank, not room depth. The
 	# depth parameter is retained only so callers (boss/encounter) keep an
 	# unchanged signature while the difficulty source is rank-only.
@@ -1037,7 +1037,7 @@ func _is_popcorn_respawn_room(root: Object) -> bool:
 	return room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_TREASURE or room_type == DungeonGraph.ROOM_DOWNSTAIRS or room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
 
 
-func _maybe_add_backtrack_popcorn(root: Object) -> void:
+func _maybe_add_backtrack_popcorn(_root: Object) -> void:
 	# Popcorn is tied to the original encounter slots. Do not inject a new slot
 	# merely because the player revisits a completed room; each popcorn slot gets
 	# its own 45-second timer when that slot dies.

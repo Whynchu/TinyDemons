@@ -109,7 +109,10 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 	hit_targets.clear()
 	hit_sound_played = false
 	charge_elapsed = 0.0
-	attack_element = int(root.call("_player_weapon_element")) if root.has_method("_player_weapon_element") else ElementCatalogScript.Element.NEUTRAL
+	if root.has_method("_player_weapon_element"):
+		attack_element = int(root.call("_player_weapon_element")) as ElementCatalogScript.Element
+	else:
+		attack_element = ElementCatalogScript.Element.NEUTRAL
 	var player := root.get("player") as Sprite2D
 	root.set("player_attack_flip_h", player.flip_h)
 	var tuning := root.get("player_tuning") as PlayerTuning

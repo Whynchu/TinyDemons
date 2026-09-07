@@ -222,14 +222,14 @@ static func render_preview(plan: MapPlan, template: Image) -> Image:
 	return map_image
 
 
-static func parse(reference: Image, template: Image, plan_id: StringName = &"") -> MapPlan:
-	if reference == null or template == null or reference.get_size() != template.get_size():
+static func parse(reference_image: Image, template: Image, plan_id: StringName = &"") -> MapPlan:
+	if reference_image == null or template == null or reference_image.get_size() != template.get_size():
 		return null
 	var plan := MapPlan.new(plan_id)
-	for y in reference.get_height():
-		for x in reference.get_width():
+	for y in reference_image.get_height():
+		for x in reference_image.get_width():
 			var coordinate := Vector2i(x, y)
-			var reference_color: Color = reference.get_pixelv(coordinate)
+			var reference_color: Color = reference_image.get_pixelv(coordinate)
 			if reference_color == template.get_pixelv(coordinate):
 				continue
 			var kind := marker_kind(reference_color)

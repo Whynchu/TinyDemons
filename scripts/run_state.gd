@@ -134,20 +134,20 @@ static func _dictionary(value: Variant) -> Dictionary:
 
 
 static func _string_name_dictionary(value: Variant) -> Dictionary:
-	var result := {}
+	var converted: Dictionary = {}
 	if value is Dictionary:
 		for key in (value as Dictionary).keys():
-			result[StringName(str(key))] = (value as Dictionary)[key]
-	return result
+			converted[StringName(str(key))] = (value as Dictionary)[key]
+	return converted
 
 
 static func _dictionary_array(value: Variant) -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
+	var converted: Array[Dictionary] = []
 	if value is Array:
 		for entry in value:
 			if entry is Dictionary:
-				result.append(entry.duplicate(true))
-	return result
+				converted.append(entry.duplicate(true))
+	return converted
 
 
 func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: float = 1.0) -> void:

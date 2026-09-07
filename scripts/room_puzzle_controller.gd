@@ -654,7 +654,7 @@ func _apply_door_socket_visual(root: Object, socket: DungeonSocket, visual: Spri
 	visual.flip_h = socket.socket_id() == DungeonGraph.WALL_LEFT
 
 
-func _apply_walkway_socket_visual(root: Object, socket: DungeonSocket, visual: Sprite2D, connection: DungeonGraph.ConnectionRecord, is_entrance: bool, is_boss_room: bool, entrance_walkway_texture: Texture2D) -> void:
+func _apply_walkway_socket_visual(root: Object, _socket: DungeonSocket, visual: Sprite2D, connection: DungeonGraph.ConnectionRecord, is_entrance: bool, is_boss_room: bool, entrance_walkway_texture: Texture2D) -> void:
 	var visual_state: StringName = root.call("_map_connection_visual_state", connection, is_entrance) as StringName
 	visual.visible = true
 	if is_boss_room:

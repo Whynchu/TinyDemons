@@ -200,7 +200,7 @@ func sync_chroma_presentation(root: Object) -> void:
 
 func execute_current_aspect_ability(root: Object, mode: int) -> bool:
 	if magic_animation_active and magic_hold_active and not magic_animation_is_imbue:
-		pending_magic_mode = mode
+		pending_magic_mode = mode as ChromaComponentScript.AbilityMode
 		magic_cast_decided = true
 		if magic_animation_frame >= MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
 			_spawn_pending_magic_projectile(root)
@@ -225,7 +225,7 @@ func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, m
 	magic_animation_frame = 0
 	pending_magic_direction = direction.normalized() if direction.length_squared() > 0.0001 else Vector2.RIGHT
 	pending_magic_target = target if target != null and is_instance_valid(target) else null
-	pending_magic_mode = mode
+	pending_magic_mode = mode as ChromaComponentScript.AbilityMode
 	pending_magic_projectile_spawned = false
 	magic_animation_is_imbue = is_imbue
 	pending_imbue_activated = false
@@ -523,7 +523,9 @@ func _magic_target_point_callback(slime: Sprite2D, root: Object) -> Vector2:
 
 
 func _magic_projectile_hit_target_callback(sprite: Sprite2D, is_beam: bool, root: Object) -> Variant:
-	return magic_projectile_hit_targets(root, sprite) if is_beam else magic_projectile_hit_target(root, sprite)
+	if is_beam:
+		return magic_projectile_hit_targets(root, sprite)
+	return magic_projectile_hit_target(root, sprite)
 
 
 func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int, is_beam: bool, root: Object) -> void:

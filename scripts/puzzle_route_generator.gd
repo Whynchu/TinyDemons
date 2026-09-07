@@ -43,16 +43,16 @@ static func _build_native_r7(dungeon_seed: int, starter_flame: StringName, bound
 	var fusion_requirement: StringName = StringName((fusion_plan.get("entrance_orb_requirements", {}) as Dictionary).get(6, "ground"))
 	var rooms: Dictionary = {}
 	var used_coordinates: Dictionary = {}
-	var serial := 0
+	var serial_box: Array[int] = [0]
 	var add_room: Callable = func(coordinate: Vector2i, room_type: StringName, chest_count: int = 0, fire_flame: StringName = &"") -> StringName:
 		if used_coordinates.has(coordinate):
 			return used_coordinates[coordinate]
 		var room_id := StringName("room_%d_%d" % [coordinate.x, coordinate.y])
-		var spec = layout.make_room_spec(room_id, coordinate, Vector2i(17, 32) + Vector2i(coordinate.x * 2, -coordinate.y * 2), room_type, chest_count, &"", dungeon_seed + serial, fire_flame)
+		var spec = layout.make_room_spec(room_id, coordinate, Vector2i(17, 32) + Vector2i(coordinate.x * 2, -coordinate.y * 2), room_type, chest_count, &"", dungeon_seed + serial_box[0], fire_flame)
 		layout.add_room(spec)
 		used_coordinates[coordinate] = room_id
 		rooms[room_id] = spec
-		serial += 1
+		serial_box[0] += 1
 		return room_id
 	var link: Callable = func(source_id: StringName, socket: StringName, destination_id: StringName, color: StringName = &"", gate_type: StringName = DungeonGraph.GATE_NONE, orb_requirement: StringName = &"", role: StringName = &"main") -> void:
 		var source = rooms[source_id]

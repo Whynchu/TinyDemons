@@ -766,7 +766,7 @@ func transmutation_effects(transmutation_id: StringName) -> Dictionary:
 func rarity_color(rarity: StringName) -> Color:
 	return RARITY_COLORS.get(rarity, Color.WHITE)
 
-func rarity_stat_rate(rarity: StringName) -> float:
+func rarity_stat_rate(_rarity: StringName) -> float:
 	# Kept as a compatibility seam for old callers. The reworked model is flat;
 	# rarity and fusion growth are folded into bonuses() instead of multiplying
 	# the player's complete stat sheet.
@@ -834,12 +834,12 @@ func display_name(item: ItemInstance) -> String:
 	return "%s %s" % [RARITY_NAMES.get(item.rarity, "COMMON"), gear_name(item)]
 
 
-func player_stat_rates(item: ItemInstance) -> Dictionary:
+func player_stat_rates(_item: ItemInstance) -> Dictionary:
 	# The old percentage-affix API remains readable by callers, but the new gear
 	# system intentionally has no hidden player-stat multipliers.
 	return {}
 
-func player_stat_rate_text(item: ItemInstance) -> String:
+func player_stat_rate_text(_item: ItemInstance) -> String:
 	return ""
 
 
@@ -968,7 +968,7 @@ func sell_soul_value(item: ItemInstance) -> int:
 
 
 func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0, rarity_multipliers: Array = []) -> StringName:
-	var band_index := mini(maxi((maxi(rank, 1) - 1) / 10, 0), 5)
+	var band_index := mini(maxi(floori(float(maxi(rank, 1) - 1) / 10.0), 0), 5)
 	var band_progress := 0.0 if band_index == 0 else float((maxi(rank, 1) - 1) % 10) / 10.0
 	var rates: Array = [[0.12, 0.0075, 0.001, 0.00005], [0.12, 0.0125, 0.0015, 0.0001], [0.12, 0.0175, 0.003, 0.0002], [0.12, 0.025, 0.005, 0.0005], [0.12, 0.0325, 0.008, 0.001], [0.12, 0.04, 0.012, 0.002]]
 	var current: Array = rates[band_index]

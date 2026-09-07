@@ -253,7 +253,9 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 		var forward_role: StringName = ROUTE_KEY_PROGRESSION if not forward_requirement.is_empty() else ROUTE_MAIN
 		var orb_element_requirement := StringName(fusion_gate_requirements.get(source_depth, ""))
 		var planned_gate_type: StringName = StringName(fusion_gate_types.get(source_depth, ""))
-		var gate_type: StringName = planned_gate_type if not planned_gate_type.is_empty() else DungeonGraph.GATE_ENTRANCE_ORB if not orb_element_requirement.is_empty() else DungeonGraph.GATE_NONE
+		var gate_type: StringName = planned_gate_type
+		if gate_type.is_empty():
+			gate_type = DungeonGraph.GATE_ENTRANCE_ORB if not orb_element_requirement.is_empty() else DungeonGraph.GATE_NONE
 		var planned_gate_color: StringName = StringName(fusion_gate_colors.get(source_depth, ""))
 		var connection_color_requirement: StringName = planned_gate_color if not planned_gate_color.is_empty() else &"" if gate_type == DungeonGraph.GATE_ENTRANCE_ORB else forward_requirement
 		builder.link(current_room_id, main_socket, destination_room_id, connection_color_requirement, forward_role, true, true, &"", gate_type, orb_element_requirement)
@@ -279,8 +281,11 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 	_add_safe_cross_links(builder, generator_rng)
 	var progression_repairs := repair_progression(layout, completed_runs, starter_flame, bound_flame)
 	last_progression_repairs = progression_repairs.duplicate()
+	var bound_label := "none"
+	if not bound_flame.is_empty():
+		bound_label = String(bound_flame)
 	for repair in progression_repairs:
-		push_warning("Generated progression repair (run %d seed %d starter=%s bound=%s): %s" % [run_number, dungeon_seed, starter_flame, bound_flame if not bound_flame.is_empty() else "none", repair])
+		push_warning("Generated progression repair (run %d seed %d starter=%s bound=%s): %s" % [run_number, dungeon_seed, starter_flame, bound_label, repair])
 	LAYOUT_DEFINITION_SCRIPT.apply_rare_enemy_branch_entry_exceptions(layout)
 	return layout
 
@@ -609,7 +614,7 @@ static func _room_type_for_depth(
 	return DungeonGraph.ROOM_COMBAT
 
 
-static func _fusion_plan_for_run(completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", dungeon_seed: int = 0) -> Dictionary:
+static func _fusion_plan_for_run(completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"", _dungeon_seed: int = 0) -> Dictionary:
 	# Run 6 is the first run whose critical path asks for a fused element. The
 	# first two fire rooms are deliberately placed before the gate so every
 	# starter choice has a reachable input pair. Later runs teach the two-step
