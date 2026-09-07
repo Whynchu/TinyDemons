@@ -1,6 +1,7 @@
 extends SceneTree
 
 const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
+const ROUTE_GENERATOR_SCRIPT = preload("res://scripts/puzzle_route_generator.gd")
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
 const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const ROOM_CONTROLLER_SCRIPT = preload("res://scripts/room_controller.gd")
@@ -121,6 +122,15 @@ func _initialize() -> void:
 			var gate_count := _entrance_orb_gate_count(fusion_layout)
 			var prerequisite_orb_count := _fusion_prerequisite_orb_count(fusion_layout)
 			_expect(prerequisite_orb_count >= gate_count, "fusion Run %d gives every entrance-Orb gate a dedicated pre-gate Orb" % (fusion_completed_runs + 1), failures)
+	for seed_value in range(6):
+		var r7_layout = ROUTE_GENERATOR_SCRIPT.build(760000 + seed_value * 7919, 6, &"fire")
+		var r7_gates := _entrance_orb_gate_count(r7_layout)
+		_expect(r7_gates == 1, "R7 keeps one ordered fusion gate", failures)
+		_expect(GENERATOR_SCRIPT.validate(r7_layout, 6, &"fire").is_empty(), "R7 proves its dedicated fusion Orb is reachable before the gate", failures)
+	for origin in [&"fire", &"water", &"electric"]:
+		for seed_value in range(100):
+			var compact_r7 = ROUTE_GENERATOR_SCRIPT.build(900000 + seed_value * 7919, 6, origin)
+			_expect(ROUTE_GENERATOR_SCRIPT.validate(compact_r7, 6, origin).is_empty(), "R7 compact lattice and progression validate across 100 %s-origin seeds" % origin, failures)
 	for origin in [&"fire", &"water", &"electric"]:
 		for seed_value in range(4):
 			var origin_r8 = GENERATOR_SCRIPT.build(810000 + seed_value * 7919, 7, origin)
@@ -207,6 +217,25 @@ func _initialize() -> void:
 	var map = MAP_CONTROLLER_SCRIPT.new()
 	map.begin_run(run_graph, 24681357, 6, &"water")
 	_expect(not map.is_authored_layout() and map.has_complete_layout(), "Run 7 initializes from a generated complete layout after authored Run 6", failures)
+	_expect(ROUTE_GENERATOR_SCRIPT.generation_is_repair_free(), "Run 7 generation completes without post-build progression repair", failures)
+	_expect(ROUTE_GENERATOR_SCRIPT.is_native_r7(6), "Run 7 uses the native compact route owner", failures)
+	var r7_shape_a = ROUTE_GENERATOR_SCRIPT.build(24681357, 6, &"water")
+	var r7_shape_b = ROUTE_GENERATOR_SCRIPT.build(24681358, 6, &"water")
+	_expect(r7_shape_a.rooms.size() >= 24 and r7_shape_b.rooms.size() >= 24, "native R7 maintains compact route density", failures)
+	_expect(r7_shape_a.rooms[4].coordinate != r7_shape_b.rooms[4].coordinate, "native R7 varies its deterministic spine shape by seed", failures)
+	_expect(ROUTE_GENERATOR_SCRIPT.generation_within_budget(), "Run 7 generation stays within the 50 ms budget", failures)
+	var compact_layout = map.get("layout")
+	_expect(compact_layout.map_size == Vector2i(35, 35), "Run 7 runtime layout uses the compact 35x35 map contract", failures)
+	var compact_coordinates_valid := true
+	for compact_room in compact_layout.rooms:
+		compact_coordinates_valid = compact_coordinates_valid and compact_room.minimap_coordinate.x >= 0 and compact_room.minimap_coordinate.x < 35 and compact_room.minimap_coordinate.y >= 0 and compact_room.minimap_coordinate.y < 35
+	_expect(compact_coordinates_valid, "Run 7 runtime room markers stay inside the compact map", failures)
+	var compact_plan = ROUTE_GENERATOR_SCRIPT.build_compact_plan(24681357, 6, &"water")
+	_expect(compact_plan.logical_edges.size() == compact_layout.connections.size(), "R7 compact plan preserves every logical connection", failures)
+	var has_fusion_metadata := false
+	for logical_edge in compact_plan.logical_edges:
+		has_fusion_metadata = has_fusion_metadata or logical_edge.get("gate_type", &"") == GRAPH_SCRIPT.GATE_ENTRANCE_ORB
+	_expect(has_fusion_metadata, "R7 compact plan preserves exact fusion gate metadata", failures)
 	var first_orb_id: StringName = &""
 	for room_id in run_graph.get_room_ids():
 		var room := run_graph.get_room(room_id)

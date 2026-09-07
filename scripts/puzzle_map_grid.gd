@@ -75,6 +75,9 @@ class MapMarker:
 class MapPlan:
 	var id: StringName
 	var markers: Array[MapMarker] = []
+	## Logical topology is kept beside presentation markers so generated plans
+	## can be compiled without reconstructing gate semantics from pixel colors.
+	var logical_edges: Array[Dictionary] = []
 	## Plain active points are deliberately separate from the template's dark
 	## connector lattice. The R3 image already carries its regular room/path
 	## points in the original combat-grey swatch; future topology plans can add
@@ -96,7 +99,11 @@ class MapPlan:
 			copy.add_active_tile(coordinate)
 		for marker in markers:
 			copy.add_marker(marker.coordinate, marker.kind)
+		copy.logical_edges = logical_edges.duplicate(true)
 		return copy
+
+	func add_logical_edge(edge: Dictionary) -> void:
+		logical_edges.append(edge.duplicate(true))
 
 	func marker_count(kind: StringName) -> int:
 		var count := 0

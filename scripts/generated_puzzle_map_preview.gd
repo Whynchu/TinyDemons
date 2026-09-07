@@ -3,7 +3,7 @@ extends Node2D
 ## Designer preview for generated R7 routes using the same minimap renderer as
 ## gameplay. Each panel is a complete discovered-layout snapshot.
 
-const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
+const GENERATOR_SCRIPT = preload("res://scripts/puzzle_route_generator.gd")
 const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
 const MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
 const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")

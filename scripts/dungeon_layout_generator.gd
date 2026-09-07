@@ -16,7 +16,13 @@ const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
 ## Keep candidate selection lightweight enough for a live run transition. The
 ## preview can still vary its outer seeds for more visual samples.
-const GENERATED_CANDIDATE_COUNT := 4
+## Runtime R7 generation validates one deterministic compact route. Preview
+## diversity comes from its outer seed iterations, so gameplay no longer pays
+## for four full candidate assemblies during a run transition.
+const GENERATED_CANDIDATE_COUNT := 1
+const COMPACT_MAP_SIZE := Vector2i(35, 35)
+const COMPACT_MAP_ORIGIN := Vector2i(17, 32)
+static var last_progression_repairs: Array[String] = []
 const FIRST_ORB_DEPTH := 3
 const FIRST_SPECIAL_DEPTH := 4
 
@@ -59,7 +65,7 @@ class LayoutBuilder extends RefCounted:
 		# presents the boss at the top and the Hub at the bottom, like Run 1.
 		# Keep the runtime lattice coordinate untouched and transform only the
 		# presentation coordinate.
-		var minimap_coordinate := Vector2i(coordinate.x * 2, -coordinate.y * 2)
+		var minimap_coordinate := COMPACT_MAP_ORIGIN + Vector2i(coordinate.x * 2, -coordinate.y * 2)
 		var spec = layout.make_room_spec(room_id, coordinate, minimap_coordinate, room_type, chest_count, special_respawn_color, seed_salt, fire_flame)
 		layout.add_room(spec)
 		room_ids_by_coordinate[coordinate] = room_id
@@ -140,6 +146,7 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 
 
 static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName, selected_bound_flame: StringName):
+	last_progression_repairs.clear()
 	var run_number := maxi(completed_runs + 1, 1)
 	var run_index := maxi(completed_runs, 1)
 	var starter_flame := selected_starter_flame if ASPECT_CATALOG_SCRIPT.is_starter_flame(selected_starter_flame) else &"fire"
@@ -149,7 +156,7 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 	var room_target := generated_room_target_for_run(run_number)
 	var generator_rng := RandomNumberGenerator.new()
 	generator_rng.seed = int(dungeon_seed) ^ (run_index * 104729) ^ 0x47E2
-	var layout = LAYOUT_DEFINITION_SCRIPT.new(GENERATED_LAYOUT_ID, Vector2i(96, boss_depth + 3))
+	var layout = LAYOUT_DEFINITION_SCRIPT.new(GENERATED_LAYOUT_ID, COMPACT_MAP_SIZE)
 	var builder := LayoutBuilder.new(layout, dungeon_seed)
 
 	# Every generated run begins with an intentional fork that rejoins before
@@ -271,6 +278,7 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 	_fill_room_target(builder, room_target, boss_depth)
 	_add_safe_cross_links(builder, generator_rng)
 	var progression_repairs := repair_progression(layout, completed_runs, starter_flame, bound_flame)
+	last_progression_repairs = progression_repairs.duplicate()
 	for repair in progression_repairs:
 		push_warning("Generated progression repair (run %d seed %d starter=%s bound=%s): %s" % [run_number, dungeon_seed, starter_flame, bound_flame if not bound_flame.is_empty() else "none", repair])
 	LAYOUT_DEFINITION_SCRIPT.apply_rare_enemy_branch_entry_exceptions(layout)
@@ -424,6 +432,8 @@ static func validate(layout, completed_runs: int = 1, selected_starter_flame: St
 			errors.append_array(fusion_softlock_errors)
 			var fusion_orb_route_errors := _fusion_orb_route_errors(layout)
 			errors.append_array(fusion_orb_route_errors)
+			var fusion_orb_order_errors := _fusion_orb_order_errors(layout, start_id, completed_runs, selected_starter_flame, selected_bound_flame)
+			errors.append_array(fusion_orb_order_errors)
 		else:
 			if not boss_id.is_empty() and not _boss_is_color_reachable(layout, start_id, boss_id, completed_runs, selected_starter_flame, selected_bound_flame):
 				errors.append("generated layout boss requires an impossible puzzle-color state")
@@ -1283,6 +1293,33 @@ static func _fusion_orb_route_errors(layout) -> Array[String]:
 				break
 		if not prerequisite_orb_found:
 			errors.append("generated entrance-orb gate lacks a pre-gate prerequisite Orb branch: %s:%s" % [gate.source_room_id, gate.exit_socket])
+	return errors
+
+
+static func _fusion_orb_order_errors(layout, start_id: StringName, completed_runs: int, starter_flame: StringName, bound_flame: StringName = &"") -> Array[String]:
+	# Prove each dedicated fusion Orb is reachable before its gate. The structural
+	# check above prevents a missing branch, but a future topology change could
+	# still route that branch through the gate it is meant to unlock.
+	var errors: Array[String] = []
+	for gate in layout.connections:
+		if gate.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB:
+			continue
+		if gate.route_role != ROUTE_MAIN and gate.route_role != ROUTE_KEY_PROGRESSION:
+			continue
+		var states := _curriculum_reachable_states(layout, start_id, completed_runs, starter_flame, bound_flame, {}, _layout_connection_key(gate))
+		var required_element := ELEMENT_CATALOG_SCRIPT.element_for_id(gate.orb_element_requirement)
+		var prerequisite_found := false
+		for orb_connection in layout.connections:
+			if orb_connection.source_room_id != gate.source_room_id or orb_connection.route_role != ROUTE_FUSION_PREREQUISITE_ORB:
+				continue
+			for state in states:
+				if state.get("room_id", &"") == orb_connection.destination_room_id and int(state.get("orb_element", ELEMENT_CATALOG_SCRIPT.Element.NEUTRAL)) == required_element:
+					prerequisite_found = true
+					break
+			if prerequisite_found:
+				break
+		if not prerequisite_found:
+			errors.append("fusion Orb for gate %s:%s is not reachable with required %s before the gate" % [gate.source_room_id, gate.exit_socket, gate.orb_element_requirement])
 	return errors
 
 

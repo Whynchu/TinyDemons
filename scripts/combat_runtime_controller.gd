@@ -289,7 +289,10 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 	var stats := root.call("_slime_stats", slime) as StatsComponent
 	if stats != null:
 		stats.apply_enemy_variant_profile(definition["base_stats"] as Dictionary, definition["growth_weights"] as Dictionary, StringName(palette))
-	root.call("_configure_slime_ambush", slime, palette)
+	# Ambush is encounter-slot data, not an inherent property of every purple
+	# slime. RoomController applies the stored per-slot decision after variant
+	# configuration.
+	root.call("_configure_slime_ambush", slime, false)
 	_enemy_max_health_frame_cache.clear()
 
 
@@ -401,7 +404,10 @@ func slime_attack_damage_result(root: Object, slime: Sprite2D) -> CombatCalculat
 			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element")))
 		request = CombatDamageRequestScript.elemental_slime(tuning.elemental_slime_physical_base, tuning.elemental_slime_physical_per_strength, tuning.elemental_slime_magic_base, tuning.elemental_slime_magic_per_int, element, player_defense_element, false)
 	else:
-		request = CombatDamageRequestScript.physical(tuning.damage_base, tuning.enemy_damage_per_strength, ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.NEUTRAL, false)
+		var player_defense_element := ElementCatalogScript.Element.NEUTRAL
+		if root.has_method("_current_player_element"):
+			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element")))
+		request = CombatDamageRequestScript.physical(tuning.damage_base, tuning.enemy_damage_per_strength, ElementCatalogScript.Element.NEUTRAL, player_defense_element, false)
 	return combat_damage_request(root, slime_stats, player_stats, request)
 
 

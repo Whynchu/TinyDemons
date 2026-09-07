@@ -1233,8 +1233,14 @@ func _ensure_current_room_layout() -> void:
 	room_controller.progression_run_rank = maxi(1, player_profile.difficulty_rank if player_profile != null else dungeon_graph.completed_run_count + 1)
 	room_controller.player_level = maxi(1, player_profile.level if player_profile != null else player_stats.level)
 	var base_palette := run_start_palette_name if not run_start_palette_name.is_empty() else current_player_palette_name
+	var layout_origin_flame := StringName(dungeon_map_controller.call("layout_origin_flame")) if dungeon_map_controller != null else &""
+	var encounter_origin_flame := layout_origin_flame if not layout_origin_flame.is_empty() else (player_profile.starter_flame if player_profile != null else &"fire")
 	var authored_mixed_route := dungeon_map_controller != null and (bool(dungeon_map_controller.call("is_authored_run4")) or bool(dungeon_map_controller.call("is_authored_run5")) or bool(dungeon_map_controller.call("is_authored_run6")))
-	if authored_mixed_route:
+	if encounter_origin_flame == &"shadow":
+		room_controller.matchup_policy = "shadow_bound"
+		room_controller.preferred_enemy_variant = "purple"
+		room_controller.secondary_enemy_variant = "grey"
+	elif authored_mixed_route:
 		room_controller.matchup_policy = "flame_mixed"
 		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, false)
 		var alternate_flames := dungeon_map_controller.call("alternate_flames") as Array
@@ -1451,7 +1457,7 @@ func _pixel_particle_texture(color: Color, size: int = 1) -> Texture2D:
 	return texture
 func _try_knockback_slime(slime: Sprite2D, movement: Vector2) -> bool: return bool(slime_runtime_controller.call("try_knockback_slime", self, slime, movement))
 func _separate_slime_from_player(slime: Sprite2D) -> void: slime_runtime_controller.call("separate_slime_from_player", self, slime)
-func _configure_slime_ambush(slime: Sprite2D, palette: String) -> void: slime_runtime_controller.call("configure_slime_ambush", self, slime, palette)
+func _configure_slime_ambush(slime: Sprite2D, enabled: bool) -> void: slime_runtime_controller.call("configure_slime_ambush", self, slime, enabled)
 func _slime_ambush(slime: Sprite2D) -> SlimeAmbushComponent: return slime_runtime_controller.call("slime_ambush", self, slime) as SlimeAmbushComponent
 func _slime_spawn(slime: Sprite2D) -> Node: return slime_runtime_controller.call("slime_spawn", self, slime) as Node
 func _is_slime_spawn_locked(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_spawn_locked", self, slime))

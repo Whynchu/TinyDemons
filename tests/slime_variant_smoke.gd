@@ -105,6 +105,27 @@ func _initialize() -> void:
 	_expect(ground_seen_at_rank_three, "Ground can appear from run rank three", failures)
 	_expect(not ice_seen_before_rank_four, "Ice is gated below run rank four", failures)
 	_expect(ice_seen_at_rank_four, "Ice can appear from run rank four", failures)
+	rooms.matchup_policy = "shadow_bound"
+	rooms.progression_run_rank = 1
+	var shadow_bound_grey := 0
+	var shadow_bound_purple := 0
+	var shadow_ambush_count := 0
+	for seed in 512:
+		var shadow_encounter := rooms._generate_enemy_encounter(seed + 16000, 0, false, true)
+		var shadow_variants := shadow_encounter["variants"] as Array
+		var shadow_ambush := shadow_encounter["ambush"] as Array
+		for index in shadow_variants.size():
+			var variant = shadow_variants[index]
+			if String(variant) == "grey":
+				shadow_bound_grey += 1
+			elif String(variant) == "purple":
+				shadow_bound_purple += 1
+				if index < shadow_ambush.size() and bool(shadow_ambush[index]):
+					shadow_ambush_count += 1
+	_expect(shadow_bound_purple > shadow_bound_grey, "Shadow-bound encounters replace most normal slots with Shadow Slimes", failures)
+	_expect(shadow_bound_grey > 0, "Shadow-bound encounters retain normal slime relief", failures)
+	_expect(shadow_bound_purple + shadow_bound_grey > 0 and float(shadow_bound_grey) / float(shadow_bound_purple + shadow_bound_grey) > 0.10 and float(shadow_bound_grey) / float(shadow_bound_purple + shadow_bound_grey) < 0.35, "Shadow-bound normal relief stays near the planned 20 percent", failures)
+	_expect(shadow_ambush_count > 0 and shadow_ambush_count < shadow_bound_purple, "Shadow Slime ambush is an ability granted to only some Shadow Slimes", failures)
 	rooms.free()
 
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D
