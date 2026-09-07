@@ -100,6 +100,7 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 			push_error("Generated layout: %s" % error)
 	graph.initialize_from_layout(dungeon_seed, layout)
 	state.begin(graph.start_room_id)
+	state.reveal_landmark_rooms(graph)
 	var state_changed_callable := Callable(self, "_on_state_changed")
 	if not state.changed.is_connected(state_changed_callable):
 		state.changed.connect(state_changed_callable)
