@@ -511,7 +511,7 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 		# and an 18px pitch keep both 16px indicators aligned to its top edge.
 		{"name": "MagicCooldown", "key": "magic", "texture": "magic button 16x16.png", "position": Vector2(84, 0)},
 		{"name": "ImbueCooldown", "key": "imbue", "texture": "imbue button 16x16.png", "position": Vector2(102, 0)},
-		{"name": "SwordBeamCooldown", "key": "sword_beam", "texture": "res://Artwork/swordbeambutton 16x16.png", "position": Vector2(120, 0)},
+		{"name": "SwordBeamCooldown", "key": "sword_beam", "texture": "res://assets/artwork/swordbeambutton 16x16.png", "position": Vector2(120, 0)},
 	]
 	for row in rows:
 		# Use a direct load first so a fresh clone can build the HUD before the

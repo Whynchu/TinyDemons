@@ -521,7 +521,7 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
 	var to_player: Vector2 = root.call("_slime_attack_offset", slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
-	if combat != null and float(slime.get_meta("encounter_scale", 1.0)) > 1.0 and combat.attack_lunge_vector != Vector2.ZERO:
+	if combat != null and combat.attack_lunge_vector != Vector2.ZERO:
 		return combat.attack_lunge_vector
 	var direction := Vector2.LEFT if to_player.length_squared() < 0.01 and combat.face_left else Vector2.RIGHT if to_player.length_squared() < 0.01 else to_player.normalized()
 	var tuning := root.get("slime_tuning") as SlimeTuning
