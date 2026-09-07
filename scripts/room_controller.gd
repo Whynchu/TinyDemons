@@ -37,6 +37,7 @@ const SHADOW_ENEMY_WEIGHT: float = 0.12
 const SHADOW_BOUND_NORMAL_WEIGHT: float = 0.20
 const SHADOW_BOUND_VARIANT_WEIGHT: float = 0.80
 const SHADOW_BOSS_CHANCE: float = 0.04
+const REGULAR_ROOM_TREASURE_CHANCE: float = 0.60
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.24
 const ROOM_POPCORN := "ROOM_POPCORN"
@@ -92,6 +93,10 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_popcorn"] = encounter["popcorn"]
 			state["enemy_popcorn_types"] = encounter["popcorn_types"]
 			state["enemy_ambush"] = encounter["ambush"]
+		if not state.has("regular_room_treasure"):
+			var treasure_rng := RandomNumberGenerator.new()
+			treasure_rng.seed = room.generation_seed ^ 0x54524541
+			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 3 and treasure_rng.randf() < REGULAR_ROOM_TREASURE_CHANCE
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
 		room_states[room_id] = state
@@ -501,6 +506,8 @@ func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 func apply_state(root: Object) -> void:
 	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
 	var state := room_states.get(room_id, {}) as Dictionary
+	var has_regular_treasure: bool = bool(state.get("regular_room_treasure", false)) and room_type == DungeonGraph.ROOM_COMBAT
+	root.set("regular_room_treasure", has_regular_treasure)
 	var treasure_chest_claimed := _treasure_chest_claimed_from_state(state) if room_type == DungeonGraph.ROOM_TREASURE else false
 	if room_type == DungeonGraph.ROOM_TREASURE:
 		root.set("chest_unlocked", treasure_chest_claimed)
@@ -522,7 +529,7 @@ func apply_state(root: Object) -> void:
 	else:
 		(root.get("cloaked_demon") as Sprite2D).visible = false
 		(root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon"))
-		reset_chest_for_room(root, room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed)
+		reset_chest_for_room(root, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (bool(root.get("regular_room_treasure")) and bool(state.get("finished", false)) and not bool(state.get("chest_claimed", false))))
 		if room_type == DungeonGraph.ROOM_TREASURE and treasure_chest_claimed:
 			root.set("chest_unlocked", true)
 			root.set("chest_claimed", true)
@@ -707,7 +714,8 @@ func try_enter_active_socket(root: Object, door_active: bool, entrance_open: boo
 	if not feet.has_area():
 		var foot: Vector2 = root.call("_actor_foot", root.get("player")); var size: Vector2 = root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") if root.get("PLAYER_DOOR_FOOT_COLLIDER_SIZE") != null else Vector2(4, 2); feet = Rect2(foot - size * 0.5, size)
 	if bool(root.get("final_exit_open")) and root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
-		var final_socket := dungeon_sockets.get(DungeonGraph.WALL_RIGHT) as DungeonSocket
+		var final_socket_id: StringName = root.get("final_exit_socket")
+		var final_socket := dungeon_sockets.get(final_socket_id) as DungeonSocket
 		if final_socket != null and _rect_touches_polygon(feet, _socket_trigger_polygon(final_socket)):
 			root.call("_enter_final_settlement_room")
 			return true
@@ -914,9 +922,10 @@ func apply_finished_state(root: Object) -> void:
 	var fire := root.get("rest_fire") as Sprite2D; fire.visible = false; var firepit := fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); (root.get("cloaked_demon") as Sprite2D).visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon")); reset_slimes_for_room(root)
 	var room: DungeonGraph.RoomRecord = (root.get("dungeon_graph") as DungeonGraph).get_room(root.get("current_room_id"))
 	var is_treasure := room != null and room.room_type == DungeonGraph.ROOM_TREASURE
+	var is_regular_treasure := bool(root.get("regular_room_treasure"))
 	var is_boss := room != null and room.room_type == DungeonGraph.ROOM_DOWNSTAIRS
 	var chest := root.get("chest") as Sprite2D
-	if is_treasure and not bool(root.get("chest_claimed")) and not bool(root.get("chest_evaporated")):
+	if (is_treasure or is_regular_treasure) and not bool(root.get("chest_claimed")) and not bool(root.get("chest_evaporated")):
 		var normal_texture := root.get("chest_normal_texture") as Texture2D
 		if normal_texture != null:
 			chest.texture = normal_texture
@@ -925,7 +934,7 @@ func apply_finished_state(root: Object) -> void:
 		if not (root.get("depth_sprites") as Array[Sprite2D]).has(chest): (root.get("depth_sprites") as Array[Sprite2D]).append(chest)
 		if not (root.get("occluder_sprites") as Array[Sprite2D]).has(chest): (root.get("occluder_sprites") as Array[Sprite2D]).append(chest)
 	else:
-		chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true if not is_treasure else root.get("chest_claimed")); root.set("chest_evaporated", true if not is_treasure else root.get("chest_evaporated")); (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
+		chest.visible = false; root.set("chest_unlocked", true); root.set("chest_claimed", true if not (is_treasure or is_regular_treasure) else root.get("chest_claimed")); root.set("chest_evaporated", true if not (is_treasure or is_regular_treasure) else root.get("chest_evaporated")); (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
 	if is_boss:
 		root.call("_open_final_exit")
 	else:

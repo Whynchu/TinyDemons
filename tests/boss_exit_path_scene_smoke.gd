@@ -35,11 +35,14 @@ func _initialize() -> void:
 		map.call("on_room_completed", entry_connection.source_room_id)
 		_expect(bool(gameplay.call("_map_connection_available", entry_connection, true)), "boss return connection is available after its approach is clear", failures)
 	gameplay.call("_on_room_enemies_cleared")
-	_expect(bool(gameplay.get("entrance_open")), "boss victory opens the return entrance", failures)
-	if entry_socket != null and entry_connection != null:
-		var trigger_center := _polygon_center(entry_socket.trigger())
+	var final_exit_id: StringName = gameplay.get("final_exit_socket")
+	_expect(not bool(gameplay.get("entrance_open")) and not final_exit_id.is_empty(), "boss victory seals the arrival stairs and selects a final exit", failures)
+	_expect(final_exit_id != entry_socket.socket_id() and final_exit_id != DungeonGraph.paired_socket(entry_socket.socket_id()), "boss final exit is not the arrival side", failures)
+	var final_socket := rooms.dungeon_sockets.get(final_exit_id) as DungeonSocket if rooms != null else null
+	if final_socket != null:
+		var trigger_center := _polygon_center(final_socket.trigger())
 		var player := gameplay.get("player") as Sprite2D
-		player.global_position = entry_socket.spawn_marker().global_position
+		player.global_position = final_socket.spawn_marker().global_position
 		gameplay.set("room_transition_locked", false)
 		for slime in gameplay.get("slimes") as Array[Sprite2D]:
 			slime.visible = false
@@ -51,8 +54,7 @@ func _initialize() -> void:
 			var toward_exit := (trigger_center - (gameplay.call("_actor_foot", player) as Vector2)).normalized() * 2.0
 			var movement := gameplay.call("_perspective_movement", toward_exit) as Vector2
 			gameplay.call("_try_move_actor", player, movement)
-		_expect(entered, "player can walk from the boss arrival marker to the reopened entrance", failures)
-		_expect(gameplay.get("current_room_id") == entry_connection.source_room_id, "walking through the boss entrance returns to the approach room", failures)
+		_expect(entered, "player can walk from the boss final-exit marker to settlement", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
