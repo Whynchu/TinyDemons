@@ -389,7 +389,6 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# Non-dialogue menus require an actual control tap. A blank tap must not
 		# act like controller confirm; that behavior is surprising on touch.
 		return
-		return
 	if _input_context == CONTEXT_DIALOGUE:
 		var dialogue_button := _menu_button_at(position)
 		if dialogue_button != null:
@@ -512,20 +511,20 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 		if activate_menu_button and menu_button != null and is_instance_valid(menu_button) and not menu_button.disabled and menu_button.is_visible_in_tree() and _menu_control_contains(menu_button, position, MENU_TOUCH_HIT_SLOP):
 			var menu_root := menu_button.get_parent()
 			if menu_root != null and menu_root.name == &"TitleOverlay" and menu_button.name in [&"Button", &"TitleNewGame", &"TitleContinue"]:
-				var host := get_parent()
-				if host != null and host.has_method("_play_sound"):
-					host.call("_play_sound", "enemy_death", -6.0, 0.95)
+				var sound_host := get_parent()
+				if sound_host != null and sound_host.has_method("_play_sound"):
+					sound_host.call("_play_sound", "enemy_death", -6.0, 0.95)
 			var now := Time.get_ticks_msec()
-			var host := get_parent()
-			var is_fusion_row: bool = _input_context == CONTEXT_HUB and menu_button.name.to_lower().begins_with("itembutton") and host != null and host.get("screen_state_controller") != null and host.screen_state_controller.hub_page == 3
+			var menu_host := get_parent()
+			var is_fusion_row: bool = _input_context == CONTEXT_HUB and menu_button.name.to_lower().begins_with("itembutton") and menu_host != null and menu_host.get("screen_state_controller") != null and menu_host.screen_state_controller.hub_page == 3
 			var is_second_fusion_tap: bool = is_fusion_row and menu_button == _last_menu_tap_button and now - _last_menu_tap_time <= FUSION_DOUBLE_TAP_MS
 			menu_button.pressed.emit()
 			if is_fusion_row:
 				_last_menu_tap_button = menu_button
 				_last_menu_tap_time = now
 				if is_second_fusion_tap:
-					if host != null and host.has_method("_hub_item_action"):
-						host.call("_hub_item_action")
+					if menu_host != null and menu_host.has_method("_hub_item_action"):
+						menu_host.call("_hub_item_action")
 		_update_touch_capture_filter()
 		return
 	if _menu_scroll_fingers.has(finger_id):

@@ -56,7 +56,7 @@ static func _rotate_coordinate(coordinate: Vector2i, turns: int) -> Vector2i:
 	return HUB_COORDINATE + offset
 
 
-static func _build_authored(plan: PuzzleMapGrid.MapPlan, layout_id: StringName, room_prefix: StringName, starter_flame: StringName, run_flame: StringName):
+static func _build_authored(plan: PuzzleMapGrid.MapPlan, layout_id: StringName, room_prefix: StringName, _starter_flame: StringName, run_flame: StringName):
 	var layout: DungeonLayoutDefinition = LAYOUT_DEFINITION_SCRIPT.new(layout_id, MAP_SIZE)
 	var active_coordinates: Dictionary = GRID_SCRIPT.active_room_coordinates(plan)
 	var marker_kinds: Dictionary = _room_marker_kinds(plan)

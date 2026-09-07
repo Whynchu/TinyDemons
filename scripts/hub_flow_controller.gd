@@ -666,7 +666,7 @@ func shift_hub_gear_candidate_grid(root: Object, column_direction: int, row_dire
 	var columns := 2
 	var rows := maxi(int(ceil(float(candidates.size()) / float(columns))), 1)
 	var column := current % columns
-	var row := current / columns
+	var row := floori(float(current) / float(columns))
 	column = posmod(column + column_direction, columns)
 	row = posmod(row + row_direction, rows)
 	var target := row * columns + column

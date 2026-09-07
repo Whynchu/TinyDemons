@@ -70,9 +70,9 @@ func begin_spawn(spawn_frames: Array[Texture2D], frame_time: float) -> void:
 	spawn.call("begin", spawn_frames, frame_time)
 
 
-func tick_spawn(delta: float, set_frame: Callable, finish: Callable) -> bool:
+func tick_spawn(delta: float, _set_frame: Callable, finish: Callable) -> bool:
 	var spawn := get_node_or_null("Spawn") as Node
-	return spawn != null and bool(spawn.call("tick", delta, set_frame, finish))
+	return spawn != null and bool(spawn.call("tick", delta, _set_frame, finish))
 
 
 func cancel_spawn() -> void:

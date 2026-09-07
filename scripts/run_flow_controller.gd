@@ -183,12 +183,12 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	if not restored_run.restore_from_dictionary(run_data) or restored_run.dungeon_seed != int(snapshot.get("dungeon_seed", restored_run.dungeon_seed)):
 		return false
 	var map_controller := root.dungeon_map_controller as Node
-	var seed := int(snapshot.get("dungeon_seed", restored_run.dungeon_seed))
+	var snapshot_seed := int(snapshot.get("dungeon_seed", restored_run.dungeon_seed))
 	var bound_flame: StringName = root.player_profile.persistent_flame() if root.player_profile.has_bound_element else &""
 	var layout_bound_flame := StringName(str(snapshot.get("layout_bound_flame", bound_flame)))
 	if not layout_bound_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(layout_bound_flame):
 		layout_bound_flame = bound_flame
-	map_controller.call("begin_run", root.dungeon_graph, seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame)
+	map_controller.call("begin_run", root.dungeon_graph, snapshot_seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame)
 	# The layout was generated from the saved origin, but the current persistent
 	# bind still controls the Hub and available flame presentation after restore.
 	map_controller.call("set_bound_flame", bound_flame)

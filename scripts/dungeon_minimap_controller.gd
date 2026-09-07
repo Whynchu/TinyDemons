@@ -138,14 +138,14 @@ func _rebuild() -> void:
 
 
 func _viewport_origin(layout, rendered_origin: Vector2i, image_size: Vector2i) -> Vector2i:
-	var focus_coordinate := Vector2i(image_size.x / 2, image_size.y / 2)
+	var focus_coordinate := Vector2i(floori(float(image_size.x) / 2.0), floori(float(image_size.y) / 2.0))
 	var state := map_controller.get("state") as DungeonMapState
 	var current_room_id: StringName = state.current_room_id if state != null else &""
 	if not current_room_id.is_empty():
 		var current_room = layout.room_by_id(current_room_id)
 		if current_room != null:
 			focus_coordinate = current_room.minimap_coordinate - rendered_origin
-	return focus_coordinate - Vector2i(MINIMAP_VIEW_SIZE.x / 2, MINIMAP_VIEW_SIZE.y / 2)
+	return focus_coordinate - Vector2i(floori(float(MINIMAP_VIEW_SIZE.x) / 2.0), floori(float(MINIMAP_VIEW_SIZE.y) / 2.0))
 
 
 func _crop_to_viewport(source_image: Image, viewport_origin: Vector2i) -> Image:
@@ -173,7 +173,7 @@ func _ensure_ring() -> void:
 	if ring_bounds.size.x > map_pixel_size.x or ring_bounds.size.y > map_pixel_size.y:
 		push_error("Dungeon minimap ring must fit inside %s map pixels, got %s." % [map_pixel_size, ring_bounds.size])
 		return
-	var ring_offset := (map_pixel_size - ring_bounds.size) / 2
+	var ring_offset := Vector2i(floori(float(map_pixel_size.x - ring_bounds.size.x) / 2.0), floori(float(map_pixel_size.y - ring_bounds.size.y) / 2.0))
 	ring_mask = _build_ring_mask(ring_image, ring_bounds, int(DISPLAY_SCALE), ring_offset)
 	ring_texture = ImageTexture.create_from_image(ring_image)
 	ring_sprite = Sprite2D.new()
@@ -225,7 +225,7 @@ func _build_ring_mask(image: Image, bounds: Rect2i, source_scale: int, ring_offs
 	mask.resize(MINIMAP_VIEW_SIZE.x * MINIMAP_VIEW_SIZE.y)
 	for y in MINIMAP_VIEW_SIZE.y:
 		for x in MINIMAP_VIEW_SIZE.x:
-			var sample := Vector2i(x * source_scale + source_scale / 2 - ring_offset.x, y * source_scale + source_scale / 2 - ring_offset.y)
+			var sample := Vector2i(x * source_scale + floori(float(source_scale) / 2.0) - ring_offset.x, y * source_scale + floori(float(source_scale) / 2.0) - ring_offset.y)
 			var inside := sample.x >= 0 and sample.y >= 0 and sample.x < bounds.size.x and sample.y < bounds.size.y and exterior[sample.y * bounds.size.x + sample.x] == 0
 			mask[y * MINIMAP_VIEW_SIZE.x + x] = 1 if inside else 0
 	return mask

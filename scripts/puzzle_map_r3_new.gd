@@ -14,7 +14,7 @@ static func build() -> PuzzleMapGrid.MapPlan:
 		Vector2i(20, 24), Vector2i(22, 24),
 		# Recovery Fire Room branch: (12,18) links the added room at (11,19)
 		# to the existing lower-left route, including every quarter-turn.
-		Vector2i(12, 18),
+		Vector2i(12, 18), Vector2i(14, 18),
 	])
 	_add_many(plan, GRID_SCRIPT.MARKER_GATE_FLAME_A, [
 		Vector2i(26, 10), Vector2i(26, 14), Vector2i(16, 18), Vector2i(18, 18),

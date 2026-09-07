@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.77"
+const GAME_VERSION := "0.1.78"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -453,7 +453,7 @@ func _hub_left_field_x(native_x: float) -> float:
 	return PauseMenuLayoutScript.left_field_x(native_x, display_view_size.x)
 
 
-func _refresh_active_menu_layout(root: Object) -> void:
+func _refresh_active_menu_layout(_root: Object) -> void:
 	if _display_layout_refreshing:
 		return
 	_display_layout_refreshing = true
@@ -1163,19 +1163,19 @@ func build_hub(parent: Node, pixel_texture: Callable, adjust_stat: Callable, app
 	var status_page := overlay.get_node_or_null("HubStatusPage") as Control
 	var allocate_page := overlay.get_node_or_null("HubAllocatePage") as Control
 	var items_page := overlay.get_node_or_null("HubItemsPage") as Control
-	var equipment_menu := items_page.get_node_or_null("EquipmentMenu") as EquipmentMenuLayout if items_page != null else null
+	var equipment_menu_node := items_page.get_node_or_null("EquipmentMenu") as EquipmentMenuLayout if items_page != null else null
 	var shop_menu := items_page.get_node_or_null("ShopMenu") as Control if items_page != null else null
 	var fusion_menu := items_page.get_node_or_null("FusionMenu") as Control if items_page != null else null
-	hub_equipment_menu = equipment_menu
-	self.equipment_menu = equipment_menu
+	hub_equipment_menu = equipment_menu_node
+	self.equipment_menu = equipment_menu_node
 	hub_shop_menu = shop_menu
 	hub_fusion_menu = fusion_menu
-	if equipment_menu != null:
-		equipment_menu.visible = false
-		if equipment_menu.has_method("set_pixel_texture"):
-			equipment_menu.call("set_pixel_texture", pixel_texture)
-		if equipment_menu.has_method("set_read_only"):
-			equipment_menu.call("set_read_only", false)
+	if equipment_menu_node != null:
+		equipment_menu_node.visible = false
+		if equipment_menu_node.has_method("set_pixel_texture"):
+			equipment_menu_node.call("set_pixel_texture", pixel_texture)
+		if equipment_menu_node.has_method("set_read_only"):
+			equipment_menu_node.call("set_read_only", false)
 	var bind_page := overlay.get_node_or_null("HubBindPage") as Control
 	var bind_menu := bind_page.get_node_or_null("BindMenu") as Control if bind_page != null else null
 	hub_bind_menu = bind_menu
@@ -2083,8 +2083,8 @@ func _shop_item_signature(item: ItemInstance) -> Dictionary:
 	if item == null:
 		return {}
 	var catalog := ItemCatalog.new()
-	var name := str(catalog.definition_data(item.definition_id).get("name", "UNKNOWN ITEM"))
-	return {"name": name, "enhancement_level": item.enhancement_level}
+	var item_name := str(catalog.definition_data(item.definition_id).get("name", "UNKNOWN ITEM"))
+	return {"name": item_name, "enhancement_level": item.enhancement_level}
 
 
 func _shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -2275,7 +2275,7 @@ func _render_bind_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	view.call("render", model)
 
 
-func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color) -> void:
 	if hub_shop_menu == null or profile == null:
 		return
 	var view := hub_shop_menu
@@ -2384,7 +2384,6 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	# The reworked hub keeps its title/command shell on screen while the
 	# selected command previews its content underneath. Entering a command only
 	# changes focus; it no longer swaps away the top shell.
-	var showing_root := hub_is_root and hub_overlay != null and hub_overlay.get_node_or_null("HubRootPage") != null
 	if hub_root_page != null: hub_root_page.visible = true
 	for page_root: Control in hub_page_roots.values(): page_root.visible = false
 	var resolved_page := HUB_PAGE_ALLOCATE if hub_page == HUB_PAGE_STATUS else hub_page
@@ -3224,7 +3223,7 @@ func _equipment_bonus_lines(catalog: ItemCatalog, item: ItemInstance) -> Array[S
 	var lines: Array[String] = ["", "", ""]
 	for index in parts.size():
 		var column_index := index % 3
-		var row_index := index / 3
+		var row_index := floori(float(index) / 3.0)
 		if row_index >= 2:
 			break
 		if lines[column_index].is_empty():
@@ -3269,7 +3268,7 @@ func _compact_equipment_navigation_prompt(prompt: String, fallback: String) -> S
 	return str(tokens[tokens.size() - 1]) if not tokens.is_empty() else fallback
 
 
-func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color, target_view: Control = null, read_only: bool = false) -> void:
+func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color, target_view: Control = null, read_only: bool = false) -> void:
 	var view := (target_view if target_view != null else hub_equipment_menu) as EquipmentMenuLayout
 	if view == null or profile == null:
 		return
@@ -3525,7 +3524,6 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 			if source_index >= fusion_items.size():
 				item_list[row].texture = null; continue
 			row_item = fusion_items[source_index]
-		var definition: Dictionary = catalog.definition_data(row_item.definition_id)
 		var rarity_mark := catalog.rarity_letter_grade(row_item.rarity)
 		var row_label := "%s %s" % [rarity_mark, catalog.gear_name(row_item)]
 		var row_mastery := row_item.enhancement_level
@@ -5202,8 +5200,8 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 	if count <= 0:
 		return
 	if equipment_active and hub_gear_browsing:
-		var visible := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
-		var max_start := maxi(0, int(ceil(float(count) / 2.0)) * 2 - visible) if hub_equipment_menu != null else maxi(0, count - visible)
+		var equipment_scroll_count := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
+		var max_start := maxi(0, int(ceil(float(count) / 2.0)) * 2 - equipment_scroll_count) if hub_equipment_menu != null else maxi(0, count - equipment_scroll_count)
 		hub_choice_scroll = clampf(hub_choice_scroll - delta_px / pitch, 0.0, float(max_start))
 		# A drag can move the visible window without changing the selected
 		# candidate. Disarm the touch confirmation so a later tap cannot commit
@@ -5214,8 +5212,8 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 		# The authored Shop scene has eight visible rows; the legacy presenter keeps
 		# its compatibility rows for other routes. Match the active presenter so a
 		# drag never leaves the selected row below the visible shop window.
-		var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if hub_page == HUB_PAGE_FUSION and hub_fusion_menu != null else maxi(hub_item_list_texts.size(), 1)
-		hub_list_scroll = clampf(hub_list_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - visible)))
+		var list_scroll_count := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if hub_page == HUB_PAGE_FUSION and hub_fusion_menu != null else maxi(hub_item_list_texts.size(), 1)
+		hub_list_scroll = clampf(hub_list_scroll - delta_px / pitch, 0.0, maxf(0.0, float(count - list_scroll_count)))
 		if hub_page == HUB_PAGE_SHOP:
 			hub_shop_sell_confirm_pending = false
 
@@ -5252,8 +5250,8 @@ func snap_hub_list_scroll_to_selection(root: Object) -> void:
 		var selected_slot := ItemCatalog.SLOTS[clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)]
 		var candidates := root.call("_hub_gear_candidates", selected_slot) as Array
 		var current_index := int(hub_gear_candidate_indices.get(String(selected_slot), 0))
-		var visible := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
-		var max_start := maxi(0, int(ceil(float(candidates.size()) / 2.0)) * 2 - visible) if hub_equipment_menu != null else maxi(0, candidates.size() - visible)
+		var equipment_visible_count := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
+		var max_start := maxi(0, int(ceil(float(candidates.size()) / 2.0)) * 2 - equipment_visible_count) if hub_equipment_menu != null else maxi(0, candidates.size() - equipment_visible_count)
 		var start := current_index - 2 if hub_equipment_menu != null else current_index - 1
 		if hub_equipment_menu != null: start -= start % 2
 		hub_choice_scroll = clampf(float(start), 0.0, float(max_start))
@@ -5261,15 +5259,15 @@ func snap_hub_list_scroll_to_selection(root: Object) -> void:
 	var count := _hub_active_list_count(root)
 	if count <= 0:
 		return
-	var visible := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if hub_page == HUB_PAGE_FUSION and hub_fusion_menu != null else maxi(hub_item_list_texts.size(), 1)
+	var list_visible_count := ShopMenuLayoutScript.VISIBLE_ROWS if hub_page == HUB_PAGE_SHOP and hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if hub_page == HUB_PAGE_FUSION and hub_fusion_menu != null else maxi(hub_item_list_texts.size(), 1)
 	# Controller browsing keeps the viewport fixed until the selection crosses
 	# an edge: moving down past the final visible row advances the window, while
 	# moving up past the first visible row retreats it. This prevents the list
 	# from drifting as soon as the cursor moves away from the bottom.
-	var max_scroll := maxf(0.0, float(count - visible))
+	var max_scroll := maxf(0.0, float(count - list_visible_count))
 	var window_start := int(floor(hub_list_scroll))
-	if hub_item_index >= window_start + visible:
-		window_start = hub_item_index - visible + 1
+	if hub_item_index >= window_start + list_visible_count:
+		window_start = hub_item_index - list_visible_count + 1
 	elif hub_item_index < window_start:
 		window_start = hub_item_index
 	hub_list_scroll = clampf(float(window_start), 0.0, max_scroll)

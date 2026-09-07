@@ -343,7 +343,7 @@ func _append_legend(parts: PackedStringArray, top: float) -> void:
 	for index in rooms.size():
 		var entry: Array = rooms[index]
 		var x := PADDING + 18.0 + float(index % 4) * 132.0
-		var y := top + 45.0 + float(index / 4) * 25.0
+		var y := top + 45.0 + floori(float(index) / 4.0) * 25.0
 		parts.append("<rect x=\"%d\" y=\"%d\" width=\"12\" height=\"12\" rx=\"3\" fill=\"%s\"/>" % [int(x), int(y - 10.0), _svg_color(entry[1])])
 		parts.append("<text x=\"%d\" y=\"%d\" class=\"legend\">%s</text>" % [int(x + 18.0), int(y), _svg_escape(entry[0])])
 	parts.append("<text x=\"%d\" y=\"%d\" class=\"legend\" font-weight=\"700\">DOORS</text>" % [int(PADDING + 550.0), int(top + 25.0)])
@@ -351,7 +351,7 @@ func _append_legend(parts: PackedStringArray, top: float) -> void:
 	for index in doors.size():
 		var entry: Array = doors[index]
 		var x := PADDING + 550.0 + float(index % 2) * 150.0
-		var y := top + 45.0 + float(index / 2) * 25.0
+		var y := top + 45.0 + floori(float(index) / 2.0) * 25.0
 		parts.append("<circle cx=\"%d\" cy=\"%d\" r=\"6\" fill=\"%s\"/>" % [int(x + 6.0), int(y - 4.0), _svg_color(entry[1])])
 		parts.append("<text x=\"%d\" y=\"%d\" class=\"legend\">%s</text>" % [int(x + 18.0), int(y), _svg_escape(entry[0])])
 	parts.append("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"%s\" stroke-width=\"4\"/>" % [int(PADDING + 550.0), int(top + 101.0), int(PADDING + 596.0), int(top + 101.0), _svg_color(COLOR_DOOR)])

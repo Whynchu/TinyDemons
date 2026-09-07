@@ -401,12 +401,12 @@ func slime_attack_damage_result(root: Object, slime: Sprite2D) -> CombatCalculat
 	if element != ElementCatalogScript.Element.NEUTRAL and SlimeVariantCatalogScript.is_elemental_variant(variant):
 		var player_defense_element := ElementCatalogScript.Element.NEUTRAL
 		if root.has_method("_current_player_element"):
-			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element")))
+			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element"))) as ElementCatalogScript.Element
 		request = CombatDamageRequestScript.elemental_slime(tuning.elemental_slime_physical_base, tuning.elemental_slime_physical_per_strength, tuning.elemental_slime_magic_base, tuning.elemental_slime_magic_per_int, element, player_defense_element, false)
 	else:
 		var player_defense_element := ElementCatalogScript.Element.NEUTRAL
 		if root.has_method("_current_player_element"):
-			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element")))
+			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element"))) as ElementCatalogScript.Element
 		request = CombatDamageRequestScript.physical(tuning.damage_base, tuning.enemy_damage_per_strength, ElementCatalogScript.Element.NEUTRAL, player_defense_element, false)
 	return combat_damage_request(root, slime_stats, player_stats, request)
 
