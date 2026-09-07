@@ -1,6 +1,7 @@
 # R7 Compact Roguelike Puzzle Generator Plan
 
-Status: proposed replacement; do not select for gameplay until validation exit criteria pass
+Status: implemented; native compact R7 topology, typed edge metadata, ordered
+progression validation, and runtime cutover are active for generated runs
 
 Reference: `Artwork/Rxpuzzle_map_ex.png`
 

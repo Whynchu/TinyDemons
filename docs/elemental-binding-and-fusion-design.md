@@ -93,6 +93,18 @@ Once the player binds an element, the bound element becomes the persistent hub
 flame identity. The starter flame and the bound element must not be conflated
 in the save schema.
 
+The same distinction applies to an active run. A run resolves its elemental
+origin once when it starts: the permanent bound element takes precedence over
+the original starter flame, and an unbound profile uses the original starter
+flame. Binding during an active run must not regenerate rooms, alter encounter
+composition, or change the run's puzzle identity. The new bind takes effect
+only after the player dies or completes the run and starts another one.
+
+While the player is currently Gray, they remain defensively neutral and take
+normal neutral damage. The run origin does not force an immediate combat
+transformation. Once Chroma changes the current aspect to the bound element,
+that current aspect governs elemental defense.
+
 ## 3. Final economy contract
 
 All values below are Souls, not Chroma and not equipment-fusion materials.

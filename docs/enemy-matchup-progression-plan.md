@@ -13,6 +13,12 @@ The encounter contract uses the flame chosen for the run, not the player's
 temporary current Chroma color. Changing Chroma during a run must not change
 the composition of an unvisited authored room.
 
+The run flame is resolved once at run start: use the permanent bound flame when
+one exists; otherwise use the original game-start flame. Binding during an
+active run never changes that run's encounter composition. The new identity
+takes effect only after the current run is completed or the player dies and a
+new run begins.
+
 The base elemental variants are:
 
 | Element | Enemy variant key | Palette |
@@ -102,6 +108,15 @@ run-locked base flame, while Normal Slimes remain present as a baseline:
 R3 should be the first authored dungeon where the player is encouraged to
 change Chroma defensively rather than simply exploiting the current flame.
 
+Shadow binding is the deliberate exception to the ordinary R3 teaching pool.
+Across all runs, a player whose run-start identity is permanently bound to
+Shadow should see most Normal/grey encounter slots converted to Shadow Slimes.
+Normal Slimes remain as an occasional relief encounter at approximately 20%
+of those otherwise-normal slots. Existing elemental variants may remain in
+the pool. This Shadow-specific composition is based on the run-start bind, not
+temporary Shadow fusion, and does not change if the player binds midway through
+the active run.
+
 ### R4 — Two-flame matchup dungeon
 
 R4 contains two meaningful flame types:
@@ -190,11 +205,14 @@ Popcorn remains a slot property. It should not change the room's matchup role,
 and its 45-second respawn timer should continue to work while the player is in
 another room.
 
-### 6. Keep Shadow rank-gated
+### 6. Shadow-bound encounter identity
 
-Shadow Slimes remain a later pressure variant and should not enter the normal
-R1–R4 teaching pools. Their extended vulnerability windows are a combat-tuning
-change, not part of the matchup-selection contract.
+Shadow Slimes remain rank-gated for unbound runs and retain their later pressure
+role. A permanently Shadow-bound run may opt into the Shadow replacement policy
+at any run rank where Shadow is available. The policy should replace roughly
+80% of Normal/grey slots with Shadow and leave roughly 20% Normal relief slots;
+it must not rewrite explicitly authored elemental slots. Shadow's vulnerability
+windows remain combat tuning, separate from matchup selection.
 
 ## Validation requirements
 
@@ -204,6 +222,10 @@ Add focused coverage for:
 - R2 mapping each supported player element to its intended weak enemy;
 - R3 mapping each supported player element to its intended counter enemy;
 - R2/R3 using the run-locked base flame even after current Chroma changes;
+- binding Shadow before a run replaces most Normal slots with Shadow while
+  retaining approximately 20% Normal relief slots;
+- binding during a run leaving all already-generated and future encounter pools
+  unchanged until death or run completion;
 - R4 separating Flame A and Flame B room families;
 - R4 mixed rooms containing both intended families without random unrelated
   elements;

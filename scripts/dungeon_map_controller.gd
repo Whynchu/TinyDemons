@@ -12,7 +12,7 @@ const RUN3_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
 const RUN4_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run4.gd")
 const RUN5_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run5.gd")
 const RUN6_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run6.gd")
-const LAYOUT_GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
+const LAYOUT_GENERATOR_SCRIPT = preload("res://scripts/puzzle_route_generator.gd")
 const MAP_STATE_SCRIPT = preload("res://scripts/dungeon_map_state.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
@@ -68,7 +68,7 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		for error in run2_errors:
 			push_error("Run 2 layout: %s" % error)
 	elif authored_run3:
-		layout = RUN3_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns)
+		layout = RUN3_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns, bound_flame)
 		var run3_errors: Array[String] = layout.validate()
 		for error in run3_errors:
 			push_error("Run 3 layout: %s" % error)
@@ -178,6 +178,13 @@ func starter_palette() -> String:
 	return starter_palette_name
 
 
+func layout_primary_flame() -> StringName:
+	# Puzzle A belongs to the run's frozen origin. Keep starter_flame as the
+	# durable profile identity, but let a pre-run permanent bind define the
+	# authored layout's primary door color.
+	return layout_bound_flame if not layout_bound_flame.is_empty() else starter_flame
+
+
 func set_starter_flame_attuned(attuned: bool) -> void:
 	if starter_flame_attuned_this_run == attuned:
 		return
@@ -231,7 +238,7 @@ func palette_for_requirement(requirement: StringName) -> String:
 		&"grey_orb":
 			return "grey_orb"
 		PUZZLE_COLOR_A:
-			return starter_palette_name
+			return ASPECT_CATALOG_SCRIPT.palette_for_flame(layout_primary_flame())
 		PUZZLE_COLOR_B:
 			return "grey"
 		PUZZLE_COLOR_C:
@@ -302,7 +309,7 @@ func puzzle_color_for_palette(palette: String) -> StringName:
 		normalized_palette = "grey"
 	if normalized_palette == "grey":
 		return PUZZLE_COLOR_B
-	if normalized_palette == starter_palette_name:
+	if normalized_palette == ASPECT_CATALOG_SCRIPT.palette_for_flame(layout_primary_flame()):
 		return PUZZLE_COLOR_A
 	var alternates := alternate_flames()
 	if alternates.size() >= 1 and normalized_palette == ASPECT_CATALOG_SCRIPT.palette_for_flame(alternates[0]):

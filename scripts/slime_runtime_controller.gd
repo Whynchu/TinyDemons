@@ -52,10 +52,10 @@ func separate_slime_from_player(root: Object, slime: Sprite2D) -> void:
 		(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(slime, overlap_push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 
 
-func configure_slime_ambush(root: Object, slime: Sprite2D, palette: String) -> void:
+func configure_slime_ambush(root: Object, slime: Sprite2D, enabled: bool) -> void:
 	var ambush := slime.get_node_or_null("Ambush") as SlimeAmbushComponent
 	var tuning := root.get("slime_tuning") as SlimeTuning
-	if palette == "purple":
+	if enabled:
 		if ambush == null:
 			ambush = SlimeAmbushComponent.new()
 			ambush.name = "Ambush"

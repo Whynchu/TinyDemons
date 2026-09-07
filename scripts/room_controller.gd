@@ -34,6 +34,8 @@ const GROUND_MIN_RANK := 5
 const ICE_ENEMY_WEIGHT: float = 1.0
 const ICE_MIN_RANK := 5
 const SHADOW_ENEMY_WEIGHT: float = 0.12
+const SHADOW_BOUND_NORMAL_WEIGHT: float = 0.20
+const SHADOW_BOUND_VARIANT_WEIGHT: float = 0.80
 const SHADOW_BOSS_CHANCE: float = 0.04
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.24
@@ -89,6 +91,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_levels"] = encounter["levels"]
 			state["enemy_popcorn"] = encounter["popcorn"]
 			state["enemy_popcorn_types"] = encounter["popcorn_types"]
+			state["enemy_ambush"] = encounter["ambush"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
 		room_states[room_id] = state
@@ -100,6 +103,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_scales"] = boss_encounter["scales"]
 			state["enemy_popcorn"] = boss_encounter["popcorn"]
 			state["enemy_popcorn_types"] = boss_encounter["popcorn_types"]
+			state["enemy_ambush"] = boss_encounter["ambush"]
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 909
 		room_states[room_id] = state
@@ -123,8 +127,10 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var variants: Array[String] = []
 	var levels: Array[int] = []
 	var variant_pool: Array[Dictionary] = [
-		{"variant": "grey", "weight": GREY_ENEMY_WEIGHT},
+		{"variant": "grey", "weight": SHADOW_BOUND_NORMAL_WEIGHT if matchup_policy == "shadow_bound" else GREY_ENEMY_WEIGHT},
 	]
+	if matchup_policy == "shadow_bound" and allow_shadow:
+		variant_pool.append({"variant": "purple", "weight": SHADOW_BOUND_VARIANT_WEIGHT})
 	# R1 is neutral-only. R2 teaches player advantage. R3 reverses that lesson.
 	# Authored R4 rooms may provide two explicit target families.
 	var primary_variant: String = preferred_enemy_variant if preferred_enemy_variant in ["blue", "green", "red", "yellow", "green"] else "grey"
@@ -153,7 +159,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		variant_pool.append({"variant": "orange", "weight": GROUND_ENEMY_WEIGHT})
 	if progression_run_rank >= ICE_MIN_RANK:
 		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
-	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK:
+	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK and matchup_policy != "shadow_bound":
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
@@ -165,6 +171,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var level_spread := 1 if progression_run_rank <= 3 else 2
 	var popcorn_flags: Array[bool] = []
 	var popcorn_types: Array[String] = []
+	var ambush_flags: Array[bool] = []
 	for enemy_index in count:
 		var total_weight := 0.0
 		for entry in variant_pool:
@@ -177,6 +184,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				selected = entry["variant"] as String
 				break
 		variants.append(selected)
+		ambush_flags.append(selected == "purple" and encounter_rng.randf() < 0.40)
 		# A Shadow Slime is never itself a popcorn roll. That keeps the shadow
 		# pressure spike intact while guaranteeing every actual popcorn slot in a
 		# shadow encounter is a Normal Slime.
@@ -195,6 +203,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				levels[index] = _popcorn_enemy_level()
 				popcorn_flags[index] = true
 				popcorn_types[index] = ROOM_POPCORN
+				ambush_flags[index] = false
 				break
 	# Shadow encounters keep their low-level mana-recovery opportunity readable:
 	# every popcorn slot beside a Shadow Slime becomes a Normal Slime. If the
@@ -212,11 +221,13 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				levels.append(_popcorn_enemy_level())
 				popcorn_flags.append(true)
 				popcorn_types.append(ELITE_POPCORN)
+				ambush_flags.append(false)
 		for index in variants.size():
 			if popcorn_flags[index]:
 				variants[index] = "grey"
 				popcorn_types[index] = ELITE_POPCORN
-	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types}
+				ambush_flags[index] = false
+	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
 
 
 func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
@@ -257,16 +268,19 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	# mana-recovery opportunity.
 	var popcorn_flags: Array[bool] = []
 	var popcorn_types: Array[String] = []
+	var ambush_flags: Array[bool] = []
 	for index in variants.size():
 		popcorn_flags.append(false)
 		popcorn_types.append("")
+		ambush_flags.append(variants[index] == "purple" and encounter_rng.randf() < 0.40)
 	for _support_index in _boss_support_popcorn_count():
 		variants.append("grey")
 		levels.append(_popcorn_enemy_level())
 		scales.append(1.0)
 		popcorn_flags.append(true)
 		popcorn_types.append(ELITE_POPCORN)
-	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types}
+		ambush_flags.append(false)
+	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
 
 
 func _enemy_level_cap() -> int:
@@ -1316,10 +1330,13 @@ func _special_room_hides_enemies(root: Object, state: Dictionary, room_id: Strin
 func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var active_variants := state.get("enemy_variants", []) as Array
+	var active_ambush := state.get("enemy_ambush", []) as Array
 	for slot in active_variants.size():
 		if slot >= slimes.size():
 			break
+		var ambush_enabled := slot < active_ambush.size() and bool(active_ambush[slot])
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
+		root.call("_configure_slime_ambush", slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled)
 	root.call("_build_slime_direction_textures")
 	root.call("_assign_slime_attack_frames")
 	root.call("_assign_slime_shocked_frames")

@@ -41,6 +41,16 @@ func _initialize() -> void:
 	var round_trip := PROFILE_SCRIPT.new()
 	round_trip.load_dictionary(profile.to_dictionary())
 	_expect(round_trip.has_bound_element and round_trip.bound_element == &"water", "bound element survives profile serialization", failures)
+	var bound_r3_graph := GRAPH_SCRIPT.new()
+	var bound_r3_map := MAP_CONTROLLER_SCRIPT.new()
+	bound_r3_map.begin_run(bound_r3_graph, 607002, 2, &"fire", &"shadow")
+	var bound_r3_fire = null
+	for bound_r3_room in bound_r3_map.layout.rooms:
+		if bound_r3_room.room_type == GRAPH_SCRIPT.ROOM_FIRE:
+			bound_r3_fire = bound_r3_room
+			break
+	_expect(bound_r3_fire != null and bound_r3_fire.fire_flame == &"shadow", "bound R3 uses the flame selected at run start", failures)
+	_expect(bound_r3_map.palette_for_requirement(&"puzzle_a") == "purple", "bound R3 primary doors use the bound flame palette", failures)
 
 	var chroma := CHROMA_SCRIPT.new()
 	root.add_child(chroma)

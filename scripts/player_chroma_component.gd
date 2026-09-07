@@ -88,10 +88,12 @@ func refill_chroma() -> bool:
 
 
 func restore_neutral_chroma(_value: int = CHROMA_PICKUP_VALUE) -> bool:
-	# A dormant bound identity can be recovered by a neutral pickup. Gray with
-	# no permanent identity still cannot store Chroma.
-	if current_aspect == Aspect.NONE and bound_aspect != Aspect.NONE:
+	# A pickup reactivates the permanent identity whenever one exists. This also
+	# clears a temporary fusion immediately; waiting for a later cast leaves the
+	# player visually and defensively out of sync with their bound flame.
+	if bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
 		_set_aspect(bound_aspect)
+	# Gray with no permanent identity still cannot store Chroma.
 	if current_aspect == Aspect.NONE:
 		return false
 	if current_chroma >= MAX_CHROMA:

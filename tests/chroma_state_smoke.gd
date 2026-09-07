@@ -52,6 +52,11 @@ func _initialize() -> void:
 	_expect(chroma.restore_neutral_chroma(), "neutral pickup restores dormant bound aspect", failures)
 	_expect(chroma.current_chroma == 20, "dormant bound aspect regains 20 Chroma", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.ELEMENTAL, "restored bound aspect resolves full ability", failures)
+	chroma.change_flame(&"shadow")
+	chroma.set("current_chroma", 0)
+	_expect(chroma.current_aspect == Chroma.Aspect.SHADOW, "bound Shadow remains the permanent defensive identity", failures)
+	_expect(chroma.restore_neutral_chroma(), "pickup restores a temporary aspect to the bound Shadow identity", failures)
+	_expect(chroma.current_aspect == Chroma.Aspect.ELECTRIC and chroma.current_chroma == 20, "bound pickup returns to the bound aspect immediately", failures)
 
 	chroma.free()
 	_finished = true

@@ -785,10 +785,11 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 		var group: Dictionary = group_value
 		var item := group["representative"] as ItemInstance
 		var can_salvage: bool = root.player_profile.can_salvage_overflow(item.instance_id, catalog)
-		var representative_equipped: bool = root.player_profile.get_equipped_instance_id(catalog.definition_slot(item.definition_id)) == item.instance_id
-		var required_unequipped := 1 if representative_equipped else 2
 		var valid_material_count: int = int(root.player_profile.fusion_material_count(item.instance_id, catalog))
-		if valid_material_count < required_unequipped and not can_salvage:
+		# One eligible duplicate is enough to fuse, whether the target is equipped
+		# or not. The previous unequipped path incorrectly demanded two materials,
+		# hiding valid targets that had exactly one duplicate.
+		if valid_material_count < 1 and not can_salvage:
 			continue
 		var slot := catalog.definition_slot(item.definition_id)
 		var equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
