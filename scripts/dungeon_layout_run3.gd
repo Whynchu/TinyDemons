@@ -15,5 +15,8 @@ static func build(selected_starter_flame: StringName = &"fire", rotation_quarter
 	# A permanent Hub bind is the flame the player actually starts this run with.
 	# It must drive the run's puzzle Fire Room even when the profile's original
 	# starter flame remains unchanged for save/profile identity.
-	var run_flame: StringName = selected_bound_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_bound_flame) else alternates[0] if not alternates.is_empty() else starter_flame
+	# Every R3 Fire Room uses the flame selected for this run in the Hub: a
+	# run-start binding wins, otherwise the chosen starter flame remains the
+	# fallback until a future run begins with a different binding.
+	var run_flame: StringName = selected_bound_flame if ASPECT_CATALOG_SCRIPT.is_elemental_flame(selected_bound_flame) else starter_flame
 	return COMPILER_SCRIPT.build_r3(starter_flame, run_flame, rotation_quarter_turns)

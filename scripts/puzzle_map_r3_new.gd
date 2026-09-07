@@ -28,6 +28,10 @@ static func build() -> PuzzleMapGrid.MapPlan:
 		Vector2i(15, 19), Vector2i(31, 19), Vector2i(19, 27), Vector2i(23, 27),
 	])
 	_add_many(plan, GRID_SCRIPT.MARKER_ORB_ROOM, [Vector2i(25, 17), Vector2i(15, 23)])
+	# The added Fire Room at the lower-left branch guarantees a mana recovery
+	# option on the authored R3 route. Its marker is mirrored by the
+	# R3(new)puzzle_map_ex.png reference image.
+	plan.add_marker(Vector2i(11, 19), GRID_SCRIPT.MARKER_FLAME_B_ROOM)
 	plan.add_marker(Vector2i(17, 17), GRID_SCRIPT.MARKER_HUB_ROOM)
 	plan.add_marker(Vector2i(25, 9), GRID_SCRIPT.MARKER_BOSS_ROOM)
 	return plan

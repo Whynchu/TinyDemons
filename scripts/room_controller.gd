@@ -96,7 +96,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		if not state.has("regular_room_treasure"):
 			var treasure_rng := RandomNumberGenerator.new()
 			treasure_rng.seed = room.generation_seed ^ 0x54524541
-			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 3 and treasure_rng.randf() < REGULAR_ROOM_TREASURE_CHANCE
+			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and treasure_rng.randf() < REGULAR_ROOM_TREASURE_CHANCE
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
 		room_states[room_id] = state
@@ -529,7 +529,9 @@ func apply_state(root: Object) -> void:
 	else:
 		(root.get("cloaked_demon") as Sprite2D).visible = false
 		(root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon"))
-		reset_chest_for_room(root, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (bool(root.get("regular_room_treasure")) and bool(state.get("finished", false)) and not bool(state.get("chest_claimed", false))))
+		# Regular-room treasure is generated with the room and must be visible on
+		# entry. It stays grey/locked until the enemy encounter is cleared.
+		reset_chest_for_room(root, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (bool(root.get("regular_room_treasure")) and not bool(state.get("chest_claimed", false))))
 		if room_type == DungeonGraph.ROOM_TREASURE and treasure_chest_claimed:
 			root.set("chest_unlocked", true)
 			root.set("chest_claimed", true)
