@@ -14,17 +14,13 @@ coverage for the named feature.
 
 | Test | Target loaded/used | Expected target | Classification | Action |
 |---|---|---|---|---|
-| `tests/r4_authored_layout_smoke.gd` | R3 layout/reference path | R4 authored layout | target mismatch | inspect and correct before treating as R4 evidence |
-| `tests/r5_authored_layout_smoke.gd` | requires current R5 target verification | R5 authored layout | unverified | inspect scene/script/resource path and assertions |
+| `tests/r3_authored_layout_smoke.gd` | R3 compiler/runtime layout | R3 authored layout | verified | retain as the R3 authored contract |
+| `tests/r4_authored_layout_smoke.gd` | R4 compiler/runtime layout | R4 authored layout | verified | retain as the R4 authored contract |
+| `tests/r5_authored_layout_smoke.gd` | R5 compiler/runtime layout | R5 authored layout | verified | retain as the R5 authored contract |
 | `tests/puzzle_map_r4_new_grid_smoke.gd` | R4 grid/reference | R4 new grid contract | pending verification | confirm image/source and assertion scope |
 | `tests/puzzle_map_r5_grid_smoke.gd` | R5 grid/reference | R5 authored grid contract | pending verification | confirm image/source and assertion scope |
 
-Additional runner defect:
-
-- `tests/run_all_smoke.ps1` registers `r3_authored_layout_smoke`, but no
-  `tests/r3_authored_layout_smoke.gd` currently exists. This must be repaired or
-  removed from the registered inventory with an explicit decision; it must not
-  be counted as a passing or covered test.
+The runner now registers all three authored-layout contracts deliberately.
 
 ## Evidence From Focused Run
 
@@ -36,17 +32,28 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestFilte
 
 Observed:
 
-- `r3_authored_layout_smoke`: failed to load because the script is missing.
-- `r4_authored_layout_smoke`: executed R3 assertions and failed on current R3
-  reachability/count expectations; it provided no valid R4 evidence.
+- `r3_authored_layout_smoke`: passed its explicit R3 identity, validation, and
+  runtime-selection assertions.
+- `r4_authored_layout_smoke`: passed its explicit R4 identity, validation, and
+  runtime-selection assertions.
+- `r5_authored_layout_smoke`: passed its explicit R5 identity, validation, and
+  runtime-selection assertions.
 - `run2_authored_layout_smoke`: executed Run 2 assertions and failed on its
   clear-gating expectations.
-- `r5_authored_layout_smoke` was not selected by the `*authored_layout*` filter
-  because the runner's current name/filter inventory needs separate review.
 
-The R4/R5 test files must not be mechanically relabeled. The correct repair is
-to create explicit R3, R4, and R5 test contracts, then register each verified
-path deliberately.
+The R3/R4/R5 target mismatch is corrected. Their pixel-perfect grid tests remain
+separate contracts and still fail independently where the authored image does
+not match the manifest.
+
+Current post-`0.1.78` grid evidence:
+
+- `puzzle_map_r4_new_grid_smoke`: target is correctly R4, but pixel-for-pixel
+  reproduction still fails.
+- `puzzle_map_r5_grid_smoke`: target is correctly R5, but pixel-for-pixel
+  reproduction and parser round-trip still fail.
+
+These are valid R4/R5 contract failures, unlike the misnamed authored-layout
+tests. They should be triaged separately from test-target repair.
 
 This is an initial list, not a complete audit.
 
@@ -75,7 +82,7 @@ For each registered test:
 ## Exit Criteria
 
 - [ ] Every runner-registered test has a target classification.
-- [ ] R3/R4/R5/R7 tests have explicit layout/version scope.
+- [x] R3/R4/R5 authored-layout tests have explicit layout/version scope.
 - [ ] Tests changed alongside gameplay code are reviewed for assertion changes.
 - [ ] Test count changes are accompanied by a reason and verification result.
 - [ ] The current matrix distinguishes test-target defects from product bugs.

@@ -12,6 +12,7 @@ const ENEMY_HEALTH_RUN_STEP := 0.15
 const ENEMY_HEALTH_MAX_FACTOR := 1.0
 const R1_BOSS_HEALTH_FACTOR := 0.50
 const BOSS_ENCOUNTER_HEALTH_FACTOR := 0.90
+const BOSS_JUMP_SLAM_HEALTH_FACTOR := 1.10
 const BOSS_XP_MULTIPLIER := 5
 const XP_REWARD_MULTIPLIER := 4.0
 const XP_UNDERLEVEL_FLOOR := 0.30
@@ -225,7 +226,7 @@ func enemy_max_health(root: Object, slime: Sprite2D) -> float:
 	# curve gradually instead of making R2 an immediate health wall.
 	health *= enemy_health_factor(completed_runs, encounter_scale)
 	if encounter_scale > 1.0:
-		health *= encounter_scale * BOSS_ENCOUNTER_HEALTH_FACTOR
+		health *= encounter_scale * BOSS_ENCOUNTER_HEALTH_FACTOR * BOSS_JUMP_SLAM_HEALTH_FACTOR
 	_enemy_max_health_frame_cache[slime] = health
 	return health
 
@@ -299,6 +300,9 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true) -> void:
 	if bool(root.call("_is_slime_dead", slime)):
 		return
+	var phase_combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if phase_combat != null and phase_combat.boss_jump_phase_stun_resistant:
+		return
 	var direction: Vector2 = root.call("_slime_knockback_direction", slime)
 	var transmutation := root.get("equipment_transmutation_component") as EquipmentTransmutationComponent
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
@@ -330,12 +334,14 @@ func slime_knockback_direction(root: Object, slime: Sprite2D) -> Vector2:
 func kill_slime(root: Object, slime: Sprite2D) -> void:
 	if bool(root.call("_is_slime_dead", slime)):
 		return
+	var boss_phase_popcorn := bool(slime.get_meta("boss_jump_phase_popcorn", false))
 	var run := root.get("run_state") as RunState
-	if run != null and run.active:
+	if not boss_phase_popcorn and run != null and run.active:
 		run.record_enemy_kill()
 	var rng := root.get("rng") as RandomNumberGenerator
 	root.call("_play_sound", "enemy_death", -6.0, 0.90 + rng.randf_range(-0.08, 0.08))
-	root.call("_award_slime_xp", slime)
+	if not boss_phase_popcorn:
+		root.call("_award_slime_xp", slime)
 	var seed_value := int(root.get("current_dungeon_seed")) ^ String(root.get("current_room_id")).hash() ^ slime.get_instance_id()
 	var drop_rng := RandomNumberGenerator.new()
 	drop_rng.seed = seed_value
@@ -469,20 +475,61 @@ func update_player_health_regen(_root: Object, _delta: float) -> void:
 	pass
 
 
-func apply_slime_attack_lunge(root: Object, slime: Sprite2D) -> void:
+func apply_slime_attack_lunge(root: Object, slime: Sprite2D, fraction: float = 1.0) -> void:
 	var movement: Vector2 = root.call("_slime_attack_lunge_vector", slime)
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	if combat != null and float(root.call("_slime_encounter_scale", slime)) > 1.0:
+		if fraction <= 0.0:
+			return
 	if movement.length_squared() > 0.0001:
-		(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(slime, movement, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+		(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(slime, movement * fraction, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+
+
+func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void:
+	var player := root.get("player") as Sprite2D
+	if player == null or bool(root.get("player_dead")):
+		return
+	var player_foot: Vector2 = root.call("_actor_foot", player)
+	if player_foot.distance_to(anchor) > 18.0:
+		return
+	var run := root.get("run_state") as RunState
+	if bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")):
+		if run != null:
+			run.record_dodge()
+		return
+	var damage_result := root.call("_slime_attack_damage_result", boss) as CombatCalculator.DamageResult
+	if damage_result == null or damage_result.immune:
+		root.call("_spawn_player_damage_number", 0.0, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, true)
+		return
+	var damage := damage_result.amount * 1.25
+	var guard := root.get("player_guard_component") as PlayerGuardComponent
+	if guard != null:
+		var guard_result := guard.absorb_damage(root, damage, anchor)
+		damage = float(guard_result["health_damage"])
+	var health := root.get("player_health_component") as HealthComponent
+	if health != null:
+		health.apply_damage(damage)
+	root.call("_mark_player_in_combat")
+	if bool(root.get("player_is_attacking")):
+		root.call("_interrupt_player_attack")
+	root.set("player_hitstun_timer", (root.get("player_tuning") as PlayerTuning).hitstun_time)
+	root.call("_spawn_player_damage_number", damage, damage_result.element, false)
+	root.call("_update_player_health_ui")
 
 
 func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
 	var to_player: Vector2 = root.call("_slime_attack_offset", slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if combat != null and float(slime.get_meta("encounter_scale", 1.0)) > 1.0 and combat.attack_lunge_vector != Vector2.ZERO:
+		return combat.attack_lunge_vector
 	var direction := Vector2.LEFT if to_player.length_squared() < 0.01 and combat.face_left else Vector2.RIGHT if to_player.length_squared() < 0.01 else to_player.normalized()
-	var contact_gap: float = root.call("_slime_attack_contact_gap", slime, direction)
 	var tuning := root.get("slime_tuning") as SlimeTuning
-	var max_lunge := tuning.attack_lunge_distance * float(root.call("_slime_encounter_scale", slime))
-	return direction * minf(max_lunge, maxf(to_player.length() - contact_gap, 0.0))
+	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
+	var max_lunge := tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	# The slime body is the attack hitbox. Drive the body toward the player,
+	# rather than stopping at the edge-to-edge contact gap.
+	return direction * minf(max_lunge, maxf(to_player.length(), 0.0))
 
 
 func apply_player_hit_knockback(root: Object, slime: Sprite2D) -> void:

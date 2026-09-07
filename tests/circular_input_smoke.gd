@@ -6,7 +6,7 @@ const Recognizer = preload("res://scripts/circular_input_recognizer.gd")
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var recognizer := Recognizer.new()
-	recognizer.configure(0.55, 0.50, TAU * 0.80, 0.28)
+	recognizer.configure(0.55, 0.50, TAU * 0.75, 0.28)
 	var circle := [
 		Vector2.RIGHT,
 		Vector2(0.707, 0.707),

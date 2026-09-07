@@ -20,6 +20,15 @@ static func foot_position(position: Vector2, actor_foot_offset: Vector2) -> Vect
 	return position + actor_foot_offset
 
 
+static func slime_shadow_anchor(slime: Sprite2D) -> Vector2:
+	if slime == null:
+		return Vector2.ZERO
+	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
+	# Visual floor anchors are separate from collision feet because the regular
+	# and boss shadow canvases are authored at 16px and 32px respectively.
+	return slime.global_position + (Vector2(16.0, 22.0) if encounter_scale > 1.0 else Vector2(8.0, 13.0))
+
+
 static func encounter_visual_offset(encounter_scale: float, actor_foot_offset: Vector2) -> Vector2:
 	return actor_foot_offset * (1.0 / encounter_scale - 1.0) if encounter_scale > 1.0 else Vector2.ZERO
 
@@ -38,8 +47,7 @@ static func visual_offset(actor: Sprite2D, player: Sprite2D, slimes: Array[Sprit
 	if actor == player:
 		return Vector2(-10, -10)
 	if slimes.has(actor):
-		var encounter_scale := float(actor.get_meta("encounter_scale", 1.0))
-		return encounter_visual_offset(encounter_scale, actor_foot_offset)
+		return Vector2.ZERO
 	return Vector2.ZERO
 
 

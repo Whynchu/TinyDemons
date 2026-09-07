@@ -20,7 +20,7 @@ game reads them at runtime with no code change.
 | Hit reaction | `hit_flash_time` 0.12, `hitstun_time` 1/30, `hit_knockback` 10, `hit_knockback_duration` 0.12 |
 | Idle/walk/run | `idle_frame_time` 0.22, `walk_frame_time` 0.18, `run_frame_time` 0.10 |
 | Attack | `attack_frame_time` 0.09, `attack_hit_frame` 2, `attack2_hit_frame` 2, `combo_window` 0.18, `between_attack_time` 0.12, `attack2_cooldown` 0.16 |
-| Spin gesture / timing | `spin_circle_min_magnitude` 0.55, `spin_circle_max_duration` 0.50, `spin_circle_required_turn` 0.80τ, `spin_circle_arm_duration` 0.28, `spin_frame_time` 0.075, `spin_recovery_frame_time` 0.14, active frames 3–6 |
+| Spin gesture / timing | `spin_circle_min_magnitude` 0.55, `spin_circle_max_duration` 0.50, `spin_circle_required_turn` 0.75τ (270°), `spin_circle_arm_duration` 0.28, `spin_frame_time` 0.075, `spin_recovery_frame_time` 0.14, hit pulses on frames 3 and 5, recovery frames 4 and 6 |
 | Spin balance | `spin_damage_multiplier` 0.90, `spin_knockback_multiplier` 2.0, `spin_lunge_distance` 14.0, `spin_lunge_duration` 0.73; travel eases out through frame 5, spin uses eight authored body frames, snapshots input direction, and does not split damage across multiple targets |
 | Charge balance | `charge_minimum_time` 0.25, `charge_maximum_time` 0.65, `charged_attack2_frame_time_multiplier` 0.90, `charged_attack2_damage_multiplier` 1.60, `charged_attack2_knockback_multiplier` 1.50 |
 | Charge aura | `charge_aura_start_interval` 0.16 -> `charge_aura_peak_interval` 0.055, launch speed 8 -> 24, rise 12 -> 26, spread 2 -> 7, curl 8 -> 52, `charge_aura_particle_lifetime` 0.28; foot-level pixels ramp into short air streaks at the charge cap |
@@ -88,6 +88,11 @@ and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
 Souls settle inside the room without snapping or flying too far from the enemy.
 
 ## Elemental slime definitions
+
+The planned shared boss behavior for Normal and all seven elemental variants is
+defined in [`boss-slime-implementation-plan.md`](boss-slime-implementation-plan.md).
+Until that plan's final tuning phase is complete, live boss constants and
+temporary multipliers should not be treated as the approved feel targets.
 
 The stateless catalogs are the source of truth for enemy identity and typed
 damage. `scripts/slime_variant_catalog.gd` owns the visual variant, display

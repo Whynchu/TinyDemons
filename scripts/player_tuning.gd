@@ -70,7 +70,7 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export_group("Spin attack")
 @export var spin_circle_min_magnitude := 0.55
 @export var spin_circle_max_duration := 0.50
-@export var spin_circle_required_turn := TAU * 0.80
+@export var spin_circle_required_turn := TAU * 0.75
 @export var spin_circle_arm_duration := 0.28
 @export var spin_frame_time := 0.09
 @export var spin_recovery_frame_time := 0.14

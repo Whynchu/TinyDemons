@@ -325,6 +325,7 @@ var name_entry_owner: Object = null
 var run_complete_overlay: ColorRect = null
 var run_complete_texts: Array[Sprite2D] = []
 var run_complete_grade_text: Sprite2D = null
+var run_complete_gold_icon: Sprite2D = null
 var run_complete_button: Button = null
 var run_complete_cursor: Sprite2D = null
 var run_complete_footer_text: Sprite2D = null
@@ -1009,8 +1010,11 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	var lines: Array[Sprite2D] = []
 	for index in RUN_COMPLETE_LINE_POSITIONS.size():
 		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, _run_complete_line_position(index, content_x), false))
-	run_complete_grade_text = create_sprite(overlay, "RunCompleteGrade", null, Vector2(content_x + 19.0, 29.0), false)
+	run_complete_grade_text = create_sprite(overlay, "RunCompleteGrade", null, Vector2(content_x + content_width - 18.0, 29.0), false)
 	run_complete_grade_text.scale = Vector2(2.0, 2.0)
+	run_complete_gold_icon = create_sprite(overlay, "RunCompleteGoldIcon", HUB_GOLD_TEXTURE, Vector2(content_x + 40.0, 124.0), false)
+	run_complete_gold_icon.region_enabled = true
+	run_complete_gold_icon.region_rect = Rect2(0.0, 0.0, 5.0, 5.0)
 	var return_button := make_menu_command_button("RETURN TO HUB", Vector2(content_x + 4.0, 141), Vector2(86, 12), pixel_texture)
 	return_button.focus_mode = Control.FOCUS_NONE
 	return_button.pressed.connect(return_to_hub)
@@ -1077,7 +1081,9 @@ func _position_run_complete_controls() -> void:
 		if run_complete_texts[index] != null:
 			run_complete_texts[index].position = _run_complete_line_position(index, content_x)
 	if run_complete_grade_text != null:
-		run_complete_grade_text.position = Vector2(content_x + 19.0, 29.0)
+		run_complete_grade_text.position = Vector2(content_x + content_width - 18.0, 29.0)
+	if run_complete_gold_icon != null:
+		run_complete_gold_icon.position = Vector2(content_x + 40.0, 124.0)
 	if run_complete_button != null:
 		run_complete_button.position = Vector2(content_x + 4.0, 141)
 	if run_complete_cursor != null:

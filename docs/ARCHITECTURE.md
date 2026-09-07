@@ -45,7 +45,9 @@ Encrypted-vault deployment and operational verification are documented in
 - **Enemies**: `slime_actor`, `slime_brain`, `slime_combat_component`,
   `slime_animation_component`, `slime_visual_component`,
   `slime_health_presenter`, `slime_ambush_component`,
-  `enemy_tactics_component`.
+  `enemy_tactics_component`. The shared Normal and eight-element boss behavior,
+  presentation, performance, and verification contract is defined in
+  [`boss-slime-implementation-plan.md`](boss-slime-implementation-plan.md).
 - **World**: `room_controller`, `dungeon_graph`, `dungeon_socket`,
   `isometric_room_layer`, `walkable_area`, `actor_collision_system`,
   `depth_sorter`, `shadow_controller`, `occlusion_renderer`.- **Interaction**: `interaction_component`, `chest_controller`,

@@ -2,6 +2,7 @@ extends Node
 class_name RoomController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
+const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
@@ -14,8 +15,12 @@ var progression_run_rank := 1
 var player_level := 1
 var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
+var boss_variant_selection: StringName = &""
 var matchup_policy := "rank_default"
 var boss_slime_authoring_scene: PackedScene = null
+var boss_jump_phase_waves: Dictionary = {}
+var boss_jump_phase_pool: Array[Sprite2D] = []
+var _enemy_visual_preparation_signature := ""
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/boss_slime_authoring.tscn"
@@ -46,6 +51,7 @@ const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 3
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
 const BOSS_MIXED_SUPPORT_START_RANK: int = 5
+const SLIME_BOSS_JUMP_PHASE_POPCORN := "SlimeBossJumpPhasePopcorn"
 const PLAYER_DOOR_REPOSITION_RADII := [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0, 48.0]
 const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
 
@@ -252,17 +258,19 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	# Purple is a rare supporting encounter. It is never the scaled lead boss,
 	# and it is not guaranteed as a minor, because its pressure is much higher
 	# than the ordinary slime variants.
-	var boss_palette := ["blue", "green"]
 	var boss_rng := RandomNumberGenerator.new()
 	boss_rng.seed = generation_seed + 991
-	var variants: Array[String] = [boss_palette[boss_rng.randi_range(0, boss_palette.size() - 1)]]
+	var boss_variant := boss_variant_selection
+	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(boss_variant):
+		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS
+		boss_variant = roster[boss_rng.randi_range(0, roster.size() - 1)]
+	var variants: Array[String] = [String(boss_variant)]
 	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
 	var scales: Array[float] = [3.0]
-	var palette := ["blue", "green", "red"]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
-		var selected_variant: String = palette[encounter_rng.randi_range(0, palette.size() - 1)]
+		var selected_variant: String = String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
 		if encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
@@ -279,7 +287,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		popcorn_types.append("")
 		ambush_flags.append(variants[index] == "purple" and encounter_rng.randf() < 0.40)
 	for _support_index in _boss_support_popcorn_count():
-		variants.append("grey")
+		variants.append(String(boss_variant))
 		levels.append(_popcorn_enemy_level())
 		scales.append(1.0)
 		popcorn_flags.append(true)
@@ -1099,6 +1107,135 @@ func record_popcorn_enemy_death(root: Object, slime: Sprite2D) -> void:
 	room_states[room_id] = state
 
 
+func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2) -> int:
+	var wave: Array[Sprite2D] = []
+	for index in 3:
+		var popcorn := _acquire_boss_jump_phase_slot(root)
+		if popcorn == null:
+			continue
+		var actor := popcorn as SlimeActor
+		popcorn.set_meta("encounter_scale", 1.0)
+		popcorn.set_meta("is_popcorn", true)
+		popcorn.set_meta("popcorn_type", SLIME_BOSS_JUMP_PHASE_POPCORN)
+		popcorn.set_meta("boss_jump_phase_popcorn", true)
+		if String(popcorn.get_meta("prepared_boss_variant", "")) != String(boss.get("variant")):
+			root.call("_configure_slime_variant", popcorn, String(boss.get("variant")))
+		var offset := Vector2(-12.0 + float(index) * 12.0, 8.0 if index % 2 == 0 else -8.0)
+		var spawn_foot: Vector2 = root.call("_nearest_slime_walkable_point", anchor + offset)
+		popcorn.global_position = spawn_foot - ACTOR_FOOT_OFFSET
+		popcorn.visible = true
+		root.call("_apply_enemy_room_level", popcorn, maxi(1, _popcorn_enemy_level_for_root(root)))
+		var tuning := root.get("slime_tuning") as SlimeTuning
+		var maximum := float(root.call("_enemy_max_health", popcorn))
+		if actor != null:
+			actor.configure_health(maximum, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
+		if not (root.get("slimes") as Array[Sprite2D]).has(popcorn): (root.get("slimes") as Array[Sprite2D]).append(popcorn)
+		(root.get("actor_sprites") as Array[Sprite2D]).append(popcorn)
+		(root.get("collision_sprites") as Array[Sprite2D]).append(popcorn)
+		(root.get("depth_sprites") as Array[Sprite2D]).append(popcorn)
+		(root.get("occluder_sprites") as Array[Sprite2D]).append(popcorn)
+		wave.append(popcorn)
+	boss_jump_phase_waves[boss.get_instance_id()] = wave
+	return wave.size()
+
+
+func boss_jump_phase_popcorn_alive(_root: Object, boss: Sprite2D) -> bool:
+	var wave := boss_jump_phase_waves.get(boss.get_instance_id(), []) as Array
+	for popcorn in wave:
+		if popcorn != null and is_instance_valid(popcorn) and not bool(popcorn.get_node("Combat").dead):
+			return true
+	return false
+
+
+func clear_boss_jump_phase_popcorn(boss: Sprite2D) -> void:
+	if boss != null:
+		var wave := boss_jump_phase_waves.get(boss.get_instance_id(), []) as Array
+		for popcorn in wave:
+			if popcorn is Sprite2D:
+				_deactivate_boss_jump_phase_slot(popcorn as Sprite2D)
+		boss_jump_phase_waves.erase(boss.get_instance_id())
+
+
+func initialize_boss_jump_phase_pool(root: Object) -> void:
+	if not boss_jump_phase_pool.is_empty():
+		return
+	var template := root.get("slime_green") as Sprite2D
+	if template == null:
+		return
+	var parent := template.get_parent()
+	for index in 3:
+		var popcorn := template.duplicate() as Sprite2D
+		if popcorn == null:
+			continue
+		popcorn.name = "BossJumpPhasePool%d" % index
+		parent.add_child(popcorn)
+		var actor := popcorn as SlimeActor
+		if actor != null:
+			actor.ensure_components()
+		var health := popcorn.get_node_or_null("Health") as HealthComponent
+		if health != null:
+			health.damaged.connect(Callable(root, "_on_slime_health_damaged").bind(popcorn))
+			health.healed.connect(Callable(root, "_on_slime_health_healed").bind(popcorn))
+			health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(popcorn))
+		_deactivate_boss_jump_phase_slot(popcorn)
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	for popcorn in boss_jump_phase_pool:
+		slimes.append(popcorn)
+	root.call("_build_slime_direction_textures")
+	for popcorn in boss_jump_phase_pool:
+		slimes.erase(popcorn)
+
+
+func prepare_boss_jump_phase_pool(root: Object, variant: String) -> void:
+	if boss_jump_phase_pool.is_empty():
+		return
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	for popcorn in boss_jump_phase_pool:
+		root.call("_configure_slime_variant", popcorn, variant)
+		popcorn.set_meta("encounter_scale", 1.0)
+		popcorn.set_meta("prepared_boss_variant", variant)
+		slimes.append(popcorn)
+	root.call("_build_slime_direction_textures")
+	root.call("_assign_slime_attack_frames")
+	root.call("_assign_slime_shocked_frames")
+	root.call("_assign_slime_spawn_frames")
+	for popcorn in boss_jump_phase_pool:
+		slimes.erase(popcorn)
+
+
+func _acquire_boss_jump_phase_slot(root: Object) -> Sprite2D:
+	if boss_jump_phase_pool.is_empty():
+		return null
+	var popcorn: Sprite2D = boss_jump_phase_pool.pop_back() as Sprite2D
+	var actor := popcorn as SlimeActor
+	if actor != null:
+		actor.reset_runtime_state(popcorn.position, root.call("_nearest_slime_walkable_point", root.call("_actor_foot", popcorn)), 0.5, 0.2, 0.0, 0.5)
+	return popcorn
+
+
+func _deactivate_boss_jump_phase_slot(popcorn: Sprite2D) -> void:
+	if popcorn == null or not is_instance_valid(popcorn):
+		return
+	var combat := popcorn.get_node_or_null("Combat") as SlimeCombatComponent
+	if combat != null:
+		combat.clear_boss_jump_phase()
+		combat.active = false
+		combat.dead = true
+	var spawn := popcorn.get_node_or_null("Spawn") as Node
+	if spawn != null:
+		spawn.call("cancel")
+	popcorn.visible = false
+	popcorn.self_modulate.a = 1.0
+	popcorn.set_meta("boss_jump_phase_popcorn", false)
+	popcorn.set_meta("boss_airborne", false)
+	for collection_name in ["actor_sprites", "collision_sprites", "depth_sprites", "occluder_sprites"]:
+		var collection: Variant = get_parent().get(collection_name) if get_parent() != null else null
+		if collection is Array:
+			(collection as Array).erase(popcorn)
+	if not boss_jump_phase_pool.has(popcorn):
+		boss_jump_phase_pool.append(popcorn)
+
+
 func _ensure_special_enemy_respawn_timers(state: Dictionary) -> void:
 	var timers := state.get("special_respawn_timers", {}) as Dictionary
 	var active_variants := state.get("enemy_variants", []) as Array
@@ -1351,17 +1488,27 @@ func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var active_variants := state.get("enemy_variants", []) as Array
 	var active_ambush := state.get("enemy_ambush", []) as Array
+	var active_scales := state.get("enemy_scales", []) as Array
+	var signature := "%s|%s|%s" % [active_variants, active_scales, active_ambush]
 	for slot in active_variants.size():
 		if slot >= slimes.size():
 			break
 		var ambush_enabled := slot < active_ambush.size() and bool(active_ambush[slot])
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
+		slimes[slot].set_meta("encounter_scale", float(active_scales[slot]) if slot < active_scales.size() else 1.0)
 		root.call("_configure_slime_ambush", slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled)
+	if signature == _enemy_visual_preparation_signature:
+		return
+	_enemy_visual_preparation_signature = signature
+	# Variant and boss scale are authoritative only after room state is applied.
+	# Refresh directional sources here so a reused/default slot cannot retain
+	# regular artwork when it becomes the boss.
 	root.call("_build_slime_direction_textures")
 	root.call("_assign_slime_attack_frames")
 	root.call("_assign_slime_shocked_frames")
 	root.call("_assign_slime_spawn_frames")
-	root.call("_refresh_enemy_palette_textures")
+	if not active_variants.is_empty() and not active_scales.is_empty() and float(active_scales[0]) > 1.0:
+		prepare_boss_jump_phase_pool(root, String(active_variants[0]))
 
 
 func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2, animate_spawn: bool = false) -> bool:
@@ -1442,7 +1589,7 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
 	root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime])
 	var is_boss := encounter_scale > 1.0
-	slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20) * (0.72 if is_boss else 1.0))
+	slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20))
 	slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20) * (1.12 if is_boss else 1.0))
 	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
 	root.call("_apply_actor_scale", slime, false)

@@ -1,20 +1,28 @@
 extends Resource
 class_name SlimeTuning
 
-@export var scoot_distance := 5.0
-@export var scoot_duration := 0.34
+@export var scoot_distance := 6.0
+@export var scoot_duration := 0.32
 @export var spawn_frame_time := 0.08
 @export var attack_frame_time := 0.08
 @export var attack_hit_frame := 5
+@export var boss_attack_hit_frame := 8
 @export var attack_range := 14.0
 @export var attack_hit_range := 16.0
 @export var attack_vertical_hit_range := 10.0
 @export var aggro_range := 28.0
 @export var attack_cooldown := 1.0
-@export var attack_lunge_distance := 10.0
+@export var attack_lunge_distance := 6.0
+@export var boss_attack_lunge_distance := 10.0
+@export var boss_attack_lunge_duration := 0.18
 @export var boss_attack_cooldown_multiplier := 1.6
-@export var boss_attack_frame_time_multiplier := 1.5
-@export var boss_movement_speed_multiplier := 0.7
+@export var boss_attack_frame_time_multiplier := 1.0
+@export var boss_movement_speed_multiplier := 0.82
+@export var boss_scoot_distance := 7.0
+@export var boss_scoot_duration := 0.55
+@export var boss_aggro_hold_min := 0.18
+@export var boss_aggro_hold_max := 0.22
+@export var boss_orbit_weight := 0.20
 @export var hold_min := 0.22
 @export var hold_max := 0.48
 @export var aggro_hold_min := 0.08
@@ -27,6 +35,8 @@ class_name SlimeTuning
 @export var repath_max := 1.8
 @export var steering_direction_count := 8
 @export var steering_approach_weight := 1.0
+@export var steering_attack_cone_weight := 0.55
+@export var steering_attack_cone_half_angle_degrees := 55.0
 @export var steering_orbit_weight := 0.42
 @export var steering_ally_danger_weight := 1.25
 @export var steering_blocked_danger_weight := 4.0

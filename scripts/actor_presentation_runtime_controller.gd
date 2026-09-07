@@ -8,9 +8,7 @@ const ACTOR_DEPTH_TIE_WINDOW := 1.5
 ## offsets, slime texture libraries, and the shared visual scale transform.
 
 func set_actor_visual_scale(root: Object, actor: Sprite2D, visual_scale: Vector2) -> void:
-	var slimes := root.get("slimes") as Array[Sprite2D]
-	var encounter_scale := float(actor.get_meta("encounter_scale", 1.0)) if slimes.has(actor) else 1.0
-	(root.get("occlusion_renderer") as OcclusionRenderer).actor_visual_scales[actor] = visual_scale * encounter_scale
+	(root.get("occlusion_renderer") as OcclusionRenderer).actor_visual_scales[actor] = visual_scale
 	apply_actor_scale(root, actor, false)
 
 
@@ -67,13 +65,19 @@ func build_slime_direction_textures(root: Object) -> void:
 	for slime in slimes:
 		var palette := String(slime.get("variant"))
 		var source := "SlimeGreen" if palette in ["purple", "grey", "yellow", "orange", "aquamarine"] else "Slime%s" % palette.capitalize()
-		paths[slime] = ["res://assets/artwork/%sLeft.png" % source, "res://assets/artwork/%sRight.png" % source]
+		var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
+		var prefix := "BOSS" if is_boss else ""
+		if is_boss:
+			source = "SlimeGreen"
+		paths[slime] = ["res://assets/artwork/%s%sLeft.png" % [prefix, source], "res://assets/artwork/%s%sRight.png" % [prefix, source]]
 	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(root, "_load_texture_or_null"))
 	var texture_cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
-	for palette in ["grey", "yellow", "purple", "orange", "aquamarine"]:
+	for palette in ["grey", "red", "blue", "yellow", "purple", "orange", "aquamarine"]:
 		var palette_slimes: Array[Sprite2D] = []
 		for slime in slimes:
-			if String(slime.get("variant")) == palette:
+			var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
+			var needs_recolor: bool = is_boss or palette in ["grey", "yellow", "purple", "orange", "aquamarine"]
+			if String(slime.get("variant")) == palette and needs_recolor:
 				palette_slimes.append(slime)
 		if not palette_slimes.is_empty():
 			SlimeVisualComponent.recolor_direction_textures(palette_slimes, palette, texture_cache)
@@ -90,6 +94,10 @@ func build_slime_attack_frames(root: Object) -> void:
 
 func assign_slime_attack_frames(root: Object) -> void:
 	SlimeVisualComponent.assign_attack_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_attack_frames_by_palette") as Dictionary)
+	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
+	SlimeVisualComponent.assign_boss_ability_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
+	SlimeVisualComponent.assign_regular_shadow_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
 
 
 func build_slime_shocked_frames(root: Object) -> void:
@@ -116,6 +124,9 @@ func assign_slime_spawn_frames(root: Object) -> void:
 
 func assign_slime_shocked_frames(root: Object) -> void:
 	SlimeVisualComponent.assign_shocked_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_shocked_frames_by_palette") as Dictionary)
+	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
+	SlimeVisualComponent.assign_boss_ability_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
 
 
 func build_enemy_health_ui(root: Object) -> void:
@@ -140,6 +151,41 @@ func refresh_enemy_palette_textures(root: Object) -> void:
 
 func set_slime_facing(root: Object, slime: Sprite2D, direction_x: float) -> void:
 	SlimeVisualComponent.set_facing(root, slime, direction_x)
+	sync_slime_shadow(root, slime)
+
+
+func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	if visual == null:
+		return
+	var shadow := slime.get_node_or_null("SlimeFloorShadow") as Sprite2D
+	if shadow == null:
+		shadow = Sprite2D.new()
+		shadow.name = "SlimeFloorShadow"
+		shadow.centered = false
+		slime.add_child(shadow)
+	var animation_name := String(slime.get_meta("runtime_animation", "idle"))
+	var frame := int(slime.get_meta("runtime_animation_frame", 0))
+	if animation_name == "attack":
+		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+		var attack_frames := visual.shadow_attack_left_frames if combat != null and combat.face_left else visual.shadow_attack_right_frames
+		if not attack_frames.is_empty():
+			shadow.texture = attack_frames[clampi(frame, 0, attack_frames.size() - 1)]
+	elif animation_name == "spawn" and not visual.shadow_spawn_frames.is_empty():
+		shadow.texture = visual.shadow_spawn_frames[clampi(frame, 0, visual.shadow_spawn_frames.size() - 1)]
+	elif animation_name == "shocked" and not visual.shadow_shocked_frames.is_empty():
+		shadow.texture = visual.shadow_shocked_frames[clampi(frame, 0, visual.shadow_shocked_frames.size() - 1)]
+	else:
+		shadow.texture = visual.shadow_idle_texture
+	shadow.visible = shadow.texture != null and not bool(root.call("_is_slime_dead", slime)) and not bool(slime.get_meta("boss_airborne", false))
+	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)
+	# Shadow exports share the slime sprite's full canvas, so their top-left
+	# origins must match rather than being repositioned around a floor anchor.
+	var boss_shadow_correction := Vector2(-2.0, 0.0) if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else Vector2.ZERO
+	# This is a child of the slime, so local canvas space keeps it attached while
+	# the actor moves. Global positioning made it lag after contact pushes.
+	shadow.position = boss_shadow_correction
+	shadow.z_index = -1
 
 
 func update_slime_attack_guides(root: Object, slime: Sprite2D) -> void:

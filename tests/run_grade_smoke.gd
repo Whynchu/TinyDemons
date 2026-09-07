@@ -42,7 +42,7 @@ func _initialize() -> void:
 		partial.record_combo_hit(combo + 1)
 	var partial_grade: Dictionary = RunGradeEvaluator.evaluate(partial, partial.starting_health)
 	_expect(bool(partial_grade["map_complete"]) and not bool(partial_grade["full_clear"]), "map completion is independent from room completion", failures)
-	_expect(str(partial_grade["grade"]) == "B", "incomplete room run is capped at B", failures)
+	_expect(int(partial_grade["score"]) >= 90 and str(partial_grade["grade"]) == "S", "strong combat and time performance can earn S without full room completion", failures)
 
 	var slow := RunState.new()
 	slow.begin(789, 0, 40.0)

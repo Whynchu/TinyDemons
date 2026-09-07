@@ -16,6 +16,8 @@ class DamageRoot extends Node:
 	])
 	var damage_values: Array[float] = []
 	var damage_targets: Array[Sprite2D] = []
+	var knockback_values: Array[float] = []
+	var sound_events: Array[String] = []
 
 
 	func _is_slime_targetable(_slime: Sprite2D) -> bool:
@@ -45,8 +47,12 @@ class DamageRoot extends Node:
 		damage_values.append(amount)
 
 
-	func _knockback_slime(_slime: Sprite2D, _multiplier: float = 1.0) -> void:
-		pass
+	func _knockback_slime(_slime: Sprite2D, multiplier: float = 1.0) -> void:
+		knockback_values.append(multiplier)
+
+
+	func _play_sound(sound_name: String, _volume_db: float = 0.0, _pitch_scale: float = 1.0) -> void:
+		sound_events.append(sound_name)
 
 
 func _initialize() -> void:
@@ -103,6 +109,23 @@ func _initialize() -> void:
 	var expected_spin := floorf(20.0 * root.player_tuning.spin_damage_multiplier)
 	_expect(root.damage_values.size() == 1 and is_equal_approx(spin_single, expected_spin), "single-target spin uses its reduced damage coefficient", failures)
 	_expect(spin_single < normal_single, "single-target spin deals slightly less than a normal attack", failures)
+
+	root.damage_values.clear()
+	root.knockback_values.clear()
+	root.sound_events.clear()
+	root.player_anim_frame = root.player_tuning.spin_hit_start_frame
+	attack.begin(1, PlayerAttackComponent.AttackKind.SPIN)
+	attack.apply_hitbox(root)
+	root.player_anim_frame = root.player_tuning.spin_hit_start_frame + 2
+	attack.apply_hitbox(root)
+	_expect(root.damage_values.size() == 2, "spin can connect two times with one target", failures)
+	if root.damage_values.size() == 2:
+		_expect(is_equal_approx(root.damage_values[0], 8.0), "spin first contact uses its normal spin coefficient", failures)
+		_expect(is_equal_approx(root.damage_values[1], expected_spin), "spin second contact uses its finisher coefficient", failures)
+	_expect(root.knockback_values.size() == 2, "spin applies knockback on both contacts", failures)
+	if root.knockback_values.size() == 2:
+		_expect(root.knockback_values[0] < root.knockback_values[1], "spin reserves strong knockback for contact two", failures)
+	_expect(root.sound_events == ["miss", "miss"], "spin plays one swing sound for each hitbox pulse", failures)
 
 	root.slimes = [target_a, target_b]
 	root.damage_values.clear()

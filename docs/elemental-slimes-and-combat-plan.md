@@ -17,6 +17,7 @@ verification log, including the corrections applied during review).
 
 Related design:
 
+- [`boss-slime-implementation-plan.md`](boss-slime-implementation-plan.md)
 - [`Tiny Demons — Elemental Chroma System Design.md`](Tiny%20Demons%20%E2%80%94%20Elemental%20Chroma%20System%20Design.md)
 - [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md)
 - [`elemental-chroma-implementation-plan.md`](elemental-chroma-implementation-plan.md)

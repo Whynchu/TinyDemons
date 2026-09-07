@@ -163,12 +163,13 @@ func apply_bar_colors(_player_color: Color = XP_COLOR, chroma_color: Color = MP_
 			frame.self_modulate = Color.WHITE
 
 
-func apply_portrait_palette(palette_name: String, library: SpriteFrameLibrary) -> void:
+func apply_portrait_palette(palette_name: String, library: SpriteFrameLibrary, cloaked := false) -> void:
 	_capture_source_textures()
 	var portrait := get_node_or_null("PlayerStatus/Portrait") as Sprite2D
 	if portrait == null or _portrait_source == null or library == null:
 		return
-	portrait.texture = library.recolor_portrait_texture(_portrait_source, palette_name)
+	var source := load("res://assets/artwork/player_cloaked_UI_portrait.png") as Texture2D if cloaked else _portrait_source
+	portrait.texture = library.recolor_cloaked_portrait_texture(source, palette_name) if cloaked else library.recolor_portrait_texture(source, palette_name)
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 

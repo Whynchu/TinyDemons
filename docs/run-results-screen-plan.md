@@ -1,6 +1,6 @@
 # Run Results Screen Plan
 
-Status: planned; score presentation is not yet simplified.
+Status: implemented; score presentation and performance weighting are active.
 
 ## Purpose
 
@@ -8,6 +8,18 @@ The results screen should answer three questions immediately: how well did the
 player perform, how fast was the completed route, and what reward was earned.
 Detailed telemetry remains available to code, save data, and a later optional
 details view rather than competing with the primary result.
+
+## Grade weighting
+
+MAP discovery remains visible as route information but contributes no grade
+points. The current score weights are time 30%, combat effectiveness 30%, STYLE
+20%, combo 10%, and room completion 10%. Combat effectiveness compares
+successful attack swings with incoming damage against enemy pressure; it does
+not use enemy kill completion. Room completion is therefore a small
+route-discipline bonus rather than a requirement for a high performance grade.
+The authored R1 route uses a 150-second par so its introductory pacing leaves
+room for learning. Later route pars use the same workload estimator with the
+R1 calibration factor of 150/90, so their time windows grow at the same pace.
 
 ## Proposed primary information
 

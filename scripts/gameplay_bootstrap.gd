@@ -124,6 +124,7 @@ func initialize(root: GameplayState) -> void:
 			initial_room_id = boss_connection.destination_room_id
 	root.current_room_id = initial_room_id
 	root._sync_current_room_metadata()
+	root.room_controller.boss_variant_selection = root.debug_boss_variant
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
@@ -136,7 +137,10 @@ func initialize(root: GameplayState) -> void:
 	var collision: Array[Sprite2D] = [player]; collision.append_array(slimes); collision.append(chest); root.set("collision_sprites", collision)
 	(root.get("depth_sorter") as DepthSorter).set_sprites(actors); occlusion.set_occluders(root.get("occluder_sprites"))
 	var player_shadow := root.get("player_shadow") as Sprite2D; var demon_shadow := root.get("cloaked_demon_shadow") as Sprite2D
-	root.set("player_shadow_offset", player_shadow.global_position - player.global_position); root.set("player_shadow_scale", player_shadow.global_scale); player_shadow.z_as_relative = false
+	# Store the authored shadow correction relative to the gameplay foot. The
+	# shadow may have been updated once before debug-room repositioning, so
+	# deriving this from its current runtime position can capture a stale offset.
+	root.set("player_shadow_offset", Vector2(-8.0, -9.0)); root.set("player_shadow_scale", player_shadow.global_scale); player_shadow.z_as_relative = false
 	root.set("cloaked_demon_shadow_offset", demon_shadow.global_position - demon.global_position); root.set("cloaked_demon_shadow_scale", demon_shadow.global_scale); demon_shadow.z_as_relative = false
 	var attack_visual := root.get("player_attack_visual") as Sprite2D; attack_visual.z_as_relative = false; attack_visual.visible = false
 	root.call("_hide_editor_only_guides")
@@ -161,20 +165,23 @@ func initialize(root: GameplayState) -> void:
 	root.set("boot_active", true)
 	await root.get_tree().process_frame
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	root.call("_refresh_player_cloak_visual")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
 	_initialize_walkable_area(root, root.EDGE_MARGIN, root.SLIME_EDGE_PADDING)
 	_initialize_slimes(root, slimes)
+	root.room_controller.initialize_boss_jump_phase_pool(root)
 	root._apply_room_state(); root._build_depth_lists()
 	if bool(root.get("debug_start_in_boss_room")):
-		root.call("_begin_new_run")
-		# begin_new_run regenerates the debug dungeon with a fresh seed. Reapply the
-		# authored boss arrival after that reset so the debug player and the active
-		# socket belong to the same room layout.
+		# Initialize normal run resources without replacing the dungeon and boss room
+		# that were already selected and applied above.
+		root.call("_begin_new_run", true)
 		_place_debug_player_at_boss_entry(root, player)
 		root.set("player_start_position", player.position)
+		root.player_animation_component.apply_frame(root)
+		root.call("_update_player_shadow")
+		root.call("_build_depth_lists")
 		_enter_debug_gameplay(root)
 		root.set("loading_screen_active", false)
 	else:

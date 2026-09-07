@@ -186,6 +186,36 @@ func recolor_portrait_texture(source: Texture2D, palette_name: String) -> Textur
 	return _recolor_player_palette_texture(source, palette_name, cache_key, _uses_shadow_base_palette(palette_name))
 
 
+func recolor_cloaked_portrait_texture(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null:
+		return null
+	var cache_key := "cloaked_portrait:%d:%s" % [source.get_instance_id(), palette_name]
+	if recolor_cache.has(cache_key):
+		return recolor_cache[cache_key] as Texture2D
+	var image := _cached_image(source).duplicate()
+	var source_colors: Array[Color] = PaletteLibrary.triple("blue")
+	var target: Array[Color] = PaletteLibrary.triple(palette_name)
+	var source_keys: Array[int] = []
+	for color in source_colors:
+		source_keys.append(_rgb_int(color))
+	for y in image.get_height():
+		for x in image.get_width():
+			var color: Color = image.get_pixel(x, y)
+			var key := _rgb_int(color)
+			if key == _rgb_int(PLAYER_EYE_HIGHLIGHT_COLOR):
+				var eye := PaletteLibrary.normal(palette_name)
+				image.set_pixel(x, y, Color(eye.r, eye.g, eye.b, color.a))
+				continue
+			for index in source_keys.size():
+				if key == source_keys[index]:
+					var replacement: Color = target[index]
+					image.set_pixel(x, y, Color(replacement.r, replacement.g, replacement.b, color.a))
+					break
+	var texture := ImageTexture.create_from_image(image)
+	recolor_cache[cache_key] = texture
+	return texture
+
+
 func _recolor_player_palette_texture(source: Texture2D, palette_name: String, cache_key: String, use_shadow_as_base: bool) -> Texture2D:
 	if recolor_cache.has(cache_key):
 		return recolor_cache[cache_key] as Texture2D
