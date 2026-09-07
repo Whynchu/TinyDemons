@@ -184,7 +184,8 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 	var boss_shadow_correction := Vector2(-2.0, 0.0) if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else Vector2.ZERO
 	# This is a child of the slime, so local canvas space keeps it attached while
 	# the actor moves. Global positioning made it lag after contact pushes.
-	shadow.position = boss_shadow_correction
+	shadow.position = boss_shadow_correction / slime.scale
+	shadow.scale = Vector2.ONE / slime.scale
 	shadow.z_index = -1
 
 

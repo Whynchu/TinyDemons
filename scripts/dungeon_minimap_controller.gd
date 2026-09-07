@@ -14,7 +14,7 @@ const MINIMAP_VIEW_SIZE := Vector2i(25, 25)
 const DISPLAY_SCALE := 2.0
 const RING_DISPLAY_SCALE := 1.0
 const MAP_POSITION := Vector2(0, 14)
-const MAP_RING_PATH := "res://Artwork/puzzle_map_ring.png"
+const MAP_RING_PATH := "res://assets/artwork/puzzle_map_ring.png"
 
 const COLOR_BACKGROUND := Color8(17, 19, 24)
 const COLOR_HUB := Color8(244, 244, 244)

@@ -92,15 +92,16 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 		if is_boss and frame_index >= hit_frame - 3 and attack_target_point == Vector2.ZERO:
 			attack_target_point = actor.get_meta("attack_target_point", Vector2.ZERO)
 			attack_lunge_vector = actor.get_meta("attack_lunge_vector", Vector2.ZERO)
-		if frame_index == hit_frame and not hit_done and confirm_hit():
+		if not hit_done and frame_index >= hit_frame - 2 and lunge_remaining <= 0.0:
 			lunge_total = tuning.boss_attack_lunge_duration if is_boss else 0.12
 			lunge_remaining = lunge_total
 			apply_lunge.call(actor, 0.0)
-			apply_hit.call(actor)
 		if lunge_remaining > 0.0:
 			var step := minf(delta, lunge_remaining)
 			lunge_remaining = maxf(lunge_remaining - delta, 0.0)
 			apply_lunge.call(actor, step / lunge_total)
+		if frame_index == hit_frame and not hit_done and confirm_hit():
+			apply_hit.call(actor)
 		if timer >= frame_time * float(frames.size()):
 			finish(cooldown_after)
 			restore_idle.call(actor)
