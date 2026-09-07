@@ -37,7 +37,7 @@ const SHADOW_ENEMY_WEIGHT: float = 0.12
 const SHADOW_BOUND_NORMAL_WEIGHT: float = 0.20
 const SHADOW_BOUND_VARIANT_WEIGHT: float = 0.80
 const SHADOW_BOSS_CHANCE: float = 0.04
-const REGULAR_ROOM_TREASURE_CHANCE: float = 0.60
+const REGULAR_ROOM_TREASURE_CHANCE: float = 0.50
 const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.24
 const ROOM_POPCORN := "ROOM_POPCORN"
@@ -509,10 +509,15 @@ func apply_state(root: Object) -> void:
 	var has_regular_treasure: bool = bool(state.get("regular_room_treasure", false)) and room_type == DungeonGraph.ROOM_COMBAT
 	root.set("regular_room_treasure", has_regular_treasure)
 	var treasure_chest_claimed := _treasure_chest_claimed_from_state(state) if room_type == DungeonGraph.ROOM_TREASURE else false
+	var regular_chest_claimed := _treasure_chest_claimed_from_state(state) if has_regular_treasure else false
 	if room_type == DungeonGraph.ROOM_TREASURE:
 		root.set("chest_unlocked", treasure_chest_claimed)
 		root.set("chest_claimed", treasure_chest_claimed)
 		root.set("chest_evaporated", bool(state.get("chest_evaporated", treasure_chest_claimed)))
+	elif has_regular_treasure:
+		root.set("chest_unlocked", regular_chest_claimed)
+		root.set("chest_claimed", regular_chest_claimed)
+		root.set("chest_evaporated", bool(state.get("chest_evaporated", regular_chest_claimed)))
 	# The scene's base Chest node is authored visible. Clear its presentation
 	# before any room-specific branch; treasure rooms explicitly re-add it later.
 	hide_chest_presentation(root)
@@ -531,8 +536,12 @@ func apply_state(root: Object) -> void:
 		(root.get("collision_sprites") as Array[Sprite2D]).erase(root.get("cloaked_demon"))
 		# Regular-room treasure is generated with the room and must be visible on
 		# entry. It stays grey/locked until the enemy encounter is cleared.
-		reset_chest_for_room(root, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (bool(root.get("regular_room_treasure")) and not bool(state.get("chest_claimed", false))))
+		reset_chest_for_room(root, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (bool(root.get("regular_room_treasure")) and not regular_chest_claimed))
 		if room_type == DungeonGraph.ROOM_TREASURE and treasure_chest_claimed:
+			root.set("chest_unlocked", true)
+			root.set("chest_claimed", true)
+			root.set("chest_evaporated", bool(state.get("chest_evaporated", true)))
+		elif bool(root.get("regular_room_treasure")) and regular_chest_claimed:
 			root.set("chest_unlocked", true)
 			root.set("chest_claimed", true)
 			root.set("chest_evaporated", bool(state.get("chest_evaporated", true)))
@@ -543,11 +552,11 @@ func apply_state(root: Object) -> void:
 
 
 func _treasure_chest_claimed_from_state(state: Dictionary) -> bool:
-	if state.has("chest_claimed"):
-		return bool(state.get("chest_claimed", false))
+	if bool(state.get("chest_claimed", false)) or bool(state.get("chest_evaporated", false)) or bool(state.get("item_rewarded", false)):
+		return true
 	# Older in-memory runs only stored item_rewarded when the chest was opened.
 	# Keep those runs from showing the authored chest again on a revisit.
-	return state.has("chest_evaporated") or state.has("item_rewarded")
+	return false
 
 
 func save_treasure_chest_state(root: Object) -> void:

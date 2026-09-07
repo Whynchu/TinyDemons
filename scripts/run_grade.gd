@@ -103,6 +103,8 @@ static func evaluate_style(run: RunState) -> Dictionary:
 
 
 static func target_time_seconds(run: RunState) -> float:
+	if run.route_par_seconds > 0.0:
+		return run.route_par_seconds
 	var room_count := maxi(run.run_room_count, 1)
 	return TIME_BASE_SECONDS + float(room_count) * TIME_PER_ROOM_SECONDS
 

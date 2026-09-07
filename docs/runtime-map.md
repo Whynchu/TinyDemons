@@ -315,6 +315,8 @@ Read in this order:
 8. `docs/vertical-slice-analysis.md` - traced runtime and save flows.
 9. `docs/GAMEPLAY_TUNING.md` - designer-facing balance surface.
 10. `docs/asset-reference-audit.md` - conservative asset/reference classification.
+11. `docs/dynamic-dependency-audit.md` - measured root seam and ownership audit.
+12. `docs/documentation-audit.md` - current, active, historical, and overlapping document classification.
 
 ## Map Gaps
 
@@ -428,6 +430,8 @@ changes, and must be triaged against the current worktree before code changes.
 - Build a normalized asset-reference scanner before identifying orphan assets;
   the conservative static audit is in `docs/asset-reference-audit.md`.
 - Enumerate all dynamic root method/property names and map them to owners.
+- The first measured root-seam pass is in `docs/dynamic-dependency-audit.md`;
+  refine it as typed boundaries are introduced.
 - Inspect scene node visibility/export classification for authoring guides.
 - Confirm cloud deployment configuration outside the project.
 - Classify active, historical, and obsolete documentation.

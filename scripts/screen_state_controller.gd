@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.76"
+const GAME_VERSION := "0.1.77"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -324,6 +324,7 @@ var name_entry_cancel_callback := Callable()
 var name_entry_owner: Object = null
 var run_complete_overlay: ColorRect = null
 var run_complete_texts: Array[Sprite2D] = []
+var run_complete_grade_text: Sprite2D = null
 var run_complete_button: Button = null
 var run_complete_cursor: Sprite2D = null
 var run_complete_footer_text: Sprite2D = null
@@ -1008,6 +1009,8 @@ func build_run_complete(parent: Node, pixel_texture: Callable, return_to_hub: Ca
 	var lines: Array[Sprite2D] = []
 	for index in RUN_COMPLETE_LINE_POSITIONS.size():
 		lines.append(create_sprite(overlay, "RunCompleteLine%d" % index, null, _run_complete_line_position(index, content_x), false))
+	run_complete_grade_text = create_sprite(overlay, "RunCompleteGrade", null, Vector2(content_x + 19.0, 29.0), false)
+	run_complete_grade_text.scale = Vector2(2.0, 2.0)
 	var return_button := make_menu_command_button("RETURN TO HUB", Vector2(content_x + 4.0, 141), Vector2(86, 12), pixel_texture)
 	return_button.focus_mode = Control.FOCUS_NONE
 	return_button.pressed.connect(return_to_hub)
@@ -1073,6 +1076,8 @@ func _position_run_complete_controls() -> void:
 	for index in mini(run_complete_texts.size(), RUN_COMPLETE_LINE_POSITIONS.size()):
 		if run_complete_texts[index] != null:
 			run_complete_texts[index].position = _run_complete_line_position(index, content_x)
+	if run_complete_grade_text != null:
+		run_complete_grade_text.position = Vector2(content_x + 19.0, 29.0)
 	if run_complete_button != null:
 		run_complete_button.position = Vector2(content_x + 4.0, 141)
 	if run_complete_cursor != null:

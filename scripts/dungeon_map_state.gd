@@ -69,13 +69,6 @@ func reveal_landmark_rooms(graph: DungeonGraph) -> void:
 		if not discovered_rooms.has(room.id):
 			discovered_rooms[room.id] = true
 			changed_value = true
-		for connection_value in room.outgoing_connections.values() + room.incoming_connections.values():
-			var connection := connection_value as DungeonGraph.ConnectionRecord
-			if connection != null:
-				var key := connection_key(connection.source_room_id, connection.exit_socket)
-				if not revealed_connections.has(key):
-					revealed_connections[key] = true
-					changed_value = true
 	if changed_value:
 		changed.emit()
 

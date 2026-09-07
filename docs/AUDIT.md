@@ -537,6 +537,23 @@ encounter the local renderer crash.
 
 ## 7. Per-slice audit record
 
+### 2026-09-07 — Route-specific completion timing and results-screen handoff
+
+- Checkpoint: route par timing is implemented in `RunState`, `RunFlowController`,
+  and `RunGrade`; the results presentation remains unchanged.
+- Owner/API introduced: persisted `route_par_seconds`, with route workload
+  calculation owned by `RunFlowController` and time evaluation by `RunGrade`.
+- State moved: none removed; the derived route par is saved for deterministic
+  recovery and result presentation.
+- Old seams removed: fixed room-count timing is retained only as a legacy fallback.
+- Automated verification: changed timing scripts pass Godot MCP diagnostics.
+- Manual playtest: pending calibration across authored and generated routes.
+- Frame-time observation: pending.
+- Metrics delta: pending route-playtest measurements.
+- Follow-ups: calibrate room workload values, record the exact selected route,
+  and implement the compact results view described in
+  `docs/run-results-screen-plan.md`.
+
 Append one entry per completed slice:
 
 ```markdown
