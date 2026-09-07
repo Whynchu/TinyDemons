@@ -55,6 +55,31 @@ func begin(start_room_id: StringName) -> void:
 	mark_room_discovered(start_room_id)
 
 
+func reveal_landmark_rooms(graph: DungeonGraph) -> void:
+	## Utility landmarks are readable map information, not player discovery.
+	## Reveal them at run start so players can plan toward the boss, Orbs, and
+	## Fires without revealing ordinary combat/puzzle rooms.
+	if graph == null:
+		return
+	var changed_value := false
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room == null or room.room_type not in [DungeonGraph.ROOM_DOWNSTAIRS, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_ORB, DungeonGraph.ROOM_REST, DungeonGraph.ROOM_FIRE]:
+			continue
+		if not discovered_rooms.has(room.id):
+			discovered_rooms[room.id] = true
+			changed_value = true
+		for connection_value in room.outgoing_connections.values() + room.incoming_connections.values():
+			var connection := connection_value as DungeonGraph.ConnectionRecord
+			if connection != null:
+				var key := connection_key(connection.source_room_id, connection.exit_socket)
+				if not revealed_connections.has(key):
+					revealed_connections[key] = true
+					changed_value = true
+	if changed_value:
+		changed.emit()
+
+
 func set_puzzle_color(next_color: StringName, count_orb_change: bool = true) -> bool:
 	if next_color not in VALID_COLORS:
 		return false
