@@ -64,6 +64,8 @@ static func from_dictionary(data: Dictionary) -> ItemInstance:
 	# Older saves advanced enhancement_level but left fusion_count at zero.
 	if item.fusion_count == 0 and item.enhancement_level > 0:
 		item.fusion_count = item.enhancement_level
+	if item.fusion_stat_points == 0 and item.enhancement_level > 0:
+		item.fusion_stat_points = item.enhancement_level
 	item.fusion_souls_invested = maxi(int(data.get("fusion_souls_invested", 0)), 0)
 	return item
 

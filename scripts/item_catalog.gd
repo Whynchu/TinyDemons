@@ -879,7 +879,7 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 		if normalized_stat in scaled_stats:
 			flat_value += rarity_points
 			if normalized_stat == tier_stat:
-				flat_value += float(item.fusion_stat_points)
+				flat_value += float(item.fusion_stat_points) * MASTERY_BONUS_PER_LEVEL
 		if random_value > 1:
 			flat_value += float(random_value - 1) * float(_rarity_rank(item.rarity))
 		# A random lane is a real stat lane: it grows at the same additive pace as

@@ -223,9 +223,7 @@ func update_overhead_bars(
 		fill.z_index = overwold_ui_z + 2
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
-		aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
-		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
-			aggro_marker.global_position = ActorGeometry.slime_shadow_anchor(slime) + Vector2(-1.0, -22.0)
+		aggro_marker.global_position = overhead_position + Vector2(5.5, 0.0) if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else slime.global_position + aggro_offset + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
