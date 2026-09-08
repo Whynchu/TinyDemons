@@ -181,10 +181,10 @@ func _set_visual(root: Object, slime: Sprite2D, slam: bool) -> void:
 		shadow.texture = visual.boss_shadow_slam_frames[clampi(frame, 0, visual.boss_shadow_slam_frames.size() - 1)] if not visual.boss_shadow_slam_frames.is_empty() else visual.boss_shadow_left_texture
 	else:
 		shadow.texture = visual.boss_shadow_jump_frames[clampi(frame, 0, visual.boss_shadow_jump_frames.size() - 1)] if not visual.boss_shadow_jump_frames.is_empty() else visual.boss_shadow_left_texture
-	# Shadow art shares the boss sprite canvas. Once the body is positioned at
-	# the landing anchor, use the same top-left origin instead of reapplying a
-	# separate horizontal floor offset.
-	shadow.global_position = slime.global_position
+	# Keep the temporary landing shadow on the same corrected canvas origin as
+	# the ordinary boss walking shadow.
+	shadow.position = Vector2(-2.0, 0.0) / slime.scale
+	shadow.scale = Vector2.ONE / slime.scale
 	shadow.visible = is_active() and (slam or not launch_committed)
 	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)
 	shadow.z_index = -1
