@@ -394,7 +394,7 @@ func update_combo_hud(root: Object) -> void:
 	if not active:
 		last_combo_text = ""
 		return
-	var combo_text := "COMBO x%d" % momentum.combo_count
+	var combo_text: String = "COMBO x%d" % momentum.combo_count
 	if combo_text != last_combo_text:
 		last_combo_text = combo_text
 		combo_label.texture = root.call("_pixel_text_texture", combo_text, Color8(255, 205, 117)) as Texture2D
