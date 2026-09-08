@@ -224,10 +224,9 @@ func update_overhead_bars(
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
-			# The boss bar is centered on the corrected floor anchor. Place the
-			# marker outside the bar's right edge using that same anchor, rather than
-			# inheriting the boss sprite's top-left coordinates.
-			aggro_marker.global_position = overhead_position + Vector2(14.5, 0.0)
+			# Match the authored regular-slime layout: the marker sits at the
+			# health bar's left edge, three pixels before its x=3 start.
+			aggro_marker.global_position = overhead_position - Vector2(3.0, 0.0)
 		else:
 			aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
