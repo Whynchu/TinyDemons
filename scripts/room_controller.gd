@@ -1133,6 +1133,10 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 		var maximum := float(root.call("_enemy_max_health", popcorn))
 		if actor != null:
 			actor.configure_health(maximum, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
+		var presenter := root.call("_slime_health_presenter", popcorn) as SlimeHealthPresenter
+		if presenter != null:
+			presenter.display_health = maximum
+			presenter.damage_fill_hold_timer = 0.0
 		if not (root.get("slimes") as Array[Sprite2D]).has(popcorn): (root.get("slimes") as Array[Sprite2D]).append(popcorn)
 		(root.get("actor_sprites") as Array[Sprite2D]).append(popcorn)
 		(root.get("collision_sprites") as Array[Sprite2D]).append(popcorn)

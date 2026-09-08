@@ -357,7 +357,12 @@ func can_slime_attack_player(root: Object, slime: Sprite2D) -> bool:
 			var combat := root.call("_slime_combat", other) as SlimeCombatComponent
 			if combat != null and combat.active:
 				active_attackers += 1
-	var granted := tactics.request_attack_slot(active_attackers, int(root.get("MAX_ACTIVE_ENEMY_ATTACKERS")))
+	var maximum_attackers := int(root.get("MAX_ACTIVE_ENEMY_ATTACKERS"))
+	# The boss is the room's primary threat and should not stand idle because
+	# three regular slimes happened to reserve the shared attack budget.
+	if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+		maximum_attackers += 1
+	var granted := tactics.request_attack_slot(active_attackers, maximum_attackers)
 	if granted and bool(root.get("slime_frame_cache_valid")):
 		root.set("slime_frame_active_attackers", int(root.get("slime_frame_active_attackers")) + 1)
 	return granted
@@ -428,6 +433,9 @@ func apply_slime_attack_hit(root: Object, slime: Sprite2D) -> void:
 
 
 func update_slime_scoot(root: Object, slime: Sprite2D, delta: float) -> void:
+	# Top-level floor shadows need one update per movement tick so contact
+	# pushes and scoot interpolation cannot leave them one frame behind.
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
 	var brain := root.call("_slime_brain", slime) as SlimeBrain
 	brain.set_aggro(is_slime_aggroed(root, slime))
 	if brain.is_noticing():

@@ -521,14 +521,22 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
 	var to_player: Vector2 = root.call("_slime_attack_offset", slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
-	if combat != null and combat.attack_lunge_vector != Vector2.ZERO:
+	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
+	# Regular slimes commit to their leap target. The larger boss keeps the same
+	# attack language but tracks the player's current position during its lunge,
+	# making the attack threatening without using a separate attack animation.
+	if encounter_scale <= 1.0 and combat != null and combat.attack_lunge_vector != Vector2.ZERO:
 		return combat.attack_lunge_vector
 	var direction := Vector2.LEFT if to_player.length_squared() < 0.01 and combat.face_left else Vector2.RIGHT if to_player.length_squared() < 0.01 else to_player.normalized()
 	var tuning := root.get("slime_tuning") as SlimeTuning
-	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
-	var max_lunge := tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	var max_lunge := tuning.boss_attack_lunge_distance + 2.0 if encounter_scale > 1.0 else tuning.attack_lunge_distance
 	# The slime body is the attack hitbox. Drive the body toward the player,
-	# rather than stopping at the edge-to-edge contact gap.
+	# rather than stopping at the edge-to-edge contact gap. The boss gets a
+	# fixed-length per-attack commitment while its direction is refreshed each
+	# tick; returning the current full distance here would make the same lunge
+	# distance accumulate repeatedly as the target moved.
+	if encounter_scale > 1.0:
+		return direction * max_lunge
 	return direction * minf(max_lunge, maxf(to_player.length(), 0.0))
 
 
