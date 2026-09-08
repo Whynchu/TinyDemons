@@ -164,7 +164,8 @@ func _crop_to_viewport(source_image: Image, viewport_origin: Vector2i) -> Image:
 func _ensure_ring() -> void:
 	if ring_sprite != null:
 		return
-	var ring_image := Image.load_from_file(ProjectSettings.globalize_path(MAP_RING_PATH))
+	var ring_source := load(MAP_RING_PATH) as Texture2D
+	var ring_image := ring_source.get_image() if ring_source != null else null
 	if ring_image == null:
 		push_error("Dungeon minimap could not load %s." % MAP_RING_PATH)
 		return

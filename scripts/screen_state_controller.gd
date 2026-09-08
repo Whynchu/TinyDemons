@@ -425,6 +425,12 @@ func apply_display_layout(root: Object) -> void:
 		game_over_button.position.x = (display_view_size.x - game_over_button.size.x) * 0.5
 	if game_over_title_button != null:
 		game_over_title_button.position.x = (display_view_size.x - game_over_title_button.size.x) * 0.5
+	var game_over_overlay_node := root.get("game_over_overlay") as ColorRect
+	if game_over_overlay_node != null:
+		for node_name in [&"GameOverTitle", &"GameOverSaved"]:
+			var label := game_over_overlay_node.get_node_or_null(NodePath(node_name)) as Sprite2D
+			if label != null and label.texture != null:
+				label.position.x = (display_view_size.x - label.texture.get_width() * label.scale.x) * 0.5
 	if game_over_footer_text != null:
 		game_over_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 	_position_game_over_controls(root, true)
@@ -3116,6 +3122,8 @@ func set_pause_page(root: Object, page: int) -> void:
 		hub_equipment_action_focus = true
 		hub_gear_browsing = false
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	elif pause_page == 1:
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -4421,6 +4429,7 @@ func open_settings(root: Object, origin: StringName) -> void:
 	# Settings replaces its source screen. Leaving the pause panel visible under
 	# it makes focus and touch hit-testing ambiguous, especially on the web port.
 	if origin == &"pause":
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		if pause_overlay != null:
 			pause_overlay.visible = false
 	elif origin == &"title":
@@ -4899,6 +4908,8 @@ func _position_name_entry_controls() -> void:
 		var label := name_entry_cell_texts[index]
 		label.position = button.size * 0.5
 	if name_entry_preview != null: name_entry_preview.position = Vector2(origin_x + 197.0, 82.0)
+	var preview_panel := name_entry_overlay.get_node_or_null("NameEntryPreviewPanel") as Panel
+	if preview_panel != null: preview_panel.position = Vector2(origin_x + 166.0, 62.0)
 	if name_entry_cursor_text != null:
 		var current_index := name_entry_row * NAME_ENTRY_COLUMNS + name_entry_column
 		move_menu_cursor(name_entry_cursor_text, grid_origin + Vector2((current_index % NAME_ENTRY_COLUMNS) * 17.0 - CURSOR_LEFT_GAP, int(float(current_index) / float(NAME_ENTRY_COLUMNS)) * 12.0 + 4.0))

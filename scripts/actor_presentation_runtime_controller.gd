@@ -322,6 +322,8 @@ func apply_actor_scale(root: Object, actor: Sprite2D, _use_effect_texture: bool)
 	actor.scale = actor_screen_scale(root, actor)
 	actor.offset = actor_visual_offset(root, actor)
 	sync_actor_geometry_offset(root, actor)
+	if (root.get("slimes") as Array[Sprite2D]).has(actor):
+		sync_slime_shadow(root, actor)
 
 
 func restore_actor_base_visual_scale(root: Object, actor: Sprite2D) -> void:

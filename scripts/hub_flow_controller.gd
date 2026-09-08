@@ -727,7 +727,7 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 	if candidates.is_empty():
 		return
 	var visible_choice_count := 8 if root.screen_state_controller.hub_equipment_menu != null else maxi(root.screen_state_controller.hub_gear_choice_buttons.size(), 1)
-	var window_start := int(root.screen_state_controller.hub_choice_scroll)
+	var window_start := int(floor(float(root.screen_state_controller.hub_choice_scroll) / 2.0)) * 2
 	var candidate_index := window_start + choice_row
 	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
 		return

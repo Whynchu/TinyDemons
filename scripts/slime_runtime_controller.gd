@@ -547,7 +547,10 @@ func try_move_actor_axes(root: Object, actor: Sprite2D, movement: Vector2) -> bo
 		actor.position.y = original.y
 	else:
 		resolve_actor_contacts(root, actor, Vector2(0.0, movement.y))
-	return actor.position.distance_squared_to(original) > 0.0001
+	var moved := actor.position.distance_squared_to(original) > 0.0001
+	if moved and (root.get("slimes") as Array[Sprite2D]).has(actor):
+		(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, actor)
+	return moved
 
 
 func resolve_actor_contacts(root: Object, actor: Sprite2D, movement: Vector2) -> void:
