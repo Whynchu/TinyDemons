@@ -179,14 +179,13 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 		shadow.texture = visual.shadow_idle_texture
 	shadow.visible = shadow.texture != null and not bool(root.call("_is_slime_dead", slime)) and not bool(slime.get_meta("boss_airborne", false))
 	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)
-	# Keep the shadow visually attached to the floor anchor while the actor
-	# squishes and changes scale during a scoot. A top-level child avoids parent
-	# Sprite2D offset/scale affecting the authored shadow canvas.
-	var floor_canvas_point := Vector2(16.0, 22.0) if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else Vector2(8.0, 13.0)
-	shadow.top_level = true
-	shadow.global_position = ActorGeometry.slime_shadow_anchor(slime) - floor_canvas_point
-	shadow.global_scale = Vector2.ONE
-	shadow.z_as_relative = false
+	# Both slime sizes use an authored full canvas. Keep the shadow as a local
+	# child so it follows movement in every renderer; inverse scaling prevents
+	# the scoot squash from changing the shadow's apparent size or floor point.
+	shadow.top_level = false
+	shadow.position = Vector2.ZERO
+	shadow.scale = Vector2.ONE / slime.scale
+	shadow.z_as_relative = true
 	shadow.z_index = -1
 
 
