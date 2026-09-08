@@ -262,8 +262,12 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	boss_rng.seed = generation_seed + 991
 	var boss_variant := boss_variant_selection
 	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(boss_variant):
-		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS
+		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.duplicate()
+		if progression_run_rank <= 1:
+			roster.erase(&"purple")
 		boss_variant = roster[boss_rng.randi_range(0, roster.size() - 1)]
+	if progression_run_rank <= 1 and boss_variant == &"purple":
+		boss_variant = &"grey"
 	var variants: Array[String] = [String(boss_variant)]
 	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
 	var scales: Array[float] = [3.0]
@@ -271,7 +275,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
 		var selected_variant: String = String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
-		if encounter_rng.randf() < SHADOW_BOSS_CHANCE:
+		if progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))

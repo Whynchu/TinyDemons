@@ -38,6 +38,7 @@ static func create(root: Object) -> Dictionary:
 		"current_room_type": String(root.get("current_room_type")),
 		"current_room_depth": int(root.get("current_room_depth")),
 		"arrival_socket_id": String(room_controller.arrival_socket_id) if room_controller != null else "",
+		"puzzle_attempt_rotation_quarter_turns": int(root.get("puzzle_attempt_rotation_quarter_turns")),
 		"room_states": room_states,
 		"map_state": map_dictionary,
 		"player_health": float(health.current_health) if health != null else 1.0,

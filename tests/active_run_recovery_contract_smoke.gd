@@ -19,7 +19,7 @@ func _initialize() -> void:
 	map_state.begin(&"room_start")
 	map_state.mark_room_discovered(&"room_next")
 	map_state.mark_room_completed(&"room_start")
-	map_state.reveal_events[&"event_one"] = true
+	map_state.revealed_events[&"event_one"] = true
 	var snapshot := {
 		"format": ACTIVE_RUN_SNAPSHOT_SCRIPT.FORMAT,
 		"schema_version": ACTIVE_RUN_SNAPSHOT_SCRIPT.SCHEMA_VERSION,
