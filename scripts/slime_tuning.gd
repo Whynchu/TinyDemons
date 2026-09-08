@@ -27,7 +27,6 @@ class_name SlimeTuning
 @export var boss_jump_repeat_cooldown_min := 25.0
 @export var boss_jump_repeat_cooldown_max := 35.0
 @export var boss_jump_frame_time := 0.16
-@export var boss_jump_airborne_timeout := 9.0
 @export var hold_min := 0.22
 @export var hold_max := 0.48
 @export var aggro_hold_min := 0.08

@@ -106,7 +106,7 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 			cooldown = maxf(cooldown, cooldown_after)
 			apply_hit.call(actor)
 		if timer >= frame_time * float(frames.size()):
-			finish(cooldown_after)
+			finish(cooldown)
 			restore_idle.call(actor)
 		return true
 	if cooldown > 0.0 or not can_attack.call(actor):

@@ -316,6 +316,7 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		boss_jump_slam.frame = -1
 		boss_jump_slam.launch_committed = false
 		boss_jump_slam.impact_resolved = false
+		boss_jump_slam.completed_phases = 0
 		set_meta("boss_airborne", false)
 		self_modulate.a = 1.0
 

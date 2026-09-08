@@ -61,8 +61,9 @@ func _initialize() -> void:
 			_expect(saw_launch_protection and boss.offset.y < component.base_sprite_offset.y, "boss remains visibly airborne after launch", failures)
 			_expect(component.frame >= 5, "boss airborne movement begins only at launch frame", failures)
 			if saw_active:
+				var boss_tuning := gameplay.get("slime_tuning") as SlimeTuning
 				_expect(component.landing_anchor.distance_to(targeted_player_foot) < 1.0, "boss targets the player's landing point", failures)
-				component.tick(gameplay, boss, BossJumpSlamComponent.BOSS_JUMP_FRAME_TIME * BossJumpSlamComponent.JUMP_FRAME_COUNT)
+				component.tick(gameplay, boss, boss_tuning.boss_jump_frame_time * BossJumpSlamComponent.JUMP_FRAME_COUNT)
 				var shadow := boss.get_node_or_null("BossFloorShadow") as Sprite2D
 				_expect(shadow != null and not shadow.visible, "boss jump phase hides its floor shadow while airborne", failures)
 				if shadow != null:
@@ -74,11 +75,11 @@ func _initialize() -> void:
 				for popcorn in (gameplay.get("room_controller") as RoomController).boss_jump_phase_waves.get(boss.get_instance_id(), []) as Array:
 					if is_instance_valid(popcorn):
 						gameplay.call("_kill_slime", popcorn)
-				component.tick(gameplay, boss, BossJumpSlamComponent.AIRBORNE_FAILSAFE_SECONDS)
-				component.tick(gameplay, boss, BossJumpSlamComponent.BOSS_JUMP_FRAME_TIME * BossJumpSlamComponent.SLAM_FRAME_COUNT)
+				component.tick(gameplay, boss, boss_tuning.boss_jump_frame_time)
+				component.tick(gameplay, boss, boss_tuning.boss_jump_frame_time * BossJumpSlamComponent.SLAM_FRAME_COUNT)
 				_expect(not component.is_active(), "boss descends and clears the jump/slam phase", failures)
 				_expect((gameplay.get("room_controller") as RoomController).boss_jump_phase_pool.size() == 3, "boss support actors return to the pool after cleanup", failures)
-				_expect(component.cooldown >= BossJumpSlamComponent.REPEAT_COOLDOWN_MIN_SECONDS and component.cooldown <= BossJumpSlamComponent.REPEAT_COOLDOWN_MAX_SECONDS, "boss repeat jump waits between thirty and forty-five seconds", failures)
+				_expect(component.cooldown >= boss_tuning.boss_jump_repeat_cooldown_min and component.cooldown <= boss_tuning.boss_jump_repeat_cooldown_max, "boss repeat jump waits between twenty-five and thirty-five seconds", failures)
 				_expect(not bool(boss.get_meta("boss_jump_ui_suppressed", true)), "boss health UI suppression restores after recovery", failures)
 	gameplay.queue_free()
 	await process_frame
