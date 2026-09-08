@@ -182,7 +182,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var towards_player := to_player.normalized()
 	var desired_distance := tuning.attack_range * 0.72
 	if _is_boss(actor):
-		desired_distance = tuning.attack_range + tuning.boss_attack_lunge_distance * 0.25
+		desired_distance = tuning.attack_range + tuning.boss_attack_lunge_distance * 0.65
 	var best_direction := towards_player
 	var best_score := -INF
 	var direction_count := maxi(tuning.steering_direction_count, 4)

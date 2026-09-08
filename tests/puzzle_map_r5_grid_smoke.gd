@@ -57,7 +57,7 @@ func _expect(condition: bool, message: String, failures: Array[String]) -> void:
 
 func _finish(failures: Array[String]) -> void:
 	if failures.is_empty():
-		print("PUZZLE_MAP_R4_GRID_SMOKE_OK")
+		print("PUZZLE_MAP_R5_GRID_SMOKE_OK")
 		quit(0)
 		return
 	for failure in failures:

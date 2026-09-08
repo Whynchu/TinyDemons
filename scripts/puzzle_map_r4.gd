@@ -27,7 +27,7 @@ static func build() -> PuzzleMapGrid.MapPlan:
 	])
 	_add_many(plan, GRID_SCRIPT.MARKER_TREASURE_ROOM, [
 		Vector2i(19, 7), Vector2i(11, 11), Vector2i(23, 11), Vector2i(9, 13),
-		Vector2i(25, 17), Vector2i(23, 19), Vector2i(9, 21), Vector2i(23, 23),
+		Vector2i(19, 15), Vector2i(25, 17), Vector2i(15, 19), Vector2i(23, 19), Vector2i(9, 21), Vector2i(23, 23),
 		Vector2i(15, 27),
 	])
 	_add_many(plan, GRID_SCRIPT.MARKER_ORB_ROOM, [Vector2i(19, 11)])

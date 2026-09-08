@@ -1599,9 +1599,11 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	presenter.damage_fill_hold_timer = 0.0
 	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
 	root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime])
-	var is_boss := encounter_scale > 1.0
 	slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20))
-	slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20) * (1.12 if is_boss else 1.0))
+	# Bosses use the same authored attack timing as regular slimes. Their size,
+	# health pool, and jump phase provide the distinction; an extra slowdown here
+	# made the boss spend too long approaching without committing to attacks.
+	slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20))
 	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
 	root.call("_apply_actor_scale", slime, false)
 	if not actor_sprites.has(slime):

@@ -47,13 +47,59 @@ not match the manifest.
 
 Current post-`0.1.78` grid evidence:
 
-- `puzzle_map_r4_new_grid_smoke`: target is correctly R4, but pixel-for-pixel
-  reproduction still fails.
-- `puzzle_map_r5_grid_smoke`: target is correctly R5, but pixel-for-pixel
-  reproduction and parser round-trip still fail.
+- `puzzle_map_r4_new_grid_smoke`: target is correctly R4. The reference diff
+  identified two missing Treasure markers at `(19,15)` and `(15,19)`; adding
+  them and updating the manifest count from 49 to 51 made the test pass.
+- `puzzle_map_r5_grid_smoke`: target is correctly R5. The old reference image
+  represented a pre-renumbering R4/R5 state; it was rebuilt from the desired
+  current R5 manifest and the pixel/parser contract now passes.
 
 These are valid R4/R5 contract failures, unlike the misnamed authored-layout
 tests. They should be triaged separately from test-target repair.
+
+The R5 reference can be regenerated with `tools/rebuild_r5_reference.gd` when
+the authored manifest is intentionally changed. The old image remains available
+through Git history rather than being preserved as a competing runtime source.
+
+## Revised Runner Evidence
+
+The runner now supports:
+
+- `-InventoryOnly` for preflight path inventory;
+- `.inventory.csv` output alongside result CSVs;
+- explicit `missing` results for absent scripts;
+- `engine_start_failure` classification; and
+- `engine_crash` classification with a configurable repeated-crash stop gate.
+
+The authored-layout batch was rerun after the target repair:
+
+| Test | Result |
+|---|---|
+| `r3_authored_layout_smoke` | pass |
+| `r4_authored_layout_smoke` | pass |
+| `r5_authored_layout_smoke` | pass |
+| `run2_authored_layout_smoke` | fail: existing clear-gating assertions |
+
+The R3/R4/R5 target repair is therefore evidenced. Run 2 remains a separate
+gameplay-contract failure.
+
+## Run 2 Gate Diagnosis
+
+The original Run 2 assertions queried `is_connection_available()` from the
+run-start context. Authored runs intentionally use current-room and arrival
+state in that method, so those calls did not model traversal through the source
+combat room. The code also treats the rare lower-side branch entrance and the
+source room's forward clear gate as separate contracts.
+
+The test now asserts the authored contract directly:
+
+- the rare branch allows destination entry before source clear;
+- the source exit remains `requires_source_room_clear`;
+- the Special Room route carries its Puzzle A requirement and source-clear gate;
+- the Special Room completion is recorded.
+
+Focused rerun result: `run2_authored_layout_smoke` passes. This was a test setup
+defect, not evidence that gameplay allowed early entry.
 
 This is an initial list, not a complete audit.
 
