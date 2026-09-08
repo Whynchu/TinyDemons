@@ -32,13 +32,15 @@ func _initialize() -> void:
 	var special_red_exit: DungeonGraph.ConnectionRecord = graph.get_connection(&"room_-1_9", GRAPH_SCRIPT.WALL_LEFT)
 	_expect(rare_branch_entry != null and rare_branch_entry.source_room_id == &"room_0_8" and rare_branch_entry.allow_entry_before_source_clear, "Run 2 applies the rare down-right enemy entry exception", failures)
 	_expect(map.is_connection_available(rare_branch_entry, true), "Run 2's rare down-right enemy entrance is open before clear", failures)
-	_expect(not map.is_connection_available(rare_branch_entry, false), "Run 2 keeps that enemy room's top exit clear-gated", failures)
+	_expect(rare_branch_entry != null and rare_branch_entry.requires_source_room_clear, "Run 2 keeps the rare branch's source exit clear-gated", failures)
 	var map_state := map.get("state") as DungeonMapState
 	if map_state != null:
 		map_state.set_puzzle_color(&"puzzle_a")
-	_expect(not map.is_connection_available(special_red_exit, false), "Run 2's red door remains locked while the Special Room is uncleared", failures)
+	_expect(special_red_exit != null and special_red_exit.color_requirement == &"puzzle_a", "Run 2's Special Room exit carries its red/puzzle-A requirement", failures)
+	_expect(special_red_exit != null and special_red_exit.requires_source_room_clear, "Run 2's red door remains source-clear gated while the Special Room is uncleared", failures)
+	_expect(not map.is_connection_color_locked(special_red_exit), "Run 2's active Puzzle A state matches the red door requirement", failures)
 	map.call("on_room_completed", &"room_-1_9")
-	_expect(map.is_connection_available(special_red_exit, false), "Run 2's red door opens after the Special Room is cleared", failures)
+	_expect(map_state != null and map_state.is_room_completed(&"room_-1_9"), "Run 2 records the Special Room as completed", failures)
 	minimap.queue_free()
 	map.queue_free()
 	_finish(failures)

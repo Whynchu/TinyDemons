@@ -5,12 +5,12 @@ enum State { READY, JUMP, SLAM }
 
 const JUMP_FRAME_COUNT := 12
 const SLAM_FRAME_COUNT := 15
-const AIRBORNE_FAILSAFE_SECONDS := 15.0
+const AIRBORNE_FAILSAFE_SECONDS := 9.0
 const INITIAL_COOLDOWN_SECONDS := 10.0
-const REPEAT_COOLDOWN_MIN_SECONDS := 15.0
-const REPEAT_COOLDOWN_MAX_SECONDS := 20.0
+const REPEAT_COOLDOWN_MIN_SECONDS := 25.0
+const REPEAT_COOLDOWN_MAX_SECONDS := 35.0
 const JUMP_HEIGHT := 13.0
-const BOSS_JUMP_FRAME_TIME := 0.12
+const BOSS_JUMP_FRAME_TIME := 0.16
 
 var state := State.READY
 var cooldown := INITIAL_COOLDOWN_SECONDS
@@ -73,7 +73,10 @@ func _tick_jump(root: Object, slime: Sprite2D) -> void:
 	var next_frame := mini(int(floor(elapsed / _frame_time(root))), JUMP_FRAME_COUNT - 1)
 	if next_frame != frame:
 		frame = next_frame
-		_set_visual(root, slime, false)
+	# The artwork advances on authored frame boundaries, while the body and
+	# shadow motion are continuous. Updating the visual transform every tick
+	# prevents the slam/jump from moving in visible steps between frames.
+	_set_visual(root, slime, false)
 	if not launch_committed and frame >= 5:
 		launch_committed = true
 		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
@@ -88,7 +91,7 @@ func _tick_jump(root: Object, slime: Sprite2D) -> void:
 	if frame < JUMP_FRAME_COUNT - 1:
 		return
 	# The boss waits in the air until the temporary phase popcorn is cleared.
-	if popcorn_remaining > 0 and elapsed < AIRBORNE_FAILSAFE_SECONDS and root.has_method("_boss_jump_phase_popcorn_alive") and bool(root.call("_boss_jump_phase_popcorn_alive", slime)):
+	if popcorn_remaining > 0 and elapsed < _tuning(root).boss_jump_airborne_timeout and root.has_method("_boss_jump_phase_popcorn_alive") and bool(root.call("_boss_jump_phase_popcorn_alive", slime)):
 		return
 	state = State.SLAM
 	elapsed = 0.0
@@ -102,7 +105,7 @@ func _tick_slam(root: Object, slime: Sprite2D) -> void:
 	var next_frame := mini(int(floor(elapsed / _frame_time(root))), SLAM_FRAME_COUNT - 1)
 	if next_frame != frame:
 		frame = next_frame
-		_set_visual(root, slime, true)
+	_set_visual(root, slime, true)
 	if not impact_resolved and frame >= 10:
 		impact_resolved = true
 		slime.set_meta("boss_airborne", false)
@@ -115,7 +118,8 @@ func _tick_slam(root: Object, slime: Sprite2D) -> void:
 		return
 	state = State.READY
 	var random_source := root.get("rng") as RandomNumberGenerator
-	cooldown = random_source.randf_range(REPEAT_COOLDOWN_MIN_SECONDS, REPEAT_COOLDOWN_MAX_SECONDS) if random_source != null else REPEAT_COOLDOWN_MIN_SECONDS
+	var tuning := _tuning(root)
+	cooldown = random_source.randf_range(tuning.boss_jump_repeat_cooldown_min, tuning.boss_jump_repeat_cooldown_max) if random_source != null else tuning.boss_jump_repeat_cooldown_min
 	frame = -1
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.clear_boss_jump_phase()
@@ -133,7 +137,12 @@ func _tick_slam(root: Object, slime: Sprite2D) -> void:
 
 
 func _frame_time(root: Object) -> float:
-	return BOSS_JUMP_FRAME_TIME
+	return _tuning(root).boss_jump_frame_time
+
+
+func _tuning(root: Object) -> SlimeTuning:
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	return tuning if tuning != null else SlimeTuning.new()
 
 
 func _choose_landing_anchor(root: Object, slime: Sprite2D) -> Vector2:

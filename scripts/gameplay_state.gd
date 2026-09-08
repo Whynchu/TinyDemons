@@ -517,6 +517,11 @@ func _refresh_player_cloak_visual() -> void:
 	var body_instance_id := player_profile.get_equipped_instance_id(&"body")
 	var body_item := player_profile.find_item(body_instance_id)
 	player_animation_component.set_cloaked(self, body_item != null and body_item.definition_id == &"demon_cloak")
+	# Menu portraits and the live HUD must resolve from the same equipped cloak
+	# state. Equipment changes can happen while the HUD remains mounted.
+	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
+	if player_hud != null:
+		player_hud.call("apply_portrait_palette", current_player_palette_name, sprite_frame_library, player_animation_component.cloaked)
 func _equip_profile_item(instance_id: String) -> bool:
 	return bool(profile_runtime_controller.call("equip_profile_item", self, instance_id))
 func _unequip_profile_slot(slot: StringName) -> bool:
