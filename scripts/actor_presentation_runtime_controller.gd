@@ -181,7 +181,7 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)
 	# Shadow exports share the slime sprite's full canvas, so their top-left
 	# origins must match rather than being repositioned around a floor anchor.
-	var boss_shadow_correction := Vector2(-2.0, 0.0) if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else Vector2.ZERO
+	var boss_shadow_correction := Vector2.ZERO
 	# This is a child of the slime, so local canvas space keeps it attached while
 	# the actor moves. Global positioning made it lag after contact pushes.
 	shadow.position = boss_shadow_correction / slime.scale
