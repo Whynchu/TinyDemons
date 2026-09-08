@@ -198,7 +198,8 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	var layout_bound_flame := StringName(str(snapshot.get("layout_bound_flame", bound_flame)))
 	if not layout_bound_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(layout_bound_flame):
 		layout_bound_flame = bound_flame
-	map_controller.call("begin_run", root.dungeon_graph, snapshot_seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame)
+	var rotation_turns := int(snapshot.get("puzzle_attempt_rotation_quarter_turns", root.player_profile.puzzle_attempt_rotation_quarter_turns))
+	map_controller.call("begin_run", root.dungeon_graph, snapshot_seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame, rotation_turns)
 	# The layout was generated from the saved origin, but the current persistent
 	# bind still controls the Hub and available flame presentation after restore.
 	map_controller.call("set_bound_flame", bound_flame)
@@ -209,7 +210,8 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
 		return false
 	root.run_state = restored_run
-	root.current_dungeon_seed = seed
+	root.current_dungeon_seed = snapshot_seed
+	root.puzzle_attempt_rotation_quarter_turns = rotation_turns
 	root.current_room_id = room_id
 	var recovery_arrival_socket := StringName(str(snapshot.get("arrival_socket_id", "")))
 	root.call("_sync_current_room_metadata", recovery_arrival_socket)
