@@ -183,7 +183,7 @@ func _set_visual(root: Object, slime: Sprite2D, slam: bool) -> void:
 		shadow.texture = visual.boss_shadow_jump_frames[clampi(frame, 0, visual.boss_shadow_jump_frames.size() - 1)] if not visual.boss_shadow_jump_frames.is_empty() else visual.boss_shadow_left_texture
 	# Keep the temporary landing shadow on the same corrected canvas origin as
 	# the ordinary boss walking shadow.
-	shadow.position = Vector2(-2.0, 0.0) / slime.scale
+	shadow.position = Vector2.ZERO
 	shadow.scale = Vector2.ONE / slime.scale
 	shadow.visible = is_active() and (slam or not launch_committed)
 	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)

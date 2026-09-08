@@ -31,7 +31,7 @@ func _initialize() -> void:
 		if component != null:
 			_expect(is_equal_approx(component.cooldown, BossJumpSlamComponent.INITIAL_COOLDOWN_SECONDS), "boss first jump waits ten seconds", failures)
 			var idle_shadow := boss.get_node_or_null("SlimeFloorShadow") as Sprite2D
-			_expect(idle_shadow != null and not idle_shadow.centered and idle_shadow.global_position.is_equal_approx(boss.global_position + Vector2(-2.0, 0.0)), "boss walking shadow uses the corrected horizontal canvas anchor", failures)
+			_expect(idle_shadow != null and not idle_shadow.centered and idle_shadow.global_position.is_equal_approx(boss.global_position), "boss walking shadow uses the sprite canvas origin", failures)
 			_expect(idle_shadow != null and is_equal_approx(idle_shadow.self_modulate.a, 0.25), "boss shadow matches player floor-shadow opacity", failures)
 			var visual := boss.get_node_or_null("Visual") as SlimeVisualComponent
 			_expect(visual != null and not visual.shadow_attack_left_frames.is_empty() and not visual.shadow_attack_right_frames.is_empty(), "boss loads both directional attack shadow animations", failures)
