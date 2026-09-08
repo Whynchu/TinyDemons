@@ -13,7 +13,11 @@ class_name SlimeTuning
 @export var aggro_range := 28.0
 @export var attack_cooldown := 1.0
 @export var attack_lunge_distance := 8.0
+@export var attack_commit_frames_before_hit := 2
+@export var attack_overshoot_distance := 2.0
 @export var boss_attack_lunge_distance := 10.0
+@export var boss_attack_commit_frames_before_hit := 3
+@export var boss_attack_overshoot_distance := 3.0
 @export var boss_attack_lunge_duration := 0.18
 @export var boss_attack_cooldown_multiplier := 1.0
 @export var boss_attack_frame_time_multiplier := 1.0
@@ -27,6 +31,7 @@ class_name SlimeTuning
 @export var boss_jump_repeat_cooldown_min := 25.0
 @export var boss_jump_repeat_cooldown_max := 35.0
 @export var boss_jump_frame_time := 0.16
+@export var boss_jump_height := 24.0
 @export var hold_min := 0.22
 @export var hold_max := 0.48
 @export var aggro_hold_min := 0.08

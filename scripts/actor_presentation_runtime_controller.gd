@@ -154,6 +154,18 @@ func set_slime_facing(root: Object, slime: Sprite2D, direction_x: float) -> void
 	sync_slime_shadow(root, slime)
 
 
+func prepare_slime_idle_visual(root: Object, slime: Sprite2D) -> void:
+	if slime == null or not is_instance_valid(slime):
+		return
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	slime.set_meta("runtime_animation", "idle")
+	slime.set_meta("runtime_animation_frame", 0)
+	# This is the final activation gate for a room or pooled slime. Resolve the
+	# already-assigned palette texture and shadow while the actor is still hidden,
+	# then the caller can safely expose it without one frame of canonical green.
+	set_slime_facing(root, slime, -1.0 if combat != null and combat.face_left else 1.0)
+
+
 func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
 	if visual == null:
@@ -341,6 +353,9 @@ func actor_screen_scale(root: Object, actor: Sprite2D) -> Vector2:
 
 
 func actor_visual_offset(root: Object, actor: Sprite2D) -> Vector2:
+	var boss_phase := actor.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
+	if boss_phase != null and boss_phase.is_active():
+		return boss_phase.presentation_offset
 	return ActorGeometry.visual_offset(actor, root.get("player") as Sprite2D, root.get("slimes") as Array[Sprite2D], root.get("ACTOR_FOOT_OFFSET") as Vector2)
 
 

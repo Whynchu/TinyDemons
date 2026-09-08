@@ -1127,7 +1127,6 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 		var offset := Vector2(-12.0 + float(index) * 12.0, 8.0 if index % 2 == 0 else -8.0)
 		var spawn_foot: Vector2 = root.call("_nearest_slime_walkable_point", anchor + offset)
 		popcorn.global_position = spawn_foot - ACTOR_FOOT_OFFSET
-		popcorn.visible = true
 		root.call("_apply_enemy_room_level", popcorn, maxi(1, _popcorn_enemy_level_for_root(root)))
 		var tuning := root.get("slime_tuning") as SlimeTuning
 		var maximum := float(root.call("_enemy_max_health", popcorn))
@@ -1137,6 +1136,8 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 		if presenter != null:
 			presenter.display_health = maximum
 			presenter.damage_fill_hold_timer = 0.0
+		root.call("_prepare_slime_idle_visual", popcorn)
+		popcorn.visible = true
 		if not (root.get("slimes") as Array[Sprite2D]).has(popcorn): (root.get("slimes") as Array[Sprite2D]).append(popcorn)
 		(root.get("actor_sprites") as Array[Sprite2D]).append(popcorn)
 		(root.get("collision_sprites") as Array[Sprite2D]).append(popcorn)
@@ -1559,7 +1560,6 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	var collision := root.get("collision_sprites") as Array[Sprite2D]
 	var depth_sprites := root.get("depth_sprites") as Array[Sprite2D]
 	var occluder_sprites := root.get("occluder_sprites") as Array[Sprite2D]
-	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
 	var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
 	if encounter_scale > 1.0:
 		_apply_authored_boss_geometry(slime)
@@ -1591,7 +1591,11 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	slime.global_position = spawn_position
 	if brain != null:
 		brain.start_position = slime.position
-	slime.visible = true
+	# Keep the slot hidden until its encounter variant, animation state, base
+	# texture, and floor shadow have all been resolved. This closes the one-frame
+	# window where a reused slot could briefly show its scene-default artwork
+	# before the recolored spawn frames take over.
+	slime.visible = false
 	slime.flip_h = false
 	root.call("_apply_enemy_room_level", slime, spawn_level)
 	var max_health := float(root.call("_enemy_max_health", slime))
@@ -1601,8 +1605,8 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter
 	presenter.display_health = max_health
 	presenter.damage_fill_hold_timer = 0.0
-	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
-	root.call("_set_actor_base_texture", slime, visual.right_texture if visual != null else occlusion.actor_default_textures[slime])
+	root.call("_prepare_slime_idle_visual", slime)
+	slime.visible = true
 	slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20))
 	# Bosses use the same authored attack timing as regular slimes. Their size,
 	# health pool, and jump phase provide the distinction; an extra slowdown here

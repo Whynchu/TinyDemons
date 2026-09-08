@@ -18,6 +18,7 @@ var popcorn_remaining := 0
 var completed_phases := 0
 var base_sprite_offset := Vector2.ZERO
 var airborne_offset := Vector2.ZERO
+var presentation_offset := Vector2.ZERO
 
 
 func is_active() -> bool:
@@ -62,7 +63,8 @@ func _begin(root: Object, slime: Sprite2D) -> void:
 	impact_resolved = false
 	completed_phases += 1
 	base_sprite_offset = slime.offset
-	airborne_offset = _offscreen_offset(slime)
+	airborne_offset = _airborne_offset(root)
+	presentation_offset = base_sprite_offset
 	landing_anchor = _choose_landing_anchor(root, slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.boss_jump_phase_active = true
@@ -137,6 +139,7 @@ func _tick_slam(root: Object, slime: Sprite2D) -> void:
 	slime.set_meta("boss_airborne", false)
 	slime.self_modulate.a = 1.0
 	slime.offset = base_sprite_offset
+	presentation_offset = base_sprite_offset
 	slime.set_meta("boss_jump_ui_suppressed", false)
 	_set_visual(root, slime, false)
 	root.call("_restore_slime_idle_texture", slime)
@@ -181,16 +184,17 @@ func _set_visual(root: Object, slime: Sprite2D, slam: bool) -> void:
 		# Slam frame 10 is the authored landing/impact frame. Recovery frames
 		# 11-14 stay grounded rather than continuing to descend.
 		var descent_progress := clampf(elapsed / (_frame_time(root) * 10.0), 0.0, 1.0)
-		slime.offset = base_sprite_offset + airborne_offset * (1.0 - descent_progress)
+		presentation_offset = base_sprite_offset + airborne_offset * (1.0 - descent_progress)
 	else:
 		# Frames 0-4 are a strictly grounded telegraph. Movement begins only
 		# when frame 5 is reached, so faster playback cannot advance the launch.
 		if frame <= 4:
-			slime.offset = base_sprite_offset
+			presentation_offset = base_sprite_offset
 		else:
 			var jump_progress := clampf((elapsed - _frame_time(root) * 5.0) / (_frame_time(root) * float(JUMP_FRAME_COUNT - 1 - 5)), 0.0, 1.0)
 			var eased_progress := sin(jump_progress * PI * 0.5)
-			slime.offset = base_sprite_offset + airborne_offset * eased_progress
+			presentation_offset = base_sprite_offset + airborne_offset * eased_progress
+	slime.offset = presentation_offset
 	var shadow := slime.get_node_or_null("BossFloorShadow") as Sprite2D
 	if shadow == null:
 		shadow = Sprite2D.new()
@@ -201,16 +205,19 @@ func _set_visual(root: Object, slime: Sprite2D, slam: bool) -> void:
 		shadow.texture = visual.boss_shadow_slam_frames[clampi(frame, 0, visual.boss_shadow_slam_frames.size() - 1)] if not visual.boss_shadow_slam_frames.is_empty() else visual.boss_shadow_left_texture
 	else:
 		shadow.texture = visual.boss_shadow_jump_frames[clampi(frame, 0, visual.boss_shadow_jump_frames.size() - 1)] if not visual.boss_shadow_jump_frames.is_empty() else visual.boss_shadow_left_texture
-	# Keep the temporary landing shadow on the same corrected canvas origin as
-	# the ordinary boss walking shadow.
-	shadow.position = Vector2.ZERO
-	shadow.scale = Vector2.ONE / slime.scale
-	shadow.visible = is_active() and (slam or not launch_committed)
+	# This warning shadow is a world-space floor marker. It must stay at the
+	# selected landing anchor while the boss sprite rises or descends, rather
+	# than inheriting the boss's current position and squash transform.
+	shadow.top_level = true
+	shadow.global_position = landing_anchor - ActorGeometry.slime_floor_canvas_point(slime)
+	shadow.scale = Vector2.ONE
+	shadow.visible = is_active() and slam
 	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)
 	shadow.z_index = -1
 
 
-func _offscreen_offset(slime: Sprite2D) -> Vector2:
-	var viewport_height: float = slime.get_viewport_rect().size.y
-	var bounds_height: float = float(slime.texture.get_height()) if slime.texture != null else 32.0
-	return Vector2(0.0, -(viewport_height + bounds_height + 8.0))
+func _airborne_offset(root: Object) -> Vector2:
+	# The boss should read as a jump in the room, not disappear above the
+	# viewport. The animated shadow remains on the floor anchor while the body
+	# rises by this authored world-space amount and descends back to contact.
+	return Vector2(0.0, -maxf(_tuning(root).boss_jump_height, 1.0))

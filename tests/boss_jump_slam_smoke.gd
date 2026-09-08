@@ -68,7 +68,7 @@ func _initialize() -> void:
 				_expect(shadow != null and not shadow.visible, "boss jump phase hides its floor shadow while airborne", failures)
 				if shadow != null:
 					_expect(visual != null and shadow.texture == visual.boss_shadow_jump_frames.back(), "boss jump shadow advances with the jump animation", failures)
-				_expect(bool(boss.get_meta("boss_airborne", false)) and boss.offset.y <= component.base_sprite_offset.y - boss.get_viewport_rect().size.y, "boss physically clears the visible arena after its launch animation", failures)
+				_expect(bool(boss.get_meta("boss_airborne", false)) and boss.offset.y <= component.base_sprite_offset.y - boss_tuning.boss_jump_height * 0.95, "boss visibly clears the floor during its launch animation", failures)
 				_expect(idle_shadow != null and not idle_shadow.visible, "ordinary boss shadow is hidden while the animated landing shadow is active", failures)
 				_expect(bool(boss.get_meta("boss_jump_ui_suppressed", false)), "boss health UI is suppressed during flight", failures)
 				# Clear the temporary wave and allow the component to reach the slam.
