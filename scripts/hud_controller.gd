@@ -201,17 +201,13 @@ func update_overhead_bars(
 		fill.self_modulate = Color.WHITE
 		damage_fill.self_modulate = Color.WHITE
 		aggro_marker.visible = is_aggroed
-		if not should_show:
-			continue
+		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
 		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
 		if not is_aggroed:
 			overhead_offset.x -= 2.0
 		var overhead_position := slime.global_position + overhead_offset + Vector2(0, -2)
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
-			# Boss art is authored on a 32px canvas. Center the 13px bar over
-			# the authored floor anchor instead of inheriting the regular slime's
-			# top-left offset.
-			overhead_position = ActorGeometry.slime_shadow_anchor(slime) + Vector2(-6.5, -22.0)
+			overhead_position = ActorGeometry.boss_slime_overhead_origin(slime, fill_size)
 		frame.global_position = overhead_position
 		frame.global_scale = Vector2.ONE
 		frame.z_index = overwold_ui_z
@@ -224,14 +220,17 @@ func update_overhead_bars(
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
-			# Match the authored regular-slime layout: the marker sits at the
-			# health bar's left edge, three pixels before its x=3 start.
-			aggro_marker.global_position = overhead_position - Vector2(3.0, 0.0)
+			# Match the regular-slime layout: the marker's right edge touches the
+			# health bar's left edge. Derive the gap from the actual marker texture
+			# instead of assuming its width is always three pixels.
+			var marker_width := aggro_marker.texture.get_size().x if aggro_marker.texture != null else 0.0
+			aggro_marker.global_position = Vector2(overhead_position.x - marker_width, overhead_position.y)
 		else:
 			aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
-		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
+		if not should_show:
+			continue
 		set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
 
@@ -890,6 +889,10 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 	if aggro_marker == null:
 		aggro_marker = Sprite2D.new(); aggro_marker.name = "AggroMarker"; aggro_marker.texture = load("res://assets/artwork/aggrodot(blue).png") as Texture2D; aggro_marker.centered = false; aggro_marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; aggro_marker.position = Vector2.ZERO; aggro_marker.z_index = 3; aggro_marker.z_as_relative = false; fill.get_parent().add_child(aggro_marker)
 	var aggro_offset := aggro_marker.position
+	# These bars remain children of the slime so hidden/unaggroed bars retain a
+	# valid authored local transform. update_overhead_bars() assigns their world
+	# position and scale whenever they are shown; only the marker needs to stay
+	# top-level because it is placed against the bar's resolved left edge.
 	aggro_marker.top_level = true
 	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset
 	frame.visible = false; damage_fill.visible = false; fill.visible = false; aggro_marker.visible = false

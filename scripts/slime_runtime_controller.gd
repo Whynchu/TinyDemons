@@ -280,7 +280,7 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 		if boss_phase_running:
 			return true
 	var was_active := combat.active
-	var result: bool = combat.tick_attack(delta, slime, root.get("slime_tuning") as SlimeTuning, attack_frames_for(root, slime), bool(root.get("player_dead")), Callable(root, "_set_slime_attack_frame"), Callable(root, "_set_actor_base_texture"), Callable(root, "_apply_slime_attack_lunge"), Callable(root, "_apply_slime_attack_hit"), Callable(root, "_restore_slime_idle_texture"), Callable(root, "_can_slime_attack_player"), Callable(root, "_start_slime_attack"))
+	var result: bool = combat.tick_attack(delta, slime, root.get("slime_tuning") as SlimeTuning, attack_frames_for(root, slime), bool(root.get("player_dead")), Callable(root, "_set_slime_attack_frame"), Callable(root, "_set_actor_base_texture"), Callable(root, "_apply_slime_attack_lunge"), Callable(root, "_apply_slime_attack_hit"), Callable(root, "_restore_slime_idle_texture"), Callable(root, "_can_slime_attack_player"), Callable(root, "_start_slime_attack"), Callable(root, "_capture_slime_attack"))
 	if was_active and not combat.active:
 		var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
 		if tactics != null:
@@ -300,6 +300,21 @@ func start_slime_attack(root: Object, slime: Sprite2D) -> void:
 	if tactics != null:
 		tactics.attack_reserved = true
 	SlimeActor.start_attack_actor(root, slime)
+
+
+func capture_slime_attack(root: Object, slime: Sprite2D) -> void:
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	var player := root.get("player") as Sprite2D
+	if combat == null or player == null:
+		return
+	var target_point: Vector2 = root.call("_actor_foot", player)
+	combat.attack_target_point = target_point
+	combat.attack_lunge_vector = root.call("_slime_attack_commitment_vector", slime, target_point) as Vector2
+	combat.attack_committed = true
+	# Keep the snapshot inspectable for debug scenes and older presentation
+	# seams, but never read it again after this commitment callback returns.
+	slime.set_meta("attack_target_point", target_point)
+	slime.set_meta("attack_lunge_vector", combat.attack_lunge_vector)
 
 
 func attack_frames_for(root: Object, slime: Sprite2D) -> Array[Texture2D]:
@@ -390,11 +405,13 @@ func slime_attack_reach(root: Object, slime: Sprite2D) -> float:
 	var direction := to_player.normalized() if to_player.length_squared() > 0.001 else Vector2.RIGHT
 	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
 	var tuning := root.get("slime_tuning") as SlimeTuning
-	var max_lunge: float = tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	var lunge_distance: float = tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	var overshoot: float = tuning.boss_attack_overshoot_distance if encounter_scale > 1.0 else tuning.attack_overshoot_distance
 	# Commit from the authored body contact gap plus a small preparation margin.
 	# Native 32px bosses can have a larger directional gap than the regular
-	# attack-hit range; using that fixed range leaves them circling forever.
-	return slime_attack_contact_gap(root, slime, direction) + tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else slime_attack_contact_gap(root, slime, direction) + tuning.attack_lunge_distance
+	# attack-hit range; include the deliberate overshoot so the fixed target is
+	# reachable from the edge of the attack permission.
+	return slime_attack_contact_gap(root, slime, direction) + lunge_distance + overshoot
 
 
 func slime_attack_contact_gap(root: Object, slime: Sprite2D, direction: Vector2) -> float:

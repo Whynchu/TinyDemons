@@ -476,12 +476,9 @@ func update_player_health_regen(_root: Object, _delta: float) -> void:
 
 
 func apply_slime_attack_lunge(root: Object, slime: Sprite2D, fraction: float = 1.0) -> void:
+	if fraction <= 0.0:
+		return
 	var movement: Vector2 = root.call("_slime_attack_lunge_vector", slime)
-	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
-	var tuning := root.get("slime_tuning") as SlimeTuning
-	if combat != null and float(root.call("_slime_encounter_scale", slime)) > 1.0:
-		if fraction <= 0.0:
-			return
 	if movement.length_squared() > 0.0001:
 		(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(slime, movement * fraction, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 
@@ -518,26 +515,34 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 	root.call("_update_player_health_ui")
 
 
-func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
-	var to_player: Vector2 = root.call("_slime_attack_offset", slime)
+func slime_attack_commitment_vector(root: Object, slime: Sprite2D, target_point: Vector2) -> Vector2:
+	var slime_point: Vector2 = root.call("_actor_foot", slime)
+	var to_target := target_point - slime_point
+	var direction := to_target.normalized()
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
-	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
-	# Regular slimes commit to their leap target. The larger boss keeps the same
-	# attack language but tracks the player's current position during its lunge,
-	# making the attack threatening without using a separate attack animation.
-	if encounter_scale <= 1.0 and combat != null and combat.attack_lunge_vector != Vector2.ZERO:
-		return combat.attack_lunge_vector
-	var direction := Vector2.LEFT if to_player.length_squared() < 0.01 and combat.face_left else Vector2.RIGHT if to_player.length_squared() < 0.01 else to_player.normalized()
+	if direction.length_squared() < 0.01:
+		direction = Vector2.LEFT if combat != null and combat.face_left else Vector2.RIGHT
 	var tuning := root.get("slime_tuning") as SlimeTuning
-	var max_lunge := tuning.boss_attack_lunge_distance + 2.0 if encounter_scale > 1.0 else tuning.attack_lunge_distance
-	# The slime body is the attack hitbox. Drive the body toward the player,
-	# rather than stopping at the edge-to-edge contact gap. The boss gets a
-	# fixed-length per-attack commitment while its direction is refreshed each
-	# tick; returning the current full distance here would make the same lunge
-	# distance accumulate repeatedly as the target moved.
-	if encounter_scale > 1.0:
-		return direction * max_lunge
-	return direction * minf(max_lunge, maxf(to_player.length(), 0.0))
+	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
+	var lunge_distance := tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	var overshoot := tuning.boss_attack_overshoot_distance if encounter_scale > 1.0 else tuning.attack_overshoot_distance
+	# Capture only the direction at the decision frame. The displacement is
+	# bounded by the authored lunge profile; using the full target delta here
+	# makes a slime teleport across the room when it attacks from the edge of its
+	# attack reach. If the player is already close, the small overshoot carries
+	# the body just beyond the captured position.
+	var desired_distance := maxf(to_target.length(), 0.0) + overshoot
+	return direction * minf(lunge_distance + overshoot, desired_distance)
+
+
+func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if combat != null and combat.attack_committed:
+		return combat.attack_lunge_vector
+	if combat != null and combat.lunge_vector != Vector2.ZERO:
+		return combat.lunge_vector
+	var player := root.get("player") as Sprite2D
+	return Vector2.ZERO if player == null else slime_attack_commitment_vector(root, slime, root.call("_actor_foot", player) as Vector2)
 
 
 func apply_player_hit_knockback(root: Object, slime: Sprite2D) -> void:

@@ -59,6 +59,21 @@ func _initialize() -> void:
 			_expect(guide == null or not guide.visible, "boss runtime hides %s" % String(node_name), failures)
 		var sprite_rect: Rect2 = gameplay.call("_sprite_source_global_rect", boss)
 		var collision_rect: Rect2 = gameplay.call("_collision_rect", boss)
+		var boss_shadow := boss.get_node_or_null("SlimeFloorShadow") as Sprite2D
+		_expect(boss_shadow != null and boss_shadow.visible and boss_shadow.texture != null, "boss floor shadow is visible with its authored texture", failures)
+		if boss_shadow != null:
+			var shadow_floor := boss_shadow.global_position + ActorGeometry.BOSS_SLIME_FLOOR_POINT
+			_expect(ActorGeometry.slime_shadow_anchor(boss).is_equal_approx(shadow_floor), "boss shadow and geometry share the same floor anchor", failures)
+		var boss_bar := boss.get_node_or_null("HpOverhead") as Sprite2D
+		var boss_bar_fill := boss.get_node_or_null("HpOverheadFill") as Sprite2D
+		var boss_aggro_marker := boss.get_node_or_null("AggroMarker") as Sprite2D
+		_expect(boss_bar != null and boss_bar_fill != null and boss_aggro_marker != null, "boss overhead health UI is complete", failures)
+		if boss_bar != null and boss_bar_fill != null and boss_aggro_marker != null:
+			gameplay.call("_update_overworld_ui")
+			var expected_bar_origin := ActorGeometry.boss_slime_overhead_origin(boss, boss_bar_fill.texture.get_size() if boss_bar_fill.texture != null else Vector2.ZERO)
+			_expect(boss_bar.global_position.is_equal_approx(expected_bar_origin), "boss health bar is centered over its floor anchor", failures)
+			var marker_width := boss_aggro_marker.texture.get_size().x if boss_aggro_marker.texture != null else 0.0
+			_expect(boss_aggro_marker.global_position.is_equal_approx(Vector2(boss_bar.global_position.x - marker_width, boss_bar.global_position.y)), "boss aggro marker is flush to the health bar's left edge", failures)
 		var body := gameplay.call("_slime_body_polygon", boss) as PackedVector2Array
 		var body_rect := _bounds(body)
 		var foot_polygon := gameplay.call("_slime_collision_polygon", boss) as PackedVector2Array

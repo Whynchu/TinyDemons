@@ -6,6 +6,10 @@ class_name ActorGeometry
 ## The coordinator still exposes compatibility wrappers while consumers migrate,
 ## but the transform math lives here so hitboxes, attacks, and flashes agree.
 
+const REGULAR_SLIME_FLOOR_POINT := Vector2(8.0, 13.0)
+const BOSS_SLIME_FLOOR_POINT := Vector2(16.0, 22.0)
+const BOSS_SLIME_OVERHEAD_HEIGHT := 22.0
+
 static func foot(actor: Sprite2D, actor_foot_offset: Vector2) -> Vector2:
 	# Runtime puzzle targets are centered on their walkable point, unlike the
 	# non-centered actor sprites whose authored feet use the shared offset. Using
@@ -23,10 +27,25 @@ static func foot_position(position: Vector2, actor_foot_offset: Vector2) -> Vect
 static func slime_shadow_anchor(slime: Sprite2D) -> Vector2:
 	if slime == null:
 		return Vector2.ZERO
-	var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
-	# Visual floor anchors are separate from collision feet because the regular
-	# and boss shadow canvases are authored at 16px and 32px respectively.
-	return slime.global_position + (Vector2(16.0, 22.0) if encounter_scale > 1.0 else Vector2(8.0, 13.0))
+	# The shadow is a normalized child canvas: its local origin follows the
+	# actor, while its inverse scale keeps the authored floor point in world
+	# pixels during the slime's squash/stretch. Read that canvas origin instead
+	# of reconstructing it from the actor's current visual scale.
+	var shadow := slime.get_node_or_null("SlimeFloorShadow") as Sprite2D
+	var canvas_origin := shadow.global_position if shadow != null else slime.global_position
+	return canvas_origin + slime_floor_canvas_point(slime)
+
+
+static func slime_floor_canvas_point(slime: Sprite2D) -> Vector2:
+	if slime == null:
+		return REGULAR_SLIME_FLOOR_POINT
+	return BOSS_SLIME_FLOOR_POINT if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else REGULAR_SLIME_FLOOR_POINT
+
+
+static func boss_slime_overhead_origin(slime: Sprite2D, bar_size: Vector2) -> Vector2:
+	# Health bars are top-left anchored. Center the actual bar width over the
+	# same authored floor point used by the boss shadow.
+	return slime_shadow_anchor(slime) - Vector2(bar_size.x * 0.5, BOSS_SLIME_OVERHEAD_HEIGHT)
 
 
 static func encounter_visual_offset(encounter_scale: float, actor_foot_offset: Vector2) -> Vector2:

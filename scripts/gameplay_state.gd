@@ -1527,6 +1527,8 @@ func _on_slime_health_healed(amount: float, slime: Sprite2D) -> void: combat_run
 func _update_player_health_regen(delta: float) -> void: combat_runtime_controller.call("update_player_health_regen", self, delta)
 func _apply_slime_attack_lunge(slime: Sprite2D, fraction: float = 1.0) -> void: combat_runtime_controller.call("apply_slime_attack_lunge", self, slime, fraction)
 func _slime_attack_lunge_vector(slime: Sprite2D) -> Vector2: return combat_runtime_controller.call("slime_attack_lunge_vector", self, slime) as Vector2
+func _slime_attack_commitment_vector(slime: Sprite2D, target_point: Vector2) -> Vector2: return combat_runtime_controller.call("slime_attack_commitment_vector", self, slime, target_point) as Vector2
+func _capture_slime_attack(slime: Sprite2D) -> void: slime_runtime_controller.call("capture_slime_attack", self, slime)
 func _apply_player_hit_knockback(slime: Sprite2D) -> void: combat_runtime_controller.call("apply_player_hit_knockback", self, slime)
 func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool: return bool(combat_runtime_controller.call("update_slime_knockback", self, slime, delta))
 func _reset_slime_scoot(slime: Sprite2D) -> void: combat_runtime_controller.call("reset_slime_scoot", self, slime)
@@ -1590,6 +1592,7 @@ func _configure_cloaked_demon_patrol_route() -> void:
 	if route.is_empty(): return
 	npc_controller.demon_patrol_min_x = route["min_x"]; npc_controller.demon_patrol_max_x = route["max_x"]; npc_controller.demon_wander_origin = route["origin"]; npc_controller.demon_patrol_position_x = route["position_x"]; npc_controller.demon_wander_target = route["target"]; npc_controller.demon_wander_has_target = route["has_target"]
 func _set_slime_facing(slime: Sprite2D, direction_x: float) -> void: actor_presentation_runtime_controller.call("set_slime_facing", self, slime, direction_x)
+func _prepare_slime_idle_visual(slime: Sprite2D) -> void: actor_presentation_runtime_controller.call("prepare_slime_idle_visual", self, slime)
 func _update_slime_attack_guides(slime: Sprite2D) -> void: actor_presentation_runtime_controller.call("update_slime_attack_guides", self, slime)
 func _set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void: actor_presentation_runtime_controller.call("set_actor_base_texture", self, actor, texture)
 func _collect_occluders(node: Node) -> void: actor_presentation_runtime_controller.call("collect_occluders", self, node)

@@ -188,10 +188,14 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat != null:
 		combat.face_left = face_left; combat.timer = 0.001; combat.begin(); combat.frame = 0; combat.hit_done = false
-		combat.attack_target_point = root.call("_actor_foot", player)
-		combat.attack_lunge_vector = root.call("_slime_attack_lunge_vector", slime)
-		slime.set_meta("attack_target_point", combat.attack_target_point)
-		slime.set_meta("attack_lunge_vector", combat.attack_lunge_vector)
+		# The attack direction is only committed shortly before impact. Starting
+		# the animation establishes the initial facing, but it must not freeze a
+		# stale target several frames before the actual decision point.
+		combat.attack_target_point = Vector2.ZERO
+		combat.attack_lunge_vector = Vector2.ZERO
+		combat.attack_committed = false
+		slime.set_meta("attack_target_point", Vector2.ZERO)
+		slime.set_meta("attack_lunge_vector", Vector2.ZERO)
 	var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
 	if animation != null: animation.set_facing(face_left)
 	root.call("_set_slime_facing", slime, -1.0 if face_left else 1.0)
@@ -300,6 +304,14 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 	combat.frame = 0
 	combat.hit_done = false
 	combat.face_left = false
+	combat.lunge_remaining = 0.0
+	combat.lunge_total = 0.0
+	combat.lunge_progress = 0.0
+	combat.lunge_applied_progress = 0.0
+	combat.lunge_vector = Vector2.ZERO
+	combat.attack_target_point = Vector2.ZERO
+	combat.attack_lunge_vector = Vector2.ZERO
+	combat.attack_committed = false
 	combat.cooldown = attack_cooldown_delay
 	combat.dead = false
 	var flash_overlay := get_node_or_null("HitFlashOverlay") as Sprite2D
@@ -317,6 +329,7 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		boss_jump_slam.launch_committed = false
 		boss_jump_slam.impact_resolved = false
 		boss_jump_slam.completed_phases = 0
+		boss_jump_slam.presentation_offset = Vector2.ZERO
 		set_meta("boss_airborne", false)
 		self_modulate.a = 1.0
 

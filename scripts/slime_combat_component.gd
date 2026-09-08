@@ -17,9 +17,12 @@ var knockback_velocity := Vector2.ZERO
 var knockback_timer := 0.0
 var lunge_remaining := 0.0
 var lunge_total := 0.0
+var lunge_progress := 0.0
+var lunge_applied_progress := 0.0
 var lunge_vector := Vector2.ZERO
 var attack_target_point := Vector2.ZERO
 var attack_lunge_vector := Vector2.ZERO
+var attack_committed := false
 var dead := false
 ## Boss Jump Slam protection is split so the telegraph can take damage without
 ## allowing hitstun, while the airborne/impact portion can reject damage too.
@@ -36,8 +39,14 @@ func begin() -> void:
 	active = true
 	timer = 0.001
 	hit_done = false
+	lunge_remaining = 0.0
+	lunge_total = 0.0
+	lunge_progress = 0.0
+	lunge_applied_progress = 0.0
+	lunge_vector = Vector2.ZERO
 	attack_target_point = Vector2.ZERO
 	attack_lunge_vector = Vector2.ZERO
+	attack_committed = false
 	attack_started.emit()
 
 
@@ -53,8 +62,14 @@ func finish(next_cooldown: float) -> void:
 	active = false
 	timer = 0.0
 	hit_done = false
+	lunge_remaining = 0.0
+	lunge_total = 0.0
+	lunge_progress = 0.0
+	lunge_applied_progress = 0.0
+	lunge_vector = Vector2.ZERO
 	attack_target_point = Vector2.ZERO
 	attack_lunge_vector = Vector2.ZERO
+	attack_committed = false
 	cooldown = maxf(next_cooldown, 0.0)
 	attack_finished.emit()
 
@@ -63,6 +78,8 @@ func begin_lunge(vector: Vector2, duration: float) -> void:
 	lunge_vector = vector
 	lunge_total = maxf(duration, 0.001)
 	lunge_remaining = lunge_total
+	lunge_progress = 0.0
+	lunge_applied_progress = 0.0
 
 
 func clear_boss_jump_phase() -> void:
@@ -71,7 +88,7 @@ func clear_boss_jump_phase() -> void:
 	boss_jump_phase_stun_resistant = false
 
 
-func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Array[Texture2D], player_dead: bool, set_frame: Callable, set_texture: Callable, apply_lunge: Callable, apply_hit: Callable, restore_idle: Callable, can_attack: Callable, start_attack: Callable) -> bool:
+func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Array[Texture2D], player_dead: bool, set_frame: Callable, set_texture: Callable, apply_lunge: Callable, apply_hit: Callable, restore_idle: Callable, can_attack: Callable, start_attack: Callable, commit_attack: Callable) -> bool:
 	if player_dead:
 		timer = 0.0
 		return false
@@ -89,17 +106,21 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 		set_frame.call(actor, frame_index)
 		set_texture.call(actor, frames[frame_index])
 		var hit_frame := tuning.boss_attack_hit_frame if is_boss else tuning.attack_hit_frame
-		if is_boss and frame_index >= hit_frame - 3 and attack_target_point == Vector2.ZERO:
-			attack_target_point = actor.get_meta("attack_target_point", Vector2.ZERO)
-			attack_lunge_vector = actor.get_meta("attack_lunge_vector", Vector2.ZERO)
+		var commit_frames := tuning.boss_attack_commit_frames_before_hit if is_boss else tuning.attack_commit_frames_before_hit
+		if not attack_committed and frame_index >= maxi(hit_frame - commit_frames, 0):
+			if commit_attack.is_valid():
+				commit_attack.call(actor)
 		if not hit_done and frame_index >= hit_frame - 2 and lunge_remaining <= 0.0:
-			lunge_total = tuning.boss_attack_lunge_duration if is_boss else 0.12
-			lunge_remaining = lunge_total
-			apply_lunge.call(actor, 0.0)
+			var lunge_duration := tuning.boss_attack_lunge_duration if is_boss else 0.12
+			begin_lunge(attack_lunge_vector, lunge_duration)
 		if lunge_remaining > 0.0:
-			var step := minf(delta, lunge_remaining)
-			lunge_remaining = maxf(lunge_remaining - delta, 0.0)
-			apply_lunge.call(actor, step / lunge_total)
+			var step := minf(maxf(delta, 0.0), lunge_remaining)
+			lunge_remaining = maxf(lunge_remaining - step, 0.0)
+			lunge_progress = clampf(1.0 - lunge_remaining / lunge_total, 0.0, 1.0)
+			var progress_delta := lunge_progress - lunge_applied_progress
+			if progress_delta > 0.0:
+				lunge_applied_progress = lunge_progress
+				apply_lunge.call(actor, progress_delta)
 		if frame_index == hit_frame and not hit_done and confirm_hit():
 			# Cooldown starts at impact so a full recovery window is guaranteed
 			# from the actual attack, not merely from animation cleanup.
