@@ -212,32 +212,11 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	if root.has_method("_play_sound"):
 		root.call("_play_sound", "bite", -8.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 	var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
-	var player_rect := (root.call("_collision_rect", player) as Rect2).grow(0.75)
+	var player_rect := root.call("_collision_rect", player) as Rect2
 	var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
 	if slime_body.size() < 3:
 		return
-	var overlaps_now := not Geometry2D.intersect_polygons(slime_body, player_body).is_empty()
-	if not overlaps_now and float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
-		# Boss attack reach includes its lunge, but the lunge is animated after
-		# impact confirmation. Test the authored impact position as well so a
-		# stationary player cannot be missed at the edge of that reach.
-		var lunge: Vector2 = combat.attack_lunge_vector if combat != null and combat.attack_lunge_vector != Vector2.ZERO else root.call("_slime_attack_lunge_vector", slime)
-		var impact_body := PackedVector2Array()
-		for point in slime_body:
-			impact_body.append(point + lunge)
-		overlaps_now = not Geometry2D.intersect_polygons(impact_body, player_body).is_empty()
-	if not overlaps_now:
-		var strike_lunge: Vector2 = combat.attack_lunge_vector if combat != null and combat.attack_lunge_vector != Vector2.ZERO else root.call("_slime_attack_lunge_vector", slime)
-		var strike_point: Vector2 = (root.call("_actor_foot", slime) as Vector2) + strike_lunge
-		var player_foot: Vector2 = root.call("_actor_foot", player)
-		var strike_radius := 12.0 if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else 8.0
-		overlaps_now = strike_point.distance_to(player_foot) <= strike_radius
-	if not overlaps_now:
-		var committed_target: Vector2 = combat.attack_target_point if combat != null else slime.get_meta("attack_target_point", Vector2.ZERO)
-		if committed_target != Vector2.ZERO:
-			var committed_radius := 16.0 if float(slime.get_meta("encounter_scale", 1.0)) > 1.0 else 10.0
-			overlaps_now = (root.call("_actor_foot", player) as Vector2).distance_to(committed_target) <= committed_radius
-	if not overlaps_now:
+	if Geometry2D.intersect_polygons(slime_body, player_body).is_empty():
 		return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
