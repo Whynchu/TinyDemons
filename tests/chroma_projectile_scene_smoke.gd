@@ -46,11 +46,11 @@ func _initialize() -> void:
 			var pickup: Sprite2D = pickup_sprites[0] as Sprite2D
 			_expect(bool(gameplay.call("_is_slime_walkable_point", pickup.global_position)), "Chroma pickup stays inside walkable space", failures)
 			var pickup_image: Image = pickup.texture.get_image() if pickup.texture != null else null
-			_expect(pickup_image != null and pickup_image.get_pixel(0, 0).is_equal_approx(PaletteLibrary.ACCENT["blue"]), "Chroma pickup matches the light-blue bar", failures)
+			_expect(pickup_image != null and pickup_image.get_pixel(0, 0).is_equal_approx(PaletteLibrary.ACCENT["grey"]), "normal Chroma pickup uses the neutral accent", failures)
 			var chroma_light: PointLight2D = pickup.get_node_or_null("ChromaLight") as PointLight2D
 			_expect(chroma_light != null and chroma_light.texture != null and chroma_light.energy > 0.0 and chroma_light.energy <= 0.20, "Chroma pickup uses a subtle light", failures)
 			if chroma_light != null:
-				_expect(chroma_light.color.is_equal_approx(PaletteLibrary.ACCENT["blue"]), "Chroma pickup light uses the bar color", failures)
+				_expect(chroma_light.color.is_equal_approx(PaletteLibrary.ACCENT["grey"]), "Chroma pickup light uses the neutral color", failures)
 				_expect(is_equal_approx(chroma_light.texture_scale, 0.70), "Chroma pickup light matches the fire scale", failures)
 			var chroma_tuning := gameplay.get("chroma_tuning") as ChromaTuning
 			var pickup_index: int = 0
@@ -82,6 +82,9 @@ func _initialize() -> void:
 			var player_chroma: Node = gameplay.get("player_chroma_component") as Node
 			player_chroma.call("attune", 1)
 			player_chroma.call("spend_elemental_ability")
+			gameplay.call("_update_chroma_pickups", 0.0)
+			var live_pickup_image: Image = pickup.texture.get_image() if pickup.texture != null else null
+			_expect(live_pickup_image != null and live_pickup_image.get_pixel(0, 0).is_equal_approx(PaletteLibrary.ACCENT["red"]), "Chroma pickup follows the player's current needed color", failures)
 			chroma_tuning.pickup_collection_distance = 10.0
 			var player_foot: Vector2 = gameplay.call("_actor_foot", gameplay.get("player")) as Vector2
 			pickup.global_position = player_foot
@@ -92,6 +95,11 @@ func _initialize() -> void:
 			gameplay.call("_update_chroma_pickups", 0.01)
 			var particle_count_after: int = (effects.get("pixel_particles") as Array).size()
 			_expect(particle_count_after > particle_count_before, "Chroma pickup creates a splash burst on collection", failures)
+			gameplay.call("_spawn_chroma_pickup", player_foot, 20, 456, Vector2.ZERO)
+			var full_bar_pickup_count_before: int = (pickup_controller.get("sprites") as Array).size()
+			gameplay.call("_update_chroma_pickups", 0.01)
+			var full_bar_pickup_count_after: int = (pickup_controller.get("sprites") as Array).size()
+			_expect(full_bar_pickup_count_before == 1 and full_bar_pickup_count_after == 1, "Chroma pickup remains available when the bar is full", failures)
 	if ability != null:
 		_expect(is_equal_approx(float(ability.get("cooldown_duration")), 2.0), "elemental triangle spell uses a 2 second cooldown", failures)
 		_expect(is_equal_approx(float(ability.get("grey_cooldown_duration")), 2.5), "gray triangle spell uses a 2.5 second cooldown", failures)

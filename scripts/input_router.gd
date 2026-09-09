@@ -19,7 +19,7 @@ var _guard_axis := 0.0
 var touch_provider: Node = null
 var _touch_snapshot: Dictionary = {}
 
-const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard", &"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right", &"move_left", &"move_right", &"move_up", &"move_down"]
+const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"open_minimap", &"target", &"guard", &"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right", &"move_left", &"move_right", &"move_up", &"move_down"]
 const MENU_REPEAT_INITIAL_DELAY := 0.32
 const MENU_REPEAT_INTERVAL := 0.08
 

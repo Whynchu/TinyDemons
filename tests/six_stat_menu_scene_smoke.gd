@@ -109,7 +109,7 @@ func _initialize() -> void:
 		await process_frame
 		var top_slot_bottom := screens.hub_item_content_clip.position.y + screens.hub_gear_slot_buttons[0].position.y + screens.hub_gear_slot_buttons[0].size.y
 		var choice_window_top := screens.hub_gear_choice_panel.position.y if screens.hub_gear_choice_panel != null else -1.0
-		_expect(screens.hub_gear_browsing and equipment_view.candidate_cursor.visible and equipment_view.get_node("CandidateText0").texture != null and screens.hub_gear_choice_panel != null and not screens.hub_gear_choice_panel.visible, "equipment opens a populated authored candidate grid for the selected slot", failures)
+		_expect(screens.hub_gear_browsing and equipment_view.candidate_cursor.visible and equipment_view.get_node("CandidateClip/CandidateText0").texture != null and screens.hub_gear_choice_panel != null and not screens.hub_gear_choice_panel.visible, "equipment opens a populated authored candidate grid for the selected slot", failures)
 		_expect(not screens.hub_item_list_texts[0].visible and choice_window_top >= top_slot_bottom, "equipment keeps the hidden legacy slot presenter out of the authored candidate window", failures)
 		_expect(equipment_view.candidate_buttons[0].visible and screens.hub_equipment_action_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_IGNORE), "equipment limits touch input to the authored picker while browsing", failures)
 		equipment_view.navigation_back_button.pressed.emit()

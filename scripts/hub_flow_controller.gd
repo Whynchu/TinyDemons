@@ -29,6 +29,12 @@ const SHOP_STATE_MODE_SELECT := ShopMenuLayoutScript.MODE_SELECT
 const SHOP_STATE_ITEM_BROWSE := ShopMenuLayoutScript.ITEM_BROWSE
 const SHOP_STATE_SELL_AMOUNT := ShopMenuLayoutScript.SELL_AMOUNT
 
+var _shop_cache_profile: PlayerProfile = null
+var _shop_cache_signature := ""
+var _shop_cache_items: Array[ItemInstance] = []
+var _shop_cache_groups: Array[Dictionary] = []
+var _shop_cache_group_by_key: Dictionary = {}
+
 
 func _set_equipment_mode(screen: Object, mode: int) -> void:
 	## One transition point keeps the legacy booleans synchronized with the
@@ -392,46 +398,17 @@ func hub_bind_current_element(root: Object) -> bool:
 
 
 func shop_sellable_items(root: Object) -> Array[ItemInstance]:
-	var result: Array[ItemInstance] = []
 	var profile := root.player_profile as PlayerProfile
 	if profile == null:
-		return result
-	for data: Dictionary in profile.inventory:
-		var item := ItemInstance.from_dictionary(data)
-		if not profile.equipped_instance_ids.values().has(item.instance_id):
-			# SELL presents one row per identical item signature. The representative
-			# keeps its instance ID for the eventual quantity sale; shop_matching_count
-			# and sell_items still operate on the complete matching stack.
-			var already_grouped := false
-			for grouped_item: ItemInstance in result:
-				if shop_items_match(grouped_item, item):
-					already_grouped = true
-					break
-			if not already_grouped:
-				result.append(item)
-	var catalog := ItemCatalog.new()
-	result.sort_custom(func(left: ItemInstance, right: ItemInstance) -> bool:
-		var left_value := catalog.sell_value(left)
-		var right_value := catalog.sell_value(right)
-		if left_value != right_value:
-			return left_value < right_value
-		if left.definition_id != right.definition_id:
-			return String(left.definition_id) < String(right.definition_id)
-		return left.instance_id < right.instance_id
-	)
-	return result
+		return []
+	_ensure_shop_cache(profile)
+	return _shop_cache_items.duplicate()
 
 
 func shop_items_match(left: ItemInstance, right: ItemInstance) -> bool:
 	if left == null or right == null:
 		return false
-	# SELL rows stack by the name the player sees.  Comparing the serialized
-	# item dictionaries separates otherwise identical Plain gear when legacy or
-	# generated fields differ (quality, empty affixes, fusion metadata, etc.).
-	var catalog := ItemCatalog.new()
-	var left_name := str(catalog.definition_data(left.definition_id).get("name", "UNKNOWN ITEM"))
-	var right_name := str(catalog.definition_data(right.definition_id).get("name", "UNKNOWN ITEM"))
-	return left_name == right_name and left.enhancement_level == right.enhancement_level
+	return left.shop_stack_key() == right.shop_stack_key()
 
 
 func shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -445,14 +422,59 @@ func shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> in
 func shop_owned_matching_count(root: Object, target: ItemInstance) -> int:
 	if root == null or root.player_profile == null or target == null:
 		return 0
-	var count := 0
-	for data: Dictionary in root.player_profile.inventory:
+	_ensure_shop_cache(root.player_profile as PlayerProfile)
+	var group: Dictionary = _shop_cache_group_by_key.get(target.shop_stack_key(), {}) as Dictionary
+	return (group.get("instance_ids", []) as Array).size()
+
+
+func _ensure_shop_cache(profile: PlayerProfile) -> void:
+	if profile == null:
+		return
+	var signature := "%d|%s" % [int(profile.inventory_revision), str(profile.equipped_instance_ids)]
+	if _shop_cache_profile == profile and _shop_cache_signature == signature:
+		return
+	_shop_cache_profile = profile
+	_shop_cache_signature = signature
+	_shop_cache_items.clear()
+	_shop_cache_groups.clear()
+	_shop_cache_group_by_key.clear()
+	var equipped_ids := profile.equipped_instance_ids.values()
+	for data: Dictionary in profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
-		if root.player_profile.equipped_instance_ids.values().has(item.instance_id):
+		if equipped_ids.has(item.instance_id):
 			continue
-		if shop_items_match(item, target):
-			count += 1
-	return count
+		var key: String = item.shop_stack_key()
+		if not _shop_cache_group_by_key.has(key):
+			var new_group: Dictionary = {"key": key, "representative": item, "instance_ids": []}
+			_shop_cache_group_by_key[key] = new_group
+			_shop_cache_groups.append(new_group)
+		var group: Dictionary = _shop_cache_group_by_key[key] as Dictionary
+		(group["instance_ids"] as Array).append(item.instance_id)
+	var catalog := ItemCatalog.new()
+	_shop_cache_groups.sort_custom(func(left: Dictionary, right: Dictionary) -> bool:
+		var left_item := left["representative"] as ItemInstance
+		var right_item := right["representative"] as ItemInstance
+		var left_value := catalog.sell_value(left_item)
+		var right_value := catalog.sell_value(right_item)
+		if left_value != right_value:
+			return left_value < right_value
+		if left_item.definition_id != right_item.definition_id:
+			return String(left_item.definition_id) < String(right_item.definition_id)
+		return left_item.shop_stack_key() < right_item.shop_stack_key()
+	)
+	for group_value: Dictionary in _shop_cache_groups:
+		_shop_cache_items.append(group_value["representative"] as ItemInstance)
+
+
+func shop_matching_ids(root: Object, target: ItemInstance) -> Array[String]:
+	if root == null or root.player_profile == null or target == null:
+		return []
+	_ensure_shop_cache(root.player_profile as PlayerProfile)
+	var group: Dictionary = _shop_cache_group_by_key.get(target.shop_stack_key(), {}) as Dictionary
+	var result: Array[String] = []
+	for instance_id: Variant in group.get("instance_ids", []):
+		result.append(str(instance_id))
+	return result
 
 
 ## Shop mode transitions are kept in the hub flow owner so every input path
@@ -825,13 +847,7 @@ func sell_profile_items(root: Object, selected: ItemInstance, quantity: int, sel
 		return false
 	var sellable := shop_sellable_items(root)
 	var previous_scroll: float = float(root.screen_state_controller.hub_list_scroll)
-	var matching_ids: Array[String] = []
-	for data: Dictionary in root.player_profile.inventory:
-		var item := ItemInstance.from_dictionary(data)
-		if root.player_profile.equipped_instance_ids.values().has(item.instance_id):
-			continue
-		if shop_items_match(item, selected):
-			matching_ids.append(item.instance_id)
+	var matching_ids := shop_matching_ids(root, selected)
 	if matching_ids.size() < quantity:
 		return false
 	matching_ids = matching_ids.slice(0, quantity)
@@ -844,16 +860,27 @@ func sell_profile_items(root: Object, selected: ItemInstance, quantity: int, sel
 	root.call("_update_gold_indicator")
 	root.call("_update_soul_indicator")
 	invalidate_hub_fusion_candidates(root)
-	var remaining_count := shop_sellable_items(root).size()
+	var remaining_sellable := shop_sellable_items(root)
+	var remaining_count := remaining_sellable.size()
 	# Preserve the visible list position after the inventory rebuild. If a sold item
-	# duplicate was before the selected row, both the selected index and the
-	# logical window move left by the same amount; otherwise the next item slides
-	# into the exact row that was just sold. Do not reset a scrolled list to zero.
+	# variant disappears before the selected row, both the selected index and the
+	# logical window move left by the same amount. A partial sale leaves its exact
+	# variant row in place, so count rows by stack identity rather than by IDs.
 	var removed_before := 0
 	for index in range(mini(selected_index, sellable.size())):
-		if matching_ids.has(sellable[index].instance_id):
+		var old_item := sellable[index] as ItemInstance
+		var still_present := false
+		for remaining_item: ItemInstance in remaining_sellable:
+			if shop_items_match(old_item, remaining_item):
+				still_present = true
+				break
+		if not still_present:
 			removed_before += 1
 	var selected_after := selected_index - removed_before
+	for index in remaining_sellable.size():
+		if shop_items_match(remaining_sellable[index], selected):
+			selected_after = index
+			break
 	root.screen_state_controller.hub_item_index = clampi(selected_after, 0, maxi(remaining_count - 1, 0))
 	var max_scroll := maxf(0.0, float(remaining_count - ShopMenuLayoutScript.VISIBLE_ROWS))
 	var restored_scroll := clampf(previous_scroll - float(removed_before), 0.0, max_scroll)

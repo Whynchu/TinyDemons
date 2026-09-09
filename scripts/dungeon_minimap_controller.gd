@@ -2,6 +2,12 @@ extends Node2D
 class_name DungeonMinimapController
 
 const REVIEW_EXPORTER_SCRIPT = preload("res://tools/export_dungeon_maps.gd")
+const MAP_FRAME_SCENE = preload("res://scenes/menu_panel_8_piece.tscn")
+const CURSOR_TEXTURE = preload("res://assets/artwork/cursor.png")
+const PAUSE_LAYOUT = preload("res://scripts/pause_menu_layout.gd")
+const HUB_FRAME_TEXTURE = preload("res://assets/artwork/frame 16x16.png")
+const MENU_CURSOR_LEFT_GAP := 10.0
+const MENU_CURSOR_ROW_OFFSET := 3.0
 
 ## Presentation-only renderer for complete dungeon layouts.
 ##
@@ -28,9 +34,18 @@ const COLOR_BOSS := Color8(177, 62, 83)
 const COLOR_ORB_MARKER := Color8(115, 239, 247)
 const COLOR_PUZZLE_A_DOOR := Color8(59, 93, 201)
 const COLOR_PUZZLE_B_DOOR := Color8(56, 183, 100)
+const COLOR_UNVISITED_FLAME := Color8(86, 92, 102)
+const COLOR_MAP_OVERLAY := Color(0.035, 0.043, 0.060, 0.97)
+const COLOR_MAP_TITLE := Color8(244, 244, 244)
+const COLOR_MAP_SELECTED := Color8(255, 205, 117)
+const COLOR_MAP_CURRENT := Color8(167, 240, 112)
+const COLOR_MAP_UNVISITED := Color8(112, 118, 130)
 const PLAYER_MARKER_BLINK_TIME := 0.24
 
+signal flame_travel_requested(room_id: StringName)
+
 var map_controller: Node = null
+var gameplay_root: Object = null
 var map_sprite: Sprite2D = null
 var map_texture: ImageTexture = null
 var map_image: Image = null
@@ -44,10 +59,29 @@ var ring_sprite: Sprite2D = null
 var ring_texture: ImageTexture = null
 var ring_bounds := Rect2i()
 var ring_mask := PackedByteArray()
+var map_open := false
+var selected_flame_index := 0
+var _flame_room_ids: Array[StringName] = []
+var map_overlay: Control = null
+var map_overlay_frame: Control = null
+var map_overlay_hub_panels: Array[NinePatchRect] = []
+var map_overlay_background: ColorRect = null
+var map_overlay_divider: ColorRect = null
+var map_overlay_title: Sprite2D = null
+var map_overlay_texture: TextureRect = null
+var map_overlay_help: Sprite2D = null
+var map_overlay_flame_labels: Array[Sprite2D] = []
+var map_overlay_cursor: Sprite2D = null
+var map_overlay_select_glyph: Sprite2D = null
+var map_overlay_back_glyph: Sprite2D = null
+var map_overlay_select_text: Sprite2D = null
+var map_overlay_back_text: Sprite2D = null
+var map_overlay_back_button: Button = null
 
 
 func configure(new_map_controller: Node) -> void:
 	map_controller = new_map_controller
+	gameplay_root = map_controller.get_parent() if map_controller != null else null
 	if map_controller == null:
 		visible = false
 		return
@@ -84,18 +118,342 @@ func configure(new_map_controller: Node) -> void:
 
 func _on_map_state_changed() -> void:
 	_rebuild()
+	_refresh_map_overlay(gameplay_root)
 
 
 func _on_room_discovered(_room_id: StringName) -> void:
 	_rebuild()
+	_refresh_map_overlay(gameplay_root)
 
 
 func _process(delta: float) -> void:
 	if player_marker == null:
 		return
 	player_marker_timer = fmod(player_marker_timer + maxf(delta, 0.0), PLAYER_MARKER_BLINK_TIME * 2.0)
-	player_marker.visible = player_marker_timer < PLAYER_MARKER_BLINK_TIME
+	player_marker.visible = not map_open and player_marker_timer < PLAYER_MARKER_BLINK_TIME
 	_update_player_marker()
+
+
+func can_open_map(root: Object) -> bool:
+	if map_controller == null or not _has_complete_layout():
+		return false
+	var state := map_controller.get("state") as DungeonMapState
+	if state == null or state.current_room_id.is_empty():
+		return false
+	if root == null:
+		return true
+	if bool(root.get("boot_active")) or bool(root.get("loading_screen_active")) or bool(root.get("scene_transition_active")) or bool(root.get("room_transition_locked")) or bool(root.get("player_dead")) or bool(root.get("player_death_pending")):
+		return false
+	var screen := root.get("screen_state_controller") as Node
+	if screen != null:
+		for overlay_name in [&"title_overlay", &"save_select_overlay", &"settings_overlay", &"name_entry_overlay", &"archetype_overlay", &"pause_overlay", &"hub_overlay", &"run_complete_overlay"]:
+			var overlay := screen.get(overlay_name) as CanvasItem
+			if overlay != null and overlay.visible:
+				return false
+	return true
+
+
+func open_map(root: Object) -> bool:
+	if map_open:
+		return true
+	if not can_open_map(root):
+		return false
+	gameplay_root = root
+	_flame_room_ids = teleport_destination_room_ids()
+	if _flame_room_ids.is_empty():
+		return false
+	var current_room_id: StringName = (map_controller.get("state") as DungeonMapState).current_room_id
+	selected_flame_index = _flame_room_ids.find(current_room_id)
+	if selected_flame_index < 0:
+		selected_flame_index = _first_visited_flame_index()
+		if selected_flame_index < 0:
+			selected_flame_index = 0
+	map_open = true
+	_ensure_map_overlay()
+	_set_small_map_visible(false)
+	_refresh_map_overlay(root)
+	return true
+
+
+func close_map() -> void:
+	if not map_open:
+		return
+	map_open = false
+	if map_overlay != null:
+		map_overlay.visible = false
+	_set_small_map_visible(true)
+
+
+func is_map_open() -> bool:
+	return map_open
+
+
+func handle_input(root: Object) -> void:
+	if not map_open or root == null:
+		return
+	var input_router := root.get("input_router") as InputRouter
+	if (input_router != null and input_router.just_pressed(&"open_minimap")) or bool(root.call("_is_menu_back_just_pressed")):
+		close_map()
+		return
+	var direction := 0
+	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+		direction = -1
+	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+		direction = 1
+	if direction != 0 and not _flame_room_ids.is_empty():
+		selected_flame_index = posmod(selected_flame_index + direction, _flame_room_ids.size())
+		_refresh_map_overlay(root, true)
+		root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		return
+	if bool(root.call("_is_menu_confirm_just_pressed")) and not _flame_room_ids.is_empty():
+		var target_room_id := _flame_room_ids[clampi(selected_flame_index, 0, _flame_room_ids.size() - 1)]
+		if can_fast_travel_to_flame(root, target_room_id):
+			flame_travel_requested.emit(target_room_id)
+		else:
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+
+
+func refresh_layout() -> void:
+	_refresh_map_overlay(gameplay_root)
+
+
+func flame_room_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	if map_controller == null:
+		return result
+	return map_controller.call("flame_room_ids") as Array[StringName] if map_controller.has_method("flame_room_ids") else result
+
+
+func teleport_destination_room_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	if map_controller == null:
+		return result
+	return map_controller.call("teleport_destination_room_ids") as Array[StringName] if map_controller.has_method("teleport_destination_room_ids") else flame_room_ids()
+
+
+func is_flame_visited(room_id: StringName) -> bool:
+	if map_controller == null:
+		return false
+	return bool(map_controller.call("is_flame_visited", room_id)) if map_controller.has_method("is_flame_visited") else false
+
+
+func can_fast_travel_to_flame(root: Object, target_room_id: StringName) -> bool:
+	if map_controller == null or root == null:
+		return false
+	var state := map_controller.get("state") as DungeonMapState
+	if state == null:
+		return false
+	return bool(map_controller.call("can_fast_travel_to_flame", state.current_room_id, target_room_id)) if map_controller.has_method("can_fast_travel_to_flame") else false
+
+
+func _first_visited_flame_index() -> int:
+	for index in _flame_room_ids.size():
+		if is_flame_visited(_flame_room_ids[index]):
+			return index
+	return -1
+
+
+func _ensure_map_overlay() -> void:
+	if map_overlay != null:
+		return
+	map_overlay = Control.new()
+	map_overlay.name = "DungeonMapOverlay"
+	map_overlay.position = Vector2.ZERO
+	map_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.z_index = 80
+	add_child(map_overlay)
+	map_overlay_frame = MAP_FRAME_SCENE.instantiate() as Control
+	map_overlay_frame.name = "PauseStyleFrame"
+	map_overlay_frame.visible = false
+	map_overlay_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.add_child(map_overlay_frame)
+	map_overlay_hub_panels.append(_add_hub_panel("HubTitlePanel"))
+	map_overlay_hub_panels.append(_add_hub_panel("HubContentPanel"))
+	map_overlay_hub_panels.append(_add_hub_panel("HubFooterPanel"))
+	map_overlay_hub_panels.append(_add_hub_panel("HubResourcePanel"))
+	map_overlay_background = ColorRect.new()
+	map_overlay_background.name = "Background"
+	map_overlay_background.color = COLOR_MAP_OVERLAY
+	map_overlay_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.add_child(map_overlay_background)
+	map_overlay_divider = ColorRect.new()
+	map_overlay_divider.name = "DestinationDivider"
+	map_overlay_divider.color = Color(0.36, 0.4, 0.52, 0.85)
+	map_overlay_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.add_child(map_overlay_divider)
+	map_overlay_title = Sprite2D.new()
+	map_overlay_title.name = "Title"
+	map_overlay_title.centered = false
+	map_overlay.add_child(map_overlay_title)
+	map_overlay_cursor = Sprite2D.new()
+	map_overlay_cursor.name = "DestinationCursor"
+	map_overlay_cursor.texture = CURSOR_TEXTURE
+	map_overlay_cursor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	map_overlay_cursor.centered = false
+	map_overlay_cursor.scale = Vector2(1.0, 1.0)
+	map_overlay_cursor.z_index = 4095
+	map_overlay_cursor.z_as_relative = false
+	map_overlay_cursor.show_behind_parent = false
+	map_overlay.add_child(map_overlay_cursor)
+	map_overlay_texture = TextureRect.new()
+	map_overlay_texture.name = "FullMap"
+	map_overlay_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	map_overlay_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	map_overlay_texture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	map_overlay_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.add_child(map_overlay_texture)
+	map_overlay_help = Sprite2D.new()
+	map_overlay_help.name = "Help"
+	map_overlay_help.centered = false
+	map_overlay.add_child(map_overlay_help)
+	map_overlay_select_glyph = _add_overlay_sprite("SelectGlyph", load("res://assets/artwork/circle55.png") as Texture2D)
+	map_overlay_back_glyph = _add_overlay_sprite("BackGlyph", load("res://assets/artwork/x55.png") as Texture2D)
+	map_overlay_select_text = _add_overlay_sprite("SelectText")
+	map_overlay_back_text = _add_overlay_sprite("BackText")
+	map_overlay_back_button = Button.new()
+	map_overlay_back_button.name = "BackTouchTarget"
+	map_overlay_back_button.focus_mode = Control.FOCUS_NONE
+	map_overlay_back_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var transparent_style := StyleBoxFlat.new()
+	transparent_style.bg_color = Color.TRANSPARENT
+	transparent_style.set_border_width_all(0)
+	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+		map_overlay_back_button.add_theme_stylebox_override(state_name, transparent_style)
+	map_overlay_back_button.pressed.connect(close_map)
+	map_overlay.add_child(map_overlay_back_button)
+	for index in 12:
+		var label := Sprite2D.new()
+		label.name = "Flame%d" % index
+		label.centered = false
+		map_overlay.add_child(label)
+		map_overlay_flame_labels.append(label)
+	map_overlay.visible = false
+
+
+func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
+	if not map_open:
+		return
+	_ensure_map_overlay()
+	var view_size := _map_view_size(root)
+	map_overlay.position = Vector2.ZERO
+	map_overlay.size = view_size
+	map_overlay_frame.size = view_size
+	var resource_left := maxf(view_size.x - 63.0, 177.0)
+	map_overlay_hub_panels[0].position = Vector2.ZERO
+	map_overlay_hub_panels[0].size = Vector2(maxf(resource_left - 1.0, 1.0), 21.0)
+	map_overlay_hub_panels[1].position = Vector2.ZERO
+	map_overlay_hub_panels[1].size = Vector2(maxf(view_size.x, 1.0), 136.0)
+	map_overlay_hub_panels[2].position = Vector2(0.0, 136.0)
+	map_overlay_hub_panels[2].size = Vector2(maxf(resource_left - 2.0, 1.0), 24.0)
+	map_overlay_hub_panels[3].position = Vector2(resource_left, 136.0)
+	map_overlay_hub_panels[3].size = Vector2(maxf(view_size.x - resource_left, 1.0), 24.0)
+	map_overlay_background.position = Vector2(3.0, 3.0)
+	map_overlay_background.size = Vector2(maxf(154.0, 1.0), maxf(109.0, 1.0))
+	map_overlay_divider.position = Vector2(157.0, 21.0)
+	map_overlay_divider.size = Vector2(1.0, 115.0)
+	map_overlay_title.position = Vector2(13.0, 4.0)
+	map_overlay_help.position = Vector2(view_size.x - 57.0, view_size.y - 18.0)
+	_set_pixel_text(map_overlay_title, "MAP", COLOR_MAP_TITLE, root)
+	map_overlay_help.visible = false
+	var footer_x := PAUSE_LAYOUT.divider_x(view_size.x)
+	map_overlay_select_glyph.position = Vector2(107.0, view_size.y - 14.0)
+	map_overlay_back_glyph.position = Vector2(146.0, view_size.y - 14.0)
+	map_overlay_select_text.position = Vector2(114.0, view_size.y - 14.0)
+	map_overlay_back_text.position = Vector2(153.0, view_size.y - 14.0)
+	map_overlay_back_button.position = Vector2(view_size.x - 35.0, view_size.y - 25.0)
+	map_overlay_back_button.size = Vector2(32.0, 23.0)
+	map_overlay_back_button.position = PAUSE_LAYOUT.back_button_position(view_size)
+	map_overlay_back_button.size = PAUSE_LAYOUT.BACK_BUTTON_SIZE
+	map_overlay_select_glyph.visible = true
+	map_overlay_back_glyph.visible = true
+	map_overlay_back_text.visible = true
+	_set_pixel_text(map_overlay_select_text, "SELECT", Color.WHITE, root)
+	_set_pixel_text(map_overlay_back_text, "BACK", Color.WHITE, root)
+	var image_left := 10.0
+	var image_width := minf(142.0, maxf(96.0, 154.0))
+	map_overlay_texture.position = Vector2(image_left, 20.0)
+	map_overlay_texture.size = Vector2(image_width, 110.0)
+	map_overlay_texture.texture = ImageTexture.create_from_image(full_map_image) if full_map_image != null else null
+	if map_overlay_cursor != null:
+		map_overlay_cursor.visible = false
+	for index in map_overlay_flame_labels.size():
+		var label := map_overlay_flame_labels[index]
+		if index >= _flame_room_ids.size():
+			label.visible = false
+			continue
+		var room_id := _flame_room_ids[index]
+		var room := (map_controller.get("graph") as DungeonGraph).get_room(room_id) if map_controller != null and map_controller.get("graph") != null else null
+		var graph := map_controller.get("graph") as DungeonGraph
+		var is_hub := graph != null and room_id == graph.start_room_id
+		var flame_name := "HUB" if is_hub else String(room.fire_flame).to_upper() if room != null else "FLAME"
+		var status := "HUB" if is_hub else "VISITED" if is_flame_visited(room_id) else "UNVISITED"
+		if room_id == (map_controller.get("state") as DungeonMapState).current_room_id:
+			status = "CURRENT"
+		_set_pixel_text(label, flame_name, COLOR_MAP_CURRENT if status == "CURRENT" else COLOR_MAP_SELECTED if index == selected_flame_index and (is_hub or is_flame_visited(room_id)) else COLOR_MAP_UNVISITED if not is_hub and not is_flame_visited(room_id) else COLOR_MAP_TITLE, root)
+		label.position = Vector2(166.0, 31.0 + index * 10.0)
+		label.visible = true
+		if index == selected_flame_index and map_overlay_cursor != null:
+			map_overlay_cursor.visible = true
+			var screen := root.get("screen_state_controller") as Node if root != null else null
+			# Match the established Hub and Pause list pattern: the finger sits to
+			# the left of the painted row and follows the row's authored text anchor.
+			var cursor_target := label.position + Vector2(-MENU_CURSOR_LEFT_GAP, MENU_CURSOR_ROW_OFFSET)
+			if screen != null and screen.has_method("move_menu_cursor"):
+				screen.call("move_menu_cursor", map_overlay_cursor, cursor_target, animate_cursor)
+			else:
+				map_overlay_cursor.position = cursor_target
+	if map_overlay_cursor != null and (selected_flame_index < 0 or selected_flame_index >= _flame_room_ids.size()):
+		map_overlay_cursor.visible = false
+	map_overlay.visible = true
+
+
+func _set_pixel_text(sprite: Sprite2D, value: String, color: Color, root: Object) -> void:
+	if sprite == null:
+		return
+	sprite.texture = root.call("_pixel_text_texture", value, color) as Texture2D if root != null and root.has_method("_pixel_text_texture") else null
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
+func _add_overlay_sprite(sprite_name: String, texture: Texture2D = null) -> Sprite2D:
+	var sprite := Sprite2D.new()
+	sprite.name = sprite_name
+	sprite.centered = false
+	sprite.texture = texture
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	map_overlay.add_child(sprite)
+	return sprite
+
+
+func _add_hub_panel(panel_name: String) -> NinePatchRect:
+	var panel := NinePatchRect.new()
+	panel.name = panel_name
+	panel.texture = HUB_FRAME_TEXTURE
+	panel.patch_margin_left = 3
+	panel.patch_margin_top = 3
+	panel.patch_margin_right = 3
+	panel.patch_margin_bottom = 3
+	panel.axis_stretch_horizontal = 1
+	panel.axis_stretch_vertical = 1
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.add_child(panel)
+	return panel
+
+
+func _map_view_size(root: Object) -> Vector2:
+	if root != null:
+		var display := root.get("display_controller") as Node
+		if display != null and display.has_method("view_size_value"):
+			return Vector2(display.call("view_size_value"))
+	return Vector2(240.0, 160.0)
+
+
+func _set_small_map_visible(value: bool) -> void:
+	if map_sprite != null:
+		map_sprite.visible = value and not map_open
+	if player_marker != null:
+		player_marker.visible = value and not map_open
+	if ring_sprite != null:
+		ring_sprite.visible = value and not map_open
 
 
 func _rebuild() -> void:
@@ -242,7 +600,7 @@ func _apply_ring_mask(image: Image) -> void:
 
 
 func _update_player_marker() -> void:
-	if player_marker == null or map_controller == null or layout_is_empty():
+	if player_marker == null or map_controller == null or layout_is_empty() or map_open:
 		if player_marker != null:
 			player_marker.visible = false
 		return
@@ -274,6 +632,8 @@ func _draw_connection(connection) -> void:
 
 func _draw_room(room) -> void:
 	var color := _room_color(room.room_type)
+	if not room.fire_flame.is_empty() and not is_flame_visited(room.id):
+		color = COLOR_UNVISITED_FLAME
 	if room.room_type == DungeonGraph.ROOM_ORB:
 		color = COLOR_ORB_MARKER
 	_set_map_pixel(room.minimap_coordinate, color)

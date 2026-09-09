@@ -1,11 +1,13 @@
 # Demon Hub Menu Visual and Display Contract
 
-Status: active Fusion presentation contract
+Status: active menu presentation contract
 
 This document records why the current Equipment, Stats, and Shop menus feel
-consistent, and defines the work required to bring Fusion and Bind into the
-same system. It is intentionally a presentation contract; transaction rules
-remain owned by `HubFlowController`, `PlayerProfile`, and `ItemCatalog`.
+consistent, and records the shared presentation rules now used by Fusion and
+Bind. It is intentionally a presentation contract; transaction rules remain
+owned by `HubFlowController`, `PlayerProfile`, and `ItemCatalog`. Runtime
+acceptance gaps and the current issue status live in
+[`current-issues-and-resolution-plan.md`](current-issues-and-resolution-plan.md).
 
 ## 1. Current ownership
 
@@ -15,12 +17,12 @@ remain owned by `HubFlowController`, `PlayerProfile`, and `ItemCatalog`.
 | Shop | `scenes/shop_menu.tscn` / `shop_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `RunState`/`PlayerProfile` |
 | Stats | `demon_hub_menu.tscn` shell plus authored runtime nodes | `screen_state_controller.gd` | `hub_flow_controller.gd` + `StatsComponent` |
 | Fusion | `scenes/fusion_menu.tscn` / `fusion_menu_layout.gd` (Shop-derived) | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerProfile` |
-| Bind | shared legacy hub binding panel | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerChromaComponent`/`PlayerProfile` |
+| Bind | `scenes/bind_menu.tscn` / `bind_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerChromaComponent`/`PlayerProfile` |
 
 The hub shell owns the common top command row, footer, resource display, and
-responsive frame. Equipment, Shop, and Fusion own their complete internal
-presentation as scene-authored controls. Bind still uses the older shared
-presenter path and remains out of scope until Fusion is accepted.
+responsive frame. Equipment, Shop, Fusion, and Bind own their active internal
+presentation as scene-authored controls. The older Bind panel remains as a
+hidden compatibility presenter while the dedicated view is active.
 
 ## 2. What makes Equipment work
 
@@ -104,7 +106,8 @@ Shop is the reference for a data-heavy scrollable transaction menu.
 
 ## 5. Shared display and input contract
 
-Fusion and Bind should adopt these rules before adding polish:
+These rules are the active contract for Fusion and Bind as well as the existing
+Equipment and Stats views:
 
 1. Native geometry is authored at `240x160`; all horizontal expansion goes
    through the existing display/layout helpers.
@@ -221,23 +224,25 @@ name/detail panel, free-form stat strings, greyed rows, and an additional action
 label. The next implementation pass should be judged against Shop's actual
 `render_shop()` and scene node positions before adding any new visual elements.
 
-## 7. Bind gap analysis
+## 7. Bind gap analysis and migration record
 
-Bind currently uses dynamically created `hub_binding_panel`, text sprites, and a
-single action button. It has useful data and clear status messages, but it does
-not yet have the same authored interaction contract:
+Bind now has a dedicated `scenes/bind_menu.tscn` and `BindMenuLayout` view. The
+older dynamically created `hub_binding_panel`, text sprites, and action button
+remain as a compatibility fallback, but the active Hub path uses the authored
+view. The remaining review work is visual orientation and touch acceptance:
 
-- current and bound element rows have no dedicated visual data layout scene;
-- the action button is the only explicit child control, so cursor ownership is
-  inherited from the hub shell rather than modeled by route depth;
-- status, cost, and action text are refreshed in the controller alongside
-  visibility decisions;
-- touch targets are not a complete panel-level interaction map;
-- portrait/landscape behavior depends on the shell's dynamic coordinates instead
-  of scene-native metadata;
-- the panel has no explicit preview/confirm state that can be tested like Shop.
+- `BindMenuLayout` owns the current/bound element rows, souls, cost, status,
+  action target, command cursor, and action cursor;
+- its Back hit target now shares the canonical Hub footer lane;
+- the shell still owns the visible shared SELECT/BACK glyphs while Bind's
+  internal Back target remains transparent;
+- portrait/landscape and touch interaction still need the same runtime pass as
+  the other Hub routes.
 
 ### Recommended Bind shape
+
+The following list is the original migration target and is retained as a design
+reference for future polish:
 
 Create `scenes/bind_menu.tscn` and `scripts/bind_menu_layout.gd` with an authored
 panel matching the Shop and Stats frame language. It should contain:

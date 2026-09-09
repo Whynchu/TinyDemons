@@ -8,6 +8,7 @@ func _initialize() -> void:
 	Input.action_release(&"attack")
 	Input.action_release(&"move_right")
 	Input.action_release(&"ui_accept")
+	Input.action_release(&"open_minimap")
 
 	Input.action_press(&"attack")
 	Input.action_press(&"move_right")
@@ -30,6 +31,13 @@ func _initialize() -> void:
 	_expect(router.ui_accept_just_pressed(), "UI accept edge is available to menu consumers", failures)
 
 	Input.action_release(&"ui_accept")
+	Input.action_press(&"open_minimap")
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.just_pressed(&"open_minimap"), "the dedicated minimap action produces a gameplay edge", failures)
+	Input.action_release(&"open_minimap")
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.just_released(&"open_minimap"), "the dedicated minimap action releases cleanly", failures)
+
 	Input.action_press(&"ui_down")
 	router.poll(InputRouter.Context.MENU)
 	_expect(router.menu_direction_just_pressed(&"ui_down"), "first menu direction press produces a navigation edge", failures)

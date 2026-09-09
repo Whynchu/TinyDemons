@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.93"
+const GAME_VERSION := "0.1.94"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2094,9 +2094,7 @@ func _hide_legacy_shop_presenter() -> void:
 func _shop_item_signature(item: ItemInstance) -> Dictionary:
 	if item == null:
 		return {}
-	var catalog := ItemCatalog.new()
-	var item_name := str(catalog.definition_data(item.definition_id).get("name", "UNKNOWN ITEM"))
-	return {"name": item_name, "enhancement_level": item.enhancement_level}
+	return {"stack_key": item.shop_stack_key()}
 
 
 func _shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -2355,12 +2353,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	var max_quantity := 1
 	if selected_item != null:
 		if sell_mode:
-			for data: Dictionary in profile.inventory:
-				var owned_item := ItemInstance.from_dictionary(data)
-				if profile.equipped_instance_ids.values().has(owned_item.instance_id):
-					continue
-				if _shop_item_signature(owned_item) == _shop_item_signature(selected_item):
-					owned_count += 1
+			owned_count = int(root.call("_hub_shop_owned_matching_count", selected_item))
 			max_quantity = maxi(owned_count, 1)
 		else:
 			for data: Dictionary in profile.inventory:
@@ -3302,6 +3295,11 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 	# pixel separation between the two prompt groups and a two-pixel glyph/text
 	# breathing gap inside each group.
 	view.set_navigation_texture(_pixel_prompt_sequence_texture(pixel_texture, [confirm_prompt, back_prompt], Color.WHITE, 9, 2))
+	# The Demon Hub already owns its canonical shared SELECT/BACK footer. The
+	# standalone equipment presenter keeps its prompt only in Pause, where it is
+	# the active route's footer and the shared Hub footer is not mounted.
+	if view.has_method("set_navigation_visible"):
+		view.call("set_navigation_visible", target_view != null)
 	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
 
 	var catalog := ItemCatalog.new()

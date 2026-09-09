@@ -56,7 +56,10 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 	authored_run3 = completed_runs == 2
 	authored_run4 = completed_runs == 3
 	authored_run5 = completed_runs == 4
-	authored_run6 = completed_runs == 5
+	# R5 is the last authored route for the current content slice. Run 6 and
+	# onward use the deterministic generator until a distinct authored R6 plan is
+	# ready; keeping the old compiler available preserves historical tooling.
+	authored_run6 = false
 	if authored_run1:
 		layout = RUN1_LAYOUT_SCRIPT.build()
 		var errors: Array[String] = layout.validate()
@@ -82,11 +85,6 @@ func begin_run(target_graph: DungeonGraph, dungeon_seed: int, completed_runs: in
 		var run5_errors: Array[String] = layout.validate()
 		for error in run5_errors:
 			push_error("Run 5 layout: %s" % error)
-	elif authored_run6:
-		layout = RUN6_LAYOUT_SCRIPT.build(starter_flame, rotation_quarter_turns)
-		var run6_errors: Array[String] = layout.validate()
-		for error in run6_errors:
-			push_error("Run 6 layout: %s" % error)
 	else:
 		layout = LAYOUT_GENERATOR_SCRIPT.build(dungeon_seed, completed_runs, starter_flame, layout_bound_flame)
 		# Continue/load paths can hand us an already-created generated layout. Run
@@ -337,6 +335,8 @@ func on_room_entered(room_id: StringName, arrival_socket_id: StringName = &"") -
 	var room := graph.get_room(room_id)
 	if room == null:
 		return
+	if not room.fire_flame.is_empty():
+		state.mark_flame_visited(room.id)
 	# Non-combat utility rooms have no later encounter event to announce their
 	# completion. Mark them when the player physically enters them, while keeping
 	# puzzle/orb objectives tied to their actual interactions.
@@ -355,6 +355,47 @@ func on_room_entered(room_id: StringName, arrival_socket_id: StringName = &"") -
 		var incoming := connection_value as DungeonGraph.ConnectionRecord
 		if incoming != null and _event_reveal_satisfied(incoming):
 			state.reveal_connection(incoming)
+
+
+func is_flame_visited(room_id: StringName) -> bool:
+	return state != null and state.is_flame_visited(room_id)
+
+
+func flame_room_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	if graph == null:
+		return result
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room != null and not room.fire_flame.is_empty():
+			result.append(room.id)
+	return result
+
+
+func teleport_destination_room_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	if graph == null:
+		return result
+	if graph.get_room(graph.start_room_id) != null:
+		result.append(graph.start_room_id)
+	result.append_array(flame_room_ids())
+	return result
+
+
+func can_fast_travel_to_flame(current_room_id: StringName, target_room_id: StringName) -> bool:
+	if graph == null or state == null or current_room_id.is_empty() or target_room_id.is_empty() or current_room_id == target_room_id:
+		return false
+	var current_room := graph.get_room(current_room_id)
+	var target_room := graph.get_room(target_room_id)
+	if current_room == null or target_room == null:
+		return false
+	# Fast travel starts at a Hub or an activated flame room.
+	var valid_origin := current_room.room_type == DungeonGraph.ROOM_START or not current_room.fire_flame.is_empty()
+	if not valid_origin:
+		return false
+	if target_room.id == graph.start_room_id:
+		return true
+	return not target_room.fire_flame.is_empty() and state.is_flame_visited(target_room_id)
 
 
 func on_room_completed(room_id: StringName) -> void:

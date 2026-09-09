@@ -213,6 +213,12 @@ func _initialize() -> void:
 			_expect(false, "generated map exposes a lower dig branch for engagement testing", failures)
 	branch_map.free()
 
+	var r6_graph = GRAPH_SCRIPT.new()
+	var r6_map = MAP_CONTROLLER_SCRIPT.new()
+	r6_map.begin_run(r6_graph, 24681356, 5, &"water")
+	_expect(not r6_map.is_authored_layout() and r6_map.has_complete_layout(), "Run 6 uses a generated complete layout after the last authored route", failures)
+	r6_map.free()
+
 	var run_graph = GRAPH_SCRIPT.new()
 	var map = MAP_CONTROLLER_SCRIPT.new()
 	map.begin_run(run_graph, 24681357, 6, &"water")

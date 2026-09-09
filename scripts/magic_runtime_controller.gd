@@ -191,8 +191,9 @@ func sync_chroma_presentation(root: Object) -> void:
 	if component == null:
 		return
 	var flame := String(component.call("aspect_name"))
-	var chroma := int(component.get("current_chroma"))
-	var palette := "grey" if flame == "gray" or chroma <= 0 else AspectCatalogScript.palette_for_flame(StringName(flame))
+	# Zero Chroma desaturates through the shared MP material. It does not erase
+	# the bound elemental identity or make the palette flash back to Gray.
+	var palette := "grey" if flame == "gray" else AspectCatalogScript.palette_for_flame(StringName(flame))
 	if palette.is_empty() or palette == String(root.get("current_player_palette_name")):
 		return
 	root.call("_start_player_palette_flash", palette)

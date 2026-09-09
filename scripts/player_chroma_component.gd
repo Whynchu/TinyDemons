@@ -51,9 +51,14 @@ func begin_new_run() -> void:
 func restore_runtime_state(saved_aspect: int, saved_chroma: int, saved_bound_aspect: int) -> void:
 	var next_aspect := clampi(saved_aspect, int(Aspect.NONE), int(Aspect.ICE)) as Aspect
 	var next_bound := clampi(saved_bound_aspect, int(Aspect.NONE), int(Aspect.ICE)) as Aspect
-	_set_aspect(next_aspect)
 	bound_aspect = next_bound
 	_sync_binding_state()
+	# Older saves could persist a depleted bound run with current_aspect set to
+	# NONE. Restore its elemental identity before applying the saved Chroma so a
+	# zero bar remains a weakened bound element instead of becoming Gray.
+	if next_aspect == Aspect.NONE and next_bound != Aspect.NONE:
+		next_aspect = next_bound
+	_set_aspect(next_aspect)
 	_set_chroma(saved_chroma)
 
 
@@ -87,18 +92,18 @@ func refill_chroma() -> bool:
 	return true
 
 
-func restore_neutral_chroma(_value: int = CHROMA_PICKUP_VALUE) -> bool:
-	# A pickup reactivates the permanent identity whenever one exists. This also
-	# clears a temporary fusion immediately; waiting for a later cast leaves the
-	# player visually and defensively out of sync with their bound flame.
-	if bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
+
+func restore_neutral_chroma(value: int = CHROMA_PICKUP_VALUE) -> bool:
+	# Neutral Chroma is a resource even while the player is Gray. It fills the
+	# bar without inventing an elemental identity; a bound element remains the
+	# current identity throughout depletion and recovery. A temporary fusion still
+	# resolves back to its permanent identity when a pickup recharges it.
+	if current_aspect != Aspect.NONE and bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
 		_set_aspect(bound_aspect)
-	# Gray with no permanent identity still cannot store Chroma.
-	if current_aspect == Aspect.NONE:
+	var restore_amount := maxi(value, 0)
+	if restore_amount <= 0 or current_chroma >= MAX_CHROMA:
 		return false
-	if current_chroma >= MAX_CHROMA:
-		return false
-	_set_chroma(mini(current_chroma + CHROMA_PICKUP_VALUE, MAX_CHROMA))
+	_set_chroma(mini(current_chroma + restore_amount, MAX_CHROMA))
 	return true
 
 
@@ -121,8 +126,9 @@ func spend_chroma(amount: int) -> bool:
 		return false
 	_set_chroma(current_chroma - amount)
 	if current_chroma == 0:
-		# A temporary fusion is useful while charged. Once it is depleted, return
-		# to the permanent identity when one exists; otherwise resolve Gray.
+		# A temporary fusion returns to the permanent identity when it depletes.
+		# A bound identity stays elemental at zero and resolves its weakened
+		# ability mode; only an unbound aspect becomes Gray.
 		if bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
 			_set_aspect(bound_aspect)
 		elif bound_aspect == Aspect.NONE:
@@ -211,6 +217,28 @@ func aspect_name() -> StringName:
 		Aspect.ICE:
 			return &"ice"
 	return &"gray"
+
+
+func chroma_palette_name() -> String:
+	## Pickups follow the aspect that is currently meaningful to the player.
+	## Gray is the neutral pickup color, including a normal player with a full
+	## neutral bar.
+	match current_aspect:
+		Aspect.FIRE:
+			return "red"
+		Aspect.WATER:
+			return "blue"
+		Aspect.ELECTRIC:
+			return "yellow"
+		Aspect.GRASS:
+			return "green"
+		Aspect.SHADOW:
+			return "purple"
+		Aspect.GROUND:
+			return "orange"
+		Aspect.ICE:
+			return "aquamarine"
+	return "grey"
 
 
 func bound_aspect_name() -> StringName:

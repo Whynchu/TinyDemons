@@ -426,6 +426,27 @@ func enter_room(room_id: StringName, room_type: StringName, arrival_socket: Stri
 	set_current_room(room_id, room_type)
 
 
+func fast_travel_to_flame(root: Object, destination_room_id: StringName) -> bool:
+	if root == null or transition_locked or bool(root.get("room_transition_locked")):
+		return false
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var map_controller := root.get("dungeon_map_controller") as Node
+	if graph == null or map_controller == null:
+		return false
+	var current_room := graph.get_room(StringName(root.get("current_room_id")))
+	var destination_room := graph.get_room(destination_room_id)
+	if current_room == null or destination_room == null:
+		return false
+	var valid_origin := current_room.room_type == DungeonGraph.ROOM_START or not current_room.fire_flame.is_empty()
+	var valid_destination := destination_room.id == graph.start_room_id or not destination_room.fire_flame.is_empty()
+	if not valid_origin or not valid_destination:
+		return false
+	if not bool(map_controller.call("can_fast_travel_to_flame", current_room.id, destination_room.id)):
+		return false
+	enter_connected_room(root, destination_room.id, &"")
+	return true
+
+
 func begin_transition() -> void:
 	transition_locked = true
 

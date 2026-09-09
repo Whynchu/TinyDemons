@@ -35,6 +35,34 @@ func to_dictionary() -> Dictionary:
 	}
 
 
+func shop_stack_key() -> String:
+	## SELL rows represent one exact inventory variant.  A display name is not
+	## enough: rarity, random `+` rolls, transmutation, and fusion investment all
+	## change the value or the identity the player is managing.
+	var random_parts: Array[String] = []
+	var random_keys := random_stat_points.keys()
+	random_keys.sort()
+	for key: Variant in random_keys:
+		random_parts.append("%s=%d" % [str(key), int(random_stat_points[key])])
+	var affix_parts: Array[String] = []
+	var affix_keys := affixes.keys()
+	affix_keys.sort()
+	for key: Variant in affix_keys:
+		affix_parts.append("%s=%s" % [str(key), str(affixes[key])])
+	return "%s|rarity=%s|quality=%.4f|affixes=%s|random=%s|transmutation=%s|enhancement=%d|fusion_points=%d|fusion_count=%d|fusion_souls=%d" % [
+		String(definition_id),
+		String(rarity),
+		quality,
+		";".join(affix_parts),
+		";".join(random_parts),
+		String(transmutation_id),
+		enhancement_level,
+		fusion_stat_points,
+		fusion_count,
+		fusion_souls_invested,
+	]
+
+
 static func from_dictionary(data: Dictionary) -> ItemInstance:
 	var item := ItemInstance.new()
 	item.instance_id = str(data.get("instance_id", ""))

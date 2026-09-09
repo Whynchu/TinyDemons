@@ -9,6 +9,9 @@ func _initialize() -> void:
 	var manager := SoundManager.new()
 	root.add_child(manager)
 	await process_frame
+	manager.preload_music_tracks()
+	var music_cache: Dictionary = manager.get("_music_stream_cache") as Dictionary
+	_expect(music_cache.values().size() >= 2, "title and run music streams are decoded during boot warmup", failures)
 
 	gameplay.sound_manager = manager
 	var run_state := RunState.new()

@@ -61,7 +61,7 @@ func _initialize() -> void:
 				_expect(icon != null and icon.texture != null and icon.texture.get_width() == 5 and icon.texture.get_height() == 5, "equipment slot %d renders its 5x5 icon" % index, failures)
 		_expect(screens.hub_equipment_mode == 0 and view.command_cursor.visible, "equipment opens on its command row", failures)
 		_expect(bool(view.command_cursor.call("is_bobbing")), "Hub equipment command cursor starts its idle animation", failures)
-		_expect((view.get_node("DescriptionText0") as Sprite2D).texture == null and (view.get_node("BonusText0") as Sprite2D).texture == null and not (view.get_node("CandidateText0") as Sprite2D).visible, "command row clears item description and final bonus strip before slot selection", failures)
+		_expect((view.get_node("DescriptionText0") as Sprite2D).texture == null and (view.get_node("BonusText0") as Sprite2D).texture == null and not (view.get_node("CandidateClip/CandidateText0") as Sprite2D).visible, "command row clears item description and final bonus strip before slot selection", failures)
 		view.navigation_back_button.pressed.emit()
 		await process_frame
 		_expect(screens.hub_is_root and not view.visible, "the navigation-cell Back prompt unwinds Equipment through the normal touch route", failures)
@@ -92,7 +92,9 @@ func _initialize() -> void:
 			_expect(bonus_text.position.x + bonus_text.texture.get_width() <= next_x and bonus_text.texture.get_height() <= 12, "Demon Cloak stat column %d does not overlap" % index, failures)
 		gameplay.call("_select_hub_gear_slot", 0)
 		await process_frame
-		_expect(screens.hub_equipment_mode == 3 and view.candidate_cursor.visible and view.get_node("CandidateText0").texture != null and (view.get_node("CandidateText0") as Sprite2D).visible and not (view.get_node("DescriptionText0") as Sprite2D).visible, "selecting a populated slot opens the two-column candidate grid", failures)
+		_expect(view.get_node("CandidateClip").clip_contents, "candidate rows are clipped to the authored description window", failures)
+		_expect(view.get_node("CandidateClip/CandidateText0").get_parent() == view.get_node("CandidateClip"), "candidate rows share the clipping parent", failures)
+		_expect(screens.hub_equipment_mode == 3 and view.candidate_cursor.visible and view.get_node("CandidateClip/CandidateText0").texture != null and (view.get_node("CandidateClip/CandidateText0") as Sprite2D).visible and not (view.get_node("DescriptionText0") as Sprite2D).visible, "selecting a populated slot opens the two-column candidate grid", failures)
 		_expect((view.get_node("SlotIcon0") as Sprite2D).visible and view.slot_cursor.modulate == EquipmentMenuLayout.DIM_CURSOR_MODULATE, "the six equipped icons persist and the previous cursor dims by fifty percent", failures)
 		var input_tracker := gameplay.get("input_device_tracker") as InputDeviceTracker
 		var equipped_before_touch := profile.get_equipped_instance_id(&"weapon")

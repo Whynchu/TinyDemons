@@ -43,6 +43,7 @@ var _last_render_slot_index := 0
 var _last_render_candidate_index := 0
 var _last_render_confirm_index := 1
 var _candidate_scroll_fraction := 0.0
+var _navigation_visible := true
 
 var command_buttons: Array[Button] = []
 var slot_buttons: Array[Button] = []
@@ -64,6 +65,7 @@ var _command_texts: Array[Sprite2D] = []
 var _confirm_texts: Array[Sprite2D] = []
 var _slot_icons: Array[Sprite2D] = []
 var _panels: Array[Control] = []
+var candidate_clip: Control = null
 var navigation_panel: Control = null
 var navigation_text: Sprite2D = null
 var navigation_back_button: Button = null
@@ -112,8 +114,8 @@ func _cache_nodes() -> void:
 		if slot_text != null: _slot_texts.append(slot_text)
 		if slot_icon != null: _slot_icons.append(slot_icon)
 	for index in 8:
-		var candidate_button := get_node_or_null("CandidateButton%d" % index) as Button
-		var candidate_text := get_node_or_null("CandidateText%d" % index) as Sprite2D
+		var candidate_button := get_node_or_null("CandidateClip/CandidateButton%d" % index) as Button
+		var candidate_text := get_node_or_null("CandidateClip/CandidateText%d" % index) as Sprite2D
 		if candidate_button != null: candidate_buttons.append(candidate_button)
 		if candidate_text != null: _candidate_texts.append(candidate_text)
 	for index in 4:
@@ -131,6 +133,7 @@ func _cache_nodes() -> void:
 	for index in 2:
 		var confirm_text := get_node_or_null("ConfirmText%d" % index) as Sprite2D
 		if confirm_text != null: _confirm_texts.append(confirm_text)
+	candidate_clip = get_node_or_null("CandidateClip") as Control
 	navigation_panel = get_node_or_null("NavigationPanel") as Control
 	navigation_text = get_node_or_null("NavigationText") as Sprite2D
 	navigation_back_button = get_node_or_null("NavigationBackButton") as Button
@@ -194,6 +197,9 @@ func _apply_layout() -> void:
 	if description != null:
 		description.position = Vector2(0.0, 84.0)
 		description.size = Vector2(width, 49.0)
+	if candidate_clip != null:
+		candidate_clip.position = Vector2(0.0, 84.0)
+		candidate_clip.size = Vector2(width, 49.0)
 	var stat := get_node_or_null("StatPanel") as Control
 	if stat != null:
 		stat.position = Vector2(0.0, 133.0)
@@ -242,6 +248,7 @@ func _apply_responsive_content(width: float) -> void:
 		var resolved_rect := RESPONSIVE_LAYOUT_SCRIPT.map_rect(native_rect, width, NATIVE_SIZE.x)
 		button.position.x = resolved_rect.position.x
 		button.size.x = resolved_rect.size.x
+	_apply_candidate_scroll()
 
 
 func _apply_button_style() -> void:
@@ -271,8 +278,18 @@ func set_navigation_texture(texture: Texture2D) -> void:
 	if navigation_text == null:
 		return
 	navigation_text.texture = texture
-	navigation_text.visible = texture != null
+	navigation_text.visible = _navigation_visible and texture != null
 	_apply_layout()
+
+
+func set_navigation_visible(value: bool) -> void:
+	_navigation_visible = value
+	if navigation_panel != null:
+		navigation_panel.visible = value
+	if navigation_back_button != null:
+		navigation_back_button.visible = value
+	if navigation_text != null:
+		navigation_text.visible = value and navigation_text.texture != null
 
 
 func _editor_texture(renderer: EffectsSpawner, value: String, color: Color = EDITOR_PREVIEW_COLOR) -> Texture2D:
@@ -422,7 +439,7 @@ func set_candidates(labels: Array[String], colors: Array[Color] = [], _selected_
 func _apply_candidate_scroll() -> void:
 	var offset_y := _candidate_scroll_fraction * 9.0
 	for index in _candidate_texts.size():
-		_candidate_texts[index].position.y = 93.0 + floori(float(index) / 2.0) * 9.0 - offset_y
+		_candidate_texts[index].position.y = 9.0 + floori(float(index) / 2.0) * 9.0 - offset_y
 	for index in candidate_buttons.size():
 		var button := candidate_buttons[index]
 		var native_rect := button.get_meta("equipment_native_rect", Rect2(button.position, button.size)) as Rect2
@@ -532,7 +549,9 @@ func render_cursors(mode: int, action_index: int, slot_index: int, candidate_ind
 			# The candidate-name glyphs sit on a half-pixel higher native baseline
 			# than the hitbox. Keep the hand aligned to the rendered name, not the
 			# button's lower edge.
-			candidate_target = candidate_button.position + Vector2(9.0, 0.0)
+			var candidate_parent := candidate_button.get_parent() as Control
+			var parent_position := candidate_parent.position if candidate_parent != null else Vector2.ZERO
+			candidate_target = parent_position + candidate_button.position + Vector2(9.0, 0.0)
 	# Remove All confirmation reuses the command's existing position: the
 	# grey locked cursor and the live bobbing cursor stack there in place.
 	var confirm_target := command_target if mode == MODE_REMOVE_ALL_CONFIRM else Vector2(74.0 if confirm_index == 0 else 110.0, 110.0)
@@ -567,12 +586,12 @@ func render_mode(mode: int, action_index: int, slot_index: int, candidate_index:
 	for button in confirm_buttons:
 		button.visible = false
 	if navigation_panel != null:
-		navigation_panel.visible = true
+		navigation_panel.visible = _navigation_visible
 	if navigation_back_button != null:
 		# The navigation cell is the touch-only Back affordance. It remains
 		# available in Pause's read-only shared view while the transaction
 		# buttons stay suppressed by the active depth.
-		navigation_back_button.visible = true
+		navigation_back_button.visible = _navigation_visible
 	var confirm_panel := get_node_or_null("ConfirmPanel") as Control
 	if confirm_panel != null: confirm_panel.visible = mode == MODE_REMOVE_ALL_CONFIRM
 	render_cursors(mode, action_index, slot_index, candidate_index, confirm_index)

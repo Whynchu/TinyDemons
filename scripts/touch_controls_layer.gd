@@ -38,7 +38,7 @@ const BUTTON_GRID_POSITIONS := {
 }
 const BUTTON_LABELS := {
 	&"attack": "ATK", &"roll": "ROLL", &"magic": "MAG",
-	&"guard": "GUARD", &"target": "TGT", &"interact": "USE", &"pause": "II", &"cancel": "CANCEL",
+	&"guard": "GUARD", &"target": "TGT", &"interact": "USE", &"pause": "II", &"open_minimap": "MAP", &"cancel": "CANCEL",
 }
 
 var _touch_root: Control = null
@@ -86,6 +86,7 @@ func build() -> void:
 	for action in BUTTON_ORDER:
 		_build_button(action)
 	_build_button(&"pause")
+	_build_button(&"open_minimap")
 	_build_button(&"cancel")
 	var window := get_window()
 	if window != null and not window.size_changed.is_connected(_update_layout):
@@ -146,7 +147,7 @@ func snapshot() -> Dictionary:
 		return {"active": false, "movement": Vector2.ZERO, "actions": {}, "just_pressed": {}}
 	_clear_stale_menu_accepts()
 	var actions: Dictionary = {}
-	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard"]:
+	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"open_minimap", &"target", &"guard"]:
 		actions[action] = action_pressed(action)
 	actions[&"ui_accept"] = action_pressed(&"interact")
 	actions[&"ui_cancel"] = action_pressed(&"cancel")
@@ -180,7 +181,8 @@ func set_virtual_stick(value: Vector2) -> void:
 
 func set_button_state(action: StringName, pressed: bool) -> void:
 	var menu_cancel_enabled := action == &"cancel" and _touch_input_enabled
-	if not _controls_visible and not menu_cancel_enabled:
+	var menu_minimap_enabled := action == &"open_minimap" and _touch_input_enabled and _input_context == CONTEXT_MENU and _is_minimap_open()
+	if not _controls_visible and not menu_cancel_enabled and not menu_minimap_enabled:
 		if not pressed:
 			_pressed_actions[action] = false
 			_update_button_visual(action)
@@ -220,6 +222,7 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictiona
 		buttons[action] = Rect2(cluster_origin + Vector2(float(grid_position.x) * (button + gap), float(grid_position.y) * (button + gap)), Vector2(button, button))
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
 	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))
+	var minimap := Rect2(Vector2(maxf(margin, pause.position.x - gap - pause_side), margin), pause.size)
 	var cancel_width := clampf(button * 2.5, 42.0, 96.0)
 	var cancel_position := Vector2(maxf(margin, viewport_size.x - margin - cancel_width), maxf(margin, viewport_size.y - margin - button))
 	var cancel := Rect2(cancel_position, Vector2(cancel_width, button))
@@ -233,6 +236,7 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictiona
 		"stick_diameter": stick_diameter,
 		"buttons": buttons,
 		"pause": pause,
+		"minimap": minimap,
 		"cancel": cancel,
 	}
 
@@ -328,6 +332,14 @@ func _input(event: InputEvent) -> void:
 
 func _finger_down(finger_id: int, position: Vector2) -> void:
 	if not _touch_input_enabled:
+		return
+	# The MAP button remains available while the full map is open so a touch
+	# player can close the overlay after opening it from gameplay.
+	var minimap: Rect2 = _layout.get("minimap", Rect2())
+	if _is_minimap_open() and minimap.has_point(position):
+		_finger_actions[finger_id] = &"open_minimap"
+		set_button_state(&"open_minimap", true)
+		_update_touch_capture_filter()
 		return
 	# Menu and dialogue input is single-finger. A new touch supersedes any ghost
 	# left by a missed touchend, which would otherwise hold interact/accept
@@ -431,6 +443,11 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 				set_button_state(action, true)
 			_update_touch_capture_filter()
 			return
+	if minimap.has_point(position) and _controls_visible and _input_context == CONTEXT_GAMEPLAY:
+		_finger_actions[finger_id] = &"open_minimap"
+		set_button_state(&"open_minimap", true)
+		_update_touch_capture_filter()
+		return
 	var pause: Rect2 = _layout.get("pause", Rect2())
 	if pause.has_point(position):
 		_finger_actions[finger_id] = &"pause"
@@ -736,10 +753,20 @@ func _update_touch_capture_filter() -> void:
 func _button_rect(action: StringName) -> Rect2:
 	if action == &"pause":
 		return _layout.get("pause", Rect2())
+	if action == &"open_minimap":
+		return _layout.get("minimap", Rect2())
 	if action == &"cancel":
 		return _layout.get("cancel", Rect2())
 	var buttons: Dictionary = _layout.get("buttons", {})
 	return buttons.get(action, Rect2())
+
+
+func _is_minimap_open() -> bool:
+	var host := get_parent()
+	if host == null:
+		return false
+	var minimap := host.get("dungeon_minimap_controller") as Node
+	return minimap != null and minimap.has_method("is_map_open") and bool(minimap.call("is_map_open"))
 
 
 func _cancel_control_visible() -> bool:
@@ -901,6 +928,8 @@ func _refresh_controls() -> void:
 			control_visible = _cancel_control_visible()
 		elif action == &"pause":
 			control_visible = _controls_visible
+		elif action == &"open_minimap":
+			control_visible = (_controls_visible and _input_context == CONTEXT_GAMEPLAY) or (_touch_input_enabled and _input_context == CONTEXT_MENU and _is_minimap_open())
 		(_button_nodes[action] as Control).visible = control_visible
 
 
@@ -920,9 +949,12 @@ func _clear_gameplay_input() -> void:
 	_target_toggle_active = false
 	_pressed_actions[&"pause"] = false
 	_update_button_visual(&"pause")
+	_pressed_actions[&"open_minimap"] = false
+	_update_button_visual(&"open_minimap")
 	for action in BUTTON_ORDER:
 		_press_latches.erase(action)
 	_press_latches.erase(&"pause")
+	_press_latches.erase(&"open_minimap")
 
 
 func _clear_transient_input() -> void:
