@@ -22,6 +22,7 @@ var shared_orb_palette := DEFAULT_ORB_PALETTE
 var current_room_id: StringName = &""
 var current_arrival_connection_key := ""
 var discovered_rooms: Dictionary = {}
+var visited_flame_rooms: Dictionary = {}
 var completed_rooms: Dictionary = {}
 var engaged_rooms: Dictionary = {}
 var revealed_connections: Dictionary = {}
@@ -43,6 +44,7 @@ func begin(start_room_id: StringName) -> void:
 	current_room_id = &""
 	current_arrival_connection_key = ""
 	discovered_rooms.clear()
+	visited_flame_rooms.clear()
 	completed_rooms.clear()
 	engaged_rooms.clear()
 	revealed_connections.clear()
@@ -115,6 +117,18 @@ func mark_room_discovered(room_id: StringName) -> void:
 	discovered_rooms[room_id] = true
 	current_room_id = room_id
 	changed.emit()
+
+
+func mark_flame_visited(room_id: StringName) -> bool:
+	if room_id.is_empty() or visited_flame_rooms.has(room_id):
+		return false
+	visited_flame_rooms[room_id] = true
+	changed.emit()
+	return true
+
+
+func is_flame_visited(room_id: StringName) -> bool:
+	return not room_id.is_empty() and bool(visited_flame_rooms.get(room_id, false))
 
 
 func set_current_arrival(connection: DungeonGraph.ConnectionRecord) -> void:
@@ -247,6 +261,7 @@ func to_dictionary() -> Dictionary:
 		"current_room_id": current_room_id,
 		"current_arrival_connection_key": current_arrival_connection_key,
 		"discovered_rooms": discovered_rooms.duplicate(),
+		"visited_flame_rooms": visited_flame_rooms.duplicate(),
 		"completed_rooms": completed_rooms.duplicate(),
 		"engaged_rooms": engaged_rooms.duplicate(),
 		"revealed_connections": revealed_connections.duplicate(),
@@ -280,6 +295,7 @@ func restore_from_dictionary(data: Dictionary) -> bool:
 	current_room_id = StringName(str(data.get("current_room_id", "")))
 	current_arrival_connection_key = str(data.get("current_arrival_connection_key", ""))
 	discovered_rooms = _string_name_dictionary(data.get("discovered_rooms", {}))
+	visited_flame_rooms = _string_name_dictionary(data.get("visited_flame_rooms", {}))
 	completed_rooms = _string_name_dictionary(data.get("completed_rooms", {}))
 	engaged_rooms = _string_name_dictionary(data.get("engaged_rooms", {}))
 	revealed_connections = _dictionary(data.get("revealed_connections", {}))

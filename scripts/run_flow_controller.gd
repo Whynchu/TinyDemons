@@ -200,6 +200,20 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 		layout_bound_flame = bound_flame
 	var rotation_turns := int(snapshot.get("puzzle_attempt_rotation_quarter_turns", root.player_profile.puzzle_attempt_rotation_quarter_turns))
 	map_controller.call("begin_run", root.dungeon_graph, snapshot_seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame, rotation_turns)
+	var active_layout: Variant = map_controller.get("layout")
+	var active_layout_id: String = String(active_layout.layout_id) if active_layout != null else ""
+	var snapshot_layout_id: String = str(snapshot.get("layout_id", ""))
+	if snapshot_layout_id.is_empty():
+		# Schema 1 snapshots created before the R6 route switch cannot identify
+		# whether completed_runs==5 refers to the old authored duplicate or the
+		# generated route. Refuse that ambiguous restore and leave the checkpoint
+		# available for an explicit Discard choice instead of loading the wrong map.
+		if root.player_profile.completed_runs == 5:
+			push_warning("Active run restore refused an unidentified legacy R6 layout; the checkpoint remains available to Discard.")
+			return false
+	elif snapshot_layout_id != active_layout_id:
+		push_warning("Active run restore refused layout %s because the active route is %s." % [snapshot_layout_id, active_layout_id])
+		return false
 	# The layout was generated from the saved origin, but the current persistent
 	# bind still controls the Hub and available flame presentation after restore.
 	map_controller.call("set_bound_flame", bound_flame)

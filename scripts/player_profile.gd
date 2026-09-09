@@ -76,6 +76,9 @@ var souls := 0
 var starter_soul_gift_claimed := false
 var demon_cloak_purchases := 0
 var inventory: Array[Dictionary] = []
+## Monotonic in-memory revision used by derived inventory views. It is not
+## persisted because a loaded profile starts a fresh cache generation.
+var inventory_revision := 0
 ## Canonical state has six slots. The `armor` key is retained as a synchronized
 ## load/save alias so older menu/test callers do not lose the Body item during
 ## migration.
@@ -120,6 +123,7 @@ func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 				if str(inventory[index].get("instance_id", "")) == starter.instance_id:
 					existing.definition_id = starter.definition_id
 					inventory[index] = existing.to_dictionary()
+					inventory_revision += 1
 					break
 		grant_item(starter)
 		if get_equipped_instance_id(slot).is_empty():
@@ -131,6 +135,7 @@ func grant_item(item: ItemInstance) -> bool:
 	if item == null or item.instance_id.is_empty() or find_item(item.instance_id) != null:
 		return false
 	inventory.append(item.to_dictionary())
+	inventory_revision += 1
 	return true
 
 
@@ -212,6 +217,7 @@ func purchase_item(item: ItemInstance, cost: int) -> bool:
 		return false
 	gold -= cost
 	inventory.append(item.to_dictionary())
+	inventory_revision += 1
 	return true
 
 
@@ -231,6 +237,7 @@ func sell_item(instance_id: String, catalog: ItemCatalog = null) -> Dictionary:
 		inventory.remove_at(index)
 		gold += value
 		souls += soul_value
+		inventory_revision += 1
 		return {"gold": value, "souls": soul_value}
 	return {}
 
@@ -267,6 +274,7 @@ func sell_items(instance_ids: Array[String], catalog: ItemCatalog = null) -> Dic
 		if not unique_ids.has(str(data.get("instance_id", ""))):
 			remaining.append(data)
 	inventory = remaining
+	inventory_revision += 1
 	gold += total_gold
 	souls += total_souls
 	return {"count": selected.size(), "gold": total_gold, "souls": total_souls}
@@ -478,6 +486,7 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 	if target_index < 0:
 		return false
 	inventory[target_index] = working.to_dictionary()
+	inventory_revision += 1
 	souls -= cost
 	return true
 
@@ -510,6 +519,7 @@ func salvage_overflow(instance_id: String, catalog: ItemCatalog = null) -> int:
 	for index in inventory.size():
 		if str(inventory[index].get("instance_id", "")) == instance_id:
 			inventory.remove_at(index)
+			inventory_revision += 1
 			var value := items.overflow_salvage_value(item)
 			gold += value
 			return value
@@ -695,6 +705,7 @@ func load_dictionary(data: Dictionary) -> void:
 	demon_cloak_purchases = maxi(int(data.get("demon_cloak_purchases", 0)), 0)
 	var saved_inventory: Variant = data.get("inventory", [])
 	inventory.assign(saved_inventory if saved_inventory is Array else [])
+	inventory_revision = 0
 	equipped_instance_ids = {"weapon": "", "head": "", "body": "", "armor": "", "arm": "", "shield": "", "accessory": ""}
 	var saved_equipment: Variant = data.get("equipped_instance_ids", {})
 	if saved_equipment is Dictionary:

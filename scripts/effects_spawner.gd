@@ -47,13 +47,12 @@ func spawn_chest_evaporation_from_root(root: Object) -> void:
 	var chest := root.get("chest") as Sprite2D; spawn_chest_evaporation_particles(root, chest.texture, chest.global_position, int(round(root.call("_depth_key", chest) * root.get("DEPTH_Z_SCALE"))) + 1, int(root.get("CHEST_EVAPORATE_PARTICLE_COUNT")), float(root.get("CHEST_EVAPORATE_LIFETIME_MIN")), float(root.get("CHEST_EVAPORATE_LIFETIME_MAX")), root.get("rng"), Callable(root, "_pixel_particle_texture"))
 
 
-func spawn_chroma_pickup_burst_from_root(root: Object, world_position: Vector2) -> void:
+func spawn_chroma_pickup_burst_from_root(root: Object, world_position: Vector2, chroma_color: Color = PaletteLibrary.ACCENT["grey"]) -> void:
 	var random_source := RandomNumberGenerator.new()
 	var seed_value := int(round(world_position.x * 100.0)) ^ int(round(world_position.y * 101.0)) ^ Time.get_ticks_msec()
 	random_source.seed = seed_value
 	var origin: Vector2 = root.call("_snap_half_pixel", world_position) as Vector2
 	var z_index := int(round(world_position.y * float(root.get("DEPTH_Z_SCALE")))) + 4
-	var chroma_color: Color = PaletteLibrary.ACCENT["blue"]
 	var flash := Sprite2D.new()
 	flash.name = "ChromaPickupFlash"
 	flash.texture = root.call("_pixel_particle_texture", chroma_color.lerp(Color.WHITE, 0.7), 3) as Texture2D

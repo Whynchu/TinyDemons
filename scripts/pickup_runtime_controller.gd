@@ -10,7 +10,6 @@ const ITEM_DROP_GRAVITY := 92.0
 const ITEM_DROP_AIR_TIME := 0.38
 const ITEM_DROP_ARC_HEIGHT := 8.0
 const ITEM_DROP_FOOTPRINT_PADDING := Vector2(4.0, 2.0)
-const CHROMA_COLOR := PaletteLibrary.ACCENT["blue"]
 const CHROMA_BOB_SPEED := 4.5
 const CHROMA_BOB_AMPLITUDE := 1.5
 const CHROMA_LIGHT_SIZE := 32
@@ -554,7 +553,8 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
 	var sprite := Sprite2D.new()
 	sprite.name = "ChromaPickup"
-	sprite.texture = root.call("_pixel_particle_texture", CHROMA_COLOR, 3) as Texture2D
+	var chroma_color := _chroma_color(root)
+	sprite.texture = root.call("_pixel_particle_texture", chroma_color, 3) as Texture2D
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false
 	sprite.modulate = Color.WHITE
@@ -564,10 +564,11 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	sprite.set_meta("chroma_bob_time", 0.0)
 	sprite.set_meta("chroma_base_position", spawn_position)
 	sprite.set_meta("chroma_last_valid_position", spawn_position)
+	sprite.set_meta("chroma_palette", _chroma_palette_name(root))
 	var light := PointLight2D.new()
 	light.name = "ChromaLight"
 	light.texture = _chroma_light_texture()
-	light.color = CHROMA_COLOR
+	light.color = chroma_color
 	light.energy = CHROMA_LIGHT_ENERGY
 	light.texture_scale = CHROMA_LIGHT_TEXTURE_SCALE
 	light.shadow_enabled = false
@@ -600,6 +601,7 @@ func update_chroma_pickups(root: Object, delta: float) -> void:
 			remove_chroma_pickup(root, index)
 			index -= 1
 			continue
+		_refresh_chroma_pickup_visual(root, pickup)
 		if root.chroma_pickup_controller.air_times[index] > 0.0:
 			root.chroma_pickup_controller.air_times[index] = maxf(root.chroma_pickup_controller.air_times[index] - delta, 0.0)
 			var velocity: Vector2 = root.chroma_pickup_controller.velocities[index]
@@ -646,11 +648,41 @@ func collect_chroma_pickup(root: Object, index: int) -> void:
 		restored = bool(root.player_chroma_component.call("restore_neutral_chroma", value))
 		root.call("_update_player_mp_ui")
 	if restored:
+		# A successful pickup may wake a depleted bound identity or return a
+		# temporary fusion to its permanent aspect. Refresh the player before
+		# choosing effect colors so the burst and HUD agree with the new state.
+		root.call("_sync_chroma_presentation")
+		var chroma_color := _chroma_color(root)
 		if pickup != null and is_instance_valid(pickup):
-			root.call("_spawn_chroma_pickup_burst", pickup.global_position)
-		root.call("_spawn_floating_number", root.call("_actor_foot", root.player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, CHROMA_COLOR, "+%d CHROMA" % value)
+			root.call("_spawn_chroma_pickup_burst", pickup.global_position, chroma_color)
+		root.call("_spawn_floating_number", root.call("_actor_foot", root.player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, chroma_color, "+%d CHROMA" % value)
 		root.call("_play_sound", "item_pickup", -12.0, 1.15)
-	remove_chroma_pickup(root, index)
+		remove_chroma_pickup(root, index)
+
+
+func _chroma_palette_name(root: Object) -> String:
+	var component := root.get("player_chroma_component") as Node
+	if component != null and component.has_method("chroma_palette_name"):
+		return str(component.call("chroma_palette_name"))
+	return "grey"
+
+
+func _chroma_color(root: Object) -> Color:
+	return PaletteLibrary.ACCENT.get(_chroma_palette_name(root), PaletteLibrary.ACCENT["grey"]) as Color
+
+
+func _refresh_chroma_pickup_visual(root: Object, pickup: Sprite2D) -> void:
+	if pickup == null or not is_instance_valid(pickup):
+		return
+	var palette := _chroma_palette_name(root)
+	if str(pickup.get_meta("chroma_palette", "")) == palette:
+		return
+	var color := PaletteLibrary.ACCENT.get(palette, PaletteLibrary.ACCENT["grey"]) as Color
+	pickup.texture = root.call("_pixel_particle_texture", color, 3) as Texture2D
+	var light := pickup.get_node_or_null("ChromaLight") as PointLight2D
+	if light != null:
+		light.color = color
+	pickup.set_meta("chroma_palette", palette)
 
 
 func remove_chroma_pickup(root: Object, index: int) -> void:

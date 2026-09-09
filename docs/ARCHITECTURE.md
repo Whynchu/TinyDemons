@@ -64,8 +64,8 @@ Encrypted-vault deployment and operational verification are documented in
   owns recovery-vault transport; and `cloud_save_panel` owns the title-screen
   recovery workflow. Supabase receives ciphertext, never profile JSON.
 - **Presentation**: `hud_controller`, `effects_spawner`,
-  `screen_state_controller`, `sprite_frame_library`, `display_controller`,
-  `display_layout`.
+  `screen_state_controller`, `dungeon_minimap_controller`,
+  `sprite_frame_library`, `display_controller`, `display_layout`.
 - **Settings/audio**: `settings_service` owns device-wide persisted options;
   `sound_manager` consumes the live music/SFX values and applies their dB
   offsets to the Master bus.
@@ -90,9 +90,10 @@ Dungeon topology and difficulty authority are documented in
 owns the in-memory topology and socket pairing; `dungeon_layout_definition`
 plus the run/generated layout builders own the authored and procedural room
 sets; `dungeon_map_controller` owns gates, engagement, and shared orb/fire
-state; `room_controller` owns per-room content and enemy encounter generation.
-Generated (Run 4+) difficulty is flat per run and keyed off `difficulty_rank`,
-not room depth.
+state and visited flame landmarks; `room_controller` owns per-room content and
+enemy encounter generation. The active route keeps authored R1–R5 and selects
+the deterministic generated layout path from R6 onward. Generated difficulty
+is flat per run and keyed off `difficulty_rank`, not room depth.
 
 ## Tuning resources (all `@export`-driven, in-editor editable)
 
@@ -131,7 +132,9 @@ in device-wide `user://settings.cfg`, separate from slot profile data.
 Menu intent is owned by `InputRouter`: Circle/Xbox B confirms and Cross/Xbox A
 backs out, while only the visible full-screen route is polled. Touch menu taps
 are scoped to that route and gameplay touch controls are disabled while a menu
-is active.
+is active. During gameplay, the dedicated `open_minimap` action opens the
+expanded flame map; its Share/Options, keyboard, and touch bindings all enter
+through the same router boundary.
 
 ## Extension guide
 

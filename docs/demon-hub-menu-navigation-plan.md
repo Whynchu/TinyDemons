@@ -83,7 +83,11 @@ Make the Demon Hub root previews and nested SHOP, FUSION, and BIND menus behave 
 
 ## Full-menu audit — September 2026
 
-### Current findings
+### Baseline findings before the current implementation pass
+
+The following findings capture the starting point for this audit. Applied
+changes are recorded in the progress section below; the active issue tracker is
+[`current-issues-and-resolution-plan.md`](current-issues-and-resolution-plan.md).
 
 - Pause Equipment is the correct navigation reference. It derives each cursor
   target from the rendered command text or active button geometry, keeps only

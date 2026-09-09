@@ -7,6 +7,7 @@ const CURSOR: Texture2D = preload("res://assets/artwork/cursor.png")
 const FRAME: Texture2D = preload("res://assets/artwork/frame 16x16.png")
 const EffectsSpawnerScript = preload("res://scripts/effects_spawner.gd")
 const BindMenuModelScript = preload("res://scripts/bind_menu_model.gd")
+const RESPONSIVE_LAYOUT_SCRIPT = preload("res://scripts/menu_responsive_layout.gd")
 
 signal action_pressed
 signal back_pressed
@@ -35,7 +36,7 @@ func _build_nodes() -> void:
 	for index in 5:
 		var text := Sprite2D.new(); text.name = "BindText%d" % index; text.centered = false; text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; text.position = Vector2(22, 41 + index * (12 if index < 4 else 14)); add_child(text); _texts.append(text)
 	_action = _make_button("BindActionButton", Vector2(156, 119), Vector2(64, 13)); _action.pressed.connect(action_pressed.emit)
-	_back = _make_button("BindBackButton", Vector2(14, 140), Vector2(54, 13)); _back.pressed.connect(back_pressed.emit)
+	_back = _make_button("BindBackButton", Vector2(128, 145), Vector2(48, 13)); _back.pressed.connect(back_pressed.emit)
 	_command_cursor = _make_cursor("BindCommandCursor")
 	_action_cursor = _make_cursor("BindActionCursor")
 
@@ -76,11 +77,18 @@ func render(model: RefCounted) -> void:
 
 func _apply_layout() -> void:
 	var width := maxf(size.x, NATIVE_SIZE.x)
-	var shift := maxf((width - NATIVE_SIZE.x) * 0.5, 0.0)
-	_action.position.x = 156.0 + shift if _action != null else 156.0
-	_back.position.x = 14.0 + shift if _back != null else 14.0
-	for text in _texts: text.position.x = 22.0 + shift
+	# Bind uses the same expandable left field as the shared Hub footer. The
+	# previous centering shift moved its back target away from the canonical
+	# SELECT/BACK lane on wide displays.
+	var left_field_width := maxf(width - 64.0, 176.0)
+	if _action != null: _action.position.x = _responsive_x(156.0, left_field_width)
+	if _back != null: _back.position.x = _responsive_x(128.0, left_field_width)
+	for text in _texts: text.position.x = _responsive_x(22.0, left_field_width)
 	if _action_cursor != null: _action_cursor.position.x = (_action.position.x if _action != null else 156.0) - 8.0
+
+
+func _responsive_x(native_x: float, left_field_width: float) -> float:
+	return RESPONSIVE_LAYOUT_SCRIPT.proportional_x(native_x, left_field_width, 176.0)
 
 func refresh_layout_preserving_state() -> void:
 	_apply_layout()

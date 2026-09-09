@@ -27,9 +27,20 @@ func _initialize() -> void:
 
 	var router := InputRouter.new()
 	get_root().add_child(router)
-	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"target", &"guard", &"move_left", &"move_right", &"move_up", &"move_down"]:
+	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"open_minimap", &"target", &"guard", &"move_left", &"move_right", &"move_up", &"move_down"]:
 		Input.action_release(action)
 	router.set_touch_provider(layer)
+	var minimap_rect: Rect2 = layer._layout["minimap"]
+	var minimap_down := InputEventScreenTouch.new()
+	minimap_down.device = 0; minimap_down.index = 8; minimap_down.pressed = true; minimap_down.position = minimap_rect.get_center()
+	layer._input(minimap_down)
+	var minimap_up := InputEventScreenTouch.new()
+	minimap_up.device = 0; minimap_up.index = 8; minimap_up.pressed = false; minimap_up.position = minimap_down.position
+	layer._input(minimap_up)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.just_pressed(&"open_minimap"), "touch map control reaches the dedicated minimap action", failures)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.just_released(&"open_minimap"), "touch map control releases cleanly", failures)
 	layer.set_button_state(&"attack", true)
 	layer.set_virtual_stick(Vector2(1.0, 0.0))
 	router.poll(InputRouter.Context.GAMEPLAY)

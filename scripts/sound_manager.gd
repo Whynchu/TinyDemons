@@ -37,6 +37,7 @@ var _music_player: AudioStreamPlayer = null
 var _music_fade_tween: Tween = null
 var _music_fade_active := false
 var _music_stream_path := ""
+var _music_stream_cache: Dictionary = {}
 var _music_mix_key: StringName = &""
 var _music_fallback_volume_db := TITLE_MUSIC_VOLUME_DB
 var _music_volume_percent := 100
@@ -146,6 +147,21 @@ func start_run_music(volume_linear: float = -1.0) -> void:
 	_start_music_track(RUN_MUSIC_PATH, volume_linear)
 
 
+func preload_music_tracks() -> void:
+	## Resolve and decode the two long-running tracks while the boot loading
+	## screen is already visible. Starting a room's music then only swaps to a
+	## cached AudioStream instead of importing it on the transition frame.
+	for track_path in [TITLE_MUSIC_PATH, RUN_MUSIC_PATH]:
+		var resolved_path := _preferred_audio_path(track_path)
+		if resolved_path.is_empty() or _music_stream_cache.has(resolved_path):
+			continue
+		if not ResourceLoader.exists(resolved_path):
+			continue
+		var stream := load(resolved_path) as AudioStream
+		if stream != null:
+			_music_stream_cache[resolved_path] = stream
+
+
 func _start_music_track(track_path: String, volume_linear: float) -> void:
 	_ensure_mix_profile()
 	var resolved_track_path := _preferred_audio_path(track_path)
@@ -163,7 +179,12 @@ func _start_music_track(track_path: String, volume_linear: float) -> void:
 		_music_player.stop()
 		_music_player.stream = null
 		_music_stream_path = resolved_track_path
-		_music_player.stream = load(_music_stream_path) as AudioStream
+		var stream := _music_stream_cache.get(_music_stream_path) as AudioStream
+		if stream == null and ResourceLoader.exists(_music_stream_path):
+			stream = load(_music_stream_path) as AudioStream
+			if stream != null:
+				_music_stream_cache[_music_stream_path] = stream
+		_music_player.stream = stream
 		if not _music_player.finished.is_connected(_replay_music):
 			_music_player.finished.connect(_replay_music)
 	var music_key: StringName = &"run_music" if track_path == RUN_MUSIC_PATH else &"title_music"

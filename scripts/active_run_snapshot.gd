@@ -20,6 +20,7 @@ static func create(root: Object) -> Dictionary:
 		return {}
 	var room_states: Dictionary = room_controller.room_states.duplicate(true) if room_controller != null else {}
 	var map_dictionary: Dictionary = map_state.call("to_dictionary") as Dictionary if map_state != null and map_state.has_method("to_dictionary") else {}
+	var layout: Variant = map_controller.get("layout") if map_controller != null else null
 	var snapshot := {
 		"format": FORMAT,
 		"schema_version": SCHEMA_VERSION,
@@ -32,6 +33,7 @@ static func create(root: Object) -> Dictionary:
 		"created_at": Time.get_unix_time_from_system(),
 		"run_state": run.to_dictionary(),
 		"dungeon_seed": int(root.get("current_dungeon_seed")),
+		"layout_id": String(layout.layout_id) if layout != null else "",
 		"layout_bound_flame": String(map_controller.get("layout_bound_flame")) if map_controller != null else "",
 		"run_rank": maxi(profile.difficulty_rank, 1),
 		"current_room_id": String(root.get("current_room_id")),

@@ -550,9 +550,9 @@ func _update_chroma_pickups(delta: float) -> void:
 	pickup_runtime_controller.call("update_chroma_pickups", self, delta)
 func _collect_chroma_pickup(index: int) -> void:
 	pickup_runtime_controller.call("collect_chroma_pickup", self, index)
-func _spawn_chroma_pickup_burst(spawn_position: Vector2) -> void:
+func _spawn_chroma_pickup_burst(spawn_position: Vector2, color: Color = PaletteLibrary.ACCENT["grey"]) -> void:
 	if effects_spawner != null:
-		effects_spawner.spawn_chroma_pickup_burst_from_root(self, spawn_position)
+		effects_spawner.spawn_chroma_pickup_burst_from_root(self, spawn_position, color)
 func _remove_chroma_pickup(index: int) -> void:
 	pickup_runtime_controller.call("remove_chroma_pickup", self, index)
 func _clear_chroma_pickups() -> void:
@@ -642,6 +642,8 @@ func _on_display_view_size_changed(_view_size: Vector2i = DisplayLayout.NATIVE_S
 			loading_screen_text.position = view_size - loading_screen_text.texture.get_size() - Vector2(4, 4)
 	if touch_controls_layer != null and touch_controls_layer.has_method("refresh_layout"):
 		touch_controls_layer.refresh_layout()
+	if dungeon_minimap_controller != null and dungeon_minimap_controller.has_method("refresh_layout"):
+		dungeon_minimap_controller.refresh_layout()
 func _show_hub(from_npc: bool = false, pause_mode: bool = false) -> void:
 	hub_flow_controller.call("show_hub", self, from_npc, pause_mode)
 func _open_pause_menu() -> void:
@@ -673,6 +675,8 @@ func _input_context() -> int:
 	if game_over_overlay != null and game_over_overlay.visible:
 		return InputRouter.Context.MENU
 	if ssc.run_complete_overlay != null and ssc.run_complete_overlay.visible:
+		return InputRouter.Context.MENU
+	if dungeon_minimap_controller != null and bool(dungeon_minimap_controller.call("is_map_open")):
 		return InputRouter.Context.MENU
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible: return InputRouter.Context.MENU
 	if ssc.settings_overlay != null and ssc.settings_overlay.visible: return InputRouter.Context.MENU
@@ -719,6 +723,8 @@ func _hub_item_action() -> void:
 	hub_flow_controller.call("hub_item_action", self)
 func _hub_shop_sellable_items() -> Array[ItemInstance]:
 	return hub_flow_controller.call("shop_sellable_items", self) as Array[ItemInstance]
+func _hub_shop_owned_matching_count(item: ItemInstance) -> int:
+	return int(hub_flow_controller.call("shop_owned_matching_count", self, item))
 func _shop_mode_pressed(mode_index: int) -> void:
 	hub_flow_controller.call("shop_mode_pressed", self, mode_index)
 func _shop_amount_changed(direction: int) -> void:
@@ -1237,6 +1243,13 @@ func _sync_current_room_metadata(arrival_socket_id: StringName = &"") -> void:
 	run_flow_controller.call("sync_current_room_metadata", self)
 	if dungeon_map_controller != null:
 		dungeon_map_controller.on_room_entered(current_room_id, arrival_socket_id)
+
+
+func _on_minimap_flame_travel_requested(destination_room_id: StringName) -> void:
+	if dungeon_minimap_controller == null or room_controller == null:
+		return
+	if room_controller.fast_travel_to_flame(self, destination_room_id):
+		dungeon_minimap_controller.close_map()
 func _finalize_run_metrics() -> void:
 	run_flow_controller.call("finalize_run_metrics", self)
 func _finalize_run_exploration() -> void:

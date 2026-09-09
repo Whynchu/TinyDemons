@@ -69,6 +69,9 @@ status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
 execution plan. The completed Combat & Economy work remains documented in
 [`docs/combat-economy-overhaul.md`](docs/combat-economy-overhaul.md).
 
+Current playtest issues and their resolution order are tracked in
+[`docs/current-issues-and-resolution-plan.md`](docs/current-issues-and-resolution-plan.md).
+
 ## Project Layout
 
 - `project.godot` - the Godot project root (this folder is the project)
@@ -123,10 +126,11 @@ remappable in-editor. Defaults:
 - Interact / confirm: `E` / Enter / controller B (PlayStation Circle)
 - Cancel/back: `X` / Escape / controller A (PlayStation Cross)
 - Pause: Escape / controller Start
+- Open minimap: `M` / controller Share or Options (DS4) / touch MAP
 
 ## Web build
 
-Current game version: **0.1.93**. Every push to `main` must increment the
+Current game version: **0.1.94**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

@@ -195,6 +195,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
 | Late-run difficulty bonus | `max(0, encounter_rank - 8)` | `combat_runtime_controller.gd:run_enemy_level_bonus` |
 | Performance-over-baseline bonus | `max(0, difficulty_rank - (completed_runs + 1))` | `run_flow_controller.gd:run_difficulty_bonus` |
+| Active dungeon route | Authored R1–R5; deterministic generated layouts from R6 onward | `dungeon_map_controller.gd:begin_run` |
 | Generated room pacing | Authored R1/R2 remain 18/24 rooms; generated targets are 22 on R3, 23 on R4, 24 on R5–R9, then `25 + floor((run - 10) / 2)` from R10; optional branches stay within a small variance budget | `dungeon_layout_generator.gd:generated_room_target_for_run` |
 | Generated boss depth | `13` on R3, `14` on R4, `15` on R5–R9, then `16 + floor((run - 10) / 2)` from R10 | `dungeon_layout_generator.gd:generated_boss_depth_for_run` |
 | Chest interact distance | 16.0 | `gameplay_state.gd:CHEST_INTERACT_DISTANCE` |
@@ -217,6 +218,10 @@ These affect dungeon generation and room behavior and are `const` in
 | Flame Fusion | 5 Souls; uses current element plus the contacted flame and produces an unbound recipe result | `gameplay_state.gd:FLAME_FUSION_SOUL_COST` |
 | Permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `gameplay_state.gd:ELEMENT_BIND_SOUL_COST` |
 | Hub flame identity | The selected starter flame remains the hub fire until an explicit permanent Bind; temporary run attunements/fusions do not replace it | `player_profile.gd:hub_flame`, `run_flow_controller.gd`, `room_controller.gd` |
+| Chroma identity at zero | Bound elements remain bound and use the weakened/desaturated mode at zero; unbound players resolve to Gray | `player_chroma_component.gd` |
+| Neutral Chroma storage | Gray players can collect neutral Chroma without acquiring an elemental identity; pickups stop collecting when the bar is full | `player_chroma_component.gd`, `pickup_runtime_controller.gd` |
+| Adaptive Chroma pickup color | Pickup tint follows the player's current effective element; Gray uses the neutral accent | `player_chroma_component.gd:chroma_palette_name`, `pickup_runtime_controller.gd` |
+| Flame map travel | The expanded map is available in gameplay; travel may target the Hub or a visited flame, and may begin only from the Hub or a flame room | `dungeon_minimap_controller.gd`, `dungeon_map_controller.gd`, `room_controller.gd` |
 
 ## Magic numbers still hardcoded (known gaps)
 

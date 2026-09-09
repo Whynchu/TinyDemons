@@ -108,6 +108,9 @@ func initialize(root: GameplayState) -> void:
 	root.current_dungeon_seed = dungeon_seed
 	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
+	var minimap_travel_callback := Callable(root, "_on_minimap_flame_travel_requested")
+	if not root.dungeon_minimap_controller.is_connected(&"flame_travel_requested", minimap_travel_callback):
+		root.dungeon_minimap_controller.connect(&"flame_travel_requested", minimap_travel_callback)
 	if root.debug_start_in_boss_room:
 		if root.dungeon_map_controller.has_complete_layout():
 			for candidate_id in dungeon_graph.get_room_ids():
@@ -164,6 +167,9 @@ func initialize(root: GameplayState) -> void:
 		boot_loading.modulate.a = 1.0
 	root.set("boot_active", true)
 	await root.get_tree().process_frame
+	# Warm long-running music after the loading screen has had a frame to draw;
+	# the first flame-room transition can then start its track from memory.
+	root.sound_manager.preload_music_tracks()
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	root.call("_refresh_player_cloak_visual")

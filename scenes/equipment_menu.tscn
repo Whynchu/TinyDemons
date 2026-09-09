@@ -688,53 +688,61 @@ texture_filter = 1
 position = Vector2(14, 119)
 centered = false
 
-[node name="CandidateText0" type="Sprite2D" parent="." unique_id=174001304]
+[node name="CandidateClip" type="Control" parent="." unique_id=189217430]
+layout_mode = 0
+offset_right = 240.0
+offset_top = 84.0
+offset_bottom = 133.0
+mouse_filter = 1
+clip_contents = true
+
+[node name="CandidateText0" type="Sprite2D" parent="CandidateClip" unique_id=174001304]
 texture_filter = 1
-position = Vector2(43, 93)
+position = Vector2(43, 9)
 centered = false
 
-[node name="CandidateText1" type="Sprite2D" parent="." unique_id=22877590]
+[node name="CandidateText1" type="Sprite2D" parent="CandidateClip" unique_id=22877590]
 texture_filter = 1
-position = Vector2(151, 93)
+position = Vector2(151, 9)
 centered = false
 
-[node name="CandidateText2" type="Sprite2D" parent="." unique_id=1728029791]
+[node name="CandidateText2" type="Sprite2D" parent="CandidateClip" unique_id=1728029791]
 texture_filter = 1
-position = Vector2(43, 102)
+position = Vector2(43, 18)
 centered = false
 
-[node name="CandidateText3" type="Sprite2D" parent="." unique_id=1268072282]
+[node name="CandidateText3" type="Sprite2D" parent="CandidateClip" unique_id=1268072282]
 texture_filter = 1
-position = Vector2(151, 102)
+position = Vector2(151, 18)
 centered = false
 
-[node name="CandidateText4" type="Sprite2D" parent="." unique_id=2007504874]
+[node name="CandidateText4" type="Sprite2D" parent="CandidateClip" unique_id=2007504874]
 texture_filter = 1
-position = Vector2(43, 111)
+position = Vector2(43, 27)
 centered = false
 
-[node name="CandidateText5" type="Sprite2D" parent="." unique_id=171872367]
+[node name="CandidateText5" type="Sprite2D" parent="CandidateClip" unique_id=171872367]
 texture_filter = 1
-position = Vector2(151, 111)
+position = Vector2(151, 27)
 centered = false
 
-[node name="CandidateText6" type="Sprite2D" parent="." unique_id=2045776669]
+[node name="CandidateText6" type="Sprite2D" parent="CandidateClip" unique_id=2045776669]
 texture_filter = 1
-position = Vector2(43, 120)
+position = Vector2(43, 36)
 centered = false
 
-[node name="CandidateText7" type="Sprite2D" parent="." unique_id=551388676]
+[node name="CandidateText7" type="Sprite2D" parent="CandidateClip" unique_id=551388676]
 texture_filter = 1
-position = Vector2(151, 120)
+position = Vector2(151, 36)
 centered = false
 
-[node name="CandidateButton0" type="Button" parent="." unique_id=1308505645]
+[node name="CandidateButton0" type="Button" parent="CandidateClip" unique_id=1308505645]
 visible = false
 layout_mode = 0
 offset_left = 14.0
-offset_top = 89.0
+offset_top = 5.0
 offset_right = 122.0
-offset_bottom = 98.0
+offset_bottom = 14.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -743,13 +751,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton1" type="Button" parent="." unique_id=934124711]
+[node name="CandidateButton1" type="Button" parent="CandidateClip" unique_id=934124711]
 visible = false
 layout_mode = 0
 offset_left = 122.0
-offset_top = 89.0
+offset_top = 5.0
 offset_right = 239.0
-offset_bottom = 98.0
+offset_bottom = 14.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -758,13 +766,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton2" type="Button" parent="." unique_id=909105209]
+[node name="CandidateButton2" type="Button" parent="CandidateClip" unique_id=909105209]
 visible = false
 layout_mode = 0
 offset_left = 14.0
-offset_top = 98.0
+offset_top = 14.0
 offset_right = 122.0
-offset_bottom = 107.0
+offset_bottom = 23.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -773,13 +781,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton3" type="Button" parent="." unique_id=1845060796]
+[node name="CandidateButton3" type="Button" parent="CandidateClip" unique_id=1845060796]
 visible = false
 layout_mode = 0
 offset_left = 122.0
-offset_top = 98.0
+offset_top = 14.0
 offset_right = 239.0
-offset_bottom = 107.0
+offset_bottom = 23.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -788,13 +796,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton4" type="Button" parent="." unique_id=699339086]
+[node name="CandidateButton4" type="Button" parent="CandidateClip" unique_id=699339086]
 visible = false
 layout_mode = 0
 offset_left = 14.0
-offset_top = 107.0
+offset_top = 23.0
 offset_right = 122.0
-offset_bottom = 116.0
+offset_bottom = 32.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -803,13 +811,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton5" type="Button" parent="." unique_id=1471270154]
+[node name="CandidateButton5" type="Button" parent="CandidateClip" unique_id=1471270154]
 visible = false
 layout_mode = 0
 offset_left = 122.0
-offset_top = 107.0
+offset_top = 23.0
 offset_right = 239.0
-offset_bottom = 116.0
+offset_bottom = 32.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -818,13 +826,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton6" type="Button" parent="." unique_id=894308497]
+[node name="CandidateButton6" type="Button" parent="CandidateClip" unique_id=894308497]
 visible = false
 layout_mode = 0
 offset_left = 14.0
-offset_top = 116.0
+offset_top = 32.0
 offset_right = 122.0
-offset_bottom = 125.0
+offset_bottom = 41.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")
@@ -833,13 +841,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_54wud")
 theme_override_styles/focus = SubResource("StyleBoxFlat_54wud")
 
-[node name="CandidateButton7" type="Button" parent="." unique_id=120730089]
+[node name="CandidateButton7" type="Button" parent="CandidateClip" unique_id=120730089]
 visible = false
 layout_mode = 0
 offset_left = 122.0
-offset_top = 116.0
+offset_top = 32.0
 offset_right = 239.0
-offset_bottom = 125.0
+offset_bottom = 41.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_54wud")

@@ -33,6 +33,18 @@ func _initialize() -> void:
 	_expect(not controller.reveal_event(&"fire_branch_revealed"), "event reveal is idempotent", failures)
 	var state_snapshot: Dictionary = controller.get("state").to_dictionary()
 	_expect(bool((state_snapshot.get("revealed_events", {}) as Dictionary).get(&"fire_branch_revealed", false)), "revealed events are included in state serialization", failures)
+	var flame_room_id: StringName = &""
+	for room_id in graph.get_room_ids():
+		var room := graph.get_room(room_id)
+		if room != null and not room.fire_flame.is_empty():
+			flame_room_id = room.id
+			break
+	if not flame_room_id.is_empty():
+		_expect(not controller.is_flame_visited(flame_room_id), "flame starts unvisited in map state", failures)
+		controller.on_room_entered(flame_room_id)
+		_expect(controller.is_flame_visited(flame_room_id), "entering a flame marks it visited", failures)
+		var flame_snapshot: Dictionary = controller.get("state").to_dictionary()
+		_expect(bool((flame_snapshot.get("visited_flame_rooms", {}) as Dictionary).get(flame_room_id, false)), "visited flames are included in state serialization", failures)
 
 	controller.free()
 	_finish(failures)

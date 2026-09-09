@@ -77,11 +77,11 @@ Codebase audit results (evidence in §11):
 | --- | --- | --- |
 | Renderer | `mobile` (`project.godot:109`) | Must be `gl_compatibility` on web — override per-platform (§4) |
 | Viewport | 240×160, `canvas_items` stretch, nearest filter (`project.godot:20-24,107`) | Ideal; trivially cheap to rasterize |
-| Input map | 10 actions, all with joypad bindings (`project.godot:26-103`) | Gamepad ready today |
+| Input map | Named gameplay/menu actions with joypad bindings (`project.godot`, including `open_minimap`) | Gamepad and keyboard paths are defined; web mapping still needs browser verification |
 | Input polling | Single seam: `input_router.poll()` (`input_router.gd:19-28`, `gameplay.gd:81`); sticks/D-pad/triggers polled in code (`input_router.gd:27-28,64-111`) | Touch layer merges at exactly one place |
-| `_input()` handlers | None anywhere in `scripts/` | Device detection adds the first one, isolated in its own node |
-| Mouse/touch gameplay | None (no `InputEventMouse*`, no `InputEventScreenTouch`) | Clean slate |
-| Menus/dialogue | Real `Button` nodes driven by focus + `.pressed.emit()` (`gameplay.gd:91-101`, `gameplay_frame_controller.gd:87-101`, `screen_state_controller.gd:1090-1172`) | Taps work via Godot's default emulate-mouse-from-touch; focus flows need touch affordances (Phase 3) |
+| `_input()` handlers | `touch_controls_layer.gd` owns screen-touch, screen-drag, and desktop mouse test input | Keep touch handling isolated from the gameplay coordinator |
+| Mouse/touch gameplay | `TouchControlsLayer` supplies the virtual stick, six action buttons, MAP, pause, and cancel through `InputRouter` | Browser/device acceptance and emulated-mouse edge cases remain to verify |
+| Menus/dialogue | Native `Button` taps plus the touch layer's menu hit testing and scroll path | Audit every web overlay for tap completion; keep focus navigation for controllers |
 | Export presets | Stub only (`export_presets.cfg`) | Real Web preset must be authored |
 | Saves | `user://` JSON (`profile_save_service.gd:4-7`) | Maps to IndexedDB on web; verify flush timing |
 | Platform-specific code | None in runtime scripts | Nothing to stub out |
@@ -215,7 +215,8 @@ Layout (240×160 logical pixels, `CanvasLayer` so it follows stretch):
 - **Left half**: virtual stick — touch-down sets origin, drag sets vector
   (clamped radius), release resets. Emits a normalized `Vector2`.
 - **Right side**: buttons for `attack`, `roll`, `magic`, `guard`, `target`,
-  `interact`. `pause` gets a small corner button. Sizes target ≥ 14×14
+  `interact`. `MAP` opens the expanded flame map and remains available there to
+  close it; `pause` gets a small corner button. Sizes target ≥ 14×14
   logical px (≈ 56 px at 4× integer scale) with the existing palette art
   style.
 - Buttons feed `Input.action_press`/`action_release` equivalents through the
@@ -317,13 +318,13 @@ the same artifact passes the headless export check.
 - Verify prompt swap live on desktop: keyboard ↔ gamepad.
 
 Exit condition: prompts follow the last device on desktop with zero gameplay
-behavior change; touch layer not yet present.
+behavior change; touch browser acceptance remains in Phase 3.
 
 ### Phase 3 — Touch controls
 
-- Add `touch_controls_layer.gd` per §7 (stick + six buttons + pause), its
-  state provider, and the `InputRouter` merge. Wire visibility to the
-  tracker.
+- Keep `touch_controls_layer.gd` per §7 (stick + six buttons + MAP + pause), its
+  state provider, and the `InputRouter` merge. Verify visibility and device
+  switching through the tracker in browser builds.
 - New `tests/touch_controls_smoke.gd`: stick vector math (origin, clamp,
   release), button press/release state reaches the router snapshot, provider
   inert when hidden, desktop poll snapshot identical with no provider.
