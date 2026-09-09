@@ -6,8 +6,17 @@ const MAP_FRAME_SCENE = preload("res://scenes/menu_panel_8_piece.tscn")
 const CURSOR_TEXTURE = preload("res://assets/artwork/cursor.png")
 const PAUSE_LAYOUT = preload("res://scripts/pause_menu_layout.gd")
 const HUB_FRAME_TEXTURE = preload("res://assets/artwork/frame 16x16.png")
-const MENU_CURSOR_LEFT_GAP := 10.0
-const MENU_CURSOR_ROW_OFFSET := 3.0
+## The full-map overlay anchors a fixed map screen on the left of the content
+## area and a destination list beside it. The dark backdrop is sized to exactly
+## enclose the rendered map so no orphaned box floats around it.
+const MAP_OVERLAY_BACKDROP := Rect2(6.0, 24.0, 146.0, 110.0)
+const MAP_OVERLAY_DIVIDER_X := 153.0
+const MAP_OVERLAY_LIST_X := 161.0
+const MAP_OVERLAY_LIST_TOP := 29.0
+const MAP_OVERLAY_ROW_PITCH := 9.0
+## move_menu_cursor raises the target by CURSOR_VERTICAL_RAISE (2 px); pass the
+## desired cursor resting point offset upward so the cursor lands on the flame.
+const MENU_CURSOR_RAISE_COMPENSATION := 2.0
 
 ## Presentation-only renderer for complete dungeon layouts.
 ##
@@ -71,6 +80,7 @@ var map_overlay_title: Sprite2D = null
 var map_overlay_texture: TextureRect = null
 var map_overlay_help: Sprite2D = null
 var map_overlay_flame_labels: Array[Sprite2D] = []
+var map_overlay_list_pointer: Sprite2D = null
 var map_overlay_cursor: Sprite2D = null
 var map_overlay_select_glyph: Sprite2D = null
 var map_overlay_back_glyph: Sprite2D = null
@@ -292,7 +302,6 @@ func _ensure_map_overlay() -> void:
 	map_overlay_cursor.centered = false
 	map_overlay_cursor.scale = Vector2(1.0, 1.0)
 	map_overlay_cursor.z_index = 4095
-	map_overlay_cursor.z_as_relative = false
 	map_overlay_cursor.show_behind_parent = false
 	map_overlay.add_child(map_overlay_cursor)
 	map_overlay_texture = TextureRect.new()
@@ -327,6 +336,10 @@ func _ensure_map_overlay() -> void:
 		label.centered = false
 		map_overlay.add_child(label)
 		map_overlay_flame_labels.append(label)
+	map_overlay_list_pointer = Sprite2D.new()
+	map_overlay_list_pointer.name = "ListPointer"
+	map_overlay_list_pointer.centered = false
+	map_overlay.add_child(map_overlay_list_pointer)
 	map_overlay.visible = false
 
 
@@ -347,21 +360,18 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 	map_overlay_hub_panels[2].size = Vector2(maxf(resource_left - 2.0, 1.0), 24.0)
 	map_overlay_hub_panels[3].position = Vector2(resource_left, 136.0)
 	map_overlay_hub_panels[3].size = Vector2(maxf(view_size.x - resource_left, 1.0), 24.0)
-	map_overlay_background.position = Vector2(3.0, 3.0)
-	map_overlay_background.size = Vector2(maxf(154.0, 1.0), maxf(109.0, 1.0))
-	map_overlay_divider.position = Vector2(157.0, 21.0)
-	map_overlay_divider.size = Vector2(1.0, 115.0)
+	map_overlay_background.position = MAP_OVERLAY_BACKDROP.position
+	map_overlay_background.size = MAP_OVERLAY_BACKDROP.size
+	map_overlay_divider.position = Vector2(MAP_OVERLAY_DIVIDER_X, 23.0)
+	map_overlay_divider.size = Vector2(1.0, 112.0)
 	map_overlay_title.position = Vector2(13.0, 4.0)
 	map_overlay_help.position = Vector2(view_size.x - 57.0, view_size.y - 18.0)
 	_set_pixel_text(map_overlay_title, "MAP", COLOR_MAP_TITLE, root)
 	map_overlay_help.visible = false
-	var footer_x := PAUSE_LAYOUT.divider_x(view_size.x)
 	map_overlay_select_glyph.position = Vector2(107.0, view_size.y - 14.0)
 	map_overlay_back_glyph.position = Vector2(146.0, view_size.y - 14.0)
 	map_overlay_select_text.position = Vector2(114.0, view_size.y - 14.0)
 	map_overlay_back_text.position = Vector2(153.0, view_size.y - 14.0)
-	map_overlay_back_button.position = Vector2(view_size.x - 35.0, view_size.y - 25.0)
-	map_overlay_back_button.size = Vector2(32.0, 23.0)
 	map_overlay_back_button.position = PAUSE_LAYOUT.back_button_position(view_size)
 	map_overlay_back_button.size = PAUSE_LAYOUT.BACK_BUTTON_SIZE
 	map_overlay_select_glyph.visible = true
@@ -369,13 +379,13 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 	map_overlay_back_text.visible = true
 	_set_pixel_text(map_overlay_select_text, "SELECT", Color.WHITE, root)
 	_set_pixel_text(map_overlay_back_text, "BACK", Color.WHITE, root)
-	var image_left := 10.0
-	var image_width := minf(142.0, maxf(96.0, 154.0))
-	map_overlay_texture.position = Vector2(image_left, 20.0)
-	map_overlay_texture.size = Vector2(image_width, 110.0)
+	map_overlay_texture.position = MAP_OVERLAY_BACKDROP.position
+	map_overlay_texture.size = MAP_OVERLAY_BACKDROP.size
 	map_overlay_texture.texture = ImageTexture.create_from_image(full_map_image) if full_map_image != null else null
 	if map_overlay_cursor != null:
 		map_overlay_cursor.visible = false
+	if map_overlay_list_pointer != null:
+		map_overlay_list_pointer.visible = false
 	for index in map_overlay_flame_labels.size():
 		var label := map_overlay_flame_labels[index]
 		if index >= _flame_room_ids.size():
@@ -389,22 +399,45 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 		var status := "HUB" if is_hub else "VISITED" if is_flame_visited(room_id) else "UNVISITED"
 		if room_id == (map_controller.get("state") as DungeonMapState).current_room_id:
 			status = "CURRENT"
-		_set_pixel_text(label, flame_name, COLOR_MAP_CURRENT if status == "CURRENT" else COLOR_MAP_SELECTED if index == selected_flame_index and (is_hub or is_flame_visited(room_id)) else COLOR_MAP_UNVISITED if not is_hub and not is_flame_visited(room_id) else COLOR_MAP_TITLE, root)
-		label.position = Vector2(166.0, 31.0 + index * 10.0)
+		# The selected destination is always highlighted, even when it is not yet
+		# eligible for travel, so the player can always tell which row is active.
+		_set_pixel_text(label, flame_name, COLOR_MAP_CURRENT if status == "CURRENT" else COLOR_MAP_SELECTED if index == selected_flame_index else COLOR_MAP_UNVISITED if not is_hub and not is_flame_visited(room_id) else COLOR_MAP_TITLE, root)
+		label.position = Vector2(MAP_OVERLAY_LIST_X, MAP_OVERLAY_LIST_TOP + index * MAP_OVERLAY_ROW_PITCH)
 		label.visible = true
+		if map_overlay_list_pointer != null:
+			map_overlay_list_pointer.visible = index == selected_flame_index
+			if index == selected_flame_index:
+				_set_pixel_text(map_overlay_list_pointer, ">", COLOR_MAP_SELECTED, root)
+				map_overlay_list_pointer.position = label.position + Vector2(-7.0, 3.0)
 		if index == selected_flame_index and map_overlay_cursor != null:
 			map_overlay_cursor.visible = true
 			var screen := root.get("screen_state_controller") as Node if root != null else null
-			# Match the established Hub and Pause list pattern: the finger sits to
-			# the left of the painted row and follows the row's authored text anchor.
-			var cursor_target := label.position + Vector2(-MENU_CURSOR_LEFT_GAP, MENU_CURSOR_ROW_OFFSET)
+			# The finger sits over the selected destination's own map pixel, so the
+			# map, list, and cursor all agree on the current target.
+			var desired_position := _flame_overlay_position(room_id) - Vector2(8.0, 8.0)
 			if screen != null and screen.has_method("move_menu_cursor"):
-				screen.call("move_menu_cursor", map_overlay_cursor, cursor_target, animate_cursor)
+				screen.call("move_menu_cursor", map_overlay_cursor, desired_position + Vector2(0.0, MENU_CURSOR_RAISE_COMPENSATION), animate_cursor)
 			else:
-				map_overlay_cursor.position = cursor_target
+				map_overlay_cursor.position = desired_position
 	if map_overlay_cursor != null and (selected_flame_index < 0 or selected_flame_index >= _flame_room_ids.size()):
 		map_overlay_cursor.visible = false
 	map_overlay.visible = true
+
+
+func _flame_overlay_position(room_id: StringName) -> Vector2:
+	## Map a destination room's logical minimap pixel to overlay-local screen
+	## coordinates using the same aspect-fit used by the full-map TextureRect.
+	if full_map_image == null or map_controller == null:
+		return Vector2.ZERO
+	var graph := map_controller.get("graph") as DungeonGraph
+	var room := graph.get_room(room_id) if graph != null else null
+	if room == null:
+		return Vector2.ZERO
+	var image_size := Vector2(full_map_image.get_width(), full_map_image.get_height())
+	var scale := minf(MAP_OVERLAY_BACKDROP.size.x / image_size.x, MAP_OVERLAY_BACKDROP.size.y / image_size.y)
+	var scaled := image_size * scale
+	var offset := (MAP_OVERLAY_BACKDROP.size - scaled) * 0.5
+	return MAP_OVERLAY_BACKDROP.position + offset + Vector2(room.minimap_coordinate - full_map_origin) * scale
 
 
 func _set_pixel_text(sprite: Sprite2D, value: String, color: Color, root: Object) -> void:
