@@ -37,12 +37,23 @@ func _initialize() -> void:
 		var travel_state := map.get("state") as DungeonMapState
 		map.on_room_entered(flame_ids[0])
 		_expect(minimap.open_map(null), "minimap opens from the gameplay map state", failures)
-		_expect(minimap.is_map_open() and minimap.get("map_overlay").visible, "open minimap displays its full-map overlay", failures)
+		var map_overlay := minimap.get("map_overlay") as Control
+		var map_cursor := minimap.get("map_overlay_cursor") as Sprite2D
+		_expect(minimap.is_map_open() and map_overlay != null and map_overlay.visible, "open minimap displays its full-map overlay", failures)
+		_expect(map_cursor != null and map_cursor.visible, "open minimap shows its destination cursor", failures)
+		_expect(map_overlay != null and map_cursor != null and _effective_z_index(map_cursor) > _effective_z_index(map_overlay), "destination cursor stacks above the map overlay", failures)
+		_expect(map_cursor != null and _cursor_center_in_backdrop(map_cursor), "destination cursor sits over the minimap render", failures)
 		minimap.close_map()
 		if flame_ids.size() >= 2:
-			_expect(not map.can_fast_travel_to_flame(flame_ids[0], flame_ids[1]), "unvisited flame cannot be selected for fast travel", failures)
-			travel_state.mark_flame_visited(flame_ids[1])
-			_expect(map.can_fast_travel_to_flame(flame_ids[0], flame_ids[1]), "visited flame can be selected for fast travel from a flame room", failures)
+			var unvisited_flame_id: StringName = flame_ids[0]
+			for candidate_id in flame_ids:
+				if not map.is_flame_visited(candidate_id):
+					unvisited_flame_id = candidate_id
+					break
+			if unvisited_flame_id != flame_ids[0]:
+				_expect(not map.can_fast_travel_to_flame(flame_ids[0], unvisited_flame_id), "unvisited flame cannot be selected for fast travel", failures)
+				travel_state.mark_flame_visited(unvisited_flame_id)
+				_expect(map.can_fast_travel_to_flame(flame_ids[0], unvisited_flame_id), "visited flame can be selected for fast travel from a flame room", failures)
 		_expect(map.can_fast_travel_to_flame(flame_ids[0], graph.start_room_id), "Hub can be selected for fast travel from a flame room", failures)
 		_expect(map.can_fast_travel_to_flame(graph.start_room_id, flame_ids[0]), "flame can be selected for fast travel from the Hub", failures)
 		var non_flame_origin = null
@@ -118,6 +129,20 @@ func _image_contains(image: Image, expected: Color) -> bool:
 			if image.get_pixel(x, y) == expected:
 				return true
 	return false
+
+
+func _effective_z_index(node: Node) -> int:
+	var item := node as CanvasItem
+	var result := 0
+	while item != null:
+		result = item.z_index if not item.z_as_relative else result + item.z_index
+		item = item.get_parent() as CanvasItem
+	return result
+
+
+func _cursor_center_in_backdrop(cursor: Sprite2D) -> bool:
+	var center := cursor.position + Vector2(8.0, 8.0)
+	return MINIMAP_SCRIPT.MAP_OVERLAY_BACKDROP.has_point(center)
 
 
 func _expect(condition: bool, message: String, failures: Array[String]) -> void:
