@@ -401,14 +401,13 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 			status = "CURRENT"
 		# The selected destination is always highlighted, even when it is not yet
 		# eligible for travel, so the player can always tell which row is active.
-		_set_pixel_text(label, flame_name, COLOR_MAP_CURRENT if status == "CURRENT" else COLOR_MAP_SELECTED if index == selected_flame_index else COLOR_MAP_UNVISITED if not is_hub and not is_flame_visited(room_id) else COLOR_MAP_TITLE, root)
+		_set_pixel_text(label, flame_name, COLOR_MAP_SELECTED if index == selected_flame_index else COLOR_MAP_CURRENT if status == "CURRENT" else COLOR_MAP_UNVISITED if not is_hub and not is_flame_visited(room_id) else COLOR_MAP_TITLE, root)
 		label.position = Vector2(MAP_OVERLAY_LIST_X, MAP_OVERLAY_LIST_TOP + index * MAP_OVERLAY_ROW_PITCH)
 		label.visible = true
-		if map_overlay_list_pointer != null:
-			map_overlay_list_pointer.visible = index == selected_flame_index
-			if index == selected_flame_index:
-				_set_pixel_text(map_overlay_list_pointer, ">", COLOR_MAP_SELECTED, root)
-				map_overlay_list_pointer.position = label.position + Vector2(-7.0, 3.0)
+		if map_overlay_list_pointer != null and index == selected_flame_index:
+			map_overlay_list_pointer.visible = true
+			_set_pixel_text(map_overlay_list_pointer, ">", COLOR_MAP_SELECTED, root)
+			map_overlay_list_pointer.position = label.position + Vector2(-7.0, 3.0)
 		if index == selected_flame_index and map_overlay_cursor != null:
 			map_overlay_cursor.visible = true
 			var screen := root.get("screen_state_controller") as Node if root != null else null

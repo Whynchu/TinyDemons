@@ -91,9 +91,26 @@ func _initialize() -> void:
 			sale_three.quality = 1.01
 			sale_three.random_stat_points = {"mnd": 2}
 			sale_three.enhancement_level = 1
+			sale_three.fusion_stat_points = 1
+			sale_three.fusion_count = 1
+			var sale_four := ItemInstance.new()
+			sale_four.instance_id = "shop-smoke-rune-3"
+			sale_four.definition_id = &"rune_accessory"
+			sale_four.rarity = &"common"
+			sale_four.quality = 1.01
+			sale_four.random_stat_points = {"mnd": 2}
+			var different_roll := ItemInstance.new()
+			different_roll.definition_id = &"rune_accessory"
+			different_roll.rarity = &"common"
+			different_roll.quality = 1.01
+			different_roll.random_stat_points = {"mnd": 1, "int": 1}
 			profile.grant_item(sale_one)
 			profile.grant_item(sale_two)
 			profile.grant_item(sale_three)
+			profile.grant_item(sale_four)
+			_expect(sale_one.shop_stack_key() == sale_four.shop_stack_key(), "truly identical gear shares one sell stack key", failures)
+			_expect(sale_one.shop_stack_key() != sale_three.shop_stack_key(), "enhancement levels remain separate sell variants", failures)
+			_expect(sale_one.shop_stack_key() != different_roll.shop_stack_key(), "different stat rolls remain separate even at the same plus tier", failures)
 			gameplay.call("_shop_mode_pressed", 1)
 			await process_frame
 			var sellable: Array = gameplay.call("_hub_shop_sellable_items") as Array
@@ -101,14 +118,13 @@ func _initialize() -> void:
 			var plus_rune_rows := 0
 			for index in sellable.size():
 				var candidate := sellable[index] as ItemInstance
-				if candidate != null and candidate.instance_id == sale_one.instance_id:
-					screens.hub_item_index = index
 				if candidate != null and candidate.shop_stack_key() == sale_one.shop_stack_key():
+					screens.hub_item_index = index
 					plain_rune_rows += 1
 				if candidate != null and candidate.shop_stack_key() == sale_three.shop_stack_key():
 					plus_rune_rows += 1
 			_expect(plain_rune_rows == 1 and plus_rune_rows == 1, "sell keeps plain and enhanced gear variants in independent rows", failures)
-			_expect(int(gameplay.call("_hub_shop_owned_matching_count", sale_one)) == 2 and int(gameplay.call("_hub_shop_owned_matching_count", sale_three)) == 1, "sell quantity counts only the selected exact gear variant", failures)
+			_expect(int(gameplay.call("_hub_shop_owned_matching_count", sale_one)) == 3 and int(gameplay.call("_hub_shop_owned_matching_count", sale_three)) == 1, "sell quantity counts only the selected exact gear variant", failures)
 			screens.update_hub_ui(gameplay, Callable(gameplay, "_pixel_text_texture"))
 			await process_frame
 			_expect(screens.hub_shop_sell_mode and screens.hub_shop_state == 1, "Shop Sell enters the authored item browse state", failures)

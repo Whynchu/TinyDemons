@@ -95,11 +95,8 @@ func refill_chroma() -> bool:
 
 func restore_neutral_chroma(value: int = CHROMA_PICKUP_VALUE) -> bool:
 	# Neutral Chroma is a resource even while the player is Gray. It fills the
-	# bar without inventing an elemental identity; a bound element remains the
-	# current identity throughout depletion and recovery. A temporary fusion still
-	# resolves back to its permanent identity when a pickup recharges it.
-	if current_aspect != Aspect.NONE and bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
-		_set_aspect(bound_aspect)
+	# bar without inventing or changing an elemental identity. Temporary flame
+	# and fusion aspects remain active until Chroma depletion resolves fallback.
 	var restore_amount := maxi(value, 0)
 	if restore_amount <= 0 or current_chroma >= MAX_CHROMA:
 		return false
@@ -124,15 +121,18 @@ func can_spend_chroma(amount: int) -> bool:
 func spend_chroma(amount: int) -> bool:
 	if not can_spend_chroma(amount):
 		return false
-	_set_chroma(current_chroma - amount)
-	if current_chroma == 0:
+	var next_chroma := current_chroma - amount
+	if next_chroma == 0:
 		# A temporary fusion returns to the permanent identity when it depletes.
 		# A bound identity stays elemental at zero and resolves its weakened
-		# ability mode; only an unbound aspect becomes Gray.
+		# ability mode; only an unbound aspect becomes Gray. Resolve the aspect
+		# before publishing zero Chroma so listeners never observe an intermediate
+		# Gray mode between temporary and bound states.
 		if bound_aspect != Aspect.NONE and current_aspect != bound_aspect:
 			_set_aspect(bound_aspect)
 		elif bound_aspect == Aspect.NONE:
 			_set_aspect(Aspect.NONE)
+	_set_chroma(next_chroma)
 	return true
 
 

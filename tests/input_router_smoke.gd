@@ -5,6 +5,9 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var router := InputRouter.new()
 	get_root().add_child(router)
+	_expect(_joy_buttons_for(&"pause") == [JOY_BUTTON_START], "Options maps exclusively to Pause", failures)
+	_expect(_joy_buttons_for(&"open_minimap") == [JOY_BUTTON_BACK], "Share maps exclusively to the minimap secondary action", failures)
+	_expect(_joy_buttons_for(&"guard") == [JOY_BUTTON_LEFT_SHOULDER], "Guard remains on the left shoulder instead of Share", failures)
 	Input.action_release(&"attack")
 	Input.action_release(&"move_right")
 	Input.action_release(&"ui_accept")
@@ -65,3 +68,12 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
+
+
+func _joy_buttons_for(action: StringName) -> Array[int]:
+	var result: Array[int] = []
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadButton:
+			result.append((event as InputEventJoypadButton).button_index)
+	result.sort()
+	return result

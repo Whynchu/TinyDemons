@@ -82,9 +82,11 @@ func _initialize() -> void:
 			var player_chroma: Node = gameplay.get("player_chroma_component") as Node
 			player_chroma.call("attune", 1)
 			player_chroma.call("spend_elemental_ability")
+			player_chroma.call("set_bound_aspect", 1)
+			player_chroma.call("change_flame", &"water")
 			gameplay.call("_update_chroma_pickups", 0.0)
 			var live_pickup_image: Image = pickup.texture.get_image() if pickup.texture != null else null
-			_expect(live_pickup_image != null and live_pickup_image.get_pixel(0, 0).is_equal_approx(PaletteLibrary.ACCENT["red"]), "Chroma pickup follows the player's current needed color", failures)
+			_expect(live_pickup_image != null and live_pickup_image.get_pixel(0, 0).is_equal_approx(PaletteLibrary.ACCENT["blue"]), "Chroma pickup follows the player's currently active element", failures)
 			chroma_tuning.pickup_collection_distance = 10.0
 			var player_foot: Vector2 = gameplay.call("_actor_foot", gameplay.get("player")) as Vector2
 			pickup.global_position = player_foot
@@ -95,6 +97,7 @@ func _initialize() -> void:
 			gameplay.call("_update_chroma_pickups", 0.01)
 			var particle_count_after: int = (effects.get("pixel_particles") as Array).size()
 			_expect(particle_count_after > particle_count_before, "Chroma pickup creates a splash burst on collection", failures)
+			_expect(player_chroma.call("aspect_name") == &"water", "collecting Chroma preserves the currently active temporary element", failures)
 			gameplay.call("_spawn_chroma_pickup", player_foot, 20, 456, Vector2.ZERO)
 			var full_bar_pickup_count_before: int = (pickup_controller.get("sprites") as Array).size()
 			gameplay.call("_update_chroma_pickups", 0.01)

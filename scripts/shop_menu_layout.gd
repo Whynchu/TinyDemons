@@ -626,7 +626,7 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 	var amount_footer_visible := state == SELL_AMOUNT and sell_mode
 	var browsing_footer := not amount_footer_visible
 	var owned_text := get_node_or_null("OwnedText") as Sprite2D
-	_set_text(owned_text, "OWNED: %d" % maxi(owned_count, 0), STAT_TEXT_COLOR)
+	_set_text(owned_text, "OWNED x%d" % maxi(owned_count, 0), STAT_TEXT_COLOR)
 	if owned_text != null:
 		owned_text.visible = browsing_footer
 	for path in ["FooterSelectGlyph", "FooterSelectText", "FooterBackGlyph", "FooterBackText"]:

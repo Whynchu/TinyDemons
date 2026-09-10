@@ -56,10 +56,17 @@ func _initialize() -> void:
 	_expect(chroma.current_chroma == 20, "dormant bound aspect regains 20 Chroma", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.ELEMENTAL, "restored bound aspect resolves full ability", failures)
 	chroma.change_flame(&"shadow")
-	chroma.set("current_chroma", 0)
-	_expect(chroma.current_aspect == Chroma.Aspect.SHADOW, "bound Shadow remains the permanent defensive identity", failures)
-	_expect(chroma.restore_neutral_chroma(), "pickup restores a temporary aspect to the bound Shadow identity", failures)
-	_expect(chroma.current_aspect == Chroma.Aspect.ELECTRIC and chroma.current_chroma == 20, "bound pickup returns to the bound aspect immediately", failures)
+	_expect(chroma.restore_neutral_chroma(), "pickup restores Chroma during a temporary aspect", failures)
+	_expect(chroma.current_aspect == Chroma.Aspect.SHADOW and chroma.current_chroma == 40, "pickup preserves the currently active temporary aspect", failures)
+	for _i in 3:
+		_expect(chroma.spend_elemental_ability(), "temporary aspect can spend toward depletion", failures)
+	var depletion_modes: Array[int] = []
+	chroma.ability_mode_changed.connect(func(mode: int) -> void: depletion_modes.append(mode))
+	_expect(chroma.spend_elemental_ability(), "temporary aspect spends its final Chroma", failures)
+	_expect(chroma.current_aspect == Chroma.Aspect.ELECTRIC and chroma.current_chroma == 0, "zero Chroma immediately restores the bound aspect", failures)
+	_expect(chroma.ability_mode() == Chroma.AbilityMode.BOUND_WEAKENED, "zero Chroma immediately exposes weakened bound mode", failures)
+	_expect(not depletion_modes.has(Chroma.AbilityMode.GRAY), "bound fallback never publishes an intermediate Gray mode", failures)
+	_expect(chroma.chroma_palette_name() == "yellow", "bound fallback immediately exposes the bound pickup color", failures)
 
 	chroma.free()
 	_finished = true

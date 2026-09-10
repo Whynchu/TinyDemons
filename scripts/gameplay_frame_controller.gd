@@ -142,22 +142,14 @@ func tick(root: Object, delta: float) -> void:
 	var minimap := root.get("dungeon_minimap_controller") as Node
 	var input_router := root.get("input_router") as InputRouter
 	if minimap != null and bool(minimap.call("is_map_open")):
-		# DS4 Options is also the legacy pause action. Keep its held state
-		# synchronized while the map owns the input so closing the map does not
-		# immediately fall through into Pause on the same button hold.
-		if input_router != null and ssc != null:
-			ssc.pause_input_was_down = input_router.pressed(&"pause")
+		if input_router != null and input_router.just_pressed(&"pause"):
+			minimap.call("close_map")
+			root.call("_open_pause_menu")
+			return
 		minimap.call("handle_input", root)
-		if ssc != null and not bool(minimap.call("is_map_open")):
-			# A quick tap can release the mapped action between physics polls. Keep
-			# one pause edge consumed after any map close so Options cannot fall
-			# through into Pause on the following frame.
-			ssc.pause_input_was_down = true
 		return
 	if minimap != null and input_router != null and input_router.just_pressed(&"open_minimap") and bool(minimap.call("can_open_map", root)):
 		if bool(minimap.call("open_map", root)):
-			# The open edge can arrive through the same physical button as Pause.
-			ssc.pause_input_was_down = input_router.pressed(&"pause")
 			root.call("_play_sound", "ui_pause", 0.0, 1.0)
 		return
 	var pause_overlay := ssc.pause_overlay
