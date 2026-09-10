@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.1.95"
+const GAME_VERSION := "0.1.96"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2342,6 +2342,10 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 		var item := items[source_index]
 		var fusion_suffix := " F%d" % item.enhancement_level if item.enhancement_level > 0 else ""
 		var label := catalog.gear_name(item) + fusion_suffix
+		if sell_mode:
+			var row_quantity := int(root.call("_hub_shop_owned_matching_count", item))
+			if row_quantity > 1:
+				label += " x%d" % row_quantity
 		row_labels.append(label)
 		row_colors.append(Color8(120, 120, 130) if source_index < sold_flags.size() and sold_flags[source_index] else catalog.rarity_color(item.rarity))
 		row_prices.append(prices[source_index] if source_index < prices.size() else "")

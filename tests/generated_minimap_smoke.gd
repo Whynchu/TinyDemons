@@ -43,6 +43,17 @@ func _initialize() -> void:
 		_expect(map_cursor != null and map_cursor.visible, "open minimap shows its destination cursor", failures)
 		_expect(map_overlay != null and map_cursor != null and _effective_z_index(map_cursor) > _effective_z_index(map_overlay), "destination cursor stacks above the map overlay", failures)
 		_expect(map_cursor != null and _cursor_center_in_backdrop(map_cursor), "destination cursor sits over the minimap render", failures)
+		if teleport_ids.size() >= 2 and map_cursor != null:
+			var first_cursor_position := map_cursor.position
+			var next_destination_index := posmod(int(minimap.get("selected_flame_index")) + 1, teleport_ids.size())
+			minimap.set("selected_flame_index", next_destination_index)
+			minimap.call("_refresh_map_overlay", null, false)
+			var expected_cursor_position: Vector2 = minimap.call("_flame_overlay_position", teleport_ids[next_destination_index]) - Vector2(8.0, 8.0)
+			var list_pointer := minimap.get("map_overlay_list_pointer") as Sprite2D
+			var selected_label := (minimap.get("map_overlay_flame_labels") as Array)[next_destination_index] as Sprite2D
+			_expect(not map_cursor.position.is_equal_approx(first_cursor_position), "destination navigation moves the finger between map locations", failures)
+			_expect(map_cursor.position.is_equal_approx(expected_cursor_position), "destination finger lands on the selected flame map pixel", failures)
+			_expect(list_pointer != null and list_pointer.visible and selected_label != null and is_equal_approx(list_pointer.position.y, selected_label.position.y + 3.0), "destination navigation marks the matching flame name", failures)
 		minimap.close_map()
 		if flame_ids.size() >= 2:
 			var unvisited_flame_id: StringName = flame_ids[0]
