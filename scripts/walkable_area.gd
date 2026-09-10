@@ -1,12 +1,19 @@
 extends Node
 class_name WalkableArea
 
+const FLOOR_TILE_GEOMETRY = preload("res://scenes/floor_tile_geometry.tscn")
+
 ## World walkability boundary. Tile extraction remains in gameplay while the
 ## scene-specific geometry is migrated incrementally.
 
 var polygons: Array[PackedVector2Array] = []
 var outline := PackedVector2Array()
 var points: Array[Vector2] = []
+var base_regions: Array[PackedVector2Array] = []
+var portal_regions: Array[PackedVector2Array] = []
+var boundary_edges: Array[PackedVector2Array] = []
+var authored_tile_polygon := PackedVector2Array()
+var tile_geometry_authoritative := false
 var entrance_block_polygons: Array[PackedVector2Array] = []
 # A bounds box per entrance block (grown by the edge margin) plus a union box.
 # The per-frame slime walkability path calls is_in_entrance_block for every
@@ -47,9 +54,85 @@ func set_geometry(new_polygons: Array[PackedVector2Array], new_outline: PackedVe
 func collect_geometry(node: Node, tile_polygon: Callable) -> void:
 	polygons.clear()
 	points.clear()
+	base_regions.clear()
+	portal_regions.clear()
+	boundary_edges.clear()
+	tile_geometry_authoritative = _collect_tile_regions(node)
+	if tile_geometry_authoritative:
+		return
 	if collect_floor_collision_guide(node):
 		return
 	_collect_tiles(node, tile_polygon)
+
+
+func _collect_tile_regions(node: Node) -> bool:
+	var core := node.get_node_or_null("FloorUnderlay") as Polygon2D
+	var boss_core := node.get_node_or_null("BossFloorUnderlay") as Polygon2D
+	if boss_core != null and boss_core.visible:
+		core = boss_core
+	if core == null or core.polygon.size() < 3:
+		return false
+	var source := FLOOR_TILE_GEOMETRY.instantiate()
+	var source_polygon := source.get_node_or_null("WalkablePolygon") as Polygon2D
+	authored_tile_polygon = source_polygon.polygon.duplicate() if source_polygon != null else PackedVector2Array()
+	source.free()
+	if authored_tile_polygon.size() < 3:
+		return false
+	var core_world := PackedVector2Array()
+	for point in core.polygon:
+		core_world.append(core.to_global(point))
+	# The underlay is the authored continuous room surface. Building the outer
+	# wall from individual tile polygons creates a sawtooth perimeter and causes
+	# directional friction at every tiny tile corner.
+	base_regions = [core_world]
+	_rebuild_regions()
+	return not base_regions.is_empty()
+
+
+func _tile_polygon_at(owner: Node2D, local_origin: Vector2) -> PackedVector2Array:
+	var polygon := PackedVector2Array()
+	for point in authored_tile_polygon:
+		polygon.append(owner.to_global(local_origin + point))
+	return polygon
+
+
+func tile_polygon_for_sprite(sprite: Sprite2D) -> PackedVector2Array:
+	return _tile_polygon_at(sprite, Vector2.ZERO) if sprite != null and authored_tile_polygon.size() >= 3 else PackedVector2Array()
+
+
+func set_walkable_portals(portals: Array[PackedVector2Array]) -> void:
+	portal_regions = portals.duplicate()
+	_rebuild_regions()
+
+
+func _rebuild_regions() -> void:
+	var combined := base_regions.duplicate()
+	combined.append_array(portal_regions)
+	polygons = _merge_polygons(combined)
+	points.clear()
+	boundary_edges.clear()
+	for polygon in polygons:
+		for point in polygon:
+			points.append(point)
+		for index in polygon.size():
+			boundary_edges.append(PackedVector2Array([polygon[index], polygon[(index + 1) % polygon.size()]]))
+
+
+func _merge_polygons(source: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
+	var regions: Array[PackedVector2Array] = []
+	for polygon in source:
+		var pending := polygon
+		var index := 0
+		while index < regions.size():
+			var merged := Geometry2D.merge_polygons(regions[index], pending)
+			if merged.size() == 1:
+				pending = merged[0]
+				regions.remove_at(index)
+				index = 0
+			else:
+				index += 1
+		regions.append(pending)
+	return regions
 
 
 func _collect_tiles(node: Node, tile_polygon: Callable) -> void:
@@ -90,7 +173,7 @@ func build_outline(use_polygon_direct: bool) -> void:
 		outline = PackedVector2Array()
 		_prepare_floor_planes()
 		return
-	if use_polygon_direct:
+	if use_polygon_direct and not tile_geometry_authoritative:
 		outline = polygons[0]
 		_prepare_floor_planes()
 		return
@@ -129,6 +212,8 @@ func nearest_point(point: Vector2) -> Vector2:
 func is_walkable(point: Vector2) -> bool:
 	if is_in_entrance_block(point):
 		return false
+	if tile_geometry_authoritative:
+		return _point_in_regions(point, -edge_margin)
 	if outline.is_empty():
 		return false
 	return point_inside_outline_with_padding(point, -edge_margin)
@@ -137,7 +222,50 @@ func is_walkable(point: Vector2) -> bool:
 func is_slime_walkable(point: Vector2) -> bool:
 	if is_in_entrance_block(point) or outline.is_empty():
 		return false
+	if tile_geometry_authoritative:
+		return _point_in_regions(point, slime_edge_padding)
 	return point_inside_outline_with_padding(point, slime_edge_padding)
+
+
+func _point_in_regions(point: Vector2, padding: float) -> bool:
+	var inside := false
+	for region in polygons:
+		if Geometry2D.is_point_in_polygon(point, region):
+			inside = true
+			break
+	var boundary_distance := _boundary_distance(point)
+	if padding < 0.0:
+		return inside or boundary_distance <= -padding
+	return inside and boundary_distance >= padding
+
+
+func _boundary_distance(point: Vector2) -> float:
+	var nearest := INF
+	for edge in boundary_edges:
+		var closest := Geometry2D.get_closest_point_to_segment(point, edge[0], edge[1])
+		nearest = minf(nearest, point.distance_to(closest))
+	return nearest
+
+
+func slide_candidates(point: Vector2, movement: Vector2) -> Array[Vector2]:
+	var candidates: Array[Vector2] = []
+	var destination := point + movement
+	var distances: Array[Dictionary] = []
+	for edge in boundary_edges:
+		var closest := Geometry2D.get_closest_point_to_segment(destination, edge[0], edge[1])
+		distances.append({"edge": edge, "distance": destination.distance_squared_to(closest)})
+	distances.sort_custom(func(left: Dictionary, right: Dictionary) -> bool: return float(left["distance"]) < float(right["distance"]))
+	for entry in distances.slice(0, mini(4, distances.size())):
+		var edge := entry["edge"] as PackedVector2Array
+		var tangent := (edge[1] - edge[0]).normalized()
+		# Projection naturally retains more speed when input is closely aligned
+		# with the wall and less when it pushes more directly into the wall.
+		var candidate := tangent * movement.dot(tangent)
+		if candidate.length_squared() <= 0.0001:
+			continue
+		if not candidates.any(func(existing: Vector2) -> bool: return existing.is_equal_approx(candidate)):
+			candidates.append(candidate)
+	return candidates
 
 
 func is_in_entrance_block(point: Vector2) -> bool:

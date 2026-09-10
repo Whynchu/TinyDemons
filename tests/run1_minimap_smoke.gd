@@ -18,6 +18,7 @@ func _initialize() -> void:
 	map_controller.on_room_entered(graph.start_room_id)
 	var marker := minimap.get_node_or_null("CurrentRoomMarker") as Sprite2D
 	_expect(marker != null and marker.position.is_equal_approx(MINIMAP_SCRIPT.MAP_POSITION + Vector2(VIEW_CENTER) * MINIMAP_SCRIPT.DISPLAY_SCALE), "Run 1 marker stays centered on the Hub", failures)
+	_expect(marker != null and marker.modulate.is_equal_approx(MINIMAP_SCRIPT.COLOR_MAP_UNVISITED), "Hub marker uses the dark inverse blink color", failures)
 	var image: Image = minimap.snapshot_image()
 	var origin: Vector2i = Vector2i.ZERO
 	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "minimap uses the fixed 25x25 circular display window", failures)
@@ -32,6 +33,7 @@ func _initialize() -> void:
 	_expect(ring != null and ring.texture != null, "minimap displays the authored puzzle-map ring above the map", failures)
 	map_controller.on_room_entered(&"room_1_1")
 	_expect(marker != null and marker.position.is_equal_approx(MINIMAP_SCRIPT.MAP_POSITION + Vector2(VIEW_CENTER) * MINIMAP_SCRIPT.DISPLAY_SCALE), "Run 1 marker stays centered on the occupied enemy room", failures)
+	_expect(marker != null and marker.modulate.is_equal_approx(Color.WHITE), "non-Hub marker uses the white blink color", failures)
 	image = minimap.snapshot_image()
 	origin = minimap.get("map_origin") as Vector2i
 	_expect(image.get_pixelv(Vector2i(10, 19) - origin) == MINIMAP_SCRIPT.COLOR_ENEMY, "discovered enemy room uses mid grey", failures)

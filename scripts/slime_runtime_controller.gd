@@ -539,43 +539,50 @@ func start_slime_hold(root: Object, slime: Sprite2D) -> void:
 
 
 func try_move_actor(root: Object, actor: Sprite2D, movement: Vector2) -> bool:
-	var original := actor.position
-	var moved := try_move_actor_axes(root, actor, movement)
-	var slimes := root.get("slimes") as Array[Sprite2D]
-	if actor == root.get("player") or not slimes.has(actor) or not is_slime_aggroed(root, actor) or movement.length_squared() < 0.001:
-		return moved
-	var moved_distance := actor.position.distance_to(original)
-	var movement_was_clipped := moved and moved_distance < movement.length() * 0.65
-	if moved and not movement_was_clipped:
-		return true
-	var slide := movement.rotated(PI * 0.5) * 0.72
-	if try_move_actor_axes(root, actor, slide):
-		return true
-	if try_move_actor_axes(root, actor, -slide):
-		return true
-	return false
+	return try_move_actor_axes(root, actor, movement)
 
 
 func try_move_actor_axes(root: Object, actor: Sprite2D, movement: Vector2) -> bool:
 	var original := actor.position
-	actor.position.x += movement.x
-	if actor == root.get("player") and bool(root.call("_try_enter_any_active_socket")):
-		return true
-	if not bool(root.call("_can_actor_stand_at_current_position", actor)) or bool(root.call("_collides_with_static", actor)):
-		actor.position.x = original.x
-	else:
-		resolve_actor_contacts(root, actor, Vector2(movement.x, 0.0))
-	actor.position.y += movement.y
-	if actor == root.get("player") and bool(root.call("_try_enter_any_active_socket")):
-		return true
-	if not bool(root.call("_can_actor_stand_at_current_position", actor)) or bool(root.call("_collides_with_static", actor)):
-		actor.position.y = original.y
-	else:
-		resolve_actor_contacts(root, actor, Vector2(0.0, movement.y))
+	var distance := movement.length()
+	if distance <= 0.001:
+		return false
+	var steps := maxi(1, int(ceil(distance / 0.75)))
+	var step := movement / float(steps)
+	for _index in steps:
+		var before := actor.position
+		if _try_actor_displacement(root, actor, step):
+			if actor == root.get("player") and bool(root.call("_try_enter_any_active_socket")):
+				return true
+			continue
+		var area := root.get("walkable_area") as WalkableArea
+		var slid := false
+		if area != null:
+			var foot: Vector2 = root.call("_actor_foot", actor)
+			for slide in area.slide_candidates(foot, step):
+				actor.position = before
+				if _try_actor_displacement(root, actor, slide):
+					if actor == root.get("player") and bool(root.call("_try_enter_any_active_socket")):
+						return true
+					slid = true
+					break
+		if not slid:
+			actor.position = before
+			break
 	var moved := actor.position.distance_squared_to(original) > 0.0001
 	if moved and (root.get("slimes") as Array[Sprite2D]).has(actor):
 		(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, actor)
 	return moved
+
+
+func _try_actor_displacement(root: Object, actor: Sprite2D, movement: Vector2) -> bool:
+	var before := actor.position
+	actor.position += movement
+	if not bool(root.call("_can_actor_stand_at_current_position", actor)) or bool(root.call("_collides_with_static", actor)):
+		actor.position = before
+		return false
+	resolve_actor_contacts(root, actor, movement)
+	return true
 
 
 func resolve_actor_contacts(root: Object, actor: Sprite2D, movement: Vector2) -> void:

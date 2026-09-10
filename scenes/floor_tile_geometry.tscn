@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="FloorTileGeometry" type="Node2D"]
+
+[node name="WalkablePolygon" type="Polygon2D" parent="."]
+color = Color(0.15, 1, 0.35, 0.35)
+polygon = PackedVector2Array(8, 0.5, 16.5, 4.5, 8, 8.5, -0.5, 4.5)
