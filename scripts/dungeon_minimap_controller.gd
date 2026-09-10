@@ -337,8 +337,11 @@ func _ensure_map_overlay() -> void:
 		map_overlay.add_child(label)
 		map_overlay_flame_labels.append(label)
 	map_overlay_list_pointer = Sprite2D.new()
-	map_overlay_list_pointer.name = "ListPointer"
+	map_overlay_list_pointer.name = "DestinationListCursor"
+	map_overlay_list_pointer.texture = CURSOR_TEXTURE
+	map_overlay_list_pointer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	map_overlay_list_pointer.centered = false
+	map_overlay_list_pointer.z_index = 4095
 	map_overlay.add_child(map_overlay_list_pointer)
 	map_overlay.visible = false
 
@@ -406,8 +409,10 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 		label.visible = true
 		if map_overlay_list_pointer != null and index == selected_flame_index:
 			map_overlay_list_pointer.visible = true
-			_set_pixel_text(map_overlay_list_pointer, ">", COLOR_MAP_SELECTED, root)
-			map_overlay_list_pointer.position = label.position + Vector2(-7.0, 3.0)
+			# Use the same authored finger as the marker over the selected map
+			# piece. The destination therefore has one finger on the map and a
+			# second finger identifying its matching name in the list.
+			map_overlay_list_pointer.position = label.position + Vector2(-18.0, -2.0)
 		if index == selected_flame_index and map_overlay_cursor != null:
 			map_overlay_cursor.visible = true
 			var screen := root.get("screen_state_controller") as Node if root != null else null

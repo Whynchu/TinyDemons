@@ -22,6 +22,10 @@ func _initialize() -> void:
 	var map := gameplay.get("dungeon_map_controller") as Node
 	_expect(graph != null and rooms != null and map != null, "wall socket geometry owners are composed", failures)
 	if graph != null and rooms != null and map != null:
+		var floor_guide := gameplay.get_node_or_null("Map/FloorTiles/FloorCollisionGuide") as Polygon2D
+		var walkable_polygons := gameplay.get("walkable_polygons") as Array
+		_expect(floor_guide != null and floor_guide.polygon.size() >= 3, "room exposes editor-authored floor collision geometry", failures)
+		_expect(walkable_polygons.size() == 1 and _polygon_matches_guide(walkable_polygons[0] as PackedVector2Array, floor_guide), "walkability uses the authored floor polygon instead of rendered tiles", failures)
 		var room := graph.get_room(TARGET_ROOM)
 		_expect(room != null, "the authored normal-room geometry target exists", failures)
 		if room != null:
@@ -164,6 +168,15 @@ func _contains_polygon(polygons: Array, target: PackedVector2Array) -> bool:
 		if matches:
 			return true
 	return false
+
+
+func _polygon_matches_guide(polygon: PackedVector2Array, guide: Polygon2D) -> bool:
+	if guide == null or polygon.size() != guide.polygon.size():
+		return false
+	for index in polygon.size():
+		if not polygon[index].is_equal_approx(guide.to_global(guide.polygon[index])):
+			return false
+	return true
 
 
 func _polygon_edge_samples_blocked(gameplay: Node, polygon: PackedVector2Array) -> bool:

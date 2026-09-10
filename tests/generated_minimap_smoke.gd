@@ -53,7 +53,8 @@ func _initialize() -> void:
 			var selected_label := (minimap.get("map_overlay_flame_labels") as Array)[next_destination_index] as Sprite2D
 			_expect(not map_cursor.position.is_equal_approx(first_cursor_position), "destination navigation moves the finger between map locations", failures)
 			_expect(map_cursor.position.is_equal_approx(expected_cursor_position), "destination finger lands on the selected flame map pixel", failures)
-			_expect(list_pointer != null and list_pointer.visible and selected_label != null and is_equal_approx(list_pointer.position.y, selected_label.position.y + 3.0), "destination navigation marks the matching flame name", failures)
+			_expect(list_pointer != null and list_pointer.visible and list_pointer.texture == MINIMAP_SCRIPT.CURSOR_TEXTURE, "destination list uses the authored finger cursor", failures)
+			_expect(list_pointer != null and selected_label != null and list_pointer.position.is_equal_approx(selected_label.position + Vector2(-18.0, -2.0)), "destination finger marks the matching flame name", failures)
 		minimap.close_map()
 		if flame_ids.size() >= 2:
 			var unvisited_flame_id: StringName = flame_ids[0]
