@@ -621,26 +621,41 @@ func _restore_world_drop(root: Object, state: Dictionary) -> void:
 
 func build_entrance_blocks(root: Object) -> void:
 	var blocks: Array[PackedVector2Array] = []
+	var portals: Array[PackedVector2Array] = []
 	var graph := root.get("dungeon_graph") as DungeonGraph
 	for socket_id in dungeon_sockets.keys():
 		var socket := dungeon_sockets.get(socket_id) as DungeonSocket
 		if socket == null: continue
 		var is_entrance := active_entrance_sockets.has(socket_id)
 		var is_active := active_door_sockets.has(socket_id) or is_entrance
-		if is_active:
-			var room_id: StringName = root.get("current_room_id")
-			var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
-			var connection_available: bool = connection != null and bool(root.call("_map_connection_available", connection, is_entrance))
-			var boss_entrance_sealed: bool = is_entrance and root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS and not bool(root.get("entrance_open"))
-			if connection_available and not boss_entrance_sealed:
-				continue
-		for tile in socket.block_tiles(): blocks.append(root.call("_tile_top_polygon", tile))
-		if socket.block_trigger_when_closed:
-			var trigger_block := _socket_trigger_polygon(socket)
-			if trigger_block.size() >= 3:
-				blocks.append(trigger_block)
+		if not is_active:
+			continue
+		var room_id: StringName = root.get("current_room_id")
+		var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
+		var connection_available: bool = connection != null and bool(root.call("_map_connection_available", connection, is_entrance))
+		var boss_entrance_sealed: bool = is_entrance and root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS and not bool(root.get("entrance_open"))
+		if connection_available and not boss_entrance_sealed:
+			portals.append_array(_socket_portal_polygons(root, socket))
 	root.set("entrance_block_polygons", blocks)
+	var area := root.get("walkable_area") as WalkableArea
+	if area != null:
+		area.set_walkable_portals(portals)
 	eject_player_from_closed_sockets(root)
+
+
+func _socket_portal_polygons(root: Object, socket: DungeonSocket) -> Array[PackedVector2Array]:
+	var portals: Array[PackedVector2Array] = []
+	var area := root.get("walkable_area") as WalkableArea
+	for tile in socket.block_tiles():
+		var polygon := area.tile_polygon_for_sprite(tile) if area != null else PackedVector2Array()
+		if polygon.size() >= 3:
+			portals.append(polygon)
+	if not portals.is_empty():
+		return portals
+	var trigger := _socket_trigger_polygon(socket)
+	if trigger.size() >= 3:
+		portals.append(trigger)
+	return portals
 
 
 func eject_player_from_closed_sockets(root: Object) -> bool:

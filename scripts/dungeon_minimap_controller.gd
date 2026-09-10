@@ -17,6 +17,8 @@ const MAP_OVERLAY_ROW_PITCH := 9.0
 ## move_menu_cursor raises the target by CURSOR_VERTICAL_RAISE (2 px); pass the
 ## desired cursor resting point offset upward so the cursor lands on the flame.
 const MENU_CURSOR_RAISE_COMPENSATION := 2.0
+const MAP_HAND_OFFSET := Vector2(-19.0, -3.0)
+const MENU_CURSOR_SCRIPT = preload("res://scripts/menu_cursor.gd")
 
 ## Presentation-only renderer for complete dungeon layouts.
 ##
@@ -82,6 +84,7 @@ var map_overlay_help: Sprite2D = null
 var map_overlay_flame_labels: Array[Sprite2D] = []
 var map_overlay_list_pointer: Sprite2D = null
 var map_overlay_cursor: Sprite2D = null
+var map_overlay_current_marker: ColorRect = null
 var map_overlay_select_glyph: Sprite2D = null
 var map_overlay_back_glyph: Sprite2D = null
 var map_overlay_select_text: Sprite2D = null
@@ -142,6 +145,8 @@ func _process(delta: float) -> void:
 	player_marker_timer = fmod(player_marker_timer + maxf(delta, 0.0), PLAYER_MARKER_BLINK_TIME * 2.0)
 	player_marker.visible = not map_open and player_marker_timer < PLAYER_MARKER_BLINK_TIME
 	_update_player_marker()
+	if map_overlay_current_marker != null:
+		map_overlay_current_marker.visible = map_open and player_marker_timer < PLAYER_MARKER_BLINK_TIME
 
 
 func can_open_map(root: Object) -> bool:
@@ -311,6 +316,10 @@ func _ensure_map_overlay() -> void:
 	map_overlay_texture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	map_overlay_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_overlay.add_child(map_overlay_texture)
+	map_overlay_current_marker = ColorRect.new()
+	map_overlay_current_marker.name = "CurrentRoomBlink"
+	map_overlay_current_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_overlay.add_child(map_overlay_current_marker)
 	map_overlay_help = Sprite2D.new()
 	map_overlay_help.name = "Help"
 	map_overlay_help.centered = false
@@ -337,9 +346,14 @@ func _ensure_map_overlay() -> void:
 		map_overlay.add_child(label)
 		map_overlay_flame_labels.append(label)
 	map_overlay_list_pointer = Sprite2D.new()
+	map_overlay_list_pointer.set_script(MENU_CURSOR_SCRIPT)
 	map_overlay_list_pointer.name = "ListPointer"
 	map_overlay_list_pointer.centered = false
 	map_overlay.add_child(map_overlay_list_pointer)
+	# Runtime UI already occupies the maximum CanvasItem z-index, so descendant
+	# z values clamp together. Keep the cursor last to make sibling draw order
+	# deterministic above the opaque map texture.
+	map_overlay.move_child(map_overlay_cursor, map_overlay.get_child_count() - 1)
 	map_overlay.visible = false
 
 
@@ -382,6 +396,8 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 	map_overlay_texture.position = MAP_OVERLAY_BACKDROP.position
 	map_overlay_texture.size = MAP_OVERLAY_BACKDROP.size
 	map_overlay_texture.texture = ImageTexture.create_from_image(full_map_image) if full_map_image != null else null
+	if map_overlay_current_marker != null:
+		map_overlay_current_marker.visible = false
 	if map_overlay_cursor != null:
 		map_overlay_cursor.visible = false
 	if map_overlay_list_pointer != null:
@@ -407,24 +423,40 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 		if map_overlay_list_pointer != null and index == selected_flame_index:
 			map_overlay_list_pointer.visible = true
 			_set_pixel_text(map_overlay_list_pointer, ">", COLOR_MAP_SELECTED, root)
-			map_overlay_list_pointer.position = label.position + Vector2(-7.0, 3.0)
+			var arrow_target := label.position + Vector2(-7.0, 0.0)
+			if animate_cursor:
+				map_overlay_list_pointer.call("move_to", arrow_target, true)
+			else:
+				map_overlay_list_pointer.call("reanchor_preserving_motion", arrow_target)
 		if index == selected_flame_index and map_overlay_cursor != null:
 			map_overlay_cursor.visible = true
 			var screen := root.get("screen_state_controller") as Node if root != null else null
 			# The finger sits over the selected destination's own map pixel, so the
 			# map, list, and cursor all agree on the current target.
-			var desired_position := _flame_overlay_position(room_id) - Vector2(8.0, 8.0)
+			var marker_position := _map_overlay_position(room_id)
+			var desired_position := marker_position + MAP_HAND_OFFSET
 			if screen != null and screen.has_method("move_menu_cursor"):
 				screen.call("move_menu_cursor", map_overlay_cursor, desired_position + Vector2(0.0, MENU_CURSOR_RAISE_COMPENSATION), animate_cursor)
 			else:
 				map_overlay_cursor.position = desired_position
+	var current_state := map_controller.get("state") as DungeonMapState if map_controller != null else null
+	var current_room_id: StringName = current_state.current_room_id if current_state != null else &""
+	if map_overlay_current_marker != null and not current_room_id.is_empty():
+		var current_room := (map_controller.get("graph") as DungeonGraph).get_room(current_room_id) if map_controller != null and map_controller.get("graph") != null else null
+		if current_room != null:
+			var current_position := _map_overlay_position(current_room_id)
+			var map_pixel_scale := minf(MAP_OVERLAY_BACKDROP.size.x / full_map_image.get_width(), MAP_OVERLAY_BACKDROP.size.y / full_map_image.get_height())
+			map_overlay_current_marker.position = current_position
+			map_overlay_current_marker.size = Vector2.ONE * map_pixel_scale
+			map_overlay_current_marker.color = _current_room_marker_color(current_room)
+			map_overlay_current_marker.visible = player_marker_timer < PLAYER_MARKER_BLINK_TIME
 	if map_overlay_cursor != null and (selected_flame_index < 0 or selected_flame_index >= _flame_room_ids.size()):
 		map_overlay_cursor.visible = false
 	map_overlay.visible = true
 
 
-func _flame_overlay_position(room_id: StringName) -> Vector2:
-	## Map a destination room's logical minimap pixel to overlay-local screen
+func _map_overlay_position(room_id: StringName) -> Vector2:
+	## Map a room's logical minimap pixel to overlay-local screen
 	## coordinates using the same aspect-fit used by the full-map TextureRect.
 	if full_map_image == null or map_controller == null:
 		return Vector2.ZERO
@@ -437,6 +469,10 @@ func _flame_overlay_position(room_id: StringName) -> Vector2:
 	var scaled := image_size * scale
 	var offset := (MAP_OVERLAY_BACKDROP.size - scaled) * 0.5
 	return MAP_OVERLAY_BACKDROP.position + offset + Vector2(room.minimap_coordinate - full_map_origin) * scale
+
+
+func _current_room_marker_color(room) -> Color:
+	return COLOR_MAP_UNVISITED if room != null and room.room_type == DungeonGraph.ROOM_START else Color.WHITE
 
 
 func _set_pixel_text(sprite: Sprite2D, value: String, color: Color, root: Object) -> void:
@@ -560,6 +596,7 @@ func _ensure_ring() -> void:
 		push_error("Dungeon minimap could not load %s." % MAP_RING_PATH)
 		return
 	ring_bounds = _opaque_bounds(ring_image)
+	_thicken_ring_inward(ring_image, ring_bounds)
 	var map_pixel_size := MINIMAP_VIEW_SIZE * int(DISPLAY_SCALE)
 	if ring_bounds.size.x > map_pixel_size.x or ring_bounds.size.y > map_pixel_size.y:
 		push_error("Dungeon minimap ring must fit inside %s map pixels, got %s." % [map_pixel_size, ring_bounds.size])
@@ -591,17 +628,37 @@ func _opaque_bounds(image: Image) -> Rect2i:
 	return Rect2i() if maximum.x < 0 else Rect2i(minimum, maximum - minimum + Vector2i.ONE)
 
 
-func _build_ring_mask(image: Image, bounds: Rect2i, source_scale: int, ring_offset: Vector2i) -> PackedByteArray:
+func _thicken_ring_inward(image: Image, bounds: Rect2i) -> void:
+	if image == null or not bounds.has_area():
+		return
+	var exterior := _ring_exterior(image, bounds)
+	var additions: Dictionary = {}
+	for y in bounds.size.y:
+		for x in bounds.size.x:
+			var coordinate := Vector2i(x, y)
+			var index := y * bounds.size.x + x
+			if exterior[index] != 0 or image.get_pixelv(bounds.position + coordinate).a > 0.0:
+				continue
+			for offset: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var neighbor := coordinate + offset
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= bounds.size.x or neighbor.y >= bounds.size.y:
+					continue
+				var color := image.get_pixelv(bounds.position + neighbor)
+				if color.a > 0.0:
+					additions[coordinate] = color
+					break
+	for coordinate: Vector2i in additions:
+		image.set_pixelv(bounds.position + coordinate, additions[coordinate] as Color)
+
+
+func _ring_exterior(image: Image, bounds: Rect2i) -> PackedByteArray:
 	var exterior := PackedByteArray()
 	exterior.resize(bounds.size.x * bounds.size.y)
 	var pending: Array[Vector2i] = []
 	for y in bounds.size.y:
 		for x in bounds.size.x:
-			if x != 0 and y != 0 and x != bounds.size.x - 1 and y != bounds.size.y - 1:
-				continue
-			var coordinate := Vector2i(x, y)
-			if image.get_pixelv(bounds.position + coordinate).a <= 0.0:
-				pending.append(coordinate)
+			if x == 0 or y == 0 or x == bounds.size.x - 1 or y == bounds.size.y - 1:
+				pending.append(Vector2i(x, y))
 	while not pending.is_empty():
 		var coordinate: Vector2i = pending.pop_back()
 		var index := coordinate.y * bounds.size.x + coordinate.x
@@ -609,9 +666,14 @@ func _build_ring_mask(image: Image, bounds: Rect2i, source_scale: int, ring_offs
 			continue
 		exterior[index] = 1
 		for offset: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var neighbor: Vector2i = coordinate + offset
+			var neighbor := coordinate + offset
 			if neighbor.x >= 0 and neighbor.y >= 0 and neighbor.x < bounds.size.x and neighbor.y < bounds.size.y:
 				pending.append(neighbor)
+	return exterior
+
+
+func _build_ring_mask(image: Image, bounds: Rect2i, source_scale: int, ring_offset: Vector2i) -> PackedByteArray:
+	var exterior := _ring_exterior(image, bounds)
 	var mask := PackedByteArray()
 	mask.resize(MINIMAP_VIEW_SIZE.x * MINIMAP_VIEW_SIZE.y)
 	for y in MINIMAP_VIEW_SIZE.y:
@@ -644,6 +706,7 @@ func _update_player_marker() -> void:
 		return
 	var marker_coordinate: Vector2i = room.minimap_coordinate - map_origin
 	player_marker.position = MAP_POSITION + Vector2(marker_coordinate) * DISPLAY_SCALE
+	player_marker.modulate = _current_room_marker_color(room)
 	# Rebuilds should not cause a visible marker to remain on the prior room.
 	player_marker.visible = player_marker_timer < PLAYER_MARKER_BLINK_TIME
 

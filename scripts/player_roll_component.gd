@@ -150,7 +150,7 @@ func _roll_multiplier_for(root: Object, tuning: PlayerTuning) -> float:
 
 
 func move_swept(movement: Vector2, root: Object) -> bool:
-	return (root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(root.get("player"), movement, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+	return bool(root.call("_try_move_actor", root.get("player"), movement))
 
 
 func begin(new_direction: Vector2) -> void:
