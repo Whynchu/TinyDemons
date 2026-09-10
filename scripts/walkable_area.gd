@@ -26,9 +26,9 @@ var outline_plane_offsets := PackedFloat32Array()
 var entrance_plane_normals: Array[PackedVector2Array] = []
 var entrance_plane_offsets: Array[PackedFloat32Array] = []
 var entrance_planes_convex: Array[bool] = []
-# Closed doorway polygons are authored against low-resolution tile seams. Keep
-# only the original half-pixel edge tolerance so the fence seals the seam
-# without making the surrounding room edge feel wider than the art.
+# Closed doorway polygons and the floor boundary are editor-authored geometry.
+# Keep only the original half-pixel edge tolerance so a doorway fence seals its
+# polygon seam without deriving collision from the visible map pixels.
 const ENTRANCE_BLOCK_EDGE_MARGIN := 0.5
 var edge_margin := 0.35
 var slime_edge_padding := 0.0
