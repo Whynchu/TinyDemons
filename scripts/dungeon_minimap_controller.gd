@@ -642,7 +642,9 @@ func _ensure_ring() -> void:
 		push_error("Dungeon minimap could not load %s." % MAP_RING_PATH)
 		return
 	ring_bounds = _opaque_bounds(ring_image)
-	_thicken_ring_inward(ring_image, ring_bounds)
+	# Keep the authored one-pixel ring. The map image is clipped separately by
+	# the ring mask in _crop_to_viewport, so the outline does not need to be
+	# thickened as a workaround for edge bleed.
 	var map_pixel_size := MINIMAP_VIEW_SIZE * int(DISPLAY_SCALE)
 	if ring_bounds.size.x > map_pixel_size.x or ring_bounds.size.y > map_pixel_size.y:
 		push_error("Dungeon minimap ring must fit inside %s map pixels, got %s." % [map_pixel_size, ring_bounds.size])
