@@ -90,6 +90,8 @@ var map_overlay_back_glyph: Sprite2D = null
 var map_overlay_select_text: Sprite2D = null
 var map_overlay_back_text: Sprite2D = null
 var map_overlay_back_button: Button = null
+var map_overlay_select_button: Button = null
+var map_overlay_destination_buttons: Array[Button] = []
 
 
 func configure(new_map_controller: Node) -> void:
@@ -345,6 +347,15 @@ func _ensure_map_overlay() -> void:
 		label.centered = false
 		map_overlay.add_child(label)
 		map_overlay_flame_labels.append(label)
+		var destination_button := Button.new()
+		destination_button.name = "DestinationTouchTarget%d" % index
+		destination_button.focus_mode = Control.FOCUS_NONE
+		destination_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+			destination_button.add_theme_stylebox_override(state_name, transparent_style)
+		destination_button.pressed.connect(_on_destination_tapped.bind(index))
+		map_overlay.add_child(destination_button)
+		map_overlay_destination_buttons.append(destination_button)
 	map_overlay_list_pointer = Sprite2D.new()
 	map_overlay_list_pointer.set_script(MENU_CURSOR_SCRIPT)
 	map_overlay_list_pointer.name = "ListPointer"
@@ -354,7 +365,34 @@ func _ensure_map_overlay() -> void:
 	# z values clamp together. Keep the cursor last to make sibling draw order
 	# deterministic above the opaque map texture.
 	map_overlay.move_child(map_overlay_cursor, map_overlay.get_child_count() - 1)
+	map_overlay_select_button = Button.new()
+	map_overlay_select_button.name = "SelectTouchTarget"
+	map_overlay_select_button.focus_mode = Control.FOCUS_NONE
+	map_overlay_select_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+		map_overlay_select_button.add_theme_stylebox_override(state_name, transparent_style)
+	map_overlay_select_button.pressed.connect(_on_select_tapped)
+	map_overlay.add_child(map_overlay_select_button)
 	map_overlay.visible = false
+
+
+func _on_destination_tapped(index: int) -> void:
+	if not map_open or index < 0 or index >= _flame_room_ids.size():
+		return
+	selected_flame_index = index
+	_refresh_map_overlay(gameplay_root, true)
+	if gameplay_root != null:
+		gameplay_root.call("_play_sound", "ui_hover", -6.0, 1.0)
+
+
+func _on_select_tapped() -> void:
+	if not map_open or _flame_room_ids.is_empty():
+		return
+	var target_room_id := _flame_room_ids[clampi(selected_flame_index, 0, _flame_room_ids.size() - 1)]
+	if can_fast_travel_to_flame(gameplay_root, target_room_id):
+		flame_travel_requested.emit(target_room_id)
+	elif gameplay_root != null:
+		gameplay_root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 
 
 func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
@@ -388,6 +426,8 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 	map_overlay_back_text.position = Vector2(153.0, view_size.y - 14.0)
 	map_overlay_back_button.position = PAUSE_LAYOUT.back_button_position(view_size)
 	map_overlay_back_button.size = PAUSE_LAYOUT.BACK_BUTTON_SIZE
+	map_overlay_select_button.position = Vector2(100.0, view_size.y - 23.0)
+	map_overlay_select_button.size = Vector2(42.0, 20.0)
 	map_overlay_select_glyph.visible = true
 	map_overlay_back_glyph.visible = true
 	map_overlay_back_text.visible = true
@@ -406,8 +446,14 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 		var label := map_overlay_flame_labels[index]
 		if index >= _flame_room_ids.size():
 			label.visible = false
+			if index < map_overlay_destination_buttons.size():
+				map_overlay_destination_buttons[index].visible = false
 			continue
 		var room_id := _flame_room_ids[index]
+		if index < map_overlay_destination_buttons.size():
+			map_overlay_destination_buttons[index].position = Vector2(MAP_OVERLAY_LIST_X - 8.0, MAP_OVERLAY_LIST_TOP + index * MAP_OVERLAY_ROW_PITCH - 2.0)
+			map_overlay_destination_buttons[index].size = Vector2(maxf(view_size.x - MAP_OVERLAY_LIST_X - 2.0, 1.0), MAP_OVERLAY_ROW_PITCH + 2.0)
+			map_overlay_destination_buttons[index].visible = true
 		var room := (map_controller.get("graph") as DungeonGraph).get_room(room_id) if map_controller != null and map_controller.get("graph") != null else null
 		var graph := map_controller.get("graph") as DungeonGraph
 		var is_hub := graph != null and room_id == graph.start_room_id
