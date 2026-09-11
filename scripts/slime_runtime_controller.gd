@@ -264,9 +264,20 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 		slime.position = last_valid[slime] as Vector2
 	if not slime_position_is_valid(root, slime):
 		var recovery_foot: Vector2 = root.call("_nearest_valid_slime_walkable_point", root.call("_actor_foot", slime), slime)
-		slime.position += recovery_foot - (root.call("_actor_foot", slime) as Vector2)
+		if recovery_foot.is_finite():
+			slime.position += recovery_foot - (root.call("_actor_foot", slime) as Vector2)
 	if slime_position_is_valid(root, slime):
 		last_valid[slime] = slime.position
+	else:
+		# An enemy that cannot occupy the current room is worse than a missing
+		# enemy: it can keep the encounter open while remaining impossible to hit.
+		# Disable it immediately and let the room runtime persist it as dead.
+		slime.visible = false
+		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+		combat.dead = true
+		combat.active = false
+		(root.get("collision_sprites") as Array[Sprite2D]).erase(slime)
+		(root.get("actor_sprites") as Array[Sprite2D]).erase(slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_timer = 0.0
 	combat.knockback_velocity = Vector2.ZERO

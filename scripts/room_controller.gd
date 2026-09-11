@@ -1612,6 +1612,9 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 		spawn_positions.erase(slime_index)
 		spawn_positions.erase(str(slime_index))
 		slime.visible = false
+		var failed_runtime := state.get("enemy_runtime", {}) as Dictionary
+		failed_runtime[str(slime_index)] = {"alive": false, "position": slime.global_position, "health": 0.0}
+		state["enemy_runtime"] = failed_runtime
 		actor_sprites.erase(slime)
 		collision.erase(slime)
 		depth_sprites.erase(slime)
@@ -1732,7 +1735,7 @@ func reset_slimes_for_room(root: Object) -> void:
 	state["enemy_spawn_positions"] = spawn_positions; state["enemy_spawn_seed"] = spawn_seed; room_states[room_id] = state
 	var run_state := root.get("run_state") as RunState
 	if run_state != null and run_state.active:
-		run_state.register_room_enemies(room_id, active_variants.size())
+		run_state.register_room_enemies(room_id, spawned_slots)
 	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS and not animated_spawn_started:
 		for slime in slimes:
 			if slime.visible:
