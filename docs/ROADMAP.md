@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.01`
+Current release: version `0.2.02`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -45,10 +45,11 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.01
+## Next checkpoint after 0.2.02
 
-Version `0.2.01` records the codebase audit, focused verification results, and
-the remaining contract failures. The next implementation checkpoint is a
+Version `0.2.02` records the touch-scroll repair, UID validator, focused
+verification results, and the remaining contract failures. The next
+implementation checkpoint is a
 stabilization pass in this order:
 
 1. Repair closed doorway geometry and trigger fences, then verify that every

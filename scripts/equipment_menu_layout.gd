@@ -10,6 +10,8 @@ class_name EquipmentMenuLayout
 const NATIVE_SIZE := Vector2(240.0, 160.0)
 const DIM_CURSOR_MODULATE := Color(0.5, 0.5, 0.5, 1.0)
 const ACTIVE_CURSOR_MODULATE := Color.WHITE
+const CANDIDATE_COLUMN_COUNT := 2
+const CANDIDATE_VISIBLE_COUNT := 8
 
 const MODE_COMMAND := 0
 const MODE_SLOT_EQUIP := 1
@@ -434,6 +436,15 @@ func set_candidates(labels: Array[String], colors: Array[Color] = [], _selected_
 		if index < candidate_buttons.size():
 			candidate_buttons[index].visible = not read_only and not value.is_empty()
 	_apply_candidate_scroll()
+
+
+static func candidate_max_scroll(item_count: int) -> int:
+	# The authored picker shows four complete rows. Keep the window aligned to
+	# columns, but calculate the final window from rows rather than assuming the
+	# inventory always fills the last row.
+	var row_count := int(ceil(float(maxi(item_count, 0)) / float(CANDIDATE_COLUMN_COUNT)))
+	var visible_rows := int(CANDIDATE_VISIBLE_COUNT / CANDIDATE_COLUMN_COUNT)
+	return maxi(0, (row_count - visible_rows) * CANDIDATE_COLUMN_COUNT)
 
 
 func _apply_candidate_scroll() -> void:
