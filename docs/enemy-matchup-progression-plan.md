@@ -1,5 +1,13 @@
 # Enemy Matchup Progression Plan
 
+Status: future encounter-content design; current matchup implementation is
+documented in `elemental-slimes-and-combat-plan.md`
+
+Updated: 2026-09-11
+
+Scope: encounter composition for authored R3–R5 and later content; it does not
+replace the stable element catalog or current generated-route validation.
+
 ## Purpose
 
 Define how enemy elemental composition should progress from the current early

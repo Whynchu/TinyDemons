@@ -1,5 +1,9 @@
 # Tiny Demons Gameplay Smoke Checklist
 
+Status: current manual acceptance checklist for the `0.2.x` baseline
+
+Updated: 2026-09-11
+
 Purpose: establish a repeatable behavior baseline before extracting gameplay
 components. Run this checklist against the current branch before and after each
 consolidation milestone.
@@ -14,11 +18,11 @@ The focused catalogue tests are also included by `tests/run_all_smoke.ps1`.
 > expected results below whenever that overhaul changes a stat or difficulty
 > knob.
 
-Baseline reference: `main` at `15a2832`
+Baseline reference: version `0.2.00` at commit
+`bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Consolidation branch: `agent/script-consolidation`
-
-Current behavior checkpoint: `84e7a61`
+The older `main`/`agent/script-consolidation` checkpoint is historical context;
+record the exact commit tested below for each run.
 
 ## Test environment
 

@@ -1,7 +1,7 @@
 # Combat & Economy Overhaul
 
-> Status: **Implemented - playtest pending**
-> Branch: `agent/script-consolidation`
+> Status: **Implemented foundation; current baseline reference**
+> Historical branch: `agent/script-consolidation`
 > Scope: player gear value, base stats, enemy/boss difficulty, and the
 > automated safety net around all of it.
 

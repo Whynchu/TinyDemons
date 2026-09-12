@@ -1,6 +1,8 @@
 # Tiny Demons Feature Map
 
-Status: initial map; requires vertical-slice verification
+Status: current baseline map; ownership remains partially coupled
+
+Updated: 2026-09-11
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. `gameplay.gd` and

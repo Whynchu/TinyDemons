@@ -1,5 +1,9 @@
 # Tiny Demons — Gear System Rework
 
+Status: current runtime specification and compatibility reference
+
+Updated: 2026-09-11
+
 ## Status
 
 Implemented runtime specification. The live catalogue and generation path use

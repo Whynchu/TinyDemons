@@ -1,8 +1,12 @@
 # Production Boundary
 
-Status: Phase 0 baseline recorded
+Status: current baseline for `0.2.x`
 
-Baseline date: 2026-09-06
+Baseline date: 2026-09-11
+
+Canonical baseline: version `0.2.00`, commit
+`bfe55782f43ee40fe32b5bebd45de988e34579d8`. See [`AUDIT.md`](AUDIT.md) for
+the measured codebase state and preservation contract.
 
 ## Project Boundary
 

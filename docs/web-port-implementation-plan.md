@@ -2,6 +2,17 @@
 
 Status: implementation complete locally; browser/device verification pending
 
+Owner: `export_presets.cfg`, `input_router.gd`, `touch_controls_layer.gd`, and
+the web save services.
+
+Current code: desktop and web coexist in the same project; local export support
+is present, while browser/device verification remains open.
+
+Verification: standalone web export smoke test plus browser input, save, and
+touch verification.
+
+Supersedes: one-off web fork proposals; web remains a permanent project target.
+
 Hosting target: GitHub Pages project site, deployed by GitHub Actions from
 `main` (`https://whynchu.github.io/TinyDemons/`)
 

@@ -1,5 +1,14 @@
 # Menu UI migration
 
+Status: active visual and interaction migration contract
+
+Updated: 2026-09-11
+
+Owner: `screen_state_controller.gd` plus the menu scenes and layout scripts.
+
+Verification: native 240×160 render comparison, responsive layout checks, and
+keyboard/controller/touch menu navigation coverage.
+
 Responsive-layout amendment:
 
 - [`responsive-menus-touch-and-progression-safety-plan.md`](responsive-menus-touch-and-progression-safety-plan.md)

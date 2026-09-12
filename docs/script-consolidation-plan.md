@@ -4,9 +4,10 @@
 > route is superseded by [`AUDIT.md`](AUDIT.md) and
 > [`refactor-route.md`](refactor-route.md) as of 2026-08-22.
 
-Status: proposed
+Status: historical; superseded by [`AUDIT.md`](AUDIT.md) and
+[`refactor-route.md`](refactor-route.md).
 
-Branch: `agent/script-consolidation`
+Historical branch: `agent/script-consolidation`
 
 Baseline commit: `15a2832`
 
@@ -554,7 +555,7 @@ dictionaries, and new gameplay objects are assembled through composition.
 
 ### M8 - Deep feature extraction
 
-Status: In progress. The first multi-slice pass moved walkability queries,
+Historical checkpoint status: the first multi-slice pass moved walkability queries,
 effect lifetime updates, title-particle lifecycle, target ownership, target
 visibility, and health-bar region updates behind the existing controllers.
 The next pass moved reusable occlusion image generation, outline, whitening,
@@ -608,7 +609,7 @@ methods; `gameplay.gd` only sequences feature controllers.
 
 ### M9 - Coordinator reduction
 
-Status: In progress. The first slice moves attack-combo buffering and attack-2 cooldown ownership into `PlayerAttackComponent`; the coordinator continues to make input and phase decisions through that API.
+Historical checkpoint status: the first slice moved attack-combo buffering and attack-2 cooldown ownership into `PlayerAttackComponent`; the coordinator continued to make input and phase decisions through that API.
 
 Model route: Terra at high effort for cross-controller integration; GPT-5.4 for
 settled API migrations; GPT-5.4 mini for exact dead-code removal; GPT-5.5 for

@@ -2,6 +2,13 @@
 
 Status: implemented; score presentation and performance weighting are active.
 
+Updated: 2026-09-11
+
+Current owners: `run_flow_controller.gd`, `progression_controller.gd`, and
+`screen_state_controller.gd`.
+
+Verification: run-grade, settlement, results presentation, and reward tests.
+
 ## Purpose
 
 The results screen should answer three questions immediately: how well did the

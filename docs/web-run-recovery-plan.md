@@ -1,5 +1,16 @@
 # Web Restart Diagnosis and Run Recovery
 
+Status: active recovery plan; local save/recovery implementation is present and
+browser lifecycle verification remains open
+
+Updated: 2026-09-11
+
+Owner: `active_run_save_service.gd`, `profile_save_service.gd`,
+`save_flow_controller.gd`, and the web lifecycle boundary.
+
+Verification: browser reload, checkpoint, resume/discard, backup selection, and
+active-run/profile separation checks.
+
 ## Goal
 
 Mobile browser restarts may show the Godot loader during an active run. Tiny

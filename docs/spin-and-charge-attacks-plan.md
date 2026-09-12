@@ -1,7 +1,16 @@
 # Spin and Charge Attacks
 
 Status: implemented; current combat follow-up is being integrated on the active
-gear/combat branch.
+gear/combat path.
+
+Updated: 2026-09-11
+
+Current owners: `player_attack_component.gd`, `player_animation_component.gd`,
+and the shared combat/equipment tuning classes.
+
+Verification: attack timing, animation transition, hitbox, and combat smoke
+coverage; the charged-attack recovery contract remains part of the `0.2.00`
+baseline.
 
 This slice adds two physical attack options while preserving the existing
 directional Attack 1 → Attack 2 combo:

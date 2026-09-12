@@ -16,10 +16,13 @@
 > gear-catalogue-spec.md and gear-catalogue.md. This broad vision page remains
 > a directional reference, not the implementation authority for item definitions.
 
-> Status: **Design proposal — discussion first.** This is the "what makes Tiny
-> Demons *Tiny Demons*" document. It projects the mid-big picture direction and
-> defines the feature set that gives the game a distinct identity. Nothing here
-> authorizes implementation until the open decisions are resolved.
+Status: directional product reference; elemental and equipment sections are
+partially superseded by the linked current contracts.
+
+This is the “what makes Tiny Demons Tiny Demons” document. It describes the
+longer-term identity and feature direction. It does not override the current
+runtime baseline or authorize implementation by itself; use the current design
+and implementation documents linked above for a feature decision.
 >
 > Companion docs: `meta_progression_design.md` (hub/gear), `combat-economy-overhaul.md`
 > (current balance), `ARCHITECTURE.md` (technical boundaries).

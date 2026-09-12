@@ -1,6 +1,13 @@
 # Gear Economy and Progression Implementation Plan
 
-Status: In progress
+Status: historical balance proposal; current gear contracts are in
+`gear-catalogue-spec.md`, `gear-effect-contracts.md`, and `gear-drop-tables.md`
+
+Updated: 2026-09-11
+
+The numerical experiments below remain useful for balance review. They are not
+an active implementation checklist until explicitly reopened against the
+`0.2.x` baseline.
 
 ## Goals
 

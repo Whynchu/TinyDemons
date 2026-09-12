@@ -1,8 +1,11 @@
 # Documentation Audit
 
-Status: initial classification
+Status: current classification policy; inventory refresh pending
 
-Audit date: 2026-09-07
+Audit date: 2026-09-11
+
+Current baseline: version `0.2.00`; see [`AUDIT.md`](AUDIT.md) for the source
+audit and preservation contract.
 
 ## Purpose
 
@@ -32,9 +35,30 @@ These documents should remain the primary navigation and decision surface:
 10. `docs/vertical-slice-analysis.md` - traced runtime/save flows.
 11. `docs/asset-reference-audit.md` - asset classification.
 12. `docs/dynamic-dependency-audit.md` - hidden dependency measurements.
+13. `docs/ROADMAP.md` - active product and infrastructure sequence.
+14. `docs/KNOWN_ISSUES.md` - current behavior and verification register.
+15. `docs/CONTENT_AUTHORING.md` - repeatable content workflows.
+16. `docs/engineering-friction-audit.md` - prioritized engineering findings.
 
 If another document conflicts with this set, the conflict should be resolved in
 the canonical set before implementation proceeds.
+
+The current canonical set is:
+
+- `README.md`, `AGENTS.md`, and `docs/DOCUMENTATION_MAP.md` for navigation and
+  contributor rules;
+- `docs/AUDIT.md`, `docs/ROADMAP.md`, and `docs/KNOWN_ISSUES.md` for baseline,
+  sequence, and live verification state;
+- `docs/CONTENT_AUTHORING.md`, `docs/ARCHITECTURE.md`,
+  `docs/FEATURE_MAP.md`, and `docs/runtime-map.md` for ownership and extension;
+- `docs/GAMEPLAY_TUNING.md` and `docs/project_direction.md` for design-facing
+  intent; and
+- `docs/production-boundary.md`, `docs/VERSIONING.md`, and the web/save plans
+  for shipping and compatibility constraints.
+
+These names are case-sensitive in links and exports. Use the existing
+lowercase `project_direction.md` filename; do not introduce an uppercase
+case-only duplicate.
 
 ## Classification Rules
 
@@ -114,6 +138,74 @@ Examples:
 
 These should be linked from the relevant current design but not treated as
 implementation ownership documents.
+
+## Current inventory
+
+### Canonical and maintained
+
+`AUDIT.md`, `ARCHITECTURE.md`, `CONTENT_AUTHORING.md`,
+`DOCUMENTATION_MAP.md`, `FEATURE_MAP.md`, `GAMEPLAY_TUNING.md`,
+`KNOWN_ISSUES.md`, `ROADMAP.md`, `VERSIONING.md`, `documentation-audit.md`,
+`dynamic-dependency-audit.md`, `engineering-friction-audit.md`,
+`production-boundary.md`, `runtime-map.md`, `test-target-audit.md`, and
+`vertical-slice-analysis.md`.
+
+### Active plans or open implementation handoffs
+
+`current-issues-and-resolution-plan.md`, `durable-save-and-cloud-sync-plan.md`,
+`elemental-chroma-implementation-plan.md`,
+`generated-route-audit.md`, `repo-analysis-plan.md`,
+`responsive-menus-touch-and-progression-safety-plan.md`,
+`web-port-implementation-plan.md`, and any implemented handoff that still has
+an open runtime, browser, touch, or performance verification item.
+
+### Implemented feature references
+
+`boss-slime-implementation-plan.md`, `demon-hub-menu-navigation-plan.md`,
+`elemental-binding-and-fusion-design.md`,
+`elemental-binding-and-fusion-implementation-plan.md`,
+`elemental-slimes-and-combat-plan.md`, `equipment-menu-rework-plan.md`,
+`ffiii-inspired-stats-and-menu-implementation-plan.md`,
+`generated-fusion-gate-inspection.md`,
+`generated-r7-route-validation.md`, `gear-catalogue-implementation-plan.md`,
+`modular-display-and-settings-plan.md`, `r7-compact-roguelike-puzzle-generator-plan.md`,
+`r8-origin-aware-progression-implementation-plan.md`,
+`run-results-screen-plan.md`, `run1-dungeon-map-implementation-plan.md`, and
+`spin-and-charge-attacks-plan.md`.
+
+These documents should retain their rationale but should identify the current
+owner and verification path when reopened. An “implemented” label does not
+erase remaining device or runtime evidence gaps.
+
+### Historical or superseded
+
+`composition-root-2000-milestone.md`, `composition-root-r0-inventory.md`,
+`composition-root-r1-checkpoint.md`, `composition-root-reduction-plan.md`,
+`meta_progression_implementation_plan.md`, `next-phase-plan.md`,
+`script-consolidation-plan.md`, and `speed_stat_design.md`.
+
+The authored R1–R5 design and implementation documents remain useful content
+contracts even when their implementation stage is complete. The R3/R4/R5
+documents should carry explicit run scope before future edits.
+
+### Design, proposal, or reference material
+
+`asset-provenance.md`, `asset-reference-audit.md`,
+`combat-economy-overhaul.md`, `dialogue_shop_concept.md`,
+`enemy-matchup-progression-plan.md`, `gear-catalogue.md`,
+`gear-catalogue-spec.md`, `gear-drop-tables.md`, `gear-effect-contracts.md`,
+`gear-economy-progression-implementation-plan.md`, `gear-system-rework.md`,
+`hub-menu-visual-display-contract.md`, `meta_progression_design.md`,
+`procedural-dungeon-design.md`, `procedural_sfx_reconstruction_plan.md`,
+`project_direction.md`, `r3-puzzle-map-generator-plan.md`,
+`r4-puzzle-map-implementation-plan.md`, `run1-dungeon-map-design.md`,
+`soul-economy-and-fire-exchanges.md`, `Tiny Demons — Elemental Chroma System Design.md`,
+`cloud-save-deployment.md`, `fusion-bind-menu-handoff.md`,
+`menu-ui-migration-plan.md`, and the SFX/reference documents.
+
+These documents are not automatically inactive. Their status must be decided
+from the current product direction and linked implementation owner before
+they guide new work.
 
 ## Overlap Clusters
 

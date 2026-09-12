@@ -1,6 +1,15 @@
 # Current Issues and Resolution Plan
 
-Created: 2026-09-09
+Status: live issue tracker; source fixes require runtime evidence before closure
+
+Updated: 2026-09-12
+
+Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
+
+Current release: version `0.2.01`
+
+Owner: the feature owner listed for each issue; tracking is maintained here and
+summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 ## Approved direction and evidence rules
 
@@ -27,6 +36,23 @@ backtracking issues reported during playtesting. It is a working document: code
 changes should update the status and verification notes here as each issue is
 resolved.
 
+## Current baseline verification — 2026-09-11
+
+The registered smoke inventory is complete (`113` paths, `0` missing files),
+but focused standalone execution found several contracts that still need
+triage. Passing layout, room, enemy, gear-effect, Chroma, and progression
+checks do not close the player-facing issues below. Current failures include
+doorway geometry, Hub/equipment/touch menu contracts, generated minimap draw
+order and discovery visibility, the starter-flame music gate, active-run
+snapshot validation, and generated R7 bounds/fusion validation. The exact test
+names and assertion messages are recorded in [`test-target-audit.md`](test-target-audit.md)
+and summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
+
+The direct checks also confirmed the declared R3/R4/R5 authored route contracts
+and the Run 2 authored route contract. The native R7 generator smoke did not
+complete after reporting out-of-bounds rooms, so generated R6+ remains a
+release-risk area under the approved route policy.
+
 ## Issue 1 — Demon Hub select/back presentation differs by menu
 
 **Observed:** The Demon Hub has four select/back button formats. SHOP and FUSION
@@ -48,7 +74,7 @@ and changing orientation. SHOP and FUSION retain their current appearance.
 Add a scene/layout characterization check where practical and perform a visual
 playtest at the supported display orientations.
 
-Status: **Implemented in source — visual orientation verification pending**
+Status: **Source path exists — focused Hub contract currently failing; visual orientation verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -92,7 +118,7 @@ after a sale, selection remains stable when possible, and the flow does not
 become slower as inventory size grows. Add focused characterization coverage
 for same-name gear at multiple levels and for selling the final item in a row.
 
-Status: **Implemented in source — runtime transaction verification pending**
+Status: **Source path exists — focused Hub contract currently failing; runtime transaction verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -203,7 +229,7 @@ row remains reachable, the first row can return fully into view, and desktop
 controller/keyboard navigation is unchanged. Verify both pause and hub
 instances at the supported aspect presets.
 
-Status: **Implemented in source — runtime touch verification pending**
+Status: **Source path exists — focused equipment contract currently failing; runtime touch verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -237,7 +263,7 @@ identities matching their design contracts. Their distinction is stable across
 fresh runs and does not depend on visual appearance alone. Add a deterministic
 regression check for the room identity and the relevant milestone/depth data.
 
-Status: **Implemented in source — runtime route/recovery verification pending**
+Status: **Source path exists — generated-route validation currently failing; runtime route/recovery verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -293,7 +319,7 @@ or clearly inactive outside a flame room, and equivalent non-DS4 input paths
 are documented. Add input, destination eligibility, and travel-state coverage
 before relying on manual playtest.
 
-Status: **Implemented in source — runtime travel verification pending**
+Status: **Source path exists — focused minimap contracts currently failing; runtime travel verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -459,23 +485,27 @@ Status: **Implemented in source — runtime color verification pending**
 5. Implement the expanded minimap, persisted visits, and flame travel on the
    updated run-generation/state contracts (Issue 7).
 
-The source implementation covers the approved behavior without changing
-unrelated balance. Remaining work is measurement and runtime acceptance:
-compare all Hub footer orientations, exercise a complete sell transaction,
-profile cold/warm flame pickup, test equipment swipes in both menu instances,
-restore a generated R6 checkpoint, travel between two visited flames, and
-visually inspect bound/temporary pickup colors.
+The source implementation contains the approved behavior without changing
+unrelated balance, but the current focused baseline shows contracts that must
+be repaired or reclassified before closure. Remaining work is to triage the
+failed Hub, equipment, doorway, minimap, music-gate, binding, generated-route,
+and recovery assertions; compare all Hub footer orientations; exercise a
+complete sell transaction; profile cold/warm flame pickup; test equipment
+swipes in both menu instances; restore a generated R6 checkpoint; travel
+between two visited flames; and visually inspect bound/temporary pickup
+colors.
 
 ## Verification and handoff
 
-Source verification on 2026-09-09: Godot MCP script diagnostics passed for all
-changed scripts and focused smoke scripts. The live MCP session confirmed the
-expanded minimap opens and closes from gameplay and that the Hub root shows the
-shared footer. `git diff --check` is clean.
+The 2026-09-09 source/MCP verification is historical evidence for the initial
+implementation pass. The current 2026-09-11 baseline had no editor peer or
+runtime active, so focused checks ran as standalone Godot processes. Inventory
+is complete (`113` registered paths, `0` missing files); the detailed pass and
+failure matrix is in [`test-target-audit.md`](test-target-audit.md).
 
-The full smoke suite was not run because an editor peer was active, as required
-by `AGENTS.md`; earlier supervised standalone Godot attempts exited with signal
-11 before producing test logs. Runtime timings, cold-start audio behavior,
+The full smoke suite remains intentionally unrun because it launches one Godot
+process per registered test. Runtime timings, cold-start audio behavior,
 flame-to-flame travel, orientation comparison, and the complete touch swipe
-matrix therefore remain open acceptance checks. Do not record a phase change in
-`docs/AUDIT.md` until those checks and the normal smoke gate are available.
+matrix remain open acceptance checks. Do not record a phase change in
+`docs/AUDIT.md` until the failed contracts are triaged and the normal smoke
+gate is available.

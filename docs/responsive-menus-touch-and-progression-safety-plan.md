@@ -3,6 +3,18 @@
 Status: Phases A–D (Demon Hub pass) implemented and verified; the remaining
 menu migration continues in the next pass.
 
+Owner: `screen_state_controller.gd`, `display_controller.gd`,
+`display_layout.gd`, and `touch_controls_layer.gd`.
+
+Current code: Demon Hub and the responsive touch preview path are active;
+remaining menu migration and browser/device verification are open.
+
+Verification: responsive menu, touch menu, progression safety, and generated
+door reachability tests under `tests/`.
+
+Supersedes: older fixed-width menu behavior described in the related migration
+plans.
+
 Plan date: 2026-09-01
 
 Related contracts:

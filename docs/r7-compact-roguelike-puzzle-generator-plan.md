@@ -1,7 +1,7 @@
 # R7 Compact Roguelike Puzzle Generator Plan
 
 Status: implemented; native compact R7 topology, typed edge metadata, ordered
-progression validation, and runtime cutover are active for generated runs
+progression validation, and runtime cutover are active for generated R6+ runs
 
 Reference: `Artwork/Rxpuzzle_map_ex.png`
 
@@ -9,7 +9,7 @@ Reference: `Artwork/Rxpuzzle_map_ex.png`
 
 R7 and later generated runs retain roguelike variation while using the same
 compact 35x35 lattice, marker language, minimap rendering, room compiler, and
-door semantics as the authored R3-R6 maps. Generation must create the route,
+door semantics as the authored R3-R5 maps. Generation must create the route,
 its progression states, and its Fire/Orb/fusion dependencies together. A map
 that is merely connected is not sufficient.
 
@@ -250,7 +250,8 @@ than being reconstructed from pixel color.
 
 Owner: replacement for `generated_puzzle_map_preview.gd`
 
-The validation tool uses the same compact-plan renderer as R3-R6. It does not
+The validation tool uses the same compact-plan renderer as R3-R5 and generated
+R6+. It does not
 instantiate gameplay or the runtime minimap controller.
 
 Required views:

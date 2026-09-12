@@ -1,5 +1,9 @@
 # Tiny Demons — Gear Catalogue and Equipment Specification
 
+Status: approved current equipment contract for the `0.2.x` baseline
+
+Updated: 2026-09-11
+
 ## Status and authority
 
 **Approved design — six-slot runtime foundation landed.** Approved 2026-08-29.

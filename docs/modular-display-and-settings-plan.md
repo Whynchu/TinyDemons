@@ -4,6 +4,12 @@ Status: implementation complete locally; responsive presentation and closed-
 entrance seam correction implemented; automated verification green through
 2026-08-29; physical browser/device matrix pending
 
+Current owners: `display_controller.gd`, `display_layout.gd`,
+`settings_service.gd`, `sound_manager.gd`, and the menu presentation owner.
+
+Verification: local responsive/settings coverage is recorded here; physical
+browser/device verification remains open.
+
 Date: 2026-08-27
 
 This document is the design and implementation handoff for making the game's
@@ -374,7 +380,8 @@ Audited 2026-08-26/27 against the live tree:
 
 ## 11. Implementation record
 
-The six phases are implemented on `feature/ffiii-stats-menu-rework`:
+The six phases were implemented during the historical
+`feature/ffiii-stats-menu-rework` workstream:
 
 1. `SettingsService` owns device-wide `user://settings.cfg` preferences;
    `DisplayController` applies logical size/scaling/fullscreen; and

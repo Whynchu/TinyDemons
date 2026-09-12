@@ -2,6 +2,18 @@
 
 Status: approved direction; implementation in progress
 
+Owner: `profile_save_service.gd`, `active_run_save_service.gd`,
+`cloud_save_service.gd`, and the web save UI/services.
+
+Current code: local profile and active-run persistence are live; account-free
+encrypted cloud recovery remains an in-progress platform workflow.
+
+Verification: save migration, active-run recovery, browser reload, export/import,
+and cloud round-trip checks under `tests/` and the web deployment workflow.
+
+Supersedes: the earlier account-based recovery direction described in this file's
+decision update.
+
 > Decision update — 2026-08-30: account-based authentication is no longer the
 > primary recovery design. Tiny Demons will use an account-free recovery key and
 > client-side encrypted cloud vault. The previously created `game_saves` table is

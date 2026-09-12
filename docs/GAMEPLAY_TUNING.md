@@ -1,16 +1,23 @@
 # Gameplay Tuning Index
 
-> Purpose: a single index of every gameplay tuning knob and where to change it
-> in the Godot editor. If it affects feel, difficulty, or economy, it should be
-> here. Values marked `inspector` are `@export` fields editable on the
-> resource in the editor; values marked `const` are hardcoded and need a code
-> change (candidates for future export).
+Status: current code-backed tuning index; external resource migration remains
+planned
 
-## Tuning resources
+Updated: 2026-09-11
 
-The six typed tuning resources are attached to the gameplay root and are the
-primary editor surface. Open any one and edit values in the inspector; the
-game reads them at runtime with no code change.
+> Purpose: a single index of gameplay tuning knobs and where to change them.
+> This index describes the intended designer-facing surface. In version
+> `0.2.00`, the six tuning objects are instantiated from code in
+> `gameplay_state.gd`; they are not yet external `.tres` resources. Treat that
+> mismatch as infrastructure work, not as a claim that inspector editing is
+> already available.
+
+## Intended tuning resources
+
+The six typed tuning classes are currently created by `gameplay_state.gd` and
+form the code-backed tuning surface. Their exported fields document the
+intended future inspector surface; moving them into external resources is a
+planned infrastructure change.
 
 ### `scripts/player_tuning.gd` — player feel (81 exports, all `inspector`)
 

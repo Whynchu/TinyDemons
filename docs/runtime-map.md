@@ -1,8 +1,10 @@
 # Tiny Demons Repository Map
 
-Status: initial full map; improve as ownership is verified
+Status: current navigation map; ownership remains partially coupled
 
-Map date: 2026-09-07
+Map date: 2026-09-11
+
+Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 This document is the practical navigation map for the repository. It describes
 the current worktree, not an idealized future architecture. Existing audit and
@@ -45,18 +47,18 @@ TinyDemons/
 
 ### Current tracked scale
 
-Measured from Git-tracked files on 2026-09-07:
+Measured from the baseline commit on 2026-09-11:
 
 | Surface | Count | Interpretation |
 |---|---:|---|
-| GDScript files | 384 | Includes runtime, tests, tools, previews, and addon code |
-| Scenes | 19 | Includes production, debug, authoring, and preview scenes |
-| Test scripts | 114 | Mostly smoke/contract tests; not all are full integration tests |
-| Markdown files | 86 | Active plans, historical decisions, reference, and addon docs |
+| GDScript files | 397 | Includes runtime, tests, tools, previews, and addon code |
+| Scenes | 20 | Includes production, debug, authoring, and preview scenes |
+| Test scripts | 121 | Mostly smoke/contract tests; not all are full integration tests |
+| Markdown files | 99 | Project docs plus addon guidance and attribution |
 
-The current worktree also contains uncommitted R7 puzzle-generation changes and
-the analysis documents created during this mapping effort. Do not treat the
-worktree as a clean release baseline.
+The baseline commit is clean; the current worktree contains documentation-only
+audit changes. Do not treat the worktree as a clean release baseline until
+those changes are committed or discarded.
 
 ## Runtime Entry And Composition
 
@@ -442,7 +444,11 @@ changes, and must be triaged against the current worktree before code changes.
 Do not infer deletion candidates from these remaining gaps until dynamic loading
 and authoring workflows have been checked.
 
-## Latest Verification Note
+## Historical Verification Note
+
+The following smoke observations come from the 2026-09-07 pre-`0.2.00` audit.
+They are retained as triage history, not as the current release result. The
+current audit has not rerun the full runtime suite.
 
 On 2026-09-07, the improved runner was exercised with:
 

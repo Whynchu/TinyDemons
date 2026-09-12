@@ -1,5 +1,11 @@
 # R4 Puzzle Map Implementation Plan
 
+Status: authored Run 4 implementation reference
+
+Scope: Run 4 authored map only; it does not define the generated R6+ route.
+
+Updated: 2026-09-11
+
 ## Goal
 
 Turn `Artwork/R4puzzle_map.png` into the next authored dungeon layout while

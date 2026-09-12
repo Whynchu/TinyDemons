@@ -4,10 +4,14 @@
 
 1. `README.md` — project entry point and verification commands.
 2. `docs/AUDIT.md` — current findings and phase status.
-3. `docs/refactor-route.md` — accepted migration route.
-4. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
-5. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
-6. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
+3. `docs/DOCUMENTATION_MAP.md` — authority and document lifecycle guide.
+4. `docs/ROADMAP.md` — active product and infrastructure sequence.
+5. `docs/KNOWN_ISSUES.md` — open behavior, verification, and infrastructure findings.
+6. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries.
+7. `docs/refactor-route.md` — accepted migration route.
+8. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
+9. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
+10. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
 
 ## Verification
 

@@ -1,6 +1,15 @@
 # Tiny Demons — Elemental Slimes and Combat Matchups
 
-Status: implementation complete on `feature/elemental-slime-combat`
+Status: implementation complete; current baseline reference
+
+Historical implementation branch: `feature/elemental-slime-combat`
+
+Current owners: `element_catalog.gd`, `slime_variant_catalog.gd`,
+`slime_actor.gd`, and `combat_runtime_controller.gd`.
+
+Verification: elemental catalog, variant, damage, combat-feedback, and slime
+spawn/engagement tests; remaining runtime behavior gaps are listed in
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 Implementation commits: `37a86bf`, `c67ce5b`, `b4b6097`, `f349726`
 

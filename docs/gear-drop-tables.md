@@ -1,5 +1,9 @@
 # Tiny Demons — Gear Sources and Drop Tables
 
+Status: approved acquisition reference; numerical weights remain balance work
+
+Updated: 2026-09-11
+
 ## Status
 
 **Approved acquisition design — six-slot source integration is landed;

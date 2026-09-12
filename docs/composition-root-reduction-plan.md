@@ -1,10 +1,10 @@
 # Tiny Demons — Composition Root Reduction Plan
 
-Status: implementation active; ~250-line composition-root size milestone achieved
+Status: historical planning record; current route is [`refactor-route.md`](refactor-route.md).
 
 Plan date: 2026-08-22
 
-Branch: `refactor/2026-08-18`
+Historical branch: `refactor/2026-08-18`
 
 Related documents:
 

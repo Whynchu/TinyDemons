@@ -1,5 +1,10 @@
 # Tiny Demons — Elemental Chroma System Design
 
+Status: broader Chroma foundation; Binding/Fusion overlap is superseded by the
+approved Binding/Fusion contract
+
+Updated: 2026-09-11
+
 The finalized Binding and flame-fusion rules live in
 [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md).
 This document remains the broader Chroma foundation; when the two documents

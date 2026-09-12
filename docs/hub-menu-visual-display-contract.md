@@ -2,6 +2,8 @@
 
 Status: active menu presentation contract
 
+Updated: 2026-09-11
+
 This document records why the current Equipment, Stats, and Shop menus feel
 consistent, and records the shared presentation rules now used by Fusion and
 Bind. It is intentionally a presentation contract; transaction rules remain

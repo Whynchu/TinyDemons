@@ -1,8 +1,10 @@
 # Dynamic Dependency Audit
 
-Status: initial measured audit
+Status: current measured audit for the `0.2.x` baseline
 
-Audit date: 2026-09-07
+Audit date: 2026-09-11
+
+Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 ## Scope
 
@@ -16,31 +18,34 @@ Across tracked GDScript files:
 
 | Expression family | Matches |
 |---|---:|
-| `root.get(...)` | 1,121 |
-| `root.set(...)` | 247 |
-| `root.call(...)` | 1,144 |
-| Total measured root seam uses | 2,512 |
+| `root.get(...)` | 1,402 |
+| `root.set(...)` | 289 |
+| `root.call(...)` | 1,421 |
+| Total measured root seam uses | 3,112 |
 
-These are textual occurrences, not unique calls or runtime executions. They
-include test/tool code where applicable, but the highest-volume files are
-runtime controllers.
+These are regex matches in the 141 GDScript files under `scripts/`, not unique
+runtime executions. They include editor/runtime support code where applicable;
+the highest-volume files are runtime controllers. Re-run the measurement after
+each vertical migration rather than treating the total as a quality score.
 
 ## Highest-Volume Runtime Files
 
 | File | Seam matches | Primary responsibility |
 |---|---:|---|
-| `screen_state_controller.gd` | 334 | menus, hub presentation, settings, save UI |
-| `room_controller.gd` | 302 | room entry, state restoration, encounters, doors |
-| `combat_runtime_controller.gd` | 182 | damage, stats, enemy scaling, combat feedback |
-| `slime_runtime_controller.gd` | 157 | slime movement, attacks, targeting, spawning |
-| `magic_runtime_controller.gd` | 125 | magic/imbue state and projectile interactions |
-| `gameplay_frame_controller.gd` | 116 | explicit frame schedule and input routing |
-| `player_animation_component.gd` | 113 | player animation and visual state |
-| `hub_flow_controller.gd` | 100 | hub routes, gear, shop, fusion, stats |
-| `player_attack_component.gd` | 92 | attack lifecycle and hit timing |
-| `actor_presentation_runtime_controller.gd` | 87 | depth, occlusion, presentation transforms |
-| `room_puzzle_controller.gd` | 84 | puzzle state and room interaction |
-| `run_flow_controller.gd` | 69 | run lifecycle, settlement, telemetry |
+| `screen_state_controller.gd` | 422 | menus, hub presentation, settings, save UI |
+| `room_controller.gd` | 409 | room entry, state restoration, encounters, doors |
+| `combat_runtime_controller.gd` | 221 | damage, stats, enemy scaling, combat feedback |
+| `gameplay_frame_controller.gd` | 205 | explicit frame schedule and input routing |
+| `slime_runtime_controller.gd` | 194 | slime movement, attacks, targeting, spawning |
+| `magic_runtime_controller.gd` | 141 | magic/imbue state and projectile interactions |
+| `player_animation_component.gd` | 124 | player animation and visual state |
+| `actor_presentation_runtime_controller.gd` | 122 | depth, occlusion, presentation transforms |
+| `hub_flow_controller.gd` | 108 | hub routes, gear, shop, fusion, stats |
+| `player_attack_component.gd` | 103 | attack lifecycle and hit timing |
+| `gameplay_bootstrap.gd` | 96 | runtime construction and dependency wiring |
+| `room_puzzle_controller.gd` | 86 | puzzle state and room interaction |
+| `chest_controller.gd` | 72 | chest state, interaction, reward callbacks |
+| `run_flow_controller.gd` | 72 | run lifecycle, settlement, telemetry |
 
 ## Most Shared Dynamic Methods
 
@@ -48,14 +53,14 @@ The most frequently requested root methods are:
 
 | Method | Calls | Likely owner | Interpretation |
 |---|---:|---|---|
-| `_play_sound` | 205 | `SoundManager` / audio boundary | Broad presentation dependency; good signal/command candidate |
-| `_is_menu_direction_just_pressed` | 83 | `InputRouter` / menu input | Menu systems depend on root input wrappers |
-| `_actor_foot` | 68 | `ActorGeometry` | Geometry is a shared contract; centralize rather than duplicate |
-| `_is_menu_confirm_just_pressed` | 30 | `InputRouter` | Same menu-input seam |
+| `_play_sound` | 214 | `SoundManager` / audio boundary | Broad presentation dependency; good signal/command candidate |
+| `_is_menu_direction_just_pressed` | 85 | `InputRouter` / menu input | Menu systems depend on root input wrappers |
+| `_actor_foot` | 78 | `ActorGeometry` | Geometry is a shared contract; centralize rather than duplicate |
+| `_is_menu_confirm_just_pressed` | 31 | `InputRouter` | Same menu-input seam |
 | `_save_player_profile` | 21 | `ProfileSaveService` | Save ownership crosses gameplay/UI/room flows |
-| `_pixel_text_texture` | 20 | text/presentation service | UI creation depends on root utility |
-| `_is_slime_dead` | 19 | combat/slime runtime | Enemy lifecycle queried by many systems |
-| `_slime_combat` | 18 | slime component owner | Component lookup is still root-mediated |
+| `_pixel_text_texture` | 22 | text/presentation service | UI creation depends on root utility |
+| `_is_slime_dead` | 20 | combat/slime runtime | Enemy lifecycle queried by many systems |
+| `_slime_combat` | 27 | slime component owner | Component lookup is still root-mediated |
 | `_is_slime_targetable` | 14 | targeting/slime runtime | Targeting contract is hidden behind root |
 | `_shift_hub_item` | 14 | `HubFlowController` | Hub routing uses compatibility delegates |
 | `_collision_rect` | 14 | `ActorGeometry` | Geometry consumers use a shared but reflective boundary |

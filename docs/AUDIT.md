@@ -1,637 +1,658 @@
-# Tiny Demons — Current Codebase Audit and Refactor Plan
+# Tiny Demons — Version 0.2.00 Codebase Baseline
 
-Status: engineering closeout complete; release compliance pending
+Status: canonical source audit for the `0.2.x` development cycle
 
-Audit date: 2026-08-22
+Audit date: 2026-09-11
 
-This branch name identifies the audit baseline. The current equipment handoff
-is being prepared on the feature/gear-catalogue-expansion branch.
+Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Branch: `refactor/2026-08-18`
+Baseline game version: `0.2.00`
 
-Current content handoff (2026-09-02): the six-stat/menu, elemental composite
-combat, responsive display, input work, and simplified six-slot gear model are
-landed on this working tree. See [`gear-system-rework.md`](gear-system-rework.md)
-for the live Plain/Basic/Set taxonomy, independent random `+` stats, fusion
-matching, and legacy-save boundary. The older catalogue documents remain useful
-for compatibility context only.
+Current release: `0.2.01` (documentation and verification baseline update)
 
-Detailed execution route: [`refactor-route.md`](refactor-route.md)
+## 1. Purpose
 
-This document is the canonical current-state audit and phase register. The route
-document defines the migration protocol and detailed work inside each phase. This
-audit supersedes the 2026-08-18 coordinator-reduction plan; historical detail remains
-available in version control.
+This document records what Tiny Demons is and how its implementation is shaped
+at the start of the `0.2.x` cycle. The current game is the foundation to preserve.
+The purpose of the next infrastructure work is to make that foundation easier to
+understand, extend, validate, and ship without changing its identity.
 
----
+Tiny Demons is an action RPG built around deep dungeon crawling, elemental
+resistances, puzzle solving, exploration, and battling. Its current systems are
+working parts of that identity rather than disposable prototype code.
 
-## 1. Executive assessment
+This audit replaces the August 2026 phase-closeout status previously stored in
+this file. That report remains available in Git history. Several of its
+architectural decisions remain valid, but its measurements, branch references,
+and completion claims no longer describe the current repository.
 
-Tiny Demons has many useful components, tuning resources, and smoke tests, but its
-runtime composition still works against safe iteration:
+## 2. Scope and evidence
 
-- `gameplay.gd` is both coordinator and feature host;
-- `gameplay_state.gd` is inherited shared storage rather than an ownership boundary;
-- frame, bootstrap, room, and screen controllers communicate through hundreds of
-  string calls and state lookups;
-- Chroma/projectiles and hub/progression continue to grow in coordinator-owned
-  blocks; and
-- actor visual transforms, combat geometry, and overlays have no single source of
-  truth.
+The audit inspected:
 
-The accepted strategy is feature-oriented vertical migration. Each subsystem gains
-tests and a typed owner, moves state and behavior together, removes its old string
-seams, and checkpoints before the next subsystem begins.
+- all 141 runtime/editor GDScript files under `scripts/`;
+- the main scene and 18 supporting project scenes under `scenes/` (the MCP
+  addon editor scene is outside this project-scene count);
+- project input, renderer, viewport, export, and CI configuration;
+- all 121 GDScript test/report files and the smoke-test registry;
+- permanent profile, active-run, local, web, and cloud save boundaries;
+- authored and generated dungeon definitions;
+- combat, Chroma, progression, equipment, room, enemy, UI, touch, and audio
+  ownership paths; and
+- the 77 tracked Markdown documents under `docs/` plus `README.md` as a
+  documentation inventory; `AGENTS.md` and addon documentation are tracked
+  separately.
 
-The refactor must preserve one explicit frame schedule. It will not replace the
-current coordinator with an event bus, service locator, or a collection of unordered
-`_process()` methods.
+Verification performed during the audit:
 
----
-
-## 2. Canonical documentation order
-
-1. [`README.md`](../README.md) — project entry point, controls, and verification.
-2. [`AUDIT.md`](AUDIT.md) — current findings and active phase register.
-3. [`refactor-route.md`](refactor-route.md) — accepted execution plan.
-4. [`ARCHITECTURE.md`](ARCHITECTURE.md) — runtime ownership and extension map.
-5. [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) — designer-facing tuning index.
-
-Phase A1 adds root `AGENTS.md` as the shortest operational map for future agents.
-
----
+- The smoke runner's inventory mode found all 113 registered tests.
+- A Godot 4.7.1 headless editor import scan completed successfully.
+- The import scan reported duplicate-UID warnings between the R4/R5 puzzle-map
+  scripts and their corresponding authored-layout smoke tests. These warnings
+  require cleanup before file reorganization.
+- Expected local environment warnings were emitted for the Windows certificate
+  store, MCP registry writes, and editor-settings persistence.
+- The full 113-test runtime suite was not run as part of this read-only audit.
+  Per the repository safety rule, it remains a supervised standalone gate.
+- MCP per-file diagnostics were unavailable because no editor peer was connected.
+  The successful editor import scan is the compile/import evidence for this
+  baseline; it is not a substitute for runtime behavior tests.
 
 ## 3. Measured baseline
 
-Measured 2026-08-22:
-
-| Metric | Baseline |
+| Metric | Version 0.2.00 |
 | --- | ---: |
-| `gameplay.gd` physical lines | 2,926 |
-| `gameplay.gd` functions | 413 |
-| `gameplay.gd` one-line functions | 304 (74%) |
-| `gameplay_state.gd` fields | 206 |
-| `gameplay_state.gd` constants | 50 |
-| `gameplay_frame_controller.gd` `root.call` / `root.get` | 78 / 75 |
-| `screen_state_controller.gd` physical lines | 1,225 |
-| `player_equipment_visual_component.gd` physical lines | 801 |
-| Smoke coverage | 12 smoke scripts plus short headless boot |
+| GDScript files in `scripts/` | 141 |
+| Runtime/editor GDScript lines | 43,799 |
+| Named GDScript classes | 127 |
+| Ordinary functions | 2,514 |
+| Static functions | 340 |
+| Declared signals | 55 |
+| One-line function declarations | 1,963 |
+| `root.call/get/set` sites | 3,112 |
+| Metadata access sites | 224 |
+| Scene files | 19 |
+| GDScript test/report files | 121 |
+| Test/report lines | 12,664 |
+| Registered smoke tests | 113 |
+| Tests loading the main scene | 34 |
+| Project Markdown documents | 78 |
 
-Counts are navigation and coupling indicators. They are not standalone completion
-criteria.
+Largest scripts:
 
-### Verification commands
+| Script | Lines | Primary concern |
+| --- | ---: | --- |
+| `screen_state_controller.gd` | 5,333 | All major menu construction, layout, input, and presentation |
+| `room_controller.gd` | 2,060 | Room lifecycle, encounters, sockets, rewards, and persistence |
+| `gameplay_state.gd` | 1,703 | Shared references/state plus 505 compatibility wrappers |
+| `dungeon_layout_generator.gd` | 1,629 | Generated topology, curriculum, and layout policy |
+| `hub_flow_controller.gd` | 1,323 | Hub routes, shop, equipment, fusion, stats, and transactions |
+| `player_equipment_visual_component.gd` | 1,152 | Layered gear presentation and attack-state synchronization |
+| `item_catalog.gd` | 994 | Definitions, generation, display, economy, effects, and compatibility |
+| `touch_controls_layer.gd` | 977 | Gameplay controls plus generic menu touch routing |
+| `hud_controller.gd` | 921 | HUD construction, updates, prompts, and generated textures |
+| `dungeon_minimap_controller.gd` | 882 | Compact map, full map, markers, travel menu, and rendering |
 
-```powershell
-# Full smoke suite and configured boot check
-pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
+Line counts are navigation and responsibility indicators. They are not quality
+scores or automatic split thresholds.
 
-# Parser/editor import scan (explicit log path avoids the local Godot user-log issue)
-& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path . --log-file ".godot_user/editor-scan.log" --editor --quit
-```
+## 4. Implemented game surface
 
-Each phase records its actual result; this document does not treat an old green run
-as proof for a changed working tree.
+### 4.1 Core loop
 
----
+The project currently supports a complete loop from title and save selection to
+the Demon Hub, dungeon entry, room traversal, combat, puzzles, treasure, rest
+flames, boss completion, settlement, progression, and return to the Hub.
 
-## 4. Findings by priority
+The loop is backed by persistent profiles and recoverable active runs. Dungeon
+state tracks discovery, completion, gate state, visited flames, current room,
+and teleport destinations. Room runtime state preserves enemies and drops across
+transitions.
 
-### Critical — Reproducibility and shipping assets
+### 4.2 Player action combat
 
-- Runtime code references generated/baked artwork, shaders, and reconstructed UI
-  audio that may be untracked. A fresh clone must not depend on local-only output.
-- Tool virtual environments, package caches, generated analysis, and reference audio
-  create hundreds of megabytes of navigation noise.
-- Reference-derived audio needs provenance and hash-based review. Equal file size is
-  not proof of identity; unverifiable material must not remain on a shipping path.
+Implemented player actions include:
 
-### High — Ownership and type safety
+- isometric movement and running;
+- attack-one/attack-two combo flow;
+- running finishers;
+- held charge into a charged attack-two and sword beam;
+- circular-input spin attack;
+- directional attack geometry and multi-target contact;
+- roll, backflip-related movement state, guard, hit reactions, and knockback;
+- target lock and target-facing behavior; and
+- equipment layers synchronized to locomotion, guard, attacks, charge, spin,
+  recovery, occlusion, and palette changes.
 
-- The coordinator inherits the shared state bag; roughly ten scripts reach into it.
-- `root.call/get/set` prevents rename safety and hides subsystem dependencies.
-- Feature behavior is partitioned by lifecycle phase, so one logical change crosses
-  bootstrap, frame ordering, shared state, coordinator, and component files.
-- Hub/progression and Chroma/projectiles remain the largest unextracted feature
-  surfaces.
+`PlayerAttackComponent`, `PlayerAnimationComponent`, `PlayerGuardComponent`,
+`PlayerRollComponent`, `ActorMotor`, `ActorGeometry`, and
+`CombatRuntimeController` contain useful ownership boundaries. Combat requests
+and stat snapshots are typed, and `CombatCalculator` is largely independent of
+scene presentation.
 
-### High — Actor geometry and presentation consistency
+### 4.3 Elements and Chroma
 
-- Encounter scaling, sprite offset, rendered bounds, body polygons, contact radius,
-  attack reach, and flash overlays reconstruct related transforms independently.
-- Recent boss regressions repeatedly displaced hitboxes and flashes down/right and
-  caused attack-range disagreement.
-- This system receives the first implementation slice after safety and documentation.
+The combat catalog contains eight stable elements: Neutral, Fire, Water,
+Electric, Grass, Shadow, Ground, and Ice. The matchup table expresses weakness,
+resistance, immunity, and neutral relationships.
 
-### Medium — Input ownership
+The player can attune to primary and fused aspects, spend and restore Chroma,
+remain bound while visually desaturating at zero Chroma, cast aspect abilities,
+imbue attacks, collect aspect-colored Chroma, charge Orbs, bind an element, and
+fuse flames. `PlayerChromaComponent` is a strong state owner with signals for
+aspect, bound aspect, Chroma, and ability-mode changes.
 
-- Gameplay, menu, dialogue, hub, HUD, and raw controller polling use several
-  edge-detection idioms.
-- The target architecture is one polling layer with explicit input contexts;
-  `PlayerController` consumes gameplay input rather than owning menu input.
+### 4.4 Enemies
 
-### Medium — Oversized presentation delegates
+The active enemy family is slime-based. It includes Neutral and elemental
+variants, shared movement and combat components, contextual steering, attack
+commitment, hitstun, knockback, ambush behavior, respawning popcorn enemies,
+spawn animation, health presentation, and boss jump/slam behavior.
 
-- `screen_state_controller.gd` mixes menu screens with hub/persistence UI.
-- `player_equipment_visual_component.gd` mixes layered presentation with
-  occlusion/death orchestration and retains obsolete paths.
-- These are split only after earlier vertical slices establish stable typed seams.
+The architecture separates reusable slime state (`SlimeBrain`,
+`SlimeCombatComponent`, `SlimeAnimationComponent`, and related components) from
+the large `SlimeRuntimeController` integration layer. Variant definitions are
+centralized in `SlimeVariantCatalog`, although runtime configuration still
+crosses the shared root heavily.
 
-### Coverage gaps
+### 4.5 Dungeons, rooms, puzzles, and exploration
 
-- Chroma coordinator glue has weak end-to-end coverage.
-- Audio playback has no focused automated smoke test.
-- Visual-transform regressions are only found through playtesting.
-- Existing headless boot coverage proves survival, not visual correctness or update
-  ordering.
+`DungeonGraph` provides typed room, connection, socket, and gate concepts.
+Current room categories include Start, Combat, Puzzle, Rest/Fire, Trader, NPC,
+Downstairs/Boss, Special Enemy, Treasure, and Orb.
 
----
+The dungeon supports authored layouts for Runs 1–5 and deterministic generated
+layouts from Run 6 onward. Layout definitions include world coordinates,
+minimap coordinates, room types, chest placement, flames, socket pairings,
+route roles, clear gates, elemental gates, puzzle-color gates, and entrance-Orb
+gates. Generator and route-solver code contains explicit reachability and
+curriculum logic.
 
-## 5. Accepted architecture decisions
+The compact minimap and expanded travel map use the same graph/state. Visited
+flames and the Hub are travel destinations, with travel restricted to flame
+rooms and the Hub.
 
-1. **Vertical slices, not bulk de-stringing.** Tests, typed boundary, extraction,
-   seam removal, verification, checkpoint—one subsystem at a time.
-2. **Central deterministic schedule.** Typed controller phase methods remain ordered
-   by one scheduler.
-3. **Direct typed calls and signals by default.** Callable injection is reserved for
-   narrow algorithms; string-created Callables are not considered de-stringed.
-4. **Domain logic stays independent of UI.** Progression and settlement do not live
-   in the hub screen controller.
-5. **Input is contextual.** Gameplay, dialogue, hub, and menu input share one polling
-   boundary and route to different consumers.
-6. **Actor geometry has one transform owner.** Rendering, targeting, collision, and
-   effects consume the same calculated geometry.
-7. **Shipping assets are reproducible.** Deterministic baked outputs may be committed
-   for mobile, but must have source/generator/manifest provenance.
-8. **Metrics inform judgment.** Line and field targets flag risk but do not override
-   cohesion, ownership, testability, or behavior.
+Room scenes contain authored floor, wall, socket, spawn, collision, and return
+guides. Runtime code composes these with active graph connections. This supports
+the current visual flexibility but also makes room geometry one of the most
+coupled and regression-prone areas.
 
----
+### 4.6 Progression, equipment, and economy
 
-## 6. Active phase register
+Profiles contain six player stats: VIT, STR, DEF, AGI, INT, and MND. They track
+level, XP, unspent points, gold, Souls, run completion, difficulty, grades,
+element binding, inventory, equipment, mastery, and stable item instance IDs.
 
-| Phase | Purpose | Status | Exit evidence |
+Equipment uses six canonical slots: Weapon, Head, Body, Arm, Shield, and
+Accessory. Items have stable definition and instance identities, rarity,
+enhancement, random stat points, effects, source restrictions, prices,
+salvage values, and fusion behavior. The Hub provides buying, selling,
+equipping, removal, duplicate fusion, binding, allocation, respec, and run
+entry flows.
+
+The item model already distinguishes individual instances, which is important
+for independently handling gear with different enhancement and random-stat
+values. `ItemCatalog` currently combines content data, compatibility data,
+generation policy, display formatting, pricing, and effect interpretation in
+one code file.
+
+### 4.7 Presentation and platform support
+
+The game uses a 240×160 logical pixel-art presentation with nearest filtering
+and integer scaling. It supports adaptive landscape widths plus fixed aspect
+presets. Desktop and web share one codebase; the web renderer is overridden to
+Compatibility mode.
+
+Input supports keyboard, gamepad, mouse/menu interaction, virtual touch
+controls, touch menu scrolling, and last-input-device prompts. Direct engine
+input access is limited to `InputRouter` and `InputDeviceTracker`, which is a
+good boundary.
+
+The Web export, GitHub Pages workflow, localStorage save mirror, active-run
+recovery, browser lifecycle diagnostics, and optional encrypted cloud backup
+are substantial production-facing systems already present in the foundation.
+
+## 5. Runtime architecture
+
+### 5.1 Composition
+
+`scenes/main.tscn` is the primary composition scene. Its root uses
+`gameplay.gd`, which inherits `GameplayState`. The scene authors the persistent
+world and actor nodes, while `GameplayBootstrap` creates and wires many runtime
+components and controllers.
+
+`gameplay.gd` is now a relatively small 245-line coordinator containing startup,
+the physics entry point, music coordination, a few remaining interactions, and
+compatibility accessors. This is a meaningful improvement over the older giant
+coordinator design.
+
+The architectural center has moved into `gameplay_state.gd`. It owns node
+references, controller references, transient fields, constants, collections,
+and 505 short forwarding methods. It acts simultaneously as:
+
+- composition root;
+- mutable shared-state container;
+- compatibility API;
+- adapter between controllers;
+- repository of gameplay constants; and
+- inherited base class for the main runtime.
+
+This arrangement preserves behavior and made incremental extraction possible,
+but it is now the main obstacle to compile-time dependency checking.
+
+### 5.2 Frame ordering
+
+The runtime correctly retains one explicit physics schedule. `gameplay.gd`
+polls the input router and delegates the frame to `GameplayFrameController`.
+That controller orders input, player actions, movement, animation, enemies,
+pickups, interactions, UI, effects, depth, targeting, and stabilization.
+
+This deterministic schedule should be preserved. Future ownership work should
+replace string calls inside scheduled phases with typed collaborators rather
+than distributing gameplay across independent `_process()` methods.
+
+### 5.3 Coupling profile
+
+There are 3,112 `root.call/get/set` sites. The largest concentrations are in:
+
+| Script | Dynamic root sites |
+| --- | ---: |
+| `screen_state_controller.gd` | 422 |
+| `room_controller.gd` | 409 |
+| `combat_runtime_controller.gd` | 221 |
+| `gameplay_frame_controller.gd` | 205 |
+| `slime_runtime_controller.gd` | 194 |
+| `magic_runtime_controller.gd` | 141 |
+| `player_animation_component.gd` | 124 |
+| `actor_presentation_runtime_controller.gd` | 122 |
+| `hub_flow_controller.gd` | 108 |
+
+These calls hide required inputs, allow misspelled properties to survive until
+runtime, make ownership difficult to infer, and broaden the effect of changes.
+They are migration seams, not evidence that the underlying feature components
+should be discarded.
+
+Metadata is used at 226 sites for encounter scale, temporary effects, visual
+state, menu state, and runtime annotations. Metadata is appropriate for some
+open-ended presentation tags, but gameplay-significant metadata should become
+typed state where practical.
+
+### 5.4 Architectural strengths to retain
+
+- Central deterministic frame scheduling.
+- Typed combat requests and stat snapshots.
+- Stable element IDs and one matchup authority.
+- Dedicated Chroma state ownership and signals.
+- Dungeon graph, map state, and layout-definition boundaries.
+- Shared actor geometry for rendering and combat bounds.
+- One input snapshot boundary across desktop, gamepad, and touch.
+- Permanent profile state separated from disposable active-run recovery.
+- Stable item instance IDs and explicit profile migrations.
+- One desktop/web codebase with platform behavior isolated at seams.
+
+## 6. Subsystem assessment
+
+| Domain | Current owners | Assessment | Main scaling need |
 | --- | --- | --- | --- |
-| A0 | Safety, asset reproducibility, characterization tests | Complete | 12/12 smoke tests and main-scene boot pass; reproducibility protections recorded |
-| A1 | `AGENTS.md`, ownership map, canonical doc cleanup | Complete | `AGENTS.md` now provides canonical reading order, ownership, and verification map |
-| B1 | Actor geometry and combat presentation | Complete | Shared geometry owner, combat consumers, opt-in debug drawer, and scene-backed characterization are complete |
-| B2 | Contextual input | Complete | `InputRouter` is the sole polling layer; 14-test suite and context/edge characterization pass |
-| B3 | Elemental Chroma and projectiles | Complete | Chroma state, pickups, projectile lifecycle, and scene-backed ownership characterization pass |
-| B4 | Progression, settlement, and hub | Complete | Progression commands, settlement guard, and domain characterization are in place |
-| B5 | Combat, room, and frame seams | Complete | Frame phase order is named, documented, and characterized; existing central schedule remains intact |
-| B6 | Presentation delegates and shared state | Complete | Hub pending edits now have a typed draft owner; durable profile state remains separate |
-| C | Verification, metrics, fresh-clone closeout | Complete | 17/17 smoke checks, main boot, fresh-clone gate, and frame-time evidence pass |
+| Frame orchestration | `gameplay.gd`, `gameplay_frame_controller.gd` | Direction is sound | Replace dynamic calls with typed phase dependencies |
+| Shared runtime state | `gameplay_state.gd` | Preserves compatibility but owns too much | Move state to feature owners and shrink wrapper API |
+| Player combat | player components, combat calculator/runtime | Strong mechanics and useful components | Separate pure resolution from root-based scene integration |
+| Slime combat | slime components and runtime controller | Rich reusable behavior | Add typed enemy runtime context and archetype boundary |
+| Actor geometry | actor geometry/collision/motor/occlusion | Shared geometry is a good foundation | Clarify collision versus rendering ownership and test room edges |
+| Chroma/magic | Chroma, aspect ability, magic/projectile controllers | Chroma state is well owned | Remove root glue and define typed ability execution requests |
+| Dungeon topology | graph, layouts, generator, route solver | Capable authored/generated foundation | Split generation policy, compilation, and validation |
+| Room runtime | room and puzzle controllers | Feature-complete but highly coupled | Extract transition, encounter, geometry, and persistence services |
+| Progression | profile, progression, run state/settlement | Durable data model with migrations | Separate profile data from economy and content policies |
+| Equipment/content | item catalog, instances, equipment | Stable instance model is valuable | Move authored definitions and generation policy out of one catalog |
+| Hub flow | hub flow plus screen state | All required flows exist | Separate transactions, navigation state, and presentation |
+| Menus/UI | screen state plus layout scripts/scenes | Visual language exists but implementation is fragmented | One reusable menu contract and one presenter per route |
+| Input/touch | input router, tracker, touch layer | Strong centralized input boundary | Split gameplay touch rendering from generic menu hit testing later |
+| HUD/effects | HUD, effects, sprite library | Functional and cache-aware | Consolidate generated-texture services and profile hot paths |
+| Audio | sound manager, clip catalog, mix profile | Centralized playback and web-aware assets | Add focused lifecycle/performance verification |
+| Saves/cloud | profile/active-run services and cloud boundary | More mature than most systems | Formal migration fixtures and failure-path integration tests |
+| Display/web | display owner, layout helpers, export workflow | Sound cross-platform direction | Maintain a device/browser acceptance matrix |
 
-All registered refactor phases are complete. Updating a row requires both the code
-change and its listed evidence; line movement alone does not advance status.
+## 7. Content authoring assessment
 
-### B1 progress — 2026-08-22
+The game can already express substantial content, but authoring is primarily
+code-driven:
 
-- Added `scripts/actor_geometry.gd` as the shared owner for actor foot anchors,
-  encounter visual offsets, collision rectangles, collision polygons, and body
-  polygons.
-- Routed the corresponding gameplay compatibility wrappers through that owner,
-  preserving the current runtime API while consumers migrate.
-- Added pure transform characterization in `tests/actor_geometry_smoke.gd` for normal,
-  boss, and nonuniform-scale cases. It reports `ACTOR_GEOMETRY_SMOKE_OK`; it is not
-  yet in the production smoke list because this Godot headless environment returns a
-  false nonzero exit for the render-free standalone script.
-- Centralized hit-flash overlay synchronization in `ActorGeometry.sync_overlay()` so
-  overlay offset and facing follow the actor presentation transform.
-- Routed stable contact-radius calculation through `ActorGeometry.contact_radius()`;
-  actor separation and enemy attack reach now share the same body/guide fallback.
-- Routed enemy directional attack reach and projectile combat target points through
-  the same geometry owner.
-- The expanded 13-test smoke suite and main-scene boot remain green.
+- item and enemy definitions are large dictionaries in GDScript;
+- authored runs are separate GDScript builders;
+- generated-run policy is concentrated in a large static generator;
+- tuning classes are instantiated directly with defaults in
+  `gameplay_state.gd` rather than loaded as named project resources; and
+- room variants depend on a combination of scene guides and runtime policy.
 
-### A1 record — 2026-08-22
+This is workable for the current content volume. It will become expensive as
+the number of items, enemy families, rooms, abilities, and run rules grows.
 
-- Added root `AGENTS.md` with canonical reading order, verification commands,
-  ownership rules, extension rules, and a feature-placement table.
-- The remaining A1 cleanup items are documentation relocation tasks, not blockers
-  for the active geometry slice.
+The target content path for `0.2.x` should be:
 
-### B1 completion — 2026-08-22
-
-- Added the opt-in `ActorGeometryDebugDrawer`, refreshed by the existing frame
-  schedule, showing actor feet, collision bounds, and combat polygons.
-- Added and registered `tests/actor_geometry_scene_smoke.gd`, which instantiates the
-  real main scene and verifies the runtime geometry owner and debug wiring.
-- B1 exit gate is complete. B2 is the next active slice.
-
-### B2 completion — 2026-08-22
-
-- Added `scripts/input_router.gd`, which polls mapped actions, controller axes,
-  button fallbacks, and edge state once per physics frame.
-- Routed `PlayerController`, gameplay frame input, dialogue, hub/menu screens, and
-  HUD button feedback through the router. Direct `Input` access now exists only in
-  `InputRouter`.
-- Added `tests/input_router_smoke.gd` covering held/pressed/released edges,
-  movement capture, and gameplay/dialogue/menu context transitions.
-- B2 exit gate is complete. B3 is the next active slice.
-
-### B3 completion — 2026-08-22
-
-- `PlayerChromaComponent` is the sole runtime owner of aspect, integer Chroma,
-  binding mode, attunement, and elemental payment. The coordinator no longer
-  mirrors `player_mp`.
-- Added `ChromaPickupController` for pickup instances, values, launch state, and
-  cleanup. Pickup collection continues to delegate restoration to the Chroma owner.
-- Added `MagicProjectileController` for projectile records, homing, movement,
-  expiry, hit dispatch, and trail requests. Gameplay retains only typed callbacks
-  for puzzle/slime impact effects.
-- Added `tests/chroma_projectile_scene_smoke.gd` and registered it in the smoke suite.
-  Existing Chroma state, pickup, and ability characterization remains green.
-- B3 exit gate is complete. B4 is the next active slice.
-
-### B4–B6 completion — 2026-08-22
-
-- Added `ProgressionController` as a UI-free domain boundary for XP, stat
-  allocation, pending-point calculation, and run-grade/rank application.
-- Added `RunSettlement.can_settle()` as an explicit idempotence guard; failed
-  persistence leaves the active run retryable.
-- Added `HubProgressionDraft` for ephemeral stat edits while preserving the
-  existing screen property surface for current UI callers.
-- Named the central frame contract as input, simulation, contact resolution,
-  damage/progression, presentation, and transitions. The single scheduler remains
-  the runtime owner.
-- Expanded `progression_smoke` to cover the domain APIs, hub draft lifecycle,
-  settlement idempotence, and frame ordering. The full 17-script suite and main
-  scene headless run pass.
-- The editor import scan exits 0. The known certificate-store/editor-settings
-  warnings and scene-backed resource-leak warnings remain environment-only.
-
-### Phase C inventory — 2026-08-22
-
-- Pushed closeout checkpoint: `107f1cc` on `refactor/2026-08-18`.
-- Added [`asset-provenance.md`](asset-provenance.md), documenting authored,
-  generated, reconstructed, and reference-sensitive asset groups.
-- Checked 87 literal runtime `res://` references after excluding dynamic path
-  templates; all resolve locally and are present in the Git index.
-- Current metrics: `gameplay.gd` 2,830 lines / 420 functions;
-  `gameplay_state.gd` 172 `var` declarations; repository-wide `root.call/get/set`
-  counts are 510 / 539 / 183. These are compared with the baseline above as
-  migration indicators, not acceptance criteria.
-- The supported Godot 4.7.1 headless frame sample measured 6.894 ms average and
-  7.925 ms worst over 180 post-warmup frames (60-frame warmup). This is the first
-  recorded runtime sample; Phase A0 did not capture a numeric frame-time value,
-  so it is a reference baseline rather than a delta against an older measurement.
-- A disposable fresh clone at `9f1b5e9` completed the editor import scan, all 15
-  smoke scripts, and the main-scene headless boot. The scan's certificate-store
-  and editor-settings warnings are environment-only.
-
-### Phase C regression fix — 2026-08-22
-
-- Fixed attack-1 ghosting by making `PlayerAnimationComponent` the single owner of
-  base-versus-attack sprite visibility and assigning the new attack texture before
-  exposing the attack layer.
-- Added the visibility invariant to the scene-backed characterization test:
-  attacking hides `TinyDemon`, while idle hides `TinyDemonAttack`.
-- Full 17-script smoke suite and main-scene headless run pass after the fix;
-  the runner now includes the boss geometry regression and frame-time sampler.
-
-### Phase C closeout — 2026-08-22
-
-- Checkpoint: `9f1b5e9` contains the attack-layer regression fix and the closeout
-  evidence updates.
-- Runtime assets: 87 literal runtime `res://` references resolve to tracked files;
-  generated palette outputs and reconstructed audio rules are documented in
-  [`asset-provenance.md`](asset-provenance.md).
-- Fresh-clone gate: passed after editor import on Godot 4.7.1; the original
-  15/15 smoke tests
-  and the main scene exited 0 without local-only generated files.
-- Post-fix local gate: the complete runner passes 17/17, including
-  `boss_geometry_scene_smoke` and `frame_time_smoke`.
-- Boss geometry regression: scaled boss collision guides now use transformed
-  world corners plus foot compensation; the regression test verifies the guide
-  remains inside the rendered boss sprite.
-- Latest frame-time sample: 7.944 ms average / 17.888 ms worst over 180 frames
-  after a 60-frame warmup. The earlier 6.894 / 7.925 ms sample remains the
-  cleaner warm-cache reference; both are recorded because headless scheduling
-  can produce occasional outliers.
-- Frame-time gate: passed for the recorded reference sample at 6.894 ms average /
-  7.925 ms worst across 180 frames after a 60-frame warmup. A numeric Phase A0
-  baseline was not captured, so a future target-runtime comparison should use
-  this measurement as its reference.
-- Remaining release gate: confirm third-party sound-library and reconstructed
-  audio provenance/licensing before distribution. This is explicitly scheduled
-  as release/compliance work, not treated as runtime-verified.
-
-### Post-closeout gameplay regression pass — 2026-08-22
-
-- Checkpoints: `5a6d181` through `83826d0` on `refactor/2026-08-18`.
-- Added the editable boss-slime authoring scene as the source for scaled boss
-  body, collision, and attack geometry.
-- Corrected runtime sprite/collider transforms, boss damage targeting, physical
-  boss contact bounds, and boss-versus-add displacement priority.
-- Corrected boss attack range and lunge calculations to use combat-body centers
-  and directional polygon reach. Vertical attacks now retain their intended
-  movement instead of applying perspective compression a second time.
-- Added scene-backed regressions for authored body bounds, empty-space contact,
-  boss/add displacement, and vertical attack reach.
-- Verification: the complete 17-test smoke suite and main-scene headless boot pass.
-
-### Current content route — Simplified gear and Run 1 placement
-
-The live catalogue now has six slots, six even player baseline stats, twelve
-Plain/Basic baseline pieces, and nine complete themed sets. Plain and Basic are
-weighted as the common drops; any tier may receive an independent random `+`
-package on any of the six stats. Fusion matches the same base definition and
-rarity without requiring the same `+` package, and random lanes grow with the
-primary ladder. The catalogue schema is version 12 and preserves legacy saved
-values.
-
-The Run 1 authored Treasure Rooms now use one shared back-right chest anchor.
-`DungeonLayoutDefinition.validate()` and the Run 1 contract smoke guard that
-placement so a center-anchor or per-room drift regression fails before
-playtesting.
-
-Follow-up verification is recorded below; the MCP-connected Godot editor is the
-preferred path for runtime checks, while standalone headless checks may still
-encounter the local renderer crash.
-
-### 2026-09-03 — Procedural dungeon redesign (design doc)
-
-- New [`procedural-dungeon-design.md`](procedural-dungeon-design.md) records the
-  approved direction for generated Run 4+: flat per-run difficulty keyed off
-  `difficulty_rank` (not room depth), the boss as a "northern door" rather than a
-  northern position, RNG-chosen Hub degree, and shortcuts that shorten required
-  backtracks. Folded dungeon topology/difficulty ownership into
-  `ARCHITECTURE.md`.
-- Removed the player-facing "D-number" room label: the HUD room indicator now
-  shows only landmark names (START, REST, CLOAKED, BOSS) and nothing for ordinary
-  rooms.
-- Flat per-run difficulty landed: `RoomController` now derives enemy level,
-  count, and variant pool from `difficulty_rank` (fed from
-  `player_profile.difficulty_rank`) rather than room depth. The
-  `ceil(depth/4)` level term and depth-scaled count/variant gates are removed;
-  variant unlocks map to rank milestones (yellow 2, ground 3, ice 4, shadow 3).
-  `combat_runtime_controller.enemy_level_for_room` mirrors the rank base. Updated
-  the `rogue_slime_smoke`/`slime_variant_smoke` characterizations to the flat
-  model.
-
-### 2026-09-04 — Dynamic generated topology
-
-- Hub degree is now seed-chosen (2/3/4 exits) instead of a fixed four-way: the
-  two progression forks are always present, while lower scoutable dig branches
-  appear at degree 3 (one) and 4 (two). A degree-2 Hub is a clean linear opening.
-- The critical path now wanders laterally with bounded momentum instead of
-  climbing a straight column, so the boss arrives through a wall socket at a
-  varied free lateral position (its door still reads as a northern stairs-up).
-  Difficulty stays flat within a run; `depth`/`y` is milestone ordering only.
-- Room-target backfill now loops and can emit lower dig branches, keeping the
-  approved pacing floor regardless of Hub degree.
-- `LayoutBuilder.link` gained `hidden_until_clear`/`hidden_until_event` params
-  (unused so far) for the still-open shortcut work.
-- Updated `generated_layout_smoke` to characterize variable-degree Hubs and
-  scan for a dig branch instead of assuming four-way.
-- Lower Hub routes now use seeded two-to-four-room walks with bends and varied
-  Treasure/Fire endpoints instead of fixed three-room diagonals. The generated
-  layout smoke samples route signatures to require meaningful structural
-  variety across seeds.
-- Fixed the Run 8 shared-Orb impasse: after a matching entrance-Orb gate is
-  successfully traversed, its existing persisted solved record now latches the
-  connection open. Changing a later Orb can no longer strand the player behind
-  an earlier gate. `generated_fusion_gate_scene_smoke` now exercises Run 8 and
-  verifies the required return traversal after changing the shared Orb state.
-- Lower branches now climb back into the first pre-gate boss approach rather
-  than ending exclusively at their reward room. Seeded `rejoin` edges also link
-  naturally adjacent rooms throughout ungated map layers. Cross-link generation
-  excludes every layer carrying a puzzle-color, element, or entrance-Orb gate,
-  preserving the no-gate-bypass invariant. Generated-layout tests now require
-  interlocking routes across sampled seeds and allow the expanded loop budget.
-
-### 2026-09-06 — Authored R4 and directionless puzzle traversal
-
-- Transcribed `Artwork/R4puzzle_map.png` into a reusable authored map plan and
-  compiled it as Run 4: 77 rooms and 88 connections, including 53 normal grey,
-  11 Grey Orb, 8 Flame A, and 16 Flame B doorways.
-- R3/R4 compiler source/destination orientation now selects socket geometry
-  only. Both authored puzzle maps support entry from either side; an uncleared
-  room retains only its current visit's arrival doorway for retreat, re-entry
-  from another side replaces that arrival, semantic color requirements remain
-  bidirectional, and engagement locks every doorway until clear.
-- Added regressions for the reported R3 top-down gates `(8,20)`, `(10,8)`, and
-  `(12,4)`, plus R4 layout, color-gate, ordinary-door engagement, and pixel-plan
-  coverage. Focused authored-map smokes and the editor import scan pass.
-- The minimap now uses the authored 25x25 circle inside
-  `Artwork/puzzle_map_ring.png` as both its visible frame and exact pixel mask.
-  The viewport expanded from 22x22 to 25x25, with exterior pixels transparent
-  and the current room centered at `(12,12)`. The enlarged 70x70 ring asset is
-  rendered at 1x while map pixels remain at their existing 2x display scale.
-- Generated layouts remain on their existing directional policy. Generated
-  runtime fixtures now begin at Run 5 after authored R4, and the stale
-  `RoomSpec.depth` test accesses use `RoomSpec.coordinate.y`. Focused generated
-  layout/minimap/runtime smokes pass.
-
-### 2026-09-03 — Four-way Hub and reversible dig branches
-
-- Topology: generated layouts now expose all four Hub sockets. The lower-left
-  Combat branch and lower-right Treasure branch are intentional scoutable dig
-  endpoints; lower entries remain available until the destination room is
-  engaged, then reopen after clear.
-- Contract: graph socket pairing/offsets are shared by authored and generated
-  layouts, and authored validation rejects duplicate or mismatched arrival
-  sockets.
-- Verification: modified scripts pass MCP `script_check`; the live generated
-  layout validates with no errors, exposes all four Hub exits, and the runtime
-  engagement sequence passed (enter, retreat, engage/lock, clear/return).
-- Socket visuals: `room_puzzle_controller.refresh_room_socket_visuals` now keys
-  socket art on socket kind instead of travel role. Wall sockets always render
-  the DoorRight* doorway; floor sockets always render the two-tile walkway. This
-  stops four-way Hub lower exits from drawing a 1-tile back-wall door on the
-  floor path and stops rooms reached below from showing a walkway tile where the
-  arrival doorway belongs. Boss arrivals keep the walkway treatment. Verified by
-  a scene-backed socket-visual probe plus the wall/entrance socket smokes.
-
-### 2026-09-03 — Slime spawn audio and animation pass
-
-- Audio: `SoundClipCatalog` is the single source of truth for clip paths used by
-  both `SoundManager` and the editor preview. `SlimeSpawn.wav`/`SlimeMove.wav`
-  are routed through the Selfmade FX set and warm at boot. `SoundMixProfile`
-  gained `slime_spawn_db`/`slime_move_db` sliders plus a reusable preview-cue
-  picker and Play Preview tool button.
-- Animation: a new `SlimeSpawnComponent` owns the short first-entry frame strip
-  (`SlimeGreenSpawn.png`, sliced per palette) on each slime actor. While active
-  the actor is excluded from collisions, knockback, attacks, magic hits, and
-  targeting; the runtime controller advances frames on the explicit gameplay
-  schedule and restores the idle texture on completion.
-- Persistence: room state now captures alive positions and remaining health, and
-  re-entry restores those values instead of replaying the intro or respawning
-  defeated slimes. Spawn audio plays once per first-entry batch.
-- Verification: `slime_spawn_smoke`, `sound_mix_profile_smoke`,
-  `sound_balance_smoke`, the sound live-reload smokes, and the slime/room
-  regression smokes all pass headless. `generated_layout_smoke` was repaired:
-  it no longer hangs on a script error or a `RefCounted.free()` call, and its
-  special-room door assertions select the room that actually carries both door
-  colors instead of assuming the first special room does.
-
-### 2026-09-03 — Four-way hub polish, even-stat baseline, and branch depth
-
-- Downward branches: the generated Hub's lower-left Combat and lower-right
-  Treasure dig paths are now full branching corridors (three rooms each) instead
-  of single dead-end rooms, so descending from the Hub expands the dungeon. The
-  lower-right path ends in a REST (Fire) room carrying a real flame. Room-target
-  curve and `generated_layout_smoke` pacing expectations updated to match.
-- Locked-path visuals: `apply_puzzle_environment_tint` no longer greys wall-socket
-  doorways inside the D0 dig rooms (their shut/locked door art already conveys the
-  state); the Hub's lower footpaths stay grey at dungeon start until the starter
-  flame opens them.
-- Stat baseline: profile schema 13 migrates every pre-baseline save (schemas 8-12)
-  to the even 2/2/2/2/2/2 base line while preserving allocated points, level, and
-  progression. `gear_system_rework_smoke` and `six_stat_profile_migration_smoke`
-  updated to assert the even-baseline migration.
-- Verification: generated/authored layout smokes, socket smokes, profile migration
-  smokes, and the slime/sound regression smokes all pass headless.
-
-### 2026-09-03 — AGI movement is a real investment
-
-- `player_tuning.gd` movement now specs off `movement_agi_reference` (10 AGI =
-  neutral). A new character's starting AGI 2 sits at 0.84x move speed and 0 AGI
-  at 0.80x, so dumping agility is a genuine slowdown while investing past the
-  reference gives a modest reward. Attack and roll timing keep their separate
-  lower reference and are unchanged.
-- Verification: `six_stat_calculator_smoke` and `speed_scale_smoke` assert the
-  reference neutral point, the below-neutral start, and the strict reward curve.
-
-### 2026-09-03 — Gear plus rarity and premium pricing
-
-- Plus distribution is now weighted toward the low end so a `++`/`+++` is a
-  rarer find at every rarity: Common ~6% `+`, Rare ~60/32/8, Epic ~38/34/21/7,
-  Legendary ~45/37/18, Mythic ~55/45.
-- The Cloaked Demon's premium shop slot passes `plus_rarity_scale` 0.35, so
-  plussed gear there is meaningfully rarer than normal loot; a `++` find from
-  the demon now reads as a memorable luxury.
-- Shop value now scales with the `+` package and enhancement level, not just
-  rarity: `+` ~1.6x, `++` ~4.4x, `+++` ~8.8x (before rarity), enhancement +22%
-  per level. `++`/`+++` are intentionally premium purchases.
-- Drop artwork: verified all 66 live definitions resolve to a real per-slot
-  pickup icon so no gear drop falls back to the white placeholder; rarity
-  tinting is applied at spawn. Head and Arm now use dedicated
-  `helm_pickup.png`/`hand_pickup.png` icons instead of sharing armor/acc.
-- Verification: `gear_drop_policy_smoke` gained premium-slot plus-rarity and
-  price-scaling assertions; gear/reward/demon-cloak smokes pass headless.
-- Drop-art regression guard: new `drop_art_smoke` verifies every catalogue
-  definition resolves to its per-slot pickup icon (`sword_pickup`, `helm_pickup`,
-  `armor_pickup`, `hand_pickup`, `shield_pickup`, `acc_pickup`) and that no gear
-  drops fall back to the white placeholder. Registered in the smoke runner.
-- Oath accessory: `oath_accessory` was a defense-tier set charm that carried no
-  defense and was strictly weaker than the basic bangle (STR 1/VIT 1/AGI 1).
-  It now reads DEF 2/VIT 2/STR 1 at 80G, a clear set upgrade that prices above
-  the bangle and scales its defense with rarity. `gear_system_rework_smoke`
-  guards that a set accessory outstats the flexible basic piece.
-
-### 2026-09-02 — Gear rework and Run 1 treasure placement
-
-- Owner/API introduced: `ItemCatalog` owns the live gear catalogue and flat
-  random-plus ladder; `PlayerProfile` owns fusion identity and schema 12.
-- State moved: new `random_stat_points` item field, live tier/set definitions,
-  even new-player baseline, and the authored Run 1 chest placement guard.
-- Compatibility: legacy item definitions, affixes, transmutations, and saved
-  base stats remain readable but are excluded from new generated gear.
-- Verification: changed scripts parse cleanly through MCP; the new gear and Run 1
-  smoke scripts are registered. A standalone Run 1 smoke invocation hit the
-  known Godot 4.7.1 local renderer crash before test initialization.
-
----
-
-## 7. Per-slice audit record
-
-### 2026-09-07 — Route-specific completion timing and results-screen handoff
-
-- Checkpoint: route par timing is implemented in `RunState`, `RunFlowController`,
-  and `RunGrade`; the results presentation remains unchanged.
-- Owner/API introduced: persisted `route_par_seconds`, with route workload
-  calculation owned by `RunFlowController` and time evaluation by `RunGrade`.
-- State moved: none removed; the derived route par is saved for deterministic
-  recovery and result presentation.
-- Old seams removed: fixed room-count timing is retained only as a legacy fallback.
-- Automated verification: changed timing scripts pass Godot MCP diagnostics.
-- Manual playtest: pending calibration across authored and generated routes.
-- Frame-time observation: pending.
-- Metrics delta: pending route-playtest measurements.
-- Follow-ups: calibrate room workload values, record the exact selected route,
-  and implement the compact results view described in
-  `docs/run-results-screen-plan.md`.
-
-Append one entry per completed slice:
-
-```markdown
-### YYYY-MM-DD — Slice name
-
-- Checkpoint:
-- Owner/API introduced:
-- State moved:
-- Old seams removed:
-- Automated verification:
-- Manual playtest:
-- Frame-time observation:
-- Metrics delta:
-- Follow-ups:
+```text
+authored definition -> validator -> catalog -> runtime instance -> stable save ID
 ```
 
-This creates a handoff trail without turning the implementation plan into a session
-log.
+Likely definition types are Item, Enemy Archetype, Encounter, Room Template,
+Run, Ability, Reward Table, and Gate/Puzzle Rule. These definitions may be
+Godot resources or another typed, validated format. Behavior remains in code;
+definitions select and tune existing behavior.
 
----
+Content migration must be incremental. Stable IDs and save migrations take
+priority over changing the storage format. Existing dictionaries should first
+receive validators and typed accessors, then move only when equivalence is
+characterized.
 
-## 8. Metrics to re-measure
+## 8. UI and menu assessment
 
-```powershell
-$gameplayPath = 'scripts/gameplay.gd'
-$gameplayLines = Get-Content $gameplayPath
-[pscustomobject]@{
-    PhysicalLines = $gameplayLines.Count
-    Functions = ($gameplayLines | Select-String '^func ').Count
-    OneLineFunctions = ($gameplayLines | Select-String '^func .*: .+').Count
-    RootCalls = (rg -o 'root\.call\(' scripts | Measure-Object).Count
-    RootGets = (rg -o 'root\.get\(' scripts | Measure-Object).Count
-    RootSets = (rg -o 'root\.set\(' scripts | Measure-Object).Count
-}
-```
+UI is the clearest current scaling bottleneck. `ScreenStateController` grew
+from the old audit's 1,225-line baseline to 5,333 lines and now combines:
 
-Also record:
+- title, save, character creation, game-over, and results flows;
+- Hub, pause, status, allocation, shop, fusion, bind, and equipment views;
+- menu construction and layout;
+- navigation and input handling;
+- cursor motion and touch targets;
+- generated pixel text and detail formatting;
+- responsive positioning; and
+- transition particles and button effects.
 
-- `gameplay_state.gd` fields grouped by intended owner;
-- largest scripts and their documented responsibilities;
-- tests passed/failed;
-- focused playtest result;
-- average/worst observed frame time; and
-- runtime resource references to untracked files.
+Dedicated layout scripts and authored menu scenes already exist, but ownership
+is split between those files, `HubFlowController`, and the screen controller.
+This explains repeated regressions where one menu uses slightly different
+cursor, footer, orientation, touch, clipping, or scrolling behavior.
 
----
+The desired boundary is not a large menu inheritance hierarchy. It is a small
+shared menu toolkit plus focused route presenters:
 
-## 9. Open decisions
+- shared frame, footer, prompt, cursor, list, clipping, and responsive-layout
+  primitives;
+- one navigation model that exposes selection, enabled state, and commands;
+- one presenter per major route; and
+- the same command path for keyboard, controller, mouse, and touch.
 
-- Exact class name and node ownership for the actor geometry API.
-- Whether Chroma pickups belong to `PlayerChromaComponent` or a small world pickup
-  controller; ownership should follow lifecycle and testability, not file count.
-- Final committed format for baked recolor assets and their manifest.
-- Audio replacements and provenance disposition.
-- Single source of truth for `Artwork/` versus `assets/artwork/`.
+Pause and Demon Hub are the best visual references for this toolkit. New menu
+work should stop expanding `ScreenStateController` while existing screens are
+migrated one at a time with screenshot and input characterization.
 
-These decisions are resolved in the slice where they become necessary and recorded
-in the per-slice audit entry.
+## 9. Testing and verification assessment
 
----
+The test investment is a major strength: 121 scripts and 12,664 lines cover
+domain rules, generated layouts, scenes, geometry, menus, progression, saves,
+touch, display, combat, and web-facing contracts. Thirty-four tests load the
+main scene, providing meaningful integration coverage.
 
-## 10. Phase A0 record — 2026-08-22
+The current harness limits that value:
 
-- Checkpoint: existing WIP remains uncommitted; no destructive cleanup performed.
-- Reproducibility change: smoke runner now passes an explicit ignored
-  `.godot_user/smoke.log` path because Godot's default `user://logs` destination
-  crashed before tests could initialize.
-- Ignore change: added `.godot_user/`, `.godot-test-user/`, nested Python virtual
-  environments, `node_modules/`, generated analysis, SFX analysis, and superseded
-  generated UI output. Runtime-required baked assets and reconstructed UI audio
-  remain visible for a later provenance/tracking decision.
-- Baseline verification: all 12 smoke scripts passed and the main scene headless
-  run passed. Godot still reports the environment-only root certificate warning,
-  and the main scene reports two leaked objects at exit without a nonzero exit.
-- Baseline fix: `progression_smoke` had partially migrated to the current flat
-  primary-stat contract but still asserted the older starter totals. Its assertions
-  now cover the live starter loadout (`+2 VIT`, `+1 net STR`, `+3 DEF`, `+1 SPD`)
-  and confirm those values remain flat at high base stats. No runtime balance code
-  was changed for this fix.
-- Structural implementation: not started. The first structural slice remains B1,
-  actor geometry and combat presentation.
+- each registered test launches a separate Godot process;
+- the full run is slow and can amplify renderer crashes;
+- all tests are called “smoke” tests despite having different cost and scope;
+- the registry is a manually maintained PowerShell array;
+- eight GDScript test/report files are outside the registry; and
+- visual acceptance remains mostly manual.
+
+Unregistered files at this baseline:
+
+- `actor_geometry_smoke.gd`
+- `cloud_panel_touch_smoke.gd`
+- `demon_cloak_smoke.gd`
+- `fusion_menu_preview.gd`
+- `hub_content_scroll_smoke.gd`
+- `puzzle_map_reference_diff_report.gd`
+- `resource_drop_motion_smoke.gd`
+- `touch_menu_scroll_smoke.gd`
+
+Some may intentionally be reports or environment-sensitive checks. Their status
+should be explicit rather than inferred from absence.
+
+The 2026-09-11 standalone baseline found all `113` registered paths with no
+missing files. Direct focused execution confirmed the authored R3/R4/R5 and
+Run 2 layout contracts, room/slime/enemy setup, selected gear contracts, and
+selected Chroma/progression contracts. It also exposed current failures in
+active-run recovery, doorway geometry, Hub/equipment/touch menu contracts,
+gear catalogue/drop policy, generated minimap visibility/order, the starter
+flame music gate, elemental binding, and generated R7 bounds. The native R7
+smoke did not complete after reporting out-of-bounds rooms. See
+[`test-target-audit.md`](test-target-audit.md) for the test-by-test result and
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for the triage register.
+
+The target test structure should contain:
+
+1. fast pure/domain checks in a shared process;
+2. content and resource validation in a shared process;
+3. focused scene integration suites;
+4. a small number of full runtime journeys;
+5. web export/boot checks; and
+6. manual visual and device acceptance checklists.
+
+The current process-per-test runner should remain available until an equivalent
+suite runner proves the same failures are detected.
+
+## 10. Persistence and compatibility
+
+`PlayerProfile` currently writes schema 13 and accepts legacy schemas 8–13.
+Compatibility includes the SPD-to-AGI transition, six-stat migration, equipment
+slot migration, Demon Cloak behavior, gear-system revisions, and current stat
+baselines.
+
+Permanent profiles use three slots, temporary writes, validation, backups, and
+web localStorage mirroring. Active runs use a separate schema-1 snapshot with
+normalized vectors, run identity, room state, map state, player health, Chroma,
+facing, and run layout identity. Cloud saves export a versioned profile envelope
+and store encrypted payloads remotely.
+
+This is a professional-quality foundation worth protecting. Every content or
+state refactor must answer:
+
+- Is the stable ID unchanged?
+- Can the current version load every supported legacy schema?
+- Does a failed write preserve the previous valid save?
+- Does desktop behavior match the web localStorage path?
+- Can an active run fail validation without damaging permanent progression?
+
+Migration fixtures should eventually replace ad hoc assumptions about old save
+shapes.
+
+## 11. Performance profile
+
+The code already uses caches, bounded effect collections, spatial slime
+broad-phase logic, and startup warming. Known areas that deserve measurement
+before more content is added are:
+
+- per-pixel actor occlusion and highlight texture generation;
+- generated pixel-text and recolor caches;
+- large menu refreshes and inventory comparison rendering;
+- room transition setup and enemy-state restoration;
+- dungeon generation and reachability checks;
+- startup palette/frame preparation; and
+- mobile/web behavior under single-threaded rendering.
+
+The rule for `0.2.x` should be profile before optimizing. Each performance task
+needs a reproducible scenario, baseline time or allocation count, target device,
+and before/after evidence. Caches require explicit invalidation ownership so
+speed fixes cannot display stale inventory, palette, or room state.
+
+## 12. Naming and repository organization
+
+The source consistently uses `snake_case` filenames and generally uses
+`PascalCase` named classes. The larger naming problem is semantic: terms such as
+controller, component, runtime controller, system, layout, model, and service
+do not yet carry a strict responsibility contract.
+
+Recommended meanings:
+
+- **Component** — state and behavior belonging to one actor/entity.
+- **Controller** — coordinates a bounded feature or lifecycle.
+- **Service** — stateless or durable capability used by multiple features.
+- **System** — evaluates a collection of entities or shared rules.
+- **Definition** — authored immutable content data.
+- **State** — serializable or explicitly owned mutable data.
+- **Presenter** — converts state into view updates and visual commands.
+- **Layout** — geometry and responsive positioning without transactions.
+- **Catalog** — lookup/index over validated definitions.
+
+All 141 scripts currently occupy one flat `scripts/` directory. A feature-based
+directory structure will improve discovery, but moving files before ownership
+is clarified would create noisy Godot reference changes. Files should move with
+their feature migration after duplicate UIDs are resolved and import checks are
+green.
+
+## 13. Documentation assessment
+
+The baseline repository contains 78 project Markdown documents (77 under
+`docs/` plus `README.md`; `AGENTS.md` and addon documentation are excluded from
+this count). The current documentation-only worktree adds the new canonical
+guides listed below:
+
+- 35 files named as implementation plans;
+- approximately 15 audits, analyses, inventories, checkpoints, inspections, or
+  validation reports; and
+- multiple overlapping design, handoff, contract, and catalogue documents.
+
+The primary problem is authority and lifecycle, not the amount of writing.
+Documents mix intended design, implementation history, current behavior,
+branch-specific status, and unresolved ideas. Several active-looking files
+refer to old feature or refactor branches. Older plans may remain valuable, but
+they must not silently override current source or current design direction.
+
+The documentation audit should establish these maintained authorities:
+
+- `README.md` — entry point and verification;
+- `docs/AUDIT.md` — measured current implementation baseline;
+- `docs/project_direction.md` — approved game identity and design principles;
+- `docs/ARCHITECTURE.md` — current ownership and extension rules;
+- `docs/ROADMAP.md` — active product and infrastructure sequence;
+- `docs/CONTENT_AUTHORING.md` — repeatable content workflows;
+- `docs/GAMEPLAY_TUNING.md` — designer-facing balance surface;
+- `docs/KNOWN_ISSUES.md` — current reproducible issues; and
+- `docs/VERSIONING.md` — release numbering and update rules.
+
+Every other document should be classified as active proposal, feature
+reference, historical, superseded, or disposable. Historical material should
+be archived before deletion. Maintained documents should state status, owner,
+last verified version/commit, source of truth, and supersession relationships.
+
+## 14. Baseline preservation contract
+
+Infrastructure work during `0.2.x` must preserve:
+
+1. The current action-RPG identity: dungeon crawling, elemental combat,
+   puzzles, exploration, and battling.
+2. The complete title → Hub → dungeon → settlement → Hub loop.
+3. Existing authored Runs 1–5 and generated Run 6+ policy unless an intentional
+   content decision changes them.
+4. Existing movement, attack, combo, spin, charge, guard, roll, magic, Chroma,
+   target, and enemy timing unless a balance change is separately approved.
+5. The 240×160 pixel-art composition and responsive landscape behavior.
+6. Keyboard, controller, touch, desktop, and web operation.
+7. One deterministic gameplay frame schedule.
+8. Stable profile, item, element, room, and run identities.
+9. Supported save migrations and active-run recovery.
+10. Current menu visual conventions while their implementation is unified.
+
+Structural and gameplay-balance changes should not share a patch unless the
+balance change is required to preserve behavior after extraction.
+
+## 15. Recommended `0.2.x` infrastructure sequence
+
+### Phase 0 — Preserve and document 0.2.00
+
+- Keep this audit tied to the baseline commit.
+- Capture a short manual acceptance run and representative screenshots.
+- Resolve the duplicate R4/R5 UID warnings.
+- Classify the eight unregistered test/report scripts.
+- Record a full supervised smoke result when the environment is stable.
+
+Exit: the baseline can be rebuilt, tested, and visually compared.
+
+### Phase 1 — Documentation authority
+
+- Write the project-direction document from the creator's current intent.
+- Create one documentation index and lifecycle convention.
+- Reconcile `ARCHITECTURE.md`, `refactor-route.md`, and `FEATURE_MAP.md` with
+  this baseline.
+- Classify all remaining documents and archive superseded material.
+- Create the live roadmap, known-issues list, and content-authoring skeleton.
+
+Exit: a contributor can identify current truth without reading historical plans.
+
+### Phase 2 — Menu platform
+
+- Characterize Pause and Demon Hub visual/input conventions.
+- Extract shared menu frame, footer, prompt, cursor, list, clipping, and
+  responsive-layout primitives.
+- Move one screen at a time from `ScreenStateController` into focused presenters.
+- Route touch, mouse, controller, and keyboard through the same commands.
+- Preserve screenshots and behavior at every extraction.
+
+Exit: adding a menu does not enlarge `ScreenStateController`, and migrated menus
+share one interaction contract.
+
+### Phase 3 — Room and encounter boundaries
+
+- Separate transition, socket/geometry, encounter spawning, room persistence,
+  and reward orchestration.
+- Define typed spawn and transition results.
+- Validate full-body enemy placement and route reachability before activation.
+- Add deterministic room scenario fixtures.
+
+Exit: adding a room or encounter uses a documented definition and does not
+require editing a general 2,000-line controller.
+
+### Phase 4 — Typed runtime ownership
+
+- Create narrow typed contexts for scheduled domains.
+- Move single-owner fields out of `GameplayState` with characterization first.
+- Replace `root.call/get/set` vertically by feature.
+- Remove compatibility wrappers after their final consumer migrates.
+- Convert gameplay-significant metadata to typed fields.
+
+Exit: migrated features are rename-safe and declare their dependencies.
+
+### Phase 5 — Content authoring pipeline
+
+- Add validators and typed accessors around current item, enemy, room, run,
+  ability, reward, and tuning data.
+- Define stable authoring templates and extension examples.
+- Move data from code only when save and runtime equivalence are covered.
+- Add one content-validation suite to CI.
+
+Exit: ordinary content additions primarily create validated definitions rather
+than modify central runtime code.
+
+### Phase 6 — Test and performance infrastructure
+
+- Group fast tests into shared-process suites.
+- Keep focused scene and journey tests separate.
+- Add screenshot/geometry checks for fragile visual contracts.
+- Establish desktop and web frame-time scenarios.
+- Profile known hot paths and optimize only with evidence.
+
+Exit: routine feedback is fast, the release gate remains comprehensive, and
+performance regressions have reproducible evidence.
+
+### Phase 7 — Feature-based repository layout
+
+- Move scripts, scenes, tests, and content by completed feature boundary.
+- Preserve UIDs and validate all resource references after each move.
+- Update the architecture and authoring guides with each domain migration.
+
+Exit: repository structure mirrors runtime ownership without a disruptive
+all-at-once path rewrite.
+
+## 16. Immediate conclusions
+
+Tiny Demons 0.2.00 already contains a broad, distinctive game and several
+strong engineering foundations. Its largest risk is not missing architecture;
+it is that successful incremental extraction stopped halfway, leaving mature
+feature components connected through a shared dynamic compatibility layer.
+
+The next cycle should therefore focus on consolidation: preserve behavior,
+make documentation authoritative, establish shared menu conventions, separate
+room responsibilities, then migrate runtime seams and content authoring one
+vertical slice at a time. A broad rewrite would put working combat, dungeon,
+save, input, and web behavior at unnecessary risk.
+
+This baseline is the starting point for that work. Product direction determines
+what Tiny Demons should become; source characterization and staged extraction
+determine how it can grow safely.

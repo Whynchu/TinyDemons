@@ -4,7 +4,8 @@ Status: accepted execution plan
 
 Plan date: 2026-08-22
 
-Branch: `refactor/2026-08-18`
+Applies to: the `0.2.x` development cycle, starting from version `0.2.00`
+(`bfe55782f43ee40fe32b5bebd45de988e34579d8`)
 
 Companion: [`AUDIT.md`](AUDIT.md) records the current baseline, findings, and
 phase status. This document defines how the refactor is executed.
@@ -44,6 +45,10 @@ different large file is not success.
 ---
 
 ## 3. Current structural baseline
+
+The measurements in this section are historical planning measurements from
+2026-08-22. For the current `0.2.00` measurements, use [`AUDIT.md`](AUDIT.md);
+this route remains authoritative for sequencing and exit gates.
 
 Measured 2026-08-22:
 

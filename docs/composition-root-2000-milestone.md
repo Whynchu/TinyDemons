@@ -4,7 +4,11 @@ Status: achieved
 
 Date: 2026-08-22
 
-Branch: `refactor/2026-08-18`
+Historical branch: `refactor/2026-08-18`
+
+This is a historical line-count milestone. Current composition measurements
+and the accepted migration route are in [`AUDIT.md`](AUDIT.md) and
+[`refactor-route.md`](refactor-route.md).
 
 ## Result
 

@@ -1,5 +1,9 @@
 # Tiny Demons — Gear Effect Contracts
 
+Status: approved current effect contract registry
+
+Updated: 2026-09-11
+
 ## Status
 
 **Approved contract registry — active existing effects are implemented; future
