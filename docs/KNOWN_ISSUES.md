@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.01`
+Current release: version `0.2.02`
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in

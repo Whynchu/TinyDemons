@@ -30,6 +30,7 @@ func _initialize() -> void:
 		var view := screens.hub_equipment_menu as EquipmentMenuLayout
 		_expect(view != null and view.visible, "hub uses the authored equipment scene", failures)
 		if view != null:
+			_expect(EquipmentMenuLayout.candidate_max_scroll(8) == 0 and EquipmentMenuLayout.candidate_max_scroll(9) == 2 and EquipmentMenuLayout.candidate_max_scroll(10) == 2 and EquipmentMenuLayout.candidate_max_scroll(16) == 8, "equipment candidate scrolling handles a partially filled final row", failures)
 			_expect(view.command_buttons.size() == 3 and view.slot_buttons.size() == 6 and view.candidate_buttons.size() == 8, "equipment scene owns one fixed button layer per route", failures)
 			_expect(view.command_buttons.all(func(button: Button) -> bool: return button.tooltip_text.is_empty()) and view.navigation_back_button != null and view.navigation_back_button.tooltip_text.is_empty(), "equipment command and navigation controls do not show native tooltips", failures)
 			var responsive_size := view.size

@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.01"
+const GAME_VERSION := "0.2.02"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -3360,7 +3360,7 @@ func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: Play
 	var candidate_window_start := 0
 	var candidate_scroll_fraction := 0.0
 	if candidates.size() > 8:
-		var max_start := maxi(0, int(ceil(float(candidates.size()) / 2.0)) * 2 - 8)
+		var max_start := EquipmentMenuLayout.candidate_max_scroll(candidates.size())
 		var candidate_scroll := clampf(hub_choice_scroll, 0.0, float(max_start))
 		candidate_window_start = clampi(int(floor(candidate_scroll / 2.0)) * 2, 0, max_start)
 		candidate_scroll_fraction = candidate_scroll - float(candidate_window_start)
@@ -5220,7 +5220,7 @@ func scroll_hub_content(root: Object, delta_px: float) -> void:
 		return
 	if equipment_active and hub_gear_browsing:
 		var equipment_scroll_count := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
-		var max_start := maxi(0, int(ceil(float(count) / 2.0)) * 2 - equipment_scroll_count) if hub_equipment_menu != null else maxi(0, count - equipment_scroll_count)
+		var max_start := EquipmentMenuLayout.candidate_max_scroll(count) if hub_equipment_menu != null else maxi(0, count - equipment_scroll_count)
 		hub_choice_scroll = clampf(hub_choice_scroll - delta_px / pitch, 0.0, float(max_start))
 		# A drag can move the visible window without changing the selected
 		# candidate. Disarm the touch confirmation so a later tap cannot commit
@@ -5270,7 +5270,7 @@ func snap_hub_list_scroll_to_selection(root: Object) -> void:
 		var candidates := root.call("_hub_gear_candidates", selected_slot) as Array
 		var current_index := int(hub_gear_candidate_indices.get(String(selected_slot), 0))
 		var equipment_visible_count := 8 if hub_equipment_menu != null else maxi(hub_gear_choice_texts.size(), 1)
-		var max_start := maxi(0, int(ceil(float(candidates.size()) / 2.0)) * 2 - equipment_visible_count) if hub_equipment_menu != null else maxi(0, candidates.size() - equipment_visible_count)
+		var max_start := EquipmentMenuLayout.candidate_max_scroll(candidates.size()) if hub_equipment_menu != null else maxi(0, candidates.size() - equipment_visible_count)
 		var start := current_index - 2 if hub_equipment_menu != null else current_index - 1
 		if hub_equipment_menu != null: start -= start % 2
 		hub_choice_scroll = clampf(float(start), 0.0, float(max_start))
