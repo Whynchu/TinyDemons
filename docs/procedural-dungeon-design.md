@@ -1,14 +1,16 @@
-# Procedural Dungeon Design — Generated Run 4+
+# Procedural Dungeon Design — Generated Runs R6+
 
-Status: Implemented — flat difficulty, RNG Hub degree, wandering critical path,
+Status: current generated-route design for R6+; flat difficulty, RNG Hub degree, wandering critical path,
 interlocking lower routes, ungated cross-links, and free boss lateral position
 are live; event-revealed shortcuts remain an optional future extension.
+Updated: 2026-09-11
+Baseline: authored R1–R5 are preserved; generated maps begin at R6.
 Design authority: this document
 Related: [`run1-dungeon-map-design.md`](run1-dungeon-map-design.md), [`run1-dungeon-map-implementation-plan.md`](run1-dungeon-map-implementation-plan.md), [`elemental-binding-and-fusion-design.md`](elemental-binding-and-fusion-design.md), [`gear-system-rework.md`](gear-system-rework.md)
 
-This document defines the grammar for procedurally generated runs (Run 4 and
+This document defines the grammar for procedurally generated runs (R6 and
 later). It is a gameplay and presentation contract, not an implementation
-checklist. Run 1, Run 2, and authored R3 remain authored reference maps the
+checklist. Runs 1–5 remain authored reference maps the
 grammar must be able to reproduce.
 
 ## Design summary

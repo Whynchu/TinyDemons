@@ -1,5 +1,12 @@
 # Tiny Demons — Architecture
 
+Status: current ownership and extension guide for the `0.2.x` baseline
+
+Updated: 2026-09-11
+
+Authority: [`AUDIT.md`](AUDIT.md) records measured findings; this document
+defines the intended runtime boundaries and safe extension rules.
+
 Companion to `AUDIT.md` (current/desired state, findings, plan) and
 `GAMEPLAY_TUNING.md` (the balance surface). This file is the component map and
 the "where does my feature go" guide.
@@ -95,7 +102,11 @@ enemy encounter generation. The active route keeps authored R1–R5 and selects
 the deterministic generated layout path from R6 onward. Generated difficulty
 is flat per run and keyed off `difficulty_rank`, not room depth.
 
-## Tuning resources (all `@export`-driven, in-editor editable)
+## Tuning classes (exported fields; resource migration planned)
+
+The tuning classes expose exported fields, but version `0.2.00` constructs them
+in `gameplay_state.gd` rather than loading external `.tres` resources. Treat
+inspector editing as the intended destination until that migration is complete.
 
 | Resource | Focus |
 | --- | --- |

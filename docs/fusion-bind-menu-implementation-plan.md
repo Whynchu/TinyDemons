@@ -1,6 +1,16 @@
 # Fusion and Bind Menu Implementation Plan
 
-Status: Fusion presentation gate accepted; Bind not started.
+Status: implemented core presentation and interaction; focused runtime/device
+verification remains open
+
+Updated: 2026-09-11
+
+Current owners: `screen_state_controller.gd`, the Fusion/Bind model and layout
+scripts, and `hub_flow_controller.gd` for transactions and profile mutation.
+
+Current state: both Fusion and Bind have dedicated scene entry points and have
+been migrated away from the legacy presenters. The remaining verification gate
+is recorded in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 ## Follow-up correction log — 2026-09-05
 

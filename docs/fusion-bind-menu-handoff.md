@@ -1,5 +1,13 @@
 # Fusion / Bind Menu Handoff
 
+Status: implemented handoff; runtime and device verification remain tracked in
+the current issue register
+
+Updated: 2026-09-11
+
+Current owners: `screen_state_controller.gd`, Fusion/Bind model and layout
+scripts, and `hub_flow_controller.gd` for transaction rules.
+
 Date: 2026-09-05
 
 ## Current objective

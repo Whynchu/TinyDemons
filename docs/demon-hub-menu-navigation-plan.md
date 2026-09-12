@@ -1,5 +1,20 @@
 # Demon Hub Menu Navigation Plan
 
+Status: implemented; retain as the hub navigation contract for follow-up menu
+work.
+
+Owner: `screen_state_controller.gd`, with layout support from the hub menu
+layout scripts.
+
+Current code: Demon Hub root, Shop, Fusion, and Bind routes in
+`screen_state_controller.gd`.
+
+Verification: menu navigation, touch-menu, and hub content smoke tests under
+`tests/`.
+
+Supersedes: older hub cursor and nested-menu behavior described in historical
+menu plans; see [`DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md).
+
 ## Goal
 
 Make the Demon Hub root previews and nested SHOP, FUSION, and BIND menus behave like the authored Equipment menu: only the currently active menu owns a cursor, input, and detail presentation.

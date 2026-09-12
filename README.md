@@ -64,9 +64,13 @@ catalogue. Its documentation-first boundary is in
 linked companion documents. Head and Arm are approved additions; future weapon
 families remain documented extension points until their combat contracts exist.
 
-Start with [`docs/AUDIT.md`](docs/AUDIT.md) for the current findings and phase
-status, then [`docs/refactor-route.md`](docs/refactor-route.md) for the accepted
-execution plan. The completed Combat & Economy work remains documented in
+Start with [`docs/DOCUMENTATION_MAP.md`](docs/DOCUMENTATION_MAP.md) for the
+documentation authority, then [`docs/AUDIT.md`](docs/AUDIT.md) for current
+findings and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the active sequence.
+Use [`docs/CONTENT_AUTHORING.md`](docs/CONTENT_AUTHORING.md) when adding game
+content and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for open verification
+gaps. The accepted refactor route is in
+[`docs/refactor-route.md`](docs/refactor-route.md). The completed Combat & Economy work remains documented in
 [`docs/combat-economy-overhaul.md`](docs/combat-economy-overhaul.md).
 
 Current playtest issues and their resolution order are tracked in
@@ -130,7 +134,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.00**. Every push to `main` must increment the
+Current game version: **0.2.01**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

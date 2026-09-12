@@ -427,7 +427,7 @@ This plan is implemented when:
 
 ## 9. Implementation record
 
-The current feature branch implements the core slices through the existing
+The implementation history completed the core slices through the existing
 composition root:
 
 - `AspectCatalog` owns the four commutative recipes and all seven elemental

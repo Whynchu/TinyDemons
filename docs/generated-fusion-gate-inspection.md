@@ -4,6 +4,8 @@ Status: implementation complete; focused verification passed
 Inspected: 2026-08-30  
 Scope: generated R6+ room topology, entrance-Orb gates, shared Orb state, and validation
 
+Baseline policy: authored R1–R5 are preserved; new generated runs begin at R6.
+
 ## Purpose
 
 This document separates what the current code produces from the topology the game
@@ -12,7 +14,7 @@ generator and regression-test changes.
 
 ## Current production path
 
-For generated runs (`completed_runs >= 2`), `DungeonMapController.begin_run()` calls
+For generated runs (`completed_runs >= 5`, which is R6 and later), `DungeonMapController.begin_run()` calls
 `DungeonLayoutGenerator.build()`, then validates the returned
 `DungeonLayoutDefinition`, and finally copies that layout into `DungeonGraph`.
 

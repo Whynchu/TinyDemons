@@ -1,9 +1,15 @@
 # FFIII-Inspired Six-Stat & Menu Redesign — Implementation Plan
 
-Status: implemented and verified on `feature/ffiii-stats-menu-rework`; reviewed
-against the reference screenshots and the current codebase on 2026-08-27;
+Status: implemented foundation; current baseline reference
+
+Historical implementation branch: `feature/ffiii-stats-menu-rework`
+
+Reviewed against the reference screenshots and the current codebase on 2026-08-27;
 composite elemental combat and responsive-menu corrections verified on
 2026-08-28
+
+Current owners: `player_profile.gd`, `progression_controller.gd`,
+`combat_runtime_controller.gd`, and `screen_state_controller.gd`.
 
 > The six-stat/menu implementation is complete. Its original four-slot
 > equipment presentation remains the compatibility baseline; the approved

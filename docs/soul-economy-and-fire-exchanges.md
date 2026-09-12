@@ -1,5 +1,9 @@
 # Soul Economy and Fire Exchanges
 
+Status: current economy and elemental-service reference
+
+Updated: 2026-09-11
+
 This document records the implementation of Souls as the persistent currency
 for flame services and equipment fusion, plus the elemental Binding/Fusion
 system. The canonical rules are in

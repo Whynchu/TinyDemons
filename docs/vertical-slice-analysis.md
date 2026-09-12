@@ -3,6 +3,10 @@
 Status: first slice traced through source; runtime characterization remains
 incomplete
 
+Updated: 2026-09-11
+
+Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
+
 Slice: start run -> enter room -> fight enemy -> clear room -> claim reward
 
 ## Slice Summary
@@ -180,7 +184,8 @@ migration only after characterization tests describe the boot contract.
 - Checkpointing occurs before reward presentation completes, protecting browser
   reload behavior.
 - Combat calculation has a recognizable owner and typed result object.
-- Tuning is already moving into dedicated resources.
+- Tuning classes are dedicated, but version `0.2.00` still instantiates them
+  from `gameplay_state.gd`; external `.tres` resource loading remains planned.
 
 ### Highest-value risks
 

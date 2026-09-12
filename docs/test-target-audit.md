@@ -2,7 +2,12 @@
 
 Status: initial findings; expand before using affected tests as release evidence
 
-Date: 2026-09-07
+Date: 2026-09-12
+
+Baseline: version `0.2.00`; expand this audit before using affected tests as
+release evidence.
+
+Current release: version `0.2.01`
 
 ## Purpose
 
@@ -22,7 +27,7 @@ coverage for the named feature.
 
 The runner now registers all three authored-layout contracts deliberately.
 
-## Evidence From Focused Run
+## Historical wrapper evidence — 2026-09-07
 
 Command:
 
@@ -45,7 +50,10 @@ The R3/R4/R5 target mismatch is corrected. Their pixel-perfect grid tests remain
 separate contracts and still fail independently where the authored image does
 not match the manifest.
 
-Current post-`0.1.78` grid evidence:
+Historical post-`0.1.78` grid evidence:
+
+The results below document an earlier target-repair pass. They remain useful
+for provenance, but do not constitute a complete `0.2.00` release matrix.
 
 - `puzzle_map_r4_new_grid_smoke`: target is correctly R4. The reference diff
   identified two missing Treasure markers at `(19,15)` and `(15,19)`; adding
@@ -71,7 +79,9 @@ The runner now supports:
 - `engine_start_failure` classification; and
 - `engine_crash` classification with a configurable repeated-crash stop gate.
 
-The authored-layout batch was rerun after the target repair:
+The authored-layout batch was rerun after the target repair. This is retained as
+historical evidence because the current direct baseline below is the authoritative
+result for `0.2.00`.
 
 | Test | Result |
 |---|---|
@@ -98,8 +108,66 @@ The test now asserts the authored contract directly:
 - the Special Room route carries its Puzzle A requirement and source-clear gate;
 - the Special Room completion is recorded.
 
-Focused rerun result: `run2_authored_layout_smoke` passes. This was a test setup
-defect, not evidence that gameplay allowed early entry.
+The later focused rerun result for `run2_authored_layout_smoke` passed. This was
+a test setup defect, not evidence that gameplay allowed early entry.
+
+## Current standalone baseline — 2026-09-11
+
+Inventory preflight:
+
+```text
+registered=113
+missing=0
+```
+
+Focused tests were invoked directly with the Godot console executable because
+the process-per-test wrapper reported false timeouts for tests that completed
+successfully. No Godot editor peer or runtime was active during this pass.
+
+Confirmed passing tests:
+
+- `dungeon_map_event_smoke`
+- `r3_authored_layout_smoke`
+- `r4_authored_layout_smoke`
+- `r5_authored_layout_smoke`
+- `run2_authored_layout_smoke`
+- `run1_room_prefab_smoke`
+- `slime_spawn_smoke`
+- `enemy_room_engagement_smoke`
+- `gear_effect_contract_smoke`
+- `gear_slot_migration_smoke`
+- `chroma_state_smoke`
+- `chroma_pickup_smoke`
+- `aspect_ability_smoke`
+- `starter_flame_smoke`
+- `generated_flame_progression_smoke`
+
+Confirmed failing tests:
+
+| Test | Current assertion evidence |
+|---|---|
+| `active_run_recovery_contract_smoke` | A valid snapshot failed schema/slot validation. |
+| `cloud_save_contract_smoke` | Cloud panel lacks the expected explicit runtime-safe types. |
+| `wall_socket_geometry_smoke` | Closed seams remain enterable or lack expected trigger fences. |
+| `demon_hub_menu_scene_smoke` | Hub root, shop cursor, shop geometry, and sell amount assertions fail. |
+| `equipment_menu_scene_smoke` | Equipment cursor animation/selection and post-equipment shop cursor assertions fail. |
+| `touch_controls_smoke` | Hub stat-row and outside-button touch assertions fail; one signal call has an argument mismatch. |
+| `gear_catalogue_expansion_smoke` | Starter package and runtime presentation expectations fail. |
+| `gear_drop_policy_smoke` | Shop baseline/premium/cloak inventory expectation fails. |
+| `elemental_binding_smoke` | R7 bounds/gate validation and two binding assertions fail. |
+| `generated_minimap_smoke` | Destination cursor is ordered behind the opaque full-map texture. |
+| `run1_minimap_smoke` | An undiscovered room remains visible. |
+| `run_music_flame_gate_smoke` | Dungeon-Crawl music does not start after starter-flame pickup under the test contract. |
+
+`r7_native_generator_smoke` did not complete. It repeatedly reported an R7 room
+outside the compact map (`room_9_11` at `(35, 10)`) before its worker stalled.
+`menu_route_scene_smoke`, `gear_system_rework_smoke`,
+`cloud_panel_touch_smoke`, and `touch_menu_scroll_smoke` did not produce a
+reliable result in this pass because their standalone workers stalled around
+the add-on MCP runtime startup/teardown path. They remain unverified.
+
+The repeated root-certificate and MCP registry messages are environment
+warnings. They appeared in direct runs and were not counted as test failures.
 
 This is an initial list, not a complete audit.
 

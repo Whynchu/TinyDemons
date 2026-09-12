@@ -1,5 +1,10 @@
 # Meta Progression, Equipment, and Hub Design
 
+Status: current directional design; detailed equipment rules live in the linked
+six-slot contracts
+
+Updated: 2026-09-11
+
 ## Status
 
 **Foundation implemented; catalogue expansion approved.** This document retains

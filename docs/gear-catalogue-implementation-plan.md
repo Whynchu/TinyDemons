@@ -2,6 +2,16 @@
 
 ## Status
 
+Owner: `item_catalog.gd`, `item_instance.gd`, and `equipment_component.gd`.
+
+Current code: the six-slot catalogue and current authored rows are active;
+Phase 6 remains intentionally gated behind effect contracts and tuning tests.
+
+Verification: gear, equipment, shop, fusion, and save compatibility tests under
+`tests/`.
+
+Supersedes: the earlier four-slot catalogue direction.
+
 **Implementation checkpoint — Phases 0–5 are landed; Phase 6 remains gated.**
 This plan follows [`gear-catalogue-spec.md`](gear-catalogue-spec.md) and does
 not authorize future weapon families or passive effects that lack an action

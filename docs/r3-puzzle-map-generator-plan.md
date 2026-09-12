@@ -1,5 +1,12 @@
 # R3 Puzzle-Map Generator
 
+Status: authored Run 3 contract and implementation reference
+
+Scope: Run 3 authored map only; generated R6+ routes use the generated-route
+documents and validators.
+
+Updated: 2026-09-11
+
 ## Scope
 
 R3 starts as an authored 35 x 35 map-plan image, rendered over

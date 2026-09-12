@@ -2,6 +2,19 @@
 
 Status: reviewed draft, implementation in progress
 
+Owner: `player_chroma_component.gd`, `element_catalog.gd`, and the pickup,
+flame, and magic runtime owners.
+
+Current code: the base Chroma loop and Binding/Fusion extension are implemented;
+this document remains the technical plan for unfinished elemental content and
+verification.
+
+Verification: Chroma, binding, fusion, pickup, casting, and elemental combat
+tests under `tests/`.
+
+Supersedes: legacy eight-aspect implementation assumptions in older design
+notes; see the current Chroma design document below.
+
 Source design: `docs/Tiny Demons — Elemental Chroma System Design.md`
 
 Decision history: `docs/elemental-chroma-handoff.md`

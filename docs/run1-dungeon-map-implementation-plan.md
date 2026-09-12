@@ -32,7 +32,7 @@ Remaining review: authored treasure-room content polish, visual placement review
 
 ## Future authored-layout boundary
 
-The current Run 4+ generator must remain replaceable by complete authored
+The current generated R6+ path must remain replaceable by complete authored
 layouts. When handmade puzzle maps arrive, they should describe the entire run
 contract rather than only overriding a puzzle node: room order and categories,
 all connections, gate requirements, Fire/Orb/fusion dependencies, encounter

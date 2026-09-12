@@ -4,6 +4,12 @@ Status: implementation complete; final balance tuning remains a playtest activit
 
 Date: 2026-09-07
 
+Current owners: `slime_actor.gd`, `slime_brain.gd`, `slime_combat_component.gd`,
+`slime_tuning.gd`, and actor geometry/presentation owners.
+
+Verification: boss scene, variant, geometry, attack, and spawn coverage; final
+balance and device/runtime behavior remain playtest work.
+
 This document defines the complete boss-slime behavior and presentation pass.
 The boss must feel like a larger, heavier version of the regular slime while
 supporting the Normal Slime and every elemental slime variant. The work is one

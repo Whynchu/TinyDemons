@@ -1,8 +1,12 @@
 # Next Phase Plan
 
-Status: approved working sequence
+Status: historical working sequence; current sequence is [`ROADMAP.md`](ROADMAP.md)
 
 Date: 2026-09-07
+
+This document retains the detailed stabilization checklist and runner safety
+notes. Use [`ROADMAP.md`](ROADMAP.md) for the current phase order and
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for the live issue register.
 
 ## Current Position
 

@@ -1,10 +1,16 @@
 # Generated R7 Route Validation
 
+Status: implemented R7 validation reference; generated-route policy begins at
+R6 for new runs
+
+Updated: 2026-09-11
+
+Baseline: authored R1–R5 remain preserved; R6 and later use generated layouts.
+
 `scripts/puzzle_route_generator.gd` is now the runtime and preview ownership
 boundary for generated R7 routes. `scenes/generated_puzzle_map_preview.tscn` is
-a designer-facing gallery for
-the first generated run after authored R3–R6. The runtime generator now builds
-one deterministic compact candidate per requested seed and validates its
+a designer-facing gallery for the R7 generated route. The runtime generator now
+builds one deterministic compact candidate per requested seed and validates its
 progression. The gallery builds six outer seed iterations and renders their room
 connections, gate colors, and special room types side by side.
 
@@ -13,7 +19,8 @@ Open the scene directly in Godot and adjust the exported values on
 
 - `preview_seed` changes the seed family.
 - `iteration_count` changes how many routes are shown.
-- `completed_runs` is `6` for R7.
+- `completed_runs` is `6` for R7 (`completed_runs >= 5` is generated-route
+  policy for new runs).
 - `starter_flame` tests a different starting flame.
 
 Each panel reports its seed, room/gate counts, and whether the generator's

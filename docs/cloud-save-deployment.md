@@ -1,5 +1,13 @@
 # Encrypted Cloud Save Deployment
 
+Status: current deployment runbook; external Supabase setup and production
+verification remain deployment work
+
+Updated: 2026-09-11
+
+Owner: `cloud_save_service.gd`, `cloud_save_panel.gd`, and the Supabase
+function/migration under the deployment boundary.
+
 Tiny Demons cloud saves are account-free. The Web client encrypts the complete
 three-slot envelope with AES-256-GCM and sends only ciphertext to Supabase.
 

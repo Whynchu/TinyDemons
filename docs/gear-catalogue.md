@@ -1,5 +1,9 @@
 # Tiny Demons — Authored Gear Catalogue
 
+Status: approved current catalogue reference; future-effect rows remain gated
+
+Updated: 2026-09-11
+
 ## Status
 
 **Approved catalogue — all 44 rows are authored in the runtime schema and
