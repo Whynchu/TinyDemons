@@ -19,6 +19,7 @@ func _initialize() -> void:
 		await process_frame
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var profile := gameplay.get("player_profile") as PlayerProfile
+	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
 	_expect(screens != null and profile != null, "pause menu owners are composed", failures)
 	if screens != null and profile != null:
 		var starting_gold := profile.gold
@@ -124,6 +125,11 @@ func _initialize() -> void:
 		_expect(bool(gameplay.get("scene_transition_active")), "Quit to Title reuses the scene teardown transition", failures)
 		_expect(profile.gold == starting_gold and profile.completed_runs == starting_runs, "Quit to Title leaves settled profile progress intact", failures)
 		_expect(profile.pending_route == "title", "Quit to Title records the title route", failures)
+	if profile != null and not original_profile.is_empty():
+		# Pause Equipment exercises the live equipment route, which can save the
+		# profile. Restore the developer's save so repeated scene checks are isolated.
+		profile.load_dictionary(original_profile)
+		ProfileSaveService.save_profile(profile)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

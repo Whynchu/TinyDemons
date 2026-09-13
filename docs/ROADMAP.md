@@ -65,10 +65,10 @@ order:
 3. Preserve the accepted minimap landmark/discovery behavior and keep the
    starter-flame music gate green; finish flame-travel save/recovery evidence,
    add its SFX/transition presentation, and capture cold/warm timing.
-4. Finish the remaining equipment, Pause, and touch contracts against the
-   authored Pause/Hub conventions, including clipping and direct touch targets.
-   The focused Demon Hub/Shop contract and the deterministic Equipment scene
-   check are now green.
+4. Finish the remaining Pause Equipment clipping and broader touch contracts
+   against the authored Pause/Hub conventions, including direct touch targets.
+   The focused Demon Hub/Shop, Equipment scene, and Pause scene checks are now
+   green.
 5. Recheck gear catalogue/drop expectations and profile exact sell-row rebuilds
    with representative inventory.
 
