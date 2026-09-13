@@ -205,6 +205,8 @@ was also rerun with a deterministic plain-starter fixture and save restoration;
 it passes without relying on whatever gear a previous local run left equipped.
 `pause_menu_scene_smoke` also passes after restoring the live profile it uses for
 its Pause Equipment touch route.
+`player_hud_scene_smoke` also passes after its two ability-prompt paths were
+aligned with the authored cooldown-icon hierarchy.
 No new test file was added, and the web export path was not reopened because
 the existing local gate is already accepted for this pass.
 
