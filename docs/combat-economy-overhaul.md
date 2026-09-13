@@ -186,7 +186,8 @@ The redesign makes the hub FUSE tab explicit and honest:
   only *materials* must be unequipped.
 - Materials are non-equipped items sharing the target's `definition_id` and
   rarity. `fusion_material_count(target)` caps eligible duplicates at the
-  target's remaining upgrade capacity (`max_fusion_steps`).
+  target's next enhancement/rarity boundary; `max_fusion_steps` remains the
+  total path to Mythic +10.
 - The player chooses a **batch count** (left/right in the FUSE tab) up to the
   available material count. `fusion_batch_cost(item, count)` sums per-step
   costs, so the price scales with the target's enhancement and rarity using
@@ -203,8 +204,10 @@ New API in `player_profile.gd` (replaces the removed
 `can_fuse_duplicate`/`fuse_duplicate`):
 
 - `max_fusion_steps(item)` - steps to reach mythic +10 from the item's state.
+- `fusion_steps_to_next_rank(item)` - maximum materials for one confirmation,
+  ending at +10 or the next rarity promotion.
 - `fusion_material_count(target_instance_id, catalog)` - eligible material
-  count (0 when full or no materials).
+  count capped to the next rank boundary (0 when full or no materials).
 - `fusion_step_cost(rarity, enhancement)` - the Soul cost for one upgrade step.
 - `fusion_batch_cost(item, count)` - summed per-step Soul cost.
 - `fuse_duplicates(target_instance_id, count, catalog)` - validates + applies

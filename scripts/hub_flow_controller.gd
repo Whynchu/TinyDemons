@@ -408,7 +408,7 @@ func shop_sellable_items(root: Object) -> Array[ItemInstance]:
 func shop_items_match(left: ItemInstance, right: ItemInstance) -> bool:
 	if left == null or right == null:
 		return false
-	return left.shop_stack_key() == right.shop_stack_key()
+	return left.inventory_stack_key() == right.inventory_stack_key()
 
 
 func shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -423,8 +423,27 @@ func shop_owned_matching_count(root: Object, target: ItemInstance) -> int:
 	if root == null or root.player_profile == null or target == null:
 		return 0
 	_ensure_shop_cache(root.player_profile as PlayerProfile)
-	var group: Dictionary = _shop_cache_group_by_key.get(target.shop_stack_key(), {}) as Dictionary
+	var group: Dictionary = _shop_cache_group_by_key.get(target.inventory_stack_key(), {}) as Dictionary
 	return (group.get("instance_ids", []) as Array).size()
+
+
+func shop_batch_value(root: Object, target: ItemInstance, quantity: int) -> Dictionary:
+	## A functional stack can contain different economic quality/history values.
+	## Price the same concrete IDs that sell_profile_items() will consume so the
+	## amount screen never promises a different payout from the transaction.
+	if root == null or root.player_profile == null or target == null or quantity <= 0:
+		return {"gold": 0, "souls": 0}
+	var matching_ids := shop_matching_ids(root, target)
+	var catalog := ItemCatalog.new()
+	var total_gold := 0
+	var total_souls := 0
+	for index in range(mini(quantity, matching_ids.size())):
+		var item: ItemInstance = root.player_profile.find_item(matching_ids[index])
+		if item == null:
+			continue
+		total_gold += catalog.sell_value(item)
+		total_souls += catalog.sell_soul_value(item)
+	return {"gold": total_gold, "souls": total_souls}
 
 
 func _ensure_shop_cache(profile: PlayerProfile) -> void:
@@ -443,7 +462,7 @@ func _ensure_shop_cache(profile: PlayerProfile) -> void:
 		var item := ItemInstance.from_dictionary(data)
 		if equipped_ids.has(item.instance_id):
 			continue
-		var key: String = item.shop_stack_key()
+		var key: String = item.inventory_stack_key()
 		if not _shop_cache_group_by_key.has(key):
 			var new_group: Dictionary = {"key": key, "representative": item, "instance_ids": []}
 			_shop_cache_group_by_key[key] = new_group
@@ -460,7 +479,7 @@ func _ensure_shop_cache(profile: PlayerProfile) -> void:
 			return left_value < right_value
 		if left_item.definition_id != right_item.definition_id:
 			return String(left_item.definition_id) < String(right_item.definition_id)
-		return left_item.shop_stack_key() < right_item.shop_stack_key()
+		return left_item.inventory_stack_key() < right_item.inventory_stack_key()
 	)
 	for group_value: Dictionary in _shop_cache_groups:
 		_shop_cache_items.append(group_value["representative"] as ItemInstance)
@@ -470,7 +489,7 @@ func shop_matching_ids(root: Object, target: ItemInstance) -> Array[String]:
 	if root == null or root.player_profile == null or target == null:
 		return []
 	_ensure_shop_cache(root.player_profile as PlayerProfile)
-	var group: Dictionary = _shop_cache_group_by_key.get(target.shop_stack_key(), {}) as Dictionary
+	var group: Dictionary = _shop_cache_group_by_key.get(target.inventory_stack_key(), {}) as Dictionary
 	var result: Array[String] = []
 	for instance_id: Variant in group.get("instance_ids", []):
 		result.append(str(instance_id))
@@ -657,9 +676,26 @@ func hub_gear_candidates(root: Object, slot: StringName) -> Array[ItemInstance]:
 		var unequip := ItemInstance.new()
 		unequip.instance_id = ItemCatalog.UNEQUIP_SHIELD_ID
 		candidates.append(unequip)
+	var grouped: Dictionary = {}
+	var group_order: Array[String] = []
+	var equipped_ids: Array = root.player_profile.equipped_instance_ids.values()
 	for data: Dictionary in root.player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
-		if catalog.definition_slot(item.definition_id) == slot: candidates.append(item)
+		if catalog.definition_slot(item.definition_id) != slot:
+			continue
+		var key := item.inventory_stack_key()
+		if not grouped.has(key):
+			grouped[key] = item
+			group_order.append(key)
+			continue
+		var current := grouped[key] as ItemInstance
+		# Keep the equipped copy as the representative. Equipping an exact
+		# duplicate has the same result, but this keeps the selection tied to the
+		# currently worn instance and avoids an unnecessary state change.
+		if equipped_ids.has(item.instance_id) and not equipped_ids.has(current.instance_id):
+			grouped[key] = item
+	for key: String in group_order:
+		candidates.append(grouped[key] as ItemInstance)
 	return candidates
 
 
@@ -791,7 +827,7 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 		var slot := catalog.definition_slot(item.definition_id)
 		if slot not in ItemCatalog.SLOTS:
 			continue
-		var key := "%s|%s|plus%d|enh%d" % [str(item.definition_id), str(item.rarity), catalog.random_plus_count(item), item.enhancement_level]
+		var key := item.inventory_stack_key()
 		if not grouped.has(key):
 			grouped[key] = {"representative": item, "items": []}
 		var group: Dictionary = grouped[key]

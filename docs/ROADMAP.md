@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.04`
+Current release: version `0.2.05`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -45,12 +45,12 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.04
+## Next checkpoint after 0.2.05
 
-Version `0.2.04` records the touch-scroll repair, UID validator, focused
-verification results, and the remaining contract failures. The R6+ risk/reward
-generation slice is now implemented behind the generated-route boundary. The
-next implementation checkpoint is a stabilization pass in this order:
+Version `0.2.05` records functional Equipment/Shop gear grouping, exact-ID
+sell accounting, and the Fusion next-rank batch cap alongside the remaining
+contract failures. The next implementation checkpoint is a stabilization pass
+in this order:
 
 1. Repair closed doorway geometry and trigger fences, then verify that every
    active room has reachable enemy and player space.

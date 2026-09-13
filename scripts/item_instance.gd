@@ -35,32 +35,48 @@ func to_dictionary() -> Dictionary:
 	}
 
 
-func shop_stack_key() -> String:
-	## SELL rows represent one exact inventory variant.  A display name is not
-	## enough: rarity, random `+` rolls, transmutation, and fusion investment all
-	## change the value or the identity the player is managing.
-	var random_parts: Array[String] = []
-	var random_keys := random_stat_points.keys()
-	random_keys.sort()
-	for key: Variant in random_keys:
-		random_parts.append("%s=%d" % [str(key), int(random_stat_points[key])])
-	var affix_parts: Array[String] = []
-	var affix_keys := affixes.keys()
-	affix_keys.sort()
-	for key: Variant in affix_keys:
-		affix_parts.append("%s=%s" % [str(key), str(affixes[key])])
-	return "%s|rarity=%s|quality=%.4f|affixes=%s|random=%s|transmutation=%s|enhancement=%d|fusion_points=%d|fusion_count=%d|fusion_souls=%d" % [
+func inventory_stack_key() -> String:
+	## Equipment and sell rows represent one functional item variant. A display
+	## name alone is not enough: rarity, random `+` rolls, affixes,
+	## transmutation, and current enhancement state must remain independent.
+	## Quality and fusion history stay on each ItemInstance because they affect
+	## the eventual sale value, but they do not change what the player equips.
+	return "%s|rarity=%s|affixes=%s|random=%s|transmutation=%s|enhancement=%d|fusion_points=%d" % [
 		String(definition_id),
 		String(rarity),
-		quality,
-		";".join(affix_parts),
-		";".join(random_parts),
+		_canonical_value(affixes),
+		_canonical_value(random_stat_points),
 		String(transmutation_id),
 		enhancement_level,
 		fusion_stat_points,
-		fusion_count,
-		fusion_souls_invested,
 	]
+
+
+func shop_stack_key() -> String:
+	## Compatibility name retained for callers and tests. The shop groups by the
+	## same functional identity as Equipment; per-instance quality/history are
+	## still used when the selected sale is priced.
+	return inventory_stack_key()
+
+
+static func _canonical_value(value: Variant) -> String:
+	if value is Dictionary:
+		var keys: Array = value.keys()
+		keys.sort_custom(func(left: Variant, right: Variant) -> bool: return str(left) < str(right))
+		var parts: Array[String] = []
+		for key: Variant in keys:
+			parts.append("%s:%s" % [str(key), _canonical_value(value[key])])
+		return "{%s}" % ",".join(parts)
+	if value is Array:
+		var entries: Array[String] = []
+		for entry: Variant in value:
+			entries.append(_canonical_value(entry))
+		return "[%s]" % ",".join(entries)
+	if value is float:
+		return "%.6f" % float(value)
+	if value is StringName:
+		return String(value)
+	return str(value)
 
 
 static func from_dictionary(data: Dictionary) -> ItemInstance:

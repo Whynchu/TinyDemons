@@ -163,6 +163,7 @@ These are code values (not inspector-exposed) that drive gear value:
 | Fusion common +0 step | 1 Soul for +0 -> +1 | `player_profile.gd:FUSION_START_COST` |
 | Fusion cost progression | +1 Soul per enhancement; each rarity adds 10 Souls; common +10 -> rare costs 10 and rare +0 -> +1 costs 11 | `player_profile.gd:fusion_step_cost` |
 | Fusion matching | Same base definition and rarity; random `+` package, affixes, transmutations, and target fusion level do not block a match | `player_profile.gd:_is_fusion_match` |
+| Fusion batch capacity | One confirmation ends at the current rarity's +10 or the next rarity promotion; Mythic +10 has no capacity | `player_profile.gd:fusion_steps_to_next_rank`, `fusion_material_count` |
 | Base stats | VIT/STR/DEF/AGI/INT/MND all start at 2 for new players; old saved values are preserved | `player_profile.gd`, `stats_component.gd`, `screen_state_controller.gd` |
 | SPD scale | 0.012 per point (see player_tuning) | `player_tuning.gd` |
 

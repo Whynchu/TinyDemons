@@ -372,6 +372,18 @@ func max_fusion_steps(item: ItemInstance) -> int:
 	return steps
 
 
+func fusion_steps_to_next_rank(item: ItemInstance) -> int:
+	## Fusion batches stop at the next visible gear boundary. A batch can fill
+	## the current rarity's +0..+10 track, or spend one material to promote a
+	## fully enhanced item to the next rarity. The player reopens Fusion for the
+	## following rank so a single confirmation cannot jump several rarities.
+	if item == null:
+		return 0
+	if item.enhancement_level < MAX_ITEM_ENHANCEMENT:
+		return MAX_ITEM_ENHANCEMENT - item.enhancement_level
+	return 1 if ItemCatalog.next_rarity(item.rarity) != &"" else 0
+
+
 func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = null) -> int:
 	var target := find_item(target_instance_id)
 	if target == null:
@@ -379,8 +391,8 @@ func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = nu
 	var items := catalog if catalog != null else ItemCatalog.new()
 	if items.definition_slot(target.definition_id) not in ItemCatalog.SLOTS:
 		return 0
-	var max_steps := max_fusion_steps(target)
-	if max_steps <= 0:
+	var rank_steps := fusion_steps_to_next_rank(target)
+	if rank_steps <= 0:
 		return 0
 	var matches := 0
 	for data: Dictionary in inventory:
@@ -392,7 +404,7 @@ func fusion_material_count(target_instance_id: String, catalog: ItemCatalog = nu
 		if candidate.instance_id in equipped_instance_ids.values():
 			continue
 		matches += 1
-	return mini(matches, max_steps)
+	return mini(matches, rank_steps)
 
 
 func fusion_owned_count(target_instance_id: String, catalog: ItemCatalog = null) -> int:

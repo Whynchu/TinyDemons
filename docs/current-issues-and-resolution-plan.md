@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.04`
+Current release: version `0.2.05`
 
 Owner: the feature owner listed for each issue; tracking is maintained here and
 summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
@@ -96,10 +96,11 @@ Status: **Source path exists — focused Hub contract currently failing; visual 
 
 ## Issue 2 — Shop selling merges gear across levels
 
-**Observed:** In the SHOP sell flow, gear with the same name appears to be
-grouped together regardless of its `+` level or other instance identity. This
-can show an incorrect inventory quantity and can make it unclear which gear is
-being sold.
+**Observed:** In the SHOP sell flow, some plain/basic gear copies fail to
+group, while other same-name gear appears to group across `+` levels or other
+meaningful differences. This can show an incorrect inventory quantity and can
+make it unclear which gear is being sold. Quality is an economic value only;
+it should not create a separate equipment or sell row by itself.
 
 **Likely owners:** shop/sell presentation in `screen_state_controller.gd`,
 the equipment/inventory data model, and the gear identity rules documented in
@@ -111,27 +112,39 @@ minimum, different enhancement levels must produce independent rows; if gear
 has additional independent identity fields, those fields must also remain
 available to the sell operation.
 
-**Acceptance criteria:** A sell row represents one exact sellable gear variant
-and displays its correct quantity. Selecting and selling one variant cannot
-remove another variant with the same base name. Quantities update immediately
-after a sale, selection remains stable when possible, and the flow does not
-become slower as inventory size grows. Add focused characterization coverage
-for same-name gear at multiple levels and for selling the final item in a row.
+**Acceptance criteria:** A sell row represents one functional gear variant:
+copies with the same base definition, rarity, displayed stat rolls, effects,
+and current enhancement state share one row and report `OWNED: x` from their
+concrete inventory IDs. Different `+` levels, random stat allocations,
+affixes, transmutations, or fusion stat investment remain separate rows.
+Selecting and selling one row cannot remove another functional variant with the
+same base name. Quantities update immediately after a sale, selection remains
+stable when possible, and the flow does not become slower as inventory size
+grows. Add focused characterization coverage for same-name gear at multiple
+levels, quality-only copies, and selling the final item in a row.
 
-Status: **Source path exists — focused Hub contract currently failing; runtime transaction verification pending**
+Status: **Source path exists — functional grouping coverage added; runtime transaction verification pending**
 
-### Current code state (2026-09-09)
+### Current code state (2026-09-12)
 
-- `ItemInstance.shop_stack_key()` is now the single sell identity. It includes
-  definition, rarity, quality, affixes, random stat points, transmutation,
-  enhancement, and fusion investment fields.
+- `ItemInstance.inventory_stack_key()` is the shared Equipment/Shop identity.
+  It includes definition, rarity, affixes, random stat points, transmutation,
+  enhancement, and current fusion stat investment. It intentionally excludes
+  instance ID, economic quality, and fusion history fields (`fusion_count` and
+  `fusion_souls_invested`) because those do not change the equipped result.
+- `shop_stack_key()` remains as a compatibility alias for older callers and
+  tests; it resolves to the same functional identity.
 - `HubFlowController` builds and sorts a cached representative list with exact
   member instance IDs. The cache is reused for row rendering, owned counts, and
   sale selection until inventory or equipped IDs change.
+- The sell amount state totals the exact concrete IDs that the transaction will
+  consume, so quality/history differences still produce accurate gold and Soul
+  payouts inside one functional row.
 - Sale removal uses the exact cached IDs and reselects the same exact variant
   after the inventory rebuild. `tests/demon_hub_menu_scene_smoke.gd` now covers
   same-name gear with different enhancement/random-roll identity and verifies
-  independent quantities.
+  independent quantities. `tests/fusion_candidate_cache_smoke.gd` adds
+  quality-only grouping coverage.
 
 ## Issue 3 — Shop sell flow feels unusually slow and lags between items
 
@@ -155,7 +168,7 @@ the focused sell tests green.
 
 Status: **First performance pass implemented — timing baseline pending**
 
-### Current code state (2026-09-09)
+### Current code state (2026-09-12)
 
 - The nested inventory/group scan and per-comparison catalog construction were
   removed from the sell path. The exact group cache is invalidated by the
@@ -167,6 +180,43 @@ Status: **First performance pass implemented — timing baseline pending**
 - No device timing baseline exists yet, so the reported lag is not marked
   resolved until shop open, row movement, sale, and post-sale refresh are
   measured in a runtime session.
+
+## Issue 11 — Fusion batches can cross the next gear rank
+
+**Observed:** The FUSE amount can be driven by all eligible same-definition
+materials even when fewer materials are needed to finish the target's current
+enhancement track. A single confirmation should stop at the next visible gear
+rank boundary rather than silently advancing through several ranks.
+
+**Likely owners:** `player_profile.gd` for the authoritative capacity and
+transaction guard, `hub_flow_controller.gd` for input limits, and
+`fusion_menu_layout.gd`/`screen_state_controller.gd` for the amount display.
+
+**Plan:** Define the next boundary as the remaining steps to `+10` for the
+current rarity. A fully enhanced item may use one material to promote to the
+next rarity; Mythic `+10` has no fusion capacity. Feed that cap into material
+count, left/right amount changes, and the transaction validation. Show the
+selected amount and cap together in the amount footer.
+
+**Acceptance criteria:** A target at `+0` exposes at most 10 materials, a
+target at `+9` exposes at most 1, a non-Mythic `+10` target exposes at most 1
+promotion material, and Mythic `+10` exposes none. The amount UI shows the
+selected value and maximum, input cannot move beyond that maximum, and a direct
+transaction call cannot consume beyond it. Reopen FUSE to continue at the next
+rank.
+
+Status: **Source path exists — rank cap and amount display implemented; runtime transaction verification pending**
+
+### Current code state (2026-09-12)
+
+- `PlayerProfile.fusion_steps_to_next_rank()` is the single boundary rule.
+  `fusion_material_count()` uses it, so the controller and `fuse_duplicates()`
+  share the same limit.
+- `HubFlowController.shift_hub_fusion_count()` clamps left/right input to the
+  capped material count. The Fusion amount footer displays the selected count
+  beside the maximum, such as `x1/10`.
+- The existing `max_fusion_steps()` remains available for total progression
+  calculations; it is no longer used as the per-confirmation batch limit.
 
 ## Issue 4 — First flame pickup causes an audio/room hitch
 
@@ -481,12 +531,14 @@ Status: **Implemented in source — runtime color verification pending**
 
 ## Applied implementation order and remaining work
 
-1. Correct sell identity and navigation performance together (Issues 2–3).
-2. Fix equipment clipping and Hub footer geometry (Issues 5 and 1).
-3. Move R6+ to generated maps and protect active-save compatibility (Issue 6).
-4. Implement Chroma identity/storage, adaptive pickup color, and music warmup
+1. Correct functional gear identity across Equipment and Shop, with exact-ID
+   sale accounting and the existing cache pass (Issues 2–3).
+2. Cap each Fusion confirmation at the next gear rank (Issue 11).
+3. Fix equipment clipping and Hub footer geometry (Issues 5 and 1).
+4. Move R6+ to generated maps and protect active-save compatibility (Issue 6).
+5. Implement Chroma identity/storage, adaptive pickup color, and music warmup
    (Issues 8–10 and 4).
-5. Implement the expanded minimap, persisted visits, and flame travel on the
+6. Implement the expanded minimap, persisted visits, and flame travel on the
    updated run-generation/state contracts (Issue 7).
 
 The source implementation contains the approved behavior without changing
@@ -500,6 +552,13 @@ between two visited flames; and visually inspect bound/temporary pickup
 colors.
 
 ## Verification and handoff
+
+The 2026-09-12 editor scan completed with exit code 0 and reported no script
+parse, type-inference, or failed-load errors. The focused
+`fusion_candidate_cache_smoke.gd` and `gear_system_rework_smoke.gd` processes
+were also attempted, but this local Godot 4.7.1 environment crashed with a
+native signal 11 before either script produced assertions. Those runtime
+checks remain open rather than being treated as product failures.
 
 The 2026-09-09 source/MCP verification is historical evidence for the initial
 implementation pass. The current 2026-09-11 baseline had no editor peer or

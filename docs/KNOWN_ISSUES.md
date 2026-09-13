@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.04`
+Current release: version `0.2.05`
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in
@@ -67,8 +67,9 @@ triage, not a release gate.
 | Area | Current state | Evidence still required |
 |---|---|---|
 | Demon Hub SELECT/BACK presentation | Source implementation exists; visual orientation check remains | Compare all hub routes at native and supported responsive layouts |
-| Shop exact sell variants | Exact instance grouping and selection logic exists | Sell same-name gear at different levels/rolls through the live transaction |
+| Shop functional sell variants | Functional grouping and exact instance selection logic exists | Sell same-name gear at different levels/rolls through the live transaction |
 | Shop sell performance | Cache/rebuild pass exists; no timing baseline | Measure open, row movement, sale, and post-sale refresh with representative inventory |
+| Fusion batch capacity | Next-rank cap and `xN/M` amount display exist | Confirm +0/+9/+10/Mythic +10 limits through the live Fusion transaction |
 | First flame-room music start | Music warmup/cache exists | Cold versus warm room pickup frame profile and audio-start check |
 | Pause equipment clipping | Candidate clip and local scroll bounds exist | Fast swipe/release checks in Pause and Hub at supported aspect presets |
 | R5/R6 route identity | New runs preserve authored R5 and use generated R6+ | Fresh-run identity, fixed-seed layout, and active-run recovery checks |

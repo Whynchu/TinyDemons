@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.04"
+const GAME_VERSION := "0.2.05"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2094,7 +2094,7 @@ func _hide_legacy_shop_presenter() -> void:
 func _shop_item_signature(item: ItemInstance) -> Dictionary:
 	if item == null:
 		return {}
-	return {"stack_key": item.shop_stack_key()}
+	return {"stack_key": item.inventory_stack_key()}
 
 
 func _shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
@@ -2367,11 +2367,18 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	hub_shop_sell_amount = selected_quantity
 	hub_shop_sell_amount_max = max_quantity
 	# In the sell quantity view, show the transaction total for the selected
-	# row. Browse mode continues to show each item's unit value.
+	# concrete stack members. Browse mode continues to show the representative's
+	# unit value. This keeps quality/history differences economically accurate
+	# while still presenting one row for one functional item variant.
 	if sell_mode and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT and selected_item != null and selected < prices.size():
-		prices[selected] = "%d" % (catalog.sell_value(selected_item) * selected_quantity)
+		var batch_value: Dictionary = {"gold": catalog.sell_value(selected_item) * selected_quantity, "souls": catalog.sell_soul_value(selected_item) * selected_quantity}
+		if root.has_method("_hub_shop_batch_value"):
+			var resolved_batch := root.call("_hub_shop_batch_value", selected_item, selected_quantity) as Dictionary
+			if not resolved_batch.is_empty():
+				batch_value = resolved_batch
+		prices[selected] = "%d" % int(batch_value.get("gold", 0))
 		if selected < soul_values.size():
-			soul_values[selected] = catalog.sell_soul_value(selected_item) * selected_quantity
+			soul_values[selected] = int(batch_value.get("souls", 0))
 		if visible_selected >= 0 and visible_selected < row_prices.size():
 			row_prices[visible_selected] = prices[selected]
 			row_soul_values[visible_selected] = soul_values[selected]

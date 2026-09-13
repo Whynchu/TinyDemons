@@ -147,8 +147,11 @@ Workflow:
    unrelated balance.
 
 Gear identity includes more than the display name. Enhancement, rarity,
-quality, affixes, random stats, transmutation, and fusion investment must stay
-  available to the exact inventory and sell flow.
+affixes, random stats, transmutation, and fusion investment determine the
+functional Equipment/Shop row; `quality` remains available on the exact
+instance for economic pricing without splitting an otherwise identical row.
+The sell cache still retains each concrete instance ID so grouped sales remove
+the requested stock and calculate the correct payout.
 
 ## Adding an element, flame, or Chroma rule
 
