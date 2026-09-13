@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.02`
+Current release: version `0.2.03`
 
 Owner: the feature owner listed for each issue; tracking is maintained here and
 summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
@@ -263,13 +263,14 @@ identities matching their design contracts. Their distinction is stable across
 fresh runs and does not depend on visual appearance alone. Add a deterministic
 regression check for the room identity and the relevant milestone/depth data.
 
-Status: **Source path exists — generated-route validation currently failing; runtime route/recovery verification pending**
+Status: **Active R6+ risk/reward route is implemented; runtime route/recovery verification pending**
 
 ### Current code state (2026-09-09)
 
 - The active route branch now keeps authored R1–R5 and sends `completed_runs >=
-  5` through the deterministic generated route. The historical R6 compiler
-  remains available for old tooling but is no longer selected for new runs.
+  5` through the deterministic R6+ risk/reward route. The historical R6
+  compiler remains available for old tooling but is no longer selected for new
+  runs.
 - Active run snapshots now store `layout_id`. New generated R6 checkpoints can
   be restored against the same topology; an older schema 1 checkpoint at the
   ambiguous R6 boundary is refused with an explicit discard path instead of
@@ -278,17 +279,20 @@ Status: **Source path exists — generated-route validation currently failing; r
   source diagnostics pass. A runtime fresh-run and save-recovery check remains
   before shipping this route policy.
 
-### Approved resolution — generated R6+
+### Approved resolution — generated R6+ migration
 
-Replace the active authored-R6 branch with the existing generated route path
-for `completed_runs >= 5`; keep authored R5 at `completed_runs == 4`.
+Replace the active authored-R6 branch with the generated route path for
+`completed_runs >= 5`; keep authored R5 at `completed_runs == 4`. The detailed
+active route contract is now the R6+ risk/reward program in
+[`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md),
+which supersedes the former mandatory fusion-door progression.
 Do not create another authored R6 map in this slice. Retain historical assets
 unless a separate cleanup is warranted.
 
-Audit generator thresholds, flame availability, bound-origin handling, gate
-requirements, validators, map labels, run recovery, and tests that assume R7
-is the first generated run. Existing R6-only assumptions must not bypass
-generated validation or restore the old authored branch.
+Audit generator thresholds, primary-flame availability, bound-origin handling,
+optional vault requirements, validators, map labels, run recovery, and tests
+that assume R7 is the first generated run. Existing R6-only assumptions must
+not bypass generated validation or restore the old authored branch.
 
 Verify R5 remains authored; R6/R7 use generated layouts; fixed seeds reproduce
 layouts; representative starter/bound combinations remain completable; saves

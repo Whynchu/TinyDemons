@@ -202,16 +202,17 @@ These affect dungeon generation and room behavior and are `const` in
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
 | Late-run difficulty bonus | `max(0, encounter_rank - 8)` | `combat_runtime_controller.gd:run_enemy_level_bonus` |
 | Performance-over-baseline bonus | `max(0, difficulty_rank - (completed_runs + 1))` | `run_flow_controller.gd:run_difficulty_bonus` |
-| Active dungeon route | Authored R1–R5; deterministic generated layouts from R6 onward | `dungeon_map_controller.gd:begin_run` |
-| Generated room pacing | Authored R1/R2 remain 18/24 rooms; generated targets are 22 on R3, 23 on R4, 24 on R5–R9, then `25 + floor((run - 10) / 2)` from R10; optional branches stay within a small variance budget | `dungeon_layout_generator.gd:generated_room_target_for_run` |
-| Generated boss depth | `13` on R3, `14` on R4, `15` on R5–R9, then `16 + floor((run - 10) / 2)` from R10 | `dungeon_layout_generator.gd:generated_boss_depth_for_run` |
+| Active dungeon route | Authored R1–R5; deterministic R6+ risk/reward layouts from completed run 5 onward | `dungeon_map_controller.gd:begin_run`, `puzzle_route_generator.gd:build` |
+| Generated room pacing | R6+ uses a compact bounded scaffold with seeded optional branches; topology depth is capped for the 35x35 presentation while encounter rank continues to scale with the run | `dungeon_layout_generator.gd:build_risk_reward`, `dungeon_layout_generator.gd:_build_candidate` |
+| Generated boss depth | R6+ keeps the compact boss approach inside the 35x35 presentation contract; later-run combat strength is supplied by encounter rank rather than unbounded room depth | `dungeon_layout_generator.gd:build_risk_reward`, `room_controller.gd` |
 | Chest interact distance | 16.0 | `gameplay_state.gd:CHEST_INTERACT_DISTANCE` |
 | NPC interact distance | 24.0 | `gameplay_state.gd:NPC_INTERACT_DISTANCE` |
 | Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
 | Chest gold roll | `0.75x-1.30x` base before rank/grade multiplier | `run_flow_controller.gd:chest_gold_reward` |
-| Chest item drop chance | clamp to [0.30, 0.88], base 0.34 | `gameplay.gd:_chest_item_drop_chance` |
+| Chest item drop chance | Standard rooms retain the base policy; dangerous shortcut rooms receive a modest bonus; elemental vault chests guarantee one item | `gameplay.gd:_chest_item_drop_chance`, `run_flow_controller.gd:chest_item_drop_chance` |
 | Regular enemy-room treasure | R1+ run ranks; 0.50 deterministic chance per combat room; 0.50x Treasure Room gold; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms | `room_controller.gd:REGULAR_ROOM_TREASURE_CHANCE`, `run_flow_controller.gd:chest_gold_reward`, `gameplay.gd:_grant_chest_item_reward` |
 | Chest second gear drop | 1 additional item, base 0.35 chance | `run_flow_controller.gd:chest_item_drop_count` |
+| R6+ route risk | Risk shortcuts use a stronger local encounter tier and improved reward tier; vault branches use elite encounters and enhanced guaranteed gear | `room_controller.gd`, `run_flow_controller.gd`, `gameplay.gd` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
 | Triangle spell cooldown | 2.0s elemental / 2.5s grey | `gameplay_state.gd:MAGIC_COOLDOWN`, `gameplay_state.gd:GREY_MAGIC_COOLDOWN` |

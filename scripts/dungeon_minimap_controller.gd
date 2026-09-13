@@ -43,6 +43,11 @@ const COLOR_FIRE := Color8(239, 125, 87)
 const COLOR_CLOAKED := Color8(93, 39, 93)
 const COLOR_BOSS := Color8(177, 62, 83)
 const COLOR_ORB_MARKER := Color8(115, 239, 247)
+const COLOR_FLAME_FIRE := Color8(239, 125, 87)
+const COLOR_FLAME_WATER := Color8(79, 160, 239)
+const COLOR_FLAME_ELECTRIC := Color8(245, 210, 75)
+const COLOR_DANGER := Color8(221, 87, 87)
+const COLOR_VAULT := Color8(255, 160, 64)
 const COLOR_PUZZLE_A_DOOR := Color8(59, 93, 201)
 const COLOR_PUZZLE_B_DOOR := Color8(56, 183, 100)
 const COLOR_UNVISITED_FLAME := Color8(86, 92, 102)
@@ -775,6 +780,15 @@ func _draw_connection(connection) -> void:
 
 func _draw_room(room) -> void:
 	var color := _room_color(room.room_type)
+	if room.route_role == DungeonGraph.ROUTE_ELITE_REWARD:
+		color = COLOR_VAULT
+	elif room.route_role == DungeonGraph.ROUTE_RISK_SHORTCUT:
+		color = COLOR_DANGER
+	elif room.route_role == DungeonGraph.ROUTE_PRIMARY_FLAME:
+		match room.fire_flame:
+			&"fire": color = COLOR_FLAME_FIRE
+			&"water": color = COLOR_FLAME_WATER
+			&"electric": color = COLOR_FLAME_ELECTRIC
 	if not room.fire_flame.is_empty() and not is_flame_visited(room.id):
 		color = COLOR_UNVISITED_FLAME
 	if room.room_type == DungeonGraph.ROOM_ORB:

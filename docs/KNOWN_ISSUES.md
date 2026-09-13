@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.02`
+Current release: version `0.2.03`
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in
@@ -79,6 +79,25 @@ triage, not a release gate.
 
 The source-level status for each item is maintained in the detailed issue
 tracker. Update both documents when a focused check changes the status.
+
+### Newly reported R6+ playtest blocker
+
+Late generated rooms could retain an active slime outside the visible playable
+area. The slime remained able to attack and counted against encounter
+completion. Runtime sanitation now validates active slime positions before each
+combat update and uses the existing recovery/deactivation path. This requires
+focused R6+ playtest verification before being marked verified.
+
+### R6+ risk/reward generation implementation status
+
+The active generated-run slice now uses an ungated critical route with one
+safe/risk fork, guaranteed Fire/Water/Electric flame rooms, and one or two
+optional elemental Orb vaults. Dangerous shortcut rooms receive a stronger
+encounter profile and risk reward tier; vault rooms receive an elite profile and
+guaranteed enhanced gear through the existing chest item generator. New route
+metadata is carried through layout, graph, room state, minimap plans, and active
+run room-state snapshots. The focused generator and scene tests are registered,
+but Godot execution and manual save/load/touch playtesting remain outstanding.
 
 ## Infrastructure findings
 

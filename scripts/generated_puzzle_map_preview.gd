@@ -1,6 +1,6 @@
 extends Node2D
 
-## Designer preview for generated R7 routes using the same minimap renderer as
+## Designer preview for generated R6+ risk/reward routes using the same minimap renderer as
 ## gameplay. Each panel is a complete discovered-layout snapshot.
 
 const GENERATOR_SCRIPT = preload("res://scripts/puzzle_route_generator.gd")
@@ -53,7 +53,7 @@ func _build_iterations() -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, _canvas_size()), Color8(17, 19, 24), true)
-	draw_string(ThemeDB.fallback_font, Vector2(8.0, 12.0), "GENERATED R7 PUZZLE ROUTES", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 8, Color8(239, 242, 247))
+	draw_string(ThemeDB.fallback_font, Vector2(8.0, 12.0), "GENERATED R6+ RISK / REWARD ROUTES", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 8, Color8(239, 242, 247))
 	for index in generated_layouts.size():
 		var column := index % COLUMNS
 		var row := index / COLUMNS

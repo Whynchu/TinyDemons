@@ -15,10 +15,20 @@ func loot_grade_bonus(root: Object, grade: String = "") -> float:
 
 func chest_item_drop_chance(root: Object) -> float:
 	var exploration_bonus: float = minf(float(root.run_state.chests_opened) * 0.025, 0.20) if root.run_state != null else 0.0
-	return clampf(0.34 + exploration_bonus + float(run_rank(root) - 1) * 0.035 + loot_grade_bonus(root) * 0.025, 0.30, 0.88)
+	var base_chance := clampf(0.34 + exploration_bonus + float(run_rank(root) - 1) * 0.035 + loot_grade_bonus(root) * 0.025, 0.30, 0.88)
+	var tier := reward_tier(root)
+	if tier == DungeonGraph.REWARD_VAULT:
+		return 1.0
+	if tier == DungeonGraph.REWARD_RISK:
+		# The dangerous route's material reward is a modest improvement over an
+		# ordinary combat chest; the elite vault remains the guaranteed premium.
+		return clampf(base_chance + 0.12, 0.30, 0.95)
+	return base_chance
 
 
 func chest_item_drop_count(root: Object, roll: float) -> int:
+	if reward_tier(root) == DungeonGraph.REWARD_VAULT:
+		return 1
 	var double_drop_chance := clampf(0.35 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04, 0.25, 0.75)
 	var triple_drop_chance := clampf(0.01 + float(run_rank(root) - 1) * 0.0045 + loot_grade_bonus(root) * 0.006, 0.01, 0.15)
 	var quad_drop_chance := clampf(0.005 + float(run_rank(root) - 1) * 0.0035 + loot_grade_bonus(root) * 0.004, 0.005, 0.10)
@@ -40,11 +50,26 @@ func chest_gold_reward(root: Object, base_gold: int) -> int:
 	return maxi(1, roundi(reward))
 
 
+func reward_tier(root: Object) -> StringName:
+	var room_controller := root.get("room_controller") as Node
+	if room_controller == null:
+		return DungeonGraph.REWARD_STANDARD
+	var room_states: Dictionary = room_controller.get("room_states") as Dictionary
+	var room_id := StringName(str(root.get("current_room_id")))
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var tier := StringName(str(state.get("reward_tier", DungeonGraph.REWARD_STANDARD)))
+	return tier if tier in [DungeonGraph.REWARD_STANDARD, DungeonGraph.REWARD_RISK, DungeonGraph.REWARD_VAULT] else DungeonGraph.REWARD_STANDARD
+
+
 func sync_current_room_metadata(root: Object) -> void:
 	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(root.current_room_id)
 	if room != null:
 		root.current_room_depth = room.depth
 		root.current_room_type = room.room_type
+		root.current_room_route_role = room.route_role
+		root.current_room_encounter_tier = room.encounter_tier
+		root.current_room_reward_tier = room.reward_tier
+		root.current_room_vault_id = room.vault_id
 		if root.current_room_depth >= 1 and root.run_state != null and root.run_state.active:
 			root.run_state.start_timer()
 			# Map completion means physical discovery. Room objective completion is

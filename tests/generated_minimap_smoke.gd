@@ -26,7 +26,10 @@ func _initialize() -> void:
 		_expect(unvisited_image.get_pixelv(flame_room.minimap_coordinate - flame_origin) == MINIMAP_SCRIPT.COLOR_UNVISITED_FLAME, "unvisited generated flame is grey on the full map", failures)
 		map.on_room_entered(flame_room.id)
 		var visited_image: Image = minimap.snapshot_full_image()
-		_expect(visited_image.get_pixelv(flame_room.minimap_coordinate - flame_origin) == MINIMAP_SCRIPT.COLOR_FIRE, "visited generated flame returns to its fire color", failures)
+		var expected_flame_color := MINIMAP_SCRIPT.COLOR_FIRE
+		if flame_room.route_role == GRAPH_SCRIPT.ROUTE_PRIMARY_FLAME:
+			expected_flame_color = MINIMAP_SCRIPT.COLOR_FLAME_WATER if flame_room.fire_flame == &"water" else MINIMAP_SCRIPT.COLOR_FLAME_ELECTRIC if flame_room.fire_flame == &"electric" else MINIMAP_SCRIPT.COLOR_FLAME_FIRE
+		_expect(visited_image.get_pixelv(flame_room.minimap_coordinate - flame_origin) == expected_flame_color, "visited generated flame returns to its semantic flame color", failures)
 	else:
 		_expect(false, "generated layout exposes a flame room", failures)
 	var flame_ids: Array[StringName] = map.flame_room_ids()
@@ -123,7 +126,7 @@ func _initialize() -> void:
 			continue
 		for connection_value in room.outgoing_connections.values():
 			var connection := connection_value as DungeonGraph.ConnectionRecord
-			if connection != null and connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+			if connection != null and connection.route_role == GRAPH_SCRIPT.ROUTE_ELEMENTAL_VAULT and connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
 				fusion_gate = connection
 				break
 		if fusion_gate != null:
@@ -132,7 +135,7 @@ func _initialize() -> void:
 	var fusion_origin: Vector2i = fusion_minimap.get("full_map_origin") as Vector2i
 	var fusion_requirement: StringName = fusion_gate.orb_element_requirement if fusion_gate != null else &""
 	var fusion_expected_color := fusion_map.door_display_color(fusion_requirement)
-	_expect(fusion_gate != null and fusion_image != null and fusion_image.get_pixelv(fusion_gate.minimap_coordinate - fusion_origin) == fusion_expected_color, "generated minimap colors the entrance-orb gate from its mixed element", failures)
+	_expect(fusion_gate != null and fusion_image != null and fusion_image.get_pixelv(fusion_gate.minimap_coordinate - fusion_origin) == fusion_expected_color, "generated minimap colors the elemental vault gate from its Orb requirement", failures)
 	fusion_minimap.queue_free()
 	fusion_map.queue_free()
 	minimap.queue_free()

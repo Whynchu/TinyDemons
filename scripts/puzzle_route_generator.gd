@@ -1,9 +1,8 @@
 extends RefCounted
 class_name PuzzleRouteGenerator
 
-## R7 route-generation boundary. R7 is assembled natively in the compact
-## lattice; later generated ranks retain the compatibility assembler until their
-## own compact route programs are migrated.
+## Generated route boundary. Runs 6 and later use the bounded risk/reward
+## program; authored Runs 1-5 remain on their established layout scripts.
 
 const LEGACY_GENERATOR = preload("res://scripts/dungeon_layout_generator.gd")
 const LAYOUT_DEFINITION = preload("res://scripts/dungeon_layout_definition.gd")
@@ -13,6 +12,7 @@ const ROUTE_SOLVER = preload("res://scripts/puzzle_route_solver.gd")
 const ROUTE_PLAN = preload("res://scripts/puzzle_route_plan.gd")
 const MAP_SIZE := Vector2i(35, 35)
 const GENERATION_BUDGET_USEC := 50000
+const RISK_REWARD_GENERATION_MODE: StringName = &"risk_reward_r6_plus"
 
 static var last_generation_usec := 0
 static var last_generation_repairs: Array[String] = []
@@ -21,16 +21,16 @@ static func build(dungeon_seed: int, completed_runs: int, starter_flame: StringN
 	var started_usec := Time.get_ticks_usec()
 	last_generation_repairs.clear()
 	# Own the runtime pipeline here. The compatibility assembler contributes only
-	# its lower-level route construction primitive; candidate policy and compact
-	# validation belong to the R7 owner.
-	var layout = _build_native_r7(dungeon_seed, starter_flame, bound_flame) if completed_runs == 6 else LEGACY_GENERATOR._build_candidate(int(dungeon_seed) ^ 0x524F5554, completed_runs, starter_flame, bound_flame)
+	# its lower-level route construction primitive; the active R6+ policy is
+	# applied by the typed risk/reward pass.
+	var layout = LEGACY_GENERATOR.build_risk_reward(dungeon_seed, completed_runs, starter_flame, bound_flame) if completed_runs >= 5 else LEGACY_GENERATOR._build_candidate(int(dungeon_seed) ^ 0x524F5554, completed_runs, starter_flame, bound_flame)
 	last_generation_repairs = LEGACY_GENERATOR.last_progression_repairs.duplicate()
 	last_generation_usec = Time.get_ticks_usec() - started_usec
 	var errors := validate(layout, completed_runs, starter_flame, bound_flame)
 	if not last_generation_repairs.is_empty():
-		errors.append("R7 route required %d post-build progression repair(s)" % last_generation_repairs.size())
+		errors.append("generated route required %d post-build progression repair(s)" % last_generation_repairs.size())
 	for error in errors:
-		push_error("R7 route generation: %s" % error)
+		push_error("generated route generation: %s" % error)
 	return layout
 
 
@@ -162,18 +162,29 @@ static func generation_is_repair_free() -> bool:
 
 
 static func validate(layout, completed_runs: int, starter_flame: StringName = &"fire", bound_flame: StringName = &"") -> Array[String]:
-	var errors: Array[String] = LEGACY_GENERATOR.validate(layout, completed_runs, starter_flame, bound_flame)
+	if layout == null:
+		return ["generated route layout is missing"]
+	var is_risk_reward_layout := layout.generation_mode == RISK_REWARD_GENERATION_MODE
+	var errors: Array[String] = LEGACY_GENERATOR.validate_risk_reward(layout, completed_runs, starter_flame, bound_flame) if is_risk_reward_layout else LEGACY_GENERATOR.validate(layout, completed_runs, starter_flame, bound_flame)
 	for room in layout.rooms:
 		if not _in_compact_bounds(room.minimap_coordinate):
-			errors.append("R7 room %s falls outside the compact 35x35 map at %s" % [room.id, room.minimap_coordinate])
+			errors.append("generated room %s falls outside the compact 35x35 map at %s" % [room.id, room.minimap_coordinate])
 	for connection in layout.connections:
 		if not _in_compact_bounds(connection.minimap_coordinate):
-			errors.append("R7 connection %s:%s falls outside the compact 35x35 map at %s" % [connection.source_room_id, connection.exit_socket, connection.minimap_coordinate])
+			errors.append("generated connection %s:%s falls outside the compact 35x35 map at %s" % [connection.source_room_id, connection.exit_socket, connection.minimap_coordinate])
 	var route_plan = ROUTE_PLAN.from_layout(layout)
 	errors.append_array(route_plan.validate_structure(MAP_SIZE))
-	if completed_runs == 6 and (layout.rooms.size() < 24 or layout.rooms.size() > 30):
-		errors.append("native R7 route must contain 24-30 rooms, got %d" % layout.rooms.size())
-	if completed_runs >= 6:
+	if completed_runs == 6 and not is_risk_reward_layout and (layout.rooms.size() < 24 or layout.rooms.size() > 30):
+		errors.append("legacy generated R7 route must contain 24-30 rooms, got %d" % layout.rooms.size())
+	if is_risk_reward_layout:
+		errors.append_array(PROGRESSION_PLANNER.validate_risk_reward(route_plan))
+		var risk_start_id: StringName = &""
+		for room in layout.rooms:
+			if room.room_type == DungeonGraph.ROOM_START:
+				risk_start_id = room.id
+				break
+		errors.append_array(ROUTE_SOLVER.validate_risk_reward(layout, risk_start_id))
+	elif completed_runs >= 6:
 		errors.append_array(PROGRESSION_PLANNER.validate(route_plan))
 		var start_id: StringName = &""
 		for room in layout.rooms:
@@ -189,6 +200,11 @@ static func _in_compact_bounds(coordinate: Vector2i) -> bool:
 
 
 static func repair_progression(layout, completed_runs: int, starter_flame: StringName = &"fire", bound_flame: StringName = &"") -> Array[String]:
+	if layout != null and layout.generation_mode == RISK_REWARD_GENERATION_MODE:
+		# The risk/reward program is validated after all optional vault metadata is
+		# assigned. Recovery must not reintroduce the legacy mandatory gate loop.
+		var no_repairs: Array[String] = []
+		return no_repairs
 	if completed_runs == 6:
 		# Native R7 is a hard-validated route. It must never be mutated by the
 		# legacy recovery repair pass.
@@ -198,7 +214,11 @@ static func repair_progression(layout, completed_runs: int, starter_flame: Strin
 
 
 static func is_native_r7(completed_runs: int) -> bool:
-	return completed_runs == 6
+	return false
+
+
+static func is_risk_reward_layout(completed_runs: int) -> bool:
+	return completed_runs >= 5
 
 
 static func build_compact_plan(dungeon_seed: int, completed_runs: int, starter_flame: StringName = &"fire", bound_flame: StringName = &"") -> PuzzleMapGrid.MapPlan:
@@ -206,12 +226,19 @@ static func build_compact_plan(dungeon_seed: int, completed_runs: int, starter_f
 	## This keeps preview and gameplay anchored to one deterministic result while
 	## the typed topology metadata is being moved into the compact planner.
 	var layout = build(dungeon_seed, completed_runs, starter_flame, bound_flame)
-	var plan := GRID.MapPlan.new(StringName("R7_%d" % dungeon_seed))
+	var plan := GRID.MapPlan.new(StringName("R6_PLUS_%d" % dungeon_seed))
+	if layout == null:
+		return plan
+	plan.generation_mode = layout.generation_mode
+	plan.route_choice_source_room_id = layout.route_choice_source_room_id
+	plan.route_choice_rejoin_room_id = layout.route_choice_rejoin_room_id
+	plan.safe_route_length = layout.safe_route_length
+	plan.risk_route_length = layout.risk_route_length
 	for room in layout.rooms:
 		var coordinate: Vector2i = room.minimap_coordinate
 		if coordinate.x < 0 or coordinate.y < 0 or coordinate.x >= MAP_SIZE.x or coordinate.y >= MAP_SIZE.y:
 			continue
-		var room_marker := _marker_for_room(room.room_type)
+		var room_marker := _marker_for_room(room)
 		if room_marker.is_empty():
 			plan.add_active_tile(coordinate)
 		else:
@@ -232,6 +259,8 @@ static func build_compact_plan(dungeon_seed: int, completed_runs: int, starter_f
 			"color_requirement": connection.color_requirement,
 			"element_requirement": connection.element_requirement,
 			"orb_element_requirement": connection.orb_element_requirement,
+			"source_room_role": layout.room_by_id(connection.source_room_id).route_role if layout.room_by_id(connection.source_room_id) != null else &"",
+			"destination_room_role": layout.room_by_id(connection.destination_room_id).route_role if layout.room_by_id(connection.destination_room_id) != null else &"",
 			"prerequisite_identity": connection.route_role == &"fusion_prerequisite_orb" or connection.resolved_gate_type() == DungeonGraph.GATE_ENTRANCE_ORB,
 		})
 		var marker_kind := _marker_for_connection(connection)
@@ -243,8 +272,19 @@ static func build_compact_plan(dungeon_seed: int, completed_runs: int, starter_f
 	return plan
 
 
-static func _marker_for_room(room_type: StringName) -> StringName:
-	match room_type:
+static func _marker_for_room(room) -> StringName:
+	if room == null:
+		return &""
+	if room.route_role == DungeonGraph.ROUTE_ELITE_REWARD:
+		return GRID.MARKER_VAULT_ROOM
+	if room.route_role == DungeonGraph.ROUTE_RISK_SHORTCUT:
+		return GRID.MARKER_DANGER_ROOM
+	if room.route_role == DungeonGraph.ROUTE_PRIMARY_FLAME:
+		match room.fire_flame:
+			&"fire": return GRID.MARKER_FLAME_FIRE_ROOM
+			&"water": return GRID.MARKER_FLAME_WATER_ROOM
+			&"electric": return GRID.MARKER_FLAME_ELECTRIC_ROOM
+	match room.room_type:
 		DungeonGraph.ROOM_START: return GRID.MARKER_HUB_ROOM
 		DungeonGraph.ROOM_BOSS: return GRID.MARKER_BOSS_ROOM
 		DungeonGraph.ROOM_ORB: return GRID.MARKER_ORB_ROOM
@@ -255,6 +295,8 @@ static func _marker_for_room(room_type: StringName) -> StringName:
 
 
 static func _marker_for_connection(connection) -> StringName:
+	if connection.route_role == DungeonGraph.ROUTE_ELEMENTAL_VAULT:
+		return GRID.MARKER_GATE_VAULT
 	if connection.resolved_gate_type() == DungeonGraph.GATE_ENTRANCE_ORB:
 		return GRID.MARKER_GATE_ORB_GREY
 	if connection.color_requirement == &"puzzle_a":

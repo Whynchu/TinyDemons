@@ -28,20 +28,28 @@ func _grant_chest_item_reward() -> bool:
 	if player_profile.find_item(reward_id) != null or player_profile.find_item("%s-0" % reward_id) != null:
 		return true
 	run_state.record_chest_open()
-	var generation_seed := int(current_dungeon_seed) ^ String(current_room_id).hash()
+	var reward_tier := _current_room_reward_tier()
+	var vault_id := _current_room_vault_id()
+	var generation_seed := int(current_dungeon_seed) ^ String(current_room_id).hash() ^ String(vault_id).hash()
 	var reward_rng := RandomNumberGenerator.new()
 	reward_rng.seed = generation_seed ^ 0x4C4F4F54
 	if reward_rng.randf() >= _chest_item_drop_chance():
 		return true
 	var item_drops: Array[ItemInstance] = []
 	var drop_count := _chest_item_drop_count(reward_rng.randf())
+	if reward_tier == DungeonGraph.REWARD_VAULT:
+		drop_count = 1
 	var catalog := ItemCatalog.new()
 	for index in drop_count:
 		var item_seed := generation_seed ^ (0x13579BDF + index * 0x2468ACE)
 		var slot := catalog.select_slot_for_source(player_profile, item_seed, player_profile.level, &"chest", _run_rank())
 		var slot_was_empty := catalog.slot_needs_introduction(player_profile, slot)
-		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if bool(get("regular_room_treasure")) else []
+		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if bool(get("regular_room_treasure")) and reward_tier == DungeonGraph.REWARD_STANDARD else []
 		var rarity := _roll_run_loot_rarity(reward_rng.randf(), -1.0, rarity_multipliers)
+		if reward_tier == DungeonGraph.REWARD_VAULT:
+			var enhanced_rarity := ItemCatalog.next_rarity(rarity)
+			if not enhanced_rarity.is_empty():
+				rarity = enhanced_rarity
 		var item := catalog.generate_item(slot, item_seed, player_profile.level, rarity, false, &"chest", _run_rank())
 		if item.definition_id.is_empty():
 			continue
@@ -51,6 +59,21 @@ func _grant_chest_item_reward() -> bool:
 	_spawn_chest_item_drops(item_drops)
 	_play_sound("ui_use_item")
 	return true
+
+
+func _current_room_reward_tier() -> StringName:
+	if run_flow_controller != null and run_flow_controller.has_method("reward_tier"):
+		return run_flow_controller.call("reward_tier", self) as StringName
+	return DungeonGraph.REWARD_STANDARD
+
+
+func _current_room_vault_id() -> StringName:
+	if room_controller == null:
+		return &""
+	var state: Dictionary = room_controller.room_states.get(current_room_id, {}) as Dictionary
+	return StringName(str(state.get("vault_id", "")))
+
+
 func _save_player_profile() -> void:
 	if player_profile != null:
 		ProfileSaveService.save_profile(player_profile)

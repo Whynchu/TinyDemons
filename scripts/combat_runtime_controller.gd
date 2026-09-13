@@ -273,7 +273,8 @@ func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int =
 	var requested := level_override if level_override > 0 else enemy_level_for_room(root)
 	if not is_popcorn:
 		requested += run_enemy_level_bonus(root) + (run.difficulty_bonus if run != null else 0)
-	stats.level = maxi(requested, 1) if is_popcorn else clampi(requested, 1, enemy_level_cap_for_run(root))
+	var level_cap := enemy_level_cap_for_run(root) + RoomController.ELITE_ENCOUNTER_LEVEL_BONUS if bool(slime.get_meta("is_elite", false)) else enemy_level_cap_for_run(root)
+	stats.level = maxi(requested, 1) if is_popcorn else clampi(requested, 1, level_cap)
 	_enemy_max_health_frame_cache.clear()
 
 

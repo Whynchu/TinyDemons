@@ -1,8 +1,14 @@
 # Generated Route Audit
 
-Status: active finding; no generator change made
+Status: historical finding; addressed by the active R6+ risk/reward generator
+plan, with runtime verification still pending
 
 Audit date: 2026-09-07
+
+The active implementation is documented in
+[`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md).
+The compact-bound and mandatory-fusion findings below describe the superseded
+route contract and remain useful as regression history.
 
 ## Current Evidence
 

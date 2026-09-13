@@ -321,7 +321,7 @@ Read in this order:
 12. `docs/documentation-audit.md` - current, active, historical, and overlapping document classification.
 13. `docs/next-phase-plan.md` - stabilization, verification, and refactor sequence.
 14. `docs/test-target-audit.md` - test identity and coverage-target audit.
-15. `docs/generated-route-audit.md` - current native R7 route findings and evidence.
+15. `docs/generated-route-audit.md` - historical compact-route findings and evidence.
 
 ## Map Gaps
 

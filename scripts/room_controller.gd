@@ -47,6 +47,7 @@ const RUN2_POPCORN_CHANCE: float = 0.40
 const LATER_POPCORN_CHANCE: float = 0.24
 const ROOM_POPCORN := "ROOM_POPCORN"
 const ELITE_POPCORN := "ELITE_POPCORN"
+const ELITE_ENCOUNTER_LEVEL_BONUS := 2
 const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 3
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
@@ -58,6 +59,13 @@ const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
 	var state := room_states.get(room_id, {}) as Dictionary
+	# Generated route policy is carried with the room state so active-run
+	# snapshots retain the exact encounter/reward contract. Missing keys are safe
+	# defaults for authored rooms and older snapshots.
+	state["route_role"] = room.route_role
+	state["encounter_tier"] = room.encounter_tier
+	state["reward_tier"] = room.reward_tier
+	state["vault_id"] = room.vault_id
 	if not state.has("generated_exits"):
 		var exits: Array[StringName] = []
 		if room.authored:
@@ -88,21 +96,28 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		state["generated_exits"] = exits; state["room_type"] = room_type; state["finished"] = bool(state.get("finished", false)); room_states[room_id] = state
 	if room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room_type == DungeonGraph.ROOM_TREASURE:
 		if not state.has("enemy_variants"):
-			# Special rooms are color-gated route rooms, not elite encounters. Their
-			# difficulty comes from the color state and delayed respawns instead of
-			# an automatic level, count, or shadow-slime bonus.
+			# Special rooms retain their authored color/puzzle behavior. R6+ elite
+			# difficulty is expressed explicitly by the generated encounter tier,
+			# rather than inferred from room depth.
 			var is_special_room := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
 			var extra_room_enemy := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room_type == DungeonGraph.ROOM_TREASURE
-			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth, extra_room_enemy, not is_special_room)
+			var encounter := _generate_enemy_encounter(room.generation_seed, room_depth, extra_room_enemy, not is_special_room, room.encounter_tier)
 			state["enemy_variants"] = encounter["variants"]
 			state["enemy_levels"] = encounter["levels"]
 			state["enemy_popcorn"] = encounter["popcorn"]
 			state["enemy_popcorn_types"] = encounter["popcorn_types"]
 			state["enemy_ambush"] = encounter["ambush"]
+			state["enemy_elite"] = encounter["elite"]
+		if not state.has("enemy_elite"):
+			var elite_flags: Array[bool] = []
+			var popcorn_flags := state.get("enemy_popcorn", []) as Array
+			for slot in (state.get("enemy_variants", []) as Array).size():
+				elite_flags.append(room.encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not (slot < popcorn_flags.size() and bool(popcorn_flags[slot])))
+			state["enemy_elite"] = elite_flags
 		if not state.has("regular_room_treasure"):
 			var treasure_rng := RandomNumberGenerator.new()
 			treasure_rng.seed = room.generation_seed ^ 0x54524541
-			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and treasure_rng.randf() < REGULAR_ROOM_TREASURE_CHANCE
+			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < REGULAR_ROOM_TREASURE_CHANCE)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
 		room_states[room_id] = state
@@ -123,7 +138,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 	return state
 
 
-func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_room: bool = false, allow_shadow: bool = true) -> Dictionary:
+func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_room: bool = false, allow_shadow: bool = true, encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL) -> Dictionary:
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 101
 	var count := 1
@@ -164,6 +179,10 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				variant_pool.append({"variant": elemental_variant, "weight": 0.35})
 	if special_room:
 		count = mini(maxi(count + 1, 2), count_cap)
+	if encounter_tier == DungeonGraph.ENCOUNTER_DANGEROUS:
+		count = mini(count + 1, count_cap)
+	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
+		count = mini(count + 2, count_cap)
 	if progression_run_rank >= YELLOW_MIN_RANK:
 		variant_pool.append({"variant": "yellow", "weight": YELLOW_ENEMY_WEIGHT})
 	if progression_run_rank >= GROUND_MIN_RANK:
@@ -179,10 +198,15 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	# dungeon run curve. It is recovery fodder, so it should remain five levels
 	# below the player even when a high-level player revisits an early run.
 	var base_level := _generated_enemy_base_level(room_depth) + (1 if special_room else 0)
+	if encounter_tier == DungeonGraph.ENCOUNTER_DANGEROUS:
+		base_level += 1
+	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
+		base_level += 2
 	var level_spread := 1 if progression_run_rank <= 3 else 2
 	var popcorn_flags: Array[bool] = []
 	var popcorn_types: Array[String] = []
 	var ambush_flags: Array[bool] = []
+	var elite_flags: Array[bool] = []
 	for enemy_index in count:
 		var total_weight := 0.0
 		for entry in variant_pool:
@@ -202,8 +226,15 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		var is_popcorn := selected != "purple" and encounter_rng.randf() < _popcorn_enemy_chance()
 		popcorn_flags.append(is_popcorn)
 		popcorn_types.append(ROOM_POPCORN if is_popcorn else "")
-		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
-		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, _enemy_level_cap()))
+		elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn)
+		var level_floor := base_level - level_spread
+		if encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
+			# Elite levels stay above the full normal encounter band, so the
+			# overhead marker communicates a real stat-pool increase.
+			level_floor = base_level + 1
+		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(level_floor, base_level + level_spread)
+		var level_cap := _enemy_level_cap() + ELITE_ENCOUNTER_LEVEL_BONUS if encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn else _enemy_level_cap()
+		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, level_cap))
 	# Every replayable combat room keeps one ordinary room-popcorn slot so the
 	# 45-second respawn system is always observable, even when all random rolls
 	# missed the optional popcorn chance.
@@ -215,6 +246,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				popcorn_flags[index] = true
 				popcorn_types[index] = ROOM_POPCORN
 				ambush_flags[index] = false
+				elite_flags[index] = false
 				break
 	# Shadow encounters keep their low-level mana-recovery opportunity readable:
 	# every popcorn slot beside a Shadow Slime becomes a Normal Slime. If the
@@ -233,12 +265,14 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				popcorn_flags.append(true)
 				popcorn_types.append(ELITE_POPCORN)
 				ambush_flags.append(false)
+				elite_flags.append(false)
 		for index in variants.size():
 			if popcorn_flags[index]:
 				variants[index] = "grey"
 				popcorn_types[index] = ELITE_POPCORN
 				ambush_flags[index] = false
-	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
+				elite_flags[index] = false
+	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags, "elite": elite_flags}
 
 
 func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
@@ -373,7 +407,7 @@ func enemy_count_for_room(room: DungeonGraph.RoomRecord) -> int:
 		return 0
 	var is_special_room := room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
 	var extra_room_enemy := is_special_room or room.room_type == DungeonGraph.ROOM_TREASURE
-	return (_generate_enemy_encounter(room.generation_seed, room.depth, extra_room_enemy, not is_special_room).get("variants", []) as Array).size()
+	return (_generate_enemy_encounter(room.generation_seed, room.depth, extra_room_enemy, not is_special_room, room.encounter_tier).get("variants", []) as Array).size()
 
 
 func configure_sockets(graph: DungeonGraph, room_id: StringName, _unlocked: bool, set_blocks: Callable) -> void:
@@ -1155,6 +1189,7 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 			continue
 		var actor := popcorn as SlimeActor
 		popcorn.set_meta("encounter_scale", 1.0)
+		popcorn.set_meta("is_elite", false)
 		popcorn.set_meta("is_popcorn", true)
 		popcorn.set_meta("popcorn_type", SLIME_BOSS_JUMP_PHASE_POPCORN)
 		popcorn.set_meta("boss_jump_phase_popcorn", true)
@@ -1279,6 +1314,7 @@ func _deactivate_boss_jump_phase_slot(popcorn: Sprite2D) -> void:
 	popcorn.visible = false
 	popcorn.self_modulate.a = 1.0
 	popcorn.set_meta("boss_jump_phase_popcorn", false)
+	popcorn.set_meta("is_elite", false)
 	popcorn.set_meta("boss_airborne", false)
 	for collection_name in ["actor_sprites", "collision_sprites", "depth_sprites", "occluder_sprites"]:
 		var collection: Variant = get_parent().get(collection_name) if get_parent() != null else null
@@ -1541,13 +1577,15 @@ func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
 	var active_variants := state.get("enemy_variants", []) as Array
 	var active_ambush := state.get("enemy_ambush", []) as Array
 	var active_scales := state.get("enemy_scales", []) as Array
-	var signature := "%s|%s|%s" % [active_variants, active_scales, active_ambush]
+	var active_elites := state.get("enemy_elite", []) as Array
+	var signature := "%s|%s|%s|%s" % [active_variants, active_scales, active_ambush, active_elites]
 	for slot in active_variants.size():
 		if slot >= slimes.size():
 			break
 		var ambush_enabled := slot < active_ambush.size() and bool(active_ambush[slot])
 		root.call("_configure_slime_variant", slimes[slot], String(active_variants[slot]))
 		slimes[slot].set_meta("encounter_scale", float(active_scales[slot]) if slot < active_scales.size() else 1.0)
+		slimes[slot].set_meta("is_elite", _is_elite_enemy_slot(state, slot))
 		root.call("_configure_slime_ambush", slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled)
 	if signature == _enemy_visual_preparation_signature:
 		return
@@ -1561,6 +1599,16 @@ func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
 	root.call("_assign_slime_spawn_frames")
 	if not active_variants.is_empty() and not active_scales.is_empty() and float(active_scales[0]) > 1.0:
 		prepare_boss_jump_phase_pool(root, String(active_variants[0]))
+
+
+func _is_elite_enemy_slot(state: Dictionary, slot: int) -> bool:
+	var active_elites := state.get("enemy_elite", []) as Array
+	if slot >= 0 and slot < active_elites.size():
+		return bool(active_elites[slot])
+	if StringName(state.get("encounter_tier", DungeonGraph.ENCOUNTER_NORMAL)) != DungeonGraph.ENCOUNTER_ELITE:
+		return false
+	var popcorn_flags := state.get("enemy_popcorn", []) as Array
+	return not (slot < popcorn_flags.size() and bool(popcorn_flags[slot]))
 
 
 func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2, animate_spawn: bool = false) -> bool:
@@ -1582,6 +1630,7 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	var popcorn_flags := state.get("enemy_popcorn", []) as Array
 	var is_popcorn := slime_index < popcorn_flags.size() and bool(popcorn_flags[slime_index])
 	var popcorn_type := _popcorn_type(state, slime_index)
+	slime.set_meta("is_elite", _is_elite_enemy_slot(state, slime_index))
 	var spawn_level := int(active_levels[slime_index])
 	if is_popcorn:
 		# Recalculate on every spawn so a level-up during a run also keeps a

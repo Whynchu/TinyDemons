@@ -8,7 +8,7 @@ Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 Baseline game version: `0.2.00`
 
-Current release: `0.2.01` (documentation and verification baseline update)
+Current release: `0.2.03` (R6+ risk/reward generation implementation update)
 
 ## 1. Purpose
 
@@ -411,8 +411,9 @@ Run 2 layout contracts, room/slime/enemy setup, selected gear contracts, and
 selected Chroma/progression contracts. It also exposed current failures in
 active-run recovery, doorway geometry, Hub/equipment/touch menu contracts,
 gear catalogue/drop policy, generated minimap visibility/order, the starter
-flame music gate, elemental binding, and generated R7 bounds. The native R7
-smoke did not complete after reporting out-of-bounds rooms. See
+flame music gate, elemental binding, and the superseded generated-route
+contract. The active R6+ risk/reward implementation now owns generated runs;
+its Godot smoke and playtest verification remain pending. See
 [`test-target-audit.md`](test-target-audit.md) for the test-by-test result and
 [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for the triage register.
 

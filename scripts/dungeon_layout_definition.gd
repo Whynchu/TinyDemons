@@ -27,6 +27,10 @@ class RoomSpec extends RefCounted:
 	var chest_position := Vector2.ZERO
 	var special_respawn_required_color: StringName = &""
 	var fire_flame: StringName = &""
+	var route_role: StringName = DungeonGraph.ROUTE_MAIN
+	var encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL
+	var reward_tier: StringName = DungeonGraph.REWARD_STANDARD
+	var vault_id: StringName = &""
 	var seed_salt := 0
 
 	func _init(
@@ -38,7 +42,11 @@ class RoomSpec extends RefCounted:
 		new_respawn_color: StringName = &"",
 		new_seed_salt: int = 0,
 		new_fire_flame: StringName = &"",
-		new_chest_position: Vector2 = Vector2.ZERO
+		new_chest_position: Vector2 = Vector2.ZERO,
+		new_route_role: StringName = DungeonGraph.ROUTE_MAIN,
+		new_encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL,
+		new_reward_tier: StringName = DungeonGraph.REWARD_STANDARD,
+		new_vault_id: StringName = &""
 	) -> void:
 		id = new_id
 		coordinate = new_coordinate
@@ -49,6 +57,10 @@ class RoomSpec extends RefCounted:
 		special_respawn_required_color = new_respawn_color
 		seed_salt = new_seed_salt
 		fire_flame = new_fire_flame
+		route_role = new_route_role
+		encounter_tier = new_encounter_tier
+		reward_tier = new_reward_tier
+		vault_id = new_vault_id
 
 
 	func to_dictionary() -> Dictionary:
@@ -61,6 +73,10 @@ class RoomSpec extends RefCounted:
 			"chest_position": chest_position,
 			"special_respawn_required_color": special_respawn_required_color,
 			"fire_flame": fire_flame,
+			"route_role": route_role,
+			"encounter_tier": encounter_tier,
+			"reward_tier": reward_tier,
+			"vault_id": vault_id,
 			"seed_salt": seed_salt,
 		}
 
@@ -167,6 +183,11 @@ class ConnectionSpec extends RefCounted:
 
 var layout_id: StringName = &""
 var map_size := Vector2i(16, 23)
+var generation_mode: StringName = &""
+var route_choice_source_room_id: StringName = &""
+var route_choice_rejoin_room_id: StringName = &""
+var safe_route_length := 0
+var risk_route_length := 0
 var rooms: Array[RoomSpec] = []
 var connections: Array[ConnectionSpec] = []
 var decorative_door_pixels: Array[Dictionary] = []
@@ -303,6 +324,11 @@ func to_dictionary() -> Dictionary:
 	return {
 		"layout_id": layout_id,
 		"map_size": map_size,
+		"generation_mode": generation_mode,
+		"route_choice_source_room_id": route_choice_source_room_id,
+		"route_choice_rejoin_room_id": route_choice_rejoin_room_id,
+		"safe_route_length": safe_route_length,
+		"risk_route_length": risk_route_length,
 		"rooms": room_data,
 		"connections": connection_data,
 		"decorative_door_pixels": decorative_door_pixels.duplicate(true),
@@ -352,6 +378,14 @@ func validate() -> Array[String]:
 			errors.append("generated Fire Room is missing a flame: %s" % spec.id)
 		if spec.room_type == DungeonGraph.ROOM_FIRE and not spec.fire_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(spec.fire_flame):
 			errors.append("unknown Fire Room flame: %s" % spec.fire_flame)
+		if spec.route_role.is_empty():
+			errors.append("room route role is empty: %s" % spec.id)
+		if spec.encounter_tier not in [DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.ENCOUNTER_DANGEROUS, DungeonGraph.ENCOUNTER_ELITE]:
+			errors.append("unknown room encounter tier: %s" % spec.encounter_tier)
+		if spec.reward_tier not in [DungeonGraph.REWARD_STANDARD, DungeonGraph.REWARD_RISK, DungeonGraph.REWARD_VAULT]:
+			errors.append("unknown room reward tier: %s" % spec.reward_tier)
+		if spec.route_role == DungeonGraph.ROUTE_ELITE_REWARD and spec.vault_id.is_empty():
+			errors.append("elite reward room is missing a vault identity: %s" % spec.id)
 	if start_count != 1:
 		errors.append("expected exactly one Hub room")
 	if boss_count != 1:
