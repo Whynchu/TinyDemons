@@ -34,7 +34,6 @@ static func create(root: Object) -> Dictionary:
 		"run_state": run.to_dictionary(),
 		"dungeon_seed": int(root.get("current_dungeon_seed")),
 		"layout_id": String(layout.layout_id) if layout != null else "",
-		"generation_mode": String(layout.generation_mode) if layout != null else "",
 		"layout_bound_flame": String(map_controller.get("layout_bound_flame")) if map_controller != null else "",
 		"run_rank": maxi(profile.difficulty_rank, 1),
 		"current_room_id": String(root.get("current_room_id")),

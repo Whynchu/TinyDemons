@@ -228,36 +228,33 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	var active_layout: Variant = map_controller.get("layout")
 	var active_layout_id: String = String(active_layout.layout_id) if active_layout != null else ""
 	var snapshot_layout_id: String = str(snapshot.get("layout_id", ""))
-	var snapshot_generation_mode: String = str(snapshot.get("generation_mode", ""))
-	var active_generation_mode: String = String(active_layout.generation_mode) if active_layout != null else ""
-	var migrated_room := false
-	if snapshot_layout_id.is_empty() or snapshot_generation_mode.is_empty():
-		migrated_room = true
-	elif snapshot_layout_id != active_layout_id or snapshot_generation_mode != active_generation_mode:
-		migrated_room = true
+	if snapshot_layout_id.is_empty():
+		# Schema 1 snapshots created before the R6 route switch cannot identify
+		# whether completed_runs==5 refers to the old authored duplicate or the
+		# generated route. Refuse that ambiguous restore and leave the checkpoint
+		# available for an explicit Discard choice instead of loading the wrong map.
+		if root.player_profile.completed_runs == 5:
+			push_warning("Active run restore refused an unidentified legacy R6 layout; the checkpoint remains available to Discard.")
+			return false
+	elif snapshot_layout_id != active_layout_id:
+		push_warning("Active run restore refused layout %s because the active route is %s." % [snapshot_layout_id, active_layout_id])
+		return false
 	# The layout was generated from the saved origin, but the current persistent
 	# bind still controls the Hub and available flame presentation after restore.
 	map_controller.call("set_bound_flame", bound_flame)
 	var room_id := StringName(str(snapshot.get("current_room_id", "")))
 	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
-	if migrated_room or room == null:
-		# The active map library changed since this checkpoint was created. Keep
-		# the run/profile and player state, but place the player in the regenerated
-		# map's valid start room instead of applying incompatible room/map state.
-		room_id = root.dungeon_graph.start_room_id
-		room = root.dungeon_graph.get_room(room_id)
-		migrated_room = room != null
-	if not migrated_room and not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
+	if room == null:
 		return false
-	if migrated_room:
-		push_warning("Active run checkpoint migrated to the current map at room %s." % room_id)
+	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
+		return false
 	root.run_state = restored_run
 	root.current_dungeon_seed = snapshot_seed
 	root.puzzle_attempt_rotation_quarter_turns = rotation_turns
 	root.current_room_id = room_id
 	var recovery_arrival_socket := StringName(str(snapshot.get("arrival_socket_id", "")))
 	root.call("_sync_current_room_metadata", recovery_arrival_socket)
-	root.room_controller.room_states = {} if migrated_room else ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
+	root.room_controller.room_states = ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
 	root.room_controller.progression_run_rank = maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
 	root.room_controller.set_current_room(room_id, root.current_room_type)
 	root.call("_ensure_current_room_layout")
