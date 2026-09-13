@@ -8,7 +8,8 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $godotVersion = if ($env:GODOT_VERSION) { $env:GODOT_VERSION } else { "4.7.1" }
 $godot = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
-$headlessUserData = Join-Path $env:TEMP ("tiny-demons-web-export-{0}" -f $PID)
+$tempRoot = if (-not [string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
+$headlessUserData = Join-Path $tempRoot ("tiny-demons-web-export-{0}" -f $PID)
 New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
 $logFile = Join-Path $headlessUserData "web-export.log"
 $presetText = Get-Content -LiteralPath (Join-Path $root "export_presets.cfg") -Raw
