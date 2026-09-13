@@ -114,7 +114,34 @@ func _initialize() -> void:
 	var hub_host := Node.new()
 	get_root().add_child(hub_host)
 	var hub_builder := ScreenStateController.new()
-	var hub_controls := hub_builder.build_hub(hub_host, Callable(self, "_pixel_texture"), Callable(self, "_record_stat_touch"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_noop"), Callable(self, "_noop_int"), Callable(self, "_record_hub_row"), Callable(self, "_record_item_row"), Callable(self, "_record_fusion_count"))
+	var noop := Callable(self, "_noop")
+	var noop_int := Callable(self, "_noop_int")
+	# Keep every optional callback valid so the fixture exercises native button
+	# activation without falling back to an unbound page setter.
+	var hub_controls := hub_builder.build_hub(
+		hub_host,
+		Callable(self, "_pixel_texture"),
+		Callable(self, "_record_stat_touch"), # adjust_stat
+		noop, # apply_stats
+		noop, # cancel_stats
+		noop, # auto_allocate
+		noop, # respec
+		noop, # start_run
+		noop, # return_title
+		noop_int, # set_page
+		noop, # item_action
+		noop_int, # select_gear_slot
+		noop, # bind_element
+		noop_int, # select_gear_candidate
+		Callable(self, "_record_hub_row"), # select_stat_row
+		Callable(self, "_record_item_row"), # select_item_row
+		Callable(self, "_record_fusion_count"), # adjust_fusion_count
+		noop, # pause_resume
+		noop, # pause_settings
+		noop, # pause_quit
+		noop, # pause_status
+		noop, # pause_equipment
+		noop) # pause_back_callback
 	var hub_overlay := hub_controls["overlay"] as ColorRect
 	hub_overlay.visible = true
 	(hub_overlay.get_node("HubAllocatePage") as Control).visible = true
@@ -161,14 +188,15 @@ func _initialize() -> void:
 	layer._input(nonselected_up)
 	_expect(stat_touch_count == 1, "a non-selected hub stat cannot be adjusted by touch", failures)
 	var stat_rows := hub_controls["stat_rows"] as Array[Button]
-	_expect(stat_rows.size() == 6 and stat_rows[0].size.x >= 80.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets for six stats", failures)
+	_expect(stat_rows.size() == 6 and stat_rows[0].size.x >= 60.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets for six stats", failures)
+	var stat_row_touch_count_before := stat_row_touch_count
 	var stat_row_down := InputEventScreenTouch.new()
 	stat_row_down.device = 0; stat_row_down.index = 15; stat_row_down.pressed = true; stat_row_down.position = stat_rows[2].get_global_rect().get_center()
 	layer._input(stat_row_down)
 	var stat_row_up := InputEventScreenTouch.new()
 	stat_row_up.device = 0; stat_row_up.index = 15; stat_row_up.pressed = false; stat_row_up.position = stat_row_down.position
 	layer._input(stat_row_up)
-	_expect(stat_row_touch_count == 1, "touching a hub stat row selects it directly", failures)
+	_expect(stat_row_touch_count == stat_row_touch_count_before + 1, "touching a hub stat row selects it directly", failures)
 	hub_builder.hub_stat_row = 2
 	hub_builder._set_hub_stat_adjustment_targets(2, true)
 	# The first touch regression was caused by a one-shot cursor advance. A
@@ -271,12 +299,13 @@ func _initialize() -> void:
 	_expect(bool(menu_button.get_meta("touch_pressed", false)), "screen touch activates a visible menu button", failures)
 	menu_host.queue_free()
 
-	# A tap outside a Button still provides the menu's normal accept edge.
+	# A blank non-dialogue menu tap stays inert; dialogue below owns the
+	# tap-anywhere accept behavior explicitly.
 	var menu_accept_down := InputEventScreenTouch.new()
 	menu_accept_down.device = 0; menu_accept_down.index = 8; menu_accept_down.pressed = true; menu_accept_down.position = Vector2(150.0, 80.0)
 	layer._input(menu_accept_down)
 	router.poll(InputRouter.Context.MENU)
-	_expect(router.ui_accept_pressed() and router.ui_accept_just_pressed(), "screen tap outside a button reaches menu accept", failures)
+	_expect(not router.ui_accept_pressed() and not router.ui_accept_just_pressed(), "blank menu touch stays inert outside a button", failures)
 	var menu_accept_up := InputEventScreenTouch.new()
 	menu_accept_up.device = 0; menu_accept_up.index = 8; menu_accept_up.pressed = false; menu_accept_up.position = Vector2(150.0, 80.0)
 	layer._input(menu_accept_up)

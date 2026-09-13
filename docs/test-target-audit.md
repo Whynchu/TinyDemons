@@ -187,6 +187,16 @@ the add-on MCP runtime startup/teardown path. They remain unverified.
 The repeated root-certificate and MCP registry messages are environment
 warnings. They appeared in direct runs and were not counted as test failures.
 
+### Current focused reconciliation — 2026-09-13
+
+- `cloud_save_contract_smoke`: pass. The source contract and cloud panel type
+  assertions are now backed by an isolated headless run.
+- `touch_controls_smoke`: pass. The harness now binds all optional pause
+  callbacks, the stat-row assertion matches the current 69.5x12 logical target,
+  and the menu assertion matches the inert blank non-dialogue policy.
+
+These are updates to the historical baseline above; no new test paths were added.
+
 A supervised full-run attempt on 2026-09-13 reached ordinary assertion
 failures without a native headless renderer crash. It was stopped when the
 broader `elemental_binding_smoke` seed set exposed the R6+ route-choice gap;

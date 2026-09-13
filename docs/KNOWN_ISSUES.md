@@ -140,9 +140,20 @@ or raced the cursor motion):
   slot-description check expected a bonus strip for zero-power plain gear, and
   the Shop check expected the legacy list cursor instead of the modern
   `ShopMenuLayout` cursor layer. All corrected; the test passes.
-- `demon_hub_menu_scene_smoke`, `touch_controls_smoke`, and
-  `pause_menu_scene_smoke` were verified pre-existing on the baseline and remain
-  open; the menu/hub/shop presentation work is tracked separately.
+- `demon_hub_menu_scene_smoke` and `pause_menu_scene_smoke` were verified
+  pre-existing on the baseline and remain open; the menu/hub/shop presentation
+  work is tracked separately.
+
+### 2026-09-13 touch/cloud contract reconciliation
+
+- `cloud_save_contract_smoke` passes in an isolated headless run. Its existing
+  source assertions now have current evidence for the cloud panel's runtime-safe
+  pixel UI types, web crypto path, migration, and recovery-vault edge function.
+- `touch_controls_smoke` passes after its fixture supplies the optional pause
+  callbacks expected by `ScreenStateController.build_hub()`. The remaining
+  expectation changes are contract alignment: the current hub stat-row target is
+  69.5x12 logical pixels, a non-dialogue blank menu tap is inert, and dialogue
+  retains the explicit tap-anywhere accept path. No new test file was added.
 
 A supervised full-run attempt on 2026-09-13 reached ordinary assertion
 failures without a native headless renderer crash. It was stopped at the
