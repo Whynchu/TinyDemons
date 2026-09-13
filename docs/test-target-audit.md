@@ -234,6 +234,10 @@ warnings. They appeared in direct runs and were not counted as test failures.
   slot coverage, premium plus weighting, pricing, and anti-repeat rewards pass.
 - `gear_system_rework_smoke`: pass. The approved Plain Head/Arm chest-drop
   policy and gear-system contracts are now reflected in the gate evidence.
+- `fusion_tooltip_smoke`: pass. The Hub/Fusion presenter, six-stat summary,
+  candidate rows, and Shop/Fusion routing match the authored contract.
+- `fusion_menu_scene_smoke`: pass. The authored Fusion panels, clipped row
+  window, Soul footer, overflow suppression, and touch signals are wired.
 
 These are updates to the historical baseline above; no new test paths were added.
 

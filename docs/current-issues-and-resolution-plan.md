@@ -586,11 +586,11 @@ The source implementation contains the approved behavior without changing
 unrelated balance. The historical focused baseline exposed contracts that have
 since been repaired or reclassified. The 2026-09-13 follow-up now has focused
 evidence for the doorway, active-run fixture, typed transition, active R6+
-generation, Hub, Equipment, Pause, Player HUD, gear catalogue, and gear/drop
-policy checks. Remaining work is visual orientation comparison, Shop timing,
-Pause Equipment touch/clipping, cold/warm flame pickup timing, generated R6
-manual save/recovery, repeated flame travel, and visual inspection of
-bound/temporary pickup colors.
+generation, Hub, Equipment, Pause, Player HUD, gear catalogue, gear/drop
+policy, and Fusion presentation checks. Remaining work is visual orientation
+comparison, Shop timing, Pause Equipment touch/clipping, cold/warm flame pickup
+timing, generated R6 manual save/recovery, repeated flame travel, and visual
+inspection of bound/temporary pickup colors.
 
 ## Verification and handoff
 
