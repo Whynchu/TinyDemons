@@ -5,7 +5,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
 const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_icon.gdshader")
-const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://Artwork/eliteslimeoverheadsymbol.png")
+const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://assets/artwork/eliteslimeoverheadsymbol.png")
 
 const COOLDOWN_FLASH_DURATION := 0.14
 const COOLDOWN_ICON_DIM := 0.58

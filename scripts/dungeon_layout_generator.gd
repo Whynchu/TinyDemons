@@ -91,7 +91,7 @@ class LayoutBuilder extends RefCounted:
 
 
 	static func from_layout(existing_layout, new_dungeon_seed: int):
-		var builder := LayoutBuilder.new(existing_layout, new_dungeon_seed)
+		var builder: LayoutBuilder = LayoutBuilder.new(existing_layout, new_dungeon_seed)
 		if existing_layout == null:
 			return builder
 		for room in existing_layout.rooms:
@@ -222,7 +222,7 @@ static func _build_risk_reward_candidate(dungeon_seed: int, completed_runs: int,
 		return null
 	layout.generation_mode = RISK_REWARD_GENERATION_MODE
 	_clear_legacy_progression_requirements(layout)
-	var builder := LayoutBuilder.from_layout(layout, dungeon_seed)
+	var builder: LayoutBuilder = LayoutBuilder.from_layout(layout, dungeon_seed)
 	var route_choice := _add_risk_shortcut(builder, dungeon_seed)
 	if not route_choice.is_empty():
 		layout.route_choice_source_room_id = route_choice["source"] as StringName
@@ -510,7 +510,7 @@ static func _attach_elemental_vaults(builder: LayoutBuilder, dungeon_seed: int) 
 		if destination_spec == null or destination_spec.route_role == ROUTE_ELITE_REWARD:
 			continue
 		var requirement: StringName = available_elements[posmod(requirement_index + vault_count, available_elements.size())]
-		_configure_elemental_vault(connection, destination, requirement)
+		_configure_elemental_vault(connection, destination_spec, requirement)
 		vault_count += 1
 	while vault_count < 2:
 		var requirement: StringName = available_elements[posmod(requirement_index + vault_count, available_elements.size())]
@@ -790,7 +790,7 @@ static func _build_candidate(
 	var layout = LAYOUT_DEFINITION_SCRIPT.new(GENERATED_LAYOUT_ID, COMPACT_MAP_SIZE)
 	if active_risk_reward:
 		layout.generation_mode = RISK_REWARD_GENERATION_MODE
-	var builder := LayoutBuilder.new(layout, dungeon_seed)
+	var builder: LayoutBuilder = LayoutBuilder.new(layout, dungeon_seed)
 
 	# Every generated run begins with an intentional fork that rejoins before
 	# the first Orb Room. This gives R2+ the same early choice-and-convergence
@@ -913,7 +913,9 @@ static func _build_candidate(
 	_connect_hub_dig_routes(builder, hub_dig_routes, spine_rooms_by_depth, generator_rng)
 	_fill_room_target(builder, room_target, boss_depth)
 	_add_safe_cross_links(builder, generator_rng)
-	var progression_repairs: Array[String] = [] if active_risk_reward else repair_progression(layout, completed_runs, starter_flame, bound_flame)
+	var progression_repairs: Array[String] = []
+	if not active_risk_reward:
+		progression_repairs.assign(repair_progression(layout, completed_runs, starter_flame, bound_flame))
 	last_progression_repairs = progression_repairs.duplicate()
 	var bound_label := "none"
 	if not bound_flame.is_empty():

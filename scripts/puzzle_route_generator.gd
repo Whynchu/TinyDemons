@@ -164,7 +164,7 @@ static func generation_is_repair_free() -> bool:
 static func validate(layout, completed_runs: int, starter_flame: StringName = &"fire", bound_flame: StringName = &"") -> Array[String]:
 	if layout == null:
 		return ["generated route layout is missing"]
-	var is_risk_reward_layout := layout.generation_mode == RISK_REWARD_GENERATION_MODE
+	var is_risk_reward_layout: bool = layout.generation_mode == RISK_REWARD_GENERATION_MODE
 	var errors: Array[String] = LEGACY_GENERATOR.validate_risk_reward(layout, completed_runs, starter_flame, bound_flame) if is_risk_reward_layout else LEGACY_GENERATOR.validate(layout, completed_runs, starter_flame, bound_flame)
 	for room in layout.rooms:
 		if not _in_compact_bounds(room.minimap_coordinate):
