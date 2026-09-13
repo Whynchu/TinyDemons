@@ -576,7 +576,7 @@ balance change is required to preserve behavior after extraction.
 - Keep this audit tied to the baseline commit.
 - Capture a short manual acceptance run and representative screenshots.
 - Resolve the duplicate R4/R5 UID warnings.
-- Classify the eight unregistered test/report scripts.
+- Keep `tests/manifest.csv` current as the single test/report registry.
 - Record a full supervised smoke result when the environment is stable.
 
 Exit: the baseline can be rebuilt, tested, and visually compared.

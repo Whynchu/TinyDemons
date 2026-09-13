@@ -216,8 +216,8 @@ const DEFINITION_METADATA := {
 	&"rootbreaker": {"family": "maul", "role_tags": ["physical", "charge", "knockback"], "primary_stat": "strength", "effects": {"charge_profile": {"lunge_multiplier": 1.10, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "maul", "visual_id": "maul_root", "description": "A grounded maul for charged openings, lunge control, and knockback decisions."},
 	&"mindweave_rod": {"family": "focus_rod", "role_tags": ["magic", "mnd", "imbue"], "primary_stat": "intelligence", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "focus", "visual_id": "rod", "description": "Strengthens Triangle and Imbue magic while leaving the physical STR portion intact."},
 
-	&"plain_hood": {"family": "cloth", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "starter_only": true, "source_tags": ["starter"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "hood", "description": "Fills the Head slot without changing combat power."},
-	&"plain_wraps": {"family": "wraps", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "starter_only": true, "source_tags": ["starter"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "wraps", "description": "Fills the Arm slot without adding free combat power."},
+	&"plain_hood": {"family": "cloth", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "source_tags": ["shop", "chest", "clear_reward", "boss"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "hood", "description": "Fills the Head slot without changing combat power."},
+	&"plain_wraps": {"family": "wraps", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "source_tags": ["shop", "chest", "clear_reward", "boss"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "wraps", "description": "Fills the Arm slot without adding free combat power."},
 	&"iron_helm": {"family": "helm", "role_tags": ["defense", "heavy"], "primary_stat": "defense", "effects": {"recovery_multiplier": {"multiplier": 1.05, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "helm", "visual_id": "helm", "description": "Heavy protection with a visible recovery tradeoff."},
 	&"feather_cap": {"family": "light_headgear", "role_tags": ["agility", "magic_defense", "light"], "primary_stat": "agility", "effects": {"recovery_multiplier": {"multiplier": 0.95, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "head", "visual_id": "cap", "description": "Light headgear for staying active through clean movement and recovery."},
 	&"mind_circlet": {"family": "circlet", "role_tags": ["mnd", "magic", "defense"], "primary_stat": "mnd", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "circlet", "visual_id": "circlet", "description": "Raises M.DEF through MND and supports the magic side of the kit."},
@@ -527,7 +527,13 @@ func slot_needs_introduction(profile: PlayerProfile, slot: Variant) -> bool:
 	if canonical.is_empty() or profile == null:
 		return true
 	var equipped := profile.find_item(profile.get_equipped_instance_id(canonical))
-	return equipped == null or bool(definition_data(equipped.definition_id).get("starter_only", false))
+	# Plain pieces are now ordinary chest drops, so "only the zero-power
+	# starter" is a tier check rather than a starter-only flag. A slot that is
+	# empty, still carries its legacy starter alias, or only has a Plain piece
+	# counts as needing introduction.
+	if equipped == null:
+		return true
+	return bool(definition_data(equipped.definition_id).get("starter_only", false)) or str(definition_data(equipped.definition_id).get("gear_tier", "")) == "plain"
 
 
 func _infer_elemental_behavior(effects: Variant) -> String:
@@ -854,11 +860,12 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var result: Dictionary = {}
 	var base_bonuses: Dictionary = definition.get("bonuses", {}).duplicate(true)
 	var rarity_points := float(rarity_flat_points(item.rarity))
-	# `enhancement_level` is the visible position on the current rarity track;
-	# `fusion_stat_points` is the monotonic total across rarity promotion. Direct
-	# callers and legacy saves may provide only one of them, so use the stronger
-	# known value when resolving the shared stat ladder.
-	var fusion_enhancement_points := float(maxi(item.fusion_stat_points, item.enhancement_level)) * MASTERY_BONUS_PER_LEVEL
+	# Enhancement is measured on the current rarity track only. `enhancement_level`
+	# is the visible +0..+10 position and resets to 0 on promotion; the rarity
+	# rank already carries the accumulated value across the jump. `fusion_stat_points`
+	# is the monotonic total across promotions and must not be re-added here, or a
+	# promoted item would receive its prior-track levels twice.
+	var fusion_enhancement_points := enhancement_flat_points(item.enhancement_level)
 	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
 	# The primary `tier_stat` scales with rarity/enhancement. `tier_stats`
 	# lists additional stats that scale alongside it (premium dual-lane items).

@@ -16,128 +16,26 @@ New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
 $logFile = Join-Path $headlessUserData "smoke.log"
 $resultsPath = if ($ResultsPath) { $ResultsPath } else { Join-Path $headlessUserData "smoke-results.csv" }
 $inventoryPath = "$resultsPath.inventory.csv"
-$tests = @("boss_variant_selection_smoke", "boss_visual_palette_smoke", "composition_root_baseline_smoke", "title_boot_scene_smoke", "settings_service_smoke", "settings_panel_scene_smoke", "run_grade_smoke", "element_catalog_smoke", "elemental_damage_smoke", "slime_variant_smoke", "typed_combat_path_smoke", "typed_damage_feedback_smoke", "progression_smoke", "item_economy_smoke", "chest_reward_smoke", "fusion_candidate_cache_smoke", "fusion_menu_scene_smoke", "rogue_slime_smoke", "slime_spawn_smoke", "speed_scale_smoke", "fusion_tooltip_smoke", "palette_smoke", "entry_orb_visual_smoke", "run1_map_contract_smoke", "run1_room_prefab_smoke", "run1_door_path_smoke", "run2_authored_layout_smoke", "enemy_room_engagement_smoke", "enemy_room_entrance_scene_smoke", "generated_layout_smoke", "generated_flame_progression_smoke", "elemental_binding_smoke", "hub_binding_smoke", "generated_fusion_gate_scene_smoke", "generated_minimap_smoke", "generated_run_scene_smoke", "hub_door_scene_smoke", "orb_interaction_scene_smoke", "run1_orb_door_scene_smoke", "boss_soul_drop_smoke", "special_respawn_policy_smoke", "treasure_chest_persistence_smoke", "run1_minimap_smoke", "run1_reference_map_smoke", "run1_door_color_smoke", "combat_momentum_smoke", "chroma_state_smoke", "chroma_pickup_smoke", "item_drop_scene_smoke", "chest_interaction_scene_smoke", "run_label_progression_smoke", "aspect_ability_smoke", "starter_flame_smoke", "actor_geometry_scene_smoke", "target_facing_scene_smoke", "attack_shadow_scene_smoke", "boss_geometry_scene_smoke", "boss_jump_slam_smoke", "popcorn_respawn_smoke", "boss_exit_path_scene_smoke", "input_router_smoke", "input_device_tracker_smoke", "touch_controls_smoke", "dialogue_choice_smoke", "chroma_projectile_scene_smoke", "imbue_spell_scene_smoke", "sound_mix_profile_smoke", "sound_mix_live_reload_smoke", "run_music_flame_gate_smoke", "sound_balance_smoke", "frame_time_smoke")
-$tests += "dungeon_map_event_smoke"
-$tests += "r7_native_generator_smoke"
-$tests += "r6_plus_risk_reward_generation_smoke"
-$tests += "elite_slime_overhead_smoke"
-$tests += "boss_movement_contact_smoke"
-$tests += "r3_authored_layout_smoke"
-$tests += "puzzle_map_grid_smoke"
-$tests += "puzzle_map_r4_new_grid_smoke"
-$tests += "puzzle_map_r5_grid_smoke"
-$tests += "r4_authored_layout_smoke"
-$tests += "r5_authored_layout_smoke"
-$tests += "backtrack_popcorn_smoke"
-$tests += "display_layout_smoke"
-$tests += "display_responsive_scene_smoke"
-$tests += "pause_menu_scene_smoke"
-$tests += "soul_pickup_smoke"
-$tests += "fire_exchange_smoke"
-$tests += "circular_input_smoke"
-$tests += "spin_damage_smoke"
-$tests += "spin_charge_scene_smoke"
-$tests += "six_stat_profile_migration_smoke"
-$tests += "six_stat_calculator_smoke"
-$tests += "composite_elemental_damage_smoke"
-$tests += "six_stat_equipment_smoke"
-$tests += "six_stat_menu_scene_smoke"
-$tests += "generated_bound_reachability_smoke"
-$tests += "equipment_menu_scene_smoke"
-$tests += "name_entry_scene_smoke"
-$tests += "demon_hub_menu_scene_smoke"
-$tests += "menu_text_smoke"
-$tests += "imbue_intelligence_smoke"
-$tests += "menu_route_scene_smoke"
-$tests += "run_locomotion_smoke"
-$tests += "wall_socket_geometry_smoke"
-$tests += "starter_flame_hub_scene_smoke"
-$tests += "gear_catalogue_expansion_smoke"
-$tests += "gear_effect_contract_smoke"
-$tests += "gear_slot_migration_smoke"
-$tests += "gear_drop_policy_smoke"
-$tests += "drop_art_smoke"
-$tests += "gear_system_rework_smoke"
-$tests += "player_hud_scene_smoke"
-$tests += "cloud_save_contract_smoke"
-$tests += "active_run_recovery_contract_smoke"
-$tests += "room_transition_result_smoke"
 
-$registeredTests = @($tests | Select-Object -Unique)
+# The manifest is the single source of truth for the test inventory. Each row
+# records role (gate/owner/reference/diagnostic/report), state
+# (verified/open/stale/harness/environment/unverified), owner, target, and load
+# kind. Runner grouping derives from `role`; `report` rows are intentionally
+# not runner tests.
+$manifestPath = Join-Path $PSScriptRoot "manifest.csv"
+$manifest = Import-Csv -LiteralPath $manifestPath
+$manifestByScript = @{}
+foreach ($row in $manifest) {
+	$manifestByScript[$row.script] = $row
+}
 
-# The default group is the small player-facing release gate. The complete
-# registered inventory remains available explicitly with -TestGroup all. This
-# keeps diagnostics and visual/reference reports useful without making every
-# exploratory check a release blocker or a one-process-per-test default cost.
-$gateTests = @(
-	"composition_root_baseline_smoke",
-	"title_boot_scene_smoke",
-	"settings_service_smoke",
-	"settings_panel_scene_smoke",
-	"run_grade_smoke",
-	"element_catalog_smoke",
-	"elemental_damage_smoke",
-	"progression_smoke",
-	"item_economy_smoke",
-	"chest_reward_smoke",
-	"slime_spawn_smoke",
-	"run1_room_prefab_smoke",
-	"run1_door_path_smoke",
-	"run2_authored_layout_smoke",
-	"enemy_room_engagement_smoke",
-	"generated_layout_smoke",
-	"r6_plus_risk_reward_generation_smoke",
-	"generated_run_scene_smoke",
-	"generated_bound_reachability_smoke",
-	"elemental_binding_smoke",
-	"active_run_recovery_contract_smoke",
-	"room_transition_result_smoke",
-	"wall_socket_geometry_smoke",
-	"boss_exit_path_scene_smoke",
-	"input_router_smoke",
-	"input_device_tracker_smoke",
-	"touch_controls_smoke",
-	"dialogue_choice_smoke",
-	"chroma_state_smoke",
-	"chroma_pickup_smoke",
-	"chroma_projectile_scene_smoke",
-	"imbue_spell_scene_smoke",
-	"run_music_flame_gate_smoke",
-	"sound_mix_profile_smoke",
-	"display_layout_smoke",
-	"display_responsive_scene_smoke",
-	"pause_menu_scene_smoke",
-	"menu_route_scene_smoke",
-	"demon_hub_menu_scene_smoke",
-	"equipment_menu_scene_smoke",
-	"gear_system_rework_smoke",
-	"cloud_save_contract_smoke",
-	"player_hud_scene_smoke"
-)
-
-$referenceTests = @(
-	"boss_visual_palette_smoke",
-	"palette_smoke",
-	"entry_orb_visual_smoke",
-	"attack_shadow_scene_smoke",
-	"puzzle_map_grid_smoke",
-	"puzzle_map_r4_new_grid_smoke",
-	"puzzle_map_r5_grid_smoke",
-	"run1_reference_map_smoke",
-	"run1_door_color_smoke",
-	"drop_art_smoke"
-)
-
-$diagnosticTests = @(
-	"frame_time_smoke"
-)
-
+$runnableRoles = @("gate", "owner", "reference", "diagnostic")
 $tests = switch ($TestGroup) {
-	"gate" { @($gateTests | Where-Object { $_ -in $registeredTests }) }
-	"owner" { @($registeredTests | Where-Object { $_ -notin $gateTests -and $_ -notin $referenceTests -and $_ -notin $diagnosticTests }) }
-	"reference" { @($referenceTests | Where-Object { $_ -in $registeredTests }) }
-	"diagnostic" { @($diagnosticTests | Where-Object { $_ -in $registeredTests }) }
-	"all" { $registeredTests }
+	"gate" { @($manifest | Where-Object { $_.role -eq "gate" } | ForEach-Object { $_.script }) }
+	"owner" { @($manifest | Where-Object { $_.role -eq "owner" } | ForEach-Object { $_.script }) }
+	"reference" { @($manifest | Where-Object { $_.role -eq "reference" } | ForEach-Object { $_.script }) }
+	"diagnostic" { @($manifest | Where-Object { $_.role -eq "diagnostic" } | ForEach-Object { $_.script }) }
+	"all" { @($manifest | Where-Object { $_.role -in $runnableRoles } | ForEach-Object { $_.script }) }
 }
 
 if ($TestFilter) {
@@ -152,16 +50,19 @@ $resultsDirectory = Split-Path -Parent $resultsPath
 if ($resultsDirectory -and -not (Test-Path -LiteralPath $resultsDirectory)) {
 	New-Item -ItemType Directory -Path $resultsDirectory -Force | Out-Null
 }
-@("test,result,exit_code,elapsed_seconds,detail") | Set-Content -LiteralPath $resultsPath
-@("test,script_path,exists") | Set-Content -LiteralPath $inventoryPath
+@("test,result,exit_code,elapsed_seconds,role,state,detail") | Set-Content -LiteralPath $resultsPath
+@("test,script_path,role,state,exists") | Set-Content -LiteralPath $inventoryPath
 $missingTests = @()
 foreach ($test in $inventoryTests) {
 	$scriptPath = Join-Path $root ("tests/{0}.gd" -f $test)
 	$exists = Test-Path -LiteralPath $scriptPath
-	Add-Content -LiteralPath $inventoryPath -Value ('"{0}","{1}",{2}' -f $test, $scriptPath, $exists.ToString().ToLowerInvariant())
+	$row = $manifestByScript[$test]
+	$role = if ($row) { $row.role } else { "unclassified" }
+	$state = if ($row) { $row.state } else { "unclassified" }
+	Add-Content -LiteralPath $inventoryPath -Value ('"{0}","{1}","{2}","{3}",{4}' -f $test, $scriptPath, $role, $state, $exists.ToString().ToLowerInvariant())
 	if (-not $exists) {
 		$missingTests += $test
-		Add-Content -LiteralPath $resultsPath -Value ('"{0}",missing,,0,"test script not found"' -f $test)
+		Add-Content -LiteralPath $resultsPath -Value ('"{0}",missing,,0,"{1}","{2}","test script not found"' -f $test, $role, $state)
 	}
 }
 if ($InventoryOnly) {
@@ -171,9 +72,13 @@ if ($InventoryOnly) {
 
 $failed = $false
 $engineCrashCount = 0
+$failByState = @{}
 foreach ($test in $tests) {
 	if ($missingTests -contains $test) { continue }
 	Write-Host "=== $test ==="
+	$row = $manifestByScript[$test]
+	$role = if ($row) { $row.role } else { "unclassified" }
+	$state = if ($row) { $row.state } else { "unclassified" }
 	$startedAt = Get-Date
 	$stdoutPath = Join-Path $env:TEMP ("tiny-demons-$test-out.log")
 	$stderrPath = Join-Path $env:TEMP ("tiny-demons-$test-error.log")
@@ -183,7 +88,7 @@ foreach ($test in $tests) {
 	} catch {
 		$detail = "failed to start Godot: $($_.Exception.Message)"
 		Write-Host "ENGINE_START_FAILURE: $test ($detail)" -ForegroundColor Red
-		Add-Content -LiteralPath $resultsPath -Value ('"{0}",engine_start_failure,,0,"{1}"' -f $test, $detail.Replace('"', '""'))
+		Add-Content -LiteralPath $resultsPath -Value ('"{0}",engine_start_failure,,0,"{1}","{2}","{3}"' -f $test, $role, $state, $detail.Replace('"', '""'))
 		$failed = $true
 		$engineCrashCount += 1
 		if ($engineCrashCount -ge $StopAfterEngineCrashes) {
@@ -199,8 +104,9 @@ foreach ($test in $tests) {
 		$elapsed = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
 		$detail = "timeout after $TestTimeoutSeconds seconds"
 		Write-Host "TIMEOUT: $test ($detail)" -ForegroundColor Red
-		Add-Content -LiteralPath $resultsPath -Value ('"{0}",timeout,,{1},"{2}"' -f $test, $elapsed, $detail)
+		Add-Content -LiteralPath $resultsPath -Value ('"{0}",timeout,,{1},"{2}","{3}","{4}"' -f $test, $elapsed, $role, $state, $detail)
 		$failed = $true
+		$failByState[$state] += 1
 	} else {
 		$process.WaitForExit()
 		$exitCode = $process.ExitCode
@@ -211,7 +117,8 @@ foreach ($test in $tests) {
 		if ($isEngineCrash) {
 			$engineCrashCount += 1
 			Write-Host "ENGINE_CRASH: $test (exit $exitCode)" -ForegroundColor Red
-			Add-Content -LiteralPath $resultsPath -Value ('"{0}",engine_crash,{1},{2},"Godot process crashed"' -f $test, $exitCode, $elapsed)
+			Add-Content -LiteralPath $resultsPath -Value ('"{0}",engine_crash,{1},{2},"{3}","{4}","Godot process crashed"' -f $test, $exitCode, $elapsed, $role, $state)
+			$failByState[$state] += 1
 			if ($engineCrashCount -ge $StopAfterEngineCrashes) {
 				Write-Host "STOPPED: repeated Godot engine crashes" -ForegroundColor Red
 				$failed = $true
@@ -220,15 +127,25 @@ foreach ($test in $tests) {
 			}
 		} elseif ($exitCode -ne 0) {
 			Write-Host "FAILED: $test (exit $exitCode)" -ForegroundColor Red
-			Add-Content -LiteralPath $resultsPath -Value ('"{0}",fail,{1},{2},""' -f $test, $exitCode, $elapsed)
+			Add-Content -LiteralPath $resultsPath -Value ('"{0}",fail,{1},{2},"{3}","{4}",""' -f $test, $exitCode, $elapsed, $role, $state)
 			$failed = $true
+			$failByState[$state] += 1
 		} else {
 			Write-Host "PASSED: $test" -ForegroundColor Green
-			Add-Content -LiteralPath $resultsPath -Value ('"{0}",pass,0,{1},""' -f $test, $elapsed)
+			Add-Content -LiteralPath $resultsPath -Value ('"{0}",pass,0,{1},"{2}","{3}",""' -f $test, $elapsed, $role, $state)
 		}
 	}
 	Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
 }
+
+if ($failByState.Count -gt 0) {
+	Write-Host "Failures by manifest state:" -ForegroundColor Yellow
+	foreach ($entry in ($failByState.GetEnumerator() | Sort-Object Key)) {
+		Write-Host ("  {0}: {1}" -f $entry.Key, $entry.Value) -ForegroundColor Yellow
+	}
+	Write-Host "NOTE: a failed check may be a harness/environment issue rather than a product bug. Consult tests/manifest.csv state for each test." -ForegroundColor Yellow
+}
+
 if (-not $TestFilter -and $TestGroup -in @("gate", "all")) {
 	Write-Host "=== sfx lab pytest ==="
 	$sfxLabPy = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_reconstruction\.venv311\Scripts\python.exe"

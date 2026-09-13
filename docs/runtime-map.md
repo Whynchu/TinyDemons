@@ -428,11 +428,12 @@ changes, and must be triaged against the current worktree before code changes.
 ## Remaining Gaps
 
 - Complete the smoke matrix in smaller supervised batches with per-test output.
-- `tests/run_all_smoke.ps1` supports `-TestGroup` (`gate`, `owner`,
-  `reference`, `diagnostic`, or `all`), `-TestFilter`, `-TestTimeoutSeconds`,
-  and CSV output at `.godot_user/smoke-results.csv`. The default `gate` group
-  runs the curated player-facing checks; `-TestGroup all` runs the complete
-  registered inventory. Filtered runs execute only the selected test loop; the SFX, web, and
+- `tests/run_all_smoke.ps1` reads `tests/manifest.csv` and supports `-TestGroup`
+  (`gate`, `owner`, `reference`, `diagnostic`, or `all`), `-TestFilter`,
+  `-TestTimeoutSeconds`, and CSV output at `.godot_user/smoke-results.csv`. The
+  default `gate` group runs the curated player-facing checks;
+  `-TestGroup all` runs the 122 runnable registered paths. The result and
+  inventory CSVs carry each script's manifest `role` and `state`. Filtered runs execute only the selected test loop; the SFX, web, and
   main-scene checks run only for an unfiltered full run.
 - Build a normalized asset-reference scanner before identifying orphan assets;
   the conservative static audit is in `docs/asset-reference-audit.md`.

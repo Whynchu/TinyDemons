@@ -54,6 +54,77 @@ The active-run snapshot fixture and the R6+ generator were corrected during the
 `wall_socket_geometry_smoke`, and the new `room_transition_result_smoke`.
 Those results do not replace the unresolved contracts listed above.
 
+### 2026-09-13 focused triage of the newly registered and previously stalled checks
+
+The six checks that were outside the runner are now registered and were run one
+at a time in isolated headless processes:
+
+- `actor_geometry_smoke` had a harness defect (its success path called
+  `quit(0)` without `return`, then fell through to `quit(1)`); fixed, and the
+  test now passes.
+- `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`,
+  and `resource_drop_motion_smoke` pass in the isolated runner (the earlier
+  stalls were environment/add-on teardown noise). `resource_drop_motion_smoke`
+  reports four engine resources still in use at exit.
+- `touch_menu_scroll_smoke` fails its ghost-accept and stale-hold assertions;
+  this is an `input & touch` product-area finding, not a harness stall.
+- `menu_route_scene_smoke` and `gear_system_rework_smoke` run to completion but
+  fail real assertions (game-over directional navigation; head/arm source drop
+  counts). These are `hub & menus` and `gear & fusion` findings respectively.
+
+Result states are recorded in `tests/manifest.csv` (state `open` for the three
+assertion failures, `verified` for the five passing checks).
+
+### 2026-09-13 contract decisions and resolutions
+
+All three open findings from the triage are now resolved with documented
+contract decisions:
+
+- `menu_route_scene_smoke` was a harness defect: the test injected
+  `_menu_directions` directly, but `update_game_over_input` reads
+  `_menu_direction_events` (populated only inside `poll()`). The test now
+  injects the field the code actually reads; product code was unchanged and the
+  test passes.
+- `gear_system_rework_smoke` was a stale expectation. Decision: Plain pieces
+  drop from chests for every slot under the same rules; the Demon Cloak remains
+  the only shop-purchased non-set item. `plain_hood` and `plain_wraps` are no
+  longer `starter_only`, and the head/arm "needs introduction" check now keys on
+  the Plain tier (zero-power) instead of a starter-only flag. The gear, drop,
+  and catalogue tests pass.
+- `touch_menu_scroll_smoke` was a stale expectation. Decision: blank non-dialogue
+  menu taps stay inert; the ghost-accept/stale-hold mechanism belongs to the
+  dialogue context. The test now exercises scroll delta in the hub/menu context
+  and the ghost-accept hold in the dialogue context; it passes.
+
+A separate pre-existing finding surfaced during verification:
+`six_stat_equipment_smoke` fails its INT/MND flat bonus assertions (a
+`gear & fusion` product-area finding tracked in `tests/manifest.csv`).
+
+### 2026-09-13 gear stat-ladder regression fix
+
+Investigating `six_stat_equipment_smoke` exposed a real product regression in
+the gear stat ladder, not just a stale test:
+
+- The original design (`item_catalog.gd`) adds `rarity_flat_points` (rank × 2,
+  which already carries the "+1 from the rarity jump" and the "+1 earned from
+  the previous track's ten levels") plus a per-track enhancement term of +0.1
+  per level (`MASTERY_BONUS_PER_LEVEL`), resetting to 0 on promotion.
+- A later refactor computed the enhancement term as
+  `max(fusion_stat_points, enhancement_level)`. `fusion_stat_points` is the
+  monotonic total that never resets on promotion, so any promoted item received
+  its prior-track fusion points a second time on top of the rarity rank.
+- `combat-economy-overhaul.md` documents the intended per-track model ("reaching
+  the same +1.0 at +10"). `gear-economy-progression-implementation-plan.md`
+  documents monotonic `fusion_stat_points` as storage/migration, not as a second
+  stat-ladder term.
+- Fix: the enhancement term now uses `enhancement_flat_points(enhancement_level)`
+  (the per-track +0..+10 counter). Fused gear now follows the intended ladder
+  (common+0 STR 3 → common+10 STR 4 → rare+0 STR 5 → rare+10 STR 6 → mythic+10
+  STR 12 for the tier-stat sword) and a fused-up rare equals a fresh rare at the
+  same track position.
+- `six_stat_equipment_smoke` aggregate expectations were also stale (equipment
+  INT is 5.0, not 4.0); corrected and the test passes.
+
 A supervised full-run attempt on 2026-09-13 reached ordinary assertion
 failures without a native headless renderer crash. It was stopped at the
 broader R6+ seed failure, which the focused elemental-binding and R6+ checks
@@ -125,26 +196,22 @@ and touch playtesting remain outstanding.
 
 ## Verification surface audit — open
 
-The repository currently has a large mixed test/report inventory: 116 runner
-registered Godot paths plus additional standalone reports. The default runner
-now selects a 43-path release gate, while the existing target
-audit confirms whether a filename points at the right feature, but it does not
-yet classify release gates, owner regressions, diagnostics, stale contracts, or
-environment-only results. This creates false pressure to make every red result
-green and encourages test growth during refactors.
-
-The separate classification and pruning issue is
+The repository has a large test/report inventory. `tests/manifest.csv` now
+classifies all 124 scripts with a role (gate/owner/reference/diagnostic/report),
+state, owner, target, and load kind. The runner derives its grouping from that
+manifest: the default release gate selects 43 paths; `-TestGroup all` covers the
+122 runnable paths. The separate classification and pruning issue is
 [`verification-surface-audit.md`](verification-surface-audit.md). Until its
-exit criteria are met, the total smoke count is an inventory metric, not a
-quality score or release gate.
+remaining exit criteria are met, the total smoke count is an inventory metric,
+not a quality score or release gate.
 
 ## Infrastructure findings
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
 | Duplicate Godot resource UIDs reported for R4/R5 puzzle scripts and tests | Import and future file moves may resolve the wrong resource | Inspect the `.uid`/import state, choose canonical resources, then rerun the editor scan |
-| Full smoke runner has 116 registered paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
-| Eight test/report scripts are outside the registered runner | Coverage claims can be incomplete or misleading | Classify each as registered, intentional standalone, obsolete, or missing from the registry |
+| Full smoke runner has 122 runnable manifest paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
+| Six formerly unregistered `role:owner` checks are now triaged and resolved | All six have reliable states recorded in `tests/manifest.csv` | `actor_geometry_smoke` harness fixed; `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`, `resource_drop_motion_smoke` verified; `touch_menu_scroll_smoke` rewritten for the dialogue-context contract and verified |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
 | `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | Characterize shared menu conventions, then extract one presenter boundary |
 | `gameplay_state.gd` remains a shared state bag and compatibility surface | Ownership and rename safety are obscured | Select one typed vertical migration after active contracts stabilize |

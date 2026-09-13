@@ -95,7 +95,8 @@ Remaining evidence work:
 
 - resolve the duplicate R4/R5 resource UID warnings found by the editor import
   scan;
-- classify the eight test/report scripts outside the registered smoke list;
+- keep `tests/manifest.csv` as the single test/report registry (all scripts
+  classified by role, state, owner, target, and load kind);
 - capture a representative cold and warm gameplay run;
 - run a focused standalone smoke test, then the full runner only when no MCP
   Godot runtime is active; and

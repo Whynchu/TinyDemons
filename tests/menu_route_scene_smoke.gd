@@ -92,8 +92,11 @@ func _initialize() -> void:
 		screens.menu_input_release_lock = false
 		router.set("_previous", {&"menu_confirm": false, &"menu_back": false})
 		router.set("_current", {&"menu_confirm": false, &"menu_back": false})
-		router.set("_previous_menu_directions", {&"ui_down": false})
-		router.set("_menu_directions", {&"ui_down": true})
+		# update_game_over_input reads menu_direction_just_pressed(), which is
+		# backed by _menu_direction_events (populated by poll()). Inject that
+		# field directly, matching how the other routed-menu checks inject their
+		# current/previous edge state.
+		router.set("_menu_direction_events", {&"ui_down": true})
 		gameplay.call("_update_game_over_input")
 		_expect(screens.game_over_row == 1, "game over accepts directional controller navigation", failures)
 	gameplay.queue_free()

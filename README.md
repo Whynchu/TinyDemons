@@ -98,12 +98,14 @@ When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
 one separate Godot process per selected test. The default release gate is
-currently 43 paths; the explicit `-TestGroup all` inventory runs all 116
-registered paths. A single headless renderer failure can create repeated
-Windows memory-error dialogs.
+currently 43 paths; the explicit `-TestGroup all` inventory runs all 122
+runnable paths. A single headless renderer failure can create repeated Windows
+memory-error dialogs.
 
 Run the headless smoke suite only as a supervised standalone check, with no MCP
-Godot runtime active. Start with one focused test before using the full runner:
+Godot runtime active. Start with one focused test before using the full runner.
+The runner derives its groups from `tests/manifest.csv`, which classifies every
+test/report script with a role, state, owner, target, and load kind:
 
 ```powershell
 # Focused check
@@ -112,7 +114,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tools/run_headless.ps1 -Script res
 # Curated release gate — standalone/supervised only; includes web export
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 
-# Complete registered inventory — standalone/supervised only
+# Complete runnable inventory — standalone/supervised only
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all
 ```
 

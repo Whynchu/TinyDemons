@@ -216,7 +216,7 @@ request and deploys only from `main`.
   - `-s res://tests/item_economy_smoke.gd` -> `ITEM_ECONOMY_SMOKE_OK`
 - Curated release gate (including web export and main-scene headless checks):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
-- Complete registered inventory, for supervised triage only:
+- Complete runnable inventory, for supervised triage only:
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all`
 - Smoke tests use a watchdog: if any assertion fails mid-script the process
   aborts with a `TEST_ABORTED` error and exit code 1 instead of hanging.
