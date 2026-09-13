@@ -168,3 +168,7 @@ matching Godot 4.7.1 Web template:
 ```powershell
 pwsh -ExecutionPolicy Bypass -File tests/web_export_smoke.ps1 -RequireExport
 ```
+
+Local smoke runs stage the export in a fresh temporary directory so an ignored
+artifact held by an editor cannot make the check fail. The Pages workflow passes
+`-OutputDirectory dist` explicitly for the publishable artifact.

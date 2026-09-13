@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-	[switch]$RequireExport
+	[switch]$RequireExport,
+	[string]$OutputDirectory = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,7 +46,16 @@ if (-not $hasTemplate) {
 	exit 0
 }
 
-$outputDir = Join-Path $root "dist"
+if (-not [string]::IsNullOrWhiteSpace($OutputDirectory)) {
+	$outputDir = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $root $OutputDirectory }
+} elseif ($env:GITHUB_ACTIONS -eq "true") {
+	# The Pages workflow publishes the generated artifact from this directory.
+	$outputDir = Join-Path $root "dist"
+} else {
+	# Local verification should not fight a stale/locked ignored export left by
+	# the editor. A fresh temp directory still exercises the complete export.
+	$outputDir = Join-Path $headlessUserData "dist"
+}
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 $exportPath = Join-Path $outputDir "index.html"
 # Godot 4.7 does not accept --user-data-dir for export. Passing it here makes

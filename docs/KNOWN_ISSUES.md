@@ -155,6 +155,14 @@ or raced the cursor motion):
   69.5x12 logical pixels, a non-dialogue blank menu tap is inert, and dialogue
   retains the explicit tap-anywhere accept path. No new test file was added.
 
+### 2026-09-13 web export gate output fix
+
+`web_export_smoke.ps1 -RequireExport` now stages local verification in a fresh
+temporary directory, avoiding stale ignored `dist` artifacts held open by an
+editor. The GitHub Pages workflow passes `-OutputDirectory dist` explicitly, so
+the publishable artifact contract is unchanged. The local single-threaded Web
+export passes; browser/device and hosted Pages verification remain open.
+
 A supervised full-run attempt on 2026-09-13 reached ordinary assertion
 failures without a native headless renderer crash. It was stopped at the
 broader R6+ seed failure, which the focused elemental-binding and R6+ checks
