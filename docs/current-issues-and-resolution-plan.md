@@ -271,7 +271,12 @@ Status: **Warmup/cache implemented — cold-start timing pending**
   keeps a fallback load path for unavailable resources.
 - `GameplayBootstrap` performs the warmup after the loading screen has had a
   frame to draw. `tests/run_music_flame_gate_smoke.gd` checks both streams are
-  cached and that run music remains gated until starter flame attunement.
+  cached and that run music remains gated until starter flame attunement. The
+  focused gate accepts the preferred OGG or source WAV run stream; the audio
+  path is not a frame-time measurement.
+- `SoundMixProfile` exposes independent inspector sliders for the live
+  `sword_beam` launch cue and `sword_beam_charge` charging cue; their default
+  trims remain unchanged.
 - A cold versus warm flame-room playtest and frame profile are still required
   before claiming the hitch is gone. The warmup moves work into boot, so boot
   duration should be measured as part of that check.

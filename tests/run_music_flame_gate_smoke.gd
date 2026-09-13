@@ -27,7 +27,7 @@ func _initialize() -> void:
 	gameplay.call("_update_music_state")
 	var music_player := manager.get_node_or_null("Music_Theme") as AudioStreamPlayer
 	_expect(gameplay.music_track_wanted == &"run", "run music becomes wanted after starter flame pickup", failures)
-	_expect(music_player != null and music_player.stream != null and music_player.stream.resource_path.ends_with("Dungeon-Crawl.wav"), "Dungeon-Crawl starts after starter flame pickup", failures)
+	_expect(music_player != null and music_player.stream != null and (music_player.stream.resource_path.ends_with("Dungeon-Crawl.wav") or music_player.stream.resource_path.ends_with("Dungeon-Crawl.ogg")), "Dungeon-Crawl starts after starter flame pickup", failures)
 
 	gameplay.free()
 	manager.free()

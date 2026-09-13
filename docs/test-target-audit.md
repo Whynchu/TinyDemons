@@ -204,6 +204,13 @@ warnings. They appeared in direct runs and were not counted as test failures.
   the full-map texture.
 - `run1_minimap_smoke`: pass. Run 1 preserves the same landmark/discovery rule
   for Orb, boss, flame, and ordinary rooms.
+- `run_music_flame_gate_smoke`: pass. The gate remains closed before starter
+  flame attunement and accepts the preferred OGG or source WAV run stream after
+  pickup; cold/warm timing is a separate open measurement.
+- `sound_mix_profile_smoke`: pass. Every catalog cue, including the beam launch
+  and charge cues, resolves to an editor-adjustable profile entry.
+- `sound_balance_smoke`: pass. Canonical audio keys and source/compact clip
+  paths resolve for the balance owner.
 
 These are updates to the historical baseline above; no new test paths were added.
 

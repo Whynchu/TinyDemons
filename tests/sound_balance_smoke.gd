@@ -32,7 +32,7 @@ func _initialize() -> void:
 		"ui_confirm": "Confirm.wav",
 		"ui_decline": "BACK.wav",
 		"ui_no_input": "NOINPUT.wav",
-		"charge_attack": "ChargedAttackwav.wav",
+		"sword_beam_charge": "ChargedAttackwav.wav",
 		"use_flame": "UseFlame.wav",
 		"slime_spawn": "SlimeSpawn.wav",
 		"slime_move": "SlimeMove.wav",
@@ -40,6 +40,7 @@ func _initialize() -> void:
 	var expected_combat_clips := {
 		"crit": "Crit.wav",
 		"imbue_impact": "IMBUEimpact.wav",
+		"sword_beam": "swordbeam.wav",
 	}
 	for sound_name in expected_menu_clips:
 		var expected_filename: String = String(expected_menu_clips[sound_name])

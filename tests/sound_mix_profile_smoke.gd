@@ -17,7 +17,7 @@ func _initialize() -> void:
 			_expect(bool(profile.call("has_volume_entry", StringName(sound_name))), "profile contains %s" % sound_name, failures)
 		_expect(bool(profile.call("has_volume_entry", &"title_music")), "profile contains title music", failures)
 		_expect(bool(profile.call("has_volume_entry", &"run_music")), "profile contains run music", failures)
-		_expect(bool(profile.call("has_volume_entry", &"charge_attack")), "profile contains charge attack", failures)
+		_expect(bool(profile.call("has_volume_entry", &"sword_beam_charge")), "profile contains sword beam charge", failures)
 		_expect(bool(profile.call("has_volume_entry", &"use_flame")), "profile contains use flame", failures)
 		_expect(bool(profile.call("has_volume_entry", &"slime_spawn")), "profile contains slime spawn", failures)
 		_expect(bool(profile.call("has_volume_entry", &"slime_move")), "profile contains slime move", failures)
