@@ -421,8 +421,9 @@ register.
 
 The active R6+ risk/reward implementation now owns generated runs. Focused
 follow-up on 2026-09-13 passed active-run snapshot, generated R6+ risk/reward,
-expanded elemental-binding, generated-scene, doorway, typed room-transition,
-and minimap landmark/discovery checks in isolated Godot processes. The
+bound reachability, generated-layout, generated-scene, enemy spawn/walkability,
+expanded elemental-binding, doorway, typed room-transition, and minimap
+landmark/discovery checks in isolated Godot processes. The
 starter-flame music gate and sound profile/balance checks also pass. The R7
 playthrough confirmed basic flame travel; save/recovery, repeated travel, and
 travel presentation remain open. The headless runner now uses temporary user
@@ -430,8 +431,9 @@ data, Dummy audio, and explicit log paths; full-suite, cold/warm audio timing,
 and manual device verification remain separate supervised work.
 
 Focused follow-up on 2026-09-13 passed the active-run snapshot, generated R6+
-risk/reward, generated-scene, doorway, typed room-transition, and minimap
-landmark/discovery checks in isolated Godot processes. The starter-flame music
+risk/reward, bound reachability, generated-layout, generated-scene, enemy
+spawn/walkability, doorway, typed room-transition, and minimap landmark/
+discovery checks in isolated Godot processes. The starter-flame music
 gate and sound profile/balance checks also pass. The R7 playthrough confirmed
 basic flame travel; save/recovery, repeated travel, and travel presentation
 remain open. The headless runner now uses temporary user data, Dummy audio, and

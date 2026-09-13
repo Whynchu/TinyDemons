@@ -173,8 +173,10 @@ Dummy audio, and an explicit log path. The following focused contracts passed:
 | `r6_plus_risk_reward_generation_smoke` | pass across sampled runs, seeds, and starter flames |
 | `r7_native_generator_smoke` | pass; compatibility filename retained while the active R6+ route stays inside the compact 35x35 bounds |
 | `generated_layout_smoke` | pass; generated room coordinates and compact logical-edge projection remain valid |
+| `generated_bound_reachability_smoke` | pass; starter/bound reachability, late-run fixtures, recovery repair, and mid-run rebinding remain valid |
 | `elemental_binding_smoke` | pass; expanded R6+ seed/starter generation and binding contract |
 | `generated_run_scene_smoke` | pass |
+| `enemy_room_entrance_scene_smoke` | pass; authored enemy spawn positions stay walkable and entrance locking remains correct |
 | `run1_door_path_smoke` | pass |
 | `wall_socket_geometry_smoke` | pass against the portal-based walkability model |
 | `room_transition_result_smoke` | pass; typed room-transition planning/validation |

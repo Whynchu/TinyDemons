@@ -61,11 +61,12 @@ available with `-TestGroup all`. Focused checks pass for active-run snapshot rec
 R6+ risk/reward layouts, compact generated-layout bounds, the compatibility-named
 R7 route check, the expanded elemental-binding route set, generated scene
 construction, authored doorway behavior, and the typed room-transition
-boundary. Manual enemy-placement, reward, save/load, touch, repeated-travel,
-and full player-journey verification remain open; the 2026-09-13 R7 playthrough
-accepted the minimap landmark visibility and basic flame-travel behavior. The
-historical failures below are not silently reclassified by these focused
-results.
+boundary. Focused generated-layout/reachability and enemy spawn/walkability
+checks also pass. Manual late-generated-room placement, reward, save/load,
+touch, repeated-travel, and full player-journey verification remain open; the
+2026-09-13 R7 playthrough accepted the minimap landmark visibility and basic
+flame-travel behavior. The historical failures below are not silently
+reclassified by these focused results.
 
 ## Issue 1 — Demon Hub select/back presentation differs by menu
 
@@ -350,10 +351,10 @@ Status: **Active R6+ risk/reward route is implemented; focused route/recovery ch
   ambiguous R6 boundary is refused with an explicit discard path instead of
   silently regenerating under saved room IDs.
 - `tests/generated_layout_smoke.gd` covers the generated route contracts and
-  source diagnostics pass. The focused R6+ generation, generated-scene, and
-  active-run snapshot checks passed on 2026-09-13; a fresh-run gameplay,
-  enemy-placement, and manual save-recovery check remains before shipping this
-  route policy.
+  source diagnostics pass. The focused R6+ generation, bound reachability,
+  generated-scene, and enemy spawn/walkability checks passed on 2026-09-13; a
+  manual late-generated-room gameplay and save-recovery check remains before
+  shipping this route policy.
 
 ### Approved resolution — generated R6+ migration
 
