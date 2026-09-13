@@ -9,9 +9,10 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 
 Owner: verification infrastructure and repository maintainability
 
-Current code: the runner registers 114 Godot smoke paths and starts one
-standalone Godot process per path. The repository also contains test/report
-scripts outside that registry.
+Current code: the runner registers 116 Godot smoke paths. Its default release
+gate selects 43 paths; `owner`, `reference`, `diagnostic`, and `all` groups keep
+the remaining evidence available without making every check a default blocker.
+The repository also contains test/report scripts outside that registry.
 
 Verification: inventory mode, focused standalone Godot checks, and a supervised
 full run when the environment permits it
@@ -65,6 +66,23 @@ may also receive a short owner and evidence note.
 `state:pass` and `state:fail` are intentionally not labels. They describe one
 run, not the quality or authority of a test.
 
+## Runner groups
+
+`tests/run_all_smoke.ps1` now exposes the classification at execution time:
+
+| Command | Current scope | Use |
+|---|---:|---|
+| default / `-TestGroup gate` | 43 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
+| `-TestGroup owner` | 62 Godot paths | Focused feature-owner regressions |
+| `-TestGroup reference` | 10 Godot paths | Opt-in authored/visual/reference checks |
+| `-TestGroup diagnostic` | 1 Godot path | Opt-in performance/diagnostic evidence |
+| `-TestGroup all` | 116 Godot paths plus the post-run checks | Supervised complete inventory |
+
+The web export is intentionally part of the default gate because browser
+delivery is a supported target. A restricted local run may still label its
+result `state:environment`; that says the evidence is unavailable in that
+environment, not that web support is optional.
+
 ## Initial triage from the 2026-09-13 sweep
 
 This is a first classification of the current evidence, not a claim that the
@@ -74,7 +92,7 @@ full suite is clean.
 |---|---|---|---|
 | Doorway, typed room transition, generated route, boss geometry, slime roster, gear/fusion, cloud typing, and minimap fixes already checked in the focused pass | `role:owner` + `state:verified` | These are useful narrow contracts after the recent reconciliation | Keep the smallest owner-level checks and record named evidence |
 | `settings_service_smoke`, `settings_panel_scene_smoke` | `role:owner` + `state:environment` | The restricted run could not write `user://`; this is not product evidence | Re-run elevated, then decide whether the fixture needs an isolated settings path |
-| `web_export_smoke` | `role:gate` candidate + `state:environment` | Export output creation failed under the restricted filesystem | Verify from a supported standalone environment before changing export code |
+| `web_export_smoke` | `role:gate` + `state:environment` | Web is a supported target; the restricted run could not create export output | Verify from a supported standalone environment before changing export code |
 | `backtrack_popcorn_smoke` | `role:owner` candidate + `state:stale` candidate | Current source intentionally keeps respawn tied to original popcorn slots and does not inject a new revisit slot | Make the gameplay decision, then update or retire the old expectation |
 | `touch_controls_smoke` | `role:owner` + `state:harness`/`state:open` | It contains a signal-argument mismatch and several expectations that may describe different menu policies | Split the test by input boundary before changing gameplay code |
 | `puzzle_map_grid_smoke` and related reference checks | `role:reference` + `state:unverified`/`state:harness` | Reference fidelity and duplicate resource IDs are separate from runtime behavior | Resolve canonical assets/UIDs, then keep visual checks opt-in |
@@ -93,9 +111,9 @@ did not identify which kind it was.
 2. Inventory every registered and unregistered test/report script. Record its
    role, state, owner, target, evidence command, and whether it loads the main
    scene or a lightweight fixture.
-3. Establish a small `role:gate` set. It should cover headless boot, core room
+3. Maintain the curated `role:gate` set. It covers headless boot, core room
    transition/doorway behavior, representative combat, progression/profile
-   integrity, and the web export only if web remains a supported target.
+   integrity, and the web export because web is a supported target.
 4. Keep focused `role:owner` checks beside the feature they protect. Prefer
    table-driven tests for pure policies and one scene smoke per meaningful
    runtime boundary.

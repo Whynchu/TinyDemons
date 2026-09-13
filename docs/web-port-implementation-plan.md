@@ -161,10 +161,11 @@ These rules keep one codebase serving desktop and web without forking:
 4. **UI must remain operable without a pointer.** New menus/overlays use the
    existing focus-and-`pressed.emit()` pattern so keyboard, gamepad, and
    touch all reach them.
-5. **The smoke suite stays the gate.** New web-related tests are registered
-   in `tests/run_all_smoke.ps1` (hard-coded list — registration is a required
-   step, not optional). A headless web export check joins the verification
-   commands (§9).
+5. **The curated smoke gate stays the web gate.** New web-related tests are
+   registered in `tests/run_all_smoke.ps1` and assigned a role in
+   `verification-surface-audit.md`; registration is still required, but visual
+   and diagnostic checks do not automatically join the release gate. The
+   headless web export check remains part of the default gate (§9).
 6. **Performance budget awareness.** The occlusion rebuild
    (`occlusion_renderer.gd:386-415`) is the known hotspot; any new per-frame
    per-pixel work must be justified against weak mobile CPUs.
@@ -259,7 +260,8 @@ than reworking navigation. Expected small; flagged as an explicit task.
 
 One testable milestone per commit. Run
 `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1` before every
-commit; register every new test file in `tests/run_all_smoke.ps1:5`.
+commit; register every new test file in `tests/run_all_smoke.ps1` and classify
+its role/state in `docs/verification-surface-audit.md`.
 
 ### Phase 0 — Decisions (no code)
 

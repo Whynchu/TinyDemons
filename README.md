@@ -97,8 +97,10 @@ Open `project.godot` in Godot 4.7 and run the main scene. The project is configu
 When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
-one separate Godot process per registered test (currently 114); a single
-headless renderer failure can create repeated Windows memory-error dialogs.
+one separate Godot process per selected test. The default release gate is
+currently 43 paths; the explicit `-TestGroup all` inventory runs all 116
+registered paths. A single headless renderer failure can create repeated
+Windows memory-error dialogs.
 
 Run the headless smoke suite only as a supervised standalone check, with no MCP
 Godot runtime active. Start with one focused test before using the full runner:
@@ -107,8 +109,11 @@ Godot runtime active. Start with one focused test before using the full runner:
 # Focused check
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/run_headless.ps1 -Script res://tests/player_hud_scene_smoke.gd
 
-# Full suite — standalone/supervised only
+# Curated release gate — standalone/supervised only; includes web export
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
+
+# Complete registered inventory — standalone/supervised only
+pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all
 ```
 
 If Windows memory-error dialogs start repeating, stop the smoke runner and

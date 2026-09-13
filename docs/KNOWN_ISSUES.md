@@ -125,8 +125,9 @@ and touch playtesting remain outstanding.
 
 ## Verification surface audit — open
 
-The repository currently has a large mixed test/report inventory: 114 runner
-registered Godot paths plus additional standalone reports. The existing target
+The repository currently has a large mixed test/report inventory: 116 runner
+registered Godot paths plus additional standalone reports. The default runner
+now selects a 43-path release gate, while the existing target
 audit confirms whether a filename points at the right feature, but it does not
 yet classify release gates, owner regressions, diagnostics, stale contracts, or
 environment-only results. This creates false pressure to make every red result
@@ -142,7 +143,7 @@ quality score or release gate.
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
 | Duplicate Godot resource UIDs reported for R4/R5 puzzle scripts and tests | Import and future file moves may resolve the wrong resource | Inspect the `.uid`/import state, choose canonical resources, then rerun the editor scan |
-| Full smoke runner has 114 registered paths and launches one Godot process per test | Slow feedback and possible Windows renderer/memory failure avalanche | Runner now isolates each headless process with a temporary user-data directory and Dummy audio driver; continue using focused groups first |
+| Full smoke runner has 116 registered paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
 | Eight test/report scripts are outside the registered runner | Coverage claims can be incomplete or misleading | Classify each as registered, intentional standalone, obsolete, or missing from the registry |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
 | `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | Characterize shared menu conventions, then extract one presenter boundary |

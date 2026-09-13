@@ -1,5 +1,7 @@
 param(
 	[string]$TestFilter = "",
+	[ValidateSet("gate", "owner", "reference", "diagnostic", "all")]
+	[string]$TestGroup = "gate",
 	[int]$TestTimeoutSeconds = 90,
 	[string]$ResultsPath = "",
 	[int]$StopAfterEngineCrashes = 2,
@@ -61,9 +63,90 @@ $tests += "cloud_save_contract_smoke"
 $tests += "active_run_recovery_contract_smoke"
 $tests += "room_transition_result_smoke"
 
+$registeredTests = @($tests | Select-Object -Unique)
+
+# The default group is the small player-facing release gate. The complete
+# registered inventory remains available explicitly with -TestGroup all. This
+# keeps diagnostics and visual/reference reports useful without making every
+# exploratory check a release blocker or a one-process-per-test default cost.
+$gateTests = @(
+	"composition_root_baseline_smoke",
+	"title_boot_scene_smoke",
+	"settings_service_smoke",
+	"settings_panel_scene_smoke",
+	"run_grade_smoke",
+	"element_catalog_smoke",
+	"elemental_damage_smoke",
+	"progression_smoke",
+	"item_economy_smoke",
+	"chest_reward_smoke",
+	"slime_spawn_smoke",
+	"run1_room_prefab_smoke",
+	"run1_door_path_smoke",
+	"run2_authored_layout_smoke",
+	"enemy_room_engagement_smoke",
+	"generated_layout_smoke",
+	"r6_plus_risk_reward_generation_smoke",
+	"generated_run_scene_smoke",
+	"generated_bound_reachability_smoke",
+	"elemental_binding_smoke",
+	"active_run_recovery_contract_smoke",
+	"room_transition_result_smoke",
+	"wall_socket_geometry_smoke",
+	"boss_exit_path_scene_smoke",
+	"input_router_smoke",
+	"input_device_tracker_smoke",
+	"touch_controls_smoke",
+	"dialogue_choice_smoke",
+	"chroma_state_smoke",
+	"chroma_pickup_smoke",
+	"chroma_projectile_scene_smoke",
+	"imbue_spell_scene_smoke",
+	"run_music_flame_gate_smoke",
+	"sound_mix_profile_smoke",
+	"display_layout_smoke",
+	"display_responsive_scene_smoke",
+	"pause_menu_scene_smoke",
+	"menu_route_scene_smoke",
+	"demon_hub_menu_scene_smoke",
+	"equipment_menu_scene_smoke",
+	"gear_system_rework_smoke",
+	"cloud_save_contract_smoke",
+	"player_hud_scene_smoke"
+)
+
+$referenceTests = @(
+	"boss_visual_palette_smoke",
+	"palette_smoke",
+	"entry_orb_visual_smoke",
+	"attack_shadow_scene_smoke",
+	"puzzle_map_grid_smoke",
+	"puzzle_map_r4_new_grid_smoke",
+	"puzzle_map_r5_grid_smoke",
+	"run1_reference_map_smoke",
+	"run1_door_color_smoke",
+	"drop_art_smoke"
+)
+
+$diagnosticTests = @(
+	"frame_time_smoke"
+)
+
+$tests = switch ($TestGroup) {
+	"gate" { @($gateTests | Where-Object { $_ -in $registeredTests }) }
+	"owner" { @($registeredTests | Where-Object { $_ -notin $gateTests -and $_ -notin $referenceTests -and $_ -notin $diagnosticTests }) }
+	"reference" { @($referenceTests | Where-Object { $_ -in $registeredTests }) }
+	"diagnostic" { @($diagnosticTests | Where-Object { $_ -in $registeredTests }) }
+	"all" { $registeredTests }
+}
+
 if ($TestFilter) {
 	$tests = @($tests | Where-Object { $_ -like $TestFilter })
 }
+
+$inventoryTests = $tests
+
+Write-Host "Smoke group: $TestGroup ($($tests.Count) selected paths)"
 
 $resultsDirectory = Split-Path -Parent $resultsPath
 if ($resultsDirectory -and -not (Test-Path -LiteralPath $resultsDirectory)) {
@@ -72,7 +155,7 @@ if ($resultsDirectory -and -not (Test-Path -LiteralPath $resultsDirectory)) {
 @("test,result,exit_code,elapsed_seconds,detail") | Set-Content -LiteralPath $resultsPath
 @("test,script_path,exists") | Set-Content -LiteralPath $inventoryPath
 $missingTests = @()
-foreach ($test in $tests) {
+foreach ($test in $inventoryTests) {
 	$scriptPath = Join-Path $root ("tests/{0}.gd" -f $test)
 	$exists = Test-Path -LiteralPath $scriptPath
 	Add-Content -LiteralPath $inventoryPath -Value ('"{0}","{1}",{2}' -f $test, $scriptPath, $exists.ToString().ToLowerInvariant())
@@ -146,7 +229,7 @@ foreach ($test in $tests) {
 	}
 	Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
 }
-if (-not $TestFilter) {
+if (-not $TestFilter -and $TestGroup -in @("gate", "all")) {
 	Write-Host "=== sfx lab pytest ==="
 	$sfxLabPy = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_reconstruction\.venv311\Scripts\python.exe"
 	$sfxLabTests = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_lab\tests"
