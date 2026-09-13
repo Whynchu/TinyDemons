@@ -309,7 +309,7 @@ row remains reachable, the first row can return fully into view, and desktop
 controller/keyboard navigation is unchanged. Verify both pause and hub
 instances at the supported aspect presets.
 
-Status: **Source path exists — focused equipment contract currently failing; runtime touch verification pending**
+Status: **Focused Equipment/Pause scene contracts verified; runtime touch verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -320,6 +320,8 @@ Status: **Source path exists — focused equipment contract currently failing; r
   the scroll after responsive layout changes, and includes the parent offset in
   cursor placement. Existing equipment smoke coverage now checks the clip and
   reparenting.
+- `equipment_menu_scene_smoke` and `pause_menu_scene_smoke` pass their authored
+  scene, route, and responsive contracts with profile-safe live fixtures.
 - Runtime touch verification is still needed for fast swipes and both Hub and
   Pause instances at the supported aspect presets.
 

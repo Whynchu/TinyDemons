@@ -147,8 +147,8 @@ or raced the cursor motion):
   slot-description check expected a bonus strip for zero-power plain gear, and
   the Shop check expected the legacy list cursor instead of the modern
   `ShopMenuLayout` cursor layer. All corrected; the test passes.
-- `pause_menu_scene_smoke` was verified pre-existing on the baseline and remains
-  open; the focused Demon Hub/Shop contract is reconciled below.
+- `pause_menu_scene_smoke` now passes its authored frame, rail, responsive, and
+  route contract; manual Pause Equipment swipe/clipping evidence remains open.
 
 ### 2026-09-13 touch/cloud contract reconciliation
 
@@ -203,6 +203,8 @@ The Shop amount route now hides the inactive `ShopBackButton` while the explicit
 SELL cancel control owns that state. The existing `equipment_menu_scene_smoke`
 was also rerun with a deterministic plain-starter fixture and save restoration;
 it passes without relying on whatever gear a previous local run left equipped.
+`pause_menu_scene_smoke` also passes after restoring the live profile it uses for
+its Pause Equipment touch route.
 No new test file was added, and the web export path was not reopened because
 the existing local gate is already accepted for this pass.
 

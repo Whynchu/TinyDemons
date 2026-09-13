@@ -220,6 +220,9 @@ warnings. They appeared in direct runs and were not counted as test failures.
 - `equipment_menu_scene_smoke`: pass. The existing scene contract now supplies
   a deterministic plain-starter loadout and restores the saved profile after
   its live equipment transactions.
+- `pause_menu_scene_smoke`: pass. The authored Pause frame/rail, responsive
+  layout, read-only Status route, and shared Equipment route pass; the test
+  restores the saved profile after its live Equipment interaction.
 
 These are updates to the historical baseline above; no new test paths were added.
 
