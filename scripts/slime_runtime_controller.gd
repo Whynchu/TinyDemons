@@ -165,8 +165,12 @@ func is_target_actor_dead(root: Object, target: Sprite2D) -> bool:
 
 func move_slimes(root: Object, delta: float) -> void:
 	tick_slime_spawns(root, delta)
-	prepare_slime_frame_cache(root)
 	var slimes := root.get("slimes") as Array[Sprite2D]
+	# A stale/generated room snapshot can contain an enemy outside the current
+	# walkable geometry. Recover it before building combat state; otherwise it can
+	# attack from outside the visible room and keep the encounter uncleared.
+	_sanitize_active_slime_positions(root, slimes)
+	prepare_slime_frame_cache(root)
 	(root.get("combat_runtime_controller") as CombatRuntimeController).clear_enemy_max_health_frame_cache()
 	# Spatial broad-phase for the crowd: built once per frame so slime-slime
 	# contact and AI steering only examine spatially local slimes.
@@ -203,6 +207,16 @@ func move_slimes(root: Object, delta: float) -> void:
 		for slime in slimes:
 			if is_instance_valid(slime) and slime.visible and not bool(slime.get_meta("boss_airborne", false)) and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)):
 				(root.get("actor_collision_system") as ActorCollisionSystem).resolve_contact_pair(slime, player, Vector2.ZERO, root)
+
+
+func _sanitize_active_slime_positions(root: Object, slimes: Array[Sprite2D]) -> void:
+	for slime in slimes:
+		if slime == null or not is_instance_valid(slime) or not slime.visible:
+			continue
+		if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
+			continue
+		if not slime_position_is_valid(root, slime):
+			recover_slime_position(root, slime)
 
 
 func prepare_slime_frame_cache(root: Object) -> void:

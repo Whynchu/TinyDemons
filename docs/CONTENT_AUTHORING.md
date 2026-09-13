@@ -64,7 +64,8 @@ milestone and persistence semantics before implementation.
 
 Current owners:
 
-- `scripts/puzzle_route_generator.gd` for the native compact generated route;
+- `scripts/puzzle_route_generator.gd` for the active R6+ risk/reward route
+  boundary and its compact presentation plan;
 - `scripts/puzzle_route_plan.gd` for route roles and planning data;
 - `scripts/puzzle_route_solver.gd` and
   `scripts/puzzle_progression_planner.gd` for validation/support; and
@@ -77,8 +78,8 @@ Workflow:
 2. Generate topology and explicit edge metadata.
 3. Assign room roles, milestones, gates, flames, Orbs, and optional branches.
 4. Validate bounds, duplicate coordinates, socket uniqueness, connectedness,
-   gate reachability, no-gate-bypass, no-stranding, fusion/order constraints,
-   and room-size/encounter placement requirements.
+   ungated critical reachability, safe/risk route lengths, optional vault
+   requirements, no-stranding, and room-size/encounter placement requirements.
 5. Confirm the same seed and run context produce the same layout.
 6. Check representative starter-flame and bound-flame combinations.
 7. Add a deterministic generator test and a runtime route test before changing

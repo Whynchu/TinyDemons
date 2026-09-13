@@ -37,6 +37,26 @@ const GATE_ELEMENT: StringName = &"element"
 const GATE_ENTRANCE_ORB: StringName = &"entrance_orb"
 const VALID_GATE_TYPES: Array[StringName] = [GATE_NONE, GATE_PUZZLE_COLOR, GATE_ELEMENT, GATE_ENTRANCE_ORB]
 
+## Semantic route and policy values shared by generated layouts and runtime
+## consumers. Authored layouts continue to use their existing route roles and
+## receive the normal/standard defaults at the layout boundary.
+const ROUTE_MAIN: StringName = &"main"
+const ROUTE_SAFE: StringName = &"safe"
+const ROUTE_RISK_SHORTCUT: StringName = &"risk_shortcut"
+const ROUTE_ELITE_REWARD: StringName = &"elite_reward"
+const ROUTE_PRIMARY_FLAME: StringName = &"primary_flame"
+const ROUTE_ORB_UTILITY: StringName = &"orb_utility"
+const ROUTE_ELEMENTAL_VAULT: StringName = &"elemental_vault"
+const ROUTE_REJOIN: StringName = &"rejoin"
+
+const ENCOUNTER_NORMAL: StringName = &"normal"
+const ENCOUNTER_DANGEROUS: StringName = &"dangerous"
+const ENCOUNTER_ELITE: StringName = &"elite"
+
+const REWARD_STANDARD: StringName = &"standard"
+const REWARD_RISK: StringName = &"risk"
+const REWARD_VAULT: StringName = &"vault"
+
 const START_ROOM_ID: StringName = &"room_0_0"
 const DUNGEON_NAME := "SLIMEY DEPTHS"
 
@@ -120,6 +140,10 @@ class RoomRecord extends RefCounted:
 	var chest_position := Vector2.ZERO
 	var special_respawn_required_color: StringName = &""
 	var fire_flame: StringName = &""
+	var route_role: StringName = ROUTE_MAIN
+	var encounter_tier: StringName = ENCOUNTER_NORMAL
+	var reward_tier: StringName = REWARD_STANDARD
+	var vault_id: StringName = &""
 	var authored := false
 
 
@@ -167,6 +191,10 @@ class RoomRecord extends RefCounted:
 			"chest_position": chest_position,
 			"special_respawn_required_color": special_respawn_required_color,
 			"fire_flame": fire_flame,
+			"route_role": route_role,
+			"encounter_tier": encounter_tier,
+			"reward_tier": reward_tier,
+			"vault_id": vault_id,
 			"authored": authored,
 		}
 
@@ -174,6 +202,11 @@ class RoomRecord extends RefCounted:
 var dungeon_seed: int = 0
 var start_room_id: StringName = START_ROOM_ID
 var layout_id: StringName = &""
+var generation_mode: StringName = &""
+var route_choice_source_room_id: StringName = &""
+var route_choice_rejoin_room_id: StringName = &""
+var safe_route_length := 0
+var risk_route_length := 0
 var completed_run_count := 0
 var target_boss_depth := 12
 var tutorial_starter_puzzle_depth := -1
@@ -191,6 +224,11 @@ func initialize(new_seed: int) -> RoomRecord:
 	dungeon_seed = new_seed
 	authored_run1 = false
 	layout_id = &""
+	generation_mode = &""
+	route_choice_source_room_id = &""
+	route_choice_rejoin_room_id = &""
+	safe_route_length = 0
+	risk_route_length = 0
 	_configure_tutorial_puzzle_depths()
 	start_room_id = START_ROOM_ID
 	_rooms.clear()
@@ -205,6 +243,11 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		return initialize(new_seed)
 	dungeon_seed = new_seed
 	layout_id = layout.layout_id
+	generation_mode = layout.generation_mode
+	route_choice_source_room_id = layout.route_choice_source_room_id
+	route_choice_rejoin_room_id = layout.route_choice_rejoin_room_id
+	safe_route_length = layout.safe_route_length
+	risk_route_length = layout.risk_route_length
 	authored_run1 = layout.layout_id == &"RUN1"
 	tutorial_starter_puzzle_depth = -1
 	tutorial_gray_puzzle_depth = -1
@@ -221,6 +264,10 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		room.chest_position = spec.chest_position
 		room.special_respawn_required_color = spec.special_respawn_required_color
 		room.fire_flame = spec.fire_flame
+		room.route_role = spec.route_role
+		room.encounter_tier = spec.encounter_tier
+		room.reward_tier = spec.reward_tier
+		room.vault_id = spec.vault_id
 		room.authored = true
 		_rooms[room.id] = room
 		_rooms_by_coordinate[room.coordinate] = room.id
@@ -377,6 +424,11 @@ func to_dictionary() -> Dictionary:
 	return {
 		"dungeon_seed": dungeon_seed,
 		"layout_id": layout_id,
+		"generation_mode": generation_mode,
+		"route_choice_source_room_id": route_choice_source_room_id,
+		"route_choice_rejoin_room_id": route_choice_rejoin_room_id,
+		"safe_route_length": safe_route_length,
+		"risk_route_length": risk_route_length,
 		"start_room_id": start_room_id,
 		"completed_run_count": completed_run_count,
 		"target_boss_depth": target_boss_depth,

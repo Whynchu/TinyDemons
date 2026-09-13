@@ -99,8 +99,12 @@ plus the run/generated layout builders own the authored and procedural room
 sets; `dungeon_map_controller` owns gates, engagement, and shared orb/fire
 state and visited flame landmarks; `room_controller` owns per-room content and
 enemy encounter generation. The active route keeps authored R1–R5 and selects
-the deterministic generated layout path from R6 onward. Generated difficulty
-is flat per run and keyed off `difficulty_rank`, not room depth.
+the deterministic generated layout path from R6 onward. Generated R6+ layouts
+carry typed route role, encounter tier, reward tier, vault identity, and
+safe/risk choice metadata from layout definition through graph, room state, and
+minimap projection. Generated difficulty is flat per run and keyed off
+`difficulty_rank`, not room depth; local encounter tiers are the explicit
+exception for dangerous shortcuts and elemental vaults.
 
 ## Tuning classes (exported fields; resource migration planned)
 

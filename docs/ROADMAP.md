@@ -6,7 +6,7 @@ Updated: 2026-09-12
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.02`
+Current release: version `0.2.03`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -45,17 +45,18 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.02
+## Next checkpoint after 0.2.03
 
-Version `0.2.02` records the touch-scroll repair, UID validator, focused
-verification results, and the remaining contract failures. The next
-implementation checkpoint is a
-stabilization pass in this order:
+Version `0.2.03` records the touch-scroll repair, UID validator, focused
+verification results, and the remaining contract failures. The R6+ risk/reward
+generation slice is now implemented behind the generated-route boundary. The
+next implementation checkpoint is a stabilization pass in this order:
 
 1. Repair closed doorway geometry and trigger fences, then verify that every
    active room has reachable enemy and player space.
-2. Fix generated R6+ bounds and fusion-gate validation, then repair active-run
-   snapshot validation before adding more generated content.
+2. Run the focused R6+ generation, compact-bounds, active-run snapshot, and
+   enemy-placement checks, then repair any runtime failures before expanding
+   generated content.
 3. Repair minimap draw order/discovery visibility and the starter-flame music
    gate; add a cold/warm timing measurement.
 4. Reconcile Demon Hub, equipment, and touch contracts against the authored
@@ -70,6 +71,16 @@ Do not begin the first broad ownership extraction until the generated-route,
 recovery, doorway, and menu contracts are either passing or explicitly
 classified as approved design changes. After that gate, take one typed boundary
 at a time, with the room transition or checkpoint result as the first candidates.
+
+The approved product direction for generated R6+ maps is documented in
+[`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md).
+It replaces mandatory elemental-door chains with an ungated Boss path, three
+guaranteed primary flames, safe/risk route choices, and optional elemental Orb
+vaults containing harder encounters and enhanced gear rewards. Implement it in
+bounded phases; the current code slice covers the generator contract, runtime
+metadata, encounter/reward policy, minimap semantics, and focused smoke
+coverage. Godot execution and manual playtesting are still required before
+calling the slice verified.
 
 ## Phase 0.00 — Preserve the baseline
 

@@ -1,7 +1,13 @@
 # R7 Compact Roguelike Puzzle Generator Plan
 
-Status: implemented; native compact R7 topology, typed edge metadata, ordered
-progression validation, and runtime cutover are active for generated R6+ runs
+Status: historical compatibility reference; compact topology, typed edge
+metadata, and ordered-progression foundations remain in use by the active R6+
+generator
+
+Current direction: [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md)
+supersedes this document's mandatory flame/fusion progression policy. Retain
+this plan as implementation history for the compact topology, typed gates, and
+solver foundations.
 
 Reference: `Artwork/Rxpuzzle_map_ex.png`
 

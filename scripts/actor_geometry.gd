@@ -9,6 +9,7 @@ class_name ActorGeometry
 const REGULAR_SLIME_FLOOR_POINT := Vector2(8.0, 13.0)
 const BOSS_SLIME_FLOOR_POINT := Vector2(16.0, 22.0)
 const BOSS_SLIME_OVERHEAD_HEIGHT := 22.0
+const ELITE_OVERHEAD_SYMBOL_GAP := 1.0
 
 static func foot(actor: Sprite2D, actor_foot_offset: Vector2) -> Vector2:
 	# Runtime puzzle targets are centered on their walkable point, unlike the
@@ -46,6 +47,17 @@ static func boss_slime_overhead_origin(slime: Sprite2D, bar_size: Vector2) -> Ve
 	# Health bars are top-left anchored. Center the actual bar width over the
 	# same authored floor point used by the boss shadow.
 	return slime_shadow_anchor(slime) - Vector2(bar_size.x * 0.5, BOSS_SLIME_OVERHEAD_HEIGHT)
+
+
+static func slime_head_overhead_origin(slime: Sprite2D, symbol_size: Vector2) -> Vector2:
+	# Elite symbols are top-left anchored. Use the shared floor point so the
+	# symbol stays above both regular and enlarged slime artwork without
+	# inheriting the actor's squash or encounter scale.
+	if slime == null:
+		return Vector2.ZERO
+	var floor_anchor := slime_shadow_anchor(slime)
+	var body_height := slime_floor_canvas_point(slime).y
+	return floor_anchor - Vector2(symbol_size.x * 0.5, body_height + symbol_size.y + ELITE_OVERHEAD_SYMBOL_GAP)
 
 
 static func encounter_visual_offset(encounter_scale: float, actor_foot_offset: Vector2) -> Vector2:

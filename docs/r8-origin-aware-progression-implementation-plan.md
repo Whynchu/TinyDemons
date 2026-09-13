@@ -1,12 +1,20 @@
 # R8+ Origin-Aware Progression Implementation Plan
 
-Status: implementation complete; focused verification passed
+Status: historical compatibility reference; mandatory generated fusion tiers
+are superseded by the active R6+ risk/reward generation plan
 
 Plan date: 2026-09-06
 
 Companion: [`generated-fusion-gate-inspection.md`](generated-fusion-gate-inspection.md)
 records the original topology audit. This plan replaces the incomplete R8+
 implementation pass with one explicit traversal contract.
+
+Current direction: [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md)
+owns generated Run 6+ topology and intentionally removes mandatory fusion-door
+progression. The runtime Orb state, fusion recipes, binding behavior, and save
+compatibility described here remain useful supporting context; the mandatory
+two-tier route contract below applies only to historical compatibility code and
+fixtures.
 
 ## Outcome
 

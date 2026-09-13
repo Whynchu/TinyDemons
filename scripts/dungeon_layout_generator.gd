@@ -1,13 +1,14 @@
 extends RefCounted
 class_name DungeonLayoutGenerator
 
-## Deterministic Run 3+ topology generator.
+## Deterministic topology generation for authored and generated runs.
 ##
 ## Run 1 is the hand-authored teaching map and Run 2 is its authored expansion.
-## Run 3+ uses the same
+## Legacy Run 3+ uses the same
 ## vocabulary (forks, combat gates, shared Orb Rooms, Special Room key routes,
 ## optional Treasure branches, utility rooms, and a boss approach), but emit a
-## complete layout before the player enters the dungeon.
+## complete layout before the player enters the dungeon. Active R6+ generation is
+## applied by build_risk_reward() after the compatibility scaffold is assembled.
 
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
@@ -15,16 +16,16 @@ const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
 
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
 ## Keep candidate selection lightweight enough for a live run transition. The
-## preview can still vary its outer seeds for more visual samples.
-## Runtime R7 generation validates one deterministic compact route. Preview
-## diversity comes from its outer seed iterations, so gameplay no longer pays
-## for four full candidate assemblies during a run transition.
+## preview can still vary its outer seeds for more visual samples. Legacy
+## generation uses one scaffold candidate; active R6+ uses a small bounded pool
+## so crowded seeds can recover a valid route choice without an unbounded search.
 const GENERATED_CANDIDATE_COUNT := 1
 const COMPACT_MAP_SIZE := Vector2i(35, 35)
 const COMPACT_MAP_ORIGIN := Vector2i(17, 32)
 static var last_progression_repairs: Array[String] = []
 const FIRST_ORB_DEPTH := 3
 const FIRST_SPECIAL_DEPTH := 4
+const RISK_REWARD_CANDIDATE_COUNT := 3
 
 const ROUTE_MAIN: StringName = &"main"
 const ROUTE_FORK: StringName = &"fork"
@@ -35,6 +36,14 @@ const ROUTE_DETOUR_FIRE: StringName = &"detour_fire"
 const ROUTE_FUSION_PREREQUISITE_ORB: StringName = &"fusion_prerequisite_orb"
 const ROUTE_DIG: StringName = &"dig"
 const ROUTE_REJOIN: StringName = &"rejoin"
+const ROUTE_SAFE: StringName = DungeonGraph.ROUTE_SAFE
+const ROUTE_RISK_SHORTCUT: StringName = DungeonGraph.ROUTE_RISK_SHORTCUT
+const ROUTE_ELITE_REWARD: StringName = DungeonGraph.ROUTE_ELITE_REWARD
+const ROUTE_PRIMARY_FLAME: StringName = DungeonGraph.ROUTE_PRIMARY_FLAME
+const ROUTE_ORB_UTILITY: StringName = DungeonGraph.ROUTE_ORB_UTILITY
+const ROUTE_ELEMENTAL_VAULT: StringName = DungeonGraph.ROUTE_ELEMENTAL_VAULT
+const RISK_REWARD_GENERATION_MODE: StringName = &"risk_reward_r6_plus"
+const PRIMARY_FLAMES: Array[StringName] = [&"fire", &"water", &"electric"]
 
 
 class LayoutBuilder extends RefCounted:
@@ -55,7 +64,11 @@ class LayoutBuilder extends RefCounted:
 		room_type: StringName,
 		chest_count: int = 0,
 		special_respawn_color: StringName = &"",
-		fire_flame: StringName = &""
+		fire_flame: StringName = &"",
+		route_role: StringName = DungeonGraph.ROUTE_MAIN,
+		encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL,
+		reward_tier: StringName = DungeonGraph.REWARD_STANDARD,
+		vault_id: StringName = &""
 	) -> StringName:
 		if room_ids_by_coordinate.has(coordinate):
 			return room_ids_by_coordinate[coordinate] as StringName
@@ -67,14 +80,45 @@ class LayoutBuilder extends RefCounted:
 		# presentation coordinate.
 		var minimap_coordinate := COMPACT_MAP_ORIGIN + Vector2i(coordinate.x * 2, -coordinate.y * 2)
 		var spec = layout.make_room_spec(room_id, coordinate, minimap_coordinate, room_type, chest_count, special_respawn_color, seed_salt, fire_flame)
+		spec.route_role = route_role
+		spec.encounter_tier = encounter_tier
+		spec.reward_tier = reward_tier
+		spec.vault_id = vault_id
 		layout.add_room(spec)
 		room_ids_by_coordinate[coordinate] = room_id
 		room_specs_by_id[room_id] = spec
 		return room_id
 
 
+	static func from_layout(existing_layout, new_dungeon_seed: int):
+		var builder := LayoutBuilder.new(existing_layout, new_dungeon_seed)
+		if existing_layout == null:
+			return builder
+		for room in existing_layout.rooms:
+			builder.room_ids_by_coordinate[room.coordinate] = room.id
+			builder.room_specs_by_id[room.id] = room
+		for connection in existing_layout.connections:
+			builder.connection_keys["%s:%s" % [connection.source_room_id, connection.exit_socket]] = true
+		return builder
+
+
 	func room_spec(room_id: StringName):
 		return room_specs_by_id.get(room_id)
+
+
+	func remove_connection(connection) -> bool:
+		if connection == null:
+			return false
+		var connection_index := -1
+		for index in layout.connections.size():
+			if layout.connections[index] == connection:
+				connection_index = index
+				break
+		if connection_index < 0:
+			return false
+		layout.connections.remove_at(connection_index)
+		connection_keys.erase("%s:%s" % [connection.source_room_id, connection.exit_socket])
+		return true
 
 
 	func link(
@@ -82,7 +126,7 @@ class LayoutBuilder extends RefCounted:
 		exit_socket: StringName,
 		destination_room_id: StringName,
 		color_requirement: StringName = &"",
-		route_role: StringName = ROUTE_MAIN,
+		route_role: StringName = DungeonGraph.ROUTE_MAIN,
 		requires_source_room_clear: bool = true,
 		locks_entry_on_destination_engagement: bool = true,
 		element_requirement: StringName = &"",
@@ -145,7 +189,594 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	return best_layout
 
 
-static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName, selected_bound_flame: StringName):
+## Active generated-run program for Run 6 and later. The compatibility builder
+## still supplies the compact lattice and room vocabulary; this pass removes its
+## mandatory color/fusion loop, then adds typed route choices, primary flames,
+## and optional elemental vaults.
+static func build_risk_reward(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName = &"fire", selected_bound_flame: StringName = &""):
+	var best_layout = null
+	var best_score := -INF
+	# A small candidate pool lets route-choice placement recover from a crowded
+	# seed without turning generation into an unbounded search.
+	for candidate_index in range(RISK_REWARD_CANDIDATE_COUNT):
+		var candidate_seed := int(dungeon_seed) ^ (candidate_index * 104729) ^ 0x52524B52
+		var candidate = _build_risk_reward_candidate(candidate_seed, completed_runs, selected_starter_flame, selected_bound_flame)
+		var candidate_errors: Array[String] = validate_risk_reward(candidate, completed_runs, selected_starter_flame, selected_bound_flame)
+		var candidate_score := _risk_reward_candidate_score(candidate, candidate_errors)
+		if best_layout == null or candidate_score > best_score:
+			best_layout = candidate
+			best_score = candidate_score
+	last_progression_repairs.clear()
+	return best_layout
+
+
+static func _build_risk_reward_candidate(dungeon_seed: int, completed_runs: int, selected_starter_flame: StringName, selected_bound_flame: StringName):
+	# The active presentation is a fixed 35x35 lattice. Once the late-run curve
+	# reaches the top row, keep the generated topology within that vertical budget
+	# instead of letting room depth turn into negative minimap coordinates. Runtime
+	# rank still controls combat/reward scaling; only the compact layout scaffold is
+	# capped here.
+	var topology_completed_runs := mini(maxi(completed_runs, 5), 9)
+	var layout = _build_candidate(dungeon_seed, topology_completed_runs, selected_starter_flame, selected_bound_flame, false, true)
+	if layout == null:
+		return null
+	layout.generation_mode = RISK_REWARD_GENERATION_MODE
+	_clear_legacy_progression_requirements(layout)
+	var builder := LayoutBuilder.from_layout(layout, dungeon_seed)
+	var route_choice := _add_risk_shortcut(builder, dungeon_seed)
+	if not route_choice.is_empty():
+		layout.route_choice_source_room_id = route_choice["source"] as StringName
+		layout.route_choice_rejoin_room_id = route_choice["rejoin"] as StringName
+		layout.safe_route_length = int(route_choice.get("safe_length", 0))
+		layout.risk_route_length = int(route_choice.get("risk_length", 0))
+	_assign_primary_flame_rooms(builder)
+	_mark_orb_utility_rooms(builder)
+	_attach_elemental_vaults(builder, dungeon_seed)
+	LAYOUT_DEFINITION_SCRIPT.apply_rare_enemy_branch_entry_exceptions(layout)
+	return layout
+
+
+static func _risk_reward_candidate_score(layout, errors: Array[String]) -> float:
+	if layout == null:
+		return -INF
+	var score := -float(errors.size()) * 100000.0
+	if errors.is_empty():
+		score += 10000.0
+	if layout.safe_route_length > layout.risk_route_length:
+		score += 150.0
+	score += minf(float(_primary_flame_room_count(layout)), 3.0) * 40.0
+	score += minf(float(_elemental_vault_count(layout)), 2.0) * 25.0
+	return score
+
+
+static func _clear_legacy_progression_requirements(layout) -> void:
+	if layout == null:
+		return
+	for connection in layout.connections:
+		# Generated R6+ doors are opportunities, not mandatory state-change
+		# checkpoints. The only gate reintroduced later is an optional vault Orb
+		# door, after the critical topology is complete.
+		connection.color_requirement = &""
+		connection.element_requirement = &""
+		connection.orb_element_requirement = &""
+		connection.gate_type = DungeonGraph.GATE_NONE
+		connection.door_display_requirement = &""
+		# Generated R6+ has no event-driven progression layer yet. Preserve normal
+		# enemy-clear commitment on optional branches, but never leave an old
+		# curriculum event as an invisible prerequisite in the new program.
+		connection.hidden_until_event = &""
+		if connection.route_role == ROUTE_MAIN or connection.route_role == ROUTE_KEY_PROGRESSION:
+			connection.hidden_until_clear = false
+
+
+static func _assign_primary_flame_rooms(builder: LayoutBuilder) -> void:
+	var candidates: Array = []
+	for room in builder.layout.rooms:
+		if room.room_type == DungeonGraph.ROOM_FIRE and not room.fire_flame.is_empty():
+			candidates.append(room)
+	_sort_room_specs_by_depth(candidates)
+	var used_ids: Dictionary = {}
+	for flame_index in PRIMARY_FLAMES.size():
+		var flame: StringName = PRIMARY_FLAMES[flame_index]
+		var chosen = null
+		if not candidates.is_empty():
+			var candidate_index := 0
+			if flame_index == 1:
+				candidate_index = floori(float(candidates.size()) / 2.0)
+			elif flame_index == 2:
+				candidate_index = candidates.size() - 1
+			for offset in candidates.size():
+				var index := posmod(candidate_index + offset, candidates.size())
+				var candidate = candidates[index]
+				if not used_ids.has(candidate.id):
+					chosen = candidate
+					break
+		if chosen == null:
+			chosen = _add_primary_flame_room(builder, flame_index)
+		if chosen == null:
+			continue
+		chosen.room_type = DungeonGraph.ROOM_FIRE
+		chosen.fire_flame = flame
+		chosen.route_role = ROUTE_PRIMARY_FLAME
+		chosen.encounter_tier = DungeonGraph.ENCOUNTER_NORMAL
+		chosen.reward_tier = DungeonGraph.REWARD_STANDARD
+		chosen.vault_id = &""
+		used_ids[chosen.id] = true
+	# The compatibility scaffold can carry extra flame landmarks for its former
+	# fusion curriculum. Active R6+ has a simpler promise: one clearly identifiable
+	# map-owned source for each primary flame. Convert any unselected scaffold Fire
+	# Room into an ordinary combat room instead of exposing accidental duplicates.
+	for candidate in candidates:
+		if used_ids.has(candidate.id):
+			continue
+		candidate.room_type = DungeonGraph.ROOM_COMBAT
+		candidate.fire_flame = &""
+		candidate.route_role = ROUTE_MAIN
+		candidate.encounter_tier = DungeonGraph.ENCOUNTER_NORMAL
+		candidate.reward_tier = DungeonGraph.REWARD_STANDARD
+		candidate.vault_id = &""
+
+
+static func _sort_room_specs_by_depth(room_specs: Array) -> void:
+	for index in range(room_specs.size()):
+		var lowest := index
+		for candidate_index in range(index + 1, room_specs.size()):
+			if room_specs[candidate_index].coordinate.y < room_specs[lowest].coordinate.y:
+				lowest = candidate_index
+		if lowest != index:
+			var temporary = room_specs[index]
+			room_specs[index] = room_specs[lowest]
+			room_specs[lowest] = temporary
+
+
+static func _add_primary_flame_room(builder: LayoutBuilder, flame_index: int):
+	var target_depth := 5 if flame_index == 0 else 9 if flame_index == 1 else 13
+	var best: Dictionary = {}
+	for source in builder.layout.rooms:
+		if source.room_type == DungeonGraph.ROOM_START or source.room_type == DungeonGraph.ROOM_BOSS:
+			continue
+		if source.route_role in [ROUTE_ELITE_REWARD, ROUTE_RISK_SHORTCUT]:
+			continue
+		for socket_id in [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
+			var connection_key := "%s:%s" % [source.id, socket_id]
+			if builder.connection_keys.has(connection_key):
+				continue
+			var destination_coordinate: Vector2i = source.coordinate + _exit_offset(socket_id)
+			if builder.room_ids_by_coordinate.has(destination_coordinate) or not _risk_coordinate_in_bounds(destination_coordinate):
+				continue
+			var score := absf(float(destination_coordinate.y - target_depth)) * 100.0 + absf(float(destination_coordinate.x))
+			if best.is_empty() or score < float(best["score"]):
+				best = {"source": source.id, "socket": socket_id, "coordinate": destination_coordinate, "score": score}
+	if not best.is_empty():
+		var room_id := builder.add_room(best["coordinate"] as Vector2i, DungeonGraph.ROOM_FIRE, 0, &"", &"", ROUTE_PRIMARY_FLAME, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		builder.link(best["source"] as StringName, best["socket"] as StringName, room_id, &"", ROUTE_PRIMARY_FLAME)
+		return builder.room_spec(room_id)
+	# Last-resort fallback keeps the contract explicit even if a future topology
+	# consumes every adjacent socket. Converting one ordinary non-boss combat node
+	# is safer than accepting a map with a missing guaranteed flame.
+	for room in builder.layout.rooms:
+		if room.room_type == DungeonGraph.ROOM_COMBAT and room.route_role not in [ROUTE_ELITE_REWARD, ROUTE_RISK_SHORTCUT]:
+			return room
+	return null
+
+
+static func _add_risk_shortcut(builder: LayoutBuilder, _dungeon_seed: int) -> Dictionary:
+	var boss_depth := 999
+	for room in builder.layout.rooms:
+		if room.room_type == DungeonGraph.ROOM_BOSS:
+			boss_depth = mini(boss_depth, room.coordinate.y)
+	for source in builder.layout.rooms:
+		# Fire, Orb, and Cloaked rooms are open utility landmarks and can host the
+		# fork just as safely as a normal combat room. Special/Treasure rooms keep
+		# their authored interaction semantics, while the shortcut destination is
+		# still required to be an actual dangerous combat encounter.
+		if source.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_SPECIAL_ENEMY, DungeonGraph.ROOM_TREASURE] or source.coordinate.y < 4:
+			continue
+		if source.coordinate.y >= boss_depth - 2:
+			continue
+		var forward_connection = _forward_spine_connection(builder, source)
+		if forward_connection == null:
+			continue
+		var risk_destination = builder.room_spec(forward_connection.destination_room_id)
+		if risk_destination == null or risk_destination.room_type != DungeonGraph.ROOM_COMBAT:
+			continue
+		var orientation := 1 if risk_destination.coordinate.x > source.coordinate.x else -1
+		var safe_socket: StringName = DungeonGraph.BOTTOM_LEFT if orientation > 0 else DungeonGraph.BOTTOM_RIGHT
+		var risk_return_socket: StringName = DungeonGraph.WALL_LEFT if orientation > 0 else DungeonGraph.WALL_RIGHT
+		var existing_risk_rejoin = _forward_spine_connection(builder, risk_destination)
+		var existing_rejoin_id: StringName = &""
+		var existing_rejoin = null
+		if existing_risk_rejoin != null:
+			var candidate_rejoin = builder.room_spec(existing_risk_rejoin.destination_room_id)
+			if candidate_rejoin != null and candidate_rejoin.coordinate == source.coordinate + Vector2i(0, 2):
+				existing_rejoin_id = candidate_rejoin.id
+				existing_rejoin = candidate_rejoin
+		var can_reuse_existing_rejoin := not existing_rejoin_id.is_empty()
+		if builder.connection_keys.has("%s:%s" % [source.id, safe_socket]) or (not can_reuse_existing_rejoin and builder.connection_keys.has("%s:%s" % [risk_destination.id, risk_return_socket])):
+			continue
+		var safe_one_coordinate: Vector2i = source.coordinate + Vector2i(-orientation, -1)
+		var safe_two_coordinate: Vector2i = source.coordinate + Vector2i(-2 * orientation, 0)
+		var safe_three_coordinate: Vector2i = source.coordinate + Vector2i(-orientation, 1)
+		var rejoin_coordinate: Vector2i = source.coordinate + Vector2i(0, 2)
+		var branch_coordinates: Array[Vector2i] = [safe_one_coordinate, safe_two_coordinate, safe_three_coordinate, rejoin_coordinate]
+		var coordinates_valid := true
+		for branch_index in branch_coordinates.size():
+			if branch_index == 3 and can_reuse_existing_rejoin:
+				continue
+			var coordinate: Vector2i = branch_coordinates[branch_index]
+			if builder.room_ids_by_coordinate.has(coordinate) or not _risk_coordinate_in_bounds(coordinate):
+				coordinates_valid = false
+				break
+		if not coordinates_valid:
+			continue
+		var target: Dictionary = {}
+		if can_reuse_existing_rejoin:
+			var safe_rejoin_socket: StringName = DungeonGraph.WALL_RIGHT if orientation > 0 else DungeonGraph.WALL_LEFT
+			if _destination_entry_used(builder, existing_rejoin_id, DungeonGraph.paired_socket(safe_rejoin_socket)):
+				continue
+		else:
+			target = _find_risk_rejoin_target(builder, rejoin_coordinate)
+			if target.is_empty():
+				continue
+		# Reuse the existing spine edge as the short dangerous route. The safe
+		# branch is built on the opposite side and rejoins after the shortcut
+		# room, so the player gets a real choice instead of an extra side loop.
+		forward_connection.route_role = ROUTE_RISK_SHORTCUT
+		risk_destination.route_role = ROUTE_RISK_SHORTCUT
+		risk_destination.encounter_tier = DungeonGraph.ENCOUNTER_DANGEROUS
+		risk_destination.reward_tier = DungeonGraph.REWARD_RISK
+		var safe_one_id := builder.add_room(safe_one_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		var safe_two_id := builder.add_room(safe_two_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		var safe_three_id := builder.add_room(safe_three_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		var rejoin_id: StringName = existing_rejoin_id if can_reuse_existing_rejoin else builder.add_room(rejoin_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_REJOIN, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		builder.link(source.id, safe_socket, safe_one_id, &"", ROUTE_SAFE)
+		builder.link(safe_one_id, DungeonGraph.WALL_LEFT if orientation > 0 else DungeonGraph.WALL_RIGHT, safe_two_id, &"", ROUTE_SAFE)
+		builder.link(safe_two_id, DungeonGraph.WALL_RIGHT if orientation > 0 else DungeonGraph.WALL_LEFT, safe_three_id, &"", ROUTE_SAFE)
+		builder.link(safe_three_id, DungeonGraph.WALL_RIGHT if orientation > 0 else DungeonGraph.WALL_LEFT, rejoin_id, &"", ROUTE_SAFE)
+		if can_reuse_existing_rejoin:
+			existing_risk_rejoin.route_role = ROUTE_RISK_SHORTCUT
+			existing_rejoin.route_role = ROUTE_REJOIN
+		else:
+			builder.link(risk_destination.id, risk_return_socket, rejoin_id, &"", ROUTE_RISK_SHORTCUT)
+			builder.link(rejoin_id, target["socket"] as StringName, target["room_id"] as StringName, &"", ROUTE_REJOIN)
+		return {"source": source.id, "rejoin": rejoin_id, "safe_length": 4, "risk_length": 2}
+	return {}
+
+
+static func _forward_spine_connection(builder: LayoutBuilder, source):
+	for connection in builder.layout.connections:
+		if connection.source_room_id != source.id or connection.route_role not in [ROUTE_MAIN, ROUTE_KEY_PROGRESSION]:
+			continue
+		var destination = builder.room_spec(connection.destination_room_id)
+		if destination == null or destination.coordinate.y != source.coordinate.y + 1:
+			continue
+		return connection
+	return null
+
+
+static func _find_risk_rejoin_target(builder: LayoutBuilder, rejoin_coordinate: Vector2i) -> Dictionary:
+	for direction in [-1, 1]:
+		var target_coordinate := rejoin_coordinate + Vector2i(direction, 1)
+		var target_id: StringName = builder.room_ids_by_coordinate.get(target_coordinate, &"") as StringName
+		if target_id.is_empty():
+			continue
+		var target = builder.room_spec(target_id)
+		if target == null or target.room_type == DungeonGraph.ROOM_BOSS:
+			continue
+		var socket_id: StringName = DungeonGraph.WALL_LEFT if direction < 0 else DungeonGraph.WALL_RIGHT
+		var destination_entry := DungeonGraph.paired_socket(socket_id)
+		if _destination_entry_used(builder, target_id, destination_entry):
+			continue
+		return {"room_id": target_id, "socket": socket_id}
+	return {}
+
+
+static func _risk_coordinate_in_bounds(coordinate: Vector2i) -> bool:
+	var minimap_coordinate := COMPACT_MAP_ORIGIN + Vector2i(coordinate.x * 2, -coordinate.y * 2)
+	return minimap_coordinate.x >= 0 and minimap_coordinate.y >= 0 and minimap_coordinate.x < COMPACT_MAP_SIZE.x and minimap_coordinate.y < COMPACT_MAP_SIZE.y
+
+
+static func _mark_orb_utility_rooms(builder: LayoutBuilder) -> void:
+	for room in builder.layout.rooms:
+		if room.room_type == DungeonGraph.ROOM_ORB and room.route_role == ROUTE_MAIN:
+			room.route_role = ROUTE_ORB_UTILITY
+			room.encounter_tier = DungeonGraph.ENCOUNTER_NORMAL
+			room.reward_tier = DungeonGraph.REWARD_STANDARD
+
+
+static func _attach_elemental_vaults(builder: LayoutBuilder, dungeon_seed: int) -> void:
+	var available_elements := _available_vault_elements()
+	if available_elements.is_empty():
+		return
+	var candidates: Array = []
+	for connection in builder.layout.connections:
+		var destination = builder.room_spec(connection.destination_room_id)
+		var source = builder.room_spec(connection.source_room_id)
+		if destination == null or source == null or destination.room_type != DungeonGraph.ROOM_TREASURE:
+			continue
+		if source.room_type == DungeonGraph.ROOM_START or source.coordinate.y < 3:
+			continue
+		if connection.route_role == ROUTE_MAIN or connection.route_role == ROUTE_KEY_PROGRESSION or connection.route_role == ROUTE_RISK_SHORTCUT or connection.route_role == ROUTE_SAFE:
+			continue
+		if not _treasure_has_single_incoming(builder.layout, destination.id, connection):
+			continue
+		candidates.append(connection)
+	var vault_count := 0
+	var requirement_index := posmod(dungeon_seed, available_elements.size())
+	for connection in candidates:
+		if vault_count >= 2:
+			break
+		var destination_spec = builder.room_spec(connection.destination_room_id)
+		if destination_spec == null or destination_spec.route_role == ROUTE_ELITE_REWARD:
+			continue
+		var requirement: StringName = available_elements[posmod(requirement_index + vault_count, available_elements.size())]
+		_configure_elemental_vault(connection, destination, requirement)
+		vault_count += 1
+	while vault_count < 2:
+		var requirement: StringName = available_elements[posmod(requirement_index + vault_count, available_elements.size())]
+		if not _add_elemental_vault_branch(builder, requirement):
+			break
+		vault_count += 1
+
+
+static func _available_vault_elements() -> Array[StringName]:
+	# The R6+ contract guarantees all three primary flames on the ungated
+	# network. Derive the optional Orb pool from the live recipe/catalog tables so
+	# a future recipe or element cannot silently diverge from generation policy.
+	var available_flames: Array[StringName] = PRIMARY_FLAMES.duplicate()
+	var expanded := true
+	while expanded:
+		expanded = false
+		for first_flame in available_flames.duplicate():
+			for second_flame in available_flames.duplicate():
+				var result_flame := ASPECT_CATALOG_SCRIPT.fusion_result(first_flame, second_flame)
+				if result_flame.is_empty() or available_flames.has(result_flame):
+					continue
+				available_flames.append(result_flame)
+				expanded = true
+	var available_elements: Array[StringName] = []
+	for flame in ASPECT_CATALOG_SCRIPT.ELEMENTAL_FLAMES:
+		if not available_flames.has(flame):
+			continue
+		var element_id := ELEMENT_CATALOG_SCRIPT.id(ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)))
+		if ELEMENT_CATALOG_SCRIPT.is_valid_id(element_id) and not available_elements.has(element_id):
+			available_elements.append(element_id)
+	return available_elements
+
+
+static func _configure_elemental_vault(connection, destination, requirement: StringName) -> void:
+	connection.route_role = ROUTE_ELEMENTAL_VAULT
+	connection.color_requirement = &""
+	connection.element_requirement = &""
+	connection.gate_type = DungeonGraph.GATE_ENTRANCE_ORB
+	connection.orb_element_requirement = requirement
+	connection.hidden_until_clear = false
+	connection.hidden_until_event = &""
+	var vault_id := StringName("vault_%s" % String(destination.id))
+	destination.route_role = ROUTE_ELITE_REWARD
+	destination.encounter_tier = DungeonGraph.ENCOUNTER_ELITE
+	destination.reward_tier = DungeonGraph.REWARD_VAULT
+	destination.vault_id = vault_id
+
+
+static func _add_elemental_vault_branch(builder: LayoutBuilder, requirement: StringName) -> bool:
+	for source in builder.layout.rooms:
+		if source.room_type != DungeonGraph.ROOM_COMBAT:
+			continue
+		if source.coordinate.y < 4 or source.route_role == ROUTE_RISK_SHORTCUT or source.route_role == ROUTE_ELITE_REWARD:
+			continue
+		for socket_id in [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
+			if builder.connection_keys.has("%s:%s" % [source.id, socket_id]):
+				continue
+			var coordinate: Vector2i = source.coordinate + _exit_offset(socket_id)
+			if builder.room_ids_by_coordinate.has(coordinate) or not _risk_coordinate_in_bounds(coordinate):
+				continue
+			var vault_id := builder.add_room(coordinate, DungeonGraph.ROOM_TREASURE, 1, &"", &"", ROUTE_ELITE_REWARD, DungeonGraph.ENCOUNTER_ELITE, DungeonGraph.REWARD_VAULT, StringName("vault_room_%d_%d" % [coordinate.x, coordinate.y]))
+			builder.link(source.id, socket_id, vault_id, &"", ROUTE_ELEMENTAL_VAULT, true, true, &"", DungeonGraph.GATE_ENTRANCE_ORB, requirement)
+			return true
+	return false
+
+
+static func _treasure_has_single_incoming(layout, destination_id: StringName, selected_connection) -> bool:
+	var incoming_count := 0
+	for connection in layout.connections:
+		if connection.destination_room_id != destination_id:
+			continue
+		incoming_count += 1
+		if connection != selected_connection:
+			return false
+	return incoming_count == 1
+
+
+static func _primary_flame_room_count(layout) -> int:
+	var count := 0
+	for room in layout.rooms:
+		if room.route_role == ROUTE_PRIMARY_FLAME and room.fire_flame in PRIMARY_FLAMES:
+			count += 1
+	return count
+
+
+static func _elemental_vault_count(layout) -> int:
+	var count := 0
+	for connection in layout.connections:
+		if connection.route_role == ROUTE_ELEMENTAL_VAULT:
+			count += 1
+	return count
+
+
+static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_starter_flame: StringName = &"fire", _selected_bound_flame: StringName = &"") -> Array[String]:
+	var errors: Array[String] = []
+	if layout == null:
+		errors.append("R6+ risk/reward layout is missing")
+		return errors
+	errors.append_array(layout.validate())
+	var start_id := _layout_start_room_id(layout)
+	var boss_id: StringName = &""
+	var room_ids: Dictionary = {}
+	var primary_by_flame: Dictionary = {}
+	var vault_room_ids: Dictionary = {}
+	var safe_edge_found := false
+	var risk_edge_found := false
+	var vault_requirements: Dictionary = {}
+	for room in layout.rooms:
+		room_ids[room.id] = true
+		if room.room_type == DungeonGraph.ROOM_BOSS:
+			boss_id = room.id
+		if room.route_role == ROUTE_PRIMARY_FLAME and room.fire_flame in PRIMARY_FLAMES:
+			primary_by_flame[room.fire_flame] = room.id
+		if room.route_role == ROUTE_ELITE_REWARD:
+			vault_room_ids[room.id] = true
+			if room.encounter_tier != DungeonGraph.ENCOUNTER_ELITE or room.reward_tier != DungeonGraph.REWARD_VAULT or room.vault_id.is_empty() or room.room_type != DungeonGraph.ROOM_TREASURE or room.chest_count != 1:
+				errors.append("elemental vault room has an invalid elite/reward contract: %s" % room.id)
+		if room.encounter_tier not in [DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.ENCOUNTER_DANGEROUS, DungeonGraph.ENCOUNTER_ELITE]:
+			errors.append("unknown generated encounter tier: %s" % room.encounter_tier)
+		if room.reward_tier not in [DungeonGraph.REWARD_STANDARD, DungeonGraph.REWARD_RISK, DungeonGraph.REWARD_VAULT]:
+			errors.append("unknown generated reward tier: %s" % room.reward_tier)
+		if room.route_role == ROUTE_RISK_SHORTCUT and room.encounter_tier != DungeonGraph.ENCOUNTER_DANGEROUS:
+			errors.append("risk shortcut room has a non-dangerous encounter tier: %s" % room.id)
+		if room.route_role == ROUTE_SAFE and room.encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
+			errors.append("safe route room cannot use the elite encounter tier: %s" % room.id)
+	for flame in PRIMARY_FLAMES:
+		if not primary_by_flame.has(flame):
+			errors.append("generated R6+ layout is missing its %s primary flame" % flame)
+	for connection in layout.connections:
+		if connection.route_role == ROUTE_SAFE:
+			safe_edge_found = true
+		if connection.route_role == ROUTE_RISK_SHORTCUT:
+			risk_edge_found = true
+		if (connection.route_role == ROUTE_MAIN or connection.route_role == ROUTE_KEY_PROGRESSION) and connection.resolved_gate_type() != DungeonGraph.GATE_NONE:
+			errors.append("critical generated route is gated: %s:%s" % [connection.source_room_id, connection.exit_socket])
+		if connection.route_role == ROUTE_ELEMENTAL_VAULT:
+			if connection.resolved_gate_type() != DungeonGraph.GATE_ENTRANCE_ORB or not ELEMENT_CATALOG_SCRIPT.is_valid_id(connection.orb_element_requirement):
+				errors.append("elemental vault door has an invalid Orb requirement: %s:%s" % [connection.source_room_id, connection.exit_socket])
+			if not _available_vault_elements().has(connection.orb_element_requirement):
+				errors.append("elemental vault door requires an unavailable Orb element: %s" % connection.orb_element_requirement)
+			vault_requirements[connection.orb_element_requirement] = true
+			if not vault_room_ids.has(connection.destination_room_id):
+				errors.append("elemental vault door does not lead to an elite reward room: %s:%s" % [connection.source_room_id, connection.exit_socket])
+			if not _treasure_has_single_incoming(layout, connection.destination_room_id, connection):
+				errors.append("elemental vault room has a bypass entrance: %s" % connection.destination_room_id)
+		elif connection.resolved_gate_type() != DungeonGraph.GATE_NONE:
+			errors.append("non-vault generated connection retains a progression gate: %s:%s" % [connection.source_room_id, connection.exit_socket])
+		if connection.route_role == ROUTE_RISK_SHORTCUT:
+			var risk_destination = layout.room_by_id(connection.destination_room_id)
+			if risk_destination != null and risk_destination.encounter_tier != DungeonGraph.ENCOUNTER_DANGEROUS:
+				errors.append("risk shortcut enters a non-dangerous room: %s" % risk_destination.id)
+	var reachable := _reachable_rooms(layout, start_id) if not start_id.is_empty() else {}
+	var ungated_reachable := _ungated_reachable_rooms(layout, start_id) if not start_id.is_empty() else {}
+	if start_id.is_empty():
+		errors.append("generated R6+ layout is missing a Hub")
+	if boss_id.is_empty():
+		errors.append("generated R6+ layout is missing a Boss")
+	if reachable.size() != room_ids.size():
+		errors.append("generated R6+ layout contains a disconnected room")
+	if not boss_id.is_empty() and not ungated_reachable.has(boss_id):
+		errors.append("generated R6+ Boss is not reachable without an optional Orb door")
+	var undirected_reachable := _undirected_reachable_rooms(layout, start_id) if not start_id.is_empty() else {}
+	for flame in PRIMARY_FLAMES:
+		var flame_id: StringName = primary_by_flame.get(flame, &"") as StringName
+		if not flame_id.is_empty() and not ungated_reachable.has(flame_id):
+			errors.append("generated %s flame is not ungated-reachable" % flame)
+		if not flame_id.is_empty() and not undirected_reachable.has(flame_id):
+			errors.append("generated %s flame has no return path to the Hub" % flame)
+	for room in layout.rooms:
+		if vault_room_ids.has(room.id):
+			if not undirected_reachable.has(room.id):
+				errors.append("elemental vault room has no return path to the Hub: %s" % room.id)
+			if not boss_id.is_empty() and _reachable_rooms(layout, room.id).has(boss_id):
+				errors.append("elemental vault room can bypass into the Boss route: %s" % room.id)
+			continue
+		if not ungated_reachable.has(room.id):
+			errors.append("non-vault generated room is behind an optional gate: %s" % room.id)
+		var has_outgoing := false
+		for connection in layout.connections:
+			if connection.source_room_id == room.id:
+				has_outgoing = true
+				break
+		if not has_outgoing and room.room_type not in [DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_TREASURE, DungeonGraph.ROOM_FIRE, DungeonGraph.ROOM_ORB]:
+			errors.append("generated dead end has no declared utility or reward: %s" % room.id)
+	if layout.route_choice_source_room_id.is_empty() or layout.route_choice_rejoin_room_id.is_empty() or not safe_edge_found or not risk_edge_found:
+		errors.append("generated R6+ layout is missing a safe/risk route choice")
+	if layout.safe_route_length <= layout.risk_route_length + 1:
+		errors.append("risk shortcut is not at least two transitions shorter than the safe route")
+	var safe_length := _route_length(layout, layout.route_choice_source_room_id, layout.route_choice_rejoin_room_id, ROUTE_SAFE)
+	var risk_length := _route_length(layout, layout.route_choice_source_room_id, layout.route_choice_rejoin_room_id, ROUTE_RISK_SHORTCUT)
+	if safe_length < 0 or risk_length < 0 or safe_length != layout.safe_route_length or risk_length != layout.risk_route_length:
+		errors.append("safe/risk route metadata does not match its generated path lengths")
+	var vault_count := _elemental_vault_count(layout)
+	if vault_count < 1 or vault_count > 2:
+		errors.append("generated R6+ layout must contain one or two elemental vaults, got %d" % vault_count)
+	if vault_requirements.size() != vault_count:
+		errors.append("generated elemental vaults should not repeat their Orb requirement")
+	return errors
+
+
+static func _ungated_reachable_rooms(layout, start_id: StringName) -> Dictionary:
+	var reachable: Dictionary = {}
+	if start_id.is_empty():
+		return reachable
+	reachable[start_id] = true
+	var pending: Array[StringName] = [start_id]
+	while not pending.is_empty():
+		var room_id: StringName = pending.pop_back() as StringName
+		for connection in layout.connections:
+			if connection.source_room_id != room_id or connection.resolved_gate_type() != DungeonGraph.GATE_NONE:
+				continue
+			if reachable.has(connection.destination_room_id):
+				continue
+			reachable[connection.destination_room_id] = true
+			pending.append(connection.destination_room_id)
+	return reachable
+
+
+static func _undirected_reachable_rooms(layout, start_id: StringName) -> Dictionary:
+	var reachable: Dictionary = {}
+	if start_id.is_empty():
+		return reachable
+	reachable[start_id] = true
+	var pending: Array[StringName] = [start_id]
+	while not pending.is_empty():
+		var room_id: StringName = pending.pop_back() as StringName
+		for connection in layout.connections:
+			var next_id: StringName = &""
+			if connection.source_room_id == room_id:
+				next_id = connection.destination_room_id
+			elif connection.destination_room_id == room_id:
+				next_id = connection.source_room_id
+			if next_id.is_empty() or reachable.has(next_id):
+				continue
+			reachable[next_id] = true
+			pending.append(next_id)
+	return reachable
+
+
+static func _route_length(layout, start_id: StringName, target_id: StringName, route_role: StringName) -> int:
+	if start_id.is_empty() or target_id.is_empty():
+		return -1
+	var distances: Dictionary = {start_id: 0}
+	var pending: Array[StringName] = [start_id]
+	while not pending.is_empty():
+		var room_id: StringName = pending.pop_front() as StringName
+		if room_id == target_id:
+			return int(distances[room_id])
+		for connection in layout.connections:
+			if connection.source_room_id != room_id or connection.route_role != route_role:
+				continue
+			if distances.has(connection.destination_room_id):
+				continue
+			distances[connection.destination_room_id] = int(distances[room_id]) + 1
+			pending.append(connection.destination_room_id)
+	return -1
+
+
+static func _build_candidate(
+	dungeon_seed: int,
+	completed_runs: int,
+	selected_starter_flame: StringName,
+	selected_bound_flame: StringName,
+	include_hub_dig_routes: bool = true,
+	active_risk_reward: bool = false
+):
 	last_progression_repairs.clear()
 	var run_number := maxi(completed_runs + 1, 1)
 	var run_index := maxi(completed_runs, 1)
@@ -157,6 +788,8 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 	var generator_rng := RandomNumberGenerator.new()
 	generator_rng.seed = int(dungeon_seed) ^ (run_index * 104729) ^ 0x47E2
 	var layout = LAYOUT_DEFINITION_SCRIPT.new(GENERATED_LAYOUT_ID, COMPACT_MAP_SIZE)
+	if active_risk_reward:
+		layout.generation_mode = RISK_REWARD_GENERATION_MODE
 	var builder := LayoutBuilder.new(layout, dungeon_seed)
 
 	# Every generated run begins with an intentional fork that rejoins before
@@ -180,10 +813,11 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 	var hub_degree := _hub_degree(generator_rng)
 	var first_dig_side := -1 if generator_rng.randi_range(0, 1) == 0 else 1
 	var hub_dig_routes: Array[Dictionary] = []
-	if hub_degree >= 3:
-		hub_dig_routes.append(_append_hub_dig_branch(builder, start_id, first_dig_side, alternate_flames, starter_flame, generator_rng))
-	if hub_degree >= 4:
-		hub_dig_routes.append(_append_hub_dig_branch(builder, start_id, -first_dig_side, alternate_flames, starter_flame, generator_rng))
+	if include_hub_dig_routes:
+		if hub_degree >= 3:
+			hub_dig_routes.append(_append_hub_dig_branch(builder, start_id, first_dig_side, alternate_flames, starter_flame, generator_rng))
+		if hub_degree >= 4:
+			hub_dig_routes.append(_append_hub_dig_branch(builder, start_id, -first_dig_side, alternate_flames, starter_flame, generator_rng))
 
 	var second_special_depth := boss_depth - 2
 	var cloaked_depth := clampi(int(float(boss_depth) / 2.0), 6, boss_depth - 5)
@@ -279,7 +913,7 @@ static func _build_candidate(dungeon_seed: int, completed_runs: int, selected_st
 	_connect_hub_dig_routes(builder, hub_dig_routes, spine_rooms_by_depth, generator_rng)
 	_fill_room_target(builder, room_target, boss_depth)
 	_add_safe_cross_links(builder, generator_rng)
-	var progression_repairs := repair_progression(layout, completed_runs, starter_flame, bound_flame)
+	var progression_repairs: Array[String] = [] if active_risk_reward else repair_progression(layout, completed_runs, starter_flame, bound_flame)
 	last_progression_repairs = progression_repairs.duplicate()
 	var bound_label := "none"
 	if not bound_flame.is_empty():

@@ -3,7 +3,7 @@ class_name PuzzleRoutePlan
 
 const PLAN_SCRIPT = preload("res://scripts/puzzle_route_plan.gd")
 
-## Typed, topology-only view consumed by R7 planning and validation.
+## Typed, topology-only view consumed by generated-route planning and validation.
 ## DungeonLayoutDefinition remains the runtime compilation format.
 
 class Gate:
@@ -21,6 +21,11 @@ class Gate:
 var rooms: Array = []
 var connections: Array = []
 var gates: Array[Gate] = []
+var generation_mode: StringName = &""
+var route_choice_source_room_id: StringName = &""
+var route_choice_rejoin_room_id: StringName = &""
+var safe_route_length := 0
+var risk_route_length := 0
 
 
 static func from_layout(layout):
@@ -29,6 +34,11 @@ static func from_layout(layout):
 		return plan
 	plan.rooms = layout.rooms.duplicate()
 	plan.connections = layout.connections.duplicate()
+	plan.generation_mode = layout.generation_mode
+	plan.route_choice_source_room_id = layout.route_choice_source_room_id
+	plan.route_choice_rejoin_room_id = layout.route_choice_rejoin_room_id
+	plan.safe_route_length = layout.safe_route_length
+	plan.risk_route_length = layout.risk_route_length
 	for connection in plan.connections:
 		if connection.resolved_gate_type() == DungeonGraph.GATE_NONE:
 			continue

@@ -24,6 +24,12 @@ const COLOR_CLOAKED := Color8(93, 39, 93)
 const COLOR_ORB := Color8(115, 239, 247)
 const COLOR_HUB := Color8(244, 244, 244)
 const COLOR_BOSS := Color8(177, 62, 83)
+const COLOR_FLAME_FIRE := Color8(239, 125, 87)
+const COLOR_FLAME_WATER := Color8(79, 160, 239)
+const COLOR_FLAME_ELECTRIC := Color8(245, 210, 75)
+const COLOR_DANGER := Color8(221, 87, 87)
+const COLOR_VAULT := Color8(255, 160, 64)
+const COLOR_VAULT_GATE := Color8(185, 110, 255)
 
 const MARKER_GATE_GREY: StringName = &"gate_grey"
 const MARKER_GATE_ORB_GREY: StringName = &"gate_orb_grey"
@@ -35,6 +41,12 @@ const MARKER_CLOAKED_ROOM: StringName = &"cloaked_room"
 const MARKER_ORB_ROOM: StringName = &"orb_room"
 const MARKER_HUB_ROOM: StringName = &"hub_room"
 const MARKER_BOSS_ROOM: StringName = &"boss_room"
+const MARKER_FLAME_FIRE_ROOM: StringName = &"flame_fire_room"
+const MARKER_FLAME_WATER_ROOM: StringName = &"flame_water_room"
+const MARKER_FLAME_ELECTRIC_ROOM: StringName = &"flame_electric_room"
+const MARKER_DANGER_ROOM: StringName = &"danger_room"
+const MARKER_VAULT_ROOM: StringName = &"vault_room"
+const MARKER_GATE_VAULT: StringName = &"gate_vault"
 
 const MARKER_COLORS: Dictionary = {
 	MARKER_GATE_GREY: COLOR_GATE_GREY,
@@ -47,6 +59,12 @@ const MARKER_COLORS: Dictionary = {
 	MARKER_ORB_ROOM: COLOR_ORB,
 	MARKER_HUB_ROOM: COLOR_HUB,
 	MARKER_BOSS_ROOM: COLOR_BOSS,
+	MARKER_FLAME_FIRE_ROOM: COLOR_FLAME_FIRE,
+	MARKER_FLAME_WATER_ROOM: COLOR_FLAME_WATER,
+	MARKER_FLAME_ELECTRIC_ROOM: COLOR_FLAME_ELECTRIC,
+	MARKER_DANGER_ROOM: COLOR_DANGER,
+	MARKER_VAULT_ROOM: COLOR_VAULT,
+	MARKER_GATE_VAULT: COLOR_VAULT_GATE,
 }
 
 const COLOR_MARKERS: Dictionary = {
@@ -60,6 +78,15 @@ const COLOR_MARKERS: Dictionary = {
 	COLOR_ORB: MARKER_ORB_ROOM,
 	COLOR_HUB: MARKER_HUB_ROOM,
 	COLOR_BOSS: MARKER_BOSS_ROOM,
+	# COLOR_FLAME_FIRE intentionally shares the legacy Flame B/Fire swatch. Keep
+	# the reverse lookup on the historical marker so authored image compilation
+	# remains backward-compatible; active generated plans carry marker kind data
+	# directly and do not infer it from this ambiguous color.
+	COLOR_FLAME_WATER: MARKER_FLAME_WATER_ROOM,
+	COLOR_FLAME_ELECTRIC: MARKER_FLAME_ELECTRIC_ROOM,
+	COLOR_DANGER: MARKER_DANGER_ROOM,
+	COLOR_VAULT: MARKER_VAULT_ROOM,
+	COLOR_VAULT_GATE: MARKER_GATE_VAULT,
 }
 
 
@@ -75,6 +102,11 @@ class MapMarker:
 class MapPlan:
 	var id: StringName
 	var markers: Array[MapMarker] = []
+	var generation_mode: StringName = &""
+	var route_choice_source_room_id: StringName = &""
+	var route_choice_rejoin_room_id: StringName = &""
+	var safe_route_length := 0
+	var risk_route_length := 0
 	## Logical topology is kept beside presentation markers so generated plans
 	## can be compiled without reconstructing gate semantics from pixel colors.
 	var logical_edges: Array[Dictionary] = []
@@ -95,6 +127,11 @@ class MapPlan:
 
 	func duplicate_plan(next_id: StringName = &"") -> MapPlan:
 		var copy := MapPlan.new(next_id if not next_id.is_empty() else id)
+		copy.generation_mode = generation_mode
+		copy.route_choice_source_room_id = route_choice_source_room_id
+		copy.route_choice_rejoin_room_id = route_choice_rejoin_room_id
+		copy.safe_route_length = safe_route_length
+		copy.risk_route_length = risk_route_length
 		for coordinate in active_tiles:
 			copy.add_active_tile(coordinate)
 		for marker in markers:
@@ -134,6 +171,8 @@ static func gate_requirement(kind: StringName) -> StringName:
 	## grey entrance and light-grey Orb door are intentionally different gates.
 	if kind == MARKER_GATE_ORB_GREY:
 		return &"orb_grey"
+	if kind == MARKER_GATE_VAULT:
+		return &"vault_orb"
 	if kind == MARKER_GATE_FLAME_A:
 		return &"flame_a"
 	if kind == MARKER_GATE_FLAME_B:
@@ -142,7 +181,7 @@ static func gate_requirement(kind: StringName) -> StringName:
 
 
 static func is_gate_marker(kind: StringName) -> bool:
-	return kind == MARKER_GATE_GREY or kind == MARKER_GATE_ORB_GREY or kind == MARKER_GATE_FLAME_A or kind == MARKER_GATE_FLAME_B
+	return kind == MARKER_GATE_GREY or kind == MARKER_GATE_ORB_GREY or kind == MARKER_GATE_FLAME_A or kind == MARKER_GATE_FLAME_B or kind == MARKER_GATE_VAULT
 
 
 static func gate_endpoints(coordinate: Vector2i) -> Array[Vector2i]:

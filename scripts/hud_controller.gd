@@ -5,6 +5,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
 const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_icon.gdshader")
+const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://Artwork/eliteslimeoverheadsymbol.png")
 
 const COOLDOWN_FLASH_DURATION := 0.14
 const COOLDOWN_ICON_DIM := 0.58
@@ -23,6 +24,7 @@ var target_overhead_offsets: Dictionary = {}
 var target_overhead_fill_sizes: Dictionary = {}
 var target_overhead_aggro_markers: Dictionary = {}
 var target_overhead_aggro_offsets: Dictionary = {}
+var target_overhead_elite_symbols: Dictionary = {}
 var bright_bar_cache: Dictionary = {}
 var aggro_marker_texture_cache: Dictionary = {}
 var last_run_timer_text := ""
@@ -182,7 +184,8 @@ func update_overhead_bars(
 		var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D
 		var fill := target_overhead_fills.get(slime) as Sprite2D
 		var aggro_marker := target_overhead_aggro_markers.get(slime) as Sprite2D
-		if frame == null or damage_fill == null or fill == null or aggro_marker == null:
+		var elite_symbol := target_overhead_elite_symbols.get(slime) as Sprite2D
+		if frame == null or damage_fill == null or fill == null or aggro_marker == null or elite_symbol == null:
 			continue
 		var hidden := (is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))) or bool(slime.get_meta("boss_jump_ui_suppressed", false))
 		if is_dead_for.call(slime) or hidden:
@@ -190,14 +193,17 @@ func update_overhead_bars(
 			damage_fill.visible = false
 			fill.visible = false
 			aggro_marker.visible = false
+			elite_symbol.visible = false
 			continue
 		var max_health := float(max_health_for.call(slime))
 		var health := float(health_for.call(slime))
 		var is_aggroed := bool(is_aggroed_for.call(slime))
 		var should_show := health < max_health or is_aggroed
+		var is_elite := bool(slime.get_meta("is_elite", false))
 		frame.visible = should_show
 		damage_fill.visible = should_show
 		fill.visible = should_show
+		elite_symbol.visible = is_elite
 		fill.self_modulate = Color.WHITE
 		damage_fill.self_modulate = Color.WHITE
 		aggro_marker.visible = is_aggroed
@@ -217,6 +223,16 @@ func update_overhead_bars(
 		fill.global_position = overhead_position
 		fill.global_scale = Vector2.ONE
 		fill.z_index = overwold_ui_z + 2
+		var symbol_size := elite_symbol.texture.get_size() if elite_symbol.texture != null else Vector2.ZERO
+		var symbol_position := ActorGeometry.slime_head_overhead_origin(slime, symbol_size)
+		if should_show:
+			# Once the damage/aggro bar is present, keep the elite symbol attached
+			# to the bar rather than letting it collide with the slime's head.
+			symbol_position = overhead_position + Vector2((fill_size.x - symbol_size.x) * 0.5, -symbol_size.y - ActorGeometry.ELITE_OVERHEAD_SYMBOL_GAP)
+		elite_symbol.top_level = true
+		elite_symbol.global_position = symbol_position
+		elite_symbol.global_scale = Vector2.ONE
+		elite_symbol.z_index = overwold_ui_z + 4
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
@@ -849,7 +865,7 @@ func build_enemy_health_ui(
 	for slime in slimes:
 		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_fill_textures.get(slime) as Texture2D)
 		target_overhead_damage_fill_textures[slime] = bright_texture.call(target_overhead_fill_textures.get(slime) as Texture2D)
-	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear()
+	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear(); target_overhead_elite_symbols.clear()
 	var target_damage_fill := duplicate_fill.call(target_health_fill, "EnemyHpDamageFill") as Sprite2D
 	target_health_bar.z_index = 0; target_health_bar.z_as_relative = true; target_damage_fill.z_index = 1; target_health_fill.z_index = 2; target_damage_fill.z_as_relative = true; target_health_fill.z_as_relative = true; target_damage_fill.get_parent().move_child(target_damage_fill, target_health_fill.get_index())
 	var player_damage_fill := duplicate_fill.call(player_health_fill, "HpBarDamageFill") as Sprite2D
@@ -889,12 +905,23 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 	if aggro_marker == null:
 		aggro_marker = Sprite2D.new(); aggro_marker.name = "AggroMarker"; aggro_marker.texture = load("res://assets/artwork/aggrodot(blue).png") as Texture2D; aggro_marker.centered = false; aggro_marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; aggro_marker.position = Vector2.ZERO; aggro_marker.z_index = 3; aggro_marker.z_as_relative = false; fill.get_parent().add_child(aggro_marker)
 	var aggro_offset := aggro_marker.position
+	var elite_symbol := fill.get_parent().get_node_or_null("EliteOverheadSymbol") as Sprite2D
+	if elite_symbol == null:
+		elite_symbol = Sprite2D.new()
+		elite_symbol.name = "EliteOverheadSymbol"
+		fill.get_parent().add_child(elite_symbol)
+	elite_symbol.texture = ELITE_OVERHEAD_SYMBOL_TEXTURE
+	elite_symbol.centered = false
+	elite_symbol.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	elite_symbol.z_as_relative = false
+	elite_symbol.top_level = true
+	elite_symbol.visible = false
 	# These bars remain children of the slime so hidden/unaggroed bars retain a
 	# valid authored local transform. update_overhead_bars() assigns their world
 	# position and scale whenever they are shown; only the marker needs to stay
 	# top-level because it is placed against the bar's resolved left edge.
 	aggro_marker.top_level = true
-	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset
+	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset; target_overhead_elite_symbols[slime] = elite_symbol
 	frame.visible = false; damage_fill.visible = false; fill.visible = false; aggro_marker.visible = false
 
 

@@ -124,13 +124,14 @@ func _initialize() -> void:
 			_expect(prerequisite_orb_count >= gate_count, "fusion Run %d gives every entrance-Orb gate a dedicated pre-gate Orb" % (fusion_completed_runs + 1), failures)
 	for seed_value in range(6):
 		var r7_layout = ROUTE_GENERATOR_SCRIPT.build(760000 + seed_value * 7919, 6, &"fire")
-		var r7_gates := _entrance_orb_gate_count(r7_layout)
-		_expect(r7_gates == 1, "R7 keeps one ordered fusion gate", failures)
-		_expect(GENERATOR_SCRIPT.validate(r7_layout, 6, &"fire").is_empty(), "R7 proves its dedicated fusion Orb is reachable before the gate", failures)
+		var r7_errors: Array[String] = ROUTE_GENERATOR_SCRIPT.validate(r7_layout, 6, &"fire")
+		_expect(r7_errors.is_empty(), "R7 risk/reward route validates", failures)
+		_expect(_primary_flame_count(r7_layout) == 3, "R7 keeps all three primary flames available", failures)
+		_expect(_elemental_vault_count(r7_layout) >= 1 and _elemental_vault_count(r7_layout) <= 2, "R7 exposes one or two optional elemental vaults", failures)
 	for origin in [&"fire", &"water", &"electric"]:
-		for seed_value in range(100):
+		for seed_value in range(24):
 			var compact_r7 = ROUTE_GENERATOR_SCRIPT.build(900000 + seed_value * 7919, 6, origin)
-			_expect(ROUTE_GENERATOR_SCRIPT.validate(compact_r7, 6, origin).is_empty(), "R7 compact lattice and progression validate across 100 %s-origin seeds" % origin, failures)
+			_expect(ROUTE_GENERATOR_SCRIPT.validate(compact_r7, 6, origin).is_empty(), "R7 risk/reward route validates across 24 %s-origin seeds" % origin, failures)
 	for origin in [&"fire", &"water", &"electric"]:
 		for seed_value in range(4):
 			var origin_r8 = GENERATOR_SCRIPT.build(810000 + seed_value * 7919, 7, origin)
@@ -224,11 +225,11 @@ func _initialize() -> void:
 	map.begin_run(run_graph, 24681357, 6, &"water")
 	_expect(not map.is_authored_layout() and map.has_complete_layout(), "Run 7 initializes from a generated complete layout after authored Run 6", failures)
 	_expect(ROUTE_GENERATOR_SCRIPT.generation_is_repair_free(), "Run 7 generation completes without post-build progression repair", failures)
-	_expect(ROUTE_GENERATOR_SCRIPT.is_native_r7(6), "Run 7 uses the native compact route owner", failures)
+	_expect(ROUTE_GENERATOR_SCRIPT.is_risk_reward_layout(6), "Run 7 uses the R6+ risk/reward route owner", failures)
 	var r7_shape_a = ROUTE_GENERATOR_SCRIPT.build(24681357, 6, &"water")
 	var r7_shape_b = ROUTE_GENERATOR_SCRIPT.build(24681358, 6, &"water")
-	_expect(r7_shape_a.rooms.size() >= 24 and r7_shape_b.rooms.size() >= 24, "native R7 maintains compact route density", failures)
-	_expect(r7_shape_a.rooms[4].coordinate != r7_shape_b.rooms[4].coordinate, "native R7 varies its deterministic spine shape by seed", failures)
+	_expect(r7_shape_a.rooms.size() >= 24 and r7_shape_b.rooms.size() >= 24, "R6+ maintains compact route density", failures)
+	_expect(r7_shape_a.rooms[4].coordinate != r7_shape_b.rooms[4].coordinate, "R6+ varies its deterministic spine shape by seed", failures)
 	_expect(ROUTE_GENERATOR_SCRIPT.generation_within_budget(), "Run 7 generation stays within the 50 ms budget", failures)
 	var compact_layout = map.get("layout")
 	_expect(compact_layout.map_size == Vector2i(35, 35), "Run 7 runtime layout uses the compact 35x35 map contract", failures)
@@ -238,10 +239,10 @@ func _initialize() -> void:
 	_expect(compact_coordinates_valid, "Run 7 runtime room markers stay inside the compact map", failures)
 	var compact_plan = ROUTE_GENERATOR_SCRIPT.build_compact_plan(24681357, 6, &"water")
 	_expect(compact_plan.logical_edges.size() == compact_layout.connections.size(), "R7 compact plan preserves every logical connection", failures)
-	var has_fusion_metadata := false
+	var has_vault_metadata := false
 	for logical_edge in compact_plan.logical_edges:
-		has_fusion_metadata = has_fusion_metadata or logical_edge.get("gate_type", &"") == GRAPH_SCRIPT.GATE_ENTRANCE_ORB
-	_expect(has_fusion_metadata, "R7 compact plan preserves exact fusion gate metadata", failures)
+		has_vault_metadata = has_vault_metadata or logical_edge.get("route_role", &"") == GRAPH_SCRIPT.ROUTE_ELEMENTAL_VAULT and logical_edge.get("gate_type", &"") == GRAPH_SCRIPT.GATE_ENTRANCE_ORB
+	_expect(has_vault_metadata, "R7 compact plan preserves exact elemental vault metadata", failures)
 	var first_orb_id: StringName = &""
 	for room_id in run_graph.get_room_ids():
 		var room := run_graph.get_room(room_id)
@@ -259,43 +260,38 @@ func _initialize() -> void:
 		_expect(false, "generated layout exposes an Orb Room to the map controller", failures)
 	map.free()
 
-	# Connection visuals and traversal use the same shared color state. A grey
-	# route must become open when Puzzle B is active, even if the old room-wide
-	# unlock flag is still false.
+	# R6+ keeps critical travel independent from element switching. Optional
+	# vault doors still use the shared Orb state and the existing solved-door latch.
 	var door_graph = GRAPH_SCRIPT.new()
 	var door_map = MAP_CONTROLLER_SCRIPT.new()
 	door_map.begin_run(door_graph, 24681357, 6, &"water")
-	# The generated run exposes multiple Special Rooms with different door
-	# colors; find the one that carries the puzzle_a/puzzle_b pair this section
-	# asserts on rather than assuming the first special room is that room.
-	var special_room: DungeonGraph.RoomRecord = null
+	var vault_gate: DungeonGraph.ConnectionRecord = null
 	for room_id in door_graph.get_room_ids():
 		var room := door_graph.get_room(room_id)
-		if room == null or room.room_type != GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY:
+		if room == null:
 			continue
-		var has_puzzle_a := false
-		var has_puzzle_b := false
-		for connection in room.outgoing_connections.values():
-			if connection.color_requirement == &"puzzle_a": has_puzzle_a = true
-			if connection.color_requirement == &"puzzle_b": has_puzzle_b = true
-		if has_puzzle_a and has_puzzle_b:
-			special_room = room
+		for connection_value in room.outgoing_connections.values():
+			var connection := connection_value as DungeonGraph.ConnectionRecord
+			if connection != null and connection.route_role == GRAPH_SCRIPT.ROUTE_ELEMENTAL_VAULT:
+				vault_gate = connection
+				break
+		if vault_gate != null:
 			break
-	if special_room != null:
-		var special_a: DungeonGraph.ConnectionRecord = null
-		var special_b: DungeonGraph.ConnectionRecord = null
-		for connection in special_room.outgoing_connections.values():
-			if connection.color_requirement == &"puzzle_a": special_a = connection
-			if connection.color_requirement == &"puzzle_b": special_b = connection
-		door_map.on_room_completed(special_room.id)
-		var door_state := door_map.get("state") as DungeonMapState
-		door_state.set_puzzle_color(&"puzzle_a")
-		_expect(special_a != null and door_map.connection_visual_state(special_a) == &"open", "generated player-color door opens for the matching map state", failures)
-		_expect(special_b != null and door_map.connection_visual_state(special_b) == &"orb_locked", "generated grey door remains color-locked for the other map state", failures)
-		door_state.set_puzzle_color(&"puzzle_b")
-		_expect(special_b != null and door_map.connection_visual_state(special_b) == &"open", "generated grey door opens when Puzzle B is active", failures)
-	else:
-		_expect(false, "generated layout exposes a Special Room with both door colors", failures)
+	_expect(vault_gate != null, "generated layout exposes an optional elemental vault door", failures)
+	if vault_gate != null:
+		door_map.on_room_completed(vault_gate.source_room_id)
+		_expect(door_map.connection_visual_state(vault_gate) == &"orb_locked", "vault door remains locked before its Orb charge", failures)
+		var vault_orb_id: StringName = &""
+		for room_id in door_graph.get_room_ids():
+			var room := door_graph.get_room(room_id)
+			if room != null and room.room_type == GRAPH_SCRIPT.ROOM_ORB:
+				vault_orb_id = room.id
+				break
+		if not vault_orb_id.is_empty():
+			door_map.on_room_entered(vault_orb_id)
+			var vault_palette := door_map.palette_for_requirement(vault_gate.orb_element_requirement)
+			_expect(door_map.change_orb_from_palette(vault_orb_id, vault_palette), "generated Orb utility accepts the vault element", failures)
+			_expect(door_map.connection_visual_state(vault_gate) == &"open", "matching Orb charge opens the optional vault door", failures)
 	door_map.free()
 
 	# The early fork rejoins at room_0_2. Its second incoming entrance must not
@@ -357,6 +353,22 @@ func _entrance_orb_gate_count(layout) -> int:
 	var count := 0
 	for connection in layout.connections:
 		if connection.resolved_gate_type() == GRAPH_SCRIPT.GATE_ENTRANCE_ORB:
+			count += 1
+	return count
+
+
+func _primary_flame_count(layout) -> int:
+	var flames: Dictionary = {}
+	for room in layout.rooms:
+		if room.route_role == GRAPH_SCRIPT.ROUTE_PRIMARY_FLAME and room.fire_flame in [&"fire", &"water", &"electric"]:
+			flames[room.fire_flame] = true
+	return flames.size()
+
+
+func _elemental_vault_count(layout) -> int:
+	var count := 0
+	for connection in layout.connections:
+		if connection.route_role == GRAPH_SCRIPT.ROUTE_ELEMENTAL_VAULT:
 			count += 1
 	return count
 

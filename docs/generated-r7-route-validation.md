@@ -1,7 +1,7 @@
 # Generated R7 Route Validation
 
-Status: implemented R7 validation reference; generated-route policy begins at
-R6 for new runs
+Status: historical compatibility reference; superseded R6+ policy is in
+`r6-plus-risk-reward-generation-plan.md`
 
 Updated: 2026-09-11
 
@@ -31,9 +31,9 @@ sequence of Orb and elemental gates.
 
 The boundary now owns the runtime generation/validation call and composes
 `PuzzleRoutePlan`, `PuzzleProgressionPlanner`, and `PuzzleRouteSolver` for typed
-gate/prerequisite metadata and ordered state checks. R7 uses the native compact
-route builder; later generated ranks still use the historical assembler's
-lower-level route-construction primitive while their topology is migrated.
+route metadata. The former mandatory fusion-gate contract described below is
+retained only as implementation history; active R6+ maps use the risk/reward
+program with ungated critical travel and optional elemental vault gates.
 
 `PuzzleRouteGenerator.build_compact_plan()` projects the same selected runtime
 candidate into the 35x35 presentation lattice, preserving room and gate marker
@@ -53,9 +53,8 @@ Native structural validation also checks edge endpoint ownership, paired room
 sockets, doorway bounds, duplicate room positions, and the four-edge degree
 limit before runtime graph initialization.
 
-Focused automated coverage is `tests/r7_native_generator_smoke.gd`; it samples
-100 seeds each for Fire, Water, and Electric starts and checks route validity,
-room density, fusion-gate count, logical-edge preservation, and determinism.
-The progression planner additionally enforces the native R7 landmark program:
-two ingredient Fire Rooms, two Orbs, two Special Rooms, one mandatory fusion
-gate, and a Boss continuation.
+Focused automated coverage is `tests/r7_native_generator_smoke.gd`; its filename
+is retained for runner compatibility, but it now samples generated R6+ route
+validity, three primary flames, optional vault count, ungated critical edges,
+and determinism. The active contract and broader matrix live in
+`r6-plus-risk-reward-generation-plan.md`.
