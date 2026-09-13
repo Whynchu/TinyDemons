@@ -57,7 +57,8 @@ jobs:
           XDG_DATA_HOME: ${{ runner.temp }}/godot-data
           REQUIRE_WEB_EXPORT: "1"
         run: |
-          & (Join-Path $env:GITHUB_WORKSPACE "tests/web_export_smoke.ps1") -RequireExport -OutputDirectory (Join-Path $env:GITHUB_WORKSPACE "dist")
+          $workspace = "${{ github.workspace }}"
+          & (Join-Path $workspace "tests/web_export_smoke.ps1") -RequireExport -OutputDirectory (Join-Path $workspace "dist")
 
       - name: Configure GitHub Pages
         if: ${{ github.event_name != 'pull_request' }}
