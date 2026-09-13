@@ -61,10 +61,11 @@ available with `-TestGroup all`. Focused checks pass for active-run snapshot rec
 R6+ risk/reward layouts, compact generated-layout bounds, the compatibility-named
 R7 route check, the expanded elemental-binding route set, generated scene
 construction, authored doorway behavior, and the typed room-transition
-boundary. Manual enemy-placement, reward, save/load, touch, flame travel, and
-full player-journey verification remain open; the 2026-09-13 R7 playthrough
-accepted the minimap landmark visibility behavior. The historical failures
-below are not silently reclassified by these focused results.
+boundary. Manual enemy-placement, reward, save/load, touch, repeated-travel,
+and full player-journey verification remain open; the 2026-09-13 R7 playthrough
+accepted the minimap landmark visibility and basic flame-travel behavior. The
+historical failures below are not silently reclassified by these focused
+results.
 
 ## Issue 1 — Demon Hub select/back presentation differs by menu
 
@@ -419,7 +420,8 @@ Status: **Source path exists — landmark/discovery contracts verified; runtime 
   input, and eligibility. `tests/generated_minimap_smoke.gd` and
   `tests/run1_minimap_smoke.gd` verify landmark visibility, ordinary-room
   discovery, draw order, and color state. Live MCP verification has opened and
-  closed the map; travel itself still needs a runtime flame-to-flame playtest.
+  closed the map, and the R7 playthrough confirmed basic flame travel. Save,
+  reload, repeated-travel, and presentation polish remain open.
 
 ### Approved map/travel contract
 

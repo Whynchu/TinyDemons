@@ -211,7 +211,7 @@ participation, and normal open-entrance movement.
 | First flame-room music start | Music warmup/cache exists | Cold versus warm room pickup frame profile and audio-start check |
 | Pause equipment clipping | Candidate clip and local scroll bounds exist | Fast swipe/release checks in Pause and Hub at supported aspect presets |
 | R5/R6 route identity | New runs preserve authored R5 and use generated R6+ | Fresh-run identity, fixed-seed layout, and active-run recovery checks |
-| Flame-room fast travel | Eligibility and transition path exist | Hub/flame-room origin rules, travel lifecycle, save/load, and repeated travel |
+| Flame-room fast travel | Basic travel works in the R7 playthrough; no travel SFX or transition animation yet | Save/load and repeated travel; add travel sound and transition presentation |
 | Bound identity at zero Chroma | Domain path preserves bound identity and desaturates | Live body/equipment presentation, depletion, pickup restore, and save/load |
 | Gray/Normal Chroma collection | Collection path exists | Live collection while Gray, storage amount, and unchanged Normal state |
 | Needed-color Chroma pickups | Selection path exists | Visual color checks for each current need and neutral/Normal state |
@@ -249,8 +249,15 @@ The user-confirmed R7 playthrough matched that behavior. Both
 `generated_minimap_smoke` and `run1_minimap_smoke` pass the focused contract,
 including landmark colors, ordinary-room discovery, and destination cursor draw
 order. Their older `open` entries were stale and are now `verified` in
-`tests/manifest.csv`. Flame-to-flame travel and browser/device verification
-remain separate evidence gaps.
+`tests/manifest.csv`. Flame-travel recovery/repeat evidence and browser/device
+verification remain separate evidence gaps.
+
+### 2026-09-13 flame-travel presentation note
+
+The R7 playthrough confirmed that Hub/flame-room travel functions correctly.
+There is currently no dedicated travel sound effect or transition animation;
+those are polish tasks, not route defects. Save/reload and repeated-travel
+verification remain open alongside browser/device verification.
 
 ### 2026-09-13 starter-flame music gate reconciliation
 
