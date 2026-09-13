@@ -7,12 +7,13 @@
 3. `docs/DOCUMENTATION_MAP.md` — authority and document lifecycle guide.
 4. `docs/ROADMAP.md` — active product and infrastructure sequence.
 5. `docs/KNOWN_ISSUES.md` — open behavior, verification, and infrastructure findings.
-6. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries.
-7. `docs/refactor-route.md` — accepted migration route.
-8. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
-9. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
-10. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
-11. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
+6. `docs/verification-surface-audit.md` — test/report roles, release-gate scope, and test-debt cleanup.
+7. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries.
+8. `docs/refactor-route.md` — accepted migration route.
+9. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
+10. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
+11. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
+12. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
 
 ## Verification
 

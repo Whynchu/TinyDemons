@@ -35,6 +35,7 @@ Work should move through one narrow slice at a time:
 |---|---|---|---|
 | 0.00 | Preserve the `0.2.00` baseline | In progress | clean import, recorded test inventory, duplicate UID decision, and representative manual run |
 | 0.10 | Make documentation authoritative | In progress | current map, roadmap, content guide, known-issues register, and lifecycle headers |
+| 0.15 | Audit and reduce the verification surface | Active issue | every test/report has a role and state; curated release gate; obsolete checks removed |
 | 0.20 | Stabilize active player-facing contracts | In progress | issue tracker findings have focused or manual verification, with failures classified |
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | Planned | typed room transition/spawn results and deterministic room fixtures |
@@ -119,6 +120,10 @@ This phase is the current documentation pass. The canonical surface is:
 The remaining work is to classify older plans, add current-state notes as they
 are reopened, add run scope to dungeon documents, and archive only after
 incoming links and compatibility rationale have been checked.
+
+The verification-surface audit is a separate prerequisite for Phase 0.20. Do
+not expand the smoke inventory while it is active; use focused owner checks and
+the curated gate only.
 
 ## Phase 0.20 — Stabilize active contracts
 

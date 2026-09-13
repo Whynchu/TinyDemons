@@ -57,6 +57,9 @@ Verification performed during the audit:
 - MCP per-file diagnostics were unavailable because no editor peer was connected.
   The successful editor import scan is the compile/import evidence for this
   baseline; it is not a substitute for runtime behavior tests.
+- The test/report inventory is intentionally audited separately in
+  [`verification-surface-audit.md`](verification-surface-audit.md); the counts
+  in this document are historical measurements, not a release-gate definition.
 
 ## 3. Measured baseline
 

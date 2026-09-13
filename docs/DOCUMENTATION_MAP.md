@@ -17,13 +17,15 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
    `0.2.x` infrastructure sequence.
 4. [`ROADMAP.md`](ROADMAP.md) — active product and infrastructure sequence.
 5. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — open findings and verification state.
-6. [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) — current content workflows.
-7. [`engineering-friction-audit.md`](engineering-friction-audit.md) — evidence-backed
+6. [`verification-surface-audit.md`](verification-surface-audit.md) — test/report
+   roles, release-gate scope, and verification-surface cleanup.
+7. [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) — current content workflows.
+8. [`engineering-friction-audit.md`](engineering-friction-audit.md) — evidence-backed
    engineering priorities.
-8. [`ARCHITECTURE.md`](ARCHITECTURE.md) — runtime boundaries and extension
+9. [`ARCHITECTURE.md`](ARCHITECTURE.md) — runtime boundaries and extension
    rules.
-9. [`FEATURE_MAP.md`](FEATURE_MAP.md) — first owner to inspect for each feature.
-10. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
+10. [`FEATURE_MAP.md`](FEATURE_MAP.md) — first owner to inspect for each feature.
+11. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
    export, and function-location index.
 
 ## Authority by question
@@ -41,6 +43,7 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 | How is a change verified? | [`README.md`](../README.md), [`gameplay-smoke-checklist.md`](gameplay-smoke-checklist.md), and test scripts | focused test reports |
 | What work is next? | [`ROADMAP.md`](ROADMAP.md) | feature plans and design proposals |
 | What is currently unresolved? | [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | the detailed issue tracker |
+| Should a test exist or block release? | [`verification-surface-audit.md`](verification-surface-audit.md) | target and runtime evidence |
 | How do I add content? | [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) | feature-specific contracts |
 | What makes a change difficult? | [`engineering-friction-audit.md`](engineering-friction-audit.md) | source files and detailed audits |
 
@@ -73,5 +76,8 @@ rationale, but they must link forward to the current authority.
 - Reconcile the tuning index with the eventual move from code-instantiated
   tuning objects to external resources.
 - Keep this map and the canonical documents linked from `AGENTS.md`.
+- Keep test/report role and state decisions in
+  [`verification-surface-audit.md`](verification-surface-audit.md); keep target
+  correctness findings in [`test-target-audit.md`](test-target-audit.md).
 - Move or archive documents only after links and code ownership have been
   checked; broad file moves are a separate cleanup change.
