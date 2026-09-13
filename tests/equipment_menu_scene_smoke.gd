@@ -41,7 +41,10 @@ func _initialize() -> void:
 			view.size = responsive_size
 			await process_frame
 			view.size = Vector2(284, 160)
-			await process_frame
+			# Cursor motion starts with a short glide before the idle bob begins.
+			# Wait for that glide so the assertion checks the steady-state bob.
+			for _frame in 15:
+				await process_frame
 			_expect(bool(view.command_cursor.call("is_bobbing")), "Hub equipment keeps its cursor animation during responsive reflow", failures)
 			_expect((view.get_node("CommandPanel") as Control).position.x == 107.0 and view.command_buttons[0].position.x == 108.0 and (view.get_node("SlotIcon3") as Sprite2D).position.x == 176.0 and (view.get_node("NavigationPanel") as Control).position.x == 205.0, "equipment distributes authored groups across the 16:9 logical width", failures)
 			view.size = responsive_size
@@ -61,6 +64,8 @@ func _initialize() -> void:
 				var icon := view.get_node("SlotIcon%d" % index) as Sprite2D
 				_expect(icon != null and icon.texture != null and icon.texture.get_width() == 5 and icon.texture.get_height() == 5, "equipment slot %d renders its 5x5 icon" % index, failures)
 		_expect(screens.hub_equipment_mode == 0 and view.command_cursor.visible, "equipment opens on its command row", failures)
+		for _frame in 15:
+			await process_frame
 		_expect(bool(view.command_cursor.call("is_bobbing")), "Hub equipment command cursor starts its idle animation", failures)
 		_expect((view.get_node("DescriptionText0") as Sprite2D).texture == null and (view.get_node("BonusText0") as Sprite2D).texture == null and not (view.get_node("CandidateClip/CandidateText0") as Sprite2D).visible, "command row clears item description and final bonus strip before slot selection", failures)
 		view.navigation_back_button.pressed.emit()
@@ -73,7 +78,10 @@ func _initialize() -> void:
 		gameplay.call("_hub_item_action")
 		await process_frame
 		_expect(screens.hub_equipment_mode == 1 and view.slot_cursor.visible and not view.candidate_cursor.visible, "Equip descends into the slot grid", failures)
-		_expect((view.get_node("DescriptionText0") as Sprite2D).texture != null and (view.get_node("BonusText0") as Sprite2D).texture != null, "slot selection restores equipped item description and final bonuses", failures)
+		# The starter loadout is zero-power plain gear, so the description is
+		# populated but the final-bonus strip is correctly blank until a real item
+		# with bonuses is selected.
+		_expect((view.get_node("DescriptionText0") as Sprite2D).texture != null and (view.get_node("BonusText0") as Sprite2D).texture == null, "slot selection restores the equipped item description while zero-power plain gear leaves the bonus strip blank", failures)
 		var catalog := ItemCatalog.new()
 		var demon_cloak := ItemInstance.new()
 		demon_cloak.definition_id = &"demon_cloak"
@@ -164,7 +172,10 @@ func _initialize() -> void:
 		await process_frame
 		screens.hub_page_buttons[1].pressed.emit()
 		await process_frame
-		_expect(screens.hub_list_cursor.visible and not screens.hub_slot_cursor.visible and not screens.hub_choice_cursor.visible, "Shop receives a clean list cursor after Equipment", failures)
+		# The reworked Shop renders through its own ShopMenuLayout cursor; the
+		# legacy hub list/slot/choice cursor layer is intentionally cleared on
+		# every render (see _reset_hub_cursor_layer).
+		_expect(not screens.hub_list_cursor.visible and not screens.hub_slot_cursor.visible and not screens.hub_choice_cursor.visible and screens.hub_shop_menu != null and screens.hub_shop_menu.visible, "Shop receives a clean modern list cursor layer after Equipment", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finished = true
