@@ -22,14 +22,17 @@ func _initialize() -> void:
 
 	var equipment := EquipmentComponent.new()
 	equipment.configure_from_profile(profile, catalog)
-	_expect(is_equal_approx(equipment.intelligence_bonus, 4.0) and is_equal_approx(equipment.mnd_bonus, 3.0), "equipment exposes authored INT/MND flat bonuses", failures)
+	# Chroma Talisman (rare): authored INT 2 + rare jump 2 = INT 4, MND 1.
+	# Mindweave Robe (common): authored MND 2, INT 1.
+	# Combined: INT 5, MND 3. Fusion/enhancement contributes zero here (fresh items).
+	_expect(is_equal_approx(equipment.intelligence_bonus, 5.0) and is_equal_approx(equipment.mnd_bonus, 3.0), "equipment exposes authored INT/MND flat bonuses", failures)
 	_expect(is_equal_approx(equipment.intelligence_rate_bonus, 0.0) and is_equal_approx(equipment.mnd_rate_bonus, 0.0), "live gear has no hidden INT/MND percentage rates", failures)
 	var stats := StatsComponent.new()
 	stats.configure_manual_growth(3, 2, 2, 1, 0, 0, 0, 0, 1, 1, 0, 0)
 	var snapshot := CombatStatSnapshot.from_components(stats, equipment)
-	_expect(is_equal_approx(snapshot.intelligence, 5.0) and is_equal_approx(snapshot.mnd, 4.0), "snapshot applies flat INT/MND gear", failures)
-	_expect(is_equal_approx(snapshot.gear_intelligence, 4.0) and is_equal_approx(snapshot.gear_mnd, 3.0), "snapshot retains canonical INT/MND gear contributions", failures)
-	_expect(is_equal_approx(snapshot.agi, 0.0) and is_equal_approx(snapshot.vit, 5.0), "existing six-stat snapshot channels remain independent", failures)
+	_expect(is_equal_approx(snapshot.intelligence, 6.0) and is_equal_approx(snapshot.mnd, 4.0), "snapshot applies flat INT/MND gear", failures)
+	_expect(is_equal_approx(snapshot.gear_intelligence, 5.0) and is_equal_approx(snapshot.gear_mnd, 3.0), "snapshot retains canonical INT/MND gear contributions", failures)
+	_expect(is_equal_approx(snapshot.agi, 1.0) and is_equal_approx(snapshot.vit, 3.0), "existing six-stat snapshot channels remain independent", failures)
 
 	var talisman_bonuses := catalog.bonuses(talisman)
 	var robe_bonuses := catalog.bonuses(robe)

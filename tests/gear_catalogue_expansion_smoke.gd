@@ -25,7 +25,7 @@ func _initialize() -> void:
 	var wraps := catalog.starter_item(&"arm")
 	_expect(hood.definition_id == &"plain_hood" and wraps.definition_id == &"plain_wraps", "new slots use the Plain starter pieces", failures)
 	_expect(catalog.bonuses(hood).is_empty() and catalog.bonuses(wraps).is_empty(), "Head and Arm starters remain zero-power Plain packages", failures)
-	_expect(bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "Plain starters remain excluded from ordinary drops", failures)
+	_expect(not bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and not bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "Plain Head and Arm starters drop from ordinary sources like every other Plain piece", failures)
 
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(catalog)

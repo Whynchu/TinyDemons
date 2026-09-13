@@ -54,9 +54,10 @@ release-risk area under the approved route policy.
 ## Current focused follow-up — 2026-09-13
 
 The runner now isolates standalone Godot processes with temporary user data,
-Dummy audio, and explicit log paths. The inventory is now `116` paths with `0`
-missing files; the default release gate selects 43 of them and the complete
-inventory is available with `-TestGroup all`. Focused checks pass for active-run snapshot recovery, generated
+Dummy audio, and explicit log paths. `tests/manifest.csv` classifies all 124
+test/report scripts with role, state, owner, target, and load kind; the default
+release gate selects 43 of the 122 runnable paths and the complete inventory is
+available with `-TestGroup all`. Focused checks pass for active-run snapshot recovery, generated
 R6+ risk/reward layouts, the expanded elemental-binding route set, generated
 scene construction, authored doorway behavior, and the typed room-transition
 boundary. Manual enemy-placement,
@@ -577,8 +578,10 @@ checks remain open rather than being treated as product failures.
 The 2026-09-09 source/MCP verification is historical evidence for the initial
 implementation pass. The 2026-09-11 baseline had no editor peer or runtime
 active, so focused checks ran as standalone Godot processes. The current
-inventory is complete (`116` registered paths, `0` missing files); the default
-release gate selects 43 paths and the detailed pass/failure matrix is in
+inventory is classified in `tests/manifest.csv` (124 scripts, including 2
+intentional `role:report` scripts that are not runner tests); the default
+release gate selects 43 of the 122 runnable paths and the detailed pass/failure
+matrix is in
 [`test-target-audit.md`](test-target-audit.md). Test/report role and release
 authority are tracked separately in
 [`verification-surface-audit.md`](verification-surface-audit.md).

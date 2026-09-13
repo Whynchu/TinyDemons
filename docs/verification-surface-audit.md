@@ -9,10 +9,13 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 
 Owner: verification infrastructure and repository maintainability
 
-Current code: the runner registers 116 Godot smoke paths. Its default release
-gate selects 43 paths; `owner`, `reference`, `diagnostic`, and `all` groups keep
-the remaining evidence available without making every check a default blocker.
-The repository also contains test/report scripts outside that registry.
+Current code: the runner derives grouping from `tests/manifest.csv`. The
+manifest classifies all 124 test/report scripts with a role, state, owner,
+target, and load kind. Its default release gate selects 43 paths; `owner`,
+`reference`, `diagnostic`, and `all` groups keep the remaining evidence
+available without making every check a default blocker. The two `report`
+scripts (`fusion_menu_preview`, `puzzle_map_reference_diff_report`) are
+intentionally not runner tests.
 
 Verification: inventory mode, focused standalone Godot checks, and a supervised
 full run when the environment permits it
@@ -68,15 +71,18 @@ run, not the quality or authority of a test.
 
 ## Runner groups
 
-`tests/run_all_smoke.ps1` now exposes the classification at execution time:
+`tests/run_all_smoke.ps1` reads `tests/manifest.csv` and exposes the
+classification at execution time. The `role` column drives grouping; the
+`state` column is carried into the result and inventory CSVs so a red result
+can be separated into product, harness, and environment causes:
 
 | Command | Current scope | Use |
 |---|---:|---|
 | default / `-TestGroup gate` | 43 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
-| `-TestGroup owner` | 62 Godot paths | Focused feature-owner regressions |
+| `-TestGroup owner` | 68 Godot paths | Focused feature-owner regressions |
 | `-TestGroup reference` | 10 Godot paths | Opt-in authored/visual/reference checks |
 | `-TestGroup diagnostic` | 1 Godot path | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 116 Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup all` | 122 runnable Godot paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its
@@ -104,13 +110,33 @@ generated-layout, slime, and doorway failures were a mixture of real owner
 defects and expectations written for an earlier contract. A red result alone
 did not identify which kind it was.
 
+## 2026-09-13 focused triage outcome
+
+The six formerly unregistered checks were run one at a time in isolated headless
+processes (see `KNOWN_ISSUES.md` for the full note). Result states are recorded
+in `tests/manifest.csv`:
+
+- `actor_geometry_smoke` harness defect fixed; now `verified`.
+- `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`,
+  `resource_drop_motion_smoke` now `verified` (the earlier stalls were add-on
+  teardown noise; the resource test still reports engine resources in use at
+  exit).
+- `touch_menu_scroll_smoke`, `menu_route_scene_smoke`,
+  `gear_system_rework_smoke` were `open` and are now `verified` with documented
+  contract decisions (see `KNOWN_ISSUES.md`): the menu-route check was a harness
+  injection mismatch; the gear check now reflects the decision that Plain pieces
+  drop from chests for every slot; the touch check now exercises the dialogue
+  ghost-accept contract and keeps blank non-dialogue menu taps inert.
+
 ## Work plan
 
 1. Freeze test growth while this issue is active. A new test must replace or
    consolidate an existing check, or protect a newly agreed public contract.
 2. Inventory every registered and unregistered test/report script. Record its
    role, state, owner, target, evidence command, and whether it loads the main
-   scene or a lightweight fixture.
+   scene or a lightweight fixture. **Done for the current inventory:** all 124
+   scripts are classified in `tests/manifest.csv`; the runner derives grouping
+   from that file.
 3. Maintain the curated `role:gate` set. It covers headless boot, core room
    transition/doorway behavior, representative combat, progression/profile
    integrity, and the web export because web is a supported target.
@@ -126,17 +152,22 @@ did not identify which kind it was.
 
 ## Exit criteria
 
-- [ ] Every registered test has a role, state, owner, and target note.
-- [ ] Every unregistered test/report script is intentional, registered, or
-  retired.
-- [ ] The default release gate is curated and substantially smaller than the
+- [x] Every registered test has a role, state, owner, and target note.
+- [x] Every unregistered test/report script is intentional, registered, or
+  retired (6 previously unregistered scripts are now `role:owner`;
+  `fusion_menu_preview` and `puzzle_map_reference_diff_report` are explicit
+  `role:report` scripts that are not runner tests).
+- [x] The default release gate is curated and substantially smaller than the
   full diagnostic inventory.
 - [ ] No test is changed solely to make a red result green without a documented
-  contract decision.
+  contract decision. (2026-09-13: three open findings were resolved with
+  recorded decisions; the `six_stat_equipment_smoke` finding uncovered and fixed
+  a real stat-ladder regression in `item_catalog.gd`, then its stale aggregate
+  expectations were corrected — see `KNOWN_ISSUES.md`.)
 - [ ] Duplicate, implementation-detail, and superseded tests are removed or
   explicitly retained for migration history.
-- [ ] The runner reports product failures separately from harness and
-  environment failures.
+- [x] The runner reports product failures separately from harness and
+  environment failures (result CSVs now carry the manifest `state` per test).
 - [ ] `AUDIT.md`, `test-target-audit.md`, and `KNOWN_ISSUES.md` link to this
   issue without duplicating its classification table.
 

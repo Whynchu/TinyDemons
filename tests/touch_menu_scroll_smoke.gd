@@ -37,26 +37,37 @@ func _initialize() -> void:
 	_expect(router.touch_scroll_y() == 0.0, "scroll delta stops after release", failures)
 
 	# A missed touchend leaves a ghost accept finger that holds interact/accept
-	# pressed and blocks dialogue and menu advancement. The stale-hold timeout
-	# drops it so the next tap advances again.
-	layer.set_input_context(InputRouter.Context.MENU)
+	# pressed and blocks dialogue advancement. The stale-hold timeout drops it so
+	# the next tap advances again. This mechanism lives in the dialogue context:
+	# non-dialogue menus deliberately keep blank taps inert.
+	layer.set_input_context(InputRouter.Context.DIALOGUE)
+	var dialogue_box := ColorRect.new()
+	dialogue_box.name = "NpcDialogueBox"
+	# Keep the dialogue panel clear of the bottom-right cancel control so the
+	# tap registers as a dialogue accept rather than a cancel.
+	dialogue_box.position = Vector2(30.0, 60.0)
+	dialogue_box.size = Vector2(100.0, 50.0)
+	dialogue_box.visible = true
+	dialogue_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	get_root().add_child(dialogue_box)
 	var ghost := InputEventScreenTouch.new()
-	ghost.device = 0; ghost.index = 7; ghost.pressed = true; ghost.position = Vector2(150.0, 80.0)
+	ghost.device = 0; ghost.index = 7; ghost.pressed = true; ghost.position = dialogue_box.get_global_rect().get_center()
 	layer._input(ghost)
-	router.poll(InputRouter.Context.MENU)
-	_expect(router.ui_accept_just_pressed(), "first menu tap produces an accept edge", failures)
-	router.poll(InputRouter.Context.MENU)
+	router.poll(InputRouter.Context.DIALOGUE)
+	_expect(router.ui_accept_just_pressed(), "first dialogue tap produces an accept edge", failures)
+	router.poll(InputRouter.Context.DIALOGUE)
 	_expect(router.ui_accept_pressed(), "ghost accept finger keeps accept held without an up event", failures)
 	var accept_fingers: Dictionary = layer.get("_menu_accept_fingers")
 	accept_fingers[7] = -1000000
 	layer.call("_clear_stale_menu_accepts")
-	router.poll(InputRouter.Context.MENU)
+	router.poll(InputRouter.Context.DIALOGUE)
 	_expect(not router.ui_accept_pressed(), "stale accept hold is dropped without an up event", failures)
 	var follow_up := InputEventScreenTouch.new()
-	follow_up.device = 0; follow_up.index = 8; follow_up.pressed = true; follow_up.position = Vector2(150.0, 90.0)
+	follow_up.device = 0; follow_up.index = 8; follow_up.pressed = true; follow_up.position = dialogue_box.get_global_rect().get_center() + Vector2(8.0, 0.0)
 	layer._input(follow_up)
-	router.poll(InputRouter.Context.MENU)
-	_expect(router.ui_accept_just_pressed(), "after the stale hold clears, the next tap advances the menu", failures)
+	router.poll(InputRouter.Context.DIALOGUE)
+	_expect(router.ui_accept_just_pressed(), "after the stale hold clears, the next tap advances the dialogue", failures)
+	dialogue_box.queue_free()
 
 	router.free()
 	layer.free()

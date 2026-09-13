@@ -40,7 +40,7 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 | What is the current dungeon/content contract? | [`runtime-map.md`](runtime-map.md) and the relevant generator or layout definition | run-specific history |
 | What is the approved R6+ generation direction? | [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md) | compact-generator implementation history and tuning evidence |
 | What must remain compatible in saves and exports? | [`production-boundary.md`](production-boundary.md), save plans, and [`VERSIONING.md`](VERSIONING.md) | migration history |
-| How is a change verified? | [`README.md`](../README.md), [`gameplay-smoke-checklist.md`](gameplay-smoke-checklist.md), and test scripts | focused test reports |
+| How is a change verified? | [`README.md`](../README.md), [`gameplay-smoke-checklist.md`](gameplay-smoke-checklist.md), and `tests/manifest.csv` | focused test reports |
 | What work is next? | [`ROADMAP.md`](ROADMAP.md) | feature plans and design proposals |
 | What is currently unresolved? | [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | the detailed issue tracker |
 | Should a test exist or block release? | [`verification-surface-audit.md`](verification-surface-audit.md) | target and runtime evidence |
@@ -78,6 +78,9 @@ rationale, but they must link forward to the current authority.
 - Keep this map and the canonical documents linked from `AGENTS.md`.
 - Keep test/report role and state decisions in
   [`verification-surface-audit.md`](verification-surface-audit.md); keep target
-  correctness findings in [`test-target-audit.md`](test-target-audit.md).
+  correctness findings in [`test-target-audit.md`](test-target-audit.md). The
+  executable classification lives in `tests/manifest.csv`; the smoke runner
+  derives its groups from that file, so update it when adding or retiring a
+  test.
 - Move or archive documents only after links and code ownership have been
   checked; broad file moves are a separate cleanup change.
