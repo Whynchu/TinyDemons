@@ -43,6 +43,28 @@ func _initialize() -> void:
 	_expect(root.player_profile.fusion_owned_count(target.instance_id, catalog) == 2, "collapsed FUSE row reports both unequipped copies as owned", failures)
 	_expect(root.player_profile.fusion_material_count(target.instance_id, catalog) == 2, "matching basic swords remain usable as materials", failures)
 
+	var mismatch_profile := PlayerProfile.new()
+	mismatch_profile.souls = 999
+	var rare_target := ItemInstance.new()
+	rare_target.instance_id = "cache-rare-target"
+	rare_target.definition_id = &"basic_sword"
+	rare_target.rarity = &"rare"
+	var common_material := ItemInstance.new()
+	common_material.instance_id = "cache-common-material"
+	common_material.definition_id = &"basic_sword"
+	common_material.rarity = &"common"
+	_expect(mismatch_profile.grant_item(rare_target), "rare target can be staged for rarity-boundary coverage", failures)
+	_expect(mismatch_profile.grant_item(common_material), "common material can be staged for rarity-boundary coverage", failures)
+	mismatch_profile.equipped_instance_ids["weapon"] = rare_target.instance_id
+	var mismatch_root := _MockRoot.new()
+	mismatch_root.screen_state_controller = _MockScreenState.new()
+	mismatch_root.player_profile = mismatch_profile
+	controller.refresh_hub_fusion_candidates(mismatch_root)
+	_expect(mismatch_profile.fusion_material_count(rare_target.instance_id, catalog) == 0, "different-rarity material is not eligible for a rare target", failures)
+	_expect(controller.hub_fusion_candidates(mismatch_root).is_empty(), "different-rarity material does not expose a fusion candidate", failures)
+	_expect(not mismatch_profile.fuse_duplicates(rare_target.instance_id, 1, catalog), "different-rarity material cannot fuse into a rare target", failures)
+	_expect(mismatch_profile.find_item(rare_target.instance_id).rarity == &"rare" and mismatch_profile.find_item(common_material.instance_id) != null, "rejected cross-rarity fusion leaves both items unchanged", failures)
+
 	# Equipment and Shop use the same functional identity. Quality is an
 	# economic value, so copies with different quality still collapse; random
 	# stat lanes and enhancement levels remain separate rows.
