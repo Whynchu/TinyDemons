@@ -61,9 +61,10 @@ available with `-TestGroup all`. Focused checks pass for active-run snapshot rec
 R6+ risk/reward layouts, compact generated-layout bounds, the compatibility-named
 R7 route check, the expanded elemental-binding route set, generated scene
 construction, authored doorway behavior, and the typed room-transition
-boundary. Focused generated-layout/reachability and enemy spawn/walkability
-checks also pass. Manual late-generated-room placement, reward, save/load,
-touch, repeated-travel, and full player-journey verification remain open; the
+boundary. Focused generated-layout/reachability, enemy spawn/walkability, and
+gear catalogue/drop policy checks also pass. Manual late-generated-room
+placement, reward, save/load, touch, repeated-travel, and full player-journey
+verification remain open; the
 2026-09-13 R7 playthrough accepted the minimap landmark visibility and basic
 flame-travel behavior. The historical failures below are not silently
 reclassified by these focused results.
@@ -582,15 +583,14 @@ Status: **Implemented in source — runtime color verification pending**
    updated run-generation/state contracts (Issue 7).
 
 The source implementation contains the approved behavior without changing
-unrelated balance. The historical focused baseline exposed contracts that must
-be repaired or reclassified before closure. The 2026-09-13 follow-up resolved
-the doorway, active-run fixture, typed transition, and active R6+ generation
-checks; remaining work is to triage the failed Hub, equipment, minimap,
-music-gate, binding, and unresolved native-generator assertions; compare all
-Hub footer orientations; exercise a complete sell transaction; profile
-cold/warm flame pickup; test equipment swipes in both menu instances; restore
-a generated R6 checkpoint; travel between two visited flames; and visually
-inspect bound/temporary pickup colors.
+unrelated balance. The historical focused baseline exposed contracts that have
+since been repaired or reclassified. The 2026-09-13 follow-up now has focused
+evidence for the doorway, active-run fixture, typed transition, active R6+
+generation, Hub, Equipment, Pause, Player HUD, gear catalogue, and gear/drop
+policy checks. Remaining work is visual orientation comparison, Shop timing,
+Pause Equipment touch/clipping, cold/warm flame pickup timing, generated R6
+manual save/recovery, repeated flame travel, and visual inspection of
+bound/temporary pickup colors.
 
 ## Verification and handoff
 
@@ -599,10 +599,9 @@ no script parse, type-inference, or failed-load errors. The focused
 `fusion_candidate_cache_smoke.gd` and `gear_system_rework_smoke.gd` processes
 were also attempted, but this local Godot 4.7.1 environment crashed with a
 native signal 11 before either script produced assertions. That is historical
-environment evidence: the 2026-09-13 isolated run of
-`fusion_candidate_cache_smoke.gd` completed successfully and now records the
-same-rarity fusion boundary. `gear_system_rework_smoke.gd` remains open for its
-separate gameplay assertions.
+environment evidence: the 2026-09-13 isolated runs of both scripts completed
+successfully. The fusion check records the same-rarity boundary, while the gear
+system check records the approved Plain Head/Arm chest-drop policy.
 
 The 2026-09-09 source/MCP verification is historical evidence for the initial
 implementation pass. The 2026-09-11 baseline had no editor peer or runtime

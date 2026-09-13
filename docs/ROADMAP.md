@@ -69,8 +69,8 @@ order:
    against the authored Pause/Hub conventions, including direct touch targets.
    The focused Demon Hub/Shop, Equipment scene, and Pause scene checks are now
    green.
-5. Recheck gear catalogue/drop expectations and profile exact sell-row rebuilds
-   with representative inventory.
+5. Keep the verified gear catalogue/drop contracts and profile-safe exact
+   sell-row rebuilds green; measure Shop timing before any optimization.
 
 Each item should keep its existing owner, add or correct a focused
 characterization check, and record the result in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).

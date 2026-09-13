@@ -186,10 +186,12 @@ pre-R6+ contract. Its compatibility filename remains for runner stability, but
 the current check exercises the active R6+ route and passes its compact-bound
 and route-policy assertions. The neighboring `generated_layout_smoke` check
 also passes.
-`menu_route_scene_smoke`, `gear_system_rework_smoke`,
-`cloud_panel_touch_smoke`, and `touch_menu_scroll_smoke` did not produce a
-reliable result in this pass because their standalone workers stalled around
-the add-on MCP runtime startup/teardown path. They remain unverified.
+At an earlier point in this pass, `menu_route_scene_smoke`,
+`gear_system_rework_smoke`, `cloud_panel_touch_smoke`, and
+`touch_menu_scroll_smoke` did not produce a reliable result because their
+standalone workers stalled around the add-on MCP runtime startup/teardown
+path. Subsequent isolated runs and contract decisions resolved those
+classifications; the current states are recorded in `tests/manifest.csv`.
 
 The repeated root-certificate and MCP registry messages are environment
 warnings. They appeared in direct runs and were not counted as test failures.
@@ -226,6 +228,12 @@ warnings. They appeared in direct runs and were not counted as test failures.
 - `player_hud_scene_smoke`: pass. Its ability-prompt target paths now match the
   authored nesting under `MagicCooldownIcon` and `ImbueCooldownIcon`; the scene
   remains a fixture-only target and no runtime HUD path was changed.
+- `gear_catalogue_expansion_smoke`: pass. The six-slot catalogue, Plain starter
+  packages, and legal Head/Arm shop generation match the authored contract.
+- `gear_drop_policy_smoke`: pass. Deterministic source selection, full shop
+  slot coverage, premium plus weighting, pricing, and anti-repeat rewards pass.
+- `gear_system_rework_smoke`: pass. The approved Plain Head/Arm chest-drop
+  policy and gear-system contracts are now reflected in the gate evidence.
 
 These are updates to the historical baseline above; no new test paths were added.
 
