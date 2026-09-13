@@ -310,10 +310,21 @@ func update_fire_sparks_from_root(root: Object, delta: float) -> void:
 	particle.z_as_relative = false
 	particle.z_index = fire.z_index + 2
 	particle.position = origin
-	particle.modulate = Color8(214, 54, 42)
+	var fire_palette := _fire_palette_from_root(root)
+	var fire_tones := PaletteLibrary.fire_triple(fire_palette)
+	particle.modulate = fire_tones[0]
 	root.add_child(particle)
 	var lifetime: float = float(root.get("rng").randf_range(0.28, 0.5))
-	pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_speed * 5.0, root.get("rng").randf_range(-18.0, -11.0)), "timer": lifetime, "lifetime": lifetime, "gravity": -3.0, "fire_spark": true})
+	pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_speed * 5.0, root.get("rng").randf_range(-18.0, -11.0)), "timer": lifetime, "lifetime": lifetime, "gravity": -3.0, "fire_spark": true, "fire_palette": fire_palette})
+
+
+func _fire_palette_from_root(root: Object) -> String:
+	var palette := ""
+	if root.has_method("_current_rest_fire_palette"):
+		palette = String(root.call("_current_rest_fire_palette"))
+	else:
+		palette = String(root.get("current_fire_palette_name"))
+	return palette if palette in PaletteLibrary.PALETTE_NAMES else "grey"
 
 
 func begin_player_death(root: Object, depth_scale: float) -> void:
@@ -765,7 +776,11 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 			particle.scale = Vector2(1.0, 2.0 if charge_progress >= 0.70 else 1.0)
 		if bool(particle_data.get("fire_spark", false)):
 			var progress := 1.0 - clampf(timer / lifetime, 0.0, 1.0)
-			var fire_color := Color(1.0, 0.12, 0.05).lerp(Color(1.0, 0.86, 0.18), clampf(progress / 0.35, 0.0, 1.0))
+			var fire_palette := String(particle_data.get("fire_palette", "grey"))
+			if fire_palette not in PaletteLibrary.PALETTE_NAMES:
+				fire_palette = "grey"
+			var fire_tones := PaletteLibrary.fire_triple(fire_palette)
+			var fire_color := fire_tones[0].lerp(fire_tones[2], clampf(progress / 0.35, 0.0, 1.0))
 			color = Color(fire_color.r, fire_color.g, fire_color.b, clampf(1.0 - progress, 0.0, 1.0))
 		particle.modulate = color
 		particle_data["velocity"] = velocity

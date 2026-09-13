@@ -36,6 +36,7 @@
 [ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="38_aggro_dot"]
 [ext_resource type="Texture2D" uid="uid://bvwy8po4byina" path="res://assets/artwork/firepit.png" id="39_firepit"]
 [ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/player_hud.tscn" id="40_player_hud"]
+[ext_resource type="Script" uid="uid://dqalh1uc2w2ev" path="res://scripts/hub_stone_accent_layer.gd" id="42_hub_stone_accent_layer"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -92,7 +93,7 @@ sources/0 = SubResource("TileSetAtlasSource_fv21b")
 [sub_resource type="Gradient" id="Gradient_fire_light"]
 interpolation_mode = 1
 offsets = PackedFloat32Array(0, 0.32, 0.58, 0.78, 1)
-colors = PackedColorArray(1, 0.803922, 0.458824, 0.78, 0.937255, 0.490196, 0.341176, 0.62, 0.670588, 0.321569, 0.211765, 0.4, 0.670588, 0.321569, 0.211765, 0.18, 1, 1, 1, 0)
+colors = PackedColorArray(1, 1, 1, 0.78, 1, 1, 1, 0.62, 1, 1, 1, 0.4, 1, 1, 1, 0.18, 1, 1, 1, 0)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_fire_light"]
 gradient = SubResource("Gradient_fire_light")
@@ -284,6 +285,12 @@ block_trigger_when_closed = true
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_RIGHT" unique_id=429081338]
 position = Vector2(160, 85)
 
+[node name="HubStoneAccentLayer" type="Node2D" parent="Map"]
+texture_filter = 1
+z_index = 1
+visible = false
+script = ExtResource("42_hub_stone_accent_layer")
+
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
 
 [node name="CloakedDemonShadow" type="Sprite2D" parent="Actors" unique_id=110558620]
@@ -320,7 +327,7 @@ color = Color(1, 1, 1, 0.40784314)
 polygon = PackedVector2Array(-8, 0.9749985, -3, -2.0250015, -1, -3.0250015, 1, -3.0250015, 3, -2.0250015, 8, 0.9749985, 8, 3.9749985, 3, 6.9749985, 1, 7.9749985, -1, 7.9749985, -3, 6.9749985, -8, 3.9749985)
 
 [node name="FireLight" type="PointLight2D" parent="Actors/RestFire" unique_id=739137859]
-color = Color(1, 0.803922, 0.458824, 1)
+color = Color(1, 1, 1, 1)
 energy = 0.12
 texture = SubResource("GradientTexture2D_fire_light")
 offset = Vector2(0, 4)

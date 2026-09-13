@@ -157,6 +157,9 @@ func starter_flame_gate_locked(root: Object) -> bool:
 
 func apply_puzzle_environment_tint(root: Object, tint: Color) -> void:
 	var presentation_tint: Color = _lightened_artwork_tint(tint)
+	var stone_layer := root.get("hub_stone_accent_layer") as HubStoneAccentLayer
+	if stone_layer != null:
+		stone_layer.apply_room_tint(presentation_tint)
 	if root.background_environment != null:
 		root.background_environment.self_modulate = Color.WHITE
 	# Reset every authored surface first so an unused entrance cannot retain a

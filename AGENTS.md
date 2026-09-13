@@ -23,7 +23,7 @@ When a Godot editor peer is connected through the MCP toolkit, use MCP for
 scene inspection, script diagnostics, playtests, screenshots, and runtime logs.
 Do **not** run `tests/run_all_smoke.ps1` from that editor session. That script
 defaults to the curated release gate (currently 43 processes); the explicit
-`-TestGroup all` inventory launches all 119 runnable paths in sequence. A
+`-TestGroup all` inventory launches all 121 runnable paths in sequence. A
 headless renderer crash can therefore produce an avalanche of Windows
 memory-error dialogs.
 
@@ -58,6 +58,7 @@ process exits nonzero or a test reports failure.
 | Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd`, `room_transition_result.gd` |
 | Progression and settlement | `progression_controller.gd` / `run_settlement.gd` when extracted |
 | Hub and menu presentation | `screen_state_controller.gd` |
+| Stone accent presentation | `hub_stone_accent_layer.gd`, `docs/stone-accent-procedural-placement-plan.md` |
 | Display settings and responsive layout | `display_controller.gd`, `display_layout.gd`, `settings_service.gd`, `screen_state_controller.gd` |
 | Audio mix settings | `sound_manager.gd`, `settings_service.gd` |
 | Input device prompts | `input_device_tracker.gd`, `input_router.gd` |

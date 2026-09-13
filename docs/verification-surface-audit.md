@@ -10,7 +10,7 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 Owner: verification infrastructure and repository maintainability
 
 Current code: the runner derives grouping from `tests/manifest.csv`. The
-manifest classifies all 121 test/report scripts with a role, state, owner,
+manifest classifies all 123 test/report scripts with a role, state, owner,
 target, and load kind. Its default release gate selects 43 paths; `owner`,
 `reference`, `diagnostic`, and `all` groups keep the remaining evidence
 available without making every check a default blocker. The two `report`
@@ -80,9 +80,9 @@ can be separated into product, harness, and environment causes:
 |---|---:|---|
 | default / `-TestGroup gate` | 43 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
 | `-TestGroup owner` | 65 Godot paths | Focused feature-owner regressions |
-| `-TestGroup reference` | 10 Godot paths | Opt-in authored/visual/reference checks |
+| `-TestGroup reference` | 12 Godot paths | Opt-in authored/visual/reference checks |
 | `-TestGroup diagnostic` | 1 Godot path | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 119 runnable Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup all` | 121 runnable Godot paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its
@@ -147,7 +147,7 @@ in `tests/manifest.csv`:
    consolidate an existing check, or protect a newly agreed public contract.
 2. Inventory every registered and unregistered test/report script. Record its
    role, state, owner, target, evidence command, and whether it loads the main
-   scene or a lightweight fixture. **Done for the current inventory:** all 121
+   scene or a lightweight fixture. **Done for the current inventory:** all 123
    scripts are classified in `tests/manifest.csv`; the runner derives grouping
    from that file.
 3. Maintain the curated `role:gate` set. It covers headless boot, core room

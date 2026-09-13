@@ -98,7 +98,7 @@ When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
 one separate Godot process per selected test. The default release gate is
-currently 43 paths; the explicit `-TestGroup all` inventory runs all 119
+currently 43 paths; the explicit `-TestGroup all` inventory runs all 121
 runnable paths. A single headless renderer failure can create repeated Windows
 memory-error dialogs.
 
@@ -148,7 +148,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.06**. Every push to `main` must increment the
+Current game version: **0.2.07**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 
