@@ -252,6 +252,18 @@ order. Their older `open` entries were stale and are now `verified` in
 `tests/manifest.csv`. Flame-to-flame travel and browser/device verification
 remain separate evidence gaps.
 
+### 2026-09-13 starter-flame music gate reconciliation
+
+`run_music_flame_gate_smoke` now passes against the sound owner's documented
+audio policy: `Dungeon-Crawl.wav` is the source path and
+`Dungeon-Crawl.ogg` is selected automatically when present. The run track stays
+silent before starter-flame attunement and starts after it. The separate cold
+versus warm pickup timing/profile remains open.
+
+The neighboring sound-balance and sound-mix-profile checks also pass. Their
+canonical runtime key is `sword_beam_charge` for charging and `sword_beam` for
+the launched projectile; both now have explicit catalog/profile coverage.
+
 ## Verification surface audit — open
 
 The repository has a large test/report inventory. `tests/manifest.csv` now

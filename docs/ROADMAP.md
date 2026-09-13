@@ -62,8 +62,8 @@ order:
    green. Compact-bound checks are now green; run the remaining enemy-placement
    and manual generated-room checks, then repair any runtime failures before
    expanding generated content.
-3. Preserve the accepted minimap landmark/discovery behavior and finish the
-   remaining flame-travel evidence; then repair the starter-flame music gate
+3. Preserve the accepted minimap landmark/discovery behavior and keep the
+   starter-flame music gate green; finish the remaining flame-travel evidence
    and add a cold/warm timing measurement.
 4. Reconcile Demon Hub, equipment, and touch contracts against the authored
    Pause/Hub conventions, including cursor, footer, clipping, and direct touch
