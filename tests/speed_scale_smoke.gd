@@ -24,7 +24,7 @@ func _initialize() -> void:
 	var catalog := ItemCatalog.new()
 	var gear := EquipmentComponent.new()
 	gear.configure_from_profile(profile, catalog)
-	_expect(is_equal_approx(gear.speed_bonus, -1.0), "starter Basic gear exposes its flat shield trade-off", failures)
+	_expect(is_equal_approx(gear.speed_bonus, 0.0), "Plain starter gear has no flat speed trade-off", failures)
 
 	var dagger := ItemInstance.new(); dagger.instance_id = "dagger-test"; dagger.definition_id = &"quick_dagger"; dagger.rarity = &"common"
 	var cloak := ItemInstance.new(); cloak.instance_id = "cloak-test"; cloak.definition_id = &"feather_cloak"; cloak.rarity = &"common"
@@ -41,13 +41,13 @@ func _initialize() -> void:
 	var base_stats := StatsComponent.new()
 	base_stats.configure_manual_growth(4, 3, 3, 2, 1, 0, 0, 0)
 	var base_snapshot := CombatStatSnapshot.from_components(base_stats, gear)
-	_expect(base_snapshot.speed == 1, "starter shield trade-off is visible in the flat snapshot", failures)
+	_expect(base_snapshot.speed == 2, "Plain starter loadout leaves the authored speed baseline intact", failures)
 	var tall_stats := StatsComponent.new()
 	tall_stats.configure_manual_growth(4, 3, 3, 40, 1, 0, 0, 0)
 	var tall_snapshot := CombatStatSnapshot.from_components(tall_stats, gear)
 	var tall_speed_snapshot := CombatStatSnapshot.from_components(tall_stats, speed_gear)
 	_expect(tall_speed_snapshot.speed > tall_snapshot.speed, "speed gear raises effective SPD at scale", failures)
-	_expect(tall_speed_snapshot.speed - tall_snapshot.speed == 10, "speed gear replaces the starter shield trade-off with a 9-point legacy package", failures)
+	_expect(tall_speed_snapshot.speed - tall_snapshot.speed == 9, "speed gear adds its nine-point package over the Plain starter loadout", failures)
 
 	var heavy_sword := ItemInstance.new(); heavy_sword.instance_id = "heavy-test"; heavy_sword.definition_id = &"soldier_sword"; heavy_sword.rarity = &"common"
 	var cuirass := ItemInstance.new(); cuirass.instance_id = "cuirass-test"; cuirass.definition_id = &"iron_cuirass"; cuirass.rarity = &"common"

@@ -18,6 +18,11 @@ static func foot(actor: Sprite2D, actor_foot_offset: Vector2) -> Vector2:
 	# pixels, which is enough to reverse lock-on facing at close range.
 	if actor != null and actor.centered:
 		return actor.global_position
+	# Boss artwork has a larger authored canvas and a different floor point than
+	# regular slimes. The shadow canvas is the shared world-space anchor for both
+	# rendering and combat, so movement/attack math must use it too.
+	if actor != null and float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
+		return slime_shadow_anchor(actor)
 	return foot_position(actor.global_position, actor_foot_offset)
 
 

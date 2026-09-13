@@ -140,6 +140,16 @@ func set_slime_spawn_frame(root: Object, slime: Sprite2D, frame_index: int) -> v
 func finish_slime_spawn(root: Object, slime: Sprite2D) -> void:
 	if slime == null or not is_instance_valid(slime):
 		return
+	# The normal tick path deactivates Spawn immediately before this callback.
+	# Keep the completion seam safe for room restoration and direct test callers
+	# by cancelling an active component here as well.
+	var slime_actor := slime as SlimeActor
+	if slime_actor != null:
+		slime_actor.cancel_spawn()
+	else:
+		var spawn := slime_spawn(root, slime)
+		if spawn != null:
+			spawn.call("cancel")
 	root.call("_restore_slime_idle_texture", slime)
 	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
 	var collision := root.get("collision_sprites") as Array[Sprite2D]
@@ -332,7 +342,11 @@ func capture_slime_attack(root: Object, slime: Sprite2D) -> void:
 	var player := root.get("player") as Sprite2D
 	if combat == null or player == null:
 		return
-	var target_point: Vector2 = root.call("_actor_foot", player)
+	# Attack commitment targets the player's collision center, matching the
+	# target bounds used by reach/contact calculations. This removes the small
+	# actor-foot/guide offset that otherwise turns a vertical boss lunge into a
+	# diagonal one.
+	var target_point: Vector2 = root.call("_collision_rect", player).get_center()
 	combat.attack_target_point = target_point
 	combat.attack_lunge_vector = root.call("_slime_attack_commitment_vector", slime, target_point) as Vector2
 	combat.attack_committed = true

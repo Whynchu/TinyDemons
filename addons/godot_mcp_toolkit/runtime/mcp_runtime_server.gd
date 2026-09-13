@@ -95,6 +95,14 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		set_process(false)
 		return
+	# Standalone smoke tests use the editor executable with --headless, which
+	# still reports the "editor" feature. Do not start the MCP WebSocket server
+	# or touch its registry in that mode: headless verification has no editor
+	# peer to serve, and concurrent editor/test processes can otherwise compete
+	# for runtime resources during startup and teardown.
+	if DisplayServer.get_name() == "headless":
+		set_process(false)
+		return
 	# --check-only is a parse-only pass — no runtime server needed.
 	if "--check-only" in OS.get_cmdline_args():
 		set_process(false)

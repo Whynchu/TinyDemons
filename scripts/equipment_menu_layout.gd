@@ -74,6 +74,7 @@ var navigation_back_button: Button = null
 
 
 func set_portrait_texture(texture: Texture2D) -> void:
+	_cache_nodes()
 	var portrait := get_node_or_null("Portrait") as Sprite2D
 	if portrait == null or texture == null:
 		return
@@ -273,10 +274,12 @@ func _apply_button_style() -> void:
 
 
 func set_pixel_texture(pixel_texture: Callable) -> void:
+	_cache_nodes()
 	_pixel_texture = pixel_texture
 
 
 func set_navigation_texture(texture: Texture2D) -> void:
+	_cache_nodes()
 	if navigation_text == null:
 		return
 	navigation_text.texture = texture
@@ -285,6 +288,7 @@ func set_navigation_texture(texture: Texture2D) -> void:
 
 
 func set_navigation_visible(value: bool) -> void:
+	_cache_nodes()
 	_navigation_visible = value
 	if navigation_panel != null:
 		navigation_panel.visible = value
@@ -386,6 +390,7 @@ func set_text(sprite: Sprite2D, value: String, color: Color = Color.WHITE) -> vo
 
 
 func clear_texts() -> void:
+	_cache_nodes()
 	for sprite in _slot_texts + _candidate_texts + _description_texts + _summary_texts + _bonus_texts + _command_texts + _confirm_texts:
 		sprite.texture = null
 		sprite.visible = false
@@ -395,6 +400,7 @@ func clear_texts() -> void:
 
 
 func set_command_labels(labels: Array[String], colors: Array[Color] = []) -> void:
+	_cache_nodes()
 	for index in _command_texts.size():
 		var label := labels[index] if index < labels.size() else ""
 		var color := colors[index] if index < colors.size() else Color.WHITE
@@ -402,12 +408,14 @@ func set_command_labels(labels: Array[String], colors: Array[Color] = []) -> voi
 
 
 func set_command_enabled(index: int, enabled: bool) -> void:
+	_cache_nodes()
 	if index < 0 or index >= command_buttons.size():
 		return
 	command_buttons[index].disabled = not enabled
 
 
 func set_summary(name_text: String, stat_values: Array[String], name_color: Color = Color.WHITE, stat_colors: Array[Color] = []) -> void:
+	_cache_nodes()
 	if _summary_texts.is_empty(): return
 	set_text(_summary_texts[0], name_text, name_color)
 	for index in range(1, _summary_texts.size()):
@@ -416,6 +424,7 @@ func set_summary(name_text: String, stat_values: Array[String], name_color: Colo
 
 
 func set_slot_grid(labels: Array[String], colors: Array[Color] = [], locked: Array[bool] = []) -> void:
+	_cache_nodes()
 	for index in _slot_texts.size():
 		var value := labels[index] if index < labels.size() else ""
 		var color := colors[index] if index < colors.size() else Color.WHITE
@@ -428,6 +437,7 @@ func set_slot_grid(labels: Array[String], colors: Array[Color] = [], locked: Arr
 
 
 func set_candidates(labels: Array[String], colors: Array[Color] = [], _selected_index: int = -1, scroll_fraction: float = 0.0) -> void:
+	_cache_nodes()
 	_candidate_scroll_fraction = clampf(scroll_fraction, 0.0, 1.999999)
 	for index in _candidate_texts.size():
 		var value := labels[index] if index < labels.size() else ""
@@ -459,11 +469,13 @@ func _apply_candidate_scroll() -> void:
 
 
 func set_description(lines: Array[String], color: Color = Color.WHITE) -> void:
+	_cache_nodes()
 	for index in _description_texts.size():
 		set_text(_description_texts[index], lines[index] if index < lines.size() else "", color)
 
 
 func set_bonuses(lines: Array[String], colors: Array[Color] = []) -> void:
+	_cache_nodes()
 	for index in _bonus_texts.size():
 		var value := lines[index] if index < lines.size() else ""
 		var color := colors[index] if index < colors.size() else Color.WHITE
@@ -471,6 +483,7 @@ func set_bonuses(lines: Array[String], colors: Array[Color] = []) -> void:
 
 
 func set_icons_visible(value: bool = true) -> void:
+	_cache_nodes()
 	for icon in _slot_icons:
 		icon.visible = value
 
@@ -488,6 +501,7 @@ func stop_cursor_motion() -> void:
 
 
 func set_confirm_prompt(lines: Array[String], selected_index: int = 1) -> void:
+	_cache_nodes()
 	for index in _confirm_texts.size():
 		set_text(_confirm_texts[index], lines[index] if index < lines.size() else "", Color.WHITE if index == selected_index else DIM_CURSOR_MODULATE)
 
@@ -518,6 +532,7 @@ func _position_cursor(cursor: Sprite2D, target: Vector2, active: bool, cursor_sh
 
 
 func render_cursors(mode: int, action_index: int, slot_index: int, candidate_index: int, confirm_index: int = 1, preserve_motion: bool = false) -> void:
+	_cache_nodes()
 	_has_render_state = true
 	_last_render_mode = mode
 	_last_render_action_index = action_index

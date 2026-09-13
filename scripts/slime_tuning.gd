@@ -22,7 +22,7 @@ class_name SlimeTuning
 @export var boss_attack_cooldown_multiplier := 1.0
 @export var boss_attack_frame_time_multiplier := 1.0
 @export var boss_scoot_distance := 8.0
-@export var boss_scoot_duration := 0.34
+@export var boss_scoot_duration := 0.54
 @export var boss_movement_speed_multiplier := 1.0
 @export var boss_aggro_hold_min := 0.18
 @export var boss_aggro_hold_max := 0.22

@@ -408,14 +408,26 @@ should be explicit rather than inferred from absence.
 The 2026-09-11 standalone baseline found all `113` registered paths with no
 missing files. Direct focused execution confirmed the authored R3/R4/R5 and
 Run 2 layout contracts, room/slime/enemy setup, selected gear contracts, and
-selected Chroma/progression contracts. It also exposed current failures in
-active-run recovery, doorway geometry, Hub/equipment/touch menu contracts,
-gear catalogue/drop policy, generated minimap visibility/order, the starter
-flame music gate, elemental binding, and the superseded generated-route
-contract. The active R6+ risk/reward implementation now owns generated runs;
-its Godot smoke and playtest verification remain pending. See
-[`test-target-audit.md`](test-target-audit.md) for the test-by-test result and
-[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for the triage register.
+selected Chroma/progression contracts. It also exposed failures in active-run
+recovery, Hub/equipment/touch menu contracts, gear catalogue/drop policy,
+generated minimap visibility/order, the starter flame music gate, elemental
+binding, and the superseded generated-route contract. This is historical
+baseline evidence; see [`test-target-audit.md`](test-target-audit.md) for the
+test-by-test record and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for the live triage
+register.
+
+The active R6+ risk/reward implementation now owns generated runs. Focused
+follow-up on 2026-09-13 passed active-run snapshot, generated R6+ risk/reward,
+expanded elemental-binding, generated-scene, doorway, and typed room-transition
+checks in isolated Godot processes. The headless runner now uses temporary user
+data, Dummy audio, and explicit log paths; full-suite and manual device
+verification remain separate supervised work.
+
+Focused follow-up on 2026-09-13 passed the active-run snapshot, generated R6+
+risk/reward, generated-scene, doorway, and typed room-transition checks in
+isolated Godot processes. The headless runner now uses temporary user data,
+Dummy audio, and explicit log paths; full-suite and manual device verification
+remain separate supervised work.
 
 The target test structure should contain:
 

@@ -1442,7 +1442,6 @@ func _configure_large_room_camera(enabled: bool) -> void: room_controller.call("
 func _update_large_room_camera() -> void: room_controller.call("update_large_room_camera", self)
 func _update_door_transition() -> void: if not room_transition_locked: room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _try_enter_any_active_socket() -> bool: return room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
-func _enter_connected_room(destination_room_id: StringName, arrival_socket_id: StringName) -> void: room_controller.enter_connected_room(self, destination_room_id, arrival_socket_id)
 func _release_room_transition_lock() -> void: room_transition_locked = false; if room_controller != null: room_controller.end_transition()
 func _save_current_room_state() -> void:
 	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary

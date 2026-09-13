@@ -12,6 +12,7 @@
 8. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
 9. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
 10. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
+11. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
 
 ## Verification
 
@@ -21,7 +22,7 @@ When a Godot editor peer is connected through the MCP toolkit, use MCP for
 scene inspection, script diagnostics, playtests, screenshots, and runtime logs.
 Do **not** run `tests/run_all_smoke.ps1` from that editor session. That script
 launches a separate Godot process for every registered smoke test (currently
-around 90 processes in sequence); a headless renderer crash can therefore
+114 processes in sequence); a headless renderer crash can therefore
 produce an avalanche of Windows memory-error dialogs.
 
 Use the full runner only as an explicitly supervised, standalone verification
@@ -32,7 +33,7 @@ editor process running unless it is also failing.
 
 ```powershell
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
-& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path . --log-file ".godot_user/editor-scan.log" --editor --quit
+pwsh -ExecutionPolicy Bypass -File tools/run_headless.ps1 -Editor
 ```
 
 The local Godot environment may report a root-certificate warning and may be
@@ -49,7 +50,7 @@ process exits nonzero or a test reports failure.
 | Slime behavior and attack timing | `slime_brain.gd`, `slime_combat_component.gd`, `slime_actor.gd` |
 | Chroma and elemental casting | `player_chroma_component.gd`, then the Chroma plan/docs |
 | Projectile lifecycle | `magic_projectile_controller.gd` when extracted; currently coordinator seams |
-| Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd` |
+| Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd`, `room_transition_result.gd` |
 | Progression and settlement | `progression_controller.gd` / `run_settlement.gd` when extracted |
 | Hub and menu presentation | `screen_state_controller.gd` |
 | Display settings and responsive layout | `display_controller.gd`, `display_layout.gd`, `settings_service.gd`, `screen_state_controller.gd` |

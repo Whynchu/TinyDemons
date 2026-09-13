@@ -2,7 +2,7 @@
 
 Status: live register for the `0.2.x` cycle
 
-Updated: 2026-09-12
+Updated: 2026-09-13
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -19,7 +19,7 @@ touch input, browser behavior, or a complete player journey has been verified.
 
 ## Focused baseline verification — 2026-09-11
 
-The smoke inventory found `113` registered test paths with `0` missing files.
+The smoke inventory found `114` registered test paths with `0` missing files.
 Because no Godot editor peer or runtime was active, focused tests were run as
 individual standalone Godot processes. The full process-per-test suite was not
 run.
@@ -29,15 +29,13 @@ Run 2 authored layout, room prefab construction, slime spawning, enemy-room
 engagement, gear effects, gear-slot migration, Chroma state and pickup rules,
 aspect abilities, starter-flame setup, and generated flame progression.
 
-The following contracts failed and need triage before they can serve as
-release evidence:
+The following contracts failed in that baseline run and need triage before they
+can serve as release evidence; the follow-up below records resolved items.
 
 - `active_run_recovery_contract_smoke`: a valid snapshot failed schema/slot
   validation;
 - `cloud_save_contract_smoke`: the source contract still lacks the expected
   explicit runtime-safe types in the cloud panel;
-- `wall_socket_geometry_smoke`: closed doorway seams remain physically
-  enterable or lack the expected trigger fence;
 - `demon_hub_menu_scene_smoke`, `equipment_menu_scene_smoke`, and
   `touch_controls_smoke`: current menu geometry, cursor/selection state, and
   touch-target contracts disagree with the tests;
@@ -48,6 +46,19 @@ release evidence:
 - `generated_minimap_smoke`, `run1_minimap_smoke`, and
   `run_music_flame_gate_smoke`: minimap draw order, undiscovered-room
   visibility, and starter-flame music-gate assertions fail.
+
+The active-run snapshot fixture and the R6+ generator were corrected during the
+2026-09-13 follow-up. Isolated focused checks now pass for
+`active_run_recovery_contract_smoke`, `r6_plus_risk_reward_generation_smoke`,
+`elemental_binding_smoke`, `generated_run_scene_smoke`, `run1_door_path_smoke`,
+`wall_socket_geometry_smoke`, and the new `room_transition_result_smoke`.
+Those results do not replace the unresolved contracts listed above.
+
+A supervised full-run attempt on 2026-09-13 reached ordinary assertion
+failures without a native headless renderer crash. It was stopped at the
+broader R6+ seed failure, which the focused elemental-binding and R6+ checks
+now cover. The full suite remains a release gate rather than a claim of zero
+behavioral failures.
 
 The native R7 generator smoke did not complete. It repeatedly reported rooms
 and connections outside the declared compact 35×35 map, including
@@ -63,6 +74,16 @@ Detailed command output and target interpretation are tracked in
 triage, not a release gate.
 
 ## Player-facing findings still needing runtime evidence
+
+### Doorway geometry — verified
+
+Doorways were checked in gameplay on 2026-09-13 and are functioning as intended:
+the player can traverse active openings and closed doorway behavior is correct
+for the current authored rooms. On 2026-09-13,
+`wall_socket_geometry_smoke` was reconciled with the current portal-based
+walkability model and passed in the isolated headless runner. The test covers
+closed-socket portal exclusion, closed transition rejection, open portal
+participation, and normal open-entrance movement.
 
 | Area | Current state | Evidence still required |
 |---|---|---|
@@ -97,15 +118,17 @@ optional elemental Orb vaults. Dangerous shortcut rooms receive a stronger
 encounter profile and risk reward tier; vault rooms receive an elite profile and
 guaranteed enhanced gear through the existing chest item generator. New route
 metadata is carried through layout, graph, room state, minimap plans, and active
-run room-state snapshots. The focused generator and scene tests are registered,
-but Godot execution and manual save/load/touch playtesting remain outstanding.
+run room-state snapshots. The focused generator, elemental-binding, and scene
+tests pass in
+isolated Godot processes; manual enemy-placement, reward, minimap, save/load,
+and touch playtesting remain outstanding.
 
 ## Infrastructure findings
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
 | Duplicate Godot resource UIDs reported for R4/R5 puzzle scripts and tests | Import and future file moves may resolve the wrong resource | Inspect the `.uid`/import state, choose canonical resources, then rerun the editor scan |
-| Full smoke runner has 113 registered paths and launches one Godot process per test | Slow feedback and possible Windows renderer/memory failure avalanche | Use focused groups first; record a supervised full-run result only without an MCP runtime |
+| Full smoke runner has 114 registered paths and launches one Godot process per test | Slow feedback and possible Windows renderer/memory failure avalanche | Runner now isolates each headless process with a temporary user-data directory and Dummy audio driver; continue using focused groups first |
 | Eight test/report scripts are outside the registered runner | Coverage claims can be incomplete or misleading | Classify each as registered, intentional standalone, obsolete, or missing from the registry |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
 | `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | Characterize shared menu conventions, then extract one presenter boundary |

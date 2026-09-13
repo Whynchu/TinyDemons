@@ -217,6 +217,7 @@ const DEFINITION_METADATA := {
 	&"mindweave_rod": {"family": "focus_rod", "role_tags": ["magic", "mnd", "imbue"], "primary_stat": "intelligence", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "focus", "visual_id": "rod", "description": "Strengthens Triangle and Imbue magic while leaving the physical STR portion intact."},
 
 	&"plain_hood": {"family": "cloth", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "starter_only": true, "source_tags": ["starter"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "hood", "description": "Fills the Head slot without changing combat power."},
+	&"plain_wraps": {"family": "wraps", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "starter_only": true, "source_tags": ["starter"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "wraps", "description": "Fills the Arm slot without adding free combat power."},
 	&"iron_helm": {"family": "helm", "role_tags": ["defense", "heavy"], "primary_stat": "defense", "effects": {"recovery_multiplier": {"multiplier": 1.05, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "helm", "visual_id": "helm", "description": "Heavy protection with a visible recovery tradeoff."},
 	&"feather_cap": {"family": "light_headgear", "role_tags": ["agility", "magic_defense", "light"], "primary_stat": "agility", "effects": {"recovery_multiplier": {"multiplier": 0.95, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "head", "visual_id": "cap", "description": "Light headgear for staying active through clean movement and recovery."},
 	&"mind_circlet": {"family": "circlet", "role_tags": ["mnd", "magic", "defense"], "primary_stat": "mnd", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "circlet", "visual_id": "circlet", "description": "Raises M.DEF through MND and supports the magic side of the kit."},
@@ -365,10 +366,13 @@ func definition_data(definition_id: StringName) -> Dictionary:
 		base = DEFINITIONS.get(definition_id, {}).duplicate(true)
 	if base.is_empty():
 		return {}
-	if not is_live:
-		var metadata: Dictionary = DEFINITION_METADATA.get(definition_id, {})
-		for key: Variant in metadata:
-			base[key] = metadata[key]
+	# Metadata is the authored source of non-stat fields for both the compact
+	# live baseline records and the legacy catalogue. Keeping this merge
+	# unconditional prevents a live starter alias from silently losing its
+	# starter-only/source restrictions.
+	var metadata: Dictionary = DEFINITION_METADATA.get(definition_id, {})
+	for key: Variant in metadata:
+		base[key] = metadata[key]
 	base["slot"] = canonical_slot(base.get("slot", &""))
 	if not base.has("primary_stat"):
 		base["primary_stat"] = base.get("tier_stat", "")
@@ -850,6 +854,11 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	var result: Dictionary = {}
 	var base_bonuses: Dictionary = definition.get("bonuses", {}).duplicate(true)
 	var rarity_points := float(rarity_flat_points(item.rarity))
+	# `enhancement_level` is the visible position on the current rarity track;
+	# `fusion_stat_points` is the monotonic total across rarity promotion. Direct
+	# callers and legacy saves may provide only one of them, so use the stronger
+	# known value when resolving the shared stat ladder.
+	var fusion_enhancement_points := float(maxi(item.fusion_stat_points, item.enhancement_level)) * MASTERY_BONUS_PER_LEVEL
 	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
 	# The primary `tier_stat` scales with rarity/enhancement. `tier_stats`
 	# lists additional stats that scale alongside it (premium dual-lane items).
@@ -879,13 +888,13 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 		if normalized_stat in scaled_stats:
 			flat_value += rarity_points
 			if normalized_stat == tier_stat:
-				flat_value += float(item.fusion_stat_points) * MASTERY_BONUS_PER_LEVEL
+				flat_value += fusion_enhancement_points
 		if random_value > 1:
 			flat_value += float(random_value - 1) * float(_rarity_rank(item.rarity))
 		# A random lane is a real stat lane: it grows at the same additive pace as
 		# the authored primary, even when its roll lands on a secondary stat.
 		if random_value > 0 and normalized_stat not in scaled_stats:
-			flat_value += rarity_points + enhancement_flat_points(item.enhancement_level)
+			flat_value += rarity_points + fusion_enhancement_points
 		result[normalized_stat] = flat_value
 		if normalized_stat == "agi":
 			result["speed"] = flat_value

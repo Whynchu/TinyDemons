@@ -33,11 +33,13 @@ func _initialize() -> void:
 			gameplay.call("_collect_dungeon_sockets")
 			gameplay.call("_ensure_current_room_layout")
 			gameplay.call("_apply_room_state")
+			var area := gameplay.get("walkable_area") as WalkableArea
+			var player := gameplay.get("player") as Sprite2D
+			_expect(area != null, "room exposes the shared walkable-area owner", failures)
 			var left_socket := rooms.dungeon_sockets.get(DungeonGraph.WALL_LEFT) as DungeonSocket
 			var right_socket := rooms.dungeon_sockets.get(DungeonGraph.WALL_RIGHT) as DungeonSocket
 			_expect(left_socket != null and left_socket.block_trigger_when_closed, "left wall socket declares a closed seam blocker", failures)
 			_expect(right_socket != null and right_socket.block_trigger_when_closed, "right wall socket declares a closed seam blocker", failures)
-			var blocks := gameplay.get("entrance_block_polygons") as Array
 			var initially_closed_side_count := 0
 			for socket_id in [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]:
 				var socket := rooms.dungeon_sockets.get(socket_id) as DungeonSocket
@@ -47,26 +49,29 @@ func _initialize() -> void:
 				if available:
 					continue
 				initially_closed_side_count += 1
-				_expect(_contains_polygon(blocks, trigger), "closed %s doorway seam is physically blocked" % String(socket_id), failures)
-				_expect(_polygon_edge_samples_blocked(gameplay, trigger), "closed %s doorway cannot be entered through its seam" % String(socket_id), failures)
+				_expect(not _socket_has_walkable_portal(rooms, area, gameplay, socket), "closed %s doorway contributes no walkable portal" % String(socket_id), failures)
+				_expect(not _can_enter_socket_at_trigger(gameplay, player, trigger), "closed %s doorway cannot transition rooms" % String(socket_id), failures)
 			_expect(initially_closed_side_count > 0, "normal combat room exposes a closed side doorway for the seam check", failures)
 
 			# Lower entrances use hidden floor placeholders rather than a door sprite.
-			# Their return trigger must still be part of the closed collision fence.
+			# Closed entrances remain outside the open portal set; their trigger is
+			# still the transition boundary used by the room controller.
 			var closed_bottom_count := 0
 			for socket_id in [DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
 				var socket := rooms.dungeon_sockets.get(socket_id) as DungeonSocket
-				_expect(socket != null and socket.block_trigger_when_closed, "closed %s entrance declares a seam blocker" % String(socket_id), failures)
+				_expect(socket != null and socket.block_trigger_when_closed, "closed %s entrance declares a transition boundary" % String(socket_id), failures)
 				var trigger := rooms.call("_socket_trigger_polygon", socket) as PackedVector2Array
-				if not _contains_polygon(blocks, trigger):
+				if _socket_has_walkable_portal(rooms, area, gameplay, socket):
 					continue
 				closed_bottom_count += 1
-				_expect(_polygon_edge_samples_blocked(gameplay, trigger), "closed %s entrance seam is physically blocked" % String(socket_id), failures)
+				_expect(not _can_enter_socket_at_trigger(gameplay, player, trigger), "closed %s entrance cannot transition rooms" % String(socket_id), failures)
 			_expect(closed_bottom_count > 0, "normal combat room exposes a closed lower entrance for the seam check", failures)
 
 			# Exercise both authored lower sockets in isolation as closed entrances.
 			# This catches asymmetry in the mirrored right-hand placeholder even when
-			# the selected room currently has that side open.
+			# the selected room currently has that side open. The current movement
+			# model represents open seams as portals, so a closed isolated socket must
+			# leave the shared portal set empty rather than add a blocker polygon.
 			var saved_door_socket_ids := rooms.active_door_sockets.keys()
 			var saved_entrance_socket_ids := rooms.active_entrance_sockets.keys()
 			rooms.active_door_sockets.clear()
@@ -74,18 +79,13 @@ func _initialize() -> void:
 			for socket_id in [DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
 				rooms.active_door_sockets[socket_id] = rooms.dungeon_sockets.get(socket_id)
 			gameplay.call("_build_entrance_block_polygons")
-			var isolated_lower_blocks := gameplay.get("entrance_block_polygons") as Array
-			var isolated_player := gameplay.get("player") as Sprite2D
-			var isolated_player_position := isolated_player.position
+			_expect(area.portal_regions.is_empty(), "isolated closed lower entrances add no walkable portals", failures)
 			for socket_id in [DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
 				var socket := rooms.dungeon_sockets.get(socket_id) as DungeonSocket
 				var trigger := rooms.call("_socket_trigger_polygon", socket) as PackedVector2Array
-				_expect(_contains_polygon(isolated_lower_blocks, trigger), "isolated closed %s entrance includes its trigger fence" % String(socket_id), failures)
-				_expect(_polygon_edge_samples_blocked(gameplay, trigger), "isolated closed %s entrance has no walkable seam" % String(socket_id), failures)
 				var trigger_center := _polygon_center(trigger)
-				isolated_player.position = trigger_center - gameplay.get("ACTOR_FOOT_OFFSET")
-				_expect(not bool(gameplay.call("_can_actor_stand_at_current_position", isolated_player)), "isolated closed %s entrance rejects the actor body" % String(socket_id), failures)
-			isolated_player.position = isolated_player_position
+				_expect(not area.is_walkable(trigger_center), "isolated closed %s entrance is outside walkable floor" % String(socket_id), failures)
+				_expect(not _can_enter_socket_at_trigger(gameplay, player, trigger), "isolated closed %s entrance cannot transition rooms" % String(socket_id), failures)
 			rooms.active_door_sockets.clear()
 			rooms.active_entrance_sockets.clear()
 			for socket_id in saved_door_socket_ids:
@@ -93,27 +93,12 @@ func _initialize() -> void:
 			for socket_id in saved_entrance_socket_ids:
 				rooms.active_entrance_sockets[socket_id] = rooms.dungeon_sockets.get(socket_id)
 			gameplay.call("_build_entrance_block_polygons")
-			blocks = gameplay.get("entrance_block_polygons") as Array
-
-			var player := gameplay.get("player") as Sprite2D
-			var saved_player_position := player.position
-			for block_value in blocks:
-				var block := block_value as PackedVector2Array
-				if block.size() < 3:
-					continue
-				var block_center := Vector2.ZERO
-				for point in block:
-					block_center += point
-				block_center /= float(block.size())
-				player.position = block_center - gameplay.get("ACTOR_FOOT_OFFSET")
-				_expect(not bool(gameplay.call("_can_actor_stand_at_current_position", player)), "actor body cannot straddle a closed doorway blocker", failures)
-			player.position = saved_player_position
 
 			# Completing the room opens its authored side exits. The same trigger
-			# polygons must then stop blocking the matching visible doorway.
+			# polygons must then be represented by walkable portal regions.
 			map.call("on_room_completed", TARGET_ROOM)
 			gameplay.call("_on_dungeon_map_state_changed")
-			blocks = gameplay.get("entrance_block_polygons") as Array
+			area = gameplay.get("walkable_area") as WalkableArea
 			var open_side_count := 0
 			for socket_id in [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT]:
 				if not rooms.active_door_sockets.has(socket_id):
@@ -124,7 +109,7 @@ func _initialize() -> void:
 				if connection == null or not bool(map.call("is_connection_available", connection, false)):
 					continue
 				open_side_count += 1
-				_expect(not _contains_polygon(blocks, trigger), "opened %s doorway no longer uses a seam blocker" % String(socket_id), failures)
+				_expect(_socket_has_walkable_portal(rooms, area, gameplay, socket), "opened %s doorway contributes a walkable portal" % String(socket_id), failures)
 			_expect(open_side_count > 0, "normal combat room exposes at least one side doorway for the open-state check", failures)
 
 			# The lower entrance is a diagonal floor edge, so a body-wide walkability
@@ -166,14 +151,25 @@ func _contains_polygon(polygons: Array, target: PackedVector2Array) -> bool:
 	return false
 
 
-func _polygon_edge_samples_blocked(gameplay: Node, polygon: PackedVector2Array) -> bool:
-	if polygon.size() < 3:
+func _socket_has_walkable_portal(rooms: RoomController, area: WalkableArea, gameplay: Node, socket: DungeonSocket) -> bool:
+	if area == null or socket == null:
 		return false
-	for index in polygon.size():
-		var point := polygon[index].lerp(polygon[(index + 1) % polygon.size()], 0.5)
-		if bool(gameplay.call("_is_walkable", point)):
-			return false
-	return true
+	var expected := rooms.call("_socket_portal_polygons", gameplay, socket) as Array
+	for polygon_value in expected:
+		var polygon := polygon_value as PackedVector2Array
+		if _contains_polygon(area.portal_regions, polygon):
+			return true
+	return false
+
+
+func _can_enter_socket_at_trigger(gameplay: Node, player: Sprite2D, trigger: PackedVector2Array) -> bool:
+	if player == null or trigger.size() < 3:
+		return false
+	var saved_position := player.global_position
+	player.global_position = _polygon_center(trigger) - gameplay.get("ACTOR_FOOT_OFFSET")
+	var entered := bool(gameplay.call("_try_enter_any_active_socket"))
+	player.global_position = saved_position
+	return entered
 
 
 func _polygon_center(polygon: PackedVector2Array) -> Vector2:

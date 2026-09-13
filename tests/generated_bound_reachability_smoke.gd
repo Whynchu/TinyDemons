@@ -115,6 +115,8 @@ func _fusion_curriculum_signature(layout) -> String:
 			continue
 		var source = layout.room_by_id(connection.source_room_id)
 		if source != null:
-			parts.append("%d:%s" % [source.depth, connection.orb_element_requirement])
+			# Generated RoomSpec keeps its lattice coordinate as the authoritative
+			# depth input; it does not expose the runtime RoomRecord.depth field.
+			parts.append("%d:%s" % [source.coordinate.y, connection.orb_element_requirement])
 	parts.sort()
 	return "|".join(parts)

@@ -1,6 +1,8 @@
 extends SceneTree
 
 const HubFlowControllerScript = preload("res://scripts/hub_flow_controller.gd")
+const EquipmentMenuLayoutScript = preload("res://scripts/equipment_menu_layout.gd")
+const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
 
 var _finished := false
 
@@ -24,16 +26,19 @@ func _initialize() -> void:
 		"gear_slot_buttons": "hub_gear_slot_buttons", "gear_stats": "hub_gear_stat_texts",
 		"gear_stat_panel": "hub_gear_stat_panel", "item_details": "hub_item_detail_texts",
 		"item_action": "hub_item_action_button", "fusion_decrease": "hub_fusion_decrease_button", "fusion_increase": "hub_fusion_increase_button", "binding_panel": "hub_binding_panel",
-		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text", "fusion_menu": "hub_fusion_menu",
+		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text", "equipment_menu": "hub_equipment_menu", "shop_menu": "hub_shop_menu", "fusion_menu": "hub_fusion_menu",
 	}
 	for key: String in built:
 		controller_instance.set(str(key_map.get(key, key)), built[key])
 	var stat_buttons := built["stat_buttons"] as Array[Button]
 	var stat_texts := built["stats"] as Array[Sprite2D]
+	var equipment_view := built["equipment_menu"] as EquipmentMenuLayout
+	var shop_view := built["shop_menu"] as ShopMenuLayout
+	var fusion_view := built["fusion_menu"] as FusionMenuLayout
 	_expect(stat_buttons.size() == 12 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets for six stats", failures)
 	_expect((built["stat_rows"] as Array[Button]).size() == 6 and (built["item_rows"] as Array[Button]).size() == 6, "hub stats, shop, and fusion expose row touch targets", failures)
 	_expect((built["fusion_decrease"] as Button).size.x >= 20.0 and (built["fusion_increase"] as Button).size.x >= 20.0, "fusion exposes direct count controls", failures)
-	_expect(stat_texts.all(func(text: Sprite2D) -> bool: return text.centered), "hub stat values are centered between their touch targets", failures)
+	_expect(stat_texts.size() == 6 and controller_instance.hub_stat_value_texts.size() == 6 and stat_texts.all(func(text: Sprite2D) -> bool: return not text.centered) and controller_instance.hub_stat_value_texts.all(func(text: Sprite2D) -> bool: return not text.centered), "hub stats keep separate left labels and right-anchored value sprites", failures)
 	controller_instance.hub_overlay = ColorRect.new()
 	controller_instance.hub_page = 1
 	controller_instance.hub_pause_mode = false
@@ -61,18 +66,19 @@ func _initialize() -> void:
 	root.run_state = RunState.new()
 	controller_instance.hub_page = 0
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(controller_instance.hub_derived_texts.all(func(text: Sprite2D) -> bool: return not text.visible), "stats page hides duplicate derived values", failures)
-	var gear_stats := controller_instance.hub_gear_stat_texts as Array[Sprite2D]
+	_expect(controller_instance.hub_derived_texts.size() == 7 and controller_instance.hub_derived_texts.all(func(text: Sprite2D) -> bool: return text.visible), "stats preview exposes the seven authored derived-stat labels", failures)
 	var details := controller_instance.hub_item_detail_texts as Array[Sprite2D]
 	controller_instance.hub_page = 1
+	controller_instance.hub_is_root = false
+	controller_instance.hub_content_focus = true
+	controller_instance.hub_equipment_mode = EquipmentMenuLayoutScript.MODE_CANDIDATE
 	controller_instance.hub_gear_browsing = true
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(gear_stats.slice(0, 4).all(func(s: Sprite2D) -> bool: return s.texture != null) and gear_stats[4].texture == null and gear_stats[5].texture == null, "gear browse keeps canonical stats without a stale duplicate SPD row", failures)
-	var gear_choice_buttons: Array[Button] = controller_instance.hub_gear_choice_buttons
-	_expect(gear_choice_buttons.size() == 4 and gear_choice_buttons.all(func(b: Button) -> bool: return b.mouse_filter != Control.MOUSE_FILTER_IGNORE), "gear browse exposes touchable choice rows", failures)
-	_expect(gear_choice_buttons[0].visible and gear_choice_buttons[1].visible, "gear browse shows touch targets for visible candidates", failures)
-	gear_choice_buttons[0].pressed.emit()
+	_expect(equipment_view != null and equipment_view.visible and (equipment_view.get_node("VitText") as Sprite2D).texture != null and (equipment_view.get_node("MndText") as Sprite2D).texture != null, "gear browse keeps one authored six-stat summary without a duplicate SPD row", failures)
+	_expect(equipment_view.candidate_buttons.size() == 8 and equipment_view.candidate_buttons.all(func(b: Button) -> bool: return b.mouse_filter != Control.MOUSE_FILTER_IGNORE), "gear browse exposes authored touch candidate rows", failures)
+	_expect(equipment_view.candidate_buttons[0].visible and equipment_view.candidate_buttons[1].visible, "gear browse shows touch targets for visible candidates", failures)
+	equipment_view.candidate_buttons[0].pressed.emit()
 	_expect(root.selected_gear_candidate_row == 0, "gear choice row forwards its selected candidate", failures)
 	var gear_flow := HubFlowControllerScript.new()
 	var gear_candidates := gear_flow.hub_gear_candidates(root, &"weapon")
@@ -82,15 +88,16 @@ func _initialize() -> void:
 	_expect(gear_candidates.size() > 1 and root.selected_equipped_instance_id == gear_candidates[1].instance_id, "touching a gear row equips that visible candidate", failures)
 	_expect(not controller_instance.hub_gear_browsing, "touch gear selection closes the browse state", failures)
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(controller_instance.hub_gear_stat_panel.visible and controller_instance.hub_item_detail_panel != null and controller_instance.hub_item_detail_panel.visible, "equipment separates its stat card from the slot list and keeps a detail card", failures)
-	_expect(details.size() >= 6 and details[0].visible, "equipment exposes the selected item in the expanded detail rows", failures)
+	_expect(equipment_view.get_node("SummaryPanel").visible and equipment_view.get_node("DescriptionPanel").visible, "equipment keeps its authored summary and description panels after selection", failures)
+	_expect((equipment_view.get_node("DescriptionText0") as Sprite2D).texture != null or (equipment_view.get_node("BonusText0") as Sprite2D).texture != null, "equipment exposes the selected item through authored detail rows", failures)
 	gear_flow.free()
 	root._set_page(3)
 	controller_instance.hub_page = 3
+	controller_instance.hub_is_root = false
+	controller_instance.hub_content_focus = true
 	controller_instance.hub_item_index = 0
 	controller_instance.hub_gear_browsing = false
 	controller_instance.call("update_hub_ui", root, pixel)
-	var fusion_view := built["fusion_menu"] as FusionMenuLayout
 	_expect(fusion_view != null and fusion_view.visible, "Fusion route uses its dedicated visible presenter", failures)
 	_expect(fusion_view.get_node("ShopListPanel").visible and fusion_view.get_node("ShopStatsPanel").visible, "Fusion keeps Shop's independent body panels", failures)
 	_expect((fusion_view.get_node("OwnedText") as Sprite2D).texture != null, "Fusion renders the owned footer", failures)
@@ -98,14 +105,16 @@ func _initialize() -> void:
 	_expect(not details[0].visible and not controller_instance.hub_item_detail_panel.visible, "legacy item detail presenter stays hidden on FUSE", failures)
 	root._set_page(2)
 	controller_instance.hub_page = 2
+	controller_instance.hub_is_root = false
+	controller_instance.hub_shop_state = ShopMenuLayoutScript.ITEM_BROWSE
+	controller_instance.hub_shop_command_focus = false
 	controller_instance.hub_item_index = 0
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(details[0].texture != null, "shop page shows item bonus text in details[0]", failures)
-	_expect(controller_instance.hub_item_name_text.visible and controller_instance.hub_item_name_text.texture != null and controller_instance.hub_item_detail_panel.visible, "shop shows the selected position/name and bounded detail panel", failures)
-	_expect(controller_instance.hub_item_action_button.position.y < 40.0, "shop action sits in the header instead of covering description text", failures)
+	_expect(shop_view != null and shop_view.visible and (shop_view.get_node("ListClip/ItemText0") as Sprite2D).texture != null and (shop_view.get_node("StatLabel0") as Sprite2D).texture != null, "shop page renders its selected row and six-stat comparison in the authored presenter", failures)
+	_expect((shop_view.get_node("ShopListPanel") as Control).visible and (shop_view.get_node("ShopStatsPanel") as Control).visible and (shop_view.get_node("ItemActionButton") as Button).visible, "shop keeps independent body panels and an active item action", failures)
 	controller_instance.hub_item_index = 6
 	controller_instance.call("update_hub_ui", root, pixel)
-	_expect(controller_instance.hub_item_name_text.visible and controller_instance.hub_item_name_text.texture != null, "shop keeps a visible selection header at the end of the scroll window", failures)
+	_expect((shop_view.get_node("ListClip/ItemText6") as Sprite2D).texture != null, "shop keeps a visible selected row at the end of the authored window", failures)
 	root._set_page(3)
 	controller_instance.hub_page = 3
 	controller_instance.hub_item_index = 0
@@ -229,9 +238,13 @@ class _MockRoot:
 	func _select_gear_candidate(choice_row: int) -> void:
 		selected_gear_candidate_row = choice_row
 
-	func _equip_profile_item(instance_id: String) -> void:
+	func _equip_profile_item(instance_id: String) -> bool:
 		selected_equipped_instance_id = instance_id
 		player_profile.equipped_instance_ids["weapon"] = instance_id
+		return true
+
+	func _play_sound(_sound_name: String, _volume_db: float = 0.0, _pitch_scale: float = 1.0) -> void:
+		pass
 
 	func _health_feedback_color(_palette: StringName) -> Color:
 		return Color.WHITE

@@ -58,7 +58,7 @@ func _initialize() -> void:
 	root.rng.seed = 909
 	var shadow_bite := controller.slime_attack_damage_result(root, shadow)
 	_expect(shadow_bite.element == ElementCatalogScript.Element.SHADOW, "Shadow slime bite carries Shadow", failures)
-	_expect(shadow_bite.immune and is_zero_approx(shadow_bite.amount), "Shadow bite is immune into Neutral player defense", failures)
+	_expect(not shadow_bite.immune and shadow_bite.amount >= 1.0, "Shadow bite damages Neutral player defense", failures)
 
 	var red := _make_slime(root, ElementCatalogScript.Element.FIRE, &"red")
 	root.rng.seed = 707

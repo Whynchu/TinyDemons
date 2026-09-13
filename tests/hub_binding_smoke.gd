@@ -38,12 +38,13 @@ func _initialize() -> void:
 		var pause_overlay := screen.get("pause_overlay") as ColorRect
 		_expect(not bool(screen.get("hub_pause_mode")) and (pause_overlay == null or not pause_overlay.is_visible_in_tree()), "Cloaked Demon Hub does not retain the pause overlay underneath it", failures)
 		gameplay.call("_set_hub_page", 4)
-		var binding_panel := screen.get("hub_binding_panel") as Panel
-		var binding_action := screen.get("hub_binding_action_button") as Button
+		var bind_menu := screen.get("hub_bind_menu") as Control
+		var binding_panel := bind_menu.get_node_or_null("BindPanel") as Control if bind_menu != null else null
+		var binding_action := bind_menu.get_node_or_null("BindActionButton") as Button if bind_menu != null else null
 		var page_buttons := screen.get("hub_page_buttons") as Array[Button]
 		_expect(bool(screen.get("hub_overlay").visible), "Demon interaction opens the Hub", failures)
 		_expect(page_buttons.size() == 4 and page_buttons[0].name == "HubCommandStats" and page_buttons[1].name == "HubCommandShop" and page_buttons[2].name == "HubCommandFusion" and page_buttons[3].name == "HubCommandBind", "Hub exposes only Stats, Shop, Fusion, and Bind commands", failures)
-		_expect(binding_panel != null and binding_panel.visible, "Binding panel is visible on the BIND tab", failures)
+		_expect(bind_menu != null and bind_menu.visible and binding_panel != null and binding_panel.visible, "Binding panel is visible on the BIND tab", failures)
 		_expect(binding_action != null and not binding_action.disabled, "eligible current element enables Binding", failures)
 		if binding_action != null:
 			binding_action.pressed.emit()

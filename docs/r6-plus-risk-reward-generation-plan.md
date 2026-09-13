@@ -1,6 +1,6 @@
 # R6+ Risk, Reward, and Elemental Vault Generation Plan
 
-Status: implemented in source; focused Godot verification pending
+Status: implemented in source; focused Godot verification passed; runtime/manual verification pending
 
 Scope: generated Run 6 and later layouts only; authored Runs 1–5 remain unchanged
 
@@ -14,11 +14,17 @@ R6+ backbone, safe/risk fork-and-rejoin routes, guaranteed primary flames,
 optional elemental Orb vaults, route encounter tiers, vault/risk reward policy,
 minimap markers, explicit elite slime markers/level bands, and focused
 generation coverage. Authored Runs 1-5 retain their existing builders.
+The active pass reserves lattice space for its safe/risk fork and skips legacy
+optional room fill/cross-links; authored/legacy generation retains those
+passes. Legacy side-route vocabulary remains available where it produces
+terminal Fire/Treasure utility, while a bounded fallback fork handles sparse
+or crowded scaffold sockets.
 
-Verification: `tests/r6_plus_risk_reward_generation_smoke.gd` plus the updated
-generated-route scene/minimap checks; Godot execution, active-run recovery,
-enemy-placement playtest, reward policy runtime checks, and manual minimap /
-readability checks remain pending until a local Godot executable is available.
+Verification: the isolated `r6_plus_risk_reward_generation_smoke`,
+`elemental_binding_smoke`, and `generated_run_scene_smoke` checks passed on
+2026-09-13, alongside the active-run snapshot contract. Enemy-placement
+playtesting, reward-policy runtime checks, and manual minimap/readability
+checks remain pending.
 
 Supersedes: the mandatory flame/fusion progression direction for generated R6+
 maps in `r7-compact-roguelike-puzzle-generator-plan.md`; that document remains

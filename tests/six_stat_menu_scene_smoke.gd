@@ -1,5 +1,7 @@
 extends SceneTree
 
+const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
+
 var _finished := false
 
 
@@ -17,8 +19,9 @@ func _initialize() -> void:
 		await process_frame
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var profile := gameplay.get("player_profile") as PlayerProfile
-	_expect(screens != null and profile != null, "six-stat menu owners are composed", failures)
-	if screens != null and profile != null:
+	var display := gameplay.get("display_controller") as DisplayController
+	_expect(screens != null and profile != null and display != null, "six-stat menu owners are composed", failures)
+	if screens != null and profile != null and display != null:
 		profile.unspent_stat_points = 2
 		gameplay.call("_show_hub", true, false)
 		await process_frame
@@ -36,8 +39,11 @@ func _initialize() -> void:
 		_expect(screens.hub_overlay.get_node_or_null("HubContentPanel") != null and screens.hub_overlay.get_node("HubContentPanel").visible and screens.hub_allocate_panel != null and not screens.hub_allocate_panel.visible, "STATS uses the single authored content frame", failures)
 		_expect(screens.hub_derived_texts.size() == 7 and screens.hub_derived_texts.all(func(text: Sprite2D) -> bool: return text.texture != null), "STATS shows the seven effective combat previews in the right column", failures)
 		_expect(screens.hub_stat_left_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)) and screens.hub_stat_row_buttons.all(func(button: Button) -> bool: return is_equal_approx(button.size.y, 12.0)), "Allocate keeps each arrow and row target inside its stat lane", failures)
-		_expect(screens.hub_stat_texts[0].position == Vector2(63, 44) and screens.hub_stat_texts[1].position.y - screens.hub_stat_texts[0].position.y == 10.0, "Allocate matches the reference stat origin and six-pixel glyph gap", failures)
-		_expect(screens.hub_stat_value_texts.all(func(text: Sprite2D) -> bool: return text.position.x + text.texture.get_width() == 93.0), "Allocate right-hangs every stat value from the authored edge", failures)
+		var hub_view_width := display.view_size_as_vector().x
+		var stat_label_x := PauseMenuLayoutScript.left_field_x(63.0, hub_view_width)
+		var stat_value_right := PauseMenuLayoutScript.left_field_x(93.0, hub_view_width)
+		_expect(is_equal_approx(screens.hub_stat_texts[0].position.x, stat_label_x) and is_equal_approx(screens.hub_stat_texts[0].position.y, 44.0) and is_equal_approx(screens.hub_stat_texts[1].position.y - screens.hub_stat_texts[0].position.y, 10.0), "Allocate matches the responsive stat origin and six-pixel glyph gap", failures)
+		_expect(screens.hub_stat_value_texts.all(func(text: Sprite2D) -> bool: return text.texture != null and is_equal_approx(text.position.x + text.texture.get_width(), stat_value_right)), "Allocate right-hangs every stat value from the responsive authored edge", failures)
 		_expect(screens.hub_derived_texts[0].position.y == 47.0, "Allocate raises the derived-stat column two pixels", failures)
 		_expect(screens.hub_stat_buttons.all(func(button: Button) -> bool: return is_zero_approx(button.modulate.a)), "Allocate hides the legacy arrow artwork while retaining touch targets", failures)
 		_expect(screens.hub_stat_right_buttons.all(func(button: Button) -> bool: return button.position.x < screens.hub_allocate_preview_panel.position.x), "Allocate keeps adjustment arrows inside the left stat card", failures)
@@ -123,12 +129,18 @@ func _initialize() -> void:
 		screens.update_hub_input(gameplay)
 		_expect(screens.hub_is_root and screens.hub_overlay.get_node_or_null("HubRootPage").visible, "equipment BACK from the command row returns to Demon Hub", failures)
 		screens.hub_page_buttons[1].pressed.emit()
-		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 6 and screens.hub_equipment_menu != null and not screens.hub_equipment_menu.visible, "Shop remains a six-slot transaction page inside the shell", failures)
-		_expect(screens.hub_item_row_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_STOP), "Shop restores its shared item-row touch targets after Equipment", failures)
+		var shop_view := screens.hub_shop_menu as ShopMenuLayout
+		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 6 and shop_view != null and shop_view.visible and screens.hub_equipment_menu != null and not screens.hub_equipment_menu.visible, "Shop remains an authored transaction page inside the shell", failures)
+		_expect(shop_view != null and shop_view.mode_buttons.size() == 2 and shop_view.mode_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_STOP) and shop_view.item_buttons.any(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_STOP), "Shop owns its mode and visible item-row touch targets", failures)
 		screens.hub_page_buttons[2].pressed.emit()
-		_expect(screens.hub_page == screens.HUB_PAGE_FUSION and screens.hub_fusion_decrease_button.visible and screens.hub_fusion_increase_button.visible, "Fusion remains a transaction page inside the shell", failures)
+		var fusion_view := screens.hub_fusion_menu as FusionMenuLayout
+		var fusion_select := fusion_view.get_node_or_null("SellConfirmButton") as Button if fusion_view != null else null
+		_expect(screens.hub_page == screens.HUB_PAGE_FUSION and fusion_view != null and fusion_view.visible and fusion_select != null and fusion_select.visible, "Fusion remains an authored transaction page inside the shell", failures)
 		screens.hub_page_buttons[3].pressed.emit()
-		_expect(screens.hub_page == screens.HUB_PAGE_BIND and screens.hub_binding_panel.visible and screens.hub_binding_action_button.visible, "Bind remains the persistent Cloaked Demon action", failures)
+		var bind_menu := screens.hub_bind_menu as Control
+		var bind_panel := bind_menu.get_node_or_null("BindPanel") as Control if bind_menu != null else null
+		var bind_action := bind_menu.get_node_or_null("BindActionButton") as Button if bind_menu != null else null
+		_expect(screens.hub_page == screens.HUB_PAGE_BIND and bind_menu != null and bind_menu.visible and bind_panel != null and bind_panel.visible and bind_action != null and bind_action.visible, "Bind remains the persistent Cloaked Demon action", failures)
 		gameplay.call("_close_hub_to_run")
 		_expect(not screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.state == &"gameplay", "hub BACK returns to the world", failures)
 	gameplay.queue_free()

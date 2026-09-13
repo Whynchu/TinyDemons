@@ -33,13 +33,16 @@ func _initialize() -> void:
 	var run_one_encounter := rooms._generate_boss_encounter(1000, 12)
 	for run_one_variant in run_one_encounter["variants"] as Array:
 		_expect(String(run_one_variant) != "purple", "Run 1 boss rooms exclude Shadow slimes", failures)
-	rooms.free()
 	if failures.is_empty():
 		print("BOSS_VARIANT_SELECTION_SMOKE_OK")
-		quit(0)
+		call_deferred("_finish", 0)
+		return
 	for failure in failures:
 		push_error(failure)
-	quit(1)
+	call_deferred("_finish", 1)
+
+func _finish(exit_code: int) -> void:
+	quit(exit_code)
 
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:

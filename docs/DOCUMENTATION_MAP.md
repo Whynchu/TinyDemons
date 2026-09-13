@@ -2,7 +2,7 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-11
+Updated: 2026-09-13
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
@@ -23,6 +23,8 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 8. [`ARCHITECTURE.md`](ARCHITECTURE.md) — runtime boundaries and extension
    rules.
 9. [`FEATURE_MAP.md`](FEATURE_MAP.md) — first owner to inspect for each feature.
+10. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
+   export, and function-location index.
 
 ## Authority by question
 
@@ -63,6 +65,8 @@ rationale, but they must link forward to the current authority.
 
 ## Current cleanup queue
 
+- Refresh `SCRIPT_INDEX.md` with `tools/generate_script_index.ps1` whenever
+  runtime scripts are added, moved, or materially split.
 - Add lifecycle headers to active implementation plans as they are reopened.
 - Mark composition and menu plans that describe completed or superseded work.
 - Add explicit run scope to R3/R4/R5/R7/R8 dungeon documents.

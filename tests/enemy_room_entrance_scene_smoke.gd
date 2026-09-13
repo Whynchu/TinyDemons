@@ -32,7 +32,10 @@ func _initialize() -> void:
 		map.call("set_starter_flame_attuned", true)
 		rooms.room_states.clear()
 		gameplay.set("current_room_id", TARGET_ROOM)
-		gameplay.call("_sync_current_room_metadata")
+		# Model the actual landing from the Hub so the map can record the
+		# destination's BOTTOM_LEFT arrival seam. Directly setting the room without
+		# an arrival socket leaves authored enemy-room exits intentionally closed.
+		gameplay.call("_sync_current_room_metadata", ENTRY_SOCKET)
 		rooms.set_current_room(TARGET_ROOM, gameplay.get("current_room_type"))
 		gameplay.call("_collect_dungeon_sockets")
 		gameplay.call("_ensure_current_room_layout")
@@ -53,17 +56,19 @@ func _initialize() -> void:
 			_expect(slime.global_position.distance_to(saved_position) < 0.01, "16:9 enemy spawn remains in world coordinates", failures)
 			_expect(bool(gameplay.call("_is_slime_collision_rect_walkable_at", slime, gameplay.call("_actor_foot", slime))), "16:9 enemy spawn stays inside the walkable room", failures)
 		var incoming := graph.get_connection_for_entry(TARGET_ROOM, ENTRY_SOCKET)
-		var blocks_before: Array = gameplay.get("entrance_block_polygons") as Array
-		var block_count_before := blocks_before.size()
+		var area := gameplay.get("walkable_area") as WalkableArea
+		var entrance_socket := rooms.dungeon_sockets.get(ENTRY_SOCKET) as DungeonSocket
+		var entrance_portal_before := _socket_has_walkable_portal(rooms, area, gameplay, entrance_socket)
 		_expect(incoming != null and bool(map.call("is_connection_available", incoming, true)), "unengaged room entrance is traversable", failures)
+		_expect(entrance_portal_before, "unengaged room entrance contributes a walkable portal", failures)
 		gameplay.call("_mark_current_room_engaged")
-		var blocks_after: Array = gameplay.get("entrance_block_polygons") as Array
+		var entrance_portal_after_engagement := _socket_has_walkable_portal(rooms, area, gameplay, entrance_socket)
 		_expect(incoming != null and not bool(map.call("is_connection_available", incoming, true)), "landed-hit engagement locks the room entrance", failures)
-		_expect(blocks_after.size() > block_count_before, "engagement adds physical entrance blocking polygons", failures)
+		_expect(not entrance_portal_after_engagement, "engagement removes the entrance walkable portal", failures)
 		map.call("on_room_completed", TARGET_ROOM)
-		var blocks_cleared: Array = gameplay.get("entrance_block_polygons") as Array
+		var entrance_portal_after_clear := _socket_has_walkable_portal(rooms, area, gameplay, entrance_socket)
 		_expect(incoming != null and bool(map.call("is_connection_available", incoming, true)), "clearing reopens the entrance", failures)
-		_expect(blocks_cleared.size() == block_count_before, "clearing removes the engagement entrance block", failures)
+		_expect(entrance_portal_after_clear, "clearing restores the entrance walkable portal", failures)
 	gameplay.queue_free()
 	await process_frame
 	var settings_absolute_path := ProjectSettings.globalize_path(TEST_SETTINGS_PATH)
@@ -74,6 +79,24 @@ func _initialize() -> void:
 
 func active_variants_size(state: Dictionary) -> int:
 	return (state.get("enemy_variants", []) as Array).size()
+
+
+func _socket_has_walkable_portal(rooms: RoomController, area: WalkableArea, gameplay: Node, socket: DungeonSocket) -> bool:
+	if area == null or socket == null:
+		return false
+	var expected := rooms.call("_socket_portal_polygons", gameplay, socket) as Array
+	for polygon_value in expected:
+		var polygon := polygon_value as PackedVector2Array
+		if polygon.size() != 0 and area.portal_regions.any(func(candidate: PackedVector2Array) -> bool: return candidate.size() == polygon.size() and _polygons_match(candidate, polygon)):
+			return true
+	return false
+
+
+func _polygons_match(left: PackedVector2Array, right: PackedVector2Array) -> bool:
+	for index in left.size():
+		if not left[index].is_equal_approx(right[index]):
+			return false
+	return true
 
 
 func _expect(condition: bool, message: String, failures: Array[String]) -> void:

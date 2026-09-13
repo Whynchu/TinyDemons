@@ -48,12 +48,12 @@ func _initialize() -> void:
 	var rarity_order := [&"common", &"rare", &"epic", &"legendary", &"mythic"]
 	_expect(rarity_order.size() == 5, "rarity tiers remain available", failures)
 	_expect(catalog.rarity_color(&"common") == Color.WHITE and catalog.rarity_color(&"rare") != catalog.rarity_color(&"epic") and catalog.rarity_color(&"legendary") != catalog.rarity_color(&"mythic"), "rarity colors are distinct", failures)
-	var low_rank_rare_roll := catalog.roll_run_rarity(0.35, 1, 0.0)
-	var high_rank_rare_roll := catalog.roll_run_rarity(0.35, 12, 3.0)
+	var low_rank_rare_roll := catalog.roll_run_rarity(0.13, 1, 0.0)
+	var high_rank_rare_roll := catalog.roll_run_rarity(0.13, 12, 3.0)
 	var rarity_rank_order := {&"common": 0, &"rare": 1, &"epic": 2, &"legendary": 3, &"mythic": 4}
 	_expect(rarity_rank_order[high_rank_rare_roll] > rarity_rank_order[low_rank_rare_roll], "higher rank/performance rolls strictly higher rarity", failures)
-	_expect(high_rank_rare_roll == &"rare", "rank 12 + S-grade at roll 0.35 is rare", failures)
-	_expect(low_rank_rare_roll == &"common", "rank 1 at roll 0.35 is common", failures)
+	_expect(high_rank_rare_roll == &"rare", "rank 12 + S-grade at roll 0.13 is rare", failures)
+	_expect(low_rank_rare_roll == &"common", "rank 1 at roll 0.13 is common", failures)
 	_expect(catalog.roll_run_rarity(0.0, 1, 0.0) != &"common", "roll near zero is never common at any rank", failures)
 	_expect(catalog.roll_run_rarity(1.0, 1, 0.0) == &"common", "roll of one is always common", failures)
 	var consistent_tiers := [&"mythic", &"legendary", &"epic", &"rare", &"common"]
@@ -73,7 +73,7 @@ func _initialize() -> void:
 	_expect(is_equal_approx(rate_equipment.strength_rate_bonus, 0.0), "rare positive STR package has no hidden player STR rate", failures)
 	var rate_stats := StatsComponent.new(); rate_stats.configure_manual_growth(3, 2, 2, 1, 0, 0, 0, 0)
 	var rate_snapshot := CombatStatSnapshot.from_components(rate_stats, rate_equipment)
-	_expect(is_equal_approx(rate_snapshot.gear_strength, 4.0) and is_equal_approx(rate_snapshot.strength, 7.0), "rarity adds flat points to the affected stat", failures)
+	_expect(is_equal_approx(rate_snapshot.gear_strength, 4.0) and is_equal_approx(rate_snapshot.strength, 6.0), "rarity adds flat points to the affected stat", failures)
 	var restored := PlayerProfile.new()
 	profile.souls = 7
 	restored.load_dictionary(profile.to_dictionary())
@@ -82,7 +82,7 @@ func _initialize() -> void:
 	_expect(restored.souls == 7, "souls persist with the profile", failures)
 	var run := RunState.new(); run.begin(424242); run.ensure_shop_stock(restored)
 	var stock_copy := run.shop_stock.duplicate(true); run.ensure_shop_stock(restored)
-	_expect(run.shop_stock == stock_copy and run.shop_stock.size() == 8, "shop stock stable within run", failures)
+	_expect(run.shop_stock == stock_copy and run.shop_stock.size() == ItemCatalog.SLOTS.size() * 2 + 2, "shop stock stable within run", failures)
 	var shop_ids: Dictionary = {}
 	for shop_entry: Dictionary in run.shop_stock:
 		var stock_item := ItemInstance.from_dictionary(shop_entry.get("item", {}) as Dictionary)

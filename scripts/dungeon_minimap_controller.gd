@@ -378,6 +378,10 @@ func _ensure_map_overlay() -> void:
 		map_overlay_select_button.add_theme_stylebox_override(state_name, transparent_style)
 	map_overlay_select_button.pressed.connect(_on_select_tapped)
 	map_overlay.add_child(map_overlay_select_button)
+	# The select touch target is intentionally added after the visual cursor so
+	# it does not change the cursor's deterministic sibling draw order. Keep the
+	# visual cursor last after all interactive children exist.
+	map_overlay.move_child(map_overlay_cursor, map_overlay.get_child_count() - 1)
 	map_overlay.visible = false
 
 

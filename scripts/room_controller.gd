@@ -3,6 +3,7 @@ class_name RoomController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
+const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/room_transition_result.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
@@ -48,7 +49,6 @@ const LATER_POPCORN_CHANCE: float = 0.24
 const ROOM_POPCORN := "ROOM_POPCORN"
 const ELITE_POPCORN := "ELITE_POPCORN"
 const ELITE_ENCOUNTER_LEVEL_BONUS := 2
-const GUARANTEED_SHADOW_POPCORN_COUNT: int = 1
 const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 3
 const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
 const BOSS_MIXED_SUPPORT_START_RANK: int = 5
@@ -235,10 +235,12 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(level_floor, base_level + level_spread)
 		var level_cap := _enemy_level_cap() + ELITE_ENCOUNTER_LEVEL_BONUS if encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn else _enemy_level_cap()
 		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, level_cap))
-	# Every replayable combat room keeps one ordinary room-popcorn slot so the
-	# 45-second respawn system is always observable, even when all random rolls
-	# missed the optional popcorn chance.
-	if not popcorn_flags.has(true):
+	# Ordinary rooms keep one room-popcorn slot so the respawn system remains
+	# observable even when all random rolls miss. Shadow-bound composition is a
+	# weighted identity policy: forcing a relief slot there would turn the
+	# authored 20/80 Shadow/Normal ratio into a much larger Normal bias on the
+	# small one-slot encounters.
+	if not popcorn_flags.has(true) and matchup_policy != "shadow_bound":
 		for index in range(variants.size() - 1, -1, -1):
 			if variants[index] != "purple":
 				variants[index] = "grey"
@@ -248,24 +250,11 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				ambush_flags[index] = false
 				elite_flags[index] = false
 				break
-	# Shadow encounters keep their low-level mana-recovery opportunity readable:
-	# every popcorn slot beside a Shadow Slime becomes a Normal Slime. If the
-	# normal popcorn roll produced no slot, add one so Shadow never removes the
-	# player's low-mana recovery option entirely.
+	# Shadow encounters keep any low-level mana-recovery slots readable: every
+	# popcorn slot beside a Shadow Slime becomes a Normal Slime. The weighted
+	# composition above intentionally does not append a guaranteed slot; doing so
+	# would violate the approximately 20 percent Normal relief target.
 	if variants.has("purple"):
-		var has_shadow_popcorn := false
-		for is_popcorn in popcorn_flags:
-			if is_popcorn:
-				has_shadow_popcorn = true
-				break
-		if not has_shadow_popcorn:
-			for _support_index in GUARANTEED_SHADOW_POPCORN_COUNT:
-				variants.append("grey")
-				levels.append(_popcorn_enemy_level())
-				popcorn_flags.append(true)
-				popcorn_types.append(ELITE_POPCORN)
-				ambush_flags.append(false)
-				elite_flags.append(false)
 		for index in variants.size():
 			if popcorn_flags[index]:
 				variants[index] = "grey"
@@ -295,8 +284,12 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var boss_rng := RandomNumberGenerator.new()
 	boss_rng.seed = generation_seed + 991
 	var boss_variant := boss_variant_selection
-	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(boss_variant):
+	var has_explicit_boss_variant := SLIME_VARIANT_CATALOG_SCRIPT.is_variant(boss_variant)
+	if not has_explicit_boss_variant:
 		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.duplicate()
+		# Run 1 teaches the neutral encounter first. Later un-authored runs may
+		# sample the complete boss catalog; purple remains rare only in the minor
+		# conversion below.
 		if progression_run_rank <= 1:
 			roster.erase(&"purple")
 		boss_variant = roster[boss_rng.randi_range(0, roster.size() - 1)]
@@ -308,8 +301,11 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
 	for index in minor_count:
-		var selected_variant: String = String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
-		if progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
+		# A designer-selected lead variant is a complete boss identity. Keep the
+		# support wave on that identity as well; the seeded mixed roster is only
+		# used when the encounter was not authored with an explicit selection.
+		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK else String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
+		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))
@@ -477,8 +473,8 @@ func fast_travel_to_flame(root: Object, destination_room_id: StringName) -> bool
 		return false
 	if not bool(map_controller.call("can_fast_travel_to_flame", current_room.id, destination_room.id)):
 		return false
-	enter_connected_room(root, destination_room.id, &"")
-	return true
+	var transition := plan_connected_room_transition(graph, current_room.id, destination_room.id, &"", &"")
+	return enter_connected_room(root, transition)
 
 
 func begin_transition() -> void:
@@ -489,7 +485,49 @@ func end_transition() -> void:
 	transition_locked = false
 
 
-func enter_connected_room(root: Object, destination_room_id: StringName, destination_socket_id: StringName) -> void:
+func plan_connected_room_transition(
+	graph: DungeonGraph,
+	source_room_id: StringName,
+	destination_room_id: StringName,
+	arrival_socket_id: StringName,
+	departure_socket_id: StringName = &""
+) -> RoomTransitionResult:
+	var result := ROOM_TRANSITION_RESULT_SCRIPT.new() as RoomTransitionResult
+	result.source_room_id = source_room_id
+	result.destination_room_id = destination_room_id
+	result.arrival_socket_id = arrival_socket_id
+	result.departure_socket_id = departure_socket_id
+	if graph == null:
+		result.reject(RoomTransitionResult.Status.INVALID_GRAPH, &"missing_graph")
+		return result
+	var source := graph.get_room(source_room_id)
+	if source == null:
+		result.reject(RoomTransitionResult.Status.MISSING_SOURCE, &"missing_source_room")
+		return result
+	var destination := graph.get_room(destination_room_id)
+	if destination == null:
+		result.reject(RoomTransitionResult.Status.MISSING_DESTINATION, &"missing_destination_room")
+		return result
+	result.destination_room_type = destination.room_type
+	return result
+
+
+func plan_connection_transition(graph: DungeonGraph, connection: DungeonGraph.ConnectionRecord) -> RoomTransitionResult:
+	if connection == null:
+		var invalid := ROOM_TRANSITION_RESULT_SCRIPT.new() as RoomTransitionResult
+		invalid.reject(RoomTransitionResult.Status.INVALID_CONNECTION, &"missing_connection")
+		return invalid
+	return plan_connected_room_transition(
+		graph,
+		connection.source_room_id,
+		connection.destination_room_id,
+		connection.destination_entry,
+		connection.exit_socket)
+
+
+func enter_connected_room(root: Object, transition: RoomTransitionResult) -> bool:
+	if root == null or transition == null or not transition.is_ready():
+		return false
 	root.set("room_transition_locked", true)
 	begin_transition()
 	# A combo is local to an encounter. Entering a new room must not carry the
@@ -497,13 +535,13 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	if root.has_method("_reset_combo"):
 		root.call("_reset_combo")
 	root.call("_save_current_room_state")
-	root.set("current_room_id", destination_room_id)
-	root.call("_sync_current_room_metadata", destination_socket_id)
-	enter_room(destination_room_id, root.get("current_room_type"), destination_socket_id)
+	root.set("current_room_id", transition.destination_room_id)
+	root.call("_sync_current_room_metadata", transition.arrival_socket_id)
+	enter_room(transition.destination_room_id, transition.destination_room_type, transition.arrival_socket_id)
 	_maybe_add_backtrack_popcorn(root)
 	root.call("_ensure_current_room_layout")
 	root.call("_update_room_number_indicator")
-	var arrival_socket := dungeon_sockets.get(destination_socket_id) as DungeonSocket
+	var arrival_socket := dungeon_sockets.get(transition.arrival_socket_id) as DungeonSocket
 	var player := root.get("player") as Sprite2D
 	player.global_position = _arrival_player_position(root, arrival_socket)
 	if not bool(root.call("_can_actor_stand_at_current_position", player)):
@@ -544,6 +582,7 @@ func enter_connected_room(root: Object, destination_room_id: StringName, destina
 	root.call("_save_player_profile")
 	root.call_deferred("_save_active_run_checkpoint")
 	root.call_deferred("_release_room_transition_lock")
+	return true
 
 
 func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
@@ -619,11 +658,12 @@ func apply_state(root: Object) -> void:
 
 
 func _treasure_chest_claimed_from_state(state: Dictionary) -> bool:
-	if bool(state.get("chest_claimed", false)) or bool(state.get("chest_evaporated", false)) or bool(state.get("item_rewarded", false)):
-		return true
-	# Older in-memory runs only stored item_rewarded when the chest was opened.
-	# Keep those runs from showing the authored chest again on a revisit.
-	return false
+	# Current saves explicitly persist chest_claimed, including false for an
+	# uncleared/unclaimed chest. Older in-memory saves only recorded the presence
+	# of item_rewarded or chest_evaporated, so the key itself is the legacy signal.
+	if state.has("chest_claimed"):
+		return !!state.get("chest_claimed", false)
+	return state.has("chest_evaporated") or state.has("item_rewarded")
 
 
 func save_treasure_chest_state(root: Object) -> void:
@@ -834,8 +874,12 @@ func _try_enter_socket_set(root: Object, sockets: Dictionary, feet: Rect2, is_en
 		var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
 		if connection == null: continue
 		if not bool(root.call("_map_connection_available", connection, is_entrance)): continue
-		var destination: StringName = connection.source_room_id if is_entrance else connection.destination_room_id; var arrival: StringName = connection.exit_socket if is_entrance else connection.destination_entry
-		root.call("_enter_connected_room", destination, arrival); return true
+		var destination: StringName = connection.source_room_id if is_entrance else connection.destination_room_id
+		var arrival: StringName = connection.exit_socket if is_entrance else connection.destination_entry
+		var departure: StringName = connection.destination_entry if is_entrance else connection.exit_socket
+		var transition := plan_connected_room_transition(graph, room_id, destination, arrival, departure) if is_entrance else plan_connection_transition(graph, connection)
+		if enter_connected_room(root, transition):
+			return true
 	return false
 
 

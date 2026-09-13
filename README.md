@@ -67,6 +67,9 @@ families remain documented extension points until their combat contracts exist.
 Start with [`docs/DOCUMENTATION_MAP.md`](docs/DOCUMENTATION_MAP.md) for the
 documentation authority, then [`docs/AUDIT.md`](docs/AUDIT.md) for current
 findings and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the active sequence.
+Use [`docs/SCRIPT_INDEX.md`](docs/SCRIPT_INDEX.md) to jump directly to a
+runtime script or function declaration; refresh it with
+`tools/generate_script_index.ps1` after structural script changes.
 Use [`docs/CONTENT_AUTHORING.md`](docs/CONTENT_AUTHORING.md) when adding game
 content and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for open verification
 gaps. The accepted refactor route is in
@@ -84,6 +87,7 @@ Current playtest issues and their resolution order are tracked in
 - `Mockups/` - reference mockups
 - `screenshots/` - game screenshots
 - `docs/` - audit, plans, tuning index, feature designs, and smoke checklist
+- `docs/SCRIPT_INDEX.md` - generated script/class/function navigation index
 - `docs/game-screenshot.png` - first-room gameplay screenshot used in this README
 
 ## Running The Project
@@ -93,7 +97,7 @@ Open `project.godot` in Godot 4.7 and run the main scene. The project is configu
 When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
-one separate Godot process per registered test (currently around 90); a single
+one separate Godot process per registered test (currently 114); a single
 headless renderer failure can create repeated Windows memory-error dialogs.
 
 Run the headless smoke suite only as a supervised standalone check, with no MCP
@@ -101,7 +105,7 @@ Godot runtime active. Start with one focused test before using the full runner:
 
 ```powershell
 # Focused check
-& "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" --headless --path . --log-file ".godot_user/focused-smoke.log" -s res://tests/player_hud_scene_smoke.gd
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/run_headless.ps1 -Script res://tests/player_hud_scene_smoke.gd
 
 # Full suite — standalone/supervised only
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
@@ -111,7 +115,10 @@ If Windows memory-error dialogs start repeating, stop the smoke runner and
 terminate only the `Godot_v4.7.1-stable_win64_console` worker processes. Keep
 the main editor/MCP process alive if it remains healthy.
 
-Display settings are device-wide and can be changed from SETTINGS on the title
+For one-off headless checks, use `tools/run_headless.ps1`; it creates a temporary
+user-data directory, selects the Dummy audio driver, and writes an isolated log
+so the editor profile is never reused by a worker. Display settings are
+device-wide and can be changed from SETTINGS on the title
 screen or from the pause menu. Available options are aspect (`FULL`, 3:2,
 16:10, or 16:9), fullscreen, pixel-perfect scaling, music volume, and SFX
 volume. `FULL` is the default and follows the live landscape browser/window

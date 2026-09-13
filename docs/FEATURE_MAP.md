@@ -2,7 +2,7 @@
 
 Status: current baseline map; ownership remains partially coupled
 
-Updated: 2026-09-11
+Updated: 2026-09-13
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. `gameplay.gd` and
@@ -16,9 +16,9 @@ not a claim that every feature is fully isolated. `gameplay.gd` and
 | Player combat | `player_attack_component.gd`, `combat_runtime_controller.gd` | combat snapshot/calculator | hitbox and effects components | combat path and damage tests | High: coordinator seams remain |
 | Actor geometry | `actor_geometry.gd`, `actor_collision_system.gd` | shared geometry source | occlusion/effects/debug guides | geometry and wall tests | High: regression-sensitive |
 | Slime enemies | `slime_brain.gd`, `slime_combat_component.gd`, `slime_actor.gd` | enemy runtime state and tuning | slime scenes/components | spawn, engagement, variant tests | Medium |
-| Room progression | `room_controller.gd` | run/map state | room scenes and encounter content | room and progression tests | High: authored/generated overlap |
+| Room progression | `room_controller.gd`, `room_transition_result.gd` | run/map state | room scenes and encounter content | room, doorway, and transition-result tests | High: authored/generated overlap |
 | Dungeon topology | `dungeon_graph.gd`, `dungeon_map_controller.gd` | `dungeon_map_state.gd` | minimap, doors, room layers | map and door tests | High: multiple layout authorities |
-| Generated layouts | `dungeon_layout_generator.gd`, `puzzle_route_generator.gd`, route plan/solver scripts | layout definitions and generated route metadata | generated preview scenes and minimap | generated layout, reachability, and R6+ risk/reward smoke tests | High: runtime playtest and Godot verification pending |
+| Generated layouts | `dungeon_layout_generator.gd`, `puzzle_route_generator.gd`, route plan/solver scripts | layout definitions and generated route metadata | generated preview scenes and minimap | generated layout, reachability, and R6+ risk/reward smoke tests | High: focused generation passes; runtime playtest and visual verification pending |
 | Chroma and elements | `player_chroma_component.gd`, `element_catalog.gd` | chroma/profile state | pickups, spells, effects | chroma, binding, elemental tests | Medium |
 | Projectiles and magic | `magic_projectile_controller.gd`, `magic_runtime_controller.gd` | combat/runtime state | projectile scenes and effects | imbue and projectile-related tests | High: documented coordinator seams |
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |

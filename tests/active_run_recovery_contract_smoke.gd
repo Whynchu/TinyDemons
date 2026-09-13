@@ -30,7 +30,7 @@ func _initialize() -> void:
 		"dungeon_seed": 424242,
 		"layout_bound_flame": "water",
 		"run_rank": 2,
-		"current_room_id": "room_start",
+		"current_room_id": "room_next",
 		"current_room_type": "combat",
 		"current_room_depth": 1,
 		"arrival_socket_id": "left",

@@ -224,6 +224,11 @@ func _place_debug_player_at_boss_entry(root: GameplayState, player: Sprite2D) ->
 		var connection := graph.get_connection_for_entry(root.get("current_room_id"), socket.socket_id())
 		if connection == null:
 			continue
+		# Debug scenes bypass the normal doorway transition, so record the same
+		# arrival socket that a live transition would pass to RoomController. This
+		# keeps boss final-exit routing and resumed-room geometry deterministic.
+		rooms.arrival_socket_id = socket.socket_id()
+		root._sync_current_room_metadata(socket.socket_id())
 		player.global_position = rooms.call("_arrival_player_position", root, socket)
 		player.flip_h = socket.inward_facing.x < 0.0
 		root.set("last_player_facing_left", player.flip_h)

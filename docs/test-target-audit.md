@@ -2,7 +2,7 @@
 
 Status: initial findings; expand before using affected tests as release evidence
 
-Date: 2026-09-12
+Date: 2026-09-13
 
 Baseline: version `0.2.00`; expand this audit before using affected tests as
 release evidence.
@@ -111,12 +111,12 @@ The test now asserts the authored contract directly:
 The later focused rerun result for `run2_authored_layout_smoke` passed. This was
 a test setup defect, not evidence that gameplay allowed early entry.
 
-## Current standalone baseline — 2026-09-11
+## Historical standalone baseline — 2026-09-11
 
 Inventory preflight:
 
 ```text
-registered=113
+registered=114
 missing=0
 ```
 
@@ -146,9 +146,7 @@ Confirmed failing tests:
 
 | Test | Current assertion evidence |
 |---|---|
-| `active_run_recovery_contract_smoke` | A valid snapshot failed schema/slot validation. |
 | `cloud_save_contract_smoke` | Cloud panel lacks the expected explicit runtime-safe types. |
-| `wall_socket_geometry_smoke` | Closed seams remain enterable or lack expected trigger fences. |
 | `demon_hub_menu_scene_smoke` | Hub root, shop cursor, shop geometry, and sell amount assertions fail. |
 | `equipment_menu_scene_smoke` | Equipment cursor animation/selection and post-equipment shop cursor assertions fail. |
 | `touch_controls_smoke` | Hub stat-row and outside-button touch assertions fail; one signal call has an argument mismatch. |
@@ -159,6 +157,21 @@ Confirmed failing tests:
 | `run1_minimap_smoke` | An undiscovered room remains visible. |
 | `run_music_flame_gate_smoke` | Dungeon-Crawl music does not start after starter-flame pickup under the test contract. |
 
+## Focused follow-up — 2026-09-13
+
+The isolated runner was updated to use a temporary Godot user-data directory,
+Dummy audio, and an explicit log path. The following focused contracts passed:
+
+| Test | Result |
+|---|---|
+| `active_run_recovery_contract_smoke` | pass; fixture now matches the map's last discovered room |
+| `r6_plus_risk_reward_generation_smoke` | pass across sampled runs, seeds, and starter flames |
+| `elemental_binding_smoke` | pass; expanded R6+ seed/starter generation and binding contract |
+| `generated_run_scene_smoke` | pass |
+| `run1_door_path_smoke` | pass |
+| `wall_socket_geometry_smoke` | pass against the portal-based walkability model |
+| `room_transition_result_smoke` | pass; typed room-transition planning/validation |
+
 `r7_native_generator_smoke` did not complete. It repeatedly reported an R7 room
 outside the compact map (`room_9_11` at `(35, 10)`) before its worker stalled.
 `menu_route_scene_smoke`, `gear_system_rework_smoke`,
@@ -168,6 +181,11 @@ the add-on MCP runtime startup/teardown path. They remain unverified.
 
 The repeated root-certificate and MCP registry messages are environment
 warnings. They appeared in direct runs and were not counted as test failures.
+
+A supervised full-run attempt on 2026-09-13 reached ordinary assertion
+failures without a native headless renderer crash. It was stopped when the
+broader `elemental_binding_smoke` seed set exposed the R6+ route-choice gap;
+the focused elemental-binding and R6+ matrices pass after that generator fix.
 
 This is an initial list, not a complete audit.
 

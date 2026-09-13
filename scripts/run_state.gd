@@ -381,6 +381,7 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 		shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))
 	if profile != null:
 		var cloak := ItemInstance.new()
+		cloak.instance_id = "shop-%s-cloak" % run_id
 		cloak.definition_id = &"demon_cloak"
 		cloak.rarity = &"common"
 		cloak.quality = 1.0

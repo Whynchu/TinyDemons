@@ -309,6 +309,19 @@ static func _assign_primary_flame_rooms(builder: LayoutBuilder) -> void:
 	for candidate in candidates:
 		if used_ids.has(candidate.id):
 			continue
+		var has_outgoing := false
+		for connection in builder.layout.connections:
+			if connection.source_room_id == candidate.id:
+				has_outgoing = true
+				break
+		if not has_outgoing:
+			# A legacy optional Fire detour can be a legitimate terminal utility
+			# room. Keep its interaction semantics instead of converting it into a
+			# combat room that the R6+ validator would correctly flag as a dead end.
+			candidate.route_role = ROUTE_DETOUR_FIRE
+			candidate.encounter_tier = DungeonGraph.ENCOUNTER_NORMAL
+			candidate.reward_tier = DungeonGraph.REWARD_STANDARD
+			continue
 		candidate.room_type = DungeonGraph.ROOM_COMBAT
 		candidate.fire_flame = &""
 		candidate.route_role = ROUTE_MAIN
@@ -370,105 +383,303 @@ static func _add_risk_shortcut(builder: LayoutBuilder, _dungeon_seed: int) -> Di
 		# fork just as safely as a normal combat room. Special/Treasure rooms keep
 		# their authored interaction semantics, while the shortcut destination is
 		# still required to be an actual dangerous combat encounter.
-		if source.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_SPECIAL_ENEMY, DungeonGraph.ROOM_TREASURE] or source.coordinate.y < 4:
+		if not _is_risk_choice_source(source, boss_depth):
 			continue
-		if source.coordinate.y >= boss_depth - 2:
-			continue
-		var forward_connection = _forward_spine_connection(builder, source)
-		if forward_connection == null:
-			continue
-		var risk_destination = builder.room_spec(forward_connection.destination_room_id)
-		if risk_destination == null or risk_destination.room_type != DungeonGraph.ROOM_COMBAT:
-			continue
-		var orientation := 1 if risk_destination.coordinate.x > source.coordinate.x else -1
-		var safe_socket: StringName = DungeonGraph.BOTTOM_LEFT if orientation > 0 else DungeonGraph.BOTTOM_RIGHT
-		var risk_return_socket: StringName = DungeonGraph.WALL_LEFT if orientation > 0 else DungeonGraph.WALL_RIGHT
-		var existing_risk_rejoin = _forward_spine_connection(builder, risk_destination)
-		var existing_rejoin_id: StringName = &""
-		var existing_rejoin = null
-		if existing_risk_rejoin != null:
-			var candidate_rejoin = builder.room_spec(existing_risk_rejoin.destination_room_id)
-			if candidate_rejoin != null and candidate_rejoin.coordinate == source.coordinate + Vector2i(0, 2):
-				existing_rejoin_id = candidate_rejoin.id
-				existing_rejoin = candidate_rejoin
-		var can_reuse_existing_rejoin := not existing_rejoin_id.is_empty()
-		if builder.connection_keys.has("%s:%s" % [source.id, safe_socket]) or (not can_reuse_existing_rejoin and builder.connection_keys.has("%s:%s" % [risk_destination.id, risk_return_socket])):
-			continue
-		var safe_one_coordinate: Vector2i = source.coordinate + Vector2i(-orientation, -1)
-		var safe_two_coordinate: Vector2i = source.coordinate + Vector2i(-2 * orientation, 0)
-		var safe_three_coordinate: Vector2i = source.coordinate + Vector2i(-orientation, 1)
-		var rejoin_coordinate: Vector2i = source.coordinate + Vector2i(0, 2)
-		var branch_coordinates: Array[Vector2i] = [safe_one_coordinate, safe_two_coordinate, safe_three_coordinate, rejoin_coordinate]
-		var coordinates_valid := true
-		for branch_index in branch_coordinates.size():
-			if branch_index == 3 and can_reuse_existing_rejoin:
+		for risk_edge in builder.layout.connections:
+			if risk_edge.source_room_id != source.id or risk_edge.route_role not in [ROUTE_MAIN, ROUTE_KEY_PROGRESSION]:
 				continue
-			var coordinate: Vector2i = branch_coordinates[branch_index]
-			if builder.room_ids_by_coordinate.has(coordinate) or not _risk_coordinate_in_bounds(coordinate):
-				coordinates_valid = false
-				break
-		if not coordinates_valid:
+			var risk_destination = builder.room_spec(risk_edge.destination_room_id)
+			if risk_destination == null or risk_destination.room_type != DungeonGraph.ROOM_COMBAT or risk_destination.route_role == ROUTE_ELITE_REWARD:
+				continue
+			for rejoin_edge in builder.layout.connections:
+				if rejoin_edge.source_room_id != risk_destination.id or rejoin_edge.route_role not in [ROUTE_MAIN, ROUTE_KEY_PROGRESSION]:
+					continue
+				var rejoin = builder.room_spec(rejoin_edge.destination_room_id)
+				if not _is_risk_choice_rejoin(rejoin, source, builder):
+					continue
+				var safe_path := _find_safe_route_path(builder, source, risk_destination, rejoin, risk_edge.exit_socket, rejoin_edge.exit_socket)
+				if safe_path.is_empty():
+					continue
+				return _apply_risk_route_choice(builder, source, risk_destination, rejoin, risk_edge, rejoin_edge, safe_path)
+	# A sparse or highly straight scaffold can have no reusable two-edge spine
+	# segment with a free four-edge loop. Build the same contract in reserved
+	# lattice space instead of returning an invalid active layout. The fallback
+	# remains bounded and reconnects to an existing forward room.
+	return _add_fallback_risk_shortcut(builder, boss_depth)
+
+
+static func _is_risk_choice_source(room, boss_depth: int) -> bool:
+	if room == null or room.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_SPECIAL_ENEMY, DungeonGraph.ROOM_TREASURE]:
+		return false
+	if room.coordinate.y < 4 or room.coordinate.y >= boss_depth - 2:
+		return false
+	return room.route_role not in [ROUTE_ELITE_REWARD, ROUTE_RISK_SHORTCUT, ROUTE_SAFE]
+
+
+static func _is_risk_choice_rejoin(room, source, builder: LayoutBuilder) -> bool:
+	if room == null or source == null or room.coordinate.y <= source.coordinate.y:
+		return false
+	if room.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_TREASURE, DungeonGraph.ROOM_FIRE]:
+		return false
+	if room.route_role in [ROUTE_ELITE_REWARD, ROUTE_PRIMARY_FLAME, ROUTE_RISK_SHORTCUT, ROUTE_SAFE]:
+		return false
+	for connection in builder.layout.connections:
+		if connection.source_room_id == room.id and connection.route_role in [ROUTE_MAIN, ROUTE_KEY_PROGRESSION]:
+			return true
+	return false
+
+
+static func _find_safe_route_path(
+	builder: LayoutBuilder,
+	source,
+	risk_destination,
+	rejoin,
+	risk_source_socket: StringName,
+	risk_rejoin_socket: StringName
+) -> Array[Dictionary]:
+	var path: Array[Dictionary] = []
+	var visited: Dictionary = {
+		source.coordinate: true,
+		risk_destination.coordinate: true,
+		rejoin.coordinate: true,
+	}
+	if not _search_safe_route_path(builder, source.id, source.coordinate, rejoin, risk_source_socket, DungeonGraph.paired_socket(risk_rejoin_socket), 0, path, visited):
+		return []
+	# A safe branch must contribute authored route space. Reusing four existing
+	# rooms would only create a relabeled loop, not the advertised alternative.
+	for path_index in 3:
+		var step: Dictionary = path[path_index]
+		if not builder.room_ids_by_coordinate.has(step["coordinate"] as Vector2i):
+			return path
+	return []
+
+
+static func _search_safe_route_path(
+	builder: LayoutBuilder,
+	current_id: StringName,
+	current_coordinate: Vector2i,
+	rejoin,
+	risk_source_socket: StringName,
+	risk_rejoin_entry: StringName,
+	edge_index: int,
+	path: Array[Dictionary],
+	visited: Dictionary
+) -> bool:
+	var sockets: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]
+	for socket_id in sockets:
+		if edge_index == 0 and socket_id == risk_source_socket:
 			continue
-		var target: Dictionary = {}
-		if can_reuse_existing_rejoin:
-			var safe_rejoin_socket: StringName = DungeonGraph.WALL_RIGHT if orientation > 0 else DungeonGraph.WALL_LEFT
-			if _destination_entry_used(builder, existing_rejoin_id, DungeonGraph.paired_socket(safe_rejoin_socket)):
+		if not current_id.is_empty() and builder.connection_keys.has("%s:%s" % [current_id, socket_id]):
+			continue
+		var next_coordinate: Vector2i = current_coordinate + _exit_offset(socket_id)
+		if edge_index == 3:
+			if next_coordinate != rejoin.coordinate:
 				continue
-		else:
-			target = _find_risk_rejoin_target(builder, rejoin_coordinate)
-			if target.is_empty():
+			var destination_entry := DungeonGraph.paired_socket(socket_id)
+			if destination_entry == risk_rejoin_entry or _destination_entry_used(builder, rejoin.id, destination_entry):
 				continue
-		# Reuse the existing spine edge as the short dangerous route. The safe
-		# branch is built on the opposite side and rejoins after the shortcut
-		# room, so the player gets a real choice instead of an extra side loop.
-		forward_connection.route_role = ROUTE_RISK_SHORTCUT
-		risk_destination.route_role = ROUTE_RISK_SHORTCUT
-		risk_destination.encounter_tier = DungeonGraph.ENCOUNTER_DANGEROUS
-		risk_destination.reward_tier = DungeonGraph.REWARD_RISK
-		var safe_one_id := builder.add_room(safe_one_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
-		var safe_two_id := builder.add_room(safe_two_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
-		var safe_three_id := builder.add_room(safe_three_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
-		var rejoin_id: StringName = existing_rejoin_id if can_reuse_existing_rejoin else builder.add_room(rejoin_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_REJOIN, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
-		builder.link(source.id, safe_socket, safe_one_id, &"", ROUTE_SAFE)
-		builder.link(safe_one_id, DungeonGraph.WALL_LEFT if orientation > 0 else DungeonGraph.WALL_RIGHT, safe_two_id, &"", ROUTE_SAFE)
-		builder.link(safe_two_id, DungeonGraph.WALL_RIGHT if orientation > 0 else DungeonGraph.WALL_LEFT, safe_three_id, &"", ROUTE_SAFE)
-		builder.link(safe_three_id, DungeonGraph.WALL_RIGHT if orientation > 0 else DungeonGraph.WALL_LEFT, rejoin_id, &"", ROUTE_SAFE)
-		if can_reuse_existing_rejoin:
-			existing_risk_rejoin.route_role = ROUTE_RISK_SHORTCUT
-			existing_rejoin.route_role = ROUTE_REJOIN
-		else:
-			builder.link(risk_destination.id, risk_return_socket, rejoin_id, &"", ROUTE_RISK_SHORTCUT)
-			builder.link(rejoin_id, target["socket"] as StringName, target["room_id"] as StringName, &"", ROUTE_REJOIN)
-		return {"source": source.id, "rejoin": rejoin_id, "safe_length": 4, "risk_length": 2}
+			if not current_id.is_empty() and _rooms_are_connected(builder, current_id, rejoin.id):
+				continue
+			path.append({"coordinate": next_coordinate, "socket": socket_id})
+			return true
+		if not _risk_coordinate_in_bounds(next_coordinate) or visited.has(next_coordinate):
+			continue
+		var next_id: StringName = builder.room_ids_by_coordinate.get(next_coordinate, &"") as StringName
+		if not next_id.is_empty():
+			var next_room = builder.room_spec(next_id)
+			if next_room == null or next_room.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS] or next_room.route_role == ROUTE_ELITE_REWARD:
+				continue
+			if _destination_entry_used(builder, next_id, DungeonGraph.paired_socket(socket_id)):
+				continue
+			if not current_id.is_empty() and _rooms_are_connected(builder, current_id, next_id):
+				continue
+			visited[next_coordinate] = true
+			path.append({"coordinate": next_coordinate, "socket": socket_id})
+			if _search_safe_route_path(builder, next_id, next_coordinate, rejoin, risk_source_socket, risk_rejoin_entry, edge_index + 1, path, visited):
+				return true
+			path.pop_back()
+			visited.erase(next_coordinate)
+			continue
+		visited[next_coordinate] = true
+		path.append({"coordinate": next_coordinate, "socket": socket_id})
+		if _search_safe_route_path(builder, &"", next_coordinate, rejoin, risk_source_socket, risk_rejoin_entry, edge_index + 1, path, visited):
+			return true
+		path.pop_back()
+		visited.erase(next_coordinate)
+	return false
+
+
+static func _apply_risk_route_choice(
+	builder: LayoutBuilder,
+	source,
+	risk_destination,
+	rejoin,
+	risk_edge,
+	rejoin_edge,
+	safe_path: Array[Dictionary]
+) -> Dictionary:
+	# Reuse the existing two-edge spine segment as the short dangerous route.
+	# This keeps the route choice inside the generated backbone and leaves all
+	# ordinary gate/clear metadata intact while changing only semantic policy.
+	risk_edge.route_role = ROUTE_RISK_SHORTCUT
+	rejoin_edge.route_role = ROUTE_RISK_SHORTCUT
+	risk_destination.route_role = ROUTE_RISK_SHORTCUT
+	risk_destination.encounter_tier = DungeonGraph.ENCOUNTER_DANGEROUS
+	risk_destination.reward_tier = DungeonGraph.REWARD_RISK
+	rejoin.route_role = ROUTE_REJOIN
+	var previous_id: StringName = source.id
+	for path_index in 3:
+		var step: Dictionary = safe_path[path_index]
+		var coordinate: Vector2i = step["coordinate"] as Vector2i
+		var safe_id: StringName = builder.room_ids_by_coordinate.get(coordinate, &"") as StringName
+		if safe_id.is_empty():
+			safe_id = builder.add_room(coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		builder.link(previous_id, step["socket"] as StringName, safe_id, &"", ROUTE_SAFE)
+		previous_id = safe_id
+	var final_step: Dictionary = safe_path[3]
+	builder.link(previous_id, final_step["socket"] as StringName, rejoin.id, &"", ROUTE_SAFE)
+	return {"source": source.id, "rejoin": rejoin.id, "safe_length": 4, "risk_length": 2}
+
+
+static func _add_fallback_risk_shortcut(builder: LayoutBuilder, boss_depth: int) -> Dictionary:
+	var sockets: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]
+	for source in builder.layout.rooms:
+		if not _is_risk_choice_source(source, boss_depth):
+			continue
+		for risk_source_socket in sockets:
+			if builder.connection_keys.has("%s:%s" % [source.id, risk_source_socket]):
+				continue
+			var risk_coordinate: Vector2i = source.coordinate + _exit_offset(risk_source_socket)
+			if not _risk_coordinate_in_bounds(risk_coordinate) or builder.room_ids_by_coordinate.has(risk_coordinate):
+				continue
+			for risk_rejoin_socket in sockets:
+				var rejoin_coordinate: Vector2i = risk_coordinate + _exit_offset(risk_rejoin_socket)
+				if not _risk_coordinate_in_bounds(rejoin_coordinate) or builder.room_ids_by_coordinate.has(rejoin_coordinate):
+					continue
+				if rejoin_coordinate == source.coordinate:
+					continue
+				var continuation := _fallback_rejoin_continuation(builder, source, rejoin_coordinate)
+				if continuation.is_empty():
+					continue
+				var safe_path := _find_fallback_safe_route_path(builder, source.coordinate, risk_coordinate, rejoin_coordinate, risk_source_socket, risk_rejoin_socket)
+				if safe_path.is_empty():
+					continue
+				return _apply_fallback_risk_route_choice(builder, source, risk_coordinate, rejoin_coordinate, risk_source_socket, risk_rejoin_socket, safe_path, continuation)
 	return {}
 
 
-static func _forward_spine_connection(builder: LayoutBuilder, source):
-	for connection in builder.layout.connections:
-		if connection.source_room_id != source.id or connection.route_role not in [ROUTE_MAIN, ROUTE_KEY_PROGRESSION]:
-			continue
-		var destination = builder.room_spec(connection.destination_room_id)
-		if destination == null or destination.coordinate.y != source.coordinate.y + 1:
-			continue
-		return connection
-	return null
-
-
-static func _find_risk_rejoin_target(builder: LayoutBuilder, rejoin_coordinate: Vector2i) -> Dictionary:
-	for direction in [-1, 1]:
-		var target_coordinate := rejoin_coordinate + Vector2i(direction, 1)
+static func _fallback_rejoin_continuation(builder: LayoutBuilder, source, rejoin_coordinate: Vector2i) -> Dictionary:
+	for socket_id in [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]:
+		var target_coordinate: Vector2i = rejoin_coordinate + _exit_offset(socket_id)
 		var target_id: StringName = builder.room_ids_by_coordinate.get(target_coordinate, &"") as StringName
-		if target_id.is_empty():
+		if target_id.is_empty() or target_id == source.id:
 			continue
 		var target = builder.room_spec(target_id)
-		if target == null or target.room_type == DungeonGraph.ROOM_BOSS:
+		if target == null or target.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_TREASURE] or target.route_role in [ROUTE_ELITE_REWARD, ROUTE_RISK_SHORTCUT, ROUTE_SAFE]:
 			continue
-		var socket_id: StringName = DungeonGraph.WALL_LEFT if direction < 0 else DungeonGraph.WALL_RIGHT
-		var destination_entry := DungeonGraph.paired_socket(socket_id)
-		if _destination_entry_used(builder, target_id, destination_entry):
+		if target.coordinate.y <= source.coordinate.y:
 			continue
-		return {"room_id": target_id, "socket": socket_id}
+		if _destination_entry_used(builder, target_id, DungeonGraph.paired_socket(socket_id)):
+			continue
+		if _rooms_are_connected(builder, source.id, target_id):
+			continue
+		var has_outgoing := false
+		for connection in builder.layout.connections:
+			if connection.source_room_id == target_id:
+				has_outgoing = true
+				break
+		if not has_outgoing:
+			continue
+		return {"socket": socket_id, "target": target_id}
 	return {}
+
+
+static func _find_fallback_safe_route_path(
+	builder: LayoutBuilder,
+	source_coordinate: Vector2i,
+	risk_coordinate: Vector2i,
+	rejoin_coordinate: Vector2i,
+	risk_source_socket: StringName,
+	risk_rejoin_socket: StringName
+) -> Array[Dictionary]:
+	var path: Array[Dictionary] = []
+	var visited: Dictionary = {
+		source_coordinate: true,
+		risk_coordinate: true,
+		rejoin_coordinate: true,
+	}
+	if _search_fallback_safe_route_path(builder, source_coordinate, rejoin_coordinate, risk_source_socket, DungeonGraph.paired_socket(risk_rejoin_socket), 0, path, visited):
+		return path
+	return []
+
+
+static func _search_fallback_safe_route_path(
+	builder: LayoutBuilder,
+	current_coordinate: Vector2i,
+	rejoin_coordinate: Vector2i,
+	risk_source_socket: StringName,
+	risk_rejoin_entry: StringName,
+	edge_index: int,
+	path: Array[Dictionary],
+	visited: Dictionary
+) -> bool:
+	var sockets: Array[StringName] = [DungeonGraph.WALL_LEFT, DungeonGraph.WALL_RIGHT, DungeonGraph.BOTTOM_LEFT, DungeonGraph.BOTTOM_RIGHT]
+	for socket_id in sockets:
+		var current_id: StringName = builder.room_ids_by_coordinate.get(current_coordinate, &"") as StringName
+		if edge_index == 0 and socket_id == risk_source_socket:
+			continue
+		if not current_id.is_empty() and builder.connection_keys.has("%s:%s" % [current_id, socket_id]):
+			continue
+		var next_coordinate: Vector2i = current_coordinate + _exit_offset(socket_id)
+		if edge_index == 3:
+			if next_coordinate != rejoin_coordinate or DungeonGraph.paired_socket(socket_id) == risk_rejoin_entry:
+				continue
+			path.append({"coordinate": next_coordinate, "socket": socket_id})
+			return true
+		if not _risk_coordinate_in_bounds(next_coordinate) or visited.has(next_coordinate):
+			continue
+		var next_id: StringName = builder.room_ids_by_coordinate.get(next_coordinate, &"") as StringName
+		if not next_id.is_empty():
+			var next_room = builder.room_spec(next_id)
+			if next_room == null or next_room.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS] or next_room.route_role in [ROUTE_ELITE_REWARD, ROUTE_RISK_SHORTCUT, ROUTE_SAFE]:
+				continue
+			if _destination_entry_used(builder, next_id, DungeonGraph.paired_socket(socket_id)):
+				continue
+			if not current_id.is_empty() and _rooms_are_connected(builder, current_id, next_id):
+				continue
+		visited[next_coordinate] = true
+		path.append({"coordinate": next_coordinate, "socket": socket_id})
+		if _search_fallback_safe_route_path(builder, next_coordinate, rejoin_coordinate, risk_source_socket, risk_rejoin_entry, edge_index + 1, path, visited):
+			return true
+		path.pop_back()
+		visited.erase(next_coordinate)
+	return false
+
+
+static func _apply_fallback_risk_route_choice(
+	builder: LayoutBuilder,
+	source,
+	risk_coordinate: Vector2i,
+	rejoin_coordinate: Vector2i,
+	risk_source_socket: StringName,
+	risk_rejoin_socket: StringName,
+	safe_path: Array[Dictionary],
+	continuation: Dictionary
+) -> Dictionary:
+	var risk_id := builder.add_room(risk_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_RISK_SHORTCUT, DungeonGraph.ENCOUNTER_DANGEROUS, DungeonGraph.REWARD_RISK)
+	var rejoin_id := builder.add_room(rejoin_coordinate, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_REJOIN, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+	builder.link(source.id, risk_source_socket, risk_id, &"", ROUTE_RISK_SHORTCUT)
+	builder.link(risk_id, risk_rejoin_socket, rejoin_id, &"", ROUTE_RISK_SHORTCUT)
+	var previous_id: StringName = source.id
+	for path_index in 3:
+		var step: Dictionary = safe_path[path_index]
+		var safe_id := builder.add_room(step["coordinate"] as Vector2i, DungeonGraph.ROOM_COMBAT, 0, &"", &"", ROUTE_SAFE, DungeonGraph.ENCOUNTER_NORMAL, DungeonGraph.REWARD_STANDARD)
+		builder.link(previous_id, step["socket"] as StringName, safe_id, &"", ROUTE_SAFE)
+		previous_id = safe_id
+	var final_step: Dictionary = safe_path[3]
+	builder.link(previous_id, final_step["socket"] as StringName, rejoin_id, &"", ROUTE_SAFE)
+	builder.link(rejoin_id, continuation["socket"] as StringName, continuation["target"] as StringName, &"", ROUTE_REJOIN)
+	return {"source": source.id, "rejoin": rejoin_id, "safe_length": 4, "risk_length": 2}
 
 
 static func _risk_coordinate_in_bounds(coordinate: Vector2i) -> bool:
@@ -660,7 +871,10 @@ static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_sta
 			errors.append("non-vault generated connection retains a progression gate: %s:%s" % [connection.source_room_id, connection.exit_socket])
 		if connection.route_role == ROUTE_RISK_SHORTCUT:
 			var risk_destination = layout.room_by_id(connection.destination_room_id)
-			if risk_destination != null and risk_destination.encounter_tier != DungeonGraph.ENCOUNTER_DANGEROUS:
+			var risk_source = layout.room_by_id(connection.source_room_id)
+			var is_risk_rejoin: bool = risk_source != null and risk_source.route_role == ROUTE_RISK_SHORTCUT \
+				and risk_destination != null and risk_destination.route_role == ROUTE_REJOIN
+			if not is_risk_rejoin and risk_destination != null and risk_destination.encounter_tier != DungeonGraph.ENCOUNTER_DANGEROUS:
 				errors.append("risk shortcut enters a non-dangerous room: %s" % risk_destination.id)
 	var reachable := _reachable_rooms(layout, start_id) if not start_id.is_empty() else {}
 	var ungated_reachable := _ungated_reachable_rooms(layout, start_id) if not start_id.is_empty() else {}
@@ -900,19 +1114,23 @@ static func _build_candidate(
 		elif destination_depth == first_alternate_fire_depth and not alternate_fire_on_main:
 			detour_type = ROUTE_DETOUR_FIRE
 			detour_flame = alternate_flames[0] if not alternate_flames.is_empty() else starter_flame
-		if fusion_gate_requirements.has(source_depth):
-			# Reserve the side socket for the prerequisite Orb before optional
-			# rewards are considered.  Late chained-fusion gates often share the
-			# guaranteed treasure depth; adding the reward first can consume both
-			# available sockets and leave the mandatory Orb without a route.
-			_add_fusion_prerequisite_orb(builder, current_room_id, current_coordinate, main_socket)
+		if not active_risk_reward:
+			if fusion_gate_requirements.has(source_depth):
+				# Reserve the side socket for the prerequisite Orb before optional
+				# rewards are considered. Late chained-fusion gates often share the
+				# guaranteed treasure depth; adding the reward first can consume both
+				# available sockets and leave the mandatory Orb without a route.
+				_add_fusion_prerequisite_orb(builder, current_room_id, current_coordinate, main_socket)
 		_add_side_route(builder, current_room_id, current_coordinate, source_depth, main_socket, generator_rng, boss_depth, second_special_depth, completed_runs, starter_flame, alternate_flames, detour_type, detour_flame, forward_requirement, room_target)
 		current_room_id = destination_room_id
 		current_coordinate = destination_coordinate
 		spine_rooms_by_depth[destination_depth] = destination_room_id
 	_connect_hub_dig_routes(builder, hub_dig_routes, spine_rooms_by_depth, generator_rng)
-	_fill_room_target(builder, room_target, boss_depth)
-	_add_safe_cross_links(builder, generator_rng)
+	if not active_risk_reward:
+		# The active R6+ policy owns its route density and must reserve lattice
+		# space for the safe/risk fork before optional legacy fill and cross-links.
+		_fill_room_target(builder, room_target, boss_depth)
+		_add_safe_cross_links(builder, generator_rng)
 	var progression_repairs: Array[String] = []
 	if not active_risk_reward:
 		progression_repairs.assign(repair_progression(layout, completed_runs, starter_flame, bound_flame))

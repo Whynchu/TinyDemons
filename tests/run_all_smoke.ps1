@@ -9,8 +9,10 @@ param(
 $ErrorActionPreference = "Stop"
 $root = "C:\Development\Tiny-Demons\TinyDemons"
 $godot = "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe"
-$logFile = Join-Path $root ".godot_user/smoke.log"
-$resultsPath = if ($ResultsPath) { $ResultsPath } else { Join-Path $root ".godot_user/smoke-results.csv" }
+$headlessUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}" -f $PID)
+New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
+$logFile = Join-Path $headlessUserData "smoke.log"
+$resultsPath = if ($ResultsPath) { $ResultsPath } else { Join-Path $headlessUserData "smoke-results.csv" }
 $inventoryPath = "$resultsPath.inventory.csv"
 $tests = @("boss_variant_selection_smoke", "boss_visual_palette_smoke", "composition_root_baseline_smoke", "title_boot_scene_smoke", "settings_service_smoke", "settings_panel_scene_smoke", "run_grade_smoke", "element_catalog_smoke", "elemental_damage_smoke", "slime_variant_smoke", "typed_combat_path_smoke", "typed_damage_feedback_smoke", "progression_smoke", "item_economy_smoke", "chest_reward_smoke", "fusion_candidate_cache_smoke", "fusion_menu_scene_smoke", "rogue_slime_smoke", "slime_spawn_smoke", "speed_scale_smoke", "fusion_tooltip_smoke", "palette_smoke", "entry_orb_visual_smoke", "run1_map_contract_smoke", "run1_room_prefab_smoke", "run1_door_path_smoke", "run2_authored_layout_smoke", "enemy_room_engagement_smoke", "enemy_room_entrance_scene_smoke", "generated_layout_smoke", "generated_flame_progression_smoke", "elemental_binding_smoke", "hub_binding_smoke", "generated_fusion_gate_scene_smoke", "generated_minimap_smoke", "generated_run_scene_smoke", "hub_door_scene_smoke", "orb_interaction_scene_smoke", "run1_orb_door_scene_smoke", "boss_soul_drop_smoke", "special_respawn_policy_smoke", "treasure_chest_persistence_smoke", "run1_minimap_smoke", "run1_reference_map_smoke", "run1_door_color_smoke", "combat_momentum_smoke", "chroma_state_smoke", "chroma_pickup_smoke", "item_drop_scene_smoke", "chest_interaction_scene_smoke", "run_label_progression_smoke", "aspect_ability_smoke", "starter_flame_smoke", "actor_geometry_scene_smoke", "target_facing_scene_smoke", "attack_shadow_scene_smoke", "boss_geometry_scene_smoke", "boss_jump_slam_smoke", "popcorn_respawn_smoke", "boss_exit_path_scene_smoke", "input_router_smoke", "input_device_tracker_smoke", "touch_controls_smoke", "dialogue_choice_smoke", "chroma_projectile_scene_smoke", "imbue_spell_scene_smoke", "sound_mix_profile_smoke", "sound_mix_live_reload_smoke", "run_music_flame_gate_smoke", "sound_balance_smoke", "frame_time_smoke")
 $tests += "dungeon_map_event_smoke"
@@ -57,6 +59,7 @@ $tests += "gear_system_rework_smoke"
 $tests += "player_hud_scene_smoke"
 $tests += "cloud_save_contract_smoke"
 $tests += "active_run_recovery_contract_smoke"
+$tests += "room_transition_result_smoke"
 
 if ($TestFilter) {
 	$tests = @($tests | Where-Object { $_ -like $TestFilter })
@@ -91,7 +94,7 @@ foreach ($test in $tests) {
 	$startedAt = Get-Date
 	$stdoutPath = Join-Path $env:TEMP ("tiny-demons-$test-out.log")
 	$stderrPath = Join-Path $env:TEMP ("tiny-demons-$test-error.log")
-	$arguments = @("--headless", "--path", $root, "--log-file", $logFile, "-s", ("res://tests/{0}.gd" -f $test))
+	$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $headlessUserData, "--path", $root, "--log-file", $logFile, "-s", ("res://tests/{0}.gd" -f $test))
 	try {
 		$process = Start-Process -FilePath $godot -ArgumentList $arguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
 	} catch {
@@ -166,7 +169,7 @@ if (-not $TestFilter) {
 		Write-Host "PASSED: web export smoke" -ForegroundColor Green
 	}
 	Write-Host "=== main scene headless run ==="
-	& $godot --headless --path $root --log-file $logFile --quit-after 30
+	& $godot --headless --audio-driver Dummy --user-data-dir $headlessUserData --path $root --log-file $logFile --quit-after 30
 	if ($LASTEXITCODE -ne 0) {
 		Write-Host "FAILED: main scene (exit $LASTEXITCODE)" -ForegroundColor Red
 		$failed = $true
