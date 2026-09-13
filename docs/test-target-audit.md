@@ -7,7 +7,7 @@ Date: 2026-09-13
 Baseline: version `0.2.00`; expand this audit before using affected tests as
 release evidence.
 
-Current release: version `0.2.05`
+Current release: version `0.2.06`
 
 ## Purpose
 

@@ -6,7 +6,7 @@ Updated: 2026-09-13
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.05`
+Current release: version `0.2.06`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -46,12 +46,13 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.05
+## Next checkpoint after 0.2.06
 
-Version `0.2.05` records functional Equipment/Shop gear grouping, exact-ID
-sell accounting, and the Fusion next-rank batch cap alongside the remaining
-contract failures. The next implementation checkpoint is a stabilization pass
-in this order:
+Version `0.2.06` records the reproducible Web export gate, touch/cloud contract
+reconciliation, functional Equipment/Shop gear grouping, exact-ID sell
+accounting, and the Fusion next-rank batch cap alongside the remaining contract
+failures. The next implementation checkpoint is a stabilization pass in this
+order:
 
 1. Doorway behavior and `wall_socket_geometry_smoke` are reconciled with the
    portal-based walkability model. Keep the focused check green while verifying

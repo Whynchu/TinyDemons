@@ -8,7 +8,7 @@ Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 Baseline game version: `0.2.00`
 
-Current release: `0.2.05` (functional gear grouping and Fusion rank-cap update)
+Current release: `0.2.06` (reproducible web export gate and reconciled touch/cloud contract evidence)
 
 ## 1. Purpose
 
