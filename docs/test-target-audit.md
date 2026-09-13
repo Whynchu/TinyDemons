@@ -15,6 +15,11 @@ Confirm that each test actually exercises the feature, layout, scene, or
 contract named by its filename. A passing test with the wrong target is not
 coverage for the named feature.
 
+This document answers target correctness. The separate
+[`verification-surface-audit.md`](verification-surface-audit.md) answers
+whether a test should exist, what role it has, whether it blocks release, and
+whether its result is trustworthy in the current environment.
+
 ## Known Findings
 
 | Test | Target loaded/used | Expected target | Classification | Action |

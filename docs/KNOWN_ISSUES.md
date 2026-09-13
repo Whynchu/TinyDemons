@@ -123,6 +123,20 @@ tests pass in
 isolated Godot processes; manual enemy-placement, reward, minimap, save/load,
 and touch playtesting remain outstanding.
 
+## Verification surface audit — open
+
+The repository currently has a large mixed test/report inventory: 114 runner
+registered Godot paths plus additional standalone reports. The existing target
+audit confirms whether a filename points at the right feature, but it does not
+yet classify release gates, owner regressions, diagnostics, stale contracts, or
+environment-only results. This creates false pressure to make every red result
+green and encourages test growth during refactors.
+
+The separate classification and pruning issue is
+[`verification-surface-audit.md`](verification-surface-audit.md). Until its
+exit criteria are met, the total smoke count is an inventory metric, not a
+quality score or release gate.
+
 ## Infrastructure findings
 
 | Finding | Impact | Next evidence or decision |
