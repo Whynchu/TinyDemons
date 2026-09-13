@@ -24,13 +24,13 @@ whether its result is trustworthy in the current environment.
 
 | Test | Target loaded/used | Expected target | Classification | Action |
 |---|---|---|---|---|
-| `tests/r3_authored_layout_smoke.gd` | R3 compiler/runtime layout | R3 authored layout | verified | retain as the R3 authored contract |
-| `tests/r4_authored_layout_smoke.gd` | R4 compiler/runtime layout | R4 authored layout | verified | retain as the R4 authored contract |
-| `tests/r5_authored_layout_smoke.gd` | R5 compiler/runtime layout | R5 authored layout | verified | retain as the R5 authored contract |
+| `tests/authored_layouts_smoke.gd` | R3/R4/R5 compiler/runtime layouts | R3/R4/R5 authored layouts | verified | retain the table-driven authored-layout contract |
 | `tests/puzzle_map_r4_new_grid_smoke.gd` | R4 grid/reference | R4 new grid contract | pending verification | confirm image/source and assertion scope |
 | `tests/puzzle_map_r5_grid_smoke.gd` | R5 grid/reference | R5 authored grid contract | pending verification | confirm image/source and assertion scope |
 
-The runner now registers all three authored-layout contracts deliberately.
+The runner now registers one table-driven authored-layout contract covering all
+three authored routes. The three former wrapper filenames remain in the
+historical evidence below, but are no longer separate runner entries.
 
 ## Historical wrapper evidence — 2026-09-07
 
@@ -221,5 +221,5 @@ For each registered test:
 - [ ] Every runner-registered test has a target classification.
 - [x] R3/R4/R5 authored-layout tests have explicit layout/version scope.
 - [ ] Tests changed alongside gameplay code are reviewed for assertion changes.
-- [ ] Test count changes are accompanied by a reason and verification result.
+- [x] Test count changes are accompanied by a reason and verification result.
 - [ ] The current matrix distinguishes test-target defects from product bugs.

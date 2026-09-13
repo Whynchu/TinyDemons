@@ -98,7 +98,7 @@ When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
 one separate Godot process per selected test. The default release gate is
-currently 43 paths; the explicit `-TestGroup all` inventory runs all 122
+currently 43 paths; the explicit `-TestGroup all` inventory runs all 119
 runnable paths. A single headless renderer failure can create repeated Windows
 memory-error dialogs.
 

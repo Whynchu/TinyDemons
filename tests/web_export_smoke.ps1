@@ -48,7 +48,11 @@ if (-not $hasTemplate) {
 $outputDir = Join-Path $root "dist"
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 $exportPath = Join-Path $outputDir "index.html"
-$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $headlessUserData, "--path", $root, "--log-file", $logFile, "--export-release", "Web", $exportPath)
+# Godot 4.7 does not accept --user-data-dir for export. Passing it here makes
+# the profile directory look like the export destination and causes export to
+# fail before it reaches the requested path. Keep the log isolated, but let
+# the standalone export use Godot's normal editor profile.
+$arguments = @("--headless", "--audio-driver", "Dummy", "--path", $root, "--log-file", $logFile, "--export-release", "Web", $exportPath)
 & $godot @arguments
 if ($LASTEXITCODE -ne 0) {
 	throw "Godot Web export failed with exit code $LASTEXITCODE"

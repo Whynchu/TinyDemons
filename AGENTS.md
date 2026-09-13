@@ -23,7 +23,7 @@ When a Godot editor peer is connected through the MCP toolkit, use MCP for
 scene inspection, script diagnostics, playtests, screenshots, and runtime logs.
 Do **not** run `tests/run_all_smoke.ps1` from that editor session. That script
 defaults to the curated release gate (currently 43 processes); the explicit
-`-TestGroup all` inventory launches all 122 runnable paths in sequence. A
+`-TestGroup all` inventory launches all 119 runnable paths in sequence. A
 headless renderer crash can therefore produce an avalanche of Windows
 memory-error dialogs.
 
