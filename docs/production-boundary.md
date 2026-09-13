@@ -41,7 +41,9 @@ assumed to be shipping project dependencies.
 The project configuration identifies Godot 4.7 and the Mobile feature set.
 The repository documents desktop as the primary target and supports a web
 build with keyboard, gamepad, and touch input. The configured export preset is
-Web and writes to `dist/index.html`; `dist/` is ignored by Git.
+Web and writes to `dist/index.html`; `dist/` is ignored by Git. Local web smoke
+verification stages into a fresh temporary directory by default, while the
+Pages workflow passes `dist` explicitly for its uploaded artifact.
 
 The exact release matrix still needs confirmation in a later phase.
 
