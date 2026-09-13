@@ -440,7 +440,8 @@ remain open. The headless runner now uses temporary user data, Dummy audio, and
 explicit log paths; full-suite, cold/warm audio timing, and manual device
 verification remain separate supervised work.
 
-The 2026-09-13 focused Demon Hub, Equipment, and Pause scene checks also pass.
+The 2026-09-13 focused Demon Hub, Equipment, Pause, and Player HUD scene checks
+also pass.
 The Hub check now has evidence for its animated nested Shop cursor contract,
 exact sell-variant transaction, and pause separation; the Equipment and Pause
 checks use profile-safe live fixtures. Visual orientation comparison, touch
