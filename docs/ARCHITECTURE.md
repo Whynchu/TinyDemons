@@ -73,7 +73,8 @@ Encrypted-vault deployment and operational verification are documented in
   recovery workflow. Supabase receives ciphertext, never profile JSON.
 - **Presentation**: `hud_controller`, `effects_spawner`,
   `screen_state_controller`, `dungeon_minimap_controller`,
-  `sprite_frame_library`, `display_controller`, `display_layout`.
+  `sprite_frame_library`, `display_controller`, `display_layout`,
+  `hub_stone_accent_layer`.
 - **Settings/audio**: `settings_service` owns device-wide persisted options;
   `sound_manager` consumes the live music/SFX values and applies their dB
   offsets to the Master bus.
@@ -222,7 +223,7 @@ through the same router boundary.
   MCP Godot runtime active):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
   The default command runs the curated 43-path release gate, including web
-  export and main-scene checks. Use `-TestGroup all` to run the complete 119-
+  export and main-scene checks. Use `-TestGroup all` to run the complete 121-
   path runnable inventory. Grouping comes from `tests/manifest.csv`, which
   records each script's role, state, owner, target, and load kind. A headless
   renderer crash can multiply into Windows memory-error dialogs. Start with one

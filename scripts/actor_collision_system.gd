@@ -325,13 +325,23 @@ func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bo
 
 
 func actor_contact_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+	if actor == null or other == null or not is_instance_valid(actor) or not is_instance_valid(other):
+		return Vector2.ZERO
 	if _uses_body_contact(actor) or _uses_body_contact(other):
 		return _rect_overlap_push_vector(root, actor, other)
 	var delta: Vector2 = root.call("_actor_foot", actor) - root.call("_actor_foot", other)
+	if not delta.is_finite():
+		return Vector2.ZERO
 	var distance := delta.length(); var min_distance := actor_contact_radius(root, actor) + actor_contact_radius(root, other)
+	if not is_finite(distance) or not is_finite(min_distance) or min_distance <= 0.0:
+		return Vector2.ZERO
 	if distance >= min_distance: return Vector2.ZERO
 	if distance <= 0.001: delta = Vector2.RIGHT; distance = 1.0
-	return delta.normalized() * (min_distance - distance)
+	var push_distance := min_distance - distance
+	if not is_finite(push_distance) or push_distance <= 0.0:
+		return Vector2.ZERO
+	var normal := delta.normalized()
+	return normal * push_distance if normal.is_finite() else Vector2.ZERO
 
 
 func player_contact_movement(root: Object, movement: Vector2) -> Vector2:
@@ -342,7 +352,13 @@ func player_contact_movement(root: Object, movement: Vector2) -> Vector2:
 	for slime in root.get("slimes") as Array[Sprite2D]:
 		if not is_instance_valid(slime) or not slime.visible or bool(slime.get_meta("boss_airborne", false)) or not actors_are_in_contact(root, player, slime):
 			continue
-		var away := (root.call("_actor_foot", player) as Vector2 - root.call("_actor_foot", slime) as Vector2).normalized()
+		var away_delta: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime)
+		var away_distance_squared := away_delta.length_squared()
+		if not away_delta.is_finite() or not is_finite(away_distance_squared) or away_distance_squared <= 0.0001:
+			continue
+		var away := away_delta.normalized()
+		if not away.is_finite():
+			continue
 		var inward := maxf(-movement.normalized().dot(-away), 0.0)
 		var retained := 0.2 if _uses_body_contact(slime) else 0.78
 		var normal_part := away * movement.dot(away)

@@ -86,6 +86,7 @@ const OCCLUDER_PATHS: Array[NodePath] = [
 ]
 @onready var floor_tiles: Node2D = $Map/FloorTiles
 @onready var map_root: Node2D = $Map
+@onready var hub_stone_accent_layer: HubStoneAccentLayer = $Map/HubStoneAccentLayer
 @onready var background_environment: Sprite2D = $BackgroundCanvas/Background
 @onready var ui: Node2D = $InterfaceCanvas/UI
 @onready var player: Sprite2D = $Actors/TinyDemon
@@ -121,7 +122,14 @@ var settings_service: SettingsService = null
 var display_controller: DisplayController = null
 var display_world_offset := Vector2.ZERO
 var run_state: RunState = null
-var current_dungeon_seed := 0
+var _current_dungeon_seed := 0
+var current_dungeon_seed: int:
+	get:
+		return _current_dungeon_seed
+	set(value):
+		_current_dungeon_seed = int(value)
+		if hub_stone_accent_layer != null and hub_stone_accent_layer.has_method("configure_dungeon_seed"):
+			hub_stone_accent_layer.call("configure_dungeon_seed", _current_dungeon_seed)
 var pending_run_restore := false
 var has_persistent_profile := false
 var player_health_component: HealthComponent = null
@@ -1320,6 +1328,8 @@ func _ensure_current_room_layout() -> void:
 		_clear_puzzle_torches()
 	_configure_room_sockets(bool(state.get("finished", false)))
 	_update_puzzle_room_tint(room if current_room_type == DungeonGraph.ROOM_PUZZLE else null, required_aspect)
+	if hub_stone_accent_layer != null:
+		hub_stone_accent_layer.refresh_current_room(current_room_id, current_room_type)
 func _configure_room_sockets(is_unlocked: bool) -> void:
 	room_puzzle_controller.call("configure_room_sockets", self, is_unlocked)
 func _r2_counter_variant(player_palette: String) -> String:

@@ -6,7 +6,7 @@ Updated: 2026-09-13
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.06`
+Current release: version `0.2.07`
 
 Owner: the feature owner listed for each issue; tracking is maintained here and
 summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).

@@ -243,10 +243,28 @@ func _load_health_bar_texture(path: String) -> Texture2D:
 	if health_bar_texture_cache.has(path): return health_bar_texture_cache[path] as Texture2D
 	var texture := load(path) as Texture2D if ResourceLoader.exists(path) else null; health_bar_texture_cache[path] = texture; return texture
 func _build_rest_fire_frames() -> void: rest_fire_frames = sprite_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_FRAME_SIZE); rest_fire_base_frames = rest_fire_frames; if not rest_fire_frames.is_empty(): _set_rest_fire_frame(0)
+func _current_rest_fire_palette() -> String:
+	if current_fire_palette_name in PaletteLibrary.PALETTE_NAMES:
+		return current_fire_palette_name
+	if run_start_palette_name in PaletteLibrary.PALETTE_NAMES:
+		return run_start_palette_name
+	return "grey"
 func _apply_rest_fire_palette(palette_name: String) -> void:
-	if palette_name.is_empty() or rest_fire_base_frames.is_empty(): return
+	if palette_name.is_empty() or palette_name not in PaletteLibrary.PALETTE_NAMES: return
+	current_fire_palette_name = palette_name
+	_apply_rest_fire_light_palette(palette_name)
+	if rest_fire_base_frames.is_empty(): return
 	if not rest_fire_frames_by_palette.has(palette_name): rest_fire_frames_by_palette[palette_name] = sprite_frame_library.recolor_fire_frames(rest_fire_base_frames, palette_name)
-	rest_fire_frames = rest_fire_frames_by_palette[palette_name] as Array[Texture2D]; current_fire_palette_name = palette_name; _set_rest_fire_frame(0)
+	rest_fire_frames = rest_fire_frames_by_palette[palette_name] as Array[Texture2D]; _set_rest_fire_frame(0)
+func _apply_rest_fire_light_palette(palette_name: String) -> void:
+	if rest_fire == null or not is_instance_valid(rest_fire): return
+	var fire_light := rest_fire.get_node_or_null("FireLight") as PointLight2D
+	if fire_light == null or not is_instance_valid(fire_light) or fire_light.texture == null or not is_instance_valid(fire_light.texture): return
+	# The authored texture is a neutral radial falloff. Tinting the light itself
+	# keeps the renderer-owned texture stable while still following the active
+	# flame palette, avoiding runtime replacement of PointLight2D textures.
+	var tones := PaletteLibrary.fire_triple(palette_name)
+	fire_light.color = tones[2]
 func _random_npc_walkable_point_near(point: Vector2, radius: float) -> Vector2:
 	var candidates: Array[Vector2] = []
 	for index in 32: var angle := rng.randf_range(0.0, TAU); var distance := rng.randf_range(3.0, radius); var candidate := point + _perspective_movement(Vector2(cos(angle), sin(angle)) * distance); if _is_walkable(candidate): candidates.append(candidate)

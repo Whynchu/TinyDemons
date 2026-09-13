@@ -19,6 +19,9 @@ var secondary_enemy_variant := "grey"
 var boss_variant_selection: StringName = &""
 var matchup_policy := "rank_default"
 var boss_slime_authoring_scene: PackedScene = null
+var boss_slime_authoring_template: Node = null
+var boss_room_authoring_template: Node = null
+var boss_geometry_active := false
 var boss_jump_phase_waves: Dictionary = {}
 var boss_jump_phase_pool: Array[Sprite2D] = []
 var _enemy_visual_preparation_signature := ""
@@ -55,6 +58,44 @@ const BOSS_MIXED_SUPPORT_START_RANK: int = 5
 const SLIME_BOSS_JUMP_PHASE_POPCORN := "SlimeBossJumpPhasePopcorn"
 const PLAYER_DOOR_REPOSITION_RADII := [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0, 48.0]
 const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
+
+
+func _exit_tree() -> void:
+	# These authoring scenes stay unparented so their nodes never participate in
+	# gameplay. Release them with the controller instead of leaving a cached
+	# duplicate of the main scene alive across a scene reload.
+	if boss_slime_authoring_template != null and is_instance_valid(boss_slime_authoring_template):
+		boss_slime_authoring_template.free()
+	if boss_room_authoring_template != null and is_instance_valid(boss_room_authoring_template):
+		boss_room_authoring_template.free()
+
+
+func prewarm_transition_assets(root: Object = null) -> void:
+	# Called while the boot loading screen is already visible. The first boss
+	# entry then reuses the parsed/instantiated authoring data instead of paying
+	# that cost during a visible room transition.
+	_get_boss_room_authoring_template()
+	_get_boss_slime_authoring_template()
+	if root == null:
+		return
+	var stone_layer := root.get("hub_stone_accent_layer") as HubStoneAccentLayer
+	if stone_layer == null:
+		return
+	root.call("_capture_normal_room_geometry")
+	stone_layer.prewarm_current_constraint_candidates()
+	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
+		return
+	# Boss rooms have a second static boundary/door profile. Apply it only behind
+	# the loading screen, cache every legal accent candidate, then restore the
+	# normal room before gameplay is exposed.
+	apply_authored_boss_room_geometry(root)
+	stone_layer.prewarm_current_constraint_candidates()
+	root.call("_restore_normal_room_geometry")
+	var floor_tiles := root.get("floor_tiles") as Node2D
+	var underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D if floor_tiles != null else null
+	if underlay != null:
+		underlay.visible = false
+	stone_layer.prewarm_current_constraint_candidates()
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
@@ -1856,13 +1897,22 @@ func rebase_enemy_spawn_positions(delta: Vector2) -> void:
 			room_states[room_id] = state
 
 
-func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
+func _get_boss_slime_authoring_template() -> Node:
+	if boss_slime_authoring_template != null and is_instance_valid(boss_slime_authoring_template):
+		return boss_slime_authoring_template
 	if boss_slime_authoring_scene == null:
 		boss_slime_authoring_scene = load(BOSS_SLIME_AUTHORING_SCENE) as PackedScene
 	if boss_slime_authoring_scene == null:
 		push_error("Boss slime authoring scene could not be loaded: %s" % BOSS_SLIME_AUTHORING_SCENE)
+		return null
+	boss_slime_authoring_template = boss_slime_authoring_scene.instantiate()
+	return boss_slime_authoring_template
+
+
+func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
+	var authored := _get_boss_slime_authoring_template()
+	if authored == null:
 		return
-	var authored := boss_slime_authoring_scene.instantiate()
 	var geometry_names := [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]
 	for geometry_name in geometry_names:
 		var source := authored.get_node_or_null(NodePath(geometry_name)) as Node
@@ -1882,7 +1932,6 @@ func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
 			(clone as CanvasItem).visible = false
 		if clone is Node2D:
 			clone.set_meta("authored_position", (clone as Node2D).position)
-	authored.free()
 
 
 func _choose_enemy_spawn_position(root: Object, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
@@ -1948,13 +1997,17 @@ func apply_room_geometry(root: Object) -> void:
 		return
 	root.call("_capture_normal_room_geometry")
 	if root.get("current_room_type") != DungeonGraph.ROOM_DOWNSTAIRS:
-		root.call("_restore_normal_room_geometry")
+		if boss_geometry_active:
+			root.call("_restore_normal_room_geometry")
+			boss_geometry_active = false
 		var underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
 		if underlay != null:
 			underlay.visible = false
 		root.call("_configure_large_room_camera", false)
 		return
-	apply_authored_boss_room_geometry(root)
+	if not boss_geometry_active:
+		apply_authored_boss_room_geometry(root)
+		boss_geometry_active = true
 	root.call("_configure_large_room_camera", true)
 
 
@@ -1966,11 +2019,9 @@ func apply_authored_boss_room_geometry(root: Object) -> void:
 			existing_underlay.visible = true
 		_configure_boss_return_guides(root)
 		return
-	var packed_scene := load("res://scenes/boss_room_debug.tscn") as PackedScene
-	if packed_scene == null:
-		push_error("Could not load the authored boss room scene.")
+	var template := _get_boss_room_authoring_template()
+	if template == null:
 		return
-	var template := packed_scene.instantiate()
 	for path in ["Map/FloorTiles/FloorLayer", "Map/FloorTiles/FloorLFaceLayer", "Map/FloorTiles/FloorRFaceLayer", "Map/Walls/WallLeftLayer", "Map/Walls/WallRightLayer"]:
 		copy_authored_tile_layer(template.get_node_or_null(path) as TileMapLayer, root.call("get_node_or_null", path) as TileMapLayer)
 	copy_authored_polygon(root, template, "Map/FloorTiles/FloorCollisionGuide")
@@ -1980,7 +2031,17 @@ func apply_authored_boss_room_geometry(root: Object) -> void:
 	for path in ["Map/Sockets/WALL_LEFT/SpawnMarker", "Map/Sockets/WALL_RIGHT/SpawnMarker", "Map/Sockets/BOTTOM_LEFT/SpawnMarker", "Map/Sockets/BOTTOM_RIGHT/SpawnMarker"]:
 		copy_authored_marker(root, template, path)
 	_configure_boss_return_guides(root)
-	template.free()
+
+
+func _get_boss_room_authoring_template() -> Node:
+	if boss_room_authoring_template != null and is_instance_valid(boss_room_authoring_template):
+		return boss_room_authoring_template
+	var packed_scene := load("res://scenes/boss_room_debug.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Could not load the authored boss room scene.")
+		return null
+	boss_room_authoring_template = packed_scene.instantiate()
+	return boss_room_authoring_template
 
 
 func _configure_boss_return_guides(root: Object) -> void:
@@ -2040,9 +2101,10 @@ func copy_boss_floor_underlay(root: Object, template: Node) -> void:
 func copy_authored_tile_layer(source: TileMapLayer, destination: TileMapLayer) -> void:
 	if source == null or destination == null:
 		return
-	destination.clear()
-	for cell in source.get_used_cells():
-		destination.set_cell(cell, source.get_cell_source_id(cell), source.get_cell_atlas_coords(cell), source.get_cell_alternative_tile(cell))
+	# The authored layers use the same TileSet as the live room. Copying the
+	# serialized layer payload lets Godot rebuild it in one native operation;
+	# setting every boss cell through GDScript was a visible transition hitch.
+	destination.tile_map_data = source.tile_map_data
 	destination.update_internals()
 
 
@@ -2064,6 +2126,7 @@ func capture_normal_room_geometry(root: Object) -> void:
 		var layer := map_root.get_node_or_null(path) as TileMapLayer
 		if layer != null:
 			saved[path] = layer.get_used_cells()
+			saved["tile_map_data:%s" % path] = layer.tile_map_data
 	var floor_tiles := root.get("floor_tiles") as Node2D
 	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Polygon2D
 	if guide != null:
@@ -2082,6 +2145,10 @@ func capture_normal_room_geometry(root: Object) -> void:
 			saved["flip_v:%s" % path] = node.flip_v
 			saved["offset:%s" % path] = node.offset
 			saved["scale:%s" % path] = node.scale
+	for path in ["Sockets/WALL_LEFT/SpawnMarker", "Sockets/WALL_RIGHT/SpawnMarker", "Sockets/BOTTOM_LEFT/SpawnMarker", "Sockets/BOTTOM_RIGHT/SpawnMarker"]:
+		var marker := map_root.get_node_or_null(path) as Marker2D
+		if marker != null:
+			saved["position:%s" % path] = marker.position
 
 
 func restore_normal_room_geometry(root: Object) -> void:
@@ -2093,11 +2160,15 @@ func restore_normal_room_geometry(root: Object) -> void:
 		var layer := map_root.get_node_or_null(path) as TileMapLayer
 		if layer == null:
 			continue
-		layer.clear()
-		var saved_cells: Array = saved.get(path, []) as Array
-		for cell_value in saved_cells:
-			var cell: Vector2i = cell_value
-			layer.set_cell(cell, 0, Vector2i.ZERO)
+		var tile_map_data_key := "tile_map_data:%s" % path
+		if saved.has(tile_map_data_key):
+			layer.tile_map_data = saved[tile_map_data_key]
+		else:
+			layer.clear()
+			var saved_cells: Array = saved.get(path, []) as Array
+			for cell_value in saved_cells:
+				var cell: Vector2i = cell_value
+				layer.set_cell(cell, 0, Vector2i.ZERO)
 		layer.update_internals()
 	var floor_tiles := root.get("floor_tiles") as Node2D
 	var guide := floor_tiles.get_node_or_null("FloorCollisionGuide") as Polygon2D
@@ -2117,6 +2188,10 @@ func restore_normal_room_geometry(root: Object) -> void:
 		var return_guide := map_root.get_node_or_null(path) as Polygon2D
 		if return_guide != null:
 			return_guide.position = saved.get("position:%s" % path, return_guide.position)
+	for path in ["Sockets/WALL_LEFT/SpawnMarker", "Sockets/WALL_RIGHT/SpawnMarker", "Sockets/BOTTOM_LEFT/SpawnMarker", "Sockets/BOTTOM_RIGHT/SpawnMarker"]:
+		var marker := map_root.get_node_or_null(path) as Marker2D
+		if marker != null:
+			marker.position = saved.get("position:%s" % path, marker.position)
 
 
 func configure_large_room_camera(root: Object, enabled: bool) -> void:

@@ -1,5 +1,16 @@
 extends SceneTree
 
+class ContactRoot extends Node:
+	var invalid_foot := false
+	var chest: Sprite2D = null
+
+	func _actor_foot(actor: Sprite2D) -> Vector2:
+		return Vector2(NAN, NAN) if invalid_foot else actor.position
+
+	func _collision_guide_rect_by_name(_actor: Sprite2D, _guide_name: String) -> Rect2:
+		return Rect2(-4.0, -4.0, 8.0, 8.0)
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var tuning := SlimeTuning.new()
@@ -52,6 +63,28 @@ func _initialize() -> void:
 		total_fraction += fraction
 	_expect(is_equal_approx(total_fraction, 1.0), "boss lunge applies exactly one full target displacement", failures)
 	_expect(hit_count[0] == 1, "boss attack still resolves one impact", failures)
+	# Contact resolution must fail closed if a transient actor state produces a
+	# non-finite foot or radius; normalization should never emit a runtime warning.
+	var contact_system := ActorCollisionSystem.new()
+	var contact_root := ContactRoot.new()
+	var contact_actor := Sprite2D.new()
+	var contact_other := Sprite2D.new()
+	contact_actor.position = Vector2.ZERO
+	contact_other.position = Vector2(1.0, 0.0)
+	contact_root.invalid_foot = true
+	var invalid_foot_push := contact_system.actor_contact_push_vector(contact_root, contact_actor, contact_other)
+	_expect(invalid_foot_push == Vector2.ZERO, "non-finite actor feet fail closed without a contact push", failures)
+	contact_root.invalid_foot = false
+	contact_actor.set_meta("encounter_scale", NAN)
+	var invalid_radius_push := contact_system.actor_contact_push_vector(contact_root, contact_actor, contact_other)
+	_expect(invalid_radius_push == Vector2.ZERO, "non-finite contact radii fail closed without a contact push", failures)
+	contact_actor.set_meta("encounter_scale", 1.0)
+	var valid_push := contact_system.actor_contact_push_vector(contact_root, contact_actor, contact_other)
+	_expect(valid_push.is_finite() and valid_push.x < 0.0, "finite actor contact still produces a finite separation push", failures)
+	contact_actor.free()
+	contact_other.free()
+	contact_root.free()
+	contact_system.free()
 	actor.free()
 	scheduled.free()
 	if failures.is_empty():
