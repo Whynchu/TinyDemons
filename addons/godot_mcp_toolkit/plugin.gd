@@ -23,6 +23,12 @@ var _wizard: OnboardingWizard = null
 
 
 func _enter_tree() -> void:
+	# Headless editor scans and standalone smoke tests use the editor binary but
+	# have no usable dock or MCP peer. Starting the toolkit there creates registry
+	# and port contention with the real editor and makes repeated verification
+	# fragile. The runtime autoload has the matching guard.
+	if DisplayServer.get_name() == "headless":
+		return
 	# Brand line, not a log line: printed first so the version is stamped even if startup fails.
 	print("Godot MCP Toolkit v%s — by NPGameDev · npgamedev.com" % get_plugin_version())
 

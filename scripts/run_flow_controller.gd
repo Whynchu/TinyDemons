@@ -45,7 +45,7 @@ func chest_gold_reward(root: Object, base_gold: int) -> int:
 	var rolled_gold: int = reward_rng.randi_range(roundi(base_gold * 0.75), roundi(base_gold * 1.30))
 	var multiplier: float = 1.0 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04
 	var reward := float(rolled_gold) * clampf(multiplier, 0.80, 1.90)
-	if bool(root.get("regular_room_treasure")):
+	if !!root.get("regular_room_treasure"):
 		reward *= 0.50
 	return maxi(1, roundi(reward))
 

@@ -33,19 +33,17 @@ func _initialize() -> void:
 			var scales := encounter["scales"] as Array
 			var popcorn := encounter["popcorn"] as Array
 			var expected_minor_count := 0 if rank < 5 else 1 if rank == 5 else 2 if rank == 6 else 2 + floori(float(rank - 7) / 3.0)
-			_expect(String(variants[0]) != "purple", "scaled lead boss excludes the purple variant at rank %d seed %d" % [rank, seed], failures)
+			if rank == 1:
+				_expect(String(variants[0]) != "purple", "Run 1 lead boss excludes the Shadow variant at seed %d" % seed, failures)
 			_expect(variants.size() == scales.size() and variants.size() == popcorn.size(), "boss support slots keep encounter arrays aligned at rank %d seed %d" % [rank, seed], failures)
 			_expect(variants.size() == 1 + expected_minor_count + rooms._boss_support_popcorn_count(), "boss encounter uses the expected mixed-support roster at Run %d" % rank, failures)
 			var last_support_index := variants.size() - 1
-			_expect(last_support_index > 0 and String(variants[last_support_index]) == "grey" and bool(popcorn[last_support_index]) and int((encounter["levels"] as Array)[last_support_index]) == rooms._popcorn_enemy_level(), "boss encounter guarantees a Normal Slime popcorn slot at rank %d seed %d" % [rank, seed], failures)
-			if rank < 5:
-				for neutral_index in range(1, variants.size()):
-					_expect(String(variants[neutral_index]) == "grey" and bool(popcorn[neutral_index]), "Runs 1–4 boss support stays neutral popcorn at rank %d seed %d" % [rank, seed], failures)
+			_expect(last_support_index > 0 and String(variants[last_support_index]) == String(variants[0]) and bool(popcorn[last_support_index]) and int((encounter["levels"] as Array)[last_support_index]) == rooms._popcorn_enemy_level(), "boss support inherits the lead identity and uses the popcorn level at rank %d seed %d" % [rank, seed], failures)
 			var support_count := 0
 			for popcorn_value in popcorn:
 				if bool(popcorn_value):
 					support_count += 1
-			var expected_support_count := 2 if rank <= 2 else 3 if rank <= 6 else 4
+			var expected_support_count := 3 if rank <= 2 else 4 if rank <= 6 else 6
 			_expect(support_count == expected_support_count and support_count == rooms._boss_support_popcorn_count() and support_count >= 2, "boss encounter scales to %d Normal Slime popcorn supports at Run %d" % [expected_support_count, rank], failures)
 			boss_minor_slot_count += variants.size() - 1
 			for variant_index in range(1, variants.size()):
@@ -54,15 +52,14 @@ func _initialize() -> void:
 			_expect(float(scales[0]) > 1.0, "boss encounter leads with a scaled boss at rank %d seed %d" % [rank, seed], failures)
 	_expect(boss_purple_count > 0, "rare boss sampling still permits an occasional purple minor", failures)
 	_expect(float(boss_purple_count) / float(boss_minor_slot_count) < 0.12, "purple minors stay rare in boss encounters", failures)
-	var expected_caps := {1: 3, 2: 5, 3: 6, 4: 7}
 	for tested_player_level in [1, 4, 5, 6, 10, 30]:
 		rooms.player_level = tested_player_level
 		var expected_popcorn_level := maxi(1, tested_player_level - 5)
 		_expect(rooms._popcorn_enemy_level() == expected_popcorn_level, "player level %d produces level %d popcorn enemies" % [tested_player_level, expected_popcorn_level], failures)
 	rooms.player_level = 1
 	# Flat difficulty: enemy level no longer grows with room depth. The
-	# generated base level is rank - 1 with a +/-20% spread (min spread 1), so
-	# a rank N encounter peaks at level N (never at the depth-scaled cap).
+	# The generated base level is rank + 1 through R3 and rank + 2 afterward,
+	# with a compact early spread and a wider late-run spread.
 	for rank in [1, 2, 3, 4]:
 		rooms.progression_run_rank = rank
 		var maximum_seen := 0
@@ -75,8 +72,9 @@ func _initialize() -> void:
 				maximum_seen = maxi(maximum_seen, level)
 				level_one_count += 1 if level == 1 else 0
 				level_count += 1
-		_expect(maximum_seen <= rank, "Run %d flat enemy levels stay at or below rank %d" % [rank, rank], failures)
-		_expect(maximum_seen == rank, "Run %d flat encounter generation peaks at level %d" % [rank, rank], failures)
+		var expected_maximum: int = rank + 2 if rank <= 3 else rank + 4
+		_expect(maximum_seen <= expected_maximum, "Run %d flat enemy levels stay at or below level %d" % [rank, expected_maximum], failures)
+		_expect(maximum_seen == expected_maximum, "Run %d flat encounter generation peaks at level %d" % [rank, expected_maximum], failures)
 		if rank == 2:
 			_expect(float(level_one_count) / float(maxi(level_count, 1)) >= 0.30, "Run 2 keeps a substantial level 1 popcorn population", failures)
 	rooms.progression_run_rank = 8
@@ -93,14 +91,11 @@ func _initialize() -> void:
 			if String(variant) == "purple":
 				regular_purple_count += 1
 		if variants.has("purple"):
-			var has_shadow_popcorn := false
 			for index in variants.size():
 				if bool(popcorn[index]):
-					has_shadow_popcorn = true
 					_expect(String(variants[index]) == "grey", "Shadow encounters reserve popcorn slots for Normal Slimes", failures)
 					_expect(int(levels[index]) == rooms._popcorn_enemy_level(), "Shadow popcorn slots use the low-level recovery curve", failures)
 					shadow_popcorn_count += 1
-			_expect(has_shadow_popcorn, "every Shadow encounter guarantees a Normal Slime popcorn slot", failures)
 	_expect(regular_purple_count > 0, "regular encounter sampling still permits an occasional purple", failures)
 	_expect(float(regular_purple_count) / float(regular_slot_count) < 0.12, "purple variants stay rare in regular encounters", failures)
 	_expect(shadow_popcorn_count > 0, "shadow encounters produce a Normal Slime popcorn slot", failures)

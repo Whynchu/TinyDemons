@@ -24,15 +24,15 @@ func _initialize() -> void:
 	var hood := catalog.starter_item(&"head")
 	var wraps := catalog.starter_item(&"arm")
 	_expect(hood.definition_id == &"plain_hood" and wraps.definition_id == &"plain_wraps", "new slots use the Plain starter pieces", failures)
-	_expect(catalog.bonuses(hood).get("vitality", 0.0) == 1.0 and catalog.bonuses(wraps).get("strength", 0.0) == 1.0, "Head and Arm starters use the small Basic packages", failures)
-	_expect(not bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and not bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "Basic starters remain eligible for ordinary drops", failures)
+	_expect(catalog.bonuses(hood).is_empty() and catalog.bonuses(wraps).is_empty(), "Head and Arm starters remain zero-power Plain packages", failures)
+	_expect(bool(catalog.definition_data(hood.definition_id).get("starter_only", false)) and bool(catalog.definition_data(wraps.definition_id).get("starter_only", false)), "Plain starters remain excluded from ordinary drops", failures)
 
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(catalog)
 	var equipment := EquipmentComponent.new()
 	equipment.configure_from_profile(profile, catalog)
 	_expect(profile.get_equipped_instance_id(&"head") == "starter-head" and profile.get_equipped_instance_id(&"arm") == "starter-arm", "new profiles equip both visible starter slots", failures)
-	_expect(equipment.head_name == "BASIC HOOD" and equipment.arm_name == "BASIC WRAPS" and equipment.armor_name == "BASIC TUNIC", "runtime presentation names use Head/Arm/Body with armor compatibility", failures)
+	_expect(equipment.head_name == "PLAIN HOOD" and equipment.arm_name == "PLAIN WRAPS" and equipment.armor_name == "PLAIN TUNIC", "runtime presentation names use Head/Arm/Body with armor compatibility", failures)
 
 	var generated_head := catalog.generate_item(&"head", 1001, 1, &"common", false, &"shop", 1)
 	var generated_arm := catalog.generate_item(&"arm", 1002, 1, &"common", false, &"shop", 1)

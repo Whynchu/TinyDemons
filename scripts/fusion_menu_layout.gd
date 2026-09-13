@@ -11,14 +11,30 @@ func visible_row_capacity() -> int:
 
 func _ready() -> void:
 	super._ready()
-	# Shop's transparent sell-confirm hitbox occupies the shared footer action
-	# slot. Reuse it for Fusion without exposing Shop's YES/NO presentation.
-	sell_amount_confirmed.connect(item_action_pressed.emit)
-	# The shared sell-cancel hitbox is the Fusion quantity state's BACK action.
-	# Keep it on the same route signal so touch and controller back use one path.
-	sell_amount_cancelled.connect(shop_back_pressed.emit)
+	_bind_fusion_signals()
 	_hide_shop_mode()
 	_apply_fusion_geometry()
+
+
+func _bind_fusion_signals() -> void:
+	if _fusion_signals_bound:
+		return
+	# Shop's transparent sell-confirm hitbox occupies the shared footer action
+	# slot. Reuse it for Fusion without exposing Shop's YES/NO presentation.
+	sell_amount_confirmed.connect(_forward_fusion_action)
+	# The shared sell-cancel hitbox is the Fusion quantity state's BACK action.
+	# Keep it on the same route signal so touch and controller back use one path.
+	sell_amount_cancelled.connect(_forward_fusion_back)
+	_fusion_signals_bound = true
+
+
+func _forward_fusion_action() -> void:
+	item_action_pressed.emit()
+
+
+func _forward_fusion_back() -> void:
+	shop_back_pressed.emit()
+
 
 func _hide_shop_mode() -> void:
 	for path in ["ShopModePanel", "ModeBuyText", "ModeSellText", "ModeBuyButton", "ModeSellButton", "ShopTopCursor", "ShopModeCursor"]:
@@ -30,6 +46,7 @@ func _hide_shop_mode() -> void:
 
 func render_fusion(model: FusionMenuModel) -> void:
 	_cache_nodes()
+	_bind_fusion_signals()
 	set_root_preview_mode(model.state == 0)
 	var labels: Array[String] = []
 	var colors: Array[Color] = []
@@ -113,3 +130,4 @@ func refresh_layout_preserving_state() -> void:
 		render_fusion(_last_fusion_model)
 
 var _last_fusion_model: FusionMenuModel
+var _fusion_signals_bound := false

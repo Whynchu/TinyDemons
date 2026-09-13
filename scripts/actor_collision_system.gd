@@ -170,9 +170,16 @@ func _move_regular_away_from_boss(root: Object, regular: Sprite2D, preferred_dir
 	var directions := [preferred_direction, preferred_direction.rotated(PI * 0.5)]
 	for direction in directions:
 		var original := regular.position
-		regular.position += direction.normalized() * 0.75
-		if _position_is_valid(root, regular):
-			return true
+		var unit_direction: Vector2 = (direction as Vector2).normalized()
+		# Resolve the whole measured overlap, and keep probing beyond it when the
+		# enlarged boss body still contains the regular slime. The boss never
+		# moves; the regular actor owns the retry distance.
+		var maximum_distance: float = maxf((direction as Vector2).length(), 12.0)
+		var probe_count: int = maxi(1, ceili(maximum_distance / 0.75))
+		for probe_index in range(1, probe_count + 1):
+			regular.position = original + unit_direction * 0.75 * float(probe_index)
+			if _position_is_valid(root, regular):
+				return true
 		regular.position = original
 	return false
 

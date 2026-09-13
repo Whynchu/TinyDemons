@@ -142,7 +142,7 @@ These are code values (not inspector-exposed) that drive gear value:
 | --- | --- | --- |
 | Gear primary-stat contribution | Authored package + 2 flat points per rarity rank + 0.1 tier-stat point per fusion enhancement | `item_catalog.gd:bonuses` |
 | Rarity player-stat buff | Retired from live gear; all live gear uses flat points | `item_catalog.gd:RARITY_PLAYER_STAT_RATES`, `equipment_component.gd` |
-| Starter loadout | Six Basic pieces; every new character starts at VIT/STR/DEF/AGI/INT/MND 2/2/2/2/2/2 | `item_catalog.gd:starter_item`, `screen_state_controller.gd` |
+| Starter loadout | Six Plain pieces; every new character starts at VIT/STR/DEF/AGI/INT/MND 2/2/2/2/2/2, with no starter gear stat package | `item_catalog.gd:starter_item`, `screen_state_controller.gd` |
 | Drop tier weights | Plain 6.0, Basic 5.0, Set 0.5; Plain and Basic are the common majority | `item_catalog.gd:_gear_drop_weight` |
 | Random `+` package | Weighted: Common 0–1 (~6% +1), Rare 0–2 (~60/32/8), Epic 0–3 (~38/34/21/7), Legendary 1–3 (~45/37/18), Mythic 2–3 (~55/45); any of six stats | `item_catalog.gd:_roll_random_stat_points`, `item_instance.gd` |
 | Cloaked Demon premium slot | Rare floor with `plus_rarity_scale` 0.35, so plussed finds there are rarer than normal loot | `run_state.gd:ensure_shop_stock` |

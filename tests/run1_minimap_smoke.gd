@@ -28,7 +28,7 @@ func _initialize() -> void:
 		origin = minimap.get("map_origin") as Vector2i
 		_expect(image.get_pixelv(Vector2i(8, 21) - origin) == MINIMAP_SCRIPT.COLOR_HUB, "Hub pixel uses the reference white", failures)
 		_expect(image.get_pixelv(Vector2i(7, 20) - origin) == MINIMAP_SCRIPT.COLOR_DOOR, "Hub-to-Orb entry remains an ordinary connector", failures)
-		_expect(image.get_pixelv(Vector2i(6, 19) - origin) == MINIMAP_SCRIPT.COLOR_BACKGROUND, "undiscovered room remains hidden", failures)
+		_expect(image.get_pixelv(Vector2i(6, 19) - origin) == MINIMAP_SCRIPT.COLOR_ORB_MARKER, "known Orb landmark is visible before entry", failures)
 	var ring := minimap.get_node_or_null("DungeonMinimapRing") as Sprite2D
 	_expect(ring != null and ring.texture != null, "minimap displays the authored puzzle-map ring above the map", failures)
 	map_controller.on_room_entered(&"room_1_1")

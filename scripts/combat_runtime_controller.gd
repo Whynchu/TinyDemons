@@ -517,7 +517,8 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 
 
 func slime_attack_commitment_vector(root: Object, slime: Sprite2D, target_point: Vector2) -> Vector2:
-	var slime_point: Vector2 = root.call("_actor_foot", slime)
+	var slime_body: PackedVector2Array = root.call("_slime_body_polygon", slime)
+	var slime_point: Vector2 = ActorGeometry.polygon_center(slime_body) if slime_body.size() >= 3 else root.call("_actor_foot", slime)
 	var to_target := target_point - slime_point
 	var direction := to_target.normalized()
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
@@ -543,7 +544,7 @@ func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
 	if combat != null and combat.lunge_vector != Vector2.ZERO:
 		return combat.lunge_vector
 	var player := root.get("player") as Sprite2D
-	return Vector2.ZERO if player == null else slime_attack_commitment_vector(root, slime, root.call("_actor_foot", player) as Vector2)
+	return Vector2.ZERO if player == null else slime_attack_commitment_vector(root, slime, root.call("_collision_rect", player).get_center())
 
 
 func apply_player_hit_knockback(root: Object, slime: Sprite2D) -> void:

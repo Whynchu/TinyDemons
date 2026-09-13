@@ -2,7 +2,7 @@
 
 Status: current ownership and extension guide for the `0.2.x` baseline
 
-Updated: 2026-09-11
+Updated: 2026-09-13
 
 Authority: [`AUDIT.md`](AUDIT.md) records measured findings; this document
 defines the intended runtime boundaries and safe extension rules.
@@ -55,9 +55,10 @@ Encrypted-vault deployment and operational verification are documented in
   `enemy_tactics_component`. The shared Normal and eight-element boss behavior,
   presentation, performance, and verification contract is defined in
   [`boss-slime-implementation-plan.md`](boss-slime-implementation-plan.md).
-- **World**: `room_controller`, `dungeon_graph`, `dungeon_socket`,
+- **World**: `room_controller`, `room_transition_result`, `dungeon_graph`, `dungeon_socket`,
   `isometric_room_layer`, `walkable_area`, `actor_collision_system`,
-  `depth_sorter`, `shadow_controller`, `occlusion_renderer`.- **Interaction**: `interaction_component`, `chest_controller`,
+  `depth_sorter`, `shadow_controller`, `occlusion_renderer`.
+- **Interaction**: `interaction_component`, `chest_controller`,
   `npc_controller`, `rest_fire_controller`, `attack_hitbox_guide`.
 - **Meta/progression**: `player_profile`, `profile_save_service`,
   `run_state`, `run_grade`, `run_settlement`, `item_catalog`,
@@ -105,6 +106,14 @@ safe/risk choice metadata from layout definition through graph, room state, and
 minimap projection. Generated difficulty is flat per run and keyed off
 `difficulty_rank`, not room depth; local encounter tiers are the explicit
 exception for dangerous shortcuts and elemental vaults.
+
+Room traversal uses `RoomTransitionResult` as the typed handoff between route
+selection and runtime entry. `RoomController.plan_connected_room_transition`
+validates graph/source/destination identity and carries departure, arrival, and
+destination room type. `RoomController.enter_connected_room` owns the side
+effects and preserves the explicit frame schedule. New room-entry behavior
+should extend this result or add a focused result beside it rather than adding
+another loose destination/arrival argument to the coordinator.
 
 ## Tuning classes (exported fields; resource migration planned)
 
@@ -212,7 +221,7 @@ through the same router boundary.
 - **Run the full smoke suite only as a supervised standalone check** (with no
   MCP Godot runtime active):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
-  The runner starts one Godot process per registered test (currently around 90),
+  The runner starts one Godot process per registered test (currently 114),
   so a headless renderer crash can multiply into Windows memory-error dialogs.
   Start with one focused test and stop the runner at the first repeating crash.
 - **Keep source art out of the import path.** Loose images in `Artwork/`,

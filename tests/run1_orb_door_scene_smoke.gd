@@ -18,9 +18,8 @@ func _initialize() -> void:
 	var graph := gameplay.get("dungeon_graph") as DungeonGraph
 	var map := gameplay.get("dungeon_map_controller") as Node
 	var rooms := gameplay.get("room_controller") as RoomController
-	var orbs := gameplay.get("puzzle_torches") as Array[Sprite2D]
-	_expect(graph != null and map != null and rooms != null and orbs != null and orbs.size() == 1, "first Orb doorway owners are composed", failures)
-	if graph != null and map != null and rooms != null and orbs != null and orbs.size() == 1:
+	_expect(graph != null and map != null and rooms != null, "first Orb doorway owners are composed", failures)
+	if graph != null and map != null and rooms != null:
 		map.call("begin_run", graph, 44017, 0, &"fire")
 		rooms.room_states.clear()
 		gameplay.set("current_room_id", TARGET_ROOM)
@@ -29,6 +28,13 @@ func _initialize() -> void:
 		gameplay.call("_collect_dungeon_sockets")
 		gameplay.call("_ensure_current_room_layout")
 		gameplay.call("_apply_room_state")
+		var orbs := gameplay.get("puzzle_torches") as Array[Sprite2D]
+		_expect(orbs != null and orbs.size() == 1, "first Orb doorway creates one targetable orb", failures)
+		if orbs == null or orbs.size() != 1:
+			gameplay.queue_free()
+			await process_frame
+			_finish(failures)
+			return
 		var left_connection := graph.get_connection(TARGET_ROOM, DungeonGraph.WALL_LEFT)
 		var right_connection := graph.get_connection(TARGET_ROOM, DungeonGraph.WALL_RIGHT)
 		_expect(map.call("current_color") == &"puzzle_b", "first Orb Room starts in the grey Puzzle B state", failures)

@@ -7,6 +7,9 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $godotVersion = if ($env:GODOT_VERSION) { $env:GODOT_VERSION } else { "4.7.1" }
 $godot = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
+$headlessUserData = Join-Path $env:TEMP ("tiny-demons-web-export-{0}" -f $PID)
+New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
+$logFile = Join-Path $headlessUserData "web-export.log"
 $presetText = Get-Content -LiteralPath (Join-Path $root "export_presets.cfg") -Raw
 $projectText = Get-Content -LiteralPath (Join-Path $root "project.godot") -Raw
 foreach ($requiredPresetValue in @('[preset.0]', 'platform="Web"', 'export_path="dist/index.html"', 'variant/thread_support=false', 'progressive_web_app/enabled=true', 'progressive_web_app/icon_144x144="res://assets/artwork/tinydemonicon_pwa_144.png"', 'progressive_web_app/icon_180x180="res://assets/artwork/tinydemonicon_pwa_180.png"', 'progressive_web_app/icon_512x512="res://assets/artwork/tinydemonicon_pwa_512.png"', 'image-rendering:pixelated', 'width:100%;height:100%;touch-action:none')) {
@@ -45,7 +48,7 @@ if (-not $hasTemplate) {
 $outputDir = Join-Path $root "dist"
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 $exportPath = Join-Path $outputDir "index.html"
-$arguments = @("--headless", "--path", $root, "--export-release", "Web", $exportPath)
+$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $headlessUserData, "--path", $root, "--log-file", $logFile, "--export-release", "Web", $exportPath)
 & $godot @arguments
 if ($LASTEXITCODE -ne 0) {
 	throw "Godot Web export failed with exit code $LASTEXITCODE"

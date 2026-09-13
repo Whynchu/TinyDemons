@@ -183,10 +183,13 @@ func _initialize() -> void:
 	# branch rather than assuming a fixed four-way Hub.
 	var branch_graph = GRAPH_SCRIPT.new()
 	var branch_map = MAP_CONTROLLER_SCRIPT.new()
+	# Use the standalone compatibility generator's Run 5 topology for this
+	# generic lower-entrance rule. The runtime controller uses the active R6+
+	# risk/reward owner after this point, which deliberately omits legacy Hub digs.
+	var branch_completed_runs := 4
 	var found_dig_seed := -1
 	for dig_seed in range(0, 64):
-		var probe_graph = GRAPH_SCRIPT.new()
-		var probe_layout = GENERATOR_SCRIPT.build(24681300 + dig_seed, 4, &"fire")
+		var probe_layout = GENERATOR_SCRIPT.build(24681300 + dig_seed, branch_completed_runs, &"fire")
 		var has_lower_dig := false
 		for connection in probe_layout.connections:
 			if connection.source_room_id == &"room_0_0" and (connection.exit_socket == GRAPH_SCRIPT.BOTTOM_LEFT or connection.exit_socket == GRAPH_SCRIPT.BOTTOM_RIGHT):
@@ -196,7 +199,16 @@ func _initialize() -> void:
 			break
 	_expect(found_dig_seed >= 0, "some generated seed opens a lower dig branch for engagement testing", failures)
 	if found_dig_seed >= 0:
-		branch_map.begin_run(branch_graph, 24681300 + found_dig_seed, 4, &"fire")
+		# Load the standalone compatibility layout directly so this test still
+		# covers the generic lower-entrance engagement rule without pretending it
+		# is part of the active R6+ route.
+		var branch_layout = GENERATOR_SCRIPT.build(24681300 + found_dig_seed, branch_completed_runs, &"fire")
+		branch_graph.initialize_from_layout(24681300 + found_dig_seed, branch_layout)
+		branch_map.graph = branch_graph
+		branch_map.layout = branch_layout
+		branch_map.completed_runs_for_layout = branch_completed_runs
+		branch_map.set_starter_flame(&"fire")
+		branch_map.state.begin(branch_graph.start_room_id)
 		branch_map.set_starter_flame_attuned(true)
 		var branch_connection := branch_graph.get_connection(GRAPH_SCRIPT.START_ROOM_ID, GRAPH_SCRIPT.BOTTOM_LEFT)
 		if branch_connection == null:

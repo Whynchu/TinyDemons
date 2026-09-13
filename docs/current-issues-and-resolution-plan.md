@@ -2,7 +2,7 @@
 
 Status: live issue tracker; source fixes require runtime evidence before closure
 
-Updated: 2026-09-12
+Updated: 2026-09-13
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -36,22 +36,32 @@ backtracking issues reported during playtesting. It is a working document: code
 changes should update the status and verification notes here as each issue is
 resolved.
 
-## Current baseline verification — 2026-09-11
+## Historical focused baseline verification — 2026-09-11
 
-The registered smoke inventory is complete (`113` paths, `0` missing files),
-but focused standalone execution found several contracts that still need
-triage. Passing layout, room, enemy, gear-effect, Chroma, and progression
-checks do not close the player-facing issues below. Current failures include
-doorway geometry, Hub/equipment/touch menu contracts, generated minimap draw
-order and discovery visibility, the starter-flame music gate, active-run
-snapshot validation, and generated R7 bounds/fusion validation. The exact test
-names and assertion messages are recorded in [`test-target-audit.md`](test-target-audit.md)
-and summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
+The registered smoke inventory was complete at that point (`113` paths, `0`
+missing files), but focused standalone execution found several contracts that
+needed triage. Passing layout, room, enemy, gear-effect, Chroma, and
+progression checks did not close the player-facing issues below. The exact
+test names and assertion messages are retained in
+[`test-target-audit.md`](test-target-audit.md) and summarized in
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 The direct checks also confirmed the declared R3/R4/R5 authored route contracts
 and the Run 2 authored route contract. The native R7 generator smoke did not
 complete after reporting out-of-bounds rooms, so generated R6+ remains a
 release-risk area under the approved route policy.
+
+## Current focused follow-up — 2026-09-13
+
+The runner now isolates standalone Godot processes with temporary user data,
+Dummy audio, and explicit log paths. The inventory is now `114` paths with `0`
+missing files. Focused checks pass for active-run snapshot recovery, generated
+R6+ risk/reward layouts, the expanded elemental-binding route set, generated
+scene construction, authored doorway behavior, and the typed room-transition
+boundary. Manual enemy-placement,
+reward, minimap, save/load, touch, and full player-journey verification remain
+open; the historical failures below are not silently reclassified by these
+focused results.
 
 ## Issue 1 — Demon Hub select/back presentation differs by menu
 
@@ -313,7 +323,7 @@ identities matching their design contracts. Their distinction is stable across
 fresh runs and does not depend on visual appearance alone. Add a deterministic
 regression check for the room identity and the relevant milestone/depth data.
 
-Status: **Active R6+ risk/reward route is implemented; runtime route/recovery verification pending**
+Status: **Active R6+ risk/reward route is implemented; focused route/recovery checks pass; manual runtime verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -326,8 +336,10 @@ Status: **Active R6+ risk/reward route is implemented; runtime route/recovery ve
   ambiguous R6 boundary is refused with an explicit discard path instead of
   silently regenerating under saved room IDs.
 - `tests/generated_layout_smoke.gd` covers the generated route contracts and
-  source diagnostics pass. A runtime fresh-run and save-recovery check remains
-  before shipping this route policy.
+  source diagnostics pass. The focused R6+ generation, generated-scene, and
+  active-run snapshot checks passed on 2026-09-13; a fresh-run gameplay,
+  enemy-placement, and manual save-recovery check remains before shipping this
+  route policy.
 
 ### Approved resolution — generated R6+ migration
 
@@ -542,33 +554,33 @@ Status: **Implemented in source — runtime color verification pending**
    updated run-generation/state contracts (Issue 7).
 
 The source implementation contains the approved behavior without changing
-unrelated balance, but the current focused baseline shows contracts that must
-be repaired or reclassified before closure. Remaining work is to triage the
-failed Hub, equipment, doorway, minimap, music-gate, binding, generated-route,
-and recovery assertions; compare all Hub footer orientations; exercise a
-complete sell transaction; profile cold/warm flame pickup; test equipment
-swipes in both menu instances; restore a generated R6 checkpoint; travel
-between two visited flames; and visually inspect bound/temporary pickup
-colors.
+unrelated balance. The historical focused baseline exposed contracts that must
+be repaired or reclassified before closure. The 2026-09-13 follow-up resolved
+the doorway, active-run fixture, typed transition, and active R6+ generation
+checks; remaining work is to triage the failed Hub, equipment, minimap,
+music-gate, binding, and unresolved native-generator assertions; compare all
+Hub footer orientations; exercise a complete sell transaction; profile
+cold/warm flame pickup; test equipment swipes in both menu instances; restore
+a generated R6 checkpoint; travel between two visited flames; and visually
+inspect bound/temporary pickup colors.
 
 ## Verification and handoff
 
-The 2026-09-12 editor scan completed with exit code 0 and reported no script
-parse, type-inference, or failed-load errors. The focused
+The historical 2026-09-12 editor scan completed with exit code 0 and reported
+no script parse, type-inference, or failed-load errors. The focused
 `fusion_candidate_cache_smoke.gd` and `gear_system_rework_smoke.gd` processes
 were also attempted, but this local Godot 4.7.1 environment crashed with a
 native signal 11 before either script produced assertions. Those runtime
 checks remain open rather than being treated as product failures.
 
 The 2026-09-09 source/MCP verification is historical evidence for the initial
-implementation pass. The current 2026-09-11 baseline had no editor peer or
-runtime active, so focused checks ran as standalone Godot processes. Inventory
-is complete (`113` registered paths, `0` missing files); the detailed pass and
-failure matrix is in [`test-target-audit.md`](test-target-audit.md).
+implementation pass. The 2026-09-11 baseline had no editor peer or runtime
+active, so focused checks ran as standalone Godot processes. The current
+inventory is complete (`114` registered paths, `0` missing files); the detailed
+pass and failure matrix is in [`test-target-audit.md`](test-target-audit.md).
 
 The full smoke suite remains intentionally unrun because it launches one Godot
-process per registered test. Runtime timings, cold-start audio behavior,
-flame-to-flame travel, orientation comparison, and the complete touch swipe
-matrix remain open acceptance checks. Do not record a phase change in
-`docs/AUDIT.md` until the failed contracts are triaged and the normal smoke
-gate is available.
+process per registered test while the editor peer is active. Runtime timings,
+cold-start audio behavior, flame-to-flame travel, orientation comparison, and
+the complete touch swipe matrix remain open acceptance checks. Record further
+phase changes only when their focused and manual evidence is available.

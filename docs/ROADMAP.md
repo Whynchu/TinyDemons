@@ -2,7 +2,7 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-12
+Updated: 2026-09-13
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -52,11 +52,13 @@ sell accounting, and the Fusion next-rank batch cap alongside the remaining
 contract failures. The next implementation checkpoint is a stabilization pass
 in this order:
 
-1. Repair closed doorway geometry and trigger fences, then verify that every
-   active room has reachable enemy and player space.
-2. Run the focused R6+ generation, compact-bounds, active-run snapshot, and
-   enemy-placement checks, then repair any runtime failures before expanding
-   generated content.
+1. Doorway behavior and `wall_socket_geometry_smoke` are reconciled with the
+   portal-based walkability model. Keep the focused check green while verifying
+   reachable enemy and player space in generated rooms; do not alter doorway
+   collision without a reproduced gameplay defect.
+2. Keep the focused R6+ generation, doorway, and active-run snapshot checks
+   green. Run the remaining compact-bounds and enemy-placement checks, then
+   repair any runtime failures before expanding generated content.
 3. Repair minimap draw order/discovery visibility and the starter-flame music
    gate; add a cold/warm timing measurement.
 4. Reconcile Demon Hub, equipment, and touch contracts against the authored

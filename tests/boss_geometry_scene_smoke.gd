@@ -118,9 +118,15 @@ func _initialize() -> void:
 				break
 		_expect(regular_slime != null, "boss room includes a regular slime for displacement checks", failures)
 		if regular_slime != null and collision_system != null:
+			for displacement_slime in [boss, regular_slime]:
+				if bool(gameplay.call("_is_slime_spawn_locked", displacement_slime)):
+					gameplay.call("_finish_slime_spawn", displacement_slime)
 			var boss_start := boss.position
 			regular_slime.global_position = body_rect.get_center()
+			var regular_body_rect := gameplay.call("_collision_rect", regular_slime) as Rect2
+			regular_slime.global_position += body_rect.get_center() - regular_body_rect.get_center()
 			var regular_start := regular_slime.position
+			collision_system.invalidate_slime_grid()
 			collision_system.resolve_slime_contacts([boss, regular_slime], gameplay, 1)
 			_expect(boss.position.is_equal_approx(boss_start), "regular slime cannot displace the boss", failures)
 			_expect(not regular_slime.position.is_equal_approx(regular_start), "boss pushes an overlapping regular slime aside", failures)
@@ -159,34 +165,20 @@ func _initialize() -> void:
 			_expect(bool(gameplay.call("_map_connection_available", boss_entry_connection, true)), "completed boss approach exposes a return connection", failures)
 		gameplay.call("_on_room_enemies_cleared")
 		_expect(bool(gameplay.get("final_exit_open")), "boss victory opens the run-completion exit", failures)
-		_expect(bool(gameplay.get("entrance_open")), "boss victory reopens the dungeon arrival entrance", failures)
+		_expect(not bool(gameplay.get("entrance_open")), "boss victory keeps the dungeon arrival entrance sealed", failures)
 		var boss_map_state := map.get("state") as DungeonMapState
 		_expect(boss_map_state != null and boss_map_state.is_room_completed(boss_room_id), "boss victory persists map completion", failures)
-		_expect(boss_door_right != null and boss_door_right.visible and boss_door_left != null and not boss_door_left.visible, "boss victory exposes only the authored final exit", failures)
-		if boss_entry_socket != null:
-			var open_entrance := boss_entry_socket.visual() as Sprite2D
-			_expect(open_entrance != null and open_entrance.texture != null and open_entrance.texture.resource_path.ends_with("Tile.png"), "boss arrival entrance restores its open walkway art", failures)
+		var final_exit_id: StringName = gameplay.get("final_exit_socket")
+		_expect(final_exit_id == DungeonGraph.WALL_LEFT or final_exit_id == DungeonGraph.WALL_RIGHT, "boss victory selects an authored wall final exit", failures)
+		var final_door := boss_door_left if final_exit_id == DungeonGraph.WALL_LEFT else boss_door_right
+		var sealed_door := boss_door_right if final_exit_id == DungeonGraph.WALL_LEFT else boss_door_left
+		_expect(final_door != null and final_door.visible and sealed_door != null and not sealed_door.visible, "boss victory exposes only the selected final exit", failures)
 		if boss_entry_socket != null and boss_entry_connection != null:
-			# The reverse route must remain usable even if the approach room's
-			# completion flag is stale in a generated or resumed map.
-			if boss_map_state != null:
-				boss_map_state.completed_rooms.erase(boss_entry_connection.source_room_id)
-				boss_map_state.changed.emit()
-			_expect(bool(gameplay.call("_map_connection_available", boss_entry_connection, true)), "completed boss room keeps its arrival connection available", failures)
-			var trigger := boss_entry_socket.trigger()
-			var trigger_center := Vector2.ZERO
-			for point in trigger.polygon:
-				trigger_center += trigger.to_global(point)
-			trigger_center /= float(trigger.polygon.size())
+			_expect(bool(gameplay.call("_map_connection_available", boss_entry_connection, true)), "boss arrival connection remains recorded after victory", failures)
 			var door_player := gameplay.get("player") as Sprite2D
-			door_player.global_position += trigger_center - (gameplay.call("_actor_foot", door_player) as Vector2)
+			door_player.global_position = boss_entry_socket.spawn_marker().global_position
 			gameplay.set("room_transition_locked", false)
-			_expect(bool(gameplay.call("_try_enter_any_active_socket")), "boss room can traverse the reopened arrival entrance", failures)
-			_expect(gameplay.get("current_room_id") == boss_entry_connection.source_room_id, "boss return route lands in the dungeon approach room", failures)
-			var restored_left_return_guide := gameplay.get_node_or_null("Map/FloorTiles/Entrance/EntranceReturnGuide") as Polygon2D
-			var restored_right_return_guide := gameplay.get_node_or_null("Map/FloorTiles/EntranceRight/EntranceReturnGuide") as Polygon2D
-			_expect(restored_left_return_guide != null and restored_left_return_guide.position.is_equal_approx(Vector2(3, -2)), "boss return restores the normal left entrance guide position", failures)
-			_expect(restored_right_return_guide != null and restored_right_return_guide.position.is_equal_approx(Vector2(13, -2)), "boss return restores the normal right entrance guide position", failures)
+			_expect(not bool(gameplay.call("_try_enter_any_active_socket")), "sealed boss arrival entrance rejects reverse traversal", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

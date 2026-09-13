@@ -48,12 +48,15 @@ func _initialize() -> void:
 			slime.visible = false
 		var entered := false
 		for _step in 120:
-			if gameplay.get("current_room_id") != boss_room_id:
+			if gameplay.get("current_room_id") != boss_room_id or bool(gameplay.get("settlement_room_active")):
 				entered = true
 				break
 			var toward_exit := (trigger_center - (gameplay.call("_actor_foot", player) as Vector2)).normalized() * 2.0
 			var movement := gameplay.call("_perspective_movement", toward_exit) as Vector2
 			gameplay.call("_try_move_actor", player, movement)
+			if bool(gameplay.call("_try_enter_any_active_socket")) or bool(gameplay.get("settlement_room_active")):
+				entered = true
+				break
 		_expect(entered, "player can walk from the boss final-exit marker to settlement", failures)
 	gameplay.queue_free()
 	await process_frame

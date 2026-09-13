@@ -100,6 +100,10 @@ func _initialize() -> void:
 	_expect(controller.active_environment_palette() == "grey", "the grey map environment begins without an added tint", failures)
 	var d9_down_left_entry: DungeonGraph.ConnectionRecord = graph.get_connection_for_entry(&"room_-1_9", GRAPH_SCRIPT.BOTTOM_LEFT)
 	var d9_red_exit: DungeonGraph.ConnectionRecord = graph.get_connection(&"room_-1_9", GRAPH_SCRIPT.WALL_LEFT)
+	# Connection availability is context-aware for authored rooms. Move the map
+	# state into D9 before asserting its entrance/exit contract, matching the
+	# runtime callback that records the arrival socket on room entry.
+	controller.on_room_entered(&"room_-1_9", GRAPH_SCRIPT.BOTTOM_LEFT)
 	_expect(d9_down_left_entry != null and d9_down_left_entry.source_room_id == &"room_-3_8" and d9_down_left_entry.allow_entry_before_source_clear, "D9 marks its down-left enemy branch as an early-open entrance", failures)
 	_expect(controller.is_connection_available(d9_down_left_entry, true), "D9's down-left entrance is open before the branch enemies are defeated", failures)
 	_expect(not controller.is_connection_available(d9_down_left_entry, false), "the down-left enemy room's own top exit remains clear-gated", failures)
