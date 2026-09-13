@@ -147,7 +147,7 @@ Confirmed passing tests:
 - `starter_flame_smoke`
 - `generated_flame_progression_smoke`
 
-Confirmed failing tests:
+Historical baseline confirmed failing tests:
 
 | Test | Current assertion evidence |
 |---|---|
@@ -199,6 +199,11 @@ warnings. They appeared in direct runs and were not counted as test failures.
 - `touch_controls_smoke`: pass. The harness now binds all optional pause
   callbacks, the stat-row assertion matches the current 69.5x12 logical target,
   and the menu assertion matches the inert blank non-dialogue policy.
+- `generated_minimap_smoke`: pass. Landmark rooms remain visible at run start,
+  ordinary generated rooms remain hidden, and the destination cursor stays above
+  the full-map texture.
+- `run1_minimap_smoke`: pass. Run 1 preserves the same landmark/discovery rule
+  for Orb, boss, flame, and ordinary rooms.
 
 These are updates to the historical baseline above; no new test paths were added.
 

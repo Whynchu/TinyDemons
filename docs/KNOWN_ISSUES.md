@@ -236,9 +236,21 @@ encounter profile and risk reward tier; vault rooms receive an elite profile and
 guaranteed enhanced gear through the existing chest item generator. New route
 metadata is carried through layout, graph, room state, minimap plans, and active
 run room-state snapshots. The focused generator, elemental-binding, and scene
-tests pass in
-isolated Godot processes; manual enemy-placement, reward, minimap, save/load,
-and touch playtesting remain outstanding.
+tests pass in isolated Godot processes; the 2026-09-13 R7 playthrough accepted
+the minimap landmark visibility behavior. Manual enemy-placement, reward,
+save/load, touch, and flame-travel checks remain outstanding.
+
+### 2026-09-13 minimap landmark visibility reconciliation
+
+The intended minimap contract is now explicit: the Hub, boss/downstairs rooms,
+Orb rooms, and Fire/Rest or flame-bearing landmarks are visible at run start;
+unvisited flame landmarks are grey; ordinary rooms remain hidden until entered.
+The user-confirmed R7 playthrough matched that behavior. Both
+`generated_minimap_smoke` and `run1_minimap_smoke` pass the focused contract,
+including landmark colors, ordinary-room discovery, and destination cursor draw
+order. Their older `open` entries were stale and are now `verified` in
+`tests/manifest.csv`. Flame-to-flame travel and browser/device verification
+remain separate evidence gaps.
 
 ## Verification surface audit — open
 

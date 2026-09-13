@@ -20,9 +20,29 @@ func _initialize() -> void:
 		if not candidate.fire_flame.is_empty():
 			flame_room = candidate
 			break
+	var unvisited_image: Image = minimap.snapshot_full_image()
+	var flame_origin: Vector2i = minimap.get("full_map_origin") as Vector2i
+	var ordinary_room = null
+	var visible_landmarks := 0
+	for room in layout.rooms:
+		var is_landmark: bool = room.room_type in [GRAPH_SCRIPT.ROOM_DOWNSTAIRS, GRAPH_SCRIPT.ROOM_BOSS, GRAPH_SCRIPT.ROOM_ORB, GRAPH_SCRIPT.ROOM_REST, GRAPH_SCRIPT.ROOM_FIRE] or not room.fire_flame.is_empty()
+		if is_landmark:
+			var landmark_pixel := unvisited_image.get_pixelv(room.minimap_coordinate - flame_origin)
+			_expect(landmark_pixel != MINIMAP_SCRIPT.COLOR_BACKGROUND, "generated landmark is visible before entry: %s" % room.id, failures)
+			if room.room_type == GRAPH_SCRIPT.ROOM_ORB:
+				_expect(landmark_pixel == MINIMAP_SCRIPT.COLOR_ORB_MARKER, "generated Orb landmark keeps its marker color: %s" % room.id, failures)
+			elif room.room_type == GRAPH_SCRIPT.ROOM_BOSS or room.room_type == GRAPH_SCRIPT.ROOM_DOWNSTAIRS:
+				_expect(landmark_pixel == MINIMAP_SCRIPT.COLOR_BOSS, "generated boss landmark keeps its marker color: %s" % room.id, failures)
+			elif not room.fire_flame.is_empty():
+				_expect(landmark_pixel == MINIMAP_SCRIPT.COLOR_UNVISITED_FLAME, "generated unvisited flame landmark is grey: %s" % room.id, failures)
+			visible_landmarks += 1
+		elif room.room_type != GRAPH_SCRIPT.ROOM_START and ordinary_room == null:
+			ordinary_room = room
+	_expect(visible_landmarks > 0, "generated map exposes visible landmarks before room discovery", failures)
+	if ordinary_room != null:
+		_expect(not map.is_room_discovered(ordinary_room.id), "ordinary generated room starts undiscovered", failures)
+		_expect(unvisited_image.get_pixelv(ordinary_room.minimap_coordinate - flame_origin) == MINIMAP_SCRIPT.COLOR_BACKGROUND, "ordinary generated room remains hidden before entry", failures)
 	if flame_room != null:
-		var flame_origin: Vector2i = minimap.get("full_map_origin") as Vector2i
-		var unvisited_image: Image = minimap.snapshot_full_image()
 		_expect(unvisited_image.get_pixelv(flame_room.minimap_coordinate - flame_origin) == MINIMAP_SCRIPT.COLOR_UNVISITED_FLAME, "unvisited generated flame is grey on the full map", failures)
 		map.on_room_entered(flame_room.id)
 		var visited_image: Image = minimap.snapshot_full_image()
