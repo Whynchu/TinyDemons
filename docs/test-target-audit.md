@@ -171,14 +171,19 @@ Dummy audio, and an explicit log path. The following focused contracts passed:
 |---|---|
 | `active_run_recovery_contract_smoke` | pass; fixture now matches the map's last discovered room |
 | `r6_plus_risk_reward_generation_smoke` | pass across sampled runs, seeds, and starter flames |
+| `r7_native_generator_smoke` | pass; compatibility filename retained while the active R6+ route stays inside the compact 35x35 bounds |
+| `generated_layout_smoke` | pass; generated room coordinates and compact logical-edge projection remain valid |
 | `elemental_binding_smoke` | pass; expanded R6+ seed/starter generation and binding contract |
 | `generated_run_scene_smoke` | pass |
 | `run1_door_path_smoke` | pass |
 | `wall_socket_geometry_smoke` | pass against the portal-based walkability model |
 | `room_transition_result_smoke` | pass; typed room-transition planning/validation |
 
-`r7_native_generator_smoke` did not complete. It repeatedly reported an R7 room
-outside the compact map (`room_9_11` at `(35, 10)`) before its worker stalled.
+The earlier `r7_native_generator_smoke` result is historical evidence from the
+pre-R6+ contract. Its compatibility filename remains for runner stability, but
+the current check exercises the active R6+ route and passes its compact-bound
+and route-policy assertions. The neighboring `generated_layout_smoke` check
+also passes.
 `menu_route_scene_smoke`, `gear_system_rework_smoke`,
 `cloud_panel_touch_smoke`, and `touch_menu_scroll_smoke` did not produce a
 reliable result in this pass because their standalone workers stalled around

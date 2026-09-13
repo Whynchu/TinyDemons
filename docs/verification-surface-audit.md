@@ -136,6 +136,10 @@ in `tests/manifest.csv`:
   injection mismatch; the gear check now reflects the decision that Plain pieces
   drop from chests for every slot; the touch check now exercises the dialogue
   ghost-accept contract and keeps blank non-dialogue menu taps inert.
+- `r7_native_generator_smoke` is now `verified`; its compatibility filename is
+  retained, while its current assertions cover the active R6+ compact bounds
+  and route policy. `generated_layout_smoke` also passes the neighboring
+  coordinate/projection contract. No new test path was added.
 
 ## Work plan
 

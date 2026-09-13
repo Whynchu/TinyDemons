@@ -54,6 +54,12 @@ The active-run snapshot fixture and the R6+ generator were corrected during the
 `wall_socket_geometry_smoke`, and the new `room_transition_result_smoke`.
 Those results do not replace the unresolved contracts listed above.
 
+The compatibility-named `r7_native_generator_smoke` and neighboring
+`generated_layout_smoke` checks were also rerun in isolated headless processes.
+Both pass: the active R6+ route stays inside the declared compact 35x35 map,
+preserves its logical-edge projection, and remains deterministic across the
+sampled starter-flame and seed cases. No new test path was added.
+
 ### 2026-09-13 focused triage of the newly registered and previously stalled checks
 
 The six checks that were outside the runner are now registered and were run one
@@ -169,14 +175,16 @@ broader R6+ seed failure, which the focused elemental-binding and R6+ checks
 now cover. The full suite remains a release gate rather than a claim of zero
 behavioral failures.
 
-The native R7 generator smoke did not complete. It repeatedly reported rooms
-and connections outside the declared compact 35×35 map, including
-`room_9_11` at `(35, 10)`, before its standalone worker stalled. Several other
-standalone checks also stalled during the add-on MCP runtime startup/teardown
-path without producing a reliable assertion result; those checks remain
-unverified rather than passing or failing by inference. The certificate-store
-and MCP registry messages are environment warnings seen across the direct
-runs, not product assertions.
+The earlier native R7 generator smoke report is retained as historical
+evidence: it repeatedly reported rooms and connections outside the declared
+compact 35x35 map, including `room_9_11` at `(35, 10)`, under the superseded
+route contract. The current compatibility-named check exercises the active R6+
+route and is verified in `tests/manifest.csv`. Several other standalone checks
+still stalled during the add-on MCP runtime startup/teardown path without
+producing a reliable assertion result; those checks remain unverified rather
+than passing or failing by inference. The certificate-store and MCP registry
+messages are environment warnings seen across the direct runs, not product
+assertions.
 
 Detailed command output and target interpretation are tracked in
 [`test-target-audit.md`](test-target-audit.md). This snapshot is evidence for
