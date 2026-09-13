@@ -47,9 +47,9 @@ test names and assertion messages are retained in
 [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 The direct checks also confirmed the declared R3/R4/R5 authored route contracts
-and the Run 2 authored route contract. The native R7 generator smoke did not
-complete after reporting out-of-bounds rooms, so generated R6+ remains a
-release-risk area under the approved route policy.
+and the Run 2 authored route contract. The earlier native R7 result reported
+out-of-bounds rooms under the superseded route contract; that result is retained
+as historical evidence below.
 
 ## Current focused follow-up — 2026-09-13
 
@@ -57,9 +57,10 @@ The runner now isolates standalone Godot processes with temporary user data,
 Dummy audio, and explicit log paths. `tests/manifest.csv` classifies all 121
 test/report scripts with role, state, owner, target, and load kind; the default
 release gate selects 43 of the 119 runnable paths and the complete inventory is
-available with `-TestGroup all`. Focused checks pass for active-run snapshot recovery, generated
-R6+ risk/reward layouts, the expanded elemental-binding route set, generated
-scene construction, authored doorway behavior, and the typed room-transition
+available with `-TestGroup all`. Focused checks pass for active-run snapshot recovery,
+R6+ risk/reward layouts, compact generated-layout bounds, the compatibility-named
+R7 route check, the expanded elemental-binding route set, generated scene
+construction, authored doorway behavior, and the typed room-transition
 boundary. Manual enemy-placement,
 reward, minimap, save/load, touch, and full player-journey verification remain
 open; the historical failures below are not silently reclassified by these

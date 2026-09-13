@@ -80,7 +80,7 @@ script,role,state,owner,target,load,notes
 "name_entry_scene_smoke","owner","unverified","hub & menus","name entry scene","main",""
 "orb_interaction_scene_smoke","owner","unverified","chroma & elements","orb interaction and puzzle colors","main",""
 "popcorn_respawn_smoke","owner","unverified","slime enemies","popcorn respawn behavior","fixture",""
-"r7_native_generator_smoke","owner","open","generated layouts","R7 native generator bounds","pure","reported out-of-bounds rooms"
+"r7_native_generator_smoke","owner","verified","generated layouts","R6+ generated compact bounds and route contract","pure","2026-09-13 focused evidence; compatibility filename retained"
 "resource_drop_motion_smoke","owner","verified","room progression","resource drop motion","fixture","passes; engine reports resources-in-use at exit"
 "rogue_slime_smoke","owner","unverified","slime enemies","rogue slime stat allocation profiles","pure",""
 "run_label_progression_smoke","owner","unverified","dungeon topology","run label and depth progression","pure",""

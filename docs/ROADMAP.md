@@ -59,8 +59,9 @@ order:
    reachable enemy and player space in generated rooms; do not alter doorway
    collision without a reproduced gameplay defect.
 2. Keep the focused R6+ generation, doorway, and active-run snapshot checks
-   green. Run the remaining compact-bounds and enemy-placement checks, then
-   repair any runtime failures before expanding generated content.
+   green. Compact-bound checks are now green; run the remaining enemy-placement
+   and manual generated-room checks, then repair any runtime failures before
+   expanding generated content.
 3. Repair minimap draw order/discovery visibility and the starter-flame music
    gate; add a cold/warm timing measurement.
 4. Reconcile Demon Hub, equipment, and touch contracts against the authored

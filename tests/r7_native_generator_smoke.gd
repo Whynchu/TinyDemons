@@ -3,6 +3,8 @@ extends SceneTree
 const ROUTE_GENERATOR = preload("res://scripts/puzzle_route_generator.gd")
 const GRAPH = preload("res://scripts/dungeon_graph.gd")
 
+# Compatibility filename retained for the existing runner; this check exercises
+# the active R6+ generated route and its compact presentation bounds.
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -11,16 +13,16 @@ func _initialize() -> void:
 			var dungeon_seed := 1200000 + seed_value * 7919
 			var layout = ROUTE_GENERATOR.build(dungeon_seed, 6, starter)
 			var errors: Array[String] = ROUTE_GENERATOR.validate(layout, 6, starter)
-			_expect(errors.is_empty(), "R7 %s seed %d validates: %s" % [starter, dungeon_seed, "; ".join(errors)], failures)
-			_expect(layout != null and ROUTE_GENERATOR.is_risk_reward_layout(6), "R7 uses the R6+ risk/reward route owner", failures)
+			_expect(errors.is_empty(), "R6+ %s seed %d validates: %s" % [starter, dungeon_seed, "; ".join(errors)], failures)
+			_expect(layout != null and ROUTE_GENERATOR.is_risk_reward_layout(6), "R6+ uses the risk/reward route owner", failures)
 			if layout == null:
 				continue
-			_expect(_primary_flame_count(layout) == 3, "R7 %s seed %d guarantees all primary flames" % [starter, dungeon_seed], failures)
-			_expect(_vault_count(layout) >= 1 and _vault_count(layout) <= 2, "R7 %s seed %d has one or two optional vaults" % [starter, dungeon_seed], failures)
-			_expect(_critical_connections_are_ungated(layout), "R7 %s seed %d keeps critical connections ungated" % [starter, dungeon_seed], failures)
-			_expect(layout.safe_route_length > layout.risk_route_length + 1, "R7 %s seed %d has a materially shorter risk route" % [starter, dungeon_seed], failures)
+			_expect(_primary_flame_count(layout) == 3, "R6+ %s seed %d guarantees all primary flames" % [starter, dungeon_seed], failures)
+			_expect(_vault_count(layout) >= 1 and _vault_count(layout) <= 2, "R6+ %s seed %d has one or two optional vaults" % [starter, dungeon_seed], failures)
+			_expect(_critical_connections_are_ungated(layout), "R6+ %s seed %d keeps critical connections ungated" % [starter, dungeon_seed], failures)
+			_expect(layout.safe_route_length > layout.risk_route_length + 1, "R6+ %s seed %d has a materially shorter risk route" % [starter, dungeon_seed], failures)
 			var repeat = ROUTE_GENERATOR.build(dungeon_seed, 6, starter)
-			_expect(_layout_signature(layout) == _layout_signature(repeat), "R7 %s seed %d is deterministic" % [starter, dungeon_seed], failures)
+			_expect(_layout_signature(layout) == _layout_signature(repeat), "R6+ %s seed %d is deterministic" % [starter, dungeon_seed], failures)
 	if failures.is_empty():
 		print("R6_PLUS_GENERATOR_SMOKE_OK")
 		quit(0)
