@@ -147,9 +147,8 @@ or raced the cursor motion):
   slot-description check expected a bonus strip for zero-power plain gear, and
   the Shop check expected the legacy list cursor instead of the modern
   `ShopMenuLayout` cursor layer. All corrected; the test passes.
-- `demon_hub_menu_scene_smoke` and `pause_menu_scene_smoke` were verified
-  pre-existing on the baseline and remain open; the menu/hub/shop presentation
-  work is tracked separately.
+- `pause_menu_scene_smoke` was verified pre-existing on the baseline and remains
+  open; the focused Demon Hub/Shop contract is reconciled below.
 
 ### 2026-09-13 touch/cloud contract reconciliation
 
@@ -191,6 +190,22 @@ Detailed command output and target interpretation are tracked in
 [`test-target-audit.md`](test-target-audit.md). This snapshot is evidence for
 triage, not a release gate.
 
+### 2026-09-13 Demon Hub/Shop contract reconciliation
+
+`demon_hub_menu_scene_smoke` now passes in an isolated Godot process. The
+focused contract covers the authored Hub shell, animated nested Shop cursors,
+responsive nested reflow, exact enhancement/random-roll sell variants, the
+quantity sale route, and pause overlay separation. The active cursor assertion
+now samples its bob range instead of requiring a single tween frame, while the
+outer Hub breadcrumb remains stable when only the nested Shop view is resized.
+
+The Shop amount route now hides the inactive `ShopBackButton` while the explicit
+SELL cancel control owns that state. The existing `equipment_menu_scene_smoke`
+was also rerun with a deterministic plain-starter fixture and save restoration;
+it passes without relying on whatever gear a previous local run left equipped.
+No new test file was added, and the web export path was not reopened because
+the existing local gate is already accepted for this pass.
+
 ## Player-facing findings still needing runtime evidence
 
 ### Doorway geometry — verified
@@ -205,8 +220,8 @@ participation, and normal open-entrance movement.
 
 | Area | Current state | Evidence still required |
 |---|---|---|
-| Demon Hub SELECT/BACK presentation | Source implementation exists; visual orientation check remains | Compare all hub routes at native and supported responsive layouts |
-| Shop functional sell variants | Functional grouping and exact instance selection logic exists | Sell same-name gear at different levels/rolls through the live transaction |
+| Demon Hub SELECT/BACK presentation | Focused Hub/Shop contract verified; visual orientation check remains | Compare all hub routes at native and supported responsive layouts |
+| Shop functional sell variants | Focused live transaction verified; performance timing remains | Measure open, row movement, sale, and post-sale refresh with representative inventory |
 | Shop sell performance | Cache/rebuild pass exists; no timing baseline | Measure open, row movement, sale, and post-sale refresh with representative inventory |
 | Fusion batch capacity | Next-rank cap and `xN/M` amount display exist | Confirm +0/+9/+10/Mythic +10 limits through the live Fusion transaction |
 | First flame-room music start | Music warmup/cache exists | Cold versus warm room pickup frame profile and audio-start check |

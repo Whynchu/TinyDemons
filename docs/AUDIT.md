@@ -440,6 +440,13 @@ remain open. The headless runner now uses temporary user data, Dummy audio, and
 explicit log paths; full-suite, cold/warm audio timing, and manual device
 verification remain separate supervised work.
 
+The 2026-09-13 focused Demon Hub and Equipment scene checks also pass. The Hub
+check now has evidence for its animated nested Shop cursor contract, exact
+sell-variant transaction, and pause separation; the Equipment check uses a
+deterministic starter fixture and restores the saved profile after its live
+mutations. Visual orientation comparison, touch swipes, and Shop performance
+timing remain separate acceptance work.
+
 The target test structure should contain:
 
 1. fast pure/domain checks in a shared process;

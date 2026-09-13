@@ -89,7 +89,7 @@ and changing orientation. SHOP and FUSION retain their current appearance.
 Add a scene/layout characterization check where practical and perform a visual
 playtest at the supported display orientations.
 
-Status: **Source path exists — focused Hub contract currently failing; visual orientation verification pending**
+Status: **Focused Hub contract verified; visual orientation verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -105,9 +105,12 @@ Status: **Source path exists — focused Hub contract currently failing; visual 
 - The Equipment presenter hides its dedicated navigation footer when mounted in
   the Hub, so the Hub's shared footer remains the only visible SELECT/BACK
   format. Pause retains the dedicated equipment footer.
+- `demon_hub_menu_scene_smoke` now passes in an isolated Godot process. It
+  covers the Hub shell, Shop cursor ownership/reflow, exact sell-variant
+  grouping, the quantity transaction route, and pause overlay separation.
 - Source characterization covers the Hub and equipment paths. A visual pass at
-  each supported orientation is still pending; the live check so far confirmed
-  the Hub root's shared footer.
+  each supported orientation is still pending; the focused check confirmed the
+  current animated cursor and nested breadcrumb contract.
 
 ## Issue 2 — Shop selling merges gear across levels
 
@@ -138,7 +141,7 @@ stable when possible, and the flow does not become slower as inventory size
 grows. Add focused characterization coverage for same-name gear at multiple
 levels, quality-only copies, and selling the final item in a row.
 
-Status: **Source path exists — functional grouping coverage added; runtime transaction verification pending**
+Status: **Focused transaction verified; performance timing baseline pending**
 
 ### Current code state (2026-09-12)
 
@@ -158,8 +161,10 @@ Status: **Source path exists — functional grouping coverage added; runtime tra
 - Sale removal uses the exact cached IDs and reselects the same exact variant
   after the inventory rebuild. `tests/demon_hub_menu_scene_smoke.gd` now covers
   same-name gear with different enhancement/random-roll identity and verifies
-  independent quantities. `tests/fusion_candidate_cache_smoke.gd` adds
-  quality-only grouping coverage.
+  independent quantities in the live sell route. The fixture uses unique IDs and
+  restores the saved profile after the transaction so repeated focused runs do
+  not collide with or leak inventory. `tests/fusion_candidate_cache_smoke.gd`
+  adds quality-only grouping coverage.
 
 ## Issue 3 — Shop sell flow feels unusually slow and lags between items
 
