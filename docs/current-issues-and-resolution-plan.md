@@ -211,6 +211,11 @@ next rarity; Mythic `+10` has no fusion capacity. Feed that cap into material
 count, left/right amount changes, and the transaction validation. Show the
 selected amount and cap together in the amount footer.
 
+The material must match the target's current rarity. Therefore a Rare target
+never accepts a Common material, while a Common `+10` target may use a Common
+material for the valid promotion to Rare `+0`; the result's new rarity does not
+change the material's eligibility for that transaction.
+
 **Acceptance criteria:** A target at `+0` exposes at most 10 materials, a
 target at `+9` exposes at most 1, a non-Mythic `+10` target exposes at most 1
 promotion material, and Mythic `+10` exposes none. The amount UI shows the
@@ -573,8 +578,11 @@ The historical 2026-09-12 editor scan completed with exit code 0 and reported
 no script parse, type-inference, or failed-load errors. The focused
 `fusion_candidate_cache_smoke.gd` and `gear_system_rework_smoke.gd` processes
 were also attempted, but this local Godot 4.7.1 environment crashed with a
-native signal 11 before either script produced assertions. Those runtime
-checks remain open rather than being treated as product failures.
+native signal 11 before either script produced assertions. That is historical
+environment evidence: the 2026-09-13 isolated run of
+`fusion_candidate_cache_smoke.gd` completed successfully and now records the
+same-rarity fusion boundary. `gear_system_rework_smoke.gd` remains open for its
+separate gameplay assertions.
 
 The 2026-09-09 source/MCP verification is historical evidence for the initial
 implementation pass. The 2026-09-11 baseline had no editor peer or runtime

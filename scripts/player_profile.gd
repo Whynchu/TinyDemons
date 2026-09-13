@@ -506,6 +506,9 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 func _is_fusion_match(target: ItemInstance, candidate: ItemInstance) -> bool:
 	if target == null or candidate == null:
 		return false
+	# Rarity is a hard boundary: a material must match the target's current
+	# rarity. A same-rarity material may still promote a fully enhanced target
+	# to the next rarity; that promotion is not a cross-rarity match.
 	# Random `+` points are an independent drop package, not fusion identity. A
 	# plain target can consume a plussed copy and keeps its own package; the
 	# material's random allocation is intentionally discarded with the material.

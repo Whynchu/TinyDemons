@@ -61,7 +61,7 @@ script,role,state,owner,target,load,notes
 "elite_slime_overhead_smoke","owner","unverified","HUD","elite slime overhead symbol","pure",""
 "enemy_room_entrance_scene_smoke","owner","unverified","room progression","enemy room entrance socket and walkability","main",""
 "fire_exchange_smoke","owner","unverified","gear & fusion","fire exchange and chest flow","main",""
-"fusion_candidate_cache_smoke","owner","unverified","gear & fusion","fusion candidate cache","pure",""
+"fusion_candidate_cache_smoke","owner","verified","gear & fusion","fusion candidate cache and rarity boundary","pure","focused run 2026-09-13; same-rarity materials only"
 "fusion_menu_scene_smoke","owner","unverified","gear & fusion","fusion menu scene layout","fixture",""
 "fusion_tooltip_smoke","owner","unverified","gear & fusion","fusion/shop tooltip text contracts","pure",""
 "gear_catalogue_expansion_smoke","owner","open","gear & fusion","gear catalogue starter and expansion","pure","confirmed failing contract"
