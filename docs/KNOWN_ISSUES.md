@@ -75,12 +75,14 @@ at a time in isolated headless processes:
   reports four engine resources still in use at exit.
 - `touch_menu_scroll_smoke` fails its ghost-accept and stale-hold assertions;
   this is an `input & touch` product-area finding, not a harness stall.
-- `menu_route_scene_smoke` and `gear_system_rework_smoke` run to completion but
-  fail real assertions (game-over directional navigation; head/arm source drop
-  counts). These are `hub & menus` and `gear & fusion` findings respectively.
+- At that earlier stage, `menu_route_scene_smoke` and
+  `gear_system_rework_smoke` ran to completion but failed real assertions
+  (game-over directional navigation; head/arm source drop counts). These were
+  `hub & menus` and `gear & fusion` findings respectively.
 
-Result states are recorded in `tests/manifest.csv` (state `open` for the three
-assertion failures, `verified` for the five passing checks).
+At that point, result states were recorded in `tests/manifest.csv` (state
+`open` for the three assertion failures, `verified` for the five passing
+checks).
 
 ### 2026-09-13 contract decisions and resolutions
 
@@ -207,6 +209,10 @@ it passes without relying on whatever gear a previous local run left equipped.
 its Pause Equipment touch route.
 `player_hud_scene_smoke` also passes after its two ability-prompt paths were
 aligned with the authored cooldown-icon hierarchy.
+`gear_catalogue_expansion_smoke` and `gear_drop_policy_smoke` pass their
+six-slot catalogue, Plain starter, deterministic drop, shop coverage, premium
+plus, pricing, and anti-repeat contracts. The earlier open labels were stale
+audit metadata; no gear source change was needed in this slice.
 No new test file was added, and the web export path was not reopened because
 the existing local gate is already accepted for this pass.
 
