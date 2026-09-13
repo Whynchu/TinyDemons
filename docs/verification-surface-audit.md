@@ -10,7 +10,7 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 Owner: verification infrastructure and repository maintainability
 
 Current code: the runner derives grouping from `tests/manifest.csv`. The
-manifest classifies all 124 test/report scripts with a role, state, owner,
+manifest classifies all 121 test/report scripts with a role, state, owner,
 target, and load kind. Its default release gate selects 43 paths; `owner`,
 `reference`, `diagnostic`, and `all` groups keep the remaining evidence
 available without making every check a default blocker. The two `report`
@@ -79,10 +79,10 @@ can be separated into product, harness, and environment causes:
 | Command | Current scope | Use |
 |---|---:|---|
 | default / `-TestGroup gate` | 43 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
-| `-TestGroup owner` | 68 Godot paths | Focused feature-owner regressions |
+| `-TestGroup owner` | 65 Godot paths | Focused feature-owner regressions |
 | `-TestGroup reference` | 10 Godot paths | Opt-in authored/visual/reference checks |
 | `-TestGroup diagnostic` | 1 Godot path | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 122 runnable Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup all` | 119 runnable Godot paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its
@@ -99,7 +99,6 @@ full suite is clean.
 | Doorway, typed room transition, generated route, boss geometry, slime roster, gear/fusion, cloud typing, and minimap fixes already checked in the focused pass | `role:owner` + `state:verified` | These are useful narrow contracts after the recent reconciliation | Keep the smallest owner-level checks and record named evidence |
 | `settings_service_smoke`, `settings_panel_scene_smoke` | `role:owner` + `state:environment` | The restricted run could not write `user://`; this is not product evidence | Re-run elevated, then decide whether the fixture needs an isolated settings path |
 | `web_export_smoke` | `role:gate` + `state:environment` | Web is a supported target; the restricted run could not create export output | Verify from a supported standalone environment before changing export code |
-| `backtrack_popcorn_smoke` | `role:owner` candidate + `state:stale` candidate | Current source intentionally keeps respawn tied to original popcorn slots and does not inject a new revisit slot | Make the gameplay decision, then update or retire the old expectation |
 | `touch_controls_smoke` | `role:owner` + `state:harness`/`state:open` | It contains a signal-argument mismatch and several expectations that may describe different menu policies | Split the test by input boundary before changing gameplay code |
 | `puzzle_map_grid_smoke` and related reference checks | `role:reference` + `state:unverified`/`state:harness` | Reference fidelity and duplicate resource IDs are separate from runtime behavior | Resolve canonical assets/UIDs, then keep visual checks opt-in |
 | Palette, projectile/imbue, audio, display/pause, soul/spin, stat/menu, locomotion, drop, gear, and HUD checks from the broad failure list | `role:owner` candidates + `state:unverified` | The broad run identified work areas but did not establish which assertions are current contracts | Triage one owner at a time; do not bulk-edit expectations |
@@ -109,6 +108,16 @@ The focused pass also demonstrated why this classification matters: boss,
 generated-layout, slime, and doorway failures were a mixture of real owner
 defects and expectations written for an earlier contract. A red result alone
 did not identify which kind it was.
+
+## 2026-09-13 pruning slice
+
+The stale `backtrack_popcorn_smoke` check was removed after the source contract
+made `_maybe_add_backtrack_popcorn()` an intentional no-op. The three nearly
+identical R3/R4/R5 authored-layout wrappers were consolidated into the
+table-driven `authored_layouts_smoke` check. Its cases retain the individual
+layout identity, validation, runtime-selection, and room-count assertions while
+starting one Godot process instead of three. The default gate remains 43 paths
+and still includes the web export because web is a supported target.
 
 ## 2026-09-13 focused triage outcome
 
@@ -134,7 +143,7 @@ in `tests/manifest.csv`:
    consolidate an existing check, or protect a newly agreed public contract.
 2. Inventory every registered and unregistered test/report script. Record its
    role, state, owner, target, evidence command, and whether it loads the main
-   scene or a lightweight fixture. **Done for the current inventory:** all 124
+   scene or a lightweight fixture. **Done for the current inventory:** all 121
    scripts are classified in `tests/manifest.csv`; the runner derives grouping
    from that file.
 3. Maintain the curated `role:gate` set. It covers headless boot, core room

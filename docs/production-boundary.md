@@ -100,10 +100,13 @@ Result: completed with warnings.
 Warnings:
 
 - duplicate UID between `scripts/puzzle_map_r5.gd` and `scripts/puzzle_map_r4.gd`;
-- duplicate UID between `tests/r5_authored_layout_smoke.gd` and `tests/r4_authored_layout_smoke.gd`.
+- historical duplicate UID warning between the former R4/R5 authored-layout
+  test wrappers; those wrappers are now consolidated into
+  `tests/authored_layouts_smoke.gd`.
 
-These are Phase 0 findings. Do not repair them as part of repository cleanup
-until the R4/R5 worktree changes and intended ownership are understood.
+The remaining puzzle-script warning is a Phase 0 finding. Do not repair it as
+part of repository cleanup until the R4/R5 worktree changes and intended
+ownership are understood.
 
 ### Focused smoke test
 
