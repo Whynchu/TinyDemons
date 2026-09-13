@@ -26,6 +26,7 @@ const DOOR_CLEARANCE: float = 2.0
 const FLOOR_CLEARANCE: int = 2
 const WALL_EDGE_BUFFER: float = 2.0
 const MIN_SWAPPABLE_GROUP_SIZE: int = 2
+const MAX_SAFE_ANCHOR_MAPS: int = 8
 const RIGHT_OUTER_WALL_STONE_ID: StringName = &"WallStone_05_right"
 
 ## These are the authored wall lanes, inset from the demonstrated room edges.
@@ -657,27 +658,36 @@ func _anchor_positions_for_room(
 			return {}
 		group_ids_by_key.append(group_ids)
 		permutation_options.append(_derangement_permutations(group_ids, group_key, room_id, room_type))
-	return _find_safe_anchor_map(placement_ids, group_ids_by_key, permutation_options, 0, result, room_id, room_type)
+	var safe_maps: Array[Dictionary] = []
+	_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, 0, result, room_id, room_type, safe_maps)
+	if safe_maps.is_empty():
+		return {}
+	var map_rng := RandomNumberGenerator.new()
+	map_rng.seed = int(dungeon_seed) ^ String(room_id).hash() ^ String(room_type).hash() ^ ANCHOR_SWAP_SALT ^ (active_layout_variant * LAYOUT_VARIATION_SALT)
+	return safe_maps[map_rng.randi_range(0, safe_maps.size() - 1)]
 
 
-func _find_safe_anchor_map(
+func _collect_safe_anchor_maps(
 	placement_ids: Array[StringName],
 	group_ids_by_key: Array, permutation_options: Array, group_index: int,
-	anchor_positions: Dictionary, room_id: StringName, room_type: StringName,
-) -> Dictionary:
+	anchor_positions: Dictionary, room_id: StringName, room_type: StringName, output: Array[Dictionary],
+) -> void:
+	if output.size() >= MAX_SAFE_ANCHOR_MAPS:
+		return
 	if group_index >= group_ids_by_key.size():
-		return anchor_positions if _anchor_map_is_safe(placement_ids, anchor_positions, room_id, room_type) else {}
+		if _anchor_map_is_safe(placement_ids, anchor_positions, room_id, room_type):
+			output.append(anchor_positions)
+		return
 	var group_ids := group_ids_by_key[group_index] as Array
 	for permutation_value in permutation_options[group_index] as Array:
+		if output.size() >= MAX_SAFE_ANCHOR_MAPS:
+			return
 		var permutation := permutation_value as Array
 		var candidate_anchors := anchor_positions.duplicate(true)
 		for index in group_ids.size():
 			var destination := _placement_for_id(permutation[index] as StringName)
 			candidate_anchors[group_ids[index]] = destination["position"]
-		var safe_map := _find_safe_anchor_map(placement_ids, group_ids_by_key, permutation_options, group_index + 1, candidate_anchors, room_id, room_type)
-		if not safe_map.is_empty():
-			return safe_map
-	return {}
+		_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, group_index + 1, candidate_anchors, room_id, room_type, output)
 
 
 func _derangement_permutations(group_ids: Array, group_key: String, room_id: StringName, room_type: StringName) -> Array:
