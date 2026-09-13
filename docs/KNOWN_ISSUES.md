@@ -54,11 +54,12 @@ The active-run snapshot fixture and the R6+ generator were corrected during the
 `wall_socket_geometry_smoke`, and the new `room_transition_result_smoke`.
 Those results do not replace the unresolved contracts listed above.
 
-The compatibility-named `r7_native_generator_smoke` and neighboring
-`generated_layout_smoke` checks were also rerun in isolated headless processes.
-Both pass: the active R6+ route stays inside the declared compact 35x35 map,
-preserves its logical-edge projection, and remains deterministic across the
-sampled starter-flame and seed cases. No new test path was added.
+The compatibility-named `r7_native_generator_smoke`, neighboring
+`generated_layout_smoke`, and bound-reachability checks were also rerun in
+isolated headless processes. They pass: the active R6+ route stays inside the
+declared compact 35x35 map, preserves its logical-edge projection, remains
+deterministic across the sampled starter-flame and seed cases, and keeps the
+required bound/recovery gates reachable. No new test path was added.
 
 ### 2026-09-13 focused triage of the newly registered and previously stalled checks
 
@@ -219,13 +220,17 @@ participation, and normal open-entrance movement.
 The source-level status for each item is maintained in the detailed issue
 tracker. Update both documents when a focused check changes the status.
 
-### Newly reported R6+ playtest blocker
+### 2026-09-13 generated-room spawn verification
 
-Late generated rooms could retain an active slime outside the visible playable
-area. The slime remained able to attack and counted against encounter
-completion. Runtime sanitation now validates active slime positions before each
-combat update and uses the existing recovery/deactivation path. This requires
-focused R6+ playtest verification before being marked verified.
+The focused `generated_bound_reachability_smoke`, `generated_layout_smoke`,
+`generated_run_scene_smoke`, and `enemy_room_entrance_scene_smoke` checks pass
+in isolated Godot processes. The route invariants, generated scene entry,
+enemy-slot spawning, spawn walkability, and engagement-door behavior all pass;
+the room controller's spawn solver continues to validate collision geometry
+against the active walkable area. No generated-room spawn defect reproduced in
+the focused headless paths. A manual late-generated-room playtest remains open
+because those checks do not replace visual/gameplay verification of every late
+R6+/R7 encounter.
 
 ### R6+ risk/reward generation implementation status
 
@@ -235,10 +240,11 @@ optional elemental Orb vaults. Dangerous shortcut rooms receive a stronger
 encounter profile and risk reward tier; vault rooms receive an elite profile and
 guaranteed enhanced gear through the existing chest item generator. New route
 metadata is carried through layout, graph, room state, minimap plans, and active
-run room-state snapshots. The focused generator, elemental-binding, and scene
-tests pass in isolated Godot processes; the 2026-09-13 R7 playthrough accepted
-the minimap landmark visibility behavior. Manual enemy-placement, reward,
-save/load, touch, and flame-travel checks remain outstanding.
+run room-state snapshots. The focused generator, elemental-binding, generated
+scene, and enemy spawn/walkability checks pass in isolated Godot processes; the
+2026-09-13 R7 playthrough accepted the minimap landmark visibility behavior.
+Manual late-generated-room placement, reward, save/load, touch, and
+flame-travel checks remain outstanding.
 
 ### 2026-09-13 minimap landmark visibility reconciliation
 

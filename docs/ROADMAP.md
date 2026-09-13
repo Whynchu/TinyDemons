@@ -59,9 +59,9 @@ order:
    reachable enemy and player space in generated rooms; do not alter doorway
    collision without a reproduced gameplay defect.
 2. Keep the focused R6+ generation, doorway, and active-run snapshot checks
-   green. Compact-bound checks are now green; run the remaining enemy-placement
-   and manual generated-room checks, then repair any runtime failures before
-   expanding generated content.
+   green. Compact-bound, bound-reachability, and focused enemy spawn/walkability
+   checks are now green; complete the remaining manual late-room checks, then
+   repair any runtime failures before expanding generated content.
 3. Preserve the accepted minimap landmark/discovery behavior and keep the
    starter-flame music gate green; finish flame-travel save/recovery evidence,
    add its SFX/transition presentation, and capture cold/warm timing.
