@@ -214,8 +214,10 @@ request and deploys only from `main`.
   - `-s res://tests/run_grade_smoke.gd` -> `RUN_GRADE_SMOKE_OK`
   - `-s res://tests/progression_smoke.gd` -> `PROGRESSION_SMOKE_OK`
   - `-s res://tests/item_economy_smoke.gd` -> `ITEM_ECONOMY_SMOKE_OK`
-- One-shot runner (all three + main-scene headless check):
+- Curated release gate (including web export and main-scene headless checks):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
+- Complete registered inventory, for supervised triage only:
+  `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all`
 - Smoke tests use a watchdog: if any assertion fails mid-script the process
   aborts with a `TEST_ABORTED` error and exit code 1 instead of hanging.
 - Post-overhaul expectations: player base 3/2/2 (archetypes sum to 7), gear

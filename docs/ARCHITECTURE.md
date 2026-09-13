@@ -221,9 +221,11 @@ through the same router boundary.
 - **Run the full smoke suite only as a supervised standalone check** (with no
   MCP Godot runtime active):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
-  The runner starts one Godot process per registered test (currently 114),
-  so a headless renderer crash can multiply into Windows memory-error dialogs.
-  Start with one focused test and stop the runner at the first repeating crash.
+  The default command runs the curated 43-path release gate, including web
+  export and main-scene checks. Use `-TestGroup all` to run the complete 116-
+  path inventory. A headless renderer crash can multiply into Windows
+  memory-error dialogs. Start with one focused test and stop the runner at the
+  first repeating crash.
 - **Keep source art out of the import path.** Loose images in `Artwork/`,
   `Mockups/`, and `screenshots/` are `.gdignore`-marked; only `assets/` is
   imported.
