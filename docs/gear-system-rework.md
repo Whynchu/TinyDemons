@@ -143,6 +143,14 @@ consumed with the material. The plus marker describes the target drop's random
 point count and does not change when the item is fused. The detail panel shows
 the current numeric values.
 
+Equipment and Shop rows use a separate functional stack identity: definition,
+rarity, affixes, random allocation, transmutation, enhancement, and current
+fusion stat investment. Copies with that same identity collapse into one row;
+different visible stats or enhancement state remain separate. Quality and
+fusion history stay on each saved instance for economic calculations, but do
+not split an otherwise identical row. Shop transactions retain the concrete
+instance IDs behind a row.
+
 ## Removed complexity
 
 The rework does not add or preserve new gear behavior for:

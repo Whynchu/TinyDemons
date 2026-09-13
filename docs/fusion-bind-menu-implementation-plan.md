@@ -16,8 +16,9 @@ is recorded in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 - Removed the duplicate hub-shell Fusion footer layer; the Shop-derived Fusion
   footer is now the sole visible footer on that route.
-- Grouped matching Fusion candidates by definition and rarity, while separating
-  displayed unequipped ownership from usable material capacity.
+- Grouped matching Fusion target rows by functional inventory identity, while
+  preserving the definition/rarity material rule and separating displayed
+  unequipped ownership from usable material capacity.
 - Expanded the authored Shop row capacity to 11 and reflowed Fusion panels,
   clipping, and stat rows upward into the removed mode-strip space.
 - Added duplicate-copy regression coverage and revalidated the changed scripts.
@@ -73,6 +74,20 @@ is recorded in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
   controller selects the dedicated Fusion presenter, renders its owned/currency
   nodes, suppresses the legacy detail presenter, and remains authoritative
   after visiting Shop. Script diagnostics pass.
+
+## Inventory identity and rank-cap correction — 2026-09-12
+
+- Equipment and Shop now use the same functional inventory key. Exact copies
+  collapse to one row, while rarity, random stat allocation, affixes,
+  transmutation, enhancement, and fusion stat investment keep separate rows.
+  Economic quality and fusion history remain on each saved instance and do not
+  split a functional row.
+- Shop rows retain exact member instance IDs. The amount state totals those IDs
+  before sale, keeping quality-dependent gold and Soul payouts accurate inside
+  a grouped row.
+- Fusion material capacity now stops at the next `+10` or rarity boundary.
+  The amount footer shows the selected count and cap together; the transaction
+  applies the same cap when called directly.
 - Live interaction checkpoint: MCP click-through on the authored plus control
   changed the amount from `2` to `3`, recomputed the selected row cost, and
   disabled the control at the maximum. Browse and amount presentation gates

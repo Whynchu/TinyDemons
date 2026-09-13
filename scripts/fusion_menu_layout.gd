@@ -53,6 +53,11 @@ func render_fusion(model: FusionMenuModel) -> void:
 	render_shop(FUSION_TARGET if model.state != 2 else FUSION_AMOUNT, true, model.selected_row, labels, colors, prices, soul_values, slots, model.stat_comparison, model.owned_count, model.fusion_count, model.fusion_count_max, _pixel_texture, model.scroll_fraction)
 	_hide_shop_mode()
 	_apply_fusion_geometry()
+	if model.state == FUSION_AMOUNT:
+		# The shared amount footer already has the x glyph. Use its value cell for
+		# the selected amount and the hard cap for this rank, so the player can see
+		# that Fusion stops at the next +10/rarity boundary.
+		_set_text(get_node_or_null("SellQuantityValue") as Sprite2D, "%d/%d" % [model.fusion_count, model.fusion_count_max], STAT_TEXT_COLOR)
 	_set_text(get_node_or_null("FooterSelectText") as Sprite2D, "SELECT" if model.state == 0 or not model.item_selected else "FUSE", PROMPT_TEXT_COLOR)
 	_set_text(get_node_or_null("FooterBackText") as Sprite2D, "BACK", PROMPT_TEXT_COLOR)
 	for path in ["SellConfirmGlyph", "SellConfirmText", "SellCancelGlyph", "SellCancelText"]:

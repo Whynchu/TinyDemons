@@ -729,6 +729,8 @@ func _hub_shop_sellable_items() -> Array[ItemInstance]:
 	return hub_flow_controller.call("shop_sellable_items", self) as Array[ItemInstance]
 func _hub_shop_owned_matching_count(item: ItemInstance) -> int:
 	return int(hub_flow_controller.call("shop_owned_matching_count", self, item))
+func _hub_shop_batch_value(item: ItemInstance, quantity: int) -> Dictionary:
+	return hub_flow_controller.call("shop_batch_value", self, item, quantity) as Dictionary
 func _shop_mode_pressed(mode_index: int) -> void:
 	hub_flow_controller.call("shop_mode_pressed", self, mode_index)
 func _shop_amount_changed(direction: int) -> void:

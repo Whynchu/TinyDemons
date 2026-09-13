@@ -99,9 +99,11 @@ Shop is the reference for a data-heavy scrollable transaction menu.
   after either choice it returns to SELECT/BACK. The item cursor is hidden until
   the item list owns focus, while the dimmed selected-item cursor remains when
   appropriate.
-- Duplicate identical sellable gear is grouped through an item signature, while
-  items with different stats remain separate. `OWNED` is calculated from the
-  same signature instead of from the number of rendered rows.
+- Duplicate functional sellable gear is grouped through the shared inventory
+  signature, while items with different stats or enhancement state remain
+  separate. `OWNED` is calculated from the same signature instead of from the
+  number of rendered rows. Economic quality stays on each concrete instance,
+  so the amount state totals the IDs that the sale will consume.
 - All responsive sprites and hit buttons retain native metadata. Reflow maps
   those coordinates to the current logical width without changing pixel-art
   scale or vertical row pitch.
@@ -158,8 +160,9 @@ structure and contains:
   level suffixes;
 - a fixed right comparison/stat panel;
 - inline per-row Soul costs using Shop's amount-plus-icon currency lane;
-- `OWNED: x` in the browsing footer, replaced by `FUSE?  -  x  +` in amount
-  state using Shop's existing footer anchors and 5x5 minus/plus artwork;
+- `OWNED: x` in the browsing footer, replaced by `FUSE?  -  xN/M  +` in amount
+  state using Shop's existing footer anchors and 5x5 minus/plus artwork, where
+  `M` is the maximum material count for the next gear rank;
 - a fixed action/footer region for FUSE and BACK;
 - a distinct overflow/salvage state without changing the surrounding frame;
 - one cursor per depth: target list, quantity, and action/confirmation.
