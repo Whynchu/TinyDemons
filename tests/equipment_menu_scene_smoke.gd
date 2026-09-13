@@ -17,9 +17,19 @@ func _initialize() -> void:
 		await process_frame
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var profile := gameplay.get("player_profile") as PlayerProfile
+	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
 	_expect(screens != null and profile != null, "equipment menu owners are composed", failures)
 	if screens != null and profile != null:
-		profile.ensure_starter_items()
+		# This scene test changes equipment and currency through the live route. Use
+		# a deterministic starter loadout so a prior local run cannot change which
+		# description/bonus contract is being sampled.
+		var starter_catalog := ItemCatalog.new()
+		profile.ensure_starter_items(starter_catalog)
+		for slot: StringName in ItemCatalog.SLOTS:
+			var starter := starter_catalog.starter_item(slot)
+			profile.equipped_instance_ids[String(slot)] = starter.instance_id
+		profile.equipped_instance_ids["armor"] = profile.equipped_instance_ids.get("body", "")
+		gameplay.call("_apply_profile_to_runtime")
 		gameplay.call("_show_hub", true, false)
 		await process_frame
 		# Equipment is now a Pause-only route; exercise the shared Hub presenter
@@ -176,6 +186,11 @@ func _initialize() -> void:
 		# legacy hub list/slot/choice cursor layer is intentionally cleared on
 		# every render (see _reset_hub_cursor_layer).
 		_expect(not screens.hub_list_cursor.visible and not screens.hub_slot_cursor.visible and not screens.hub_choice_cursor.visible and screens.hub_shop_menu != null and screens.hub_shop_menu.visible, "Shop receives a clean modern list cursor layer after Equipment", failures)
+	if profile != null and not original_profile.is_empty():
+		# Restore the developer's save after the live equipment transactions so a
+		# focused scene run is repeatable and cannot leak its fixture state.
+		profile.load_dictionary(original_profile)
+		ProfileSaveService.save_profile(profile)
 	gameplay.queue_free()
 	await process_frame
 	_finished = true

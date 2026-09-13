@@ -643,7 +643,7 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 	var item_action := get_node_or_null("ItemActionButton") as Button
 	_set_button_active(item_action, not _root_preview_mode and state == ITEM_BROWSE and visible_item_count > 0, true)
 	var shop_back := get_node_or_null("ShopBackButton") as Button
-	_set_button_active(shop_back, state != SELL_AMOUNT, true)
+	_set_button_active(shop_back, state != SELL_AMOUNT, state != SELL_AMOUNT)
 
 	for path in ["SellQuestionText", "SellSubtractIcon", "SellQuantityX", "SellQuantityValue", "SellAddIcon", "SellConfirmGlyph", "SellConfirmText", "SellCancelGlyph", "SellCancelText"]:
 		var node := get_node_or_null(path) as CanvasItem

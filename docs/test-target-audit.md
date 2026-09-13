@@ -213,6 +213,13 @@ warnings. They appeared in direct runs and were not counted as test failures.
   and charge cues, resolves to an editor-adjustable profile entry.
 - `sound_balance_smoke`: pass. Canonical audio keys and source/compact clip
   paths resolve for the balance owner.
+- `demon_hub_menu_scene_smoke`: pass. The focused scene route confirms the
+  authored Hub shell, animated/reflowing Shop cursor ownership, exact sell
+  variants, quantity transaction, and pause separation. Its fixture uses unique
+  IDs and restores the saved profile after exercising the live route.
+- `equipment_menu_scene_smoke`: pass. The existing scene contract now supplies
+  a deterministic plain-starter loadout and restores the saved profile after
+  its live equipment transactions.
 
 These are updates to the historical baseline above; no new test paths were added.
 

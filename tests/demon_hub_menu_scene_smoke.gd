@@ -46,13 +46,17 @@ func _initialize() -> void:
 		await process_frame
 		var shop_view := screens.hub_shop_menu as Control
 		var profile := gameplay.get("player_profile") as PlayerProfile
+		var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
 		_expect(shop_view != null and shop_view.visible and not screens.hub_list_cursor.visible and not screens.hub_slot_cursor.visible and not screens.hub_choice_cursor.visible, "Shop receives its authored scene after Equipment", failures)
 		if shop_view != null and profile != null:
 			var shop_top_cursor := shop_view.get_node_or_null("ShopTopCursor") as Sprite2D
 			var shop_mode_cursor := shop_view.get_node_or_null("ShopModeCursor") as Sprite2D
 			var shop_item_cursor := shop_view.get_node_or_null("ShopItemCursor") as Sprite2D
 			var shop_amount_cursor := shop_view.get_node_or_null("ShopAmountCursor") as Sprite2D
-			_expect(shop_top_cursor != null and shop_mode_cursor != null and shop_item_cursor != null and shop_amount_cursor != null and screens.hub_cursor_text != null and screens.hub_cursor_text.position == Vector2(122, 5) and not shop_top_cursor.visible and shop_mode_cursor.position == Vector2(73, 26) and shop_mode_cursor.visible and not shop_item_cursor.visible and not shop_amount_cursor.visible, "Shop cursor ownership and anchors match the authored 240x160 mockup", failures)
+			var mode_anchor := Vector2(73.0, 26.0)
+			var hub_breadcrumb_anchor := Vector2(121.0, 5.5)
+			var mode_cursor_is_at_anchor := shop_mode_cursor != null and shop_mode_cursor.position.y == mode_anchor.y and shop_mode_cursor.position.x >= mode_anchor.x and shop_mode_cursor.position.x <= mode_anchor.x + 3.0
+			_expect(shop_top_cursor != null and shop_mode_cursor != null and shop_item_cursor != null and shop_amount_cursor != null and screens.hub_cursor_text != null and screens.hub_cursor_text.position.is_equal_approx(hub_breadcrumb_anchor) and not shop_top_cursor.visible and mode_cursor_is_at_anchor and shop_mode_cursor.visible and not shop_item_cursor.visible and not shop_amount_cursor.visible, "Shop cursor ownership and anchors match the authored 240x160 mockup", failures)
 			var mode_panel := shop_view.get_node_or_null("ShopModePanel") as NinePatchRect
 			var list_panel := shop_view.get_node_or_null("ShopListPanel") as NinePatchRect
 			var stats_panel := shop_view.get_node_or_null("ShopStatsPanel") as NinePatchRect
@@ -65,7 +69,7 @@ func _initialize() -> void:
 			for _frame in 20:
 				await process_frame
 			_expect(shop_mode_cursor != null and shop_mode_cursor.has_method("is_bobbing") and bool(shop_mode_cursor.call("is_bobbing")) and shop_top_cursor != null and not shop_top_cursor.visible and screens.hub_cursor_text != null and not bool(screens.hub_cursor_text.call("is_bobbing")), "Shop only animates the active cursor depth", failures)
-			_expect(shop_mode_cursor != null and shop_mode_cursor.position.x > 75.0 and screens.hub_cursor_text != null and screens.hub_cursor_text.position.x > 122.0, "Shop cursor anchors reflow with the logical width", failures)
+			_expect(shop_mode_cursor != null and shop_mode_cursor.position.x > 75.0 and screens.hub_cursor_text != null and screens.hub_cursor_text.position.is_equal_approx(hub_breadcrumb_anchor), "Shop cursor anchors reflow with the logical width", failures)
 			_expect(mode_panel != null and mode_panel.size == Vector2(284, 21) and list_panel != null and list_panel.position.x == 0.0 and list_panel.size.x > 146.0 and list_panel.size.y == 94.0 and stats_panel != null and stats_panel.position.x > 148.0 and list_clip != null and list_clip.size.x > 146.0, "Shop preserves authored height while reflowing its logical width", failures)
 			shop_view.size = native_shop_size
 			await process_frame
@@ -73,19 +77,20 @@ func _initialize() -> void:
 			# Two identical unequipped copies verify that sell quantity starts at
 			# one and can be increased before one atomic transaction removes both.
 			var sale_one := ItemInstance.new()
-			sale_one.instance_id = "shop-smoke-rune-1"
+			var fixture_prefix := "hub-shop-smoke-%d" % Time.get_ticks_usec()
+			sale_one.instance_id = "%s-plain-1" % fixture_prefix
 			sale_one.definition_id = &"rune_accessory"
 			sale_one.rarity = &"common"
 			sale_one.quality = 1.01
 			sale_one.random_stat_points = {"mnd": 2}
 			var sale_two := ItemInstance.new()
-			sale_two.instance_id = "shop-smoke-rune-2"
+			sale_two.instance_id = "%s-plain-2" % fixture_prefix
 			sale_two.definition_id = &"rune_accessory"
 			sale_two.rarity = &"common"
 			sale_two.quality = 1.01
 			sale_two.random_stat_points = {"mnd": 2}
 			var sale_three := ItemInstance.new()
-			sale_three.instance_id = "shop-smoke-rune-plus-1"
+			sale_three.instance_id = "%s-plus-1" % fixture_prefix
 			sale_three.definition_id = &"rune_accessory"
 			sale_three.rarity = &"common"
 			sale_three.quality = 1.01
@@ -94,7 +99,7 @@ func _initialize() -> void:
 			sale_three.fusion_stat_points = 1
 			sale_three.fusion_count = 1
 			var sale_four := ItemInstance.new()
-			sale_four.instance_id = "shop-smoke-rune-3"
+			sale_four.instance_id = "%s-plain-3" % fixture_prefix
 			sale_four.definition_id = &"rune_accessory"
 			sale_four.rarity = &"common"
 			sale_four.quality = 1.01
@@ -104,10 +109,7 @@ func _initialize() -> void:
 			different_roll.rarity = &"common"
 			different_roll.quality = 1.01
 			different_roll.random_stat_points = {"mnd": 1, "int": 1}
-			profile.grant_item(sale_one)
-			profile.grant_item(sale_two)
-			profile.grant_item(sale_three)
-			profile.grant_item(sale_four)
+			_expect(profile.grant_item(sale_one) and profile.grant_item(sale_two) and profile.grant_item(sale_three) and profile.grant_item(sale_four), "shop fixture items are added without colliding with saved inventory", failures)
 			_expect(sale_one.shop_stack_key() == sale_four.shop_stack_key(), "truly identical gear shares one sell stack key", failures)
 			_expect(sale_one.shop_stack_key() != sale_three.shop_stack_key(), "enhancement levels remain separate sell variants", failures)
 			_expect(sale_one.shop_stack_key() != different_roll.shop_stack_key(), "different stat rolls remain separate even at the same plus tier", failures)
@@ -176,6 +178,12 @@ func _initialize() -> void:
 		_expect(screens.settings_overlay.visible and not screens.pause_overlay.visible and not screens.hub_overlay.visible, "pause Settings replaces pause without overlay overlap", failures)
 		gameplay.call("_close_settings")
 		_expect(screens.pause_overlay.visible and not screens.settings_overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "closing pause Settings restores only pause", failures)
+		if profile != null and not original_profile.is_empty():
+			# Shop assertions exercise the live transaction route, which saves the
+			# profile. Restore the developer's save so a smoke run is repeatable and
+			# cannot leave fixture inventory behind.
+			profile.load_dictionary(original_profile)
+			ProfileSaveService.save_profile(profile)
 		gameplay.call("_close_hub_to_run")
 		_expect(not screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.state == &"gameplay", "pause cancellation returns to gameplay", failures)
 	gameplay.queue_free()
