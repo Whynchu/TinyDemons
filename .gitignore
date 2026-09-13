@@ -33,5 +33,10 @@ analysis/
 sfx analysis/
 assets/sounds/generated_ui/
 
+# Godot import artifacts for the test manifest (read by the runner directly,
+# not as a Godot translation resource)
+tests/manifest.csv.import
+tests/manifest.*.translation
+
 # Local cloud-service configuration (use the committed example as a template)
 config/supabase.local.cfg

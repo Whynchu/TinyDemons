@@ -163,7 +163,9 @@ in `tests/manifest.csv`:
   contract decision. (2026-09-13: three open findings were resolved with
   recorded decisions; the `six_stat_equipment_smoke` finding uncovered and fixed
   a real stat-ladder regression in `item_catalog.gd`, then its stale aggregate
-  expectations were corrected — see `KNOWN_ISSUES.md`.)
+  expectations were corrected. `six_stat_calculator_smoke` and
+  `equipment_menu_scene_smoke` were stale-test-only fixes for the documented
+  plain-starter and modern-presenter contracts — see `KNOWN_ISSUES.md`.)
 - [ ] Duplicate, implementation-detail, and superseded tests are removed or
   explicitly retained for migration history.
 - [x] The runner reports product failures separately from harness and

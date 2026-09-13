@@ -125,6 +125,25 @@ the gear stat ladder, not just a stale test:
 - `six_stat_equipment_smoke` aggregate expectations were also stale (equipment
   INT is 5.0, not 4.0); corrected and the test passes.
 
+### 2026-09-13 menu/equipment test fixes
+
+Two further pre-existing failures were stale test expectations, not product bugs
+(the product matches the documented contracts; the tests described older layouts
+or raced the cursor motion):
+
+- `six_stat_calculator_smoke` asserted the level-one starter deals 3–5 physical
+  damage, which assumed the old Basic starter gear. Plain starters are
+  intentionally zero-power (per the starter contract), so the benchmark is now
+  the base-stat 2.0 and the test asserts the 1–3 band.
+- `equipment_menu_scene_smoke` had four stale assertions: the cursor bob checks
+  sampled a single frame while the cursor was still in its short glide, the
+  slot-description check expected a bonus strip for zero-power plain gear, and
+  the Shop check expected the legacy list cursor instead of the modern
+  `ShopMenuLayout` cursor layer. All corrected; the test passes.
+- `demon_hub_menu_scene_smoke`, `touch_controls_smoke`, and
+  `pause_menu_scene_smoke` were verified pre-existing on the baseline and remain
+  open; the menu/hub/shop presentation work is tracked separately.
+
 A supervised full-run attempt on 2026-09-13 reached ordinary assertion
 failures without a native headless renderer crash. It was stopped at the
 broader R6+ seed failure, which the focused elemental-binding and R6+ checks

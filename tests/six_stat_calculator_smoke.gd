@@ -67,7 +67,10 @@ func _initialize() -> void:
 	var player_snapshot := CombatStatSnapshot.from_components(player_stats, starter_equipment)
 	var neutral_slime := _snapshot(2.0, 0.0, 2.0, 2.0, 0.0, 1.0)
 	var benchmark := CombatCalculator.calculate_request(physical, player_snapshot, neutral_slime, rng, tuning)
-	_expect(benchmark.amount >= 3.0 and benchmark.amount <= 5.0, "level-one starter physical damage lands in the 3-5 neutral-slime band", failures)
+	# Plain starters are intentionally zero-power, so a level-one starter's
+	# physical damage comes from the base 3/2/2 stats alone (STR 2 -> 2.0 against
+	# a neutral slime). The old 3-5 band assumed Basic starter gear with bonuses.
+	_expect(benchmark.amount >= 1.0 and benchmark.amount <= 3.0, "level-one starter with plain gear deals base-stat physical damage in the 1-3 band", failures)
 	var breakdown := player_snapshot.debug_breakdown(tuning)
 	_expect(breakdown.has_all(["VIT", "STR", "DEF", "AGI", "INT", "MND", "HP", "P.ATK", "P.DEF", "M.ATK", "M.DEF"]), "shared snapshot exposes the six-stat debug breakdown", failures)
 	_expect(player_snapshot.debug_summary(tuning).contains("INT") and player_snapshot.debug_summary(tuning).contains("M.DEF"), "debug summary includes canonical magical stat outputs", failures)
