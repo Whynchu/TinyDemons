@@ -213,6 +213,10 @@ aligned with the authored cooldown-icon hierarchy.
 six-slot catalogue, Plain starter, deterministic drop, shop coverage, premium
 plus, pricing, and anti-repeat contracts. The earlier open labels were stale
 audit metadata; no gear source change was needed in this slice.
+`fusion_tooltip_smoke` and `fusion_menu_scene_smoke` also pass the existing
+Hub/Fusion presenter, authored panel, clipped list, Soul footer, and touch
+signal contracts. The remaining Fusion evidence is the live next-rank
+transaction matrix, not a scene-construction failure.
 No new test file was added, and the web export path was not reopened because
 the existing local gate is already accepted for this pass.
 
