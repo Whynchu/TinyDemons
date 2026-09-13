@@ -21,6 +21,19 @@ func _initialize() -> void:
 	_expect(marker != null and marker.modulate.is_equal_approx(MINIMAP_SCRIPT.COLOR_MAP_UNVISITED), "Hub marker uses the dark inverse blink color", failures)
 	var image: Image = minimap.snapshot_image()
 	var origin: Vector2i = Vector2i.ZERO
+	var full_image: Image = minimap.snapshot_full_image()
+	var full_origin: Vector2i = minimap.get("full_map_origin") as Vector2i
+	var layout = map_controller.get("layout")
+	var boss_room = null
+	var flame_room = null
+	var ordinary_room = null
+	for room in layout.rooms:
+		if room.room_type == GRAPH_SCRIPT.ROOM_BOSS:
+			boss_room = room
+		elif not room.fire_flame.is_empty():
+			flame_room = room
+		elif room.room_type not in [GRAPH_SCRIPT.ROOM_START, GRAPH_SCRIPT.ROOM_DOWNSTAIRS, GRAPH_SCRIPT.ROOM_ORB, GRAPH_SCRIPT.ROOM_REST, GRAPH_SCRIPT.ROOM_FIRE] and ordinary_room == null:
+			ordinary_room = room
 	_expect(image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE, "minimap uses the fixed 25x25 circular display window", failures)
 	if image != null and image.get_size() == MINIMAP_SCRIPT.MINIMAP_VIEW_SIZE:
 		_expect(image.get_pixel(0, 0).a == 0.0 and image.get_pixel(24, 24).a == 0.0, "circular minimap mask clears pixels outside the authored ring", failures)
@@ -29,6 +42,13 @@ func _initialize() -> void:
 		_expect(image.get_pixelv(Vector2i(8, 21) - origin) == MINIMAP_SCRIPT.COLOR_HUB, "Hub pixel uses the reference white", failures)
 		_expect(image.get_pixelv(Vector2i(7, 20) - origin) == MINIMAP_SCRIPT.COLOR_DOOR, "Hub-to-Orb entry remains an ordinary connector", failures)
 		_expect(image.get_pixelv(Vector2i(6, 19) - origin) == MINIMAP_SCRIPT.COLOR_ORB_MARKER, "known Orb landmark is visible before entry", failures)
+	if full_image != null:
+		_expect(boss_room != null and full_image.get_pixelv(boss_room.minimap_coordinate - full_origin) == MINIMAP_SCRIPT.COLOR_BOSS, "Run 1 boss landmark is visible before entry", failures)
+		if flame_room != null:
+			_expect(full_image.get_pixelv(flame_room.minimap_coordinate - full_origin) == MINIMAP_SCRIPT.COLOR_UNVISITED_FLAME, "Run 1 unvisited flame landmark is grey", failures)
+		if ordinary_room != null:
+			_expect(not map_controller.is_room_discovered(ordinary_room.id), "Run 1 ordinary room starts undiscovered", failures)
+			_expect(full_image.get_pixelv(ordinary_room.minimap_coordinate - full_origin) == MINIMAP_SCRIPT.COLOR_BACKGROUND, "Run 1 ordinary room remains hidden before entry", failures)
 	var ring := minimap.get_node_or_null("DungeonMinimapRing") as Sprite2D
 	_expect(ring != null and ring.texture != null, "minimap displays the authored puzzle-map ring above the map", failures)
 	map_controller.on_room_entered(&"room_1_1")

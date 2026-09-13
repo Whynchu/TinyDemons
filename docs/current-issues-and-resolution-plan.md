@@ -61,10 +61,10 @@ available with `-TestGroup all`. Focused checks pass for active-run snapshot rec
 R6+ risk/reward layouts, compact generated-layout bounds, the compatibility-named
 R7 route check, the expanded elemental-binding route set, generated scene
 construction, authored doorway behavior, and the typed room-transition
-boundary. Manual enemy-placement,
-reward, minimap, save/load, touch, and full player-journey verification remain
-open; the historical failures below are not silently reclassified by these
-focused results.
+boundary. Manual enemy-placement, reward, save/load, touch, flame travel, and
+full player-journey verification remain open; the 2026-09-13 R7 playthrough
+accepted the minimap landmark visibility behavior. The historical failures
+below are not silently reclassified by these focused results.
 
 ## Issue 1 — Demon Hub select/back presentation differs by menu
 
@@ -393,7 +393,7 @@ or clearly inactive outside a flame room, and equivalent non-DS4 input paths
 are documented. Add input, destination eligibility, and travel-state coverage
 before relying on manual playtest.
 
-Status: **Source path exists — focused minimap contracts currently failing; runtime travel verification pending**
+Status: **Source path exists — landmark/discovery contracts verified; runtime travel verification pending**
 
 ### Current code state (2026-09-09)
 
@@ -411,14 +411,19 @@ Status: **Source path exists — focused minimap contracts currently failing; ru
   endpoints, then uses the existing transition/save/arrival lifecycle without
   refilling or awarding room rewards.
 - Source coverage includes unvisited/visited color state, serialization,
-  input, and eligibility. Live MCP verification has opened and closed the map;
-  travel itself still needs a runtime flame-to-flame playtest.
+  input, and eligibility. `tests/generated_minimap_smoke.gd` and
+  `tests/run1_minimap_smoke.gd` verify landmark visibility, ordinary-room
+  discovery, draw order, and color state. Live MCP verification has opened and
+  closed the map; travel itself still needs a runtime flame-to-flame playtest.
 
 ### Approved map/travel contract
 
-Keep unvisited flame landmarks visible but greyed out and non-selectable for
-travel. Visited flames retain their elemental colors. Map inspection should
-remain available outside flame rooms; only travel is restricted by origin.
+At run start, the Hub, boss/downstairs rooms, Orb rooms, and Fire/Rest or
+flame-bearing landmarks are visible for planning. Ordinary rooms remain hidden
+until discovered. Keep unvisited flame landmarks visible but greyed out and
+non-selectable for travel. Visited flames retain their elemental colors. Map
+inspection should remain available outside flame rooms; only travel is
+restricted by origin.
 
 `DungeonMapState.reveal_landmark_rooms()` adds fire/rest landmarks to
 `discovered_rooms` at run start. That dictionary cannot establish a visit.

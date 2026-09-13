@@ -421,16 +421,17 @@ register.
 
 The active R6+ risk/reward implementation now owns generated runs. Focused
 follow-up on 2026-09-13 passed active-run snapshot, generated R6+ risk/reward,
-expanded elemental-binding, generated-scene, doorway, and typed room-transition
-checks in isolated Godot processes. The headless runner now uses temporary user
-data, Dummy audio, and explicit log paths; full-suite and manual device
-verification remain separate supervised work.
+expanded elemental-binding, generated-scene, doorway, typed room-transition,
+and minimap landmark/discovery checks in isolated Godot processes. The headless
+runner now uses temporary user data, Dummy audio, and explicit log paths;
+full-suite, flame-travel, and manual device verification remain separate
+supervised work.
 
 Focused follow-up on 2026-09-13 passed the active-run snapshot, generated R6+
-risk/reward, generated-scene, doorway, and typed room-transition checks in
-isolated Godot processes. The headless runner now uses temporary user data,
-Dummy audio, and explicit log paths; full-suite and manual device verification
-remain separate supervised work.
+risk/reward, generated-scene, doorway, typed room-transition, and minimap
+landmark/discovery checks in isolated Godot processes. The headless runner now
+uses temporary user data, Dummy audio, and explicit log paths; full-suite,
+flame-travel, and manual device verification remain separate supervised work.
 
 The target test structure should contain:
 

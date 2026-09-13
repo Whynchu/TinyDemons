@@ -483,11 +483,13 @@ Focused post-change results:
 | Generated-named tests | 3 | 2 | 1 timeout |
 | Slime-named tests | 1 | 2 | 0 |
 
-Notable current failures:
+Historical post-change batch failures (the live state is maintained in
+`tests/manifest.csv` and `KNOWN_ISSUES.md`):
 
 - R4/R5 puzzle grid tests fail pixel/reference reproduction checks.
 - `generated_layout_smoke` exceeds the 90-second test bound.
-- `generated_minimap_smoke` fails an entrance-orb gate color assertion.
+- `generated_minimap_smoke` had an entrance-orb gate color assertion in this
+  historical batch; the current focused landmark/discovery check passes.
 - `generated_bound_reachability_smoke` exits with Windows code `-1073741510`
   after Godot allocator/thread cleanup errors.
 - `slime_variant_smoke` and `rogue_slime_smoke` fail current variant/scaling
