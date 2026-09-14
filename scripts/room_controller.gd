@@ -566,6 +566,27 @@ func plan_connection_transition(graph: DungeonGraph, connection: DungeonGraph.Co
 		connection.exit_socket)
 
 
+func plan_socket_transition(
+	graph: DungeonGraph,
+	room_id: StringName,
+	socket_id: StringName,
+	is_entrance: bool,
+) -> RoomTransitionResult:
+	if graph == null:
+		return plan_connected_room_transition(graph, room_id, &"", &"", socket_id)
+	var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
+	if connection == null:
+		var invalid := ROOM_TRANSITION_RESULT_SCRIPT.new() as RoomTransitionResult
+		invalid.source_room_id = room_id
+		invalid.departure_socket_id = socket_id
+		invalid.reject(RoomTransitionResult.Status.INVALID_CONNECTION, &"missing_socket_connection")
+		return invalid
+	if is_entrance:
+		return plan_connected_room_transition(
+			graph, room_id, connection.source_room_id, connection.exit_socket, connection.destination_entry)
+	return plan_connection_transition(graph, connection)
+
+
 func enter_connected_room(root: Object, transition: RoomTransitionResult) -> bool:
 	if root == null or transition == null or not transition.is_ready():
 		return false
@@ -915,10 +936,7 @@ func _try_enter_socket_set(root: Object, sockets: Dictionary, feet: Rect2, is_en
 		var connection := graph.get_connection_for_entry(room_id, socket_id) if is_entrance else graph.get_connection(room_id, socket_id)
 		if connection == null: continue
 		if not bool(root.call("_map_connection_available", connection, is_entrance)): continue
-		var destination: StringName = connection.source_room_id if is_entrance else connection.destination_room_id
-		var arrival: StringName = connection.exit_socket if is_entrance else connection.destination_entry
-		var departure: StringName = connection.destination_entry if is_entrance else connection.exit_socket
-		var transition := plan_connected_room_transition(graph, room_id, destination, arrival, departure) if is_entrance else plan_connection_transition(graph, connection)
+		var transition := plan_socket_transition(graph, room_id, socket_id, is_entrance)
 		if enter_connected_room(root, transition):
 			return true
 	return false
