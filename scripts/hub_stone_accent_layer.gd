@@ -14,7 +14,7 @@ const HUB_ROOM_TYPE: StringName = &"START"
 const BASE_ALPHA: float = 128.0 / 255.0
 const SPECULAR_ALPHA: float = 38.0 / 255.0
 const NON_HUB_REMOVAL_MIN: int = 3
-const NON_HUB_REMOVAL_MAX: int = 5
+const NON_HUB_REMOVAL_MAX: int = 4
 const ROOM_VARIATION_SALT: int = 0x53544F4E
 const POSITION_VARIATION_SALT: int = 0x504F5349
 const ANCHOR_SWAP_SALT: int = 0x53574150
@@ -640,24 +640,29 @@ func _anchor_positions_for_room(
 	if room_type == HUB_ROOM_TYPE:
 		return result
 
-	var groups: Dictionary = {}
+	var selected_by_group: Dictionary = {}
 	for placement_id in placement_ids:
 		if not _placement_allows_anchor_swap(placement_id):
 			continue
 		var placement := _placement_for_id(placement_id)
 		var group_key := _reposition_group_key(placement)
-		if not groups.has(group_key):
-			groups[group_key] = []
-		(groups[group_key] as Array).append(placement_id)
+		if not selected_by_group.has(group_key):
+			selected_by_group[group_key] = []
+		(selected_by_group[group_key] as Array).append(placement_id)
 
 	var group_ids_by_key: Array = []
 	var permutation_options: Array = []
-	for group_key in groups:
-		var group_ids := groups[group_key] as Array
-		if group_ids.size() < MIN_SWAPPABLE_GROUP_SIZE:
+	for group_key in selected_by_group:
+		var selected_ids := selected_by_group[group_key] as Array
+		var anchor_ids: Array = []
+		for placement in REFERENCE_PLACEMENTS:
+			var placement_id: StringName = placement["id"]
+			if _placement_allows_anchor_swap(placement_id) and _reposition_group_key(placement) == group_key:
+				anchor_ids.append(placement_id)
+		if selected_ids.size() < MIN_SWAPPABLE_GROUP_SIZE or anchor_ids.size() < MIN_SWAPPABLE_GROUP_SIZE:
 			return {}
-		group_ids_by_key.append(group_ids)
-		permutation_options.append(_derangement_permutations(group_ids, group_key, room_id, room_type))
+		group_ids_by_key.append(selected_ids)
+		permutation_options.append(_derangement_permutations_for_selected(selected_ids, anchor_ids, group_key, room_id, room_type))
 	var safe_maps: Array[Dictionary] = []
 	_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, 0, result, room_id, room_type, safe_maps)
 	if safe_maps.is_empty():
@@ -712,6 +717,33 @@ func _derangement_permutations(group_ids: Array, group_key: String, room_id: Str
 		derangements[index] = derangements[swap_index]
 		derangements[swap_index] = swap_value
 	return derangements
+
+
+func _derangement_permutations_for_selected(selected_ids: Array, anchor_ids: Array, group_key: String, room_id: StringName, room_type: StringName) -> Array:
+	var permutations: Array = []
+	var working_ids: Array = anchor_ids.duplicate()
+	_append_permutations(working_ids, 0, permutations)
+	var valid: Array = []
+	for permutation_value in permutations:
+		var permutation := permutation_value as Array
+		var assigned: Array = []
+		var valid_assignment := true
+		for index in selected_ids.size():
+			var anchor_id: StringName = permutation[index]
+			if anchor_id == selected_ids[index]:
+				valid_assignment = false
+				break
+			assigned.append(anchor_id)
+		if valid_assignment:
+			valid.append(assigned)
+	var swap_rng := RandomNumberGenerator.new()
+	swap_rng.seed = int(dungeon_seed) ^ String(room_id).hash() ^ String(room_type).hash() ^ group_key.hash() ^ ANCHOR_SWAP_SALT ^ (active_layout_variant * LAYOUT_VARIATION_SALT)
+	for index in range(valid.size() - 1, 0, -1):
+		var swap_index := swap_rng.randi_range(0, index)
+		var swap_value: Array = valid[index]
+		valid[index] = valid[swap_index]
+		valid[swap_index] = swap_value
+	return valid
 
 
 func _append_permutations(values: Array, start_index: int, output: Array) -> void:
