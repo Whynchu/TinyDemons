@@ -486,29 +486,17 @@ func placement_constraints_valid() -> bool:
 func anchor_swaps_valid() -> bool:
 	if last_room_type == HUB_ROOM_TYPE:
 		return true
-	var groups: Dictionary = {}
+	var used_anchors: Dictionary = {}
 	for placement_id in last_selected_ids:
 		if not _placement_allows_anchor_swap(placement_id):
 			continue
-		var placement := _placement_for_id(placement_id)
-		var group_key := _reposition_group_key(placement)
-		if not groups.has(group_key):
-			groups[group_key] = []
-		(groups[group_key] as Array).append(placement_id)
-	for group_ids_value in groups.values():
-		var group_ids := group_ids_value as Array
-		if group_ids.size() < MIN_SWAPPABLE_GROUP_SIZE:
+		if not last_anchor_positions.has(placement_id):
 			return false
-		var used_anchors: Array[Vector2] = []
-		for placement_id in group_ids:
-			if not last_positions.has(placement_id) or not last_anchor_positions.has(placement_id):
-				return false
-			var placement := _placement_for_id(placement_id)
-			var authored_position: Vector2 = placement["position"]
-			var anchor_position: Vector2 = last_anchor_positions[placement_id]
-			if anchor_position == authored_position or used_anchors.has(anchor_position):
-				return false
-			used_anchors.append(anchor_position)
+		var anchor_position: Vector2 = last_anchor_positions[placement_id]
+		var anchor_key := "%s@%s" % [anchor_position.x, anchor_position.y]
+		if used_anchors.has(anchor_key):
+			return false
+		used_anchors[anchor_key] = true
 	return true
 
 
@@ -549,6 +537,8 @@ func _placement_ids_for_room(room_id: StringName, room_type: StringName, layout_
 
 func _can_remove_from_sparse_selection(candidate_ids: Array[StringName], placement_id: StringName) -> bool:
 	if not _placement_allows_reposition(placement_id):
+		# Cracks are fixed authored marks. They may be omitted, but they never
+		# participate in repositioning or anchor swaps.
 		return true
 	var placement := _placement_for_id(placement_id)
 	if placement.get("surface", &"") == &"floor":
@@ -568,7 +558,10 @@ func _can_remove_from_sparse_selection(candidate_ids: Array[StringName], placeme
 			continue
 		if _reposition_group_key(_placement_for_id(candidate_id)) == group_key:
 			group_count += 1
-	return group_count > MIN_SWAPPABLE_GROUP_SIZE
+	# A wall group may drop to a single survivor. With the full authored anchor
+	# set available to survivors, the removed piece's anchor stays swappable, so
+	# keeping at least one member of the group is enough for real variation.
+	return group_count > 1
 
 
 func _reposition_group_key(placement: Dictionary) -> String:
@@ -654,15 +647,18 @@ func _anchor_positions_for_room(
 	var permutation_options: Array = []
 	for group_key in selected_by_group:
 		var selected_ids := selected_by_group[group_key] as Array
+		# The full authored anchor set for this surface/side stays available even
+		# when some members were removed. A single survivor can still move to a
+		# removed piece's anchor, so the group only needs one member to participate.
 		var anchor_ids: Array = []
 		for placement in REFERENCE_PLACEMENTS:
 			var placement_id: StringName = placement["id"]
 			if _placement_allows_anchor_swap(placement_id) and _reposition_group_key(placement) == group_key:
 				anchor_ids.append(placement_id)
-		if selected_ids.size() < MIN_SWAPPABLE_GROUP_SIZE or anchor_ids.size() < MIN_SWAPPABLE_GROUP_SIZE:
-			return {}
+		if selected_ids.is_empty() or anchor_ids.size() < MIN_SWAPPABLE_GROUP_SIZE:
+			continue
 		group_ids_by_key.append(selected_ids)
-		permutation_options.append(_derangement_permutations_for_selected(selected_ids, anchor_ids, group_key, room_id, room_type))
+		permutation_options.append(_partial_anchor_shuffles(selected_ids, anchor_ids, group_key, room_id, room_type))
 	var safe_maps: Array[Dictionary] = []
 	_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, 0, result, room_id, room_type, safe_maps)
 	if safe_maps.is_empty():
@@ -695,31 +691,13 @@ func _collect_safe_anchor_maps(
 		_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, group_index + 1, candidate_anchors, room_id, room_type, output)
 
 
-func _derangement_permutations(group_ids: Array, group_key: String, room_id: StringName, room_type: StringName) -> Array:
-	var working_ids: Array = group_ids.duplicate()
-	var permutations: Array = []
-	_append_permutations(working_ids, 0, permutations)
-	var derangements: Array = []
-	for permutation_value in permutations:
-		var permutation := permutation_value as Array
-		var is_derangement := true
-		for index in group_ids.size():
-			if permutation[index] == group_ids[index]:
-				is_derangement = false
-				break
-		if is_derangement:
-			derangements.append(permutation)
-	var swap_rng := RandomNumberGenerator.new()
-	swap_rng.seed = int(dungeon_seed) ^ String(room_id).hash() ^ String(room_type).hash() ^ group_key.hash() ^ ANCHOR_SWAP_SALT ^ (active_layout_variant * LAYOUT_VARIATION_SALT)
-	for index in range(derangements.size() - 1, 0, -1):
-		var swap_index := swap_rng.randi_range(0, index)
-		var swap_value: Array = derangements[index]
-		derangements[index] = derangements[swap_index]
-		derangements[swap_index] = swap_value
-	return derangements
-
-
-func _derangement_permutations_for_selected(selected_ids: Array, anchor_ids: Array, group_key: String, room_id: StringName, room_type: StringName) -> Array:
+func _partial_anchor_shuffles(selected_ids: Array, anchor_ids: Array, group_key: String, room_id: StringName, room_type: StringName) -> Array:
+	# A partial shuffle assigns each selected survivor to a distinct anchor from
+	# the group's full authored anchor set. Unlike a strict derangement, a
+	# survivor is allowed to keep its own anchor, so the layout reads as varied
+	# placement rather than a forced full-cycle A/B exchange. The full anchor set
+	# includes anchors of pieces that were removed for this room, so survivors
+	# can occupy those vacant slots.
 	var permutations: Array = []
 	var working_ids: Array = anchor_ids.duplicate()
 	_append_permutations(working_ids, 0, permutations)
@@ -729,11 +707,7 @@ func _derangement_permutations_for_selected(selected_ids: Array, anchor_ids: Arr
 		var assigned: Array = []
 		var valid_assignment := true
 		for index in selected_ids.size():
-			var anchor_id: StringName = permutation[index]
-			if anchor_id == selected_ids[index]:
-				valid_assignment = false
-				break
-			assigned.append(anchor_id)
+			assigned.append(permutation[index])
 		if valid_assignment:
 			valid.append(assigned)
 	var swap_rng := RandomNumberGenerator.new()
