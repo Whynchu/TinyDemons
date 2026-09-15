@@ -25,6 +25,15 @@
     "RoomSpawnContext",
     "RoomRespawnContext"
   ],
+  "completion_start": {
+    "root_accesses": 3135,
+    "gameplay_state_lines": 1777,
+    "gameplay_state_fields": 299,
+    "room_controller_lines": 3265,
+    "runtime_refs": 20,
+    "legacy_pairs": 11,
+    "transitional_contexts": 5
+  },
   "targets": {
     "root_accesses_max": 2499,
     "gameplay_state_lines_max": 1719,

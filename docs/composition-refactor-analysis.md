@@ -52,6 +52,13 @@ ownership had moved. They do not. The current strict score is **25% complete /
 The accepted `0.2.x` migration route remains complete; this is the separate
 post-Phase-C composition score.
 
+The authoritative live number is the **completion percentage printed by
+`tools/validate_composition.ps1`**, which is measured from the recorded
+`completion_start` toward the strict targets and currently reads **0%** — the
+25% gate-score below is the coarser "one of four hard gates" label, not the
+measured progress figure. Treat the validator's percentage as the source of
+truth; it moves only when a metric actually shrinks.
+
 The scorecard is intentionally difficult to satisfy:
 
 | Hard gate | Baseline (`d6a965d`) | Current | Status |
@@ -553,23 +560,33 @@ still open. The normal CI gate does not use `-RequireTargets`, because the
 strict ownership targets are the work remaining, not the current release
 floor.
 
-The validator reads `tools/composition-baseline.json`, which records both the
-accepted values and the target thresholds. Use `-UpdateBaseline` only when a
-reviewed slice deliberately retires coupling or extracts an owner; it refuses
-to write when the current tree has audit errors. Run it with
-`-BaselinePath`/`-ScriptsDirectory` to test against a different tree.
+The default output now also prints a **completion percentage**: weighted
+progress from the recorded `completion_start` toward the strict targets, where
+each metric is weighted by the size of its remaining gap. It starts at 0% and
+climbs only when a slice measurably reduces a metric; a metric that grows
+beyond its start contributes zero progress (clamped, never negative credit).
+`-UpdateBaseline` preserves `completion_start`, so the percentage measures
+progress since the original reference and cannot be re-zeroed by a routine
+baseline refresh.
 
-Current recorded baseline and strict targets (from
+The validator reads `tools/composition-baseline.json`, which records the
+accepted floor, the `completion_start` reference, and the strict target
+thresholds. Use `-UpdateBaseline` only when a reviewed slice deliberately
+retires coupling or extracts an owner; it refuses to write when the current
+tree has audit errors. Run it with `-BaselinePath`/`-ScriptsDirectory` to test
+against a different tree.
+
+Current recorded baseline, completion start, and strict targets (from
 `tools/composition-baseline.json`):
 
-| Metric | Accepted floor | Strict target |
-|---|---:|---:|
-| `root.call/get/set` sites | 3,135 | ≤ 2,499 |
-| `GameplayState` lines / fields | 1,777 / 299 | ≤ 1,719 / 286 |
-| `RoomController` lines | 3,265 | ≤ 2,296 |
-| `.runtime` references | 20 | 0 |
-| Paired legacy/context duplicates | 11 | 0 |
-| Transitional contexts | 5 | 0 |
+| Metric | Accepted floor | Completion start | Strict target |
+|---|---:|---:|---:|
+| `root.call/get/set` sites | 3,135 | 3,135 | ≤ 2,499 |
+| `GameplayState` lines / fields | 1,777 / 299 | 1,777 / 299 | ≤ 1,719 / 286 |
+| `RoomController` lines | 3,265 | 3,265 | ≤ 2,296 |
+| `.runtime` references | 20 | 20 | 0 |
+| Paired legacy/context duplicates | 11 | 11 | 0 |
+| Transitional contexts | 5 | 5 | 0 |
 
 The accepted floor is the regression baseline. The strict target column is only
 enforced when `-RequireTargets` is supplied; it is intentionally red while the

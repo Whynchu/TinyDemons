@@ -6,7 +6,7 @@ Updated: 2026-09-15
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.16`
+Current release: version `0.2.17`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -46,9 +46,9 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.16
+## Next checkpoint after 0.2.17
 
-Version `0.2.16` records the typed reward, checkpoint, and room-state seams alongside
+Version `0.2.17` records the typed reward, checkpoint, and room-state seams alongside
 the earlier Web export, touch/cloud, gear, progression, and generated-route
 reconciliation. The next checkpoint is a stabilization pass in this order:
 
