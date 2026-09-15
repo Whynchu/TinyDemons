@@ -35,12 +35,20 @@ only the `Godot_v4.7.1-stable_win64_console` worker processes; leave the main
 editor process running unless it is also failing.
 
 ```powershell
+# Composition guardrail implementation self-test and regression floor.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1 -SelfTest
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1
 # Curated release gate; includes the web export and main-scene checks.
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 # Full runnable inventory — standalone/supervised only.
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all
 pwsh -ExecutionPolicy Bypass -File tools/run_headless.ps1 -Editor
 ```
+
+The opt-in composition completion audit is
+`pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1 -RequireTargets`.
+It is expected to fail while the documented transitional room contexts and
+ownership targets remain open; it is not part of the current release gate.
 
 The local Godot environment may report a root-certificate warning and may be
 unable to save editor settings. Treat those as environment warnings unless the

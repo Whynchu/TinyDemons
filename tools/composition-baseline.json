@@ -5,11 +5,33 @@
   "room_controller_lines": 3265,
   "runtime_refs": 20,
   "legacy_total": 13,
+  "legacy_pairs": [
+    "room_controller.gd:_activate_room",
+    "room_controller.gd:_apply_state",
+    "room_controller.gd:_enter_connected_room",
+    "room_controller.gd:_prepare_enemy_slot_visuals",
+    "room_controller.gd:_record_popcorn_enemy_death",
+    "room_controller.gd:_record_special_enemy_death",
+    "room_controller.gd:_reset_slimes_for_room",
+    "room_controller.gd:_save_enemy_runtime_state",
+    "room_controller.gd:_spawn_enemy_slot",
+    "room_controller.gd:_update_popcorn_respawns",
+    "room_controller.gd:_update_special_enemy_respawns"
+  ],
   "transitional_allowlist": [
     "RoomEntryContext",
     "RoomActivationContext",
     "RoomRuntimeContext",
     "RoomSpawnContext",
     "RoomRespawnContext"
-  ]
+  ],
+  "targets": {
+    "root_accesses_max": 2499,
+    "gameplay_state_lines_max": 1719,
+    "gameplay_state_fields_max": 286,
+    "room_controller_lines_max": 2296,
+    "runtime_refs_max": 0,
+    "legacy_pairs_max": 0,
+    "transitional_contexts_max": 0
+  }
 }
