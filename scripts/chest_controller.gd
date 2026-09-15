@@ -10,8 +10,21 @@ var unlock_fade_timer := 0.0
 var flame_hold_timer := 0.0
 var flame_hold_active := false
 var flame_action_resolved := false
+var reward_controller: RunFlowController = null
+var room_controller: RoomController = null
+var pickup_runtime_controller: PickupRuntimeController = null
 
 const FLAME_FUSION_HOLD_THRESHOLD := 0.35
+
+
+func configure_reward_boundary(
+	new_reward_controller: RunFlowController,
+	new_room_controller: RoomController,
+	new_pickup_runtime_controller: PickupRuntimeController
+) -> void:
+	reward_controller = new_reward_controller
+	room_controller = new_room_controller
+	pickup_runtime_controller = new_pickup_runtime_controller
 
 
 func update_interaction(root: Object, interact_input_down: bool, interact_input_was_down: bool, reward_gold: int, flash_time: float, delta: float = 0.0) -> void:
@@ -46,15 +59,24 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 		var chest := root.get("chest") as Sprite2D
 		if bool(root.get("chest_unlocked")) and not bool(root.get("chest_claimed")) and bool(root.call("_can_interact_with_chest")):
 			root.set("chest_claimed", true)
-			var room_controller := root.get("room_controller") as RoomController
-			var state := room_controller.room_states.get(root.get("current_room_id"), {}) as Dictionary
+			var gameplay := root as GameplayState
+			var room_id := gameplay.current_room_id if gameplay != null else StringName(str(root.get("current_room_id")))
+			var state: Dictionary = room_controller.room_states.get(room_id, {}) as Dictionary if room_controller != null else {}
 			if not bool(state.get("item_rewarded", false)):
-				var reward_result := root.call("_claim_chest_item_reward") as ChestRewardResult
+				var reward_result: ChestRewardResult = reward_controller.claim_chest_item_reward(gameplay._chest_reward_context()) if reward_controller != null and gameplay != null else null
 				state["item_rewarded"] = reward_result != null and reward_result.is_resolved()
-			room_controller.room_states[root.get("current_room_id")] = state
+				if reward_result != null and reward_result.presentation_required:
+					if pickup_runtime_controller != null:
+						pickup_runtime_controller.spawn_chest_item_drops(gameplay, reward_result.items)
+					else:
+						root.call("_spawn_chest_item_drops", reward_result.items)
+					root.call("_play_sound", "ui_use_item")
+			if room_controller != null:
+				room_controller.room_states[room_id] = state
 			# Persist the claim after the reward marker is written. This keeps
 			# generated combat-room chests from being recreated on re-entry.
-			room_controller.save_treasure_chest_state(root)
+			if room_controller != null:
+				room_controller.save_treasure_chest_state(root)
 			root.set("chest_collect_flash_timer", flash_time); start_flash(root)
 			var scaled_gold := int(root.call("_chest_gold_reward", reward_gold))
 			var profile := root.get("player_profile") as PlayerProfile

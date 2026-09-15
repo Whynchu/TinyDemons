@@ -18,6 +18,7 @@ var reward_tier: StringName = DungeonGraph.REWARD_STANDARD
 var drop_roll := -1.0
 var requested_item_count := 0
 var items: Array[ItemInstance] = []
+var presentation_required := false
 
 
 func is_resolved() -> bool:

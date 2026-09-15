@@ -50,9 +50,9 @@ func initialize(root: GameplayState) -> void:
 	touch_controls_layer.set_input_context(InputRouter.Context.MENU)
 	root.input_router.set_touch_provider(touch_controls_layer)
 	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
-	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController")
-	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController")
-	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as Node
+	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController") as PickupRuntimeController
+	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController") as RunFlowController
+	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as DungeonMapController
 	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
 	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")
 	root.cloud_save_service = _add_runtime_node(root, CLOUD_SAVE_SERVICE_SCRIPT, "CloudSaveService") as CloudSaveService
@@ -91,6 +91,7 @@ func initialize(root: GameplayState) -> void:
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
 	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
+	root.chest_controller.configure_reward_boundary(root.run_flow_controller, root.room_controller, root.pickup_runtime_controller)
 	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
 	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
@@ -311,7 +312,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	var attack := root.player_attack_component
 	attack.attack_started.connect(Callable(transmutations, "begin_attack")); attack.attack_finished.connect(Callable(transmutations, "finish_attack")); attack.attack_hit_resolved.connect(Callable(transmutations, "record_attack_hits"))
 	transmutations.effect_triggered.connect(Callable(root, "_on_transmutation_effect_triggered")); root.equipment_transmutation_component = transmutations; root._configure_equipment_transmutations()
-	root.player_chroma_component = _ensure_player_component(player, PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma")
+	root.player_chroma_component = _ensure_player_component(player, PLAYER_CHROMA_COMPONENT_SCRIPT, "Chroma") as PlayerChromaComponent
 	if profile != null and profile.has_bound_element:
 		root.player_chroma_component.call("set_bound_flame", profile.bound_element)
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")

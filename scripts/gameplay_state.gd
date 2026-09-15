@@ -5,6 +5,11 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
 const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
+const ChestRewardContextScript = preload("res://scripts/chest_reward_context.gd")
+const ActiveRunSnapshotContextScript = preload("res://scripts/active_run_snapshot_context.gd")
+const RoomCheckpointContextScript = preload("res://scripts/room_checkpoint_context.gd")
+const RunCheckpointContextScript = preload("res://scripts/run_checkpoint_context.gd")
+const RunCheckpointServiceScript = preload("res://scripts/run_checkpoint_service.gd")
 
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
@@ -140,15 +145,15 @@ var input_device_tracker: Node = null
 var touch_controls_layer: Node = null
 var player_roll_component: PlayerRollComponent = null
 var player_attack_component: PlayerAttackComponent = null
-var player_chroma_component: Node = null
+var player_chroma_component: PlayerChromaComponent = null
 var player_aspect_ability_component: Node = null
 var player_guard_component: PlayerGuardComponent = null
 var equipment_transmutation_component: EquipmentTransmutationComponent = null
 var player_animation_component: PlayerAnimationComponent = null
 var player_equipment_visual_component: PlayerEquipmentVisualComponent = null
 var profile_runtime_controller: Node = null
-var pickup_runtime_controller: Node = null
-var run_flow_controller: Node = null
+var pickup_runtime_controller: PickupRuntimeController = null
+var run_flow_controller: RunFlowController = null
 var hub_flow_controller: Node = null
 var save_flow_controller: Node = null
 var cloud_save_service: CloudSaveService = null
@@ -165,7 +170,7 @@ var actor_geometry_debug_drawer: ActorGeometryDebugDrawer = null
 var depth_sorter: DepthSorter = null
 var occlusion_renderer: OcclusionRenderer = null
 var room_controller: RoomController = null
-var dungeon_map_controller: Node = null
+var dungeon_map_controller: DungeonMapController = null
 var dungeon_minimap_controller: Node = null
 var shadow_controller: ShadowController = null
 var interaction_component: InteractionComponent = null
@@ -587,8 +592,17 @@ func _chest_item_drop_count(roll: float) -> int:
 	return int(run_flow_controller.call("chest_item_drop_count", self, roll))
 func _chest_gold_reward(base_gold: int) -> int:
 	return int(run_flow_controller.call("chest_gold_reward", self, base_gold))
-func _claim_chest_item_reward() -> ChestRewardResult:
-	return run_flow_controller.call("claim_chest_item_reward", self) as ChestRewardResult
+func _chest_reward_context() -> ChestRewardContext:
+	var state: Dictionary = room_controller.room_states.get(current_room_id, {}) as Dictionary if room_controller != null else {}
+	return ChestRewardContextScript.new(
+		player_profile,
+		run_state,
+		current_dungeon_seed,
+		current_room_id,
+		run_flow_controller.reward_tier(self),
+		StringName(str(state.get("vault_id", ""))),
+		regular_room_treasure
+	)
 func _set_gold_value(value: int) -> void:
 	profile_runtime_controller.call("set_gold_value", self, value)
 func _sync_runtime_progression_to_profile() -> void:
@@ -795,7 +809,7 @@ func _begin_new_run(preserve_current_dungeon := false) -> void:
 func _save_active_run_checkpoint() -> bool:
 	if not OS.has_feature("web") or run_state == null or not run_state.active:
 		return false
-	var snapshot := ActiveRunSnapshotScript.create(self)
+	var snapshot := ActiveRunSnapshotScript.create_context(_active_run_snapshot_context())
 	if snapshot.is_empty():
 		return false
 	var saved := bool(ActiveRunSaveServiceScript.save_snapshot(snapshot, ProfileSaveService.current_slot()))
@@ -804,14 +818,40 @@ func _save_active_run_checkpoint() -> bool:
 		if diagnostics != null and diagnostics.has_method("record_checkpoint"):
 			diagnostics.call("record_checkpoint", self)
 	return saved
+
+func _active_run_snapshot_context() -> ActiveRunSnapshotContext:
+	return ActiveRunSnapshotContextScript.new(
+		player_profile,
+		run_state,
+		dungeon_map_controller,
+		room_controller,
+		player_health_component,
+		player_chroma_component,
+		current_dungeon_seed,
+		current_room_id,
+		current_room_type,
+		current_room_depth,
+		puzzle_attempt_rotation_quarter_turns,
+		last_player_facing_left,
+		starter_flame_attuned_this_run)
+
 func _checkpoint_safe_run_state() -> bool:
 	if not OS.has_feature("web") or run_state == null or not run_state.active or room_transition_locked:
 		return false
 	# Assemble room state before writing the profile and active-run record so
 	# rewards, chest claims, defeated enemies, and drops share one boundary.
-	_save_current_room_state()
-	call("_save_player_profile")
-	return _save_active_run_checkpoint()
+	var context := RunCheckpointContextScript.new(
+		player_profile,
+		run_state,
+		_room_checkpoint_context(),
+		_active_run_snapshot_context(),
+		ProfileSaveService.current_slot())
+	var result := RunCheckpointServiceScript.save_safe_state(context)
+	if result.succeeded():
+		var diagnostics := get_node_or_null("WebRunDiagnostics")
+		if diagnostics != null and diagnostics.has_method("record_checkpoint"):
+			diagnostics.call("record_checkpoint", self)
+	return result.succeeded()
 func _on_room_cleared_for_checkpoint(room_id: StringName) -> void:
 	if room_id != current_room_id or room_transition_locked:
 		return
@@ -1455,48 +1495,29 @@ func _update_large_room_camera() -> void: room_controller.call("update_large_roo
 func _update_door_transition() -> void: if not room_transition_locked: room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _try_enter_any_active_socket() -> bool: return room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _release_room_transition_lock() -> void: room_transition_locked = false; if room_controller != null: room_controller.end_transition()
-func _save_current_room_state() -> void:
-	var state := room_controller.room_states.get(current_room_id, {}) as Dictionary
+func _room_checkpoint_context() -> RoomCheckpointContext:
 	room_controller.save_enemy_runtime_state(self)
-	state = room_controller.room_states.get(current_room_id, state) as Dictionary
+	var state: Dictionary = room_controller.room_states.get(current_room_id, {}) as Dictionary
 	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
+	var puzzle_finished := false
 	if current_room_type == DungeonGraph.ROOM_PUZZLE:
 		var required_aspect := StringName(state.get("puzzle_required_flame", _puzzle_required_aspect(room)))
-		state["finished"] = _puzzle_torches_solved(_puzzle_palette_for_aspect(required_aspect))
-	elif room != null and (room.room_type == DungeonGraph.ROOM_TREASURE or bool(state.get("regular_room_treasure", false))):
-		# Treasure completion belongs to the enemy encounter. The chest is an
-		# optional reward and must not reopen or clear the room on a revisit. This
-		# also persists the generated combat-room chest across room transitions.
-		state["chest_claimed"] = chest_claimed
-		state["chest_evaporated"] = chest_evaporated
-		state["finished"] = bool(state.get("finished", false)) or room_controller.is_cleared(current_room_id)
-	else:
-		# Combat and boss rooms are completed by enemy defeat, not by opening a
-		# chest. Preserve the clear state when the player leaves before re-entry.
-		state["finished"] = bool(state.get("finished", false)) or room_controller.is_cleared(current_room_id)
-	var saved_drops: Array = []
-	for drop in world_item_drops:
-		var sprite := drop.get("sprite") as Sprite2D
-		var item := drop.get("item") as ItemInstance
-		if sprite != null and is_instance_valid(sprite) and item != null:
-			var saved_position := sprite.global_position
-			if float(drop.get("air_time", 0.0)) > 0.0 and drop.has("landing_position"):
-				saved_position = drop.get("landing_position") as Vector2
-			saved_drops.append({"item": item.to_dictionary(), "position": saved_position})
-	if saved_drops.is_empty():
-		state.erase("world_item_drops")
-	else:
-		state["world_item_drops"] = saved_drops
-	state.erase("world_item_drop")
-	var saved_pickups: Array = []
-	for index in chroma_pickup_controller.sprites.size():
-		var pickup := chroma_pickup_controller.sprites[index]
-		if pickup != null and is_instance_valid(pickup):
-			saved_pickups.append({"position": pickup.global_position, "value": chroma_pickup_controller.values[index]})
-	if saved_pickups.is_empty(): state.erase("chroma_pickups")
-	else: state["chroma_pickups"] = saved_pickups
-	room_controller.room_states[current_room_id] = state
-	if room_controller != null and bool(state.get("finished", false)): room_controller.mark_cleared(current_room_id)
+		puzzle_finished = _puzzle_torches_solved(_puzzle_palette_for_aspect(required_aspect))
+	var context := RoomCheckpointContextScript.new(
+		current_room_id,
+		current_room_type,
+		room,
+		room_controller,
+		puzzle_finished,
+		room_controller.is_cleared(current_room_id),
+		chest_claimed,
+		chest_evaporated,
+		world_item_drops,
+		chroma_pickup_controller)
+	return context
+
+func _save_current_room_state() -> RoomCheckpointResult:
+	return room_controller.save_current_room_state(_room_checkpoint_context())
 func _apply_room_state() -> RoomActivationResult: return room_controller.activate_room(self)
 func _apply_rest_room_state() -> void: room_controller.apply_rest_state(self)
 func _apply_npc_room_state() -> void: room_controller.apply_npc_state(self)

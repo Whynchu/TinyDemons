@@ -6,21 +6,22 @@ class_name ActiveRunSnapshot
 ## progression, while this record is disposable runtime recovery state.
 const SCHEMA_VERSION := 1
 const FORMAT := "tiny-demons-active-run"
+const ActiveRunSnapshotContextScript = preload("res://scripts/active_run_snapshot_context.gd")
 
 
-static func create(root: Object) -> Dictionary:
-	var profile := root.get("player_profile") as PlayerProfile
-	var run := root.get("run_state") as RunState
-	var map_controller := root.get("dungeon_map_controller") as Node
-	var map_state: Variant = map_controller.get("state") if map_controller != null else null
-	var room_controller := root.get("room_controller") as RoomController
-	var health := root.get("player_health_component") as HealthComponent
-	var chroma := root.get("player_chroma_component") as Node
-	if profile == null or run == null or not run.active or run.settled:
+static func create_context(context: ActiveRunSnapshotContext) -> Dictionary:
+	if context == null or not context.is_valid():
 		return {}
+	var profile := context.player_profile
+	var run := context.run_state
+	var map_controller := context.dungeon_map_controller
+	var map_state: DungeonMapState = map_controller.state as DungeonMapState if map_controller != null else null
+	var room_controller := context.room_controller
+	var health := context.player_health_component
+	var chroma := context.player_chroma_component
 	var room_states: Dictionary = room_controller.room_states.duplicate(true) if room_controller != null else {}
-	var map_dictionary: Dictionary = map_state.call("to_dictionary") as Dictionary if map_state != null and map_state.has_method("to_dictionary") else {}
-	var layout: Variant = map_controller.get("layout") if map_controller != null else null
+	var map_dictionary: Dictionary = map_state.to_dictionary() if map_state != null else {}
+	var layout: Variant = map_controller.layout if map_controller != null else null
 	var snapshot := {
 		"format": FORMAT,
 		"schema_version": SCHEMA_VERSION,
@@ -32,27 +33,51 @@ static func create(root: Object) -> Dictionary:
 		},
 		"created_at": Time.get_unix_time_from_system(),
 		"run_state": run.to_dictionary(),
-		"dungeon_seed": int(root.get("current_dungeon_seed")),
+		"dungeon_seed": context.dungeon_seed,
 		"layout_id": String(layout.layout_id) if layout != null else "",
-		"layout_bound_flame": String(map_controller.get("layout_bound_flame")) if map_controller != null else "",
+		"layout_bound_flame": String(map_controller.layout_bound_flame) if map_controller != null else "",
 		"run_rank": maxi(profile.difficulty_rank, 1),
-		"current_room_id": String(root.get("current_room_id")),
-		"current_room_type": String(root.get("current_room_type")),
-		"current_room_depth": int(root.get("current_room_depth")),
+		"current_room_id": String(context.current_room_id),
+		"current_room_type": String(context.current_room_type),
+		"current_room_depth": context.current_room_depth,
 		"arrival_socket_id": String(room_controller.arrival_socket_id) if room_controller != null else "",
-		"puzzle_attempt_rotation_quarter_turns": int(root.get("puzzle_attempt_rotation_quarter_turns")),
+		"puzzle_attempt_rotation_quarter_turns": context.puzzle_attempt_rotation_quarter_turns,
 		"room_states": room_states,
 		"map_state": map_dictionary,
 		"player_health": float(health.current_health) if health != null else 1.0,
 		"player_chroma_state": {
-			"current_aspect": int(chroma.get("current_aspect")) if chroma != null else 0,
-			"current_chroma": int(chroma.get("current_chroma")) if chroma != null else 0,
-			"bound_aspect": int(chroma.get("bound_aspect")) if chroma != null else 0,
+			"current_aspect": int(chroma.current_aspect) if chroma != null else 0,
+			"current_chroma": int(chroma.current_chroma) if chroma != null else 0,
+			"bound_aspect": int(chroma.bound_aspect) if chroma != null else 0,
 		},
-		"player_facing_left": bool(root.get("last_player_facing_left")),
-		"starter_flame_attuned_this_run": bool(root.get("starter_flame_attuned_this_run")),
+		"player_facing_left": context.player_facing_left,
+		"starter_flame_attuned_this_run": context.starter_flame_attuned_this_run,
 	}
 	return normalize(snapshot)
+
+
+static func create(root: Object) -> Dictionary:
+	var profile := root.get("player_profile") as PlayerProfile
+	var run := root.get("run_state") as RunState
+	var map_controller := root.get("dungeon_map_controller") as DungeonMapController
+	var room_controller := root.get("room_controller") as RoomController
+	var health := root.get("player_health_component") as HealthComponent
+	var chroma := root.get("player_chroma_component") as PlayerChromaComponent
+	var context := ActiveRunSnapshotContextScript.new(
+		profile,
+		run,
+		map_controller,
+		room_controller,
+		health,
+		chroma,
+		int(root.get("current_dungeon_seed")),
+		StringName(str(root.get("current_room_id"))),
+		StringName(str(root.get("current_room_type"))),
+		int(root.get("current_room_depth")),
+		int(root.get("puzzle_attempt_rotation_quarter_turns")),
+		bool(root.get("last_player_facing_left")),
+		bool(root.get("starter_flame_attuned_this_run")))
+	return create_context(context)
 
 
 static func validate(data: Dictionary, expected_slot: int = -1) -> bool:

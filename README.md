@@ -84,30 +84,35 @@ feature boundaries, and `GameplayState` should remain the composition root
 instead of becoming a shared service locator. The detailed handoff is in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md).
 
-The current source scan gives us this shape:
+The latest pinned source scan, measured at baseline commit `d6a965d`, gives us
+this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
 | Runtime scripts | 146 | The project already has a substantial feature vocabulary |
-| Explicit `*Component` classes | 19 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime lines | 46,859 | Refactor by ownership, not by indiscriminate file splitting |
-| `gameplay.gd` | about 245 lines | The old giant coordinator has already been reduced |
-| `gameplay_state.gd` | 1,721 lines / 506 functions | The remaining composition-root and compatibility surface is the main debt |
-| `root.call/get/set` | 3,112 sites | Dependencies are still hidden across controllers and components |
+| Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
+| Runtime physical lines | 46,714 | Refactor by ownership, not by indiscriminate file splitting |
+| Runtime non-blank lines | 41,330 | Blank/comment volume is separated from implementation size |
+| `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
+| `gameplay_state.gd` | 1,720 lines / 506 functions / 287 fields | The remaining composition-root and compatibility surface is the main debt |
+| `root.call/get/set` | 3,140 sites | Dependencies are still hidden across controllers and components |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed room transition/activation
-and spawn results, and the typed chest item-reward result. The immediate work is
-to finish reward persistence/settlement, then migrate one vertical slice at a
-time from dynamic root access to direct typed dependencies and meaningful
-signals.
+and spawn results, and the typed chest item-reward result. The current working
+tree is implementing direct typed dependency migrations for chest rewards and
+run settlement. The immediate work is to checkpoint these boundaries and finish
+the typed safe-checkpoint sequence, then apply the proven pattern one vertical
+slice at a time to replace dynamic root access with direct typed
+dependencies and meaningful signals.
 
 The practical sequence is:
 
 1. Finish the reward result through room persistence and settlement.
-2. Prove a narrow typed dependency/context boundary and remove its obsolete
-   wrappers.
-3. Apply the same approach to checkpoint/run settlement and room lifecycle.
+2. Finish the typed settlement and room-state checkpoint boundaries, then
+   characterize active-run file-write ordering.
+3. Remove compatibility wrappers as each migrated slice reaches its last
+   consumer.
 4. Tackle the large mixed menu owner only after the runtime pattern is proven.
 5. Move balance/configuration data toward external tuning resources.
 
@@ -194,7 +199,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.12**. Every push to `main` must increment the
+Current game version: **0.2.13**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 
