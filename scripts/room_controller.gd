@@ -15,6 +15,7 @@ const ROOM_ENTRY_RESULT_SCRIPT = preload("res://scripts/room_entry_result.gd")
 const ROOM_ENEMY_RUNTIME_CONTEXT_SCRIPT = preload("res://scripts/room_enemy_runtime_context.gd")
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
 const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
+const ROOM_SPAWN_CONTEXT_SCRIPT = preload("res://scripts/room_spawn_context.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(result: RoomClearResult)
@@ -2130,6 +2131,106 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 
 
 func reset_slimes_for_room(root: Object) -> RoomSpawnResult:
+	if root is GameplayState:
+		return reset_slimes_for_room_context(ROOM_SPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self))
+	return _reset_slimes_for_room_legacy(root)
+
+
+func reset_slimes_for_room_context(context: RoomSpawnContext) -> RoomSpawnResult:
+	var result := ROOM_SPAWN_RESULT_SCRIPT.new() as RoomSpawnResult
+	if context == null or not context.is_valid():
+		result.reject(RoomSpawnResult.Status.MISSING_ROOT)
+		return result
+	var runtime := context.runtime
+	result.room_id = context.room_id
+	result.room_type = context.room_type
+	runtime.effects_spawner.clear_slime_notices()
+	for slime in context.slimes:
+		kill_slime_without_effects(runtime, slime)
+	# Hub, rest, NPC, puzzle, and orb rooms are intentionally enemy-free. Keep
+	# the cleanup above, but do not interpret stale room-state data as an enemy
+	# encounter when one of those rooms is entered.
+	if context.room_type != DungeonGraph.ROOM_COMBAT and context.room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and context.room_type != DungeonGraph.ROOM_TREASURE and context.room_type != DungeonGraph.ROOM_DOWNSTAIRS:
+		last_spawn_result = result
+		return result
+	var state := context.state
+	var active_variants := state.get("enemy_variants", []) as Array
+	result.requested_slots = active_variants.size()
+	var runtime_states := state.get("enemy_runtime", {}) as Dictionary
+	var first_entry := not bool(state.get("enemy_spawned", false))
+	result.first_entry = first_entry
+	var spawn_positions: Dictionary
+	if state.has("enemy_spawn_positions"):
+		spawn_positions = state["enemy_spawn_positions"] as Dictionary
+	else:
+		spawn_positions = {}
+		state["enemy_spawn_positions"] = spawn_positions
+	var spawn_seed := int(state.get("enemy_spawn_seed", String(context.room_id).hash() + 303))
+	var layout_rng := RandomNumberGenerator.new()
+	layout_rng.seed = spawn_seed
+	_prepare_enemy_slot_visuals(runtime, state)
+	var player := runtime.player
+	var player_foot: Vector2 = runtime._actor_foot(player)
+	var chest := runtime.chest
+	var chest_rect: Rect2 = runtime._collision_rect(chest)
+	var occupied: Array[Vector2] = []
+	var special_timers := state.get("special_respawn_timers", {}) as Dictionary
+	var hide_special_enemies := _special_room_hides_enemies(runtime, state)
+	var spawned_slots := 0
+	var animated_spawn_started := false
+	var spawn_audio_played := false
+	# Legacy saves may contain the removed revisit-injection flag. It must never
+	# create an immediate replacement on room entry.
+	state.erase("backtrack_popcorn_pending")
+	var backtrack_popcorn_pending := false
+	var backtrack_spawn_started := false
+	for slime_index in active_variants.size():
+		if slime_index >= context.slimes.size():
+			result.record_failure(slime_index)
+			continue
+		var timer_key := str(slime_index)
+		if hide_special_enemies or (context.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY and special_timers.has(timer_key) and float(special_timers[timer_key]) > 0.0):
+			continue
+		var has_runtime_entry := runtime_states.has(timer_key) or runtime_states.has(slime_index)
+		var runtime_entry := runtime_states.get(timer_key, runtime_states.get(slime_index, {})) as Dictionary
+		if has_runtime_entry and not bool(runtime_entry.get("alive", false)):
+			continue
+		if has_runtime_entry and runtime_entry.get("position") is Vector2:
+			spawn_positions[slime_index] = runtime_entry["position"]
+		var animate_spawn := (first_entry and not has_runtime_entry) or (backtrack_popcorn_pending and not has_runtime_entry and slime_index == active_variants.size() - 1)
+		if _spawn_enemy_slot(runtime, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
+			var spawn_started: bool = animate_spawn and runtime._is_slime_spawn_locked(context.slimes[slime_index])
+			result.record_spawn(slime_index, spawn_started)
+			spawned_slots += 1
+			if has_runtime_entry:
+				_restore_enemy_runtime_state(runtime, context.slimes[slime_index], runtime_entry)
+			if animate_spawn and runtime._is_slime_spawn_locked(context.slimes[slime_index]):
+				backtrack_spawn_started = backtrack_popcorn_pending
+				animated_spawn_started = true
+				if not spawn_audio_played:
+					var spawn_rng := runtime.rng
+					runtime._play_sound("slime_spawn", -6.0, 0.98 + spawn_rng.randf_range(-0.03, 0.03))
+					spawn_audio_played = true
+		else:
+			result.record_failure(slime_index)
+	if first_entry and spawned_slots > 0:
+		state["enemy_spawned"] = true
+	if backtrack_spawn_started:
+		state.erase("backtrack_popcorn_pending")
+	state["enemy_spawn_positions"] = spawn_positions
+	state["enemy_spawn_seed"] = spawn_seed
+	room_states[context.room_id] = state
+	if runtime.run_state != null and runtime.run_state.active:
+		runtime.run_state.register_room_enemies(context.room_id, spawned_slots)
+	if context.room_type == DungeonGraph.ROOM_DOWNSTAIRS and not animated_spawn_started:
+		for slime in context.slimes:
+			if slime.visible:
+				runtime._trigger_slime_notice(slime)
+	last_spawn_result = result
+	return result
+
+
+func _reset_slimes_for_room_legacy(root: Object) -> RoomSpawnResult:
 	var result := ROOM_SPAWN_RESULT_SCRIPT.new() as RoomSpawnResult
 	if root == null:
 		result.reject(RoomSpawnResult.Status.MISSING_ROOT)
