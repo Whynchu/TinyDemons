@@ -100,21 +100,23 @@ this shape:
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
 boundaries, typed room transition/activation/clear results, typed enemy-runtime
-capture, typed room-level initial spawn orchestration, and typed per-frame
-respawn coordination. The composition refactor is approximately 90% complete;
-the remaining work is concentrated in lower-level spawn/death-recording
-ownership, browser durability evidence, the large menu owner, deliberate
-tuning-data extraction, and compatibility-wrapper retirement.
+capture, typed room-level initial spawn orchestration, typed per-frame
+respawn coordination, typed room spawn/death helpers, external default tuning
+resources, and the first typed pause player-card presenter boundary. The
+composition refactor is approximately **96% complete / 4% remaining**; the
+remaining work is concentrated in browser/device durability evidence, the rest
+of the large menu owner, and compatibility-wrapper retirement.
 
 The practical sequence is:
 
-1. Finish lower-level room spawn/death-recording ownership and reconcile the
-   remaining respawn fixture expectations.
-2. Characterize active-run browser file-write ordering.
+1. Characterize active-run browser/device file-write ordering and the hosted
+   Pages artifact.
+2. Continue moving one complete menu presenter at a time from
+   `ScreenStateController`.
 3. Remove compatibility wrappers as each migrated slice reaches its last
    consumer.
-4. Tackle the large mixed menu owner only after the runtime pattern is proven.
-5. Move balance/configuration data toward external tuning resources.
+4. Keep adding newly identified balance knobs to the external tuning surface
+   without mixing balance changes into ownership migrations.
 
 Line counts and dynamic-call counts are navigation evidence, not quality scores.
 Do not split files or remove `GameplayState` wholesale; preserve the explicit

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="CombatTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat_tuning.gd" id="1_combat"]
+
+[resource]
+resource_name = "Default Combat Tuning"
+script = ExtResource("1_combat")

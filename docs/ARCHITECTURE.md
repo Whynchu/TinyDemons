@@ -116,19 +116,21 @@ effects and preserves the explicit frame schedule. New room-entry behavior
 should extend this result or add a focused result beside it rather than adding
 another loose destination/arrival argument to the coordinator.
 
-## Tuning classes (exported fields; resource migration planned)
+## Tuning classes and default resources
 
-The tuning classes expose exported fields, but version `0.2.00` constructs them
-in `gameplay_state.gd` rather than loading external `.tres` resources. Treat
-inspector editing as the intended destination until that migration is complete.
+The tuning classes expose typed exported fields and have inspector-facing
+defaults under `resources/tuning/`. `GameplayState` loads and deep-duplicates
+one default resource per runtime, so a test, debug scene, or future designer
+override cannot mutate the cached default used by another runtime.
 
 | Resource | Focus |
 | --- | --- |
-| `player_tuning.gd` | Movement, attack frames/combos, stats |
-| `slime_tuning.gd` | Enemy health, speed, aggro, attack ranges |
-| `combat_tuning.gd` | Global combat constants, contact/gap rules |
-| `progression_tuning.gd` | XP curve, depth scaling, milestones |
-| `effects_tuning.gd` | Damage numbers, particles, screen effects |
+| `resources/tuning/player_default.tres` / `player_tuning.gd` | Movement, attack frames/combos, stats |
+| `resources/tuning/slime_default.tres` / `slime_tuning.gd` | Enemy health, speed, aggro, attack ranges |
+| `resources/tuning/combat_default.tres` / `combat_tuning.gd` | Global combat constants, contact/gap rules |
+| `resources/tuning/progression_default.tres` / `progression_tuning.gd` | XP curve, depth scaling, milestones |
+| `resources/tuning/effects_default.tres` / `effects_tuning.gd` | Damage numbers, particles, screen effects |
+| `resources/tuning/chroma_default.tres` / `chroma_tuning.gd` | Chroma pickup and elemental resource values |
 
 Balance data lives in these resources, not in `gameplay.gd`. See
 `GAMEPLAY_TUNING.md` for the full export index and the remaining hardcoded

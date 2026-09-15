@@ -1,23 +1,29 @@
 # Gameplay Tuning Index
 
-Status: current code-backed tuning index; external resource migration remains
-planned
+Status: current external-resource-backed tuning index; hardcoded gap list remains
+planned work
 
-Updated: 2026-09-11
+Updated: 2026-09-15
 
 > Purpose: a single index of gameplay tuning knobs and where to change them.
-> This index describes the intended designer-facing surface. In version
-> `0.2.00`, the six tuning objects are instantiated from code in
-> `gameplay_state.gd`; they are not yet external `.tres` resources. Treat that
-> mismatch as infrastructure work, not as a claim that inspector editing is
-> already available.
+> The six core tuning defaults are now external `.tres` resources. Each
+> `GameplayState` deep-duplicates those defaults so inspector-facing source data
+> is shared while runtime/test overrides remain isolated.
 
-## Intended tuning resources
+## Default tuning resources
 
-The six typed tuning classes are currently created by `gameplay_state.gd` and
-form the code-backed tuning surface. Their exported fields document the
-intended future inspector surface; moving them into external resources is a
-planned infrastructure change.
+The resource files provide the default values and the scripts provide the typed
+field definitions and formulas. Edit the resource when changing a default;
+edit `GameplayState` only when changing how a runtime copy is composed.
+
+| Resource | Script class | Focus |
+| --- | --- | --- |
+| `resources/tuning/player_default.tres` | `PlayerTuning` | Movement, attacks, rolls, and player feel |
+| `resources/tuning/slime_default.tres` | `SlimeTuning` | Enemy health, speed, aggro, and attacks |
+| `resources/tuning/combat_default.tres` | `CombatTuning` | Combat formulas and contact/gap rules |
+| `resources/tuning/progression_default.tres` | `ProgressionTuning` | XP curve, depth scaling, and milestones |
+| `resources/tuning/effects_default.tres` | `EffectsTuning` | Damage numbers, particles, and screen effects |
+| `resources/tuning/chroma_default.tres` | `ChromaTuning` | Chroma pickup and elemental resource values |
 
 ### `scripts/player_tuning.gd` — player feel (81 exports, all `inspector`)
 

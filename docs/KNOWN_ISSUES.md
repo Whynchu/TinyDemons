@@ -354,10 +354,10 @@ not a quality score or release gate.
 | Full smoke runner has 121 runnable manifest paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
 | Six formerly unregistered `role:owner` checks are now triaged and resolved | All six have reliable states recorded in `tests/manifest.csv` | `actor_geometry_smoke` harness fixed; `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`, `resource_drop_motion_smoke` verified; `touch_menu_scroll_smoke` rewritten for the dialogue-context contract and verified |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
-| `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | Characterize shared menu conventions, then extract one presenter boundary |
-| `gameplay_state.gd` remains a shared state bag and compatibility surface | Ownership and rename safety are obscured | Select one typed vertical migration after active contracts stabilize |
+| `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | The pause player card now has a typed presenter context; continue one complete screen boundary at a time |
+| `gameplay_state.gd` remains a shared state bag and compatibility surface | Ownership and rename safety are obscured | Continue retiring wrappers only after each typed slice reaches its last consumer |
 | `root.call/get/set` remains widespread across runtime controllers | Hidden dependencies and runtime-only failures | Reduce calls by feature, measuring before/after rather than performing a global rewrite |
-| Tuning classes are instantiated in code rather than external `.tres` resources | Designers cannot yet use the intended inspector workflow | Define resource equivalence and migration tests before moving tuning data |
+| Six core tuning defaults now live in external `.tres` resources; the index still lists hardcoded gaps | Newly discovered balance knobs are not all inspector-facing yet | Add future knobs incrementally; preserve per-runtime deep-copy isolation and keep balance changes separate |
 | Per-pixel image work and synchronous startup paths exist in rendering/audio/UI | Device-specific frame hitches remain possible | Capture repeatable frame-time scenarios before optimization |
 
 ## Documentation findings

@@ -22,6 +22,8 @@ func _initialize() -> void:
 	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
 	_expect(screens != null and profile != null, "pause menu owners are composed", failures)
 	if screens != null and profile != null:
+		var menu_player_context := gameplay.call("_menu_player_context") as MenuPlayerContext
+		_expect(menu_player_context != null and menu_player_context.is_valid() and menu_player_context.profile == profile and menu_player_context.snapshot != null, "pause player card receives a typed presentation context", failures)
 		var starting_gold := profile.gold
 		var starting_runs := profile.completed_runs
 		gameplay.call("_open_pause_menu")

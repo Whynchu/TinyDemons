@@ -257,12 +257,11 @@ suite only as a supervised standalone gate with no MCP runtime active.
   the deterministic map, room state, map progress, health, Chroma, facing, and
   safe arrival point, then resets transient combat/input state. Failed restore
   preserves the checkpoint and returns to title instead of starting over.
-- Verified: focused script checks pass for all recovery owners and the new
-  `active_run_recovery_contract_smoke.gd` contract test. A standalone headless
-  execution was attempted once but hit the known Windows Godot renderer crash
-  before test execution; the full smoke runner remains intentionally deferred
-  while an MCP editor peer is active.
-- Remaining release gate: run the focused contract smoke in a healthy Godot
-  runtime, then perform the iPhone Safari/Android Chrome restart and long-run
-  profiling matrix, compare export/runtime metrics, and deploy only when
-  requested.
+- Verified: focused script checks pass for all recovery owners and the
+  `active_run_recovery_contract_smoke.gd` contract test passes in a standalone
+  Godot runtime. The single-threaded Web export also passes into a fresh output
+  directory with the expected HTML, WASM, and PCK payloads.
+- Remaining release gate: perform the iPhone Safari/Android Chrome restart and
+  long-run profiling matrix, compare export/runtime metrics, and deploy only
+  when requested. Local export evidence does not replace hosted browser
+  evidence.

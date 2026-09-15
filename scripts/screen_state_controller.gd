@@ -2949,6 +2949,9 @@ func _update_hub_allocation_preview(root: Object, pixel_texture: Callable, curre
 
 
 func _update_pause_player_info(root: Object, pixel_texture: Callable) -> void:
+	if root is GameplayState:
+		_update_pause_player_info_context((root as GameplayState)._menu_player_context(), pixel_texture)
+		return
 	if pause_player_card_texts.is_empty():
 		return
 	var profile := root.get("player_profile") as PlayerProfile
@@ -2992,8 +2995,43 @@ func _update_pause_player_info(root: Object, pixel_texture: Callable) -> void:
 	_update_pause_resources(root, pixel_texture)
 
 
+func _update_pause_player_info_context(context: MenuPlayerContext, pixel_texture: Callable) -> void:
+	if pause_player_card_texts.is_empty() or context == null or not context.is_valid():
+		return
+	var profile := context.profile
+	var max_health := context.max_health()
+	var health := context.current_health()
+	var chroma := context.chroma()
+	var values := [
+		PlayerProfile.normalize_player_name(profile.player_name),
+		context.element_display_name(),
+		"HP",
+		"%d/%d" % [health, max_health],
+		"CHR",
+		"%d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA],
+		"LV %d" % profile.level,
+	]
+	for index in pause_player_card_texts.size():
+		var text := pause_player_card_texts[index]
+		text.visible = true
+		var label: String = str(values[index]) if index < values.size() else ""
+		var label_color := PauseMenuLayoutScript.MUTED_TEXT_COLOR if index == 1 else Color.WHITE
+		text.texture = pixel_texture.call(label, label_color) as Texture2D
+	if pause_player_portrait != null:
+		var portrait_texture := context.portrait_texture()
+		if portrait_texture != null:
+			pause_player_portrait.texture = portrait_texture
+	_update_pause_resources_context(profile, pixel_texture)
+
+
 func _update_pause_resources(root: Object, pixel_texture: Callable) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
+	if profile == null:
+		return
+	_update_pause_resources_context(profile, pixel_texture)
+
+
+func _update_pause_resources_context(profile: PlayerProfile, pixel_texture: Callable) -> void:
 	if profile == null:
 		return
 	if pause_gold_icon != null:

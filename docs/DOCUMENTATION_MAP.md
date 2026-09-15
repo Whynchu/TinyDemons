@@ -76,8 +76,8 @@ rationale, but they must link forward to the current authority.
 - Add lifecycle headers to active implementation plans as they are reopened.
 - Mark composition and menu plans that describe completed or superseded work.
 - Add explicit run scope to R3/R4/R5/R7/R8 dungeon documents.
-- Reconcile the tuning index with the eventual move from code-instantiated
-  tuning objects to external resources.
+- Keep the tuning index aligned with the external default resources under
+  `resources/tuning/`; add newly surfaced hardcoded knobs to its gap list.
 - Keep this map and the canonical documents linked from `AGENTS.md`.
 - Keep test/report role and state decisions in
   [`verification-surface-audit.md`](verification-surface-audit.md); keep target

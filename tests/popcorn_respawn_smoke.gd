@@ -46,37 +46,51 @@ func _initialize() -> void:
 		for support in supports:
 			gameplay.call("_kill_slime", support)
 		state = rooms.room_states.get(room_id, {}) as Dictionary
-		_expect(state.has("popcorn_respawn_slots"), "defeated popcorn slot enters the respawn queue", failures)
+		var waiting := state.get("popcorn_respawn_waiting", {}) as Dictionary
+		_expect(waiting.size() == supports.size(), "defeated popcorn slots wait for room clear before scheduling", failures)
+		_expect(not state.has("popcorn_respawn_slots"), "popcorn slots are not scheduled before room clear", failures)
 		_expect(not bool(gameplay.get("entrance_open")), "defeating popcorn does not open the boss arrival entrance", failures)
-		rooms.update_popcorn_respawns(gameplay, 4.99)
+		rooms.update_popcorn_respawns(gameplay, 5.0)
 		for support in supports:
-			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots wait before the five-second respawn", failures)
-		rooms.update_popcorn_respawns(gameplay, 0.02)
+			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots stay defeated before the room is cleared", failures)
+
+		# Popcorn belongs to the completed room's replay loop. Once the remaining
+		# threats are defeated, the room clear schedules each waiting slot with a
+		# seeded 30-45 second delay.
+		for threat in big_threats:
+			if not bool(gameplay.call("_is_slime_dead", threat)):
+				gameplay.call("_kill_slime", threat)
+		for regular in regular_enemies:
+			if not bool(gameplay.call("_is_slime_dead", regular)):
+				gameplay.call("_kill_slime", regular)
+		state = rooms.room_states.get(room_id, {}) as Dictionary
+		var pending := state.get("popcorn_respawn_slots", {}) as Dictionary
+		_expect(bool(state.get("finished", false)), "room clear marks the boss room finished", failures)
+		_expect(pending.size() == supports.size(), "room clear schedules every defeated popcorn slot", failures)
+		var earliest_delay := 45.0
+		var latest_delay := 30.0
+		for delay_value in pending.values():
+			var delay := float(delay_value)
+			earliest_delay = minf(earliest_delay, delay)
+			latest_delay = maxf(latest_delay, delay)
+		_expect(earliest_delay >= 30.0 and latest_delay <= 45.0, "popcorn delays stay inside the 30-45 second contract", failures)
+		rooms.update_popcorn_respawns(gameplay, maxf(earliest_delay - 0.01, 0.0))
 		for support in supports:
-			_expect(support.visible and not bool(gameplay.call("_is_slime_dead", support)), "popcorn slots respawn while the boss is alive", failures)
+			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots wait until their seeded delay expires", failures)
+		rooms.update_popcorn_respawns(gameplay, latest_delay + 0.1)
+		for support in supports:
+			_expect(support.visible and not bool(gameplay.call("_is_slime_dead", support)), "popcorn slots respawn after their seeded delays", failures)
 			var respawned_stats := gameplay.call("_slime_stats", support) as StatsComponent
 			_expect(respawned_stats != null and respawned_stats.level == expected_popcorn_level, "respawned popcorn support remains five levels below the player", failures)
 		_expect(not bool(gameplay.get("entrance_open")), "popcorn respawn keeps the boss arrival entrance sealed", failures)
 
-		for threat in big_threats:
-			gameplay.call("_kill_slime", threat)
 		for support in supports:
 			gameplay.call("_kill_slime", support)
-		for _frame in 30:
-			await process_frame
-		for support in supports:
-			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots stay defeated after every big threat is gone", failures)
-		state = rooms.room_states.get(room_id, {}) as Dictionary
-		_expect(not state.has("popcorn_respawn_slots"), "big-threat defeat clears pending popcorn respawns", failures)
-		var regular_enemies_alive := false
-		for regular in regular_enemies:
-			if not bool(gameplay.call("_is_slime_dead", regular)):
-				regular_enemies_alive = true
-		_expect(bool(gameplay.get("entrance_open")) == not regular_enemies_alive, "boss entrance follows the remaining regular-enemy roster", failures)
+		_expect(not bool(gameplay.get("entrance_open")), "boss arrival entrance stays sealed after a respawned support dies", failures)
 		for slime in slimes:
 			if not bool(gameplay.call("_is_slime_dead", slime)):
 				gameplay.call("_kill_slime", slime)
-		_expect(bool(gameplay.get("entrance_open")), "the boss entrance opens only after the full encounter is defeated", failures)
+		_expect(bool(gameplay.get("final_exit_open")), "the final exit remains available after the full boss encounter is defeated", failures)
 
 	gameplay.queue_free()
 	await process_frame
