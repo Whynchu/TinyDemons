@@ -74,6 +74,45 @@ function Get-IntegerBaseline($Baseline, [string]$Name, [int]$Fallback) {
 	return $Fallback
 }
 
+## Weighted completion: how far each metric has traveled from the recorded
+## completion_start toward its strict target, weighted by the size of the
+## remaining gap. A metric that grew beyond its start contributes zero progress
+## (clamped), never negative credit.
+function Get-CompletionPercent(
+	[int]$RootAccesses, [int]$GameplayStateLines, [int]$GameplayStateFields,
+	[int]$RoomControllerLines, [int]$RuntimeRefs, [int]$LegacyPairs,
+	[int]$TransitionalContexts, $CompletionStart, $TargetValues
+) {
+	$metrics = @(
+		@{ Name = "root_accesses"; Start = (Get-IntegerBaseline $CompletionStart "root_accesses" 3135); Target = (Get-TargetValue $TargetValues "root_accesses_max" 2499); Current = $RootAccesses },
+		@{ Name = "gameplay_state_lines"; Start = (Get-IntegerBaseline $CompletionStart "gameplay_state_lines" 1720); Target = (Get-TargetValue $TargetValues "gameplay_state_lines_max" 1719); Current = $GameplayStateLines },
+		@{ Name = "gameplay_state_fields"; Start = (Get-IntegerBaseline $CompletionStart "gameplay_state_fields" 287); Target = (Get-TargetValue $TargetValues "gameplay_state_fields_max" 286); Current = $GameplayStateFields },
+		@{ Name = "room_controller_lines"; Start = (Get-IntegerBaseline $CompletionStart "room_controller_lines" 2297); Target = (Get-TargetValue $TargetValues "room_controller_lines_max" 2296); Current = $RoomControllerLines },
+		@{ Name = "runtime_refs"; Start = (Get-IntegerBaseline $CompletionStart "runtime_refs" 20); Target = (Get-TargetValue $TargetValues "runtime_refs_max" 0); Current = $RuntimeRefs },
+		@{ Name = "legacy_pairs"; Start = (Get-IntegerBaseline $CompletionStart "legacy_pairs" 11); Target = (Get-TargetValue $TargetValues "legacy_pairs_max" 0); Current = $LegacyPairs },
+		@{ Name = "transitional_contexts"; Start = (Get-IntegerBaseline $CompletionStart "transitional_contexts" 5); Target = (Get-TargetValue $TargetValues "transitional_contexts_max" 0); Current = $TransitionalContexts }
+	)
+	$weightedSum = 0.0
+	$totalWeight = 0.0
+	$details = [System.Collections.Generic.List[string]]::new()
+	foreach ($metric in $metrics) {
+		$gap = $metric.Start - $metric.Target
+		if ($gap -le 0) {
+			continue
+		}
+		$traveled = $metric.Start - $metric.Current
+		$progress = [Math]::Min([Math]::Max($traveled / $gap, 0.0), 1.0)
+		$weightedSum += $progress * $gap
+		$totalWeight += $gap
+		$details.Add(("{0}={1:P0}" -f $metric.Name, $progress))
+	}
+	$percent = if ($totalWeight -gt 0) { $weightedSum / $totalWeight } else { 1.0 }
+	return [PSCustomObject]@{
+		Percent = $percent
+		Details = @($details)
+	}
+}
+
 function Get-TargetValue($Targets, [string]$Name, [int]$Fallback) {
 	$value = Get-PropertyValue $Targets $Name
 	if ($null -ne $value) {
@@ -180,6 +219,15 @@ if ($SelfTest) {
 			legacy_total = 1
 			legacy_pairs = @()
 			transitional_allowlist = @()
+			completion_start = [ordered]@{
+				root_accesses = 0
+				gameplay_state_lines = 1
+				gameplay_state_fields = 1
+				room_controller_lines = 1
+				runtime_refs = 0
+				legacy_pairs = 0
+				transitional_contexts = 0
+			}
 			targets = [ordered]@{
 				root_accesses_max = 0
 				gameplay_state_lines_max = 1
@@ -300,6 +348,17 @@ $requiredBaselineMetrics = @(
 foreach ($metricName in $requiredBaselineMetrics) {
 	if ($null -eq (Get-PropertyInfo $baseline $metricName)) {
 		$errors.Add("Baseline is missing required metric '$metricName'; refusing to use an implicit value.")
+	}
+}
+
+$completionStart = Get-PropertyValue $baseline "completion_start"
+if ($null -eq $completionStart) {
+	$errors.Add("Baseline is missing 'completion_start'; refusing to compute a completion percentage from an implicit start.")
+} else {
+	foreach ($startName in @("root_accesses", "gameplay_state_lines", "gameplay_state_fields", "room_controller_lines", "runtime_refs", "legacy_pairs", "transitional_contexts")) {
+		if ($null -eq (Get-PropertyInfo $completionStart $startName)) {
+			$errors.Add("Baseline completion_start is missing '$startName'; refusing to use an implicit value.")
+		}
 	}
 }
 
@@ -434,8 +493,13 @@ if ($RequireTargets) {
 }
 
 # ---- 5. Output and baseline update ----
+$completion = Get-CompletionPercent `
+	$rootAccesses $gameplayStateLines $gameplayStateFields `
+	$roomControllerLines $runtimeRefs $legacyPairs.Count $transitionalFound.Count `
+	$completionStart $targetValues
 Write-Host "COMPOSITION_AUDIT" -ForegroundColor Cyan
 Write-Host "  mode              : $(if ($RequireTargets) { 'strict targets' } else { 'regression floor' })"
+Write-Host ("  completion        : {0:P1} (weighted progress from recorded start toward strict targets)" -f $completion.Percent)
 Write-Host "  root.call/get/set : $rootAccesses (baseline $rootBaseline; target <= $($targetValues.root_accesses_max))"
 Write-Host "  GameplayState     : $gameplayStateLines lines / $gameplayStateFields fields (baseline $gsLinesBaseline / $gsFieldsBaseline)"
 Write-Host "  RoomController    : $roomControllerLines lines (baseline $rcLinesBaseline; target <= $($targetValues.room_controller_lines_max))"
@@ -445,6 +509,9 @@ Write-Host "  contexts          : $($contextFiles.Count) files; $($transitionalF
 foreach ($pair in $legacyPairs) {
 	Write-Host "  duplicate pair: $pair" -ForegroundColor Yellow
 }
+if ($completion.Details.Count -gt 0) {
+	Write-Host "  progress detail  : $($completion.Details -join ', ')"
+}
 
 if ($UpdateBaseline) {
 	if ($errors.Count -gt 0) {
@@ -452,6 +519,22 @@ if ($UpdateBaseline) {
 	} elseif ($null -eq $baseline) {
 		$errors.Add("Refusing -UpdateBaseline because no baseline JSON was loaded")
 	} else {
+		# completion_start is a fixed reference: it is seeded from the current
+		# values on first creation and then preserved on later updates so the
+		# completion percentage measures progress since the original start,
+		# not since the last baseline refresh. There is no implicit re-zeroing.
+		$resolvedCompletionStart = $completionStart
+		if ($null -eq $resolvedCompletionStart) {
+			$resolvedCompletionStart = [ordered]@{
+				root_accesses = $rootAccesses
+				gameplay_state_lines = $gameplayStateLines
+				gameplay_state_fields = $gameplayStateFields
+				room_controller_lines = $roomControllerLines
+				runtime_refs = $runtimeRefs
+				legacy_pairs = $legacyPairs.Count
+				transitional_contexts = $transitionalFound.Count
+			}
+		}
 		$newBaseline = [ordered]@{
 			root_accesses = $rootAccesses
 			gameplay_state_lines = $gameplayStateLines
@@ -461,6 +544,7 @@ if ($UpdateBaseline) {
 			legacy_total = $legacyCount
 			legacy_pairs = $legacyPairs
 			transitional_allowlist = $transitionalAllowlist
+			completion_start = $resolvedCompletionStart
 			targets = $targetValues
 		}
 		$newBaseline | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $resolvedBaselinePath -Encoding UTF8

@@ -8,7 +8,7 @@ Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 Baseline game version: `0.2.00`
 
-Current release: `0.2.16` (typed reward, checkpoint, room-state, and runtime ownership boundaries)
+Current release: `0.2.17` (typed reward, checkpoint, room-state, and runtime ownership boundaries)
 
 Post-audit checkpoint (2026-09-15): the composition handoff is approximately
 25% complete under the strict ownership scorecard. Typed room spawn/death
