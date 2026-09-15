@@ -33,6 +33,35 @@ func _initialize() -> void:
 	_expect(not missing_connection.is_ready(), "missing connection is rejected before runtime mutation", failures)
 	_expect(missing_connection.status == RoomTransitionResult.Status.INVALID_CONNECTION, "missing connection has a typed rejection status", failures)
 
+	var clear_events: Array[RoomClearResult] = []
+	rooms.room_cleared.connect(func(result: RoomClearResult) -> void: clear_events.append(result))
+	var clear_context := RoomClearContext.new(DungeonGraph.START_ROOM_ID, graph.get_room(DungeonGraph.START_ROOM_ID))
+	var clear_result := rooms.mark_cleared_context(clear_context)
+	_expect(clear_result.succeeded() and clear_result.is_new_clear(), "room clear applies through a typed context and result", failures)
+	_expect(clear_result.room_id == DungeonGraph.START_ROOM_ID, "room clear result preserves the room identity", failures)
+	_expect(clear_events.size() == 1 and clear_events[0] == clear_result, "room clear emits the typed result once", failures)
+	var repeated_clear := rooms.mark_cleared_context(clear_context)
+	_expect(repeated_clear.status == RoomClearResult.Status.ALREADY_CLEARED, "repeated room clear is reported without re-emitting", failures)
+	_expect(clear_events.size() == 1, "repeated room clear does not duplicate the event", failures)
+
+	var enemy := Sprite2D.new()
+	var combat := SlimeCombatComponent.new()
+	var health := HealthComponent.new()
+	health.maximum_health = 10.0
+	health.current_health = 7.0
+	var enemy_slimes: Array[Sprite2D] = [enemy]
+	var enemy_combats: Array[SlimeCombatComponent] = [combat]
+	var enemy_health: Array[HealthComponent] = [health]
+	rooms.room_states[&"runtime_room"] = {"enemy_variants": ["grey"]}
+	var runtime_context := RoomEnemyRuntimeContext.new(&"runtime_room", ["grey"], enemy_slimes, enemy_combats, enemy_health)
+	var runtime_result := rooms.save_enemy_runtime_state_context(runtime_context)
+	var runtime_state := rooms.room_states[&"runtime_room"] as Dictionary
+	_expect(runtime_result.succeeded() and runtime_result.saved_slots == 1, "enemy runtime saves through a typed context", failures)
+	_expect(bool((runtime_state["enemy_runtime"] as Dictionary)["0"]["alive"]) and is_equal_approx(float((runtime_state["enemy_runtime"] as Dictionary)["0"]["health"]), 7.0), "enemy runtime result preserves live health state", failures)
+	enemy.free()
+	combat.free()
+	health.free()
+
 	rooms.free()
 	if failures.is_empty():
 		print("ROOM_TRANSITION_RESULT_SMOKE_OK")

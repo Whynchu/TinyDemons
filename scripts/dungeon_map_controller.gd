@@ -398,6 +398,12 @@ func can_fast_travel_to_flame(current_room_id: StringName, target_room_id: Strin
 	return not target_room.fire_flame.is_empty() and state.is_flame_visited(target_room_id)
 
 
+func on_room_completed_result(result: RoomClearResult) -> void:
+	if result == null or not result.succeeded():
+		return
+	on_room_completed(result.room_id)
+
+
 func on_room_completed(room_id: StringName) -> void:
 	var was_completed := state.is_room_completed(room_id)
 	state.mark_room_completed(room_id)

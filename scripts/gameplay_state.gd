@@ -852,8 +852,8 @@ func _checkpoint_safe_run_state() -> bool:
 		if diagnostics != null and diagnostics.has_method("record_checkpoint"):
 			diagnostics.call("record_checkpoint", self)
 	return result.succeeded()
-func _on_room_cleared_for_checkpoint(room_id: StringName) -> void:
-	if room_id != current_room_id or room_transition_locked:
+func _on_room_cleared_for_checkpoint(result: RoomClearResult) -> void:
+	if result == null or not result.is_new_clear() or result.room_id != current_room_id or room_transition_locked:
 		return
 	_checkpoint_safe_run_state()
 func _clear_active_run_checkpoint() -> void:
@@ -1446,13 +1446,13 @@ func _change_orb_palette_from_room(palette: String) -> bool:
 	return dungeon_map_controller != null and bool(dungeon_map_controller.call("change_orb_from_palette", current_room_id, palette))
 func _on_room_enemies_cleared() -> void:
 	if current_room_type == DungeonGraph.ROOM_DOWNSTAIRS:
-		room_controller.mark_cleared(current_room_id)
+		room_controller.mark_cleared_context(RoomClearContext.new(current_room_id, dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null))
 		_open_final_exit()
 		return
 	if current_room_type != DungeonGraph.ROOM_COMBAT and current_room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and current_room_type != DungeonGraph.ROOM_TREASURE:
 		return
-	room_controller.mark_cleared(current_room_id)
-	_set_door_active(room_controller.is_cleared(current_room_id))
+	var clear_result := room_controller.mark_cleared_context(RoomClearContext.new(current_room_id, dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null))
+	_set_door_active(clear_result.succeeded())
 	_set_entrance_open(true)
 func _map_connection_available(connection: DungeonGraph.ConnectionRecord, is_entrance: bool = false) -> bool:
 	if current_room_type == DungeonGraph.ROOM_START and not starter_flame_attuned_this_run:
@@ -1496,7 +1496,7 @@ func _update_door_transition() -> void: if not room_transition_locked: room_cont
 func _try_enter_any_active_socket() -> bool: return room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _release_room_transition_lock() -> void: room_transition_locked = false; if room_controller != null: room_controller.end_transition()
 func _room_checkpoint_context() -> RoomCheckpointContext:
-	room_controller.save_enemy_runtime_state(self)
+	room_controller.save_enemy_runtime_state_context(_room_enemy_runtime_context())
 	var state: Dictionary = room_controller.room_states.get(current_room_id, {}) as Dictionary
 	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
 	var puzzle_finished := false
@@ -1515,6 +1515,17 @@ func _room_checkpoint_context() -> RoomCheckpointContext:
 		world_item_drops,
 		chroma_pickup_controller)
 	return context
+
+
+func _room_enemy_runtime_context() -> RoomEnemyRuntimeContext:
+	var state: Dictionary = room_controller.room_states.get(current_room_id, {}) as Dictionary
+	var slimes := self.slimes
+	var combat_components: Array[SlimeCombatComponent] = []
+	var health_components: Array[HealthComponent] = []
+	for slime in slimes:
+		combat_components.append(SlimeActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent)
+		health_components.append(slime.get_node_or_null("Health") as HealthComponent)
+	return RoomEnemyRuntimeContext.new(current_room_id, state.get("enemy_variants", []) as Array, slimes, combat_components, health_components)
 
 func _save_current_room_state() -> RoomCheckpointResult:
 	return room_controller.save_current_room_state(_room_checkpoint_context())

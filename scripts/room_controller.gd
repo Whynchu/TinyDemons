@@ -8,9 +8,16 @@ const ROOM_ACTIVATION_RESULT_SCRIPT = preload("res://scripts/room_activation_res
 const ROOM_SPAWN_RESULT_SCRIPT = preload("res://scripts/room_spawn_result.gd")
 const ROOM_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/room_checkpoint_context.gd")
 const ROOM_CHECKPOINT_RESULT_SCRIPT = preload("res://scripts/room_checkpoint_result.gd")
+const ROOM_CLEAR_CONTEXT_SCRIPT = preload("res://scripts/room_clear_context.gd")
+const ROOM_CLEAR_RESULT_SCRIPT = preload("res://scripts/room_clear_result.gd")
+const ROOM_ENTRY_CONTEXT_SCRIPT = preload("res://scripts/room_entry_context.gd")
+const ROOM_ENTRY_RESULT_SCRIPT = preload("res://scripts/room_entry_result.gd")
+const ROOM_ENEMY_RUNTIME_CONTEXT_SCRIPT = preload("res://scripts/room_enemy_runtime_context.gd")
+const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
+const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
-signal room_cleared(room_id: StringName)
+signal room_cleared(result: RoomClearResult)
 
 var current_room_id: StringName = &""
 var arrival_socket_id: StringName = &""
@@ -593,6 +600,86 @@ func plan_socket_transition(
 
 
 func enter_connected_room(root: Object, transition: RoomTransitionResult) -> bool:
+	if root is GameplayState:
+		return enter_connected_room_context(ROOM_ENTRY_CONTEXT_SCRIPT.new(root as GameplayState, transition)).succeeded()
+	return _enter_connected_room_legacy(root, transition)
+
+
+func enter_connected_room_context(context: RoomEntryContext) -> RoomEntryResult:
+	var result: RoomEntryResult = ROOM_ENTRY_RESULT_SCRIPT.new()
+	if context != null:
+		result.transition = context.transition
+		if context.transition != null:
+			result.room_id = context.transition.destination_room_id
+			result.room_type = context.transition.destination_room_type
+	if context == null or not context.is_valid():
+		return result
+	var runtime := context.runtime
+	var transition := context.transition
+	var player := runtime.player
+	if player == null or not is_instance_valid(player):
+		result.status = RoomEntryResult.Status.MISSING_PLAYER
+		return result
+	runtime.room_transition_locked = true
+	begin_transition()
+	# A combo is local to an encounter. Entering a new room must not carry the
+	# previous room's timer or multiplier into the next one.
+	runtime._reset_combo()
+	runtime._save_current_room_state()
+	runtime.current_room_id = transition.destination_room_id
+	runtime._sync_current_room_metadata(transition.arrival_socket_id)
+	enter_room(transition.destination_room_id, transition.destination_room_type, transition.arrival_socket_id)
+	_maybe_add_backtrack_popcorn(runtime)
+	runtime._ensure_current_room_layout()
+	runtime._update_room_number_indicator()
+	var arrival_socket := dungeon_sockets.get(transition.arrival_socket_id) as DungeonSocket
+	player.global_position = _arrival_player_position(runtime, arrival_socket)
+	if not runtime._can_actor_stand_at_current_position(player):
+		var requested_foot: Vector2 = runtime._actor_foot(player)
+		var nearest_foot := nearest_player_walkable_point(runtime, requested_foot)
+		if nearest_foot != Vector2.INF:
+			player.global_position += nearest_foot - requested_foot
+		else:
+			# Preserve the old sampled-point fallback for partially initialized test
+			# scenes that do not yet have a usable player collision context.
+			var fallback_foot: Vector2 = runtime._nearest_slime_walkable_point(requested_foot)
+			player.global_position = fallback_foot - GameplayState.ACTOR_FOOT_OFFSET
+	player.flip_h = arrival_socket != null and arrival_socket.inward_facing.x < 0.0
+	runtime.last_player_facing_left = player.flip_h
+	runtime.player_is_attacking = false
+	runtime.magic_input_was_down = false
+	runtime._cancel_magic_animation()
+	runtime._reset_magic_runtime()
+	runtime.player_is_rolling = false
+	runtime.player_is_backflipping = false
+	runtime.orb_knockback_animation_lock = false
+	runtime.orb_knockback_animation_grace = false
+	runtime.orb_knockback_attack_cancelled = false
+	runtime._clear_roll_dust()
+	var equipment_visual := runtime.player_equipment_visual_component
+	if equipment_visual != null:
+		equipment_visual.reset_for_room(runtime)
+	runtime.player_attack_visual.visible = false
+	runtime._set_current_target(null)
+	runtime.target_input_was_down = false
+	var npc := runtime.npc_controller as NpcController
+	if npc != null:
+		npc.hide_dialogue(runtime)
+	runtime._set_target_ui_visible(false)
+	runtime._apply_room_state()
+	runtime._build_depth_lists()
+	# The destination layout/state is now fully applied. Persist the profile first
+	# and then capture this safe boundary; a browser restart cannot resume from a
+	# half-applied room transition.
+	if runtime.player_profile != null:
+		ProfileSaveService.save_profile(runtime.player_profile)
+	runtime.call_deferred("_save_active_run_checkpoint")
+	runtime.call_deferred("_release_room_transition_lock")
+	result.status = RoomEntryResult.Status.ENTERED
+	return result
+
+
+func _enter_connected_room_legacy(root: Object, transition: RoomTransitionResult) -> bool:
 	if root == null or transition == null or not transition.is_ready():
 		return false
 	root.set("room_transition_locked", true)
@@ -677,6 +764,39 @@ func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 
 
 func activate_room(root: Object) -> RoomActivationResult:
+	if root is GameplayState:
+		return activate_room_context(ROOM_ACTIVATION_CONTEXT_SCRIPT.new(root as GameplayState, self))
+	return _activate_room_legacy(root)
+
+
+func activate_room_context(context: RoomActivationContext) -> RoomActivationResult:
+	var result := ROOM_ACTIVATION_RESULT_SCRIPT.new() as RoomActivationResult
+	if context == null or context.runtime == null:
+		result.reject(RoomActivationResult.Status.MISSING_ROOT)
+		return result
+	if context.runtime.dungeon_graph == null:
+		result.reject(RoomActivationResult.Status.INVALID_GRAPH)
+		return result
+	result.room_id = context.room_id
+	if context.room == null:
+		result.reject(RoomActivationResult.Status.MISSING_ROOM)
+		return result
+	result.room_type = context.room_type
+	result.state = context.state.duplicate(true)
+	if result.state.is_empty():
+		result.reject(RoomActivationResult.Status.MISSING_STATE)
+		return result
+	apply_state_context(context)
+	result.state = (room_states.get(result.room_id, {}) as Dictionary).duplicate(true)
+	result.spawn_result = last_spawn_result
+	result.configured_enemy_slots = (result.state.get("enemy_variants", []) as Array).size()
+	for slime in context.runtime.slimes:
+		if slime.visible:
+			result.visible_enemy_slots += 1
+	return result
+
+
+func _activate_room_legacy(root: Object) -> RoomActivationResult:
 	var result := ROOM_ACTIVATION_RESULT_SCRIPT.new() as RoomActivationResult
 	if root == null:
 		result.reject(RoomActivationResult.Status.MISSING_ROOT)
@@ -695,7 +815,7 @@ func activate_room(root: Object) -> RoomActivationResult:
 	if result.state.is_empty():
 		result.reject(RoomActivationResult.Status.MISSING_STATE)
 		return result
-	apply_state(root)
+	_apply_state_legacy(root)
 	result.state = (room_states.get(result.room_id, {}) as Dictionary).duplicate(true)
 	result.spawn_result = last_spawn_result
 	result.configured_enemy_slots = (result.state.get("enemy_variants", []) as Array).size()
@@ -707,6 +827,69 @@ func activate_room(root: Object) -> RoomActivationResult:
 
 
 func apply_state(root: Object) -> void:
+	if root is GameplayState:
+		apply_state_context(ROOM_ACTIVATION_CONTEXT_SCRIPT.new(root as GameplayState, self))
+		return
+	_apply_state_legacy(root)
+
+
+func apply_state_context(context: RoomActivationContext) -> void:
+	last_spawn_result = null
+	var runtime := context.runtime
+	var state := context.state
+	var room_type := context.room_type
+	var has_regular_treasure: bool = bool(state.get("regular_room_treasure", false)) and room_type == DungeonGraph.ROOM_COMBAT
+	runtime.regular_room_treasure = has_regular_treasure
+	var treasure_chest_claimed := _treasure_chest_claimed_from_state(state) if room_type == DungeonGraph.ROOM_TREASURE else false
+	var regular_chest_claimed := _treasure_chest_claimed_from_state(state) if has_regular_treasure else false
+	if room_type == DungeonGraph.ROOM_TREASURE:
+		runtime.chest_unlocked = treasure_chest_claimed
+		runtime.chest_claimed = treasure_chest_claimed
+		runtime.chest_evaporated = bool(state.get("chest_evaporated", treasure_chest_claimed))
+	elif has_regular_treasure:
+		runtime.chest_unlocked = regular_chest_claimed
+		runtime.chest_claimed = regular_chest_claimed
+		runtime.chest_evaporated = bool(state.get("chest_evaporated", regular_chest_claimed))
+	# The scene's base Chest node is authored visible. Clear its presentation
+	# before any room-specific branch; treasure rooms explicitly re-add it later.
+	hide_chest_presentation(runtime)
+	_clear_active_world_drop(runtime)
+	runtime._clear_chroma_pickups()
+	runtime._clear_soul_pickups()
+	_apply_special_enemy_color_policy(runtime, state)
+	if is_cleared(context.room_id):
+		state["finished"] = true
+	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST:
+		runtime._apply_rest_room_state()
+	elif room_type == DungeonGraph.ROOM_NPC:
+		runtime._apply_npc_room_state()
+	elif room_type == DungeonGraph.ROOM_PUZZLE:
+		apply_puzzle_state(runtime, bool(state.get("finished", false)))
+	elif room_type == DungeonGraph.ROOM_ORB:
+		apply_orb_state(runtime)
+	elif bool(state.get("finished", false)):
+		runtime._apply_finished_room_state()
+	else:
+		runtime.cloaked_demon.visible = false
+		runtime.collision_sprites.erase(runtime.cloaked_demon)
+		# Regular-room treasure is generated with the room and must be visible on
+		# entry. It stays grey/locked until the enemy encounter is cleared.
+		reset_chest_for_room(runtime, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (has_regular_treasure and not regular_chest_claimed))
+		if room_type == DungeonGraph.ROOM_TREASURE and treasure_chest_claimed:
+			runtime.chest_unlocked = true
+			runtime.chest_claimed = true
+			runtime.chest_evaporated = bool(state.get("chest_evaporated", true))
+		elif has_regular_treasure and regular_chest_claimed:
+			runtime.chest_unlocked = true
+			runtime.chest_claimed = true
+			runtime.chest_evaporated = bool(state.get("chest_evaporated", true))
+		reset_slimes_for_room(runtime)
+	_restore_world_drop(runtime, state)
+	_restore_chroma_pickups(runtime, state)
+	runtime._apply_chest_map_tint()
+
+
+func _apply_state_legacy(root: Object) -> void:
 	last_spawn_result = null
 	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
 	var state := room_states.get(room_id, {}) as Dictionary
@@ -823,7 +1006,7 @@ func save_current_room_state(context: RoomCheckpointContext) -> RoomCheckpointRe
 	result.status = RoomCheckpointResult.Status.SAVED
 	result.finished = bool(state.get("finished", false))
 	if result.finished:
-		mark_cleared(context.room_id)
+		mark_cleared_context(ROOM_CLEAR_CONTEXT_SCRIPT.new(context.room_id, room))
 	return result
 
 func _clear_active_world_drop(root: Object) -> void:
@@ -1052,19 +1235,35 @@ func _rect_touches_polygon(rect: Rect2, polygon: PackedVector2Array) -> bool:
 	return false
 
 
-func mark_cleared(room_id: StringName) -> void:
-	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
-	var was_finished := bool(state.get("finished", false))
-	state["finished"] = true
-	_schedule_room_popcorn_respawns(state, room_id)
+func mark_cleared(room_id: StringName) -> RoomClearResult:
 	var graph: DungeonGraph = get_parent().get("dungeon_graph") as DungeonGraph if get_parent() != null else null
 	var room := graph.get_room(room_id) if graph != null else null
-	if room != null and room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
+	return mark_cleared_context(ROOM_CLEAR_CONTEXT_SCRIPT.new(room_id, room))
+
+
+func mark_cleared_context(context: RoomClearContext) -> RoomClearResult:
+	var result: RoomClearResult = ROOM_CLEAR_RESULT_SCRIPT.new()
+	if context != null:
+		result.room_id = context.room_id
+		result.room_type = context.room.room_type if context.room != null else &""
+	if context == null or not context.is_valid():
+		return result
+	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
+	result.was_finished = bool(state.get("finished", false))
+	state["finished"] = true
+	var had_popcorn_waiting := not (state.get("popcorn_respawn_waiting", {}) as Dictionary).is_empty()
+	_schedule_room_popcorn_respawns(state, context.room_id)
+	result.popcorn_respawn_scheduled = had_popcorn_waiting
+	if context.room != null and context.room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
 		state["special_clear_earned"] = true
 		_ensure_special_enemy_respawn_timers(state)
-	room_states[room_id] = state
-	if not was_finished:
-		room_cleared.emit(room_id)
+		result.special_clear_earned = true
+	room_states[context.room_id] = state
+	result.became_finished = not result.was_finished
+	result.status = RoomClearResult.Status.CLEARED if result.became_finished else RoomClearResult.Status.ALREADY_CLEARED
+	if result.became_finished:
+		room_cleared.emit(result)
+	return result
 
 
 func _schedule_room_popcorn_respawns(state: Dictionary, room_id: StringName) -> void:
@@ -1195,7 +1394,7 @@ func apply_puzzle_state(root: Object, solved: bool) -> void:
 	root.call("_set_door_active", solved)
 	root.call("_set_entrance_open", true)
 	if solved:
-		mark_cleared(root.get("current_room_id"))
+		mark_cleared_context(_room_clear_context_from_root(root))
 
 
 func apply_orb_state(root: Object) -> void:
@@ -1249,31 +1448,50 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 	for item in [hud.target_overhead_frames.get(slime), hud.target_overhead_damage_fills.get(slime), hud.target_overhead_fills.get(slime)]: if item != null: (item as Sprite2D).visible = false
 
 
-func save_enemy_runtime_state(root: Object) -> void:
+func save_enemy_runtime_state(root: Object) -> RoomEnemyRuntimeResult:
 	var room_id: StringName = StringName(root.get("current_room_id"))
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	var active_variants := state.get("enemy_variants", []) as Array
-	if active_variants.is_empty():
-		state.erase("enemy_runtime")
-		room_states[room_id] = state
-		return
-	var runtime: Dictionary = {}
 	var slimes := root.get("slimes") as Array[Sprite2D]
-	for slot in active_variants.size():
-		if slot >= slimes.size():
+	var combat_components: Array[SlimeCombatComponent] = []
+	var health_components: Array[HealthComponent] = []
+	for slime in slimes:
+		combat_components.append(root.call("_slime_combat", slime) as SlimeCombatComponent)
+		health_components.append(root.call("_slime_health", slime) as HealthComponent)
+	return save_enemy_runtime_state_context(ROOM_ENEMY_RUNTIME_CONTEXT_SCRIPT.new(room_id, active_variants, slimes, combat_components, health_components))
+
+
+func save_enemy_runtime_state_context(context: RoomEnemyRuntimeContext) -> RoomEnemyRuntimeResult:
+	var result: RoomEnemyRuntimeResult = ROOM_ENEMY_RUNTIME_RESULT_SCRIPT.new()
+	if context != null:
+		result.room_id = context.room_id
+	if context == null or not context.is_valid():
+		return result
+	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
+	if context.active_variants.is_empty():
+		state.erase("enemy_runtime")
+		room_states[context.room_id] = state
+		result.status = RoomEnemyRuntimeResult.Status.EMPTY
+		return result
+	var runtime: Dictionary = {}
+	for slot in context.active_variants.size():
+		if slot >= context.slimes.size():
 			continue
-		var slime := slimes[slot]
+		var slime := context.slimes[slot]
 		if slime == null or not is_instance_valid(slime):
 			continue
-		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
-		var health := root.call("_slime_health", slime) as HealthComponent
+		var combat := context.combat_components[slot] if slot < context.combat_components.size() else null
+		var health := context.health_components[slot] if slot < context.health_components.size() else null
 		runtime[str(slot)] = {
 			"alive": slime.visible and combat != null and not combat.dead and (health == null or health.current_health > 0.0),
 			"position": slime.global_position,
 			"health": health.current_health if health != null else 0.0,
 		}
+		result.saved_slots += 1
 	state["enemy_runtime"] = runtime
-	room_states[room_id] = state
+	room_states[context.room_id] = state
+	result.status = RoomEnemyRuntimeResult.Status.SAVED
+	return result
 
 
 func _restore_enemy_runtime_state(root: Object, slime: Sprite2D, runtime_entry: Dictionary) -> void:
@@ -2351,4 +2569,11 @@ func update_large_room_camera(root: Object) -> void:
 
 func _mark_finished(root: Object) -> void:
 	var room_id: StringName = root.get("current_room_id")
-	mark_cleared(room_id)
+	mark_cleared_context(_room_clear_context_from_root(root))
+
+
+func _room_clear_context_from_root(root: Object) -> RoomClearContext:
+	var room_id: StringName = StringName(root.get("current_room_id"))
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var room := graph.get_room(room_id) if graph != null else null
+	return ROOM_CLEAR_CONTEXT_SCRIPT.new(room_id, room)

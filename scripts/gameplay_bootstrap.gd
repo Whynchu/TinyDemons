@@ -85,7 +85,7 @@ func initialize(root: GameplayState) -> void:
 	if root.hub_stone_accent_layer != null:
 		root.room_controller.room_entered.connect(
 			Callable(root.hub_stone_accent_layer, "on_room_entered"))
-	root.room_controller.room_cleared.connect(Callable(root.dungeon_map_controller, "on_room_completed"))
+	root.room_controller.room_cleared.connect(Callable(root.dungeon_map_controller, "on_room_completed_result"))
 	root.room_controller.room_cleared.connect(Callable(root, "_on_room_cleared_for_checkpoint"))
 	root.dungeon_map_controller.connect(&"map_state_changed", Callable(root, "_on_dungeon_map_state_changed"))
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController

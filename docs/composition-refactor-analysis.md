@@ -3,7 +3,7 @@
 Status: active handoff
 Scope: runtime composition, component ownership, dependency direction, and the next refactor sequence
 Owner: repository refactor / architecture
-Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, feature components/controllers, and `gameplay_frame_controller.gd`
+Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_activation_context.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, feature components/controllers, and `gameplay_frame_controller.gd`
 Baseline commit: `d6a965d` (2026-09-15)
 Verification: see the named evidence and commands in the Verification section below
 Supersedes: none; this document extends the completed `refactor-route.md` Phase C and becomes the authoritative sequence for the next composition phase
@@ -42,6 +42,18 @@ The current architectural task is therefore:
 
 This is a staged consolidation, not a universal conversion of every script into
 a Node or every method into a component.
+
+### Progress estimate — 80% complete
+
+The long-term composition refactor is approximately **80% complete / 20%
+remaining**, weighted by ownership risk and usable feature boundaries rather
+than raw line count. The accepted `0.2.x` migration route remains complete.
+
+Completed or substantially migrated: reward and settlement boundaries, room
+checkpoint ordering, typed room-clear signaling, typed room-entry execution,
+typed enemy-runtime capture, and typed room activation. Remaining work is
+concentrated in the final initial-spawn/respawn seams, browser durability
+evidence, the large menu owner, and deliberate tuning-data extraction.
 
 ## Current measured shape
 
@@ -138,11 +150,13 @@ the important question is whether its inputs and outputs are explicit.
 The refactor has established typed results and contexts across the current
 runtime slices:
 
-- **Committed:** `RoomTransitionResult`, `RoomActivationResult`,
-  `RoomSpawnResult`, `ChestRewardResult`, `ChestRewardContext`,
-  `RunSettlementContext`, `RunSettlementResult`, `RoomCheckpointContext`,
-  `RoomCheckpointResult`, `RunCheckpointContext`, `RunCheckpointResult`, and
-  `RunCheckpointService`.
+- **Committed:** `RoomTransitionResult`, `RoomActivationContext`,
+  `RoomActivationResult`, `RoomSpawnResult`, `RoomClearContext`,
+  `RoomClearResult`, `RoomEntryContext`, `RoomEntryResult`,
+  `RoomEnemyRuntimeContext`, `RoomEnemyRuntimeResult`, `ChestRewardResult`,
+  `ChestRewardContext`, `RunSettlementContext`, `RunSettlementResult`,
+  `RoomCheckpointContext`, `RoomCheckpointResult`, `RunCheckpointContext`,
+  `RunCheckpointResult`, and `RunCheckpointService`.
 - The remaining work is to characterize browser durability and retire the
   compatibility wrappers after their final consumers migrate.
 
@@ -235,8 +249,7 @@ typed context or direct reference should make its dependencies visible.
 ## Current migration sequence
 
 Status legend: `[x]` complete, `[~]` in progress, `[ ]` not started. These
-statuses reflect the working tree at the baseline commit; update them as slices
-land.
+statuses reflect the current working tree; update them as slices land.
 
 ### 1. Finish the reward boundary — [x]
 
@@ -281,22 +294,42 @@ settlement boundaries. The settlement domain now has committed
 the existing save-before-`RunState.mark_settled` ordering while using that typed
 boundary. Room-state assembly now has committed
 `RoomCheckpointContext` and `RoomCheckpointResult`; `GameplayState` captures
-enemy runtime first, then delegates dictionary assembly to `RoomController`.
-The active-run file write and room-clear orchestration still need their own
-characterization before they move. `RunCheckpointService` now owns the ordered
-room → profile → active-run writes; the room-clear event guard and compatibility
-wrappers remain in `GameplayState` until that behavior has a dedicated web
-durability characterization. Do not mark these slices shipped until their
-context/result files and focused coverage have an explicit commit checkpoint;
-the remaining `[~]` status is only for browser durability evidence and the
-room-clear compatibility facade.
+enemy runtime through `RoomEnemyRuntimeContext` and
+`RoomEnemyRuntimeResult`, then delegates dictionary assembly to
+`RoomController`. Room activation now consumes `RoomActivationContext` and
+returns the existing `RoomActivationResult` through a typed runtime path.
+The active-run file write still needs browser durability evidence. `RunCheckpointService`
+owns the ordered room → profile → active-run writes, and the room-clear event now
+crosses the composition boundary as `RoomClearResult` rather than a loose room
+ID. `GameplayState` retains only the web-checkpoint eligibility guard and the
+compatibility checkpoint wrapper. Do not mark this slice fully shipped until
+browser durability evidence is recorded.
 
-### 4. Continue room lifecycle migration — [ ]
+### 4. Continue room lifecycle migration — [~]
 
-Use the existing transition, activation, spawn, and reward results to make room
-entry/clear responsibilities explicit. Preserve the authored/generated room
-distinction and the central frame schedule. Respawn behavior should remain a
-separate characterization slice from initial activation spawning.
+The clear event is explicit: `RoomController.mark_cleared_context()` owns the
+mutation and returns `RoomClearResult`; the map controller and checkpoint
+consumer receive that typed event. Room entry now follows the same pattern via
+`RoomEntryContext` and `RoomEntryResult`; the normal `GameplayState` path no
+longer runs the reflection-heavy entry body. The ID-based `mark_cleared()` and
+`enter_connected_room()` methods remain as compatibility facades for direct
+callers. Room activation now follows the same typed-context path and preserves
+the existing `RoomActivationResult`/`RoomSpawnResult` reporting. Preserve the
+authored/generated room distinction and the central frame schedule. Initial
+spawn internals and respawn behavior remain separate characterization slices.
+
+Focused evidence for this slice:
+
+- `room_transition_result_smoke`: typed clear result, idempotency, and single
+  event emission.
+- `enemy_room_engagement_smoke`: map clear behavior remains intact.
+- `enemy_room_entrance_scene_smoke`: composed room wiring remains intact.
+- `boss_geometry_scene_smoke`: boss room composition remains intact.
+- `generated_run_scene_smoke`: typed room-entry and activation path remains
+  intact during generated traversal.
+
+`popcorn_respawn_smoke` remains manifest `unverified` and currently fails its
+fixture assertions; it is not used as evidence for this slice.
 
 ### 5. Tackle menus after the runtime pattern is proven — [ ]
 
