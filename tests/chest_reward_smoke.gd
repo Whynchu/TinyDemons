@@ -51,17 +51,34 @@ func _initialize() -> void:
 		stub.current_room_id = StringName("typed_treasure_%d" % seed_value)
 		stub.run_state = RunState.new()
 		stub.run_state.begin(stub.current_dungeon_seed, 0, 100.0)
-		stub.spawned_items.clear()
-		var result := run_flow.claim_chest_item_reward(stub)
+		var context := ChestRewardContext.new(
+			stub.player_profile,
+			stub.run_state,
+			stub.current_dungeon_seed,
+			stub.current_room_id,
+			DungeonGraph.REWARD_STANDARD,
+			&"",
+			stub.regular_room_treasure
+		)
+		var result := run_flow.claim_chest_item_reward(context)
 		_expect(result != null and result.is_resolved(), "typed chest reward always resolves its deterministic decision", failures)
 		if result != null and result.granted_items():
 			granted_result = result
 			break
 	_expect(granted_result != null, "typed chest reward reports a generated item in the characterization sample", failures)
 	if granted_result != null:
-		_expect(granted_result.items.size() == stub.spawned_items.size(), "typed result matches spawned chest items", failures)
+		_expect(granted_result.items.size() == granted_result.requested_item_count, "typed result reports its generated item count", failures)
 		stub.player_profile.grant_item(granted_result.items[0])
-		var duplicate := run_flow.claim_chest_item_reward(stub)
+		var duplicate_context := ChestRewardContext.new(
+			stub.player_profile,
+			stub.run_state,
+			stub.current_dungeon_seed,
+			stub.current_room_id,
+			DungeonGraph.REWARD_STANDARD,
+			&"",
+			stub.regular_room_treasure
+		)
+		var duplicate := run_flow.claim_chest_item_reward(duplicate_context)
 		_expect(duplicate.status == ChestRewardResult.Status.ALREADY_RESOLVED, "typed chest reward remains idempotent after generation", failures)
 	_finish(failures)
 

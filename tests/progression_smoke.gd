@@ -3,6 +3,8 @@ extends SceneTree
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const FrameControllerScript = preload("res://scripts/gameplay_frame_controller.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
+const RunSettlementContextScript = preload("res://scripts/run_settlement_context.gd")
+const RunSettlementResultScript = preload("res://scripts/run_settlement_result.gd")
 
 var _finished := false
 
@@ -44,7 +46,12 @@ func _initialize() -> void:
 	var settlement_run := RunState.new()
 	settlement_run.begin(42)
 	_expect(RunSettlement.can_settle(settlement_run, &"complete"), "active run can settle", failures)
+	var settlement_profile := PlayerProfile.new()
+	var settlement_context := RunSettlementContextScript.new(settlement_profile, settlement_run, &"complete")
+	_expect(settlement_context.is_valid(), "typed settlement context exposes the required durable inputs", failures)
 	settlement_run.mark_settled(&"complete")
+	var duplicate_settlement := RunSettlement.settle_context(settlement_context)
+	_expect(duplicate_settlement.status == RunSettlementResultScript.Status.ALREADY_SETTLED, "typed settlement result reports duplicate settlement", failures)
 	_expect(not RunSettlement.can_settle(settlement_run, &"complete"), "settlement is idempotently closed", failures)
 
 	var restored := PlayerProfile.new()

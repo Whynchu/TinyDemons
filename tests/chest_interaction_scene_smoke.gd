@@ -12,6 +12,11 @@ func _initialize() -> void:
 	root.add_child(gameplay)
 	for _frame in 30:
 		await process_frame
+	var chest_controller := gameplay.get("chest_controller") as ChestController
+	var reward_controller := gameplay.get("run_flow_controller") as RunFlowController
+	var room_controller := gameplay.get("room_controller") as RoomController
+	_expect(chest_controller != null and chest_controller.reward_controller == reward_controller, "chest interaction receives its typed reward owner", failures)
+	_expect(chest_controller != null and chest_controller.room_controller == room_controller, "chest interaction receives its typed room persistence owner", failures)
 
 	gameplay.set("current_room_type", DungeonGraph.ROOM_TREASURE)
 	gameplay.set("chest_unlocked", true)

@@ -7,17 +7,28 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
 const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
 const ChestRewardResultScript = preload("res://scripts/chest_reward_result.gd")
+const RunSettlementContextScript = preload("res://scripts/run_settlement_context.gd")
 
 
 func loot_grade_bonus(root: Object, grade: String = "") -> float:
-	var value: String = grade.to_upper() if not grade.is_empty() else (root.player_profile.last_run_grade if root.player_profile != null else "D")
+	var profile := root.get("player_profile") as PlayerProfile
+	return loot_grade_bonus_for_profile(profile, grade)
+
+
+func loot_grade_bonus_for_profile(profile: PlayerProfile, grade: String = "") -> float:
+	var value: String = grade.to_upper() if not grade.is_empty() else (profile.last_run_grade if profile != null else "D")
 	return 3.0 if value == "S" else 2.0 if value == "A" else 1.0 if value == "B" else 0.5 if value == "C" else -0.5 if value == "F" else 0.0
 
 
 func chest_item_drop_chance(root: Object) -> float:
-	var exploration_bonus: float = minf(float(root.run_state.chests_opened) * 0.025, 0.20) if root.run_state != null else 0.0
-	var base_chance := clampf(0.34 + exploration_bonus + float(run_rank(root) - 1) * 0.035 + loot_grade_bonus(root) * 0.025, 0.30, 0.88)
-	var tier := reward_tier(root)
+	var profile := root.get("player_profile") as PlayerProfile
+	var run := root.get("run_state") as RunState
+	return chest_item_drop_chance_for_values(profile, run, reward_tier(root))
+
+
+func chest_item_drop_chance_for_values(profile: PlayerProfile, run: RunState, tier: StringName) -> float:
+	var exploration_bonus: float = minf(float(run.chests_opened) * 0.025, 0.20) if run != null else 0.0
+	var base_chance := clampf(0.34 + exploration_bonus + float(run_rank_for_profile(profile) - 1) * 0.035 + loot_grade_bonus_for_profile(profile) * 0.025, 0.30, 0.88)
 	if tier == DungeonGraph.REWARD_VAULT:
 		return 1.0
 	if tier == DungeonGraph.REWARD_RISK:
@@ -28,16 +39,26 @@ func chest_item_drop_chance(root: Object) -> float:
 
 
 func chest_item_drop_count(root: Object, roll: float) -> int:
-	if reward_tier(root) == DungeonGraph.REWARD_VAULT:
+	var profile := root.get("player_profile") as PlayerProfile
+	return chest_item_drop_count_for_values(profile, reward_tier(root), roll)
+
+
+func chest_item_drop_count_for_values(profile: PlayerProfile, tier: StringName, roll: float) -> int:
+	if tier == DungeonGraph.REWARD_VAULT:
 		return 1
-	var double_drop_chance := clampf(0.35 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04, 0.25, 0.75)
-	var triple_drop_chance := clampf(0.01 + float(run_rank(root) - 1) * 0.0045 + loot_grade_bonus(root) * 0.006, 0.01, 0.15)
-	var quad_drop_chance := clampf(0.005 + float(run_rank(root) - 1) * 0.0035 + loot_grade_bonus(root) * 0.004, 0.005, 0.10)
+	var double_drop_chance := clampf(0.35 + float(run_rank_for_profile(profile) - 1) * 0.06 + loot_grade_bonus_for_profile(profile) * 0.04, 0.25, 0.75)
+	var triple_drop_chance := clampf(0.01 + float(run_rank_for_profile(profile) - 1) * 0.0045 + loot_grade_bonus_for_profile(profile) * 0.006, 0.01, 0.15)
+	var quad_drop_chance := clampf(0.005 + float(run_rank_for_profile(profile) - 1) * 0.0035 + loot_grade_bonus_for_profile(profile) * 0.004, 0.005, 0.10)
 	if roll < quad_drop_chance:
 		return 4
 	if roll < triple_drop_chance:
 		return 3
 	return 2 if roll < double_drop_chance else 1
+
+
+func roll_run_loot_rarity_for_values(profile: PlayerProfile, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
+	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else loot_grade_bonus_for_profile(profile)
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank_for_profile(profile), performance_bonus, rarity_multipliers)
 
 
 func chest_gold_reward(root: Object, base_gold: int) -> int:
@@ -51,45 +72,43 @@ func chest_gold_reward(root: Object, base_gold: int) -> int:
 	return maxi(1, roundi(reward))
 
 
-func claim_chest_item_reward(root: Object) -> ChestRewardResult:
+func claim_chest_item_reward(context: ChestRewardContext) -> ChestRewardResult:
 	var result: ChestRewardResult = ChestRewardResultScript.new()
-	result.room_id = StringName(str(root.get("current_room_id")))
-	if root.get("player_profile") == null or root.get("run_state") == null:
+	if context == null:
 		return result
-	result.reward_tier = reward_tier(root)
-	var profile := root.get("player_profile") as PlayerProfile
-	var run := root.get("run_state") as RunState
+	result.room_id = context.room_id
+	result.reward_tier = context.reward_tier
+	if not context.is_valid():
+		return result
+	var profile := context.player_profile
+	var run := context.run_state
 	var reward_id := "drop-%s-%s" % [run.run_id, String(result.room_id)]
 	if profile.find_item(reward_id) != null or profile.find_item("%s-0" % reward_id) != null:
 		result.status = ChestRewardResult.Status.ALREADY_RESOLVED
 		return result
 	run.record_chest_open()
-	var room_controller := root.get("room_controller") as Node
-	var vault_id := &""
-	if room_controller != null:
-		var state: Dictionary = (room_controller.get("room_states") as Dictionary).get(result.room_id, {}) as Dictionary
-		vault_id = StringName(str(state.get("vault_id", "")))
-	var generation_seed := int(root.get("current_dungeon_seed")) ^ String(result.room_id).hash() ^ String(vault_id).hash()
+	var generation_seed := context.dungeon_seed ^ String(result.room_id).hash() ^ String(context.vault_id).hash()
 	var reward_rng := RandomNumberGenerator.new()
 	reward_rng.seed = generation_seed ^ 0x4C4F4F54
 	result.drop_roll = reward_rng.randf()
-	if result.drop_roll >= chest_item_drop_chance(root):
+	if result.drop_roll >= chest_item_drop_chance_for_values(profile, run, result.reward_tier):
 		result.status = ChestRewardResult.Status.RESOLVED_NO_DROP
 		return result
-	var drop_count := chest_item_drop_count(root, reward_rng.randf())
+	result.presentation_required = true
+	var drop_count := chest_item_drop_count_for_values(profile, result.reward_tier, reward_rng.randf())
 	if result.reward_tier == DungeonGraph.REWARD_VAULT:
 		drop_count = 1
 	result.requested_item_count = drop_count
 	var item_drops: Array[ItemInstance] = []
 	var catalog := ItemCatalog.new()
-	var run_rank_value := run_rank(root)
+	var run_rank_value := run_rank_for_profile(profile)
 	var player_level := profile.level
 	for index in drop_count:
 		var item_seed := generation_seed ^ (0x13579BDF + index * 0x2468ACE)
 		var slot := catalog.select_slot_for_source(profile, item_seed, player_level, &"chest", run_rank_value)
 		var slot_was_empty := catalog.slot_needs_introduction(profile, slot)
-		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if bool(root.get("regular_room_treasure")) and result.reward_tier == DungeonGraph.REWARD_STANDARD else []
-		var rarity := roll_run_loot_rarity(root, reward_rng.randf(), -1.0, rarity_multipliers)
+		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if context.regular_room_treasure and result.reward_tier == DungeonGraph.REWARD_STANDARD else []
+		var rarity := roll_run_loot_rarity_for_values(profile, reward_rng.randf(), -1.0, rarity_multipliers)
 		if result.reward_tier == DungeonGraph.REWARD_VAULT:
 			var enhanced_rarity := ItemCatalog.next_rarity(rarity)
 			if not enhanced_rarity.is_empty():
@@ -101,10 +120,6 @@ func claim_chest_item_reward(root: Object) -> ChestRewardResult:
 		item_drops.append(item)
 		run.record_gear_reward(&"chest", item, run_rank_value, player_level, -1, "", slot_was_empty, false, &"dropped")
 	result.items = item_drops
-	# Keep the presentation boundary identical to the former coordinator path,
-	# including the harmless empty-drop call for malformed catalogue data.
-	root.call("_spawn_chest_item_drops", item_drops)
-	root.call("_play_sound", "ui_use_item")
 	if not item_drops.is_empty():
 		result.status = ChestRewardResult.Status.ITEMS_GRANTED
 	else:
@@ -218,7 +233,12 @@ func run_difficulty_bonus(root: Object) -> int:
 
 
 func run_rank(root: Object) -> int:
-	return maxi(root.player_profile.difficulty_rank if root.player_profile != null else 1, 1)
+	var profile := root.get("player_profile") as PlayerProfile
+	return run_rank_for_profile(profile)
+
+
+func run_rank_for_profile(profile: PlayerProfile) -> int:
+	return maxi(profile.difficulty_rank if profile != null else 1, 1)
 
 
 func apply_run_rank_grade(root: Object, grade: String) -> void:
@@ -431,10 +451,11 @@ func settle_current_run(root: Object, result: StringName) -> bool:
 	if not RunSettlement.can_settle(root.run_state, result):
 		return false
 	root.call("_sync_runtime_progression_to_profile")
-	var settled := RunSettlement.settle(root.player_profile, root.run_state, result)
-	if settled:
+	var settlement_context := RunSettlementContextScript.new(root.player_profile, root.run_state, result)
+	var settlement := RunSettlement.settle_context(settlement_context)
+	if settlement.succeeded():
 		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
-	return settled
+	return settlement.succeeded()
 
 
 func tick_run_telemetry(root: Object, delta: float) -> void:

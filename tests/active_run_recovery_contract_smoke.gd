@@ -1,6 +1,11 @@
 extends SceneTree
 
 const ACTIVE_RUN_SNAPSHOT_SCRIPT = preload("res://scripts/active_run_snapshot.gd")
+const ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT = preload("res://scripts/active_run_snapshot_context.gd")
+const ROOM_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/room_checkpoint_context.gd")
+const RUN_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/run_checkpoint_context.gd")
+const RUN_CHECKPOINT_RESULT_SCRIPT = preload("res://scripts/run_checkpoint_result.gd")
+const RUN_CHECKPOINT_SERVICE_SCRIPT = preload("res://scripts/run_checkpoint_service.gd")
 
 
 func _initialize() -> void:
@@ -20,6 +25,25 @@ func _initialize() -> void:
 	map_state.mark_room_discovered(&"room_next")
 	map_state.mark_room_completed(&"room_start")
 	map_state.revealed_events[&"event_one"] = true
+	var map_controller := DungeonMapController.new()
+	map_controller.state = map_state
+	map_controller.layout_bound_flame = &"water"
+	var room_controller := RoomController.new()
+	room_controller.arrival_socket_id = &"left"
+	room_controller.room_states = {&"room_start": {"finished": true}}
+	var profile := PlayerProfile.new()
+	profile.has_started = true
+	var health := HealthComponent.new()
+	var chroma := PlayerChromaComponent.new()
+	var typed_context := ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT.new(profile, run, map_controller, room_controller, health, chroma, 424242, &"room_next", &"combat", 1, 0, true, true)
+	var typed_snapshot := ACTIVE_RUN_SNAPSHOT_SCRIPT.create_context(typed_context)
+	_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(typed_snapshot, 0), "typed checkpoint context produces a valid recovery snapshot", failures)
+	var no_drops: Array[Dictionary] = []
+	var room_context := ROOM_CHECKPOINT_CONTEXT_SCRIPT.new(&"room_next", &"combat", null, room_controller, false, false, false, false, no_drops, null)
+	var checkpoint_context := RUN_CHECKPOINT_CONTEXT_SCRIPT.new(profile, run, room_context, typed_context, 0)
+	_expect(checkpoint_context.is_valid(), "typed safe-checkpoint context exposes durable dependencies", failures)
+	var unavailable_checkpoint := RUN_CHECKPOINT_SERVICE_SCRIPT.save_safe_state(checkpoint_context)
+	_expect(unavailable_checkpoint.status == RUN_CHECKPOINT_RESULT_SCRIPT.Status.NOT_AVAILABLE, "desktop checkpoint service reports web-only persistence without mutating state", failures)
 	var snapshot := {
 		"format": ACTIVE_RUN_SNAPSHOT_SCRIPT.FORMAT,
 		"schema_version": ACTIVE_RUN_SNAPSHOT_SCRIPT.SCHEMA_VERSION,
@@ -62,6 +86,10 @@ func _initialize() -> void:
 		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(future, 1), "future snapshot schema is rejected", failures)
 		var wrong_slot := decoded.duplicate(true)
 		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(wrong_slot, 0), "snapshot cannot cross profile slots", failures)
+	map_controller.free()
+	room_controller.free()
+	health.free()
+	chroma.free()
 	_finish(failures)
 
 

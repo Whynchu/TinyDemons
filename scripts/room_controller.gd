@@ -6,6 +6,8 @@ const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalo
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/room_transition_result.gd")
 const ROOM_ACTIVATION_RESULT_SCRIPT = preload("res://scripts/room_activation_result.gd")
 const ROOM_SPAWN_RESULT_SCRIPT = preload("res://scripts/room_spawn_result.gd")
+const ROOM_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/room_checkpoint_context.gd")
+const ROOM_CHECKPOINT_RESULT_SCRIPT = preload("res://scripts/room_checkpoint_result.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
@@ -768,6 +770,61 @@ func save_treasure_chest_state(root: Object) -> void:
 	state["chest_claimed"] = bool(root.get("chest_claimed"))
 	state["chest_evaporated"] = bool(root.get("chest_evaporated"))
 	room_states[room_id] = state
+
+
+func save_current_room_state(context: RoomCheckpointContext) -> RoomCheckpointResult:
+	var result: RoomCheckpointResult = ROOM_CHECKPOINT_RESULT_SCRIPT.new()
+	if context != null:
+		result.room_id = context.room_id
+	if context == null or not context.is_valid():
+		return result
+	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
+	var room := context.room
+	if context.room_type == DungeonGraph.ROOM_PUZZLE:
+		state["finished"] = context.puzzle_finished
+	elif room != null and (room.room_type == DungeonGraph.ROOM_TREASURE or bool(state.get("regular_room_treasure", false))):
+		# Treasure completion belongs to the enemy encounter. The chest is an
+		# optional reward and must not reopen or clear the room on a revisit.
+		state["chest_claimed"] = context.chest_claimed
+		state["chest_evaporated"] = context.chest_evaporated
+		state["finished"] = bool(state.get("finished", false)) or context.room_is_cleared
+	else:
+		# Combat and boss rooms are completed by enemy defeat, not by opening a
+		# chest. Preserve the clear state when the player leaves before re-entry.
+		state["finished"] = bool(state.get("finished", false)) or context.room_is_cleared
+
+	var saved_drops: Array = []
+	for drop in context.world_item_drops:
+		var sprite := drop.get("sprite") as Sprite2D
+		var item := drop.get("item") as ItemInstance
+		if sprite != null and is_instance_valid(sprite) and item != null:
+			var saved_position := sprite.global_position
+			if float(drop.get("air_time", 0.0)) > 0.0 and drop.has("landing_position"):
+				saved_position = drop.get("landing_position") as Vector2
+			saved_drops.append({"item": item.to_dictionary(), "position": saved_position})
+	if saved_drops.is_empty():
+		state.erase("world_item_drops")
+	else:
+		state["world_item_drops"] = saved_drops
+	state.erase("world_item_drop")
+
+	var saved_pickups: Array = []
+	var pickup_controller := context.chroma_pickup_controller
+	if pickup_controller != null:
+		for index in pickup_controller.sprites.size():
+			var pickup := pickup_controller.sprites[index]
+			if pickup != null and is_instance_valid(pickup):
+				saved_pickups.append({"position": pickup.global_position, "value": pickup_controller.values[index]})
+	if saved_pickups.is_empty():
+		state.erase("chroma_pickups")
+	else:
+		state["chroma_pickups"] = saved_pickups
+	room_states[context.room_id] = state
+	result.status = RoomCheckpointResult.Status.SAVED
+	result.finished = bool(state.get("finished", false))
+	if result.finished:
+		mark_cleared(context.room_id)
+	return result
 
 func _clear_active_world_drop(root: Object) -> void:
 	root.call("_clear_world_item_drops")

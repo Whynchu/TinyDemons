@@ -51,7 +51,7 @@ script,role,state,owner,target,load,notes
 "boss_movement_contact_smoke","owner","unverified","slime enemies","boss movement and contact characterization","pure",""
 "boss_soul_drop_smoke","owner","unverified","room progression","boss soul drop","pure",""
 "boss_variant_selection_smoke","owner","unverified","slime enemies","boss variant selection against catalogs","pure",""
-"chest_interaction_scene_smoke","owner","unverified","room progression","chest interaction in main scene","main",""
+"chest_interaction_scene_smoke","owner","verified","room progression","chest interaction and typed owner wiring in main scene","main","focused pass"
 "circular_input_smoke","owner","unverified","input & touch","circular input recognizer","pure",""
 "cloud_panel_touch_smoke","owner","verified","save & profile","cloud panel touch flow","main","passes in isolated headless run 2026-09-13"
 "combat_momentum_smoke","owner","unverified","player combat","combat momentum component","pure",""

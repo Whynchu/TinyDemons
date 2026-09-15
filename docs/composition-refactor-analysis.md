@@ -3,7 +3,7 @@
 Status: active handoff
 Scope: runtime composition, component ownership, dependency direction, and the next refactor sequence
 Owner: repository refactor / architecture
-Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, feature components/controllers, and `gameplay_frame_controller.gd`
+Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, feature components/controllers, and `gameplay_frame_controller.gd`
 Baseline commit: `d6a965d` (2026-09-15)
 Verification: see the named evidence and commands in the Verification section below
 Supersedes: none; this document extends the completed `refactor-route.md` Phase C and becomes the authoritative sequence for the next composition phase
@@ -135,15 +135,16 @@ the important question is whether its inputs and outputs are explicit.
 
 ### Typed boundaries
 
-The refactor has established typed results in two groups:
+The refactor has established typed results and contexts across the current
+runtime slices:
 
-- **Committed:** `RoomTransitionResult` (route selection and connected-room
-  entry) and `RoomActivationResult` (room activation state) are tracked at the
-  baseline commit.
-- **In progress (working tree only, not yet committed):** `RoomSpawnResult`
-  (initial enemy-spawn pass) and `ChestRewardResult` (deterministic chest
-  item-reward resolution) exist in the current working tree but are untracked.
-  Do not treat them as shipped boundaries until they are committed and covered.
+- **Committed:** `RoomTransitionResult`, `RoomActivationResult`,
+  `RoomSpawnResult`, `ChestRewardResult`, `ChestRewardContext`,
+  `RunSettlementContext`, `RunSettlementResult`, `RoomCheckpointContext`,
+  `RoomCheckpointResult`, `RunCheckpointContext`, `RunCheckpointResult`, and
+  `RunCheckpointService`.
+- The remaining work is to characterize browser durability and retire the
+  compatibility wrappers after their final consumers migrate.
 
 These results are valuable because callers no longer need to reconstruct an
 outcome from scattered arrays, booleans, and root fields. Before relying on any
@@ -237,26 +238,32 @@ Status legend: `[x]` complete, `[~]` in progress, `[ ]` not started. These
 statuses reflect the working tree at the baseline commit; update them as slices
 land.
 
-### 1. Finish the reward boundary — [~]
+### 1. Finish the reward boundary — [x]
 
 The item-reward decision now lives in `RunFlowController` and returns
-`ChestRewardResult` (in-progress in the working tree). The remaining work is to
-make persistence and settlement ordering equally explicit:
+`ChestRewardResult`. The reward path now receives a narrow typed
+`ChestRewardContext`; persistence and settlement ordering now have explicit
+typed boundaries:
 
 - keep `ChestController` responsible for interaction and presentation timing;
 - keep `RoomController` responsible for room claim persistence;
 - keep `RunState` responsible for telemetry;
 - keep profile mutations in profile/progression owners; and
-- characterize checkpoint ordering before moving it.
+- keep browser durability characterization as a separate verification task.
 
 Do not change reward probabilities or item balance during this structural pass.
 
-### 2. Prove one direct typed dependency migration — [ ]
+### 2. Prove one direct typed dependency migration — [x]
 
-Choose one narrow slice, preferably the chest/reward path, and replace only its
-root reach-ins with explicit dependencies. A suitable boundary may be a small
-typed context containing room identity, profile, run state, and room reward
-metadata. Avoid creating a context that simply mirrors all of `GameplayState`.
+The chest/reward path is the first committed example. `ChestController` receives
+typed `RunFlowController`, `RoomController`, and `PickupRuntimeController`
+references; `RunFlowController` receives only the narrow reward context; and the
+result returns generated item data without owning presentation side effects.
+The context is intentionally smaller than `GameplayState`. The extracted reward
+method has no `root.call/get/set` accesses; the remaining dynamic accesses in
+`ChestController` belong to the other interaction and presentation paths and
+are separate migration work. The context and dependency code is now committed;
+those remaining accesses are separate migration work.
 
 Completion evidence should include:
 
@@ -266,12 +273,23 @@ Completion evidence should include:
 - the focused characterization tests still pass; and
 - the obsolete wrappers are removed only after their final consumer migrates.
 
-### 3. Migrate checkpoint and settlement — [ ]
+### 3. Migrate checkpoint and settlement — [~]
 
 Checkpoint ordering currently crosses room, map, profile, active-run, and
-settlement boundaries. Introduce a typed command/result only after the current
-room-clear and save behavior is characterized. This is more valuable than a
-global wrapper cleanup because it protects run durability.
+settlement boundaries. The settlement domain now has committed
+`RunSettlementContext` and `RunSettlementResult`; `RunFlowController` preserves
+the existing save-before-`RunState.mark_settled` ordering while using that typed
+boundary. Room-state assembly now has committed
+`RoomCheckpointContext` and `RoomCheckpointResult`; `GameplayState` captures
+enemy runtime first, then delegates dictionary assembly to `RoomController`.
+The active-run file write and room-clear orchestration still need their own
+characterization before they move. `RunCheckpointService` now owns the ordered
+room → profile → active-run writes; the room-clear event guard and compatibility
+wrappers remain in `GameplayState` until that behavior has a dedicated web
+durability characterization. Do not mark these slices shipped until their
+context/result files and focused coverage have an explicit commit checkpoint;
+the remaining `[~]` status is only for browser durability evidence and the
+room-clear compatibility facade.
 
 ### 4. Continue room lifecycle migration — [ ]
 
