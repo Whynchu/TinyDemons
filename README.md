@@ -174,8 +174,14 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all
 # Fast manifest/path preflight — no Godot process starts
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_test_manifest.ps1
 
-# Composition ownership guardrail — enforces the strict refactor scorecard
+# Composition ownership guardrail — blocks composition regressions
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1
+
+# Guardrail implementation self-test
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1 -SelfTest
+
+# Opt-in completion audit — expected to fail until the remaining targets land
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1 -RequireTargets
 ```
 
 If Windows memory-error dialogs start repeating, stop the smoke runner and

@@ -534,35 +534,46 @@ regression; neither is evidence against the typed room slice.
 
 The manifest validator (`tools/validate_test_manifest.ps1`) enforces the test
 inventory. The composition refactor has an equivalent structural guard,
-`tools/validate_composition.ps1`, which is wired into the same CI and runner
-preflight so the scorecard cannot drift back into claimed-but-unmeasured
-progress. It fails when it finds any of:
+`tools/validate_composition.ps1`, wired into the same CI and runner preflight.
+Its default mode is a **regression floor**: it passes the current open debt but
+fails when a future change makes that debt worse. It checks for:
 
-- a context that declares a `GameplayState` field or accepts `GameplayState` in
-  its constructor, outside an explicit transitional allowlist;
-- `context.runtime` access in a context the allowlist marks as completed;
-- a new parallel `*_legacy`/`*_context` pair for the same behavior where the
-  legacy body is not a one-line compatibility forward;
-- a root-access regression (count higher than the recorded baseline) in a
-  migrated owner; and
-- a `GameplayState` field count, line count, `RoomController` line count, or
-  `.runtime` reference count above the recorded baseline.
+- a context that declares or accepts `GameplayState`, outside the transitional
+  allowlist stored in the baseline JSON;
+- `.runtime` access in a context that is not transitional;
+- a new parallel `*_legacy`/`*_context` pair, including changes that keep the
+  total duplicate count unchanged; and
+- root-access, `GameplayState`, `RoomController`, `.runtime`, or duplicate-count
+  regressions against the accepted baseline.
 
-The validator reads `tools/composition-baseline.json`, which records the
-accepted values when a slice lands. Use `-UpdateBaseline` only when a slice
-deliberately retires coupling or extracts an owner; never use it to bless a
-regression. Run it with `-BaselinePath`/`-ScriptsDirectory` to test against a
-different tree.
+Run `-SelfTest` to exercise the guard against temporary valid, coupling,
+duplicate, regression, and strict-target fixtures. Run `-RequireTargets` as the
+opt-in completion audit; it is expected to fail while the room migration is
+still open. The normal CI gate does not use `-RequireTargets`, because the
+strict ownership targets are the work remaining, not the current release
+floor.
 
-Current recorded baseline (from `tools/composition-baseline.json`):
+The validator reads `tools/composition-baseline.json`, which records both the
+accepted values and the target thresholds. Use `-UpdateBaseline` only when a
+reviewed slice deliberately retires coupling or extracts an owner; it refuses
+to write when the current tree has audit errors. Run it with
+`-BaselinePath`/`-ScriptsDirectory` to test against a different tree.
 
-| Metric | Recorded |
-|---|---:|
-| `root.call/get/set` sites | 3,135 |
-| `GameplayState` lines / fields | 1,777 / 299 |
-| `RoomController` lines | 3,265 |
-| `.runtime` references | 20 |
-| Legacy duplicates in `room_controller.gd` | 13 (11 flagged as non-forward `_context` twins) |
+Current recorded baseline and strict targets (from
+`tools/composition-baseline.json`):
+
+| Metric | Accepted floor | Strict target |
+|---|---:|---:|
+| `root.call/get/set` sites | 3,135 | ≤ 2,499 |
+| `GameplayState` lines / fields | 1,777 / 299 | ≤ 1,719 / 286 |
+| `RoomController` lines | 3,265 | ≤ 2,296 |
+| `.runtime` references | 20 | 0 |
+| Paired legacy/context duplicates | 11 | 0 |
+| Transitional contexts | 5 | 0 |
+
+The accepted floor is the regression baseline. The strict target column is only
+enforced when `-RequireTargets` is supplied; it is intentionally red while the
+room ownership migration remains open.
 
 The transitional allowlist must name exactly the current adapters and shrink as
 slices land:
@@ -581,9 +592,11 @@ The allowlist therefore contains five entries today
 direct typed dependencies, remove it from the allowlist and record the metric
 delta.
 
-Wire the validator into the same CI and runner preflight as the manifest
-check so an architecture regression fails loudly instead of being recorded in a
-doc.
+The current regression-floor output is expected to list the 11 existing paired
+duplicates and five transitional contexts. The strict target audit remains
+red until those are retired and the three size/access thresholds move. The
+self-test and regression-floor run are wired into CI and the smoke runner so
+the guard itself is exercised before gameplay tests begin.
 
 ## Handoff checklist
 

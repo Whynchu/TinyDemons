@@ -19,6 +19,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $compositionValidator = Join-Path $root "tools/validate_composition.ps1"
+& pwsh -NoProfile -ExecutionPolicy Bypass -File $compositionValidator -SelfTest
+if ($LASTEXITCODE -ne 0) {
+	throw "Composition ownership self-test failed"
+}
 & pwsh -NoProfile -ExecutionPolicy Bypass -File $compositionValidator
 if ($LASTEXITCODE -ne 0) {
 	throw "Composition ownership preflight failed"
