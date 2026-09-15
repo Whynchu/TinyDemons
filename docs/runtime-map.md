@@ -298,9 +298,12 @@ groups are:
 
 Known baseline issues recorded during mapping:
 
-- Editor scan reports duplicate UIDs for the R4/R5 puzzle scripts; the former
-  duplicate test wrappers were consolidated into one authored-layout check.
-- The focused HUD smoke test currently reports two authored prompt-icon failures.
+- Editor import is clean for the R4/R5 puzzle scripts after rebuilding the
+  generated UID/filesystem cache; the former duplicate test wrappers remain
+  consolidated into one authored-layout check.
+- The focused HUD smoke test passes after its authored prompt-icon paths were
+  aligned with the current scene hierarchy; live/native-resolution evidence
+  remains separate.
 - Web export previously failed because `renderer/rendering_method.web` was
   removed; it has now been restored and local export validation passes.
 
@@ -433,7 +436,7 @@ changes, and must be triaged against the current worktree before code changes.
   (`gate`, `owner`, `reference`, `diagnostic`, or `all`), `-TestFilter`,
   `-TestTimeoutSeconds`, and CSV output at `.godot_user/smoke-results.csv`. The
   default `gate` group runs the curated player-facing checks;
-  `-TestGroup all` runs the 119 runnable registered paths. The result and
+  `-TestGroup all` runs the 121 runnable registered paths. The result and
   inventory CSVs carry each script's manifest `role` and `state`. Filtered runs execute only the selected test loop; the SFX, web, and
   main-scene checks run only for an unfiltered full run.
 - Build a normalized asset-reference scanner before identifying orphan assets;

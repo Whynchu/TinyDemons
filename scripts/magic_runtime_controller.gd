@@ -8,7 +8,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
 const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
 const MAGIC_KNOCKBACK_MULTIPLIER := 0.25
-const MAGIC_FRAME_COUNT := 4
+const MAGIC_FRAME_COUNT := 5
 const MAGIC_CAST_FRAME_INDEX := 2
 const MAGIC_FRAME_TIME_SCALE := 1.20
 const IMBUE_MAGIC_FRAME_COUNT := 9
@@ -248,7 +248,7 @@ func begin_magic_animation(root: Object, direction: Vector2, target: Sprite2D, m
 func _apply_magic_animation_frame(root: Object, frame: int) -> void:
 	# Magic owns the player presentation until the cast finishes. A leftover
 	# walk/attack frame can otherwise be selected while an IMBUE timeline is
-	# still advancing, and those shorter frame sets cannot represent frame 4+.
+	# still advancing. Magic uses the authored five-frame cast timeline.
 	root.set("player_anim_name", "magic")
 	root.set("player_anim_frame", frame)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent

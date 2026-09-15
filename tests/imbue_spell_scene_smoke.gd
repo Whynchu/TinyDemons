@@ -28,8 +28,8 @@ func _initialize() -> void:
 		return
 
 	var hud := gameplay.get("hud_controller") as HudController
-	_expect(hud != null and hud.cooldown_hud.size() == 6, "HUD builds both cooldown icon widgets", failures)
-	if hud != null and hud.cooldown_hud.size() == 6:
+	_expect(hud != null and hud.cooldown_hud.size() == 9, "HUD builds all cooldown icon widgets", failures)
+	if hud != null and hud.cooldown_hud.size() == 9:
 		var magic_icon := hud.cooldown_hud["magic_icon"] as Sprite2D
 		var imbue_icon := hud.cooldown_hud["imbue_icon"] as Sprite2D
 		var magic_timer := hud.cooldown_hud["magic_timer"] as Sprite2D

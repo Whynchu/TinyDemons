@@ -146,8 +146,9 @@ migration only after characterization tests describe the boot contract.
 6. In treasure rooms, `ChestController.update_interaction()` handles the player
    interaction.
 7. Chest claim state is written into `RoomController.room_states`.
-8. `_grant_chest_item_reward()` in `gameplay.gd` creates deterministic item
-   drops and records telemetry on `RunState`.
+8. `RunFlowController.claim_chest_item_reward()` creates deterministic item
+	drops, returns a typed `ChestRewardResult`, and records telemetry on
+	`RunState`.
 9. `_chest_gold_reward()` is delegated from `GameplayState` to
    `RunFlowController`.
 10. Gold is applied through `ProfileRuntimeController`.
@@ -158,7 +159,8 @@ migration only after characterization tests describe the boot contract.
 
 - Chest interaction and visual state: `ChestController`.
 - Room chest persistence: `RoomController`.
-- Item generation: `ItemCatalog` called by `gameplay.gd`.
+- Item generation: `RunFlowController` calls `ItemCatalog` and returns a typed
+	`ChestRewardResult`.
 - Run reward telemetry: `RunState`.
 - Gold mutation: `ProfileRuntimeController`.
 - Reward scaling: `RunFlowController` through root delegation.
@@ -169,8 +171,8 @@ migration only after characterization tests describe the boot contract.
 - Reward ownership is split across chest, gameplay, room, profile, run, and
   flow controllers.
 - Idempotence is intentionally implemented, but the contract is distributed.
-- The item reward method remains in `gameplay.gd`, despite item authority being
-  documented elsewhere.
+- Chest reward resolution now has one typed owner; the remaining interaction
+	boundary still persists the result into `RoomController.room_states`.
 - The checkpoint ordering is important but not represented by a typed command or
   result object.
 
@@ -196,8 +198,8 @@ migration only after characterization tests describe the boot contract.
 3. Room transition combines state restoration, movement, presentation reset,
    and persistence ordering.
 4. Root callbacks make renames and ownership changes runtime-fragile.
-5. The current HUD smoke failure and duplicate UID warnings need resolution
-   before using the full suite as a clean baseline.
+5. Live/native-resolution HUD evidence remains separate from the passing scene
+   smoke test before using the full suite as a clean baseline.
 
 ## Recommended Follow-Up
 

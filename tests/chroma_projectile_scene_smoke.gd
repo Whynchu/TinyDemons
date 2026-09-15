@@ -32,12 +32,14 @@ func _initialize() -> void:
 	_expect(mp_fill != null and mp_fill.texture != null, "Chroma HUD bar is rendered", failures)
 	if mp_fill != null and mp_fill.texture != null:
 		var mp_image: Image = mp_fill.texture.get_image()
+		var runtime_palette := String(gameplay.get("current_player_palette_name"))
+		var expected_mp_color := PaletteLibrary.accent(runtime_palette)
 		var mp_color_found := false
 		for y in mp_image.get_height():
 			for x in mp_image.get_width():
-				if mp_image.get_pixel(x, y).a > 0.0 and mp_image.get_pixel(x, y).is_equal_approx(PaletteLibrary.ACCENT["blue"]):
+				if mp_image.get_pixel(x, y).a > 0.0 and mp_image.get_pixel(x, y).is_equal_approx(expected_mp_color):
 					mp_color_found = true
-		_expect(mp_color_found, "Chroma bar uses the light-blue MP accent", failures)
+		_expect(mp_color_found, "Chroma bar uses the active player palette accent (%s)" % runtime_palette, failures)
 	if pickup_controller != null:
 		gameplay.call("_spawn_chroma_pickup", Vector2(-10000.0, -10000.0), 20, 123, Vector2.ZERO)
 		var pickup_sprites: Array = pickup_controller.get("sprites") as Array
@@ -109,7 +111,7 @@ func _initialize() -> void:
 	var player_animation := gameplay.get("player_animation_component") as PlayerAnimationComponent
 	var equipment_visual := gameplay.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	var magic_runtime := gameplay.get("magic_runtime_controller") as MagicRuntimeController
-	_expect(player_animation != null and player_animation.magic_frames.size() == 4, "triangle cast loads four body magic frames", failures)
+	_expect(player_animation != null and player_animation.magic_frames.size() == 5, "triangle cast loads five body magic frames (got %d)" % (player_animation.magic_frames.size() if player_animation != null else -1), failures)
 	if equipment_visual != null:
 		var magic_equipment_frames: Dictionary = equipment_visual.get("frames") as Dictionary
 		_expect((magic_equipment_frames.get("sword_magic", []) as Array).size() == 4 and (magic_equipment_frames.get("shield_magic", []) as Array).size() == 4, "triangle cast loads four sword and shield magic frames", failures)
@@ -131,8 +133,8 @@ func _initialize() -> void:
 		_expect(int(gameplay.get("player_anim_frame")) == 1 and projectile_controller.projectiles.is_empty(), "triangle cast advances to frame 2 without firing", failures)
 		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 1.01)
 		_expect(int(gameplay.get("player_anim_frame")) == 2 and projectile_controller.projectiles.size() == 1, "triangle projectile fires on frame 3", failures)
-		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 2.01)
-		_expect(not bool(gameplay.get("player_is_magic_casting")), "triangle cast returns to the normal animation after frame 4", failures)
+		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 3.01)
+		_expect(not bool(gameplay.get("player_is_magic_casting")), "triangle cast returns to the normal animation after frame 5", failures)
 		var equipment_fixture := gameplay.get("player_equipment") as EquipmentComponent
 		var shield_was_equipped := equipment_fixture != null and equipment_fixture.has_shield
 		# The smoke scene may load a saved profile without a shield. Force the

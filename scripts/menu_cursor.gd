@@ -141,5 +141,11 @@ func is_bobbing() -> bool:
 	return _bobbing
 
 
+## Stable logical anchor used by responsive layout and characterization checks.
+## `position` may include the intentional bob offset or a route-transition glide.
+func anchor_position() -> Vector2:
+	return _target if _target.is_finite() else position
+
+
 func _exit_tree() -> void:
 	_kill_motion()

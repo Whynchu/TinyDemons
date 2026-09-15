@@ -587,6 +587,8 @@ func _chest_item_drop_count(roll: float) -> int:
 	return int(run_flow_controller.call("chest_item_drop_count", self, roll))
 func _chest_gold_reward(base_gold: int) -> int:
 	return int(run_flow_controller.call("chest_gold_reward", self, base_gold))
+func _claim_chest_item_reward() -> ChestRewardResult:
+	return run_flow_controller.call("claim_chest_item_reward", self) as ChestRewardResult
 func _set_gold_value(value: int) -> void:
 	profile_runtime_controller.call("set_gold_value", self, value)
 func _sync_runtime_progression_to_profile() -> void:

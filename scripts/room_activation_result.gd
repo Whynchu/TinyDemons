@@ -19,6 +19,7 @@ var room_type: StringName = &""
 var state: Dictionary = {}
 var configured_enemy_slots := 0
 var visible_enemy_slots := 0
+var spawn_result: RoomSpawnResult = null
 
 
 func is_ready() -> bool:

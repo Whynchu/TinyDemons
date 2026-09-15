@@ -210,8 +210,8 @@ These affect dungeon generation and room behavior and are `const` in
 | NPC interact distance | 24.0 | `gameplay_state.gd:NPC_INTERACT_DISTANCE` |
 | Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
 | Chest gold roll | `0.75x-1.30x` base before rank/grade multiplier | `run_flow_controller.gd:chest_gold_reward` |
-| Chest item drop chance | Standard rooms retain the base policy; dangerous shortcut rooms receive a modest bonus; elemental vault chests guarantee one item | `gameplay.gd:_chest_item_drop_chance`, `run_flow_controller.gd:chest_item_drop_chance` |
-| Regular enemy-room treasure | R1+ run ranks; 0.50 deterministic chance per combat room; 0.50x Treasure Room gold; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms | `room_controller.gd:REGULAR_ROOM_TREASURE_CHANCE`, `run_flow_controller.gd:chest_gold_reward`, `gameplay.gd:_grant_chest_item_reward` |
+| Chest item drop chance | Standard rooms retain the base policy; dangerous shortcut rooms receive a modest bonus; elemental vault chests guarantee one item | `run_flow_controller.gd:chest_item_drop_chance`, `run_flow_controller.gd:claim_chest_item_reward` |
+| Regular enemy-room treasure | R1+ run ranks; 0.50 deterministic chance per combat room; 0.50x Treasure Room gold; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms | `room_controller.gd:REGULAR_ROOM_TREASURE_CHANCE`, `run_flow_controller.gd:chest_gold_reward`, `run_flow_controller.gd:claim_chest_item_reward` |
 | Chest second gear drop | 1 additional item, base 0.35 chance | `run_flow_controller.gd:chest_item_drop_count` |
 | R6+ route risk | Risk shortcuts use a stronger local encounter tier and improved reward tier; vault branches use elite encounters and enhanced guaranteed gear | `room_controller.gd`, `run_flow_controller.gd`, `gameplay.gd` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |

@@ -2,7 +2,7 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-13
+Updated: 2026-09-15
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -33,12 +33,12 @@ Work should move through one narrow slice at a time:
 
 | Phase | Purpose | State | Exit evidence |
 |---|---|---|---|
-| 0.00 | Preserve the `0.2.00` baseline | In progress | clean import, recorded test inventory, duplicate UID decision, and representative manual run |
+| 0.00 | Preserve the `0.2.00` baseline | In progress | clean import, recorded test inventory, focused evidence, and representative manual run |
 | 0.10 | Make documentation authoritative | In progress | current map, roadmap, content guide, known-issues register, and lifecycle headers |
 | 0.15 | Audit and reduce the verification surface | Active issue | every test/report has a role and state; curated release gate; obsolete checks removed |
 | 0.20 | Stabilize active player-facing contracts | In progress | issue tracker findings have focused or manual verification, with failures classified |
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
-| 0.40 | Separate room and encounter responsibilities | Planned | typed room transition/spawn results and deterministic room fixtures |
+| 0.40 | Separate room and encounter responsibilities | In progress | typed room transition/activation results and deterministic room fixtures |
 | 0.50 | Reduce dynamic runtime seams by feature | Planned | one owner migration removes its compatibility calls while preserving frame order |
 | 0.60 | Make content authoring repeatable | Planned | validated definitions and an example workflow for rooms, enemies, rewards, and tuning |
 | 0.70 | Improve test and performance feedback | Planned | grouped verification, runtime timing baselines, and reproducible performance scenarios |
@@ -46,31 +46,26 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.06
+## Next checkpoint after 0.2.12
 
-Version `0.2.06` records the reproducible Web export gate, touch/cloud contract
-reconciliation, functional Equipment/Shop gear grouping, exact-ID sell
-accounting, and the Fusion next-rank batch cap alongside the remaining contract
-failures. The next implementation checkpoint is a stabilization pass in this
-order:
+Version `0.2.12` records the typed room transition and activation seams alongside
+the earlier Web export, touch/cloud, gear, progression, and generated-route
+reconciliation. The next checkpoint is a stabilization pass in this order:
 
-1. Doorway behavior and `wall_socket_geometry_smoke` are reconciled with the
-   portal-based walkability model. Keep the focused check green while verifying
-   reachable enemy and player space in generated rooms; do not alter doorway
-   collision without a reproduced gameplay defect.
-2. Keep the focused R6+ generation, doorway, and active-run snapshot checks
-   green. Compact-bound, bound-reachability, and focused enemy spawn/walkability
-   checks are now green; complete the remaining manual late-room checks, then
-   repair any runtime failures before expanding generated content.
-3. Preserve the accepted minimap landmark/discovery behavior and keep the
-   starter-flame music gate green; finish flame-travel save/recovery evidence,
-   add its SFX/transition presentation, and capture cold/warm timing.
-4. Finish the remaining Pause Equipment clipping and broader touch contracts
-   against the authored Pause/Hub conventions, including direct touch targets.
-   The focused Demon Hub/Shop, Equipment scene, and Pause scene checks are now
-   green.
-5. Keep the verified gear catalogue/drop contracts and profile-safe exact
-   sell-row rebuilds green; measure Shop timing before any optimization.
+1. Keep the manifest preflight and focused room/HUD/reference checks green, then
+   run the curated standalone gate and record product, harness, environment, and
+   crash outcomes separately.
+2. Close the remaining verification-surface decisions: explicitly retain or
+   retire duplicate/implementation-detail checks, and link the audit documents
+   without duplicating the manifest classification table.
+3. Finish the remaining browser/device, native-resolution, cold/warm timing,
+   and representative gameplay evidence that cannot be established headlessly.
+4. Continue the room boundary one seam at a time: the initial typed enemy-spawn
+   and chest-item reward results now travel through their owners; next tighten
+   reward persistence/settlement boundaries while preserving authored/generated
+   distinctions and the explicit frame schedule.
+5. Select the first menu or checkpoint ownership extraction only after the
+   active contract evidence is current.
 
 Each item should keep its existing owner, add or correct a focused
 characterization check, and record the result in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
@@ -97,10 +92,11 @@ active-run recovery, and explicit gameplay frame schedule.
 
 Remaining evidence work:
 
-- resolve the duplicate R4/R5 resource UID warnings found by the editor import
-  scan;
+- keep the distinct R4/R5 `.uid` files committed; a stale local generated cache
+  can be rebuilt if the warning reappears;
 - keep `tests/manifest.csv` as the single test/report registry (all scripts
   classified by role, state, owner, target, and load kind);
+- run the curated standalone release gate and record its result;
 - capture a representative cold and warm gameplay run;
 - run a focused standalone smoke test, then the full runner only when no MCP
   Godot runtime is active; and
@@ -164,9 +160,12 @@ render at native 240×160 before checking wider modes.
 ## Phase 0.40 — Room and encounter boundaries
 
 Define typed results around room transition, arrival sockets, room persistence,
-encounter spawning, and reward orchestration. Preserve authored and generated
-layout distinctions. A room is eligible for activation only after its full
-enemy body positions and route reachability have been validated.
+encounter spawning, and reward orchestration. The room transition and activation
+results, plus the initial typed enemy-spawn and chest-item reward results, are now
+in place. Preserve authored and generated layout distinctions. A room is eligible
+for activation only after its full enemy body positions and route reachability
+have been validated. The next seam is the remaining reward persistence and
+settlement boundary.
 
 ## Phase 0.50 — Typed runtime ownership
 
