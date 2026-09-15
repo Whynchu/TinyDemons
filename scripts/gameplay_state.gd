@@ -1571,7 +1571,7 @@ func _boss_jump_phase_popcorn_alive(boss: Sprite2D) -> bool: return bool(room_co
 func _clear_boss_jump_phase_popcorn(boss: Sprite2D) -> void: room_controller.clear_boss_jump_phase_popcorn(boss)
 func _apply_boss_jump_slam(boss: Sprite2D, anchor: Vector2) -> void: combat_runtime_controller.apply_boss_jump_slam(self, boss, anchor)
 func _is_any_slime_aggroed() -> bool: return bool(slime_runtime_controller.call("is_any_slime_aggroed", self))
-func _update_special_enemy_respawns(delta: float) -> void: room_controller.call("update_special_enemy_respawns", self, delta); room_controller.call("update_popcorn_respawns", self, delta)
+func _update_special_enemy_respawns(delta: float) -> void: room_controller.update_respawns(self, delta)
 func _slime_attack_reach(slime: Sprite2D) -> float: return float(slime_runtime_controller.call("slime_attack_reach", self, slime))
 func _slime_attack_contact_gap(slime: Sprite2D, direction: Vector2) -> float: return float(slime_runtime_controller.call("slime_attack_contact_gap", self, slime, direction))
 func _slime_attack_offset(slime: Sprite2D) -> Vector2: return slime_runtime_controller.call("slime_attack_offset", self, slime) as Vector2

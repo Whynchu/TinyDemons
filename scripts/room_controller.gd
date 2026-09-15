@@ -16,6 +16,7 @@ const ROOM_ENEMY_RUNTIME_CONTEXT_SCRIPT = preload("res://scripts/room_enemy_runt
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
 const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
 const ROOM_SPAWN_CONTEXT_SCRIPT = preload("res://scripts/room_spawn_context.gd")
+const ROOM_RESPAWN_CONTEXT_SCRIPT = preload("res://scripts/room_respawn_context.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(result: RoomClearResult)
@@ -1532,6 +1533,13 @@ func _is_popcorn_respawn_room(root: Object) -> bool:
 	return room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_COMBAT or room_type == DungeonGraph.ROOM_TREASURE or room_type == DungeonGraph.ROOM_DOWNSTAIRS or room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
 
 
+func _is_popcorn_respawn_room_context(context: RoomRespawnContext) -> bool:
+	# Backtracking popcorn belongs to replayable combat spaces. Flame/Rest,
+	# Cloaked/NPC, and Orb rooms are safe presentation or puzzle rooms and must
+	# never receive an injected enemy.
+	return context.room_type == DungeonGraph.ROOM_START or context.room_type == DungeonGraph.ROOM_COMBAT or context.room_type == DungeonGraph.ROOM_TREASURE or context.room_type == DungeonGraph.ROOM_DOWNSTAIRS or context.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+
+
 func _maybe_add_backtrack_popcorn(_root: Object) -> void:
 	# Popcorn is tied to the original encounter slots. Do not inject a new slot
 	# merely because the player revisits a completed room; each popcorn slot gets
@@ -1763,6 +1771,21 @@ func schedule_special_enemy_respawns(root: Object) -> void:
 	room_states[root.get("current_room_id")] = state
 
 
+func update_respawns(root: Object, delta: float) -> void:
+	if root is GameplayState:
+		update_respawns_context(ROOM_RESPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), delta)
+		return
+	update_special_enemy_respawns(root, delta)
+	update_popcorn_respawns(root, delta)
+
+
+func update_respawns_context(context: RoomRespawnContext, delta: float) -> void:
+	if context == null or not context.is_valid():
+		return
+	update_special_enemy_respawns_context(context, delta)
+	update_popcorn_respawns_context(context, delta)
+
+
 func _is_special_room_state(root: Object, room_id: StringName, state: Dictionary) -> bool:
 	var graph := root.get("dungeon_graph") as DungeonGraph
 	var room := graph.get_room(room_id) if graph != null else null
@@ -1771,7 +1794,86 @@ func _is_special_room_state(root: Object, room_id: StringName, state: Dictionary
 	return StringName(state.get("room_type", &"")) == DungeonGraph.ROOM_SPECIAL_ENEMY
 
 
+func _is_special_room_state_context(context: RoomRespawnContext, room_id: StringName, state: Dictionary) -> bool:
+	var graph: DungeonGraph = context.runtime.dungeon_graph
+	var room := graph.get_room(room_id) if graph != null else null
+	if room != null:
+		return room.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+	return StringName(state.get("room_type", &"")) == DungeonGraph.ROOM_SPECIAL_ENEMY
+
+
 func update_special_enemy_respawns(root: Object, delta: float) -> void:
+	if root is GameplayState:
+		update_special_enemy_respawns_context(ROOM_RESPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), delta)
+		return
+	_update_special_enemy_respawns_legacy(root, delta)
+
+
+func update_special_enemy_respawns_context(context: RoomRespawnContext, delta: float) -> void:
+	if context == null or not context.is_valid():
+		return
+	var runtime := context.runtime
+	var active_room_id: StringName = context.room_id
+	var current_state: Dictionary = {}
+	var ready_slots: Array[int] = []
+	for room_key in room_states.keys():
+		var room_id: StringName = StringName(room_key)
+		var state := room_states.get(room_key, {}) as Dictionary
+		if not _is_special_room_state_context(context, room_id, state) or not bool(state.get("special_clear_earned", false)):
+			continue
+		var timers := state.get("special_respawn_timers", {}) as Dictionary
+		if timers.is_empty() and bool(state.get("finished", false)):
+			_ensure_special_enemy_respawn_timers(state)
+			timers = state.get("special_respawn_timers", {}) as Dictionary
+		if timers.is_empty():
+			room_states[room_key] = state
+			continue
+		var room_is_current: bool = room_id == active_room_id and context.room_type == DungeonGraph.ROOM_SPECIAL_ENEMY
+		for timer_key in timers.keys():
+			var remaining := maxf(0.0, float(timers[timer_key]) - maxf(delta, 0.0))
+			timers[timer_key] = remaining
+			if room_is_current and remaining <= 0.0 and not _special_room_hides_enemies_context(context, state, room_id):
+				ready_slots.append(int(timer_key))
+		state["special_respawn_timers"] = timers
+		room_states[room_key] = state
+		if room_is_current:
+			current_state = state
+	if ready_slots.is_empty():
+		return
+	var current_room_state: Dictionary = current_state
+	var current_room_timers: Dictionary = current_room_state.get("special_respawn_timers", {}) as Dictionary
+	_prepare_enemy_slot_visuals(runtime, current_room_state)
+	var player: Sprite2D = context.player
+	var player_foot: Vector2 = runtime._actor_foot(player)
+	var chest: Sprite2D = context.chest
+	var chest_rect: Rect2 = runtime._collision_rect(chest)
+	var occupied: Array[Vector2] = []
+	for slime in context.slimes:
+		if slime.visible and not runtime._is_slime_dead(slime):
+			occupied.append(runtime._actor_foot(slime))
+	var layout_rng := RandomNumberGenerator.new()
+	layout_rng.seed = int(current_room_state.get("enemy_spawn_seed", String(context.room_id).hash() + 303)) + 1771
+	var did_respawn := false
+	for slot in ready_slots:
+		var timer_key := str(slot)
+		if _spawn_enemy_slot(runtime, current_room_state, slot, occupied, layout_rng, player_foot, chest_rect, true):
+			current_room_timers.erase(timer_key)
+			did_respawn = true
+		else:
+			# Keep retrying if a temporary actor/wall arrangement prevents a valid
+			# spawn. This does not reset the original staggered schedule.
+			current_room_timers[timer_key] = 0.25
+	current_room_state["special_respawn_timers"] = current_room_timers
+	if did_respawn:
+		_play_popcorn_spawn_sound_context(context)
+		current_room_state["finished"] = false
+		runtime._set_door_active(false)
+		runtime._set_entrance_open(true)
+		runtime._build_depth_lists()
+	room_states[context.room_id] = current_room_state
+
+
+func _update_special_enemy_respawns_legacy(root: Object, delta: float) -> void:
 	var active_room_id: StringName = StringName(root.get("current_room_id"))
 	var current_state: Dictionary = {}
 	var ready_slots: Array[int] = []
@@ -1833,6 +1935,112 @@ func update_special_enemy_respawns(root: Object, delta: float) -> void:
 
 
 func update_popcorn_respawns(root: Object, delta: float) -> void:
+	if root is GameplayState:
+		update_popcorn_respawns_context(ROOM_RESPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), delta)
+		return
+	_update_popcorn_respawns_legacy(root, delta)
+
+
+func update_popcorn_respawns_context(context: RoomRespawnContext, delta: float) -> void:
+	if context == null or not context.is_valid():
+		return
+	# Advance every room's clocks, including rooms outside the active scene. A
+	# ready off-room slot remains at zero until that room is visited again.
+	var step := maxf(delta, 0.0)
+	for room_key in room_states.keys():
+		var clock_state := room_states.get(room_key, {}) as Dictionary
+		var waiting := clock_state.get("popcorn_respawn_waiting", {}) as Dictionary
+		if not waiting.is_empty() and not bool(clock_state.get("finished", false)):
+			for waiting_key in waiting.keys():
+				var waiting_entry := waiting[waiting_key] as Dictionary
+				waiting_entry["dead_before_clear"] = float(waiting_entry.get("dead_before_clear", 0.0)) + step
+				waiting[waiting_key] = waiting_entry
+			clock_state["popcorn_respawn_waiting"] = waiting
+		var clock_pending := clock_state.get("popcorn_respawn_slots", {}) as Dictionary
+		if clock_pending.is_empty():
+			room_states[room_key] = clock_state
+			continue
+		for clock_key in clock_pending.keys():
+			clock_pending[clock_key] = maxf(0.0, float(clock_pending[clock_key]) - step)
+		clock_state["popcorn_respawn_slots"] = clock_pending
+		room_states[room_key] = clock_state
+	if not _is_popcorn_respawn_room_context(context):
+		return
+	var room_id: StringName = context.room_id
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var pending := state.get("popcorn_respawn_slots", {}) as Dictionary
+	if pending.is_empty():
+		if state.has("popcorn_respawn_slots"):
+			state.erase("popcorn_respawn_slots")
+			room_states[room_id] = state
+		return
+	var ready_slots: Array[int] = []
+	var active_variants := state.get("enemy_variants", []) as Array
+	for pending_key in pending.keys():
+		var slot := int(pending_key)
+		if slot < 0 or slot >= active_variants.size():
+			pending.erase(pending_key)
+			continue
+		if float(pending[pending_key]) <= 0.0:
+			ready_slots.append(slot)
+	if ready_slots.is_empty():
+		if pending.is_empty():
+			state.erase("popcorn_respawn_slots")
+		else:
+			state["popcorn_respawn_slots"] = pending
+		room_states[room_id] = state
+		return
+
+	var runtime := context.runtime
+	_prepare_enemy_slot_visuals(runtime, state)
+	var player: Sprite2D = context.player
+	var player_foot: Vector2 = runtime._actor_foot(player)
+	var chest: Sprite2D = context.chest
+	var chest_rect: Rect2 = runtime._collision_rect(chest)
+	var occupied: Array[Vector2] = []
+	for slime in context.slimes:
+		if slime.visible and not runtime._is_slime_dead(slime):
+			occupied.append(runtime._actor_foot(slime))
+	var respawn_serial := int(state.get("popcorn_respawn_serial", 0)) + 1
+	state["popcorn_respawn_serial"] = respawn_serial
+	var layout_rng := RandomNumberGenerator.new()
+	layout_rng.seed = int(state.get("enemy_spawn_seed", String(room_id).hash() + 303)) + 1771 + respawn_serial * 7919
+	var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary
+	var did_respawn := false
+	for slot in ready_slots:
+		var timer_key := str(slot)
+		if slot < 0 or slot >= context.slimes.size():
+			pending.erase(timer_key)
+			continue
+		var slime := context.slimes[slot]
+		if slime.visible and not runtime._is_slime_dead(slime):
+			pending.erase(timer_key)
+			continue
+		# A defeated support slot gets a fresh position when it returns. The
+		# spawn helper still validates it against walls, the player, and all
+		# currently active actors.
+		spawn_positions.erase(slot)
+		spawn_positions.erase(timer_key)
+		if _spawn_enemy_slot(runtime, state, slot, occupied, layout_rng, player_foot, chest_rect, true):
+			pending.erase(timer_key)
+			did_respawn = true
+		else:
+			pending[timer_key] = POPCORN_RESPAWN_RETRY_DELAY
+	state["enemy_spawn_positions"] = spawn_positions
+	if pending.is_empty():
+		state.erase("popcorn_respawn_slots")
+	else:
+		state["popcorn_respawn_slots"] = pending
+	if did_respawn:
+		_play_popcorn_spawn_sound_context(context)
+		state["finished"] = false
+		runtime._set_door_active(false)
+		runtime._set_entrance_open(false if context.room_type == DungeonGraph.ROOM_DOWNSTAIRS else true)
+		runtime._build_depth_lists()
+	room_states[room_id] = state
+
+
+func _update_popcorn_respawns_legacy(root: Object, delta: float) -> void:
 	# Advance every room's clocks, including rooms outside the active scene. A
 	# ready off-room slot remains at zero until that room is visited again.
 	var step := maxf(delta, 0.0)
@@ -1937,6 +2145,13 @@ func _play_popcorn_spawn_sound(root: Object) -> void:
 	root.call("_play_sound", "slime_spawn", -6.0, pitch)
 
 
+func _play_popcorn_spawn_sound_context(context: RoomRespawnContext) -> void:
+	var pitch := 0.98
+	if context.runtime.rng != null:
+		pitch += context.runtime.rng.randf_range(-0.03, 0.03)
+	context.runtime._play_sound("slime_spawn", -6.0, pitch)
+
+
 func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 	var rest_fire := root.get("rest_fire") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var chest := root.get("chest") as Sprite2D
 	rest_fire.visible = false; var firepit := rest_fire.get_node_or_null("Firepit") as Sprite2D; if firepit != null: firepit.visible = false; (root.get("collision_sprites") as Array[Sprite2D]).erase(firepit); demon.visible = false; chest.position = _chest_position_for_room(root); chest.flip_h = false; chest.texture = root.get("chest_gray_texture"); chest.visible = show_chest; chest.self_modulate = Color.WHITE; root.set("chest_unlocked", false); root.set("chest_claimed", false); root.set("chest_evaporated", false); root.set("chest_collect_flash_timer", 0.0); root.call("_set_door_active", false)
@@ -1982,6 +2197,19 @@ func _special_room_hides_enemies(root: Object, state: Dictionary, room_id: Strin
 		return false
 	var map_controller := root.get("dungeon_map_controller") as Node
 	var active_color: StringName = StringName(map_controller.call("current_color")) if map_controller != null else &"neutral"
+	return active_color == room.special_respawn_required_color
+
+
+func _special_room_hides_enemies_context(context: RoomRespawnContext, state: Dictionary, room_id: StringName = &"") -> bool:
+	if not bool(state.get("special_clear_earned", false)):
+		return false
+	var graph: DungeonGraph = context.runtime.dungeon_graph
+	var target_room_id: StringName = room_id if not room_id.is_empty() else context.room_id
+	var room := graph.get_room(target_room_id) if graph != null else null
+	if room == null or room.special_respawn_required_color.is_empty():
+		return false
+	var map_controller: DungeonMapController = context.runtime.dungeon_map_controller
+	var active_color: StringName = map_controller.current_color() if map_controller != null else &"neutral"
 	return active_color == room.special_respawn_required_color
 
 
