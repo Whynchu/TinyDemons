@@ -173,6 +173,9 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all
 
 # Fast manifest/path preflight — no Godot process starts
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_test_manifest.ps1
+
+# Composition ownership guardrail — enforces the strict refactor scorecard
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1
 ```
 
 If Windows memory-error dialogs start repeating, stop the smoke runner and
@@ -205,7 +208,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.14**. Every push to `main` must increment the
+Current game version: **0.2.15**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

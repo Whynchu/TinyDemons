@@ -18,6 +18,12 @@ if ($LASTEXITCODE -ne 0) {
 	throw "Test manifest preflight failed"
 }
 
+$compositionValidator = Join-Path $root "tools/validate_composition.ps1"
+& pwsh -NoProfile -ExecutionPolicy Bypass -File $compositionValidator
+if ($LASTEXITCODE -ne 0) {
+	throw "Composition ownership preflight failed"
+}
+
 $headlessUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}" -f $PID)
 New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
 $logFile = Join-Path $headlessUserData "smoke.log"

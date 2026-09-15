@@ -60,6 +60,8 @@ jobs:
         run: |
           & "./tools/validate_test_manifest.ps1"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "./tools/validate_composition.ps1"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "./tests/web_export_smoke.ps1" -RequireExport -OutputDirectory "dist"
 
       - name: Configure GitHub Pages
