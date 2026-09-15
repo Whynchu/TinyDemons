@@ -59,7 +59,7 @@ The scorecard is intentionally difficult to satisfy:
 | Meaningful reduction in dynamic `root.call/get/set` sites | 3,140 | 3,135 | `[ ]` only 5 fewer sites, or about 0.16% |
 | `GameplayState` smaller than the pre-slice baseline | 1,720 lines / 287 fields | 1,777 lines / 299 fields | `[ ]` larger by 57 lines and 12 fields |
 | `RoomController` below its pre-refactor baseline | 2,297 lines | 3,265 lines | `[ ]` larger by 968 lines |
-| At least one direct typed context used end-to-end | none counted | `ChestRewardContext` and several data contexts | `[x]` |
+| At least one direct typed context used end-to-end | none counted | `ChestRewardContext`, `RoomClearContext`, `RoomCheckpointContext`, `RoomEnemyRuntimeContext`, `RunSettlementContext`, `ActiveRunSnapshotContext`, `RunCheckpointContext`, `MenuPlayerContext` | `[x]` |
 
 This score is a measure of architectural ownership, not a claim that the
 recent work was useless. Typed result contracts, deterministic snapshots,
@@ -71,6 +71,24 @@ The next work is therefore not browser evidence or more wrapper creation. It
 is to rework the room lifecycle through direct typed slices, reduce the root
 access surface, and make `RoomController` smaller than its pre-refactor
 baseline before assigning a higher percentage.
+
+The 25% score advances only when a slice earns measurable credit against these
+pinned thresholds, not when it merely adds a typed class:
+
+- **Root access threshold:** total `root.call/get/set` sites must fall below
+  **2,500** before the first slice earns credit; each completed slice must also
+  reduce its own owner's count.
+- **State-bag threshold:** `GameplayState` must be below its pre-slice baseline
+  (1,720 lines / 287 fields) before assigning 50%.
+- **Owner-size threshold:** `RoomController` must be below its pre-refactor
+  baseline (2,297 lines) or have a clear extracted owner that removes at least
+  500 lines from the coordinator.
+- **Slice integrity:** a slice earns no credit while it has a parallel
+  `*_legacy` or root-shaped implementation of the same behavior, or a context
+  that stores `GameplayState`.
+
+Until all four thresholds move together on the same slice, the score stays
+25%. Do not raise it based on a single gate.
 
 ## Current measured shape
 
@@ -385,6 +403,25 @@ dependencies, demonstrate a measurable root-access reduction, and delete the
 duplicate implementation for that slice. Preserve the authored/generated room
 distinction and the central frame schedule while doing so.
 
+**First target: enemy spawn and respawn.** This is the narrowest room workflow
+with the strongest existing coverage (`enemy_room_entrance_scene_smoke`,
+`popcorn_respawn_smoke`, `generated_run_scene_smoke`, `typed_combat_path_smoke`)
+and the smallest cross-system surface. The acceptance criteria for this slice
+are:
+
+- build `RoomSpawnContext`/`RoomRespawnContext` from direct typed inputs
+  (slime component arrays, room state, tuning, RNG, placement services) with no
+  `GameplayState` field and no inheritance from `RoomRuntimeContext`;
+- route the normal runtime path through the direct implementation and reduce
+  the owner's `root.*` count by at least the accesses that slice removed;
+- delete or collapse the parallel `_spawn`/`_respawn` root-shaped body to a
+  one-line compatibility forward, or remove it once the final consumer migrates;
+- keep `RoomController` authoritative for room state; and
+- report before/after line and access counts in the handoff.
+
+Room entry must come later: it crosses the most systems and is the most likely
+target to produce another oversized context if attempted first.
+
 Focused evidence for this slice:
 
 - `room_transition_result_smoke`: typed clear result, idempotency, and single
@@ -492,6 +529,44 @@ regression; neither is evidence against the typed room slice.
   runner: `tests/run_all_smoke.ps1` with `-TestGroup gate`, `-TestGroup owner`,
   or `-TestGroup all`. Test roles and states are tracked in
   `tests/manifest.csv` and `docs/verification-surface-audit.md`.
+
+## Architecture guardrail
+
+The manifest validator (`tools/validate_test_manifest.ps1`) enforces the test
+inventory. The composition refactor needs an equivalent structural guard so the
+scorecard cannot drift back into claimed-but-unmeasured progress. Add a
+`tools/validate_composition.gd` (or PowerShell equivalent) that fails when it
+finds any of:
+
+- a context that declares a `GameplayState` field or accepts `GameplayState` in
+  its constructor, outside an explicit transitional allowlist;
+- `context.runtime` access in a context the allowlist marks as completed;
+- a new parallel `*_legacy`/`*_context` pair for the same behavior where the
+  legacy body is not a one-line compatibility forward;
+- a root-access regression (count higher than the recorded baseline) in a
+  migrated owner; and
+- a `GameplayState` field count or line count above the recorded baseline.
+
+The transitional allowlist must name exactly the current adapters and shrink as
+slices land:
+
+- `RoomEntryContext`, `RoomActivationContext`, and `RoomRuntimeContext` declare a
+  `GameplayState` field directly;
+- `RoomSpawnContext` and `RoomRespawnContext` inherit that field through
+  `RoomRuntimeContext`; and
+- `MenuPlayerContext` and `RunCheckpointContext` mention `GameplayState` only in
+  comments and do not store it — they are **not** transitional and must not be
+  added to the allowlist.
+
+The allowlist therefore contains five entries today
+(`RoomEntryContext`, `RoomActivationContext`, `RoomRuntimeContext`,
+`RoomSpawnContext`, `RoomRespawnContext`). The moment a slice migrates one to
+direct typed dependencies, remove it from the allowlist and record the metric
+delta.
+
+Wire the validator into the same CI and runner preflight as the manifest
+check so an architecture regression fails loudly instead of being recorded in a
+doc.
 
 ## Handoff checklist
 
