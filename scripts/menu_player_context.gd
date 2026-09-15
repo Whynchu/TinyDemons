@@ -13,6 +13,8 @@ const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 var profile: PlayerProfile = null
 var snapshot: CombatStatSnapshot = null
 var combat_tuning: CombatTuning = null
+var progression_tuning: ProgressionTuning = null
+var player_tuning: PlayerTuning = null
 var health_component: HealthComponent = null
 var chroma_component: PlayerChromaComponent = null
 var palette_name: StringName = &"blue"
@@ -23,6 +25,8 @@ func _init(
 	new_profile: PlayerProfile,
 	new_snapshot: CombatStatSnapshot,
 	new_combat_tuning: CombatTuning,
+	new_progression_tuning: ProgressionTuning,
+	new_player_tuning: PlayerTuning,
 	new_health_component: HealthComponent,
 	new_chroma_component: PlayerChromaComponent,
 	new_palette_name: StringName,
@@ -31,6 +35,8 @@ func _init(
 	profile = new_profile
 	snapshot = new_snapshot
 	combat_tuning = new_combat_tuning
+	progression_tuning = new_progression_tuning
+	player_tuning = new_player_tuning
 	health_component = new_health_component
 	chroma_component = new_chroma_component
 	palette_name = new_palette_name if not new_palette_name.is_empty() else &"blue"

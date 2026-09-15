@@ -1447,6 +1447,17 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 	_kill_slime_without_effects_legacy(root, slime)
 
 
+func record_enemy_death_context(context: RoomRespawnContext, slime: Sprite2D) -> void:
+	## Typed room boundary for the three room-owned consequences of a combat
+	## death. Combat owns damage, drops, and XP; this owner records room timers,
+	## removes the actor from the active room, and queues popcorn policy.
+	if context == null or not context.is_valid():
+		return
+	record_special_enemy_death_context(context, slime)
+	_kill_slime_without_effects_runtime(context.runtime, slime)
+	record_popcorn_enemy_death_context(context, slime)
+
+
 func _kill_slime_without_effects_runtime(runtime: GameplayState, slime: Sprite2D) -> void:
 	if runtime == null or slime == null:
 		return
@@ -2663,7 +2674,7 @@ func reset_slimes_for_room_context(context: RoomSpawnContext) -> RoomSpawnResult
 	result.room_type = context.room_type
 	runtime.effects_spawner.clear_slime_notices()
 	for slime in context.slimes:
-		kill_slime_without_effects(runtime, slime)
+		_kill_slime_without_effects_runtime(runtime, slime)
 	# Hub, rest, NPC, puzzle, and orb rooms are intentionally enemy-free. Keep
 	# the cleanup above, but do not interpret stale room-state data as an enemy
 	# encounter when one of those rooms is entered.

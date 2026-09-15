@@ -363,9 +363,12 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 		root.call("_spawn_soul_pickup", drop_origin, soul_drop_value, seed_value ^ 0x51A7, drop_direction)
 	(root.get("effects_spawner") as EffectsSpawner).spawn_slime_death_from_root(root, slime)
 	var room_controller := root.get("room_controller") as RoomController
-	room_controller.record_special_enemy_death(root, slime)
-	room_controller.kill_slime_without_effects(root, slime)
-	room_controller.record_popcorn_enemy_death(root, slime)
+	if root is GameplayState:
+		room_controller.record_enemy_death_context(RoomRespawnContext.new(root as GameplayState, room_controller), slime)
+	else:
+		room_controller.record_special_enemy_death(root, slime)
+		room_controller.kill_slime_without_effects(root, slime)
+		room_controller.record_popcorn_enemy_death(root, slime)
 	if root.get("current_target") == slime:
 		if bool(root.call("_is_target_input_held")):
 			root.call("_set_current_target", root.call("_closest_target"), false)

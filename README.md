@@ -84,35 +84,36 @@ feature boundaries, and `GameplayState` should remain the composition root
 instead of becoming a shared service locator. The detailed handoff is in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md).
 
-The latest pinned source scan, measured at baseline commit `d6a965d`, gives us
-this shape:
+The latest source scan (working tree on 2026-09-15; `d6a965d` remains the
+pinned comparison baseline) gives us this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 146 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 166 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime physical lines | 46,714 | Refactor by ownership, not by indiscriminate file splitting |
-| Runtime non-blank lines | 41,330 | Blank/comment volume is separated from implementation size |
+| Runtime physical lines | 48,522 | Refactor by ownership, not by indiscriminate file splitting |
+| Runtime non-blank lines | 42,888 | Blank/comment volume is separated from implementation size |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
-| `gameplay_state.gd` | 1,720 lines / 506 functions / 287 fields | The remaining composition-root and compatibility surface is the main debt |
-| `root.call/get/set` | 3,140 sites | Dependencies are still hidden across controllers and components |
+| `gameplay_state.gd` | 1,777 lines / 510 functions / 299 fields | The remaining composition-root and compatibility surface is the main debt |
+| `root.call/get/set` | 3,135 sites | Dependencies are still hidden across controllers and components |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
 boundaries, typed room transition/activation/clear results, typed enemy-runtime
 capture, typed room-level initial spawn orchestration, typed per-frame
-respawn coordination, typed room spawn/death helpers, external default tuning
-resources, and the first typed pause player-card presenter boundary. The
-composition refactor is approximately **96% complete / 4% remaining**; the
-remaining work is concentrated in browser/device durability evidence, the rest
-of the large menu owner, and compatibility-wrapper retirement.
+respawn coordination, typed room spawn/death helpers, typed room-owned combat
+death consequences, external default tuning resources, and typed pause/Hub
+player presentation contexts. The composition refactor is approximately
+**98% complete / 2% remaining**; the remaining work is concentrated in
+browser/device durability evidence, the final mixed menu workflows, and
+compatibility-wrapper retirement.
 
 The practical sequence is:
 
 1. Characterize active-run browser/device file-write ordering and the hosted
    Pages artifact.
-2. Continue moving one complete menu presenter at a time from
-   `ScreenStateController`.
+2. Finish the remaining mixed settings/save/equipment menu workflows one
+   presenter boundary at a time.
 3. Remove compatibility wrappers as each migrated slice reaches its last
    consumer.
 4. Keep adding newly identified balance knobs to the external tuning surface

@@ -951,6 +951,8 @@ func _menu_player_context() -> MenuPlayerContext:
 		player_profile,
 		snapshot,
 		combat_tuning,
+		progression_tuning,
+		player_tuning,
 		player_health_component,
 		player_chroma_component,
 		StringName(current_player_palette_name),
