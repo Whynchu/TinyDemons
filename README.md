@@ -98,19 +98,19 @@ this shape:
 | `root.call/get/set` | 3,140 sites | Dependencies are still hidden across controllers and components |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
-bootstrap wiring, player and slime components, typed room transition/activation
-and spawn results, and the typed chest item-reward result. The current working
-tree is implementing direct typed dependency migrations for chest rewards and
-run settlement. The immediate work is to checkpoint these boundaries and finish
-the typed safe-checkpoint sequence, then apply the proven pattern one vertical
-slice at a time to replace dynamic root access with direct typed
-dependencies and meaningful signals.
+bootstrap wiring, player and slime components, typed reward and settlement
+boundaries, typed room transition/activation/clear results, typed enemy-runtime
+capture, and typed room-level initial spawn orchestration. The composition
+refactor is approximately 85% complete; the remaining work is concentrated in
+lower-level spawn/respawn ownership, browser durability evidence, the large
+menu owner, deliberate tuning-data extraction, and compatibility-wrapper
+retirement.
 
 The practical sequence is:
 
-1. Finish the reward result through room persistence and settlement.
-2. Finish the typed settlement and room-state checkpoint boundaries, then
-   characterize active-run file-write ordering.
+1. Finish lower-level room spawn/respawn ownership and characterize its
+   remaining compatibility seam.
+2. Characterize active-run browser file-write ordering.
 3. Remove compatibility wrappers as each migrated slice reaches its last
    consumer.
 4. Tackle the large mixed menu owner only after the runtime pattern is proven.
