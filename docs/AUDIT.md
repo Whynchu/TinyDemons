@@ -11,9 +11,10 @@ Baseline game version: `0.2.00`
 Current release: `0.2.13` (typed reward, checkpoint, room-state, and runtime ownership boundaries)
 
 Post-audit checkpoint (2026-09-15): the composition handoff is approximately
-98% complete. Typed room spawn/death helpers, the typed room-owned combat death
-boundary, external default tuning resources, typed pause/Hub player contexts,
-and fresh local Web export evidence are now recorded in
+25% complete under the strict ownership scorecard. Typed room spawn/death
+helpers, the typed room-owned combat death boundary, external default tuning
+resources, typed pause/Hub player contexts, and fresh local Web export evidence
+are now recorded in
 [`composition-refactor-analysis.md`](composition-refactor-analysis.md).
 Browser/device and hosted-Pages verification remain separate release work.
 

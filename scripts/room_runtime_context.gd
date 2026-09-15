@@ -3,6 +3,10 @@ class_name RoomRuntimeContext
 
 ## Shared typed runtime inputs for room-owned enemy workflows.
 ## Specialized contexts add only the state needed by their operation.
+##
+## Transitional adapter only: RoomSpawnContext and RoomRespawnContext inherit
+## this GameplayState-backed shape. Keep it for compatibility while a direct
+## room-owned slice is characterized, but do not treat it as the target model.
 
 var runtime: GameplayState = null
 var room_controller: RoomController = null

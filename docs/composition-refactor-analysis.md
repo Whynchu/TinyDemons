@@ -43,21 +43,34 @@ The current architectural task is therefore:
 This is a staged consolidation, not a universal conversion of every script into
 a Node or every method into a component.
 
-### Progress estimate — 98% complete
+### Progress estimate — 25% strict ownership score
 
-The long-term composition refactor is approximately **98% complete / 2%
-remaining**, weighted by ownership risk and usable feature boundaries rather
-than raw line count. The accepted `0.2.x` migration route remains complete.
+The previous **98% complete / 2% remaining** estimate was too generous. It
+counted typed method names and passing behavior checks as if they proved that
+ownership had moved. They do not. The current strict score is **25% complete /
+75% remaining** because only one of four hard ownership gates is satisfied.
+The accepted `0.2.x` migration route remains complete; this is the separate
+post-Phase-C composition score.
 
-Completed or substantially migrated: reward and settlement boundaries, room
-checkpoint ordering, typed room-clear signaling, typed room-entry execution,
-typed enemy-runtime capture, typed room activation, typed room-level initial
-spawn orchestration, typed per-frame respawn coordination, the lower-level room
-spawn/death paths, the typed room-owned combat death boundary, external default
-tuning resources, and typed pause/Hub player presentation contexts. Remaining
-work is concentrated in browser and device durability evidence, the final mixed
-menu workflows, and retiring compatibility wrappers after their final consumers
-migrate.
+The scorecard is intentionally difficult to satisfy:
+
+| Hard gate | Baseline (`d6a965d`) | Current | Status |
+|---|---:|---:|---|
+| Meaningful reduction in dynamic `root.call/get/set` sites | 3,140 | 3,135 | `[ ]` only 5 fewer sites, or about 0.16% |
+| `GameplayState` smaller than the pre-slice baseline | 1,720 lines / 287 fields | 1,777 lines / 299 fields | `[ ]` larger by 57 lines and 12 fields |
+| `RoomController` below its pre-refactor baseline | 2,297 lines | 3,265 lines | `[ ]` larger by 968 lines |
+| At least one direct typed context used end-to-end | none counted | `ChestRewardContext` and several data contexts | `[x]` |
+
+This score is a measure of architectural ownership, not a claim that the
+recent work was useless. Typed result contracts, deterministic snapshots,
+external tuning resources, and focused behavior checks are valuable foundation
+work. They become composition progress only when a slice also removes the
+state-bag dependency and retires its duplicate compatibility implementation.
+
+The next work is therefore not browser evidence or more wrapper creation. It
+is to rework the room lifecycle through direct typed slices, reduce the root
+access surface, and make `RoomController` smaller than its pre-refactor
+baseline before assigning a higher percentage.
 
 ## Current measured shape
 
@@ -69,8 +82,8 @@ Measurement command section below.
 | Surface | Measurement | Interpretation |
 |---|---:|---|
 | Runtime GDScript files | 166 | There are enough existing boundaries to refactor vertically |
-| Runtime physical lines | 48,522 | Large enough that broad mechanical migration is unsafe |
-| Runtime non-blank lines | 42,888 | Blank/comment lines are excluded from this count |
+| Runtime physical lines | 48,534 | Large enough that broad mechanical migration is unsafe |
+| Runtime non-blank lines | 42,900 | Blank lines are excluded; comments remain counted |
 | Explicit `*Component` classes | 20 | Entity-level composition is established |
 | Named functions | 2,709 | Function count is not a reason to create more wrappers |
 | `GameplayState` lines | 1,777 | It remains the main shared-state surface |
@@ -149,31 +162,58 @@ feature workflow. `RoomController`, `RunFlowController`, `PickupRuntimeControlle
 examples. A controller is not a failed component merely because it is larger;
 the important question is whether its inputs and outputs are explicit.
 
-### Typed boundaries
+### Typed boundaries: direct versus transitional
 
-The refactor has established typed results and contexts across the current
-runtime slices:
+The refactor has established useful typed results and contexts, but their names
+do not all mean the same architectural thing. The distinction below is part of
+the handoff and must remain explicit.
 
-- **Committed:** `RoomTransitionResult`, `RoomActivationContext`,
-  `RoomActivationResult`, `RoomSpawnContext`, `RoomRespawnContext`,
-  `RoomRuntimeContext`, `RoomSpawnResult`, `RoomClearContext`,
-  `RoomClearResult`, `RoomEntryContext`, `RoomEntryResult`,
-  `RoomEnemyRuntimeContext`, `RoomEnemyRuntimeResult`, `ChestRewardResult`,
-  `ChestRewardContext`, `RunSettlementContext`, `RunSettlementResult`,
-  `RoomCheckpointContext`, `RoomCheckpointResult`, `RunCheckpointContext`,
-  `RunCheckpointResult`, `RunCheckpointService`, and `MenuPlayerContext` for
-  pause root/status and Hub player presentation.
-- The six default tuning resources under `resources/tuning/` are now loaded by
-  the composition root and duplicated per runtime, so inspector-facing data
-  has a real resource path without shared mutable state.
-- The remaining work is to characterize browser/device durability, finish the
-  remaining mixed settings/save/equipment menu workflows, and retire
-  compatibility wrappers after their final consumers migrate.
+Genuinely direct contexts currently include:
 
-These results are valuable because callers no longer need to reconstruct an
-outcome from scattered arrays, booleans, and root fields. Before relying on any
-of them as release evidence, confirm the file is tracked and the owning test
-passes.
+- `ChestRewardContext`, which passes profile/run data directly to the reward
+  decision without a `GameplayState` field;
+- `RoomClearContext`, which passes the room identity and authored record to the
+  room-clear owner;
+- `RoomCheckpointContext`, `RoomEnemyRuntimeContext`, and
+  `ActiveRunSnapshotContext`, which pass direct room, component, controller,
+  and scalar inputs to snapshot/serialization boundaries;
+- `RunCheckpointContext` and `RunSettlementContext`, which compose direct
+  persistence inputs; and
+- `MenuPlayerContext`, which supplies direct profile, snapshot, tuning,
+  component, palette, and portrait inputs to the migrated pause/Hub presenters.
+
+The typed result contracts paired with these contexts remain useful:
+`RoomTransitionResult`, `RoomActivationResult`, `RoomSpawnResult`,
+`RoomClearResult`, `RoomEntryResult`, `RoomEnemyRuntimeResult`,
+`ChestRewardResult`, `RunSettlementResult`, `RoomCheckpointResult`, and
+`RunCheckpointResult` are all real boundary improvements. The six default
+tuning resources under `resources/tuning/` are also real composition-root
+improvements because each runtime receives an isolated duplicate.
+
+The following room contexts are **transitional adapters, not completed narrow
+contexts**:
+
+- `RoomEntryContext` stores `GameplayState` and a transition result. Its entry
+  owner still discovers most of its actual dependencies through that runtime;
+- `RoomActivationContext` stores `GameplayState` and `RoomController`, then
+  copies a few fields from the runtime. It does not own the activation inputs;
+- `RoomRuntimeContext` stores `GameplayState` and copies room/slime/player/chest
+  references. `RoomSpawnContext` and `RoomRespawnContext` inherit the same
+  dependency shape; and
+- the corresponding `*_context` methods in `RoomController` still have
+  parallel root-shaped implementations and call back into `context.runtime`.
+
+These adapters make call sites look typed, but they do not yet reduce the
+state-bag coupling. A context containing `GameplayState`, or whose completed
+operation still relies on `context.runtime`, cannot receive `[x]` credit in the
+strict scorecard. Do not copy this shape into another feature. The room layer
+needs a direct typed-slice redesign; a wholesale revert would throw away the
+useful result contracts and the genuinely direct contexts without solving the
+underlying ownership problem.
+
+Before relying on any boundary as release or architecture evidence, confirm the
+file is tracked, the owning test passes, and the slice demonstrates reduced
+dynamic access or retired compatibility code.
 
 ## What is still only partially compositional
 
@@ -304,10 +344,12 @@ settlement boundaries. The settlement domain now has committed
 the existing save-before-`RunState.mark_settled` ordering while using that typed
 boundary. Room-state assembly now has committed
 `RoomCheckpointContext` and `RoomCheckpointResult`; `GameplayState` captures
-enemy runtime through `RoomEnemyRuntimeContext` and
+enemy runtime through the direct `RoomEnemyRuntimeContext` and
 `RoomEnemyRuntimeResult`, then delegates dictionary assembly to
 `RoomController`. Room activation now consumes `RoomActivationContext` and
-returns the existing `RoomActivationResult` through a typed runtime path.
+returns the existing `RoomActivationResult` through a typed runtime path, but
+that context is still a `GameplayState`-backed adapter and does not yet count
+as direct ownership migration.
 The active-run file write still needs browser durability evidence. `RunCheckpointService`
 owns the ordered room → profile → active-run writes, and the room-clear event now
 crosses the composition boundary as `RoomClearResult` rather than a loose room
@@ -315,25 +357,33 @@ ID. `GameplayState` retains only the web-checkpoint eligibility guard and the
 compatibility checkpoint wrapper. Do not mark this slice fully shipped until
 browser durability evidence is recorded.
 
-### 4. Continue room lifecycle migration — [x]
+### 4. Rework room lifecycle ownership — [~]
 
 The clear event is explicit: `RoomController.mark_cleared_context()` owns the
 mutation and returns `RoomClearResult`; the map controller and checkpoint
 consumer receive that typed event. Room entry now follows the same pattern via
 `RoomEntryContext` and `RoomEntryResult`; the normal `GameplayState` path no
-longer runs the reflection-heavy entry body. The ID-based `mark_cleared()` and
-`enter_connected_room()` methods remain as compatibility facades for direct
-callers. Room activation now follows the same typed-context path and preserves
-the existing `RoomActivationResult`/`RoomSpawnResult` reporting. Preserve the
-authored/generated room distinction and the central frame schedule. Room-level
-initial spawn orchestration consumes `RoomSpawnContext`, and the normal frame
-schedule now sends respawn ticks through `RoomRespawnContext`. The shared
-`RoomRuntimeContext` now carries the typed runtime inputs for spawn preparation,
-placement validation, cleanup, runtime save/restore, and death recording. The
-Combat's normal `GameplayState` path now sends the three room-owned death
-consequences through `record_enemy_death_context()` and `RoomRespawnContext`;
-the old root-shaped methods remain named compatibility facades for fixtures and
-older callers.
+longer runs the old entry body directly. That is a useful seam, but the entry
+context still carries the entire `GameplayState`, so it has not moved the
+entry dependencies into a room-owned boundary. The ID-based
+`mark_cleared()` and `enter_connected_room()` methods remain compatibility
+facades for direct callers. Room activation follows the same typed-context
+path and preserves the existing `RoomActivationResult`/`RoomSpawnResult`
+reporting, while `RoomActivationContext` still wraps the root.
+
+Room-level initial spawn orchestration consumes `RoomSpawnContext`, and the
+normal frame schedule sends respawn ticks through `RoomRespawnContext`. Those
+contexts inherit `RoomRuntimeContext`, which still stores `GameplayState` and
+lets `RoomController` call back into it. The Combat normal path now sends the
+three room-owned death consequences through `record_enemy_death_context()`;
+that result boundary and `RoomEnemyRuntimeContext` are useful direct pieces,
+but the room lifecycle migration remains incomplete while the parallel
+`*_context` and root-shaped implementations coexist.
+
+The next room slice must replace one of these adapters with direct typed
+dependencies, demonstrate a measurable root-access reduction, and delete the
+duplicate implementation for that slice. Preserve the authored/generated room
+distinction and the central frame schedule while doing so.
 
 Focused evidence for this slice:
 
@@ -348,7 +398,9 @@ Focused evidence for this slice:
 - `generated_run_scene_smoke`: typed room-entry and activation path remains
   intact during generated traversal.
 
-`popcorn_respawn_smoke` is now manifest `verified`; its fixture checks the
+These checks prove that the behavior survived the seam extraction; they do not
+prove that the room contexts are narrow or that ownership moved out of
+`GameplayState`. `popcorn_respawn_smoke` is now manifest `verified`; its fixture checks the
 waiting-before-clear contract, seeded 30–45 second schedule, support respawn,
 and sealed boss entrance.
 
@@ -421,6 +473,15 @@ regression; neither is evidence against the typed room slice.
   freeze is active; do not grow the test inventory for each slice.
 - Prefer a direct typed reference over a new reflective call.
 - Prefer a narrow context over a universal runtime context.
+- Never add `GameplayState` as a field or constructor dependency to a context
+  intended to represent a completed slice. Existing room contexts with that
+  shape are transitional adapters and must remain labeled as such.
+- A typed method name is not enough for completion credit: inspect the body for
+  `context.runtime`, root reflection, and a parallel `_legacy` implementation.
+- Every completed slice must report before/after dynamic-access counts, the
+  relevant owner size/state change, and the compatibility code that was
+  retired. If those numbers do not improve, record the work as a seam or
+  characterization step rather than an ownership migration.
 - Use signals for events, not as a replacement for every function call.
 - Keep state with the owner that has the authority to change it.
 - Do not split a file solely because its line count is large.
