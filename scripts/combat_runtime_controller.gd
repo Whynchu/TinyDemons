@@ -364,7 +364,7 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 	(root.get("effects_spawner") as EffectsSpawner).spawn_slime_death_from_root(root, slime)
 	var room_controller := root.get("room_controller") as RoomController
 	if root is GameplayState:
-		room_controller.record_enemy_death_context(RoomRespawnContext.new(root as GameplayState, room_controller), slime)
+		room_controller.record_enemy_death_context(room_controller.enemy_respawn_context(), slime)
 	else:
 		room_controller.record_special_enemy_death(root, slime)
 		room_controller.kill_slime_without_effects(root, slime)

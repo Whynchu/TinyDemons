@@ -19,11 +19,13 @@ func _initialize() -> void:
 			_expect(String(variant) != "purple", "special-room policy does not force Shadow Slimes", failures)
 	var fake := FakeRoot.new()
 	var room_id: StringName = &"special_test"
-	fake.current_room_type = GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY
-	fake.current_room_id = room_id
 	fake.slimes = [Sprite2D.new(), Sprite2D.new(), Sprite2D.new()]
+	var services := RoomEnemySpawnServices.new()
+	services.slime_tuning = SlimeTuning.new()
+	services.rng = RandomNumberGenerator.new()
+	var special_context := RoomRespawnContext.new(room_id, GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY, fake.slimes, null, null, Vector2.ZERO, Rect2(), services)
 	controller.room_states[room_id] = {"enemy_variants": ["blue", "red", "green"]}
-	controller.schedule_special_enemy_respawns(fake)
+	controller.schedule_special_enemy_respawns_context(special_context)
 	var state: Dictionary = controller.room_states[room_id]
 	var timers: Dictionary = state.get("special_respawn_timers", {}) as Dictionary
 	_expect(timers.size() == 3, "every special-room enemy slot receives a respawn timer", failures)
@@ -32,7 +34,7 @@ func _initialize() -> void:
 	timers["0"] = 12.0
 	state["special_respawn_timers"] = timers
 	controller.room_states[room_id] = state
-	controller.schedule_special_enemy_respawns(fake)
+	controller.schedule_special_enemy_respawns_context(special_context)
 	_expect(is_equal_approx(float((controller.room_states[room_id] as Dictionary)["special_respawn_timers"]["0"]), 12.0), "rescheduling preserves an existing slot's death time", failures)
 	controller.room_states[room_id] = {
 		"room_type": GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY,
@@ -40,12 +42,12 @@ func _initialize() -> void:
 		"enemy_runtime": {"0": {"alive": true, "health": 7.0}, "1": {"alive": false, "health": 0.0}},
 		"special_respawn_timers": {"0": 12.0},
 	}
-	controller.schedule_special_enemy_respawns(fake)
+	controller.schedule_special_enemy_respawns_context(special_context)
 	var persistent_state: Dictionary = controller.room_states[room_id]
 	var persistent_timers: Dictionary = persistent_state.get("special_respawn_timers", {}) as Dictionary
 	_expect(not persistent_timers.has("0"), "living special-room enemies do not receive a reset timer on re-entry", failures)
 	_expect(is_equal_approx(float(persistent_timers.get("1", -1.0)), 45.0), "defeated special-room enemies still receive their respawn timer", failures)
-	fake.current_room_type = GRAPH_SCRIPT.ROOM_COMBAT
+	var away_context := RoomRespawnContext.new(room_id, GRAPH_SCRIPT.ROOM_COMBAT, fake.slimes, null, null, Vector2.ZERO, Rect2(), services)
 	controller.room_states[room_id] = {
 		"room_type": GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY,
 		"special_clear_earned": true,
@@ -53,9 +55,9 @@ func _initialize() -> void:
 		"enemy_variants": ["blue"],
 		"special_respawn_timers": {"0": 30.0},
 	}
-	controller.update_special_enemy_respawns(fake, 17.0)
+	controller.update_special_enemy_respawns_context(away_context, 17.0)
 	_expect(is_equal_approx(float((controller.room_states[room_id] as Dictionary)["special_respawn_timers"]["0"]), 13.0), "special-room timers continue while the room is away from the player", failures)
-	controller.update_special_enemy_respawns(fake, 20.0)
+	controller.update_special_enemy_respawns_context(away_context, 20.0)
 	_expect(is_zero_approx(float((controller.room_states[room_id] as Dictionary)["special_respawn_timers"]["0"])), "away-room respawn timers become ready after 45 seconds", failures)
 	for slime in fake.slimes:
 		slime.free()
