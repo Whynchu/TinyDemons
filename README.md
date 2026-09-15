@@ -100,16 +100,16 @@ this shape:
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
 boundaries, typed room transition/activation/clear results, typed enemy-runtime
-capture, and typed room-level initial spawn orchestration. The composition
-refactor is approximately 85% complete; the remaining work is concentrated in
-lower-level spawn/respawn ownership, browser durability evidence, the large
-menu owner, deliberate tuning-data extraction, and compatibility-wrapper
-retirement.
+capture, typed room-level initial spawn orchestration, and typed per-frame
+respawn coordination. The composition refactor is approximately 90% complete;
+the remaining work is concentrated in lower-level spawn/death-recording
+ownership, browser durability evidence, the large menu owner, deliberate
+tuning-data extraction, and compatibility-wrapper retirement.
 
 The practical sequence is:
 
-1. Finish lower-level room spawn/respawn ownership and characterize its
-   remaining compatibility seam.
+1. Finish lower-level room spawn/death-recording ownership and reconcile the
+   remaining respawn fixture expectations.
 2. Characterize active-run browser file-write ordering.
 3. Remove compatibility wrappers as each migrated slice reaches its last
    consumer.
