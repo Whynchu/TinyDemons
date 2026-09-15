@@ -2,6 +2,10 @@ extends RefCounted
 class_name RoomActivationContext
 
 ## Typed runtime input for applying one room's persisted state.
+##
+## Transitional adapter only: this still stores the universal GameplayState
+## root and copies a few values from it. A completed activation boundary must
+## receive direct typed dependencies instead of forwarding the root.
 
 var runtime: GameplayState = null
 var room_controller: RoomController = null

@@ -91,8 +91,8 @@ pinned comparison baseline) gives us this shape:
 |---|---:|---|
 | Runtime scripts | 166 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime physical lines | 48,522 | Refactor by ownership, not by indiscriminate file splitting |
-| Runtime non-blank lines | 42,888 | Blank/comment volume is separated from implementation size |
+| Runtime physical lines | 48,534 | Refactor by ownership, not by indiscriminate file splitting |
+| Runtime non-blank lines | 42,900 | Blank lines are excluded; comments remain counted |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,777 lines / 510 functions / 299 fields | The remaining composition-root and compatibility surface is the main debt |
 | `root.call/get/set` | 3,135 sites | Dependencies are still hidden across controllers and components |
@@ -103,21 +103,24 @@ boundaries, typed room transition/activation/clear results, typed enemy-runtime
 capture, typed room-level initial spawn orchestration, typed per-frame
 respawn coordination, typed room spawn/death helpers, typed room-owned combat
 death consequences, external default tuning resources, and typed pause/Hub
-player presentation contexts. The composition refactor is approximately
-**98% complete / 2% remaining**; the remaining work is concentrated in
-browser/device durability evidence, the final mixed menu workflows, and
-compatibility-wrapper retirement.
+player presentation contexts. Those result contracts and data snapshots are a
+useful foundation, but they do not prove that ownership has moved out of the
+state bag. Under the strict ownership scorecard in
+[`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
+the composition refactor is approximately **25% complete / 75% remaining**.
+The one completed hard gate is a genuine direct typed context; root-access
+reduction, state-bag shrinkage, and room-owner shrinkage are not complete.
 
 The practical sequence is:
 
-1. Characterize active-run browser/device file-write ordering and the hosted
-   Pages artifact.
-2. Finish the remaining mixed settings/save/equipment menu workflows one
-   presenter boundary at a time.
-3. Remove compatibility wrappers as each migrated slice reaches its last
-   consumer.
-4. Keep adding newly identified balance knobs to the external tuning surface
-   without mixing balance changes into ownership migrations.
+1. Stop adding `GameplayState`-backed contexts; classify the existing room
+   adapters as transitional seams.
+2. Rework room entry, activation, spawn, and respawn through direct typed
+   slices that lower root access and keep `RoomController` below its baseline.
+3. Move state out of `GameplayState` only when its owner and direct consumers
+   are established, then retire the parallel compatibility implementation.
+4. Characterize browser/device file-write ordering and the hosted Pages
+   artifact after the runtime ownership work is genuinely complete.
 
 Line counts and dynamic-call counts are navigation evidence, not quality scores.
 Do not split files or remove `GameplayState` wholesale; preserve the explicit
