@@ -29,7 +29,7 @@ script,role,state,owner,target,load,notes
 "player_hud_scene_smoke","gate","verified","HUD","player HUD scene contract","fixture","focused run 2026-09-13; prompt paths aligned with authored cooldown-icon hierarchy"
 "progression_smoke","gate","verified","progression & settlement","ProgressionController progression math","pure","core smoke checklist evidence"
 "r6_plus_risk_reward_generation_smoke","gate","verified","generated layouts","R6+ risk/reward generator contract","pure","2026-09-13 focused evidence"
-"room_transition_result_smoke","gate","verified","room progression","typed room-transition planning and validation","pure","2026-09-13 focused evidence"
+"room_transition_result_smoke","gate","verified","room progression","typed room-transition planning and room-clear event validation","pure","2026-09-15 focused evidence; clear result idempotency and single-emission coverage"
 "run_grade_smoke","gate","verified","progression & settlement","RunGradeEvaluator grade computation","pure","core smoke checklist evidence"
 "run_music_flame_gate_smoke","gate","verified","audio","starter-flame pickup starts dungeon music","pure","focused run 2026-09-13; accepts preferred OGG or source WAV; cold/warm timing remains open"
 "run1_door_path_smoke","gate","verified","room progression","Run 1 door path and traversal contract","main","2026-09-13 focused evidence"
