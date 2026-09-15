@@ -39,13 +39,16 @@ func _initialize() -> void:
 		rooms.set_current_room(TARGET_ROOM, gameplay.get("current_room_type"))
 		gameplay.call("_collect_dungeon_sockets")
 		gameplay.call("_ensure_current_room_layout")
-		gameplay.call("_apply_room_state")
+		var activation := gameplay.call("_apply_room_state") as RoomActivationResult
+		_expect(activation != null and activation.is_ready(), "enemy room activation returns a typed ready result", failures)
 		var state: Dictionary = rooms.room_states.get(TARGET_ROOM, {}) as Dictionary
 		var expected_enemy_count := (state.get("enemy_variants", []) as Array).size()
 		var visible_enemy_count := 0
 		for slime in gameplay.get("slimes") as Array[Sprite2D]:
 			if slime.visible:
 				visible_enemy_count += 1
+		_expect(activation.configured_enemy_slots == expected_enemy_count, "typed activation reports the configured enemy slots", failures)
+		_expect(activation.visible_enemy_slots == visible_enemy_count, "typed activation reports the visible enemy slots", failures)
 		_expect(expected_enemy_count > 0 and visible_enemy_count == expected_enemy_count, "R1 enemy room spawns every generated enemy slot on entry", failures)
 		var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary
 		for slime_index in active_variants_size(state):

@@ -1495,7 +1495,7 @@ func _save_current_room_state() -> void:
 	else: state["chroma_pickups"] = saved_pickups
 	room_controller.room_states[current_room_id] = state
 	if room_controller != null and bool(state.get("finished", false)): room_controller.mark_cleared(current_room_id)
-func _apply_room_state() -> void: room_controller.apply_state(self)
+func _apply_room_state() -> RoomActivationResult: return room_controller.activate_room(self)
 func _apply_rest_room_state() -> void: room_controller.apply_rest_state(self)
 func _apply_npc_room_state() -> void: room_controller.apply_npc_state(self)
 func _apply_finished_room_state() -> void: room_controller.apply_finished_state(self)
