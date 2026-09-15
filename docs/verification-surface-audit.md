@@ -18,7 +18,8 @@ scripts (`fusion_menu_preview`, `puzzle_map_reference_diff_report`) are
 intentionally not runner tests.
 
 Verification: inventory mode, focused standalone Godot checks, and a supervised
-full run when the environment permits it
+full run when the environment permits it; `tools/validate_test_manifest.ps1`
+provides a no-engine manifest/path preflight
 
 Supersedes: none; this complements `test-target-audit.md`
 
@@ -149,7 +150,9 @@ in `tests/manifest.csv`:
    role, state, owner, target, evidence command, and whether it loads the main
    scene or a lightweight fixture. **Done for the current inventory:** all 123
    scripts are classified in `tests/manifest.csv`; the runner derives grouping
-   from that file.
+   from that file. `tools/validate_test_manifest.ps1` enforces registration,
+   filename, required-field, and role/state/load constraints before the smoke
+   runner starts a Godot process.
 3. Maintain the curated `role:gate` set. It covers headless boot, core room
    transition/doorway behavior, representative combat, progression/profile
    integrity, and the web export because web is a supported target.

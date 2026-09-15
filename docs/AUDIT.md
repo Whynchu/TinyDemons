@@ -47,9 +47,9 @@ Verification performed during the audit:
 
 - The smoke runner's inventory mode found all 113 registered tests.
 - A Godot 4.7.1 headless editor import scan completed successfully.
-- The import scan reported duplicate-UID warnings between the R4/R5 puzzle-map
-  scripts and their corresponding authored-layout smoke tests. These warnings
-  require cleanup before file reorganization.
+- The import scan is clean for the R4/R5 puzzle-map scripts after rebuilding
+  the generated Godot UID/filesystem cache; their committed `.uid` files are
+  distinct. The former authored-layout smoke wrappers remain consolidated.
 - Expected local environment warnings were emitted for the Windows certificate
   store, MCP registry writes, and editor-settings persistence.
 - The full 113-test runtime suite was not run as part of this read-only audit.
@@ -525,8 +525,7 @@ Recommended meanings:
 All 141 scripts currently occupy one flat `scripts/` directory. A feature-based
 directory structure will improve discovery, but moving files before ownership
 is clarified would create noisy Godot reference changes. Files should move with
-their feature migration after duplicate UIDs are resolved and import checks are
-green.
+their feature migration after import checks are green.
 
 ## 13. Documentation assessment
 
@@ -590,7 +589,8 @@ balance change is required to preserve behavior after extraction.
 
 - Keep this audit tied to the baseline commit.
 - Capture a short manual acceptance run and representative screenshots.
-- Resolve the duplicate R4/R5 UID warnings.
+- Keep the distinct R4/R5 `.uid` files committed and rebuild generated caches
+  when a local editor reports stale identity data.
 - Keep `tests/manifest.csv` current as the single test/report registry.
 - Record a full supervised smoke result when the environment is stable.
 

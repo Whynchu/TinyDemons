@@ -49,7 +49,8 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 			var room_controller := root.get("room_controller") as RoomController
 			var state := room_controller.room_states.get(root.get("current_room_id"), {}) as Dictionary
 			if not bool(state.get("item_rewarded", false)):
-				state["item_rewarded"] = bool(root.call("_grant_chest_item_reward"))
+				var reward_result := root.call("_claim_chest_item_reward") as ChestRewardResult
+				state["item_rewarded"] = reward_result != null and reward_result.is_resolved()
 			room_controller.room_states[root.get("current_room_id")] = state
 			# Persist the claim after the reward marker is written. This keeps
 			# generated combat-room chests from being recreated on re-entry.

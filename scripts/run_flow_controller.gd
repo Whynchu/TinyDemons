@@ -6,6 +6,7 @@ const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
 const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
+const ChestRewardResultScript = preload("res://scripts/chest_reward_result.gd")
 
 
 func loot_grade_bonus(root: Object, grade: String = "") -> float:
@@ -48,6 +49,67 @@ func chest_gold_reward(root: Object, base_gold: int) -> int:
 	if !!root.get("regular_room_treasure"):
 		reward *= 0.50
 	return maxi(1, roundi(reward))
+
+
+func claim_chest_item_reward(root: Object) -> ChestRewardResult:
+	var result: ChestRewardResult = ChestRewardResultScript.new()
+	result.room_id = StringName(str(root.get("current_room_id")))
+	if root.get("player_profile") == null or root.get("run_state") == null:
+		return result
+	result.reward_tier = reward_tier(root)
+	var profile := root.get("player_profile") as PlayerProfile
+	var run := root.get("run_state") as RunState
+	var reward_id := "drop-%s-%s" % [run.run_id, String(result.room_id)]
+	if profile.find_item(reward_id) != null or profile.find_item("%s-0" % reward_id) != null:
+		result.status = ChestRewardResult.Status.ALREADY_RESOLVED
+		return result
+	run.record_chest_open()
+	var room_controller := root.get("room_controller") as Node
+	var vault_id := &""
+	if room_controller != null:
+		var state: Dictionary = (room_controller.get("room_states") as Dictionary).get(result.room_id, {}) as Dictionary
+		vault_id = StringName(str(state.get("vault_id", "")))
+	var generation_seed := int(root.get("current_dungeon_seed")) ^ String(result.room_id).hash() ^ String(vault_id).hash()
+	var reward_rng := RandomNumberGenerator.new()
+	reward_rng.seed = generation_seed ^ 0x4C4F4F54
+	result.drop_roll = reward_rng.randf()
+	if result.drop_roll >= chest_item_drop_chance(root):
+		result.status = ChestRewardResult.Status.RESOLVED_NO_DROP
+		return result
+	var drop_count := chest_item_drop_count(root, reward_rng.randf())
+	if result.reward_tier == DungeonGraph.REWARD_VAULT:
+		drop_count = 1
+	result.requested_item_count = drop_count
+	var item_drops: Array[ItemInstance] = []
+	var catalog := ItemCatalog.new()
+	var run_rank_value := run_rank(root)
+	var player_level := profile.level
+	for index in drop_count:
+		var item_seed := generation_seed ^ (0x13579BDF + index * 0x2468ACE)
+		var slot := catalog.select_slot_for_source(profile, item_seed, player_level, &"chest", run_rank_value)
+		var slot_was_empty := catalog.slot_needs_introduction(profile, slot)
+		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if bool(root.get("regular_room_treasure")) and result.reward_tier == DungeonGraph.REWARD_STANDARD else []
+		var rarity := roll_run_loot_rarity(root, reward_rng.randf(), -1.0, rarity_multipliers)
+		if result.reward_tier == DungeonGraph.REWARD_VAULT:
+			var enhanced_rarity := ItemCatalog.next_rarity(rarity)
+			if not enhanced_rarity.is_empty():
+				rarity = enhanced_rarity
+		var item := catalog.generate_item(slot, item_seed, player_level, rarity, false, &"chest", run_rank_value)
+		if item.definition_id.is_empty():
+			continue
+		item.instance_id = "%s-%d" % [reward_id, index]
+		item_drops.append(item)
+		run.record_gear_reward(&"chest", item, run_rank_value, player_level, -1, "", slot_was_empty, false, &"dropped")
+	result.items = item_drops
+	# Keep the presentation boundary identical to the former coordinator path,
+	# including the harmless empty-drop call for malformed catalogue data.
+	root.call("_spawn_chest_item_drops", item_drops)
+	root.call("_play_sound", "ui_use_item")
+	if not item_drops.is_empty():
+		result.status = ChestRewardResult.Status.ITEMS_GRANTED
+	else:
+		result.status = ChestRewardResult.Status.RESOLVED_NO_DROP
+	return result
 
 
 func reward_tier(root: Object) -> StringName:

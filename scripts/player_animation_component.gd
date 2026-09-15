@@ -10,8 +10,10 @@ var frames_built := false
 
 const BAKED_ROOT := "res://assets/baked/player"
 const CLOAKED_BAKED_ROOT := "res://assets/baked/player_cloaked"
+const BASE_FULL_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet.png"
 const CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet_cloaked.png"
 const CLOAKED_DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend-Cloaked.png"
+const MAGIC_FRAME_COUNT := 5
 const CLOAKED_SHEET_ROWS := {
 	"idle": 0,
 	"walk": 1,
@@ -25,6 +27,7 @@ const CLOAKED_SHEET_ROWS := {
 	"magic": 9,
 	"spin": 10,
 }
+const BASE_MAGIC_SHEET_ROW := 9
 const CLOAKED_FRAME_COUNTS := {
 	"idle": 5,
 	"walk": 4,
@@ -35,7 +38,7 @@ const CLOAKED_FRAME_COUNTS := {
 	"after": 1,
 	"roll": 6,
 	"backflip": 7,
-	"magic": 4,
+	"magic": MAGIC_FRAME_COUNT,
 	"spin": 9,
 }
 var idle_frames: Array[Texture2D] = []
@@ -88,7 +91,7 @@ func build_frames(root: Object) -> void:
 
 
 func _slice_base_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
-	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_frames("res://assets/artwork/TinyDemon-Magic.png", size)
+	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_sheet_row(BASE_FULL_SHEET_PATH, BASE_MAGIC_SHEET_ROW, size, MAGIC_FRAME_COUNT)
 	attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
 	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = coordinator_root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = coordinator_root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
 	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()

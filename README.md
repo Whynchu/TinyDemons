@@ -76,6 +76,45 @@ gaps. The accepted refactor route is in
 [`docs/refactor-route.md`](docs/refactor-route.md). The completed Combat & Economy work remains documented in
 [`docs/combat-economy-overhaul.md`](docs/combat-economy-overhaul.md).
 
+### Current refactor focus
+
+The current engineering goal is to make the runtime genuinely compositional:
+components should own focused state and behavior, controllers should coordinate
+feature boundaries, and `GameplayState` should remain the composition root
+instead of becoming a shared service locator. The detailed handoff is in
+[`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md).
+
+The current source scan gives us this shape:
+
+| Surface | Current measurement | What it tells us |
+|---|---:|---|
+| Runtime scripts | 146 | The project already has a substantial feature vocabulary |
+| Explicit `*Component` classes | 19 | Player, slime, Chroma, equipment, health, and interaction composition is established |
+| Runtime lines | 46,859 | Refactor by ownership, not by indiscriminate file splitting |
+| `gameplay.gd` | about 245 lines | The old giant coordinator has already been reduced |
+| `gameplay_state.gd` | 1,721 lines / 506 functions | The remaining composition-root and compatibility surface is the main debt |
+| `root.call/get/set` | 3,112 sites | Dependencies are still hidden across controllers and components |
+
+Completed refactor foundations include the explicit frame scheduler, runtime
+bootstrap wiring, player and slime components, typed room transition/activation
+and spawn results, and the typed chest item-reward result. The immediate work is
+to finish reward persistence/settlement, then migrate one vertical slice at a
+time from dynamic root access to direct typed dependencies and meaningful
+signals.
+
+The practical sequence is:
+
+1. Finish the reward result through room persistence and settlement.
+2. Prove a narrow typed dependency/context boundary and remove its obsolete
+   wrappers.
+3. Apply the same approach to checkpoint/run settlement and room lifecycle.
+4. Tackle the large mixed menu owner only after the runtime pattern is proven.
+5. Move balance/configuration data toward external tuning resources.
+
+Line counts and dynamic-call counts are navigation evidence, not quality scores.
+Do not split files or remove `GameplayState` wholesale; preserve the explicit
+frame order and characterize each vertical slice before changing its ownership.
+
 Current playtest issues and their resolution order are tracked in
 [`docs/current-issues-and-resolution-plan.md`](docs/current-issues-and-resolution-plan.md).
 
@@ -107,6 +146,10 @@ Godot runtime active. Start with one focused test before using the full runner.
 The runner derives its groups from `tests/manifest.csv`, which classifies every
 test/report script with a role, state, owner, target, and load kind:
 
+Set `GODOT_BIN` to use a Godot executable outside the repository’s default
+Windows development path. The runner derives the project root from its own
+location, so it can be launched from a clean checkout.
+
 ```powershell
 # Focused check
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/run_headless.ps1 -Script res://tests/player_hud_scene_smoke.gd
@@ -116,6 +159,9 @@ pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 
 # Complete runnable inventory — standalone/supervised only
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 -TestGroup all
+
+# Fast manifest/path preflight — no Godot process starts
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_test_manifest.ps1
 ```
 
 If Windows memory-error dialogs start repeating, stop the smoke runner and

@@ -49,6 +49,10 @@ func _initialize() -> void:
 				visible_enemy_count += 1
 		_expect(activation.configured_enemy_slots == expected_enemy_count, "typed activation reports the configured enemy slots", failures)
 		_expect(activation.visible_enemy_slots == visible_enemy_count, "typed activation reports the visible enemy slots", failures)
+		_expect(activation.spawn_result != null and activation.spawn_result.is_ready(), "typed activation includes a ready room spawn result", failures)
+		if activation.spawn_result != null:
+			_expect(activation.spawn_result.requested_slots == expected_enemy_count, "typed spawn result reports requested enemy slots", failures)
+			_expect(activation.spawn_result.spawned_slots == visible_enemy_count and activation.spawn_result.failed_slots.is_empty(), "typed spawn result reports successful enemy slot placement", failures)
 		_expect(expected_enemy_count > 0 and visible_enemy_count == expected_enemy_count, "R1 enemy room spawns every generated enemy slot on entry", failures)
 		var spawn_positions := state.get("enemy_spawn_positions", {}) as Dictionary
 		for slime_index in active_variants_size(state):

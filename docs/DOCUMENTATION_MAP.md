@@ -2,7 +2,7 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-13
+Updated: 2026-09-15
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
@@ -25,7 +25,9 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 9. [`ARCHITECTURE.md`](ARCHITECTURE.md) — runtime boundaries and extension
    rules.
 10. [`FEATURE_MAP.md`](FEATURE_MAP.md) — first owner to inspect for each feature.
-11. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
+11. [`composition-refactor-analysis.md`](composition-refactor-analysis.md) —
+    component/composition refactor measurements and agent handoff.
+12. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
    export, and function-location index.
 
 ## Authority by question
@@ -46,6 +48,7 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 | Should a test exist or block release? | [`verification-surface-audit.md`](verification-surface-audit.md) | target and runtime evidence |
 | How do I add content? | [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) | feature-specific contracts |
 | What makes a change difficult? | [`engineering-friction-audit.md`](engineering-friction-audit.md) | source files and detailed audits |
+| How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | measurements, target shape, and handoff sequence |
 
 ## Document lifecycle
 

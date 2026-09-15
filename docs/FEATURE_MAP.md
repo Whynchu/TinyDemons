@@ -25,7 +25,7 @@ not a claim that every feature is fully isolated. `gameplay.gd` and
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |
 | Gear and fusion | `item_catalog.gd`, `item_instance.gd`, `equipment_component.gd` | profile item instances and equipped IDs | equipment/fusion/bind menus | gear, fusion, equipment tests | Medium: legacy compatibility paths |
 | Hub and menus | `screen_state_controller.gd` | profile/menu state | menu scenes and layout scripts | menu, hub, touch-menu tests | High: large mixed owner |
-| HUD | `player_hud.gd`, `hud_controller.gd` | player/combat display data | `scenes/player_hud.tscn` | player HUD smoke test | High: current focused test fails |
+| HUD | `player_hud.gd`, `hud_controller.gd` | player/combat display data | `scenes/player_hud.tscn` | player HUD smoke test | Medium: focused scene contract passes; live layout evidence remains |
 | Save and profile | `profile_save_service.gd`, `active_run_save_service.gd` | profile and active-run snapshots | cloud panel and recovery UI | save/cloud/recovery tests | Critical: data integrity |
 | Settings and display | `settings_service.gd`, `display_controller.gd`, `display_layout.gd` | device-wide settings | title/pause settings panels | settings and responsive tests | Medium |
 | Input and touch | `input_router.gd`, `input_device_tracker.gd`, `touch_controls_layer.gd` | per-frame input snapshot | prompts and touch layer | input/device/touch tests | Medium |
@@ -59,6 +59,4 @@ vertical-slice analysis should look for duplicated ownership:
 
 1. Trace room entry, combat, and reward persistence from `main.tscn`.
 2. Trace profile and active-run save/load boundaries.
-3. Resolve whether R4/R5 duplicate UID warnings are caused by the current
-   uncommitted puzzle-generation work.
-4. Investigate the HUD smoke-test contract failure without mixing in cleanup.
+3. Capture live/native-resolution HUD and responsive layout evidence.

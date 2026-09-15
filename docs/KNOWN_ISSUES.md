@@ -2,7 +2,7 @@
 
 Status: live register for the `0.2.x` cycle
 
-Updated: 2026-09-13
+Updated: 2026-09-15
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -261,6 +261,33 @@ the focused headless paths. A manual late-generated-room playtest remains open
 because those checks do not replace visual/gameplay verification of every late
 R6+/R7 encounter.
 
+### 2026-09-15 curated gate and verification preflight
+
+The manifest preflight passed before the curated gate: `tests/manifest.csv`
+contains 123 registered scripts, 121 runnable checks, 2 report scripts, and 43
+gate checks. The runner now gives each Godot test process its own temporary
+`user://` profile, preventing settings/profile state from leaking between
+checks. The curated gate completed without an engine crash.
+
+Passing infrastructure evidence included SFX lab pytest (25/25), the Web
+export, main-scene boot, room transition, HUD scene, generated-room, doorway,
+and other existing gate contracts. `imbue_spell_scene_smoke` also passes in
+isolation after its stale six-entry cooldown assertion was aligned with the
+current three-icon HUD.
+
+The Chroma/magic presentation contract is resolved: the magic cast now uses
+the authored five-frame body timeline, with the projectile firing on frame 3,
+and the MP bar assertion follows the active player palette accent. The
+responsive Hub and restored-controller input contracts are also resolved; their
+focused checks pass after making cursor-anchor and wall-clock handoff assertions
+deterministic. The remaining focused gate findings are the two settings
+persistence checks listed below, which are environment findings on this
+restricted host.
+
+`settings_panel_scene_smoke` and `settings_service_smoke` remain environment
+findings on this restricted host because their `user://` persistence path is
+not writable. They are not treated as product failures.
+
 ### R6+ risk/reward generation implementation status
 
 The active generated-run slice now uses an ungated critical route with one
@@ -309,10 +336,10 @@ the launched projectile; both now have explicit catalog/profile coverage.
 ## Verification surface audit — open
 
 The repository has a large test/report inventory. `tests/manifest.csv` now
-classifies all 121 scripts with a role (gate/owner/reference/diagnostic/report),
+classifies all 123 scripts with a role (gate/owner/reference/diagnostic/report),
 state, owner, target, and load kind. The runner derives its grouping from that
 manifest: the default release gate selects 43 paths; `-TestGroup all` covers the
-119 runnable paths. The 2026-09-13 pruning slice removed the stale
+121 runnable paths. The 2026-09-13 pruning slice removed the stale
 `backtrack_popcorn_smoke` expectation and consolidated the three identical
 R3/R4/R5 layout wrappers into `authored_layouts_smoke`; no gate coverage or web
 export coverage was removed. The separate classification and pruning issue is
@@ -324,8 +351,7 @@ not a quality score or release gate.
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
-| Duplicate Godot resource UIDs reported for R4/R5 puzzle scripts; the former duplicate test wrappers were consolidated | Import and future file moves may resolve the wrong resource | Inspect the remaining `.uid`/import state for the puzzle scripts, choose canonical resources, then rerun the editor scan |
-| Full smoke runner has 119 runnable manifest paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
+| Full smoke runner has 121 runnable manifest paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
 | Six formerly unregistered `role:owner` checks are now triaged and resolved | All six have reliable states recorded in `tests/manifest.csv` | `actor_geometry_smoke` harness fixed; `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`, `resource_drop_motion_smoke` verified; `touch_menu_scroll_smoke` rewritten for the dialogue-context contract and verified |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
 | `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | Characterize shared menu conventions, then extract one presenter boundary |

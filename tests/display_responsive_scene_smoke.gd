@@ -110,14 +110,18 @@ func _initialize() -> void:
 			orientation_screens.hub_content_focus = true
 			orientation_screens.hub_stat_row = 2
 			orientation_screens.update_hub_ui(gameplay, Callable(gameplay, "_pixel_text_texture"))
-		await process_frame
+		# update_hub_ui starts the normal 100 ms route glide. Let that settle so
+		# this responsive check observes the cursor's stable anchor/bob state,
+		# rather than an arbitrary in-flight position.
+		await create_timer(0.14).timeout
 		var saved_hub_page: int = orientation_screens.hub_page if orientation_screens != null else -1
 		var saved_hub_row: int = orientation_screens.hub_stat_row if orientation_screens != null else -1
 		var saved_hub_focus: bool = orientation_screens.hub_content_focus if orientation_screens != null else false
 		if orientation_screens != null:
-			var wide_hub_stat_x := PauseMenuLayoutScript.left_field_x(63.0, display.view_size.x)
-			var wide_hub_cursor_x := PauseMenuLayoutScript.left_field_x(30.0, display.view_size.x)
-			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == wide_hub_stat_x and orientation_screens.hub_stat_cursor_text.position.x == wide_hub_cursor_x, "wide hub maps stat text and active cursor into the expandable content field", failures)
+			var wide_hub_stat_x := PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x)
+			var wide_hub_cursor_x := PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x)
+			var wide_hub_cursor_anchor := orientation_screens.hub_stat_cursor_text.call("anchor_position") as Vector2
+			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == wide_hub_stat_x and is_equal_approx(wide_hub_cursor_anchor.x, wide_hub_cursor_x), "wide hub maps stat text and active cursor into the expandable content field", failures)
 			_expect(orientation_screens.hub_context_text.position.x == PauseMenuLayoutScript.left_field_x(136.0, display.view_size_as_vector().x), "wide hub repositions its confirmation prompt with the content field", failures)
 			var wide_add_marker := orientation_screens.hub_stat_add_marker as Sprite2D
 			var wide_stat_right := orientation_screens.hub_stat_right_buttons[2] as Button
@@ -140,7 +144,8 @@ func _initialize() -> void:
 			_expect(orientation_screens.hub_page == saved_hub_page and orientation_screens.hub_stat_row == saved_hub_row and orientation_screens.hub_content_focus == saved_hub_focus, "portrait orientation preserves hub route and selection state", failures)
 			var portrait_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
 			var portrait_value_aligned := portrait_value != null and portrait_value.texture != null and is_equal_approx(portrait_value.position.x + portrait_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))
-			_expect(orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and orientation_screens.hub_stat_cursor_text.position.x == PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x) and portrait_value_aligned, "portrait orientation reflows hub labels, value anchors, and the active cursor", failures)
+			var portrait_cursor_anchor := orientation_screens.hub_stat_cursor_text.call("anchor_position") as Vector2
+			_expect(orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and is_equal_approx(portrait_cursor_anchor.x, PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x)) and portrait_value_aligned, "portrait orientation reflows hub labels, value anchors, and the active cursor", failures)
 			var portrait_add_marker := orientation_screens.hub_stat_add_marker as Sprite2D
 			var portrait_stat_right := orientation_screens.hub_stat_right_buttons[2] as Button
 			_expect(portrait_add_marker != null and portrait_stat_right != null and is_equal_approx(portrait_stat_right.get_global_rect().get_center().x, portrait_add_marker.position.x), "portrait orientation keeps the selected stat plus hitbox aligned", failures)
@@ -154,7 +159,8 @@ func _initialize() -> void:
 		if orientation_screens != null:
 			var landscape_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
 			var landscape_value_aligned := landscape_value != null and landscape_value.texture != null and is_equal_approx(landscape_value.position.x + landscape_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))
-			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and orientation_screens.hub_stat_cursor_text.position.x == PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x) and landscape_value_aligned, "landscape orientation reflows the active hub back to the wide content field", failures)
+			var landscape_cursor_anchor := orientation_screens.hub_stat_cursor_text.call("anchor_position") as Vector2
+			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_stat_texts[0].position.x == PauseMenuLayoutScript.left_field_x(63.0, display.view_size_as_vector().x) and is_equal_approx(landscape_cursor_anchor.x, PauseMenuLayoutScript.left_field_x(30.0, display.view_size_as_vector().x)) and landscape_value_aligned, "landscape orientation reflows the active hub back to the wide content field", failures)
 		gameplay.get_window().size = original_window_size
 	gameplay.queue_free()
 	await process_frame

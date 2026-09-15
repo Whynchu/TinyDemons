@@ -9,8 +9,15 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = "C:\Development\Tiny-Demons\TinyDemons"
-$godot = "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe"
+$root = Split-Path -Parent $PSScriptRoot
+$godot = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
+
+$manifestValidator = Join-Path $root "tools/validate_test_manifest.ps1"
+& pwsh -NoProfile -ExecutionPolicy Bypass -File $manifestValidator
+if ($LASTEXITCODE -ne 0) {
+	throw "Test manifest preflight failed"
+}
+
 $headlessUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}" -f $PID)
 New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
 $logFile = Join-Path $headlessUserData "smoke.log"
@@ -82,7 +89,10 @@ foreach ($test in $tests) {
 	$startedAt = Get-Date
 	$stdoutPath = Join-Path $env:TEMP ("tiny-demons-$test-out.log")
 	$stderrPath = Join-Path $env:TEMP ("tiny-demons-$test-error.log")
-	$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $headlessUserData, "--path", $root, "--log-file", $logFile, "-s", ("res://tests/{0}.gd" -f $test))
+	$testUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}-{1}" -f $PID, $test)
+	$testLogFile = Join-Path $testUserData "smoke.log"
+	New-Item -ItemType Directory -Path $testUserData -Force | Out-Null
+	$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $testUserData, "--path", $root, "--log-file", $testLogFile, "-s", ("res://tests/{0}.gd" -f $test))
 	try {
 		$process = Start-Process -FilePath $godot -ArgumentList $arguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
 	} catch {

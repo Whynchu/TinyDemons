@@ -5,6 +5,7 @@ const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/room_transition_result.gd")
 const ROOM_ACTIVATION_RESULT_SCRIPT = preload("res://scripts/room_activation_result.gd")
+const ROOM_SPAWN_RESULT_SCRIPT = preload("res://scripts/room_spawn_result.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
@@ -26,6 +27,7 @@ var boss_geometry_active := false
 var boss_jump_phase_waves: Dictionary = {}
 var boss_jump_phase_pool: Array[Sprite2D] = []
 var _enemy_visual_preparation_signature := ""
+var last_spawn_result: RoomSpawnResult = null
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/boss_slime_authoring.tscn"
@@ -693,6 +695,7 @@ func activate_room(root: Object) -> RoomActivationResult:
 		return result
 	apply_state(root)
 	result.state = (room_states.get(result.room_id, {}) as Dictionary).duplicate(true)
+	result.spawn_result = last_spawn_result
 	result.configured_enemy_slots = (result.state.get("enemy_variants", []) as Array).size()
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	for slime in slimes:
@@ -702,6 +705,7 @@ func activate_room(root: Object) -> RoomActivationResult:
 
 
 func apply_state(root: Object) -> void:
+	last_spawn_result = null
 	var room_id: StringName = root.get("current_room_id"); var room_type: StringName = root.get("current_room_type")
 	var state := room_states.get(room_id, {}) as Dictionary
 	var has_regular_treasure: bool = bool(state.get("regular_room_treasure", false)) and room_type == DungeonGraph.ROOM_COMBAT
@@ -1850,7 +1854,13 @@ func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupi
 	return true
 
 
-func reset_slimes_for_room(root: Object) -> void:
+func reset_slimes_for_room(root: Object) -> RoomSpawnResult:
+	var result := ROOM_SPAWN_RESULT_SCRIPT.new() as RoomSpawnResult
+	if root == null:
+		result.reject(RoomSpawnResult.Status.MISSING_ROOT)
+		return result
+	result.room_id = StringName(root.get("current_room_id"))
+	result.room_type = StringName(root.get("current_room_type"))
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	(root.get("effects_spawner") as EffectsSpawner).clear_slime_notices()
 	for slime in slimes: kill_slime_without_effects(root, slime)
@@ -1859,12 +1869,15 @@ func reset_slimes_for_room(root: Object) -> void:
 	# encounter when one of those rooms is entered.
 	var current_room_type: StringName = root.get("current_room_type")
 	if current_room_type != DungeonGraph.ROOM_COMBAT and current_room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and current_room_type != DungeonGraph.ROOM_TREASURE and current_room_type != DungeonGraph.ROOM_DOWNSTAIRS:
-		return
+		last_spawn_result = result
+		return result
 	var room_id: StringName = root.get("current_room_id")
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	var active_variants := state.get("enemy_variants", []) as Array
+	result.requested_slots = active_variants.size()
 	var runtime_states := state.get("enemy_runtime", {}) as Dictionary
 	var first_entry := not bool(state.get("enemy_spawned", false))
+	result.first_entry = first_entry
 	var spawn_positions: Dictionary
 	if state.has("enemy_spawn_positions"):
 		spawn_positions = state["enemy_spawn_positions"] as Dictionary
@@ -1888,7 +1901,9 @@ func reset_slimes_for_room(root: Object) -> void:
 	var backtrack_popcorn_pending := false
 	var backtrack_spawn_started := false
 	for slime_index in active_variants.size():
-		if slime_index >= slimes.size(): continue
+		if slime_index >= slimes.size():
+			result.record_failure(slime_index)
+			continue
 		var timer_key := str(slime_index)
 		if hide_special_enemies or (root.get("current_room_type") == DungeonGraph.ROOM_SPECIAL_ENEMY and special_timers.has(timer_key) and float(special_timers[timer_key]) > 0.0):
 			continue
@@ -1900,6 +1915,8 @@ func reset_slimes_for_room(root: Object) -> void:
 			spawn_positions[slime_index] = runtime_entry["position"]
 		var animate_spawn := (first_entry and not has_runtime_entry) or (backtrack_popcorn_pending and not has_runtime_entry and slime_index == active_variants.size() - 1)
 		if _spawn_enemy_slot(root, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
+			var spawn_started: bool = animate_spawn and bool(root.call("_is_slime_spawn_locked", slimes[slime_index]))
+			result.record_spawn(slime_index, spawn_started)
 			spawned_slots += 1
 			if has_runtime_entry:
 				_restore_enemy_runtime_state(root, slimes[slime_index], runtime_entry)
@@ -1910,6 +1927,8 @@ func reset_slimes_for_room(root: Object) -> void:
 					var spawn_rng := root.get("rng") as RandomNumberGenerator
 					root.call("_play_sound", "slime_spawn", -6.0, 0.98 + spawn_rng.randf_range(-0.03, 0.03))
 					spawn_audio_played = true
+		else:
+			result.record_failure(slime_index)
 	if first_entry and spawned_slots > 0:
 		state["enemy_spawned"] = true
 	if backtrack_spawn_started:
@@ -1922,6 +1941,8 @@ func reset_slimes_for_room(root: Object) -> void:
 		for slime in slimes:
 			if slime.visible:
 				root.call("_trigger_slime_notice", slime)
+	last_spawn_result = result
+	return result
 
 
 func rebase_enemy_spawn_positions(delta: Vector2) -> void:

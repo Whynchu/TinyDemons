@@ -68,7 +68,13 @@ func _initialize() -> void:
 	startup_mouse_motion.relative = Vector2(4.0, 0.0)
 	rebuilt._input(startup_mouse_motion)
 	_expect(rebuilt.current_device == InputDeviceTracker.Device.GAMEPAD, "startup mouse-motion echo does not replace a restored controller", failures)
-	await create_timer(0.80).timeout
+	# SceneTree timers advance in engine time, while the production grace window
+	# is deliberately measured in wall-clock milliseconds. Headless runs can
+	# process 0.8 engine seconds before 750 real milliseconds have elapsed, so
+	# wait on the same clock the tracker uses.
+	var grace_end_msec := Time.get_ticks_msec() + InputDeviceTracker.RESTORED_DEVICE_MOUSE_GRACE_MSEC + 50
+	while Time.get_ticks_msec() < grace_end_msec:
+		await process_frame
 	rebuilt._input(startup_mouse_motion)
 	_expect(rebuilt.current_device == InputDeviceTracker.Device.KEYBOARD_MOUSE, "real mouse movement can switch devices after the handoff", failures)
 	rebuilt.queue_free()

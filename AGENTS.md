@@ -10,10 +10,11 @@
 6. `docs/verification-surface-audit.md` — test/report roles, release-gate scope, and test-debt cleanup.
 7. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries.
 8. `docs/refactor-route.md` — accepted migration route.
-9. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
-10. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
-11. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
-12. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
+9. `docs/composition-refactor-analysis.md` — component/composition measurements and handoff sequence.
+10. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
+11. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
+12. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
+13. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
 
 ## Verification
 
