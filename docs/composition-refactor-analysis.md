@@ -43,9 +43,9 @@ The current architectural task is therefore:
 This is a staged consolidation, not a universal conversion of every script into
 a Node or every method into a component.
 
-### Progress estimate — 96% complete
+### Progress estimate — 98% complete
 
-The long-term composition refactor is approximately **96% complete / 4%
+The long-term composition refactor is approximately **98% complete / 2%
 remaining**, weighted by ownership risk and usable feature boundaries rather
 than raw line count. The accepted `0.2.x` migration route remains complete.
 
@@ -53,38 +53,39 @@ Completed or substantially migrated: reward and settlement boundaries, room
 checkpoint ordering, typed room-clear signaling, typed room-entry execution,
 typed enemy-runtime capture, typed room activation, typed room-level initial
 spawn orchestration, typed per-frame respawn coordination, the lower-level room
-spawn/death paths, external default tuning resources, and the first typed pause
-player-card presenter boundary. Remaining work is concentrated in browser and
-device durability evidence, the rest of the large menu owner, and retiring
-compatibility wrappers after their final consumers migrate.
+spawn/death paths, the typed room-owned combat death boundary, external default
+tuning resources, and typed pause/Hub player presentation contexts. Remaining
+work is concentrated in browser and device durability evidence, the final mixed
+menu workflows, and retiring compatibility wrappers after their final consumers
+migrate.
 
 ## Current measured shape
 
-These measurements are from the working tree on 2026-09-15 at baseline commit
-`d6a965d`. They are useful for choosing leverage points, not as quality scores.
-To regenerate them, run the PowerShell one-liner in the Measurement command
-section below; the counts are reproducible from a clean checkout at that commit.
+These measurements are from the working tree on 2026-09-15; `d6a965d` remains
+the pinned comparison baseline. They are useful for choosing leverage points,
+not as quality scores. To regenerate them, run the PowerShell one-liner in the
+Measurement command section below.
 
 | Surface | Measurement | Interpretation |
 |---|---:|---|
-| Runtime GDScript files | 146 | There are enough existing boundaries to refactor vertically |
-| Runtime physical lines | 46,714 | Large enough that broad mechanical migration is unsafe |
-| Runtime non-blank lines | 41,330 | Blank/comment lines are excluded from this count |
+| Runtime GDScript files | 166 | There are enough existing boundaries to refactor vertically |
+| Runtime physical lines | 48,522 | Large enough that broad mechanical migration is unsafe |
+| Runtime non-blank lines | 42,888 | Blank/comment lines are excluded from this count |
 | Explicit `*Component` classes | 20 | Entity-level composition is established |
-| Named functions | 2,611 | Function count is not a reason to create more wrappers |
-| `GameplayState` lines | 1,720 | It remains the main shared-state surface |
-| `GameplayState` functions | 506 | Many are forwarding/compatibility methods |
-| `GameplayState` declared fields | 287 | State and ownership are still concentrated |
+| Named functions | 2,709 | Function count is not a reason to create more wrappers |
+| `GameplayState` lines | 1,777 | It remains the main shared-state surface |
+| `GameplayState` functions | 510 | Many are forwarding/compatibility methods |
+| `GameplayState` declared fields | 299 | State and ownership are still concentrated |
 | `gameplay.gd` lines | 233 | The coordinator itself has been slimmed; the seams moved to state/components |
-| Dynamic `root.call/get/set` sites | 3,140 | Dependency direction remains the largest structural risk |
+| Dynamic `root.call/get/set` sites | 3,135 | Dependency direction remains the largest structural risk |
 
 The largest dynamic-access concentrations are:
 
 | Script | Lines | Dynamic root accesses | Architectural concern |
 |---|---:|---:|---|
-| `screen_state_controller.gd` | 5,340 | 423 | Menu construction, input, layout, and presentation remain mixed |
-| `room_controller.gd` | 2,297 | 419 | Room lifecycle, encounters, persistence, and rewards overlap |
-| `combat_runtime_controller.gd` | 792 | 222 | Combat integration still reaches through the root |
+| `screen_state_controller.gd` | 5,432 | 423 | Menu construction, input, layout, and presentation remain mixed |
+| `room_controller.gd` | 3,265 | 420 | Room lifecycle, encounters, persistence, and rewards overlap |
+| `combat_runtime_controller.gd` | 795 | 222 | Combat integration still reaches through the root |
 | `gameplay_frame_controller.gd` | 266 | 205 | Ordering is explicit, but phase dependencies are hidden |
 | `slime_runtime_controller.gd` | 805 | 195 | Reusable slime components still rely on a broad runtime context |
 | `magic_runtime_controller.gd` | 686 | 141 | Magic state and presentation have remaining coordinator seams |
@@ -161,13 +162,13 @@ runtime slices:
   `ChestRewardContext`, `RunSettlementContext`, `RunSettlementResult`,
   `RoomCheckpointContext`, `RoomCheckpointResult`, `RunCheckpointContext`,
   `RunCheckpointResult`, `RunCheckpointService`, and `MenuPlayerContext` for
-  pause player presentation.
+  pause root/status and Hub player presentation.
 - The six default tuning resources under `resources/tuning/` are now loaded by
   the composition root and duplicated per runtime, so inspector-facing data
   has a real resource path without shared mutable state.
 - The remaining work is to characterize browser/device durability, finish the
-  broader menu presenter extraction, and retire compatibility wrappers after
-  their final consumers migrate.
+  remaining mixed settings/save/equipment menu workflows, and retire
+  compatibility wrappers after their final consumers migrate.
 
 These results are valuable because callers no longer need to reconstruct an
 outcome from scattered arrays, booleans, and root fields. Before relying on any
@@ -329,8 +330,10 @@ initial spawn orchestration consumes `RoomSpawnContext`, and the normal frame
 schedule now sends respawn ticks through `RoomRespawnContext`. The shared
 `RoomRuntimeContext` now carries the typed runtime inputs for spawn preparation,
 placement validation, cleanup, runtime save/restore, and death recording. The
-old root-shaped methods remain named compatibility facades, but normal runtime
-paths use the typed helpers.
+Combat's normal `GameplayState` path now sends the three room-owned death
+consequences through `record_enemy_death_context()` and `RoomRespawnContext`;
+the old root-shaped methods remain named compatibility facades for fixtures and
+older callers.
 
 Focused evidence for this slice:
 
@@ -352,11 +355,12 @@ and sealed boss entrance.
 ### 5. Tackle menus after the runtime pattern is proven — [~]
 
 `ScreenStateController` is the largest remaining owner, but it should not be the
-next broad extraction by default. The pause player card now receives a narrow
-`MenuPlayerContext` containing profile, combat snapshot/tuning, health, Chroma,
-palette, and portrait dependencies. Continue one screen at a time while
-preserving native 240×160 geometry and touch/controller behavior; the remaining
-hub, settings, save, and equipment workflows still use the mixed controller.
+next broad extraction by default. `MenuPlayerContext` now supplies the pause
+root card, pause Status page, and Hub player summary with profile, combat and
+progression snapshots/tuning, health, Chroma, palette, and portrait
+dependencies. Continue one screen at a time while preserving native 240×160
+geometry and touch/controller behavior; the remaining settings, save,
+equipment, and transaction workflows still use the mixed controller.
 
 ### 6. Move tuning data deliberately — [x]
 
@@ -371,23 +375,29 @@ without reopening this ownership migration.
 The manifest validator and focused standalone Godot checks for this slice pass:
 
 - `tools/run_headless.ps1 -Editor`: import scan completed successfully,
-  including `RoomRespawnContext`.
+  including the typed room and menu contexts.
 - `room_transition_result_smoke`.
 - `enemy_room_engagement_smoke`.
 - `enemy_room_entrance_scene_smoke` (typed initial spawn path).
-- `special_respawn_policy_smoke` (respawn timer policy).
+- `special_respawn_policy_smoke` (respawn timer policy through the legacy
+  fixture boundary).
 - `boss_geometry_scene_smoke`.
 - `generated_run_scene_smoke`.
 - `popcorn_respawn_smoke` (waiting, seeded schedule, support respawn, entrance
   seal).
-- `pause_menu_scene_smoke` (typed player-card context plus existing layout and
-  route contract).
+- `typed_combat_path_smoke` (typed combat damage and room-owned death boundary).
+- `pause_menu_scene_smoke` (typed player-card/status context plus existing
+  layout and route contract).
 - `composition_root_baseline_smoke` (six external tuning resources and isolated
   per-runtime copies).
 - Fresh-output `tests/web_export_smoke.ps1 -RequireExport` (single-threaded
   Compatibility payload; `.wasm` and `.pck` present).
 - `tools/validate_test_manifest.ps1`: 123 rows, 121 runnable paths, 2 report
   rows, and 43 curated-gate paths.
+- Curated `tests/run_all_smoke.ps1 -TestGroup gate`: no engine crash; SFX
+  pytest 25/25, Web export (`wasm=1`, `pck=1`), and main-scene boot pass. The
+  runner remains nonzero only for the documented legacy `run1_door_path_smoke`
+  mismatch and the two restricted-host settings persistence findings.
 
 Use the manifest-driven runner for repeatable checks. For example:
 

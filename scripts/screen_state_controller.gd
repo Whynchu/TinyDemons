@@ -2811,6 +2811,9 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 
 
 func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Sprite2D], summary: Sprite2D = null) -> void:
+	if root is GameplayState:
+		_update_player_card_context((root as GameplayState)._menu_player_context(), pixel_texture, texts, summary)
+		return
 	if texts.is_empty():
 		return
 	var profile := root.get("player_profile") as PlayerProfile
@@ -2838,6 +2841,32 @@ func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Spr
 			var palette_value: Variant = root.get("current_player_palette_name")
 			var palette_name: StringName = StringName(str(palette_value)) if palette_value != null else &"blue"
 			label_color = PaletteLibrary.accent(palette_name)
+		texts[index].texture = pixel_texture.call(label, label_color) as Texture2D
+	if summary != null:
+		summary.visible = true
+
+
+func _update_player_card_context(context: MenuPlayerContext, pixel_texture: Callable, texts: Array[Sprite2D], summary: Sprite2D = null) -> void:
+	if texts.is_empty() or context == null or not context.is_valid():
+		return
+	var profile := context.profile
+	var max_health := context.max_health()
+	var health := context.current_health()
+	var xp_required := PlayerProfile.xp_required_for_level(profile.level, context.progression_tuning)
+	var values := [
+		PlayerProfile.normalize_player_name(profile.player_name),
+		context.element_display_name(),
+		"LV %d" % profile.level,
+		"XP %d/%d" % [profile.xp, xp_required],
+		"HP %d/%d" % [health, max_health],
+		"CHR %d/%d" % [context.chroma(), PlayerChromaComponent.MAX_CHROMA],
+		"READY",
+	]
+	for index in texts.size():
+		var label: String = str(values[index]) if index < values.size() else ""
+		var label_color := Color8(255, 205, 117) if index == 3 else Color.WHITE
+		if index == 1:
+			label_color = PaletteLibrary.accent(context.palette_name)
 		texts[index].texture = pixel_texture.call(label, label_color) as Texture2D
 	if summary != null:
 		summary.visible = true
@@ -3070,7 +3099,12 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 			if chrome != null: chrome.visible = not pause_equipment_view_active
 	var root_panel := pause_overlay.get_node_or_null("PausePanel8Piece") as Control
 	if root_panel != null: root_panel.visible = showing_root
-	_update_pause_player_info(root, pixel_texture)
+	var menu_player_context: MenuPlayerContext = null
+	if root is GameplayState:
+		menu_player_context = (root as GameplayState)._menu_player_context()
+		_update_pause_player_info_context(menu_player_context, pixel_texture)
+	else:
+		_update_pause_player_info(root, pixel_texture)
 	for index in pause_menu_buttons.size():
 		var button := pause_menu_buttons[index]
 		button.visible = pause_page == 0
@@ -3094,9 +3128,10 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if pause_gold_text != null: pause_gold_text.visible = showing_root
 	if pause_soul_text != null: pause_soul_text.visible = showing_root
 	if pause_page == 1:
-		_update_pause_status(root, pixel_texture)
+		_update_pause_status_context(menu_player_context, pixel_texture) if menu_player_context != null else _update_pause_status(root, pixel_texture)
 	elif pause_page == 2 and pause_equipment_view_active:
-		_render_equipment_menu(root, pixel_texture, root.get("player_profile") as PlayerProfile, highlight, pause_equipment_menu, false)
+		var pause_profile := menu_player_context.profile if menu_player_context != null else root.get("player_profile") as PlayerProfile
+		_render_equipment_menu(root, pixel_texture, pause_profile, highlight, pause_equipment_menu, false)
 		return
 	elif pause_page == 2:
 		_update_pause_equipment(root, pixel_texture)
@@ -3125,6 +3160,25 @@ func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
 	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression) if profile != null else 0
 	var values := [
 		"LV ...... %d" % (profile.level if profile != null else 0), "XP ...... %d/%d" % [xp, xp_required], "HP ...... %d/%d" % [roundi(health), roundi(max_health)], "CHROMA .. %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
+		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
+	]
+	for index in mini(values.size(), pause_status_texts.size()):
+		pause_status_texts[index].texture = pixel_texture.call(values[index], Color8(255, 205, 117) if index == 1 else Color.WHITE) as Texture2D
+	if pause_description_text != null: pause_description_text.texture = null
+
+
+func _update_pause_status_context(context: MenuPlayerContext, pixel_texture: Callable) -> void:
+	if context == null or not context.is_valid():
+		return
+	var profile := context.profile
+	var snapshot := context.snapshot
+	var tuning := context.combat_tuning
+	var player_tuning := context.player_tuning
+	var health := context.current_health()
+	var max_health := context.max_health()
+	var xp_required := PlayerProfile.xp_required_for_level(profile.level, context.progression_tuning)
+	var values := [
+		"LV ...... %d" % profile.level, "XP ...... %d/%d" % [profile.xp, xp_required], "HP ...... %d/%d" % [health, max_health], "CHROMA .. %d/%d" % [context.chroma(), PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
 		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
 	]
 	for index in mini(values.size(), pause_status_texts.size()):
