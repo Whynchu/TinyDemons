@@ -1,0 +1,15 @@
+{
+  "root_accesses": 3135,
+  "gameplay_state_lines": 1777,
+  "gameplay_state_fields": 299,
+  "room_controller_lines": 3265,
+  "runtime_refs": 20,
+  "legacy_total": 13,
+  "transitional_allowlist": [
+    "RoomEntryContext",
+    "RoomActivationContext",
+    "RoomRuntimeContext",
+    "RoomSpawnContext",
+    "RoomRespawnContext"
+  ]
+}

@@ -533,10 +533,10 @@ regression; neither is evidence against the typed room slice.
 ## Architecture guardrail
 
 The manifest validator (`tools/validate_test_manifest.ps1`) enforces the test
-inventory. The composition refactor needs an equivalent structural guard so the
-scorecard cannot drift back into claimed-but-unmeasured progress. Add a
-`tools/validate_composition.gd` (or PowerShell equivalent) that fails when it
-finds any of:
+inventory. The composition refactor has an equivalent structural guard,
+`tools/validate_composition.ps1`, which is wired into the same CI and runner
+preflight so the scorecard cannot drift back into claimed-but-unmeasured
+progress. It fails when it finds any of:
 
 - a context that declares a `GameplayState` field or accepts `GameplayState` in
   its constructor, outside an explicit transitional allowlist;
@@ -545,7 +545,24 @@ finds any of:
   legacy body is not a one-line compatibility forward;
 - a root-access regression (count higher than the recorded baseline) in a
   migrated owner; and
-- a `GameplayState` field count or line count above the recorded baseline.
+- a `GameplayState` field count, line count, `RoomController` line count, or
+  `.runtime` reference count above the recorded baseline.
+
+The validator reads `tools/composition-baseline.json`, which records the
+accepted values when a slice lands. Use `-UpdateBaseline` only when a slice
+deliberately retires coupling or extracts an owner; never use it to bless a
+regression. Run it with `-BaselinePath`/`-ScriptsDirectory` to test against a
+different tree.
+
+Current recorded baseline (from `tools/composition-baseline.json`):
+
+| Metric | Recorded |
+|---|---:|
+| `root.call/get/set` sites | 3,135 |
+| `GameplayState` lines / fields | 1,777 / 299 |
+| `RoomController` lines | 3,265 |
+| `.runtime` references | 20 |
+| Legacy duplicates in `room_controller.gd` | 13 (11 flagged as non-forward `_context` twins) |
 
 The transitional allowlist must name exactly the current adapters and shrink as
 slices land:
