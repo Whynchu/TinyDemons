@@ -10,6 +10,11 @@ Applies to: the `0.2.x` development cycle, starting from version `0.2.00`
 Companion: [`AUDIT.md`](AUDIT.md) records the current baseline, findings, and
 phase status. This document defines how the refactor is executed.
 
+Follow-on: after the Phase C closeout below, the next composition sequence is
+defined in [`composition-refactor-analysis.md`](composition-refactor-analysis.md).
+That document extends this route; it does not replace the route's recorded
+slices or this document's sequencing authority for the `0.2.x` cycle.
+
 ---
 
 ## 1. Outcome
