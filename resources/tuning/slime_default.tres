@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="SlimeTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/slime_tuning.gd" id="1_slime"]
+
+[resource]
+resource_name = "Default Slime Tuning"
+script = ExtResource("1_slime")

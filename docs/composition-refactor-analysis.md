@@ -3,7 +3,7 @@
 Status: active handoff
 Scope: runtime composition, component ownership, dependency direction, and the next refactor sequence
 Owner: repository refactor / architecture
-Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_activation_context.gd`, `room_spawn_context.gd`, `room_respawn_context.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, feature components/controllers, and `gameplay_frame_controller.gd`
+Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_activation_context.gd`, `room_spawn_context.gd`, `room_respawn_context.gd`, `room_runtime_context.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, `menu_player_context.gd`, external tuning resources under `resources/tuning/`, feature components/controllers, and `gameplay_frame_controller.gd`
 Baseline commit: `d6a965d` (2026-09-15)
 Verification: see the named evidence and commands in the Verification section below
 Supersedes: none; this document extends the completed `refactor-route.md` Phase C and becomes the authoritative sequence for the next composition phase
@@ -43,19 +43,20 @@ The current architectural task is therefore:
 This is a staged consolidation, not a universal conversion of every script into
 a Node or every method into a component.
 
-### Progress estimate — 90% complete
+### Progress estimate — 96% complete
 
-The long-term composition refactor is approximately **90% complete / 10%
+The long-term composition refactor is approximately **96% complete / 4%
 remaining**, weighted by ownership risk and usable feature boundaries rather
 than raw line count. The accepted `0.2.x` migration route remains complete.
 
 Completed or substantially migrated: reward and settlement boundaries, room
 checkpoint ordering, typed room-clear signaling, typed room-entry execution,
 typed enemy-runtime capture, typed room activation, typed room-level initial
-spawn orchestration, and typed per-frame respawn coordination. Remaining work
-is concentrated in the lower-level spawn solver/death-recording seam, browser
-durability evidence, the large menu owner, and deliberate tuning-data
-extraction.
+spawn orchestration, typed per-frame respawn coordination, the lower-level room
+spawn/death paths, external default tuning resources, and the first typed pause
+player-card presenter boundary. Remaining work is concentrated in browser and
+device durability evidence, the rest of the large menu owner, and retiring
+compatibility wrappers after their final consumers migrate.
 
 ## Current measured shape
 
@@ -154,14 +155,19 @@ runtime slices:
 
 - **Committed:** `RoomTransitionResult`, `RoomActivationContext`,
   `RoomActivationResult`, `RoomSpawnContext`, `RoomRespawnContext`,
-  `RoomSpawnResult`, `RoomClearContext`,
+  `RoomRuntimeContext`, `RoomSpawnResult`, `RoomClearContext`,
   `RoomClearResult`, `RoomEntryContext`, `RoomEntryResult`,
   `RoomEnemyRuntimeContext`, `RoomEnemyRuntimeResult`, `ChestRewardResult`,
   `ChestRewardContext`, `RunSettlementContext`, `RunSettlementResult`,
   `RoomCheckpointContext`, `RoomCheckpointResult`, `RunCheckpointContext`,
-  `RunCheckpointResult`, and `RunCheckpointService`.
-- The remaining work is to characterize browser durability and retire the
-  compatibility wrappers after their final consumers migrate.
+  `RunCheckpointResult`, `RunCheckpointService`, and `MenuPlayerContext` for
+  pause player presentation.
+- The six default tuning resources under `resources/tuning/` are now loaded by
+  the composition root and duplicated per runtime, so inspector-facing data
+  has a real resource path without shared mutable state.
+- The remaining work is to characterize browser/device durability, finish the
+  broader menu presenter extraction, and retire compatibility wrappers after
+  their final consumers migrate.
 
 These results are valuable because callers no longer need to reconstruct an
 outcome from scattered arrays, booleans, and root fields. Before relying on any
@@ -308,7 +314,7 @@ ID. `GameplayState` retains only the web-checkpoint eligibility guard and the
 compatibility checkpoint wrapper. Do not mark this slice fully shipped until
 browser durability evidence is recorded.
 
-### 4. Continue room lifecycle migration — [~]
+### 4. Continue room lifecycle migration — [x]
 
 The clear event is explicit: `RoomController.mark_cleared_context()` owns the
 mutation and returns `RoomClearResult`; the map controller and checkpoint
@@ -320,9 +326,11 @@ callers. Room activation now follows the same typed-context path and preserves
 the existing `RoomActivationResult`/`RoomSpawnResult` reporting. Preserve the
 authored/generated room distinction and the central frame schedule. Room-level
 initial spawn orchestration consumes `RoomSpawnContext`, and the normal frame
-schedule now sends respawn ticks through `RoomRespawnContext`. The lower-level
-placement solver and death-recording compatibility paths remain separate
-characterization slices.
+schedule now sends respawn ticks through `RoomRespawnContext`. The shared
+`RoomRuntimeContext` now carries the typed runtime inputs for spawn preparation,
+placement validation, cleanup, runtime save/restore, and death recording. The
+old root-shaped methods remain named compatibility facades, but normal runtime
+paths use the typed helpers.
 
 Focused evidence for this slice:
 
@@ -337,22 +345,26 @@ Focused evidence for this slice:
 - `generated_run_scene_smoke`: typed room-entry and activation path remains
   intact during generated traversal.
 
-`popcorn_respawn_smoke` remains manifest `unverified` and currently fails its
-fixture assertions; it is not used as evidence for this slice.
+`popcorn_respawn_smoke` is now manifest `verified`; its fixture checks the
+waiting-before-clear contract, seeded 30–45 second schedule, support respawn,
+and sealed boss entrance.
 
-### 5. Tackle menus after the runtime pattern is proven — [ ]
+### 5. Tackle menus after the runtime pattern is proven — [~]
 
 `ScreenStateController` is the largest remaining owner, but it should not be the
-next broad extraction by default. First establish shared typed primitives for
-cursor, list, footer, responsive layout, and route intent. Move one screen at a
-time while preserving native 240×160 geometry and touch/controller behavior.
+next broad extraction by default. The pause player card now receives a narrow
+`MenuPlayerContext` containing profile, combat snapshot/tuning, health, Chroma,
+palette, and portrait dependencies. Continue one screen at a time while
+preserving native 240×160 geometry and touch/controller behavior; the remaining
+hub, settings, save, and equipment workflows still use the mixed controller.
 
-### 6. Move tuning data deliberately — [ ]
+### 6. Move tuning data deliberately — [x]
 
-The tuning classes already provide a useful data vocabulary, but many are still
-constructed in `GameplayState`. Move them toward external `.tres` resources only
-after ownership and compatibility are clear. Keep balance changes separate from
-structural refactors.
+The six existing tuning classes now have external defaults in
+`resources/tuning/*.tres`. `GameplayState` deep-duplicates each resource per
+runtime, preserving test/debug overrides without allowing one runtime to mutate
+the cached inspector default. Future hardcoded knobs can be added incrementally
+without reopening this ownership migration.
 
 ## Verification
 
@@ -366,6 +378,14 @@ The manifest validator and focused standalone Godot checks for this slice pass:
 - `special_respawn_policy_smoke` (respawn timer policy).
 - `boss_geometry_scene_smoke`.
 - `generated_run_scene_smoke`.
+- `popcorn_respawn_smoke` (waiting, seeded schedule, support respawn, entrance
+  seal).
+- `pause_menu_scene_smoke` (typed player-card context plus existing layout and
+  route contract).
+- `composition_root_baseline_smoke` (six external tuning resources and isolated
+  per-runtime copies).
+- Fresh-output `tests/web_export_smoke.ps1 -RequireExport` (single-threaded
+  Compatibility payload; `.wasm` and `.pck` present).
 - `tools/validate_test_manifest.ps1`: 123 rows, 121 runnable paths, 2 report
   rows, and 43 curated-gate paths.
 
@@ -377,10 +397,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1 `
 ```
 
 The Windows root-certificate warning and headless editor-settings persistence
-warning are environment warnings. `popcorn_respawn_smoke` remains an
-unverified fixture failure, and `run1_door_path_smoke` remains the known
-verified legacy room-lock regression; neither is evidence against this typed
-spawn slice.
+warning are environment warnings. The local web export can fail if an old
+ignored `dist/` payload is locked; the fresh temporary-output export is the
+reliable local evidence. Browser/device/hosted-Pages behavior remains open,
+and `run1_door_path_smoke` remains the known verified legacy room-lock
+regression; neither is evidence against the typed room slice.
 
 ## Refactor rules for the next agent
 

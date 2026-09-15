@@ -10,6 +10,13 @@ const ActiveRunSnapshotContextScript = preload("res://scripts/active_run_snapsho
 const RoomCheckpointContextScript = preload("res://scripts/room_checkpoint_context.gd")
 const RunCheckpointContextScript = preload("res://scripts/run_checkpoint_context.gd")
 const RunCheckpointServiceScript = preload("res://scripts/run_checkpoint_service.gd")
+const MenuPlayerContextScript = preload("res://scripts/menu_player_context.gd")
+const DEFAULT_COMBAT_TUNING: CombatTuning = preload("res://resources/tuning/combat_default.tres")
+const DEFAULT_PROGRESSION_TUNING: ProgressionTuning = preload("res://resources/tuning/progression_default.tres")
+const DEFAULT_PLAYER_TUNING: PlayerTuning = preload("res://resources/tuning/player_default.tres")
+const DEFAULT_SLIME_TUNING: SlimeTuning = preload("res://resources/tuning/slime_default.tres")
+const DEFAULT_EFFECTS_TUNING: EffectsTuning = preload("res://resources/tuning/effects_default.tres")
+const DEFAULT_CHROMA_TUNING: ChromaTuning = preload("res://resources/tuning/chroma_default.tres")
 
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
@@ -352,12 +359,15 @@ var player_palette_flash_phase := 0
 var player_palette_flash_overlay: Sprite2D = null
 var rng := RandomNumberGenerator.new()
 var sprite_frame_library := SpriteFrameLibrary.new()
-var combat_tuning := CombatTuning.new()
-var progression_tuning := ProgressionTuning.new()
-var player_tuning := PlayerTuning.new()
-var slime_tuning := SlimeTuning.new()
-var effects_tuning := EffectsTuning.new()
-var chroma_tuning := ChromaTuning.new()
+## Each runtime receives its own editable copy. The external resources define
+## the shared inspector-facing defaults without allowing a test or debug scene
+## to mutate the next GameplayState instance through a cached Resource.
+var combat_tuning: CombatTuning = DEFAULT_COMBAT_TUNING.duplicate(true) as CombatTuning
+var progression_tuning: ProgressionTuning = DEFAULT_PROGRESSION_TUNING.duplicate(true) as ProgressionTuning
+var player_tuning: PlayerTuning = DEFAULT_PLAYER_TUNING.duplicate(true) as PlayerTuning
+var slime_tuning: SlimeTuning = DEFAULT_SLIME_TUNING.duplicate(true) as SlimeTuning
+var effects_tuning: EffectsTuning = DEFAULT_EFFECTS_TUNING.duplicate(true) as EffectsTuning
+var chroma_tuning: ChromaTuning = DEFAULT_CHROMA_TUNING.duplicate(true) as ChromaTuning
 
 ## Legacy callback bridge
 
@@ -933,6 +943,19 @@ func _save_preview_texture(palette_name: String) -> Texture2D:
 
 func _save_portrait_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_portrait_texture", self, palette_name, player_animation_component.cloaked if player_animation_component != null else false) as Texture2D
+
+
+func _menu_player_context() -> MenuPlayerContext:
+	var snapshot := _player_stat_snapshot() if combat_runtime_controller != null else null
+	return MenuPlayerContextScript.new(
+		player_profile,
+		snapshot,
+		combat_tuning,
+		player_health_component,
+		player_chroma_component,
+		StringName(current_player_palette_name),
+		Callable(self, "_save_portrait_texture")
+	) as MenuPlayerContext
 
 
 func _equipment_portrait_texture() -> Texture2D:

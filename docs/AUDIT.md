@@ -8,7 +8,13 @@ Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 Baseline game version: `0.2.00`
 
-Current release: `0.2.13` (typed reward, checkpoint, and room-state ownership boundaries)
+Current release: `0.2.13` (typed reward, checkpoint, room-state, and runtime ownership boundaries)
+
+Post-audit checkpoint (2026-09-15): the composition handoff is approximately
+96% complete. Typed room spawn/death helpers, external default tuning resources,
+the typed pause player-card context, and fresh local Web export evidence are
+now recorded in [`composition-refactor-analysis.md`](composition-refactor-analysis.md).
+Browser/device and hosted-Pages verification remain separate release work.
 
 ## 1. Purpose
 
@@ -323,8 +329,8 @@ code-driven:
 - item and enemy definitions are large dictionaries in GDScript;
 - authored runs are separate GDScript builders;
 - generated-run policy is concentrated in a large static generator;
-- tuning classes are instantiated directly with defaults in
-  `gameplay_state.gd` rather than loaded as named project resources; and
+- six core tuning defaults are loaded as named project resources and duplicated
+  per runtime; the remaining content definitions are still primarily code-driven; and
 - room variants depend on a combination of scene guides and runtime policy.
 
 This is workable for the current content volume. It will become expensive as

@@ -1,12 +1,13 @@
 # Tiny Demons — Web Port Implementation Plan
 
-Status: implementation complete locally; browser/device verification pending
+Status: implementation and fresh local export verified; browser/device verification pending
 
 Owner: `export_presets.cfg`, `input_router.gd`, `touch_controls_layer.gd`, and
 the web save services.
 
-Current code: desktop and web coexist in the same project; local export support
-is present, while browser/device verification remains open.
+Current code: desktop and web coexist in the same project; the single-threaded
+Compatibility export has passed into a fresh standalone output directory, while
+browser/device and hosted-Pages verification remain open.
 
 Verification: standalone web export smoke test plus browser input, save, and
 touch verification.
@@ -48,6 +49,11 @@ Related docs:
 - [x] Audio payload/performance hardening
 - [x] Responsive landscape presentation frame and closed-entrance seam guards
 - [ ] Browser/device matrix and production Pages deployment verification
+
+Fresh local evidence on 2026-09-15: `tests/web_export_smoke.ps1
+-RequireExport` produced `index.html`, one `.wasm`, and one `.pck` in a fresh
+temporary directory. An ignored `dist/` directory may be locked by an editor;
+the CI workflow still owns the clean `dist/` artifact path.
 
 ## 1. Goal and non-goals
 

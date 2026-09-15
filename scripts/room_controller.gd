@@ -417,6 +417,11 @@ func _popcorn_enemy_level_for_root(root: Object) -> int:
 	return maxi(1, profile.level - 5) if profile != null else _popcorn_enemy_level()
 
 
+func _popcorn_enemy_level_for_runtime(runtime: GameplayState) -> int:
+	var profile: PlayerProfile = runtime.player_profile
+	return maxi(1, profile.level - 5) if profile != null else _popcorn_enemy_level()
+
+
 func _boss_support_popcorn_count() -> int:
 	# Bosses need a real support wave even in the opening ranks. Add one more
 	# support for the first mixed encounters, then grow the late-run wave while
@@ -1436,6 +1441,52 @@ func apply_finished_state(root: Object) -> void:
 
 
 func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
+	if root is GameplayState:
+		_kill_slime_without_effects_runtime(root as GameplayState, slime)
+		return
+	_kill_slime_without_effects_legacy(root, slime)
+
+
+func _kill_slime_without_effects_runtime(runtime: GameplayState, slime: Sprite2D) -> void:
+	if runtime == null or slime == null:
+		return
+	var combat: SlimeCombatComponent = runtime._slime_combat(slime)
+	if combat != null:
+		combat.dead = true
+		combat.active = false
+		combat.timer = 0.0
+		combat.frame = 0
+		combat.hit_done = false
+	slime.visible = false
+	var spawn: Node = runtime._slime_spawn(slime)
+	if spawn != null:
+		spawn.call("cancel")
+	var brain: SlimeBrain = runtime._slime_brain(slime)
+	if brain != null:
+		brain.attack_cooldown = 0.0
+		brain.aggroed = false
+	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		tactics.reset()
+	runtime.collision_sprites.erase(slime)
+	runtime.depth_sprites.erase(slime)
+	runtime.occluder_sprites.erase(slime)
+	runtime.actor_sprites.erase(slime)
+	var health: HealthComponent = runtime._slime_health(slime)
+	if health != null:
+		health.reset(0.0)
+	var presenter: SlimeHealthPresenter = runtime._slime_health_presenter(slime)
+	if presenter != null:
+		presenter.display_health = 0.0
+	var hud: HudController = runtime.hud_controller
+	if hud == null:
+		return
+	for item in [hud.target_overhead_frames.get(slime), hud.target_overhead_damage_fills.get(slime), hud.target_overhead_fills.get(slime)]:
+		if item != null:
+			(item as Sprite2D).visible = false
+
+
+func _kill_slime_without_effects_legacy(root: Object, slime: Sprite2D) -> void:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent; combat.dead = true; combat.active = false; slime.visible = false; combat.timer = 0.0; combat.frame = 0; combat.hit_done = false
 	if root.has_method("_slime_spawn"):
 		var spawn := root.call("_slime_spawn", slime) as Node
@@ -1451,6 +1502,24 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 
 
 func save_enemy_runtime_state(root: Object) -> RoomEnemyRuntimeResult:
+	if root is GameplayState:
+		return _save_enemy_runtime_state_runtime(root as GameplayState)
+	return _save_enemy_runtime_state_legacy(root)
+
+
+func _save_enemy_runtime_state_runtime(runtime: GameplayState) -> RoomEnemyRuntimeResult:
+	var room_id: StringName = runtime.current_room_id
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var active_variants := state.get("enemy_variants", []) as Array
+	var combat_components: Array[SlimeCombatComponent] = []
+	var health_components: Array[HealthComponent] = []
+	for slime in runtime.slimes:
+		combat_components.append(runtime._slime_combat(slime))
+		health_components.append(runtime._slime_health(slime))
+	return save_enemy_runtime_state_context(ROOM_ENEMY_RUNTIME_CONTEXT_SCRIPT.new(room_id, active_variants, runtime.slimes, combat_components, health_components))
+
+
+func _save_enemy_runtime_state_legacy(root: Object) -> RoomEnemyRuntimeResult:
 	var room_id: StringName = StringName(root.get("current_room_id"))
 	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
 	var active_variants := state.get("enemy_variants", []) as Array
@@ -1497,6 +1566,26 @@ func save_enemy_runtime_state_context(context: RoomEnemyRuntimeContext) -> RoomE
 
 
 func _restore_enemy_runtime_state(root: Object, slime: Sprite2D, runtime_entry: Dictionary) -> void:
+	if root is GameplayState:
+		_restore_enemy_runtime_state_runtime(root as GameplayState, slime, runtime_entry)
+		return
+	_restore_enemy_runtime_state_legacy(root, slime, runtime_entry)
+
+
+func _restore_enemy_runtime_state_runtime(runtime: GameplayState, slime: Sprite2D, runtime_entry: Dictionary) -> void:
+	var health: HealthComponent = runtime._slime_health(slime)
+	if health == null:
+		return
+	var maximum := health.maximum_health
+	var current := clampf(float(runtime_entry.get("health", maximum)), 0.0, maximum)
+	health.reset(current)
+	var presenter: SlimeHealthPresenter = runtime._slime_health_presenter(slime)
+	if presenter != null:
+		presenter.display_health = current
+		presenter.damage_fill_hold_timer = 0.0
+
+
+func _restore_enemy_runtime_state_legacy(root: Object, slime: Sprite2D, runtime_entry: Dictionary) -> void:
 	var health := root.call("_slime_health", slime) as HealthComponent
 	if health == null:
 		return
@@ -1510,6 +1599,28 @@ func _restore_enemy_runtime_state(root: Object, slime: Sprite2D, runtime_entry: 
 
 
 func record_special_enemy_death(root: Object, slime: Sprite2D) -> void:
+	if root is GameplayState:
+		record_special_enemy_death_context(ROOM_RESPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), slime)
+		return
+	_record_special_enemy_death_legacy(root, slime)
+
+
+func record_special_enemy_death_context(context: RoomRespawnContext, slime: Sprite2D) -> void:
+	if context == null or not context.is_valid() or context.room_type != DungeonGraph.ROOM_SPECIAL_ENEMY:
+		return
+	var slot := context.slimes.find(slime)
+	if slot < 0:
+		return
+	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
+	var timers := state.get("special_respawn_timers", {}) as Dictionary
+	var timer_key := str(slot)
+	if not timers.has(timer_key) or float(timers[timer_key]) <= 0.0:
+		timers[timer_key] = SPECIAL_ROOM_RESPAWN_DELAY
+	state["special_respawn_timers"] = timers
+	room_states[context.room_id] = state
+
+
+func _record_special_enemy_death_legacy(root: Object, slime: Sprite2D) -> void:
 	if root.get("current_room_type") != DungeonGraph.ROOM_SPECIAL_ENEMY:
 		return
 	var slimes := root.get("slimes") as Array[Sprite2D]
@@ -1582,6 +1693,31 @@ func _big_threat_is_alive(root: Object, state: Dictionary) -> bool:
 
 
 func record_popcorn_enemy_death(root: Object, slime: Sprite2D) -> void:
+	if root is GameplayState:
+		record_popcorn_enemy_death_context(ROOM_RESPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), slime)
+		return
+	_record_popcorn_enemy_death_legacy(root, slime)
+
+
+func record_popcorn_enemy_death_context(context: RoomRespawnContext, slime: Sprite2D) -> void:
+	if context == null or not context.is_valid() or not _is_popcorn_respawn_room_context(context):
+		return
+	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
+	var slot := context.slimes.find(slime)
+	if slot < 0 or slot >= (state.get("enemy_variants", []) as Array).size():
+		return
+	# Ordinary encounters respawn from their complete initial roster. Boss and
+	# special encounters only respawn their explicitly-authored support slots.
+	if context.room_type in [DungeonGraph.ROOM_DOWNSTAIRS, DungeonGraph.ROOM_SPECIAL_ENEMY] and not _is_popcorn_slot(state, slot):
+		return
+	var waiting := state.get("popcorn_respawn_waiting", {}) as Dictionary
+	if not waiting.has(str(slot)):
+		waiting[str(slot)] = {"death_order": waiting.size(), "dead_before_clear": 0.0}
+	state["popcorn_respawn_waiting"] = waiting
+	room_states[context.room_id] = state
+
+
+func _record_popcorn_enemy_death_legacy(root: Object, slime: Sprite2D) -> void:
 	if not _is_popcorn_respawn_room(root):
 		return
 	var room_id: StringName = StringName(root.get("current_room_id"))
@@ -1842,7 +1978,7 @@ func update_special_enemy_respawns_context(context: RoomRespawnContext, delta: f
 		return
 	var current_room_state: Dictionary = current_state
 	var current_room_timers: Dictionary = current_room_state.get("special_respawn_timers", {}) as Dictionary
-	_prepare_enemy_slot_visuals(runtime, current_room_state)
+	_prepare_enemy_slot_visuals_context(context, current_room_state)
 	var player: Sprite2D = context.player
 	var player_foot: Vector2 = runtime._actor_foot(player)
 	var chest: Sprite2D = context.chest
@@ -1856,7 +1992,7 @@ func update_special_enemy_respawns_context(context: RoomRespawnContext, delta: f
 	var did_respawn := false
 	for slot in ready_slots:
 		var timer_key := str(slot)
-		if _spawn_enemy_slot(runtime, current_room_state, slot, occupied, layout_rng, player_foot, chest_rect, true):
+		if _spawn_enemy_slot_context(context, current_room_state, slot, occupied, layout_rng, player_foot, chest_rect, true):
 			current_room_timers.erase(timer_key)
 			did_respawn = true
 		else:
@@ -1992,7 +2128,7 @@ func update_popcorn_respawns_context(context: RoomRespawnContext, delta: float) 
 		return
 
 	var runtime := context.runtime
-	_prepare_enemy_slot_visuals(runtime, state)
+	_prepare_enemy_slot_visuals_context(context, state)
 	var player: Sprite2D = context.player
 	var player_foot: Vector2 = runtime._actor_foot(player)
 	var chest: Sprite2D = context.chest
@@ -2021,7 +2157,7 @@ func update_popcorn_respawns_context(context: RoomRespawnContext, delta: float) 
 		# currently active actors.
 		spawn_positions.erase(slot)
 		spawn_positions.erase(timer_key)
-		if _spawn_enemy_slot(runtime, state, slot, occupied, layout_rng, player_foot, chest_rect, true):
+		if _spawn_enemy_slot_context(context, state, slot, occupied, layout_rng, player_foot, chest_rect, true):
 			pending.erase(timer_key)
 			did_respawn = true
 		else:
@@ -2214,6 +2350,42 @@ func _special_room_hides_enemies_context(context: RoomRespawnContext, state: Dic
 
 
 func _prepare_enemy_slot_visuals(root: Object, state: Dictionary) -> void:
+	if root is GameplayState:
+		_prepare_enemy_slot_visuals_context(ROOM_SPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), state)
+		return
+	_prepare_enemy_slot_visuals_legacy(root, state)
+
+
+func _prepare_enemy_slot_visuals_context(context: RoomRuntimeContext, state: Dictionary) -> void:
+	if context == null or not context.is_valid():
+		return
+	var runtime := context.runtime
+	var slimes := context.slimes
+	var active_variants := state.get("enemy_variants", []) as Array
+	var active_ambush := state.get("enemy_ambush", []) as Array
+	var active_scales := state.get("enemy_scales", []) as Array
+	var active_elites := state.get("enemy_elite", []) as Array
+	var signature := "%s|%s|%s|%s" % [active_variants, active_scales, active_ambush, active_elites]
+	for slot in active_variants.size():
+		if slot >= slimes.size():
+			break
+		var ambush_enabled := slot < active_ambush.size() and bool(active_ambush[slot])
+		runtime._configure_slime_variant(slimes[slot], String(active_variants[slot]))
+		slimes[slot].set_meta("encounter_scale", float(active_scales[slot]) if slot < active_scales.size() else 1.0)
+		slimes[slot].set_meta("is_elite", _is_elite_enemy_slot(state, slot))
+		runtime._configure_slime_ambush(slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled)
+	if signature == _enemy_visual_preparation_signature:
+		return
+	_enemy_visual_preparation_signature = signature
+	runtime._build_slime_direction_textures()
+	runtime._assign_slime_attack_frames()
+	runtime._assign_slime_shocked_frames()
+	runtime._assign_slime_spawn_frames()
+	if not active_variants.is_empty() and not active_scales.is_empty() and float(active_scales[0]) > 1.0:
+		prepare_boss_jump_phase_pool(runtime, String(active_variants[0]))
+
+
+func _prepare_enemy_slot_visuals_legacy(root: Object, state: Dictionary) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var active_variants := state.get("enemy_variants", []) as Array
 	var active_ambush := state.get("enemy_ambush", []) as Array
@@ -2253,6 +2425,123 @@ func _is_elite_enemy_slot(state: Dictionary, slot: int) -> bool:
 
 
 func _spawn_enemy_slot(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2, animate_spawn: bool = false) -> bool:
+	if root is GameplayState:
+		return _spawn_enemy_slot_context(ROOM_SPAWN_CONTEXT_SCRIPT.new(root as GameplayState, self), state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn)
+	return _spawn_enemy_slot_legacy(root, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn)
+
+
+func _spawn_enemy_slot_context(context: RoomRuntimeContext, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2, animate_spawn: bool = false) -> bool:
+	if context == null or not context.is_valid():
+		return false
+	var runtime := context.runtime
+	var slimes := context.slimes
+	if slime_index < 0 or slime_index >= slimes.size():
+		return false
+	var active_variants := state.get("enemy_variants", []) as Array
+	var active_levels := state.get("enemy_levels", []) as Array
+	if slime_index >= active_variants.size() or slime_index >= active_levels.size():
+		return false
+	var active_scales := state.get("enemy_scales", []) as Array
+	var spawn_positions: Dictionary
+	if state.has("enemy_spawn_positions"):
+		spawn_positions = state["enemy_spawn_positions"] as Dictionary
+	else:
+		spawn_positions = {}
+		state["enemy_spawn_positions"] = spawn_positions
+	var slime := slimes[slime_index]
+	var popcorn_flags := state.get("enemy_popcorn", []) as Array
+	var is_popcorn := slime_index < popcorn_flags.size() and bool(popcorn_flags[slime_index])
+	var popcorn_type := _popcorn_type(state, slime_index)
+	slime.set_meta("is_elite", _is_elite_enemy_slot(state, slime_index))
+	var spawn_level := int(active_levels[slime_index])
+	if is_popcorn:
+		# Recalculate on every spawn so a level-up during a run also keeps a
+		# respawning fodder slime five levels under the player.
+		spawn_level = _popcorn_enemy_level_for_runtime(runtime)
+		active_levels[slime_index] = spawn_level
+	slime.set_meta("is_popcorn", is_popcorn)
+	slime.set_meta("popcorn_type", popcorn_type)
+	var tuning: SlimeTuning = runtime.slime_tuning
+	var rng: RandomNumberGenerator = runtime.rng
+	var actor_sprites: Array[Sprite2D] = runtime.actor_sprites
+	var collision: Array[Sprite2D] = runtime.collision_sprites
+	var depth_sprites: Array[Sprite2D] = runtime.depth_sprites
+	var occluder_sprites: Array[Sprite2D] = runtime.occluder_sprites
+	var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
+	if encounter_scale > 1.0:
+		_apply_authored_boss_geometry(slime)
+	slime.set_meta("encounter_scale", encounter_scale)
+	runtime._set_actor_visual_scale(slime, Vector2.ONE)
+	runtime._apply_actor_scale(slime, false)
+	var has_saved_position := spawn_positions.has(slime_index) or spawn_positions.has(str(slime_index))
+	var spawn_position: Vector2 = spawn_positions.get(slime_index, spawn_positions.get(str(slime_index), Vector2.ZERO))
+	if not has_saved_position or not _valid_enemy_spawn_foot_context(context, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
+		spawn_position = _choose_enemy_spawn_position_context(context, slime, layout_rng, occupied)
+		spawn_positions[slime_index] = spawn_position
+	var spawn_foot := spawn_position + ACTOR_FOOT_OFFSET
+	if not _valid_enemy_spawn_foot_context(context, slime, spawn_foot, player_foot, chest_rect, occupied):
+		spawn_positions.erase(slime_index)
+		spawn_positions.erase(str(slime_index))
+		slime.visible = false
+		var failed_runtime := state.get("enemy_runtime", {}) as Dictionary
+		failed_runtime[str(slime_index)] = {"alive": false, "position": slime.global_position, "health": 0.0}
+		state["enemy_runtime"] = failed_runtime
+		actor_sprites.erase(slime)
+		collision.erase(slime)
+		depth_sprites.erase(slime)
+		occluder_sprites.erase(slime)
+		return false
+	occupied.append(spawn_foot)
+	var actor := slime as SlimeActor
+	var brain: SlimeBrain = runtime._slime_brain(slime)
+	# The spawn solver returns a world-space position because it validates against
+	# the world-space floor outline. Actors are children of the offset Actors
+	# node, so assign through global_position instead of treating that point as a
+	# local coordinate (the old path double-applied the 16:9 horizontal offset).
+	slime.global_position = spawn_position
+	if brain != null:
+		brain.start_position = slime.position
+	# Keep the slot hidden until its encounter variant, animation state, base
+	# texture, and floor shadow have all been resolved. This closes the one-frame
+	# window where a reused slot could briefly show its scene-default artwork
+	# before the recolored spawn frames take over.
+	slime.visible = false
+	slime.flip_h = false
+	runtime._apply_enemy_room_level(slime, spawn_level)
+	var max_health := float(runtime._enemy_max_health(slime))
+	if actor != null:
+		actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
+		actor.reset_runtime_state(slime.position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
+	var presenter: SlimeHealthPresenter = runtime._slime_health_presenter(slime)
+	if presenter == null:
+		return false
+	presenter.display_health = max_health
+	presenter.damage_fill_hold_timer = 0.0
+	runtime._prepare_slime_idle_visual(slime)
+	slime.visible = true
+	slime.set_meta("movement_speed_multiplier", rng.randf_range(0.75, 1.20))
+	# Bosses use the same authored attack timing as regular slimes. Their size,
+	# health pool, and jump phase provide the distinction; an extra slowdown here
+	# made the boss spend too long approaching without committing to attacks.
+	slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20))
+	runtime._set_actor_visual_scale(slime, Vector2.ONE)
+	runtime._apply_actor_scale(slime, false)
+	if not actor_sprites.has(slime):
+		actor_sprites.append(slime)
+	if not collision.has(slime):
+		collision.append(slime)
+	if not depth_sprites.has(slime):
+		depth_sprites.append(slime)
+	if not occluder_sprites.has(slime):
+		occluder_sprites.append(slime)
+	if animate_spawn and runtime._begin_slime_spawn(slime):
+		# The actor remains rendered and depth-sorted during the intro, but it is
+		# excluded from collisions and all combat queries until the final frame.
+		collision.erase(slime)
+	return true
+
+
+func _spawn_enemy_slot_legacy(root: Object, state: Dictionary, slime_index: int, occupied: Array[Vector2], layout_rng: RandomNumberGenerator, player_foot: Vector2, chest_rect: Rect2, animate_spawn: bool = false) -> bool:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	if slime_index < 0 or slime_index >= slimes.size():
 		return false
@@ -2396,7 +2685,7 @@ func reset_slimes_for_room_context(context: RoomSpawnContext) -> RoomSpawnResult
 	var spawn_seed := int(state.get("enemy_spawn_seed", String(context.room_id).hash() + 303))
 	var layout_rng := RandomNumberGenerator.new()
 	layout_rng.seed = spawn_seed
-	_prepare_enemy_slot_visuals(runtime, state)
+	_prepare_enemy_slot_visuals_context(context, state)
 	var player := runtime.player
 	var player_foot: Vector2 = runtime._actor_foot(player)
 	var chest := runtime.chest
@@ -2426,12 +2715,12 @@ func reset_slimes_for_room_context(context: RoomSpawnContext) -> RoomSpawnResult
 		if has_runtime_entry and runtime_entry.get("position") is Vector2:
 			spawn_positions[slime_index] = runtime_entry["position"]
 		var animate_spawn := (first_entry and not has_runtime_entry) or (backtrack_popcorn_pending and not has_runtime_entry and slime_index == active_variants.size() - 1)
-		if _spawn_enemy_slot(runtime, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
+		if _spawn_enemy_slot_context(context, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
 			var spawn_started: bool = animate_spawn and runtime._is_slime_spawn_locked(context.slimes[slime_index])
 			result.record_spawn(slime_index, spawn_started)
 			spawned_slots += 1
 			if has_runtime_entry:
-				_restore_enemy_runtime_state(runtime, context.slimes[slime_index], runtime_entry)
+				_restore_enemy_runtime_state_runtime(runtime, context.slimes[slime_index], runtime_entry)
 			if animate_spawn and runtime._is_slime_spawn_locked(context.slimes[slime_index]):
 				backtrack_spawn_started = backtrack_popcorn_pending
 				animated_spawn_started = true
@@ -2629,6 +2918,35 @@ func _choose_enemy_spawn_position(root: Object, slime: Sprite2D, layout_rng: Ran
 	return Vector2(INF, INF)
 
 
+func _choose_enemy_spawn_position_context(context: RoomRuntimeContext, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
+	var runtime := context.runtime
+	var area: WalkableArea = runtime.walkable_area
+	var bounds := Rect2()
+	if area != null:
+		for point in area.outline:
+			bounds = bounds.expand(point)
+	var player_foot: Vector2 = runtime._actor_foot(context.player)
+	var chest_rect: Rect2 = runtime._collision_rect(context.chest)
+	for _attempt in 96:
+		if bounds.size == Vector2.ZERO:
+			break
+		var candidate_foot := Vector2(layout_rng.randf_range(bounds.position.x, bounds.end.x), layout_rng.randf_range(bounds.position.y, bounds.end.y))
+		if _valid_enemy_spawn_foot_context(context, slime, candidate_foot, player_foot, chest_rect, occupied):
+			return candidate_foot - ACTOR_FOOT_OFFSET
+	if area != null:
+		for candidate_foot in area.points:
+			if _valid_enemy_spawn_foot_context(context, slime, candidate_foot, player_foot, chest_rect, occupied):
+				return candidate_foot - ACTOR_FOOT_OFFSET
+	var nearest_foot: Vector2 = runtime._nearest_slime_walkable_point(player_foot)
+	for radius_value in [0.0, 4.0, 8.0, 12.0, 16.0, 24.0, 32.0]:
+		var radius: float = radius_value
+		for direction_index in 16:
+			var candidate_foot: Vector2 = nearest_foot + Vector2.RIGHT.rotated(TAU * float(direction_index) / 16.0) * radius
+			if _valid_enemy_spawn_foot_context(context, slime, candidate_foot, player_foot, chest_rect, occupied):
+				return candidate_foot - ACTOR_FOOT_OFFSET
+	return Vector2(INF, INF)
+
+
 func _valid_enemy_spawn_foot(root: Object, slime: Sprite2D, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
 	if not bool(root.call("_is_slime_collision_rect_walkable_at", slime, candidate_foot)): return false
 	var collision_rect := _enemy_collision_rect_at(slime, candidate_foot)
@@ -2638,6 +2956,25 @@ func _valid_enemy_spawn_foot(root: Object, slime: Sprite2D, candidate_foot: Vect
 	if _is_enemy_spawn_near_socket(candidate_foot): return false
 	for occupied_foot in occupied:
 		if candidate_foot.distance_to(occupied_foot) < ENEMY_MIN_SPAWN_DISTANCE: return false
+	return true
+
+
+func _valid_enemy_spawn_foot_context(context: RoomRuntimeContext, slime: Sprite2D, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
+	var runtime := context.runtime
+	if not runtime._is_slime_collision_rect_walkable_at(slime, candidate_foot):
+		return false
+	var collision_rect := _enemy_collision_rect_at(slime, candidate_foot)
+	if not _is_collision_rect_walkable_context(context, collision_rect):
+		return false
+	if candidate_foot.distance_to(player_foot) < ENEMY_MIN_PLAYER_DISTANCE:
+		return false
+	if chest_rect.grow(4.0).intersects(collision_rect, false):
+		return false
+	if _is_enemy_spawn_near_socket(candidate_foot):
+		return false
+	for occupied_foot in occupied:
+		if candidate_foot.distance_to(occupied_foot) < ENEMY_MIN_SPAWN_DISTANCE:
+			return false
 	return true
 
 
@@ -2661,6 +2998,15 @@ func _is_collision_rect_walkable(root: Object, collision_rect: Rect2) -> bool:
 	var samples := [collision_rect.position, collision_rect.position + Vector2(collision_rect.size.x, 0), collision_rect.position + collision_rect.size, collision_rect.position + Vector2(0, collision_rect.size.y), collision_rect.get_center(), collision_rect.position + Vector2(collision_rect.size.x * 0.5, 0), collision_rect.position + Vector2(collision_rect.size.x, collision_rect.size.y * 0.5), collision_rect.position + Vector2(collision_rect.size.x * 0.5, collision_rect.size.y), collision_rect.position + Vector2(0, collision_rect.size.y * 0.5)]
 	for sample in samples:
 		if not bool(root.call("_is_slime_walkable_point", sample)): return false
+	return true
+
+
+func _is_collision_rect_walkable_context(context: RoomRuntimeContext, collision_rect: Rect2) -> bool:
+	var runtime := context.runtime
+	var samples := [collision_rect.position, collision_rect.position + Vector2(collision_rect.size.x, 0), collision_rect.position + collision_rect.size, collision_rect.position + Vector2(0, collision_rect.size.y), collision_rect.get_center(), collision_rect.position + Vector2(collision_rect.size.x * 0.5, 0), collision_rect.position + Vector2(collision_rect.size.x, collision_rect.size.y * 0.5), collision_rect.position + Vector2(collision_rect.size.x * 0.5, collision_rect.size.y), collision_rect.position + Vector2(0, collision_rect.size.y * 0.5)]
+	for sample in samples:
+		if not runtime._is_slime_walkable_point(sample):
+			return false
 	return true
 
 
