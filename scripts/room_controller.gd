@@ -4,6 +4,7 @@ class_name RoomController
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/room_transition_result.gd")
+const ROOM_ACTIVATION_RESULT_SCRIPT = preload("res://scripts/room_activation_result.gd")
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(room_id: StringName)
@@ -669,6 +670,35 @@ func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 		return center + socket.arrival_offset
 	var marker := socket.spawn_marker()
 	return marker.global_position if marker != null else root.get("player_start_position")
+
+
+func activate_room(root: Object) -> RoomActivationResult:
+	var result := ROOM_ACTIVATION_RESULT_SCRIPT.new() as RoomActivationResult
+	if root == null:
+		result.reject(RoomActivationResult.Status.MISSING_ROOT)
+		return result
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	if graph == null:
+		result.reject(RoomActivationResult.Status.INVALID_GRAPH)
+		return result
+	result.room_id = StringName(root.get("current_room_id"))
+	var room := graph.get_room(result.room_id)
+	if room == null:
+		result.reject(RoomActivationResult.Status.MISSING_ROOM)
+		return result
+	result.room_type = StringName(root.get("current_room_type"))
+	result.state = (room_states.get(result.room_id, {}) as Dictionary).duplicate(true)
+	if result.state.is_empty():
+		result.reject(RoomActivationResult.Status.MISSING_STATE)
+		return result
+	apply_state(root)
+	result.state = (room_states.get(result.room_id, {}) as Dictionary).duplicate(true)
+	result.configured_enemy_slots = (result.state.get("enemy_variants", []) as Array).size()
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	for slime in slimes:
+		if slime.visible:
+			result.visible_enemy_slots += 1
+	return result
 
 
 func apply_state(root: Object) -> void:
