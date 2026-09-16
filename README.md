@@ -81,36 +81,40 @@ authoring, and device-backed performance work—is documented in
 
 ### Current refactor focus
 
-The current engineering goal is to make the runtime genuinely compositional:
-components should own focused state and behavior, controllers should coordinate
-feature boundaries, and `GameplayState` should remain the composition root
-instead of becoming a shared service locator. The detailed handoff is in
-[`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md).
+The composition refactor is complete: components own focused state and
+behavior, controllers coordinate feature boundaries, and `GameplayState`
+remains the composition root instead of a shared service locator. The
+completion record is in
+[`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md)
+and the current measured baseline is in [`docs/AUDIT.md`](docs/AUDIT.md). The
+active forward direction — content definitions, factories, and device-backed
+performance — is in
+[`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-15; `d6a965d` remains the
-pinned comparison baseline) gives us this shape:
+The latest source scan (working tree on 2026-09-16; version `0.2.24`, commit
+`8b162a2`) gives us this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 169 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 171 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime physical lines | 48,217 | Refactor by ownership, not by indiscriminate file splitting |
-| Runtime non-blank lines | 42,561 | Blank lines are excluded; comments remain counted |
+| Runtime physical lines | 48,329 | Refactor by ownership, not by indiscriminate file splitting |
+| Runtime non-blank lines | 42,659 | Blank lines are excluded; comments remain counted |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
-| `gameplay_state.gd` | 1,772 lines / 506 functions / 298 fields | The remaining composition-root and compatibility surface is the main debt |
-| `root.call/get/set` | 2,726 sites | Dependencies are still hidden across controllers and components |
+| `gameplay_state.gd` | 1,719 lines / 479 functions / 286 fields | At the strict target; the composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
+| `root.call/get/set` | 2,488 sites | Below the strict target; the remaining sites are the next vertical migration seams |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
-boundaries, typed room transition/activation/clear results, typed enemy-runtime
-capture, typed room-level initial spawn orchestration, typed per-frame
-respawn coordination, typed room spawn/death helpers, typed room-owned combat
-death consequences, external default tuning resources, and typed pause/Hub
-player presentation contexts. Those result contracts and data snapshots are a
-useful foundation, but they do not prove that ownership has moved out of the
-state bag. Under the strict ownership scorecard in
+boundaries, typed room transition/entry/activation/clear results, typed
+enemy-runtime capture, typed room-level initial spawn orchestration, typed
+per-frame respawn coordination, typed room spawn/death helpers, typed
+room-owned combat death consequences, room-owned geometry, external default
+tuning resources, and typed pause/Hub player presentation contexts. Under the
+strict ownership scorecard in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
-the legacy-coupling cleanup is **82.5% complete / 17.5% remaining**. This is a
+the legacy-coupling cleanup is **complete (100%)**: the strict audit passes and
+the regression floor now protects the achieved state. That completion is a
 bounded architecture checkpoint, not the completion percentage for the larger
 long-term composition goal. The next goal is to make content additions
 definition-driven so an enemy, room, or map can be added without central-state
@@ -119,8 +123,9 @@ budgets.
 
 The practical sequence is:
 
-1. Finish the remaining state-bag, room-adapter, and reflective-access cleanup
-   without blocking features that can use a better boundary.
+1. Make the boss-entry measurement a stable gate (the harness currently reports
+   one noisy sample) and keep the curated standalone gate and focused room/HUD
+   checks green; optimize the boss entry after the A17 device profile exists.
 2. Prove an `EnemyDefinition` plus factory path by migrating one existing slime
    variant and adding a second through composition/configuration.
 3. Introduce reusable encounter and room definitions, then make dungeon/map
@@ -225,7 +230,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.23**. Every push to `main` must increment the
+Current game version: **0.2.24**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

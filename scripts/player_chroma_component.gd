@@ -28,9 +28,9 @@ enum AbilityMode {
 	BOUND_WEAKENED,
 }
 
-const MAX_CHROMA := 100
-const CHROMA_PICKUP_VALUE := 20
-const ELEMENTAL_ABILITY_COST := 10
+@export var max_chroma := 100
+@export var chroma_pickup_value := 20
+@export var elemental_ability_cost := 10
 
 var current_aspect: Aspect = Aspect.NONE
 var current_chroma := 0
@@ -66,7 +66,7 @@ func attune(aspect: Aspect) -> bool:
 	if not _is_valid_elemental_aspect(aspect):
 		return false
 	_set_aspect(aspect)
-	_set_chroma(MAX_CHROMA)
+	_set_chroma(max_chroma)
 	return true
 
 
@@ -86,32 +86,32 @@ func change_flame(flame: StringName) -> bool:
 func refill_chroma() -> bool:
 	if current_aspect == Aspect.NONE and bound_aspect != Aspect.NONE:
 		_set_aspect(bound_aspect)
-	if current_aspect == Aspect.NONE or current_chroma >= MAX_CHROMA:
+	if current_aspect == Aspect.NONE or current_chroma >= max_chroma:
 		return false
-	_set_chroma(MAX_CHROMA)
+	_set_chroma(max_chroma)
 	return true
 
 
 
-func restore_neutral_chroma(value: int = CHROMA_PICKUP_VALUE) -> bool:
+func restore_neutral_chroma(value: int = chroma_pickup_value) -> bool:
 	# Neutral Chroma is a resource even while the player is Gray. It fills the
 	# bar without inventing or changing an elemental identity. Temporary flame
 	# and fusion aspects remain active until Chroma depletion resolves fallback.
 	var restore_amount := maxi(value, 0)
-	if restore_amount <= 0 or current_chroma >= MAX_CHROMA:
+	if restore_amount <= 0 or current_chroma >= max_chroma:
 		return false
-	_set_chroma(mini(current_chroma + restore_amount, MAX_CHROMA))
+	_set_chroma(mini(current_chroma + restore_amount, max_chroma))
 	return true
 
 
 func can_use_elemental_ability() -> bool:
-	return current_aspect != Aspect.NONE and current_chroma >= ELEMENTAL_ABILITY_COST
+	return current_aspect != Aspect.NONE and current_chroma >= elemental_ability_cost
 
 
 func spend_elemental_ability() -> bool:
 	if not can_use_elemental_ability():
 		return false
-	return spend_chroma(ELEMENTAL_ABILITY_COST)
+	return spend_chroma(elemental_ability_cost)
 
 
 func can_spend_chroma(amount: int) -> bool:
@@ -193,7 +193,7 @@ func aspect_for_flame(flame: StringName) -> Aspect:
 func ability_mode() -> AbilityMode:
 	if current_aspect == Aspect.NONE:
 		return AbilityMode.GRAY
-	if current_chroma >= ELEMENTAL_ABILITY_COST:
+	if current_chroma >= elemental_ability_cost:
 		return AbilityMode.ELEMENTAL
 	if current_is_bound() and current_chroma == 0:
 		return AbilityMode.BOUND_WEAKENED
@@ -273,14 +273,14 @@ func _set_aspect(next_aspect: Aspect) -> void:
 
 
 func _set_chroma(next_chroma: int) -> void:
-	var clamped := clampi(next_chroma, 0, MAX_CHROMA)
+	var clamped := clampi(next_chroma, 0, max_chroma)
 	# Triangle spends are 10-point actions while neutral pickups restore 20, so
 	# Chroma intentionally is not restricted to the old 25-point grid.
 	if current_chroma == clamped:
 		return
 	var previous_mode := ability_mode()
 	current_chroma = clamped
-	chroma_changed.emit(current_chroma, MAX_CHROMA)
+	chroma_changed.emit(current_chroma, max_chroma)
 	var next_mode := ability_mode()
 	if previous_mode != next_mode:
 		ability_mode_changed.emit(next_mode)

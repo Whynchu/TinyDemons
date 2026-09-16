@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.23"
+const GAME_VERSION := "0.2.24"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2829,7 +2829,7 @@ func _update_player_card(root: Object, pixel_texture: Callable, texts: Array[Spr
 	var display_name := PlayerProfile.normalize_player_name(profile.player_name)
 	var progression := root.get("progression_tuning") as ProgressionTuning
 	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression)
-	var values := [display_name, element, "LV %d" % profile.level, "XP %d/%d" % [profile.xp, xp_required], "HP %d/%d" % [roundi(health), roundi(max_health)], "CHR %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "READY"]
+	var values := [display_name, element, "LV %d" % profile.level, "XP %d/%d" % [profile.xp, xp_required], "HP %d/%d" % [roundi(health), roundi(max_health)], "CHR %d/%d" % [chroma, int(chroma_component.max_chroma) if chroma_component != null else 0], "READY"]
 	for index in texts.size():
 		var label: String = str(values[index]) if index < values.size() else ""
 		var label_color := Color8(255, 205, 117) if index == 3 else Color.WHITE
@@ -2855,7 +2855,7 @@ func _update_player_card_context(context: MenuPlayerContext, pixel_texture: Call
 		"LV %d" % profile.level,
 		"XP %d/%d" % [profile.xp, xp_required],
 		"HP %d/%d" % [health, max_health],
-		"CHR %d/%d" % [context.chroma(), PlayerChromaComponent.MAX_CHROMA],
+		"CHR %d/%d" % [context.chroma(), context.max_chroma()],
 		"READY",
 	]
 	for index in texts.size():
@@ -2883,7 +2883,7 @@ func _update_hub_status_page(root: Object, pixel_texture: Callable, profile: Pla
 	var chroma := int(chroma_component.get("current_chroma")) if chroma_component != null else 0
 	var progression := root.get("progression_tuning") as ProgressionTuning
 	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression)
-	var left := ["LV ....... %d" % profile.level, "XP ....... %d/%d" % [profile.xp, xp_required], "HP ....... %d/%d" % [hp, max_hp], "CHROMA ... %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR ...... %d" % roundi(snapshot.strength), "AGI ...... %d" % roundi(snapshot.agi), "VIT ...... %d" % roundi(snapshot.vit), "INT ...... %d" % roundi(snapshot.intelligence), "MND ...... %d" % roundi(snapshot.mnd), "DEF ...... %d" % roundi(snapshot.def)]
+	var left := ["LV ....... %d" % profile.level, "XP ....... %d/%d" % [profile.xp, xp_required], "HP ....... %d/%d" % [hp, max_hp], "CHROMA ... %d/%d" % [chroma, int(chroma_component.max_chroma) if chroma_component != null else 0], "STR ...... %d" % roundi(snapshot.strength), "AGI ...... %d" % roundi(snapshot.agi), "VIT ...... %d" % roundi(snapshot.vit), "INT ...... %d" % roundi(snapshot.intelligence), "MND ...... %d" % roundi(snapshot.mnd), "DEF ...... %d" % roundi(snapshot.def)]
 	var right := ["P.ATK .... %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .... %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .... %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .... %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV ...... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "RECOVERY . %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0)]
 	for index in left.size():
 		hub_status_texts[index].texture = pixel_texture.call(left[index], Color8(255, 205, 117) if index == 1 else Color.WHITE) as Texture2D
@@ -3004,7 +3004,7 @@ func _update_pause_player_info(root: Object, pixel_texture: Callable) -> void:
 		"HP",
 		"%d/%d" % [health, max_health],
 		"CHR",
-		"%d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA],
+		"%d/%d" % [chroma, int(chroma_component.max_chroma) if chroma_component != null else 0],
 		"LV %d" % profile.level,
 	]
 	for index in pause_player_card_texts.size():
@@ -3033,7 +3033,7 @@ func _update_pause_player_info_context(context: MenuPlayerContext, pixel_texture
 		"HP",
 		"%d/%d" % [health, max_health],
 		"CHR",
-		"%d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA],
+		"%d/%d" % [chroma, context.max_chroma()],
 		"LV %d" % profile.level,
 	]
 	for index in pause_player_card_texts.size():
@@ -3155,7 +3155,7 @@ func _update_pause_status(root: Object, pixel_texture: Callable) -> void:
 	var xp := profile.xp if profile != null else 0
 	var xp_required := PlayerProfile.xp_required_for_level(profile.level, progression) if profile != null else 0
 	var values := [
-		"LV ...... %d" % (profile.level if profile != null else 0), "XP ...... %d/%d" % [xp, xp_required], "HP ...... %d/%d" % [roundi(health), roundi(max_health)], "CHROMA .. %d/%d" % [chroma, PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
+		"LV ...... %d" % (profile.level if profile != null else 0), "XP ...... %d/%d" % [xp, xp_required], "HP ...... %d/%d" % [roundi(health), roundi(max_health)], "CHROMA .. %d/%d" % [chroma, int(chroma_component.max_chroma) if chroma_component != null else 0], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
 		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
 	]
 	for index in mini(values.size(), pause_status_texts.size()):
@@ -3174,7 +3174,7 @@ func _update_pause_status_context(context: MenuPlayerContext, pixel_texture: Cal
 	var max_health := context.max_health()
 	var xp_required := PlayerProfile.xp_required_for_level(profile.level, context.progression_tuning)
 	var values := [
-		"LV ...... %d" % profile.level, "XP ...... %d/%d" % [profile.xp, xp_required], "HP ...... %d/%d" % [health, max_health], "CHROMA .. %d/%d" % [context.chroma(), PlayerChromaComponent.MAX_CHROMA], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
+		"LV ...... %d" % profile.level, "XP ...... %d/%d" % [profile.xp, xp_required], "HP ...... %d/%d" % [health, max_health], "CHROMA .. %d/%d" % [context.chroma(), context.max_chroma()], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
 		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
 	]
 	for index in mini(values.size(), pause_status_texts.size()):

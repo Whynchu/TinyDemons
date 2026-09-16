@@ -96,7 +96,7 @@ func update_charge_aura_from_root(root: Object, delta: float) -> void:
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	var player := root.get("player") as Sprite2D
 	var chroma := root.get("player_chroma_component") as Node
-	var beam_available: bool = attack != null and attack.sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", PlayerAttackComponent.SWORD_BEAM_CHROMA_COST))
+	var beam_available: bool = attack != null and attack.sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", attack.sword_beam_chroma_cost))
 	if attack == null or player == null or not is_instance_valid(player) or not attack.is_charging() or not beam_available:
 		if charge_aura_active:
 			clear_effect_particles(CHARGE_AURA_TAG)

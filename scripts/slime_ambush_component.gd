@@ -4,17 +4,22 @@ class_name SlimeAmbushComponent
 var active := false
 var hidden := false
 var reveal_timer := 0.0
+## Editor-facing defaults used when configure() does not supply explicit values.
+@export var default_reveal_window := 0.5
+@export var default_block_stun := 1.0
+@export var default_hit_extension := 0.5
+@export var hidden_modulate := Color(0.55, 0.55, 0.62, 0.5)
+
 var reveal_window := 0.5
 var block_stun := 1.0
 var hit_extension := 0.5
-var hidden_modulate := Color(0.55, 0.55, 0.62, 0.5)
 
 
-func configure(active_value: bool, reveal_window_value: float, block_stun_value: float, hit_extension_value: float) -> void:
+func configure(active_value: bool, reveal_window_value: float = -1.0, block_stun_value: float = -1.0, hit_extension_value: float = -1.0) -> void:
 	active = active_value
-	reveal_window = reveal_window_value
-	block_stun = block_stun_value
-	hit_extension = hit_extension_value
+	reveal_window = maxf(default_reveal_window if reveal_window_value < 0.0 else reveal_window_value, 0.0)
+	block_stun = maxf(default_block_stun if block_stun_value < 0.0 else block_stun_value, 0.0)
+	hit_extension = maxf(default_hit_extension if hit_extension_value < 0.0 else hit_extension_value, 0.0)
 
 
 func is_hidden() -> bool:

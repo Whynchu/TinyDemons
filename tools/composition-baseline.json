@@ -1,7 +1,7 @@
 {
-  "root_accesses": 2726,
-  "gameplay_state_lines": 1772,
-  "gameplay_state_fields": 298,
+  "root_accesses": 2488,
+  "gameplay_state_lines": 1719,
+  "gameplay_state_fields": 286,
   "room_controller_lines": 2253,
   "runtime_refs": 0,
   "legacy_total": 0,
@@ -24,5 +24,13 @@
     "runtime_refs_max": 0,
     "legacy_pairs_max": 0,
     "transitional_contexts_max": 0
+  },
+  "editor_composition": {
+    "component_total": 20,
+    "component_blind": 13,
+    "component_configured": 11,
+    "component_both": 11,
+    "definition_total": 17,
+    "definition_editable": 6
   }
 }

@@ -2,12 +2,14 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-15
+Updated: 2026-09-16
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
-The baseline being preserved is version `0.2.00`; the measured state and
-preservation rules are in [`AUDIT.md`](AUDIT.md).
+The baseline being preserved is version `0.2.00`; the measured current state
+(version `0.2.24`) and preservation rules are in [`AUDIT.md`](AUDIT.md). The
+`0.2.00` audit is archived in Git history and its key measurements are retained
+in [`AUDIT.md`](AUDIT.md) section 3.2.
 
 ## Start here
 
@@ -26,9 +28,12 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
    rules.
 10. [`FEATURE_MAP.md`](FEATURE_MAP.md) — first owner to inspect for each feature.
 11. [`composition-refactor-analysis.md`](composition-refactor-analysis.md) —
-    component/composition refactor measurements and agent handoff.
-12. [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) —
-    long-term content composition, authoring, and performance direction.
+     historical record of the completed legacy-coupling cleanup and agent handoff.
+ 12. [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) —
+     active long-term content composition, authoring, and performance direction.
+ 13. [`component-composition-design.md`](component-composition-design.md) —
+     approved component contract, wiring rules, and the interchangeable-entity
+     proof sequence.
 13. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
     export, and function-location index.
 
@@ -50,7 +55,8 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 | Should a test exist or block release? | [`verification-surface-audit.md`](verification-surface-audit.md) | target and runtime evidence |
 | How do I add content? | [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) | feature-specific contracts |
 | What makes a change difficult? | [`engineering-friction-audit.md`](engineering-friction-audit.md) | source files and detailed audits |
-| How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | measurements, target shape, and handoff sequence |
+| How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | historical completion record; the strict scorecard is 100% and the regression floor is re-baselined |
+| What is the component contract for reusable entity behavior? | [`component-composition-design.md`](component-composition-design.md) | wiring rules, adapter refinement, and the interchangeable-entity proof |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 
 ## Document lifecycle

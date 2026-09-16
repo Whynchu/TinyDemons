@@ -1132,7 +1132,7 @@ func _can_interact_with_fire() -> bool:
 	var current_flame := _current_player_flame()
 	if current_flame == target_flame:
 		var health_full := player_health_component == null or player_health_component.current_health >= player_health_component.maximum_health
-		var chroma_full := player_chroma_component == null or int(player_chroma_component.get("current_chroma")) >= PlayerChromaComponent.MAX_CHROMA
+		var chroma_full := player_chroma_component == null or int(player_chroma_component.get("current_chroma")) >= player_chroma_component.max_chroma
 		if health_full and chroma_full:
 			# Do not expose a paid interaction when the flame would have no effect.
 			return false

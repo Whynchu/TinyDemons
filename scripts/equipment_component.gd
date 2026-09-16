@@ -42,6 +42,14 @@ var active_effects: Dictionary = {}
 var elemental_resonances: Array[Dictionary] = []
 var elemental_wards: Array[Dictionary] = []
 
+## Editor-facing default loadout names used by equip_default_loadout().
+@export var default_weapon_name := "BASIC SWORD"
+@export var default_head_name := "BASIC HOOD"
+@export var default_body_name := "BASIC TUNIC"
+@export var default_arm_name := "BASIC WRAPS"
+@export var default_shield_name := "NO SHIELD"
+@export var default_accessory_name := "BASIC CHARM"
+
 var weapon_name := "BASIC SWORD"
 var head_name := "BASIC HOOD"
 var body_name := "BASIC TUNIC"
@@ -125,12 +133,12 @@ func _reset_runtime_state() -> void:
 	elemental_resonances.clear()
 	elemental_wards.clear()
 	equipped_transmutations.clear()
-	weapon_name = "BASIC SWORD"
-	head_name = "BASIC HOOD"
-	body_name = "BASIC TUNIC"
-	arm_name = "BASIC WRAPS"
-	shield_name = "NO SHIELD"
-	accessory_name = "BASIC CHARM"
+	weapon_name = default_weapon_name
+	head_name = default_head_name
+	body_name = default_body_name
+	arm_name = default_arm_name
+	shield_name = default_shield_name
+	accessory_name = default_accessory_name
 
 
 func _apply_equipped_instance(slot: StringName, instance: ItemInstance, items: ItemCatalog) -> void:

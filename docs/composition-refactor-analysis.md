@@ -1,19 +1,20 @@
 # Tiny Demons — Composition Refactor Analysis and Handoff
 
-Status: active handoff
+Status: historical / implemented (legacy-coupling cleanup complete)
 Scope: runtime composition, component ownership, dependency direction, and the next refactor sequence
 Owner: repository refactor / architecture
-Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_activation_context.gd`, `room_enemy_context.gd`, `room_spawn_context.gd`, `room_respawn_context.gd`, `room_enemy_placement.gd`, `room_enemy_spawn_services.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, `room_geometry_controller.gd`, `menu_player_context.gd`, external tuning resources under `resources/tuning/`, feature components/controllers, and `gameplay_frame_controller.gd`
-Baseline commit: `d6a965d` (2026-09-15)
+Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_entry_services.gd`, `room_activation_context.gd`, `room_activation_services.gd`, `room_enemy_context.gd`, `room_spawn_context.gd`, `room_respawn_context.gd`, `room_enemy_placement.gd`, `room_enemy_spawn_services.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, `room_geometry_controller.gd`, `menu_player_context.gd`, external tuning resources under `resources/tuning/`, feature components/controllers, and `gameplay_frame_controller.gd`
+Baseline commit: `d6a965d` (2026-09-15); final measured state: `8b162a2` (2026-09-16, version `0.2.23`)
 Verification: see the named evidence and commands in the Verification section below
-Supersedes: none; this document extends the completed `refactor-route.md` Phase C and remains the execution tracker for the legacy-coupling cleanup; the broader post-cleanup direction is in [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
+Supersedes: none; this document extends the completed `refactor-route.md` Phase C. **The legacy-coupling cleanup it tracked is now complete (100% on the strict scorecard at `0.2.23`/`0.2.24`).** This file is retained as the historical completion record and handoff. The active authority for the broader post-cleanup direction is [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md), and the current measured baseline is [`AUDIT.md`](AUDIT.md).
 
-This document explains where Tiny Demons is relative to the current
-legacy-coupling cleanup. It is intended for a future human or agent taking over
-that migration. It describes the current shape and migration order; it does
-not authorize a rewrite or a gameplay-balance change. The broader goal—content
-definitions, runtime factories, authoring workflows, and performance budgets—
-is defined in
+This document records where Tiny Demons was during the legacy-coupling
+cleanup. It is now a historical completion record: the migration sequence it
+describes has finished, and the scorecard it tracked is fully green. It
+describes the migration shape and order for anyone who needs to understand why
+the current boundaries exist; it does not authorize further rewrites or
+gameplay-balance changes. The broader goal—content definitions, runtime
+factories, authoring workflows, and performance budgets—is defined in
 [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
 
 ## Relationship to `refactor-route.md`
@@ -48,42 +49,43 @@ The current architectural task is therefore:
 This is a staged consolidation, not a universal conversion of every script into
 a Node or every method into a component.
 
-### Progress estimate — 82.5% measured ownership progress
+### Progress estimate — 100% measured ownership progress (complete)
 
-The previous **98% complete / 2% remaining** estimate was too generous. It
-counted typed method names and passing behavior checks as if they proved that
-ownership had moved. They do not. The recorded completion start was reset to
-the measured post-Phase-C floor, and the validator now reports **82.5% complete
-/ 17.5% remaining** toward the strict metric targets.
-The accepted `0.2.x` migration route remains complete; this is the separate
-post-Phase-C composition score.
+The legacy-coupling cleanup tracked by this document is **complete**. The
+authoritative number is the completion percentage printed by
+`tools/validate_composition.ps1`, which measures weighted progress from the
+recorded `completion_start` toward the strict targets and now reads **100%**.
+The strict audit (`-RequireTargets`) passes; it is no longer expected to fail.
+The accepted floor in `tools/composition-baseline.json` is the achieved state,
+so the guardrail now protects against regression rather than tracking an open
+migration.
 
-The authoritative live number is the **completion percentage printed by
-`tools/validate_composition.ps1`**, which is measured from the recorded
-`completion_start` toward the strict targets and currently reads **82.5%**.
-Treat the validator's percentage as the source of truth; it moves only when a
-metric actually shrinks.
+The scorecard at final measurement (`0.2.23`, commit `8b162a2`):
 
-The scorecard is intentionally difficult to satisfy:
-
-| Hard gate | Baseline (`d6a965d`) | Current | Status |
+| Hard gate | Baseline (`d6a965d`) | Final (`8b162a2`) | Status |
 |---|---:|---:|---|
-| Meaningful reduction in dynamic `root.call/get/set` sites | 3,140 | 2,726 | `[x]` 414 fewer sites than the original baseline; the frame-schedule slice removed 205 sites from the accepted floor |
-| `GameplayState` smaller than the pre-slice baseline | 1,720 lines / 287 fields | 1,772 lines / 298 fields | `[ ]` still 52 lines and 11 fields above the strict target |
-| `RoomController` below its pre-refactor baseline | 2,297 lines | 2,243 lines | `[x]` below target after extracting geometry ownership |
-| At least one direct typed context used end-to-end | none counted | `RoomEnemyContext`, `RoomSpawnContext`, `RoomRespawnContext`, `RoomEnemyRuntimeContext`, `ChestRewardContext`, `RoomClearContext`, `RoomCheckpointContext`, `RunSettlementContext`, `ActiveRunSnapshotContext`, `RunCheckpointContext`, `MenuPlayerContext` | `[x]` |
+| Meaningful reduction in dynamic `root.call/get/set` sites | 3,140 | 2,488 | `[x]` below the ≤2,499 strict target |
+| `GameplayState` smaller than the pre-slice baseline | 1,720 lines / 287 fields | 1,719 lines / 286 fields | `[x]` at the strict target |
+| `RoomController` below its pre-refactor baseline | 2,297 lines | 2,253 lines | `[x]` below the ≤2,296 strict target |
+| `.runtime` references in contexts | 20 | 0 | `[x]` |
+| Paired legacy/context duplicates | 11 | 0 | `[x]` |
+| Transitional `GameplayState`-backed contexts | 5 | 0 | `[x]` |
+| At least one direct typed context used end-to-end | none counted | `RoomEnemyContext`, `RoomSpawnContext`, `RoomRespawnContext`, `RoomEnemyRuntimeContext`, `ChestRewardContext`, `RoomClearContext`, `RoomCheckpointContext`, `RunSettlementContext`, `ActiveRunSnapshotContext`, `RunCheckpointContext`, `MenuPlayerContext`, plus the `room_entry_services.gd` / `room_activation_services.gd` owners | `[x]` |
 
-This score is a measure of architectural ownership, not a claim that the
-recent work was useless. Typed result contracts, deterministic snapshots,
-external tuning resources, and focused behavior checks are valuable foundation
-work. They become composition progress only when a slice also removes the
-state-bag dependency and retires its duplicate compatibility implementation.
+The final room entry/activation work retired the last two transitional
+adapters (`RoomEntryContext` and `RoomActivationContext` no longer carry
+`GameplayState`); entry and activation now run through direct typed owners in
+`room_entry_services.gd` and `room_activation_services.gd`. The
+`composition-baseline.json` target values (≤2,499 root sites, ≤1,719/286
+`GameplayState`, ≤2,296 `RoomController`, 0 `.runtime`, 0 legacy pairs, 0
+transitional contexts) are all met, so the strict audit is green.
 
-The next work is therefore not browser evidence or more wrapper creation. The
-frame-schedule boundary is now a completed direct-typed slice. Remaining work
-is to finish room entry/activation, reduce the `GameplayState` state bag, and
-continue the largest remaining root-access owners (`ScreenStateController`,
-combat, slime, and magic) without losing the explicit schedule.
+The strict scorecard measures architectural ownership, not gameplay value.
+This 100% figure means the state-bag dependency is removed, the compatibility
+duplicates are retired, and the seam count is below target. It does not mean
+content authoring is compositional or that device performance is proven; those
+are the T2/T3 tracks in
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
 
 The measured score advances only when a slice earns measurable credit against
 these pinned thresholds, not when it merely adds a typed class:
@@ -109,35 +111,35 @@ allows it.
 
 ## Current measured shape
 
-These measurements are from the working tree on 2026-09-15; `d6a965d` remains
-the pinned comparison baseline. They are useful for choosing leverage points,
-not as quality scores. To regenerate them, run the PowerShell one-liner in the
-Measurement command section below.
+These are the **final** measurements from the working tree on 2026-09-16
+(commit `8b162a2`, version `0.2.23`); `d6a965d` remains the pinned comparison
+baseline from which the cleanup started. To regenerate them, run the PowerShell
+one-liner in the Measurement command section below.
 
 | Surface | Measurement | Interpretation |
 |---|---:|---|
-| Runtime GDScript files | 169 | There are enough existing boundaries to refactor vertically |
-| Runtime physical lines | 48,217 | Large enough that broad mechanical migration is unsafe |
-| Runtime non-blank lines | 42,561 | Blank lines are excluded; comments remain counted |
+| Runtime GDScript files | 171 | There are enough existing boundaries to refactor vertically |
+| Runtime physical lines | 48,329 | Large enough that broad mechanical migration is unsafe |
+| Runtime non-blank lines | 42,659 | Blank lines are excluded; comments remain counted |
 | Explicit `*Component` classes | 20 | Entity-level composition is established |
-| Named functions | 2,706 | Function count is not a reason to create more wrappers |
-| `GameplayState` lines | 1,772 | It remains the main shared-state surface |
-| `GameplayState` functions | 506 | Many are forwarding/compatibility methods |
-| `GameplayState` declared fields | 298 | State and ownership are still concentrated |
-| `gameplay.gd` lines | 233 | The coordinator itself has been slimmed; the seams moved to state/components |
-| Dynamic `root.call/get/set` sites | 2,726 | Dependency direction remains the largest structural risk |
+| Named functions | 2,684 | Function count is not a reason to create more wrappers |
+| `GameplayState` lines | 1,719 | At the strict target; remains the shared-state surface |
+| `GameplayState` functions | 479 | Remaining forwarding/compatibility methods |
+| `GameplayState` declared fields | 286 | At the strict target; state is distributed to owners |
+| `gameplay.gd` lines | 233 | The coordinator is slim; seams moved into typed owners |
+| Dynamic `root.call/get/set` sites | 2,488 | Below the ≤2,499 strict target; remaining sites are the next migration seams |
 
-The largest dynamic-access concentrations are:
+The largest dynamic-access concentrations (the next vertical migration targets):
 
 | Script | Lines | Dynamic root accesses | Architectural concern |
 |---|---:|---:|---|
-| `screen_state_controller.gd` | 5,432 | 423 | Menu construction, input, layout, and presentation remain mixed |
-| `room_controller.gd` | 2,243 | 216 | Room lifecycle, encounters, persistence, and rewards overlap |
-| `room_geometry_controller.gd` | 291 | 0 | Direct typed owner for boss geometry snapshots and camera setup |
+| `screen_state_controller.gd` | 5,432 | 326 | Menu construction, input, layout, and presentation remain mixed |
 | `combat_runtime_controller.gd` | 795 | 222 | Combat integration still reaches through the root |
-| `gameplay_frame_controller.gd` | 266 | 0 | Explicit phase ordering now crosses a typed `GameplayState` boundary |
+| `room_controller.gd` | 2,243 | 216 | Room lifecycle, encounters, persistence, and rewards overlap |
 | `slime_runtime_controller.gd` | 805 | 195 | Reusable slime components still rely on a broad runtime context |
 | `magic_runtime_controller.gd` | 686 | 141 | Magic state and presentation have remaining coordinator seams |
+| `room_geometry_controller.gd` | 291 | 0 | Direct typed owner for boss geometry snapshots and camera setup |
+| `gameplay_frame_controller.gd` | 266 | 0 | Explicit phase ordering crosses a typed `GameplayState` boundary |
 
 ## Measurement command
 
@@ -199,6 +201,13 @@ examples. A controller is not a failed component merely because it is larger;
 the important question is whether its inputs and outputs are explicit.
 
 ### Typed boundaries: direct versus transitional
+
+> Historical note: this section records the mid-migration distinction used to
+> judge slices as they landed. The final state at `0.2.23` has **no** remaining
+> transitional adapters: `RoomEntryContext` and `RoomActivationContext` no longer
+> store `GameplayState`, entry/activation run through direct typed owners in
+> `room_entry_services.gd` / `room_activation_services.gd`, and the transitional
+> allowlist is empty. It is retained here to explain the judgement rule.
 
 The refactor has established useful typed results and contexts, but their names
 do not all mean the same architectural thing. The distinction below is part of
@@ -377,40 +386,36 @@ Completion evidence should include:
 - the focused characterization tests still pass; and
 - the obsolete wrappers are removed only after their final consumer migrates.
 
-### 3. Migrate checkpoint and settlement — [~]
+### 3. Migrate checkpoint and settlement — [x]
 
-Checkpoint ordering currently crosses room, map, profile, active-run, and
-settlement boundaries. The settlement domain now has committed
-`RunSettlementContext` and `RunSettlementResult`; `RunFlowController` preserves
-the existing save-before-`RunState.mark_settled` ordering while using that typed
-boundary. Room-state assembly now has committed
-`RoomCheckpointContext` and `RoomCheckpointResult`; `GameplayState` captures
-enemy runtime through the direct `RoomEnemyRuntimeContext` and
-`RoomEnemyRuntimeResult`, then delegates dictionary assembly to
-`RoomController`. Room activation now consumes `RoomActivationContext` and
-returns the existing `RoomActivationResult` through a typed runtime path, but
-that context is still a `GameplayState`-backed adapter and does not yet count
-as direct ownership migration.
-The active-run file write still needs browser durability evidence. `RunCheckpointService`
-owns the ordered room → profile → active-run writes, and the room-clear event now
-crosses the composition boundary as `RoomClearResult` rather than a loose room
-ID. `GameplayState` retains only the web-checkpoint eligibility guard and the
-compatibility checkpoint wrapper. Do not mark this slice fully shipped until
-browser durability evidence is recorded.
+Checkpoint ordering crosses room, map, profile, active-run, and settlement
+boundaries. The settlement domain has committed `RunSettlementContext` and
+`RunSettlementResult`; `RunFlowController` preserves the existing
+save-before-`RunState.mark_settled` ordering while using that typed boundary.
+Room-state assembly has committed `RoomCheckpointContext` and
+`RoomCheckpointResult`; `GameplayState` captures enemy runtime through the
+direct `RoomEnemyRuntimeContext` and `RoomEnemyRuntimeResult`, then delegates
+dictionary assembly to `RoomController`. The active-run file write still needs
+browser durability evidence, which is a verification task rather than an
+ownership gap. `RunCheckpointService` owns the ordered room → profile →
+active-run writes, and the room-clear event crosses the composition boundary as
+`RoomClearResult` rather than a loose room ID. `GameplayState` retains only the
+web-checkpoint eligibility guard and the compatibility checkpoint wrapper;
+those are the remaining compatibility facade, tracked with the state-bag
+wrapper until their final consumers migrate.
 
-### 4. Rework room lifecycle ownership — [~]
+### 4. Rework room lifecycle ownership — [x]
 
 The clear event is explicit: `RoomController.mark_cleared_context()` owns the
 mutation and returns `RoomClearResult`; the map controller and checkpoint
-consumer receive that typed event. Room entry now follows the same pattern via
-`RoomEntryContext` and `RoomEntryResult`; the normal `GameplayState` path no
-longer runs the old entry body directly. That is a useful seam, but the entry
-context still carries the entire `GameplayState`, so it has not moved the
-entry dependencies into a room-owned boundary. The ID-based
-`mark_cleared()` and `enter_connected_room()` methods remain compatibility
-facades for direct callers. Room activation follows the same typed-context
-path and preserves the existing `RoomActivationResult`/`RoomSpawnResult`
-reporting, while `RoomActivationContext` still wraps the root.
+consumer receive that typed event. Room entry and activation now run through
+direct typed owners: `room_entry_services.gd` and `room_activation_services.gd`
+consume `RoomEntryContext` / `RoomActivationContext` without a `GameplayState`
+dependency, returning `RoomEntryResult` / `RoomActivationResult`. The final
+slice retired the last two transitional adapters and reduced the guardrail's
+transitional allowlist to zero. The ID-based `mark_cleared()` and
+`enter_connected_room()` methods remain compatibility facades for direct
+callers.
 
 Room-level initial spawn orchestration now consumes `RoomSpawnContext`, and the
 normal frame schedule sends respawn ticks through `RoomRespawnContext`. Both are
@@ -423,7 +428,13 @@ The normal Combat path also sends the room-owned death consequences through
 `record_enemy_death_context()`. The enemy spawn/respawn root-shaped bodies and
 their duplicate legacy helpers have been retired. This is the first room slice
 that demonstrates the intended pattern end to end; the remaining lifecycle
-debt is entry/activation, where two transitional contexts still remain.
+debt at that point was entry/activation, where two transitional contexts
+remained.
+
+**Final state:** the entry/activation debt was subsequently closed at `0.2.23`.
+`RoomEntryContext` and `RoomActivationContext` no longer carry `GameplayState`;
+`room_entry_services.gd` and `room_activation_services.gd` own entry/activation
+with direct typed dependencies, and the transitional allowlist is empty.
 
 #### Room geometry ownership — [x]
 
@@ -520,11 +531,13 @@ The manifest validator and focused standalone Godot checks for this slice pass:
   per-runtime copies).
 - Fresh-output `tests/web_export_smoke.ps1 -RequireExport` (single-threaded
   Compatibility payload; `.wasm` and `.pck` present).
-- `tools/validate_test_manifest.ps1`: 123 rows, 121 runnable paths, 2 report
+- `tools/validate_test_manifest.ps1`: 124 rows, 122 runnable paths, 2 report
   rows, and 43 curated-gate paths.
-- `tools/validate_composition.ps1`: 82.5% measured ownership progress; the
-  geometry and frame-schedule slices are below their accepted owner floors and
-  have zero paired legacy implementations.
+- `tools/validate_composition.ps1`: **100%** measured ownership progress; the
+  strict audit (`-RequireTargets`) passes. All strict targets are met, the
+  transitional allowlist is empty, and the geometry, frame-schedule, and
+  entry/activation slices are below their accepted owner floors with zero
+  paired legacy implementations.
 - Curated `tests/run_all_smoke.ps1 -TestGroup gate`: no engine crash; SFX
   pytest 25/25, Web export (`wasm=1`, `pck=1`), and main-scene boot pass. The
   runner remains nonzero only for the documented legacy `run1_door_path_smoke`
@@ -590,10 +603,12 @@ fails when a future change makes that debt worse. It checks for:
 
 Run `-SelfTest` to exercise the guard against temporary valid, coupling,
 duplicate, regression, and strict-target fixtures. Run `-RequireTargets` as the
-opt-in completion audit; it is expected to fail while the room migration is
-still open. The normal CI gate does not use `-RequireTargets`, because the
-strict ownership targets are the work remaining, not the current release
-floor.
+strict completion audit; it now **passes** (the final target values were met at
+`0.2.23`, commit `8b162a2`). The normal CI gate uses the regression floor,
+which now protects the achieved state from future regressions.
+`-UpdateBaseline` preserves `completion_start`, so the percentage measures
+progress since the original reference and cannot be re-zeroed by a routine
+baseline refresh.
 
 The default output now also prints a **completion percentage**: weighted
 progress from the recorded `completion_start` toward the strict targets, where
@@ -623,31 +638,25 @@ Current recorded baseline, completion start, and strict targets (from
 | Paired legacy/context duplicates | 0 | 11 | 0 |
 | Transitional contexts | 2 | 5 | 0 |
 
-The accepted floor is the regression baseline. The strict target column is only
-enforced when `-RequireTargets` is supplied; it is intentionally red while the
-room ownership migration remains open.
+The accepted floor is the regression baseline. The strict target column is now
+met, so both the regression floor and `-RequireTargets` are green.
 
-The transitional allowlist must name exactly the current adapters and shrink as
-slices land:
+The transitional allowlist is now empty; the final slice retired the last two
+adapters:
 
-- `RoomEntryContext` and `RoomActivationContext` declare or accept a
-  `GameplayState` dependency directly;
-- `RoomSpawnContext` and `RoomRespawnContext` are direct typed contexts and are
-  no longer transitional; `RoomRuntimeContext` has been removed; and
+- `RoomEntryContext` and `RoomActivationContext` no longer declare or accept a
+  `GameplayState` dependency; entry and activation run through direct typed
+  owners in `room_entry_services.gd` and `room_activation_services.gd`;
+- `RoomSpawnContext` and `RoomRespawnContext` are direct typed contexts (not
+  transitional); `RoomRuntimeContext` has been removed; and
 - `MenuPlayerContext` and `RunCheckpointContext` mention `GameplayState` only in
-  comments and do not store it — they are **not** transitional and must not be
-  added to the allowlist.
+  comments and do not store it — they are not transitional and were never added
+  to the allowlist.
 
-The allowlist therefore contains two entries today
-(`RoomEntryContext`, `RoomActivationContext`). When the room entry/activation
-slice migrates either to direct typed dependencies, remove it from the allowlist
-and record the metric delta.
-
-The current regression-floor output is expected to list zero paired duplicates
-and two transitional contexts. The strict target audit remains red until those
-contexts are retired and the three size/access thresholds move. The self-test
-and regression-floor run are wired into CI and the smoke runner so the guard
-itself is exercised before gameplay tests begin.
+The current regression-floor output lists zero paired duplicates and zero
+transitional contexts. The strict target audit is also green. The self-test and
+regression-floor run are wired into CI and the smoke runner so the guard itself
+is exercised before gameplay tests begin.
 
 ## Handoff checklist
 

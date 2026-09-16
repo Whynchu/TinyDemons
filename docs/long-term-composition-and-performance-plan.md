@@ -29,8 +29,8 @@ monolithic effort:
 
 | Track | Scope | Sequence gate | Tracked in |
 |---|---|---|---|
-| **T1 — Ownership cleanup** | Reduce `GameplayState` coupling, root reflection, oversized owners, transitional adapters | `tools/validate_composition.ps1` percentage; no new `GameplayState`-backed contexts | `composition-refactor-analysis.md` |
-| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Enemy-definition proof slice (B); then one slice per content kind | this document |
+| **T1 — Ownership cleanup** | Reduce `GameplayState` coupling, root reflection, oversized owners, transitional adapters | **Complete** — `tools/validate_composition.ps1` reports 100% and the strict audit passes; the regression floor now protects the achieved state | `composition-refactor-analysis.md` (historical record) |
+| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Enemy-definition proof slice (B); then one slice per content kind | this document + [`component-composition-design.md`](component-composition-design.md) |
 | **T3 — Performance** | Device-backed frame-time, transition, memory, and startup budgets on desktop + Samsung A17 | First fixed-seed scenario harness; then A/B palette test | this document |
 
 Each track may be at a different progress point and can be picked up
@@ -52,6 +52,14 @@ room, map rule, reward, effect, or balance change requiring edits to a central
 state bag or a large coordinator. A new piece of content should be assembled
 from an explicit definition, a runtime scene/component composition, and a
 validated registration or content pool.
+
+The **editor-composition percentage** produced by `tools/validate_composition.ps1`
+is the real representation of this direction: it measures the pieces that have
+been given direct access *and* are changeable in the editor (blind components,
+`@export`/`.tres`/Resource-driven definitions). It is a separate number from the
+legacy-coupling score and starts near 30%; the component contract and the
+weighted sub-metrics are defined in
+[`component-composition-design.md`](component-composition-design.md).
 
 This is an incremental architecture plan, not permission to rewrite the game.
 Existing authored rooms, pixel geometry, save identities, frame ordering, and
@@ -455,10 +463,11 @@ sprite preparation, palette recolor), and without a baseline the T2/T1 work
 cannot be shown not to regress.
 
 1. **[x] Add the fixed-seed performance scenario harness** (`tests/performance_scenario_harness.gd` + `tools/run_perf_harness.ps1`). It reports frame time, active nodes/sprites, and room-transition timing on fixed seeds. The desktop baseline is recorded above; the **Samsung A17 run is the outstanding next measurement** and gates any optimization claim.
-1b. **[x] Fix the room-transition hitch** the harness exposed: the boss-room door entry measured ~1,786 ms (real `enter_connected_room` path) and is now ~89 ms via the stone-accent placer fixes above. Steady-state frame time and the accent layout contract are unchanged (verified by the accent smoke + door smoke tests).
-2. Keep the current composition score (from `tools/validate_composition.ps1`)
-   labeled as the legacy-coupling checkpoint; do not hardcode its value in
-   this document.
+1b. **[x] Fix the room-transition hitch** the harness exposed: the boss-room door entry measured ~1,786 ms (real `enter_connected_room` path) and is now ~89 ms via the stone-accent placer fixes above. Steady-state frame time and the accent layout contract are unchanged (verified by the accent smoke + door smoke tests). **Measurement note:** the ~89 ms figure is a single favorable sample; later runs (2026-09-16) ranged ~100–385 ms across both the pre- and post-refactor trees, so the boss entry is a genuine slow path but not a measured refactor regression. See [`AUDIT.md`](AUDIT.md) section 11.2 for the corrected reading and the harness-averaging next step.
+2. **[x] Complete the legacy-coupling cleanup (T1)** — the composition score is
+   100% and the strict audit passes; the regression floor is re-baselined to the
+   achieved state. Do not hardcode the percentage in this document; the
+   validator is the live source of truth.
 3. Build the enemy-definition/factory proof around one existing slime variant
    (T2 slice B, with its pinned acceptance bar).
 4. Use the measured A17 + desktop result to choose between cache/atlas work,

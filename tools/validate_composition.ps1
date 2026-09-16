@@ -121,6 +121,85 @@ function Get-TargetValue($Targets, [string]$Name, [int]$Fallback) {
 	return $Fallback
 }
 
+## Editor composition: the reusable-component / editor-changeable direction.
+## A "piece" counts toward completion only when it is BOTH directly wired (no
+## root.call/get/set) AND changeable in the editor (@export field, tuning .tres,
+## or typed Resource) instead of a hardcoded const dictionary. The composite is
+## a weighted average over four measured sub-metrics:
+##   component_direct    (weight 0.20) blind components / total components
+##   component_editor    (weight 0.30) @export-configured / total components
+##   component_both      (weight 0.25) blind AND editor-configured / total
+##   definition_editor   (weight 0.25) editor-able definition surfaces / total
+## This number is intentionally low today: the direct-access half is mostly
+## complete but the editor-changeable half has barely started.
+function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
+	$componentFiles = @(Get-ChildItem -LiteralPath $ScriptsDir -Filter "*component*.gd" -File)
+	$componentTotal = $componentFiles.Count
+	$componentBlind = 0
+	$componentConfigured = 0
+	$componentBoth = 0
+	foreach ($file in $componentFiles) {
+		$codeContent = Get-CodeOnlyContent (Get-Content -Raw -LiteralPath $file.FullName)
+		$rootSites = ([regex]::Matches($codeContent, 'root\.(call|get|set)\(')).Count
+		$exportCount = ([regex]::Matches($codeContent, '@export')).Count
+		$isBlind = $rootSites -eq 0
+		$isConfigured = $exportCount -gt 0
+		if ($isBlind) { $componentBlind += 1 }
+		if ($isConfigured) { $componentConfigured += 1 }
+		if ($isBlind -and $isConfigured) { $componentBoth += 1 }
+	}
+	# Definition surfaces are counted by file: the content catalogs, the authored
+	# run builders, and the external tuning resources. A surface is editor-able
+	# when it is a resource file the editor can inspect (.tres).
+	$definitionScripts = @(
+		"item_catalog.gd",
+		"element_catalog.gd",
+		"slime_variant_catalog.gd",
+		"palette_library.gd",
+		"dungeon_layout_definition.gd",
+		"dungeon_layout_run1.gd",
+		"dungeon_layout_run2.gd",
+		"dungeon_layout_run3.gd",
+		"dungeon_layout_run4.gd",
+		"dungeon_layout_run5.gd",
+		"dungeon_layout_run6.gd"
+	)
+	$definitionScriptCount = 0
+	foreach ($name in $definitionScripts) {
+		if (Test-Path -LiteralPath (Join-Path $ScriptsDir $name)) {
+			$definitionScriptCount += 1
+		}
+	}
+	$tuningDir = Join-Path $ProjectRoot "resources/tuning"
+	$tuningCount = if (Test-Path -LiteralPath $tuningDir) {
+		@(Get-ChildItem -LiteralPath $tuningDir -Filter "*.tres" -File).Count
+	} else {
+		0
+	}
+	$definitionTotal = $definitionScriptCount + $tuningCount
+	$definitionEditable = $tuningCount
+
+	$componentDirect = if ($componentTotal -gt 0) { $componentBlind / $componentTotal } else { 0.0 }
+	$componentEditor = if ($componentTotal -gt 0) { $componentConfigured / $componentTotal } else { 0.0 }
+	$componentBothRate = if ($componentTotal -gt 0) { $componentBoth / $componentTotal } else { 0.0 }
+	$definitionEditor = if ($definitionTotal -gt 0) { $definitionEditable / $definitionTotal } else { 0.0 }
+	$composite = (0.20 * $componentDirect) + (0.30 * $componentEditor) + (0.25 * $componentBothRate) + (0.25 * $definitionEditor)
+
+	return [PSCustomObject]@{
+		ComponentTotal = $componentTotal
+		ComponentBlind = $componentBlind
+		ComponentConfigured = $componentConfigured
+		ComponentBoth = $componentBoth
+		DefinitionTotal = $definitionTotal
+		DefinitionEditable = $definitionEditable
+		ComponentDirect = $componentDirect
+		ComponentEditor = $componentEditor
+		ComponentBothRate = $componentBothRate
+		DefinitionEditor = $definitionEditor
+		Composite = $composite
+	}
+}
+
 function Get-FunctionBodyInfo([string[]]$Lines, [int]$FunctionLineIndex) {
 	$body = [System.Collections.Generic.List[string]]::new()
 	for ($index = $FunctionLineIndex + 1; $index -lt $Lines.Count; $index += 1) {
@@ -319,11 +398,11 @@ if (Test-Path -LiteralPath $resolvedBaselinePath) {
 }
 
 $allowlistProperty = Get-PropertyInfo $baseline "transitional_allowlist"
-$transitionalAllowlist = if ($null -ne $allowlistProperty) {
-	@($allowlistProperty.Value | ForEach-Object { [string]$_ })
-} else {
+$transitionalAllowlist = if ($null -eq $allowlistProperty) {
 	$errors.Add("Baseline has no transitional_allowlist; refusing to run with an implicit allowlist")
 	@()
+} else {
+	@($allowlistProperty.Value | Where-Object { $null -ne $_ -and [string]$_ -ne "" } | ForEach-Object { [string]$_ })
 }
 
 $targetsValue = Get-PropertyValue $baseline "targets"
@@ -449,6 +528,32 @@ $rcLinesBaseline = Get-IntegerBaseline $baseline "room_controller_lines" 2297
 $runtimeBaseline = Get-IntegerBaseline $baseline "runtime_refs" 20
 $legacyBaseline = Get-IntegerBaseline $baseline "legacy_total" 13
 
+# ---- 4b. Editor composition metric ----
+$editorComposition = Get-EditorComposition $resolvedScriptsDirectory $projectRoot
+$editorBaseline = Get-PropertyValue $baseline "editor_composition"
+$editorWarned = $false
+if ($null -eq $editorBaseline) {
+	$warnings.Add("Baseline has no editor_composition record; editor-composition percent is computed but not regression-guarded. Run -UpdateBaseline to lock it in.")
+	$editorWarned = $true
+} else {
+	$editorBlindBaseline = Get-IntegerBaseline $editorBaseline "component_blind" -1
+	$editorConfiguredBaseline = Get-IntegerBaseline $editorBaseline "component_configured" -1
+	$editorBothBaseline = Get-IntegerBaseline $editorBaseline "component_both" -1
+	$editorEditableBaseline = Get-IntegerBaseline $editorBaseline "definition_editable" -1
+	if ($editorBlindBaseline -ge 0 -and $editorComposition.ComponentBlind -lt $editorBlindBaseline) {
+		$errors.Add("Editor composition regression: blind components $($editorComposition.ComponentBlind) < baseline $editorBlindBaseline")
+	}
+	if ($editorConfiguredBaseline -ge 0 -and $editorComposition.ComponentConfigured -lt $editorConfiguredBaseline) {
+		$errors.Add("Editor composition regression: editor-configured components $($editorComposition.ComponentConfigured) < baseline $editorConfiguredBaseline")
+	}
+	if ($editorBothBaseline -ge 0 -and $editorComposition.ComponentBoth -lt $editorBothBaseline) {
+		$errors.Add("Editor composition regression: blind+configured components $($editorComposition.ComponentBoth) < baseline $editorBothBaseline")
+	}
+	if ($editorEditableBaseline -ge 0 -and $editorComposition.DefinitionEditable -lt $editorEditableBaseline) {
+		$errors.Add("Editor composition regression: editor-able definition surfaces $($editorComposition.DefinitionEditable) < baseline $editorEditableBaseline")
+	}
+}
+
 if ($rootAccesses -gt $rootBaseline) {
 	$errors.Add("Root-access regression: $rootAccesses > baseline $rootBaseline")
 }
@@ -509,6 +614,9 @@ Write-Host "  contexts          : $($contextFiles.Count) files; $($transitionalF
 foreach ($pair in $legacyPairs) {
 	Write-Host "  duplicate pair: $pair" -ForegroundColor Yellow
 }
+Write-Host ("  editor compos.   : {0:P1} (weighted; direct+editor changeable)" -f $editorComposition.Composite)
+Write-Host ("    components      : {0} blind / {1} editor-configured / {2} both of {3} (direct {4:P0} / editor {5:P0} / both {6:P0})" -f $editorComposition.ComponentBlind, $editorComposition.ComponentConfigured, $editorComposition.ComponentBoth, $editorComposition.ComponentTotal, $editorComposition.ComponentDirect, $editorComposition.ComponentEditor, $editorComposition.ComponentBothRate)
+Write-Host ("    definitions     : {0} editor-able of {1} surfaces ({2:P0})" -f $editorComposition.DefinitionEditable, $editorComposition.DefinitionTotal, $editorComposition.DefinitionEditor)
 if ($completion.Details.Count -gt 0) {
 	Write-Host "  progress detail  : $($completion.Details -join ', ')"
 }
@@ -542,12 +650,24 @@ if ($UpdateBaseline) {
 			room_controller_lines = $roomControllerLines
 			runtime_refs = $runtimeRefs
 			legacy_total = $legacyCount
-			legacy_pairs = $legacyPairs
-			transitional_allowlist = $transitionalAllowlist
+			legacy_pairs = @($legacyPairs)
+			transitional_allowlist = @($transitionalAllowlist)
 			completion_start = $resolvedCompletionStart
 			targets = $targetValues
+			editor_composition = [ordered]@{
+				component_total = $editorComposition.ComponentTotal
+				component_blind = $editorComposition.ComponentBlind
+				component_configured = $editorComposition.ComponentConfigured
+				component_both = $editorComposition.ComponentBoth
+				definition_total = $editorComposition.DefinitionTotal
+				definition_editable = $editorComposition.DefinitionEditable
+			}
 		}
-		$newBaseline | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $resolvedBaselinePath -Encoding UTF8
+		$json = $newBaseline | ConvertTo-Json -Depth 6
+		# ConvertTo-Json can render a nested empty array as null; normalize those
+		# back to [] so the guardrail reads a clean empty allowlist.
+		$json = [regex]::Replace($json, ':\s*null(\s*(,|\}))', ': []$1')
+		$json | Set-Content -LiteralPath $resolvedBaselinePath -Encoding UTF8
 		Write-Host "COMPOSITION_BASELINE_UPDATED" -ForegroundColor Green
 	}
 }

@@ -1,12 +1,14 @@
 # Tiny Demons Feature Map
 
-Status: current baseline map; ownership remains partially coupled
+Status: current baseline map; composition refactor complete, remaining root-access owners listed
 
-Updated: 2026-09-13
+Updated: 2026-09-16
 
 This is a human-maintained ownership map. It records the first place to look,
-not a claim that every feature is fully isolated. `gameplay.gd` and
-`gameplay_state.gd` remain cross-cutting seams in the current implementation.
+not a claim that every feature is fully isolated. The composition refactor is
+complete (strict scorecard at 100%); the remaining dynamic root-access owners
+are `screen_state_controller.gd`, `combat_runtime_controller.gd`,
+`slime_runtime_controller.gd`, and `magic_runtime_controller.gd`.
 
 | Feature | Primary owner / first place to look | State or data authority | Presentation / runtime support | Existing verification | Initial risk |
 |---|---|---|---|---|---|
