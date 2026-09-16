@@ -7,7 +7,9 @@ Updated: 2026-09-11
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
-framework or a gameplay balance change.
+framework or a gameplay balance change. The long-term target for definition-
+driven content, runtime factories, and performance-aware authoring is in
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
 
 This guide answers the practical question: “Where should a new piece of Tiny
 Demons content be added?” The safest current workflow is to identify the

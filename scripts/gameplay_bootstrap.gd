@@ -82,6 +82,12 @@ func initialize(root: GameplayState) -> void:
 	# the inspector-selected scale unchanged.
 	occlusion.resolution_scale = 1 if OS.has_feature("web") else effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
 	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
+	root.room_controller.configure_geometry(
+		root.map_root,
+		root.floor_tiles,
+		root.player,
+		root.display_controller,
+		root.scene_file_path)
 	if root.hub_stone_accent_layer != null:
 		root.room_controller.room_entered.connect(
 			Callable(root.hub_stone_accent_layer, "on_room_entered"))
@@ -183,7 +189,7 @@ func initialize(root: GameplayState) -> void:
 	# screen is visible. Room entry can then reuse them without loading a second
 	# main-scene tree or cloning a fresh boss guide source on the transition
 	# frame.
-	root.room_controller.prewarm_transition_assets(root)
+	root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	root.call("_refresh_player_cloak_visual")

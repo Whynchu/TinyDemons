@@ -3,15 +3,18 @@
 Status: active handoff
 Scope: runtime composition, component ownership, dependency direction, and the next refactor sequence
 Owner: repository refactor / architecture
-Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_activation_context.gd`, `room_enemy_context.gd`, `room_spawn_context.gd`, `room_respawn_context.gd`, `room_enemy_placement.gd`, `room_enemy_spawn_services.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, `menu_player_context.gd`, external tuning resources under `resources/tuning/`, feature components/controllers, and `gameplay_frame_controller.gd`
+Current code: `gameplay.gd`, `gameplay_state.gd`, `gameplay_bootstrap.gd`, `chest_reward_context.gd`, `run_settlement_context.gd`, `run_settlement_result.gd`, `room_checkpoint_context.gd`, `room_checkpoint_result.gd`, `run_checkpoint_context.gd`, `run_checkpoint_result.gd`, `run_checkpoint_service.gd`, `room_clear_context.gd`, `room_clear_result.gd`, `room_entry_context.gd`, `room_entry_result.gd`, `room_activation_context.gd`, `room_enemy_context.gd`, `room_spawn_context.gd`, `room_respawn_context.gd`, `room_enemy_placement.gd`, `room_enemy_spawn_services.gd`, `room_enemy_runtime_context.gd`, `room_enemy_runtime_result.gd`, `room_geometry_controller.gd`, `menu_player_context.gd`, external tuning resources under `resources/tuning/`, feature components/controllers, and `gameplay_frame_controller.gd`
 Baseline commit: `d6a965d` (2026-09-15)
 Verification: see the named evidence and commands in the Verification section below
-Supersedes: none; this document extends the completed `refactor-route.md` Phase C and becomes the authoritative sequence for the next composition phase
+Supersedes: none; this document extends the completed `refactor-route.md` Phase C and remains the execution tracker for the legacy-coupling cleanup; the broader post-cleanup direction is in [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
 
-This document explains where Tiny Demons is relative to its long-term
-composition goal. It is intended for a future human or agent taking over the
-refactor. It describes the current shape and migration order; it does not
-authorize a rewrite or a gameplay-balance change.
+This document explains where Tiny Demons is relative to the current
+legacy-coupling cleanup. It is intended for a future human or agent taking over
+that migration. It describes the current shape and migration order; it does
+not authorize a rewrite or a gameplay-balance change. The broader goal—content
+definitions, runtime factories, authoring workflows, and performance budgets—
+is defined in
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
 
 ## Relationship to `refactor-route.md`
 
@@ -20,7 +23,9 @@ slices B1–B6 and Phase C are marked complete on 2026-08-22. This document does
 not supersede that route; it **follows it**. The route remains the record of
 what was executed; this document is the handoff for the next sequence after the
 route's completed slices. If the two disagree about ordering, this document's
-migration sequence is the current intent for post-Phase-C work.
+migration sequence is the current intent for the narrow post-Phase-C cleanup.
+The long-term plan is the authority for what the finished
+content/composition project must make possible.
 
 ## Executive summary
 
@@ -43,19 +48,19 @@ The current architectural task is therefore:
 This is a staged consolidation, not a universal conversion of every script into
 a Node or every method into a component.
 
-### Progress estimate — 47.8% measured ownership progress
+### Progress estimate — 82.5% measured ownership progress
 
 The previous **98% complete / 2% remaining** estimate was too generous. It
 counted typed method names and passing behavior checks as if they proved that
 ownership had moved. They do not. The recorded completion start was reset to
-the measured post-Phase-C floor, and the validator now reports **47.8% complete
-/ 52.2% remaining** toward the strict metric targets.
+the measured post-Phase-C floor, and the validator now reports **82.5% complete
+/ 17.5% remaining** toward the strict metric targets.
 The accepted `0.2.x` migration route remains complete; this is the separate
 post-Phase-C composition score.
 
 The authoritative live number is the **completion percentage printed by
 `tools/validate_composition.ps1`**, which is measured from the recorded
-`completion_start` toward the strict targets and currently reads **47.8%**.
+`completion_start` toward the strict targets and currently reads **82.5%**.
 Treat the validator's percentage as the source of truth; it moves only when a
 metric actually shrinks.
 
@@ -63,9 +68,9 @@ The scorecard is intentionally difficult to satisfy:
 
 | Hard gate | Baseline (`d6a965d`) | Current | Status |
 |---|---:|---:|---|
-| Meaningful reduction in dynamic `root.call/get/set` sites | 3,140 | 3,022 | `[x]` 113 fewer sites |
-| `GameplayState` smaller than the pre-slice baseline | 1,720 lines / 287 fields | 1,777 lines / 299 fields | `[ ]` larger by 57 lines and 12 fields |
-| `RoomController` below its pre-refactor baseline | 2,297 lines | 2,586 lines | `[~]` 679 lines removed from the accepted post-slice floor; 289 remain above the target |
+| Meaningful reduction in dynamic `root.call/get/set` sites | 3,140 | 2,726 | `[x]` 414 fewer sites than the original baseline; the frame-schedule slice removed 205 sites from the accepted floor |
+| `GameplayState` smaller than the pre-slice baseline | 1,720 lines / 287 fields | 1,772 lines / 298 fields | `[ ]` still 52 lines and 11 fields above the strict target |
+| `RoomController` below its pre-refactor baseline | 2,297 lines | 2,243 lines | `[x]` below target after extracting geometry ownership |
 | At least one direct typed context used end-to-end | none counted | `RoomEnemyContext`, `RoomSpawnContext`, `RoomRespawnContext`, `RoomEnemyRuntimeContext`, `ChestRewardContext`, `RoomClearContext`, `RoomCheckpointContext`, `RunSettlementContext`, `ActiveRunSnapshotContext`, `RunCheckpointContext`, `MenuPlayerContext` | `[x]` |
 
 This score is a measure of architectural ownership, not a claim that the
@@ -74,19 +79,22 @@ external tuning resources, and focused behavior checks are valuable foundation
 work. They become composition progress only when a slice also removes the
 state-bag dependency and retires its duplicate compatibility implementation.
 
-The next work is therefore not browser evidence or more wrapper creation. It
-is to rework the room lifecycle through direct typed slices, reduce the root
-access surface, and make `RoomController` smaller than its pre-refactor
-baseline before assigning a higher percentage.
+The next work is therefore not browser evidence or more wrapper creation. The
+frame-schedule boundary is now a completed direct-typed slice. Remaining work
+is to finish room entry/activation, reduce the `GameplayState` state bag, and
+continue the largest remaining root-access owners (`ScreenStateController`,
+combat, slime, and magic) without losing the explicit schedule.
 
 The measured score advances only when a slice earns measurable credit against
 these pinned thresholds, not when it merely adds a typed class:
 
 - **Root access threshold:** total `root.call/get/set` sites must fall below
-  **2,500** before the first slice earns credit; each completed slice must also
-  reduce its own owner's count.
+  **2,500** before the root-dependency milestone is considered crossed; each
+  completed slice must also reduce its own owner's count.
 - **State-bag threshold:** `GameplayState` must be below its pre-slice baseline
-  (1,720 lines / 287 fields) before assigning 50%.
+  (1,720 lines / 287 fields) before the state-bag migration is considered
+  complete. The weighted aggregate may advance before this individual gate is
+  closed because the other metrics are measured independently.
 - **Owner-size threshold:** `RoomController` must be below its pre-refactor
   baseline (2,297 lines) or have a clear extracted owner that removes at least
   500 lines from the coordinator.
@@ -108,25 +116,26 @@ Measurement command section below.
 
 | Surface | Measurement | Interpretation |
 |---|---:|---|
-| Runtime GDScript files | 168 | There are enough existing boundaries to refactor vertically |
-| Runtime physical lines | 48,268 | Large enough that broad mechanical migration is unsafe |
-| Runtime non-blank lines | 42,629 | Blank lines are excluded; comments remain counted |
+| Runtime GDScript files | 169 | There are enough existing boundaries to refactor vertically |
+| Runtime physical lines | 48,217 | Large enough that broad mechanical migration is unsafe |
+| Runtime non-blank lines | 42,561 | Blank lines are excluded; comments remain counted |
 | Explicit `*Component` classes | 20 | Entity-level composition is established |
-| Named functions | 2,703 | Function count is not a reason to create more wrappers |
-| `GameplayState` lines | 1,777 | It remains the main shared-state surface |
-| `GameplayState` functions | 510 | Many are forwarding/compatibility methods |
-| `GameplayState` declared fields | 299 | State and ownership are still concentrated |
+| Named functions | 2,706 | Function count is not a reason to create more wrappers |
+| `GameplayState` lines | 1,772 | It remains the main shared-state surface |
+| `GameplayState` functions | 506 | Many are forwarding/compatibility methods |
+| `GameplayState` declared fields | 298 | State and ownership are still concentrated |
 | `gameplay.gd` lines | 233 | The coordinator itself has been slimmed; the seams moved to state/components |
-| Dynamic `root.call/get/set` sites | 3,022 | Dependency direction remains the largest structural risk |
+| Dynamic `root.call/get/set` sites | 2,726 | Dependency direction remains the largest structural risk |
 
 The largest dynamic-access concentrations are:
 
 | Script | Lines | Dynamic root accesses | Architectural concern |
 |---|---:|---:|---|
 | `screen_state_controller.gd` | 5,432 | 423 | Menu construction, input, layout, and presentation remain mixed |
-| `room_controller.gd` | 2,586 | 307 | Room lifecycle, encounters, persistence, and rewards overlap |
+| `room_controller.gd` | 2,243 | 216 | Room lifecycle, encounters, persistence, and rewards overlap |
+| `room_geometry_controller.gd` | 291 | 0 | Direct typed owner for boss geometry snapshots and camera setup |
 | `combat_runtime_controller.gd` | 795 | 222 | Combat integration still reaches through the root |
-| `gameplay_frame_controller.gd` | 266 | 205 | Ordering is explicit, but phase dependencies are hidden |
+| `gameplay_frame_controller.gd` | 266 | 0 | Explicit phase ordering now crosses a typed `GameplayState` boundary |
 | `slime_runtime_controller.gd` | 805 | 195 | Reusable slime components still rely on a broad runtime context |
 | `magic_runtime_controller.gd` | 686 | 141 | Magic state and presentation have remaining coordinator seams |
 
@@ -414,8 +423,22 @@ The normal Combat path also sends the room-owned death consequences through
 `record_enemy_death_context()`. The enemy spawn/respawn root-shaped bodies and
 their duplicate legacy helpers have been retired. This is the first room slice
 that demonstrates the intended pattern end to end; the remaining lifecycle
-debt is entry/activation, where three compatibility pairs and two transitional
-contexts still coexist.
+debt is entry/activation, where two transitional contexts still remain.
+
+#### Room geometry ownership — [x]
+
+`RoomGeometryController` now owns the authored boss-room template, normal-room
+geometry snapshot/restore, boss underlay and return-guide setup, and the
+large-room camera. `GameplayBootstrap` composes it with direct references to
+the map, floor, player, display controller, and scene path. `RoomController`
+retains thin compatibility delegates for older callers, but no longer reaches
+through `GameplayState` to perform geometry work.
+
+This slice removed the `normal_room_geometry` field from `GameplayState`,
+retired the room geometry implementation from `RoomController`, and reduced
+that controller from 2,447 to 2,243 lines and from 245 to 216 dynamic root
+accesses. `boss_geometry_scene_smoke` and `generated_run_scene_smoke` cover the
+authored and generated boot/transition paths.
 
 Room entry must come later: it crosses the most systems and is the most likely
 target to produce another oversized context if attempted first. Preserve the
@@ -440,6 +463,22 @@ prove that the room contexts are narrow or that ownership moved out of
 `GameplayState`. `popcorn_respawn_smoke` is now manifest `verified`; its fixture checks the
 waiting-before-clear contract, seeded 30–45 second schedule, support respawn,
 and sealed boss entrance.
+
+#### Frame-schedule dependency boundary — [x]
+
+`GameplayFrameController` now accepts a typed `GameplayState` reference and
+reads/writes the scheduled state through direct properties and methods. The
+explicit input → simulation → contact → damage → presentation → transition
+ordering is unchanged. The scheduler no longer uses `root.call/get/set`; the
+remaining dynamic calls in this file target generic collaborator nodes such as
+the minimap and aspect-ability components and are outside the root seam metric.
+
+This slice removed 205 dynamic root accesses (`2,931` → `2,726`) without adding
+a universal context or moving frame behavior into another coordinator. The
+validator moved from 70.6% to 82.5%. Focused evidence includes
+`generated_run_scene_smoke`, `boss_geometry_scene_smoke`,
+`enemy_room_entrance_scene_smoke`, `room_transition_result_smoke`, and
+`typed_combat_path_smoke`; the headless editor import scan also passed.
 
 ### 5. Tackle menus after the runtime pattern is proven — [~]
 
@@ -483,6 +522,9 @@ The manifest validator and focused standalone Godot checks for this slice pass:
   Compatibility payload; `.wasm` and `.pck` present).
 - `tools/validate_test_manifest.ps1`: 123 rows, 121 runnable paths, 2 report
   rows, and 43 curated-gate paths.
+- `tools/validate_composition.ps1`: 82.5% measured ownership progress; the
+  geometry and frame-schedule slices are below their accepted owner floors and
+  have zero paired legacy implementations.
 - Curated `tests/run_all_smoke.ps1 -TestGroup gate`: no engine crash; SFX
   pytest 25/25, Web export (`wasm=1`, `pck=1`), and main-scene boot pass. The
   runner remains nonzero only for the documented legacy `run1_door_path_smoke`
@@ -574,11 +616,11 @@ Current recorded baseline, completion start, and strict targets (from
 
 | Metric | Accepted floor | Completion start | Strict target |
 |---|---:|---:|---:|
-| `root.call/get/set` sites | 3,022 | 3,135 | ≤ 2,499 |
-| `GameplayState` lines / fields | 1,777 / 299 | 1,777 / 299 | ≤ 1,719 / 286 |
-| `RoomController` lines | 2,586 | 3,265 | ≤ 2,296 |
+| `root.call/get/set` sites | 2,726 | 3,135 | ≤ 2,499 |
+| `GameplayState` lines / fields | 1,772 / 298 | 1,777 / 299 | ≤ 1,719 / 286 |
+| `RoomController` lines | 2,243 | 3,265 | ≤ 2,296 |
 | `.runtime` references | 5 | 20 | 0 |
-| Paired legacy/context duplicates | 3 | 11 | 0 |
+| Paired legacy/context duplicates | 0 | 11 | 0 |
 | Transitional contexts | 2 | 5 | 0 |
 
 The accepted floor is the regression baseline. The strict target column is only
@@ -601,11 +643,11 @@ The allowlist therefore contains two entries today
 slice migrates either to direct typed dependencies, remove it from the allowlist
 and record the metric delta.
 
-The current regression-floor output is expected to list the three remaining
-activation/entry paired duplicates and two transitional contexts. The strict
-target audit remains red until those are retired and the three size/access
-thresholds move. The self-test and regression-floor run are wired into CI and
-the smoke runner so the guard itself is exercised before gameplay tests begin.
+The current regression-floor output is expected to list zero paired duplicates
+and two transitional contexts. The strict target audit remains red until those
+contexts are retired and the three size/access thresholds move. The self-test
+and regression-floor run are wired into CI and the smoke runner so the guard
+itself is exercised before gameplay tests begin.
 
 ## Handoff checklist
 

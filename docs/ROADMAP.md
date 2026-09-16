@@ -6,7 +6,7 @@ Updated: 2026-09-15
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.18`
+Current release: version `0.2.19`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -17,9 +17,11 @@ settlement → Hub loop.
 ## How to use this roadmap
 
 Use [`AUDIT.md`](AUDIT.md) for measured current state, [`ARCHITECTURE.md`](ARCHITECTURE.md)
-for ownership rules, and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for unresolved
-behavior and verification findings. Feature-specific plans provide detail only
-when they agree with those documents.
+for ownership rules, [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for unresolved
+behavior and verification findings, and
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
+for the post-cleanup content-composition and device-performance direction.
+Feature-specific plans provide detail only when they agree with those documents.
 
 Work should move through one narrow slice at a time:
 
@@ -39,16 +41,17 @@ Work should move through one narrow slice at a time:
 | 0.20 | Stabilize active player-facing contracts | In progress | issue tracker findings have focused or manual verification, with failures classified |
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | In progress | typed room transition/activation results and deterministic room fixtures |
-| 0.50 | Reduce dynamic runtime seams by feature | Planned | one owner migration removes its compatibility calls while preserving frame order |
-| 0.60 | Make content authoring repeatable | Planned | validated definitions and an example workflow for rooms, enemies, rewards, and tuning |
-| 0.70 | Improve test and performance feedback | Planned | grouped verification, runtime timing baselines, and reproducible performance scenarios |
+| 0.50 | Reduce dynamic runtime seams by feature | In progress | one owner migration removes its compatibility calls while preserving frame order |
+| 0.60 | Make content authoring repeatable | Planned | validated definitions, factories, and an example workflow for rooms, enemies, rewards, and tuning |
+| 0.70 | Improve test and performance feedback | Planned | device-backed timing, memory, render-cost, and reproducible performance scenarios |
+| 0.80 | Establish long-term content composition | Planned | an enemy/room/map can be added through definitions and composition without central-state special cases |
 
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.18
+## Next checkpoint after 0.2.19
 
-Version `0.2.18` records the typed reward, checkpoint, and room-state seams alongside
+Version `0.2.19` records the typed reward, checkpoint, and room-state seams alongside
 the earlier Web export, touch/cloud, gear, progression, and generated-route
 reconciliation. The next checkpoint is a stabilization pass in this order:
 
@@ -178,16 +181,31 @@ in reflective calls for the migrated feature.
 ## Phase 0.60 — Content authoring
 
 Use [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) to make one new room,
-enemy, reward, and tuning example repeatable. Add validators at the current
-definition boundaries before moving data out of code. Keep stable IDs and save
-migrations part of every data change.
+enemy, reward, and tuning example repeatable. The long-term target is a typed
+definition/catalog/factory path for enemies, encounters, rooms, and dungeon
+layouts, with validators at each boundary before more data moves out of code.
+Keep stable IDs and save migrations part of every data change.
 
 ## Phase 0.70 — Feedback infrastructure
 
 Group fast tests into shared-process suites where safe, retain focused scene
-tests for visual contracts, and record desktop/web timing scenarios. Profile
-the known dynamic-call, per-pixel, synchronous-loading, and menu-refresh hot
-paths before optimizing them.
+tests for visual contracts, and record desktop/web/mobile timing scenarios.
+Profile the known dynamic-call, per-pixel palette/image, synchronous-loading,
+particle, occlusion, and menu-refresh paths before optimizing them. Include the
+Samsung A17 as an explicit target rather than inferring mobile performance from
+desktop.
+
+## Phase 0.80 — Long-term content composition
+
+The broader direction is documented in
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
+The current 82.5% composition score remains a legacy-coupling checkpoint; it is
+not a claim that content authoring is complete. Start with one existing slime
+variant behind an `EnemyDefinition` and factory, then make adding a second
+variant require no central `GameplayState` or room special case. Extend the
+same contract to encounters, rooms, and dungeon/map definitions only after the
+reference slice has scene parity, persistence rules, deterministic tests, and a
+measured performance profile.
 
 ## Out of scope for this cycle
 

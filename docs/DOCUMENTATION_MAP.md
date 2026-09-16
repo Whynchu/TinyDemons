@@ -27,8 +27,10 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 10. [`FEATURE_MAP.md`](FEATURE_MAP.md) — first owner to inspect for each feature.
 11. [`composition-refactor-analysis.md`](composition-refactor-analysis.md) —
     component/composition refactor measurements and agent handoff.
-12. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
-   export, and function-location index.
+12. [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) —
+    long-term content composition, authoring, and performance direction.
+13. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
+    export, and function-location index.
 
 ## Authority by question
 
@@ -49,6 +51,7 @@ preservation rules are in [`AUDIT.md`](AUDIT.md).
 | How do I add content? | [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) | feature-specific contracts |
 | What makes a change difficult? | [`engineering-friction-audit.md`](engineering-friction-audit.md) | source files and detailed audits |
 | How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | measurements, target shape, and handoff sequence |
+| What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 
 ## Document lifecycle
 
