@@ -349,6 +349,45 @@ player experience; do not invent a desktop-only number and call mobile done.
 Every optimization must include a before/after measurement and a visual
 regression check at native pixel scale.
 
+## Measured baseline — 2026-09-15
+
+The fixed-seed scenario harness (`tests/performance_scenario_harness.gd`,
+invoked via `tools/run_perf_harness.ps1`) now produces a repeatable desktop
+baseline. Run it with no arguments for the regression floor, or on the device
+build for the mobile profile. The harness does **not** assert budgets; budgets
+are decided here after both targets are measured.
+
+Desktop (this dev machine, headless console, seed `24681357`, 180 samples per
+scenario after 90-frame warmup):
+
+| Scenario | avg ms | worst ms | nodes | sprites |
+|---|---:|---:|---:|---:|
+| title idle | 6.90 | 8.08 | 1,646 | 891 |
+| hub idle | 6.90 | 8.27 | 1,657 | 902 |
+| hub shop page | 6.90 | 8.17 | 1,657 | 902 |
+| combat room | 6.91 | 13.81 | 1,659 | 904 |
+| boss room | 6.90 | 11.80 | 1,659 | 904 |
+| room transition | 16.56 | 16.56 | — | — |
+| pause menu | 6.89 | 8.28 | 1,664 | 909 |
+
+Readings:
+
+- Steady-state headless frame time is ~6.9 ms everywhere (~145 fps). That is the
+  desktop CPU floor for the current scene, not the mobile number.
+- The scene holds **~900 sprites across ~1,650 nodes**. That is a real count to
+  watch; a device profile will decide whether node count is the binding cost.
+- The **room transition is the one clear hitch** at ~16.6 ms single-sample,
+  roughly 2.4× the steady state. This matches the plan's hypothesis that
+  synchronous transition/prewarm work is a hot spot and is the first
+  optimization target.
+- Combat and boss worst-frames (13.8 / 11.8 ms) show the frame scheduler
+  visiting more systems; still sub-16 ms headless.
+
+Samsung A17 (real low-end target, already experienced as poor): baseline not yet
+recorded. The harness must be run on a device build of this seed before any
+optimization claim. Until the A17 numbers exist, the desktop numbers above are a
+CPU floor, not a mobile budget.
+
 ## Guardrails
 
 - Prefer a new definition or direct typed dependency over a new global lookup.
@@ -369,16 +408,13 @@ composition change touches the same hot paths (per-frame controller visits,
 sprite preparation, palette recolor), and without a baseline the T2/T1 work
 cannot be shown not to regress.
 
-1. **Add the fixed-seed performance scenario harness first.** It reports frame
-   time, active visual objects, palette/resource preparation, and
-   room-transition timing on the desktop and Samsung A17 targets. This is the
-   T3 foundation and the measurement any composition slice must not regress.
+1. **[x] Add the fixed-seed performance scenario harness** (`tests/performance_scenario_harness.gd` + `tools/run_perf_harness.ps1`). It reports frame time, active nodes/sprites, and room-transition timing on fixed seeds. The desktop baseline is recorded above; the **Samsung A17 run is the outstanding next measurement** and gates any optimization claim.
 2. Keep the current composition score (from `tools/validate_composition.ps1`)
    labeled as the legacy-coupling checkpoint; do not hardcode its value in
    this document.
 3. Build the enemy-definition/factory proof around one existing slime variant
    (T2 slice B, with its pinned acceptance bar).
-4. Use the measured performance result to choose between cache/atlas work,
+4. Use the measured A17 + desktop result to choose between cache/atlas work,
    node/effect reduction, loading changes, and the palette-shader experiment.
 5. Require every new content feature to use the emerging definition boundary.
 

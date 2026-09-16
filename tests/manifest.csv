@@ -122,3 +122,4 @@ script,role,state,owner,target,load,notes
 "frame_time_smoke","diagnostic","unverified","frame ordering","cold/warm frame-time sample","main","performance sample; opt-in"
 "fusion_menu_preview","report","unverified","gear & fusion","editor preview of fusion menu layout","pure","intentional standalone preview, not a runner test"
 "puzzle_map_reference_diff_report","report","unverified","generated layouts","R4/R5 authored-grid reference diff report","pure","intentional standalone report, not a runner test"
+"performance_scenario_harness","diagnostic","unverified","performance","fixed-seed 7-scenario frame-time, node/sprite, and transition baseline; desktop + A17 target","main","headless; not part of the release gate"
