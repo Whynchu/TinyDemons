@@ -67,14 +67,13 @@ func _initialize() -> void:
 	# 4. Full enemy room during combat
 	await _sample_scenario(gameplay, "combat_room", func() -> void: pass)
 
-	# 5. Boss room (boss debug scene path is used by existing tests; here we
-	#    stay in the main scene and scale one enemy to exercise the boss path).
-	await _sample_scenario(gameplay, "boss_room", func() -> void:
-		var slimes := gameplay.get("slimes") as Array[Sprite2D]
-		for slime in slimes:
-			if slime != null:
-				slime.set_meta("encounter_scale", 2.0)
-	)
+	# 5. Boss room transition - the user-reported worst case. Enter the real
+	#    ROOM_DOWNSTAIRS room for this seed through the actual door path.
+	var boss_transition := await _measure_boss_transition(gameplay, rooms)
+	_scenario_timings.append({"name": "boss_room_transition", "avg_ms": boss_transition.total_ms, "worst_ms": boss_transition.total_ms, "nodes": 0, "sprites": 0, "extra": "layout_ms=%f|activate_ms=%f" % [boss_transition.layout_ms, boss_transition.activate_ms]})
+
+	# Boss room steady state after the transition has settled.
+	await _sample_scenario(gameplay, "boss_room", func() -> void: pass)
 
 	# 6. Room transition (leave and re-enter a room) - measures transition hitch.
 	var transition_ms := await _measure_transition(gameplay, rooms)
@@ -120,6 +119,29 @@ func _measure_transition(gameplay: Node, rooms: Node) -> float:
 	gameplay.call("_apply_room_state")
 	await process_frame
 	return float(Time.get_ticks_usec() - started_usec) / 1000.0
+
+
+func _measure_boss_transition(gameplay: Node, rooms: Node) -> Dictionary:
+	# Enter the real ROOM_DOWNSTAIRS room for RUN_SEED through the actual door
+	# path (enter_connected_room), timing the layout and activation steps that
+	# happen synchronously on the door-touch frame.
+	var graph := gameplay.get("dungeon_graph") as DungeonGraph
+	var boss_id: StringName = &""
+	for rid in graph.get_room_ids():
+		var room := graph.get_room(rid)
+		if room.room_type == DungeonGraph.ROOM_DOWNSTAIRS:
+			boss_id = rid
+			break
+	if boss_id == &"":
+		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0}
+	var started_usec := Time.get_ticks_usec()
+	var transition: Object = rooms.call("plan_connected_room_transition", graph, &"room_1_1", boss_id, &"", &"")
+	if transition == null:
+		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0}
+	var ok: bool = rooms.call("enter_connected_room", gameplay, transition)
+	var total_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
+	await process_frame
+	return {"total_ms": total_ms if ok else -1.0, "layout_ms": -1.0, "activate_ms": -1.0}
 
 
 func _sample_scenario(gameplay: Node, scenario_name: String, setup: Callable) -> void:

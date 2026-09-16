@@ -22,6 +22,7 @@ const LAYOUT_VARIATION_SALT: int = 0x4C41594F
 const MAX_LAYOUT_VARIANT_ATTEMPTS: int = 32
 const MAX_WALL_JITTER: int = 2
 const MAX_FLOOR_JITTER: int = 2
+const MAX_POSITION_ATTEMPTS: int = 8
 const DOOR_CLEARANCE: float = 2.0
 const FLOOR_CLEARANCE: int = 2
 const WALL_EDGE_BUFFER: float = 2.0
@@ -187,6 +188,7 @@ var door_block_points: Array[Vector2] = []
 var door_blocked_point_lookup: Dictionary = {}
 var door_block_polygons: Array[PackedVector2Array] = []
 var opaque_texture_points_cache: Dictionary = {}
+var floor_clearance_cache: Dictionary = {}
 var placement_static_fit_cache: Dictionary = {}
 var candidate_offsets_cache: Dictionary = {}
 var translated_footprint_cache: Dictionary = {}
@@ -301,20 +303,41 @@ func refresh_current_room(room_id: StringName, room_type: StringName) -> void:
 	var placement_ids := pending_placement_ids
 	var attempt := 0
 	var signature := ""
+	var best_visible_count := -1
+	var best_variant_ids: Array[StringName] = []
+	var best_variant_index := 0
 	while true:
 		active_layout_variant = pending_layout_variant
 		_apply_room_placements(placement_ids, room_id, room_type)
 		signature = _layout_signature()
+		if last_visible_ids.size() > best_visible_count:
+			best_visible_count = last_visible_ids.size()
+			best_variant_ids = placement_ids.duplicate()
+			best_variant_index = active_layout_variant
 		var needs_distinct_layout := not is_same_committed_room and room_type != HUB_ROOM_TYPE and not previous_layout_signature.is_empty()
 		var density_is_valid := room_type == HUB_ROOM_TYPE or last_visible_ids.size() >= REFERENCE_PLACEMENTS.size() - NON_HUB_REMOVAL_MAX
 		var swap_contract_is_valid := room_type == HUB_ROOM_TYPE or anchor_swaps_valid()
-		if ((not needs_distinct_layout or signature != previous_layout_signature) and density_is_valid and swap_contract_is_valid) or attempt >= MAX_LAYOUT_VARIANT_ATTEMPTS:
+		# A room whose geometry invalidates several authored anchors can never
+		# reach the full density target (e.g. boss rooms with sealed doors).
+		# Once the visible count stops improving over several variants, further
+		# layout variants only re-run the same bounded search and burn transition
+		# frames. Give the loop a few attempts first so rooms that can still reach
+		# a valid swapped layout keep searching, but terminate stuck rooms fast.
+		var density_plateaued := not density_is_valid and attempt >= 2 and last_visible_ids.size() <= best_visible_count
+		if ((not needs_distinct_layout or signature != previous_layout_signature) and density_is_valid and swap_contract_is_valid) or attempt >= MAX_LAYOUT_VARIANT_ATTEMPTS or density_plateaued:
 			break
 		attempt += 1
 		pending_layout_variant += 1
 		active_layout_variant = pending_layout_variant
 		placement_ids = _placement_ids_for_room(room_id, room_type, active_layout_variant)
 		pending_placement_ids = placement_ids
+	# If the plateau broke on a sparser layout than the best variant we already
+	# resolved, restore the denser arrangement instead of committing a worse one.
+	if not best_variant_ids.is_empty() and last_visible_ids.size() < best_visible_count:
+		placement_ids = best_variant_ids
+		active_layout_variant = best_variant_index
+		_apply_room_placements(placement_ids, room_id, room_type)
+		signature = _layout_signature()
 	last_layout_signature = signature
 	last_committed_room_id = room_id
 	last_committed_room_type = room_type
@@ -581,15 +604,16 @@ func _apply_room_placements(placement_ids: Array[StringName], room_id: StringNam
 	last_anchor_positions.clear()
 	last_positions.clear()
 	candidate_offsets_cache.clear()
-	var occupied_points: Dictionary = {}
 	var is_hub := room_type == HUB_ROOM_TYPE
-	var anchor_positions := _anchor_positions_for_room(placement_ids, room_id, room_type)
+	# Returns {id: {"position": chosen, "anchor": anchor}} with collisions already
+	# resolved. The search happened once during validation; committing these
+	# positions directly avoids a second full jitter search for every placement.
+	var resolved_positions := _anchor_positions_for_room(placement_ids, room_id, room_type)
 	for placement in REFERENCE_PLACEMENTS:
 		var id: StringName = placement["id"]
 		var base_sprite := base_sprites_by_id.get(id) as Sprite2D
 		var specular_sprite := specular_sprites_by_id.get(id) as Sprite2D
 		var authored_position: Vector2 = placement["position"]
-		var anchor_position: Vector2 = anchor_positions.get(id, authored_position)
 		if base_sprite != null:
 			base_sprite.position = authored_position
 			base_sprite.visible = false
@@ -600,16 +624,16 @@ func _apply_room_placements(placement_ids: Array[StringName], room_id: StringNam
 			continue
 
 		var chosen_position := authored_position
+		var anchor_position := authored_position
 		if not is_hub:
-			var placement_result := _find_valid_position(placement, anchor_position, room_id, room_type, occupied_points)
-			if placement_result.is_empty():
+			var resolved := resolved_positions.get(id, {}) as Dictionary
+			if resolved.is_empty():
 				# A room-specific door or boundary can invalidate an authored slot.
 				# Omit that whole group instead of ever forcing an unsafe overlap.
 				continue
-			chosen_position = placement_result["position"]
-			anchor_position = placement_result["anchor"]
+			chosen_position = resolved["position"]
+			anchor_position = resolved["anchor"]
 
-		_add_footprint_to_occupancy(id, chosen_position, occupied_points)
 		last_visible_ids.append(id)
 		last_anchor_positions[id] = anchor_position
 		last_positions[id] = chosen_position
@@ -627,9 +651,10 @@ func _anchor_positions_for_room(
 	room_id: StringName,
 	room_type: StringName,
 ) -> Dictionary:
+	# Resolved layout as {id: {"position": chosen, "anchor": anchor}}.
 	var result: Dictionary = {}
 	for placement in REFERENCE_PLACEMENTS:
-		result[placement["id"]] = placement["position"]
+		result[placement["id"]] = {"position": placement["position"], "anchor": placement["position"]}
 	if room_type == HUB_ROOM_TYPE:
 		return result
 
@@ -659,36 +684,104 @@ func _anchor_positions_for_room(
 			continue
 		group_ids_by_key.append(selected_ids)
 		permutation_options.append(_partial_anchor_shuffles(selected_ids, anchor_ids, group_key, room_id, room_type))
-	var safe_maps: Array[Dictionary] = []
-	_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, 0, result, room_id, room_type, safe_maps)
-	if safe_maps.is_empty():
-		return {}
-	var map_rng := RandomNumberGenerator.new()
-	map_rng.seed = int(dungeon_seed) ^ String(room_id).hash() ^ String(room_type).hash() ^ ANCHOR_SWAP_SALT ^ (active_layout_variant * LAYOUT_VARIATION_SALT)
-	return safe_maps[map_rng.randi_range(0, safe_maps.size() - 1)]
+	# The placer only needs one valid arrangement. Returning the first safe map
+	# instead of collecting MAX_SAFE_ANCHOR_MAPS and discarding all but one keeps
+	# the search bounded: validating every candidate map was a ~500 ms hitch on
+	# full rooms because each map re-tests every placement's jitter footprint.
+	var first_safe := _first_safe_anchor_map(placement_ids, group_ids_by_key, permutation_options, 0, result, room_id, room_type)
+	if not first_safe.is_empty():
+		return first_safe
+	# No swapped arrangement is fully safe. Resolve each placement individually,
+	# omitting any authored slot invalidated by a room-specific door/boundary
+	# instead of committing unsafe overlaps.
+	return _resolve_positions_individually(placement_ids, result, room_id, room_type)
 
 
-func _collect_safe_anchor_maps(
+# Soft cap on how many candidate anchor maps _first_safe_anchor_map evaluates.
+# The permutation cross-product is bounded per group, but rooms with several
+# swappable groups can still multiply into hundreds of evaluations. Rooms that
+# cannot reach any safe arrangement (e.g. boss geometry blocking authored
+# anchors) fall back to individual resolution once the budget is exhausted,
+# keeping the door-touch transition frame bounded.
+const SAFE_MAP_EVALUATION_BUDGET: int = 9
+
+
+# When no swapped anchor map is safe, still resolve every placement through the
+# jitter search and drop only the placements that cannot fit. This mirrors the
+# original per-placement behavior so an unsafe authored slot is omitted rather
+# than committed at its authored coordinate.
+func _resolve_positions_individually(placement_ids: Array[StringName], anchor_positions: Dictionary, room_id: StringName, room_type: StringName) -> Dictionary:
+	var occupied_points: Dictionary = {}
+	var resolved_by_id: Dictionary = {}
+	for placement in REFERENCE_PLACEMENTS:
+		var id: StringName = placement["id"]
+		if not placement_ids.has(id):
+			continue
+		var anchor_position: Vector2 = anchor_positions[id]["anchor"]
+		var chosen := _find_valid_position(placement, anchor_position, room_id, room_type, occupied_points)
+		if chosen.is_empty():
+			continue
+		resolved_by_id[id] = chosen
+		_add_footprint_to_occupancy(id, chosen["position"], occupied_points)
+	return resolved_by_id
+
+
+func _first_safe_anchor_map(
 	placement_ids: Array[StringName],
 	group_ids_by_key: Array, permutation_options: Array, group_index: int,
-	anchor_positions: Dictionary, room_id: StringName, room_type: StringName, output: Array[Dictionary],
-) -> void:
-	if output.size() >= MAX_SAFE_ANCHOR_MAPS:
-		return
+	anchor_positions: Dictionary, room_id: StringName, room_type: StringName,
+) -> Dictionary:
+	return _first_safe_anchor_map_budgeted(placement_ids, group_ids_by_key, permutation_options, group_index, anchor_positions, room_id, room_type, SAFE_MAP_EVALUATION_BUDGET)
+
+
+func _first_safe_anchor_map_budgeted(
+	placement_ids: Array[StringName],
+	group_ids_by_key: Array, permutation_options: Array, group_index: int,
+	anchor_positions: Dictionary, room_id: StringName, room_type: StringName,
+	budget: int,
+) -> Dictionary:
+	if budget <= 0:
+		return {}
 	if group_index >= group_ids_by_key.size():
-		if _anchor_map_is_safe(placement_ids, anchor_positions, room_id, room_type):
-			output.append(anchor_positions)
-		return
+		var resolved := _safe_anchor_map_positions(placement_ids, anchor_positions, room_id, room_type)
+		if resolved.is_empty():
+			return {}
+		return resolved
 	var group_ids := group_ids_by_key[group_index] as Array
+	var remaining_budget := budget - 1
 	for permutation_value in permutation_options[group_index] as Array:
-		if output.size() >= MAX_SAFE_ANCHOR_MAPS:
-			return
+		if remaining_budget <= 0:
+			return {}
 		var permutation := permutation_value as Array
 		var candidate_anchors := anchor_positions.duplicate(true)
 		for index in group_ids.size():
 			var destination := _placement_for_id(permutation[index] as StringName)
-			candidate_anchors[group_ids[index]] = destination["position"]
-		_collect_safe_anchor_maps(placement_ids, group_ids_by_key, permutation_options, group_index + 1, candidate_anchors, room_id, room_type, output)
+			candidate_anchors[group_ids[index]] = {"position": destination["position"], "anchor": destination["position"]}
+		var safe := _first_safe_anchor_map_budgeted(placement_ids, group_ids_by_key, permutation_options, group_index + 1, candidate_anchors, room_id, room_type, remaining_budget)
+		if not safe.is_empty():
+			return safe
+		remaining_budget -= 1
+	return {}
+
+
+# Returns {id: {"position": chosen, "anchor": anchor}} for the given anchor map,
+# or {} if any placement cannot fit. The chosen positions are exactly what
+# _apply_room_placements commits, so reusing them here avoids a second full
+# jitter search on the frame that actually places the accents.
+func _safe_anchor_map_positions(placement_ids: Array[StringName], anchor_positions: Dictionary, room_id: StringName, room_type: StringName) -> Dictionary:
+	var occupied_points: Dictionary = {}
+	var resolved_by_id: Dictionary = {}
+	for placement in REFERENCE_PLACEMENTS:
+		var id: StringName = placement["id"]
+		if not placement_ids.has(id):
+			continue
+		var anchor_position: Vector2 = anchor_positions[id]["anchor"]
+		var chosen := _find_valid_position(placement, anchor_position, room_id, room_type, occupied_points)
+		if chosen.is_empty():
+			return {}
+		resolved_by_id[id] = chosen
+		_add_footprint_to_occupancy(id, chosen["position"], occupied_points)
+	return resolved_by_id
 
 
 func _partial_anchor_shuffles(selected_ids: Array, anchor_ids: Array, group_key: String, room_id: StringName, room_type: StringName) -> Array:
@@ -698,53 +791,40 @@ func _partial_anchor_shuffles(selected_ids: Array, anchor_ids: Array, group_key:
 	# placement rather than a forced full-cycle A/B exchange. The full anchor set
 	# includes anchors of pieces that were removed for this room, so survivors
 	# can occupy those vacant slots.
-	var permutations: Array = []
-	var working_ids: Array = anchor_ids.duplicate()
-	_append_permutations(working_ids, 0, permutations)
-	var valid: Array = []
-	for permutation_value in permutations:
-		var permutation := permutation_value as Array
-		var assigned: Array = []
-		var valid_assignment := true
-		for index in selected_ids.size():
-			assigned.append(permutation[index])
-		if valid_assignment:
-			valid.append(assigned)
+	#
+	# This deliberately does NOT enumerate every permutation: the cross-product
+	# of all group permutations is factorial and cost a visible transition hitch
+	# (~500 ms) on full rooms. The placer only needs one valid arrangement per
+	# room, so we generate a small seeded candidate set and stop early. The room
+	# layout signature still varies because the seed differs per room/seed.
+	var candidates: Array = []
 	var swap_rng := RandomNumberGenerator.new()
 	swap_rng.seed = int(dungeon_seed) ^ String(room_id).hash() ^ String(room_type).hash() ^ group_key.hash() ^ ANCHOR_SWAP_SALT ^ (active_layout_variant * LAYOUT_VARIATION_SALT)
-	for index in range(valid.size() - 1, 0, -1):
-		var swap_index := swap_rng.randi_range(0, index)
-		var swap_value: Array = valid[index]
-		valid[index] = valid[swap_index]
-		valid[swap_index] = swap_value
-	return valid
+	var attempts := 0
+	while candidates.size() < MAX_SAFE_ANCHOR_MAPS and attempts < 24:
+		attempts += 1
+		var shuffled := anchor_ids.duplicate()
+		for index in range(shuffled.size() - 1, 0, -1):
+			var swap_index := swap_rng.randi_range(0, index)
+			var swap_value: Variant = shuffled[index]
+			shuffled[index] = shuffled[swap_index]
+			shuffled[swap_index] = swap_value
+		var assigned: Array = []
+		for index in selected_ids.size():
+			assigned.append(shuffled[index])
+		if not _list_has_duplicates(assigned):
+			candidates.append(assigned)
+	return candidates
 
 
-func _append_permutations(values: Array, start_index: int, output: Array) -> void:
-	if start_index >= values.size():
-		output.append(values.duplicate())
-		return
-	for index in range(start_index, values.size()):
-		var swap_value: Variant = values[start_index]
-		values[start_index] = values[index]
-		values[index] = swap_value
-		_append_permutations(values, start_index + 1, output)
-		values[index] = values[start_index]
-		values[start_index] = swap_value
-
-
-func _anchor_map_is_safe(placement_ids: Array[StringName], anchor_positions: Dictionary, room_id: StringName, room_type: StringName) -> bool:
-	var occupied_points: Dictionary = {}
-	for placement in REFERENCE_PLACEMENTS:
-		var id: StringName = placement["id"]
-		if not placement_ids.has(id):
-			continue
-		var anchor_position: Vector2 = anchor_positions.get(id, placement["position"])
-		var chosen := _find_valid_position(placement, anchor_position, room_id, room_type, occupied_points)
-		if chosen.is_empty():
-			return false
-		_add_footprint_to_occupancy(id, chosen["position"], occupied_points)
-	return true
+func _list_has_duplicates(values: Array) -> bool:
+	var seen: Dictionary = {}
+	for value in values:
+		var key := str(value)
+		if seen.has(key):
+			return true
+		seen[key] = true
+	return false
 
 
 func _find_valid_position(
@@ -756,8 +836,24 @@ func _find_valid_position(
 ) -> Dictionary:
 	var id: StringName = placement["id"]
 	var repeated_candidate := Vector2.INF
+	# The authored anchor is the designed slot and is valid in the vast majority
+	# of rooms. Try it before the jitter set: the seeded offset order can bury it
+	# 20+ entries deep, and every failed candidate runs a full footprint static
+	# scan, which was a large share of the room-transition hitch.
+	if _placement_fits(placement, anchor_position, occupied_points):
+		return {"position": anchor_position, "anchor": anchor_position}
+	var offset_attempts := 0
 	for offset in _candidate_offsets(id, room_id, room_type):
 		var candidate: Vector2 = anchor_position + offset
+		if candidate.is_equal_approx(anchor_position):
+			continue
+		# The authored anchor is almost always the correct slot; the jitter set is
+		# only a small bounded fallback for door/boundary edge cases. Trying a few
+		# seeded offsets is enough to find a fit or prove the slot is blocked, and
+		# keeps the transition frame cost bounded on large-footprint pieces.
+		if offset_attempts >= MAX_POSITION_ATTEMPTS:
+			break
+		offset_attempts += 1
 		if _candidate_repeats_previous_position(id, candidate):
 			repeated_candidate = candidate
 			continue
@@ -872,11 +968,19 @@ func _placement_static_fit(placement: Dictionary, position: Vector2) -> bool:
 func _floor_point_has_clearance(point: Vector2) -> bool:
 	if floor_boundary_polygon.is_empty():
 		return false
+	var cache_key := str(point)
+	if floor_clearance_cache.has(cache_key):
+		return bool(floor_clearance_cache[cache_key])
+	var result := true
 	for dx in range(-FLOOR_CLEARANCE, FLOOR_CLEARANCE + 1):
 		for dy in range(-FLOOR_CLEARANCE, FLOOR_CLEARANCE + 1):
 			if not Geometry2D.is_point_in_polygon(point + Vector2(dx, dy), floor_boundary_polygon):
-				return false
-	return true
+				result = false
+				break
+		if not result:
+			break
+	floor_clearance_cache[cache_key] = result
+	return result
 
 
 func _wall_point_has_clearance(point: Vector2, side: StringName, is_crack: bool = false) -> bool:
@@ -972,6 +1076,7 @@ func _refresh_room_constraints() -> void:
 	door_block_points.clear()
 	door_blocked_point_lookup.clear()
 	door_block_polygons.clear()
+	floor_clearance_cache.clear()
 	var map_root := get_parent() as Node2D
 	if map_root == null:
 		return

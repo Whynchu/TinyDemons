@@ -388,6 +388,52 @@ recorded. The harness must be run on a device build of this seed before any
 optimization claim. Until the A17 numbers exist, the desktop numbers above are a
 CPU floor, not a mobile budget.
 
+### Measured improvement — 2026-09-15 (room-transition hitches)
+
+The harness's `boss_room_transition` scenario was corrected to enter the real
+`ROOM_DOWNSTAIRS` room for the seed through the actual door path
+(`enter_connected_room`) instead of forcing a room id that did not exist in the
+graph. That exposed a real defect the desktop baseline had hidden:
+
+| Scenario | before | after | factor |
+|---|---:|---:|---:|
+| boss room transition (real door entry) | ~1,786 ms | ~89 ms | 20× |
+| regular room transition | ~17 ms | ~16 ms | — |
+
+The hitch was not the geometry copy (`tile_map_data` was already one native
+operation, ~0.5 ms) or the walkable-tile rebuild (~0.2 ms). It was the stone
+accent placer in `hub_stone_accent_layer.gd`:
+
+1. **Full permutation enumeration** of every swappable group's anchors, then a
+   cross-product over all groups, each candidate re-validating every placement's
+   per-pixel footprint. Bounded to a seeded partial-shuffle candidate set.
+2. **Double search** — the anchor-map validation re-ran `_find_valid_position`
+   for every placement, then `_apply_room_placements` re-ran it again to commit
+   the same positions. The validation now returns the resolved positions and the
+   commit path consumes them directly.
+3. **Unbounded retry loop** — rooms whose geometry (boss underlay/sealed doors)
+   invalidate several authored anchors can never reach the full density target,
+   so `refresh_current_room` retried up to 32 layout variants, each a full
+   search (~50 ms). A plateau check now stops retrying once the visible count
+   stops improving, and keeps the best variant.
+4. **Authored anchor buried in the shuffled jitter order** — the designed slot
+   could sit 20+ entries deep in a 25-offset shuffle, so every placement burned
+   ~20 failed footprint scans before trying it. The authored anchor is now tried
+   first, then a bounded seeded fallback.
+5. **Unbounded anchor-map search budget** — the first-safe-map DFS could evaluate
+   hundreds of candidate maps on anchor-hostile rooms before giving up. A
+   per-leaf evaluation budget (`SAFE_MAP_EVALUATION_BUDGET`, tuned to 9) bounds
+   the fallback without breaking the connected-room distinct-layout contract the
+   accent smoke test enforces.
+
+The accent layout contract (density 3-5 removals, per-group anchor swaps,
+connected-room movement ≥ 60%, fixed cracks, room-tinted overlays) is unchanged
+and verified by `hub_stone_accent_scene_smoke` across all 64 seeds.
+
+The remaining ~40 ms of the boss entry is the boss activation (enemy spawn +
+chest/room state) and the synchronous profile save; those are separate targets
+from the accent hitch.
+
 ## Guardrails
 
 - Prefer a new definition or direct typed dependency over a new global lookup.
@@ -409,6 +455,7 @@ sprite preparation, palette recolor), and without a baseline the T2/T1 work
 cannot be shown not to regress.
 
 1. **[x] Add the fixed-seed performance scenario harness** (`tests/performance_scenario_harness.gd` + `tools/run_perf_harness.ps1`). It reports frame time, active nodes/sprites, and room-transition timing on fixed seeds. The desktop baseline is recorded above; the **Samsung A17 run is the outstanding next measurement** and gates any optimization claim.
+1b. **[x] Fix the room-transition hitch** the harness exposed: the boss-room door entry measured ~1,786 ms (real `enter_connected_room` path) and is now ~89 ms via the stone-accent placer fixes above. Steady-state frame time and the accent layout contract are unchanged (verified by the accent smoke + door smoke tests).
 2. Keep the current composition score (from `tools/validate_composition.ps1`)
    labeled as the legacy-coupling checkpoint; do not hardcode its value in
    this document.
