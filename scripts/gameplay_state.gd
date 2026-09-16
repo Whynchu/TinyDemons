@@ -311,7 +311,6 @@ var current_room_encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL
 var current_room_reward_tier: StringName = DungeonGraph.REWARD_STANDARD
 var current_room_vault_id: StringName = &""
 var room_transition_locked := false
-var normal_room_geometry: Dictionary = {}
 var chest_normal_texture: Texture2D = null
 var chest_gray_texture: Texture2D = null
 var chest_unlock_overlay: Sprite2D = null
@@ -1507,16 +1506,12 @@ func _on_dungeon_map_state_changed() -> void:
 	_build_entrance_block_polygons()
 func _refresh_room_socket_visuals(is_unlocked: bool) -> void:
 	room_puzzle_controller.call("refresh_room_socket_visuals", self, is_unlocked)
-func _apply_room_geometry() -> void: room_controller.call("apply_room_geometry", self)
-func _apply_authored_boss_room_geometry() -> void: room_controller.call("apply_authored_boss_room_geometry", self)
-func _copy_authored_room_sprite(template: Node, path: NodePath) -> void: room_controller.call("copy_authored_room_sprite", self, template, path)
-func _copy_boss_floor_underlay(template: Node) -> void: room_controller.call("copy_boss_floor_underlay", self, template)
-func _copy_authored_tile_layer(source: TileMapLayer, destination: TileMapLayer) -> void: room_controller.call("copy_authored_tile_layer", source, destination)
-func _copy_authored_polygon(template: Node, path: NodePath) -> void: room_controller.call("copy_authored_polygon", self, template, path)
-func _capture_normal_room_geometry() -> void: room_controller.call("capture_normal_room_geometry", self)
-func _restore_normal_room_geometry() -> void: room_controller.call("restore_normal_room_geometry", self)
-func _configure_large_room_camera(enabled: bool) -> void: room_controller.call("configure_large_room_camera", self, enabled)
-func _update_large_room_camera() -> void: room_controller.call("update_large_room_camera", self)
+func _apply_room_geometry() -> void: room_controller.apply_room_geometry()
+func _apply_authored_boss_room_geometry() -> void: room_controller.apply_authored_boss_room_geometry()
+func _capture_normal_room_geometry() -> void: room_controller.capture_normal_room_geometry()
+func _restore_normal_room_geometry() -> void: room_controller.restore_normal_room_geometry()
+func _configure_large_room_camera(enabled: bool) -> void: room_controller.configure_large_room_camera(self, enabled)
+func _update_large_room_camera() -> void: room_controller.update_large_room_camera()
 func _update_door_transition() -> void: if not room_transition_locked: room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _try_enter_any_active_socket() -> bool: return room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)
 func _release_room_transition_lock() -> void: room_transition_locked = false; if room_controller != null: room_controller.end_transition()

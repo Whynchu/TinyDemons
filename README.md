@@ -75,6 +75,9 @@ content and [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) for open verification
 gaps. The accepted refactor route is in
 [`docs/refactor-route.md`](docs/refactor-route.md). The completed Combat & Economy work remains documented in
 [`docs/combat-economy-overhaul.md`](docs/combat-economy-overhaul.md).
+The longer-term goal—data-driven content composition, easier enemy/room/map
+authoring, and device-backed performance work—is documented in
+[`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
 ### Current refactor focus
 
@@ -89,13 +92,13 @@ pinned comparison baseline) gives us this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 166 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 169 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime physical lines | 48,534 | Refactor by ownership, not by indiscriminate file splitting |
-| Runtime non-blank lines | 42,900 | Blank lines are excluded; comments remain counted |
+| Runtime physical lines | 48,217 | Refactor by ownership, not by indiscriminate file splitting |
+| Runtime non-blank lines | 42,561 | Blank lines are excluded; comments remain counted |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
-| `gameplay_state.gd` | 1,777 lines / 510 functions / 299 fields | The remaining composition-root and compatibility surface is the main debt |
-| `root.call/get/set` | 3,135 sites | Dependencies are still hidden across controllers and components |
+| `gameplay_state.gd` | 1,772 lines / 506 functions / 298 fields | The remaining composition-root and compatibility surface is the main debt |
+| `root.call/get/set` | 2,726 sites | Dependencies are still hidden across controllers and components |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -107,24 +110,32 @@ player presentation contexts. Those result contracts and data snapshots are a
 useful foundation, but they do not prove that ownership has moved out of the
 state bag. Under the strict ownership scorecard in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
-the composition refactor is approximately **25% complete / 75% remaining**.
-The one completed hard gate is a genuine direct typed context; root-access
-reduction, state-bag shrinkage, and room-owner shrinkage are not complete.
+the legacy-coupling cleanup is **82.5% complete / 17.5% remaining**. This is a
+bounded architecture checkpoint, not the completion percentage for the larger
+long-term composition goal. The next goal is to make content additions
+definition-driven so an enemy, room, or map can be added without central-state
+special cases, while also establishing real desktop/web/mobile performance
+budgets.
 
 The practical sequence is:
 
-1. Stop adding `GameplayState`-backed contexts; classify the existing room
-   adapters as transitional seams.
-2. Rework room entry, activation, spawn, and respawn through direct typed
-   slices that lower root access and keep `RoomController` below its baseline.
-3. Move state out of `GameplayState` only when its owner and direct consumers
-   are established, then retire the parallel compatibility implementation.
-4. Characterize browser/device file-write ordering and the hosted Pages
-   artifact after the runtime ownership work is genuinely complete.
+1. Finish the remaining state-bag, room-adapter, and reflective-access cleanup
+   without blocking features that can use a better boundary.
+2. Prove an `EnemyDefinition` plus factory path by migrating one existing slime
+   variant and adding a second through composition/configuration.
+3. Introduce reusable encounter and room definitions, then make dungeon/map
+   generation consume validated content rather than accumulating special cases.
+4. Profile title, hub, rooms, boss combat, transitions, effects, and menus on
+   desktop, web, and the Samsung A17 before choosing rendering optimizations.
+5. Characterize browser/device file-write ordering and the hosted Pages
+   artifact alongside the runtime work.
 
 Line counts and dynamic-call counts are navigation evidence, not quality scores.
 Do not split files or remove `GameplayState` wholesale; preserve the explicit
 frame order and characterize each vertical slice before changing its ownership.
+The long-term composition plan defines the workflow tests that matter: adding
+an enemy, room, or map without editing the central state bag, and meeting
+measured performance budgets on the actual target device.
 
 Current playtest issues and their resolution order are tracked in
 [`docs/current-issues-and-resolution-plan.md`](docs/current-issues-and-resolution-plan.md).
@@ -214,7 +225,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.18**. Every push to `main` must increment the
+Current game version: **0.2.19**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

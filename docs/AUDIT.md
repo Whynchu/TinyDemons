@@ -8,14 +8,16 @@ Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 Baseline game version: `0.2.00`
 
-Current release: `0.2.18` (typed reward, checkpoint, room-state, and runtime ownership boundaries)
+Current release: `0.2.19` (typed reward, checkpoint, room-state, runtime ownership, and long-term composition direction)
 
-Post-audit checkpoint (2026-09-15): the composition handoff is approximately
-25% complete under the strict ownership scorecard. Typed room spawn/death
-helpers, the typed room-owned combat death boundary, external default tuning
-resources, typed pause/Hub player contexts, and fresh local Web export evidence
-are now recorded in
-[`composition-refactor-analysis.md`](composition-refactor-analysis.md).
+Post-audit checkpoint (2026-09-15): the legacy-coupling cleanup is 82.5%
+complete under the strict ownership scorecard. Typed room spawn/death helpers,
+the typed room-owned combat death boundary, external default tuning resources,
+typed pause/Hub player contexts, room geometry ownership, and the typed frame
+schedule boundary are now recorded in
+[`composition-refactor-analysis.md`](composition-refactor-analysis.md). The
+broader content-composition and device-performance direction is documented in
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
 Browser/device and hosted-Pages verification remain separate release work.
 
 ## 1. Purpose
