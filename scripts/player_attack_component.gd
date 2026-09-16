@@ -4,9 +4,10 @@ class_name PlayerAttackComponent
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CircularInputRecognizerScript = preload("res://scripts/circular_input_recognizer.gd")
 
-const SWORD_BEAM_CHROMA_COST := 30
-const SWORD_BEAM_COOLDOWN := 8.0
-const SPIN_HITSTUN_DURATION := 0.18
+## Editor-facing attack tuning.
+@export var sword_beam_chroma_cost := 30
+@export var sword_beam_cooldown := 8.0
+@export var spin_hitstun_duration := 0.18
 
 enum AttackKind { NONE, ATTACK1, ATTACK2, SPIN, CHARGING, CHARGED_ATTACK2 }
 
@@ -157,13 +158,13 @@ func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animati
 	if new_kind == AttackKind.CHARGED_ATTACK2:
 		var chroma := root.player_chroma_component
 		var beam_palette := String(root.current_player_palette_name)
-		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", SWORD_BEAM_CHROMA_COST)):
+		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", sword_beam_chroma_cost)):
 			root._sync_chroma_presentation()
 			var direction: Vector2 = root._player_facing_vector()
 			if direction.length_squared() <= 0.0001:
 				direction = Vector2.LEFT if root.player_attack_flip_h else Vector2.RIGHT
 			root._spawn_sword_beam(root._player_visual_center(), direction.normalized(), beam_palette)
-			sword_beam_cooldown_remaining = SWORD_BEAM_COOLDOWN
+			sword_beam_cooldown_remaining = sword_beam_cooldown
 	var shadow_controller := root.shadow_controller
 	if shadow_controller != null:
 		shadow_controller.sync_player_attack_shadow(root, float(root.DEPTH_Z_SCALE))
@@ -220,7 +221,7 @@ func begin_charge(root: GameplayState) -> bool:
 	attack_kind = AttackKind.CHARGING
 	charge_release_pending = false
 	var charge_chroma := root.player_chroma_component
-	if sword_beam_cooldown_remaining <= 0.0 and (charge_chroma == null or bool(charge_chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))):
+	if sword_beam_cooldown_remaining <= 0.0 and (charge_chroma == null or bool(charge_chroma.call("can_spend_chroma", sword_beam_chroma_cost))):
 		root._play_sound("sword_beam_charge", 0.0, 1.0)
 	charge_elapsed = 0.0
 	combo_buffered = false
@@ -263,7 +264,7 @@ func tick_charge(root: GameplayState, delta: float) -> void:
 		return
 	var effects := root.effects_spawner
 	var chroma := root.player_chroma_component
-	var beam_available: bool = sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
+	var beam_available: bool = sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", sword_beam_chroma_cost))
 	if beam_available and effects != null and not effects.charge_ready_flash_complete():
 		return
 	start_charged_attack(root)
@@ -368,7 +369,7 @@ func apply_hitbox(root: GameplayState) -> void:
 			if is_spin_attack():
 				var slime_combat: SlimeCombatComponent = root._slime_combat(slime)
 				if slime_combat != null:
-					slime_combat.hitstun_timer = maxf(slime_combat.hitstun_timer, SPIN_HITSTUN_DURATION)
+					slime_combat.hitstun_timer = maxf(slime_combat.hitstun_timer, spin_hitstun_duration)
 			if is_spin_attack():
 				if spin_pulse == 1:
 					root._knockback_slime(slime, special_knockback_multiplier(tuning))

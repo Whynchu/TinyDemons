@@ -5,6 +5,10 @@ signal attack_started
 signal hit_confirmed
 signal attack_finished
 
+## Non-boss attack lunge duration in seconds. Boss lunge timing comes from the
+## slime tuning resource; this is the editor-facing default for regular slimes.
+@export var regular_attack_lunge_duration := 0.12
+
 var active := false
 var timer := 0.0
 var hit_done := false
@@ -111,7 +115,7 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 			if commit_attack.is_valid():
 				commit_attack.call(actor)
 		if not hit_done and frame_index >= hit_frame - 2 and lunge_remaining <= 0.0:
-			var lunge_duration := tuning.boss_attack_lunge_duration if is_boss else 0.12
+			var lunge_duration := tuning.boss_attack_lunge_duration if is_boss else regular_attack_lunge_duration
 			begin_lunge(attack_lunge_vector, lunge_duration)
 		if lunge_remaining > 0.0:
 			var step := minf(maxf(delta, 0.0), lunge_remaining)

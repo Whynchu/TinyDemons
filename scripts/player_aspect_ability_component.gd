@@ -10,20 +10,25 @@ signal ability_rejected
 
 const CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.gd")
 
+## Editor-facing default cooldown durations used when the caller does not
+## provide explicit values via configure_mode_cooldowns.
+@export var default_elemental_cooldown := 2.0
+@export var default_grey_cooldown := 2.5
+
 var cooldown_duration := 0.0
 var grey_cooldown_duration := 0.0
 var cooldown_remaining := 0.0
 var active_cooldown_duration := 0.0
 
 
-func configure_cooldown(duration: float) -> void:
-	cooldown_duration = maxf(duration, 0.0)
+func configure_cooldown(duration: float = -1.0) -> void:
+	cooldown_duration = maxf(default_elemental_cooldown if duration < 0.0 else duration, 0.0)
 	grey_cooldown_duration = cooldown_duration
 
 
-func configure_mode_cooldowns(elemental_duration: float, grey_duration: float) -> void:
-	cooldown_duration = maxf(elemental_duration, 0.0)
-	grey_cooldown_duration = maxf(grey_duration, 0.0)
+func configure_mode_cooldowns(elemental_duration: float = -1.0, grey_duration: float = -1.0) -> void:
+	cooldown_duration = maxf(default_elemental_cooldown if elemental_duration < 0.0 else elemental_duration, 0.0)
+	grey_cooldown_duration = maxf(default_grey_cooldown if grey_duration < 0.0 else grey_duration, 0.0)
 
 
 func cooldown_duration_for_mode(mode: int) -> float:

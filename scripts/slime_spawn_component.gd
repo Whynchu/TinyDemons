@@ -7,13 +7,16 @@ extends Node
 var active := false
 var frame_index := 0
 var frame_timer := 0.0
+## Editor-facing default frame duration used when the caller does not supply
+## an explicit duration to begin().
+@export var default_frame_time := 0.08
 var frame_time := 0.08
 var frames: Array[Texture2D] = []
 
 
-func begin(spawn_frames: Array[Texture2D], frame_duration: float) -> void:
+func begin(spawn_frames: Array[Texture2D], frame_duration: float = -1.0) -> void:
 	frames = spawn_frames.duplicate()
-	frame_time = maxf(frame_duration, 0.01)
+	frame_time = maxf(default_frame_time if frame_duration < 0.0 else frame_duration, 0.01)
 	frame_index = 0
 	frame_timer = 0.0
 	active = not frames.is_empty()

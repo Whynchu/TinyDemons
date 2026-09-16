@@ -2,11 +2,11 @@
 
 Status: live register for the `0.2.x` cycle
 
-Updated: 2026-09-15
+Updated: 2026-09-16
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.23`
+Current release: version `0.2.24`
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in
@@ -336,10 +336,10 @@ the launched projectile; both now have explicit catalog/profile coverage.
 ## Verification surface audit — open
 
 The repository has a large test/report inventory. `tests/manifest.csv` now
-classifies all 123 scripts with a role (gate/owner/reference/diagnostic/report),
+classifies all 124 scripts with a role (gate/owner/reference/diagnostic/report),
 state, owner, target, and load kind. The runner derives its grouping from that
 manifest: the default release gate selects 43 paths; `-TestGroup all` covers the
-121 runnable paths. The 2026-09-13 pruning slice removed the stale
+122 runnable paths. The 2026-09-13 pruning slice removed the stale
 `backtrack_popcorn_smoke` expectation and consolidated the three identical
 R3/R4/R5 layout wrappers into `authored_layouts_smoke`; no gate coverage or web
 export coverage was removed. The separate classification and pruning issue is
@@ -351,7 +351,8 @@ not a quality score or release gate.
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
-| Full smoke runner has 121 runnable manifest paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
+| Full smoke runner has 122 runnable manifest paths; the default gate selects 43 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
+| Boss-room door entry is a genuine slow path (measured 300–385 ms on loaded runs, 100–165 ms on quiet runs) | The boss transition is the worst synchronous path; the harness's single-sample reading is too noisy to gate on | Average the boss-entry measurement across several door entries, then optimize the accent placer, boss activation/spawn, and synchronous profile-save phases after the A17 device profile. Tracked in [`AUDIT.md`](AUDIT.md) section 11.2 |
 | Six formerly unregistered `role:owner` checks are now triaged and resolved | All six have reliable states recorded in `tests/manifest.csv` | `actor_geometry_smoke` harness fixed; `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`, `resource_drop_motion_smoke` verified; `touch_menu_scroll_smoke` rewritten for the dialogue-context contract and verified |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
 | `screen_state_controller.gd` remains a large mixed menu/hub/persistence owner | Menu changes carry broad regression risk | Pause root/status and the Hub summary now use a typed presenter context; continue one complete screen boundary at a time |

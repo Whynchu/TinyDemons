@@ -2,17 +2,18 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-15
+Updated: 2026-09-16
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.23`
+Current release: version `0.2.24`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
 contract remains dungeon crawling, elemental combat, puzzle solving,
 exploration, battling, gear, progression, and the title → Hub → dungeon →
-settlement → Hub loop.
+settlement → Hub loop. The measured current state is in [`AUDIT.md`](AUDIT.md);
+the composition refactor is complete (100% on the strict scorecard).
 
 ## How to use this roadmap
 
@@ -35,39 +36,45 @@ Work should move through one narrow slice at a time:
 
 | Phase | Purpose | State | Exit evidence |
 |---|---|---|---|
-| 0.00 | Preserve the `0.2.00` baseline | In progress | clean import, recorded test inventory, focused evidence, and representative manual run |
+| 0.00 | Preserve the `0.2.00` baseline | Complete | clean import, recorded test inventory, focused evidence, and representative manual run |
 | 0.10 | Make documentation authoritative | In progress | current map, roadmap, content guide, known-issues register, and lifecycle headers |
 | 0.15 | Audit and reduce the verification surface | Active issue | every test/report has a role and state; curated release gate; obsolete checks removed |
 | 0.20 | Stabilize active player-facing contracts | In progress | issue tracker findings have focused or manual verification, with failures classified |
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
-| 0.40 | Separate room and encounter responsibilities | In progress | typed room transition/activation results and deterministic room fixtures |
-| 0.50 | Reduce dynamic runtime seams by feature | In progress | one owner migration removes its compatibility calls while preserving frame order |
+| 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
+| 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard at 100%; state bag and room owner at strict targets; legacy adapters retired |
 | 0.60 | Make content authoring repeatable | Planned | validated definitions, factories, and an example workflow for rooms, enemies, rewards, and tuning |
-| 0.70 | Improve test and performance feedback | Planned | device-backed timing, memory, render-cost, and reproducible performance scenarios |
+| 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios |
 | 0.80 | Establish long-term content composition | Planned | an enemy/room/map can be added through definitions and composition without central-state special cases |
 
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.23
+## Next checkpoint after 0.2.24
 
-Version `0.2.23` records the completed composition refactor alongside
-the earlier Web export, touch/cloud, gear, progression, and generated-route
-reconciliation. The next checkpoint is a stabilization pass in this order:
+Version `0.2.24` records the completed composition refactor (100% on the strict
+scorecard), a fresh measured baseline in [`AUDIT.md`](AUDIT.md), and a new
+regression floor in `tools/composition-baseline.json`. The next checkpoint is a
+stabilization pass in this order:
 
-1. Keep the manifest preflight and focused room/HUD/reference checks green, then
-   run the curated standalone gate and record product, harness, environment, and
-   crash outcomes separately.
+1. Make the boss-entry measurement a stable gate: the perf harness reports one
+   noisy sample per run (~100–165 ms quiet, ~300–385 ms loaded), so average it
+   across several door entries before treating it as a trend. The boss door
+   entry is a genuine slow path (accent placer, boss activation/spawn, and the
+   synchronous profile save) to optimize after the A17 device profile. Keep the
+   manifest preflight and focused room/HUD checks green, then run the curated
+   standalone gate and record product, harness, environment, and crash outcomes
+   separately.
 2. Close the remaining verification-surface decisions: explicitly retain or
    retire duplicate/implementation-detail checks, and link the audit documents
    without duplicating the manifest classification table.
 3. Finish the remaining browser/device, native-resolution, cold/warm timing,
    and representative gameplay evidence that cannot be established headlessly.
-4. Continue the room boundary one seam at a time: the initial typed enemy-spawn
-   and chest-item reward results now travel through their owners; next tighten
-   reward persistence/settlement boundaries while preserving authored/generated
+4. Continue the room boundary one seam at a time: the typed entry/activation,
+   spawn, clear, and chest-reward results are in place; next tighten the reward
+   persistence/settlement boundaries while preserving authored/generated
    distinctions and the explicit frame schedule.
-5. Select the first menu or checkpoint ownership extraction only after the
+5. Select the first menu or content-definition extraction only after the
    active contract evidence is current.
 
 Each item should keep its existing owner, add or correct a focused
@@ -162,21 +169,26 @@ render at native 240×160 before checking wider modes.
 
 ## Phase 0.40 — Room and encounter boundaries
 
-Define typed results around room transition, arrival sockets, room persistence,
-encounter spawning, and reward orchestration. The room transition and activation
-results, plus the initial typed enemy-spawn and chest-item reward results, are now
-in place. Preserve authored and generated layout distinctions. A room is eligible
+Typed results now wrap room transition, entry, activation, spawn, clear, and
+reward orchestration, with room geometry owned by `RoomGeometryController` and
+entry/activation by `room_entry_services.gd` / `room_activation_services.gd`.
+Authored and generated layout distinctions are preserved. A room is eligible
 for activation only after its full enemy body positions and route reachability
 have been validated. The next seam is the remaining reward persistence and
 settlement boundary.
 
 ## Phase 0.50 — Typed runtime ownership
 
-Select one boundary only after the active contracts are stable. The preferred
-first candidates are checkpoint command/result, room transition result, or the
-shared actor geometry interface. Move behavior vertically, remove obsolete
-wrappers only after their final consumer is migrated, and measure the reduction
-in reflective calls for the migrated feature.
+Complete. The composition scorecard is at 100%: `GameplayState` is at 1,719
+lines / 286 fields, dynamic root access is at 2,488, `RoomController` is at
+2,253 lines, and the transitional/legacy counts are zero. The strict audit
+(`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
+floor now protects the achieved state. Remaining dynamic-access owners
+(`screen_state_controller.gd`, `combat_runtime_controller.gd`,
+`slime_runtime_controller.gd`, `magic_runtime_controller.gd`) are the next
+vertical migration candidates and should be reduced feature by feature while
+preserving frame order and removing obsolete wrappers only after their final
+consumer migrates.
 
 ## Phase 0.60 — Content authoring
 
@@ -198,9 +210,13 @@ desktop.
 ## Phase 0.80 — Long-term content composition
 
 The broader direction is documented in
-[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
-The current 82.5% composition score remains a legacy-coupling checkpoint; it is
-not a claim that content authoring is complete. Start with one existing slime
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md);
+the approved component contract, wiring rules, and the interchangeable-entity
+proof sequence are in
+[`component-composition-design.md`](component-composition-design.md). The
+composition refactor is complete (100% on the strict scorecard), which
+closes the legacy-coupling checkpoint; it is not a claim that content authoring
+is complete. Start with one existing slime
 variant behind an `EnemyDefinition` and factory, then make adding a second
 variant require no central `GameplayState` or room special case. Extend the
 same contract to encounters, rooms, and dungeon/map definitions only after the

@@ -8,12 +8,13 @@ const BLOODWOVEN_CORE := &"bloodwoven_core"
 const BLOOD_FEED := &"blood_feed"
 const DUELIST_FOCUS := &"duelist_focus"
 const GATHERING_EDGE := &"gathering_edge"
-const BASTION_MAX_CHARGES := 3
-const BASTION_KNOCKBACK_PER_CHARGE := 0.35
-const BASTION_DURABILITY_PER_DEF := 0.50
-const DUELIST_LOCKED_DAMAGE_PER_STR := 0.03
-const DUELIST_OTHER_TARGET_MULTIPLIER := 0.80
-const BLOOD_FEED_LIFE_STEAL_RATE := 0.20
+## Editor-facing transmutation tuning.
+@export var bastion_max_charges := 3
+@export var bastion_knockback_per_charge := 0.35
+@export var bastion_durability_per_def := 0.50
+@export var duelist_locked_damage_per_str := 0.03
+@export var duelist_other_target_multiplier := 0.80
+@export var blood_feed_life_steal_rate := 0.20
 
 var active_transmutations: Dictionary = {}
 var bastion_charges := 0
@@ -42,14 +43,14 @@ func has(transmutation_id: StringName) -> bool:
 func guard_maximum_durability(base_durability: float, effective_defense: float) -> float:
 	if not has(BASTION_CORE):
 		return base_durability
-	return base_durability + maxf(effective_defense, 0.0) * BASTION_DURABILITY_PER_DEF
+	return base_durability + maxf(effective_defense, 0.0) * bastion_durability_per_def
 
 
 func record_successful_block(_shield_damage: float = 0.0, _health_damage: float = 0.0) -> void:
 	if not has(BASTION_CORE):
 		return
-	bastion_charges = mini(bastion_charges + 1, BASTION_MAX_CHARGES)
-	effect_triggered.emit(BASTION_CORE, "BASTION %d/%d" % [bastion_charges, BASTION_MAX_CHARGES])
+	bastion_charges = mini(bastion_charges + 1, bastion_max_charges)
+	effect_triggered.emit(BASTION_CORE, "BASTION %d/%d" % [bastion_charges, bastion_max_charges])
 
 
 func begin_attack(variant: int) -> void:
@@ -75,7 +76,7 @@ func finish_attack() -> void:
 
 
 func attack_knockback_multiplier() -> float:
-	return 1.0 + active_bastion_attack_charges * BASTION_KNOCKBACK_PER_CHARGE
+	return 1.0 + active_bastion_attack_charges * bastion_knockback_per_charge
 
 
 func record_attack_hits(attack_variant: int, targets: Array) -> void:
@@ -100,13 +101,13 @@ func damage_share_divisor(target: Sprite2D, target_count: int) -> float:
 func duelist_damage_multiplier(target: Sprite2D, locked_target: Sprite2D, effective_strength: float) -> float:
 	if not has(DUELIST_FOCUS) or locked_target == null:
 		return 1.0
-	return 1.0 + maxf(float(effective_strength), 0.0) * DUELIST_LOCKED_DAMAGE_PER_STR if target == locked_target else DUELIST_OTHER_TARGET_MULTIPLIER
+	return 1.0 + maxf(float(effective_strength), 0.0) * duelist_locked_damage_per_str if target == locked_target else duelist_other_target_multiplier
 
 
 func life_steal_amount(damage: float) -> float:
 	if not has(BLOOD_FEED):
 		return 0.0
-	return maxf(damage, 0.0) * BLOOD_FEED_LIFE_STEAL_RATE
+	return maxf(damage, 0.0) * blood_feed_life_steal_rate
 
 
 func consume_duelist_feedback(target_is_locked: bool, effective_strength: float) -> void:
@@ -114,6 +115,6 @@ func consume_duelist_feedback(target_is_locked: bool, effective_strength: float)
 		return
 	duelist_feedback_ready = false
 	if target_is_locked:
-		effect_triggered.emit(DUELIST_FOCUS, "DUELIST +%d%%" % roundi(maxf(float(effective_strength), 0.0) * DUELIST_LOCKED_DAMAGE_PER_STR * 100.0))
+		effect_triggered.emit(DUELIST_FOCUS, "DUELIST +%d%%" % roundi(maxf(float(effective_strength), 0.0) * duelist_locked_damage_per_str * 100.0))
 	else:
 		effect_triggered.emit(DUELIST_FOCUS, "DUELIST -20%")

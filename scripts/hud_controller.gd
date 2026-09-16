@@ -316,7 +316,7 @@ func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
 	var imbue_duration := float(root.get("IMBUE_COOLDOWN"))
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	var beam_remaining := attack.sword_beam_cooldown_remaining if attack != null else 0.0
-	var beam_duration := PlayerAttackComponent.SWORD_BEAM_COOLDOWN
+	var beam_duration := attack.sword_beam_cooldown if attack != null else 8.0
 	var regular_cooldown_ratio := clampf(regular_remaining / maxf(regular_duration, 0.001), 0.0, 1.0)
 	var imbue_cooldown_ratio := clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
 	var beam_cooldown_ratio := clampf(beam_remaining / maxf(beam_duration, 0.001), 0.0, 1.0)
@@ -325,7 +325,7 @@ func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
 	_update_cooldown_flash(&"sword_beam", beam_remaining, delta)
 	var magic_available := _magic_cooldown_available(chroma)
 	var imbue_available := _imbue_cooldown_available(root, chroma)
-	var beam_available := beam_remaining <= 0.0001 and chroma != null and bool(chroma.call("can_spend_chroma", PlayerAttackComponent.SWORD_BEAM_CHROMA_COST))
+	var beam_available := beam_remaining <= 0.0001 and chroma != null and bool(chroma.call("can_spend_chroma", attack.sword_beam_chroma_cost if attack != null else 30))
 	_update_cooldown_icon(root, &"magic", regular_remaining, regular_cooldown_ratio, magic_available)
 	_update_cooldown_icon(root, &"imbue", imbue_remaining, imbue_cooldown_ratio, imbue_available)
 	_update_cooldown_icon(root, &"sword_beam", beam_remaining, beam_cooldown_ratio, beam_available)

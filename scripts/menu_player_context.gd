@@ -64,6 +64,10 @@ func chroma() -> int:
 	return chroma_component.current_chroma if chroma_component != null else 0
 
 
+func max_chroma() -> int:
+	return chroma_component.max_chroma if chroma_component != null else 0
+
+
 func element_display_name() -> String:
 	if chroma_component == null:
 		return "NORMAL"

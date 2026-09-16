@@ -24,12 +24,12 @@ func _initialize() -> void:
 	_expect(chroma.current_aspect == Chroma.Aspect.FIRE, "attunement stores Fire", failures)
 	_expect(chroma.current_chroma == 100, "attunement fills to 100", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.ELEMENTAL, "charged Fire resolves elemental ability", failures)
-	_expect(Chroma.ELEMENTAL_ABILITY_COST == 10, "Triangle costs 10 Chroma", failures)
+	_expect(chroma.elemental_ability_cost == 10, "Triangle costs 10 Chroma", failures)
 
 	for expected in [90, 80, 70, 60, 50, 40, 30, 20, 10, 0]:
 		_expect(chroma.spend_elemental_ability(), "elemental cast spends 10 Chroma", failures)
 		_expect(chroma.current_chroma == expected, "Chroma reaches %d" % expected, failures)
-		_expect(chroma.current_chroma % Chroma.ELEMENTAL_ABILITY_COST == 0, "Chroma remains 10-point aligned at %d" % expected, failures)
+		_expect(chroma.current_chroma % chroma.elemental_ability_cost == 0, "Chroma remains 10-point aligned at %d" % expected, failures)
 
 	_expect(chroma.current_aspect == Chroma.Aspect.NONE, "unbound depletion returns to Gray", failures)
 	_expect(chroma.ability_mode() == Chroma.AbilityMode.GRAY, "unbound depletion resolves Gray ability", failures)
