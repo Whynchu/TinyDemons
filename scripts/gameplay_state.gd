@@ -26,16 +26,11 @@ const DEFAULT_CHROMA_TUNING: ChromaTuning = preload("res://resources/tuning/chro
 
 const SLIME_ATTACK_FRAME_SIZE := Vector2i(16, 16)
 const SLIME_NOTICE_FRAME_TIME := 0.10
-const EDGE_MARGIN := 0.35
-const SLIME_EDGE_PADDING := 1.25
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const DEPTH_Z_SCALE := 10.0
 const OVERWORLD_UI_Z := 4090
-const VERTICAL_MOVEMENT_SCALE := 0.5
 const MAX_ACTIVE_ENEMY_ATTACKERS := 3
 const PLAYER_ATTACK_FRAME_SIZE := Vector2i(36, 36)
-const GAME_OVER_FADE_TIME := 0.8
-const PLAYER_TEXTURE_OFFSET := Vector2(-10, -10)
 const CHEST_INTERACT_DISTANCE := 16.0
 const NPC_INTERACT_DISTANCE := 24.0
 const FIRE_INTERACT_DISTANCE := 20.0
@@ -65,17 +60,12 @@ const CONTROLLER_DEADZONE := 0.25
 const CONTROLLER_TRIGGER_DEADZONE := 0.35
 const PLAYER_MAX_MP := 100.0
 const CHROMA_SATURATION_CURVE_EXPONENT := 0.65
-const MAGIC_MP_COST := 10.0
-const MAGIC_COOLDOWN := 2.0
 const GREY_MAGIC_COOLDOWN := 2.5
 const IMBUE_MP_COST := 40.0
 const IMBUE_DURATION := 15.0
 const IMBUE_COOLDOWN := 20.0
 const IMBUE_HOLD_THRESHOLD := 0.35
 const CHROMA_PICKUP_VALUE := 20
-const CHROMA_PICKUP_DROP_CHANCE := 0.35
-const CHROMA_PICKUP_COLLECTION_DISTANCE := 10.0
-const CHROMA_PICKUP_AIR_TIME := 0.38
 const SOUL_PICKUP_VALUE := 1
 const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
 const SOUL_PICKUP_AIR_TIME := 0.38
@@ -90,7 +80,6 @@ const FIRE_SOUL_COST := FLAME_SWAP_SOUL_COST
 const ELEMENT_BIND_SOUL_COST := 50
 const SOUL_COLOR := Color8(167, 59, 167)
 const SOUL_HIGHLIGHT_COLOR := Color8(234, 122, 197)
-const MAGIC_PROJECTILE_SPEED := 70.0
 const MAGIC_PROJECTILE_LIFETIME := 2.2
 const MAGIC_PROJECTILE_SIZE := 3
 const OCCLUDER_PATHS: Array[NodePath] = [
@@ -203,7 +192,6 @@ var player_anim_timer := 0.0
 var orb_knockback_animation_lock := false
 var orb_knockback_animation_grace := false
 var orb_knockback_attack_cancelled := false
-var player_footstep_cooldown := 0.0
 var player_is_moving := false
 var player_is_running := false
 var player_is_attacking := false
@@ -432,7 +420,6 @@ func _play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float 
 func _play_sound_with_perlin_pitch(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0, variation: float = 0.03) -> void:
 	if sound_manager != null:
 		sound_manager.play_with_perlin_pitch(sound_name, volume_db, pitch_scale, variation)
-func _is_ui_accept_pressed() -> bool: return input_router != null and input_router.ui_accept_pressed()
 func _is_ui_accept_just_pressed() -> bool: return input_router != null and input_router.ui_accept_just_pressed()
 func _is_ui_cancel_just_pressed() -> bool: return input_router != null and input_router.menu_cancel_just_pressed()
 func _is_menu_confirm_pressed() -> bool: return input_router != null and input_router.menu_confirm_pressed()
@@ -535,8 +522,6 @@ func _cloaked_demon_texture_origin() -> Vector2:
 	return cloaked_demon.global_position + cloaked_demon.offset - cloaked_demon.texture.get_size() * 0.5 if cloaked_demon.centered and cloaked_demon.texture != null else cloaked_demon.global_position + cloaked_demon.offset
 func _apply_profile_to_runtime() -> void:
 	profile_runtime_controller.call("apply_profile_to_runtime", self)
-func _reapply_equipment_preserving_health() -> void:
-	profile_runtime_controller.call("reapply_equipment_preserving_health", self)
 func _refresh_player_cloak_visual() -> void:
 	if player_profile == null or player_animation_component == null:
 		return
@@ -558,8 +543,6 @@ func _restore_chest_item_drops(saved_drops: Array) -> void:
 	pickup_runtime_controller.call("restore_chest_item_drops", self, saved_drops)
 func _clear_world_item_drops() -> void:
 	pickup_runtime_controller.call("clear_world_item_drops", self)
-func _constrain_world_item_drops() -> void:
-	pickup_runtime_controller.call("constrain_world_item_drops", self)
 func _update_world_item_drops(delta: float) -> void:
 	pickup_runtime_controller.call("update_world_item_drops", self, delta)
 func _world_item_drop_position() -> Vector2:
@@ -574,31 +557,19 @@ func _restore_chroma_pickups(saved_pickups: Array) -> void:
 	pickup_runtime_controller.call("restore_chroma_pickups", self, saved_pickups)
 func _update_chroma_pickups(delta: float) -> void:
 	pickup_runtime_controller.call("update_chroma_pickups", self, delta)
-func _collect_chroma_pickup(index: int) -> void:
-	pickup_runtime_controller.call("collect_chroma_pickup", self, index)
 func _spawn_chroma_pickup_burst(spawn_position: Vector2, color: Color = PaletteLibrary.ACCENT["grey"]) -> void:
 	if effects_spawner != null:
 		effects_spawner.spawn_chroma_pickup_burst_from_root(self, spawn_position, color)
-func _remove_chroma_pickup(index: int) -> void:
-	pickup_runtime_controller.call("remove_chroma_pickup", self, index)
 func _clear_chroma_pickups() -> void:
 	pickup_runtime_controller.call("clear_chroma_pickups", self)
 func _spawn_soul_pickup(spawn_position: Vector2, value: int = SOUL_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
 	return pickup_runtime_controller.call("spawn_soul_pickup", self, spawn_position, value, launch_seed, launch_direction, avoid_position) as Vector2
 func _update_soul_pickups(delta: float) -> void:
 	pickup_runtime_controller.call("update_soul_pickups", self, delta)
-func _collect_soul_pickup(index: int) -> void:
-	pickup_runtime_controller.call("collect_soul_pickup", self, index)
-func _remove_soul_pickup(index: int) -> void:
-	pickup_runtime_controller.call("remove_soul_pickup", self, index)
 func _clear_soul_pickups() -> void:
 	pickup_runtime_controller.call("clear_soul_pickups", self)
 func _loot_grade_bonus(grade: String = "") -> float:
 	return float(run_flow_controller.call("loot_grade_bonus", self, grade))
-func _chest_item_drop_chance() -> float:
-	return float(run_flow_controller.call("chest_item_drop_chance", self))
-func _chest_item_drop_count(roll: float) -> int:
-	return int(run_flow_controller.call("chest_item_drop_count", self, roll))
 func _chest_gold_reward(base_gold: int) -> int:
 	return int(run_flow_controller.call("chest_gold_reward", self, base_gold))
 func _chest_reward_context() -> ChestRewardContext:
@@ -623,7 +594,7 @@ func _start_player_death() -> void:
 	_reset_magic_runtime(true)
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
-func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, GAME_OVER_FADE_TIME)
+func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, 0.8)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
 func _build_game_over_ui() -> void: var controls: Dictionary = screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D; screen_state_controller.game_over_footer_text = controls["footer"] as Sprite2D
 func _build_run_complete_ui() -> void:
@@ -807,8 +778,6 @@ func _hub_respec() -> void:
 	hub_flow_controller.call("hub_respec", self)
 func _start_from_hub() -> void:
 	hub_flow_controller.call("start_from_hub", self)
-func _run_difficulty_bonus() -> int:
-	return int(run_flow_controller.call("run_difficulty_bonus", self))
 func _run_rank() -> int:
 	return int(run_flow_controller.call("run_rank", self))
 func _apply_run_rank_grade(grade: String) -> void:
@@ -865,10 +834,6 @@ func _on_room_cleared_for_checkpoint(result: RoomClearResult) -> void:
 	if result == null or not result.is_new_clear() or result.room_id != current_room_id or room_transition_locked:
 		return
 	_checkpoint_safe_run_state()
-func _clear_active_run_checkpoint() -> void:
-	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
-func _has_active_run_checkpoint() -> bool:
-	return ActiveRunSaveServiceScript.has_valid_snapshot(ProfileSaveService.current_slot())
 func _restore_active_run_checkpoint() -> bool:
 	return bool(run_flow_controller.call("restore_active_run", self, ActiveRunSaveServiceScript.load_snapshot(ProfileSaveService.current_slot())))
 func _return_to_hub() -> void:
@@ -885,14 +850,8 @@ func _record_run_style_action(action: StringName) -> void:
 	run_flow_controller.call("record_style_action", self, action)
 func _record_run_action_input(action: StringName, accepted: bool) -> void:
 	run_flow_controller.call("record_run_action_input", self, action, accepted)
-func _clear_reward_rarity(score: int, roll: float) -> StringName:
-	return run_flow_controller.call("clear_reward_rarity", self, score, roll) as StringName
-func _roll_run_loot_rarity(roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
-	return run_flow_controller.call("roll_run_loot_rarity", self, roll, score_quality, rarity_multipliers) as StringName
 func _complete_run() -> void:
 	run_flow_controller.call("complete_run", self)
-func _show_run_complete(drop_color: Color) -> void:
-	run_flow_controller.call("show_run_complete", self, drop_color)
 func _run_metric_color(quality: float) -> Color:
 	return run_flow_controller.call("metric_color", quality) as Color
 func _update_run_complete_input() -> void:
@@ -1045,23 +1004,14 @@ func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false, a
 func _damage_slime_with_number(slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("damage_slime_with_number", self, slime, amount, was_critical, show_damage_number, attack_element, immune)
 func _player_attack_damage_result_against(slime: Sprite2D, attack_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_attack_damage_result_against", self, slime, attack_element) as CombatCalculator.DamageResult
 func _player_magic_damage_result_against(slime: Sprite2D, attack_element: int, magic_base_bonus: float = 0.0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_magic_damage_result_against", self, slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
-func _player_attack_damage_against(slime: Sprite2D) -> float: return float(combat_runtime_controller.call("player_attack_damage_against", self, slime))
 func _combat_momentum() -> CombatMomentumComponent: return combat_runtime_controller.call("combat_momentum", self) as CombatMomentumComponent
-func _register_combo_hit() -> void: combat_runtime_controller.call("register_combo_hit", self)
 func _tick_focus_combo(delta: float) -> void: combat_runtime_controller.call("tick_focus_combo", self, delta)
 func _reset_combo() -> void: combat_runtime_controller.call("reset_combo", self)
 func _player_attack_damage_share_divisor(slime: Sprite2D, target_count: int) -> float: return float(combat_runtime_controller.call("player_attack_damage_share_divisor", self, slime, target_count))
-func _combat_damage(attacker_stats: StatsComponent, defender_stats: StatsComponent, attack_element: int = 0, defense_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("combat_damage", self, attacker_stats, defender_stats, attack_element, defense_element) as CombatCalculator.DamageResult
-func _max_health_for_stats(stats: StatsComponent) -> float: return float(combat_runtime_controller.call("max_health_for_stats", self, stats))
 func _player_stat_snapshot() -> CombatStatSnapshot: return combat_runtime_controller.call("player_stat_snapshot", self) as CombatStatSnapshot
-func _player_stat_debug_breakdown() -> Dictionary: return combat_runtime_controller.call("player_stat_debug_breakdown", self) as Dictionary
-func _player_stat_debug_summary() -> String: return str(combat_runtime_controller.call("player_stat_debug_summary", self))
 func _recompute_player_speed_multiplier() -> void: combat_runtime_controller.call("recompute_player_speed_multiplier", self)
 func _player_max_health() -> float: return float(combat_runtime_controller.call("player_max_health", self))
 func _enemy_max_health(slime: Sprite2D) -> float: return float(combat_runtime_controller.call("enemy_max_health", self, slime))
-func _enemy_level_for_room() -> int: return int(combat_runtime_controller.call("enemy_level_for_room", self))
-func _enemy_level_cap_for_run() -> int: return int(combat_runtime_controller.call("enemy_level_cap_for_run", self))
-func _run_enemy_level_bonus() -> int: return int(combat_runtime_controller.call("run_enemy_level_bonus", self))
 func _apply_enemy_room_level(slime: Sprite2D, level_override: int = 0) -> void: combat_runtime_controller.call("apply_enemy_room_level", self, slime, level_override)
 func _configure_slime_variant(slime: Sprite2D, variant: String) -> void: combat_runtime_controller.call("configure_slime_variant", self, slime, variant)
 func _knockback_slime(slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true) -> void: combat_runtime_controller.call("knockback_slime", self, slime, knockback_multiplier, strength_scaled)
@@ -1507,9 +1457,6 @@ func _on_dungeon_map_state_changed() -> void:
 func _refresh_room_socket_visuals(is_unlocked: bool) -> void:
 	room_puzzle_controller.call("refresh_room_socket_visuals", self, is_unlocked)
 func _apply_room_geometry() -> void: room_controller.apply_room_geometry()
-func _apply_authored_boss_room_geometry() -> void: room_controller.apply_authored_boss_room_geometry()
-func _capture_normal_room_geometry() -> void: room_controller.capture_normal_room_geometry()
-func _restore_normal_room_geometry() -> void: room_controller.restore_normal_room_geometry()
 func _configure_large_room_camera(enabled: bool) -> void: room_controller.configure_large_room_camera(self, enabled)
 func _update_large_room_camera() -> void: room_controller.update_large_room_camera()
 func _update_door_transition() -> void: if not room_transition_locked: room_controller.try_enter_active_socket(self, door_active, entrance_open, room_transition_locked)

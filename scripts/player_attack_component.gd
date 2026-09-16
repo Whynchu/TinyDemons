@@ -50,7 +50,7 @@ var _spin_gesture_configured := false
 var _spin_gesture_signature := 0
 
 
-func start_player_attack(root: Object, new_variant: int) -> bool:
+func start_player_attack(root: GameplayState, new_variant: int) -> bool:
 	var requested_kind := AttackKind.ATTACK2 if new_variant == 2 else AttackKind.ATTACK1
 	return _start_attack(root, requested_kind, 2 if new_variant == 2 else 1, "attack2" if new_variant == 2 else "attack1")
 
@@ -58,19 +58,19 @@ func start_player_attack(root: Object, new_variant: int) -> bool:
 ## A running attack skips the first swing and commits directly to the regular
 ## Attack 2 animation with the running-specific movement, damage, knockback,
 ## hitstop, and recovery contract.
-func start_running_attack(root: Object) -> bool:
-	if not bool(root.get("player_is_running")):
+func start_running_attack(root: GameplayState) -> bool:
+	if not root.player_is_running:
 		return false
 	var started := _start_attack(root, AttackKind.ATTACK2, 2, "attack2")
 	if started:
 		# The roll continuation has been spent. Holding the button through this
 		# attack cannot silently create another run after the attack recovers.
-		root.set("player_is_running", false)
+		root.player_is_running = false
 	return started
 
 
-func start_spin_attack(root: Object) -> bool:
-	var animation := root.get("player_animation_component") as PlayerAnimationComponent
+func start_spin_attack(root: GameplayState) -> bool:
+	var animation := root.player_animation_component
 	if animation == null or animation.spin_frames.is_empty():
 		return false
 	var started := _start_attack(root, AttackKind.SPIN, 1, "spin_attack")
@@ -79,51 +79,48 @@ func start_spin_attack(root: Object) -> bool:
 	return started
 
 
-func start_charged_attack(root: Object) -> bool:
+func start_charged_attack(root: GameplayState) -> bool:
 	return _start_attack(root, AttackKind.CHARGED_ATTACK2, 2, "attack2_charged")
 
 
-func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name: String) -> bool:
-	var anim := root.get("player_animation_component") as PlayerAnimationComponent
+func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animation_name: String) -> bool:
+	var anim := root.player_animation_component
 	if anim == null:
 		return false
 	var frames: Array[Texture2D] = anim.spin_frames if new_kind == AttackKind.SPIN else anim.attack2_frames if new_variant == 2 else anim.attack_frames
 	if frames.is_empty():
 		return false
-	var starts_from_run := new_kind == AttackKind.ATTACK2 and bool(root.get("player_is_running"))
+	var starts_from_run := new_kind == AttackKind.ATTACK2 and root.player_is_running
 	if new_variant == 2 and combo_buffered:
 		starts_from_run = combo_running_attack
 	elif new_kind == AttackKind.CHARGED_ATTACK2 and attack_kind == AttackKind.CHARGING:
 		starts_from_run = running_attack_active
 	running_attack_active = starts_from_run and new_kind == AttackKind.ATTACK2
-	var run_state := root.get("run_state") as RunState
+	var run_state := root.run_state
 	if run_state != null:
-		run_state.record_attack(new_variant, bool(root.call("_is_run_combat_active")))
-	root.set("player_is_attacking", true)
+		run_state.record_attack(new_variant, root._is_run_combat_active())
+	root.player_is_attacking = true
 	begin(new_variant, new_kind)
-	root.set("player_just_finished_attack2", false)
-	root.set("player_attack_hit_done", false)
+	root.player_just_finished_attack2 = false
+	root.player_attack_hit_done = false
 	hit_targets.clear()
 	hit_sound_played = false
 	charge_elapsed = 0.0
-	if root.has_method("_player_weapon_element"):
-		attack_element = int(root.call("_player_weapon_element")) as ElementCatalogScript.Element
-	else:
-		attack_element = ElementCatalogScript.Element.NEUTRAL
-	var player := root.get("player") as Sprite2D
-	root.set("player_attack_flip_h", player.flip_h)
-	var tuning := root.get("player_tuning") as PlayerTuning
-	var agi_value: Variant = root.get("player_agi")
-	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	attack_element = int(root._player_weapon_element()) as ElementCatalogScript.Element
+	var player := root.player
+	root.player_attack_flip_h = player.flip_h
+	var tuning := root.player_tuning
+	var agi_value: Variant = root.player_agi
+	var effective_agi := float(agi_value) if agi_value != null else float(root.player_spd)
 	var attack_multiplier := tuning.attack_multiplier_for_agi(effective_agi)
 	if new_kind == AttackKind.SPIN:
-		var input_direction: Vector2 = root.call("_movement_input")
+		var input_direction: Vector2 = root._movement_input()
 		if input_direction.length_squared() <= 0.0001:
-			var remembered_direction: Variant = root.get("last_player_input_direction")
+			var remembered_direction: Variant = root.last_player_input_direction
 			if remembered_direction is Vector2:
 				input_direction = remembered_direction as Vector2
 		if input_direction.length_squared() <= 0.0001:
-			input_direction = root.call("_player_facing_vector")
+			input_direction = root._player_facing_vector()
 		spin_direction = input_direction.normalized() if input_direction.length_squared() > 0.0001 else Vector2.RIGHT
 		var spin_distance := tuning.spin_lunge_distance if tuning != null else 3.5
 		# Finish the spin's travel before frame 6 (the third-to-last frame). The
@@ -132,44 +129,44 @@ func _start_attack(root: Object, new_kind: int, new_variant: int, animation_name
 		if tuning != null:
 			spin_duration = tuning.spin_frame_time * float(tuning.spin_recovery_start_frame) / attack_multiplier
 		spin_duration = maxf(spin_duration, 0.001)
-		start_lunge(root.call("_perspective_movement", spin_direction * (spin_distance * 2.0 / spin_duration)), spin_duration, true)
+		start_lunge(root._perspective_movement(spin_direction * (spin_distance * 2.0 / spin_duration)), spin_duration, true)
 		# A spin is a standalone attack. It cannot inherit a pending combo or
 		# the recovery timer from an attack that happened immediately before it.
 		combo_buffered = false
 		combo_timer = 0.0
-		root.set("player_between_timer", 0.0)
+		root.player_between_timer = 0.0
 	else:
 		var lunge_multiplier := tuning.run_attack_lunge_multiplier if running_attack_active else 1.0
 		if new_kind == AttackKind.CHARGED_ATTACK2:
 			lunge_multiplier = tuning.charged_attack_lunge_multiplier
 		var lunge_distance := tuning.attack_lunge_distance * lunge_multiplier
 		var motion_duration := tuning.attack_lunge_duration / attack_multiplier
-		start_lunge(root.call("_perspective_movement", root.call("_player_facing_vector") * (lunge_distance / motion_duration)), motion_duration)
-	root.set("player_anim_name", animation_name)
+		start_lunge(root._perspective_movement(root._player_facing_vector() * (lunge_distance / motion_duration)), motion_duration)
+	root.player_anim_name = animation_name
 	if new_variant == 2:
-		root.set("player_between_timer", 0.0)
-	root.set("player_anim_frame", 0)
-	root.set("player_anim_timer", 0.0)
-	root.call("_restore_actor_base_visual_scale", player)
-	(root.get("player_attack_visual") as Sprite2D).visible = false
+		root.player_between_timer = 0.0
+	root.player_anim_frame = 0
+	root.player_anim_timer = 0.0
+	root._restore_actor_base_visual_scale(player)
+	root.player_attack_visual.visible = false
 	player.visible = false
 	anim.apply_frame(root)
-	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	var equipment_visual := root.player_equipment_visual_component
 	if equipment_visual != null:
 		equipment_visual.begin_attack_visual(root)
 	if new_kind == AttackKind.CHARGED_ATTACK2:
-		var chroma := root.get("player_chroma_component") as Node
-		var beam_palette := String(root.get("current_player_palette_name"))
+		var chroma := root.player_chroma_component
+		var beam_palette := String(root.current_player_palette_name)
 		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", SWORD_BEAM_CHROMA_COST)):
-			root.call("_sync_chroma_presentation")
-			var direction := root.call("_player_facing_vector") as Vector2
+			root._sync_chroma_presentation()
+			var direction: Vector2 = root._player_facing_vector()
 			if direction.length_squared() <= 0.0001:
-				direction = Vector2.LEFT if bool(root.get("player_attack_flip_h")) else Vector2.RIGHT
-			root.call("_spawn_sword_beam", root.call("_player_visual_center"), direction.normalized(), beam_palette)
+				direction = Vector2.LEFT if root.player_attack_flip_h else Vector2.RIGHT
+			root._spawn_sword_beam(root._player_visual_center(), direction.normalized(), beam_palette)
 			sword_beam_cooldown_remaining = SWORD_BEAM_COOLDOWN
-	var shadow_controller := root.get("shadow_controller") as ShadowController
+	var shadow_controller := root.shadow_controller
 	if shadow_controller != null:
-		shadow_controller.sync_player_attack_shadow(root, float(root.get("DEPTH_Z_SCALE")))
+		shadow_controller.sync_player_attack_shadow(root, float(root.DEPTH_Z_SCALE))
 	return true
 
 
@@ -177,16 +174,16 @@ func set_attack_input_held(held: bool) -> void:
 	attack_button_held = held
 
 
-func update_spin_input(root: Object, movement: Vector2, delta: float, can_listen: bool) -> void:
+func update_spin_input(root: GameplayState, movement: Vector2, delta: float, can_listen: bool) -> void:
 	_configure_spin_gesture(root)
-	if not can_listen or active or bool(root.get("player_is_magic_casting")) or bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or bool(root.get("player_is_defending")):
+	if not can_listen or active or root.player_is_magic_casting or root.player_is_rolling or root.player_is_backflipping or root.player_is_defending:
 		spin_gesture.reset()
 		return
 	spin_gesture.update(movement, delta)
 
 
-func _configure_spin_gesture(root: Object) -> void:
-	var tuning := root.get("player_tuning") as PlayerTuning
+func _configure_spin_gesture(root: GameplayState) -> void:
+	var tuning := root.player_tuning
 	if tuning == null:
 		return
 	var signature := [tuning.spin_circle_min_magnitude, tuning.spin_circle_max_duration, tuning.spin_circle_required_turn, tuning.spin_circle_arm_duration].hash()
@@ -217,39 +214,39 @@ func should_enter_charge() -> bool:
 	return active and attack_kind == AttackKind.ATTACK1 and attack_button_held and not combo_buffered
 
 
-func begin_charge(root: Object) -> bool:
+func begin_charge(root: GameplayState) -> bool:
 	if not should_enter_charge():
 		return false
 	attack_kind = AttackKind.CHARGING
 	charge_release_pending = false
-	var charge_chroma := root.get("player_chroma_component") as Node
+	var charge_chroma := root.player_chroma_component
 	if sword_beam_cooldown_remaining <= 0.0 and (charge_chroma == null or bool(charge_chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))):
-		root.call("_play_sound", "sword_beam_charge", 0.0, 1.0)
+		root._play_sound("sword_beam_charge", 0.0, 1.0)
 	charge_elapsed = 0.0
 	combo_buffered = false
 	combo_timer = 0.0
 	cancel_lunge()
-	root.set("player_is_attacking", true)
-	root.set("player_anim_name", "charge")
-	root.set("player_anim_frame", 0)
-	root.set("player_anim_timer", 0.0)
-	root.set("player_attack_hit_done", false)
-	var player := root.get("player") as Sprite2D
+	root.player_is_attacking = true
+	root.player_anim_name = "charge"
+	root.player_anim_frame = 0
+	root.player_anim_timer = 0.0
+	root.player_attack_hit_done = false
+	var player := root.player
 	player.visible = true
-	(root.get("player_attack_visual") as Sprite2D).visible = false
-	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
-	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	root.player_attack_visual.visible = false
+	root.player_animation_component.apply_frame(root)
+	var equipment_visual := root.player_equipment_visual_component
 	if equipment_visual != null:
 		equipment_visual.begin_attack_visual(root)
 	return true
 
 
-func tick_charge(root: Object, delta: float) -> void:
+func tick_charge(root: GameplayState, delta: float) -> void:
 	if attack_kind != AttackKind.CHARGING:
 		return
-	var tuning := root.get("player_tuning") as PlayerTuning
-	var agi_value: Variant = root.get("player_agi")
-	var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+	var tuning := root.player_tuning
+	var agi_value: Variant = root.player_agi
+	var effective_agi := float(agi_value) if agi_value != null else float(root.player_spd)
 	var charge_multiplier := tuning.charge_multiplier_for_agi(effective_agi) if tuning != null else 1.0
 	charge_elapsed = minf(charge_elapsed + maxf(delta, 0.0) * charge_multiplier, tuning.charge_maximum_time if tuning != null else 1.0)
 	if attack_button_held:
@@ -257,40 +254,40 @@ func tick_charge(root: Object, delta: float) -> void:
 	if tuning == null or charge_elapsed < tuning.charge_minimum_time:
 		# A release before the threshold is a canceled charge, not an accidental
 		# weak finisher. The shared interrupt path restores all visual layers.
-		root.call("_interrupt_player_attack")
+		root._interrupt_player_attack()
 		return
 	# Releasing arms the finisher, but it cannot fire until the charge reaches its
 	# cap and the outline's opaque ready flash has completed.
 	charge_release_pending = true
 	if charge_elapsed < tuning.charge_maximum_time:
 		return
-	var effects := root.get("effects_spawner") as EffectsSpawner
-	var chroma := root.get("player_chroma_component") as Node
+	var effects := root.effects_spawner
+	var chroma := root.player_chroma_component
 	var beam_available: bool = sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", SWORD_BEAM_CHROMA_COST))
 	if beam_available and effects != null and not effects.charge_ready_flash_complete():
 		return
 	start_charged_attack(root)
 
 
-func apply_hitbox(root: Object) -> void:
+func apply_hitbox(root: GameplayState) -> void:
 	var hitbox := attack_polygon(root)
 	if hitbox.size() < 3:
 		return
-	var tuning := root.get("player_tuning") as PlayerTuning
-	var spin_pulse := _spin_pulse_index(int(root.get("player_anim_frame")), tuning) if is_spin_attack() else -1
+	var tuning := root.player_tuning
+	var spin_pulse := _spin_pulse_index(root.player_anim_frame, tuning) if is_spin_attack() else -1
 	# Spin has two explicit pulse windows; never let the generic attack hit-frame
 	# fallback create an extra contact before pulse one.
 	if is_spin_attack() and spin_pulse < 0:
 		return
 	var should_play_spin_sound := spin_pulse >= 0 and not spin_pulse_sounds.has(spin_pulse)
-	if should_play_spin_sound and root.has_method("_play_sound"):
-		root.call("_play_sound", "miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
+	if should_play_spin_sound:
+		root._play_sound("miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 		spin_pulse_sounds[spin_pulse] = true
-	elif not is_spin_attack() and not hit_sound_played and root.has_method("_play_sound"):
-		root.call("_play_sound", "miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
+	elif not is_spin_attack() and not hit_sound_played:
+		root._play_sound("miss", -6.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 		hit_sound_played = true
-	var slimes := root.get("slimes") as Array[Sprite2D]
-	var puzzle_torches := root.get("puzzle_torches") as Array[Sprite2D]
+	var slimes := root.slimes
+	var puzzle_torches := root.puzzle_torches
 	var eligible_targets: Array[Sprite2D] = []
 	var slime_targets: Array[Sprite2D] = []
 	var orb_targets: Array[Sprite2D] = []
@@ -302,9 +299,9 @@ func apply_hitbox(root: Object) -> void:
 	for slime in slimes:
 		var slime_id := slime.get_instance_id()
 		var already_hit := hit_targets.has(slime) if not is_spin_attack() else pulse_targets.has(slime_id)
-		if not bool(root.call("_is_slime_targetable", slime)) or eligible_targets.has(slime) or already_hit:
+		if not root._is_slime_targetable(slime) or eligible_targets.has(slime) or already_hit:
 			continue
-		var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
+		var slime_body := root._slime_body_polygon(slime)
 		if slime_body.size() < 3 or Geometry2D.intersect_polygons(hitbox, slime_body).is_empty():
 			continue
 		if is_spin_attack():
@@ -312,7 +309,7 @@ func apply_hitbox(root: Object) -> void:
 		eligible_targets.append(slime)
 		slime_targets.append(slime)
 	for orb in puzzle_torches:
-		if not bool(root.call("_is_slime_targetable", orb)) or eligible_targets.has(orb) or hit_targets.has(orb):
+		if not root._is_slime_targetable(orb) or eligible_targets.has(orb) or hit_targets.has(orb):
 			continue
 		if not polygon_intersects_rect(hitbox, sprite_world_rect(orb)):
 			continue
@@ -323,22 +320,22 @@ func apply_hitbox(root: Object) -> void:
 	var target_count := slime_targets.size()
 	var successful_damage_count := 0
 	var used_imbue := false
-	var imbued_element_value = root.get("player_imbued_element")
+	var imbued_element_value = root.player_imbued_element
 	var active_imbued_element := int(imbued_element_value) if imbued_element_value != null else ElementCatalogScript.Element.NEUTRAL
 	for orb in orb_targets:
 		register_hit(orb)
-		root.call("_activate_puzzle_torch", orb, orb.global_position, ElementCatalogScript.palette_key(attack_element))
+		root._activate_puzzle_torch(orb, orb.global_position, ElementCatalogScript.palette_key(attack_element))
 	for slime in slime_targets:
 		if not is_spin_attack():
 			register_hit(slime)
 		var imbued_contact := active_imbued_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == ElementCatalogScript.normalize(active_imbued_element)
-		var damage_result := root.call("_player_attack_damage_result_against", slime, attack_element) as CombatCalculator.DamageResult
+		var damage_result := root._player_attack_damage_result_against(slime, attack_element)
 		var base_damage := damage_result.amount
 		var damage := base_damage
 		# Spin is the player's area-control option: its single-target coefficient
 		# is lower than Attack 1, but each enemy receives the full spin hit instead
 		# of the normal multi-target damage share.
-		var divisor := 1.0 if is_spin_attack() else float(root.call("_player_attack_damage_share_divisor", slime, target_count))
+		var divisor := 1.0 if is_spin_attack() else float(root._player_attack_damage_share_divisor(slime, target_count))
 		if not damage_result.immune and tuning != null:
 			if is_charged_attack2():
 				damage = maxf(base_damage * tuning.charged_attack2_damage_multiplier, base_damage + 1.0)
@@ -358,42 +355,42 @@ func apply_hitbox(root: Object) -> void:
 			var first_swing_share := floorf(base_damage / maxf(divisor, 1.0))
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
-		root.call("_damage_slime", slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
-		if imbued_contact and root.has_method("_play_sound_with_perlin_pitch"):
-			root.call("_play_sound_with_perlin_pitch", "imbue_impact", 0.0, 1.0, 0.03)
+		root._damage_slime(slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
+		if imbued_contact:
+			root._play_sound_with_perlin_pitch("imbue_impact", 0.0, 1.0, 0.03)
 		if not damage_result.immune and damage_result.amount > 0.0:
 			successful_damage_count += 1
 			if imbued_contact:
 				used_imbue = true
 		if running_attack_active and not damage_result.immune and tuning != null:
-			root.set("hitstop_timer", maxf(float(root.get("hitstop_timer")), tuning.hitstop_duration * tuning.run_attack_hitstop_multiplier))
+			root.hitstop_timer = maxf(root.hitstop_timer, tuning.hitstop_duration * tuning.run_attack_hitstop_multiplier)
 		if not damage_result.immune:
 			if is_spin_attack():
-				var slime_combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+				var slime_combat: SlimeCombatComponent = root._slime_combat(slime)
 				if slime_combat != null:
 					slime_combat.hitstun_timer = maxf(slime_combat.hitstun_timer, SPIN_HITSTUN_DURATION)
 			if is_spin_attack():
 				if spin_pulse == 1:
-					root.call("_knockback_slime", slime, special_knockback_multiplier(tuning))
+					root._knockback_slime(slime, special_knockback_multiplier(tuning))
 				else:
-					root.call("_knockback_slime", slime, special_knockback_multiplier(tuning) * 0.25)
+					root._knockback_slime(slime, special_knockback_multiplier(tuning) * 0.25)
 			else:
-				root.call("_knockback_slime", slime, special_knockback_multiplier(tuning))
-		if not damage_result.immune and root.has_method("_apply_player_lifesteal"):
-			root.call("_apply_player_lifesteal", maxf(divided_damage, 1.0))
-	if successful_damage_count > 0 and root.has_method("_record_run_style_action"):
+				root._knockback_slime(slime, special_knockback_multiplier(tuning))
+		if not damage_result.immune:
+			root._apply_player_lifesteal(maxf(divided_damage, 1.0))
+	if successful_damage_count > 0:
 		if is_spin_attack():
-			root.call("_record_run_style_action", &"spin")
+			root._record_run_style_action(&"spin")
 		elif is_charged_attack2():
-			root.call("_record_run_style_action", &"charged")
-			root.call("_record_run_style_action", &"attack2")
+			root._record_run_style_action(&"charged")
+			root._record_run_style_action(&"attack2")
 		elif variant == 2:
-			root.call("_record_run_style_action", &"attack2")
+			root._record_run_style_action(&"attack2")
 		else:
-			root.call("_record_run_style_action", &"attack1")
+			root._record_run_style_action(&"attack1")
 		if used_imbue:
-			root.call("_record_run_style_action", &"imbued")
-	var run_state := root.get("run_state") as RunState
+			root._record_run_style_action(&"imbued")
+	var run_state := root.run_state
 	if run_state != null:
 		run_state.record_attack_hits(variant, eligible_targets.size())
 	attack_hit_resolved.emit(variant, eligible_targets)
@@ -447,13 +444,13 @@ func _spin_pulse_index(frame: int, tuning: PlayerTuning) -> int:
 	return -1
 
 
-func attack_polygon(root: Object) -> PackedVector2Array:
-	var player := root.get("player") as Sprite2D
+func attack_polygon(root: GameplayState) -> PackedVector2Array:
+	var player := root.player
 	var guide_name := "SpinAttackHitboxShape" if is_spin_attack() else "Attack2HitboxShape" if variant == 2 else "Attack1HitboxShape"
 	var guide := player.get_node_or_null(guide_name) as AttackHitboxGuide
 	if guide == null:
 		return PackedVector2Array()
-	return guide.world_polygon(bool(root.get("player_attack_flip_h")), int(root.get("player_anim_frame")) if is_spin_attack() else -1)
+	return guide.world_polygon(root.player_attack_flip_h, root.player_anim_frame if is_spin_attack() else -1)
 
 
 func polygon_intersects_rect(polygon: PackedVector2Array, rect: Rect2) -> bool:
@@ -511,12 +508,12 @@ func finish() -> void:
 	cancel_lunge()
 
 
-func release_spin_knockback(root: Object) -> void:
+func release_spin_knockback(root: GameplayState) -> void:
 	if not is_spin_attack():
 		return
 	for slime in spin_pending_knockback:
-		if slime != null and is_instance_valid(slime) and bool(root.call("_is_slime_targetable", slime)):
-			root.call("_knockback_slime", slime, special_knockback_multiplier(root.get("player_tuning") as PlayerTuning))
+		if slime != null and is_instance_valid(slime) and root._is_slime_targetable(slime):
+			root._knockback_slime(slime, special_knockback_multiplier(root.player_tuning))
 	spin_pending_knockback.clear()
 
 
@@ -612,15 +609,15 @@ func consume_lunge(delta: float) -> Vector2:
 	return motion
 
 
-func update_lunge(root: Object, delta: float) -> void:
+func update_lunge(root: GameplayState, delta: float) -> void:
 	if not has_lunge():
 		return
-	var player := root.get("player") as Sprite2D
+	var player := root.player
 	var original := player.position
 	var movement := consume_lunge(delta)
 	player.position.x += movement.x
-	if not root.call("_is_walkable", root.call("_actor_foot", player)) or root.call("_collides_with_static", player):
+	if not root._is_walkable(root._actor_foot(player)) or root._collides_with_static(player):
 		player.position.x = original.x
 	player.position.y += movement.y
-	if not root.call("_is_walkable", root.call("_actor_foot", player)) or root.call("_collides_with_static", player):
+	if not root._is_walkable(root._actor_foot(player)) or root._collides_with_static(player):
 		player.position.y = original.y

@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.22"
+const GAME_VERSION := "0.2.23"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -353,14 +353,14 @@ var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
 var _display_layout_refreshing := false
 
 
-func apply_display_layout(root: Object) -> void:
-	var display := root.get("display_controller") as DisplayController
+func apply_display_layout(root: GameplayState) -> void:
+	var display := root.display_controller
 	# FULL keeps the authored 160px height but can expose additional logical
 	# width when the browser viewport is wider than the configured content size.
 	# Menus are full-view overlays, so their frame and responsive anchors must
 	# use that visible width instead of the narrower content-scale width.
 	display_view_size = display.visible_view_size_value() if display != null and DisplayLayout.is_full_aspect(display.aspect_mode()) else (Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE))
-	var game_over := root.get("game_over_overlay") as ColorRect
+	var game_over := root.game_over_overlay
 	for overlay in [title_overlay, save_select_overlay, name_entry_overlay, archetype_overlay, run_complete_overlay, game_over] as Array:
 		if overlay != null and bool(overlay.get_meta("display_full_view", false)):
 			overlay.size = display_view_size
@@ -408,7 +408,7 @@ func apply_display_layout(root: Object) -> void:
 	if settings_overlay != null:
 		settings_overlay.size = display_view_size
 		_position_settings_controls()
-	var cloud_panel := root.get("cloud_save_panel") as CloudSavePanel
+	var cloud_panel := root.cloud_save_panel
 	if cloud_panel != null: cloud_panel.apply_layout(display_view_size)
 	if name_entry_overlay != null:
 		name_entry_overlay.size = display_view_size
@@ -419,13 +419,13 @@ func apply_display_layout(root: Object) -> void:
 		_resize_menu_frame(pause_overlay, display_view_size)
 		_position_pause_controls(false, true)
 	_refresh_active_menu_layout(root)
-	var game_over_button := root.get("game_over_button") as Button
-	var game_over_title_button := root.get("game_over_title_button") as Button
+	var game_over_button := root.game_over_button
+	var game_over_title_button := root.game_over_title_button
 	if game_over_button != null:
 		game_over_button.position.x = (display_view_size.x - game_over_button.size.x) * 0.5
 	if game_over_title_button != null:
 		game_over_title_button.position.x = (display_view_size.x - game_over_title_button.size.x) * 0.5
-	var game_over_overlay_node := root.get("game_over_overlay") as ColorRect
+	var game_over_overlay_node := root.game_over_overlay
 	if game_over_overlay_node != null:
 		for node_name in [&"GameOverTitle", &"GameOverSaved"]:
 			var label := game_over_overlay_node.get_node_or_null(NodePath(node_name)) as Sprite2D
@@ -489,18 +489,18 @@ func retro_button_alpha(timer: float) -> float:
 func retro_button_bob(timer: float) -> float: return snappedf(sin(timer / 3.6 * TAU) * 1.5, 0.5)
 
 
-func _position_game_over_controls(root: Object, preserve_animation: bool = true) -> void:
-	var restart := root.get("game_over_button") as Button
-	var title := root.get("game_over_title_button") as Button
+func _position_game_over_controls(root: GameplayState, preserve_animation: bool = true) -> void:
+	var restart := root.game_over_button
+	var title := root.game_over_title_button
 	if restart != null:
 		restart.position.x = (display_view_size.x - restart.size.x) * 0.5
 		restart.position.y = 105.0
 	if title != null:
 		title.position.x = (display_view_size.x - title.size.x) * 0.5
 		title.position.y = 121.0
-	var game_over := root.get("game_over_overlay") as ColorRect
-	if preserve_animation and bool(root.get("player_death_particles_started")) and game_over != null and game_over.visible:
-		var fade_timer := float(root.get("game_over_fade_timer"))
+	var game_over := root.game_over_overlay
+	if preserve_animation and root.player_death_particles_started and game_over != null and game_over.visible:
+		var fade_timer := root.game_over_fade_timer
 		if restart != null: restart.position.y = 105.0 + retro_button_bob(fade_timer)
 		if title != null: title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
 	var selected := title if game_over_row == 1 and title != null and not title.disabled else restart
@@ -527,25 +527,25 @@ func set_state(new_state: StringName) -> void:
 	state_changed.emit(state)
 
 
-func update_title_flow(root: Object, delta: float) -> void:
-	var cloud_panel := root.get("cloud_save_panel") as CloudSavePanel
+func update_title_flow(root: GameplayState, delta: float) -> void:
+	var cloud_panel := root.cloud_save_panel
 	if cloud_panel != null and cloud_panel.overlay != null and cloud_panel.overlay.visible:
 		cloud_panel.update_input()
 		return
 	if settings_overlay != null and settings_overlay.visible:
-		root.call("_update_settings_input")
+		root._update_settings_input()
 		return
 	if menu_input_release_lock:
 		# A confirm used to close title Settings must be released before the title
 		# screen can dispatch its focused button. Otherwise BACK immediately falls
 		# through to New Game on the next frame.
-		var released := not bool(root.call("_is_menu_confirm_pressed")) and not bool(root.call("_is_menu_back_pressed"))
+		var released := not root._is_menu_confirm_pressed() and not root._is_menu_back_pressed()
 		if released:
 			menu_input_release_lock = false
 		else:
 			return
 	if archetype_overlay != null and archetype_overlay.visible and not title_transition_active:
-		root.call("_update_archetype_input", delta)
+		root._update_archetype_input(delta)
 		return
 	if title_transition_active:
 		update_particles(delta, Callable(root, "_snap_half_pixel"))
@@ -564,11 +564,11 @@ func update_title_flow(root: Object, delta: float) -> void:
 				pending_title_destination = ""
 				overlay.visible = true
 				overlay.modulate.a = 1.0
-				root.call("_open_save_select_after_title_transition")
+				root._open_save_select_after_title_transition()
 			else:
 				overlay.visible = false
 				archetype_transition_timer = -0.35
-				root.call("_select_archetype_menu_row", 0)
+				root._select_archetype_menu_row(0)
 		return
 	title_frame_timer += delta
 	var frame_timer := title_frame_timer
@@ -590,14 +590,14 @@ func update_title_flow(root: Object, delta: float) -> void:
 		if title_buttons[index] != null and not title_buttons[index].disabled: available_rows.append(index)
 	if available_rows.is_empty(): return
 	if not available_rows.has(title_menu_row): title_menu_row = available_rows[0]
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+	if root._is_menu_direction_just_pressed(&"ui_up"):
 		var current_index := available_rows.find(title_menu_row)
 		title_menu_row = available_rows[posmod(current_index - 1, available_rows.size())]
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+		root._play_sound("ui_hover", -6.0, 1.0)
+	elif root._is_menu_direction_just_pressed(&"ui_down"):
 		var current_index := available_rows.find(title_menu_row)
 		title_menu_row = available_rows[posmod(current_index + 1, available_rows.size())]
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		root._play_sound("ui_hover", -6.0, 1.0)
 	var selected := title_buttons[title_menu_row]
 	var cursor := title_cursor_text
 	if cursor != null and selected != null:
@@ -608,14 +608,14 @@ func update_title_flow(root: Object, delta: float) -> void:
 		var base_y: float = selected.get_meta("title_base_y") as float if selected.has_meta("title_base_y") else selected.position.y
 		move_menu_cursor(cursor, Vector2(selected.position.x - CURSOR_LEFT_GAP, base_y + 4.0))
 		cursor.texture = MENU_CURSOR_TEXTURE
-	if bool(root.call("_is_menu_confirm_just_pressed")) and selected != null and not selected.disabled:
+	if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
 		# Preserve the title transition's original fizzle cue for both NEW GAME
 		# and CONTINUE. Generic menu confirms use the authored Confirm sound.
-		root.call("_play_sound", "enemy_death", -6.0, 0.95)
+		root._play_sound("enemy_death", -6.0, 0.95)
 		selected.pressed.emit()
 
 
-func update_archetype_input(root: Object, delta: float) -> void:
+func update_archetype_input(root: GameplayState, delta: float) -> void:
 	if archetype_footer_text != null:
 		archetype_footer_text.texture = _pixel_prompt_texture(Callable(root, "_pixel_text_texture"), _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
 	if archetype_transition_active:
@@ -634,43 +634,41 @@ func update_archetype_input(root: Object, delta: float) -> void:
 				archetype_overlay.visible = false
 		return
 	if menu_input_release_lock:
-		var released := not bool(root.call("_is_menu_confirm_pressed")) and not bool(root.call("_is_menu_back_pressed"))
+		var released := not root._is_menu_confirm_pressed() and not root._is_menu_back_pressed()
 		if released: menu_input_release_lock = false
 		else: return
-	if bool(root.call("_is_menu_back_just_pressed")):
-		root.call("_cancel_character_creation")
+	if root._is_menu_back_just_pressed():
+		root._cancel_character_creation()
 		return
 	archetype_frame_timer += delta
 	archetype_arrow_anim_timer = maxf(archetype_arrow_anim_timer - delta, 0.0)
-	root.call("_update_archetype_preview_animation")
-	root.call("_update_archetype_arrow_animation")
+	root._update_archetype_preview_animation()
+	root._update_archetype_arrow_animation()
 	var button := archetype_start_button
 	button.modulate.a = retro_button_alpha(archetype_frame_timer)
 	button.position.y = 104.0 + retro_button_bob(archetype_frame_timer)
 	var row := archetype_menu_row
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
-		root.call("_select_archetype_menu_row", row - 1)
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
-		root.call("_select_archetype_menu_row", row + 1)
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
-		var direction := -1 if bool(root.call("_is_menu_direction_just_pressed", &"ui_left")) else 1
-		if row == 0: root.call("_shift_archetype", direction)
-		else: root.call("_select_archetype_menu_row", 1)
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	if bool(root.call("_is_menu_confirm_just_pressed")):
-		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-		if row == 1: root.call("_start_selected_archetype")
-		else: root.call("_select_archetype_menu_row", 1)
+	if root._is_menu_direction_just_pressed(&"ui_up"):
+		root._select_archetype_menu_row(row - 1); root._play_sound("ui_hover", -6.0, 1.0)
+	elif root._is_menu_direction_just_pressed(&"ui_down"):
+		root._select_archetype_menu_row(row + 1); root._play_sound("ui_hover", -6.0, 1.0)
+	elif root._is_menu_direction_just_pressed(&"ui_left") or root._is_menu_direction_just_pressed(&"ui_right"):
+		var direction := -1 if root._is_menu_direction_just_pressed(&"ui_left") else 1
+		if row == 0: root._shift_archetype(direction)
+		else: root._select_archetype_menu_row(1)
+		root._play_sound("ui_hover", -6.0, 1.0)
+	if root._is_menu_confirm_just_pressed():
+		root._play_sound("ui_confirm", 0.0, 1.0)
+		if row == 1: root._start_selected_archetype()
+		else: root._select_archetype_menu_row(1)
 
 
-func start_selected_archetype(root: Object) -> void:
-	if archetype_overlay == null or not archetype_overlay.visible or bool(root.get("loading_screen_active")):
+func start_selected_archetype(root: GameplayState) -> void:
+	if archetype_overlay == null or not archetype_overlay.visible or root.loading_screen_active:
 		return
-	var profile := root.get("player_profile") as PlayerProfile
+	var profile := root.player_profile
 	if profile != null and not profile.has_started:
-		var stats := root.get("player_stats") as StatsComponent
+		var stats := root.player_stats
 		stats.manual_allocation_enabled = true
 		# Starter aspect selection is presentation/element identity only. Every
 		# new player starts from the same even two-point baseline.
@@ -686,18 +684,18 @@ func start_selected_archetype(root: Object) -> void:
 		profile.palette_name = ASPECT_CATALOG_SCRIPT.palette_for_flame(starter_flame)
 		profile.has_started = true
 		profile.ensure_starter_items()
-		root.call("_apply_profile_to_runtime")
-		root.call("_save_player_profile")
+		root._apply_profile_to_runtime()
+		root._save_player_profile()
 	archetype_overlay.visible = false
 	archetype_hold_cover.visible = false
-	root.set("has_persistent_profile", true)
-	root.call("_enter_starting_room_from_menu")
+	root.has_persistent_profile = true
+	root._enter_starting_room_from_menu()
 
 
-func start_new_game(root: Object) -> void:
+func start_new_game(root: GameplayState) -> void:
 	if title_overlay == null or not title_overlay.visible:
 		return
-	root.call("_spawn_title_ui_breakup")
+	root._spawn_title_ui_breakup()
 	title_overlay.visible = true; title_overlay.modulate.a = 1.0
 	title_transition_active = true; title_transition_timer = 0.0
 	if title_screen_text != null: title_screen_text.visible = false
@@ -715,12 +713,12 @@ func start_new_game(root: Object) -> void:
 	archetype_transition_active = true; archetype_transition_timer = -1.0; archetype_fade_out = false
 
 
-func start_save_select(root: Object, mode: String) -> void:
+func start_save_select(root: GameplayState, mode: String) -> void:
 	if title_overlay == null or not title_overlay.visible:
 		return
 	save_select_mode = mode
 	pending_title_destination = "save_select"
-	root.call("_spawn_title_ui_breakup")
+	root._spawn_title_ui_breakup()
 	title_overlay.visible = true
 	title_overlay.modulate.a = 1.0
 	title_transition_active = true
@@ -736,7 +734,7 @@ func start_save_select(root: Object, mode: String) -> void:
 	if title_cursor_text != null: title_cursor_text.visible = false
 
 
-func show_character_creation(root: Object) -> void:
+func show_character_creation(root: GameplayState) -> void:
 	if title_overlay == null or archetype_overlay == null:
 		return
 	title_overlay.visible = false
@@ -749,29 +747,29 @@ func show_character_creation(root: Object) -> void:
 	if archetype_hold_cover != null: archetype_hold_cover.visible = false
 	archetype_transition_active = false
 	menu_input_release_lock = true
-	root.call("_select_archetype_menu_row", 0)
+	root._select_archetype_menu_row(0)
 
 
-func update_player_death(root: Object, delta: float, game_over_fade_time: float) -> void:
-	var death_timer := float(root.get("player_death_timer")) + delta
-	root.set("player_death_timer", death_timer)
-	var overlay := root.get("player_death_overlay") as Sprite2D
-	var tuning := root.get("player_tuning") as PlayerTuning
+func update_player_death(root: GameplayState, delta: float, game_over_fade_time: float) -> void:
+	var death_timer := root.player_death_timer + delta
+	root.player_death_timer = death_timer
+	var overlay := root.player_death_overlay
+	var tuning := root.player_tuning
 	if overlay != null:
 		if death_timer < tuning.death_particle_delay:
 			overlay.modulate.a = clampf(death_timer / tuning.death_fade_time, 0.0, 1.0)
-		elif not bool(root.get("player_death_particles_started")):
-			root.set("player_death_particles_started", true); root.call("_spawn_player_death_pixels"); overlay.queue_free(); root.set("player_death_overlay", null)
-			root.call("_play_sound", "enemy_death", -4.0, 0.90 + RandomNumberGenerator.new().randf_range(-0.06, 0.06))
-	if not bool(root.get("player_death_particles_started")):
+		elif not root.player_death_particles_started:
+			root.player_death_particles_started = true; root._spawn_player_death_pixels(); overlay.queue_free(); root.player_death_overlay = null
+			root._play_sound("enemy_death", -4.0, 0.90 + RandomNumberGenerator.new().randf_range(-0.06, 0.06))
+	if not root.player_death_particles_started:
 		return
 	var death_effect_end := tuning.death_particle_delay + tuning.death_particle_lifetime
-	var game_over := root.get("game_over_overlay") as ColorRect
+	var game_over := root.game_over_overlay
 	if game_over != null and game_over.visible:
-		var fade_timer := float(root.get("game_over_fade_timer")) + delta
-		root.set("game_over_fade_timer", fade_timer); game_over.modulate.a = clampf(fade_timer / game_over_fade_time, 0.0, 1.0)
-		var restart := root.get("game_over_button") as Button
-		var title := root.get("game_over_title_button") as Button
+		var fade_timer := root.game_over_fade_timer + delta
+		root.game_over_fade_timer = fade_timer; game_over.modulate.a = clampf(fade_timer / game_over_fade_time, 0.0, 1.0)
+		var restart := root.game_over_button
+		var title := root.game_over_title_button
 		if restart != null: restart.modulate.a = retro_button_alpha(fade_timer)
 		if title != null: title.modulate.a = retro_button_alpha(fade_timer + 0.6)
 		var selected := title if game_over_row == 1 and title != null and not title.disabled else restart
@@ -782,29 +780,29 @@ func update_player_death(root: Object, delta: float, game_over_fade_time: float)
 		if game_over_footer_text != null:
 			game_over_footer_text.visible = true
 			game_over_footer_text.texture = _pixel_prompt_texture(Callable(root, "_pixel_text_texture"), _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
-	elif death_timer >= death_effect_end + float(root.get("player_tuning").death_observe_time):
-		root.call("_show_game_over")
+	elif death_timer >= death_effect_end + tuning.death_observe_time:
+		root._show_game_over()
 
 
-func update_game_over_input(root: Object) -> void:
-	var overlay := root.get("game_over_overlay") as ColorRect
+func update_game_over_input(root: GameplayState) -> void:
+	var overlay := root.game_over_overlay
 	if overlay == null or not overlay.visible:
 		return
 	if menu_input_release_lock:
-		if not bool(root.call("_is_menu_confirm_pressed")) and not bool(root.call("_is_menu_back_pressed")):
+		if not root._is_menu_confirm_pressed() and not root._is_menu_back_pressed():
 			menu_input_release_lock = false
 		else:
 			return
-	var restart := root.get("game_over_button") as Button
-	var title := root.get("game_over_title_button") as Button
-	if bool(root.call("_is_menu_back_just_pressed")):
+	var restart := root.game_over_button
+	var title := root.game_over_title_button
+	if root._is_menu_back_just_pressed():
 		if title != null and not title.disabled:
-			root.call("_play_sound", "ui_decline", 0.0, 1.0)
+			root._play_sound("ui_decline", 0.0, 1.0)
 			title.pressed.emit()
 		return
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+	if root._is_menu_direction_just_pressed(&"ui_up") or root._is_menu_direction_just_pressed(&"ui_down"):
 		game_over_row = 1 - game_over_row
-		root.call("_play_sound", "ui_hover", -6.0, 1.0)
+		root._play_sound("ui_hover", -6.0, 1.0)
 	var selected := title if game_over_row == 1 else restart
 	if selected == null or selected.disabled:
 		selected = restart if restart != null and not restart.disabled else title
@@ -816,8 +814,8 @@ func update_game_over_input(root: Object) -> void:
 	if game_over_footer_text != null:
 		game_over_footer_text.visible = true
 		game_over_footer_text.texture = _pixel_prompt_texture(Callable(root, "_pixel_text_texture"), _menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
-	if bool(root.call("_is_menu_confirm_just_pressed")) and selected != null and not selected.disabled:
-		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
+		root._play_sound("ui_confirm", 0.0, 1.0)
 		selected.pressed.emit()
 
 
@@ -2137,7 +2135,7 @@ func _shop_item_details(catalog: ItemCatalog, item: ItemInstance, sell_mode: boo
 	return lines.slice(0, 4)
 
 
-func _shop_stat_comparison(root: Object, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
+func _shop_stat_comparison(root: GameplayState, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
 	var fields := [
 		{"key": "vit", "label": "VIT"},
 		{"key": "strength", "label": "STR"},
@@ -2147,7 +2145,7 @@ func _shop_stat_comparison(root: Object, profile: PlayerProfile, catalog: ItemCa
 		{"key": "mnd", "label": "MND"},
 	]
 	var result: Array[Dictionary] = []
-	var live_snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
+	var live_snapshot := root._player_stat_snapshot()
 	var preview_snapshot: CombatStatSnapshot = null
 	if live_snapshot != null and item != null:
 		var slot := catalog.definition_slot(item.definition_id)
@@ -2156,7 +2154,7 @@ func _shop_stat_comparison(root: Object, profile: PlayerProfile, catalog: ItemCa
 		if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
 			preview_item = null
 		preview_equipment.configure_preview_from_profile(profile, catalog, slot, preview_item)
-		var player_stats := root.get("player_stats") as StatsComponent
+		var player_stats := root.player_stats
 		if player_stats != null:
 			preview_snapshot = CombatStatSnapshot.from_components(player_stats, preview_equipment)
 		preview_equipment.free()
@@ -2173,7 +2171,7 @@ func _shop_stat_comparison(root: Object, profile: PlayerProfile, catalog: ItemCa
 				"after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244),
 			})
 		return result
-	var stats := root.get("player_stats") as StatsComponent
+	var stats := root.player_stats
 	var base_values := [
 		float(stats.vit) if stats != null else 0.0,
 		float(stats.strength) if stats != null else 0.0,
@@ -2226,12 +2224,12 @@ func _fusion_stat_comparison(catalog: ItemCatalog, item: ItemInstance, count: in
 	return result
 
 
-func _render_fusion_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile) -> void:
+func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile) -> void:
 	if hub_fusion_menu == null or profile == null:
 		return
 	var view := hub_fusion_menu
 	var catalog := ItemCatalog.new()
-	var candidates := root.call("_hub_fusion_candidates") as Array
+	var candidates := root._hub_fusion_candidates()
 	var model := FusionMenuModelScript.new()
 	model.state = 0 if hub_is_root else hub_fusion_state
 	model.item_selected = hub_fusion_item_selected
@@ -2262,13 +2260,13 @@ func _render_fusion_menu(root: Object, pixel_texture: Callable, profile: PlayerP
 	view.call("render_fusion", model)
 
 
-func _render_bind_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
+func _render_bind_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
 	if hub_bind_menu == null or profile == null:
 		return
 	var view := hub_bind_menu
 	var model := BindMenuModelScript.new()
 	model.state = 0 if hub_is_root else hub_binding_state
-	var chroma := root.get("player_chroma_component") as Node
+	var chroma := root.player_chroma_component
 	var current_aspect := chroma.call("aspect_name") as StringName if chroma != null else &"gray"
 	model.current_element = ASPECT_CATALOG_SCRIPT.display_name(current_aspect)
 	model.current_is_bound = profile.has_bound_element and profile.bound_element == current_aspect
@@ -2285,7 +2283,7 @@ func _render_bind_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	view.call("render", model)
 
 
-func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color) -> void:
+func _render_shop_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color) -> void:
 	if hub_shop_menu == null or profile == null:
 		return
 	var view := hub_shop_menu
@@ -2298,14 +2296,14 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	var item_slots: Array[StringName] = []
 	var sell_mode := hub_shop_sell_mode
 	if sell_mode:
-		items = root.call("_hub_shop_sellable_items") as Array[ItemInstance]
+		items = root._hub_shop_sellable_items()
 		for item: ItemInstance in items:
 			item_slots.append(catalog.definition_slot(item.definition_id))
 			prices.append("%d" % catalog.sell_value(item))
 			soul_values.append(catalog.sell_soul_value(item))
 			sold_flags.append(false)
 	else:
-		var run_state := root.get("run_state") as RunState
+		var run_state := root.run_state
 		if run_state != null:
 			run_state.ensure_shop_stock(profile)
 			for entry: Dictionary in run_state.shop_stock:
@@ -2343,7 +2341,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 		var fusion_suffix := " F%d" % item.enhancement_level if item.enhancement_level > 0 else ""
 		var label := catalog.gear_name(item) + fusion_suffix
 		if sell_mode:
-			var row_quantity := int(root.call("_hub_shop_owned_matching_count", item))
+			var row_quantity := root._hub_shop_owned_matching_count(item)
 			if row_quantity > 1:
 				label += " x%d" % row_quantity
 		row_labels.append(label)
@@ -2357,7 +2355,7 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	var max_quantity := 1
 	if selected_item != null:
 		if sell_mode:
-			owned_count = int(root.call("_hub_shop_owned_matching_count", selected_item))
+			owned_count = root._hub_shop_owned_matching_count(selected_item)
 			max_quantity = maxi(owned_count, 1)
 		else:
 			for data: Dictionary in profile.inventory:
@@ -2372,10 +2370,9 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	# while still presenting one row for one functional item variant.
 	if sell_mode and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT and selected_item != null and selected < prices.size():
 		var batch_value: Dictionary = {"gold": catalog.sell_value(selected_item) * selected_quantity, "souls": catalog.sell_soul_value(selected_item) * selected_quantity}
-		if root.has_method("_hub_shop_batch_value"):
-			var resolved_batch := root.call("_hub_shop_batch_value", selected_item, selected_quantity) as Dictionary
-			if not resolved_batch.is_empty():
-				batch_value = resolved_batch
+		var resolved_batch := root._hub_shop_batch_value(selected_item, selected_quantity)
+		if not resolved_batch.is_empty():
+			batch_value = resolved_batch
 		prices[selected] = "%d" % int(batch_value.get("gold", 0))
 		if selected < soul_values.size():
 			soul_values[selected] = int(batch_value.get("souls", 0))
@@ -2386,8 +2383,8 @@ func _render_shop_menu(root: Object, pixel_texture: Callable, profile: PlayerPro
 	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, visible_slots, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
 
 
-func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
-	var profile := root.get("player_profile") as PlayerProfile
+func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
+	var profile := root.player_profile
 	if profile == null: return
 	# Fusion is a child of the shared Items page, so page-root visibility alone
 	# cannot hide it when another route returns early below (notably BIND).
@@ -2463,8 +2460,7 @@ func update_hub_ui(root: Object, pixel_texture: Callable) -> void:
 	_position_hub_controls()
 	var page_buttons := hub_page_buttons
 	var highlight_color := PaletteLibrary.accent(player_palette_name)
-	if root.has_method("_health_feedback_color"):
-		highlight_color = root.call("_health_feedback_color", player_palette_name)
+	highlight_color = root._health_feedback_color(player_palette_name)
 	for page_index in page_buttons.size():
 		page_buttons[page_index].visible = true
 		page_buttons[page_index].mouse_filter = Control.MOUSE_FILTER_STOP

@@ -145,24 +145,24 @@ func _apply_cloaked_state() -> void:
 ## Resolves the locomotion animation name from shared root state so every
 ## transition (attack/magic/between recovery) returns to the correct state:
 ## defend > run > walk > idle.
-func movement_anim_name(root: Object) -> String:
-	if bool(root.get("player_is_defending")):
+func movement_anim_name(root: GameplayState) -> String:
+	if root.player_is_defending:
 		return "defend"
-	if bool(root.get("player_is_running")):
+	if root.player_is_running:
 		return "run"
-	if bool(root.get("player_is_moving")):
+	if root.player_is_moving:
 		return "walk"
 	return "idle"
 
 
-func apply_frame(root: Object) -> void:
-	var player := root.get("player") as Sprite2D
-	var animation_key := String(root.get("player_anim_name"))
-	var frame := int(root.get("player_anim_frame"))
+func apply_frame(root: GameplayState) -> void:
+	var player := root.player
+	var animation_key := String(root.player_anim_name)
+	var frame := root.player_anim_frame
 	var frames: Array[Texture2D] = idle_frames
-	if bool(root.get("player_is_rolling")):
+	if root.player_is_rolling:
 		frames = roll_frames
-	elif bool(root.get("player_is_backflipping")):
+	elif root.player_is_backflipping:
 		frames = backflip_frames
 	elif animation_key == "spin_attack":
 		frames = spin_frames
@@ -180,66 +180,66 @@ func apply_frame(root: Object) -> void:
 		frames = run_frames
 	if animation_key == "charge":
 		player.offset = Vector2(-10, -10)
-		player.flip_h = bool(root.get("player_attack_flip_h"))
-		_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
+		player.flip_h = root.player_attack_flip_h
+		_set_render_visibility(player, root.player_attack_visual, false)
 		var charge_grey_set: Dictionary = frames_by_palette.get("grey", {})
 		var charge_grey := charge_grey_set.get("between") as Texture2D
-		root.call("_set_mp_grey_texture", charge_grey)
+		root._set_mp_grey_texture(charge_grey)
 		var charge_texture := between_attack_texture if between_attack_texture != null else (attack_frames[0] if not attack_frames.is_empty() else null)
 		if charge_texture != null:
-			root.call("_set_actor_base_texture", player, charge_texture)
+			root._set_actor_base_texture(player, charge_texture)
 		return
 	if frames.is_empty():
 		return
 	var grey_set: Dictionary = frames_by_palette.get("grey", {})
-	if bool(root.get("player_is_rolling")):
-		var roll_frame := clampi(int(root.get("player_roll_component").frame), 0, frames.size() - 1)
+	if root.player_is_rolling:
+		var roll_frame := clampi(root.player_roll_component.frame, 0, frames.size() - 1)
 		var grey_roll := grey_set.get("roll", []) as Array[Texture2D]
-		root.call("_set_mp_grey_texture", grey_roll[mini(roll_frame, grey_roll.size() - 1)] if not grey_roll.is_empty() else null)
-		root.call("_set_actor_base_texture", player, frames[roll_frame])
+		root._set_mp_grey_texture(grey_roll[mini(roll_frame, grey_roll.size() - 1)] if not grey_roll.is_empty() else null)
+		root._set_actor_base_texture(player, frames[roll_frame])
 		return
-	if bool(root.get("player_is_backflipping")):
-		var backflip_frame := clampi(int(root.get("player_roll_component").frame), 0, frames.size() - 1)
+	if root.player_is_backflipping:
+		var backflip_frame := clampi(root.player_roll_component.frame, 0, frames.size() - 1)
 		var grey_backflip := grey_set.get("backflip", []) as Array[Texture2D]
-		root.call("_set_mp_grey_texture", grey_backflip[mini(backflip_frame, grey_backflip.size() - 1)] if not grey_backflip.is_empty() else null)
-		root.call("_set_actor_base_texture", player, frames[backflip_frame])
+		root._set_mp_grey_texture(grey_backflip[mini(backflip_frame, grey_backflip.size() - 1)] if not grey_backflip.is_empty() else null)
+		root._set_actor_base_texture(player, frames[backflip_frame])
 		return
 	var is_spin := animation_key == "spin_attack"
 	var is_attack2 := animation_key == "attack2" or animation_key == "attack2_charged"
 	var is_attack_animation := is_spin or is_attack2 or animation_key == "attack1"
 	if is_attack_animation:
-		var flip := bool(root.get("player_attack_flip_h"))
+		var flip := root.player_attack_flip_h
 		var active_attack_frames: Array[Texture2D] = spin_left_frames if is_spin and flip else spin_frames if is_spin else attack2_left_frames if is_attack2 and flip else attack_left_frames if flip else attack2_frames if is_attack2 else attack_frames
 		if active_attack_frames.is_empty():
 			return
 		var attack_frame_index := clampi(frame, 0, active_attack_frames.size() - 1)
 		var grey_key := "spin_left" if is_spin and flip else "spin" if is_spin else "attack2_left" if is_attack2 and flip else "attack_left" if flip else "attack2" if is_attack2 else "attack"
 		var grey_attack := grey_set.get(grey_key, []) as Array[Texture2D]
-		root.call("_set_mp_grey_texture", grey_attack[mini(attack_frame_index, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
-		var visual := root.get("player_attack_visual") as Sprite2D
+		root._set_mp_grey_texture(grey_attack[mini(attack_frame_index, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
+		var visual := root.player_attack_visual
 		# Assign the new frame while the attack layer is hidden. Exposing it first
 		# can render the previous attack frame for one frame as a delayed ghost.
 		visual.visible = false
 		visual.texture = active_attack_frames[attack_frame_index]
-		_set_render_visibility(player, visual, bool(root.get("player_is_attacking")))
-		update_attack_visual(player, visual, bool(root.get("player_is_attacking")), Vector2(-10, -10), player.z_index)
+		_set_render_visibility(player, visual, root.player_is_attacking)
+		update_attack_visual(player, visual, root.player_is_attacking, Vector2(-10, -10), player.z_index)
 		return
 	if animation_key == "magic":
-		var flip := bool(root.get("player_magic_flip_h"))
+		var flip := root.player_magic_flip_h
 		var grey_magic := grey_set.get("magic", []) as Array[Texture2D]
 		var resolved_magic_frame := clampi(frame, 0, frames.size() - 1)
 		player.offset = Vector2(-10, -10)
 		player.flip_h = flip
-		root.call("_set_mp_grey_texture", grey_magic[mini(resolved_magic_frame, grey_magic.size() - 1)] if not grey_magic.is_empty() else null)
-		_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
-		root.call("_set_actor_base_texture", player, frames[resolved_magic_frame])
+		root._set_mp_grey_texture(grey_magic[mini(resolved_magic_frame, grey_magic.size() - 1)] if not grey_magic.is_empty() else null)
+		_set_render_visibility(player, root.player_attack_visual, false)
+		root._set_actor_base_texture(player, frames[resolved_magic_frame])
 		return
 	var base_frame_index := clampi(frame, 0, frames.size() - 1)
 	player.offset = Vector2(-10, -10)
-	_set_render_visibility(player, root.get("player_attack_visual") as Sprite2D, false)
+	_set_render_visibility(player, root.player_attack_visual, false)
 	var grey_frames := grey_set.get(animation_key, []) as Array[Texture2D]
-	root.call("_set_mp_grey_texture", grey_frames[mini(base_frame_index, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
-	root.call("_set_actor_base_texture", player, frames[base_frame_index])
+	root._set_mp_grey_texture(grey_frames[mini(base_frame_index, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
+	root._set_actor_base_texture(player, frames[base_frame_index])
 
 
 func _set_transition_grey(root: Object, transition_name: String) -> void:
@@ -249,15 +249,15 @@ func _set_transition_grey(root: Object, transition_name: String) -> void:
 		root.call("_set_mp_grey_texture", grey_texture)
 
 
-func begin_transition(root: Object, transition_name: String, texture: Texture2D, duration: float) -> void:
+func begin_transition(root: GameplayState, transition_name: String, texture: Texture2D, duration: float) -> void:
 	if texture == null:
 		return
-	root.set("player_between_timer", maxf(duration, 0.0))
-	root.set("player_anim_name", transition_name)
-	root.set("player_anim_frame", 0)
-	root.set("player_anim_timer", 0.0)
+	root.player_between_timer = maxf(duration, 0.0)
+	root.player_anim_name = transition_name
+	root.player_anim_frame = 0
+	root.player_anim_timer = 0.0
 	_set_transition_grey(root, transition_name)
-	root.call("_set_actor_base_texture", root.get("player"), texture)
+	root._set_actor_base_texture(root.player, texture)
 
 
 func apply_palette(root: Object, palette_name: String) -> void:

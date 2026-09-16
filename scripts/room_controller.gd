@@ -11,6 +11,7 @@ const ROOM_CHECKPOINT_RESULT_SCRIPT = preload("res://scripts/room_checkpoint_res
 const ROOM_CLEAR_CONTEXT_SCRIPT = preload("res://scripts/room_clear_context.gd")
 const ROOM_CLEAR_RESULT_SCRIPT = preload("res://scripts/room_clear_result.gd")
 const ROOM_ENTRY_CONTEXT_SCRIPT = preload("res://scripts/room_entry_context.gd")
+const ROOM_ENTRY_SERVICES_SCRIPT = preload("res://scripts/room_entry_services.gd")
 const ROOM_ENTRY_RESULT_SCRIPT = preload("res://scripts/room_entry_result.gd")
 const ROOM_ENEMY_PLACEMENT_SCRIPT = preload("res://scripts/room_enemy_placement.gd")
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
@@ -627,7 +628,9 @@ func plan_socket_transition(
 
 func enter_connected_room(root: Object, transition: RoomTransitionResult) -> bool:
 	if root is GameplayState:
-		return enter_connected_room_context(ROOM_ENTRY_CONTEXT_SCRIPT.new(root as GameplayState, transition)).succeeded()
+		var services := ROOM_ENTRY_SERVICES_SCRIPT.new() as RoomEntryServices
+		services.execute_entry = Callable(self, "_enter_connected_room_impl").bind(root as GameplayState, transition)
+		return enter_connected_room_context(ROOM_ENTRY_CONTEXT_SCRIPT.new(services, transition)).succeeded()
 	return false
 
 
@@ -640,8 +643,15 @@ func enter_connected_room_context(context: RoomEntryContext) -> RoomEntryResult:
 			result.room_type = context.transition.destination_room_type
 	if context == null or not context.is_valid():
 		return result
-	var runtime := context.runtime
-	var transition := context.transition
+	return context.services.execute_entry.call() as RoomEntryResult
+
+
+func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransitionResult) -> RoomEntryResult:
+	var result: RoomEntryResult = ROOM_ENTRY_RESULT_SCRIPT.new()
+	result.transition = transition
+	if transition != null:
+		result.room_id = transition.destination_room_id
+		result.room_type = transition.destination_room_type
 	var player := runtime.player
 	if player == null or not is_instance_valid(player):
 		result.status = RoomEntryResult.Status.MISSING_PLAYER
@@ -728,10 +738,12 @@ func _arrival_player_position(root: Object, socket: DungeonSocket) -> Vector2:
 	var marker := socket.spawn_marker()
 	return marker.global_position if marker != null else root.get("player_start_position")
 
-
 func activate_room(root: Object) -> RoomActivationResult:
 	if root is GameplayState:
-		return activate_room_context(ROOM_ACTIVATION_CONTEXT_SCRIPT.new(root as GameplayState, self))
+		var runtime := root as GameplayState
+		var room := runtime.dungeon_graph.get_room(runtime.current_room_id)
+		var state := room_states.get(runtime.current_room_id, {}) as Dictionary
+		return activate_room_context(ROOM_ACTIVATION_CONTEXT_SCRIPT.new(RoomActivationServices.from_runtime(runtime, self, state, runtime.current_room_type), self, runtime.current_room_id, runtime.current_room_type, room, state))
 	var result := ROOM_ACTIVATION_RESULT_SCRIPT.new() as RoomActivationResult
 	result.reject(RoomActivationResult.Status.MISSING_ROOT)
 	return result
@@ -739,10 +751,10 @@ func activate_room(root: Object) -> RoomActivationResult:
 
 func activate_room_context(context: RoomActivationContext) -> RoomActivationResult:
 	var result := ROOM_ACTIVATION_RESULT_SCRIPT.new() as RoomActivationResult
-	if context == null or context.runtime == null:
+	if context == null or context.services == null:
 		result.reject(RoomActivationResult.Status.MISSING_ROOT)
 		return result
-	if context.runtime.dungeon_graph == null:
+	if context.services.dungeon_graph == null:
 		result.reject(RoomActivationResult.Status.INVALID_GRAPH)
 		return result
 	result.room_id = context.room_id
@@ -758,7 +770,7 @@ func activate_room_context(context: RoomActivationContext) -> RoomActivationResu
 	result.state = (room_states.get(result.room_id, {}) as Dictionary).duplicate(true)
 	result.spawn_result = last_spawn_result
 	result.configured_enemy_slots = (result.state.get("enemy_variants", []) as Array).size()
-	for slime in context.runtime.slimes:
+	for slime in context.services.slimes:
 		if slime.visible:
 			result.visible_enemy_slots += 1
 	return result
@@ -766,63 +778,61 @@ func activate_room_context(context: RoomActivationContext) -> RoomActivationResu
 
 func apply_state(root: Object) -> void:
 	if root is GameplayState:
-		apply_state_context(ROOM_ACTIVATION_CONTEXT_SCRIPT.new(root as GameplayState, self))
-
+		activate_room(root)
 
 func apply_state_context(context: RoomActivationContext) -> void:
 	last_spawn_result = null
-	var runtime := context.runtime
+	var services := context.services
 	var state := context.state
 	var room_type := context.room_type
+	services.activation_state = state
 	var has_regular_treasure: bool = bool(state.get("regular_room_treasure", false)) and room_type == DungeonGraph.ROOM_COMBAT
-	runtime.regular_room_treasure = has_regular_treasure
+	services.set_runtime_property.call("regular_room_treasure", has_regular_treasure)
 	var treasure_chest_claimed := _treasure_chest_claimed_from_state(state) if room_type == DungeonGraph.ROOM_TREASURE else false
 	var regular_chest_claimed := _treasure_chest_claimed_from_state(state) if has_regular_treasure else false
 	if room_type == DungeonGraph.ROOM_TREASURE:
-		runtime.chest_unlocked = treasure_chest_claimed
-		runtime.chest_claimed = treasure_chest_claimed
-		runtime.chest_evaporated = bool(state.get("chest_evaporated", treasure_chest_claimed))
+		services.set_runtime_property.call("chest_unlocked", treasure_chest_claimed)
+		services.set_runtime_property.call("chest_claimed", treasure_chest_claimed)
+		services.set_runtime_property.call("chest_evaporated", bool(state.get("chest_evaporated", treasure_chest_claimed)))
 	elif has_regular_treasure:
-		runtime.chest_unlocked = regular_chest_claimed
-		runtime.chest_claimed = regular_chest_claimed
-		runtime.chest_evaporated = bool(state.get("chest_evaporated", regular_chest_claimed))
+		services.set_runtime_property.call("chest_unlocked", regular_chest_claimed)
+		services.set_runtime_property.call("chest_claimed", regular_chest_claimed)
+		services.set_runtime_property.call("chest_evaporated", bool(state.get("chest_evaporated", regular_chest_claimed)))
 	# The scene's base Chest node is authored visible. Clear its presentation
 	# before any room-specific branch; treasure rooms explicitly re-add it later.
-	hide_chest_presentation(runtime)
-	_clear_active_world_drop(runtime)
-	runtime._clear_chroma_pickups()
-	runtime._clear_soul_pickups()
-	_apply_special_enemy_color_policy(runtime, state)
+	services.hide_chest_presentation.call()
+	services.clear_active_world_drop.call()
+	services.clear_chroma_pickups.call()
+	services.clear_soul_pickups.call()
+	services.apply_special_enemy_color_policy.call()
 	if is_cleared(context.room_id):
 		state["finished"] = true
 	if room_type == DungeonGraph.ROOM_START or room_type == DungeonGraph.ROOM_REST:
-		runtime._apply_rest_room_state()
+		services.apply_rest_room_state.call()
 	elif room_type == DungeonGraph.ROOM_NPC:
-		runtime._apply_npc_room_state()
+		services.apply_npc_room_state.call()
 	elif room_type == DungeonGraph.ROOM_PUZZLE:
-		apply_puzzle_state(runtime, bool(state.get("finished", false)))
+		services.apply_puzzle_state.call()
 	elif room_type == DungeonGraph.ROOM_ORB:
-		apply_orb_state(runtime)
+		services.apply_orb_state.call()
 	elif bool(state.get("finished", false)):
-		runtime._apply_finished_room_state()
+		services.apply_finished_room_state.call()
 	else:
-		runtime.cloaked_demon.visible = false
-		runtime.collision_sprites.erase(runtime.cloaked_demon)
+		services.reset_chest_for_room.call()
 		# Regular-room treasure is generated with the room and must be visible on
 		# entry. It stays grey/locked until the enemy encounter is cleared.
-		reset_chest_for_room(runtime, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_chest_claimed) or (has_regular_treasure and not regular_chest_claimed))
 		if room_type == DungeonGraph.ROOM_TREASURE and treasure_chest_claimed:
-			runtime.chest_unlocked = true
-			runtime.chest_claimed = true
-			runtime.chest_evaporated = bool(state.get("chest_evaporated", true))
+			services.set_runtime_property.call("chest_unlocked", true)
+			services.set_runtime_property.call("chest_claimed", true)
+			services.set_runtime_property.call("chest_evaporated", bool(state.get("chest_evaporated", true)))
 		elif has_regular_treasure and regular_chest_claimed:
-			runtime.chest_unlocked = true
-			runtime.chest_claimed = true
-			runtime.chest_evaporated = bool(state.get("chest_evaporated", true))
-		reset_slimes_for_room(runtime)
-	_restore_world_drop(runtime, state)
-	_restore_chroma_pickups(runtime, state)
-	runtime._apply_chest_map_tint()
+			services.set_runtime_property.call("chest_unlocked", true)
+			services.set_runtime_property.call("chest_claimed", true)
+			services.set_runtime_property.call("chest_evaporated", bool(state.get("chest_evaporated", true)))
+		services.reset_slimes_for_room.call()
+	services.restore_world_drop.call()
+	services.restore_chroma_pickups.call()
+	services.apply_chest_map_tint.call()
 
 
 func _treasure_chest_claimed_from_state(state: Dictionary) -> bool:
