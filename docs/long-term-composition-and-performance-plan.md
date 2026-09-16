@@ -21,11 +21,31 @@ post-Phase-C cleanup tracker into the long-term architecture direction
 
 Updated: 2026-09-15
 
+## How this plan is tracked
+
+This document bundles three long-running tracks that are sequenced separately
+and each have their own completion gate. They are deliberately not one
+monolithic effort:
+
+| Track | Scope | Sequence gate | Tracked in |
+|---|---|---|---|
+| **T1 — Ownership cleanup** | Reduce `GameplayState` coupling, root reflection, oversized owners, transitional adapters | `tools/validate_composition.ps1` percentage; no new `GameplayState`-backed contexts | `composition-refactor-analysis.md` |
+| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Enemy-definition proof slice (B); then one slice per content kind | this document |
+| **T3 — Performance** | Device-backed frame-time, transition, memory, and startup budgets on desktop + Samsung A17 | First fixed-seed scenario harness; then A/B palette test | this document |
+
+Each track may be at a different progress point and can be picked up
+independently. Do not treat T2 or T3 as blocked by T1, and do not treat T1 as
+blocked by the content or performance work.
+
 ## Purpose
 
 The current composition percentage measures a specific cleanup: reducing legacy
 coupling around `GameplayState`, reflective root access, oversized owners, and
-transitional adapters. It is useful, but it is not the full product goal.
+transitional adapters. It is useful, but it is not the full product goal. That
+percentage is **not hardcoded in this document** — it is produced by
+`tools/validate_composition.ps1` (run it with no arguments for the regression
+floor, or `-RequireTargets` for the strict completion audit). Refer to that
+validator as the live source of truth instead of reading a stale number here.
 
 The long-term goal is a game that can grow for years without every new enemy,
 room, map rule, reward, effect, or balance change requiring edits to a central
@@ -120,31 +140,48 @@ an editor-friendly enemy composition boundary.
 ## What completion of the larger goal means
 
 The long-term architecture should pass workflow tests, not only line-count
-tests:
+tests. Each workflow has a pinned acceptance bar so "done" is measurable, not a
+vibe. These bars may tighten as the architecture improves, but they are the
+minimum to claim a workflow passes:
 
-1. Add a new enemy by creating or composing a scene, definition, and behavior
+1. **Add a new enemy** by creating or composing a scene, definition, and behavior
    registration without editing `GameplayState` or adding a room special case.
-2. Add a room by supplying geometry, sockets, encounter, reward, and milestone
+   Bar: the new enemy requires **zero edits to `GameplayState`** and at most one
+   new catalog/definition row plus one factory registration.
+2. **Add a room** by supplying geometry, sockets, encounter, reward, and milestone
    definitions without changing the central frame coordinator.
-3. Add a map or route by selecting a dungeon definition and generator policy,
+   Bar: **no `gameplay_frame_controller.gd` edit** and no new
+   `root.call/get/set` site in the definition or factory path.
+3. **Add a map or route** by selecting a dungeon definition and generator policy,
    with deterministic seed output and validation.
-4. Change tuning, palettes, drops, or spawn weights through resources/catalogs
+   Bar: a fixed seed reproduces the layout, and validation fails early on
+   duplicate IDs, unreachable sockets, or unsafe encounter placement.
+4. **Change tuning, palettes, drops, or spawn weights** through resources/catalogs
    while preserving stable IDs and save migration rules.
-5. Instantiate the same content in a headless fixture, a normal scene, and a
+   Bar: the change is a resource/catalog edit only; no runtime script body is
+   touched, and save compatibility round-trips.
+5. **Instantiate the same content** in a headless fixture, a normal scene, and a
    generated run with the same ownership rules.
-6. Validate definitions before runtime: duplicate IDs, missing assets,
+   Bar: one shared factory path produces the same definition-derived composition
+   in all three hosts.
+6. **Validate definitions before runtime**: duplicate IDs, missing assets,
    invalid references, impossible geometry, unreachable sockets, and unsafe
    encounter placement should fail early.
-7. Keep persistence based on IDs, seeds, and plain data rather than live Node
+   Bar: a validator runs in the same CI preflight as the manifest and
+   composition checks, and fails on a malformed definition.
+7. **Keep persistence based on IDs, seeds, and plain data** rather than live Node
    references.
+   Bar: a save snapshot contains no `Object`/node handles and round-trips
+   through a schema-versioned serializer.
 
-The current `tools/validate_composition.ps1` percentage remains useful for the
-legacy-coupling subproject. It should not be renamed into a claim that these
-content-authoring workflows are complete.
+A workflow is not complete until its bar is met and demonstrated with a focused
+test. The current `tools/validate_composition.ps1` percentage remains useful for
+the legacy-coupling subproject (T1). It should not be renamed into a claim that
+these content-authoring workflows (T2) are complete.
 
 ## Incremental migration sequence
 
-### A. Finish the current ownership cleanup without blocking feature work
+### A. Finish the current ownership cleanup without blocking feature work — T1
 
 Complete the remaining room-entry/activation adapters, state-bag reductions,
 and root-access reductions tracked in
@@ -152,7 +189,7 @@ and root-access reductions tracked in
 this as a hygiene track. A feature may proceed when it uses the new boundary it
 needs; it should not add new `GameplayState`-backed contexts or reflective seams.
 
-### B. Build one enemy definition vertical slice
+### B. Build one enemy definition vertical slice — T2 (first proof)
 
 Start with an existing slime variant so behavior is preserved:
 
@@ -167,35 +204,75 @@ Start with an existing slime variant so behavior is preserved:
 This is the first meaningful proof that the architecture makes adding enemies
 easier. A recolor-only variant is not enough if the gameplay identity differs.
 
-### C. Separate encounters and rooms
+**Slice B acceptance bar (T2 gate):**
+
+- the enemy definition is a `Resource` subclass (or an equivalent validated,
+  serializable contract) that the editor can inspect, not a `const` dictionary;
+- the migrated variant's scene, tuning, geometry, visual, and behavior are all
+  driven by the definition, not by hand-written `GameplayState` branches;
+- `EnemyFactory` assembles the actor/components from the definition;
+- adding a **second** variant requires: one new definition resource, one
+  catalog row, and no `GameplayState` edit — nothing else;
+- focused tests cover the new variant and a save/load round-trip of any
+  definition-derived runtime state.
+
+If the second variant cannot be added with ≤1 definition/catalog change and zero
+`GameplayState` edits, the slice is not complete. Do not declare B done on
+"a test passes" alone.
+
+### B1. Cost of the Resource migration — T2
+
+Moving the current dictionary catalogs (`slime_variant_catalog.gd`,
+`item_catalog.gd` definition blocks, `dungeon_layout_definition.gd`) to
+inspector-editable `Resource` subclasses is a real serialization migration, not
+a rename. The honest cost items:
+
+- a `Resource` subclass per definition kind with `@export` fields and stable
+  IDs;
+- a load path that migrates the existing `const DEFINITIONS := {...}` data
+  into `.tres` files (or an equivalent authored source) without losing the
+  current default tuning;
+- a validation pass that catches missing fields, duplicate IDs, and dangling
+  references before runtime (ties into workflow test 6);
+- a save/load compatibility decision: old saves reference stable IDs, so the
+  definition move must not invalidate them;
+- editor workflow: the resource must be readable in the inspector and
+  exportable in the web/mobile builds.
+
+Sequence B before B1: prove the enemy slice works with one hand-authored
+definition resource first, then migrate the remaining catalogs behind the same
+pattern. Do not migrate every catalog in one commit; each kind (enemy, item,
+element, room, encounter, effect) is a separate slice with its own tests.
+
+### C. Separate encounters and rooms — T2
 
 Move room-specific enemy/reward choices into `EncounterDefinition` and
 `RoomDefinition` while leaving authored geometry and generated topology
 distinct. Room runtime state should own claims, active actors, entrance locks,
 and clear state; definitions should remain reusable and immutable.
 
-### D. Make dungeon and map authoring compositional
+### D. Make dungeon and map authoring compositional — T2
 
 Keep the seeded generator responsible for producing a validated layout, but
 make its inputs explicit: room pool, route policy, milestone rules, socket
 rules, reward policy, and seed. The map controller should present the result,
 not become the source of every generation rule.
 
-### E. Extend the same pattern to items, elements, rewards, and effects
+### E. Extend the same pattern to items, elements, rewards, and effects — T2
 
 Use stable definitions and catalogs for content. Runtime components should
 consume typed definitions and emit typed results/signals. Do not create a new
 global registry as a replacement service locator; catalogs should be narrow,
 validated dependencies.
 
-### F. Add authoring and validation feedback
+### F. Add authoring and validation feedback — T2
 
 The editor/designer workflow should answer “what can I add and what will break?”
 without reading several coordinators. Add definition validation, catalog
 reports, deterministic preview commands, and one documented example each for
 an enemy, room, encounter, reward, and map.
 
-## Performance investigation track
+## Performance investigation track — T3
 
 Tiny Demons’ low logical resolution does not automatically make it cheap. A
 small pixel game can still spend significant time on transparent blended
@@ -208,7 +285,7 @@ The project already selects Godot’s mobile renderer and nearest-neighbor canva
 texture filtering in `project.godot`. That is a sensible baseline, but it is
 not a performance diagnosis or a mobile budget.
 
-### Current hypotheses to measure
+### Current hypotheses to measure — T3
 
 - `SpriteFrameLibrary`, `SlimeVisualComponent`, and player animation paths
   perform per-pixel image recoloring and create `ImageTexture` resources. Caches
@@ -225,7 +302,7 @@ not a performance diagnosis or a mobile budget.
 - Synchronous loading and transition prewarming may trade room-entry hitches
   for startup memory/CPU spikes.
 
-### Measurement before optimization
+### Measurement before optimization — T3
 
 Capture the same scenarios on desktop, web, and the Samsung A17 before changing
 rendering architecture:
@@ -244,7 +321,7 @@ particle counts, load/prewarm time, and whether memory grows after repeated
 room transitions. Use fixed seeds and a repeatable input script where possible.
 The first performance task is an evidence report, not an optimization claim.
 
-### Palette rendering decision
+### Palette rendering decision — T3
 
 Shaders may reduce duplicated palette textures, but they are not automatically
 cheaper. A palette shader can save CPU-side image copies and texture memory
@@ -263,7 +340,7 @@ Do not replace all sprite sets with shaders before this A/B test. A shader will
 not fix excessive node counts, per-frame allocations, synchronous loading, or
 an overactive update loop.
 
-### Performance exit criteria
+### Performance exit criteria — T3
 
 Before calling the performance track complete, record device-backed budgets for
 frame time, transition hitch duration, memory stability, and startup/room-entry
@@ -287,12 +364,24 @@ regression check at native pixel scale.
 
 ## Immediate next moves
 
-1. Keep the current 82.5% composition score labeled as the legacy-coupling
-   checkpoint.
-2. Build the enemy-definition/factory proof around one existing slime variant.
-3. Add a fixed-seed performance scenario harness that reports frame time,
-   active visual objects, palette/resource preparation, and room-transition
-   timing on the desktop and Samsung A17 targets.
-4. Use the measured result to choose between cache/atlas work, node/effect
-   reduction, loading changes, and the palette-shader experiment.
+Ordered by dependency: the performance harness runs first because every
+composition change touches the same hot paths (per-frame controller visits,
+sprite preparation, palette recolor), and without a baseline the T2/T1 work
+cannot be shown not to regress.
+
+1. **Add the fixed-seed performance scenario harness first.** It reports frame
+   time, active visual objects, palette/resource preparation, and
+   room-transition timing on the desktop and Samsung A17 targets. This is the
+   T3 foundation and the measurement any composition slice must not regress.
+2. Keep the current composition score (from `tools/validate_composition.ps1`)
+   labeled as the legacy-coupling checkpoint; do not hardcode its value in
+   this document.
+3. Build the enemy-definition/factory proof around one existing slime variant
+   (T2 slice B, with its pinned acceptance bar).
+4. Use the measured performance result to choose between cache/atlas work,
+   node/effect reduction, loading changes, and the palette-shader experiment.
 5. Require every new content feature to use the emerging definition boundary.
+
+Each of these is an independent track: the harness (1/4) is T3, the enemy
+proof (3) is T2, and the score (2) is T1. Pick them up in parallel where the
+environment permits.
