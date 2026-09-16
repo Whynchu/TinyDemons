@@ -2,14 +2,11 @@
   "root_accesses": 2726,
   "gameplay_state_lines": 1772,
   "gameplay_state_fields": 298,
-  "room_controller_lines": 2243,
-  "runtime_refs": 5,
+  "room_controller_lines": 2253,
+  "runtime_refs": 0,
   "legacy_total": 0,
   "legacy_pairs": [],
-  "transitional_allowlist": [
-    "RoomEntryContext",
-    "RoomActivationContext"
-  ],
+  "transitional_allowlist": [],
   "completion_start": {
     "root_accesses": 3135,
     "gameplay_state_lines": 1777,

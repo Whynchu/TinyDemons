@@ -195,7 +195,7 @@ func initialize(root: GameplayState) -> void:
 	root.call("_refresh_player_cloak_visual")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
-	_initialize_walkable_area(root, root.EDGE_MARGIN, root.SLIME_EDGE_PADDING)
+	_initialize_walkable_area(root, 0.35, 1.25)
 	_initialize_slimes(root, slimes)
 	root.room_controller.initialize_boss_jump_phase_pool(root)
 	root._apply_room_state(); root._build_depth_lists()
@@ -327,7 +327,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	if profile != null and profile.has_bound_element:
 		root.player_chroma_component.call("set_bound_flame", profile.bound_element)
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
-	root.player_aspect_ability_component.call("configure_mode_cooldowns", root.MAGIC_COOLDOWN, root.GREY_MAGIC_COOLDOWN)
+	root.player_aspect_ability_component.call("configure_mode_cooldowns", 2.0, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
 	equipment_visual.initialize(root); root.player_equipment_visual_component = equipment_visual
 	root._set_target_ui_visible(false)

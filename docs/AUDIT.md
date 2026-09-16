@@ -8,7 +8,7 @@ Baseline commit: `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
 Baseline game version: `0.2.00`
 
-Current release: `0.2.22` (typed reward, checkpoint, room-state, runtime ownership, and long-term composition direction)
+Current release: `0.2.23` (typed reward, checkpoint, room-state, runtime ownership, and long-term composition direction)
 
 Post-audit checkpoint (2026-09-15): the legacy-coupling cleanup is 82.5%
 complete under the strict ownership scorecard. Typed room spawn/death helpers,
