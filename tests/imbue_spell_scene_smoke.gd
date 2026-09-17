@@ -4,6 +4,16 @@ const Chroma = preload("res://scripts/player_chroma_component.gd")
 const Elements = preload("res://scripts/element_catalog.gd")
 
 
+func _equipment_visual_context(gameplay: Node) -> PlayerEquipmentVisualContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.equipment_visual_context(gameplay) if frame_controller != null else PlayerEquipmentVisualContext.new()
+
+
+func _animation_context(gameplay: Node) -> PlayerAnimationContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.animation_context(gameplay) if frame_controller != null else PlayerAnimationContext.new()
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -126,7 +136,7 @@ func _initialize() -> void:
 	_expect(absf(float(runtime.get("imbue_remaining")) - 15.0) < 0.1, "IMBUE starts its fifteen second duration", failures)
 	_expect(absf(float(runtime.get("imbue_cooldown_remaining")) - 20.0) < 0.1, "IMBUE starts its twenty second cooldown", failures)
 	if equipment != null:
-		equipment.tick(gameplay, 0.0)
+		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		_expect(int(equipment.get("imbue_element")) == Elements.Element.FIRE, "weapon visual stores the imbued element", failures)
 		_expect((equipment.get("imbue_outline_overlays") as Dictionary).size() > 0, "weapon visual creates an elemental outline overlay", failures)
 	for _frame in 5:
@@ -138,7 +148,7 @@ func _initialize() -> void:
 		gameplay.set("player_is_attacking", true)
 		gameplay.set("player_anim_name", "attack1")
 		gameplay.set("player_anim_frame", 0)
-		equipment.tick(gameplay, 0.0)
+		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		var equipment_layers: Dictionary = equipment.get("layers") as Dictionary
 		var outline_overlays: Dictionary = equipment.get("imbue_outline_overlays") as Dictionary
 		var player := gameplay.get("player") as Sprite2D
@@ -151,11 +161,11 @@ func _initialize() -> void:
 		gameplay.set("player_is_attacking", false)
 		gameplay.set("player_anim_name", "idle")
 		gameplay.set("player_anim_frame", 0)
-		equipment.tick(gameplay, 0.0)
+		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 	var imbue_before_room_reset := float(runtime.get("imbue_remaining"))
 	gameplay.call("_reset_magic_runtime")
 	if equipment != null:
-		equipment.reset_for_room(gameplay)
+		equipment.reset_for_room(_equipment_visual_context(gameplay))
 	_expect(int(runtime.get("imbued_element")) == Elements.Element.FIRE, "room reset preserves the active IMBUE element", failures)
 	_expect(absf(float(runtime.get("imbue_remaining")) - imbue_before_room_reset) < 0.1, "room reset preserves the active IMBUE timer", failures)
 	_expect(int(gameplay.call("_player_weapon_element")) == Elements.Element.FIRE, "weapon attacks retain IMBUE after a room reset", failures)
@@ -170,7 +180,7 @@ func _initialize() -> void:
 		gameplay.set("player_is_attacking", false)
 		gameplay.set("player_anim_name", "idle")
 		gameplay.set("player_anim_frame", 0)
-		(gameplay.get("player_animation_component") as PlayerAnimationComponent).apply_frame(gameplay)
+		(gameplay.get("player_animation_component") as PlayerAnimationComponent).apply_frame(_animation_context(gameplay))
 
 	runtime.call("tick_magic_animation", gameplay, 15.0)
 	_expect(int(runtime.get("imbued_element")) == Elements.Element.NEUTRAL, "weapon element clears after fifteen seconds", failures)

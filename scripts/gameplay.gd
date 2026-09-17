@@ -102,7 +102,7 @@ func _interrupt_player_attack() -> void:
 		sound_manager.fade_out("sword_beam_charge", 0.08)
 	player_is_attacking = false; if player_attack_component != null: player_attack_component.cancel()
 	orb_knockback_animation_lock = false; orb_knockback_animation_grace = false; orb_knockback_attack_cancelled = false
-	player_attack_hit_done = false; player_attack_visual.visible = false; player.visible = true; _restore_actor_base_visual_scale(player); player_anim_name = player_animation_component.movement_anim_name(self); player_anim_frame = 0; player_anim_timer = 0.0; player_animation_component.apply_frame(self)
+	player_attack_hit_done = false; player_attack_visual.visible = false; player.visible = true; _restore_actor_base_visual_scale(player); player_anim_name = player_animation_component.movement_anim_name(gameplay_frame_controller.animation_context(self)); player_anim_frame = 0; player_anim_timer = 0.0; player_animation_component.apply_frame(gameplay_frame_controller.animation_context(self))
 	if player_equipment_visual_component != null: player_equipment_visual_component.interrupt_attack(gameplay_frame_controller.equipment_visual_context(self))
 	_update_player_shadow()
 func _player_facing_vector() -> Vector2:

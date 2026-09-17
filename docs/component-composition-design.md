@@ -377,11 +377,20 @@ The clean plan to 90%:
 | Slice | Change | Points | Risk |
 |---|---:|---:|---|
 | A1 | `player_equipment_visual_component` → `PlayerEquipmentVisualContext` + `@export` (65 root sites) | **+3.75 (done → 80.5%)** | High — pixel presentation, occlusion, imbue, death visuals |
-| A2 | `player_animation_component` → typed context + `@export` (86 root sites) | +3.75 | High — palette recolor, frame slicing, HUD coordination |
+| A2 | `player_animation_component` → `PlayerAnimationContext` + `@export` (86 root sites) | **+3.75 (done → 84.2%)** | High — palette recolor, frame slicing, HUD coordination |
 | B1 | `item_catalog.gd` definitions → `ItemCatalogData` `.tres` | +1.47 | High — save/equipment compatibility |
 | B2 | `dungeon_layout_run2.gd` static rooms → `.tres` | +1.47 | Medium — route/flame behavior |
 | C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | +1.47 × 4 | Medium — authored grid plans become editor-inspectable |
 | **Total** | | **≈ +14.7 → 91.4%** | |
+
+A1 (slice 3/4) and A2 (slice 4/4) are **done**: all 20 components are now blind,
+18 of 20 editor-configured (components at 100% direct / 90% editor / 90% both).
+The two component adapters together removed 106 root sites (2414 → 2308). A1 and
+A2 each needed a typed context (`PlayerEquipmentVisualContext`,
+`PlayerAnimationContext`) built in `gameplay_frame_controller`, with the
+`GameplayState` line budget held at 1,719 via inlining. `spin_charge_scene_smoke`
+and `run_locomotion_smoke` have pre-existing failures unrelated to these
+migrations.
 
 A1 + A2 + B1 + B2 alone reach **87.2%**; C1 (adding the four authored puzzle
 plans as definition surfaces) supplies the final ~4.4 points to clear 90%. C1

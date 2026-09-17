@@ -30,8 +30,8 @@ func _roll_context(gameplay: Node) -> PlayerRollContext:
 	context.player_anim_name_set = func(value: Variant) -> void: gameplay.set("player_anim_name", value)
 	var anim := gameplay.get("player_animation_component") as PlayerAnimationComponent
 	var motor := gameplay.get("player_motor") as ActorMotor
-	context.apply_animation_frame = func() -> void: anim.apply_frame(gameplay) if anim != null else null
-	context.movement_anim_name = func() -> Variant: return anim.movement_anim_name(gameplay) if anim != null else ""
+	context.apply_animation_frame = func() -> void: anim.apply_frame(gameplay.gameplay_frame_controller.animation_context(gameplay)) if anim != null else null
+	context.movement_anim_name = func() -> Variant: return anim.movement_anim_name(gameplay.gameplay_frame_controller.animation_context(gameplay)) if anim != null else ""
 	context.update_motor_facing = func(direction: Vector2) -> void: motor.update_horizontal_facing(gameplay, direction) if motor != null else null
 	context.movement_input = Callable(gameplay, "_movement_input")
 	context.player_facing_vector = Callable(gameplay, "_player_facing_vector")
@@ -76,12 +76,12 @@ func _initialize() -> void:
 	gameplay.set("player_is_running", true)
 	gameplay.set("player_is_moving", true)
 	gameplay.set("player_is_defending", false)
-	_expect(anim.movement_anim_name(gameplay) == "run", "holding roll while moving after a dodge resolves the run animation", failures)
+	_expect(anim.movement_anim_name(gameplay.gameplay_frame_controller.animation_context(gameplay)) == "run", "holding roll while moving after a dodge resolves the run animation", failures)
 	gameplay.set("player_is_running", false)
-	_expect(anim.movement_anim_name(gameplay) == "walk", "moving without the run latch resolves the walk animation", failures)
+	_expect(anim.movement_anim_name(gameplay.gameplay_frame_controller.animation_context(gameplay)) == "walk", "moving without the run latch resolves the walk animation", failures)
 	gameplay.set("player_is_running", true)
 	gameplay.set("player_is_defending", true)
-	_expect(anim.movement_anim_name(gameplay) == "defend", "defending takes priority over the run animation", failures)
+	_expect(anim.movement_anim_name(gameplay.gameplay_frame_controller.animation_context(gameplay)) == "defend", "defending takes priority over the run animation", failures)
 	gameplay.set("player_is_defending", false)
 
 	# apply_frame renders the authored run frame on the base player sprite.
@@ -89,7 +89,7 @@ func _initialize() -> void:
 	gameplay.set("player_anim_frame", 1)
 	gameplay.set("player_is_rolling", false)
 	gameplay.set("player_is_attacking", false)
-	anim.apply_frame(gameplay)
+	anim.apply_frame(gameplay.gameplay_frame_controller.animation_context(gameplay))
 	_expect(player.texture == (anim.run_frames as Array[Texture2D])[1], "apply_frame renders the requested run frame", failures)
 
 	var motor := gameplay.get("player_motor") as ActorMotor
@@ -214,20 +214,20 @@ func _initialize() -> void:
 			gameplay.set("player_is_defending", false)
 			gameplay.set("player_is_magic_casting", false)
 			gameplay.set("player_anim_name", "idle")
-			equipment_visual.begin_attack_visual(gameplay)
+			equipment_visual.begin_attack_visual(gameplay.gameplay_frame_controller.equipment_visual_context(gameplay))
 			var equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
 			var sword_before := equipment_layers.get("EquipmentSwordBack") as Sprite2D
 			var shield_before := equipment_layers.get("EquipmentShieldFront") as Sprite2D
 			_expect(sword_before != null and sword_before.visible and shield_before != null and shield_before.visible, "backflip test starts with visible sword and shield layers", failures)
 			_expect(float(equipment_visual.get("draw_white_timer")) > 0.0 and float(equipment_visual.get("draw_color_fade_timer")) > 0.0, "attack deployment starts the sword and shield white fade", failures)
-			equipment_visual.tick(gameplay, 0.30)
-			equipment_visual.begin_attack_visual(gameplay)
+			equipment_visual.tick(gameplay.gameplay_frame_controller.equipment_visual_context(gameplay), 0.30)
+			equipment_visual.begin_attack_visual(gameplay.gameplay_frame_controller.equipment_visual_context(gameplay))
 			_expect(is_zero_approx(float(equipment_visual.get("draw_white_timer"))) and is_zero_approx(float(equipment_visual.get("draw_color_fade_timer"))), "repeated attacks do not replay the equipment deployment flash", failures)
 			gameplay.set("player_is_backflipping", true)
-			equipment_visual.tick(gameplay, 0.0)
+			equipment_visual.tick(gameplay.gameplay_frame_controller.equipment_visual_context(gameplay), 0.0)
 			_expect(not equipment_visual.active and equipment_visual.roll_fizzle_active and equipment_visual.fade_timer > 0.0, "backflip starts the same equipment fizzle as a roll", failures)
 			gameplay.set("player_is_backflipping", false)
-			equipment_visual.tick(gameplay, 0.20)
+			equipment_visual.tick(gameplay.gameplay_frame_controller.equipment_visual_context(gameplay), 0.20)
 			_expect(not sword_before.visible and not shield_before.visible, "backflip equipment breakup clears sword and shield layers", failures)
 			equipment_fixture.has_shield = shield_was_equipped
 		roll.start_backflip_from_root(_roll_context(gameplay))

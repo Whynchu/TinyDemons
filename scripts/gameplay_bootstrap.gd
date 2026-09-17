@@ -191,7 +191,7 @@ func initialize(root: GameplayState) -> void:
 	# frame.
 	root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	root.player_animation_component.build_frames(root); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+	root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root)); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	root.call("_refresh_player_cloak_visual")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_initialize_player(root, player)
@@ -205,7 +205,7 @@ func initialize(root: GameplayState) -> void:
 		root.call("_begin_new_run", true)
 		_place_debug_player_at_boss_entry(root, player)
 		root.set("player_start_position", player.position)
-		root.player_animation_component.apply_frame(root)
+		root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
 		root.call("_update_player_shadow")
 		root.call("_build_depth_lists")
 		_enter_debug_gameplay(root)
@@ -349,7 +349,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
 	root.player_aspect_ability_component.call("configure_mode_cooldowns", 2.0, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
-	equipment_visual.initialize(root._equipment_visual_context()); root.player_equipment_visual_component = equipment_visual
+	equipment_visual.initialize(root.gameplay_frame_controller.equipment_visual_context(root)); root.player_equipment_visual_component = equipment_visual
 	root._set_target_ui_visible(false)
 	var player_health: float = root._player_max_health(); health.maximum_health = player_health; health.reset(player_health); root.player_display_health = player_health; root._update_player_health_ui()
 	root._update_player_mp_ui()

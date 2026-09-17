@@ -13,6 +13,62 @@ static func phase_order() -> Array[StringName]:
 	return PHASE_ORDER.duplicate()
 
 
+func animation_context(root: GameplayState) -> PlayerAnimationContext:
+	var context := PlayerAnimationContext.new()
+	context.player = root.player
+	context.actor_root = root
+	context.sprite_frame_library = root.sprite_frame_library
+	context.occlusion_renderer = root.occlusion_renderer
+	context.hud_controller = root.hud_controller
+	context.player_attack_component = root.player_attack_component
+	context.player_attack_visual = root.player_attack_visual
+	context.player_equipment_visual_component = root.player_equipment_visual_component
+	context.player_tuning = root.player_tuning
+	context.attack_frame_size = root.PLAYER_ATTACK_FRAME_SIZE
+	context.current_player_palette_name_get = func() -> Variant: return root.get("current_player_palette_name")
+	context.player_anim_name_get = func() -> Variant: return root.get("player_anim_name")
+	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
+	context.player_anim_frame_get = func() -> Variant: return root.get("player_anim_frame")
+	context.player_anim_frame_set = func(value: Variant) -> void: root.set("player_anim_frame", value)
+	context.player_anim_timer_get = func() -> Variant: return root.get("player_anim_timer")
+	context.player_anim_timer_set = func(value: Variant) -> void: root.set("player_anim_timer", value)
+	context.player_between_timer_get = func() -> Variant: return root.get("player_between_timer")
+	context.player_between_timer_set = func(value: Variant) -> void: root.set("player_between_timer", value)
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_attacking_set = func(value: Variant) -> void: root.set("player_is_attacking", value)
+	context.player_is_moving_get = func() -> Variant: return root.get("player_is_moving")
+	context.player_is_running_get = func() -> Variant: return root.get("player_is_running")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	context.player_is_magic_casting_get = func() -> Variant: return root.get("player_is_magic_casting")
+	context.player_agi_get = func() -> Variant: return root.get("player_agi")
+	context.player_spd_get = func() -> Variant: return root.get("player_spd")
+	context.player_attack_hit_done_get = func() -> Variant: return root.get("player_attack_hit_done")
+	context.player_attack_hit_done_set = func(value: Variant) -> void: root.set("player_attack_hit_done", value)
+	context.player_just_finished_attack_set = func(value: Variant) -> void: root.set("player_just_finished_attack2", value)
+	context.player_attack_flip_h_get = func() -> Variant: return root.get("player_attack_flip_h")
+	context.player_magic_flip_h_get = func() -> Variant: return root.get("player_magic_flip_h")
+	context.player_roll_component_frame = func() -> Variant: return root.player_roll_component.frame if root.player_roll_component != null else 0
+	context.orb_knockback_animation_lock_get = func() -> Variant: return root.get("orb_knockback_animation_lock")
+	context.orb_knockback_animation_grace_get = func() -> Variant: return root.get("orb_knockback_animation_grace")
+	context.orb_knockback_animation_grace_set = func(value: Variant) -> void: root.set("orb_knockback_animation_grace", value)
+	context.player_health_fill_get = func() -> Variant: return root.get("player_health_fill")
+	context.player_health_damage_fill_get = func() -> Variant: return root.get("player_health_damage_fill")
+	context.roll_dust_frames_get = func() -> Variant: return root.get("roll_dust_frames")
+	context.roll_dust_frames_set = func(value: Variant) -> void: root.set("roll_dust_frames", value)
+	context.roll_dust_flipped_frames_get = func() -> Variant: return root.get("roll_dust_flipped_frames")
+	context.roll_dust_flipped_frames_set = func(value: Variant) -> void: root.set("roll_dust_flipped_frames", value)
+	context.apply_player_attack_hitbox = Callable(root, "_apply_player_attack_hitbox")
+	context.load_texture_or_null = Callable(root, "_load_texture_or_null")
+	context.on_player_walk_step = Callable(root, "_on_player_walk_step")
+	context.restore_actor_base_visual_scale = Callable(root, "_restore_actor_base_visual_scale")
+	context.set_mp_grey_texture = Callable(root, "_set_mp_grey_texture")
+	context.set_actor_base_texture = Callable(root, "_set_actor_base_texture")
+	context.equipment_visual_context = func() -> PlayerEquipmentVisualContext: return equipment_visual_context(root)
+	return context
+
+
 func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualContext:
 	var context := PlayerEquipmentVisualContext.new()
 	context.player = root.player
@@ -93,8 +149,8 @@ func _roll_context(root: GameplayState) -> PlayerRollContext:
 	context.roll_dust_spawned_this_roll_get = func() -> Variant: return root.get("roll_dust_spawned_this_roll")
 	context.roll_dust_spawned_this_roll_set = func(value: Variant) -> void: root.set("roll_dust_spawned_this_roll", value)
 	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
-	context.apply_animation_frame = func() -> void: root.player_animation_component.apply_frame(root) if root.player_animation_component != null else null
-	context.movement_anim_name = func() -> Variant: return root.player_animation_component.movement_anim_name(root) if root.player_animation_component != null else ""
+	context.apply_animation_frame = func() -> void: root.player_animation_component.apply_frame(animation_context(root)) if root.player_animation_component != null else null
+	context.movement_anim_name = func() -> Variant: return root.player_animation_component.movement_anim_name(animation_context(root)) if root.player_animation_component != null else ""
 	context.update_motor_facing = func(direction: Vector2) -> void: root.player_motor.update_horizontal_facing(root, direction) if root.player_motor != null else null
 	context.movement_input = Callable(root, "_movement_input")
 	context.player_facing_vector = Callable(root, "_player_facing_vector")
@@ -314,12 +370,12 @@ func tick(root: GameplayState, delta: float) -> void:
 	var hitstop: float = root.hitstop_timer
 	if hitstop > 0.0: root.hitstop_timer = maxf(hitstop - delta, 0.0); return
 	if root.player_death_pending and not root.player_dead:
-		root.player_motor.update_player_hit_reaction(root, delta); root.player_equipment_visual_component.tick_death_pending(root._equipment_visual_context()); root._update_damage_numbers(delta)
+		root.player_motor.update_player_hit_reaction(root, delta); root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root)); root._update_damage_numbers(delta)
 		var motor := root.player_motor
 		if motor == null or not motor.is_in_knockback(): root._start_player_death()
 		return
 	if root.player_dead:
-		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); root.player_equipment_visual_component.tick_death(root._equipment_visual_context()); root._update_damage_numbers(delta)
+		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); root.player_equipment_visual_component.tick_death(root.gameplay_frame_controller.equipment_visual_context(root)); root._update_damage_numbers(delta)
 		var tuning := root.player_tuning
 		if root.player_death_particles_started and root.player_death_timer >= tuning.death_particle_delay + tuning.death_particle_lifetime: root._move_slimes(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta)
 		root._update_depth_sorting(); root._update_actor_occlusion(delta); _stabilize(root); root._update_overworld_ui(); root._update_game_over_input(); return
@@ -351,7 +407,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	if root.player_roll_component != null: root.player_roll_component.update_from_root(_roll_context(root), delta)
 	root._update_roll_dust(delta); root.player_motor.update_player_hit_reaction(root, delta); root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta)
-	root.magic_runtime_controller.tick_magic_animation(root, delta); root.player_animation_component.tick_coordinator_animation(root, delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root._equipment_visual_context(), delta)
+	root.magic_runtime_controller.tick_magic_animation(root, delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
 		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
 		# The charge pose is rendered by the base player sprite. The shared attack
@@ -373,9 +429,9 @@ func tick(root: GameplayState, delta: float) -> void:
 			var effective_agi := float(agi_value) if agi_value != null else float(root.player_spd)
 			var attack_multiplier := player_tuning.attack_multiplier_for_agi(effective_agi)
 			if root.player_just_finished_attack2 and anim.after_attack2_texture != null:
-				anim.begin_transition(root, "after", anim.after_attack2_texture, player_tuning.attack2_cooldown / attack_multiplier)
+				anim.begin_transition(animation_context(root), "after", anim.after_attack2_texture, player_tuning.attack2_cooldown / attack_multiplier)
 			elif (player_attack == null or not player_attack.combo_buffered) and anim.between_attack_texture != null:
-				anim.begin_transition(root, "between", anim.between_attack_texture, player_tuning.between_attack_time / attack_multiplier)
+				anim.begin_transition(animation_context(root), "between", anim.between_attack_texture, player_tuning.between_attack_time / attack_multiplier)
 		root.player_just_finished_attack2 = false
 	var between_timer: float = root.player_between_timer
 	if between_timer > 0.0:
@@ -384,10 +440,10 @@ func tick(root: GameplayState, delta: float) -> void:
 			if player_attack != null and player_attack.combo_buffered and player_attack.can_start_attack2():
 				player_attack.start_player_attack(root, 2); player_attack.consume_combo()
 			elif not root.player_is_magic_casting and not (anim.idle_frames as Array[Texture2D]).is_empty():
-				root.player_anim_name = anim.movement_anim_name(root)
+				root.player_anim_name = anim.movement_anim_name(animation_context(root))
 				root.player_anim_frame = 0
 				root.player_anim_timer = 0.0
-				anim.apply_frame(root)
+				anim.apply_frame(root.gameplay_frame_controller.animation_context(root))
 	root._update_player_shadow(); root._update_cloaked_demon_shadow(); root._update_overworld_ui(); root._tick_focus_combo(delta); root._update_focus_indicator(delta)
 
 

@@ -7,6 +7,12 @@ class VisualRoot extends Node:
 	func _player_stat_snapshot() -> CombatStatSnapshot:
 		return snapshot
 
+	func build_context() -> PlayerEquipmentVisualContext:
+		var context := PlayerEquipmentVisualContext.new()
+		context.combat_tuning = combat_tuning
+		context.player_stat_snapshot = Callable(self, "_player_stat_snapshot")
+		return context
+
 
 var _finished := false
 
@@ -25,18 +31,18 @@ func _initialize() -> void:
 	root.snapshot = low
 	_expect(is_equal_approx(tuning.imbue_visual_intensity_for_intelligence(1.0), 1.0), "reference INT keeps Imbue visual intensity neutral", failures)
 	_expect(tuning.imbue_visual_intensity_for_intelligence(60.0) <= tuning.imbue_visual_intensity_max and tuning.imbue_visual_intensity_for_intelligence(-20.0) >= tuning.imbue_visual_intensity_min, "Imbue visual intensity is bounded", failures)
-	visual.begin_imbue(root, ElementCatalog.Element.FIRE, 15.0)
+	visual.begin_imbue(root.build_context(), ElementCatalog.Element.FIRE, 15.0)
 	var low_intensity := visual.last_imbue_visual_intensity
 	var low_remaining := visual.imbue_remaining
 	var high := CombatStatSnapshot.new()
 	high.intelligence = 20.0
 	root.snapshot = high
-	visual.begin_imbue(root, ElementCatalog.Element.FIRE, 15.0)
+	visual.begin_imbue(root.build_context(), ElementCatalog.Element.FIRE, 15.0)
 	var high_intensity := visual.last_imbue_visual_intensity
 	_expect(high_intensity > low_intensity and high_intensity <= tuning.imbue_visual_intensity_max, "higher INT increases Imbue visual intensity without exceeding the cap", failures)
 	_expect(is_equal_approx(low_remaining, visual.imbue_remaining), "INT visual intensity does not change Imbue duration", failures)
 	_expect(is_equal_approx(tuning.imbue_base + high.intelligence * tuning.imbue_per_int, 11.0), "Imbue mechanical INT scaling remains the separate magic contract", failures)
-	visual.end_imbue(root)
+	visual.end_imbue(root.build_context())
 	_expect(is_equal_approx(visual.last_imbue_visual_intensity, 1.0) and is_zero_approx(visual.imbue_remaining), "ending Imbue clears presentation state", failures)
 
 	visual.free()

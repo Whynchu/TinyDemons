@@ -1,12 +1,17 @@
 extends Node
 class_name PlayerAnimationComponent
 
-var coordinator_root: Object = null
+var context: PlayerAnimationContext = null
 var using_baked := false
 var baked_root := "res://assets/baked/player"
 var cloaked := false
 var cloaked_requested := false
 var frames_built := false
+
+## Editor-facing animation tuning.
+@export var magic_frame_count := 5
+@export var base_frame_size := Vector2i(36, 36)
+@export var attack_frame_size_export := Vector2i(36, 36)
 
 const BAKED_ROOT := "res://assets/baked/player"
 const CLOAKED_BAKED_ROOT := "res://assets/baked/player_cloaked"
@@ -75,25 +80,25 @@ var base_health_fill_texture: Texture2D = null
 var frames_by_palette: Dictionary = {}
 
 
-func build_frames(root: Object) -> void:
-	coordinator_root = root
-	var library := root.get("sprite_frame_library") as SpriteFrameLibrary; var size := Vector2i(36, 36)
+func build_frames(new_context: PlayerAnimationContext) -> void:
+	context = new_context
+	var library := new_context.sprite_frame_library; var size := base_frame_size
 	cloaked = false
 	cloaked_requested = false
 	_slice_base_sources(library, size, _anim_frame_size("attack"))
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
 	for index in raw_dust.size(): dust.append(library.dither_roll_dust_frame(raw_dust[index], float(index) / float(maxi(raw_dust.size(), 1))))
-	root.set("roll_dust_frames", dust); root.set("roll_dust_flipped_frames", library.flip_effect_frames(dust, Vector2i(16, 16)))
+	new_context.roll_dust_frames_set.call(dust); new_context.roll_dust_flipped_frames_set.call(library.flip_effect_frames(dust, Vector2i(16, 16)))
 	baked_root = BAKED_ROOT
-	using_baked = _detect_baked(); apply_palette(root, "blue"); precache_all_palettes(); warm_all_palette_caches(root)
+	using_baked = _detect_baked(); apply_palette(new_context, "blue"); precache_all_palettes(); warm_all_palette_caches(new_context)
 	frames_built = true
 	_apply_cloaked_state()
 
 
 func _slice_base_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
-	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_sheet_row(BASE_FULL_SHEET_PATH, BASE_MAGIC_SHEET_ROW, size, MAGIC_FRAME_COUNT)
+	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_sheet_row(BASE_FULL_SHEET_PATH, BASE_MAGIC_SHEET_ROW, size, magic_frame_count)
 	attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
-	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = coordinator_root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = coordinator_root.call("_load_texture_or_null", "res://assets/artwork/TinyDemon-after-attack2.png")
+	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = context.load_texture_or_null.call("res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = context.load_texture_or_null.call("res://assets/artwork/TinyDemon-after-attack2.png")
 	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
 	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
 
@@ -112,8 +117,8 @@ func _slice_cloaked_sources(library: SpriteFrameLibrary, size: Vector2i, attack_
 
 ## Requests the cloaked art variant. Before the frames are built this only
 ## records the request; build_frames() applies it once the sources exist.
-func set_cloaked(root: Object, enabled: bool) -> void:
-	coordinator_root = root
+func set_cloaked(new_context: PlayerAnimationContext, enabled: bool) -> void:
+	context = new_context
 	cloaked_requested = enabled
 	if not frames_built:
 		return
@@ -124,8 +129,8 @@ func _apply_cloaked_state() -> void:
 	if cloaked == cloaked_requested:
 		return
 	cloaked = cloaked_requested
-	var library := coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary
-	var size := Vector2i(36, 36)
+	var library := context.sprite_frame_library
+	var size := base_frame_size
 	var attack_size := _anim_frame_size("attack")
 	if cloaked:
 		_slice_cloaked_sources(library, size, attack_size)
@@ -135,34 +140,34 @@ func _apply_cloaked_state() -> void:
 		baked_root = BAKED_ROOT
 	using_baked = _detect_baked()
 	frames_by_palette.clear()
-	var palette := String(coordinator_root.get("current_player_palette_name")) if coordinator_root.get("current_player_palette_name") != null else "blue"
-	apply_palette(coordinator_root, palette)
+	var palette := String(context.current_player_palette_name_get.call()) if context.current_player_palette_name_get.is_valid() and context.current_player_palette_name_get.call() != null else "blue"
+	apply_palette(context, palette)
 	precache_all_palettes()
-	warm_all_palette_caches(coordinator_root)
-	apply_frame(coordinator_root)
+	warm_all_palette_caches(context)
+	apply_frame(context)
 
 
 ## Resolves the locomotion animation name from shared root state so every
 ## transition (attack/magic/between recovery) returns to the correct state:
 ## defend > run > walk > idle.
-func movement_anim_name(root: GameplayState) -> String:
-	if root.player_is_defending:
+func movement_anim_name(new_context: PlayerAnimationContext) -> String:
+	if bool(new_context.player_is_defending_get.call()):
 		return "defend"
-	if root.player_is_running:
+	if bool(new_context.player_is_running_get.call()):
 		return "run"
-	if root.player_is_moving:
+	if bool(new_context.player_is_moving_get.call()):
 		return "walk"
 	return "idle"
 
 
-func apply_frame(root: GameplayState) -> void:
-	var player := root.player
-	var animation_key := String(root.player_anim_name)
-	var frame := root.player_anim_frame
+func apply_frame(new_context: PlayerAnimationContext) -> void:
+	var player := new_context.player
+	var animation_key := String(new_context.player_anim_name_get.call())
+	var frame := int(new_context.player_anim_frame_get.call())
 	var frames: Array[Texture2D] = idle_frames
-	if root.player_is_rolling:
+	if bool(new_context.player_is_rolling_get.call()):
 		frames = roll_frames
-	elif root.player_is_backflipping:
+	elif bool(new_context.player_is_backflipping_get.call()):
 		frames = backflip_frames
 	elif animation_key == "spin_attack":
 		frames = spin_frames
@@ -180,89 +185,89 @@ func apply_frame(root: GameplayState) -> void:
 		frames = run_frames
 	if animation_key == "charge":
 		player.offset = Vector2(-10, -10)
-		player.flip_h = root.player_attack_flip_h
-		_set_render_visibility(player, root.player_attack_visual, false)
+		player.flip_h = new_context.player_attack_flip_h_get.call()
+		_set_render_visibility(player, new_context.player_attack_visual, false)
 		var charge_grey_set: Dictionary = frames_by_palette.get("grey", {})
 		var charge_grey := charge_grey_set.get("between") as Texture2D
-		root._set_mp_grey_texture(charge_grey)
+		new_context.set_mp_grey_texture.call(charge_grey)
 		var charge_texture := between_attack_texture if between_attack_texture != null else (attack_frames[0] if not attack_frames.is_empty() else null)
 		if charge_texture != null:
-			root._set_actor_base_texture(player, charge_texture)
+			new_context.set_actor_base_texture.call(player, charge_texture)
 		return
 	if frames.is_empty():
 		return
 	var grey_set: Dictionary = frames_by_palette.get("grey", {})
-	if root.player_is_rolling:
-		var roll_frame := clampi(root.player_roll_component.frame, 0, frames.size() - 1)
+	if bool(new_context.player_is_rolling_get.call()):
+		var roll_frame := clampi(new_context.player_roll_component_frame.call(), 0, frames.size() - 1)
 		var grey_roll := grey_set.get("roll", []) as Array[Texture2D]
-		root._set_mp_grey_texture(grey_roll[mini(roll_frame, grey_roll.size() - 1)] if not grey_roll.is_empty() else null)
-		root._set_actor_base_texture(player, frames[roll_frame])
+		new_context.set_mp_grey_texture.call(grey_roll[mini(roll_frame, grey_roll.size() - 1)] if not grey_roll.is_empty() else null)
+		new_context.set_actor_base_texture.call(player, frames[roll_frame])
 		return
-	if root.player_is_backflipping:
-		var backflip_frame := clampi(root.player_roll_component.frame, 0, frames.size() - 1)
+	if bool(new_context.player_is_backflipping_get.call()):
+		var backflip_frame := clampi(new_context.player_roll_component_frame.call(), 0, frames.size() - 1)
 		var grey_backflip := grey_set.get("backflip", []) as Array[Texture2D]
-		root._set_mp_grey_texture(grey_backflip[mini(backflip_frame, grey_backflip.size() - 1)] if not grey_backflip.is_empty() else null)
-		root._set_actor_base_texture(player, frames[backflip_frame])
+		new_context.set_mp_grey_texture.call(grey_backflip[mini(backflip_frame, grey_backflip.size() - 1)] if not grey_backflip.is_empty() else null)
+		new_context.set_actor_base_texture.call(player, frames[backflip_frame])
 		return
 	var is_spin := animation_key == "spin_attack"
 	var is_attack2 := animation_key == "attack2" or animation_key == "attack2_charged"
 	var is_attack_animation := is_spin or is_attack2 or animation_key == "attack1"
 	if is_attack_animation:
-		var flip := root.player_attack_flip_h
+		var flip := bool(new_context.player_attack_flip_h_get.call())
 		var active_attack_frames: Array[Texture2D] = spin_left_frames if is_spin and flip else spin_frames if is_spin else attack2_left_frames if is_attack2 and flip else attack_left_frames if flip else attack2_frames if is_attack2 else attack_frames
 		if active_attack_frames.is_empty():
 			return
 		var attack_frame_index := clampi(frame, 0, active_attack_frames.size() - 1)
 		var grey_key := "spin_left" if is_spin and flip else "spin" if is_spin else "attack2_left" if is_attack2 and flip else "attack_left" if flip else "attack2" if is_attack2 else "attack"
 		var grey_attack := grey_set.get(grey_key, []) as Array[Texture2D]
-		root._set_mp_grey_texture(grey_attack[mini(attack_frame_index, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
-		var visual := root.player_attack_visual
+		new_context.set_mp_grey_texture.call(grey_attack[mini(attack_frame_index, grey_attack.size() - 1)] if not grey_attack.is_empty() else null)
+		var visual := new_context.player_attack_visual
 		# Assign the new frame while the attack layer is hidden. Exposing it first
 		# can render the previous attack frame for one frame as a delayed ghost.
 		visual.visible = false
 		visual.texture = active_attack_frames[attack_frame_index]
-		_set_render_visibility(player, visual, root.player_is_attacking)
-		update_attack_visual(player, visual, root.player_is_attacking, Vector2(-10, -10), player.z_index)
+		_set_render_visibility(player, visual, bool(new_context.player_is_attacking_get.call()))
+		update_attack_visual(player, visual, bool(new_context.player_is_attacking_get.call()), Vector2(-10, -10), player.z_index)
 		return
 	if animation_key == "magic":
-		var flip := root.player_magic_flip_h
+		var flip := bool(new_context.player_magic_flip_h_get.call())
 		var grey_magic := grey_set.get("magic", []) as Array[Texture2D]
 		var resolved_magic_frame := clampi(frame, 0, frames.size() - 1)
 		player.offset = Vector2(-10, -10)
 		player.flip_h = flip
-		root._set_mp_grey_texture(grey_magic[mini(resolved_magic_frame, grey_magic.size() - 1)] if not grey_magic.is_empty() else null)
-		_set_render_visibility(player, root.player_attack_visual, false)
-		root._set_actor_base_texture(player, frames[resolved_magic_frame])
+		new_context.set_mp_grey_texture.call(grey_magic[mini(resolved_magic_frame, grey_magic.size() - 1)] if not grey_magic.is_empty() else null)
+		_set_render_visibility(player, new_context.player_attack_visual, false)
+		new_context.set_actor_base_texture.call(player, frames[resolved_magic_frame])
 		return
 	var base_frame_index := clampi(frame, 0, frames.size() - 1)
 	player.offset = Vector2(-10, -10)
-	_set_render_visibility(player, root.player_attack_visual, false)
+	_set_render_visibility(player, new_context.player_attack_visual, false)
 	var grey_frames := grey_set.get(animation_key, []) as Array[Texture2D]
-	root._set_mp_grey_texture(grey_frames[mini(base_frame_index, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
-	root._set_actor_base_texture(player, frames[base_frame_index])
+	new_context.set_mp_grey_texture.call(grey_frames[mini(base_frame_index, grey_frames.size() - 1)] if not grey_frames.is_empty() else null)
+	new_context.set_actor_base_texture.call(player, frames[base_frame_index])
 
 
-func _set_transition_grey(root: Object, transition_name: String) -> void:
+func _set_transition_grey(new_context: PlayerAnimationContext, transition_name: String) -> void:
 	var grey_set: Dictionary = frames_by_palette.get("grey", {})
 	var grey_texture := grey_set.get(transition_name) as Texture2D
 	if grey_texture != null:
-		root.call("_set_mp_grey_texture", grey_texture)
+		new_context.set_mp_grey_texture.call(grey_texture)
 
 
-func begin_transition(root: GameplayState, transition_name: String, texture: Texture2D, duration: float) -> void:
+func begin_transition(new_context: PlayerAnimationContext, transition_name: String, texture: Texture2D, duration: float) -> void:
 	if texture == null:
 		return
-	root.player_between_timer = maxf(duration, 0.0)
-	root.player_anim_name = transition_name
-	root.player_anim_frame = 0
-	root.player_anim_timer = 0.0
-	_set_transition_grey(root, transition_name)
-	root._set_actor_base_texture(root.player, texture)
+	new_context.player_between_timer_set.call(maxf(duration, 0.0))
+	new_context.player_anim_name_set.call(transition_name)
+	new_context.player_anim_frame_set.call(0)
+	new_context.player_anim_timer_set.call(0.0)
+	_set_transition_grey(new_context, transition_name)
+	new_context.set_actor_base_texture.call(new_context.player, texture)
 
 
-func apply_palette(root: Object, palette_name: String) -> void:
+func apply_palette(new_context: PlayerAnimationContext, palette_name: String) -> void:
 	_load_palette(palette_name)
-	warm_player_caches(root)
+	warm_player_caches(new_context)
 
 
 func _store_palette(palette_name: String) -> void:
@@ -302,7 +307,7 @@ func _baked_or_recolor(palette_name: String, anim: String, source_frames: Array[
 	if not ResourceLoader.exists(sheet_path):
 		return recolor_frames(source_frames, palette_name)
 	var frame_size := _anim_frame_size(anim)
-	var frames := (coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary).slice_frames(sheet_path, frame_size)
+	var frames := context.sprite_frame_library.slice_frames(sheet_path, frame_size)
 	if frames.is_empty():
 		return recolor_frames(source_frames, palette_name)
 	return frames
@@ -320,9 +325,11 @@ func _baked_or_recolor_texture(palette_name: String, anim: String, source_textur
 
 func _anim_frame_size(anim: String) -> Vector2i:
 	if anim == "attack" or anim == "attack2" or anim == "attack_left" or anim == "attack2_left" or anim == "spin" or anim == "spin_left":
-		var attack_size: Vector2i = coordinator_root.get("PLAYER_ATTACK_FRAME_SIZE") if coordinator_root != null and coordinator_root.get("PLAYER_ATTACK_FRAME_SIZE") != null else Vector2i(36, 36)
+		var attack_size: Vector2i = attack_frame_size_export
+		if context != null and context.attack_frame_size != Vector2i.ZERO:
+			attack_size = context.attack_frame_size
 		return attack_size
-	return Vector2i(36, 36)
+	return base_frame_size
 
 
 func _load_palette(palette_name: String) -> void:
@@ -340,18 +347,18 @@ func precache_all_palettes() -> void:
 			_store_palette(palette_name)
 
 
-func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]: return (coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary).recolor_frames(frames, palette_name)
-func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D: return (coordinator_root.get("sprite_frame_library") as SpriteFrameLibrary).recolor_texture(source, palette_name)
-func warm_texture_cache(texture: Texture2D) -> void: (coordinator_root.get("occlusion_renderer") as OcclusionRenderer).warm_actor_texture(texture)
-func warm_player_caches(root: Object) -> void:
+func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]: return context.sprite_frame_library.recolor_frames(frames, palette_name)
+func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D: return context.sprite_frame_library.recolor_texture(source, palette_name)
+func warm_texture_cache(texture: Texture2D) -> void: context.occlusion_renderer.warm_actor_texture(texture)
+func warm_player_caches(new_context: PlayerAnimationContext) -> void:
 	for texture in idle_frames: warm_texture_cache(texture)
 	for texture in walk_frames: warm_texture_cache(texture)
 	for texture in run_frames: warm_texture_cache(texture)
 	for texture in backflip_frames: warm_texture_cache(texture)
 	for texture in defend_frames: warm_texture_cache(texture)
 	for texture in roll_frames: warm_texture_cache(texture)
-	for texture in root.get("roll_dust_frames") as Array[Texture2D]: warm_texture_cache(texture)
-	for texture in root.get("roll_dust_flipped_frames") as Array[Texture2D]: warm_texture_cache(texture)
+	for texture in new_context.roll_dust_frames_get.call() as Array[Texture2D]: warm_texture_cache(texture)
+	for texture in new_context.roll_dust_flipped_frames_get.call() as Array[Texture2D]: warm_texture_cache(texture)
 	for texture in attack_frames: warm_texture_cache(texture)
 	for texture in attack2_frames: warm_texture_cache(texture)
 	for texture in attack2_left_frames: warm_texture_cache(texture)
@@ -366,7 +373,7 @@ func warm_player_caches(root: Object) -> void:
 ## triggers a first-use image-processing hitch.  Uses the renderer's shared warm
 ## pass (upscale + silhouette outline computed once), so this is cheap enough to
 ## do for all palettes up front.
-func warm_all_palette_caches(_root: Object) -> void:
+func warm_all_palette_caches(_new_context: PlayerAnimationContext) -> void:
 	for palette_name: String in frames_by_palette:
 		var palette_frames: Dictionary = frames_by_palette[palette_name]
 		for texture in palette_frames.get("idle") as Array[Texture2D]: warm_texture_cache(texture)
@@ -384,7 +391,7 @@ func warm_all_palette_caches(_root: Object) -> void:
 		for texture in palette_frames.get("magic") as Array[Texture2D]: warm_texture_cache(texture)
 
 
-func apply_palette_async(root: Object, palette_name: String) -> void:
+func apply_palette_async(new_context: PlayerAnimationContext, palette_name: String) -> void:
 	_load_palette(palette_name)
 	# All player palettes are precomputed and occlusion-warmed during startup.
 	# Repeating that full cache walk during an interaction causes a visible hitch
@@ -392,70 +399,70 @@ func apply_palette_async(root: Object, palette_name: String) -> void:
 	# Palette changes can happen while the player is holding a charge. Re-apply
 	# the active animation state so the authored between-attacks pose is refreshed
 	# in the new palette instead of leaving the previous chroma frame on screen.
-	if root.get("player") != null:
-		apply_frame(root)
+	if new_context.player != null:
+		apply_frame(new_context)
 	var health_texture := base_health_fill_texture as Texture2D
 	if health_texture != null:
-		var fill := root.get("player_health_fill") as Sprite2D; fill.texture = recolor_texture(health_texture, palette_name); var damage_fill := root.get("player_health_damage_fill") as Sprite2D
-		if damage_fill != null: damage_fill.texture = (root.get("hud_controller") as HudController).brighter_bar_texture(fill.texture)
+		var fill := new_context.player_health_fill_get.call() as Sprite2D; fill.texture = recolor_texture(health_texture, palette_name); var damage_fill := new_context.player_health_damage_fill_get.call() as Sprite2D
+		if damage_fill != null: damage_fill.texture = new_context.hud_controller.brighter_bar_texture(fill.texture)
 
 
-func tick_coordinator_animation(root: Object, delta: float) -> void:
-	var attacking := bool(root.get("player_is_attacking"))
-	var rolling := bool(root.get("player_is_rolling"))
-	var backflipping := bool(root.get("player_is_backflipping"))
-	if bool(root.get("player_is_magic_casting")):
-		apply_frame(root)
+func tick_coordinator_animation(new_context: PlayerAnimationContext, delta: float) -> void:
+	var attacking := bool(new_context.player_is_attacking_get.call())
+	var rolling := bool(new_context.player_is_rolling_get.call())
+	var backflipping := bool(new_context.player_is_backflipping_get.call())
+	if bool(new_context.player_is_magic_casting_get.call()):
+		apply_frame(new_context)
 		return
 	if attacking or rolling or backflipping:
 		if rolling or backflipping:
-			apply_frame(root)
+			apply_frame(new_context)
 			return
-		if bool(root.get("orb_knockback_animation_lock")):
-			if bool(root.get("orb_knockback_animation_grace")):
+		if bool(new_context.orb_knockback_animation_lock_get.call()):
+			if bool(new_context.orb_knockback_animation_grace_get.call()):
 				# The hit callback has just displayed the attack frame. Leave it
 				# visible for one animation tick before rewinding to frame 1.
-				root.set("orb_knockback_animation_grace", false)
+				new_context.orb_knockback_animation_grace_set.call(false)
 				return
 			# Keep the first attack frame visible while the orb reaction owns the
 			# player motion. The reaction releases this lock when knockback ends.
-			root.set("player_anim_name", "attack1")
-			root.set("player_anim_frame", 0)
-			root.set("player_anim_timer", 0.0)
-			apply_frame(root)
+			new_context.player_anim_name_set.call("attack1")
+			new_context.player_anim_frame_set.call(0)
+			new_context.player_anim_timer_set.call(0.0)
+			apply_frame(new_context)
 			return
-		var attack_component := root.get("player_attack_component") as PlayerAttackComponent
-		var attack_name := String(root.get("player_anim_name"))
+		var attack_component := new_context.player_attack_component
+		var attack_name := String(new_context.player_anim_name_get.call())
 		if attack_component != null and attack_component.is_charging() and attack_name != "charge":
 			# The charge state owns a single authored pose. If another transition
 			# briefly leaves the old attack name behind, normalize it before the
 			# next draw so the last attack frame cannot remain stuck on screen.
-			root.set("player_anim_name", "charge")
-			root.set("player_anim_frame", 0)
-			root.set("player_anim_timer", 0.0)
+			new_context.player_anim_name_set.call("charge")
+			new_context.player_anim_frame_set.call(0)
+			new_context.player_anim_timer_set.call(0.0)
 			attack_name = "charge"
 		if attack_name == "charge" or (attack_component != null and attack_component.is_charging()):
-			apply_frame(root)
+			apply_frame(new_context)
 			return
-		var attack_tuning := root.get("player_tuning") as PlayerTuning
-		var agi_value: Variant = root.get("player_agi")
-		var effective_agi := float(agi_value) if agi_value != null else float(root.get("player_spd"))
+		var attack_tuning := new_context.player_tuning
+		var agi_value: Variant = new_context.player_agi_get.call()
+		var effective_agi := float(agi_value) if agi_value != null else float(new_context.player_spd_get.call())
 		var attack_multiplier := attack_tuning.attack_multiplier_for_agi(effective_agi)
 		var is_spin := attack_name == "spin_attack"
 		var is_attack2 := attack_name == "attack2" or attack_name == "attack2_charged"
 		var active_frames: Array[Texture2D] = spin_frames if is_spin else attack2_frames if is_attack2 else attack_frames
 		if active_frames.is_empty():
 			return
-		var current_frame := clampi(int(root.get("player_anim_frame")), 0, active_frames.size() - 1)
+		var current_frame := clampi(int(new_context.player_anim_frame_get.call()), 0, active_frames.size() - 1)
 		var attack_frame_time := attack_tuning.attack_frame_time
 		if is_spin:
 			attack_frame_time = attack_tuning.spin_recovery_frame_time if current_frame >= attack_tuning.spin_recovery_start_frame else attack_tuning.spin_frame_time
 		elif attack_name == "attack2_charged":
 			attack_frame_time *= attack_tuning.charged_attack2_frame_time_multiplier
 		attack_frame_time = maxf(attack_frame_time / attack_multiplier, 0.001)
-		var attack_timer := float(root.get("player_anim_timer")) + delta
+		var attack_timer := float(new_context.player_anim_timer_get.call()) + delta
 		if attack_timer < attack_frame_time:
-			root.set("player_anim_timer", attack_timer)
+			new_context.player_anim_timer_set.call(attack_timer)
 			return
 		attack_timer = fmod(attack_timer, attack_frame_time)
 		var animation_frame := current_frame + 1
@@ -465,28 +472,28 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 				# Spin has no combo bridge or finisher recovery. Its final authored
 				# frames are its complete recovery, then the player returns directly
 				# to the normal movement/idle animation.
-				root.set("player_between_timer", 0.0)
-				root.set("player_just_finished_attack2", false)
-				root.set("player_is_attacking", false)
+				new_context.player_between_timer_set.call(0.0)
+				new_context.player_just_finished_attack_set.call(false)
+				new_context.player_is_attacking_set.call(false)
 				if attack_component != null:
-					attack_component.release_spin_knockback(root)
+					attack_component.release_spin_knockback(new_context.actor_root)
 					attack_component.combo_buffered = false
 					attack_component.combo_timer = 0.0
 					attack_component.finish()
-				root.set("player_attack_hit_done", false)
-				root.call("_restore_actor_base_visual_scale", root.get("player"))
-				(root.get("player") as Sprite2D).visible = true
-				(root.get("player_attack_visual") as Sprite2D).visible = false
-				root.set("player_anim_name", movement_anim_name(root))
-				root.set("player_anim_frame", 0)
-				root.set("player_anim_timer", 0.0)
-				apply_frame(root)
-				var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+				new_context.player_attack_hit_done_set.call(false)
+				new_context.restore_actor_base_visual_scale.call(new_context.player)
+				new_context.player.visible = true
+				new_context.player_attack_visual.visible = false
+				new_context.player_anim_name_set.call(movement_anim_name(new_context))
+				new_context.player_anim_frame_set.call(0)
+				new_context.player_anim_timer_set.call(0.0)
+				apply_frame(new_context)
+				var equipment_visual := new_context.player_equipment_visual_component as PlayerEquipmentVisualComponent
 				if equipment_visual != null:
-					equipment_visual.finish_spin_attack_visual(root._equipment_visual_context())
+					equipment_visual.finish_spin_attack_visual(new_context.equipment_visual_context.call())
 				return
 			if attack_name == "attack1" and attack_component != null and attack_component.should_enter_charge():
-				attack_component.begin_charge(root)
+				attack_component.begin_charge(new_context.actor_root)
 				return
 			var combo := attack_name == "attack1" and attack_component != null and attack_component.combo_buffered and between_attack_texture != null
 			var attack2_finished := is_attack2
@@ -497,57 +504,57 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 			var transition_time := attack2_recovery / attack_multiplier if attack2_finished else attack_tuning.between_attack_time / attack_multiplier
 			if attack2_finished and attack_component != null:
 				attack_component.start_attack2_cooldown(transition_time)
-			root.set("player_just_finished_attack2", attack2_finished)
-			root.set("player_is_attacking", false)
+			new_context.player_just_finished_attack_set.call(attack2_finished)
+			new_context.player_is_attacking_set.call(false)
 			if attack_component != null: attack_component.finish()
-			root.set("player_attack_hit_done", false)
-			root.call("_restore_actor_base_visual_scale", root.get("player"))
-			(root.get("player") as Sprite2D).visible = true
-			(root.get("player_attack_visual") as Sprite2D).visible = false
-			root.set("player_anim_frame", 0)
-			root.set("player_anim_timer", 0.0)
+			new_context.player_attack_hit_done_set.call(false)
+			new_context.restore_actor_base_visual_scale.call(new_context.player)
+			new_context.player.visible = true
+			new_context.player_attack_visual.visible = false
+			new_context.player_anim_frame_set.call(0)
+			new_context.player_anim_timer_set.call(0.0)
 			if (attack2_finished or combo) and transition_texture != null:
-				begin_transition(root, "after" if attack2_finished else "between", transition_texture, transition_time)
+				begin_transition(new_context, "after" if attack2_finished else "between", transition_texture, transition_time)
 			elif combo:
-				begin_transition(root, "between", between_attack_texture, attack_tuning.between_attack_time / attack_multiplier)
+				begin_transition(new_context, "between", between_attack_texture, attack_tuning.between_attack_time / attack_multiplier)
 			else:
-				root.set("player_anim_name", movement_anim_name(root))
-				apply_frame(root)
+				new_context.player_anim_name_set.call(movement_anim_name(new_context))
+				apply_frame(new_context)
 			return
-		root.set("player_anim_timer", attack_timer)
-		root.set("player_anim_frame", animation_frame)
-		apply_frame(root)
+		new_context.player_anim_timer_set.call(attack_timer)
+		new_context.player_anim_frame_set.call(animation_frame)
+		apply_frame(new_context)
 		if attack_component != null and attack_component.frame_uses_hitbox(animation_frame, attack_tuning):
-			root.call("_apply_player_attack_hitbox")
-		elif animation_frame == hit_frame and not bool(root.get("player_attack_hit_done")):
-			root.call("_apply_player_attack_hitbox")
-			root.set("player_attack_hit_done", true)
+			new_context.apply_player_attack_hitbox.call()
+		elif animation_frame == hit_frame and not bool(new_context.player_attack_hit_done_get.call()):
+			new_context.apply_player_attack_hitbox.call()
+			new_context.player_attack_hit_done_set.call(true)
 		return
-	if float(root.get("player_between_timer")) > 0.0:
+	if float(new_context.player_between_timer_get.call()) > 0.0:
 		return
-	var idle_name := "defend" if bool(root.get("player_is_defending")) else "run" if bool(root.get("player_is_running")) else "walk" if bool(root.get("player_is_moving")) else "idle"
-	if String(root.get("player_anim_name")) != idle_name:
-		root.set("player_anim_name", idle_name)
-		root.set("player_anim_frame", 0)
-		root.set("player_anim_timer", 0.0)
-		apply_frame(root)
+	var idle_name := "defend" if bool(new_context.player_is_defending_get.call()) else "run" if bool(new_context.player_is_running_get.call()) else "walk" if bool(new_context.player_is_moving_get.call()) else "idle"
+	if String(new_context.player_anim_name_get.call()) != idle_name:
+		new_context.player_anim_name_set.call(idle_name)
+		new_context.player_anim_frame_set.call(0)
+		new_context.player_anim_timer_set.call(0.0)
+		apply_frame(new_context)
 		return
-	var idle_tuning := root.get("player_tuning") as PlayerTuning
-	var idle_timer := float(root.get("player_anim_timer")) + delta
+	var idle_tuning := new_context.player_tuning
+	var idle_timer := float(new_context.player_anim_timer_get.call()) + delta
 	var idle_frame_time := idle_tuning.walk_frame_time if idle_name == "walk" or idle_name == "defend" else idle_tuning.run_frame_time if idle_name == "run" else idle_tuning.idle_frame_time
 	if idle_timer < idle_frame_time:
-		root.set("player_anim_timer", idle_timer)
+		new_context.player_anim_timer_set.call(idle_timer)
 		return
-	root.set("player_anim_timer", fmod(idle_timer, idle_frame_time))
+	new_context.player_anim_timer_set.call(fmod(idle_timer, idle_frame_time))
 	var idle_frame_set := defend_frames if idle_name == "defend" else run_frames if idle_name == "run" else walk_frames if idle_name == "walk" else idle_frames
 	if idle_frame_set.is_empty(): return
-	root.set("player_anim_frame", (int(root.get("player_anim_frame")) + 1) % idle_frame_set.size())
+	new_context.player_anim_frame_set.call((int(new_context.player_anim_frame_get.call()) + 1) % idle_frame_set.size())
 	if idle_name == "walk" or idle_name == "run":
-		var step_frame := int(root.get("player_anim_frame"))
+		var step_frame := int(new_context.player_anim_frame_get.call())
 		# Four-frame walk/run cycle: trigger on visual frames 2 and 4.
 		if step_frame == 1 or step_frame == 3:
-			root.call("_on_player_walk_step", step_frame)
-	apply_frame(root)
+			new_context.on_player_walk_step.call(step_frame)
+	apply_frame(new_context)
 
 
 func update_attack_visual(player: Sprite2D, attack_visual: Sprite2D, active: bool, texture_offset: Vector2, z_index_value: int) -> void:
