@@ -150,7 +150,7 @@ func refresh_enemy_palette_textures(root: Object) -> void:
 
 
 func set_slime_facing(root: Object, slime: Sprite2D, direction_x: float) -> void:
-	SlimeVisualComponent.set_facing(root, slime, direction_x)
+	SlimeVisualComponent.set_facing(root.get("occlusion_renderer") as OcclusionRenderer, slime, direction_x, Callable(root, "_set_actor_base_texture"), Callable(root, "_update_slime_attack_guides"))
 	sync_slime_shadow(root, slime)
 
 

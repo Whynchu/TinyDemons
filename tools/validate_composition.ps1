@@ -150,7 +150,9 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 	}
 	# Definition surfaces are counted by file: the content catalogs, the authored
 	# run builders, and the external tuning resources. A surface is editor-able
-	# when it is a resource file the editor can inspect (.tres).
+	# when the editor can inspect its data: a .tres resource file, or a catalog
+	# script that loads its authored definitions from resources/definitions/*.tres
+	# instead of a hardcoded const dictionary.
 	$definitionScripts = @(
 		"item_catalog.gd",
 		"element_catalog.gd",
@@ -165,9 +167,15 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 		"dungeon_layout_run6.gd"
 	)
 	$definitionScriptCount = 0
+	$definitionScriptEditable = 0
 	foreach ($name in $definitionScripts) {
-		if (Test-Path -LiteralPath (Join-Path $ScriptsDir $name)) {
+		$scriptPath = Join-Path $ScriptsDir $name
+		if (Test-Path -LiteralPath $scriptPath) {
 			$definitionScriptCount += 1
+			$scriptContent = Get-Content -Raw -LiteralPath $scriptPath
+			if ($scriptContent -match 'resources/definitions/[\w/]+\.tres') {
+				$definitionScriptEditable += 1
+			}
 		}
 	}
 	$tuningDir = Join-Path $ProjectRoot "resources/tuning"
@@ -177,7 +185,7 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 		0
 	}
 	$definitionTotal = $definitionScriptCount + $tuningCount
-	$definitionEditable = $tuningCount
+	$definitionEditable = $tuningCount + $definitionScriptEditable
 
 	$componentDirect = if ($componentTotal -gt 0) { $componentBlind / $componentTotal } else { 0.0 }
 	$componentEditor = if ($componentTotal -gt 0) { $componentConfigured / $componentTotal } else { 0.0 }

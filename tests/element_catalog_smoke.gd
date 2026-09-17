@@ -19,8 +19,8 @@ func _initialize() -> void:
 		[1.0, 1.25, 1.0, 1.25, 0.8, 1.0, 0.8, 1.0],
 		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.25, 0.8],
 	]
-	for attacker in ElementCatalogScript.ELEMENT_COUNT:
-		for defender in ElementCatalogScript.ELEMENT_COUNT:
+	for attacker in ElementCatalogScript.element_count():
+		for defender in ElementCatalogScript.element_count():
 			_expect(is_equal_approx(ElementCatalogScript.effectiveness(attacker, defender), expected[attacker][defender]), "matchup %d -> %d" % [attacker, defender], failures)
 	_expect(ElementCatalogScript.effectiveness(e.NEUTRAL, e.SHADOW) == 0.0, "Neutral is immune into Shadow", failures)
 	_expect(ElementCatalogScript.effectiveness(e.SHADOW, e.NEUTRAL) == 1.0, "Shadow damages Normal slimes", failures)

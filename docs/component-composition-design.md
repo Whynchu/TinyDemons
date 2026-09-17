@@ -178,13 +178,13 @@ it passes **both** gates:
 
 The weighted composite is a blend of four measured sub-metrics:
 
-| Sub-metric | Formula | Weight | 2026-09-16 start | after slice 1 | after slice 2 |
-|---|---|---:|---:|---:|---:|
-| Component direct access | blind components / total components | 20% | 13/20 = 65% | 13/20 = 65% | 13/20 = 65% |
-| Component editor-config | `@export`-configured / total components | 30% | 3/20 = 15% | 5/20 = 25% | 11/20 = 55% |
-| Both-gate components | blind AND editor-configured / total | 25% | 3/20 = 15% | 5/20 = 25% | 11/20 = 55% |
-| Definition editor-ability | editor-able surfaces / total definition surfaces | 25% | 6/17 ≈ 35% | 6/17 ≈ 35% | 6/17 ≈ 35% |
-| **Composite** | weighted blend | | **≈ 30.1%** | **≈ 35.6%** | **≈ 52.1%** |
+| Sub-metric | Formula | Weight | start | slice 1 | slice 2 | slice 3 |
+|---|---|---:|---:|---:|---:|---:|
+| Component direct access | blind components / total components | 20% | 13/20 = 65% | 65% | 65% | 14/20 = 70% |
+| Component editor-config | `@export`-configured / total components | 30% | 3/20 = 15% | 25% | 55% | 12/20 = 60% |
+| Both-gate components | blind AND editor-configured / total | 25% | 3/20 = 15% | 25% | 55% | 12/20 = 60% |
+| Definition editor-ability | editor-able surfaces / total definition surfaces | 25% | 6/17 ≈ 35% | 35% | 35% | 9/17 ≈ 53% |
+| **Composite** | weighted blend | | **≈ 30.1%** | **≈ 35.6%** | **≈ 52.1%** | **≈ 60.2%** |
 
 Slice 1 (2026-09-16) promoted two already-blind components to editor-configured:
 `SlimeCombatComponent` gained `@export var regular_attack_lunge_duration` (replacing a
@@ -222,6 +222,41 @@ and `rogue_slime_smoke` all pass; `chroma_state_smoke.gd` was updated to read th
 instance `elemental_ability_cost` instead of the retired class const. Baseline
 re-locked at 52.1% via `-UpdateBaseline`.
 
+Slice 3 (2026-09-16) cleared the 60% milestone (composite **≈ 60.2%**). It moved
+both remaining levers:
+
+- `SlimeVisualComponent` became blind (its `set_facing` no longer reaches through
+  the root; the caller passes a typed `OcclusionRenderer` plus callables) and
+  gained `@export` squish tuning. Component sub-metrics moved to 14 blind / 12
+  configured / 12 both of 20.
+- **Definition surfaces moved from code dictionaries to editor-inspectable
+  `Resource` + `.tres` files** (the T2 migration), one per catalog:
+  - `SlimeVariantCatalog` loads `resources/definitions/slime_variant_catalog.tres`
+    (via `SlimeVariantCatalogData`), keeping its static lookup API.
+  - `ElementCatalog` loads `resources/definitions/element_catalog.tres` (via
+    `ElementCatalogData`); the stable `Element` enum stays in code, the lookup
+    tables and matchup policy move to the resource. The retired const accessors
+    (`ELEMENT_COUNT`, `PALETTE_KEYS`, etc.) were migrated to static methods and
+    their callers updated (`dungeon_map_controller.gd`, `element_catalog_smoke.gd`,
+    `typed_damage_feedback_smoke.gd`).
+  - `PaletteLibrary` loads `resources/definitions/palette_library.tres` (via
+    `PaletteLibraryData`) and keeps both the static methods and the const-style
+    accessors (`NORMAL`, `ACCENT`, `SHADOW`, `WHITE`, `PALETTE_NAMES`) as
+    `static var` backed by the resource. Colors are snapped to 8-bit on load so
+    RGBA8 recolor matches the original `Color8` constants byte-for-byte (a `.tres`
+    float serialization would otherwise truncate one step). `player_hud.gd` color
+    consts became `static var` to read the resource-backed values.
+
+The validator counts a definition surface as editor-able when its script loads
+from `resources/definitions/*.tres`, so the three converted catalogs moved the
+definition-editorability sub-metric from 35% to 53% (9 of 17 surfaces).
+Verification: headless import scan clean (exit 0); `player_hud_scene_smoke`,
+`element_catalog_smoke`, `typed_damage_feedback_smoke`, `chroma_projectile_scene_smoke`,
+`pause_menu_scene_smoke`, `equipment_menu_scene_smoke`, `demon_hub_menu_scene_smoke`,
+`slime_spawn_smoke`, and `item_economy_smoke` all pass. Baseline re-locked at
+60.2% via `-UpdateBaseline`. Root-access count also fell 2488 → 2486 from the
+slime visual refactor.
+
 Definition surfaces are counted by file: `item_catalog.gd`, `element_catalog.gd`,
 `slime_variant_catalog.gd`, `palette_library.gd`, `dungeon_layout_definition.gd`,
 the Run 1–6 builders, and the six tuning `.tres` resources under
@@ -255,18 +290,23 @@ not complete the slice.
 
 ## Component adoption sequence
 
-1. **[x] `HealthComponent`/clean-component editor promotion.** Slice 1 exposed
-   editor-facing `@export` defaults on two blind components; slice 2 promoted six
-   more and migrated their external class-const consumers to instance reads.
-   Composite is at **52.1%**; the component-editor and both-gate sub-metrics are
-   now 55%, so the next component lever is the four remaining blind components
-   (`combat_momentum` is RefCounted, `slime_animation` has no knobs, and the
-   non-blind adapters need root-refinement first).
-2. **`EnemyDefinition` + `EnemyFactory` slice (Slice B above)** for one slime
-   variant and a second entity sharing its components. This is the slice that
-   moves the **definition editor-ability** sub-metric (currently the biggest
-   remaining gap at 35%), by converting one authored definition surface from a
-   code dictionary into an editor-inspectable `Resource`.
+1. **[x] Editor-facing `@export` promotions.** Slices 1–3 exposed editor-facing
+   defaults on blind components (12 of 20 now configured, including
+   `SlimeVisualComponent` which also became blind). Composite is at **60.2%**.
+2. **[x] Definition surfaces to `Resource` + `.tres` (T2 start).** Slice 3
+   converted `SlimeVariantCatalog`, `ElementCatalog`, and `PaletteLibrary` from
+   `const` dictionaries to editor-inspectable resources. The definition-editorability
+   sub-metric is now 53% (9 of 17 surfaces); `item_catalog.gd`,
+   `dungeon_layout_definition.gd`, and the Run 1–6 builders remain code-authored.
+3. **`EnemyDefinition` + `EnemyFactory` slice (Slice B)** — the slime variant
+   data is now a resource, so the next proof is an `EnemyFactory` that assembles
+   a runtime slime from the definition and mounts a second entity sharing its
+   components with zero `GameplayState` edits.
+4. **Remaining component levers** — `combat_momentum` (RefCounted, tuning-driven)
+   and `slime_animation` (no knobs) are the only blind-but-unconfigured
+   components left; the non-blind adapters (`player_animation`,
+   `player_equipment_visual`, `player_roll`, `interaction`, `player_guard`,
+   `boss_jump_slam`) need root-refinement first.
 3. **Refine the adapters vertically** one at a time, replacing `initialize(root)`
    and root reach-ins with typed config/direct references:
    `interaction_component`, `player_roll_component`, `player_guard_component`,

@@ -1,5 +1,5 @@
 {
-  "root_accesses": 2488,
+  "root_accesses": 2486,
   "gameplay_state_lines": 1719,
   "gameplay_state_fields": 286,
   "room_controller_lines": 2253,
@@ -27,10 +27,10 @@
   },
   "editor_composition": {
     "component_total": 20,
-    "component_blind": 13,
-    "component_configured": 11,
-    "component_both": 11,
+    "component_blind": 14,
+    "component_configured": 12,
+    "component_both": 12,
     "definition_total": 17,
-    "definition_editable": 6
+    "definition_editable": 9
   }
 }
