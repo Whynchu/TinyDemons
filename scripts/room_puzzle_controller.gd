@@ -583,13 +583,13 @@ func update_entry_orb_player_reaction(root: Object) -> void:
 	root.set("player_attack_hit_done", false)
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	(root.get("player") as Sprite2D).visible = true
-	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root))
+	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root.gameplay_frame_controller.animation_context(root)))
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
-	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
+	(root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root.gameplay_frame_controller.animation_context(root))
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.interrupt_attack(root)
+		equipment_visual.interrupt_attack(root.gameplay_frame_controller.equipment_visual_context(root))
 
 
 func refresh_room_socket_visuals(root: Object, is_unlocked: bool) -> void:

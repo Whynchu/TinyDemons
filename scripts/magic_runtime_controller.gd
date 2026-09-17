@@ -253,7 +253,7 @@ func _apply_magic_animation_frame(root: Object, frame: int) -> void:
 	root.set("player_anim_frame", frame)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent
 	if animation != null:
-		animation.apply_frame(root)
+		animation.apply_frame(root.gameplay_frame_controller.animation_context(root))
 
 
 func magic_frame_time(root: Object) -> float:
@@ -297,7 +297,7 @@ func _tick_imbue_timers(root: Object, delta: float) -> void:
 	root.set("player_imbued_element", imbued_element)
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.end_imbue(root._equipment_visual_context())
+		equipment_visual.end_imbue(root.gameplay_frame_controller.equipment_visual_context(root))
 
 
 func _activate_pending_imbue(root: Object) -> void:
@@ -316,7 +316,7 @@ func _activate_pending_imbue(root: Object) -> void:
 	imbue_cooldown_remaining = cooldown
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.begin_imbue(root._equipment_visual_context(), imbued_element, duration)
+		equipment_visual.begin_imbue(root.gameplay_frame_controller.equipment_visual_context(root), imbued_element, duration)
 	root.call("_sync_chroma_presentation")
 	root.call("_update_player_mp_ui")
 	root.call("_play_sound", "magic_cast", -8.0, 0.85)
@@ -339,7 +339,7 @@ func _finish_magic_animation(root: Object) -> void:
 		root.set("player_anim_frame", magic_animation_frame)
 		var held_animation := root.get("player_animation_component") as PlayerAnimationComponent
 		if held_animation != null:
-			held_animation.apply_frame(root)
+			held_animation.apply_frame(root.gameplay_frame_controller.animation_context(root))
 		return
 	magic_animation_active = false
 	magic_animation_timer = 0.0
@@ -354,12 +354,12 @@ func _finish_magic_animation(root: Object) -> void:
 	var player := root.get("player") as Sprite2D
 	if player != null:
 		player.flip_h = bool(root.get("last_player_facing_left"))
-	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root))
+	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root.gameplay_frame_controller.animation_context(root)))
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent
 	if animation != null:
-		animation.apply_frame(root)
+		animation.apply_frame(root.gameplay_frame_controller.animation_context(root))
 
 
 func cancel_magic_animation(root: Object) -> void:
@@ -381,12 +381,12 @@ func cancel_magic_animation(root: Object) -> void:
 	var player := root.get("player") as Sprite2D
 	if player != null:
 		player.flip_h = bool(root.get("last_player_facing_left"))
-	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root))
+	root.set("player_anim_name", (root.get("player_animation_component") as PlayerAnimationComponent).movement_anim_name(root.gameplay_frame_controller.animation_context(root)))
 	root.set("player_anim_frame", 0)
 	root.set("player_anim_timer", 0.0)
 	var animation := root.get("player_animation_component") as PlayerAnimationComponent
 	if animation != null:
-		animation.apply_frame(root)
+		animation.apply_frame(root.gameplay_frame_controller.animation_context(root))
 
 
 func player_weapon_element(_root: Object) -> int:
@@ -408,7 +408,7 @@ func reset_for_room(root: Object, reset_cooldown := false) -> void:
 	root.set("player_imbued_element", imbued_element)
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.end_imbue(root._equipment_visual_context())
+		equipment_visual.end_imbue(root.gameplay_frame_controller.equipment_visual_context(root))
 
 
 func player_visual_center(root: Object) -> Vector2:

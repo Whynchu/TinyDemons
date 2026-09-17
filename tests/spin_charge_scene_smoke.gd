@@ -1,6 +1,16 @@
 extends SceneTree
 
 
+func _animation_context(gameplay: Node) -> PlayerAnimationContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.animation_context(gameplay) if frame_controller != null else PlayerAnimationContext.new()
+
+
+func _equipment_visual_context(gameplay: Node) -> PlayerEquipmentVisualContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.equipment_visual_context(gameplay) if frame_controller != null else PlayerEquipmentVisualContext.new()
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -52,27 +62,27 @@ func _initialize() -> void:
 		_expect(is_zero_approx(float(gameplay.get("player_between_timer"))) and not attack.combo_buffered, "spin attack clears combo and recovery state", failures)
 		for frame_index in range(tuning.spin_hit_start_frame, tuning.spin_hit_end_frame + 1):
 			gameplay.set("player_anim_frame", frame_index)
-			animation.apply_frame(gameplay)
+			animation.apply_frame(_animation_context(gameplay))
 			var polygon := attack.attack_polygon(gameplay)
 			_expect(polygon.size() >= 3, "spin frame %d uses its scene polygon at runtime" % frame_index, failures)
-			equipment.tick(gameplay, 0.0)
+			equipment.tick(_equipment_visual_context(gameplay), 0.0)
 			var sword_front := equipment.layers.get("EquipmentSwordFront") as Sprite2D
 			_expect(sword_front != null and sword_front.visible and String(sword_front.get_meta("mp_grey_key", "")) == "sword_front_spin", "spin frame %d keeps the sword front layer aligned" % frame_index, failures)
 		player.flip_h = true
 		gameplay.set("player_attack_flip_h", true)
 		gameplay.set("player_anim_frame", tuning.spin_hit_start_frame)
-		animation.apply_frame(gameplay)
-		equipment.tick(gameplay, 0.0)
+		animation.apply_frame(_animation_context(gameplay))
+		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		var left_sword_front := equipment.layers.get("EquipmentSwordFront") as Sprite2D
 		var left_sword_back := equipment.layers.get("EquipmentSwordBack") as Sprite2D
 		_expect(left_sword_front != null and left_sword_front.flip_h and left_sword_back != null and left_sword_back.flip_h, "spin equipment mirrors both sword layers when facing left", failures)
 		player.flip_h = false
 		gameplay.set("player_attack_flip_h", false)
 		for _frame in 40:
-			animation.tick_coordinator_animation(gameplay, 0.10)
+			animation.tick_coordinator_animation(_animation_context(gameplay), 0.10)
 		_expect(not bool(gameplay.get("player_is_attacking")) and is_zero_approx(float(gameplay.get("player_between_timer"))), "spin attack finishes without a combo recovery", failures)
 		_expect(StringName(gameplay.get("player_anim_name")) == &"idle", "spin attack returns directly to idle", failures)
-		equipment.tick(gameplay, 0.0)
+		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		_expect(not equipment.was_attacking and is_zero_approx(equipment.transition_hold_timer), "spin completion clears equipment recovery hold", failures)
 		var frame_controller := gameplay.get("gameplay_frame_controller") as GameplayFrameController
 		_expect(frame_controller != null, "gameplay frame controller is available for spin transition coverage", failures)
@@ -88,7 +98,7 @@ func _initialize() -> void:
 		attack.set_attack_input_held(true)
 		_expect(attack.start_player_attack(gameplay, 1), "a held attack begins with attack 1", failures)
 		for _frame in animation.attack_frames.size():
-			animation.tick_coordinator_animation(gameplay, 0.10)
+			animation.tick_coordinator_animation(_animation_context(gameplay), 0.10)
 		_expect(attack.is_charging() and StringName(gameplay.get("player_anim_name")) == &"charge", "holding attack enters the post-attack charge pose", failures)
 		_expect(player.visible and not (gameplay.get("player_attack_visual") as Sprite2D).visible, "charge pose restores the base player layer", failures)
 		_expect(player.texture == animation.between_attack_texture, "charge uses the authored between-attacks pose", failures)
@@ -146,7 +156,7 @@ func _initialize() -> void:
 		gameplay.call("_apply_player_palette_async", "blue")
 		_expect(player.texture == animation.between_attack_texture, "charge keeps the between-attacks pose when returning to water chroma", failures)
 		gameplay.set("player_anim_name", "attack1")
-		animation.tick_coordinator_animation(gameplay, 0.0)
+		animation.tick_coordinator_animation(_animation_context(gameplay), 0.0)
 		_expect(StringName(gameplay.get("player_anim_name")) == &"charge" and player.texture == animation.between_attack_texture, "charging state repairs a stale attack animation name", failures)
 		attack.tick_charge(gameplay, tuning.charge_minimum_time)
 		attack.set_attack_input_held(false)
@@ -164,11 +174,11 @@ func _initialize() -> void:
 		_expect(attack.is_charged_attack2() and attack.variant == 2 and StringName(gameplay.get("player_anim_name")) == &"attack2_charged", "releasing a charged hold starts charged attack 2", failures)
 		_expect(attack.special_knockback_multiplier(tuning) > 1.0 and attack.knockback_multiplier(tuning) > 1.0, "charged attack 2 has stronger knockback than regular attack 2", failures)
 		_expect(tuning.charged_attack2_damage_multiplier > tuning.attack2_damage_multiplier and tuning.charged_attack2_frame_time_multiplier > 1.0, "charged attack 2 is stronger and slower by tuning", failures)
-		equipment.tick(gameplay, 0.0)
+		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		var charged_sword := equipment.layers.get("EquipmentSwordFront") as Sprite2D
 		_expect(charged_sword != null and charged_sword.visible and String(charged_sword.get_meta("mp_grey_key", "")) == "sword_front_attack2", "charged attack 2 keeps normal front equipment layering", failures)
 		for _frame in animation.attack2_frames.size():
-			animation.tick_coordinator_animation(gameplay, 0.20)
+			animation.tick_coordinator_animation(_animation_context(gameplay), 0.20)
 		_expect(not bool(gameplay.get("player_is_attacking")) and float(gameplay.get("player_between_timer")) > 0.0, "charged attack 2 finishes through the normal finisher recovery", failures)
 	gameplay.queue_free()
 	await process_frame

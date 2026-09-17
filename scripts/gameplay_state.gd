@@ -382,7 +382,7 @@ func _update_mp_desaturation() -> void:
 	if material_was_created and player_animation_component != null:
 		# The first animation frame may have been assigned before the material
 		# existed, so initialize the sampler with its matching grey frame now.
-		player_animation_component.apply_frame(self)
+		player_animation_component.apply_frame(gameplay_frame_controller.animation_context(self))
 
 
 func _new_mp_desaturation_material() -> ShaderMaterial:
@@ -433,7 +433,7 @@ func _menu_confirm_prompt() -> String: return input_device_tracker.menu_confirm_
 func _menu_back_prompt() -> String: return input_device_tracker.menu_back_prompt() if input_device_tracker != null else "ESC BACK"
 func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)
 func _apply_player_palette_async(palette_name: String) -> void:
-	if player_animation_component != null: player_animation_component.apply_palette_async(self, palette_name)
+	if player_animation_component != null: player_animation_component.apply_palette_async(gameplay_frame_controller.animation_context(self), palette_name)
 	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(gameplay_frame_controller.equipment_visual_context(self))
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
@@ -527,7 +527,7 @@ func _refresh_player_cloak_visual() -> void:
 		return
 	var body_instance_id := player_profile.get_equipped_instance_id(&"body")
 	var body_item := player_profile.find_item(body_instance_id)
-	player_animation_component.set_cloaked(self, body_item != null and body_item.definition_id == &"demon_cloak")
+	player_animation_component.set_cloaked(gameplay_frame_controller.animation_context(self), body_item != null and body_item.definition_id == &"demon_cloak")
 	# Menu portraits and the live HUD must resolve from the same equipped cloak
 	# state. Equipment changes can happen while the HUD remains mounted.
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D

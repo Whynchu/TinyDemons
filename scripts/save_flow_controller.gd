@@ -374,7 +374,7 @@ func enter_starting_room_from_menu(root: Object) -> void:
 		root.player_health_component.maximum_health = maximum_health
 		root.player_health_component.reset(maximum_health)
 	root.player_display_health = maximum_health
-	root.player_animation_component.apply_frame(root)
+	root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
 	root.call("_update_player_shadow")
 	root.call("_build_depth_lists")
 	root.player.visible = true

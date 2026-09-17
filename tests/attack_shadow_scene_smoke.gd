@@ -1,6 +1,11 @@
 extends SceneTree
 
 
+func _animation_context(gameplay: Node) -> PlayerAnimationContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.animation_context(gameplay) if frame_controller != null else PlayerAnimationContext.new()
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -48,7 +53,7 @@ func _initialize() -> void:
 		for frame_index in grey_attack.size():
 			gameplay.set("player_anim_name", "attack1")
 			gameplay.set("player_anim_frame", frame_index)
-			animation.apply_frame(gameplay)
+			animation.apply_frame(_animation_context(gameplay))
 			gameplay.call("_update_player_shadow")
 			_expect(attack_visual.material.get_shader_parameter("grey_texture") == grey_attack[frame_index], "empty-MP attack keeps grey frame %d synchronized" % frame_index, failures)
 			_expect(sprite_shadow.material == null, "empty-MP attack shadow stays independent of the grey shader at frame %d" % frame_index, failures)

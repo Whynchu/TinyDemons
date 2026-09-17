@@ -151,10 +151,10 @@ func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animati
 	root._restore_actor_base_visual_scale(player)
 	root.player_attack_visual.visible = false
 	player.visible = false
-	anim.apply_frame(root)
+	anim.apply_frame(root.gameplay_frame_controller.animation_context(root))
 	var equipment_visual := root.player_equipment_visual_component
 	if equipment_visual != null:
-		equipment_visual.begin_attack_visual(root._equipment_visual_context())
+		equipment_visual.begin_attack_visual(root.gameplay_frame_controller.equipment_visual_context(root))
 	if new_kind == AttackKind.CHARGED_ATTACK2:
 		var chroma := root.player_chroma_component
 		var beam_palette := String(root.current_player_palette_name)
@@ -235,10 +235,10 @@ func begin_charge(root: GameplayState) -> bool:
 	var player := root.player
 	player.visible = true
 	root.player_attack_visual.visible = false
-	root.player_animation_component.apply_frame(root)
+	root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
 	var equipment_visual := root.player_equipment_visual_component
 	if equipment_visual != null:
-		equipment_visual.begin_attack_visual(root._equipment_visual_context())
+		equipment_visual.begin_attack_visual(root.gameplay_frame_controller.equipment_visual_context(root))
 	return true
 
 
