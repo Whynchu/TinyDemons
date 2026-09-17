@@ -91,17 +91,16 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-16; version `0.2.25`) gives us
+The latest source scan (working tree on 2026-09-16; version `0.2.26`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 175 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 179 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime physical lines | ~49,300 | Refactor by ownership, not by indiscriminate file splitting |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,719 lines / 479 functions / 286 fields | At the strict target; the composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
-| `root.call/get/set` | 2,486 sites | Below the strict target; the remaining sites are the next vertical migration seams |
+| `root.call/get/set` | 2,414 sites | Below the strict target; the remaining sites are the next vertical migration seams |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -116,7 +115,7 @@ strict ownership scorecard in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
 the legacy-coupling cleanup is **complete (100%)**: the strict audit passes and
 the regression floor now protects the achieved state. The **editor-composition
-score is ≈ 60%** (12 of 20 components are blind + editor-configured, and 9 of 17
+score is ≈ 75%** (16 of 20 components are blind + editor-configured, and 9 of 17
 definition surfaces are editor-inspectable resources) — see
 [`docs/component-composition-design.md`](docs/component-composition-design.md).
 That is a real milestone, not completion: the remaining work is to make content
@@ -236,7 +235,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.25**. Every push to `main` must increment the
+Current game version: **0.2.26**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

@@ -6,6 +6,25 @@ const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.g
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CombatDamageRequestScript = preload("res://scripts/combat_damage_request.gd")
 
+
+func _guard_context(root: Object) -> PlayerGuardContext:
+	var context := PlayerGuardContext.new()
+	context.ui_parent = root
+	context.player = root.get("player") as Sprite2D
+	context.equipment = root.get("player_equipment") as EquipmentComponent
+	context.visuals = root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	context.overworld_ui_z = int(root.get("OVERWORLD_UI_Z"))
+	context.is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	context.is_defending_set = func(value: Variant) -> void: root.set("player_is_defending", value)
+	context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	context.player_death_pending_get = func() -> Variant: return root.get("player_death_pending")
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
+	context.actor_foot = Callable(root, "_actor_foot")
+	return context
+
 const ENEMY_HEALTH_R1_FACTOR := 0.50
 const ENEMY_HEALTH_R2_FACTOR := 0.65
 const ENEMY_HEALTH_RUN_STEP := 0.15
@@ -506,7 +525,7 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 	var damage := damage_result.amount * 1.25
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null:
-		var guard_result := guard.absorb_damage(root, damage, anchor)
+		var guard_result := guard.absorb_damage(_guard_context(root), damage, anchor)
 		damage = float(guard_result["health_damage"])
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null:
@@ -697,7 +716,7 @@ func configure_equipment_transmutations(root: Object) -> void:
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null:
 		var snapshot: CombatStatSnapshot = root.call("_player_stat_snapshot")
-		var shield_maximum := PlayerGuardComponent.MAX_DURABILITY + equipment.guard_durability_bonus
+		var shield_maximum := guard.max_durability + equipment.guard_durability_bonus
 		guard.set_maximum_durability(transmutation.guard_maximum_durability(shield_maximum, snapshot.def), true)
 
 

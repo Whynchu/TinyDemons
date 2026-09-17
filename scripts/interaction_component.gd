@@ -1,6 +1,9 @@
 extends Node
 class_name InteractionComponent
 
+## Editor-facing targeting tuning.
+@export var prompt_bob_time := 1.0
+
 var prompt_timer := 0.0
 var target_cycle_axis := 0
 
@@ -21,68 +24,68 @@ func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: flo
 	return closest
 
 
-func target_facing_left(root: Object, target: Sprite2D) -> bool:
-	var player := root.get("player") as Sprite2D
+func target_facing_left(context: InteractionContext, target: Sprite2D) -> bool:
+	var player := context.player
 	if player == null or target == null:
 		return false
-	var player_foot: Vector2 = root.call("_actor_foot", player)
-	var target_foot: Vector2 = root.call("_actor_foot", target)
+	var player_foot: Vector2 = context.actor_foot.call(player)
+	var target_foot: Vector2 = context.actor_foot.call(target)
 	return target_foot.x < player_foot.x
 
 
-func target_is_in_front(root: Object, target_position: Vector2) -> bool:
-	var player := root.get("player") as Sprite2D
+func target_is_in_front(context: InteractionContext, target_position: Vector2) -> bool:
+	var player := context.player
 	if player == null:
 		return false
-	var player_foot: Vector2 = root.call("_actor_foot", player)
+	var player_foot: Vector2 = context.actor_foot.call(player)
 	var offset := target_position - player_foot
 	if offset.length_squared() <= 0.0001:
 		return true
 	var facing := Vector2.LEFT if player.flip_h else Vector2.RIGHT
-	if root.has_method("_player_facing_vector"):
-		var facing_value: Variant = root.call("_player_facing_vector")
+	if context.player_facing_vector.is_valid():
+		var facing_value: Variant = context.player_facing_vector.call()
 		if facing_value is Vector2 and (facing_value as Vector2).length_squared() > 0.0001:
 			facing = facing_value as Vector2
 	return facing.normalized().dot(offset.normalized()) >= 0.0
 
 
-func update_targeting(root: Object) -> void:
-	var should_target := bool(root.call("_is_target_input_held"))
+func update_targeting(context: InteractionContext) -> void:
+	var should_target := bool(context.is_target_input_held.call())
 	if not should_target:
-		root.call("_set_current_target", null); root.call("_set_target_ui_visible", false); root.set("target_input_was_down", false); target_cycle_axis = 0; return
-	if not bool(root.get("target_input_was_down")):
-		root.call("_set_current_target", root.call("_closest_target")); root.set("target_input_was_down", true)
-	var target := root.call("_valid_current_target") as Sprite2D
-	if target != null and not bool(root.call("_is_slime_targetable", target)): root.call("_set_current_target", null); target = null
-	var cycle_direction := int(root.call("_target_cycle_direction"))
+		context.set_current_target.call(null); context.set_target_ui_visible.call(false); context.target_input_was_down_set.call(false); target_cycle_axis = 0; return
+	if not bool(context.target_input_was_down_get.call()):
+		context.set_current_target.call(context.closest_target.call()); context.target_input_was_down_set.call(true)
+	var target := context.valid_current_target.call() as Sprite2D
+	if target != null and not bool(context.is_slime_targetable.call(target)): context.set_current_target.call(null); target = null
+	var cycle_direction := int(context.target_cycle_direction.call())
 	if cycle_direction != 0 and cycle_direction != target_cycle_axis:
-		root.call("_cycle_target", cycle_direction)
+		context.cycle_target.call(cycle_direction)
 	target_cycle_axis = cycle_direction
-	target = root.call("_valid_current_target") as Sprite2D
-	var player := root.get("player") as Sprite2D
-	if not bool(root.get("player_is_attacking")) and not bool(root.get("player_is_magic_casting")):
+	target = context.valid_current_target.call() as Sprite2D
+	var player := context.player
+	if not bool(context.player_is_attacking_get.call()) and not bool(context.player_is_magic_casting_get.call()):
 		if target != null:
-			var target_left := target_facing_left(root, target)
+			var target_left := target_facing_left(context, target)
 			# Targeting owns the complete kit's horizontal facing, including while
 			# the player is holding shield and moving backwards. Keep the selected
 			# target direction as the persistent facing when lock-on is released.
 			player.flip_h = target_left
-			root.set("last_player_facing_left", target_left)
+			context.last_player_facing_left_set.call(target_left)
 		else:
 			# Lock the facing the player had when they pressed lock-on, even with
 			# no target to stare at, so the lock keeps them looking that way.
-			player.flip_h = root.get("last_player_facing_left") == true
-	root.call("_update_target_ui")
+			player.flip_h = context.last_player_facing_left_get.call() == true
+	context.update_target_ui.call()
 
 
-func update_world_prompt(root: Object, delta: float, bob_time: float, ui_z: int) -> void:
-	var chest := root.get("chest") as Sprite2D
-	var chest_anchor := (root.call("_collision_rect", chest) as Rect2).get_center()
-	var near_item := bool(root.call("_can_interact_with_world_item"))
-	var item_position: Vector2 = root.call("_world_item_drop_position")
-	var npc := root.get("npc_controller") as NpcController
+func update_world_prompt(context: InteractionContext, delta: float, bob_time: float, ui_z: int) -> void:
+	var chest := context.chest
+	var chest_anchor := (context.collision_rect.call(chest) as Rect2).get_center()
+	var near_item := bool(context.can_interact_with_world_item.call())
+	var item_position: Vector2 = context.world_item_drop_position.call()
+	var npc := context.npc_controller
 	var dialogue_visible: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible
-	update_prompt(delta, root.get("interact_prompt"), dialogue_visible, bool(root.call("_can_interact_with_chest")), bool(root.call("_can_interact_with_npc")), near_item, bool(root.call("_can_interact_with_fire")), chest_anchor, root.call("_cloaked_demon_head_position"), item_position, root.call("_fire_anchor"), Vector2(0, -13), Callable(root, "_snap_half_pixel"), bob_time, ui_z)
+	update_prompt(delta, context.interact_prompt, dialogue_visible, bool(context.can_interact_with_chest.call()), bool(context.can_interact_with_npc.call()), near_item, bool(context.can_interact_with_fire.call()), chest_anchor, context.cloaked_demon_head_position.call(), item_position, context.fire_anchor.call(), Vector2(0, -13), context.snap_half_pixel, bob_time, ui_z)
 
 
 func build_prompt(parent: Node, texture: Texture2D, ui_z: int) -> Sprite2D:

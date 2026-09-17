@@ -57,7 +57,7 @@ The **editor-composition percentage** produced by `tools/validate_composition.ps
 is the real representation of this direction: it measures the pieces that have
 been given direct access *and* are changeable in the editor (blind components,
 `@export`/`.tres`/Resource-driven definitions). It is a separate number from the
-legacy-coupling score. As of slice 3 (2026-09-16) it is **≈ 60%**: 12 of 20
+legacy-coupling score. As of slice 4 (2026-09-16) it is **≈ 75%**: 16 of 20
 components are blind+configured, and 9 of 17 definition surfaces are
 editor-inspectable resources (`slime_variant_catalog`, `element_catalog`,
 `palette_library` + six tuning `.tres`). The component contract and the

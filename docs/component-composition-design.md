@@ -85,16 +85,14 @@ be refined through its owning slice, not treated as proof of composition.
 
 ### Adapters to refine (measured 2026-09-16)
 
-These are component-named but still reach through the root:
+These were component-named but still reached through the root. Slices 3–4
+refined `boss_jump_slam`, `player_guard`, `interaction`, and `player_roll` into
+blind typed-context components; the remaining adapters are:
 
 | Script | root sites | Refinement note |
 |---|---:|---|
 | `player_animation_component.gd` | 86 | `root._play_sound`, palette/HUD coordination |
 | `player_equipment_visual_component.gd` | 65 | presentation side effects on `root` |
-| `player_roll_component.gd` | 52 | movement/dust coordination |
-| `interaction_component.gd` | 37 | prompt targeting |
-| `player_guard_component.gd` | 23 | flash/block feedback |
-| `boss_jump_slam_component.gd` | 22 | boss presentation |
 
 `slime_runtime_controller.gd` (805 lines, 195 root sites) is not a component; it
 is the enemy runtime controller that drives the clean slime components through
@@ -178,13 +176,13 @@ it passes **both** gates:
 
 The weighted composite is a blend of four measured sub-metrics:
 
-| Sub-metric | Formula | Weight | start | slice 1 | slice 2 | slice 3 |
-|---|---|---:|---:|---:|---:|---:|
-| Component direct access | blind components / total components | 20% | 13/20 = 65% | 65% | 65% | 14/20 = 70% |
-| Component editor-config | `@export`-configured / total components | 30% | 3/20 = 15% | 25% | 55% | 12/20 = 60% |
-| Both-gate components | blind AND editor-configured / total | 25% | 3/20 = 15% | 25% | 55% | 12/20 = 60% |
-| Definition editor-ability | editor-able surfaces / total definition surfaces | 25% | 6/17 ≈ 35% | 35% | 35% | 9/17 ≈ 53% |
-| **Composite** | weighted blend | | **≈ 30.1%** | **≈ 35.6%** | **≈ 52.1%** | **≈ 60.2%** |
+| Sub-metric | Formula | Weight | start | slice 1 | slice 2 | slice 3 | slice 4 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Component direct access | blind components / total components | 20% | 13/20 = 65% | 65% | 65% | 14/20 = 70% | 18/20 = 90% |
+| Component editor-config | `@export`-configured / total components | 30% | 3/20 = 15% | 25% | 55% | 12/20 = 60% | 16/20 = 80% |
+| Both-gate components | blind AND editor-configured / total | 25% | 3/20 = 15% | 25% | 55% | 12/20 = 60% | 16/20 = 80% |
+| Definition editor-ability | editor-able surfaces / total definition surfaces | 25% | 6/17 ≈ 35% | 35% | 35% | 9/17 ≈ 53% | 9/17 ≈ 53% |
+| **Composite** | weighted blend | | **≈ 30.1%** | **≈ 35.6%** | **≈ 52.1%** | **≈ 60.2%** | **≈ 75.2%** |
 
 Slice 1 (2026-09-16) promoted two already-blind components to editor-configured:
 `SlimeCombatComponent` gained `@export var regular_attack_lunge_duration` (replacing a
@@ -257,6 +255,38 @@ Verification: headless import scan clean (exit 0); `player_hud_scene_smoke`,
 60.2% via `-UpdateBaseline`. Root-access count also fell 2488 → 2486 from the
 slime visual refactor.
 
+Slice 4 (2026-09-16) cleared the 75% milestone (composite **≈ 75.2%**). Four
+remaining non-blind adapters were refined into blind, editor-configured typed
+contexts:
+
+- `BossJumpSlamComponent`: `tick` now takes a `BossJumpSlamContext` (typed
+  player/tuning/collision refs plus gameplay callables) instead of `root`;
+  `JUMP_FRAME_COUNT`/`SLAM_FRAME_COUNT`/`INITIAL_COOLDOWN_SECONDS` became
+  `@export`. Builder lives in `slime_runtime_controller._boss_jump_slam_context`.
+- `PlayerGuardComponent`: `initialize`/`tick`/`absorb_damage` take a
+  `PlayerGuardContext` carrying typed refs and shared-state get/set callables;
+  the 13 guard tuning consts became `@export`. Builders live in
+  `gameplay_frame_controller._guard_context`, `gameplay_bootstrap._guard_context`,
+  `combat_runtime_controller._guard_context`, and `slime_actor._guard_context`.
+- `InteractionComponent`: `target_facing_left`/`target_is_in_front`/
+  `update_targeting`/`update_world_prompt` take an `InteractionContext`
+  (targeting and prompt dependencies as typed refs + callables). The builder
+  lives in `gameplay_frame_controller.interaction_context`; `GameplayState`
+  delegates to it without growing.
+- `PlayerRollComponent`: `start_from_root`/`should_backflip`/
+  `start_backflip_from_root`/`update_from_root`/`move_swept` take a
+  `PlayerRollContext`; `BACKFLIP_AWAY_DOT_THRESHOLD` became `@export`. The
+  still-root-coupled animation/motor forwards cross as callables so the context
+  never stores `GameplayState` (matching the guardrail).
+
+Root-access count fell 2486 → 2414 (72 sites removed). Component sub-metrics
+moved to 18 blind / 16 configured / 16 both of 20. Verification: headless import
+scan clean (exit 0); `typed_combat_path_smoke`, `boss_jump_slam_smoke`,
+`target_facing_scene_smoke`, `pause_menu_scene_smoke`, `equipment_menu_scene_smoke`,
+and `player_hud_scene_smoke` all pass. `run_locomotion_smoke` has a pre-existing
+unrelated failure (attack white-fade assertion) that also fails on the committed
+baseline. Baseline re-locked at 75.2% via `-UpdateBaseline`.
+
 Definition surfaces are counted by file: `item_catalog.gd`, `element_catalog.gd`,
 `slime_variant_catalog.gd`, `palette_library.gd`, `dungeon_layout_definition.gd`,
 the Run 1–6 builders, and the six tuning `.tres` resources under
@@ -290,9 +320,12 @@ not complete the slice.
 
 ## Component adoption sequence
 
-1. **[x] Editor-facing `@export` promotions.** Slices 1–3 exposed editor-facing
-   defaults on blind components (12 of 20 now configured, including
-   `SlimeVisualComponent` which also became blind). Composite is at **60.2%**.
+1. **[x] Editor-facing `@export` promotions.** Slices 1–4 exposed editor-facing
+   defaults on blind components and refined the four largest remaining
+   non-blind adapters (`boss_jump_slam`, `player_guard`, `interaction`,
+   `player_roll`) into typed-context blind components. Composite is at **75.2%**.
+   The remaining component levers are `player_animation_component.gd` (86 root
+   sites) and `player_equipment_visual_component.gd` (65) — the largest adapters.
 2. **[x] Definition surfaces to `Resource` + `.tres` (T2 start).** Slice 3
    converted `SlimeVariantCatalog`, `ElementCatalog`, and `PaletteLibrary` from
    `const` dictionaries to editor-inspectable resources. The definition-editorability

@@ -311,7 +311,7 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	var boss_jump_slam: BossJumpSlamComponent = slime.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
 	if boss_jump_slam != null:
-		var boss_phase_running: bool = boss_jump_slam.tick(root, slime, delta)
+		var boss_phase_running: bool = boss_jump_slam.tick(_boss_jump_slam_context(root), slime, delta)
 		if boss_phase_running:
 			return true
 	var was_active := combat.active
@@ -321,6 +321,28 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 		if tactics != null:
 			tactics.release_attack_slot()
 	return result
+
+
+func _boss_jump_slam_context(root: Object) -> BossJumpSlamContext:
+	var context := BossJumpSlamContext.new()
+	context.player = root.get("player") as Sprite2D
+	context.rng = root.get("rng") as RandomNumberGenerator
+	context.slime_tuning = root.get("slime_tuning") as SlimeTuning
+	context.actor_collision_system = root.get("actor_collision_system") as ActorCollisionSystem
+	context.get_combat = Callable(root, "_slime_combat")
+	context.is_aggroed = Callable(root, "_is_slime_aggroed")
+	context.get_visual = Callable(root, "_slime_visual")
+	context.set_actor_base_texture = Callable(root, "_set_actor_base_texture")
+	context.restore_idle_texture = Callable(root, "_restore_slime_idle_texture")
+	context.play_sound = Callable(root, "_play_sound")
+	context.begin_boss_jump_phase_popcorn = Callable(root, "_begin_boss_jump_phase_popcorn")
+	context.boss_jump_phase_popcorn_alive = Callable(root, "_boss_jump_phase_popcorn_alive")
+	context.clear_boss_jump_phase_popcorn = Callable(root, "_clear_boss_jump_phase_popcorn")
+	context.apply_boss_jump_slam = Callable(root, "_apply_boss_jump_slam")
+	context.slime_shadow_anchor = Callable(root, "_slime_shadow_anchor")
+	context.actor_foot = Callable(root, "_actor_foot")
+	context.nearest_slime_walkable_point = Callable(root, "_nearest_slime_walkable_point")
+	return context
 
 
 func set_slime_attack_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:

@@ -3,6 +3,25 @@ class_name SlimeActor
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
+
+static func _guard_context(root: Object) -> PlayerGuardContext:
+	var context := PlayerGuardContext.new()
+	context.ui_parent = root
+	context.player = root.get("player") as Sprite2D
+	context.equipment = root.get("player_equipment") as EquipmentComponent
+	context.visuals = root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
+	context.overworld_ui_z = int(root.get("OVERWORLD_UI_Z"))
+	context.is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	context.is_defending_set = func(value: Variant) -> void: root.set("player_is_defending", value)
+	context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	context.player_death_pending_get = func() -> Variant: return root.get("player_death_pending")
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
+	context.actor_foot = Callable(root, "_actor_foot")
+	return context
+
 @export_enum("blue", "green", "red", "purple", "grey", "yellow", "orange", "aquamarine") var variant := "green"
 @export var tuning: SlimeTuning
 var combat_element: int = ElementCatalogScript.Element.GRASS
@@ -241,7 +260,7 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var blocked := false
 	var block_stun := 0.0
 	if guard != null:
-		var guard_result := guard.absorb_damage(root, damage, root.call("_actor_foot", slime))
+		var guard_result := guard.absorb_damage(_guard_context(root), damage, root.call("_actor_foot", slime))
 		blocked = bool(guard_result["blocked"])
 		block_stun = float(guard_result.get("stun", 0.0))
 		var shield_damage := float(guard_result["shield_damage"])
@@ -323,7 +342,7 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 	var boss_jump_slam := get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
 	if boss_jump_slam != null:
 		boss_jump_slam.state = BossJumpSlamComponent.State.READY
-		boss_jump_slam.cooldown = BossJumpSlamComponent.INITIAL_COOLDOWN_SECONDS
+		boss_jump_slam.cooldown = boss_jump_slam.initial_cooldown_seconds
 		boss_jump_slam.elapsed = 0.0
 		boss_jump_slam.frame = -1
 		boss_jump_slam.launch_committed = false

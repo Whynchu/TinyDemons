@@ -71,7 +71,20 @@ func _initialize() -> void:
 	root.player_is_defending = true
 	var guard := PlayerGuardComponent.new()
 	root.add_child(guard)
-	var block := guard.absorb_damage(root, 10.0, Vector2(1.0, 0.0))
+	var guard_context := PlayerGuardContext.new()
+	guard_context.ui_parent = root
+	guard_context.player = root.player
+	guard_context.overworld_ui_z = 4090
+	guard_context.is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	guard_context.is_defending_set = func(value: Variant) -> void: root.set("player_is_defending", value)
+	guard_context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	guard_context.player_death_pending_get = func() -> Variant: return root.get("player_death_pending")
+	guard_context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	guard_context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	guard_context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	guard_context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
+	guard_context.actor_foot = Callable(root, "_actor_foot")
+	var block := guard.absorb_damage(guard_context, 10.0, Vector2(1.0, 0.0))
 	_expect(is_equal_approx(float(block["shield_damage"]), 8.0) and is_equal_approx(float(block["health_damage"]), 2.0), "Neutral guard split remains 80 percent shield reduction", failures)
 
 	root.free()
