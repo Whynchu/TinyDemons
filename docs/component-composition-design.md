@@ -378,7 +378,7 @@ The clean plan to 90%:
 |---|---:|---:|---|
 | A1 | `player_equipment_visual_component` → `PlayerEquipmentVisualContext` + `@export` (65 root sites) | **+3.75 (done → 80.5%)** | High — pixel presentation, occlusion, imbue, death visuals |
 | A2 | `player_animation_component` → `PlayerAnimationContext` + `@export` (86 root sites) | **+3.75 (done → 84.2%)** | High — palette recolor, frame slicing, HUD coordination |
-| B1 | `item_catalog.gd` definitions → `ItemCatalogData` `.tres` | +1.47 | High — save/equipment compatibility |
+| B1 | `item_catalog.gd` definitions → `ItemCatalogData` `.tres` | **+1.47 (done → 85.7%)** | High — save/equipment compatibility |
 | B2 | `dungeon_layout_run2.gd` static rooms → `.tres` | +1.47 | Medium — route/flame behavior |
 | C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | +1.47 × 4 | Medium — authored grid plans become editor-inspectable |
 | **Total** | | **≈ +14.7 → 91.4%** | |
@@ -391,6 +391,14 @@ A2 each needed a typed context (`PlayerEquipmentVisualContext`,
 `GameplayState` line budget held at 1,719 via inlining. `spin_charge_scene_smoke`
 and `run_locomotion_smoke` have pre-existing failures unrelated to these
 migrations.
+
+B1 is **done**: `item_catalog` now loads all authored gear data (live bases, set
+definitions, expansion records, metadata, transmutations) from
+`resources/definitions/item_catalog.tres` as an `ItemCatalogData` resource, so
+the definition surface is editor-inspectable (11/17 → 85.7%). Item IDs and the
+instance API are unchanged; `gear_catalogue_expansion_smoke` and the item
+economy/profile/equipment/save smokes pass. The `.tres` was generated once from
+the prior const dictionaries to guarantee byte-for-byte data equivalence.
 
 A1 + A2 + B1 + B2 alone reach **87.2%**; C1 (adding the four authored puzzle
 plans as definition surfaces) supplies the final ~4.4 points to clear 90%. C1

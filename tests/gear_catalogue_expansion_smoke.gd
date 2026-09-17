@@ -13,7 +13,7 @@ func _initialize() -> void:
 	_expect(ItemCatalog.canonical_slot(&"not-a-slot") == &"", "invalid slot names fail closed", failures)
 
 	var counts := {}
-	for definition_id: StringName in ItemCatalog.DEFINITIONS:
+	for definition_id: StringName in catalog.definitions:
 		var definition := catalog.definition_data(definition_id)
 		var slot := catalog.definition_slot(definition_id)
 		counts[slot] = int(counts.get(slot, 0)) + 1
