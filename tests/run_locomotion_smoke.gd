@@ -8,6 +8,43 @@ extends SceneTree
 var _captured_motion := Vector2.ZERO
 
 
+func _roll_context(gameplay: Node) -> PlayerRollContext:
+	var context := PlayerRollContext.new()
+	context.player = gameplay.get("player") as Sprite2D
+	context.player_motor = gameplay.get("player_motor") as ActorMotor
+	context.player_animation_component = gameplay.get("player_animation_component") as PlayerAnimationComponent
+	context.player_attack_visual = gameplay.get("player_attack_visual") as Sprite2D
+	context.run_state = gameplay.get("run_state") as RunState
+	context.player_tuning = gameplay.get("player_tuning") as PlayerTuning
+	context.player_agi_get = func() -> Variant: return gameplay.get("player_agi")
+	context.player_spd_get = func() -> Variant: return gameplay.get("player_spd")
+	context.player_is_targeting_get = func() -> Variant: return gameplay.get("player_is_targeting")
+	context.player_is_rolling_get = func() -> Variant: return gameplay.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return gameplay.get("player_is_backflipping")
+	context.player_is_rolling_set = func(value: Variant) -> void: gameplay.set("player_is_rolling", value)
+	context.player_is_backflipping_set = func(value: Variant) -> void: gameplay.set("player_is_backflipping", value)
+	context.player_facing_left_before_target_get = func() -> Variant: return gameplay.get("player_facing_left_before_target")
+	context.last_player_facing_left_set = func(value: Variant) -> void: gameplay.set("last_player_facing_left", value)
+	context.roll_dust_spawned_this_roll_get = func() -> Variant: return gameplay.get("roll_dust_spawned_this_roll")
+	context.roll_dust_spawned_this_roll_set = func(value: Variant) -> void: gameplay.set("roll_dust_spawned_this_roll", value)
+	context.player_anim_name_set = func(value: Variant) -> void: gameplay.set("player_anim_name", value)
+	var anim := gameplay.get("player_animation_component") as PlayerAnimationComponent
+	var motor := gameplay.get("player_motor") as ActorMotor
+	context.apply_animation_frame = func() -> void: anim.apply_frame(gameplay) if anim != null else null
+	context.movement_anim_name = func() -> Variant: return anim.movement_anim_name(gameplay) if anim != null else ""
+	context.update_motor_facing = func(direction: Vector2) -> void: motor.update_horizontal_facing(gameplay, direction) if motor != null else null
+	context.movement_input = Callable(gameplay, "_movement_input")
+	context.player_facing_vector = Callable(gameplay, "_player_facing_vector")
+	context.perspective_movement = Callable(gameplay, "_perspective_movement")
+	context.try_move_actor = Callable(gameplay, "_try_move_actor")
+	context.actor_foot = Callable(gameplay, "_actor_foot")
+	context.valid_current_target = Callable(gameplay, "_valid_current_target")
+	context.is_run_combat_active = Callable(gameplay, "_is_run_combat_active")
+	context.play_sound = Callable(gameplay, "_play_sound")
+	context.start_roll_dust = Callable(gameplay, "_start_roll_dust")
+	return context
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -157,14 +194,14 @@ func _initialize() -> void:
 	if roll != null and not backflip_frames.is_empty():
 		gameplay.set("player_is_targeting", false)
 		router.set("_movement", Vector2.LEFT)
-		_expect(not roll.should_backflip(gameplay), "backflip requires the lock-on input", failures)
+		_expect(not roll.should_backflip(_roll_context(gameplay)), "backflip requires the lock-on input", failures)
 		gameplay.set("player_is_targeting", true)
 		player.flip_h = false
 		gameplay.set("player_facing_left_before_target", false)
 		router.set("_movement", Vector2.LEFT)
-		_expect(roll.should_backflip(gameplay), "no-target backflip activates when holding away from facing", failures)
+		_expect(roll.should_backflip(_roll_context(gameplay)), "no-target backflip activates when holding away from facing", failures)
 		router.set("_movement", Vector2.RIGHT)
-		_expect(not roll.should_backflip(gameplay), "pushing toward the facing does not backflip", failures)
+		_expect(not roll.should_backflip(_roll_context(gameplay)), "pushing toward the facing does not backflip", failures)
 		router.set("_movement", Vector2.LEFT)
 		var equipment_visual := gameplay.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 		var equipment_fixture := gameplay.get("player_equipment") as EquipmentComponent
@@ -193,11 +230,11 @@ func _initialize() -> void:
 			equipment_visual.tick(gameplay, 0.20)
 			_expect(not sword_before.visible and not shield_before.visible, "backflip equipment breakup clears sword and shield layers", failures)
 			equipment_fixture.has_shield = shield_was_equipped
-		roll.start_backflip_from_root(gameplay)
+		roll.start_backflip_from_root(_roll_context(gameplay))
 		_expect(bool(gameplay.get("player_is_backflipping")), "backflip input starts the retreat dodge", failures)
 		_expect(not bool(player.flip_h), "backflip keeps the pre-target facing", failures)
 		for _tick in 60:
-			roll.update_from_root(gameplay, 1.0 / 60.0)
+			roll.update_from_root(_roll_context(gameplay), 1.0 / 60.0)
 			if not bool(gameplay.get("player_is_backflipping")):
 				break
 		_expect(not bool(gameplay.get("player_is_backflipping")), "backflip completes and clears its state", failures)

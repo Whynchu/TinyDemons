@@ -13,6 +13,95 @@ static func phase_order() -> Array[StringName]:
 	return PHASE_ORDER.duplicate()
 
 
+func _guard_context(root: GameplayState) -> PlayerGuardContext:
+	var context := PlayerGuardContext.new()
+	context.ui_parent = root
+	context.player = root.player
+	context.equipment = root.player_equipment
+	context.visuals = root.player_equipment_visual_component
+	context.overworld_ui_z = root.OVERWORLD_UI_Z
+	context.is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	context.is_defending_set = func(value: Variant) -> void: root.set("player_is_defending", value)
+	context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	context.player_death_pending_get = func() -> Variant: return root.get("player_death_pending")
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
+	context.actor_foot = Callable(root, "_actor_foot")
+	return context
+
+
+func _roll_context(root: GameplayState) -> PlayerRollContext:
+	var context := PlayerRollContext.new()
+	context.player = root.player
+	context.player_motor = root.player_motor
+	context.player_animation_component = root.player_animation_component
+	context.player_attack_visual = root.player_attack_visual
+	context.run_state = root.run_state
+	context.player_tuning = root.player_tuning
+	context.player_agi_get = func() -> Variant: return root.get("player_agi")
+	context.player_spd_get = func() -> Variant: return root.get("player_spd")
+	context.player_is_targeting_get = func() -> Variant: return root.get("player_is_targeting")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_is_rolling_set = func(value: Variant) -> void: root.set("player_is_rolling", value)
+	context.player_is_backflipping_set = func(value: Variant) -> void: root.set("player_is_backflipping", value)
+	context.player_facing_left_before_target_get = func() -> Variant: return root.get("player_facing_left_before_target")
+	context.last_player_facing_left_set = func(value: Variant) -> void: root.set("last_player_facing_left", value)
+	context.roll_dust_spawned_this_roll_get = func() -> Variant: return root.get("roll_dust_spawned_this_roll")
+	context.roll_dust_spawned_this_roll_set = func(value: Variant) -> void: root.set("roll_dust_spawned_this_roll", value)
+	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
+	context.apply_animation_frame = func() -> void: root.player_animation_component.apply_frame(root) if root.player_animation_component != null else null
+	context.movement_anim_name = func() -> Variant: return root.player_animation_component.movement_anim_name(root) if root.player_animation_component != null else ""
+	context.update_motor_facing = func(direction: Vector2) -> void: root.player_motor.update_horizontal_facing(root, direction) if root.player_motor != null else null
+	context.movement_input = Callable(root, "_movement_input")
+	context.player_facing_vector = Callable(root, "_player_facing_vector")
+	context.perspective_movement = Callable(root, "_perspective_movement")
+	context.try_move_actor = Callable(root, "_try_move_actor")
+	context.actor_foot = Callable(root, "_actor_foot")
+	context.valid_current_target = Callable(root, "_valid_current_target")
+	context.is_run_combat_active = Callable(root, "_is_run_combat_active")
+	context.play_sound = Callable(root, "_play_sound")
+	context.start_roll_dust = Callable(root, "_start_roll_dust")
+	return context
+
+
+func interaction_context(root: GameplayState) -> InteractionContext:
+	var context := InteractionContext.new()
+	context.player = root.player
+	context.chest = root.chest
+	context.npc_controller = root.npc_controller
+	context.interact_prompt = root.interact_prompt
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_magic_casting_get = func() -> Variant: return root.get("player_is_magic_casting")
+	context.target_input_was_down_get = func() -> Variant: return root.get("target_input_was_down")
+	context.target_input_was_down_set = func(value: Variant) -> void: root.set("target_input_was_down", value)
+	context.last_player_facing_left_get = func() -> Variant: return root.get("last_player_facing_left")
+	context.last_player_facing_left_set = func(value: Variant) -> void: root.set("last_player_facing_left", value)
+	context.actor_foot = Callable(root, "_actor_foot")
+	context.is_target_input_held = Callable(root, "_is_target_input_held")
+	context.set_current_target = Callable(root, "_set_current_target")
+	context.set_target_ui_visible = Callable(root, "_set_target_ui_visible")
+	context.closest_target = Callable(root, "_closest_target")
+	context.valid_current_target = Callable(root, "_valid_current_target")
+	context.is_slime_targetable = Callable(root, "_is_slime_targetable")
+	context.target_cycle_direction = Callable(root, "_target_cycle_direction")
+	context.cycle_target = Callable(root, "_cycle_target")
+	context.update_target_ui = Callable(root, "_update_target_ui")
+	context.player_facing_vector = Callable(root, "_player_facing_vector")
+	context.can_interact_with_chest = Callable(root, "_can_interact_with_chest")
+	context.can_interact_with_npc = Callable(root, "_can_interact_with_npc")
+	context.can_interact_with_world_item = Callable(root, "_can_interact_with_world_item")
+	context.can_interact_with_fire = Callable(root, "_can_interact_with_fire")
+	context.collision_rect = Callable(root, "_collision_rect")
+	context.world_item_drop_position = Callable(root, "_world_item_drop_position")
+	context.cloaked_demon_head_position = Callable(root, "_cloaked_demon_head_position")
+	context.fire_anchor = Callable(root, "_fire_anchor")
+	context.snap_half_pixel = Callable(root, "_snap_half_pixel")
+	return context
+
+
 func update_player_input(root: GameplayState, delta: float) -> void:
 	var attack_down: bool = root._is_attack_input_pressed(); var attack := root.player_attack_component
 	if attack != null:
@@ -42,10 +131,11 @@ func update_player_input(root: GameplayState, delta: float) -> void:
 		if not root.player_is_attacking and not root.player_is_magic_casting and not root.player_is_rolling and not root.player_is_backflipping and not root.player_is_defending and (root.player_motor == null or not root.player_motor.is_in_knockback()):
 			var roll := root.player_roll_component
 			if roll != null:
-				if roll.should_backflip(root):
-					roll.start_backflip_from_root(root)
+				var roll_context := _roll_context(root)
+				if roll.should_backflip(roll_context):
+					roll.start_backflip_from_root(roll_context)
 				else:
-					roll.start_from_root(root)
+					roll.start_from_root(roll_context)
 				accepted_roll = true
 		if accepted_roll:
 			# Running is a continuation of this roll-button hold: while the button
@@ -200,7 +290,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	var previous_attacking: bool = root.player_is_attacking
 	var previous_attack_animation := root.player_anim_name
 	var guard := root.player_guard_component
-	if guard != null: guard.tick(root, delta, not player_input_locked and root._is_guard_input_held())
+	if guard != null: guard.tick(_guard_context(root), delta, not player_input_locked and root._is_guard_input_held())
 	if not player_input_locked:
 		update_player_input(root, delta)
 	elif root.player_is_magic_casting or root.magic_input_was_down:
@@ -217,7 +307,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		if combo_direction_changed: player_attack.consume_combo()
 	if player_attack != null and player_attack.combo_buffered and not root.player_is_attacking and root.player_between_timer <= 0.0 and player_attack.can_start_attack2(): player_attack.start_player_attack(root, 2); player_attack.consume_combo()
 	if player_attack != null: player_attack.update_lunge(root, delta)
-	if root.player_roll_component != null: root.player_roll_component.update_from_root(root, delta)
+	if root.player_roll_component != null: root.player_roll_component.update_from_root(_roll_context(root), delta)
 	root._update_roll_dust(delta); root.player_motor.update_player_hit_reaction(root, delta); root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta)
 	root.magic_runtime_controller.tick_magic_animation(root, delta); root.player_animation_component.tick_coordinator_animation(root, delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root, delta)

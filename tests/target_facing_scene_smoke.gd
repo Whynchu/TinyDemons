@@ -26,12 +26,15 @@ func _initialize() -> void:
 	target.centered = false
 	root_node.add_child(target)
 	var interaction := INTERACTION_SCRIPT.new() as InteractionComponent
+	var interaction_context := InteractionContext.new()
+	interaction_context.player = root_node.player
+	interaction_context.actor_foot = Callable(root_node, "_actor_foot")
 	root_node.player.flip_h = false
-	_expect(interaction.target_is_in_front(root_node, Vector2(112, 115)), "right-facing player accepts a target in front", failures)
-	_expect(not interaction.target_is_in_front(root_node, Vector2(88, 115)), "right-facing player rejects a target behind", failures)
+	_expect(interaction.target_is_in_front(interaction_context, Vector2(112, 115)), "right-facing player accepts a target in front", failures)
+	_expect(not interaction.target_is_in_front(interaction_context, Vector2(88, 115)), "right-facing player rejects a target behind", failures)
 	root_node.player.flip_h = true
-	_expect(interaction.target_is_in_front(root_node, Vector2(88, 115)), "left-facing player accepts a target in front", failures)
-	_expect(not interaction.target_is_in_front(root_node, Vector2(112, 115)), "left-facing player rejects a target behind", failures)
+	_expect(interaction.target_is_in_front(interaction_context, Vector2(88, 115)), "left-facing player accepts a target in front", failures)
+	_expect(not interaction.target_is_in_front(interaction_context, Vector2(112, 115)), "left-facing player rejects a target behind", failures)
 
 	# Facing is a horizontal state, not a fresh decision from every movement
 	# vector. This protects straight vertical walking from controller drift.
@@ -51,17 +54,17 @@ func _initialize() -> void:
 	motor.free()
 
 	target.global_position = Vector2(96, 100)
-	_expect(interaction.target_facing_left(root_node, target), "non-centered target on the left faces the player left", failures)
+	_expect(interaction.target_facing_left(interaction_context, target), "non-centered target on the left faces the player left", failures)
 	target.global_position = Vector2(104, 100)
-	_expect(not interaction.target_facing_left(root_node, target), "non-centered target on the right faces the player right", failures)
+	_expect(not interaction.target_facing_left(interaction_context, target), "non-centered target on the right faces the player right", failures)
 
 	# A centered target can sit inside the player's non-centered anchor width.
 	# This is the close-range case that previously reported the wrong side.
 	target.centered = true
 	target.global_position = Vector2(104, 100)
-	_expect(interaction.target_facing_left(root_node, target), "centered target just left of the visible player faces left", failures)
+	_expect(interaction.target_facing_left(interaction_context, target), "centered target just left of the visible player faces left", failures)
 	target.global_position = Vector2(112, 100)
-	_expect(not interaction.target_facing_left(root_node, target), "centered target just right of the visible player faces right", failures)
+	_expect(not interaction.target_facing_left(interaction_context, target), "centered target just right of the visible player faces right", failures)
 
 	interaction.free()
 	root_node.queue_free()

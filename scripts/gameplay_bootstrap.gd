@@ -291,6 +291,25 @@ func _enter_debug_gameplay(root: Object) -> void:
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"gameplay")
 
 
+func _guard_context(root: GameplayState, player: Sprite2D) -> PlayerGuardContext:
+	var context := PlayerGuardContext.new()
+	context.ui_parent = root
+	context.player = player
+	context.equipment = root.player_equipment
+	context.visuals = root.player_equipment_visual_component
+	context.overworld_ui_z = root.OVERWORLD_UI_Z
+	context.is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	context.is_defending_set = func(value: Variant) -> void: root.set("player_is_defending", value)
+	context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	context.player_death_pending_get = func() -> Variant: return root.get("player_death_pending")
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
+	context.actor_foot = Callable(root, "_actor_foot")
+	return context
+
+
 func _ensure_player_component(player: Sprite2D, script: Script, node_name: StringName) -> Node:
 	var component := player.get_node_or_null(NodePath(node_name)) as Node
 	if component == null:
@@ -317,7 +336,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root.player_health_component = health
 	var motor := _ensure_player_component(player, ActorMotor, "Motor") as ActorMotor; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.player_motor = motor
 	root.player_controller = _ensure_player_component(player, PlayerController, "Controller") as PlayerController; root.player_controller.configure_input_router(root.input_router); root.player_roll_component = _ensure_player_component(player, PlayerRollComponent, "Roll") as PlayerRollComponent; root.player_attack_component = _ensure_player_component(player, PlayerAttackComponent, "Attack") as PlayerAttackComponent; root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	var guard := _ensure_player_component(player, PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(root); root.player_guard_component = guard
+	var guard := _ensure_player_component(player, PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(_guard_context(root, player)); root.player_guard_component = guard
 	var transmutations := _ensure_player_component(player, EquipmentTransmutationComponent, "Transmutations") as EquipmentTransmutationComponent
 	transmutations.configure(equipment); guard.successful_block.connect(Callable(transmutations, "record_successful_block")); guard.successful_block.connect(Callable(root, "_on_player_successful_block"))
 	var attack := root.player_attack_component

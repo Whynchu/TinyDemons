@@ -29,7 +29,7 @@ func _initialize() -> void:
 		var component := boss.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
 		_expect(component != null, "boss has a jump/slam component", failures)
 		if component != null:
-			_expect(is_equal_approx(component.cooldown, BossJumpSlamComponent.INITIAL_COOLDOWN_SECONDS), "boss first jump waits ten seconds", failures)
+			_expect(is_equal_approx(component.cooldown, component.initial_cooldown_seconds), "boss first jump waits ten seconds", failures)
 			var idle_shadow := boss.get_node_or_null("SlimeFloorShadow") as Sprite2D
 			_expect(idle_shadow != null and not idle_shadow.centered and idle_shadow.global_position.is_equal_approx(boss.global_position), "boss walking shadow uses the sprite canvas origin", failures)
 			_expect(idle_shadow != null and is_equal_approx(idle_shadow.self_modulate.a, 0.25), "boss shadow matches player floor-shadow opacity", failures)
@@ -62,8 +62,26 @@ func _initialize() -> void:
 			_expect(component.frame >= 5, "boss airborne movement begins only at launch frame", failures)
 			if saw_active:
 				var boss_tuning := gameplay.get("slime_tuning") as SlimeTuning
+				var boss_context := BossJumpSlamContext.new()
+				boss_context.player = gameplay.get("player") as Sprite2D
+				boss_context.rng = gameplay.get("rng") as RandomNumberGenerator
+				boss_context.slime_tuning = boss_tuning
+				boss_context.actor_collision_system = gameplay.get("actor_collision_system") as ActorCollisionSystem
+				boss_context.get_combat = Callable(gameplay, "_slime_combat")
+				boss_context.is_aggroed = Callable(gameplay, "_is_slime_aggroed")
+				boss_context.get_visual = Callable(gameplay, "_slime_visual")
+				boss_context.set_actor_base_texture = Callable(gameplay, "_set_actor_base_texture")
+				boss_context.restore_idle_texture = Callable(gameplay, "_restore_slime_idle_texture")
+				boss_context.play_sound = Callable(gameplay, "_play_sound")
+				boss_context.begin_boss_jump_phase_popcorn = Callable(gameplay, "_begin_boss_jump_phase_popcorn")
+				boss_context.boss_jump_phase_popcorn_alive = Callable(gameplay, "_boss_jump_phase_popcorn_alive")
+				boss_context.clear_boss_jump_phase_popcorn = Callable(gameplay, "_clear_boss_jump_phase_popcorn")
+				boss_context.apply_boss_jump_slam = Callable(gameplay, "_apply_boss_jump_slam")
+				boss_context.slime_shadow_anchor = Callable(gameplay, "_slime_shadow_anchor")
+				boss_context.actor_foot = Callable(gameplay, "_actor_foot")
+				boss_context.nearest_slime_walkable_point = Callable(gameplay, "_nearest_slime_walkable_point")
 				_expect(component.landing_anchor.distance_to(targeted_player_foot) < 1.0, "boss targets the player's landing point", failures)
-				component.tick(gameplay, boss, boss_tuning.boss_jump_frame_time * BossJumpSlamComponent.JUMP_FRAME_COUNT)
+				component.tick(boss_context, boss, boss_tuning.boss_jump_frame_time * component.jump_frame_count)
 				var shadow := boss.get_node_or_null("BossFloorShadow") as Sprite2D
 				_expect(shadow != null and not shadow.visible, "boss jump phase hides its floor shadow while airborne", failures)
 				if shadow != null:
@@ -75,8 +93,8 @@ func _initialize() -> void:
 				for popcorn in (gameplay.get("room_controller") as RoomController).boss_jump_phase_waves.get(boss.get_instance_id(), []) as Array:
 					if is_instance_valid(popcorn):
 						gameplay.call("_kill_slime", popcorn)
-				component.tick(gameplay, boss, boss_tuning.boss_jump_frame_time)
-				component.tick(gameplay, boss, boss_tuning.boss_jump_frame_time * BossJumpSlamComponent.SLAM_FRAME_COUNT)
+				component.tick(boss_context, boss, boss_tuning.boss_jump_frame_time)
+				component.tick(boss_context, boss, boss_tuning.boss_jump_frame_time * component.slam_frame_count)
 				_expect(not component.is_active(), "boss descends and clears the jump/slam phase", failures)
 				_expect((gameplay.get("room_controller") as RoomController).boss_jump_phase_pool.size() == 3, "boss support actors return to the pool after cleanup", failures)
 				_expect(component.cooldown >= boss_tuning.boss_jump_repeat_cooldown_min and component.cooldown <= boss_tuning.boss_jump_repeat_cooldown_max, "boss repeat jump waits between twenty-five and thirty-five seconds", failures)

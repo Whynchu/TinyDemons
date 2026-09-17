@@ -448,7 +448,7 @@ func _set_entrance_open(is_open: bool) -> void:
 		is_open = false
 	entrance_open = is_open; _refresh_room_socket_visuals(door_active)
 func _is_interaction_target_in_front(target_position: Vector2) -> bool:
-	return interaction_component == null or interaction_component.target_is_in_front(self, target_position)
+	return interaction_component == null or interaction_component.target_is_in_front(gameplay_frame_controller.interaction_context(self), target_position)
 
 
 func _current_player_element() -> int:
@@ -1262,7 +1262,7 @@ func _update_interact_prompt(delta: float) -> void:
 		interaction_component.set_prompt_texture(interact_prompt, _input_prompt_texture(&"interact"))
 	if npc_controller != null:
 		npc_controller.set_continue_prompt_texture(_input_prompt_texture(&"interact"))
-	interaction_component.update_world_prompt(self, delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
+	interaction_component.update_world_prompt(gameplay_frame_controller.interaction_context(self), delta, NPC_DIALOGUE_BUTTON_BOB_TIME, OVERWORLD_UI_Z + 1)
 func _set_door_active(is_active: bool) -> void:
 	room_puzzle_controller.call("set_door_active", self, is_active)
 func _collect_dungeon_sockets() -> void:
@@ -1631,8 +1631,8 @@ func _update_actor_occlusion(delta: float) -> void: actor_presentation_runtime_c
 func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool: return bool(actor_presentation_runtime_controller.call("is_actor_occlusion_flashing", self, actor))
 func _update_player_shadow() -> void: shadow_controller.update_player_shadow(self, DEPTH_Z_SCALE)
 func _update_cloaked_demon_shadow() -> void: shadow_controller.update_cloaked_demon_shadow(self, DEPTH_Z_SCALE)
-func _update_targeting() -> void: interaction_component.update_targeting(self)
-func _target_facing_left(target: Sprite2D) -> bool: return interaction_component.target_facing_left(self, target)
+func _update_targeting() -> void: interaction_component.update_targeting(gameplay_frame_controller.interaction_context(self))
+func _target_facing_left(target: Sprite2D) -> bool: return interaction_component.target_facing_left(gameplay_frame_controller.interaction_context(self), target)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _raw_movement_input() -> Vector2: return input_router.raw_movement() if input_router != null else Vector2.ZERO
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
