@@ -6,16 +6,16 @@ var focus_active := false
 var combo_count := 0
 var combo_timer := 0.0
 
-var focus_window := 2.5
-var focus_bonus := 0.30
-var focus_penalty := -0.20
-var combo_hit_window := 1.5
-var combo_damage_per_hit := 0.05
-var combo_damage_cap := 0.25
+@export var focus_window := 2.5
+@export var focus_bonus := 0.30
+@export var focus_penalty := -0.20
+@export var combo_hit_window := 1.5
+@export var combo_damage_per_hit := 0.05
+@export var combo_damage_cap := 0.25
 ## Optional safety/tuning limit. Zero means the streak continues for every
 ## confirmed hit until combo_hit_window expires; it does not affect the
 ## separately bounded combo damage multiplier.
-var combo_max_steps := 0
+@export var combo_max_steps := 0
 
 
 func configure(tuning: PlayerTuning) -> void:
