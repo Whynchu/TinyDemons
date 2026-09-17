@@ -1,8 +1,8 @@
 extends Node
 class_name SlimeAnimationComponent
 
-var facing_left := false
-var attack_frame := 0
+@export var facing_left := false
+@export var attack_frame := 0
 
 
 func set_facing(left: bool) -> void:

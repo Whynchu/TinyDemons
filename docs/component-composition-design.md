@@ -380,8 +380,9 @@ The clean plan to 90%:
 | A2 | `player_animation_component` → `PlayerAnimationContext` + `@export` (86 root sites) | **+3.75 (done → 84.2%)** | High — palette recolor, frame slicing, HUD coordination |
 | B1 | `item_catalog.gd` definitions → `ItemCatalogData` `.tres` | **+1.47 (done → 85.7%)** | High — save/equipment compatibility |
 | B2 | `dungeon_layout_run2.gd` static rooms → `.tres` | **+1.47 (done → 87.1%)** | Medium — route/flame behavior |
-| C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | +1.47 × 4 | Medium — authored grid plans become editor-inspectable |
-| **Total** | | **≈ +14.7 → 91.4%** | |
+| C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | **done (16/21 surfaces)** | Medium — authored grid plans become editor-inspectable |
+| C2 | `@export`-configure the final blind components (`combat_momentum`, `slime_animation`) | **done → 94.0%** | Low — tuning/state defaults, runtime override intact |
+| **Total** | | **94.0%** | |
 
 A1 (slice 3/4) and A2 (slice 4/4) are **done**: all 20 components are now blind,
 18 of 20 editor-configured (components at 100% direct / 90% editor / 90% both).
@@ -409,13 +410,24 @@ was generated from the prior authored builder output in the run1 dictionary
 shape, so route/flame behavior is unchanged; `run2_authored_layout_smoke` and the
 dungeon/room/hub-door smokes pass.
 
-A1 + A2 + B1 + B2 alone reach **87.2%**; C1 (adding the four authored puzzle
-plans as definition surfaces) supplies the final ~4.4 points to clear 90%. C1
-is a deliberate metric-scope change: those plan files are authored content and
-belong on the definition surface list. Each slice must run the focused smokes
-for its owner and a visual check before the baseline re-lock, per the refactor
-rules. `item_catalog` must preserve stable item IDs and save round-trips
-byte-for-byte.
+C1 is **done**: `puzzle_map_r3/r4/r5/r3_new.gd` now load their authored marker
+grids from `resources/definitions/puzzle_map_r{3,4,5,r3_new}.tres`
+(`PuzzlePlanData` resources), and all four were added to the definition surface
+list (12/17 → 16/21 = 76% of surfaces editor-able). Runtime transforms (rotation,
+validation variants) stay in the builder code. The `.tres` files were generated
+once from the prior authored builders, so the R3/R4/R5 preview paths are
+unchanged: `puzzle_map_grid_smoke` keeps its two pre-existing reference
+failures, while `puzzle_map_r4_new_grid_smoke`, `puzzle_map_r5_grid_smoke`, and
+`generated_run_scene_smoke` pass.
+
+Note on the earlier "+1.47 × 4" estimate: adding scripts to the surface list
+grows the denominator too, so C1's real contribution was +1.4 (to 88.5%), not
++5.88. To clear 90% the remaining lever was configuring the two last blind
+components. C2 did that: `combat_momentum_component` and
+`slime_animation_component` received `@export` on their tuning/state fields
+(runtime `configure()`/setter override still wins), bringing components to
+**20 blind / 20 configured / 20 both (100% / 100% / 100%)** and the composite to
+**94.0%**.
 
 ## Rules and guardrails
 

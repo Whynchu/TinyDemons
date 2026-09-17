@@ -164,7 +164,11 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 		"dungeon_layout_run3.gd",
 		"dungeon_layout_run4.gd",
 		"dungeon_layout_run5.gd",
-		"dungeon_layout_run6.gd"
+		"dungeon_layout_run6.gd",
+		"puzzle_map_r3.gd",
+		"puzzle_map_r4.gd",
+		"puzzle_map_r5.gd",
+		"puzzle_map_r3_new.gd"
 	)
 	$definitionScriptCount = 0
 	$definitionScriptEditable = 0

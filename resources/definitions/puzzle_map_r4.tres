@@ -1,0 +1,161 @@
+[gd_resource type="Resource" script_class="PuzzlePlanData" format=3]
+
+[ext_resource type="Script" path="res://scripts/puzzle_plan_data.gd" id="1_llxm4"]
+
+[resource]
+script = ExtResource("1_llxm4")
+plan_id = &"r4_new"
+markers = Array[Dictionary]([{
+"coordinate": Vector2i(16, 10),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(18, 10),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(16, 12),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(14, 14),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(18, 14),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(20, 14),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(22, 14),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(12, 16),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(16, 16),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(22, 16),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(12, 18),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(20, 18),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(12, 20),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(14, 20),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(16, 20),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(20, 20),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(14, 22),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(18, 22),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(20, 22),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(16, 24),
+"kind": &"gate_grey"
+}, {
+"coordinate": Vector2i(14, 12),
+"kind": &"gate_orb_grey"
+}, {
+"coordinate": Vector2i(24, 14),
+"kind": &"gate_orb_grey"
+}, {
+"coordinate": Vector2i(22, 22),
+"kind": &"gate_orb_grey"
+}, {
+"coordinate": Vector2i(22, 12),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(10, 14),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(12, 14),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(16, 14),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(24, 16),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(18, 18),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(22, 18),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(10, 20),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(18, 24),
+"kind": &"gate_flame_a"
+}, {
+"coordinate": Vector2i(18, 8),
+"kind": &"gate_flame_b"
+}, {
+"coordinate": Vector2i(12, 12),
+"kind": &"gate_flame_b"
+}, {
+"coordinate": Vector2i(10, 16),
+"kind": &"gate_flame_b"
+}, {
+"coordinate": Vector2i(16, 26),
+"kind": &"gate_flame_b"
+}, {
+"coordinate": Vector2i(19, 7),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(11, 11),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(23, 11),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(9, 13),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(19, 15),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(25, 17),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(15, 19),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(23, 19),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(9, 21),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(23, 23),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(15, 27),
+"kind": &"treasure_room"
+}, {
+"coordinate": Vector2i(19, 11),
+"kind": &"orb_room"
+}, {
+"coordinate": Vector2i(25, 13),
+"kind": &"flame_b_room"
+}, {
+"coordinate": Vector2i(17, 17),
+"kind": &"hub_room"
+}, {
+"coordinate": Vector2i(9, 17),
+"kind": &"boss_room"
+}])
