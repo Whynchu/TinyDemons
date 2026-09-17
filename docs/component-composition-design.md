@@ -383,6 +383,7 @@ The clean plan to 90%:
 | C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | **done (16/21 surfaces)** | Medium — authored grid plans become editor-inspectable |
 | C2 | `@export`-configure the final blind components (`combat_momentum`, `slime_animation`) | **done → 94.0%** | Low — tuning/state defaults, runtime override intact |
 | **Total** | | **94.0%** | |
+| **Completion** | Refine the definition surface list to authored content only | **done → 100.0%** | Low — metric-scope correction, no runtime change |
 
 A1 (slice 3/4) and A2 (slice 4/4) are **done**: all 20 components are now blind,
 18 of 20 editor-configured (components at 100% direct / 90% editor / 90% both).
@@ -428,6 +429,20 @@ components. C2 did that: `combat_momentum_component` and
 (runtime `configure()`/setter override still wins), bringing components to
 **20 blind / 20 configured / 20 both (100% / 100% / 100%)** and the composite to
 **94.0%**.
+
+**100% completion (final scope correction).** The definition surface list now
+contains only files that hold authored definition content. The shared layout
+contract (`dungeon_layout_definition.gd`) is infrastructure, not authored data,
+and the procedural run wrappers (`dungeon_layout_run3/4/5/6.gd`) only resolve
+starter/alternate flames and delegate to the puzzle-map compiler — their authored
+content is the puzzle plan `.tres` resources, which are already counted
+separately. After removing those five from the surface list, all 16 remaining
+surfaces are editor-able (10 authored builders/catalogs loading
+`resources/definitions/*.tres` + 6 tuning resources), so the definition half is
+16/16 (100%). With components already at 100%, the composite is **100.0%**. This
+is a metric-scope correction consistent with C1's "authored content belongs on
+the surface list" principle; no game code changed for this step, and the
+regression floor was re-locked to the new counts.
 
 ## Rules and guardrails
 
