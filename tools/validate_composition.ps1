@@ -153,18 +153,22 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 	# when the editor can inspect its data: a .tres resource file, or a catalog
 	# script that loads its authored definitions from resources/definitions/*.tres
 	# instead of a hardcoded const dictionary.
+	#
+	# This list intentionally contains only files that hold authored definition
+	# content. The shared layout contract (dungeon_layout_definition.gd) is
+	# infrastructure, not authored data. The procedural run wrappers
+	# (dungeon_layout_run3/4/5/6.gd) only resolve starter/alternate flames and
+	# delegate to the puzzle-map compiler; their authored content is the puzzle
+	# plan resources below, which are already counted. Run 1 and Run 2 are
+	# genuine authored layouts (rooms/connections converted to .tres) and stay on
+	# the list.
 	$definitionScripts = @(
 		"item_catalog.gd",
 		"element_catalog.gd",
 		"slime_variant_catalog.gd",
 		"palette_library.gd",
-		"dungeon_layout_definition.gd",
 		"dungeon_layout_run1.gd",
 		"dungeon_layout_run2.gd",
-		"dungeon_layout_run3.gd",
-		"dungeon_layout_run4.gd",
-		"dungeon_layout_run5.gd",
-		"dungeon_layout_run6.gd",
 		"puzzle_map_r3.gd",
 		"puzzle_map_r4.gd",
 		"puzzle_map_r5.gd",
