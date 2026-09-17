@@ -307,6 +307,7 @@ func _guard_context(root: GameplayState, player: Sprite2D) -> PlayerGuardContext
 	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
 	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
 	context.actor_foot = Callable(root, "_actor_foot")
+	context.build_equipment_visual_context = Callable(root, "_equipment_visual_context")
 	return context
 
 
@@ -348,7 +349,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
 	root.player_aspect_ability_component.call("configure_mode_cooldowns", 2.0, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
-	equipment_visual.initialize(root); root.player_equipment_visual_component = equipment_visual
+	equipment_visual.initialize(root._equipment_visual_context()); root.player_equipment_visual_component = equipment_visual
 	root._set_target_ui_visible(false)
 	var player_health: float = root._player_max_health(); health.maximum_health = player_health; health.reset(player_health); root.player_display_health = player_health; root._update_player_health_ui()
 	root._update_player_mp_ui()

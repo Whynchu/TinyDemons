@@ -21,6 +21,7 @@ var player_is_rolling_get: Callable = Callable()
 var player_is_backflipping_get: Callable = Callable()
 var player_hitstun_timer_get: Callable = Callable()
 var actor_foot: Callable = Callable()
+var build_equipment_visual_context: Callable = Callable()
 
 
 func is_valid() -> bool:

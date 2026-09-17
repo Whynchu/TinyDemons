@@ -154,7 +154,7 @@ func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animati
 	anim.apply_frame(root)
 	var equipment_visual := root.player_equipment_visual_component
 	if equipment_visual != null:
-		equipment_visual.begin_attack_visual(root)
+		equipment_visual.begin_attack_visual(root._equipment_visual_context())
 	if new_kind == AttackKind.CHARGED_ATTACK2:
 		var chroma := root.player_chroma_component
 		var beam_palette := String(root.current_player_palette_name)
@@ -238,7 +238,7 @@ func begin_charge(root: GameplayState) -> bool:
 	root.player_animation_component.apply_frame(root)
 	var equipment_visual := root.player_equipment_visual_component
 	if equipment_visual != null:
-		equipment_visual.begin_attack_visual(root)
+		equipment_visual.begin_attack_visual(root._equipment_visual_context())
 	return true
 
 

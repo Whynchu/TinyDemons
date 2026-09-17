@@ -434,7 +434,7 @@ func _menu_back_prompt() -> String: return input_device_tracker.menu_back_prompt
 func _is_ui_direction_just_pressed(direction: StringName) -> bool: return input_router != null and input_router.ui_direction_just_pressed(direction)
 func _apply_player_palette_async(palette_name: String) -> void:
 	if player_animation_component != null: player_animation_component.apply_palette_async(self, palette_name)
-	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(self)
+	if player_equipment_visual_component != null: player_equipment_visual_component.apply_palette(gameplay_frame_controller.equipment_visual_context(self))
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null:
 		player_hud.call("apply_bar_colors", _health_feedback_color(palette_name), PaletteLibrary.accent(palette_name))
@@ -593,7 +593,7 @@ func _start_player_death() -> void:
 	_cancel_magic_animation()
 	_reset_magic_runtime(true)
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
-	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(self)
+	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(gameplay_frame_controller.equipment_visual_context(self))
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, 0.8)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
 func _build_game_over_ui() -> void: var controls: Dictionary = screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title")); game_over_overlay = controls["overlay"] as ColorRect; game_over_button = controls["restart"] as Button; game_over_title_button = controls["title"] as Button; screen_state_controller.game_over_cursor_text = controls["cursor"] as Sprite2D; screen_state_controller.game_over_footer_text = controls["footer"] as Sprite2D

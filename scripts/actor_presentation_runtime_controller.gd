@@ -280,7 +280,7 @@ func update_actor_occlusion(root: Object, delta: float) -> void:
 	(root.get("occlusion_renderer") as OcclusionRenderer).update_actor_occlusion(actors, root.get("occluder_sprites") as Array[Sprite2D], player, target, focus_lost, delta, release_grace, Callable(root, "_is_actor_occlusion_flashing"), Callable(root, "_depth_key"), Callable(root, "_sprite_source_global_rect"), Callable(root, "_build_exact_occluded_actor_texture"), Callable(root, "_apply_actor_scale"), Callable(root, "_restore_actor_base_visual_scale"))
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.update_occlusion(root, delta)
+		equipment_visual.update_occlusion(root._equipment_visual_context(), delta)
 
 
 func is_actor_occlusion_flashing(root: Object, actor: Sprite2D) -> bool:

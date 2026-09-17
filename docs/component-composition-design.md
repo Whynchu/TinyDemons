@@ -355,6 +355,42 @@ Each step keeps the explicit frame schedule and moves one complete
 responsibility with its state and tests. Do not split a file solely because its
 line count is large; characterize the boundary first.
 
+## Road to 90% completion
+
+Current: **≈ 76.7%** (components 18 blind / 16 configured / 16 both of 20;
+definitions 10 of 17 editor-able). Target: **90%**, which needs **+13.3
+points** on the weighted composite.
+
+Each remaining non-blind component made blind + editor-configured adds **+3.75
+points**. Each definition surface converted to an editor-inspectable resource
+adds **+1.47 points**.
+
+**Definition reality check:** the `dungeon_layout_run3/4/5/6.gd` builders carry
+no authored data — they are pure flame-selection + compiler delegation, and the
+actual authored grids live in `puzzle_map_r3.gd`, `puzzle_map_r4.gd`,
+`puzzle_map_r5.gd`, and `puzzle_map_r3_new.gd`. Those plan files are not in the
+definition-surface list. So the honest definition lever is `item_catalog` and
+`dungeon_layout_run2` (+2.94 total), not six run surfaces.
+
+The clean plan to 90%:
+
+| Slice | Change | Points | Risk |
+|---|---:|---:|---|
+| A1 | `player_equipment_visual_component` → `PlayerEquipmentVisualContext` + `@export` (65 root sites) | **+3.75 (done → 80.5%)** | High — pixel presentation, occlusion, imbue, death visuals |
+| A2 | `player_animation_component` → typed context + `@export` (86 root sites) | +3.75 | High — palette recolor, frame slicing, HUD coordination |
+| B1 | `item_catalog.gd` definitions → `ItemCatalogData` `.tres` | +1.47 | High — save/equipment compatibility |
+| B2 | `dungeon_layout_run2.gd` static rooms → `.tres` | +1.47 | Medium — route/flame behavior |
+| C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | +1.47 × 4 | Medium — authored grid plans become editor-inspectable |
+| **Total** | | **≈ +14.7 → 91.4%** | |
+
+A1 + A2 + B1 + B2 alone reach **87.2%**; C1 (adding the four authored puzzle
+plans as definition surfaces) supplies the final ~4.4 points to clear 90%. C1
+is a deliberate metric-scope change: those plan files are authored content and
+belong on the definition surface list. Each slice must run the focused smokes
+for its owner and a visual check before the baseline re-lock, per the refactor
+rules. `item_catalog` must preserve stable item IDs and save round-trips
+byte-for-byte.
+
 ## Rules and guardrails
 
 - Preserve the explicit frame schedule; do not add independent `_process()`

@@ -483,7 +483,7 @@ func tick_coordinator_animation(root: Object, delta: float) -> void:
 				apply_frame(root)
 				var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 				if equipment_visual != null:
-					equipment_visual.finish_spin_attack_visual(root)
+					equipment_visual.finish_spin_attack_visual(root._equipment_visual_context())
 				return
 			if attack_name == "attack1" and attack_component != null and attack_component.should_enter_charge():
 				attack_component.begin_charge(root)
