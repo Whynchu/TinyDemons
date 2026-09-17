@@ -44,255 +44,30 @@ const SET_GEAR_DROP_WEIGHT := 0.5
 const RANDOM_STAT_KEYS: Array[String] = ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]
 const SET_IDS: Array[StringName] = [&"swift", &"soldier", &"guard", &"blood", &"arcane", &"soul", &"edge", &"oath", &"rune"]
 
-## The live catalogue is intentionally small and explicit. The older catalogue
-## below remains readable for save compatibility, but only these records can be
-## generated, bought, fused, or shown as current design data.
-const LIVE_BASE_DEFINITIONS := {
-	&"plain_blade": {"name": "PLAIN BLADE", "slot": &"weapon", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain blade."},
-	&"plain_hood": {"name": "PLAIN HOOD", "slot": &"head", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain hood."},
-	&"plain_tunic": {"name": "PLAIN TUNIC", "slot": &"body", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain tunic."},
-	&"plain_wraps": {"name": "PLAIN WRAPS", "slot": &"arm", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "Plain hand wraps."},
-	&"plain_shield": {"name": "PLAIN SHIELD", "slot": &"shield", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "shield": {"guard_durability": 1.0, "guard_reduction": 0.0}, "price": 8, "description": "A plain shield."},
-	&"plain_ring": {"name": "PLAIN RING", "slot": &"accessory", "gear_tier": "plain", "tier_stat": "", "bonuses": {}, "price": 8, "description": "A plain ring."},
-	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "gear_tier": "basic", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 25, "description": "A dependable sword."},
-	&"basic_hood": {"name": "BASIC HOOD", "slot": &"head", "gear_tier": "basic", "tier_stat": "vitality", "bonuses": {"vitality": 1.0}, "price": 25, "description": "A dependable hood."},
-	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"body", "gear_tier": "basic", "tier_stat": "vitality", "bonuses": {"vitality": 1.0, "defense": 1.0}, "price": 30, "description": "A dependable tunic."},
-	&"basic_wraps": {"name": "BASIC WRAPS", "slot": &"arm", "gear_tier": "basic", "tier_stat": "strength", "bonuses": {"strength": 1.0}, "price": 25, "description": "A dependable pair of wraps."},
-	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "gear_tier": "basic", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "defense": 2.0, "agi": -1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 30, "description": "A dependable shield."},
-	&"basic_charm": {"name": "BASIC CHARM", "slot": &"accessory", "gear_tier": "basic", "tier_stat": "vitality", "bonuses": {"vitality": 1.0, "strength": 1.0}, "price": 25, "description": "A dependable charm."},
-}
+## Authoring data loads from resources/definitions/item_catalog.tres so the full
+## catalogue (live bases, sets, expansion records, metadata, transmutations) is
+## editor-inspectable. Instance fields keep the legacy bare-identifier call sites
+## working without a static rewrite.
+const DATA_PATH := "res://resources/definitions/item_catalog.tres"
 
-## Every set has one item in every slot. Secondary stats and penalties are
-## deliberately visible in the flat package; only the authored primary lane
-## and independent random `+` lanes receive the rarity/fusion ladder.
-const SET_DEFINITIONS := {
-	&"swift": {
-		&"weapon": {"name": "SWIFT BLADE", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 70, "description": "Movement first."},
-		&"head": {"name": "SWIFT CAP", "tier_stat": "agi", "bonuses": {"agi": 2.0}, "price": 60, "description": "Light and quick."},
-		&"body": {"name": "SWIFT CLOAK", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 75, "description": "Move through danger."},
-		&"arm": {"name": "SWIFT GLOVES", "tier_stat": "agi", "bonuses": {"agi": 2.0}, "price": 60, "description": "Keep your hands light."},
-		&"shield": {"name": "SWIFT BUCKLER", "tier_stat": "agi", "bonuses": {"agi": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 65, "description": "A shield for active fighters."},
-		&"accessory": {"name": "SWIFT BOOTS", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 70, "description": "Movement is the job."},
-	},
-	&"soldier": {
-		&"weapon": {"name": "SOLDIER SWORD", "tier_stat": "strength", "bonuses": {"strength": 3.0}, "price": 80, "description": "Force with a hard mobility cost."},
-		&"head": {"name": "SOLDIER HELM", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0}, "price": 70, "description": "A helm for the front line."},
-		&"body": {"name": "SOLDIER MAIL", "tier_stat": "strength", "bonuses": {"strength": 3.0, "vitality": 1.0, "agi": -2.0}, "price": 85, "description": "Heavy force, poor mobility."},
-		&"arm": {"name": "SOLDIER GLOVES", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 70, "description": "Built for committed blows."},
-		&"shield": {"name": "SOLDIER SHIELD", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0, "agi": -2.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 80, "description": "Power with a real speed loss."},
-		&"accessory": {"name": "SOLDIER CHARM", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 70, "description": "A simple soldier's charm."},
-	},
-	&"guard": {
-		&"weapon": {"name": "GUARD BLADE", "tier_stat": "defense", "bonuses": {"defense": 2.0, "strength": 1.0}, "price": 80, "description": "Turn defense into pressure."},
-		&"head": {"name": "GUARD HELM", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 1.0, "agi": -1.0}, "price": 75, "description": "Protection with a small speed loss."},
-		&"body": {"name": "GUARD PLATE", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 2.0, "agi": -1.0}, "price": 90, "description": "Hold the line."},
-		&"arm": {"name": "GUARD BRACERS", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "price": 70, "description": "Steady defense."},
-		&"shield": {"name": "GUARD SHIELD", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 1.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0}, "price": 95, "description": "The strongest guard."},
-		&"accessory": {"name": "GUARD RING", "tier_stat": "defense", "bonuses": {"defense": 1.0, "vitality": 1.0}, "price": 70, "description": "Reliable protection."},
-	},
-	&"blood": {
-		&"weapon": {"name": "BLOOD BLADE", "tier_stat": "vitality", "bonuses": {"vitality": 3.0, "strength": 1.0, "agi": -1.0}, "price": 80, "description": "Health first."},
-		&"head": {"name": "BLOOD HOOD", "tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "price": 65, "description": "A deep reserve of health."},
-		&"body": {"name": "BLOOD TUNIC", "tier_stat": "vitality", "bonuses": {"vitality": 3.0, "agi": -1.0}, "price": 85, "description": "A sturdy life pool."},
-		&"arm": {"name": "BLOOD WRAPS", "tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "price": 65, "description": "Endure the exchange."},
-		&"shield": {"name": "BLOOD SHIELD", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "defense": 1.0, "agi": -1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 80, "description": "Health with a speed cost."},
-		&"accessory": {"name": "BLOOD RING", "tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "price": 70, "description": "Wear the extra life."},
-	},
-	&"arcane": {
-		&"weapon": {"name": "ARCANE SWORD", "tier_stat": "intelligence", "bonuses": {"intelligence": 3.0}, "price": 80, "description": "Spell power in a blade."},
-		&"head": {"name": "ARCANE HOOD", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 70, "description": "A clear magical focus."},
-		&"body": {"name": "ARCANE ROBE", "tier_stat": "intelligence", "bonuses": {"intelligence": 3.0, "mnd": 1.0, "defense": -1.0}, "price": 90, "description": "Power over physical cover."},
-		&"arm": {"name": "ARCANE SLEEVES", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 70, "description": "Guide the spell."},
-		&"shield": {"name": "ARCANE SHIELD", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 80, "description": "A shield for a caster."},
-		&"accessory": {"name": "ARCANE CHARM", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 75, "description": "More magic, less steel."},
-	},
-	&"soul": {
-		&"weapon": {"name": "SOUL BLADE", "tier_stat": "mnd", "bonuses": {"mnd": 3.0, "intelligence": 1.0}, "price": 80, "description": "Mind over force."},
-		&"head": {"name": "SOUL HOOD", "tier_stat": "mnd", "bonuses": {"mnd": 2.0}, "price": 70, "description": "A quiet mind."},
-		&"body": {"name": "SOUL CLOAK", "tier_stat": "mnd", "bonuses": {"mnd": 3.0, "defense": 1.0, "strength": -1.0}, "price": 90, "description": "Magic defense over physical force."},
-		&"arm": {"name": "SOUL WRAPS", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 70, "description": "Keep the mind steady."},
-		&"shield": {"name": "SOUL BUCKLER", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 80, "description": "A small ward of will."},
-		&"accessory": {"name": "SOUL SEAL", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 75, "description": "A seal for the inner fight."},
-	},
-	&"edge": {
-		&"weapon": {"name": "EDGE BLADE", "tier_stat": "agi", "bonuses": {"agi": 3.0, "strength": 1.0}, "price": 80, "description": "Speed with a sharp finish."},
-		&"head": {"name": "EDGE CAP", "tier_stat": "agi", "bonuses": {"agi": 2.0}, "price": 65, "description": "Light and precise."},
-		&"body": {"name": "EDGE CLOAK", "tier_stat": "agi", "bonuses": {"agi": 3.0, "strength": 1.0, "defense": -2.0}, "price": 85, "description": "Precision over protection."},
-		&"arm": {"name": "EDGE GLOVES", "tier_stat": "agi", "bonuses": {"agi": 2.0, "strength": 1.0}, "price": 70, "description": "Keep the attack clean."},
-		&"shield": {"name": "EDGE BUCKLER", "tier_stat": "agi", "bonuses": {"agi": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 70, "description": "A shield that stays out of the way."},
-		&"accessory": {"name": "EDGE BOOTS", "tier_stat": "agi", "bonuses": {"agi": 3.0}, "price": 75, "description": "Take the opening."},
-	},
-	&"oath": {
-		&"weapon": {"name": "OATH SWORD", "tier_stat": "defense", "bonuses": {"strength": 2.0, "defense": 1.0}, "price": 80, "description": "A balanced combat promise."},
-		&"head": {"name": "OATH HELM", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "price": 70, "description": "Stand firm."},
-		&"body": {"name": "OATH MAIL", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 2.0}, "price": 85, "description": "A broad middle path."},
-		&"arm": {"name": "OATH BRACERS", "tier_stat": "defense", "bonuses": {"defense": 1.0, "strength": 1.0}, "price": 70, "description": "Force and guard together."},
-		&"shield": {"name": "OATH SHIELD", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 2.0}, "price": 85, "description": "A dependable shield."},
-		&"accessory": {"name": "OATH CHARM", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 2.0, "strength": 1.0}, "price": 80, "description": "A little of everything, built around standing firm."},
-	},
-	&"rune": {
-		&"weapon": {"name": "RUNE BLADE", "tier_stat": "strength", "bonuses": {"strength": 3.0, "intelligence": 1.0}, "price": 90, "description": "A brutal battle mage's blade."},
-		&"head": {"name": "RUNE HOOD", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0, "mnd": -1.0}, "price": 75, "description": "Power without calm."},
-		&"body": {"name": "RUNE ROBE", "tier_stat": "strength", "bonuses": {"strength": 2.0, "intelligence": 2.0, "defense": -2.0, "mnd": -1.0}, "price": 95, "description": "A brutal robe with poor defense."},
-		&"arm": {"name": "RUNE GLOVES", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0}, "price": 75, "description": "Strike through the spell."},
-		&"shield": {"name": "RUNE SHIELD", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0, "defense": -1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 85, "description": "A battle mage's compromise."},
-		&"accessory": {"name": "RUNE CHARM", "tier_stat": "strength", "bonuses": {"strength": 1.0, "intelligence": 1.0, "mnd": -1.0}, "price": 80, "description": "More power, less restraint."},
-	},
-}
+var live_base_ids: Array[StringName] = []
+var live_base_definitions: Dictionary = {}
+var set_definitions: Dictionary = {}
+var definitions: Dictionary = {}
+var definition_metadata: Dictionary = {}
+var transmutations: Dictionary = {}
 
-const LIVE_BASE_IDS: Array[StringName] = [&"plain_blade", &"plain_hood", &"plain_tunic", &"plain_wraps", &"plain_shield", &"plain_ring", &"basic_sword", &"basic_hood", &"basic_tunic", &"basic_wraps", &"basic_shield", &"basic_charm"]
 
-const DEFINITIONS := {
-	# Weapon — the original six bases plus the approved expansion identities.
-	&"basic_sword": {"name": "BASIC SWORD", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 2.0}, "price": 45},
-	&"soldier_sword": {"name": "SOLDIER SWORD", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 3.0, "agility": -1.0}, "price": 90},
-	&"guardian_blade": {"name": "GUARDIAN BLADE", "slot": &"weapon", "tier_stat": "defense", "bonuses": {"defense": 2.0, "agility": -1.0}, "price": 95},
-	&"blood_blade": {"name": "BLOOD BLADE", "slot": &"weapon", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "agility": -1.0}, "price": 115},
-	&"iron_maul": {"name": "IRON MAUL", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 2.0, "agility": -1.0}, "price": 105},
-	&"quick_dagger": {"name": "QUICK DAGGER", "slot": &"weapon", "tier_stat": "agility", "bonuses": {"agility": 3.0}, "price": 75},
-	&"emberbrand": {"name": "EMBERBRAND", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 3.0, "agility": -1.0}, "price": 135},
-	&"tideglass_rapier": {"name": "TIDEGLASS RAPIER", "slot": &"weapon", "tier_stat": "agility", "bonuses": {"agility": 2.0, "intelligence": 1.0}, "price": 140},
-	&"rootbreaker": {"name": "ROOTBREAKER", "slot": &"weapon", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0, "agility": -1.0}, "price": 145},
-	&"mindweave_rod": {"name": "MINDWEAVE ROD", "slot": &"weapon", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 140},
-
-	# Head — `plain_hood` is intentionally the only zero-power exception.
-	&"plain_hood": {"name": "PLAIN HOOD", "slot": &"head", "tier_stat": "", "bonuses": {}, "price": 1},
-	&"iron_helm": {"name": "IRON HELM", "slot": &"head", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0, "agility": -1.0}, "price": 115},
-	&"feather_cap": {"name": "FEATHER CAP", "slot": &"head", "tier_stat": "agility", "bonuses": {"agility": 2.0, "mnd": 1.0}, "price": 100},
-	&"mind_circlet": {"name": "MIND CIRCLET", "slot": &"head", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 125},
-	&"ember_crown": {"name": "EMBER CROWN", "slot": &"head", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 145},
-	&"shadow_mask": {"name": "SHADOW MASK", "slot": &"head", "tier_stat": "agility", "bonuses": {"agility": 2.0, "mnd": 1.0}, "price": 135},
-
-	# Body — these entries retain their old IDs; their slot is now canonical.
-	&"basic_tunic": {"name": "BASIC TUNIC", "slot": &"body", "tier_stat": "vitality", "bonuses": {"vitality": 1.0, "defense": 1.0}, "price": 45},
-	&"bloodwoven_tunic": {"name": "BLOODWOVEN TUNIC", "slot": &"body", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "agility": 1.0}, "price": 110},
-	&"iron_cuirass": {"name": "IRON CUIRASS", "slot": &"body", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0, "agility": -1.0}, "price": 105},
-	&"feather_cloak": {"name": "FEATHER CLOAK", "slot": &"body", "tier_stat": "agility", "bonuses": {"agility": 3.0}, "price": 80},
-	&"mindweave_robe": {"name": "MINDWEAVE ROBE", "slot": &"body", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 125},
-	&"chainmail": {"name": "CHAINMAIL", "slot": &"body", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "defense": 1.0}, "price": 95},
-	&"ash_mantle": {"name": "ASH MANTLE", "slot": &"body", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "intelligence": 1.0}, "price": 140},
-	&"rootplate": {"name": "ROOTPLATE", "slot": &"body", "tier_stat": "defense", "bonuses": {"defense": 3.0, "vitality": 1.0, "agility": -1.0}, "price": 150},
-	&"demon_cloak": {"name": "DEMON CLOAK", "slot": &"body", "tier_stat": "agility", "tier_stats": ["defense"], "bonuses": {"defense": 3.0, "vitality": 2.0, "mnd": 2.0, "agility": 4.0}, "price": 200},
-
-	# Arm — the second new slot is action-facing, not a second accessory.
-	&"cloth_wraps": {"name": "CLOTH WRAPS", "slot": &"arm", "tier_stat": "", "bonuses": {}, "price": 1},
-	&"iron_gauntlets": {"name": "IRON GAUNTLETS", "slot": &"arm", "tier_stat": "strength", "bonuses": {"strength": 2.0, "agility": -1.0}, "price": 115},
-	&"duelist_gloves": {"name": "DUELIST GLOVES", "slot": &"arm", "tier_stat": "agility", "bonuses": {"agility": 2.0, "strength": 1.0}, "price": 125},
-	&"sage_sleeves": {"name": "SAGE SLEEVES", "slot": &"arm", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 130},
-	&"guard_bracers": {"name": "GUARD BRACERS", "slot": &"arm", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0}, "price": 120},
-	&"thorn_claws": {"name": "THORN CLAWS", "slot": &"arm", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0}, "price": 135},
-
-	# Shield — guard data stays in the dedicated shield package.
-	&"basic_shield": {"name": "BASIC SHIELD", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "agility": -1.0, "defense": 2.0}, "shield": {"guard_durability": 2.0, "guard_reduction": 1.0}, "price": 45},
-	&"living_bulwark": {"name": "LIVING BULWARK", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "agility": -2.0, "defense": 3.0}, "shield": {"guard_durability": 4.0, "guard_reduction": 3.0}, "price": 110},
-	&"thorn_guard": {"name": "THORN GUARD", "slot": &"shield", "tier_stat": "vitality", "bonuses": {"vitality": 2.0, "agility": -1.0, "defense": 2.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0}, "price": 105},
-	&"parry_buckler": {"name": "PARRY BUCKLER", "slot": &"shield", "tier_stat": "defense", "bonuses": {"vitality": 1.0, "defense": 2.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 50},
-	&"mirror_ward": {"name": "MIRROR WARD", "slot": &"shield", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "defense": 1.0}, "shield": {"guard_durability": 1.0, "guard_reduction": 1.0}, "price": 140},
-	&"frostwall": {"name": "FROSTWALL", "slot": &"shield", "tier_stat": "defense", "bonuses": {"defense": 2.0, "vitality": 1.0, "agility": -1.0}, "shield": {"guard_durability": 3.0, "guard_reduction": 2.0}, "price": 145},
-
-	# Accessory — one flexible slot, with no direct currency multiplier.
-	&"bangle": {"name": "BANGLE", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 1.0, "vitality": 1.0, "agility": 1.0}, "price": 45},
-	&"duelist_seal": {"name": "DUELIST SEAL", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 2.0, "agility": -1.0}, "price": 105},
-	&"warrior_charm": {"name": "WARRIOR CHARM", "slot": &"accessory", "tier_stat": "strength", "bonuses": {"strength": 2.0, "defense": 1.0, "agility": -1.0}, "price": 100},
-	&"swift_boots": {"name": "SWIFT BOOTS", "slot": &"accessory", "tier_stat": "agility", "bonuses": {"agility": 3.0}, "price": 85},
-	&"chroma_talisman": {"name": "CHROMA TALISMAN", "slot": &"accessory", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 125},
-	&"soul_locket": {"name": "SOUL LOCKET", "slot": &"accessory", "tier_stat": "mnd", "bonuses": {"mnd": 2.0, "vitality": 1.0}, "price": 120},
-	&"runebound_knot": {"name": "RUNEBOUND KNOT", "slot": &"accessory", "tier_stat": "agility", "bonuses": {"agility": 2.0, "intelligence": 1.0}, "price": 135},
-	&"elemental_knot": {"name": "ELEMENTAL KNOT", "slot": &"accessory", "tier_stat": "intelligence", "bonuses": {"intelligence": 2.0, "mnd": 1.0}, "price": 145},
-}
-
-## Non-stat definition data is kept beside the compact legacy records above so
-## old callers can continue reading `DEFINITIONS` while new systems consume a
-## complete authored record through `definition_data()`.
-const DEFINITION_METADATA := {
-	&"basic_sword": {"family": "blade", "role_tags": ["physical", "baseline"], "primary_stat": "strength", "effects": {}, "source_tags": ["starter", "shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "blade", "visual_id": "sword", "description": "A dependable blade with no trick."},
-	&"soldier_sword": {"family": "blade", "role_tags": ["physical", "multi_target"], "primary_stat": "strength", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "blade", "visual_id": "sword", "description": "Attack 1 against several targets improves the same-target share of Attack 2."},
-	&"guardian_blade": {"family": "blade", "role_tags": ["physical", "defense"], "primary_stat": "defense", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "blade", "visual_id": "sword", "description": "A defensive blade that turns DEF into a deliberate offensive choice."},
-	&"blood_blade": {"family": "blade", "role_tags": ["physical", "health_risk"], "primary_stat": "vitality", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "blade", "visual_id": "sword", "description": "Damage dealt can return a bounded portion of the hit as health."},
-	&"iron_maul": {"family": "maul", "role_tags": ["physical", "charge"], "primary_stat": "strength", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "maul", "visual_id": "maul", "description": "A heavy weapon whose committed timing is the price of its force."},
-	&"quick_dagger": {"family": "dagger", "role_tags": ["physical", "mobility"], "primary_stat": "agility", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "dagger", "visual_id": "dagger", "description": "A light blade for movement, running attacks, and follow-ups."},
-	&"emberbrand": {"family": "blade", "role_tags": ["physical", "fire", "imbue"], "primary_stat": "strength", "effects": {"imbue_resonance": {"element": "fire", "magic_multiplier": 0.08, "mode": "matching_imbue", "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "blade", "visual_id": "sword_fire", "description": "Matching Fire Imbue strengthens its magic portion without changing the demon's aspect."},
-	&"tideglass_rapier": {"family": "dagger_blade", "role_tags": ["physical", "water", "imbue", "mobility"], "primary_stat": "agility", "effects": {"imbue_resonance": {"element": "water", "magic_multiplier": 0.08, "mode": "matching_imbue", "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "dagger", "visual_id": "rapier_water", "description": "A mobile precision blade for a matching Water Imbue."},
-	&"rootbreaker": {"family": "maul", "role_tags": ["physical", "charge", "knockback"], "primary_stat": "strength", "effects": {"charge_profile": {"lunge_multiplier": 1.10, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "maul", "visual_id": "maul_root", "description": "A grounded maul for charged openings, lunge control, and knockback decisions."},
-	&"mindweave_rod": {"family": "focus_rod", "role_tags": ["magic", "mnd", "imbue"], "primary_stat": "intelligence", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "focus", "visual_id": "rod", "description": "Strengthens Triangle and Imbue magic while leaving the physical STR portion intact."},
-
-	&"plain_hood": {"family": "cloth", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "source_tags": ["shop", "chest", "clear_reward", "boss"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "hood", "description": "Fills the Head slot without changing combat power."},
-	&"plain_wraps": {"family": "wraps", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "source_tags": ["shop", "chest", "clear_reward", "boss"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "wraps", "description": "Fills the Arm slot without adding free combat power."},
-	&"iron_helm": {"family": "helm", "role_tags": ["defense", "heavy"], "primary_stat": "defense", "effects": {"recovery_multiplier": {"multiplier": 1.05, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "helm", "visual_id": "helm", "description": "Heavy protection with a visible recovery tradeoff."},
-	&"feather_cap": {"family": "light_headgear", "role_tags": ["agility", "magic_defense", "light"], "primary_stat": "agility", "effects": {"recovery_multiplier": {"multiplier": 0.95, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "head", "visual_id": "cap", "description": "Light headgear for staying active through clean movement and recovery."},
-	&"mind_circlet": {"family": "circlet", "role_tags": ["mnd", "magic", "defense"], "primary_stat": "mnd", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "circlet", "visual_id": "circlet", "description": "Raises M.DEF through MND and supports the magic side of the kit."},
-	&"ember_crown": {"family": "elemental_crown", "role_tags": ["intelligence", "fire", "ward"], "primary_stat": "intelligence", "effects": {"elemental_ward": {"element": "fire", "multiplier": 0.90, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "epic", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "crown", "visual_id": "crown_fire", "description": "Reduces Fire pressure after the shared elemental matchup step."},
-	&"shadow_mask": {"family": "mask", "role_tags": ["agility", "shadow", "ward"], "primary_stat": "agility", "effects": {"elemental_ward": {"element": "shadow", "multiplier": 0.90, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "epic", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "mask", "visual_id": "mask_shadow", "description": "Adds Shadow protection without changing the demon's own element."},
-
-	&"basic_tunic": {"family": "tunic", "role_tags": ["vitality", "defense", "baseline"], "primary_stat": "vitality", "effects": {}, "source_tags": ["starter", "shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "tunic", "visual_id": "tunic", "description": "A plain survival baseline for learning rooms and building VIT."},
-	&"bloodwoven_tunic": {"family": "tunic", "role_tags": ["vitality", "health_risk"], "primary_stat": "vitality", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "tunic", "visual_id": "tunic_blood", "description": "Core HP and VIT make health-risk choices more forgiving."},
-	&"iron_cuirass": {"family": "heavy_armor", "role_tags": ["defense", "vitality", "heavy"], "primary_stat": "defense", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "heavy_armor", "visual_id": "cuirass", "description": "Reliable physical protection that gives up some mobility."},
-	&"feather_cloak": {"family": "cloak", "role_tags": ["agility", "light"], "primary_stat": "agility", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "cloak", "visual_id": "cloak", "description": "A mobile body layer for surviving through repositioning."},
-	&"mindweave_robe": {"family": "robe", "role_tags": ["mnd", "magic", "defense"], "primary_stat": "mnd", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "robe", "visual_id": "robe", "description": "A magic-defense body layer that supports M.DEF and Triangle."},
-	&"chainmail": {"family": "mail", "role_tags": ["vitality", "defense", "balanced"], "primary_stat": "vitality", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "mail", "visual_id": "chainmail", "description": "A dependable middle path with no sharp action requirement."},
-	&"ash_mantle": {"family": "mantle", "role_tags": ["mnd", "fire", "imbue"], "primary_stat": "mnd", "effects": {"imbue_resonance": {"element": "fire", "magic_multiplier": 0.06, "mode": "matching_imbue", "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "mantle", "visual_id": "mantle_ash", "description": "A Fire-attuned layer that improves matching Imbue without assigning Fire to the demon."},
-	&"rootplate": {"family": "heavy_plate", "role_tags": ["defense", "vitality", "knockback", "heavy"], "primary_stat": "defense", "effects": {"knockback_resistance": {"multiplier": 0.15, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "plate", "visual_id": "plate_root", "description": "Holds ground against forceful enemies at a clear mobility cost."},
-	&"demon_cloak": {"family": "cloak", "role_tags": ["agility", "defense", "vitality", "mnd", "premium", "dual_slot"], "primary_stat": "agility", "effects": {}, "source_tags": ["cloaked_demon"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "cloak", "visual_id": "cloak_demon", "description": "A living cloak from the Cloaked Demon. It wears over Body and Head together, and only he sells it — each one costs more than the last."},
-
-	&"cloth_wraps": {"family": "wraps", "role_tags": ["starter", "zero_power"], "primary_stat": "", "effects": {}, "starter_only": true, "source_tags": ["starter"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "common", "shop_eligible": false, "fusion_group": "starter", "visual_id": "wraps", "description": "Fills the Arm slot without adding free combat power."},
-	&"iron_gauntlets": {"family": "gauntlets", "role_tags": ["strength", "charge", "heavy"], "primary_stat": "strength", "effects": {"charge_profile": {"lunge_multiplier": 1.08, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "gauntlets", "visual_id": "gauntlets", "description": "Put weight behind charged attacks and accept a handling cost."},
-	&"duelist_gloves": {"family": "gloves", "role_tags": ["agility", "attack_two", "recovery"], "primary_stat": "agility", "effects": {"running_attack_profile": {"lunge_multiplier": 1.06, "status": "future"}}, "source_tags": ["chest", "clear_reward"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "gloves", "visual_id": "gloves", "description": "Reward the timing between a roll, a run, and the next attack without awarding Style."},
-	&"sage_sleeves": {"family": "sleeves", "role_tags": ["intelligence", "mnd", "magic"], "primary_stat": "intelligence", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "sleeves", "visual_id": "sleeves", "description": "Strengthen Triangle and the magic portion of Imbue."},
-	&"guard_bracers": {"family": "bracers", "role_tags": ["defense", "guard", "vitality"], "primary_stat": "defense", "effects": {"guard_reduction": {"flat_points": 1.0, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "bracers", "visual_id": "bracers", "description": "Make active blocking matter without replacing the Shield slot."},
-	&"thorn_claws": {"family": "claws", "role_tags": ["strength", "defense", "knockback"], "primary_stat": "strength", "effects": {"attack_lunge": {"multiplier": 1.06, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "claws", "visual_id": "claws", "description": "Turn committed contact and knockback into a close-range decision."},
-
-	&"basic_shield": {"family": "shield", "role_tags": ["defense", "guard", "baseline"], "primary_stat": "defense", "effects": {}, "source_tags": ["starter", "shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "shield", "visual_id": "shield", "description": "Teaches the core block contract with a readable guard package."},
-	&"living_bulwark": {"family": "bulwark", "role_tags": ["defense", "guard", "heavy"], "primary_stat": "defense", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "bulwark", "visual_id": "bulwark", "description": "Converts DEF and successful blocks into a stronger Attack 2 opening."},
-	&"thorn_guard": {"family": "thorn_shield", "role_tags": ["vitality", "defense", "counter"], "primary_stat": "vitality", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "thorn_shield", "visual_id": "shield_thorn", "description": "Absorb pressure and choose when to answer."},
-	&"parry_buckler": {"family": "buckler", "role_tags": ["defense", "guard", "recovery"], "primary_stat": "defense", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "buckler", "visual_id": "buckler", "description": "Trade durability for a lighter, more responsive block rhythm."},
-	&"mirror_ward": {"family": "ward_shield", "role_tags": ["mnd", "defense", "water", "ward"], "primary_stat": "mnd", "effects": {"elemental_ward": {"element": "water", "multiplier": 0.90, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "epic", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "ward_shield", "visual_id": "shield_mirror", "description": "Protect against Water pressure after the shared matchup step."},
-	&"frostwall": {"family": "heavy_shield", "role_tags": ["defense", "vitality", "ice", "ward", "heavy"], "primary_stat": "defense", "effects": {"elemental_ward": {"element": "ice", "multiplier": 0.90, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 3, "minimum_player_level": 8, "rarity_floor": "epic", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "heavy_shield", "visual_id": "shield_frost", "description": "A stable wall against Ice pressure with a clear mobility cost."},
-
-	&"bangle": {"family": "bracelet", "role_tags": ["balanced", "baseline"], "primary_stat": "strength", "effects": {}, "source_tags": ["starter", "shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "bracelet", "visual_id": "bangle", "description": "A flexible bracelet with small benefits in several lanes."},
-	&"duelist_seal": {"family": "seal", "role_tags": ["strength", "target_lock"], "primary_stat": "strength", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "seal", "visual_id": "seal", "description": "Commit to a locked target for stronger STR scaling and accept the off-target tradeoff."},
-	&"warrior_charm": {"family": "charm", "role_tags": ["strength", "defense"], "primary_stat": "strength", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "charm", "visual_id": "charm", "description": "Value force and resilience over speed."},
-	&"swift_boots": {"family": "boots", "role_tags": ["agility", "mobility"], "primary_stat": "agility", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "boots", "visual_id": "boots", "description": "Make movement, running, and roll recovery the build's center."},
-	&"chroma_talisman": {"family": "talisman", "role_tags": ["intelligence", "mnd", "chroma"], "primary_stat": "intelligence", "effects": {}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "talisman", "visual_id": "talisman", "description": "Support the magic side of Chroma without granting free Souls or changing aspect."},
-	&"soul_locket": {"family": "locket", "role_tags": ["mnd", "vitality", "pickup"], "primary_stat": "mnd", "effects": {"pickup_radius": {"multiplier": 1.20, "status": "future"}}, "source_tags": ["shop", "chest", "clear_reward"], "minimum_run_rank": 1, "minimum_player_level": 1, "rarity_floor": "common", "rarity_ceiling": "mythic", "shop_eligible": true, "fusion_group": "locket", "visual_id": "locket", "description": "Collect Souls and Chroma more comfortably without increasing their value."},
-	&"runebound_knot": {"family": "knot", "role_tags": ["agility", "intelligence", "combo"], "primary_stat": "agility", "effects": {"combo_window": {"seconds": 0.15, "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "knot", "visual_id": "knot", "description": "Give sustained contact more room through the visible combo timer, not direct Style."},
-	&"elemental_knot": {"family": "knot", "role_tags": ["intelligence", "mnd", "imbue"], "primary_stat": "intelligence", "effects": {"imbue_resonance": {"element": "active_aspect", "magic_multiplier": 0.06, "mode": "matching_imbue", "status": "future"}}, "source_tags": ["chest", "clear_reward", "boss"], "minimum_run_rank": 2, "minimum_player_level": 5, "rarity_floor": "rare", "rarity_ceiling": "mythic", "shop_eligible": false, "fusion_group": "knot", "visual_id": "knot_elemental", "description": "Reward matching the active aspect without overriding it."},
-}
-
-const TRANSMUTATIONS := {
-	&"gathering_edge": {
-		"name": "GATHERING EDGE",
-		"slot": &"weapon",
-		"definitions": [&"soldier_sword"],
-		"description": "ATTACK 1 HITTING 2+ TARGETS IMPROVES ATTACK 2 SHARE.",
-	},
-	&"duelist_focus": {
-		"name": "DUELIST FOCUS",
-		"slot": &"accessory",
-		"definitions": [&"duelist_seal"],
-		"description": "LOCKED TARGET DMG SCALES WITH STR. OTHER TARGETS -20%.",
-	},
-	&"bloodwoven_core": {
-		"name": "BLOODWOVEN CORE",
-		"slot": &"body",
-		"definitions": [&"bloodwoven_tunic"],
-		"description": "CORE HP +12%. VIT-DERIVED HEALTH +20%.",
-		"effects": {"core_health_rate": 0.12, "vit_health_multiplier": 0.20},
-	},
-	&"blood_feed": {
-		"name": "BLOOD FEED",
-		"slot": &"weapon",
-		"definitions": [&"blood_blade"],
-		"min_rarity": &"legendary",
-		"description": "DAMAGE DEALT HEALS 20% OF THE HIT.",
-	},
-	&"bastion_core": {
-		"name": "BASTION CORE",
-		"slot": &"shield",
-		"definitions": [&"living_bulwark"],
-		"description": "DEF RAISES GUARD. BLOCKS CHARGE ATTACK 2 KNOCKBACK.",
-	},
-}
-
+func _init() -> void:
+	var data := load(DATA_PATH) as ItemCatalogData
+	if data == null:
+		return
+	live_base_ids = data.live_base_ids
+	live_base_definitions = data.live_base_definitions
+	set_definitions = data.set_definitions
+	definitions = data.definitions
+	definition_metadata = data.definition_metadata
+	transmutations = data.transmutations
 
 static func canonical_slot(slot: Variant) -> StringName:
 	var normalized := str(slot).to_lower()
@@ -308,7 +83,7 @@ func slot_label(slot: Variant) -> String:
 
 
 func live_definition_ids() -> Array[StringName]:
-	var result: Array[StringName] = LIVE_BASE_IDS.duplicate()
+	var result: Array[StringName] = live_base_ids.duplicate()
 	for set_id: StringName in SET_IDS:
 		for slot: StringName in SLOTS:
 			result.append(StringName("%s_%s" % [String(set_id), String(slot)]))
@@ -335,7 +110,7 @@ func _live_set_definition(definition_id: StringName) -> Dictionary:
 		if not value.begins_with(prefix):
 			continue
 		var slot := canonical_slot(value.substr(prefix.length()))
-		var set_records: Dictionary = SET_DEFINITIONS.get(set_id, {})
+		var set_records: Dictionary = set_definitions.get(set_id, {})
 		var record: Dictionary = set_records.get(slot, {}).duplicate(true)
 		if record.is_empty():
 			return {}
@@ -360,17 +135,17 @@ func _live_set_definition(definition_id: StringName) -> Dictionary:
 
 
 func definition_data(definition_id: StringName) -> Dictionary:
-	var is_live := LIVE_BASE_DEFINITIONS.has(definition_id) or _is_live_set_definition(definition_id)
-	var base: Dictionary = LIVE_BASE_DEFINITIONS.get(definition_id, {}).duplicate(true) if LIVE_BASE_DEFINITIONS.has(definition_id) else _live_set_definition(definition_id)
-	if base.is_empty() and DEFINITIONS.has(definition_id):
-		base = DEFINITIONS.get(definition_id, {}).duplicate(true)
+	var is_live := live_base_definitions.has(definition_id) or _is_live_set_definition(definition_id)
+	var base: Dictionary = live_base_definitions.get(definition_id, {}).duplicate(true) if live_base_definitions.has(definition_id) else _live_set_definition(definition_id)
+	if base.is_empty() and definitions.has(definition_id):
+		base = definitions.get(definition_id, {}).duplicate(true)
 	if base.is_empty():
 		return {}
 	# Metadata is the authored source of non-stat fields for both the compact
 	# live baseline records and the legacy catalogue. Keeping this merge
 	# unconditional prevents a live starter alias from silently losing its
 	# starter-only/source restrictions.
-	var metadata: Dictionary = DEFINITION_METADATA.get(definition_id, {})
+	var metadata: Dictionary = definition_metadata.get(definition_id, {})
 	for key: Variant in metadata:
 		base[key] = metadata[key]
 	base["slot"] = canonical_slot(base.get("slot", &""))
@@ -494,12 +269,12 @@ func definition_effects(definition_id: StringName) -> Dictionary:
 
 
 func definition_is_runtime_ready(definition_id: StringName) -> bool:
-	if LIVE_BASE_DEFINITIONS.has(definition_id) or _is_live_set_definition(definition_id):
+	if live_base_definitions.has(definition_id) or _is_live_set_definition(definition_id):
 		return true
-	if not DEFINITIONS.has(definition_id):
+	if not definitions.has(definition_id):
 		return false
-	var base: Dictionary = DEFINITIONS.get(definition_id, {})
-	var metadata: Dictionary = DEFINITION_METADATA.get(definition_id, {})
+	var base: Dictionary = definitions.get(definition_id, {})
+	var metadata: Dictionary = definition_metadata.get(definition_id, {})
 	var effects: Variant = metadata.get("effects", base.get("effects", {}))
 	if not effects is Dictionary:
 		return true
@@ -671,7 +446,7 @@ func generate_item(slot: StringName, generation_seed: int, level: int = 1, minim
 		if not available_transmutations.is_empty():
 			var eligible: Array[StringName] = []
 			for transmutation_id: StringName in available_transmutations:
-				var min_rarity := StringName(TRANSMUTATIONS[transmutation_id].get("min_rarity", &"epic"))
+				var min_rarity := StringName(transmutations[transmutation_id].get("min_rarity", &"epic"))
 				if _rarity_rank(item.rarity) >= _rarity_rank(min_rarity):
 					eligible.append(transmutation_id)
 			if not eligible.is_empty():
@@ -698,7 +473,7 @@ func _is_basic_gear(definition_id: StringName) -> bool:
 
 
 func _is_live_definition(definition_id: StringName) -> bool:
-	return LIVE_BASE_DEFINITIONS.has(definition_id) or _is_live_set_definition(definition_id)
+	return live_base_definitions.has(definition_id) or _is_live_set_definition(definition_id)
 
 
 func _gear_drop_weight(definition_id: StringName) -> float:
@@ -746,15 +521,15 @@ func _pick_weighted_definition(candidates: Array[StringName], weights: Array[flo
 
 func transmutations_for_definition(definition_id: StringName) -> Array[StringName]:
 	var result: Array[StringName] = []
-	for transmutation_id: StringName in TRANSMUTATIONS:
-		var definition: Dictionary = TRANSMUTATIONS[transmutation_id]
+	for transmutation_id: StringName in transmutations:
+		var definition: Dictionary = transmutations[transmutation_id]
 		if definition_id in definition.get("definitions", []):
 			result.append(transmutation_id)
 	return result
 
 
 func transmutation_is_eligible(definition_id: StringName, transmutation_id: StringName, rarity: StringName) -> bool:
-	var transmutation: Dictionary = TRANSMUTATIONS.get(transmutation_id, {})
+	var transmutation: Dictionary = transmutations.get(transmutation_id, {})
 	if transmutation.is_empty() or definition_id not in transmutation.get("definitions", []):
 		return false
 	var minimum_rarity := StringName(str(transmutation.get("min_rarity", "common")))
@@ -762,15 +537,15 @@ func transmutation_is_eligible(definition_id: StringName, transmutation_id: Stri
 
 
 func transmutation_name(transmutation_id: StringName) -> String:
-	return str(TRANSMUTATIONS.get(transmutation_id, {}).get("name", ""))
+	return str(transmutations.get(transmutation_id, {}).get("name", ""))
 
 
 func transmutation_description(transmutation_id: StringName) -> String:
-	return str(TRANSMUTATIONS.get(transmutation_id, {}).get("description", ""))
+	return str(transmutations.get(transmutation_id, {}).get("description", ""))
 
 
 func transmutation_effects(transmutation_id: StringName) -> Dictionary:
-	return TRANSMUTATIONS.get(transmutation_id, {}).get("effects", {}).duplicate(true)
+	return transmutations.get(transmutation_id, {}).get("effects", {}).duplicate(true)
 
 
 func rarity_color(rarity: StringName) -> Color:
