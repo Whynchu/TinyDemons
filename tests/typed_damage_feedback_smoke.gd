@@ -13,7 +13,7 @@ func _initialize() -> void:
 	var pixel_number := Callable(effects, "number_texture")
 	var snap_position := Callable(self, "_identity")
 
-	for element in range(ElementCatalogScript.ELEMENT_COUNT):
+	for element in range(ElementCatalogScript.element_count()):
 		var color := ElementCatalogScript.damage_number_color(element)
 		var texture := effects.number_texture("7", color)
 		_expect(_contains_color(texture, color), "element %s damage glyph uses its accent color" % ElementCatalogScript.id(element), failures)

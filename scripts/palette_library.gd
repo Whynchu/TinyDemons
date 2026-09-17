@@ -1,63 +1,79 @@
 extends RefCounted
 class_name PaletteLibrary
 
-const PALETTE_NAMES := ["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"]
+## Editor-inspectable palette color tables. The authored colors live in
+## resources/definitions/palette_library.tres; the static lookup API and the
+## const-style accessors are backed by that resource so there is one source of
+## truth and the editor can inspect and retune presentation tones.
 
-## Palettes the player may choose for their character.  Grey is excluded so the
-## grey player-state (empty MP) is never a selectable identity.
-const SELECTABLE_PALETTES := ["blue", "orange", "green", "red", "yellow", "purple", "aquamarine"]
+const DATA := preload("res://resources/definitions/palette_library.tres") as PaletteLibraryData
 
-## Palettes a rest fire may be assigned.  Grey is excluded so the grey flame no
-## longer spawns.
-const REST_FIRE_PALETTES := ["blue", "orange", "green", "red", "yellow", "purple", "aquamarine"]
+static var PALETTE_NAMES: Array = DATA.palette_names
+static var SELECTABLE_PALETTES: Array = DATA.selectable_palettes
+static var REST_FIRE_PALETTES: Array = DATA.rest_fire_palettes
+static var SHADOW: Dictionary = _normalize_color_dict(DATA.shadow)
+static var NORMAL: Dictionary = _normalize_color_dict(DATA.normal)
+static var ACCENT: Dictionary = _normalize_color_dict(DATA.accent)
+static var ARCHETYPE_HIGHLIGHTS: Array = _normalize_color_array(DATA.archetype_highlights)
+static var WHITE: Color = _normalize_color(DATA.white)
 
-const SHADOW := {
-	"blue": Color8(41, 54, 111), "orange": Color8(171, 82, 54),
-	"green": Color8(37, 113, 121), "red": Color8(93, 39, 93),
-	"yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82),
-	"purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116),
-	"grey_orb": Color8(86, 108, 134),
-}
 
-const NORMAL := {
-	"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87),
-	"green": Color8(56, 183, 100), "red": Color8(177, 62, 83),
-	"yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134),
-	"purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151),
-	"grey_orb": Color8(148, 176, 194),
-}
+## .tres serialization stores floats that can sit one ULP below the authored
+## 8-bit value (e.g. Color8(181, 97, 55) loads as g=0.380392, which truncates
+## to 96 in an RGBA8 image). Snap every color to its nearest 8-bit value so the
+## runtime palette is byte-exact with the original Color8 constants.
+static func _normalize_color(c: Color) -> Color:
+	return Color8(roundi(clampf(c.r, 0.0, 1.0) * 255.0), roundi(clampf(c.g, 0.0, 1.0) * 255.0), roundi(clampf(c.b, 0.0, 1.0) * 255.0), roundi(clampf(c.a, 0.0, 1.0) * 255.0))
 
-const ACCENT := {
-	"blue": Color8(65, 166, 246), "orange": Color8(255, 205, 117),
-	"green": Color8(167, 240, 112), "red": Color8(239, 125, 87),
-	"yellow": Color8(255, 240, 150),
-	"purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194),
-	"aquamarine": Color8(134, 203, 255),
-	"grey_orb": Color8(244, 244, 244),
-}
 
-const ARCHETYPE_HIGHLIGHTS := [
-	Color8(65, 166, 246), Color8(255, 205, 117), Color8(167, 240, 112),
-	Color8(239, 125, 87), Color8(255, 240, 150), Color8(148, 176, 194),
-	Color8(118, 78, 142), Color8(134, 203, 255),
-]
+static func _normalize_color_dict(values: Dictionary) -> Dictionary:
+	var result := {}
+	for key in values:
+		result[key] = _normalize_color(values[key] as Color)
+	return result
 
-const WHITE := Color8(244, 244, 244)
+
+static func _normalize_color_array(values: Array) -> Array:
+	var result: Array = []
+	for value in values:
+		result.append(_normalize_color(value as Color))
+	return result
+
+static func palette_names() -> Array:
+	return DATA.palette_names
+
+static func selectable_palettes() -> Array:
+	return DATA.selectable_palettes
+
+static func rest_fire_palettes() -> Array:
+	return DATA.rest_fire_palettes
+
+static func white() -> Color:
+	return DATA.white
+
+static func archetype_highlights() -> Array:
+	return DATA.archetype_highlights
+
 
 static func shadow(name: String) -> Color:
 	return SHADOW.get(name, SHADOW["blue"])
 
+
 static func normal(name: String) -> Color:
 	return NORMAL.get(name, NORMAL["blue"])
+
 
 static func accent(name: String) -> Color:
 	return ACCENT.get(name, NORMAL.get(name, NORMAL["blue"]))
 
+
 static func pair(name: String) -> Array[Color]:
 	return [shadow(name), normal(name)]
 
+
 static func triple(name: String) -> Array[Color]:
 	return [shadow(name), normal(name), WHITE]
+
 
 ## Flame recolor palette: [darkest, mid, brightest].  Flames are bright, so they
 ## skip the palette's dark shadow and use the NORMAL tone as their darkest part
@@ -93,6 +109,7 @@ static func _raise_to_luma(color: Color, min_luma: float) -> Color:
 			break
 		result = result.lerp(WHITE, 0.05)
 	return result
+
 
 static func archetype_highlight(index: int) -> Color:
 	return ARCHETYPE_HIGHLIGHTS[posmod(index, ARCHETYPE_HIGHLIGHTS.size())]

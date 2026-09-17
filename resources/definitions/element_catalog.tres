@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="ElementCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/element_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+ids = {
+0: &"neutral",
+1: &"fire",
+2: &"water",
+3: &"electric",
+4: &"grass",
+5: &"shadow",
+6: &"ground",
+7: &"ice"
+}
+display_names = {
+0: "NORMAL",
+1: "FIRE",
+2: "WATER",
+3: "ELECTRIC",
+4: "GRASS",
+5: "SHADOW",
+6: "GROUND",
+7: "ICE"
+}
+palette_keys = {
+0: "grey",
+1: "red",
+2: "blue",
+3: "yellow",
+4: "green",
+5: "purple",
+6: "orange",
+7: "aquamarine"
+}
+matchup_table = [
+[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0],
+[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.0, 1.25],
+[1.0, 1.25, 0.8, 1.0, 0.8, 1.0, 1.25, 1.0],
+[1.0, 1.0, 1.25, 0.8, 0.8, 1.0, 0.0, 1.0],
+[1.0, 0.8, 1.25, 1.0, 0.8, 1.0, 1.25, 1.0],
+[1.0, 1.0, 1.0, 1.0, 1.0, 1.25, 1.0, 1.0],
+[1.0, 1.25, 1.0, 1.25, 0.8, 1.0, 0.8, 1.0],
+[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.25, 0.8]
+]
+damage_number_color_boost = 1.1
+default_element = 0
+element_count = 8

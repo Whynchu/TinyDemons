@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="SlimeVariantCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/slime_variant_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+order = Array[StringName]([&"grey", &"red", &"blue", &"yellow", &"green", &"purple", &"orange", &"aquamarine"])
+definitions = {
+&"grey": {
+"base_stats": {"VIT": 2, "STR": 2, "DEF": 2, "AGI": 2, "INT": 0, "MND": 1},
+"damage_contract": &"physical",
+"display_name": "Normal Slime",
+"element": 0,
+"growth_weights": {"VIT": 0.24, "STR": 0.24, "DEF": 0.24, "AGI": 0.20, "INT": 0.0, "MND": 0.08},
+"variant": &"grey"
+},
+&"red": {
+"base_stats": {"VIT": 1, "STR": 4, "DEF": 2, "AGI": 1, "INT": 2, "MND": 1},
+"damage_contract": &"elemental_slime",
+"display_name": "Fire Slime",
+"element": 1,
+"growth_weights": {"VIT": 0.08, "STR": 0.48, "DEF": 0.16, "AGI": 0.12, "INT": 0.12, "MND": 0.04},
+"variant": &"red"
+},
+&"blue": {
+"base_stats": {"VIT": 2, "STR": 1, "DEF": 4, "AGI": 1, "INT": 2, "MND": 3},
+"damage_contract": &"elemental_slime",
+"display_name": "Water Slime",
+"element": 2,
+"growth_weights": {"VIT": 0.16, "STR": 0.08, "DEF": 0.44, "AGI": 0.10, "INT": 0.08, "MND": 0.14},
+"variant": &"blue"
+},
+&"yellow": {
+"base_stats": {"VIT": 2, "STR": 2, "DEF": 1, "AGI": 3, "INT": 3, "MND": 1},
+"damage_contract": &"elemental_slime",
+"display_name": "Electric Slime",
+"element": 3,
+"growth_weights": {"VIT": 0.16, "STR": 0.12, "DEF": 0.08, "AGI": 0.44, "INT": 0.16, "MND": 0.04},
+"variant": &"yellow"
+},
+&"green": {
+"base_stats": {"VIT": 4, "STR": 1, "DEF": 2, "AGI": 1, "INT": 2, "MND": 2},
+"damage_contract": &"elemental_slime",
+"display_name": "Grass Slime",
+"element": 4,
+"growth_weights": {"VIT": 0.44, "STR": 0.08, "DEF": 0.16, "AGI": 0.12, "INT": 0.10, "MND": 0.10},
+"variant": &"green"
+},
+&"purple": {
+"base_stats": {"VIT": 1, "STR": 3, "DEF": 1, "AGI": 3, "INT": 3, "MND": 1},
+"damage_contract": &"elemental_slime",
+"display_name": "Shadow Slime",
+"element": 5,
+"growth_weights": {"VIT": 0.06, "STR": 0.36, "DEF": 0.06, "AGI": 0.36, "INT": 0.12, "MND": 0.04},
+"variant": &"purple"
+},
+&"orange": {
+"base_stats": {"VIT": 3, "STR": 1, "DEF": 3, "AGI": 1, "INT": 2, "MND": 2},
+"damage_contract": &"elemental_slime",
+"display_name": "Ground Slime",
+"element": 6,
+"growth_weights": {"VIT": 0.28, "STR": 0.08, "DEF": 0.38, "AGI": 0.08, "INT": 0.10, "MND": 0.08},
+"variant": &"orange"
+},
+&"aquamarine": {
+"base_stats": {"VIT": 2, "STR": 2, "DEF": 1, "AGI": 3, "INT": 3, "MND": 2},
+"damage_contract": &"elemental_slime",
+"display_name": "Ice Slime",
+"element": 7,
+"growth_weights": {"VIT": 0.10, "STR": 0.14, "DEF": 0.08, "AGI": 0.50, "INT": 0.10, "MND": 0.08},
+"variant": &"aquamarine"
+}
+}

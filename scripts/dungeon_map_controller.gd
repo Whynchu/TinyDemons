@@ -235,7 +235,7 @@ func available_puzzle_colors() -> Array[StringName]:
 
 func palette_for_requirement(requirement: StringName) -> String:
 	if ELEMENT_CATALOG_SCRIPT.is_valid_id(requirement):
-		return str(ELEMENT_CATALOG_SCRIPT.PALETTE_KEYS.get(ELEMENT_CATALOG_SCRIPT.element_for_id(requirement), "grey"))
+		return ELEMENT_CATALOG_SCRIPT.palette_key(ELEMENT_CATALOG_SCRIPT.element_for_id(requirement))
 	match requirement:
 		&"grey_orb":
 			return "grey_orb"

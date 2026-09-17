@@ -91,18 +91,17 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-16; version `0.2.24`, commit
-`8b162a2`) gives us this shape:
+The latest source scan (working tree on 2026-09-16; version `0.2.25`) gives us
+this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 171 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 175 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
-| Runtime physical lines | 48,329 | Refactor by ownership, not by indiscriminate file splitting |
-| Runtime non-blank lines | 42,659 | Blank lines are excluded; comments remain counted |
+| Runtime physical lines | ~49,300 | Refactor by ownership, not by indiscriminate file splitting |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,719 lines / 479 functions / 286 fields | At the strict target; the composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
-| `root.call/get/set` | 2,488 sites | Below the strict target; the remaining sites are the next vertical migration seams |
+| `root.call/get/set` | 2,486 sites | Below the strict target; the remaining sites are the next vertical migration seams |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -110,26 +109,33 @@ boundaries, typed room transition/entry/activation/clear results, typed
 enemy-runtime capture, typed room-level initial spawn orchestration, typed
 per-frame respawn coordination, typed room spawn/death helpers, typed
 room-owned combat death consequences, room-owned geometry, external default
-tuning resources, and typed pause/Hub player presentation contexts. Under the
+tuning resources, typed pause/Hub player presentation contexts, and
+editor-inspectable definition resources for slime variants, elements, and
+palettes. Under the
 strict ownership scorecard in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
 the legacy-coupling cleanup is **complete (100%)**: the strict audit passes and
-the regression floor now protects the achieved state. That completion is a
-bounded architecture checkpoint, not the completion percentage for the larger
-long-term composition goal. The next goal is to make content additions
-definition-driven so an enemy, room, or map can be added without central-state
-special cases, while also establishing real desktop/web/mobile performance
-budgets.
+the regression floor now protects the achieved state. The **editor-composition
+score is ≈ 60%** (12 of 20 components are blind + editor-configured, and 9 of 17
+definition surfaces are editor-inspectable resources) — see
+[`docs/component-composition-design.md`](docs/component-composition-design.md).
+That is a real milestone, not completion: the remaining work is to make content
+additions definition-driven so an enemy, room, or map can be added without
+central-state special cases, while also establishing real desktop/web/mobile
+performance budgets.
 
 The practical sequence is:
 
 1. Make the boss-entry measurement a stable gate (the harness currently reports
    one noisy sample) and keep the curated standalone gate and focused room/HUD
    checks green; optimize the boss entry after the A17 device profile exists.
-2. Prove an `EnemyDefinition` plus factory path by migrating one existing slime
-   variant and adding a second through composition/configuration.
-3. Introduce reusable encounter and room definitions, then make dungeon/map
-   generation consume validated content rather than accumulating special cases.
+2. Finish the `EnemyDefinition` + `EnemyFactory` proof: the slime variant data is
+   now an editor-inspectable resource, so the next step is a factory that
+   assembles a runtime slime from the definition and mounts a second entity
+   sharing its components with zero `GameplayState` edits.
+3. Convert `item_catalog.gd`, `dungeon_layout_definition.gd`, and the Run 1–6
+   builders to editor-inspectable resources, then make dungeon/map generation
+   consume validated content rather than accumulating special cases.
 4. Profile title, hub, rooms, boss combat, transitions, effects, and menus on
    desktop, web, and the Samsung A17 before choosing rendering optimizations.
 5. Characterize browser/device file-write ordering and the hosted Pages
@@ -230,7 +236,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.24**. Every push to `main` must increment the
+Current game version: **0.2.25**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

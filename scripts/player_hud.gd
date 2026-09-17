@@ -7,13 +7,13 @@ extends Node2D
 const HUD_SIZE := Vector2(82, 16)
 const HUD_SIZE_PIXELS := Vector2i(82, 16)
 const SOUL_VISUALS_SCRIPT = preload("res://scripts/soul_visuals.gd")
-const XP_COLOR := PaletteLibrary.NORMAL["yellow"]
-const HP_COLOR := PaletteLibrary.NORMAL["red"]
+static var XP_COLOR: Color = PaletteLibrary.NORMAL["yellow"]
+static var HP_COLOR: Color = PaletteLibrary.NORMAL["red"]
 const HP_HIGHLIGHT := Color8(239, 125, 87)
-const MP_COLOR := PaletteLibrary.ACCENT["blue"]
-const GOLD_COLOR := PaletteLibrary.NORMAL["yellow"]
+static var MP_COLOR: Color = PaletteLibrary.ACCENT["blue"]
+static var GOLD_COLOR: Color = PaletteLibrary.NORMAL["yellow"]
 const LEVEL_NUMBER_ATLAS: Texture2D = preload("res://assets/artwork/player_UI_lvlnumbers.png")
-const LEVEL_NUMBER_COLOR := PaletteLibrary.WHITE
+static var LEVEL_NUMBER_COLOR: Color = PaletteLibrary.WHITE
 const LEVEL_NUMBER_ORIGIN := Vector2i(66, 8)
 const LEVEL_SLOT_ORIGINS := [66, 71, 76]
 # The authored bars share an 82px strip but their colored tracks do not. The

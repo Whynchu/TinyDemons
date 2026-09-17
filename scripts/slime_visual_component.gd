@@ -330,24 +330,30 @@ static func recolor_attack_frame_set(source_frames: Array[Texture2D], palette: S
 	return recolored
 
 
-static func set_facing(root: Object, slime: Sprite2D, direction_x: float) -> void:
+static func set_facing(occlusion_renderer: OcclusionRenderer, slime: Sprite2D, direction_x: float, set_base_texture: Callable, update_attack_guides: Callable) -> void:
 	if absf(direction_x) < 0.1: return
 	var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 	var texture: Texture2D = visual.left_texture if direction_x < 0.0 and visual != null else visual.right_texture if visual != null else null
 	if direction_x < 0.0: slime.flip_h = false
 	elif texture == null and visual != null and visual.left_texture != null: texture = visual.left_texture; slime.flip_h = true
 	else: slime.flip_h = false
-	if texture == null: texture = (root.get("occlusion_renderer") as OcclusionRenderer).actor_default_textures.get(slime)
-	root.call("_set_actor_base_texture", slime, texture); root.call("_update_slime_attack_guides", slime)
+	if texture == null and occlusion_renderer != null: texture = occlusion_renderer.actor_default_textures.get(slime)
+	if set_base_texture.is_valid(): set_base_texture.call(slime, texture)
+	if update_attack_guides.is_valid(): update_attack_guides.call(slime)
 
+
+## Editor-facing squish/impact visual tuning.
+@export var squish_stretch := 0.18
+@export var squish_vertical_scale := 0.14
+@export var squish_lateral_scale := 0.12
 
 func squish_scale(progress: float, movement: Vector2) -> Vector2:
 	var pulse := sin(clampf(progress, 0.0, 1.0) * PI)
-	var stretch_x := 1.0 + pulse * 0.18
-	var stretch_y := 1.0 - pulse * 0.14
+	var stretch_x := 1.0 + pulse * squish_stretch
+	var stretch_y := 1.0 - pulse * squish_vertical_scale
 	if absf(movement.y) > absf(movement.x):
-		stretch_x = 1.0 + pulse * 0.12
-		stretch_y = 1.0 - pulse * 0.18
+		stretch_x = 1.0 + pulse * squish_lateral_scale
+		stretch_y = 1.0 - pulse * squish_vertical_scale
 	return Vector2(stretch_x, stretch_y)
 
 
