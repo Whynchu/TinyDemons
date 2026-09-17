@@ -3,18 +3,19 @@ class_name PlayerEquipmentVisualComponent
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
-const FRAME_SIZE := Vector2i(36, 36)
-const INACTIVITY_TIME := 6.0
-const FLASH_TIME := 0.16
-const FADE_TIME := 1.5
-const ATTACK_TRANSITION_HOLD := 0.16
-const DRAW_WHITE_TIME := 0.18
-const DRAW_COLOR_FADE_TIME := 0.09
-const EQUIPMENT_TEXTURE_OFFSET := Vector2(-10, -10)
-const OCCLUSION_MASK_REFRESH_TIME := 0.08
-const IMBUE_FLASH_TIME := 0.16
-const IMBUE_FADE_TIME := 2.50
-const IMBUE_PARTICLE_INTERVAL := 0.08
+## Editor-facing presentation tuning.
+@export var frame_size := Vector2i(36, 36)
+@export var inactivity_time := 6.0
+@export var flash_time := 0.16
+@export var fade_time := 1.5
+@export var attack_transition_hold := 0.16
+@export var draw_white_time := 0.18
+@export var draw_color_fade_time := 0.09
+@export var equipment_texture_offset := Vector2(-10, -10)
+@export var occlusion_mask_refresh_time := 0.08
+@export var imbue_flash_time := 0.16
+@export var imbue_fade_time := 2.50
+@export var imbue_particle_interval := 0.08
 
 var layers: Dictionary = {}
 var shadows: Dictionary = {}
@@ -36,7 +37,7 @@ var active := false
 var inactivity_timer := 0.0
 var fade_timer := 0.0
 var was_attacking := false
-var gameplay_root: Object = null
+var context: PlayerEquipmentVisualContext = null
 var breakup_pending := false
 var breakup_started := false
 var last_attack_name := "attack1"
@@ -92,43 +93,43 @@ var frame_paths := {
 }
 
 
-func initialize(root: Object) -> void:
-	gameplay_root = root
-	var parent := root.get("player") as Sprite2D
+func initialize(new_context: PlayerEquipmentVisualContext) -> void:
+	context = new_context
+	var parent := new_context.player
 	if parent == null:
 		return
-	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	var library := new_context.sprite_frame_library
 	if library == null:
 		return
-	apply_palette(root)
+	apply_palette(new_context)
 	_create_layer(parent, "EquipmentSwordBack", -1)
 	_create_layer(parent, "EquipmentShieldBack", -1)
 	_create_layer(parent, "EquipmentShieldFront", 1)
 	_create_layer(parent, "EquipmentSwordFront", 1)
 	_create_occlusion_material()
-	precache_all_palettes(root)
+	precache_all_palettes(new_context)
 
 
-func begin_imbue(root: Object, element: int, duration: float) -> void:
-	gameplay_root = root
+func begin_imbue(new_context: PlayerEquipmentVisualContext, element: int, duration: float) -> void:
+	context = new_context
 	imbue_element = ElementCatalogScript.normalize(element) as ElementCatalogScript.Element
 	imbue_remaining = maxf(duration, 0.0)
-	imbue_flash_timer = IMBUE_FLASH_TIME
+	imbue_flash_timer = imbue_flash_time
 	imbue_particle_timer = 0.0
-	imbue_noise.seed = int((root.get("rng") as RandomNumberGenerator).randi()) if root.get("rng") != null else Time.get_ticks_msec()
+	imbue_noise.seed = int(new_context.rng.randi()) if new_context.rng != null else Time.get_ticks_msec()
 	imbue_noise.frequency = 0.28
 	_clear_imbue_overlays()
-	_update_imbue_overlays(root)
+	_update_imbue_overlays(new_context)
 
 
-func end_imbue(root: Object) -> void:
+func end_imbue(new_context: PlayerEquipmentVisualContext) -> void:
 	imbue_remaining = 0.0
 	last_imbue_visual_intensity = 1.0
 	imbue_flash_timer = 0.0
 	imbue_particle_timer = 0.0
 	imbue_element = ElementCatalogScript.Element.NEUTRAL
 	_clear_imbue_overlays()
-	var imbue_effects := root.get("effects_spawner") as EffectsSpawner
+	var imbue_effects := new_context.effects_spawner
 	if imbue_effects != null:
 		imbue_effects.clear_effect_particles(&"imbue_weapon")
 
@@ -178,11 +179,11 @@ func _create_occlusion_material() -> void:
 		occlusion_materials[layer] = material
 
 
-func update_occlusion(root: Object, _delta: float) -> void:
-	var renderer := root.get("occlusion_renderer") as OcclusionRenderer
+func update_occlusion(new_context: PlayerEquipmentVisualContext, _delta: float) -> void:
+	var renderer := new_context.occlusion_renderer
 	if renderer == null:
 		return
-	_sync_depth_order(root)
+	_sync_depth_order(new_context)
 	if fade_timer > 0.0 or death_active:
 		_set_occlusion_enabled(false)
 		return
@@ -194,10 +195,10 @@ func update_occlusion(root: Object, _delta: float) -> void:
 	if visible_layers.is_empty():
 		_set_occlusion_enabled(false)
 		return
-	var occluders := _equipment_occluders(root)
+	var occluders := _equipment_occluders(new_context)
 	var any_occluded := false
 	for layer in visible_layers:
-		var candidates := renderer.active_occluders_for(layer, occluders, float(root.call("_equipment_occlusion_depth_key", layer)), root.call("_sprite_source_global_rect", layer) as Rect2, Callable(root, "_equipment_occlusion_depth_key"), Callable(root, "_sprite_source_global_rect"))
+		var candidates := renderer.active_occluders_for(layer, occluders, float(new_context.equipment_occlusion_depth_key.call(layer)), new_context.sprite_source_global_rect.call(layer) as Rect2, new_context.equipment_occlusion_depth_key, new_context.sprite_source_global_rect)
 		var active_occluders := candidates["occluders"] as Array[Sprite2D]
 		if active_occluders.is_empty():
 			continue
@@ -211,7 +212,7 @@ func update_occlusion(root: Object, _delta: float) -> void:
 		if cached != null and int(cached.get("signature", 0)) == signature and cached.has("texture"):
 			occluded_texture = cached["texture"] as Texture2D
 		else:
-			occluded_texture = _build_occluded_texture(root, renderer, layer, active_occluders)
+			occluded_texture = _build_occluded_texture(new_context, renderer, layer, active_occluders)
 			if occluded_texture != null:
 				occlusion_texture_cache[layer_key] = {"signature": signature, "texture": occluded_texture}
 		if occluded_texture != null:
@@ -228,13 +229,13 @@ func _first_visible_layer() -> Sprite2D:
 	return null
 
 
-func _build_occluded_texture(root: Object, renderer: OcclusionRenderer, layer: Sprite2D, active_occluders: Array[Sprite2D]) -> Texture2D:
+func _build_occluded_texture(new_context: PlayerEquipmentVisualContext, renderer: OcclusionRenderer, layer: Sprite2D, active_occluders: Array[Sprite2D]) -> Texture2D:
 	var source_texture := layer.texture
 	var source_image := source_texture.get_image()
 	var source_size := source_image.get_size()
 	var mask_size := Vector2i(maxi(1, int(source_size.x * 2.0)), maxi(1, int(source_size.y * 2.0)))
 	var image := Image.create(mask_size.x, mask_size.y, false, Image.FORMAT_RGBA8)
-	var source_rect := root.call("_sprite_source_global_rect", layer) as Rect2
+	var source_rect := new_context.sprite_source_global_rect.call(layer) as Rect2
 	var scale := layer.scale.abs()
 	var has_covered_pixel := false
 	for y in range(mask_size.y):
@@ -247,7 +248,7 @@ func _build_occluded_texture(root: Object, renderer: OcclusionRenderer, layer: S
 			if color.a <= 0.0:
 				continue
 			var world_pixel := source_rect.position + source_pixel * scale
-			if renderer.is_pixel_covered_by_occluder(world_pixel, active_occluders, Callable(root, "_actor_screen_scale"), Callable(root, "_actor_visual_offset")):
+			if renderer.is_pixel_covered_by_occluder(world_pixel, active_occluders, new_context.actor_screen_scale, new_context.actor_visual_offset):
 				has_covered_pixel = true
 				if (x + y) % 2 == 0:
 					color.a = 0.0
@@ -286,8 +287,8 @@ func _occlusion_position_cell(position: Vector2) -> Vector2i:
 	return Vector2i(floori(position.x / 4.0), floori(position.y / 4.0))
 
 
-func _sync_depth_order(root: Object) -> void:
-	var player := root.get("player") as Sprite2D
+func _sync_depth_order(new_context: PlayerEquipmentVisualContext) -> void:
+	var player := new_context.player
 	if player == null:
 		return
 	for layer_name in layers:
@@ -296,17 +297,17 @@ func _sync_depth_order(root: Object) -> void:
 			layer.z_index = player.z_index + (-1 if String(layer_name).ends_with("Back") else 1)
 
 
-func _equipment_occluders(root: Object) -> Array[Sprite2D]:
+func _equipment_occluders(new_context: PlayerEquipmentVisualContext) -> Array[Sprite2D]:
 	var result: Array[Sprite2D] = []
-	var actors := root.get("actor_sprites") as Array[Sprite2D]
-	for value in root.get("occluder_sprites") as Array:
+	var actors := new_context.actor_sprites
+	for value in new_context.occluder_sprites:
 		var sprite := value as Sprite2D
 		# The fire is a light source, not a solid cover plane. Let its light
 		# remain visible without making the equipment dither as the player walks
 		# through the fire's depth range.
-		if sprite != null and sprite != root.get("rest_fire") and not actors.has(sprite) and sprite.visible:
+		if sprite != null and sprite != new_context.rest_fire and not actors.has(sprite) and sprite.visible:
 			result.append(sprite)
-	var cloaked_demon := root.get("cloaked_demon") as Sprite2D
+	var cloaked_demon := new_context.cloaked_demon
 	if cloaked_demon != null and cloaked_demon.visible and not result.has(cloaked_demon):
 		result.append(cloaked_demon)
 	return result
@@ -316,12 +317,11 @@ func _is_layer_occlusion_flashing(_layer: Sprite2D) -> bool:
 	return false
 
 
-func apply_palette(root: Object) -> void:
-	gameplay_root = root
-	var screen_state_controller: Object = root.get("screen_state_controller")
-	var palette_name := palette_override if not palette_override.is_empty() else String(screen_state_controller.get("player_palette_name"))
+func apply_palette(new_context: PlayerEquipmentVisualContext) -> void:
+	context = new_context
+	var palette_name := palette_override if not palette_override.is_empty() else String(new_context.screen_state_controller.get("player_palette_name"))
 	if not frames_by_palette.has(palette_name):
-		var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+		var library := new_context.sprite_frame_library
 		if library == null:
 			return
 		white_copy_cache.clear(); occlusion_texture_cache.clear()
@@ -337,7 +337,7 @@ func _build_palette_frames(library: SpriteFrameLibrary, palette_name: String) ->
 	var palette: Array[Color] = PaletteLibrary.pair(palette_name)
 	var built: Dictionary = {}
 	for key in frame_paths:
-		var source_frames := library.slice_frames(frame_paths[key], FRAME_SIZE)
+		var source_frames := library.slice_frames(frame_paths[key], frame_size)
 		var recolored: Array[Texture2D] = []
 		for source in source_frames:
 			recolored.append(_recolor_frame(source, palette[0], palette[1]))
@@ -345,9 +345,9 @@ func _build_palette_frames(library: SpriteFrameLibrary, palette_name: String) ->
 	return built
 
 
-func precache_all_palettes(root: Object) -> void:
-	gameplay_root = root
-	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+func precache_all_palettes(new_context: PlayerEquipmentVisualContext) -> void:
+	context = new_context
+	var library := new_context.sprite_frame_library
 	if library == null:
 		return
 	for palette_name in PaletteLibrary.PALETTE_NAMES:
@@ -393,7 +393,7 @@ func _create_layer(parent: Sprite2D, layer_name: String, z_offset: int) -> void:
 	shadows[layer_name] = shadow
 
 
-func tick(root: Object, delta: float) -> void:
+func tick(new_context: PlayerEquipmentVisualContext, delta: float) -> void:
 	if layers.is_empty():
 		return
 	if imbue_remaining > 0.0:
@@ -401,12 +401,12 @@ func tick(root: Object, delta: float) -> void:
 		imbue_flash_timer = maxf(imbue_flash_timer - maxf(delta, 0.0), 0.0)
 		imbue_particle_timer -= maxf(delta, 0.0)
 		if imbue_particle_timer <= 0.0:
-			_spawn_imbue_bleed(root)
-			imbue_particle_timer = IMBUE_PARTICLE_INTERVAL / maxf(imbue_visual_intensity(root), 0.01)
+			_spawn_imbue_bleed(new_context)
+			imbue_particle_timer = imbue_particle_interval / maxf(imbue_visual_intensity(new_context), 0.01)
 		if imbue_remaining <= 0.0:
-			end_imbue(root)
-	if (bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping"))) and active and fade_timer <= 0.0:
-		fade_timer = FLASH_TIME
+			end_imbue(new_context)
+	if (bool(new_context.player_is_rolling_get.call()) or bool(new_context.player_is_backflipping_get.call())) and active and fade_timer <= 0.0:
+		fade_timer = flash_time
 		active = false
 		shield_is_out = false
 		roll_fizzle_active = true
@@ -415,14 +415,14 @@ func tick(root: Object, delta: float) -> void:
 			var equipment_layer := layer as Sprite2D
 			if equipment_layer.visible:
 				roll_fizzle_positions[equipment_layer] = equipment_layer.global_position
-		_create_fade_overlays(root)
+		_create_fade_overlays(new_context)
 		breakup_pending = true
 		breakup_started = false
 	guard_flash_timer = maxf(guard_flash_timer - delta, 0.0)
-	_update_guard_flash(root)
-	var attacking := bool(root.get("player_is_attacking"))
-	var magic_casting := bool(root.get("player_is_magic_casting"))
-	var defending := bool(root.get("player_is_defending"))
+	_update_guard_flash(new_context)
+	var attacking := bool(new_context.player_is_attacking_get.call())
+	var magic_casting := bool(new_context.player_is_magic_casting_get.call())
+	var defending := bool(new_context.player_is_defending_get.call())
 	if magic_casting:
 		_clear_fade_overlays()
 		_clear_draw_overlays()
@@ -434,8 +434,8 @@ func tick(root: Object, delta: float) -> void:
 		# Guard deployment uses the same white draw flash as the sword.
 		_clear_fade_overlays()
 		_clear_draw_overlays()
-		draw_white_timer = DRAW_WHITE_TIME
-		draw_color_fade_timer = DRAW_COLOR_FADE_TIME
+		draw_white_timer = draw_white_time
+		draw_color_fade_timer = draw_color_fade_time
 		active = true
 		fade_timer = 0.0
 		inactivity_timer = 0.0
@@ -448,10 +448,10 @@ func tick(root: Object, delta: float) -> void:
 	if attacking:
 		_clear_fade_overlays()
 		if not active:
-			draw_white_timer = DRAW_WHITE_TIME
-			draw_color_fade_timer = DRAW_COLOR_FADE_TIME
+			draw_white_timer = draw_white_time
+			draw_color_fade_timer = draw_color_fade_time
 			shield_is_out = true
-		var current_animation_name := String(root.get("player_anim_name"))
+		var current_animation_name := String(new_context.player_anim_name_get.call())
 		if current_animation_name.begins_with("attack") or current_animation_name == "spin_attack":
 			last_attack_name = current_animation_name
 		active = true
@@ -460,18 +460,18 @@ func tick(root: Object, delta: float) -> void:
 		was_attacking = true
 	elif not defending and not magic_casting:
 		if was_attacking:
-			transition_hold_timer = ATTACK_TRANSITION_HOLD
+			transition_hold_timer = attack_transition_hold
 		was_attacking = false
 		if active:
 			inactivity_timer += delta
-			if inactivity_timer >= INACTIVITY_TIME:
-				fade_timer = maxf(fade_timer, FADE_TIME)
+			if inactivity_timer >= inactivity_time:
+				fade_timer = maxf(fade_timer, fade_time)
 				inactivity_timer = 0.0
 				active = false
 				shield_is_out = false
 				roll_fizzle_active = false
 				roll_fizzle_positions.clear()
-				_create_fade_overlays(root)
+				_create_fade_overlays(new_context)
 				breakup_pending = true
 				breakup_started = false
 	draw_white_timer = maxf(draw_white_timer - delta, 0.0)
@@ -481,12 +481,12 @@ func tick(root: Object, delta: float) -> void:
 	if fade_timer > 0.0:
 		fade_timer = maxf(fade_timer - delta, 0.0)
 	if breakup_pending and not breakup_started and fade_timer <= 0.0:
-		_spawn_breakup(root)
-	_update_layers(root)
-	_update_imbue_overlays(root)
+		_spawn_breakup(new_context)
+	_update_layers(new_context)
+	_update_imbue_overlays(new_context)
 
 
-func begin_attack_visual(root: Object) -> void:
+func begin_attack_visual(new_context: PlayerEquipmentVisualContext) -> void:
 	# Attack sprites are initialized immediately by PlayerAttackComponent. Use
 	# the same white deployment flash as guard so the sword and shield do not
 	# pop in when an attack starts.
@@ -494,28 +494,28 @@ func begin_attack_visual(root: Object) -> void:
 	_clear_fade_overlays()
 	_clear_draw_overlays()
 	if not equipment_was_active:
-		draw_white_timer = DRAW_WHITE_TIME
-		draw_color_fade_timer = DRAW_COLOR_FADE_TIME
+		draw_white_timer = draw_white_time
+		draw_color_fade_timer = draw_color_fade_time
 	active = true
 	shield_is_out = true
 	was_attacking = true
 	inactivity_timer = 0.0
 	fade_timer = 0.0
-	last_attack_name = String(root.get("player_anim_name"))
-	_update_layers(root)
+	last_attack_name = String(new_context.player_anim_name_get.call())
+	_update_layers(new_context)
 
 
-func finish_spin_attack_visual(root: Object) -> void:
+func finish_spin_attack_visual(new_context: PlayerEquipmentVisualContext) -> void:
 	# Spin's authored final frames are the complete recovery. Clear the generic
 	# attack hold immediately so the equipment cannot display a between/after
 	# layer after the body has already returned to idle.
 	was_attacking = false
 	last_attack_name = ""
 	transition_hold_timer = 0.0
-	_update_layers(root)
+	_update_layers(new_context)
 
 
-func interrupt_attack(root: Object) -> void:
+func interrupt_attack(new_context: PlayerEquipmentVisualContext) -> void:
 	# Orb knockback cancels the attack instead of entering the normal between-
 	# attack presentation. Clear the component's own transition memory too, or
 	# its equipment layers can leave a delayed attack sprite behind the player.
@@ -528,13 +528,13 @@ func interrupt_attack(root: Object) -> void:
 	_clear_draw_overlays()
 	if active:
 		inactivity_timer = 0.0
-		_update_layers(root)
+		_update_layers(new_context)
 
 
-func begin_death(root: Object) -> void:
+func begin_death(new_context: PlayerEquipmentVisualContext) -> void:
 	# Death supersedes every equipment lifecycle. In particular, an inactivity or
 	# roll fizzle may have active overlays while `active` is already false.
-	end_imbue(root)
+	end_imbue(new_context)
 	active = false
 	shield_is_out = false
 	was_attacking = false
@@ -551,19 +551,19 @@ func begin_death(root: Object) -> void:
 	_clear_fade_overlays()
 	_clear_draw_overlays()
 	occlusion_texture_cache.clear()
-	var player := root.get("player") as Sprite2D
+	var player := new_context.player
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
 		if equipment_layer.visible:
 			if player != null:
-				equipment_layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
+				equipment_layer.global_position = player.global_position + equipment_texture_offset
 			_set_layer_opacity(equipment_layer, 1.0)
-	_create_fade_overlays(root)
+	_create_fade_overlays(new_context)
 	death_active = true
 	death_breakup_started = false
 
 
-func reset_for_room(root: Object) -> void:
+func reset_for_room(new_context: PlayerEquipmentVisualContext) -> void:
 	# Room transitions keep this component alive. Preserve an applied IMBUE while
 	# clearing only presentation artifacts that cannot safely cross the room
 	# rebuild. Death and new-run resets call end_imbue separately.
@@ -572,7 +572,7 @@ func reset_for_room(root: Object) -> void:
 	var preserved_imbue_remaining := imbue_remaining
 	var restore_equipment := active
 	_clear_imbue_overlays()
-	var imbue_effects := root.get("effects_spawner") as EffectsSpawner
+	var imbue_effects := new_context.effects_spawner
 	if imbue_effects != null:
 		imbue_effects.clear_effect_particles(&"imbue_weapon")
 	active = false
@@ -596,7 +596,7 @@ func reset_for_room(root: Object) -> void:
 		guard_flash_overlay = null
 	_clear_fade_overlays()
 	_clear_draw_overlays()
-	var effects := root.get("effects_spawner") as EffectsSpawner
+	var effects := new_context.effects_spawner
 	if effects != null:
 		effects.clear_effect_particles(&"equipment_fizzle")
 	for layer in layers.values():
@@ -619,14 +619,14 @@ func reset_for_room(root: Object) -> void:
 	if restore_equipment:
 		active = true
 		inactivity_timer = 0.0
-		_update_layers(root)
-	_update_imbue_overlays(root)
+		_update_layers(new_context)
+	_update_imbue_overlays(new_context)
 
 
-func tick_death_pending(root: Object) -> void:
+func tick_death_pending(new_context: PlayerEquipmentVisualContext) -> void:
 	# The player may still be completing fatal-hit knockback before the death
 	# effect starts. Keep equipment attached and cancel attack/draw artifacts.
-	var player := root.get("player") as Sprite2D
+	var player := new_context.player
 	if player == null:
 		return
 	draw_white_timer = 0.0
@@ -635,31 +635,31 @@ func tick_death_pending(root: Object) -> void:
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
 		if equipment_layer.visible:
-			equipment_layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
+			equipment_layer.global_position = player.global_position + equipment_texture_offset
 	_update_equipment_shadows()
 
 
-func tick_death(root: Object) -> void:
+func tick_death(new_context: PlayerEquipmentVisualContext) -> void:
 	if not death_active:
 		return
-	var player := root.get("player") as Sprite2D
-	var tuning := root.get("player_tuning") as PlayerTuning
+	var player := new_context.player
+	var tuning := new_context.player_tuning
 	if player == null or tuning == null:
 		return
-	var death_timer := float(root.get("player_death_timer"))
+	var death_timer := float(new_context.player_death_timer_get.call())
 	var fade_progress := clampf(death_timer / tuning.death_fade_time, 0.0, 1.0)
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
 		if not equipment_layer.visible:
 			continue
-		equipment_layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
+		equipment_layer.global_position = player.global_position + equipment_texture_offset
 		_set_layer_opacity(equipment_layer, 1.0 - fade_progress)
 		var overlay := fade_overlays.get(equipment_layer) as Sprite2D
 		if overlay != null:
 			overlay.global_position = equipment_layer.global_position
 			overlay.modulate.a = fade_progress
-	if bool(root.get("player_death_particles_started")) and not death_breakup_started:
-		_spawn_breakup(root)
+	if bool(new_context.player_death_particles_started_get.call()) and not death_breakup_started:
+		_spawn_breakup(new_context)
 		death_breakup_started = true
 		_clear_fade_overlays()
 		_clear_draw_overlays()
@@ -705,10 +705,10 @@ func _update_draw_overlays() -> void:
 	if draw_white_timer <= 0.0 and draw_color_fade_timer <= 0.0:
 		_clear_draw_overlays()
 		return
-	var normal_opacity := 0.0 if draw_white_timer > 0.0 else 1.0 - draw_color_fade_timer / DRAW_COLOR_FADE_TIME
+	var normal_opacity := 0.0 if draw_white_timer > 0.0 else 1.0 - draw_color_fade_timer / draw_color_fade_time
 	# Guard deployment uses the same draw effect, but a blocked hit should read as
 	# shield impact. Keep the sword layers completely out of this white overlay.
-	var defending := gameplay_root != null and bool(gameplay_root.get("player_is_defending"))
+	var defending := context != null and bool(context.player_is_defending_get.call())
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
 		if defending and equipment_layer.name.begins_with("EquipmentSword"):
@@ -737,7 +737,7 @@ func _update_draw_overlays() -> void:
 		overlay.modulate = Color(1.0, 1.0, 1.0, white_opacity)
 
 
-func _create_fade_overlays(root: Object) -> void:
+func _create_fade_overlays(new_context: PlayerEquipmentVisualContext) -> void:
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
 		if equipment_layer.visible and equipment_layer.texture != null:
@@ -751,7 +751,7 @@ func _create_fade_overlays(root: Object) -> void:
 			overlay.global_position = equipment_layer.global_position
 			overlay.flip_h = equipment_layer.flip_h
 			overlay.modulate = Color(1.0, 1.0, 1.0, 0.0)
-			root.add_child(overlay)
+			new_context.player.get_parent().add_child(overlay)
 			fade_overlays[equipment_layer] = overlay
 
 
@@ -771,18 +771,18 @@ func _white_copy(source: Texture2D) -> Texture2D:
 	return texture
 
 
-func _spawn_breakup(root: Object) -> void:
+func _spawn_breakup(new_context: PlayerEquipmentVisualContext) -> void:
 	breakup_started = true
 	breakup_pending = false
-	var effects := root.get("effects_spawner") as EffectsSpawner
-	var random_source := root.get("rng") as RandomNumberGenerator
+	var effects := new_context.effects_spawner
+	var random_source := new_context.rng
 	if effects == null or random_source == null:
 		return
 	for layer in layers.values():
 		var equipment_layer := layer as Sprite2D
 		if not equipment_layer.visible or equipment_layer.texture == null:
 			continue
-		effects.spawn_player_death_particles(root, equipment_layer.texture, equipment_layer.global_position, Vector2.ZERO, Vector2.ONE, equipment_layer.z_index + 1, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), equipment_layer.flip_h, &"equipment_fizzle")
+		effects.spawn_player_death_particles(new_context.player.get_parent(), equipment_layer.texture, equipment_layer.global_position, Vector2.ZERO, Vector2.ONE, equipment_layer.z_index + 1, 0.75, random_source.randi(), new_context.pixel_particle_texture, equipment_layer.flip_h, &"equipment_fizzle")
 		equipment_layer.visible = false
 		var overlay := fade_overlays.get(equipment_layer) as Sprite2D
 		if overlay != null:
@@ -790,21 +790,21 @@ func _spawn_breakup(root: Object) -> void:
 	_hide_equipment_shadows()
 
 
-func _update_layers(root: Object) -> void:
-	var player := root.get("player") as Sprite2D
+func _update_layers(new_context: PlayerEquipmentVisualContext) -> void:
+	var player := new_context.player
 	if player == null:
 		return
 	for layer_name in layers:
 		var depth_layer := layers[layer_name] as Sprite2D
 		depth_layer.z_index = player.z_index + (-1 if String(layer_name).ends_with("Back") else 1)
-	if (bool(root.get("player_is_rolling")) or bool(root.get("player_is_backflipping")) or String(root.get("player_anim_name")) == "run") and fade_timer <= 0.0:
+	if (bool(new_context.player_is_rolling_get.call()) or bool(new_context.player_is_backflipping_get.call()) or String(new_context.player_anim_name_get.call()) == "run") and fade_timer <= 0.0:
 		for layer in layers.values():
 			(layer as Sprite2D).visible = false
 		_update_equipment_shadows()
 		return
 	var opacity := 1.0
 	if fade_timer > 0.0:
-		opacity = fade_timer / FADE_TIME
+		opacity = fade_timer / fade_time
 	if not active and fade_timer <= 0.0:
 		for layer in layers.values():
 			(layer as Sprite2D).visible = false
@@ -814,8 +814,8 @@ func _update_layers(root: Object) -> void:
 		_clear_draw_overlays()
 		_update_equipment_shadows()
 		return
-	var animation_name := String(root.get("player_anim_name"))
-	var frame_index := int(root.get("player_anim_frame"))
+	var animation_name := String(new_context.player_anim_name_get.call())
+	var frame_index := int(new_context.player_anim_frame_get.call())
 	if fade_timer > 0.0 and roll_fizzle_active:
 		for layer in layers.values():
 			var fading_layer := layer as Sprite2D
@@ -823,7 +823,7 @@ func _update_layers(root: Object) -> void:
 				if roll_fizzle_active and roll_fizzle_positions.has(fading_layer):
 					fading_layer.global_position = roll_fizzle_positions[fading_layer]
 				else:
-					fading_layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
+					fading_layer.global_position = player.global_position + equipment_texture_offset
 				_set_layer_opacity(fading_layer, 1.0)
 				var overlay := fade_overlays.get(fading_layer) as Sprite2D
 				if overlay != null:
@@ -833,23 +833,23 @@ func _update_layers(root: Object) -> void:
 					overlay.modulate.a = 1.0 - opacity
 		_update_equipment_shadows()
 		return
-	var currently_attacking := bool(root.get("player_is_attacking"))
-	var currently_magic_casting := bool(root.get("player_is_magic_casting"))
+	var currently_attacking := bool(new_context.player_is_attacking_get.call())
+	var currently_magic_casting := bool(new_context.player_is_magic_casting_get.call())
 	var state := "idle"
 	if currently_magic_casting: state = "magic"
-	elif bool(root.get("player_is_defending")): state = "defend"
+	elif bool(new_context.player_is_defending_get.call()): state = "defend"
 	elif currently_attacking and animation_name == "spin_attack": state = "spin"
 	elif currently_attacking and animation_name == "attack1": state = "attack1"
 	elif currently_attacking and (animation_name == "attack2" or animation_name == "attack2_charged"): state = "attack2"
 	elif currently_attacking and animation_name == "charge": state = "between"
 	elif transition_hold_timer > 0.0 and (last_attack_name == "attack2" or last_attack_name == "attack2_charged"): state = "after"
 	elif transition_hold_timer > 0.0: state = "between"
-	elif float(root.get("player_between_timer")) > 0.0 and (last_attack_name == "attack2" or last_attack_name == "attack2_charged"): state = "after"
-	elif float(root.get("player_between_timer")) > 0.0: state = "between"
+	elif float(new_context.player_between_timer_get.call()) > 0.0 and (last_attack_name == "attack2" or last_attack_name == "attack2_charged"): state = "after"
+	elif float(new_context.player_between_timer_get.call()) > 0.0: state = "between"
 	elif animation_name == "walk": state = "walk"
 	elif animation_name == "between": state = "between"
-	var guard := root.get("player_guard_component") as PlayerGuardComponent
-	var equipment := root.get("player_equipment") as EquipmentComponent
+	var guard := new_context.player_guard_component
+	var equipment := new_context.player_equipment
 	var shield_available := equipment != null and equipment.has_shield and (guard == null or guard.cooldown_timer <= 0.0)
 	var sword_back_key := "sword_back_spin" if state == "spin" else "sword_back_%s" % ("attack" if state == "attack1" else state)
 	var shield_back_key := "shield_back_spin" if state == "spin" else "shield_back_%s" % ("attack1" if state == "attack1" else "attack2" if state == "attack2" else "between")
@@ -883,21 +883,21 @@ func _update_layers(root: Object) -> void:
 	_update_equipment_shadows()
 
 
-func flash_guard(root: Object) -> void:
+func flash_guard(new_context: PlayerEquipmentVisualContext) -> void:
 	guard_flash_timer = 0.12
-	_update_guard_flash(root)
+	_update_guard_flash(new_context)
 
 
-func break_guard(root: Object) -> void:
+func break_guard(new_context: PlayerEquipmentVisualContext) -> void:
 	shield_is_out = false
 	var shield := layers.get("EquipmentShieldFront") as Sprite2D
 	if shield == null or not shield.visible or shield.texture == null:
 		shield = layers.get("EquipmentShieldBack") as Sprite2D
 	if shield != null and shield.texture != null:
-		var effects := root.get("effects_spawner") as EffectsSpawner
-		var random_source := root.get("rng") as RandomNumberGenerator
+		var effects := new_context.effects_spawner
+		var random_source := new_context.rng
 		if effects != null and random_source != null:
-			effects.spawn_player_death_particles(root, _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), Callable(root, "_pixel_particle_texture"), shield.flip_h, &"equipment_fizzle")
+			effects.spawn_player_death_particles(new_context.player.get_parent(), _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), new_context.pixel_particle_texture, shield.flip_h, &"equipment_fizzle")
 	for layer_name in ["EquipmentShieldFront", "EquipmentShieldBack"]:
 		var layer := layers.get(layer_name) as Sprite2D
 		if layer != null:
@@ -909,7 +909,7 @@ func break_guard(root: Object) -> void:
 	_hide_equipment_shadows()
 
 
-func _update_guard_flash(root: Object) -> void:
+func _update_guard_flash(new_context: PlayerEquipmentVisualContext) -> void:
 	if guard_flash_timer <= 0.0:
 		if guard_flash_overlay != null:
 			guard_flash_overlay.queue_free()
@@ -924,7 +924,7 @@ func _update_guard_flash(root: Object) -> void:
 		guard_flash_overlay.centered = shield.centered
 		guard_flash_overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		guard_flash_overlay.z_as_relative = false
-		root.add_child(guard_flash_overlay)
+		new_context.player.get_parent().add_child(guard_flash_overlay)
 	guard_flash_overlay.texture = _white_copy(shield.texture)
 	guard_flash_overlay.global_position = shield.global_position
 	guard_flash_overlay.flip_h = shield.flip_h
@@ -945,16 +945,16 @@ func _clear_imbue_overlays() -> void:
 	imbue_flash_overlays.clear()
 
 
-func _update_imbue_overlays(root: Object) -> void:
+func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext) -> void:
 	if imbue_remaining <= 0.0 or imbue_element == ElementCatalogScript.Element.NEUTRAL:
 		last_imbue_visual_intensity = 1.0
 		_clear_imbue_overlays()
 		return
-	last_imbue_visual_intensity = imbue_visual_intensity(root)
+	last_imbue_visual_intensity = imbue_visual_intensity(new_context)
 	var outline_color := ElementCatalogScript.damage_number_color(imbue_element)
 	var flash_color := PaletteLibrary.accent(ElementCatalogScript.palette_key(imbue_element)).lerp(Color.WHITE, 0.20)
-	var outline_alpha := clampf(clampf(imbue_remaining / IMBUE_FADE_TIME, 0.0, 1.0) * 0.9 * last_imbue_visual_intensity, 0.0, 1.0)
-	var flash_alpha := clampf(clampf(imbue_flash_timer / IMBUE_FLASH_TIME, 0.0, 1.0) * last_imbue_visual_intensity, 0.0, 1.0)
+	var outline_alpha := clampf(clampf(imbue_remaining / imbue_fade_time, 0.0, 1.0) * 0.9 * last_imbue_visual_intensity, 0.0, 1.0)
+	var flash_alpha := clampf(clampf(imbue_flash_timer / imbue_flash_time, 0.0, 1.0) * last_imbue_visual_intensity, 0.0, 1.0)
 	var visible_layers: Dictionary = {}
 	for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
 		var layer := layers.get(layer_name) as Sprite2D
@@ -968,7 +968,7 @@ func _update_imbue_overlays(root: Object) -> void:
 			outline.centered = layer.centered
 			outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			outline.z_as_relative = false
-			root.add_child(outline)
+			new_context.player.get_parent().add_child(outline)
 			imbue_outline_overlays[layer] = outline
 		outline.texture = _imbue_outline_texture(layer.texture, outline_color)
 		outline.global_position = layer.global_position
@@ -986,7 +986,7 @@ func _update_imbue_overlays(root: Object) -> void:
 			flash.centered = layer.centered
 			flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			flash.z_as_relative = false
-			root.add_child(flash)
+			new_context.player.get_parent().add_child(flash)
 			imbue_flash_overlays[layer] = flash
 		flash.texture = _imbue_color_texture(layer.texture, flash_color)
 		flash.global_position = layer.global_position
@@ -1003,9 +1003,9 @@ func _update_imbue_overlays(root: Object) -> void:
 			(imbue_flash_overlays[layer] as Sprite2D).visible = false
 
 
-func imbue_visual_intensity(root: Object) -> float:
-	var tuning := root.get("combat_tuning") as CombatTuning
-	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root != null and root.has_method("_player_stat_snapshot") else null
+func imbue_visual_intensity(new_context: PlayerEquipmentVisualContext) -> float:
+	var tuning := new_context.combat_tuning
+	var snapshot := new_context.player_stat_snapshot.call() as CombatStatSnapshot if new_context.player_stat_snapshot.is_valid() else null
 	if tuning == null or snapshot == null:
 		return 1.0
 	return tuning.imbue_visual_intensity_for_intelligence(snapshot.intelligence)
@@ -1078,11 +1078,11 @@ func _imbue_bleed_positions(source: Texture2D) -> Array:
 	return positions
 
 
-func _spawn_imbue_bleed(root: Object) -> void:
-	var effects := root.get("effects_spawner") as EffectsSpawner
+func _spawn_imbue_bleed(new_context: PlayerEquipmentVisualContext) -> void:
+	var effects := new_context.effects_spawner
 	if effects == null:
 		return
-	var random_source := root.get("rng") as RandomNumberGenerator
+	var random_source := new_context.rng
 	if random_source == null:
 		random_source = RandomNumberGenerator.new()
 	var bleed_color := ElementCatalogScript.damage_number_color(imbue_element)
@@ -1097,7 +1097,7 @@ func _spawn_imbue_bleed(root: Object) -> void:
 		var pixel_x := layer.texture.get_width() - 1 - source_pixel.x if layer.flip_h else source_pixel.x
 		var particle := Sprite2D.new()
 		particle.name = "ImbueWeaponPixel"
-		particle.texture = root.call("_pixel_particle_texture", bleed_color) as Texture2D
+		particle.texture = new_context.pixel_particle_texture.call(bleed_color) as Texture2D
 		particle.centered = false
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
@@ -1105,7 +1105,7 @@ func _spawn_imbue_bleed(root: Object) -> void:
 		particle.z_index = layer.z_index
 		var origin := layer.global_position + Vector2(pixel_x, source_pixel.y)
 		particle.position = origin
-		root.add_child(particle)
+		new_context.player.get_parent().add_child(particle)
 		var noise_value := imbue_noise.get_noise_2d(float(source_pixel.x), float(source_pixel.y) + float(Time.get_ticks_msec()) * 0.002)
 		var lifetime := random_source.randf_range(0.45, 0.90)
 		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_value * 5.0, -(8.0 + (noise_value + 1.0) * 14.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": &"imbue_weapon", "logical_position": origin})
@@ -1125,23 +1125,23 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 	layer.set_meta("mp_grey_key", grey_key)
 	layer.set_meta("mp_grey_frame", resolved_frame)
 	_apply_mp_material(layer)
-	var player := gameplay_root.get("player") as Sprite2D
+	var player := context.player
 	if player == null:
 		layer.visible = false
 		return
-	layer.global_position = player.global_position + EQUIPMENT_TEXTURE_OFFSET
-	var animation_name := String(gameplay_root.get("player_anim_name"))
+	layer.global_position = player.global_position + equipment_texture_offset
+	var animation_name := String(context.player_anim_name_get.call())
 	var attack_animation := animation_name.begins_with("attack") or animation_name == "spin_attack"
-	var facing_left := bool(gameplay_root.get("player_magic_flip_h")) if animation_name == "magic" else player.flip_h
+	var facing_left := bool(context.player_magic_flip_h_get.call()) if animation_name == "magic" else player.flip_h
 	if animation_name != "magic":
-		var guard := gameplay_root.get("player_guard_component") as PlayerGuardComponent
-		if guard != null and bool(gameplay_root.get("player_is_defending")):
+		var guard := context.player_guard_component
+		if guard != null and bool(context.player_is_defending_get.call()):
 			facing_left = guard.facing_left
-		elif not attack_animation and bool(gameplay_root.call("_is_target_input_held")):
-			var target := gameplay_root.call("_valid_current_target") as Sprite2D
-			if target != null and not bool(gameplay_root.get("player_is_attacking")):
-				facing_left = bool(gameplay_root.call("_target_facing_left", target))
-	layer.flip_h = bool(gameplay_root.get("player_attack_flip_h")) if attack_animation else facing_left
+		elif not attack_animation and bool(context.is_target_input_held.call()):
+			var target := context.valid_current_target.call() as Sprite2D
+			if target != null and not bool(context.player_is_attacking_get.call()):
+				facing_left = bool(context.target_facing_left.call(target))
+	layer.flip_h = bool(context.player_attack_flip_h_get.call()) if attack_animation else facing_left
 	_set_layer_opacity(layer, opacity)
 	layer.visible = true
 

@@ -148,10 +148,10 @@ func absorb_damage(context: PlayerGuardContext, incoming_damage: float, source_p
 		context.is_defending_set.call(false)
 		facing_locked = false
 		if visuals != null:
-			visuals.break_guard(context.ui_parent)
+			visuals.break_guard(context.build_equipment_visual_context.call() if context.build_equipment_visual_context.is_valid() else null)
 	else:
 		if visuals != null:
-			visuals.flash_guard(context.ui_parent)
+			visuals.flash_guard(context.build_equipment_visual_context.call() if context.build_equipment_visual_context.is_valid() else null)
 	_update_meter(context)
 	successful_block.emit(shield_damage, health_damage)
 	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true, "perfect": perfect, "stun": perfect_block_stun if perfect else normal_block_stun}

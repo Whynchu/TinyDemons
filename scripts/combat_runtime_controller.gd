@@ -23,6 +23,7 @@ func _guard_context(root: Object) -> PlayerGuardContext:
 	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
 	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
 	context.actor_foot = Callable(root, "_actor_foot")
+	context.build_equipment_visual_context = Callable(root, "_equipment_visual_context")
 	return context
 
 const ENEMY_HEALTH_R1_FACTOR := 0.50

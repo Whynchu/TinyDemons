@@ -297,7 +297,7 @@ func _tick_imbue_timers(root: Object, delta: float) -> void:
 	root.set("player_imbued_element", imbued_element)
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.end_imbue(root)
+		equipment_visual.end_imbue(root._equipment_visual_context())
 
 
 func _activate_pending_imbue(root: Object) -> void:
@@ -316,7 +316,7 @@ func _activate_pending_imbue(root: Object) -> void:
 	imbue_cooldown_remaining = cooldown
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.begin_imbue(root, imbued_element, duration)
+		equipment_visual.begin_imbue(root._equipment_visual_context(), imbued_element, duration)
 	root.call("_sync_chroma_presentation")
 	root.call("_update_player_mp_ui")
 	root.call("_play_sound", "magic_cast", -8.0, 0.85)
@@ -408,7 +408,7 @@ func reset_for_room(root: Object, reset_cooldown := false) -> void:
 	root.set("player_imbued_element", imbued_element)
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
-		equipment_visual.end_imbue(root)
+		equipment_visual.end_imbue(root._equipment_visual_context())
 
 
 func player_visual_center(root: Object) -> Vector2:

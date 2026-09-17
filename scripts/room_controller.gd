@@ -694,7 +694,7 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 	runtime._clear_roll_dust()
 	var equipment_visual := runtime.player_equipment_visual_component
 	if equipment_visual != null:
-		equipment_visual.reset_for_room(runtime)
+		equipment_visual.reset_for_room(runtime._equipment_visual_context())
 	runtime.player_attack_visual.visible = false
 	runtime._set_current_target(null)
 	runtime.target_input_was_down = false
