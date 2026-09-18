@@ -58,6 +58,11 @@ const GROUND_MIN_RANK := 5
 const ICE_ENEMY_WEIGHT: float = 1.0
 const ICE_MIN_RANK := 5
 const SHADOW_ENEMY_WEIGHT: float = 0.12
+## Crimson is a tanky Fire slime (content-driven via EnemyDefinition). It enters
+## the rotation at the same run rank as the other late elemental families, with
+## a modest weight so it adds variety without becoming the default.
+const CRIMSON_ENEMY_WEIGHT: float = 0.6
+const CRIMSON_MIN_RANK := 5
 const SHADOW_BOUND_NORMAL_WEIGHT: float = 0.20
 const SHADOW_BOUND_VARIANT_WEIGHT: float = 0.80
 const SHADOW_BOSS_CHANCE: float = 0.04
@@ -243,6 +248,8 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		variant_pool.append({"variant": "orange", "weight": GROUND_ENEMY_WEIGHT})
 	if progression_run_rank >= ICE_MIN_RANK:
 		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
+	if progression_run_rank >= CRIMSON_MIN_RANK:
+		variant_pool.append({"variant": "crimson", "weight": CRIMSON_ENEMY_WEIGHT})
 	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK and matchup_policy != "shadow_bound":
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later

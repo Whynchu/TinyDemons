@@ -337,9 +337,10 @@ not complete the slice.
    (variant, combat element, damage contract, stats). The runtime spawn path and
    visual texture-source resolution now read through the factory. A second
    variant ("crimson", tanky Fire) was added via one catalog row + one definition
-   with zero `GameplayState` edits, proven by `enemy_definition_slice_smoke`.
-   Remaining for full interchangeability: mount the second entity in a real
-   encounter and a save/load round-trip of definition-derived runtime state.
+   with zero `GameplayState` edits, mounted in the run-5+ encounter rotation,
+   and proven by `enemy_definition_slice_smoke` plus the save/load round-trip
+   `enemy_definition_roundtrip_smoke` (variant id persists and re-expands to
+   identical stats). Slice B is **complete**.
 4. **Remaining component levers** — `combat_momentum` (RefCounted, tuning-driven)
    and `slime_animation` (no knobs) were promoted to `@export`; the non-blind
    adapters (`player_animation`, `player_equipment_visual`, `player_roll`,
