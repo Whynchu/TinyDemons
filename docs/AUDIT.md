@@ -485,7 +485,7 @@ Infrastructure work must continue to preserve:
 Structural and gameplay-balance changes should not share a patch unless the
 balance change is required to preserve behavior after extraction.
 
-## 15. Recommended next sequence after 0.2.24
+## 15. Recommended next sequence after 0.2.32
 
 1. **Stabilize the measured floor.** Make the perf harness average the boss-entry
    transition across several door entries (it currently reports one noisy sample),
@@ -494,9 +494,10 @@ balance change is required to preserve behavior after extraction.
    dominated by the accent placer, boss activation/spawn, and the synchronous
    profile save — and should be optimized only after the A17 device profile
    exists (see section 11.2).
-2. **Reconcile the remaining stale docs.** Link the audit documents without
-   duplicating the manifest classification table, and verify release stamps are
-   current across `docs/`.
+2. **Triage the two remaining gate failures.** `run1_door_path_smoke` and
+   `wall_socket_geometry_smoke` fail the curated gate with pre-existing
+   assertions (reproduced at the pre-composition baseline); decide to reconcile
+   or retire them before they serve as release evidence.
 3. **Performance track (T3).** Record the Samsung A17 device profile for the
    fixed seed before any optimization claim; then choose between node/effect
    reduction, cache/atlas work, loading changes, and the palette-shader A/B.
@@ -516,11 +517,13 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.24 is past the legacy-coupling cleanup: the composition
-scorecard is fully green, the state bag is at its measured target, the room
-lifecycle has typed boundaries, and the frame schedule is a typed direct slice.
-The game surface is broad and distinctive, the test investment is deep, and the
-performance harness now produces repeatable evidence.
+Tiny Demons 0.2.32 is past the legacy-coupling and editor-composition cleanup:
+the composition scorecard is fully green (strict and editor halves both 100%),
+the state bag is at its measured target, the room lifecycle has typed
+boundaries, the frame schedule is a typed direct slice, and every authored
+definition surface is editor-inspectable. The game surface is broad and
+distinctive, the test investment is deep, and the performance harness now
+produces repeatable evidence.
 
 The next cycle is no longer "finish the coupling cleanup." It is: stabilize the
 boss-entry measurement into a repeatable gate and optimize that slow path,

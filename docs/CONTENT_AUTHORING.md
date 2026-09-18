@@ -1,9 +1,10 @@
 # Tiny Demons Content Authoring Guide
 
-Status: working guide; current workflows are partly data-driven and partly
-embedded in typed GDScript
+Status: working guide; authored data is editor-inspectable (`.tres` resources and
+`@export` tuning), while runtime factories for new enemy/room definitions are
+still the planned T2 workflow
 
-Updated: 2026-09-11
+Updated: 2026-09-17
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -39,8 +40,11 @@ activation.
 
 Current owners:
 
-- run layout definitions in `scripts/dungeon_layout_run*.gd`;
-- map plans in `scripts/puzzle_map_r*.gd` and related layout scripts;
+- run layout data in `resources/definitions/dungeon_layout_run1.tres` and
+  `dungeon_layout_run2.tres` (`DungeonRunDefinition`), loaded by
+  `scripts/dungeon_layout_run1.gd` / `dungeon_layout_run2.gd`;
+- map plans in `resources/definitions/puzzle_map_r*.tres` (`PuzzlePlanData`),
+  loaded by `scripts/puzzle_map_r*.gd`;
 - compilation in `scripts/puzzle_map_layout_compiler.gd`;
 - runtime topology in `scripts/dungeon_graph.gd` and
   `scripts/dungeon_map_controller.gd`; and
@@ -49,8 +53,9 @@ Current owners:
 Workflow:
 
 1. Define the run scope and whether its map is an authored pixel contract.
-2. Assign stable room IDs, room types, sockets, arrival sockets, and gate
-   requirements in the layout definition.
+2. Edit the authored room/connection or puzzle-plan `.tres` resource (or add a
+   new one) and assign stable room IDs, room types, sockets, arrival sockets,
+   and gate requirements.
 3. Keep map art, markers, room geometry, and doorway semantics aligned.
 4. Validate socket pairing, room reachability, entrance geometry, and milestone
    ordering.
@@ -124,7 +129,8 @@ Do not alter global tuning to solve a room-specific placement problem.
 
 Current owners:
 
-- definitions and stable IDs: `scripts/item_catalog.gd`;
+- definitions and stable IDs: `resources/definitions/item_catalog.tres`
+  (`ItemCatalogData`), loaded by `scripts/item_catalog.gd`;
 - serialized instance identity: `scripts/item_instance.gd`;
 - equip/unequip state: `scripts/equipment_component.gd`;
 - equipment presentation: `scripts/player_equipment_visual_component.gd`;
@@ -180,10 +186,11 @@ new element into the player aspect state without an explicit mapping decision.
 ## Adding tuning
 
 The intended tuning classes are `PlayerTuning`, `CombatTuning`, `SlimeTuning`,
-`EffectsTuning`, `ChromaTuning`, and `ProgressionTuning`. In version `0.2.00`
-they are instantiated in `gameplay_state.gd`; their exported fields are not yet
-external `.tres` resources. Update [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md)
-and the relevant class together when adding a tuning value.
+`EffectsTuning`, `ChromaTuning`, and `ProgressionTuning`. They load external
+defaults from `resources/tuning/*.tres`, deep-duplicated per runtime, so a
+balance change is an inspector/resource edit. Update
+[`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) and the relevant `.tres` resource
+together when adding a tuning value.
 
 Every tuning value should state its unit, owner, safe range or invariant, and
 the behavior it changes. Keep animation frame identity and authored hit-frame

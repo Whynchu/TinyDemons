@@ -2,11 +2,11 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.24`
+Current release: version `0.2.32`
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product

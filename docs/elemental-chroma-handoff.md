@@ -151,8 +151,9 @@ Exact values remain to be tuned.
 
 The project already contains several useful seams:
 
-- `scripts/player_hud.gd` already presents an MP bar, though it is not yet
-  connected to gameplay Chroma.
+- `scripts/player_hud.gd` presents the MP bar and `magic_runtime_controller.gd`
+  (`update_player_mp_ui`) drives its fill and text from the live Chroma bar;
+  Chroma spending and the zero-bar desaturation surface through the same path.
 - `scripts/player_equipment_visual_component.gd` already exposes
   `set_mp_desaturation()`.
 - `shaders/mp_desaturation.gdshader` provides the visual saturation control.

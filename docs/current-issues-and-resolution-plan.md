@@ -2,11 +2,11 @@
 
 Status: live issue tracker; source fixes require runtime evidence before closure
 
-Updated: 2026-09-13
+Updated: 2026-09-17
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.24`
+Current release: version `0.2.32`
 
 Owner: the feature owner listed for each issue; tracking is maintained here and
 summarized in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).

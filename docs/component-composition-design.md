@@ -465,7 +465,7 @@ regression floor was re-locked to the new counts.
 ## Verification
 
 - Composition guardrail: `tools/validate_composition.ps1` (regression floor and
-  `-RequireTargets` both pass at `0.2.24`).
+  `-RequireTargets` both pass at `0.2.32`).
 - Manifest validator: `tools/validate_test_manifest.ps1`.
 - Focused characterization for each component slice before moving behavior.
 - The Slice B acceptance bar above is the gate for the content-composition

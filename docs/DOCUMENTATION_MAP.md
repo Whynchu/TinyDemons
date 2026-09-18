@@ -2,7 +2,7 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
