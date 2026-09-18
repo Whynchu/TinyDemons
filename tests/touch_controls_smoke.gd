@@ -105,6 +105,18 @@ func _initialize() -> void:
 	layer._input(stick_up)
 	_expect(layer.movement_vector() == Vector2.ZERO, "virtual stick release clears its pointer", failures)
 
+	# The floating joystick relocates to any left-half touch and nests back in
+	# the lower-left corner on release, mirroring the button cluster's home.
+	var relocate_position := Vector2(stick_home.x + 40.0, stick_home.y - 20.0)
+	var relocate_down := InputEventScreenTouch.new()
+	relocate_down.device = 0; relocate_down.index = 22; relocate_down.pressed = true; relocate_down.position = relocate_position
+	layer._input(relocate_down)
+	_expect(layer._stick_origin.distance_to(relocate_position) < 1.0, "left-half touch relocates the floating stick to that point", failures)
+	var relocate_up := InputEventScreenTouch.new()
+	relocate_up.device = 0; relocate_up.index = 22; relocate_up.pressed = false; relocate_up.position = relocate_position
+	layer._input(relocate_up)
+	_expect(layer._stick_origin.distance_to(stick_home) < 1.0, "released stick nests back in its lower-left home", failures)
+
 	layer.set_last_input_device(InputDeviceTracker.Device.KEYBOARD_MOUSE)
 	layer.set_button_state(&"magic", true)
 	layer.set_virtual_stick(Vector2.RIGHT)
@@ -363,7 +375,8 @@ func _initialize() -> void:
 		_expect(roll_rect.size.x > attack_rect.size.x and roll_rect.size.y > attack_rect.size.y, "roll is the primary button, larger than the secondaries", failures)
 		_expect(attack_distance < magic_distance and attack_distance < use_distance and attack_distance < guard_distance and attack_distance < target_distance, "attack sits nearest the roll thumb home", failures)
 		_expect(attack_rect.position.y > roll_rect.position.y or magic_rect.position.y < roll_rect.position.y, "secondary actions spread around the roll button", failures)
-		_expect(magic_rect.get_center().x < roll_center.x and target_layout_rect.get_center().x < roll_center.x, "the left/up arc keeps Magic and Target beside the roll", failures)
+		_expect(magic_rect.get_center().x < roll_center.x and target_layout_rect.get_center().y < roll_center.y, "the left/up arc keeps Magic beside and Target above the roll", failures)
+		_expect(is_equal_approx(magic_distance, guard_distance) and is_equal_approx(guard_distance, use_distance) and is_equal_approx(use_distance, target_distance), "secondary actions sit on one even arc radius around roll", failures)
 	_expect(float((layer._compute_layout(TouchControlsLayer.BASE_CONTENT_SIZE, TouchControlsLayer.BASE_CONTENT_SIZE))["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "buttons keep the minimum logical size", failures)
 
 	router.free()
