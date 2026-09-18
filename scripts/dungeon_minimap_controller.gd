@@ -210,6 +210,17 @@ func is_map_open() -> bool:
 	return map_open
 
 
+## The small-map touch target in root-viewport coordinates, accounting for the
+## InterfaceCanvas presentation offset. Touch events report positions in this
+## space, so the touch layer can hit-test the minimap itself to open the map.
+func small_map_screen_rect() -> Rect2:
+	if map_sprite == null or not is_instance_valid(map_sprite) or map_sprite.texture == null:
+		return Rect2()
+	var transform := map_sprite.get_global_transform_with_canvas()
+	var texture_size := Vector2(map_sprite.texture.get_width(), map_sprite.texture.get_height())
+	return Rect2(transform.origin, texture_size * map_sprite.scale)
+
+
 func handle_input(root: Object) -> void:
 	if not map_open or root == null:
 		return

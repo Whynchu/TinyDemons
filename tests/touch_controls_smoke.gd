@@ -343,6 +343,8 @@ func _initialize() -> void:
 		_expect(layout_window.encloses(layout["stick_zone"] as Rect2), "stick zone stays inside the logical viewport", failures)
 		_expect(layout_window.encloses(layout["pause"] as Rect2), "pause button stays inside the logical viewport", failures)
 		_expect(layout_window.encloses(layout["cancel"] as Rect2), "cancel button stays inside the logical viewport", failures)
+		var stick_zone: Rect2 = layout["stick_zone"]
+		_expect(stick_zone.position.x <= layout_window.position.x + layout_window.size.x * 0.5 and stick_zone.end.x <= layout_window.position.x + layout_window.size.x * 0.5 + 1.0, "stick owns the left half of the viewport", failures)
 		var layout_buttons: Dictionary = layout["buttons"]
 		for action in layout_buttons:
 			_expect(layout_window.encloses(layout_buttons[action] as Rect2), "action button stays inside the logical viewport", failures)
@@ -352,8 +354,16 @@ func _initialize() -> void:
 		var roll_rect: Rect2 = layout_buttons[&"roll"]
 		var guard_rect: Rect2 = layout_buttons[&"guard"]
 		var target_layout_rect: Rect2 = layout_buttons[&"target"]
-		_expect(magic_rect.position.y < attack_rect.position.y and attack_rect.position.y == use_rect.position.y and roll_rect.position.y > attack_rect.position.y, "touch actions form a diamond with Magic top and Roll bottom", failures)
-		_expect(attack_rect.position.x < roll_rect.position.x and roll_rect.position.x < use_rect.position.x and guard_rect.position.x < roll_rect.position.x and target_layout_rect.position.x > roll_rect.position.x, "touch actions place Use right and Guard/Target around Roll", failures)
+		var roll_center := roll_rect.get_center()
+		var attack_distance := attack_rect.get_center().distance_to(roll_center)
+		var magic_distance := magic_rect.get_center().distance_to(roll_center)
+		var use_distance := use_rect.get_center().distance_to(roll_center)
+		var guard_distance := guard_rect.get_center().distance_to(roll_center)
+		var target_distance := target_layout_rect.get_center().distance_to(roll_center)
+		_expect(roll_rect.size.x > attack_rect.size.x and roll_rect.size.y > attack_rect.size.y, "roll is the primary button, larger than the secondaries", failures)
+		_expect(attack_distance < magic_distance and attack_distance < use_distance and attack_distance < guard_distance and attack_distance < target_distance, "attack sits nearest the roll thumb home", failures)
+		_expect(attack_rect.position.y > roll_rect.position.y or magic_rect.position.y < roll_rect.position.y, "secondary actions spread around the roll button", failures)
+		_expect(magic_rect.get_center().x < roll_center.x and target_layout_rect.get_center().x < roll_center.x, "the left/up arc keeps Magic and Target beside the roll", failures)
 	_expect(float((layer._compute_layout(TouchControlsLayer.BASE_CONTENT_SIZE, TouchControlsLayer.BASE_CONTENT_SIZE))["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "buttons keep the minimum logical size", failures)
 
 	router.free()
