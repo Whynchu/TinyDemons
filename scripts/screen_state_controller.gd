@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.37"
+const GAME_VERSION := "0.2.38"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -220,6 +220,7 @@ var pause_page := 0
 var pause_root_page: Control = null
 var pause_page_roots: Dictionary = {}
 var pause_menu_row := 0
+var pause_command_list: MenuCommandList = null
 var pause_player_card_panel: Panel = null
 var pause_player_card_texts: Array[Sprite2D] = []
 var pause_player_portrait: Sprite2D = null
@@ -4043,6 +4044,17 @@ func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_l
 		return {}
 	return catalog.bonuses(item, mastery_level)
 
+func _pause_command_list() -> MenuCommandList:
+	if pause_command_list == null:
+		pause_command_list = MenuCommandList.new()
+	var base_ys: Array[float] = []
+	for index in pause_menu_buttons.size():
+		base_ys.append(pause_menu_buttons[index].position.y if pause_menu_buttons[index] != null else 0.0)
+	pause_command_list.configure(pause_menu_buttons, base_ys)
+	pause_command_list.row = pause_menu_row
+	return pause_command_list
+
+
 func update_pause_input(root: Object) -> void:
 	if pause_overlay == null or not pause_overlay.visible:
 		return
@@ -4058,10 +4070,16 @@ func update_pause_input(root: Object) -> void:
 		return
 	if pause_page != 0:
 		return
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
-		pause_menu_row = posmod(pause_menu_row - 1, pause_menu_buttons.size()); update_pause_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
-		pause_menu_row = posmod(pause_menu_row + 1, pause_menu_buttons.size()); update_pause_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
+	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+		var command_list := _pause_command_list()
+		if command_list != null:
+			if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): command_list.move_up()
+			else: command_list.move_down()
+			pause_menu_row = command_list.row
+		else:
+			if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")): pause_menu_row = posmod(pause_menu_row - 1, pause_menu_buttons.size())
+			else: pause_menu_row = posmod(pause_menu_row + 1, pause_menu_buttons.size())
+		update_pause_ui(root, Callable(root, "_pixel_text_texture")); root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_confirm_just_pressed")):
 		if pause_menu_row >= 0 and pause_menu_row < pause_menu_buttons.size():
 			var action := pause_menu_buttons[pause_menu_row]
