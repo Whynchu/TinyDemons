@@ -231,6 +231,17 @@ If the second variant cannot be added with ≤1 definition/catalog change and ze
 `GameplayState` edits, the slice is not complete. Do not declare B done on
 "a test passes" alone.
 
+**Slice B status: complete at `0.2.34`.** `EnemyDefinition` is the typed
+`@export` resource; `EnemyFactory` assembles `SlimeActor` from a definition;
+the runtime spawn path and visual texture resolution read through the factory;
+"crimson" was added via one catalog row + definition with zero
+`GameplayState` edits; `enemy_definition_slice_smoke` proves the second-variant
+proof, `enemy_definition_roundtrip_smoke` proves the save/load round-trip
+(variant id persists and re-expands to identical stats), and crimson is now
+mounted in the run-5+ encounter rotation (`room_controller.gd`). The
+`room_controller_lines` baseline was re-locked to 2,260 (under the 2,296
+target) to record the pool addition.
+
 ### B1. Cost of the Resource migration — T2
 
 The dictionary catalogs are moving to inspector-editable `Resource` subclasses.
