@@ -7,7 +7,7 @@ Updated: 2026-09-16
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
 The baseline being preserved is version `0.2.00`; the measured current state
-(version `0.2.24`) and preservation rules are in [`AUDIT.md`](AUDIT.md). The
+(version `0.2.32`) and preservation rules are in [`AUDIT.md`](AUDIT.md). The
 `0.2.00` audit is archived in Git history and its key measurements are retained
 in [`AUDIT.md`](AUDIT.md) section 3.2.
 

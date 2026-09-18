@@ -2,11 +2,11 @@
 
 Status: live register for the `0.2.x` cycle
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.24`
+Current release: version `0.2.32`
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in
@@ -231,6 +231,17 @@ for the current authored rooms. On 2026-09-13,
 walkability model and passed in the isolated headless runner. The test covers
 closed-socket portal exclusion, closed transition rejection, open portal
 participation, and normal open-entrance movement.
+
+Note (2026-09-17): the curated release gate at `0.2.32` still reports
+`wall_socket_geometry_smoke` failing on "the authored normal-room geometry
+target exists" (`room_-1_1`), reproduced identically at the pre-composition
+baseline `8b162a2`. This is a pre-existing gate failure, not a composition
+regression; the isolated focused pass above does not replace the gate outcome.
+The gate also retains the pre-existing `run1_door_path_smoke` failure. A real
+composition regression (`chroma_projectile_scene_smoke` calling the pre-A1
+`equipment.tick(gameplay)` signature) was found in the same gate run and fixed.
+These two remaining failures need triage before they can serve as release
+evidence.
 
 | Area | Current state | Evidence still required |
 |---|---|---|

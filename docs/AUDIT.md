@@ -1,8 +1,8 @@
-# Tiny Demons — Version 0.2.24 Codebase Baseline
+# Tiny Demons — Version 0.2.32 Codebase Baseline
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
-Audit date: 2026-09-16
+Audit date: 2026-09-17
 
 Baseline commit: `8b162a2410ebea45bfea2e846b427838663ad61d` (the `0.2.23` tree that
 the measurements below describe; the `0.2.24` documentation/version checkpoint is
@@ -10,8 +10,9 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.24` (completed composition refactor, typed room/menu
-boundaries, and a fresh full-state baseline)
+Current release: `0.2.32` (composition refactor structurally and editor-wise
+complete: strict scorecard at 100% and editor composition at 100%, typed
+room/menu boundaries, and a fresh full-state baseline)
 
 Supersedes: the `0.2.00` audit (`docs/AUDIT.md` at commit
 `bfe55782f43ee40fe32b5bebd45de988e34579d8`). That document remains available in
@@ -100,7 +101,10 @@ remains available in Git history for anyone who needs the pre-refactor shape.
 The migration since then is summarized by the composition scorecard: dynamic
 root access fell 3,112 → 2,488, `GameplayState` fell from 1,720+ lines / 287+
 fields to 1,719 / 286, `RoomController` fell to 2,253 lines, and the transitional
-adapter / parallel-legacy counts are both zero.
+adapter / parallel-legacy counts are both zero. Through `0.2.32` the
+editor-composition half also reached 100%: all 20 components are blind and
+`@export`-configured, and all 16 authored definition surfaces are
+editor-inspectable resources (see section 5.1).
 
 ### 3.3 Largest scripts
 
@@ -174,6 +178,22 @@ expected to fail. The accepted floor in `tools/composition-baseline.json` is now
 the achieved state, so the guardrail protects against regression rather than
 tracking an open migration.
 
+The editor-composition half is also **100%** at `0.2.32`. Every one of the 20
+reusable components is both blind (no `root.call/get/set`) and editor-configured
+(`@export`), so components are 20/20 blind, 20/20 configured, 20/20 both. All 16
+authored definition surfaces (10 builders/catalogs loading
+`resources/definitions/*.tres` + 6 tuning resources) are editor-inspectable, so
+definitions are 16/16. The weighted composite is **100.0%**. The migration that
+reached this state is recorded in `docs/component-composition-design.md`:
+player equipment visual (A1), player animation (A2), item catalog (B1),
+dungeon layout run2 (B2), the four authored puzzle plans (C1), the final two
+`@export`-configured components (C2), and the final scope correction that
+restricted the definition surface list to authored-content-only files (the
+procedural `dungeon_layout_run3/4/5/6` wrappers and the shared
+`dungeon_layout_definition` contract hold no authored data, so they are not
+definition surfaces). Root sites fell 2,414 → 2,308 across the component
+adapters alone.
+
 Completed typed boundaries now include: `RoomEnemyContext` / `RoomSpawnContext`
 / `RoomRespawnContext` (direct `RoomEnemyContext` slices backed by
 `RoomEnemySpawnServices` and pure `RoomEnemyPlacement`), `RoomEntryContext` /
@@ -186,7 +206,10 @@ through `room_entry_services.gd` and `room_activation_services.gd`),
 `MenuPlayerContext`, `RoomTransitionResult`, `RoomActivationResult`,
 `RoomSpawnResult`, `RoomEntryResult`, `RoomEnemyRuntimeResult`, and
 `RoomGeometryController`. Six tuning classes now load external defaults from
-`resources/tuning/*.tres`, deep-duplicated per runtime.
+`resources/tuning/*.tres`, deep-duplicated per runtime. Authored definition data
+loads from `resources/definitions/*.tres` through typed resources:
+`ItemCatalogData`, `DungeonRunDefinition` (run1/run2), and `PuzzlePlanData`
+(r3/r4/r5/r3_new).
 
 `GameplayState` remains the composition root and a compatibility facade, but it
 is now at its smallest measured size (1,719 lines / 286 fields / 479 functions)
@@ -259,11 +282,17 @@ gameplay-significant metadata should become typed state where practical.
 
 ## 7. Content authoring assessment
 
-Content authoring is still primarily code-driven. Item and enemy definitions
-are large dictionaries in GDScript; authored runs are separate GDScript
-builders; generated-run policy is concentrated in a large static generator.
-The six tuning classes now load external defaults, which is the first piece of
-the intended path:
+Content authoring is moving from code-driven to editor-inspectable data. The
+item catalogue now loads all authored gear data (live bases, sets, expansion
+records, metadata, transmutations) from `resources/definitions/item_catalog.tres`
+(`ItemCatalogData`); the authored Run 1 and Run 2 layouts load from
+`resources/definitions/dungeon_layout_run1.tres` / `dungeon_layout_run2.tres`
+(`DungeonRunDefinition`); and the four authored puzzle plans load from
+`resources/definitions/puzzle_map_r{3,4,5,r3_new}.tres` (`PuzzlePlanData`). The
+six tuning classes load external defaults. Procedural run builders
+(`dungeon_layout_run3/4/5/6`) and the shared layout contract remain code, since
+their authored content lives in the puzzle-plan resources above. This is the
+first piece of the intended path:
 
 ```text
 authored definition -> validator -> catalog -> runtime instance -> stable save ID
