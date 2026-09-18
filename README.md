@@ -91,16 +91,16 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-16; version `0.2.26`) gives us
+The latest source scan (working tree on 2026-09-17; version `0.2.32`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 179 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 183 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
 | `gameplay.gd` | 233 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,719 lines / 479 functions / 286 fields | At the strict target; the composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
-| `root.call/get/set` | 2,414 sites | Below the strict target; the remaining sites are the next vertical migration seams |
+| `root.call/get/set` | 2,308 sites | Below the strict target; the remaining sites are the next vertical migration seams |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -109,19 +109,19 @@ enemy-runtime capture, typed room-level initial spawn orchestration, typed
 per-frame respawn coordination, typed room spawn/death helpers, typed
 room-owned combat death consequences, room-owned geometry, external default
 tuning resources, typed pause/Hub player presentation contexts, and
-editor-inspectable definition resources for slime variants, elements, and
-palettes. Under the
-strict ownership scorecard in
+editor-inspectable definition resources for slime variants, elements, palettes,
+the item catalogue, the Run 1/Run 2 layouts, and the authored puzzle plans.
+Under the strict ownership scorecard in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
 the legacy-coupling cleanup is **complete (100%)**: the strict audit passes and
 the regression floor now protects the achieved state. The **editor-composition
-score is ≈ 75%** (16 of 20 components are blind + editor-configured, and 9 of 17
-definition surfaces are editor-inspectable resources) — see
+score is 100%**: all 20 components are blind + editor-configured, and all 16
+authored definition surfaces are editor-inspectable resources — see
 [`docs/component-composition-design.md`](docs/component-composition-design.md).
-That is a real milestone, not completion: the remaining work is to make content
-additions definition-driven so an enemy, room, or map can be added without
-central-state special cases, while also establishing real desktop/web/mobile
-performance budgets.
+That is a real milestone, but not the end of the authoring goal: the remaining
+work is to make content additions definition-driven so an enemy, room, or map
+can be added through a factory and definition instead of central-state special
+cases, while also establishing real desktop/web/mobile performance budgets.
 
 The practical sequence is:
 

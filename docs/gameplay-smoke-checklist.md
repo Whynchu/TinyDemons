@@ -2,7 +2,7 @@
 
 Status: current manual acceptance checklist for the `0.2.x` baseline
 
-Updated: 2026-09-11
+Updated: 2026-09-17
 
 Purpose: establish a repeatable behavior baseline before extracting gameplay
 components. Run this checklist against the current branch before and after each

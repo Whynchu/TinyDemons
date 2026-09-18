@@ -2,10 +2,10 @@
 
 Status: current navigation map; composition refactor complete
 
-Map date: 2026-09-16
+Map date: 2026-09-17
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
-(current measured state: version `0.2.24`, see [`AUDIT.md`](AUDIT.md))
+(current measured state: version `0.2.32`, see [`AUDIT.md`](AUDIT.md))
 
 This document is the practical navigation map for the repository. It describes
 the current worktree, not an idealized future architecture. Existing audit and

@@ -2,7 +2,7 @@
 
 Status: current baseline map; composition refactor complete, remaining root-access owners listed
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. The composition refactor is
@@ -25,7 +25,7 @@ are `screen_state_controller.gd`, `combat_runtime_controller.gd`,
 | Chroma and elements | `player_chroma_component.gd`, `element_catalog.gd` | chroma/profile state | pickups, spells, palette-driven fire effects (`gameplay.gd`, `effects_spawner.gd`) | chroma, binding, elemental, and fire-palette tests | Medium |
 | Projectiles and magic | `magic_projectile_controller.gd`, `magic_runtime_controller.gd` | combat/runtime state | projectile scenes and effects | imbue and projectile-related tests | High: documented coordinator seams |
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |
-| Gear and fusion | `item_catalog.gd`, `item_instance.gd`, `equipment_component.gd` | profile item instances and equipped IDs | equipment/fusion/bind menus | gear, fusion, equipment tests | Medium: legacy compatibility paths |
+| Gear and fusion | `item_catalog.gd` (authored data in `resources/definitions/item_catalog.tres`), `item_instance.gd`, `equipment_component.gd` | profile item instances and equipped IDs | equipment/fusion/bind menus | gear, fusion, equipment tests | Medium: legacy compatibility paths |
 | Hub and menus | `screen_state_controller.gd` | profile/menu state | menu scenes and layout scripts | menu, hub, touch-menu tests | High: large mixed owner |
 | HUD | `player_hud.gd`, `hud_controller.gd` | player/combat display data | `scenes/player_hud.tscn` | player HUD smoke test | Medium: focused scene contract passes; live layout evidence remains |
 | Save and profile | `profile_save_service.gd`, `active_run_save_service.gd` | profile and active-run snapshots | cloud panel and recovery UI | save/cloud/recovery tests | Critical: data integrity |

@@ -186,8 +186,8 @@ migration only after characterization tests describe the boot contract.
 - Checkpointing occurs before reward presentation completes, protecting browser
   reload behavior.
 - Combat calculation has a recognizable owner and typed result object.
-- Tuning classes are dedicated, but version `0.2.00` still instantiates them
-  from `gameplay_state.gd`; external `.tres` resource loading remains planned.
+- Tuning classes are dedicated and load external defaults from
+  `resources/tuning/*.tres`, deep-duplicated per runtime.
 
 ### Highest-value risks
 

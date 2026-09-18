@@ -57,12 +57,12 @@ The **editor-composition percentage** produced by `tools/validate_composition.ps
 is the real representation of this direction: it measures the pieces that have
 been given direct access *and* are changeable in the editor (blind components,
 `@export`/`.tres`/Resource-driven definitions). It is a separate number from the
-legacy-coupling score. As of slice 4 (2026-09-16) it is **≈ 75%**: 16 of 20
-components are blind+configured, and 9 of 17 definition surfaces are
-editor-inspectable resources (`slime_variant_catalog`, `element_catalog`,
-`palette_library` + six tuning `.tres`). The component contract and the
-weighted sub-metrics are defined in
-[`component-composition-design.md`](component-composition-design.md).
+legacy-coupling score. As of `0.2.32` it is **100%**: all 20 components are
+blind and `@export`-configured, and all 16 authored definition surfaces are
+editor-inspectable resources (`item_catalog` `ItemCatalogData`, Run 1/Run 2
+`DungeonRunDefinition`, the four `PuzzlePlanData` puzzle plans, plus the six
+tuning `.tres`). The component contract and the weighted sub-metrics are
+defined in [`component-composition-design.md`](component-composition-design.md).
 
 This is an incremental architecture plan, not permission to rewrite the game.
 Existing authored rooms, pixel geometry, save identities, frame ordering, and
@@ -233,10 +233,15 @@ If the second variant cannot be added with ≤1 definition/catalog change and ze
 
 ### B1. Cost of the Resource migration — T2
 
-Moving the current dictionary catalogs (`slime_variant_catalog.gd`,
-`item_catalog.gd` definition blocks, `dungeon_layout_definition.gd`) to
-inspector-editable `Resource` subclasses is a real serialization migration, not
-a rename. The honest cost items:
+The dictionary catalogs are moving to inspector-editable `Resource` subclasses.
+**Completed at `0.2.32`:** the item catalogue (`ItemCatalogData`), the Run 1/Run
+2 layouts (`DungeonRunDefinition`), and the four authored puzzle plans
+(`PuzzlePlanData`) now load from `resources/definitions/*.tres`; the six tuning
+classes load from `resources/tuning/*.tres`. **Remaining:** the enemy/slime
+variant catalog is still a dictionary-driven catalog, and the definition/run
+contracts for encounters, rooms, rewards, and effects do not yet have typed
+`Resource` definitions. The honest cost items that still apply to the
+unmigrated kinds:
 
 - a `Resource` subclass per definition kind with `@export` fields and stable
   IDs;
