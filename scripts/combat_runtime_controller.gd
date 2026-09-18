@@ -299,18 +299,17 @@ func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int =
 
 
 func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> void:
-	var requested_variant := StringName(variant)
-	var definition := SlimeVariantCatalogScript.definition(requested_variant)
-	var palette := String(definition["variant"])
+	var definition := EnemyFactory.definition(StringName(variant))
+	var palette := String(definition.id)
 	slime.set("variant", palette)
-	slime.set_meta("element", int(definition["element"]))
-	slime.set_meta("damage_contract", String(definition.get("damage_contract", &"physical")))
+	slime.set_meta("element", definition.element)
+	slime.set_meta("damage_contract", String(definition.damage_contract))
 	var actor := slime as SlimeActor
 	if actor != null:
-		actor.combat_element = int(definition["element"])
+		EnemyFactory.configure_actor(actor, definition)
 	var stats := root.call("_slime_stats", slime) as StatsComponent
-	if stats != null:
-		stats.apply_enemy_variant_profile(definition["base_stats"] as Dictionary, definition["growth_weights"] as Dictionary, StringName(palette))
+	if stats != null and actor == null:
+		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.id)
 	# Ambush is encounter-slot data, not an inherent property of every purple
 	# slime. RoomController applies the stored per-slot decision after variant
 	# configuration.

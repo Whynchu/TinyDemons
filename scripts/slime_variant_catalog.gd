@@ -16,6 +16,7 @@ const VARIANTS: Array[StringName] = [
 	&"purple",
 	&"orange",
 	&"aquamarine",
+	&"crimson",
 ]
 
 

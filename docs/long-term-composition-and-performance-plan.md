@@ -237,11 +237,21 @@ The dictionary catalogs are moving to inspector-editable `Resource` subclasses.
 **Completed at `0.2.32`:** the item catalogue (`ItemCatalogData`), the Run 1/Run
 2 layouts (`DungeonRunDefinition`), and the four authored puzzle plans
 (`PuzzlePlanData`) now load from `resources/definitions/*.tres`; the six tuning
-classes load from `resources/tuning/*.tres`. **Remaining:** the enemy/slime
-variant catalog is still a dictionary-driven catalog, and the definition/run
-contracts for encounters, rooms, rewards, and effects do not yet have typed
-`Resource` definitions. The honest cost items that still apply to the
-unmigrated kinds:
+classes load from `resources/tuning/*.tres`. **At `0.2.33`** the enemy vertical
+slice (Slice B) landed: `EnemyDefinition` (`scripts/enemy_definition.gd`) is a
+typed `@export` contract over each `SlimeVariantCatalogData` record, and
+`EnemyFactory` (`scripts/enemy_factory.gd`) assembles/configures `SlimeActor`
+from a definition (variant, combat element, damage contract, stats profile).
+The runtime spawn path (`room_enemy_spawn_services.gd` and
+`combat_runtime_controller.gd` `configure_slime_variant`) and the visual
+texture source resolution (`actor_presentation_runtime_controller.gd`
+`build_slime_direction_textures`) now read through the factory/definition
+instead of raw dictionaries and a hardcoded palette→art mapping. A second
+variant ("crimson", a tanky Fire slime) was added via one catalog row + one
+`EnemyDefinition` view with **zero `GameplayState` edits**, proven by
+`enemy_definition_slice_smoke`. **Remaining:** the definition/run contracts
+for encounters, rooms, rewards, and effects do not yet have typed `Resource`
+definitions. The honest cost items that still apply to the unmigrated kinds:
 
 - a `Resource` subclass per definition kind with `@export` fields and stable
   IDs;
