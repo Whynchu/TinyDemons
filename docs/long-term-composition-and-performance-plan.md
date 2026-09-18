@@ -305,6 +305,16 @@ make its inputs explicit: room pool, route policy, milestone rules, socket
 rules, reward policy, and seed. The map controller should present the result,
 not become the source of every generation rule.
 
+**First increment at `0.2.40`:** `DungeonGenerationPolicy`
+(`scripts/dungeon_generation_policy.gd`) captures the numeric candidate/pool
+policy (generated + risk-reward candidate counts, first-orb/special depths,
+primary flames) as validated, editor-inspectable data. The generator's
+`build`/`build_risk_reward` entry points read the candidate counts from the
+policy via `DungeonLayoutGenerator.policy()`, replacing the hardcoded
+constants. `dungeon_generation_policy_smoke` characterizes the defaults and
+validation. Remaining for D: route policy, milestone rules, and socket/reward
+policy as explicit inputs.
+
 ### E. Extend the same pattern to items, elements, rewards, and effects — T2
 
 Use stable definitions and catalogs for content. Runtime components should
