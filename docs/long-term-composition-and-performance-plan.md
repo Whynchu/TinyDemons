@@ -288,6 +288,16 @@ Move room-specific enemy/reward choices into `EncounterDefinition` and
 distinct. Room runtime state should own claims, active actors, entrance locks,
 and clear state; definitions should remain reusable and immutable.
 
+**First increment at `0.2.39`:** `EncounterDefinition`
+(`scripts/encounter_definition.gd`) captures the rank-gated enemy variant pool
+(weights + min ranks + shadow-bound policy) as validated, editor-inspectable
+data. `RoomController._generate_enemy_encounter` reads the pool from the
+definition instead of the hardcoded rank constants; the definition rebuilds
+when the matchup policy changes. `encounter_definition_smoke` characterizes
+validation, late-pool gating, and the shadow-bound relief contract. Remaining
+for C: a `RoomDefinition` resource for room-specific reward/tier choices and
+full `.tres` authoring of encounter data.
+
 ### D. Make dungeon and map authoring compositional — T2
 
 Keep the seeded generator responsible for producing a validated layout, but

@@ -31,6 +31,7 @@ var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
 var boss_variant_selection: StringName = &""
 var matchup_policy := "rank_default"
+var encounter_definition: EncounterDefinition = null
 var boss_slime_authoring_scene: PackedScene = null
 var boss_slime_authoring_template: Node = null
 var boss_jump_phase_waves: Dictionary = {}
@@ -211,26 +212,27 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		count += 1
 	var variants: Array[String] = []
 	var levels: Array[int] = []
+	var definition := _encounter_definition()
 	var variant_pool: Array[Dictionary] = [
-		{"variant": "grey", "weight": SHADOW_BOUND_NORMAL_WEIGHT if matchup_policy == "shadow_bound" else GREY_ENEMY_WEIGHT},
+		{"variant": "grey", "weight": definition.shadow_bound_normal_weight if definition.is_shadow_bound() else definition.grey_weight},
 	]
-	if matchup_policy == "shadow_bound" and allow_shadow:
-		variant_pool.append({"variant": "purple", "weight": SHADOW_BOUND_VARIANT_WEIGHT})
+	if definition.is_shadow_bound() and allow_shadow:
+		variant_pool.append({"variant": "purple", "weight": definition.shadow_bound_variant_weight})
 	# R1 is neutral-only. R2 teaches player advantage. R3 reverses that lesson.
 	# Authored R4 rooms may provide two explicit target families.
 	var primary_variant: String = preferred_enemy_variant if preferred_enemy_variant in ["blue", "green", "red", "yellow", "green"] else "grey"
 	var secondary_variant: String = secondary_enemy_variant if secondary_enemy_variant in ["blue", "green", "red", "yellow"] else "grey"
-	if matchup_policy == "base_advantage" or (matchup_policy == "rank_default" and progression_run_rank == 2):
+	if definition.matchup_policy == EncounterDefinition.POLICY_BASE_ADVANTAGE or (definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank == 2):
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": 0.75})
-	elif matchup_policy == "base_counter":
+	elif definition.matchup_policy == EncounterDefinition.POLICY_BASE_COUNTER:
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": 0.75})
-	elif matchup_policy == "flame_mixed":
+	elif definition.matchup_policy == EncounterDefinition.POLICY_FLAME_MIXED:
 		for family_variant in [primary_variant, secondary_variant]:
 			if family_variant != "grey" and not _variant_pool_has(variant_pool, family_variant):
 				variant_pool.append({"variant": family_variant, "weight": 0.75})
-	elif matchup_policy == "rank_default" and progression_run_rank >= 3:
+	elif definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank >= 3:
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": 0.75})
 		for elemental_variant in ["blue", "green", "red"]:
@@ -250,11 +252,11 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
 	if progression_run_rank >= CRIMSON_MIN_RANK:
 		variant_pool.append({"variant": "crimson", "weight": CRIMSON_ENEMY_WEIGHT})
-	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK and matchup_policy != "shadow_bound":
+	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK and not definition.is_shadow_bound():
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
-		variant_pool.append({"variant": "purple", "weight": SHADOW_ENEMY_WEIGHT})
+		variant_pool.append({"variant": "purple", "weight": definition.shadow_weight})
 	# Popcorn is deliberately tied to the player's durable level instead of the
 	# dungeon run curve. It is recovery fodder, so it should remain five levels
 	# below the player even when a high-level player revisits an early run.
@@ -301,7 +303,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	# weighted identity policy: forcing a relief slot there would turn the
 	# authored 20/80 Shadow/Normal ratio into a much larger Normal bias on the
 	# small one-slot encounters.
-	if not popcorn_flags.has(true) and matchup_policy != "shadow_bound":
+	if not popcorn_flags.has(true) and not definition.is_shadow_bound():
 		for index in range(variants.size() - 1, -1, -1):
 			if variants[index] != "purple":
 				variants[index] = "grey"
@@ -323,6 +325,15 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 				ambush_flags[index] = false
 				elite_flags[index] = false
 	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags, "elite": elite_flags}
+
+
+func _encounter_definition() -> EncounterDefinition:
+	if encounter_definition != null and encounter_definition.matchup_policy == matchup_policy:
+		return encounter_definition
+	var definition := EncounterDefinition.new()
+	definition.matchup_policy = matchup_policy
+	encounter_definition = definition
+	return definition
 
 
 func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
