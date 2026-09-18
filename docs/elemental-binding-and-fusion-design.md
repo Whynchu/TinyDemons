@@ -346,6 +346,13 @@ The existing Chroma rules remain the baseline:
 - A temporary unbound fusion result is therefore powerful immediately, but
   Binding is what makes that identity reliable through depletion and future
   runs.
+- **Magic always requires Chroma.** At zero Chroma the player cannot cast even
+  the gray baseline triangle, and a bound element at zero cannot cast a
+  weakened spell. The identity/palette still resolves to the weakened bound
+  state at zero (so doors stay solved and pickups stay correct), but the
+  triangle action is unavailable until Chroma is restored. Only the
+  elemental Triangle (at `elemental_ability_cost`) spends Chroma; the gray
+  Triangle requires a non-zero bar but does not spend.
 
 The implementation must make the zero-Chroma transition explicit when the
 current and bound elements differ. The recommended behavior is to preserve the

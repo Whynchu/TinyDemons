@@ -342,6 +342,9 @@ func _update_cooldown_flash(ability_key: StringName, remaining: float, delta: fl
 func _magic_cooldown_available(chroma: Node) -> bool:
 	if chroma == null or not is_instance_valid(chroma):
 		return true
+	# Magic always requires Chroma: a zero bar disables even the gray triangle.
+	if int(chroma.get("current_chroma")) <= 0:
+		return false
 	var mode := int(chroma.call("ability_mode"))
 	return mode != ChromaComponentScript.AbilityMode.ELEMENTAL or bool(chroma.call("can_use_elemental_ability"))
 

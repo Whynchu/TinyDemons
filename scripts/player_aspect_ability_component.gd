@@ -42,6 +42,10 @@ func tick(delta: float) -> void:
 func can_activate(chroma: Node, blocked: bool = false) -> bool:
 	if blocked or chroma == null or cooldown_remaining > 0.0:
 		return false
+	# Magic always requires Chroma: at zero the player cannot cast even the
+	# gray baseline triangle. The elemental branch keeps its own cost gate.
+	if int(chroma.get("current_chroma")) <= 0:
+		return false
 	var mode: int = chroma.call("ability_mode")
 	if mode == CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL:
 		return bool(chroma.call("can_use_elemental_ability"))

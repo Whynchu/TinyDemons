@@ -32,9 +32,18 @@ func _initialize() -> void:
 		callback_modes.append(mode)
 		return true
 	)
-	_expect(accepted, "Gray ability can activate without Chroma", failures)
-	_expect(callback_modes == [Chroma.AbilityMode.GRAY], "Gray mode reaches the execution callback", failures)
-	_expect(chroma.current_chroma == 0, "Gray activation spends no Chroma", failures)
+	_expect(not accepted, "Gray ability is rejected at zero Chroma", failures)
+	_expect(callback_modes.is_empty(), "Gray mode never reaches the execution callback at zero Chroma", failures)
+	_expect(chroma.current_chroma == 0, "rejected Gray activation spends no Chroma", failures)
+
+	chroma.restore_neutral_chroma()
+	accepted = ability.try_activate(chroma, func(mode: int) -> bool:
+		callback_modes.append(mode)
+		return true
+	)
+	_expect(accepted, "Gray ability can activate with Chroma available", failures)
+	_expect(callback_modes == [Chroma.AbilityMode.GRAY], "Gray mode reaches the execution callback with Chroma", failures)
+	_expect(chroma.current_chroma == 20, "Gray activation spends no Chroma but requires a non-zero bar", failures)
 	_expect(is_equal_approx(ability.cooldown_remaining, 2.5), "gray activation starts the longer cooldown", failures)
 	_expect(is_equal_approx(ability.active_cooldown_duration, 2.5), "gray activation records the active cooldown duration", failures)
 	_expect(not ability.try_activate(chroma, func(_mode: int) -> bool: return true), "cooldown rejects activation", failures)
@@ -66,9 +75,9 @@ func _initialize() -> void:
 		callback_modes.append(mode)
 		return true
 	)
-	_expect(accepted, "dormant bound aspect can activate", failures)
-	_expect(callback_modes[-1] == Chroma.AbilityMode.BOUND_WEAKENED, "dormant bound mode reaches callback", failures)
-	_expect(chroma.current_chroma == 0, "weakened bound activation spends no Chroma", failures)
+	_expect(not accepted, "dormant bound aspect cannot activate at zero Chroma", failures)
+	_expect(chroma.ability_mode() == Chroma.AbilityMode.BOUND_WEAKENED, "bound zero still resolves weakened mode", failures)
+	_expect(chroma.current_chroma == 0, "rejected weakened bound activation spends no Chroma", failures)
 
 	chroma.free()
 	ability.free()
