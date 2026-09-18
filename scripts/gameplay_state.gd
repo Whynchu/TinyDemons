@@ -155,7 +155,7 @@ var save_flow_controller: Node = null
 var cloud_save_service: CloudSaveService = null
 var cloud_save_panel: CloudSavePanel = null
 var room_puzzle_controller: Node = null
-var magic_runtime_controller: Node = null
+var magic_runtime_controller: MagicRuntimeController = null
 var targeting_runtime_controller: Node = null
 var combat_runtime_controller: Node = null
 var slime_runtime_controller: Node = null
@@ -1663,32 +1663,31 @@ func _update_focus_indicator(delta: float = 0.0) -> void:
 func _slime_display_name(slime: Sprite2D) -> String:
 	return str(targeting_runtime_controller.call("slime_display_name", self, slime))
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health_component.current_health if player_health_component != null else 0.0, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
-func _update_player_mp_ui(_delta: float = 0.0) -> void: magic_runtime_controller.call("update_player_mp_ui", self)
-func _current_player_chroma() -> float: return float(magic_runtime_controller.call("current_player_chroma", self))
-func _restore_player_mp() -> void: magic_runtime_controller.call("restore_player_mp", self)
-func _try_cast_magic() -> bool: return bool(magic_runtime_controller.call("try_cast_magic", self))
-func _update_magic_input(magic_down: bool, was_down: bool, delta: float) -> bool: return bool(magic_runtime_controller.call("update_magic_input", self, magic_down, was_down, delta))
-func _try_cast_imbue() -> bool: return bool(magic_runtime_controller.call("try_cast_imbue", self))
-func _cancel_magic_animation() -> void: magic_runtime_controller.call("cancel_magic_animation", self)
-func _reset_magic_runtime(reset_cooldown: bool = false) -> void: magic_runtime_controller.call("reset_for_room", self, reset_cooldown)
-func _sync_chroma_presentation() -> void:
-	magic_runtime_controller.call("sync_chroma_presentation", self)
-	_sync_current_element_state()
-func _execute_current_aspect_ability(mode: int) -> bool: return bool(magic_runtime_controller.call("execute_current_aspect_ability", self, mode))
-func _player_visual_center() -> Vector2: return magic_runtime_controller.call("player_visual_center", self) as Vector2
-func _slime_visual_center(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("slime_visual_center", self, slime) as Vector2
-func _magic_target_point(slime: Sprite2D) -> Vector2: return magic_runtime_controller.call("magic_target_point", self, slime) as Vector2
-func _spawn_magic_projectile(origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = 0) -> void: magic_runtime_controller.call("spawn_magic_projectile", self, origin, direction, homing_target, ability_mode)
-func _spawn_sword_beam(origin: Vector2, direction: Vector2, palette: String = "") -> void: magic_runtime_controller.call("spawn_sword_beam", self, origin, direction, palette)
-func _magic_projectile_outline_texture(base_color: Color, accent_color: Color) -> Texture2D: return magic_runtime_controller.call("magic_projectile_outline_texture", self, base_color, accent_color) as Texture2D
-func _update_magic_projectiles(delta: float) -> void: magic_runtime_controller.call("update_magic_projectiles", self, delta)
-func _resolve_magic_projectile_hit(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0) -> void: magic_runtime_controller.call("resolve_magic_projectile_hit", self, target, world_position, palette, ability_mode)
-func _magic_projectile_hit_target(sprite: Sprite2D) -> Sprite2D: return magic_runtime_controller.call("magic_projectile_hit_target", self, sprite) as Sprite2D
-func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool: return bool(magic_runtime_controller.call("_circle_intersects_polygon", center, radius, polygon))
-func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0, is_beam: bool = false) -> void: magic_runtime_controller.call("magic_hit_slime", self, slime, world_position, palette, ability_mode, is_beam)
-func _player_weapon_element() -> int: return int(magic_runtime_controller.call("player_weapon_element", self))
-func _spawn_magic_trail(world_position: Vector2, palette: String) -> void: magic_runtime_controller.call("spawn_magic_trail", self, world_position, palette)
-func _spawn_magic_impact(world_position: Vector2, palette: String) -> void: magic_runtime_controller.call("spawn_magic_impact", self, world_position, palette)
+func _magic_context() -> MagicRuntimeContext: return gameplay_frame_controller.magic_context(self) if gameplay_frame_controller != null else MagicRuntimeContext.new()
+func _update_player_mp_ui(_delta: float = 0.0) -> void: magic_runtime_controller.update_player_mp_ui(_magic_context())
+func _current_player_chroma() -> float: return magic_runtime_controller.current_player_chroma(_magic_context())
+func _restore_player_mp() -> void: magic_runtime_controller.restore_player_mp(_magic_context())
+func _try_cast_magic() -> bool: return magic_runtime_controller.try_cast_magic(_magic_context())
+func _update_magic_input(magic_down: bool, was_down: bool, delta: float) -> bool: return magic_runtime_controller.update_magic_input(_magic_context(), magic_down, was_down, delta)
+func _try_cast_imbue() -> bool: return magic_runtime_controller.try_cast_imbue(_magic_context())
+func _cancel_magic_animation() -> void: magic_runtime_controller.cancel_magic_animation(_magic_context())
+func _reset_magic_runtime(reset_cooldown: bool = false) -> void: magic_runtime_controller.reset_for_room(_magic_context(), reset_cooldown)
+func _sync_chroma_presentation() -> void: magic_runtime_controller.sync_chroma_presentation(_magic_context()); _sync_current_element_state()
+func _execute_current_aspect_ability(mode: int) -> bool: return magic_runtime_controller.execute_current_aspect_ability(_magic_context(), mode)
+func _player_visual_center() -> Vector2: return magic_runtime_controller.player_visual_center(_magic_context())
+func _slime_visual_center(slime: Sprite2D) -> Vector2: return magic_runtime_controller.slime_visual_center(_magic_context(), slime)
+func _magic_target_point(slime: Sprite2D) -> Vector2: return magic_runtime_controller.magic_target_point(_magic_context(), slime)
+func _spawn_magic_projectile(origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = 0) -> void: magic_runtime_controller.spawn_magic_projectile(_magic_context(), origin, direction, homing_target, ability_mode)
+func _spawn_sword_beam(origin: Vector2, direction: Vector2, palette: String = "") -> void: magic_runtime_controller.spawn_sword_beam(_magic_context(), origin, direction, palette)
+func _magic_projectile_outline_texture(base_color: Color, accent_color: Color) -> Texture2D: return magic_runtime_controller.magic_projectile_outline_texture(_magic_context(), base_color, accent_color)
+func _update_magic_projectiles(delta: float) -> void: magic_runtime_controller.update_magic_projectiles(_magic_context(), delta)
+func _resolve_magic_projectile_hit(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0) -> void: magic_runtime_controller.resolve_magic_projectile_hit(_magic_context(), target, world_position, palette, ability_mode)
+func _magic_projectile_hit_target(sprite: Sprite2D) -> Sprite2D: return magic_runtime_controller.magic_projectile_hit_target(_magic_context(), sprite)
+func _circle_intersects_polygon(center: Vector2, radius: float, polygon: PackedVector2Array) -> bool: return magic_runtime_controller._circle_intersects_polygon(center, radius, polygon)
+func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = 0, is_beam: bool = false) -> void: magic_runtime_controller.magic_hit_slime(_magic_context(), slime, world_position, palette, ability_mode, is_beam)
+func _player_weapon_element() -> int: return magic_runtime_controller.player_weapon_element(_magic_context())
+func _spawn_magic_trail(world_position: Vector2, palette: String) -> void: magic_runtime_controller.spawn_magic_trail(_magic_context(), world_position, palette)
+func _spawn_magic_impact(world_position: Vector2, palette: String) -> void: magic_runtime_controller.spawn_magic_impact(_magic_context(), world_position, palette)
 func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _depth_key(sprite: Sprite2D) -> float: return float(actor_presentation_runtime_controller.call("depth_key", self, sprite))
 func _equipment_occlusion_depth_key(sprite: Sprite2D) -> float: return float(actor_presentation_runtime_controller.call("equipment_occlusion_depth_key", self, sprite))
