@@ -42,6 +42,7 @@ script,role,state,owner,target,load,notes
 "slime_spawn_smoke","gate","verified","slime enemies","slime spawn visuals and actors","pure","2026-09-11 focused evidence"
 "sound_mix_profile_smoke","gate","verified","audio","sound mix profile clip resolution","pure","focused run 2026-09-13; every catalog cue has an editor volume entry"
 "title_boot_scene_smoke","gate","unverified","boot & run loop","main.tscn boots into title with cloud/save panel","main",""
+"menu_command_list_smoke","owner","unverified","menus & UI","shared command-list navigation primitive","pure",""
 "touch_controls_smoke","gate","verified","input & touch","TouchControlsLayer gestures and menu policy","pure","2026-09-13 focused evidence; callback fixture and menu policy reconciled"
 "wall_socket_geometry_smoke","gate","verified","room progression","portal-based doorway geometry and walkability","main","2026-09-13 focused evidence"
 "actor_geometry_scene_smoke","owner","unverified","actor geometry","geometry drawer and render visibility in main","main",""
