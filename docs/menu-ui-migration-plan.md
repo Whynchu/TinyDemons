@@ -105,8 +105,10 @@ over only the available (enabled) commands, computes the cursor anchor for the
 selected row, and dispatches confirm. The title screen's `update_title_flow`
 delegates its row/cursor/confirm handling to it (proving the shared primitive on
 a second screen after pause), and `menu_command_list_smoke` characterizes the
-behavior. The pause screen uses the same pattern and can adopt the primitive as
-its next slice.
+behavior. At `0.2.38` the **pause screen** also delegates its command-rail row
+navigation to `MenuCommandList` (via `_pause_command_list`), keeping pause's
+scene-authored cursor rendering; the pause screen is now fully on the shared
+navigation primitive.
 
 ## Demon Hub visual-identity handoff
 

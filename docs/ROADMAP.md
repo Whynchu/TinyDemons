@@ -167,11 +167,11 @@ Move one screen at a time out of `screen_state_controller.gd`. Keep route state
 and callbacks explicit, preserve the central frame schedule, and compare the
 render at native 240×160 before checking wider modes.
 
-**Status (0.2.37):** the shared `MenuCommandList` primitive is extracted and the
-title screen delegates its command-rail navigation to it (characterized by
-`menu_command_list_smoke`). Remaining: migrate the pause screen onto the same
-primitive, then extract the shared frame/cursor/footer components for the
-remaining screens.
+**Status (0.2.38):** the shared `MenuCommandList` primitive is extracted and both
+the title and pause screens delegate their command-rail navigation to it
+(characterized by `menu_command_list_smoke`). Remaining: extract the shared
+frame/cursor/footer components for the remaining screens (settings, save select,
+hub), then adopt them one screen at a time.
 
 ## Phase 0.40 — Room and encounter boundaries
 
