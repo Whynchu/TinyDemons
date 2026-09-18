@@ -1,6 +1,11 @@
 extends SceneTree
 
 
+func _equipment_visual_context(gameplay: Node) -> PlayerEquipmentVisualContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.equipment_visual_context(gameplay) if frame_controller != null else PlayerEquipmentVisualContext.new()
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -122,7 +127,7 @@ func _initialize() -> void:
 		_expect(magic_frame_time > attack_tuning.attack_frame_time / attack_multiplier, "triangle magic animation is slower than attack animation", failures)
 		_expect(bool(gameplay.call("_execute_current_aspect_ability", 0)), "triangle cast starts its visual animation", failures)
 		if equipment_visual != null:
-			equipment_visual.tick(gameplay, 0.0)
+			equipment_visual.tick(_equipment_visual_context(gameplay), 0.0)
 			var equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
 			var sword_back := equipment_layers.get("EquipmentSwordBack") as Sprite2D
 			var sword_front := equipment_layers.get("EquipmentSwordFront") as Sprite2D
@@ -143,7 +148,7 @@ func _initialize() -> void:
 			equipment_fixture.has_shield = true
 		magic_runtime.call("begin_magic_animation", gameplay, Vector2.LEFT, null, 0)
 		if equipment_visual != null:
-			equipment_visual.tick(gameplay, 0.0)
+			equipment_visual.tick(_equipment_visual_context(gameplay), 0.0)
 			var left_equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
 			var left_sword_back := left_equipment_layers.get("EquipmentSwordBack") as Sprite2D
 			var left_shield_front := left_equipment_layers.get("EquipmentShieldFront") as Sprite2D

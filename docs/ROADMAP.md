@@ -42,7 +42,7 @@ Work should move through one narrow slice at a time:
 | 0.20 | Stabilize active player-facing contracts | In progress | issue tracker findings have focused or manual verification, with failures classified |
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
-| 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard at 100%; state bag and room owner at strict targets; legacy adapters retired |
+| 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard and editor composition at 100%; state bag and room owner at strict targets; legacy adapters retired; all authored definitions inspectable |
 | 0.60 | Make content authoring repeatable | Planned | validated definitions, factories, and an example workflow for rooms, enemies, rewards, and tuning |
 | 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios |
 | 0.80 | Establish long-term content composition | Planned | an enemy/room/map can be added through definitions and composition without central-state special cases |
@@ -50,12 +50,12 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.24
+## Next checkpoint after 0.2.32
 
-Version `0.2.24` records the completed composition refactor (100% on the strict
-scorecard), a fresh measured baseline in [`AUDIT.md`](AUDIT.md), and a new
-regression floor in `tools/composition-baseline.json`. The next checkpoint is a
-stabilization pass in this order:
+Version `0.2.32` records the completed composition refactor in both halves (strict
+scorecard and editor composition at 100%), the fully authored-content definition
+surface, and the re-locked regression floor in `tools/composition-baseline.json`.
+The next checkpoint is a stabilization pass in this order:
 
 1. Make the boss-entry measurement a stable gate: the perf harness reports one
    noisy sample per run (~100–165 ms quiet, ~300–385 ms loaded), so average it
@@ -183,12 +183,15 @@ Complete. The composition scorecard is at 100%: `GameplayState` is at 1,719
 lines / 286 fields, dynamic root access is at 2,488, `RoomController` is at
 2,253 lines, and the transitional/legacy counts are zero. The strict audit
 (`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
-floor now protects the achieved state. Remaining dynamic-access owners
-(`screen_state_controller.gd`, `combat_runtime_controller.gd`,
-`slime_runtime_controller.gd`, `magic_runtime_controller.gd`) are the next
-vertical migration candidates and should be reduced feature by feature while
-preserving frame order and removing obsolete wrappers only after their final
-consumer migrates.
+floor now protects the achieved state. At `0.2.32` the editor-composition half
+is also 100%: all 20 components are blind and `@export`-configured, and all 16
+authored definition surfaces are editor-inspectable resources (see
+`docs/component-composition-design.md` for the A1/A2/B1/B2/C1/C2/scope sequence).
+Remaining dynamic-access owners (`screen_state_controller.gd`,
+`combat_runtime_controller.gd`, `slime_runtime_controller.gd`,
+`magic_runtime_controller.gd`) are the next vertical migration candidates and
+should be reduced feature by feature while preserving frame order and removing
+obsolete wrappers only after their final consumer migrates.
 
 ## Phase 0.60 — Content authoring
 
