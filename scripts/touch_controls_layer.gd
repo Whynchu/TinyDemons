@@ -33,17 +33,22 @@ const FUSION_DOUBLE_TAP_MS := 350
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
 ## Roll is the primary thumb-home action (the GameCube-A-style main button).
-## Secondary actions fan out radially around its edge, with attack nearest the
-## thumb. Directions are unit-steps of (button + gap) from the roll center.
+## Secondary actions sit on a clean geometric arc around roll's edge: attack at
+## the nearest radius (thumb-flick direction, 180° = directly left), the rest
+## evenly spaced at ~22.5° steps across the upper-left arc. Angles are measured
+## in screen degrees (0° = right, 90° = up, 180° = left). Radius is in
+## (button + gap) steps from the roll center. The arc radius is sized so
+## adjacent 24 px buttons do not overlap.
 const ROLL_PRIMARY_SCALE := 1.5
-const BUTTON_RADIAL_DIRECTIONS := {
-	&"roll": Vector2.ZERO,
-	&"attack": Vector2(-0.85, 0.30),
-	&"magic": Vector2(-0.40, -0.85),
-	&"guard": Vector2(0.20, -1.15),
-	&"interact": Vector2(0.70, -0.80),
-	&"target": Vector2(-1.25, -0.30),
+const BUTTON_ARC := {
+	&"attack": {"angle": 180.0, "radius": 1.10},
+	&"magic": {"angle": 157.5, "radius": 2.10},
+	&"guard": {"angle": 135.0, "radius": 2.10},
+	&"interact": {"angle": 112.5, "radius": 2.10},
+	&"target": {"angle": 90.0, "radius": 2.10},
 }
+## Touch slop beyond the circle radius so near-miss taps still register.
+const CIRCLE_HIT_SLOP := 2.0
 const BUTTON_LABELS := {
 	&"attack": "ATK", &"roll": "ROLL", &"magic": "MAG",
 	&"guard": "GUARD", &"target": "TGT", &"interact": "USE", &"pause": "II", &"open_minimap": "MAP", &"cancel": "CANCEL",
@@ -219,36 +224,45 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2, minimap_rec
 	var gap := maxf(5.0, button * 0.30)
 	var step := button + gap
 	var stick_diameter := clampf(unit * STICK_FRACTION, STICK_MIN, STICK_MAX)
-	# The stick owns the entire left half so a touch settles wherever the thumb
-	# lands; the minimap (and any dialogue zone) is excluded by the finger-down
-	# ordering that checks it first. The stick stays inside the viewport.
+	# The stick owns the entire left half: a touch anywhere there relocates the
+	# stick to that point (the classic floating mobile joystick). Its resting
+	# home nests in the lower-left corner, mirroring the button cluster on the
+	# right, so the idle visual is always anchored.
 	var left_half := maxf(viewport_size.x * 0.5, stick_diameter * 1.2)
 	var stick_zone := Rect2(Vector2(margin, margin), Vector2(maxf(left_half - margin * 2.0, stick_diameter), maxf(viewport_size.y - margin * 2.0, stick_diameter)))
-	var stick_home := stick_zone.position + stick_zone.size * 0.5
-	# The radial action cluster anchors on the primary roll button in the
-	# lower-right thumb-home position. Secondary actions arc around its edge.
+	var stick_home := Vector2(margin + stick_diameter * 0.62, viewport_size.y - margin - stick_diameter * 0.62)
+	# The action cluster anchors on the primary roll button in the lower-right
+	# thumb-home position. Secondary actions sit on a clean geometric arc around
+	# roll's edge at a fixed radius, evenly spaced by angle.
 	var roll_size := button * ROLL_PRIMARY_SCALE
 	var min_extent := Vector2(INF, INF)
 	var max_extent := Vector2(-INF, -INF)
-	for action in BUTTON_RADIAL_DIRECTIONS:
-		var direction: Vector2 = BUTTON_RADIAL_DIRECTIONS[action]
-		var half := (roll_size if action == &"roll" else button) * 0.5
-		min_extent.x = minf(min_extent.x, direction.x * step - half)
-		min_extent.y = minf(min_extent.y, direction.y * step - half)
-		max_extent.x = maxf(max_extent.x, direction.x * step + half)
-		max_extent.y = maxf(max_extent.y, direction.y * step + half)
+	for action in BUTTON_ARC:
+		var arc: Dictionary = BUTTON_ARC[action]
+		var angle_deg := float(arc["angle"])
+		var radius := float(arc["radius"]) * step
+		var direction := Vector2(cos(deg_to_rad(angle_deg)), -sin(deg_to_rad(angle_deg)))
+		min_extent.x = minf(min_extent.x, direction.x * radius - button * 0.5)
+		min_extent.y = minf(min_extent.y, direction.y * radius - button * 0.5)
+		max_extent.x = maxf(max_extent.x, direction.x * radius + button * 0.5)
+		max_extent.y = maxf(max_extent.y, direction.y * radius + button * 0.5)
+	min_extent.x = minf(min_extent.x, -roll_size * 0.5)
+	min_extent.y = minf(min_extent.y, -roll_size * 0.5)
+	max_extent.x = maxf(max_extent.x, roll_size * 0.5)
+	max_extent.y = maxf(max_extent.y, roll_size * 0.5)
 	var cluster_w := max_extent.x - min_extent.x
 	var cluster_h := max_extent.y - min_extent.y
 	var cluster_origin := Vector2(maxf(margin, viewport_size.x - margin - cluster_w), maxf(margin, viewport_size.y - margin - cluster_h))
 	var roll_center := cluster_origin - min_extent
 	var buttons: Dictionary = {}
-	for action in BUTTON_ORDER:
-		var direction: Vector2 = BUTTON_RADIAL_DIRECTIONS[action]
-		if action == &"roll":
-			buttons[action] = Rect2(roll_center - Vector2(roll_size, roll_size) * 0.5, Vector2(roll_size, roll_size))
-		else:
-			var center := roll_center + direction * step
-			buttons[action] = Rect2(center - Vector2(button, button) * 0.5, Vector2(button, button))
+	buttons[&"roll"] = Rect2(roll_center - Vector2(roll_size, roll_size) * 0.5, Vector2(roll_size, roll_size))
+	for action in BUTTON_ARC:
+		var arc: Dictionary = BUTTON_ARC[action]
+		var angle_deg := float(arc["angle"])
+		var radius := float(arc["radius"]) * step
+		var direction := Vector2(cos(deg_to_rad(angle_deg)), -sin(deg_to_rad(angle_deg)))
+		var center := roll_center + direction * radius
+		buttons[action] = Rect2(center - Vector2(button, button) * 0.5, Vector2(button, button))
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
 	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))
 	# The minimap is the map button. Use the live minimap sprite rect when the
@@ -258,8 +272,11 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2, minimap_rec
 		var minimap_side := clampf(unit * 0.20, 40.0, 72.0)
 		minimap = Rect2(Vector2(margin, margin), Vector2(minimap_side, minimap_side))
 	var cancel_width := clampf(button * 2.5, 42.0, 96.0)
-	var cancel_position := Vector2(maxf(margin, viewport_size.x - margin - cancel_width), maxf(margin, viewport_size.y - margin - button))
-	var cancel := Rect2(cancel_position, Vector2(cancel_width, button))
+	# Cancel is contextual (dialogue) and must not collide with the action
+	# cluster or dialogue panel. It nests just above the roll cluster at the
+	# right edge so it stays clear of the lower-right thumb-home buttons.
+	var cancel_height := button * 0.8
+	var cancel := Rect2(Vector2(maxf(margin, viewport_size.x - margin - cancel_width), maxf(margin, viewport_size.y - margin - button - roll_size - gap)), Vector2(cancel_width, cancel_height))
 	return {
 		"window_rect": window_rect,
 		"margin": margin,
@@ -462,14 +479,14 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		# interact/accept button when the tap is not on a gameplay control.
 		var dialogue_buttons: Dictionary = _layout.get("buttons", {})
 		var dialogue_pause: Rect2 = _layout.get("pause", Rect2())
-		if not _rect_dictionary_contains(dialogue_buttons, position) and not dialogue_pause.has_point(position):
+		if not _buttons_contain(dialogue_buttons, position) and not dialogue_pause.has_point(position):
 			_menu_accept_fingers[finger_id] = Time.get_ticks_msec()
 			_menu_accept_latch = true
 			_update_touch_capture_filter()
 			return
 	var buttons: Dictionary = _layout.get("buttons", {})
 	for action in buttons:
-		if (buttons[action] as Rect2).has_point(position):
+		if _circle_contains(buttons[action] as Rect2, position, CIRCLE_HIT_SLOP):
 			_finger_actions[finger_id] = action
 			if action == &"target":
 				_target_toggle_active = not _target_toggle_active
@@ -543,7 +560,7 @@ func _finger_moved(finger_id: int, position: Vector2) -> void:
 				_update_touch_capture_filter()
 			return
 		var rect := _button_rect(action)
-		if not rect.grow(3.0).has_point(position):
+		if not _circle_contains(rect, position, CIRCLE_HIT_SLOP + 3.0):
 			_finger_actions.erase(finger_id)
 			if action != &"target": set_button_state(action, false)
 			_update_touch_capture_filter()
@@ -628,6 +645,21 @@ func _is_scrollable_menu() -> bool:
 func _rect_dictionary_contains(rectangles: Dictionary, position: Vector2) -> bool:
 	for value in rectangles.values():
 		if value is Rect2 and (value as Rect2).has_point(position):
+			return true
+	return false
+
+
+## Circular hit test: a button is a true circle centered in its rect, so a
+## touch registers only when it lands at or near the circle. This keeps the
+## touchable area round like the visual instead of a forgiving square.
+func _circle_contains(rect: Rect2, position: Vector2, slop: float) -> bool:
+	var radius := minf(rect.size.x, rect.size.y) * 0.5 + slop
+	return rect.get_center().distance_to(position) <= radius
+
+
+func _buttons_contain(buttons: Dictionary, position: Vector2) -> bool:
+	for action in buttons:
+		if _circle_contains(buttons[action] as Rect2, position, CIRCLE_HIT_SLOP):
 			return true
 	return false
 
@@ -921,6 +953,7 @@ func _apply_layout() -> void:
 		var label := node.get_child(0) as Label
 		if label != null:
 			label.add_theme_font_size_override("font_size", int(clampf(node.size.y * 0.32, 6.0, 16.0)))
+		_update_button_visual(action)
 
 
 func _update_stick_visuals() -> void:
@@ -942,7 +975,9 @@ func _update_button_visual(action: StringName) -> void:
 		return
 	var node := _button_nodes[action] as Panel
 	var pressed := bool(_pressed_actions.get(action, false))
-	var diameter := float(_layout.get("button_size", 20.0))
+	var diameter := node.size.x
+	if diameter <= 0.0:
+		diameter = float(_layout.get("button_size", 20.0))
 	var corner := int(diameter * 0.5)
 	if pressed:
 		node.add_theme_stylebox_override("panel", _panel_style(Color(0.38, 0.42, 0.58, 0.95), Color.WHITE, 2, corner))
