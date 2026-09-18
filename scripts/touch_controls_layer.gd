@@ -32,9 +32,17 @@ const MENU_ACCEPT_MAX_HOLD_MS := 800
 const FUSION_DOUBLE_TAP_MS := 350
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
-const BUTTON_GRID_POSITIONS := {
-	&"magic": Vector2i(1, 0), &"attack": Vector2i(0, 1), &"interact": Vector2i(2, 1),
-	&"guard": Vector2i(0, 2), &"roll": Vector2i(1, 2), &"target": Vector2i(2, 2),
+## Roll is the primary thumb-home action (the GameCube-A-style main button).
+## Secondary actions fan out radially around its edge, with attack nearest the
+## thumb. Directions are unit-steps of (button + gap) from the roll center.
+const ROLL_PRIMARY_SCALE := 1.5
+const BUTTON_RADIAL_DIRECTIONS := {
+	&"roll": Vector2.ZERO,
+	&"attack": Vector2(-0.85, 0.30),
+	&"magic": Vector2(-0.40, -0.85),
+	&"guard": Vector2(0.20, -1.15),
+	&"interact": Vector2(0.70, -0.80),
+	&"target": Vector2(-1.25, -0.30),
 }
 const BUTTON_LABELS := {
 	&"attack": "ATK", &"roll": "ROLL", &"magic": "MAG",
@@ -197,32 +205,58 @@ func set_button_state(action: StringName, pressed: bool) -> void:
 ## device. All returned rects are in the logical viewport/canvas space. The
 ## physical window scale and any letterbox bars are applied outside this
 ## CanvasLayer by Godot, so they must not be included in these coordinates.
-func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictionary:
+##
+## minimap_rect is the on-screen rect of the small minimap itself (the touch
+## target that opens the full map). It is provided by the live minimap
+## controller; callers without one pass Rect2() and the computed fallback (the
+## known authored minimap corner) is used.
+func _compute_layout(window_logical: Vector2, content_size: Vector2, minimap_rect: Rect2 = Rect2()) -> Dictionary:
 	var viewport_size := Vector2(maxf(window_logical.x, content_size.x), maxf(window_logical.y, content_size.y))
 	var window_rect := Rect2(Vector2.ZERO, viewport_size)
 	var unit := minf(viewport_size.x, viewport_size.y)
 	var margin := clampf(unit * MARGIN_FRACTION, 2.0, 8.0)
 	var button := clampf(unit * BUTTON_FRACTION, BUTTON_MIN, BUTTON_MAX)
 	var gap := maxf(5.0, button * 0.30)
+	var step := button + gap
 	var stick_diameter := clampf(unit * STICK_FRACTION, STICK_MIN, STICK_MAX)
-	# Keep the stick in the lower-left corner and the action cluster in the
-	# lower-right corner. These are deliberately inside the viewport: the
-	# stretch transform maps both the visuals and touch positions together.
-	var stick_width := minf(maxf(stick_diameter * 1.4, 60.0), viewport_size.x * 0.40)
-	var stick_zone := Rect2(Vector2(margin, viewport_size.y - margin - stick_diameter), Vector2(maxf(stick_width, stick_diameter), stick_diameter))
+	# The stick owns the entire left half so a touch settles wherever the thumb
+	# lands; the minimap (and any dialogue zone) is excluded by the finger-down
+	# ordering that checks it first. The stick stays inside the viewport.
+	var left_half := maxf(viewport_size.x * 0.5, stick_diameter * 1.2)
+	var stick_zone := Rect2(Vector2(margin, margin), Vector2(maxf(left_half - margin * 2.0, stick_diameter), maxf(viewport_size.y - margin * 2.0, stick_diameter)))
 	var stick_home := stick_zone.position + stick_zone.size * 0.5
-	var cluster_origin := Vector2.ZERO
-	var columns := 3
-	var cluster_w := columns * button + float(columns - 1) * gap
-	var cluster_h := 3.0 * button + 2.0 * gap
-	cluster_origin = Vector2(maxf(margin, viewport_size.x - margin - cluster_w), maxf(margin, viewport_size.y - margin - cluster_h))
+	# The radial action cluster anchors on the primary roll button in the
+	# lower-right thumb-home position. Secondary actions arc around its edge.
+	var roll_size := button * ROLL_PRIMARY_SCALE
+	var min_extent := Vector2(INF, INF)
+	var max_extent := Vector2(-INF, -INF)
+	for action in BUTTON_RADIAL_DIRECTIONS:
+		var direction: Vector2 = BUTTON_RADIAL_DIRECTIONS[action]
+		var half := (roll_size if action == &"roll" else button) * 0.5
+		min_extent.x = minf(min_extent.x, direction.x * step - half)
+		min_extent.y = minf(min_extent.y, direction.y * step - half)
+		max_extent.x = maxf(max_extent.x, direction.x * step + half)
+		max_extent.y = maxf(max_extent.y, direction.y * step + half)
+	var cluster_w := max_extent.x - min_extent.x
+	var cluster_h := max_extent.y - min_extent.y
+	var cluster_origin := Vector2(maxf(margin, viewport_size.x - margin - cluster_w), maxf(margin, viewport_size.y - margin - cluster_h))
+	var roll_center := cluster_origin - min_extent
 	var buttons: Dictionary = {}
 	for action in BUTTON_ORDER:
-		var grid_position: Vector2i = BUTTON_GRID_POSITIONS[action]
-		buttons[action] = Rect2(cluster_origin + Vector2(float(grid_position.x) * (button + gap), float(grid_position.y) * (button + gap)), Vector2(button, button))
+		var direction: Vector2 = BUTTON_RADIAL_DIRECTIONS[action]
+		if action == &"roll":
+			buttons[action] = Rect2(roll_center - Vector2(roll_size, roll_size) * 0.5, Vector2(roll_size, roll_size))
+		else:
+			var center := roll_center + direction * step
+			buttons[action] = Rect2(center - Vector2(button, button) * 0.5, Vector2(button, button))
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
 	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))
-	var minimap := Rect2(Vector2(maxf(margin, pause.position.x - gap - pause_side), margin), pause.size)
+	# The minimap is the map button. Use the live minimap sprite rect when the
+	# controller provides it; otherwise fall back to the authored minimap corner.
+	var minimap := minimap_rect
+	if minimap.size.x <= 0.0 or minimap.size.y <= 0.0:
+		var minimap_side := clampf(unit * 0.20, 40.0, 72.0)
+		minimap = Rect2(Vector2(margin, margin), Vector2(minimap_side, minimap_side))
 	var cancel_width := clampf(button * 2.5, 42.0, 96.0)
 	var cancel_position := Vector2(maxf(margin, viewport_size.x - margin - cancel_width), maxf(margin, viewport_size.y - margin - button))
 	var cancel := Rect2(cancel_position, Vector2(cancel_width, button))
@@ -230,6 +264,7 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2) -> Dictiona
 		"window_rect": window_rect,
 		"margin": margin,
 		"button_size": button,
+		"roll_size": roll_size,
 		"stick_zone": stick_zone,
 		"stick_home": stick_home,
 		"stick_radius": stick_diameter * 0.42,
@@ -806,10 +841,22 @@ func _update_layout() -> void:
 		viewport_size = viewport.get_visible_rect().size
 		if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 			viewport_size = content_size
-	_layout = _compute_layout(viewport_size, content_size)
+	_layout = _compute_layout(viewport_size, content_size, _live_minimap_rect())
 	if _stick_pointer_id < 0:
 		_stick_origin = _layout["stick_home"]
 	_apply_layout()
+
+
+func _live_minimap_rect() -> Rect2:
+	var host := get_parent()
+	if host == null:
+		return Rect2()
+	var minimap := host.get("dungeon_minimap_controller") as Node
+	if minimap != null and minimap.has_method("small_map_screen_rect"):
+		var screen_rect := minimap.call("small_map_screen_rect") as Rect2
+		if screen_rect.size.x > 0.0 and screen_rect.size.y > 0.0:
+			return screen_rect.grow(maxf(float(_layout.get("margin", 4.0)), 2.0))
+	return Rect2()
 
 
 func _context_cancel_rect(layout: Dictionary) -> Rect2:
@@ -929,7 +976,10 @@ func _refresh_controls() -> void:
 		elif action == &"pause":
 			control_visible = _controls_visible
 		elif action == &"open_minimap":
-			control_visible = (_controls_visible and _input_context == CONTEXT_GAMEPLAY) or (_touch_input_enabled and _input_context == CONTEXT_MENU and _is_minimap_open())
+			# In gameplay the minimap itself is the map button, so the separate
+			# MAP button stays hidden there. It remains available while the full
+			# map is open in a menu context so a touch player can close it.
+			control_visible = _touch_input_enabled and _input_context == CONTEXT_MENU and _is_minimap_open()
 		(_button_nodes[action] as Control).visible = control_visible
 
 
