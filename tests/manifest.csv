@@ -54,6 +54,7 @@ script,role,state,owner,target,load,notes
 "chest_interaction_scene_smoke","owner","verified","room progression","chest interaction and typed owner wiring in main scene","main","focused pass"
 "circular_input_smoke","owner","unverified","input & touch","circular input recognizer","pure",""
 "cloud_panel_touch_smoke","owner","verified","save & profile","cloud panel touch flow","main","passes in isolated headless run 2026-09-13"
+"guard_block_smoke","owner","unverified","player combat","guard block visual callable freeze regression","pure",""
 "combat_momentum_smoke","owner","unverified","player combat","combat momentum component","pure",""
 "composite_elemental_damage_smoke","owner","unverified","chroma & elements","composite elemental damage","pure",""
 "demon_cloak_smoke","owner","verified","gear & fusion","demon cloak purchase and presentation","main","passes in isolated headless run 2026-09-13"

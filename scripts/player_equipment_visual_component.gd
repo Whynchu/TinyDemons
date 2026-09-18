@@ -893,10 +893,10 @@ func break_guard(new_context: PlayerEquipmentVisualContext) -> void:
 	var shield := layers.get("EquipmentShieldFront") as Sprite2D
 	if shield == null or not shield.visible or shield.texture == null:
 		shield = layers.get("EquipmentShieldBack") as Sprite2D
-	if shield != null and shield.texture != null:
+	if shield != null and shield.texture != null and new_context != null:
 		var effects := new_context.effects_spawner
 		var random_source := new_context.rng
-		if effects != null and random_source != null:
+		if effects != null and random_source != null and new_context.player != null:
 			effects.spawn_player_death_particles(new_context.player.get_parent(), _white_copy(shield.texture), shield.global_position, Vector2.ZERO, Vector2.ONE, shield.z_index + 2, 0.75, random_source.randi(), new_context.pixel_particle_texture, shield.flip_h, &"equipment_fizzle")
 	for layer_name in ["EquipmentShieldFront", "EquipmentShieldBack"]:
 		var layer := layers.get(layer_name) as Sprite2D
@@ -914,6 +914,8 @@ func _update_guard_flash(new_context: PlayerEquipmentVisualContext) -> void:
 		if guard_flash_overlay != null:
 			guard_flash_overlay.queue_free()
 			guard_flash_overlay = null
+		return
+	if new_context == null or new_context.player == null:
 		return
 	var shield := layers.get("EquipmentShieldFront") as Sprite2D
 	if shield == null or not shield.visible or shield.texture == null:

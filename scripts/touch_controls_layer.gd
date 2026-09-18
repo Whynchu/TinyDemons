@@ -33,19 +33,19 @@ const FUSION_DOUBLE_TAP_MS := 350
 
 const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
 ## Roll is the primary thumb-home action (the GameCube-A-style main button).
-## Secondary actions sit on a clean geometric arc around roll's edge: attack at
-## the nearest radius (thumb-flick direction, 180° = directly left), the rest
-## evenly spaced at ~22.5° steps across the upper-left arc. Angles are measured
-## in screen degrees (0° = right, 90° = up, 180° = left). Radius is in
-## (button + gap) steps from the roll center. The arc radius is sized so
-## adjacent 24 px buttons do not overlap.
+## Secondary actions sit on a clean geometric arc close around roll's edge:
+## attack at the nearest radius (down-left of the thumb), the rest evenly
+## spaced at ~30° steps across the upper-left arc. Angles are measured in
+## screen degrees (0° = right, 90° = up, 180° = left). Radius is in
+## (button + gap) steps from the roll center. The arc radius keeps adjacent
+## 24 px buttons from overlapping while staying within thumb reach of roll.
 const ROLL_PRIMARY_SCALE := 1.5
 const BUTTON_ARC := {
-	&"attack": {"angle": 180.0, "radius": 1.10},
-	&"magic": {"angle": 157.5, "radius": 2.10},
-	&"guard": {"angle": 135.0, "radius": 2.10},
-	&"interact": {"angle": 112.5, "radius": 2.10},
-	&"target": {"angle": 90.0, "radius": 2.10},
+	&"attack": {"angle": 200.0, "radius": 0.95},
+	&"magic": {"angle": 170.0, "radius": 1.60},
+	&"guard": {"angle": 140.0, "radius": 1.60},
+	&"interact": {"angle": 110.0, "radius": 1.60},
+	&"target": {"angle": 80.0, "radius": 1.60},
 }
 ## Touch slop beyond the circle radius so near-miss taps still register.
 const CIRCLE_HIT_SLOP := 2.0
