@@ -13,19 +13,23 @@ class_name DungeonLayoutGenerator
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
+const POLICY_SCRIPT = preload("res://scripts/dungeon_generation_policy.gd")
+static var _policy: DungeonGenerationPolicy = null
+
+
+static func policy() -> DungeonGenerationPolicy:
+	if _policy == null:
+		_policy = POLICY_SCRIPT.new() as DungeonGenerationPolicy
+	return _policy
 
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
-## Keep candidate selection lightweight enough for a live run transition. The
-## preview can still vary its outer seeds for more visual samples. Legacy
-## generation uses one scaffold candidate; active R6+ uses a small bounded pool
-## so crowded seeds can recover a valid route choice without an unbounded search.
-const GENERATED_CANDIDATE_COUNT := 1
+## Candidate counts come from DungeonGenerationPolicy (editor-inspectable), so
+## the generation inputs are explicit data rather than hardcoded constants.
 const COMPACT_MAP_SIZE := Vector2i(35, 35)
 const COMPACT_MAP_ORIGIN := Vector2i(17, 32)
 static var last_progression_repairs: Array[String] = []
 const FIRST_ORB_DEPTH := 3
 const FIRST_SPECIAL_DEPTH := 4
-const RISK_REWARD_CANDIDATE_COUNT := 3
 
 const ROUTE_MAIN: StringName = &"main"
 const ROUTE_FORK: StringName = &"fork"
@@ -178,7 +182,7 @@ static func build(dungeon_seed: int, completed_runs: int, selected_starter_flame
 	# seed. The selected result remains deterministic for saves and replays.
 	var best_layout = null
 	var best_score := -INF
-	for candidate_index in range(GENERATED_CANDIDATE_COUNT):
+	for candidate_index in range(policy().generated_candidate_count):
 		var candidate_seed := int(dungeon_seed) ^ (candidate_index * 104729) ^ 0x524F5554
 		var candidate = _build_candidate(candidate_seed, completed_runs, selected_starter_flame, selected_bound_flame)
 		var candidate_errors: Array[String] = validate(candidate, completed_runs, selected_starter_flame, selected_bound_flame)
@@ -198,7 +202,7 @@ static func build_risk_reward(dungeon_seed: int, completed_runs: int, selected_s
 	var best_score := -INF
 	# A small candidate pool lets route-choice placement recover from a crowded
 	# seed without turning generation into an unbounded search.
-	for candidate_index in range(RISK_REWARD_CANDIDATE_COUNT):
+	for candidate_index in range(policy().risk_reward_candidate_count):
 		var candidate_seed := int(dungeon_seed) ^ (candidate_index * 104729) ^ 0x52524B52
 		var candidate = _build_risk_reward_candidate(candidate_seed, completed_runs, selected_starter_flame, selected_bound_flame)
 		var candidate_errors: Array[String] = validate_risk_reward(candidate, completed_runs, selected_starter_flame, selected_bound_flame)
