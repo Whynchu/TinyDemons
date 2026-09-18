@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.36"
+const GAME_VERSION := "0.2.37"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -266,6 +266,7 @@ var title_start_text: Sprite2D = null
 var title_settings_text: Sprite2D = null
 var title_cursor_text: Sprite2D = null
 var title_menu_row := 0
+var title_command_list: MenuCommandList = null
 var title_transition_active := false
 var title_transition_timer := 0.0
 var title_particle_layer: Node2D = null
@@ -585,34 +586,34 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		var base_y := float(button.get_meta("title_base_y", 93.0 + visible_index * 16.0))
 		button.position.y = base_y + retro_button_bob(frame_timer + phase)
 		visible_index += 1
-	var available_rows: Array[int] = []
-	for index in title_buttons.size():
-		if title_buttons[index] != null and not title_buttons[index].disabled: available_rows.append(index)
-	if available_rows.is_empty(): return
-	if not available_rows.has(title_menu_row): title_menu_row = available_rows[0]
-	if root._is_menu_direction_just_pressed(&"ui_up"):
-		var current_index := available_rows.find(title_menu_row)
-		title_menu_row = available_rows[posmod(current_index - 1, available_rows.size())]
-		root._play_sound("ui_hover", -6.0, 1.0)
-	elif root._is_menu_direction_just_pressed(&"ui_down"):
-		var current_index := available_rows.find(title_menu_row)
-		title_menu_row = available_rows[posmod(current_index + 1, available_rows.size())]
-		root._play_sound("ui_hover", -6.0, 1.0)
-	var selected := title_buttons[title_menu_row]
-	var cursor := title_cursor_text
-	if cursor != null and selected != null:
-		cursor.visible = true
-		# The title buttons float up/down every frame (retro bob); anchor the
-		# cursor to the button's static base row so it stays put and bobs like the
-		# other menus instead of chasing the animated position.
-		var base_y: float = selected.get_meta("title_base_y") as float if selected.has_meta("title_base_y") else selected.position.y
-		move_menu_cursor(cursor, Vector2(selected.position.x - CURSOR_LEFT_GAP, base_y + 4.0))
-		cursor.texture = MENU_CURSOR_TEXTURE
-	if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
-		# Preserve the title transition's original fizzle cue for both NEW GAME
-		# and CONTINUE. Generic menu confirms use the authored Confirm sound.
-		root._play_sound("enemy_death", -6.0, 0.95)
-		selected.pressed.emit()
+	var command_list := title_command_list
+	if command_list != null:
+		command_list.configure(title_buttons, [93.0, 109.0, 125.0, 141.0])
+		command_list.row = title_menu_row
+		if command_list.available_rows().is_empty(): return
+		if not command_list.available_rows().has(title_menu_row): title_menu_row = command_list.available_rows()[0]; command_list.row = title_menu_row
+		if root._is_menu_direction_just_pressed(&"ui_up"):
+			command_list.move_up(); title_menu_row = command_list.row
+			root._play_sound("ui_hover", -6.0, 1.0)
+		elif root._is_menu_direction_just_pressed(&"ui_down"):
+			command_list.move_down(); title_menu_row = command_list.row
+			root._play_sound("ui_hover", -6.0, 1.0)
+		var cursor := title_cursor_text
+		var selected := command_list.selected()
+		if cursor != null and selected != null:
+			cursor.visible = true
+			# The title buttons float up/down every frame (retro bob); anchor the
+			# cursor to the button's static base row so it stays put and bobs like the
+			# other menus instead of chasing the animated position.
+			var base_y2: float = selected.get_meta("title_base_y") as float if selected.has_meta("title_base_y") else selected.position.y
+			move_menu_cursor(cursor, Vector2(selected.position.x - CURSOR_LEFT_GAP, base_y2 + 4.0))
+			cursor.texture = MENU_CURSOR_TEXTURE
+		if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
+			# Preserve the title transition's original fizzle cue for both NEW GAME
+			# and CONTINUE. Generic menu confirms use the authored Confirm sound.
+			root._play_sound("enemy_death", -6.0, 0.95)
+			selected.pressed.emit()
+		return
 
 
 func update_archetype_input(root: GameplayState, delta: float) -> void:
@@ -4390,6 +4391,9 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	overlay.add_child(settings_button)
 	var cursor := create_sprite(overlay, "TitleCursor", MENU_CURSOR_TEXTURE, Vector2((display_view_size.x - 64.0) * 0.5 - 8.0, 97 if not has_profile else 113), false)
 	title_menu_row = 1 if has_profile else 0
+	title_command_list = MenuCommandList.new()
+	title_command_list.configure([new_game_button, continue_button, cloud_button, settings_button], [93.0, 109.0, 125.0, 141.0])
+	title_command_list.row = title_menu_row
 	return {"overlay": overlay, "text": title_text, "version": version_text, "new_game": new_game_button, "continue": continue_button, "cloud": cloud_button, "settings": settings_button, "start_text": new_game_button.get_child(0) as Sprite2D, "settings_text": settings_button.get_child(0) as Sprite2D, "cursor": cursor}
 
 

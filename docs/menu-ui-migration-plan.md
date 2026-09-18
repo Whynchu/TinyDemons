@@ -97,6 +97,17 @@ their existing route contracts preserved until scene parity is verified.
 4. Title, save, settings, element selection, hub, and result screens.
 5. Remove procedural presentation that has reached scene parity.
 
+### Step 2 status — `MenuCommandList` (0.2.37)
+
+The shared command-list primitive now lives in `scripts/menu_command_list.gd`
+(`MenuCommandList`): it owns an ordered command rail's buttons, navigates up/down
+over only the available (enabled) commands, computes the cursor anchor for the
+selected row, and dispatches confirm. The title screen's `update_title_flow`
+delegates its row/cursor/confirm handling to it (proving the shared primitive on
+a second screen after pause), and `menu_command_list_smoke` characterizes the
+behavior. The pause screen uses the same pattern and can adopt the primitive as
+its next slice.
+
 ## Demon Hub visual-identity handoff
 
 The Demon Hub should share the pause menu's visual grammar without becoming a
