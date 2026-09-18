@@ -331,15 +331,20 @@ not complete the slice.
    `const` dictionaries to editor-inspectable resources. The definition-editorability
    sub-metric is now 53% (9 of 17 surfaces); `item_catalog.gd`,
    `dungeon_layout_definition.gd`, and the Run 1–6 builders remain code-authored.
-3. **`EnemyDefinition` + `EnemyFactory` slice (Slice B)** — the slime variant
-   data is now a resource, so the next proof is an `EnemyFactory` that assembles
-   a runtime slime from the definition and mounts a second entity sharing its
-   components with zero `GameplayState` edits.
+3. **[x] `EnemyDefinition` + `EnemyFactory` slice (Slice B).** `EnemyDefinition`
+   is a typed `@export` contract over each `SlimeVariantCatalogData` record and
+   `EnemyFactory` assembles/configures a runtime slime actor from the definition
+   (variant, combat element, damage contract, stats). The runtime spawn path and
+   visual texture-source resolution now read through the factory. A second
+   variant ("crimson", tanky Fire) was added via one catalog row + one definition
+   with zero `GameplayState` edits, proven by `enemy_definition_slice_smoke`.
+   Remaining for full interchangeability: mount the second entity in a real
+   encounter and a save/load round-trip of definition-derived runtime state.
 4. **Remaining component levers** — `combat_momentum` (RefCounted, tuning-driven)
-   and `slime_animation` (no knobs) are the only blind-but-unconfigured
-   components left; the non-blind adapters (`player_animation`,
-   `player_equipment_visual`, `player_roll`, `interaction`, `player_guard`,
-   `boss_jump_slam`) need root-refinement first.
+   and `slime_animation` (no knobs) were promoted to `@export`; the non-blind
+   adapters (`player_animation`, `player_equipment_visual`, `player_roll`,
+   `interaction`, `player_guard`, `boss_jump_slam`) were refined to typed
+   contexts. Composite is at **100%** (see "Road to 90%" above).
 3. **Refine the adapters vertically** one at a time, replacing `initialize(root)`
    and root reach-ins with typed config/direct references:
    `interaction_component`, `player_roll_component`, `player_guard_component`,

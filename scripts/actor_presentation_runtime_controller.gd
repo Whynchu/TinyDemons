@@ -64,12 +64,13 @@ func build_slime_direction_textures(root: Object) -> void:
 	var paths := {}
 	for slime in slimes:
 		var palette := String(slime.get("variant"))
-		var source := "SlimeGreen" if palette in ["purple", "grey", "yellow", "orange", "aquamarine"] else "Slime%s" % palette.capitalize()
+		var definition := EnemyFactory.definition(StringName(palette)) if EnemyFactory.is_variant(StringName(palette)) else null
+		var source := definition.visual_source if definition != null else "green"
 		var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
 		var prefix := "BOSS" if is_boss else ""
 		if is_boss:
-			source = "SlimeGreen"
-		paths[slime] = ["res://assets/artwork/%s%sLeft.png" % [prefix, source], "res://assets/artwork/%s%sRight.png" % [prefix, source]]
+			source = "green"
+		paths[slime] = ["res://assets/artwork/%sSlime%sLeft.png" % [prefix, source.capitalize()], "res://assets/artwork/%sSlime%sRight.png" % [prefix, source.capitalize()]]
 	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(root, "_load_texture_or_null"))
 	var texture_cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
 	for palette in ["grey", "red", "blue", "yellow", "purple", "orange", "aquamarine"]:

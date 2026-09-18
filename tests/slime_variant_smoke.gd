@@ -18,6 +18,7 @@ func _initialize() -> void:
 		&"purple": [1, 3, 1, 3, 3, 1],
 		&"orange": [3, 1, 3, 1, 2, 2],
 		&"aquamarine": [2, 2, 1, 3, 3, 2],
+		&"crimson": [4, 3, 3, 0, 2, 1],
 	}
 	var expected_elements := {
 		&"grey": ElementCatalogScript.Element.NEUTRAL,
@@ -28,6 +29,7 @@ func _initialize() -> void:
 		&"purple": ElementCatalogScript.Element.SHADOW,
 		&"orange": ElementCatalogScript.Element.GROUND,
 		&"aquamarine": ElementCatalogScript.Element.ICE,
+		&"crimson": ElementCatalogScript.Element.FIRE,
 	}
 	var stats := StatsComponent.new()
 	for variant in CatalogScript.VARIANTS:

@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-order = Array[StringName]([&"grey", &"red", &"blue", &"yellow", &"green", &"purple", &"orange", &"aquamarine"])
+order = Array[StringName]([&"grey", &"red", &"blue", &"yellow", &"green", &"purple", &"orange", &"aquamarine", &"crimson"])
 definitions = {
 &"grey": {
 "base_stats": {"VIT": 2, "STR": 2, "DEF": 2, "AGI": 2, "INT": 0, "MND": 1},
@@ -69,5 +69,14 @@ definitions = {
 "element": 7,
 "growth_weights": {"VIT": 0.10, "STR": 0.14, "DEF": 0.08, "AGI": 0.50, "INT": 0.10, "MND": 0.08},
 "variant": &"aquamarine"
+},
+&"crimson": {
+"base_stats": {"VIT": 4, "STR": 3, "DEF": 3, "AGI": 0, "INT": 2, "MND": 1},
+"damage_contract": &"elemental_slime",
+"display_name": "Crimson Slime",
+"element": 1,
+"growth_weights": {"VIT": 0.34, "STR": 0.30, "DEF": 0.26, "AGI": 0.0, "INT": 0.06, "MND": 0.04},
+"variant": &"crimson",
+"visual_source": "red"
 }
 }
