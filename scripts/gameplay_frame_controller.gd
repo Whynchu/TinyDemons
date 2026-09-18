@@ -109,6 +109,75 @@ func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualConte
 	return context
 
 
+func magic_context(root: GameplayState) -> MagicRuntimeContext:
+	var context := MagicRuntimeContext.new()
+	context.player = root.player
+	context.slimes = root.slimes
+	context.puzzle_torches = root.puzzle_torches if root.get("puzzle_torches") != null else []
+	context.player_tuning = root.player_tuning
+	context.combat_tuning = root.combat_tuning
+	context.player_animation_component = root.player_animation_component
+	context.player_chroma_component = root.player_chroma_component
+	context.player_aspect_ability_component = root.player_aspect_ability_component
+	context.player_equipment_visual_component = root.player_equipment_visual_component
+	context.magic_projectile_controller = root.magic_projectile_controller
+	context.effects_spawner = root.effects_spawner
+	context.hud_controller = root.hud_controller
+	context.rng = root.rng
+	context.player_is_magic_casting_get = func() -> Variant: return root.get("player_is_magic_casting")
+	context.player_is_magic_casting_set = func(value: Variant) -> void: root.set("player_is_magic_casting", value)
+	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
+	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
+	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_is_defending_get = func() -> Variant: return root.get("player_is_defending")
+	context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	context.last_player_facing_left_get = func() -> Variant: return root.get("last_player_facing_left")
+	context.last_player_input_direction_get = func() -> Variant: return root.get("last_player_input_direction")
+	context.current_player_palette_name_get = func() -> Variant: return root.get("current_player_palette_name")
+	context.player_agi_get = func() -> Variant: return root.get("player_agi")
+	context.player_spd_get = func() -> Variant: return root.get("player_spd")
+	context.player_mp_fill_get = func() -> Variant: return root.get("player_mp_fill")
+	context.player_mp_fill_size_get = func() -> Variant: return root.get("player_mp_fill_size")
+	context.player_mp_fill_size_set = func(value: Variant) -> void: root.set("player_mp_fill_size", value)
+	context.player_mp_text_get = func() -> Variant: return root.get("player_mp_text")
+	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
+	context.player_anim_frame_set = func(value: Variant) -> void: root.set("player_anim_frame", value)
+	context.player_anim_timer_set = func(value: Variant) -> void: root.set("player_anim_timer", value)
+	context.player_magic_flip_h_set = func(value: Variant) -> void: root.set("player_magic_flip_h", value)
+	context.player_imbued_element_set = func(value: Variant) -> void: root.set("player_imbued_element", value)
+	context.imbue_mp_cost = int(root.get("IMBUE_MP_COST")) if root.get("IMBUE_MP_COST") != null else 40
+	context.imbue_duration = float(root.get("IMBUE_DURATION")) if root.get("IMBUE_DURATION") != null else 15.0
+	context.imbue_cooldown = float(root.get("IMBUE_COOLDOWN")) if root.get("IMBUE_COOLDOWN") != null else 20.0
+	context.imbue_hold_threshold = float(root.get("IMBUE_HOLD_THRESHOLD")) if root.get("IMBUE_HOLD_THRESHOLD") != null else 0.35
+	context.magic_projectile_size = int(root.get("MAGIC_PROJECTILE_SIZE")) if root.get("MAGIC_PROJECTILE_SIZE") != null else 4
+	context.magic_projectile_lifetime = float(root.get("MAGIC_PROJECTILE_LIFETIME")) if root.get("MAGIC_PROJECTILE_LIFETIME") != null else 0.6
+	context.execute_current_aspect_ability = Callable(root, "_execute_current_aspect_ability")
+	context.valid_current_target = Callable(root, "_valid_current_target")
+	context.closest_target = Callable(root, "_closest_target")
+	context.is_slime_targetable = Callable(root, "_is_slime_targetable")
+	context.slime_body_polygon = Callable(root, "_slime_body_polygon")
+	context.collision_rect = Callable(root, "_collision_rect")
+	context.player_magic_damage_result_against = Callable(root, "_player_magic_damage_result_against")
+	context.damage_slime_with_number = Callable(root, "_damage_slime_with_number")
+	context.knockback_slime = Callable(root, "_knockback_slime")
+	context.magic_hit_slime = Callable(root, "_magic_hit_slime")
+	context.activate_puzzle_torch = Callable(root, "_activate_puzzle_torch")
+	context.spawn_damage_number = Callable(root, "_spawn_damage_number")
+	context.play_sound = Callable(root, "_play_sound")
+	context.record_run_style_action = Callable(root, "_record_run_style_action")
+	context.load_texture_or_null = Callable(root, "_load_texture_or_null")
+	context.pixel_particle_texture = Callable(root, "_pixel_particle_texture")
+	context.pixel_text_texture = Callable(root, "_pixel_text_texture")
+	context.start_player_palette_flash = Callable(root, "_start_player_palette_flash")
+	context.sync_chroma_presentation = Callable(root, "_sync_chroma_presentation")
+	context.update_player_mp_ui = Callable(root, "_update_player_mp_ui")
+	context.update_mp_desaturation = Callable(root, "_update_mp_desaturation")
+	context.snap_half_pixel = Callable(root, "_snap_half_pixel")
+	context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext: return equipment_visual_context(root)
+	context.build_animation_context = func() -> PlayerAnimationContext: return animation_context(root)
+	return context
+
+
 func _guard_context(root: GameplayState) -> PlayerGuardContext:
 	var context := PlayerGuardContext.new()
 	context.ui_parent = root
@@ -407,7 +476,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	if root.player_roll_component != null: root.player_roll_component.update_from_root(_roll_context(root), delta)
 	root._update_roll_dust(delta); root.player_motor.update_player_hit_reaction(root, delta); root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta)
-	root.magic_runtime_controller.tick_magic_animation(root, delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
+	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
 		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
 		# The charge pose is rendered by the base player sprite. The shared attack

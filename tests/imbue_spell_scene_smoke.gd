@@ -14,6 +14,11 @@ func _animation_context(gameplay: Node) -> PlayerAnimationContext:
 	return frame_controller.animation_context(gameplay) if frame_controller != null else PlayerAnimationContext.new()
 
 
+func _magic_context(gameplay: Node) -> MagicRuntimeContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.magic_context(gameplay) if frame_controller != null else MagicRuntimeContext.new()
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -73,19 +78,19 @@ func _initialize() -> void:
 		hud.update_cooldown_hud(gameplay)
 
 	chroma.call("attune", Chroma.Aspect.FIRE)
-	var accepted := bool(runtime.call("update_magic_input", gameplay, true, false, 0.0))
+	var accepted := bool(runtime.update_magic_input(_magic_context(gameplay), true, false, 0.0))
 	_expect(not accepted and bool(gameplay.get("player_is_magic_casting")) and int(gameplay.get("player_anim_frame")) == 0, "triangle press starts the shared magic animation immediately", failures)
-	accepted = bool(runtime.call("update_magic_input", gameplay, false, true, 0.0))
+	accepted = bool(runtime.update_magic_input(_magic_context(gameplay), false, true, 0.0))
 	_expect(accepted and bool(gameplay.get("player_is_magic_casting")) and projectiles.projectiles.is_empty(), "short triangle press starts the normal spell", failures)
 	if hud != null:
 		hud.update_cooldown_hud(gameplay)
 		var magic_icon := hud.cooldown_hud["magic_icon"] as Sprite2D
 		var magic_material := magic_icon.material as ShaderMaterial if magic_icon != null else null
 		_expect(magic_material != null and float(magic_material.get_shader_parameter("flash_strength")) > 0.0, "normal magic activation briefly highlights its cooldown icon", failures)
-	var normal_frame_time := float(runtime.call("magic_frame_time", gameplay))
-	runtime.call("tick_magic_animation", gameplay, normal_frame_time * 2.01)
+	var normal_frame_time := float(runtime.magic_frame_time(_magic_context(gameplay)))
+	runtime.tick_magic_animation(_magic_context(gameplay), normal_frame_time * 2.01)
 	_expect(not projectiles.projectiles.is_empty(), "short triangle press reaches the normal projectile frame", failures)
-	runtime.call("cancel_magic_animation", gameplay)
+	runtime.cancel_magic_animation(_magic_context(gameplay))
 	gameplay.set("player_is_magic_casting", false)
 	if ability != null:
 		ability.set("cooldown_remaining", 0.0)
@@ -113,23 +118,23 @@ func _initialize() -> void:
 		input_router.poll(InputRouter.Context.GAMEPLAY)
 		frame_controller.call("_update_magic_input", gameplay, 0.0)
 		_expect(not bool(runtime.get("magic_hold_active")), "releasing Triangle closes the IMBUE decision window", failures)
-		runtime.call("cancel_magic_animation", gameplay)
+		runtime.cancel_magic_animation(_magic_context(gameplay))
 		gameplay.set("player_is_magic_casting", false)
 
 	chroma.call("attune", Chroma.Aspect.FIRE)
-	accepted = bool(runtime.call("update_magic_input", gameplay, true, false, 0.0))
+	accepted = bool(runtime.update_magic_input(_magic_context(gameplay), true, false, 0.0))
 	_expect(not accepted, "IMBUE hold begins as a candidate", failures)
-	accepted = bool(runtime.call("update_magic_input", gameplay, true, true, 0.36))
+	accepted = bool(runtime.update_magic_input(_magic_context(gameplay), true, true, 0.36))
 	_expect(accepted and bool(runtime.get("magic_animation_is_imbue")) and projectiles.projectiles.is_empty(), "holding triangle commits IMBUE without a projectile", failures)
 	_expect(int(chroma.get("current_chroma")) == 100, "IMBUE waits to charge mana until its effect frame", failures)
-	var frame_time := float(runtime.call("magic_frame_time", gameplay))
+	var frame_time := float(runtime.magic_frame_time(_magic_context(gameplay)))
 	# Simulate an unrelated animation transition trying to restore an idle frame
 	# while the IMBUE animation is still active.
 	gameplay.set("player_anim_name", "idle")
-	runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
+	runtime.tick_magic_animation(_magic_context(gameplay), frame_time * 1.01)
 	_expect(String(gameplay.get("player_anim_name")) == "magic", "IMBUE reasserts its animation after a stale state", failures)
 	for _frame in 3:
-		runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
+		runtime.tick_magic_animation(_magic_context(gameplay), frame_time * 1.01)
 	_expect(int(gameplay.get("player_anim_frame")) == 4, "IMBUE reaches its fifth displayed frame", failures)
 	_expect(int(chroma.get("current_chroma")) == 60, "IMBUE spends exactly 40 mana on frame five", failures)
 	_expect(int(runtime.get("imbued_element")) == Elements.Element.FIRE, "IMBUE snapshots the active element", failures)
@@ -140,7 +145,7 @@ func _initialize() -> void:
 		_expect(int(equipment.get("imbue_element")) == Elements.Element.FIRE, "weapon visual stores the imbued element", failures)
 		_expect((equipment.get("imbue_outline_overlays") as Dictionary).size() > 0, "weapon visual creates an elemental outline overlay", failures)
 	for _frame in 5:
-		runtime.call("tick_magic_animation", gameplay, frame_time * 1.01)
+		runtime.tick_magic_animation(_magic_context(gameplay), frame_time * 1.01)
 	_expect(not bool(gameplay.get("player_is_magic_casting")), "IMBUE returns to normal animation after the held final frame", failures)
 	if equipment != null:
 		# Force both sword layers visible so the overlay depth follows each source
@@ -182,11 +187,11 @@ func _initialize() -> void:
 		gameplay.set("player_anim_frame", 0)
 		(gameplay.get("player_animation_component") as PlayerAnimationComponent).apply_frame(_animation_context(gameplay))
 
-	runtime.call("tick_magic_animation", gameplay, 15.0)
+	runtime.tick_magic_animation(_magic_context(gameplay), 15.0)
 	_expect(int(runtime.get("imbued_element")) == Elements.Element.NEUTRAL, "weapon element clears after fifteen seconds", failures)
 	_expect(int(gameplay.get("player_imbued_element")) == Elements.Element.NEUTRAL, "gameplay element mirror clears after expiration", failures)
 	_expect(float(runtime.get("imbue_cooldown_remaining")) > 0.0, "IMBUE cooldown outlasts its active duration", failures)
-	runtime.call("tick_magic_animation", gameplay, 5.0)
+	runtime.tick_magic_animation(_magic_context(gameplay), 5.0)
 	_expect(is_zero_approx(float(runtime.get("imbue_cooldown_remaining"))), "IMBUE becomes ready after twenty seconds", failures)
 
 	gameplay.queue_free()

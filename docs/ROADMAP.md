@@ -191,7 +191,11 @@ Remaining dynamic-access owners (`screen_state_controller.gd`,
 `combat_runtime_controller.gd`, `slime_runtime_controller.gd`,
 `magic_runtime_controller.gd`) are the next vertical migration candidates and
 should be reduced feature by feature while preserving frame order and removing
-obsolete wrappers only after their final consumer migrates.
+obsolete wrappers only after their final consumer migrates. At `0.2.35`,
+`magic_runtime_controller.gd` was migrated to a typed `MagicRuntimeContext`
+(141 root sites → 0), dropping the total from 2,308 → 2,201; the remaining
+owners are `screen_state_controller` (326), `combat_runtime_controller` (234),
+and `slime_runtime_controller` (199).
 
 ## Phase 0.60 — Content authoring
 

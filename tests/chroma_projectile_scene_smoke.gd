@@ -6,6 +6,11 @@ func _equipment_visual_context(gameplay: Node) -> PlayerEquipmentVisualContext:
 	return frame_controller.equipment_visual_context(gameplay) if frame_controller != null else PlayerEquipmentVisualContext.new()
 
 
+func _magic_context(gameplay: Node) -> MagicRuntimeContext:
+	var frame_controller := gameplay.get("gameplay_frame_controller") as Node
+	return frame_controller.magic_context(gameplay) if frame_controller != null else MagicRuntimeContext.new()
+
+
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var packed := load("res://scenes/main.tscn") as PackedScene
@@ -122,7 +127,7 @@ func _initialize() -> void:
 		_expect((magic_equipment_frames.get("sword_magic", []) as Array).size() == 4 and (magic_equipment_frames.get("shield_magic", []) as Array).size() == 4, "triangle cast loads four sword and shield magic frames", failures)
 	if magic_runtime != null and player_animation != null and projectile_controller != null:
 		var attack_tuning := gameplay.get("player_tuning") as PlayerTuning
-		var magic_frame_time := float(magic_runtime.call("magic_frame_time", gameplay))
+		var magic_frame_time := float(magic_runtime.magic_frame_time(_magic_context(gameplay)))
 		var attack_multiplier := attack_tuning.attack_multiplier(float(gameplay.get("player_spd")))
 		_expect(magic_frame_time > attack_tuning.attack_frame_time / attack_multiplier, "triangle magic animation is slower than attack animation", failures)
 		_expect(bool(gameplay.call("_execute_current_aspect_ability", 0)), "triangle cast starts its visual animation", failures)
@@ -134,11 +139,11 @@ func _initialize() -> void:
 			_expect(sword_back != null and sword_back.visible and String(sword_back.get_meta("mp_grey_key", "")) == "sword_magic", "triangle magic sword uses the behind layer", failures)
 			_expect(sword_front != null and not sword_front.visible, "triangle magic does not use the front sword layer", failures)
 		_expect(bool(gameplay.get("player_is_magic_casting")) and int(gameplay.get("player_anim_frame")) == 0 and projectile_controller.projectiles.is_empty(), "triangle cast begins on frame 1 without firing", failures)
-		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 1.01)
+		magic_runtime.tick_magic_animation(_magic_context(gameplay), magic_frame_time * 1.01)
 		_expect(int(gameplay.get("player_anim_frame")) == 1 and projectile_controller.projectiles.is_empty(), "triangle cast advances to frame 2 without firing", failures)
-		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 1.01)
+		magic_runtime.tick_magic_animation(_magic_context(gameplay), magic_frame_time * 1.01)
 		_expect(int(gameplay.get("player_anim_frame")) == 2 and projectile_controller.projectiles.size() == 1, "triangle projectile fires on frame 3", failures)
-		magic_runtime.call("tick_magic_animation", gameplay, magic_frame_time * 3.01)
+		magic_runtime.tick_magic_animation(_magic_context(gameplay), magic_frame_time * 3.01)
 		_expect(not bool(gameplay.get("player_is_magic_casting")), "triangle cast returns to the normal animation after frame 5", failures)
 		var equipment_fixture := gameplay.get("player_equipment") as EquipmentComponent
 		var shield_was_equipped := equipment_fixture != null and equipment_fixture.has_shield
@@ -146,7 +151,7 @@ func _initialize() -> void:
 		# visual fixture on for the facing assertion, then restore that state.
 		if equipment_fixture != null:
 			equipment_fixture.has_shield = true
-		magic_runtime.call("begin_magic_animation", gameplay, Vector2.LEFT, null, 0)
+		magic_runtime.begin_magic_animation(_magic_context(gameplay), Vector2.LEFT, null, 0)
 		if equipment_visual != null:
 			equipment_visual.tick(_equipment_visual_context(gameplay), 0.0)
 			var left_equipment_layers: Dictionary = equipment_visual.get("layers") as Dictionary
@@ -158,7 +163,7 @@ func _initialize() -> void:
 			_expect(left_shield_front != null and left_shield_front.flip_h, "left-facing triangle reverses the shield", failures)
 		if equipment_fixture != null:
 			equipment_fixture.has_shield = shield_was_equipped
-		magic_runtime.call("cancel_magic_animation", gameplay)
+		magic_runtime.cancel_magic_animation(_magic_context(gameplay))
 	if chroma != null:
 		chroma.call("begin_new_run")
 		_expect(int(chroma.get("current_chroma")) == 0, "new runtime starts at zero Chroma", failures)
