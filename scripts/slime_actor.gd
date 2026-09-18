@@ -20,7 +20,7 @@ static func _guard_context(root: Object) -> PlayerGuardContext:
 	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
 	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
 	context.actor_foot = Callable(root, "_actor_foot")
-	context.build_equipment_visual_context = Callable(root, "_equipment_visual_context")
+	context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext: return root.gameplay_frame_controller.equipment_visual_context(root)
 	return context
 
 @export_enum("blue", "green", "red", "purple", "grey", "yellow", "orange", "aquamarine") var variant := "green"
