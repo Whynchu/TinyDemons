@@ -38,6 +38,7 @@ script,role,state,owner,target,load,notes
 "settings_panel_scene_smoke","gate","environment","settings & display","settings panel scene layout and back route","main","restricted run could not write user://"
 "settings_service_smoke","gate","environment","settings & display","SettingsService persistence via user://","pure","restricted run could not write user://"
 "enemy_definition_roundtrip_smoke","owner","unverified","content authoring","EnemyDefinition factory save/load round-trip","pure",""
+"encounter_definition_smoke","owner","unverified","content authoring","EncounterDefinition rank-gated pool and validation contract","pure",""
 "enemy_definition_slice_smoke","owner","unverified","content authoring","EnemyDefinition contract + EnemyFactory assemble and second-variant proof","pure",""
 "slime_spawn_smoke","gate","verified","slime enemies","slime spawn visuals and actors","pure","2026-09-11 focused evidence"
 "sound_mix_profile_smoke","gate","verified","audio","sound mix profile clip resolution","pure","focused run 2026-09-13; every catalog cue has an editor volume entry"
