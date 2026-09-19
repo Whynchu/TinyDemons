@@ -415,6 +415,18 @@ func _on_select_tapped() -> void:
 		gameplay_root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 
 
+func map_footer_prompt_positions(view_size: Vector2) -> Dictionary:
+	var back_button_position := PAUSE_LAYOUT.back_button_position(view_size)
+	return {
+		"back_button": back_button_position,
+		"select_glyph": back_button_position + Vector2(-21.0, 1.0),
+		"back_glyph": back_button_position + Vector2(18.0, 1.0),
+		"select_text": back_button_position + Vector2(-14.0, 1.0),
+		"back_text": back_button_position + Vector2(25.0, 1.0),
+		"select_button": back_button_position + Vector2(-28.0, -8.0),
+	}
+
+
 func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 	if not map_open:
 		return
@@ -440,13 +452,17 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 	map_overlay_help.position = Vector2(view_size.x - 57.0, view_size.y - 18.0)
 	_set_pixel_text(map_overlay_title, "MAP", COLOR_MAP_TITLE, root)
 	map_overlay_help.visible = false
-	map_overlay_select_glyph.position = Vector2(107.0, view_size.y - 14.0)
-	map_overlay_back_glyph.position = Vector2(146.0, view_size.y - 14.0)
-	map_overlay_select_text.position = Vector2(114.0, view_size.y - 14.0)
-	map_overlay_back_text.position = Vector2(153.0, view_size.y - 14.0)
-	map_overlay_back_button.position = PAUSE_LAYOUT.back_button_position(view_size)
+	# Keep the prompts in the same right-anchored footer cell as the existing
+	# back control. The old fixed x positions only happened to fit the native
+	# 240px viewport and drifted inward on browser widths.
+	var footer_positions := map_footer_prompt_positions(view_size)
+	map_overlay_select_glyph.position = footer_positions["select_glyph"]
+	map_overlay_back_glyph.position = footer_positions["back_glyph"]
+	map_overlay_select_text.position = footer_positions["select_text"]
+	map_overlay_back_text.position = footer_positions["back_text"]
+	map_overlay_back_button.position = footer_positions["back_button"]
 	map_overlay_back_button.size = PAUSE_LAYOUT.BACK_BUTTON_SIZE
-	map_overlay_select_button.position = Vector2(100.0, view_size.y - 23.0)
+	map_overlay_select_button.position = footer_positions["select_button"]
 	map_overlay_select_button.size = Vector2(42.0, 20.0)
 	map_overlay_select_glyph.visible = true
 	map_overlay_back_glyph.visible = true

@@ -132,6 +132,16 @@ func _initialize() -> void:
 		var shop_view := screens.hub_shop_menu as ShopMenuLayout
 		_expect(screens.hub_page == screens.HUB_PAGE_SHOP and screens.hub_shop_price_texts.size() == 6 and shop_view != null and shop_view.visible and screens.hub_equipment_menu != null and not screens.hub_equipment_menu.visible, "Shop remains an authored transaction page inside the shell", failures)
 		_expect(shop_view != null and shop_view.mode_buttons.size() == 2 and shop_view.mode_buttons.all(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_STOP) and shop_view.item_buttons.any(func(button: Button) -> bool: return button.mouse_filter == Control.MOUSE_FILTER_STOP), "Shop owns its mode and visible item-row touch targets", failures)
+		if shop_view != null and not shop_view.item_buttons.is_empty() and not shop_view.item_texts.is_empty():
+			var first_shop_button := shop_view.item_buttons[0]
+			var first_shop_text := shop_view.item_texts[0]
+			_expect(is_equal_approx(first_shop_button.position.y, first_shop_text.position.y - 2.0) and is_equal_approx(first_shop_button.size.y, ShopMenuLayout.ITEM_ROW_PITCH), "shop item hitboxes share the visible row origin and full row pitch", failures)
+			var shop_native_width := shop_view.size.x
+			shop_view.size.x = maxf(shop_native_width, 284.0)
+			shop_view.refresh_layout_preserving_state()
+			_expect(is_equal_approx(first_shop_button.position.y, first_shop_text.position.y - 2.0) and first_shop_button.get_global_rect().get_center().y >= first_shop_text.position.y, "wider BUY/SELL layouts keep item touch centers on the visible row", failures)
+			shop_view.size.x = shop_native_width
+			shop_view.refresh_layout_preserving_state()
 		screens.hub_page_buttons[2].pressed.emit()
 		var fusion_view := screens.hub_fusion_menu as FusionMenuLayout
 		var fusion_select := fusion_view.get_node_or_null("SellConfirmButton") as Button if fusion_view != null else null

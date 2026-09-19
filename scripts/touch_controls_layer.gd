@@ -1043,10 +1043,10 @@ func _refresh_controls() -> void:
 		elif action == &"pause":
 			control_visible = _controls_visible
 		elif action == &"open_minimap":
-			# In gameplay the minimap itself is the map button, so the separate
-			# MAP button stays hidden there. It remains available while the full
-			# map is open in a menu context so a touch player can close it.
-			control_visible = _touch_input_enabled and _input_context == CONTEXT_MENU and _is_minimap_open()
+			# The full map owns its own select/back prompts. Keep the legacy MAP
+			# touch route alive for input compatibility, but never draw a second
+			# giant circular button over the map overlay.
+			control_visible = false
 		(_button_nodes[action] as Control).visible = control_visible
 
 

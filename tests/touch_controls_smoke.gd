@@ -302,6 +302,14 @@ func _initialize() -> void:
 	_expect(touch_root.mouse_filter == Control.MOUSE_FILTER_IGNORE, "menu touch overlay stays transparent to title Buttons", failures)
 	var cancel_node := layer.get_node("TouchControlsRoot/Touch_Cancel") as Panel
 	_expect(cancel_node != null and not cancel_node.visible, "menu back is owned by the active native footer", failures)
+	var duplicate_map_button := layer._button_nodes.get(&"open_minimap") as Panel
+	_expect(duplicate_map_button != null and not duplicate_map_button.visible, "full-map touch keeps the legacy MAP visual hidden", failures)
+	var map_controller := DungeonMinimapController.new()
+	var native_map_footer := map_controller.map_footer_prompt_positions(Vector2(240.0, 160.0))
+	var wide_map_footer := map_controller.map_footer_prompt_positions(Vector2(284.0, 160.0))
+	_expect(wide_map_footer["back_button"].x > native_map_footer["back_button"].x and wide_map_footer["select_text"].x > native_map_footer["select_text"].x and wide_map_footer["back_text"].x > native_map_footer["back_text"].x, "map footer prompts follow the responsive back rail", failures)
+	_expect(is_equal_approx(native_map_footer["back_button"].x - native_map_footer["select_text"].x, wide_map_footer["back_button"].x - wide_map_footer["select_text"].x), "map SELECT keeps its authored spacing from BACK at wider widths", failures)
+	map_controller.free()
 
 	# A real screen touch activates the same native Button that a desktop mouse
 	# click would activate. The overlay captures the sequence so a browser's

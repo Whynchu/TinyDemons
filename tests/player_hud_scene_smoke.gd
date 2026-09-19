@@ -81,6 +81,38 @@ func _initialize() -> void:
 		_expect(authored != null, "%s is authored in the player HUD scene" % path, failures)
 	var target_health_text := hud.get_node_or_null("TargetHud/TargetHealthText") as Sprite2D
 	_expect(target_health_text != null and target_health_text.z_index > 3, "enemy health text is above the health-bar layers", failures)
+	var target := Sprite2D.new()
+	var target_bar := Sprite2D.new()
+	var target_fill := Sprite2D.new()
+	var target_damage_fill := Sprite2D.new()
+	var target_name := Sprite2D.new()
+	var target_number := Sprite2D.new()
+	target_bar.texture = load("res://assets/artwork/EnemyHp.png") as Texture2D
+	target_bar.centered = false
+	target_bar.position = Vector2(81.0, 147.0)
+	target_fill.texture = load("res://assets/artwork/EnemyHpGreenBar.png") as Texture2D
+	target_damage_fill.texture = target_fill.texture
+	var target_bar_center := target_bar.position + target_bar.texture.get_size() * 0.5
+	hud_controller.target_health_fill_textures.clear()
+	hud_controller.target_health_damage_fill_textures.clear()
+	hud_controller.update_target_ui(
+		target,
+		target_name,
+		target_bar,
+		target_damage_fill,
+		target_fill,
+		target_number,
+		Vector2.ZERO,
+		Callable(self, "_target_display_name"),
+		Callable(self, "_target_max_health"),
+		Callable(self, "_target_health"),
+		Callable(self, "_target_display_health"),
+		Callable(self, "_target_text_texture"),
+		Callable(self, "_target_text_texture"),
+		Callable(hud_controller, "set_health_bar_values"))
+	_expect(target_fill.texture.resource_path.ends_with("EnemyHpRedBar.png"), "a target without a cached entry uses the canonical red health fill", failures)
+	_expect(target_damage_fill.texture != null and not target_damage_fill.texture.resource_path.ends_with("EnemyHpGreenBar.png"), "a target without a cached entry uses the canonical damage fill", failures)
+	_expect(target_number.centered and target_number.position.is_equal_approx(target_bar_center), "target health text is centered on the visible bar", failures)
 
 	var atlas := load("res://assets/artwork/player_UI_lvlnumbers.png") as Texture2D
 	_expect(atlas != null and atlas.get_size().is_equal_approx(Vector2(40, 7)), "level number atlas contains ten 4x7 digits", failures)
@@ -140,3 +172,23 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
+
+
+func _target_display_name(_target: Sprite2D) -> String:
+	return "SLIME"
+
+
+func _target_max_health(_target: Sprite2D) -> float:
+	return 10.0
+
+
+func _target_health(_target: Sprite2D) -> float:
+	return 7.0
+
+
+func _target_display_health(_target: Sprite2D) -> float:
+	return 7.0
+
+
+func _target_text_texture(_text: String, _color: Color) -> Texture2D:
+	return load("res://assets/artwork/EnemyHpRedBar.png") as Texture2D

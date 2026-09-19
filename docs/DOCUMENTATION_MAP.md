@@ -73,6 +73,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | What is the component contract for reusable entity behavior? | [`component-composition-design.md`](component-composition-design.md) | wiring rules, adapter refinement, and the interchangeable-entity proof |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 | What is the end-to-end performance execution plan? | [`peak-performance-plan.md`](peak-performance-plan.md) | boot/menu gates, capture scenarios, lifecycle separation, runtime budgets, and A17 verification |
+| What is the current target HUD and touch-polish contract? | [`ui-consistency-and-touch-polish-plan.md`](ui-consistency-and-touch-polish-plan.md) | target health geometry, map footer anchoring, and shop row hitboxes |
 | What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |
 | Which product and design questions remain unresolved? | [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md) | current design authorities and interview decision records |
 | What is the ratified design contract? | [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md) | feature-specific plans and tuning values |
