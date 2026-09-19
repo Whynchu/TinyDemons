@@ -288,15 +288,16 @@ Move room-specific enemy/reward choices into `EncounterDefinition` and
 distinct. Room runtime state should own claims, active actors, entrance locks,
 and clear state; definitions should remain reusable and immutable.
 
-**First increment at `0.2.39`:** `EncounterDefinition`
-(`scripts/encounter_definition.gd`) captures the rank-gated enemy variant pool
-(weights + min ranks + shadow-bound policy) as validated, editor-inspectable
-data. `RoomController._generate_enemy_encounter` reads the pool from the
-definition instead of the hardcoded rank constants; the definition rebuilds
-when the matchup policy changes. `encounter_definition_smoke` characterizes
-validation, late-pool gating, and the shadow-bound relief contract. Remaining
-for C: a `RoomDefinition` resource for room-specific reward/tier choices and
-full `.tres` authoring of encounter data.
+**Increments at `0.2.39`–`0.2.41`:** `EncounterDefinition` captures the
+rank-gated enemy variant pool, and `RoomDefinition`
+(`scripts/room_definition.gd`) captures the rank-curve difficulty/traffic
+policy (enemy cap, extra-enemy chance, popcorn rates, boss support/minor
+counts, regular treasure chance). `RoomController` reads both through
+`_encounter_definition()`/`_room_definition()` instead of hardcoded rank
+constants; `encounter_definition_smoke` and `room_definition_smoke`
+characterize validation and the authored curves. `RoomController` shrank
+2,271 → 2,248 lines. Remaining for C: `RoomDefinition` for room-specific
+reward/tier choices and full `.tres` authoring of encounter data.
 
 ### D. Make dungeon and map authoring compositional — T2
 

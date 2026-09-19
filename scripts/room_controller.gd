@@ -32,6 +32,7 @@ var secondary_enemy_variant := "grey"
 var boss_variant_selection: StringName = &""
 var matchup_policy := "rank_default"
 var encounter_definition: EncounterDefinition = null
+var room_definition: RoomDefinition = null
 var boss_slime_authoring_scene: PackedScene = null
 var boss_slime_authoring_template: Node = null
 var boss_jump_phase_waves: Dictionary = {}
@@ -67,15 +68,9 @@ const CRIMSON_MIN_RANK := 5
 const SHADOW_BOUND_NORMAL_WEIGHT: float = 0.20
 const SHADOW_BOUND_VARIANT_WEIGHT: float = 0.80
 const SHADOW_BOSS_CHANCE: float = 0.04
-const REGULAR_ROOM_TREASURE_CHANCE: float = 0.50
-const RUN2_POPCORN_CHANCE: float = 0.40
-const LATER_POPCORN_CHANCE: float = 0.24
 const ROOM_POPCORN := "ROOM_POPCORN"
 const ELITE_POPCORN := "ELITE_POPCORN"
 const ELITE_ENCOUNTER_LEVEL_BONUS := 2
-const BOSS_SUPPORT_POPCORN_BASE_COUNT: int = 3
-const BOSS_SUPPORT_POPCORN_MAX_COUNT: int = 6
-const BOSS_MIXED_SUPPORT_START_RANK: int = 5
 const SLIME_BOSS_JUMP_PHASE_POPCORN := "SlimeBossJumpPhasePopcorn"
 const PLAYER_DOOR_REPOSITION_RADII := [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0, 48.0]
 const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
@@ -177,7 +172,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		if not state.has("regular_room_treasure"):
 			var treasure_rng := RandomNumberGenerator.new()
 			treasure_rng.seed = room.generation_seed ^ 0x54524541
-			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < REGULAR_ROOM_TREASURE_CHANCE)
+			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < _room_definition().regular_room_treasure_chance)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
 		room_states[room_id] = state
@@ -336,6 +331,12 @@ func _encounter_definition() -> EncounterDefinition:
 	return definition
 
 
+func _room_definition() -> RoomDefinition:
+	if room_definition == null:
+		room_definition = RoomDefinition.new()
+	return room_definition
+
+
 func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
 	for entry in pool:
 		if str(entry.get("variant", "")) == variant:
@@ -376,7 +377,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		# A designer-selected lead variant is a complete boss identity. Keep the
 		# support wave on that identity as well; the seeded mixed roster is only
 		# used when the encounter was not authored with an explicit selection.
-		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK else String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
+		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < _room_definition().boss_mixed_support_start_rank else String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
 		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
@@ -416,13 +417,7 @@ func _generated_enemy_base_level(_room_depth: int) -> int:
 
 
 func _popcorn_enemy_chance() -> float:
-	if progression_run_rank <= 1:
-		return 0.25
-	if progression_run_rank == 2:
-		return RUN2_POPCORN_CHANCE
-	if progression_run_rank > 2:
-		return LATER_POPCORN_CHANCE
-	return 0.0
+	return _room_definition().popcorn_chance_for_rank(progression_run_rank)
 
 
 func _popcorn_enemy_level() -> int:
@@ -439,35 +434,17 @@ func _popcorn_enemy_level_for_profile(profile: PlayerProfile) -> int:
 
 
 func _boss_support_popcorn_count() -> int:
-	# Bosses need a real support wave even in the opening ranks. Add one more
-	# support for the first mixed encounters, then grow the late-run wave while
-	# mixed minors provide additional elemental pressure.
-	if progression_run_rank <= 2:
-		return BOSS_SUPPORT_POPCORN_BASE_COUNT
-	if progression_run_rank <= 6:
-		return BOSS_SUPPORT_POPCORN_BASE_COUNT + 1
-	return BOSS_SUPPORT_POPCORN_MAX_COUNT
+	return _room_definition().boss_support_popcorn_for_rank(progression_run_rank)
 
 
 func _boss_minor_count() -> int:
-	if progression_run_rank < BOSS_MIXED_SUPPORT_START_RANK:
-		return 0
-	if progression_run_rank == BOSS_MIXED_SUPPORT_START_RANK:
-		return 1
-	if progression_run_rank == BOSS_MIXED_SUPPORT_START_RANK + 1:
-		return 2
-	# After the first two mixed-support steps, add one minor every three runs.
-	return 2 + floori(float(progression_run_rank - 7) / 3.0)
+	return _room_definition().boss_minor_count_for_rank(progression_run_rank)
 
 func _normal_enemy_cap() -> int:
-	return 7
+	return _room_definition().normal_enemy_cap
 
 func _additional_enemy_chance(current_count: int) -> float:
-	var first_extra := clampf(0.50 + float(progression_run_rank - 1) * 0.05, 0.50, 0.78)
-	var rank_bonus := clampf(float(progression_run_rank - 1) * 0.015, 0.0, 0.10)
-	# The steep falloff keeps five-to-seven enemy rooms as rare tails rather
-	# than letting early and mid-rank rooms snowball past four too often.
-	return clampf(first_extra - float(current_count - 1) * 0.14 + rank_bonus, 0.01, 0.85)
+	return _room_definition().additional_enemy_chance_for(progression_run_rank, current_count)
 
 
 func enemy_count_for_room(room: DungeonGraph.RoomRecord) -> int:

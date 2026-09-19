@@ -36,6 +36,9 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
      proof sequence.
 13. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
     export, and function-location index.
+14. [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md)
+    — current combat roles, elemental identity, dungeon interaction, and
+    minimalist content principles.
 
 ## Authority by question
 
@@ -58,6 +61,7 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
 | How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | historical completion record; the strict scorecard is 100% and the regression floor is re-baselined |
 | What is the component contract for reusable entity behavior? | [`component-composition-design.md`](component-composition-design.md) | wiring rules, adapter refinement, and the interchangeable-entity proof |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
+| What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |
 
 ## Document lifecycle
 
