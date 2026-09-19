@@ -303,7 +303,16 @@ func initialize(root: GameplayState) -> void:
 	_phase(&"refresh_player_cloak_visual")
 	root.call("_refresh_player_cloak_visual")
 	_phase(&"set_title_state")
-	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
+	var screens := root.get("screen_state_controller") as ScreenStateController
+	var enters_saved_route := profile.has_started and (profile.pending_route == "hub" or profile.pending_route == "run")
+	if enters_saved_route:
+		# Full run boot may still construct the title scene for shared UI assets, but
+		# an active save route must never expose that overlay between loading and play.
+		if screens.title_overlay != null: screens.title_overlay.visible = false
+		if screens.archetype_overlay != null: screens.archetype_overlay.visible = false
+		screens.set_state(&"loading")
+	else:
+		screens.set_state(&"title")
 	_phase(&"initialize_player")
 	_initialize_player(root, player)
 	await root.get_tree().process_frame
@@ -341,10 +350,9 @@ func initialize(root: GameplayState) -> void:
 			# offer the explicit resume/discard choice. A confirmed Continue flow
 			# persists the "run" route and can enter directly on the next scene.
 			root.pending_run_restore = route == "run" and has_recovery_checkpoint
-			# Enter the room directly (not deferred) so the title screen never
-			# flashes before the hub/run; _enter_starting_room_from_menu hides the
-			# title and fades the loading screen out.
-			root.call("_enter_starting_room_from_menu")
+			# Await the room handoff so bootstrap cannot release its boot lock while
+			# the async loading path is still between title and gameplay.
+			await (root.save_flow_controller as SaveFlowController).enter_starting_room_from_menu(root)
 		else:
 			_show_title_after_boot(root, boot_loading)
 	# Contexts built earlier in bootstrap (build_frames runs before
