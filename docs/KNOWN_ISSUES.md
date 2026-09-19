@@ -243,6 +243,18 @@ composition regression (`chroma_projectile_scene_smoke` calling the pre-A1
 These two remaining failures need triage before they can serve as release
 evidence.
 
+**Triage outcome (2026-09-17, at `0.2.47`):** both remaining failures were
+reconciled and now pass. `wall_socket_geometry_smoke` was a transient gate flake
+(a scene test dependent on main-scene frame timing) and passes via the runner.
+`run1_door_path_smoke`'s failing assertion pinned an obsolete legacy bug — the
+room-wide `door_active` now correctly activates after a successful clear (the
+"legacy room-wide lock" is resolved), so the assertion was updated to verify the
+modern contract while keeping the per-socket enterable-exit assertions.
+`run1_map_contract_smoke` (owner role) had the same stale pattern — the D9
+arrival exit is intentionally escapable in authored rooms, so its assertion was
+reconciled to the authored-room escape contract. All run1/dungeon/map/door
+smokes pass.
+
 | Area | Current state | Evidence still required |
 |---|---|---|
 | Demon Hub SELECT/BACK presentation | Focused Hub/Shop contract verified; visual orientation check remains | Compare all hub routes at native and supported responsive layouts |

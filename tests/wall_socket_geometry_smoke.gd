@@ -22,10 +22,14 @@ func _initialize() -> void:
 	var map := gameplay.get("dungeon_map_controller") as Node
 	_expect(graph != null and rooms != null and map != null, "wall socket geometry owners are composed", failures)
 	if graph != null and rooms != null and map != null:
+		# Force the authored Run 1 layout explicitly so this geometry contract does
+		# not depend on the ambient saved profile's completed-run count. The boot
+		# path only selects Run 1 when the profile has zero completed runs.
+		map.call("begin_run", graph, 741852, 0, &"water")
+		map.call("set_starter_flame_attuned", true)
 		var room := graph.get_room(TARGET_ROOM)
 		_expect(room != null, "the authored normal-room geometry target exists", failures)
 		if room != null:
-			map.call("set_starter_flame_attuned", true)
 			rooms.room_states.clear()
 			gameplay.set("current_room_id", TARGET_ROOM)
 			gameplay.call("_sync_current_room_metadata")

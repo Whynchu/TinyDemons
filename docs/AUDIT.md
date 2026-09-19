@@ -494,10 +494,14 @@ balance change is required to preserve behavior after extraction.
    dominated by the accent placer, boss activation/spawn, and the synchronous
    profile save — and should be optimized only after the A17 device profile
    exists (see section 11.2).
-2. **Triage the two remaining gate failures.** `run1_door_path_smoke` and
-   `wall_socket_geometry_smoke` fail the curated gate with pre-existing
-   assertions (reproduced at the pre-composition baseline); decide to reconcile
-   or retire them before they serve as release evidence.
+2. **Triage the remaining gate failures — resolved at `0.2.47`.** The curated
+   release gate is fully green. `run1_door_path_smoke` and
+   `run1_map_contract_smoke` had stale assertions pinning an obsolete legacy
+   room-wide door lock (now correctly resolved) and the authored-room escape
+   contract; both were reconciled. `wall_socket_geometry_smoke` was a
+   profile-dependent flake — it relied on the ambient saved profile selecting
+   Run 1; the test now forces the authored Run 1 layout explicitly via
+   `begin_run(..., 0, ...)`, making it deterministic.
 3. **Performance track (T3).** Record the Samsung A17 device profile for the
    fixed seed before any optimization claim; then choose between node/effect
    reduction, cache/atlas work, loading changes, and the palette-shader A/B.
