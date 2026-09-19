@@ -28,6 +28,19 @@ static var direction_texture_cache: Dictionary = {}
 const PALETTES := ["grey", "red", "blue", "yellow", "green", "purple", "orange", "aquamarine"]
 
 
+## Resolves a slime variant to the palette key used by the shared frame
+## libraries. Base palettes key their own entry; content variants (crimson)
+## share the art sheet named by EnemyDefinition.visual_source, which is a
+## real palette key in the frame libraries.
+static func frame_palette_for(slime: Sprite2D) -> String:
+	var variant := String(slime.get("variant"))
+	if variant in PALETTES:
+		return variant
+	var definition := EnemyFactory.definition(StringName(variant))
+	var source := definition.visual_source if definition != null else "green"
+	return source if source in PALETTES else "green"
+
+
 static func build_direction_textures(slimes: Array[Sprite2D], paths: Dictionary, load_texture: Callable) -> void:
 	for slime in slimes:
 		if not paths.has(slime):
@@ -123,7 +136,7 @@ static func assign_attack_frames(slimes: Array[Sprite2D], frames_by_palette: Dic
 			visual = SlimeVisualComponent.new()
 			visual.name = "Visual"
 			slime.add_child(visual)
-		var palette := String(slime.get("variant")); if not frames_by_palette.has(palette): palette = "green"
+		var palette := frame_palette_for(slime)
 		var source_frames: Dictionary = frames_by_palette if float(slime.get_meta("encounter_scale", 1.0)) <= 1.0 else frames_by_palette.get("boss", frames_by_palette) as Dictionary
 		var palette_frames := (source_frames as Dictionary)[palette] as Dictionary
 		visual.attack_left_frames = palette_frames["left"] as Array[Texture2D]
@@ -157,10 +170,7 @@ static func assign_shocked_frames(slimes: Array[Sprite2D], frames_by_palette: Di
 			visual = SlimeVisualComponent.new()
 			visual.name = "Visual"
 			slime.add_child(visual)
-		var palette := String(slime.get("variant"))
-		if not frames_by_palette.has(palette):
-			palette = "green"
-		visual.shocked_frames = frames_by_palette[palette] as Array[Texture2D]
+		visual.shocked_frames = frames_by_palette[frame_palette_for(slime)] as Array[Texture2D]
 
 
 static func build_spawn_frame_library(frame_library: SpriteFrameLibrary, frame_size: Vector2i, cache: Dictionary, warm_texture: Callable) -> Dictionary:
@@ -194,9 +204,7 @@ static func assign_spawn_frames(slimes: Array[Sprite2D], frames_by_palette: Dict
 			visual = SlimeVisualComponent.new()
 			visual.name = "Visual"
 			slime.add_child(visual)
-		var palette := String(slime.get("variant"))
-		if not frames_by_palette.has(palette):
-			palette = "green"
+		var palette := frame_palette_for(slime)
 		var source_frames: Dictionary = frames_by_palette if float(slime.get_meta("encounter_scale", 1.0)) <= 1.0 else frames_by_palette.get("boss", frames_by_palette) as Dictionary
 		visual.spawn_frames = (source_frames as Dictionary)[palette] as Array[Texture2D]
 
@@ -209,8 +217,7 @@ static func assign_boss_ability_frames(slimes: Array[Sprite2D], frame_library: S
 		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 		if visual == null:
 			continue
-		var palette := String(slime.get("variant"))
-		if not frame_sets.has(palette): palette = "green"
+		var palette := frame_palette_for(slime)
 		var palette_set := frame_sets[palette] as Dictionary
 		var jump: Array[Texture2D] = palette_set["jump"]
 		var slam: Array[Texture2D] = palette_set["slam"]
@@ -243,8 +250,7 @@ static func assign_regular_shadow_frames(slimes: Array[Sprite2D], frame_library:
 		var visual: SlimeVisualComponent = slime.get_node_or_null("Visual") as SlimeVisualComponent
 		if visual == null:
 			continue
-		var palette := String(slime.get("variant"))
-		if not frame_sets.has(palette): palette = "green"
+		var palette := frame_palette_for(slime)
 		var palette_set := frame_sets[palette] as Dictionary
 		visual.shadow_idle_texture = palette_set["idle"] as Texture2D
 		visual.shadow_attack_left_frames = palette_set["attack_left"]
