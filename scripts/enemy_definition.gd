@@ -29,7 +29,13 @@ static func from_variant(variant: StringName) -> EnemyDefinition:
 	definition.damage_contract = StringName(str(raw.get("damage_contract", "physical")))
 	definition.base_stats = (raw.get("base_stats", {}) as Dictionary).duplicate(true)
 	definition.growth_weights = (raw.get("growth_weights", {}) as Dictionary).duplicate(true)
-	definition.visual_source = String(raw.get("visual_source", String(raw.get("variant", String(variant)))))
+	# Recolor-only palettes share the green base art sheet and are tinted at
+	# runtime; only art-sheet variants (red/blue/green) and explicit overrides
+	# (crimson -> red) name a distinct source.
+	var raw_source := str(raw.get("visual_source", ""))
+	if raw_source.is_empty():
+		raw_source = "green" if String(variant) in ["grey", "purple", "yellow", "orange", "aquamarine"] else String(variant)
+	definition.visual_source = raw_source
 	return definition
 
 
