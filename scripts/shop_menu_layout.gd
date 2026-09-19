@@ -13,6 +13,7 @@ const NATIVE_SIZE := Vector2(240.0, 160.0)
 const VISIBLE_ROWS := 8
 const STAT_COUNT := 6
 const ITEM_ROW_PITCH := 10.0
+const ITEM_TOUCH_ROW_TOP_OFFSET := -2.0
 const STAT_ROW_PITCH := 13.0
 const STAT_BEFORE_RIGHT := 202.0
 const STAT_ARROW_X := 205.0
@@ -324,6 +325,21 @@ func _responsive_rect(native_rect: Rect2, width: float) -> Rect2:
 	return RESPONSIVE_LAYOUT_SCRIPT.map_rect(native_rect, width, NATIVE_SIZE.x)
 
 
+func _set_item_touch_rect(index: int, row_y: float) -> void:
+	if index < 0 or index >= item_buttons.size() or item_buttons[index] == null:
+		return
+	var button := item_buttons[index]
+	var previous_rect := button.get_meta("shop_native_rect", Rect2(button.position, button.size)) as Rect2
+	# The text and icon share this row origin. Give the row a full-pitch touch
+	# lane centered on that origin instead of relying on the scene's stale
+	# per-button offsets after a responsive layout pass.
+	var native_rect := Rect2(previous_rect.position.x, row_y + ITEM_TOUCH_ROW_TOP_OFFSET, previous_rect.size.x, ITEM_ROW_PITCH)
+	button.set_meta("shop_native_rect", native_rect)
+	var resolved := _responsive_rect(native_rect, maxf(size.x, NATIVE_SIZE.x))
+	button.position = resolved.position
+	button.size = resolved.size
+
+
 func _apply_footer_anchor(width: float) -> void:
 	# The authored 240px footer is right-anchored in the other hub menus. Keep
 	# its native positions unchanged at 240px, then move the complete prompt
@@ -576,6 +592,7 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 			_set_native_position(item_icons[index], Vector2(icon_x, row_y))
 			item_icons[index].visible = has_label and item_icons[index].texture != null
 		if index < item_buttons.size():
+			_set_item_touch_rect(index, row_y)
 			# A visible row is a direct touch route into item browse, even from the
 			# mode selector or sell amount view. It never auto-confirms a sale.
 			_set_button_active(item_buttons[index], has_label, has_label)

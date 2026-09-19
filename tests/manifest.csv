@@ -48,6 +48,7 @@ script,role,state,owner,target,load,notes
 "title_boot_scene_smoke","gate","unverified","boot & run loop","main.tscn boots into title with cloud/save panel","main",""
 "menu_command_list_smoke","owner","unverified","menus & UI","shared command-list navigation primitive","pure",""
 "touch_controls_smoke","gate","verified","input & touch","TouchControlsLayer gestures and menu policy","pure","2026-09-13 focused evidence; callback fixture and menu policy reconciled"
+"ui_consistency_touch_polish_smoke","gate","verified","HUD / input & touch / hub & menus","target HUD, map footer, and shop touch geometry","fixture","focused pass 2026-09-19; see ui-consistency-and-touch-polish-plan.md"
 "wall_socket_geometry_smoke","gate","verified","room progression","portal-based doorway geometry and walkability","main","2026-09-13 focused evidence"
 "actor_geometry_scene_smoke","owner","unverified","actor geometry","geometry drawer and render visibility in main","main",""
 "actor_geometry_smoke","owner","verified","actor geometry","ActorGeometry pure math: foot/encounter/bounds","pure","harness defect fixed 2026-09-13: quit(0) fell through to quit(1)"

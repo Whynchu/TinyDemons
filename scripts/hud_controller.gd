@@ -6,6 +6,8 @@ const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
 const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_icon.gdshader")
 const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://assets/artwork/eliteslimeoverheadsymbol.png")
+const TARGET_HEALTH_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/EnemyHpRedBar.png")
+const TARGET_OVERHEAD_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/HpOverheadRedBar.png")
 
 const COOLDOWN_FLASH_DURATION := 0.14
 const COOLDOWN_ICON_DIM := 0.58
@@ -74,11 +76,16 @@ func apply_display_layout(root: Object) -> void:
 	_set_layout_position(combo_label, &"combo")
 	_set_layout_position(combo_base, &"combo")
 	_set_layout_position(combo_fill, &"combo")
-	_set_layout_position(root.get("target_health_bar") as Sprite2D, &"target")
-	_set_layout_position(root.get("target_health_fill") as Sprite2D, &"target")
+	var target_bar := root.get("target_health_bar") as Sprite2D
+	var target_fill := root.get("target_health_fill") as Sprite2D
+	_set_layout_position(target_bar, &"target")
+	_set_layout_position(target_fill, &"target")
 	_set_layout_position(root.get("target_health_damage_fill") as Sprite2D, &"target")
 	_set_layout_position(root.get("target_name_text") as Sprite2D, &"target_name", Vector2(120, 148))
-	_set_layout_position(root.get("target_health_text") as Sprite2D, &"target")
+	var target_health_text := root.get("target_health_text") as Sprite2D
+	if target_health_text != null:
+		target_health_text.centered = true
+		target_health_text.position = target_health_text_position(target_bar, target_fill.texture if target_fill != null else null)
 	_set_layout_position(root.get("focus_label") as Sprite2D, &"focus", Vector2(120, 148))
 	_set_layout_position(root.get("focus_label_base") as Sprite2D, &"focus", Vector2(120, 148))
 	for button in button_hud_sprites:
@@ -115,20 +122,66 @@ func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_
 		target_health_text.visible = visible
 
 
-func update_target_ui(target: Sprite2D, target_name: Sprite2D, _target_bar: Sprite2D, target_damage_fill: Sprite2D, target_fill: Sprite2D, target_health_text: Sprite2D, bar_size: Vector2, display_name: Callable, max_health_for: Callable, health_for: Callable, display_health_for: Callable, pixel_name: Callable, pixel_number: Callable, set_values: Callable) -> Vector2:
+func target_health_text_position(target_bar: Sprite2D, fallback_texture: Texture2D = null) -> Vector2:
+	if target_bar == null:
+		return DisplayLayout.position_for(Vector2(120, 148), &"target", display_view_size)
+	var bar_texture: Texture2D = target_bar.texture if target_bar.texture != null else fallback_texture
+	var bar_size := bar_texture.get_size() if bar_texture != null else Vector2.ZERO
+	var bar_origin := target_bar.position
+	if target_bar.centered:
+		bar_origin -= bar_size * 0.5
+	return bar_origin + bar_size * 0.5
+
+
+func target_health_texture_for(target: Sprite2D) -> Texture2D:
+	var texture := target_health_fill_textures.get(target) as Texture2D
+	if texture == null:
+		texture = TARGET_HEALTH_BAR_TEXTURE
+		target_health_fill_textures[target] = texture
+	return texture
+
+
+func target_health_damage_texture_for(target: Sprite2D, base_texture: Texture2D) -> Texture2D:
+	var texture := target_health_damage_fill_textures.get(target) as Texture2D
+	if texture == null:
+		texture = brighter_bar_texture(base_texture if base_texture != null else TARGET_HEALTH_BAR_TEXTURE)
+		target_health_damage_fill_textures[target] = texture
+	return texture
+
+
+func target_overhead_texture_for(slime: Sprite2D) -> Texture2D:
+	var texture := target_overhead_fill_textures.get(slime) as Texture2D
+	if texture == null:
+		texture = TARGET_OVERHEAD_BAR_TEXTURE
+		target_overhead_fill_textures[slime] = texture
+	return texture
+
+
+func target_overhead_damage_texture_for(slime: Sprite2D, base_texture: Texture2D) -> Texture2D:
+	var texture := target_overhead_damage_fill_textures.get(slime) as Texture2D
+	if texture == null:
+		texture = brighter_bar_texture(base_texture if base_texture != null else TARGET_OVERHEAD_BAR_TEXTURE)
+		target_overhead_damage_fill_textures[slime] = texture
+	return texture
+
+
+func update_target_ui(target: Sprite2D, target_name: Sprite2D, target_bar: Sprite2D, target_damage_fill: Sprite2D, target_fill: Sprite2D, target_health_text: Sprite2D, bar_size: Vector2, display_name: Callable, max_health_for: Callable, health_for: Callable, display_health_for: Callable, pixel_name: Callable, pixel_number: Callable, set_values: Callable) -> Vector2:
 	if target == null: return bar_size
 	target_name.texture = pixel_name.call(display_name.call(target), Color.WHITE); target_name.centered = true; target_name.position = target_name_position()
-	var fill_texture := target_health_fill_textures.get(target, target_fill.texture) as Texture2D
+	var fill_texture := target_health_texture_for(target)
 	if fill_texture != null:
 		target_fill.texture = fill_texture
 		target_fill.self_modulate = Color.WHITE
 		bar_size = fill_texture.get_size()
-	var damage_fill_texture := target_health_damage_fill_textures.get(target, target_fill.texture) as Texture2D
+	var damage_fill_texture := target_health_damage_texture_for(target, fill_texture)
 	if target_damage_fill != null and damage_fill_texture != null:
 		target_damage_fill.texture = damage_fill_texture
 		target_damage_fill.self_modulate = Color.WHITE
 	var max_health := float(max_health_for.call(target)); var health := float(health_for.call(target)); var display_health := float(display_health_for.call(target))
-	target_health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
+	if target_health_text != null:
+		target_health_text.centered = true
+		target_health_text.position = target_health_text_position(target_bar, fill_texture)
+		target_health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
 	set_values.call(target_fill, target_damage_fill, bar_size, health, display_health, max_health)
 	return bar_size
 
@@ -781,7 +834,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		target_text.reparent(target_bar_parent, false)
 	target_text.z_as_relative = true
 	target_text.z_index = target_bar.z_index + 3
-	target_text.position = target_bar.position + target_bar.texture.get_size() * 0.5
+	target_text.position = target_health_text_position(target_bar, target_bar.texture)
 	target_text.visible = false
 	var focus_label_base := hud_parent.get_node_or_null("TargetHud/FocusLabelBase") as Sprite2D
 	if focus_label_base == null:
@@ -866,9 +919,11 @@ func build_enemy_health_ui(
 		target_health_fill_textures[slime] = load_texture.call("res://assets/artwork/" + target_bar_paths[palette]); target_overhead_fill_textures[slime] = load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette])
 	target_health_damage_fill_textures.clear(); target_overhead_damage_fill_textures.clear()
 	for slime in slimes:
-		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_fill_textures.get(slime) as Texture2D)
-		target_overhead_damage_fill_textures[slime] = bright_texture.call(target_overhead_fill_textures.get(slime) as Texture2D)
+		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_texture_for(slime))
+		target_overhead_damage_fill_textures[slime] = bright_texture.call(target_overhead_texture_for(slime))
 	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear(); target_overhead_elite_symbols.clear()
+	target_health_fill.texture = TARGET_HEALTH_BAR_TEXTURE
+	target_health_fill.self_modulate = Color.WHITE
 	var target_damage_fill := duplicate_fill.call(target_health_fill, "EnemyHpDamageFill") as Sprite2D
 	target_health_bar.z_index = 0; target_health_bar.z_as_relative = true; target_damage_fill.z_index = 1; target_health_fill.z_index = 2; target_damage_fill.z_as_relative = true; target_health_fill.z_as_relative = true; target_damage_fill.get_parent().move_child(target_damage_fill, target_health_fill.get_index())
 	var player_damage_fill := duplicate_fill.call(player_health_fill, "HpBarDamageFill") as Sprite2D
@@ -878,8 +933,9 @@ func build_enemy_health_ui(
 	for slime in slimes:
 		if slime == slime_green: continue
 		var frame := Sprite2D.new(); frame.name = "HpOverhead"; frame.texture = hp_overhead.texture; frame.centered = hp_overhead.centered; frame.position = hp_overhead.position; frame.z_index = 0; frame.z_as_relative = false; slime.add_child(frame)
-		var damage_fill := Sprite2D.new(); damage_fill.name = "HpOverheadDamageFill"; damage_fill.texture = target_overhead_damage_fill_textures.get(slime, hp_overhead_fill.texture); damage_fill.centered = hp_overhead_fill.centered; damage_fill.position = hp_overhead_fill.position; damage_fill.z_index = 1; damage_fill.z_as_relative = false; slime.add_child(damage_fill)
-		var fill := Sprite2D.new(); fill.name = "HpOverheadFill"; fill.texture = target_overhead_fill_textures.get(slime, hp_overhead_fill.texture); fill.centered = hp_overhead_fill.centered; fill.position = hp_overhead_fill.position; fill.z_index = 2; fill.z_as_relative = false; slime.add_child(fill)
+		var overhead_texture := target_overhead_texture_for(slime)
+		var damage_fill := Sprite2D.new(); damage_fill.name = "HpOverheadDamageFill"; damage_fill.texture = target_overhead_damage_texture_for(slime, overhead_texture); damage_fill.centered = hp_overhead_fill.centered; damage_fill.position = hp_overhead_fill.position; damage_fill.z_index = 1; damage_fill.z_as_relative = false; slime.add_child(damage_fill)
+		var fill := Sprite2D.new(); fill.name = "HpOverheadFill"; fill.texture = overhead_texture; fill.centered = hp_overhead_fill.centered; fill.position = hp_overhead_fill.position; fill.z_index = 2; fill.z_as_relative = false; slime.add_child(fill)
 		register_overhead.call(slime, frame, fill, hp_overhead.global_position - slime_green.global_position, duplicate_fill, pixel_particle)
 	return base_texture
 
@@ -897,12 +953,12 @@ func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Calla
 
 
 func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, offset: Vector2, duplicate_fill: Callable, _pixel_particle: Callable) -> void:
-	var fill_texture := target_overhead_fill_textures.get(slime, fill.texture) as Texture2D
+	var fill_texture := target_overhead_texture_for(slime)
 	if fill_texture != null: fill.texture = fill_texture
 	var damage_fill := fill.get_parent().get_node_or_null("HpOverheadDamageFill") as Sprite2D
 	if damage_fill == null: damage_fill = duplicate_fill.call(fill, "HpOverheadDamageFill") as Sprite2D; damage_fill.z_index = 1
 	fill.z_index = 2
-	var damage_fill_texture := target_overhead_damage_fill_textures.get(slime, damage_fill.texture) as Texture2D
+	var damage_fill_texture := target_overhead_damage_texture_for(slime, fill_texture)
 	if damage_fill_texture != null: damage_fill.texture = damage_fill_texture
 	var aggro_marker := fill.get_parent().get_node_or_null("AggroMarker") as Sprite2D
 	if aggro_marker == null:
