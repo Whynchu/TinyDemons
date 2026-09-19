@@ -9,3 +9,7 @@ risk_reward_candidate_count = 3
 first_orb_depth = 3
 first_special_depth = 4
 primary_flames = Array[StringName]([&"fire", &"water", &"electric"])
+risk_choice_min_y = 4
+risk_choice_boss_margin = 2
+elemental_vault_cap = 2
+risk_route_shortcut_advantage = 1

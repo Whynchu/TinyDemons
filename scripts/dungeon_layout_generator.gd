@@ -415,7 +415,7 @@ static func _add_risk_shortcut(builder: LayoutBuilder, _dungeon_seed: int) -> Di
 static func _is_risk_choice_source(room, boss_depth: int) -> bool:
 	if room == null or room.room_type in [DungeonGraph.ROOM_START, DungeonGraph.ROOM_BOSS, DungeonGraph.ROOM_SPECIAL_ENEMY, DungeonGraph.ROOM_TREASURE]:
 		return false
-	if room.coordinate.y < 4 or room.coordinate.y >= boss_depth - 2:
+	if not policy().is_valid_risk_choice_y(room.coordinate.y, boss_depth):
 		return false
 	return room.route_role not in [ROUTE_ELITE_REWARD, ROUTE_RISK_SHORTCUT, ROUTE_SAFE]
 
@@ -719,7 +719,7 @@ static func _attach_elemental_vaults(builder: LayoutBuilder, dungeon_seed: int) 
 	var vault_count := 0
 	var requirement_index := posmod(dungeon_seed, available_elements.size())
 	for connection in candidates:
-		if vault_count >= 2:
+		if vault_count >= policy().elemental_vault_cap:
 			break
 		var destination_spec = builder.room_spec(connection.destination_room_id)
 		if destination_spec == null or destination_spec.route_role == ROUTE_ELITE_REWARD:
@@ -915,7 +915,7 @@ static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_sta
 			errors.append("generated dead end has no declared utility or reward: %s" % room.id)
 	if layout.route_choice_source_room_id.is_empty() or layout.route_choice_rejoin_room_id.is_empty() or not safe_edge_found or not risk_edge_found:
 		errors.append("generated R6+ layout is missing a safe/risk route choice")
-	if layout.safe_route_length <= layout.risk_route_length + 1:
+	if layout.safe_route_length <= layout.risk_route_length + policy().risk_route_shortcut_advantage:
 		errors.append("risk shortcut is not at least two transitions shorter than the safe route")
 	var safe_length := _route_length(layout, layout.route_choice_source_room_id, layout.route_choice_rejoin_room_id, ROUTE_SAFE)
 	var risk_length := _route_length(layout, layout.route_choice_source_room_id, layout.route_choice_rejoin_room_id, ROUTE_RISK_SHORTCUT)

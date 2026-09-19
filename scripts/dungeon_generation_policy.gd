@@ -24,6 +24,14 @@ const RISK_REWARD_GENERATION_MODE: StringName = &"risk_reward_r6_plus"
 @export var first_special_depth := 4
 @export var primary_flames: Array[StringName] = [&"fire", &"water", &"electric"]
 
+## Route policy: risk shortcuts must sit between the first dig depth and a
+## band below the boss, and the risk route must be at least this many
+## transitions shorter than the safe route.
+@export var risk_choice_min_y := 4
+@export var risk_choice_boss_margin := 2
+@export var elemental_vault_cap := 2
+@export var risk_route_shortcut_advantage := 1
+
 
 func validate() -> Array[String]:
 	var problems: Array[String] = []
@@ -32,4 +40,12 @@ func validate() -> Array[String]:
 	if first_orb_depth < 1: problems.append("first_orb_depth must be >= 1")
 	if first_special_depth < 1: problems.append("first_special_depth must be >= 1")
 	if primary_flames.is_empty(): problems.append("primary_flames must not be empty")
+	if risk_choice_min_y < 1: problems.append("risk_choice_min_y must be >= 1")
+	if risk_choice_boss_margin < 1: problems.append("risk_choice_boss_margin must be >= 1")
+	if elemental_vault_cap < 0: problems.append("elemental_vault_cap must be >= 0")
+	if risk_route_shortcut_advantage < 0: problems.append("risk_route_shortcut_advantage must be >= 0")
 	return problems
+
+
+func is_valid_risk_choice_y(room_y: int, boss_depth: int) -> bool:
+	return room_y >= risk_choice_min_y and room_y < boss_depth - risk_choice_boss_margin
