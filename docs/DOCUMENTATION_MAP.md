@@ -13,6 +13,8 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
 
 ## Start here
 
+For an external product/design review, use the curated [`review/00-astra-review-index.md`](review/00-astra-review-index.md) package. It consolidates current reality, the ratified interview contract, production state, presentation rubric, and staged agent instructions.
+
 1. [`README.md`](../README.md) — project entry point and verification commands.
 2. [`AGENTS.md`](../AGENTS.md) — contributor rules and feature ownership.
 3. [`AUDIT.md`](AUDIT.md) — current codebase measurements, risks, and the

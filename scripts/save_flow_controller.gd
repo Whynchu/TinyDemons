@@ -88,7 +88,11 @@ func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
 	if root.player_animation_component == null:
 		return null
 	var palette_frames: Dictionary = root.player_animation_component.frames_by_palette.get(palette_name, {}) as Dictionary
-	var baked_idle_frames: Array[Texture2D] = palette_frames.get("idle", []) as Array[Texture2D]
+	var baked_idle_frames: Array[Texture2D] = []
+	var idle_value: Variant = palette_frames.get("idle")
+	if idle_value is Array:
+		for frame: Texture2D in idle_value:
+			baked_idle_frames.append(frame)
 	if not baked_idle_frames.is_empty():
 		# Save/name previews must use the same pre-rendered palette frames as
 		# character creation; recoloring the blue source would restore old eyes.
@@ -460,9 +464,16 @@ func update_archetype_screen(root: Object) -> void:
 	root.screen_state_controller.archetype_name_text.position = Vector2((view_width - root.screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
 	var colors: Array[String] = [flame_palette]
 	var cached_palette_frames: Dictionary = root.player_animation_component.frames_by_palette.get(flame_palette, {}) as Dictionary
-	var preview_source_frames: Array[Texture2D] = cached_palette_frames.get("idle", []) as Array[Texture2D]
+	var preview_source_frames: Array[Texture2D] = []
+	var idle_value: Variant = cached_palette_frames.get("idle")
+	if idle_value is Array:
+		for frame: Texture2D in idle_value:
+			preview_source_frames.append(frame)
 	if preview_source_frames.is_empty():
-		preview_source_frames = root.player_animation_component.idle_frames
+		# Shader-palette mode keeps no per-palette frames; recolor the base idle
+		# set for this preview only. SpriteFrameLibrary caches per source+palette.
+		for frame in root.player_animation_component.idle_frames:
+			preview_source_frames.append(root.player_animation_component.recolor_texture(frame, flame_palette))
 	if not preview_source_frames.is_empty():
 		# Use the pre-rendered palette frames directly. Recoloring the active blue
 		# frames here bypasses the baked green/yellow eye treatment and shows the

@@ -1,0 +1,174 @@
+[gd_scene format=3 uid="uid://bpou4q4u1xajn"]
+
+[ext_resource type="Script" uid="uid://ciunxa1vx7dpj" path="res://scripts/touch_controls_authoring.gd" id="1_authoring"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ytnco"]
+bg_color = Color(0.04, 0.05, 0.08, 0.86)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.46, 0.52, 0.66, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xwl8b"]
+bg_color = Color(0.04, 0.05, 0.08, 0.86)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.46, 0.52, 0.66, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nevgk"]
+bg_color = Color(0.08, 0.1, 0.16, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.86, 1, 0.95)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q78wy"]
+bg_color = Color(0.04, 0.05, 0.08, 0.86)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.46, 0.52, 0.66, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_33p87"]
+bg_color = Color(0.04, 0.05, 0.08, 0.86)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.46, 0.52, 0.66, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6lyp0"]
+bg_color = Color(0.04, 0.05, 0.08, 0.86)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.46, 0.52, 0.66, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_in8of"]
+bg_color = Color(0.04, 0.05, 0.08, 0.86)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.46, 0.52, 0.66, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="TouchControlsAuthoring" type="Control" unique_id=926596736]
+custom_minimum_size = Vector2(240, 160)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+script = ExtResource("1_authoring")
+
+[node name="StickPreview" type="Panel" parent="." unique_id=823707390]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 108.0
+offset_right = 56.0
+offset_bottom = 156.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ytnco")
+
+[node name="StickKnob" type="Panel" parent="." unique_id=1913800225]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 122.0
+offset_right = 42.0
+offset_bottom = 142.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xwl8b")
+
+[node name="MapPreview" type="Label" parent="." unique_id=1341540360]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 5.0
+offset_right = 42.0
+offset_bottom = 17.0
+theme_override_colors/font_color = Color(0.65, 0.72, 0.9, 0.9)
+theme_override_font_sizes/font_size = 7
+text = "MAP"
+
+[node name="PausePreview" type="Label" parent="." unique_id=1207948170]
+layout_mode = 0
+offset_left = 222.0
+offset_top = 5.0
+offset_right = 236.0
+offset_bottom = 17.0
+theme_override_colors/font_color = Color(0.65, 0.72, 0.9, 0.9)
+theme_override_font_sizes/font_size = 7
+text = "II"
+
+[node name="Roll" type="Panel" parent="." unique_id=2070101897]
+layout_mode = 0
+offset_left = 199.0
+offset_top = 115.0
+offset_right = 235.0
+offset_bottom = 151.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_nevgk")
+
+[node name="Attack" type="Panel" parent="." unique_id=586942597]
+layout_mode = 0
+offset_left = 175.0
+offset_top = 131.0
+offset_right = 199.0
+offset_bottom = 155.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_q78wy")
+
+[node name="Magic" type="Panel" parent="." unique_id=96483144]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 105.0
+offset_right = 194.0
+offset_bottom = 129.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_33p87")
+
+[node name="Guard" type="Panel" parent="." unique_id=1184576969]
+layout_mode = 0
+offset_left = 189.0
+offset_top = 88.0
+offset_right = 213.0
+offset_bottom = 112.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_6lyp0")
+
+[node name="Target" type="Panel" parent="." unique_id=965867357]
+layout_mode = 0
+offset_left = 215.0
+offset_top = 90.0
+offset_right = 239.0
+offset_bottom = 114.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_in8of")

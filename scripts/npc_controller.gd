@@ -120,7 +120,7 @@ func show_dialogue(root: Object) -> void:
 	root.set("player_is_moving", false); root.set("player_is_running", false); root.set("player_roll_hold_armed", false)
 	dialogue_text.texture = root.call("_pixel_text_texture", "", Color.WHITE); dialogue_text.visible = true; dialogue_button.visible = false; dialogue_input_was_down = root.call("_is_interact_input_pressed"); dialogue_box.visible = true; root.set("player_is_moving", false); root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.set("player_is_backflipping", false); (root.get("player_attack_visual") as Sprite2D).visible = false
 	if not player_was_idle:
-		root.set("player_anim_name", "idle"); root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root)
+		root.set("player_anim_name", "idle"); root.set("player_anim_frame", 0); root.set("player_anim_timer", 0.0); (root.get("player_animation_component") as PlayerAnimationComponent).apply_frame(root.gameplay_frame_controller.animation_context(root))
 	(root.get("interact_prompt") as Sprite2D).visible = false
 	update_dialogue_from_root(root, 0.0)
 

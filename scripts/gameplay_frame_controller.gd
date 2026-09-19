@@ -9,12 +9,61 @@ const PHASE_PRESENTATION := &"presentation"
 const PHASE_TRANSITIONS := &"transitions"
 const PHASE_ORDER: Array[StringName] = [PHASE_INPUT, PHASE_SIMULATION, PHASE_CONTACT, PHASE_DAMAGE, PHASE_PRESENTATION, PHASE_TRANSITIONS]
 
+## Opt-in diagnostics for the performance harness. Disabled by default, so the
+## disabled path is a single boolean test at each context builder. Access counts
+## record every request; build counts record only real constructions, so a
+## cached context shows high accesses and zero builds.
+static var context_diagnostics_enabled := false
+static var context_access_counts: Dictionary = {}
+static var context_build_counts: Dictionary = {}
+
+## Run-scoped cache for the closure-heavy context objects. Context closures read
+## live state through the root, so a context only needs rebuilding when a direct
+## field's source object is replaced. `occluder_sprites` is reassigned by the
+## depth sorter and is refreshed on every access; every other direct field is
+## stable for the lifetime of the runtime. Call invalidate_contexts() if a source
+## object such as a tuning resource or equipment component is ever swapped.
+var _context_cache: Dictionary = {}
+
+
+func invalidate_contexts() -> void:
+	_context_cache.clear()
+
+
 static func phase_order() -> Array[StringName]:
 	return PHASE_ORDER.duplicate()
 
 
+static func begin_context_diagnostics() -> void:
+	context_access_counts.clear()
+	context_build_counts.clear()
+	context_diagnostics_enabled = true
+
+
+static func end_context_diagnostics() -> void:
+	context_diagnostics_enabled = false
+
+
+static func _record_context_access(context_name: StringName) -> void:
+	if not context_diagnostics_enabled:
+		return
+	context_access_counts[context_name] = int(context_access_counts.get(context_name, 0)) + 1
+
+
+static func _record_context_build(context_name: StringName) -> void:
+	if not context_diagnostics_enabled:
+		return
+	context_build_counts[context_name] = int(context_build_counts.get(context_name, 0)) + 1
+
+
 func animation_context(root: GameplayState) -> PlayerAnimationContext:
-	var context := PlayerAnimationContext.new()
+	_record_context_access(&"animation_context")
+	var context := _context_cache.get(&"animation_context") as PlayerAnimationContext
+	if context != null:
+		return context
+	_record_context_build(&"animation_context")
+	context = PlayerAnimationContext.new()
+	_context_cache[&"animation_context"] = context
 	context.player = root.player
 	context.actor_root = root
 	context.sprite_frame_library = root.sprite_frame_library
@@ -70,7 +119,16 @@ func animation_context(root: GameplayState) -> PlayerAnimationContext:
 
 
 func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualContext:
-	var context := PlayerEquipmentVisualContext.new()
+	_record_context_access(&"equipment_visual_context")
+	var context := _context_cache.get(&"equipment_visual_context") as PlayerEquipmentVisualContext
+	if context != null:
+		# The depth sorter reassigns these arrays, so refresh them on each access.
+		context.actor_sprites = root.actor_sprites
+		context.occluder_sprites = root.occluder_sprites
+		return context
+	_record_context_build(&"equipment_visual_context")
+	context = PlayerEquipmentVisualContext.new()
+	_context_cache[&"equipment_visual_context"] = context
 	context.player = root.player
 	context.rest_fire = root.rest_fire
 	context.cloaked_demon = root.cloaked_demon
@@ -110,7 +168,13 @@ func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualConte
 
 
 func magic_context(root: GameplayState) -> MagicRuntimeContext:
-	var context := MagicRuntimeContext.new()
+	_record_context_access(&"magic_context")
+	var context := _context_cache.get(&"magic_context") as MagicRuntimeContext
+	if context != null:
+		return context
+	_record_context_build(&"magic_context")
+	context = MagicRuntimeContext.new()
+	_context_cache[&"magic_context"] = context
 	context.player = root.player
 	context.slimes = root.slimes
 	context.puzzle_torches = root.puzzle_torches if root.get("puzzle_torches") != null else []
@@ -179,7 +243,13 @@ func magic_context(root: GameplayState) -> MagicRuntimeContext:
 
 
 func _guard_context(root: GameplayState) -> PlayerGuardContext:
-	var context := PlayerGuardContext.new()
+	_record_context_access(&"guard_context")
+	var context := _context_cache.get(&"guard_context") as PlayerGuardContext
+	if context != null:
+		return context
+	_record_context_build(&"guard_context")
+	context = PlayerGuardContext.new()
+	_context_cache[&"guard_context"] = context
 	context.ui_parent = root
 	context.player = root.player
 	context.equipment = root.player_equipment
@@ -200,7 +270,13 @@ func _guard_context(root: GameplayState) -> PlayerGuardContext:
 
 
 func _roll_context(root: GameplayState) -> PlayerRollContext:
-	var context := PlayerRollContext.new()
+	_record_context_access(&"roll_context")
+	var context := _context_cache.get(&"roll_context") as PlayerRollContext
+	if context != null:
+		return context
+	_record_context_build(&"roll_context")
+	context = PlayerRollContext.new()
+	_context_cache[&"roll_context"] = context
 	context.player = root.player
 	context.player_motor = root.player_motor
 	context.player_animation_component = root.player_animation_component
@@ -235,7 +311,13 @@ func _roll_context(root: GameplayState) -> PlayerRollContext:
 
 
 func interaction_context(root: GameplayState) -> InteractionContext:
-	var context := InteractionContext.new()
+	_record_context_access(&"interaction_context")
+	var context := _context_cache.get(&"interaction_context") as InteractionContext
+	if context != null:
+		return context
+	_record_context_build(&"interaction_context")
+	context = InteractionContext.new()
+	_context_cache[&"interaction_context"] = context
 	context.player = root.player
 	context.chest = root.chest
 	context.npc_controller = root.npc_controller

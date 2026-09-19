@@ -15,6 +15,8 @@ var frames_built := false
 
 const BAKED_ROOT := "res://assets/baked/player"
 const CLOAKED_BAKED_ROOT := "res://assets/baked/player_cloaked"
+const BASE_DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend.png"
+const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
 const BASE_FULL_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet.png"
 const CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet_cloaked.png"
 const CLOAKED_DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend-Cloaked.png"
@@ -85,32 +87,62 @@ func build_frames(new_context: PlayerAnimationContext) -> void:
 	var library := new_context.sprite_frame_library; var size := base_frame_size
 	cloaked = false
 	cloaked_requested = false
-	_slice_base_sources(library, size, _anim_frame_size("attack"))
+	_slice_shader_sources(BASE_FULL_SHEET_PATH, BASE_DEFEND_SHEET_PATH, size)
 	var raw_dust := library.slice_frames("res://assets/artwork/rolldust.png", Vector2i(16, 16)); var dust: Array[Texture2D] = []
 	for index in raw_dust.size(): dust.append(library.dither_roll_dust_frame(raw_dust[index], float(index) / float(maxi(raw_dust.size(), 1))))
 	new_context.roll_dust_frames_set.call(dust); new_context.roll_dust_flipped_frames_set.call(library.flip_effect_frames(dust, Vector2i(16, 16)))
 	baked_root = BAKED_ROOT
-	using_baked = _detect_baked(); apply_palette(new_context, "blue"); precache_all_palettes(); warm_all_palette_caches(new_context)
+	using_baked = _detect_baked()
+	_build_shader_palette_cache(new_context)
 	frames_built = true
 	_apply_cloaked_state()
 
 
-func _slice_base_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
-	idle_frames = library.slice_frames("res://assets/artwork/TinyDemon-idle.png", size); walk_frames = library.slice_frames("res://assets/artwork/TinyDemon-walk.png", size); run_frames = library.slice_frames("res://assets/artwork/TinyDemon-run.png", size); backflip_frames = library.slice_frames("res://assets/artwork/TinyDemon-backflip.png", size); defend_frames = library.slice_frames("res://assets/artwork/TinyDemon-Defend.png", size); roll_frames = library.slice_frames("res://assets/artwork/TinyDemon-roll.png", size); magic_frames = library.slice_sheet_row(BASE_FULL_SHEET_PATH, BASE_MAGIC_SHEET_ROW, size, magic_frame_count)
-	attack_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack1.png", attack_size); attack2_frames = library.slice_frames("res://assets/artwork/TinyDemon-attack2.png", attack_size); spin_frames = library.slice_frames("res://assets/artwork/TinyDemon-Spin_Attack.png", attack_size); if (attack2_frames as Array).is_empty(): attack2_frames = (attack_frames as Array).duplicate()
-	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames); between_attack_texture = context.load_texture_or_null.call("res://assets/artwork/TinyDemon-attack-between.png"); after_attack2_texture = context.load_texture_or_null.call("res://assets/artwork/TinyDemon-after-attack2.png")
-	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
-	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
+## Shader path: only the grey reference set is baked. Every other palette is
+## applied on the GPU, so there is no per-palette texture generation or warming.
+func _build_shader_palette_cache(new_context: PlayerAnimationContext) -> void:
+	frames_by_palette.clear()
+	_store_palette("grey")
+	warm_player_caches(new_context)
+	_warm_grey_caches()
 
 
-## Slices the authored cloaked fullsheet into the same animation groups as the
-## base player sheet. Defend is authored as its own strip, matching the base set.
-func _slice_cloaked_sources(library: SpriteFrameLibrary, size: Vector2i, attack_size: Vector2i) -> void:
-	idle_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["idle"], size, CLOAKED_FRAME_COUNTS["idle"]); walk_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["walk"], size, CLOAKED_FRAME_COUNTS["walk"]); run_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["run"], size, CLOAKED_FRAME_COUNTS["run"]); backflip_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["backflip"], size, CLOAKED_FRAME_COUNTS["backflip"]); defend_frames = library.slice_frames(CLOAKED_DEFEND_SHEET_PATH, size); roll_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["roll"], size, CLOAKED_FRAME_COUNTS["roll"]); magic_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["magic"], size, CLOAKED_FRAME_COUNTS["magic"])
-	attack_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["attack"], attack_size, CLOAKED_FRAME_COUNTS["attack"]); attack2_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["attack2"], attack_size, CLOAKED_FRAME_COUNTS["attack2"]); spin_frames = library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["spin"], attack_size, CLOAKED_FRAME_COUNTS["spin"])
-	attack_left_frames = library.flip_frames(attack_frames); attack2_left_frames = library.flip_frames(attack2_frames); spin_left_frames = library.flip_frames(spin_frames)
-	var between_frames := library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["between"], size, 1); var after_frames := library.slice_sheet_row(CLOAKED_SHEET_PATH, CLOAKED_SHEET_ROWS["after"], size, 1)
-	between_attack_texture = between_frames[0] if not between_frames.is_empty() else null; after_attack2_texture = after_frames[0] if not after_frames.is_empty() else null
+func _warm_grey_caches() -> void:
+	var grey_set: Dictionary = frames_by_palette.get("grey", {})
+	for key in grey_set:
+		var value: Variant = grey_set[key]
+		if value is Array:
+			for texture: Texture2D in value as Array[Texture2D]:
+				warm_texture_cache(texture)
+		elif value is Texture2D:
+			warm_texture_cache(value)
+
+
+## Shader-source frames: the raw fullsheet rows with blank slots dropped, exactly
+## like tools/bake_palettes.gd. The fullsheet carries the eye/horn highlight
+## color the strip files omit, so the palette shader can darken eyes and horns
+## for the green and yellow palettes, and the blank filter removes empty spin
+## frames. Mirrors the offline baker's frame set so the GPU output matches the
+## baked reference exactly.
+func _slice_shader_sources(sheet_path: String, defend_path: String, size: Vector2i) -> void:
+	var library := context.sprite_frame_library
+	idle_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["idle"], size)
+	walk_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["walk"], size)
+	run_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["run"], size)
+	backflip_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["backflip"], size)
+	roll_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["roll"], size)
+	magic_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["magic"], size)
+	attack_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["attack"], size)
+	attack2_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["attack2"], size)
+	spin_frames = library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["spin"], size)
+	var between_frames := library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["between"], size)
+	var after_frames := library.slice_full_row_visible(sheet_path, CLOAKED_SHEET_ROWS["after"], size)
+	defend_frames = library.slice_frames(defend_path, size)
+	between_attack_texture = between_frames[0] if not between_frames.is_empty() else null
+	after_attack2_texture = after_frames[0] if not after_frames.is_empty() else null
+	attack_left_frames = library.flip_frames(attack_frames)
+	attack2_left_frames = library.flip_frames(attack2_frames)
+	spin_left_frames = library.flip_frames(spin_frames)
 	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
 	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
 
@@ -129,21 +161,16 @@ func _apply_cloaked_state() -> void:
 	if cloaked == cloaked_requested:
 		return
 	cloaked = cloaked_requested
-	var library := context.sprite_frame_library
 	var size := base_frame_size
-	var attack_size := _anim_frame_size("attack")
 	if cloaked:
-		_slice_cloaked_sources(library, size, attack_size)
+		_slice_shader_sources(CLOAKED_SHEET_PATH, CLOAKED_DEFEND_SHEET_PATH, size)
 		baked_root = CLOAKED_BAKED_ROOT
 	else:
-		_slice_base_sources(library, size, attack_size)
+		_slice_shader_sources(BASE_FULL_SHEET_PATH, BASE_DEFEND_SHEET_PATH, size)
 		baked_root = BAKED_ROOT
 	using_baked = _detect_baked()
 	frames_by_palette.clear()
-	var palette := String(context.current_player_palette_name_get.call()) if context.current_player_palette_name_get.is_valid() and context.current_player_palette_name_get.call() != null else "blue"
-	apply_palette(context, palette)
-	precache_all_palettes()
-	warm_all_palette_caches(context)
+	_build_shader_palette_cache(context)
 	apply_frame(context)
 
 
@@ -160,7 +187,30 @@ func movement_anim_name(new_context: PlayerAnimationContext) -> String:
 	return "idle"
 
 
+## Shader path: the sprite materials own the palette. Keep the swap pairs in
+## sync with the active palette, gated by material metadata so the uniforms are
+## only rewritten when the palette actually changes.
+func _sync_material_palette(new_context: PlayerAnimationContext) -> void:
+	if not new_context.current_player_palette_name_get.is_valid():
+		return
+	var palette_value: Variant = new_context.current_player_palette_name_get.call()
+	var palette := String(palette_value) if palette_value != null else "blue"
+	_apply_material_palette(new_context.player, palette)
+	_apply_material_palette(new_context.player_attack_visual, palette)
+
+
+func _apply_material_palette(sprite: Sprite2D, palette: String) -> void:
+	if sprite == null:
+		return
+	var material := sprite.material as ShaderMaterial
+	if material == null or material.get_meta("actor_palette", "") == palette:
+		return
+	ActorPaletteMaterialScript.apply_to(material, palette)
+	material.set_meta("actor_palette", palette)
+
+
 func apply_frame(new_context: PlayerAnimationContext) -> void:
+	_sync_material_palette(new_context)
 	var player := new_context.player
 	var animation_key := String(new_context.player_anim_name_get.call())
 	var frame := int(new_context.player_anim_frame_get.call())
@@ -265,11 +315,6 @@ func begin_transition(new_context: PlayerAnimationContext, transition_name: Stri
 	new_context.set_actor_base_texture.call(new_context.player, texture)
 
 
-func apply_palette(new_context: PlayerAnimationContext, palette_name: String) -> void:
-	_load_palette(palette_name)
-	warm_player_caches(new_context)
-
-
 func _store_palette(palette_name: String) -> void:
 	frames_by_palette[palette_name] = {
 		"idle": _baked_or_recolor(palette_name, "idle", base_idle_frames),
@@ -291,10 +336,12 @@ func _store_palette(palette_name: String) -> void:
 
 
 func _detect_baked() -> bool:
-	var path := "res://assets/baked/player/blue/idle.png"
+	# Only the grey MP-reference set is baked; every other palette is applied by
+	# the shared GPU palette-swap material, so grey is the sentinel for the
+	# baked path.
+	var path := "res://assets/baked/player/grey/idle.png"
 	if not ResourceLoader.exists(path):
 		return false
-	# Baked attack sheets use the fixed attack frame size.
 	return true
 
 
@@ -332,21 +379,6 @@ func _anim_frame_size(anim: String) -> Vector2i:
 	return base_frame_size
 
 
-func _load_palette(palette_name: String) -> void:
-	if not frames_by_palette.has(palette_name):
-		_store_palette(palette_name)
-	var palette_frames: Dictionary = frames_by_palette[palette_name]
-	idle_frames = palette_frames["idle"]; walk_frames = palette_frames["walk"]; run_frames = palette_frames["run"]; backflip_frames = palette_frames["backflip"]; defend_frames = palette_frames["defend"]; roll_frames = palette_frames["roll"]
-	attack_frames = palette_frames["attack"]; attack2_frames = palette_frames["attack2"]; attack_left_frames = palette_frames["attack_left"]; attack2_left_frames = palette_frames["attack2_left"]; spin_frames = palette_frames["spin"]; spin_left_frames = palette_frames["spin_left"]; magic_frames = palette_frames["magic"]
-	between_attack_texture = palette_frames["between"]; after_attack2_texture = palette_frames["after"]
-
-
-func precache_all_palettes() -> void:
-	for palette_name in PaletteLibrary.PALETTE_NAMES:
-		if not frames_by_palette.has(palette_name):
-			_store_palette(palette_name)
-
-
 func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]: return context.sprite_frame_library.recolor_frames(frames, palette_name)
 func recolor_texture(source: Texture2D, palette_name: String) -> Texture2D: return context.sprite_frame_library.recolor_texture(source, palette_name)
 func warm_texture_cache(texture: Texture2D) -> void: context.occlusion_renderer.warm_actor_texture(texture)
@@ -368,37 +400,10 @@ func warm_player_caches(new_context: PlayerAnimationContext) -> void:
 	for texture in magic_frames: warm_texture_cache(texture)
 
 
-## Warms the occlusion caches for every palette's frames at startup so that a
-## runtime palette swap (fire color, or the grey-on-empty-MP state) never
-## triggers a first-use image-processing hitch.  Uses the renderer's shared warm
-## pass (upscale + silhouette outline computed once), so this is cheap enough to
-## do for all palettes up front.
-func warm_all_palette_caches(_new_context: PlayerAnimationContext) -> void:
-	for palette_name: String in frames_by_palette:
-		var palette_frames: Dictionary = frames_by_palette[palette_name]
-		for texture in palette_frames.get("idle") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("walk") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("run") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("backflip") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("defend") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("roll") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("attack") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("attack2") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("attack2_left") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("attack_left") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("spin") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("spin_left") as Array[Texture2D]: warm_texture_cache(texture)
-		for texture in palette_frames.get("magic") as Array[Texture2D]: warm_texture_cache(texture)
-
-
 func apply_palette_async(new_context: PlayerAnimationContext, palette_name: String) -> void:
-	_load_palette(palette_name)
-	# All player palettes are precomputed and occlusion-warmed during startup.
-	# Repeating that full cache walk during an interaction causes a visible hitch
-	# when the player attunes at a flame.
-	# Palette changes can happen while the player is holding a charge. Re-apply
-	# the active animation state so the authored between-attacks pose is refreshed
-	# in the new palette instead of leaving the previous chroma frame on screen.
+	# Palettes are applied by the shared GPU material. Re-apply the active
+	# animation state so a palette change while holding a charge refreshes the
+	# pose instead of leaving the previous chroma frame on screen.
 	if new_context.player != null:
 		apply_frame(new_context)
 	var health_texture := base_health_fill_texture as Texture2D

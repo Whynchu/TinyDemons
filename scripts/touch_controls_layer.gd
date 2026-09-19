@@ -61,6 +61,7 @@ const BUTTON_LABELS := {
 	&"attack": "ATK", &"roll": "ROLL", &"magic": "MAG",
 	&"guard": "GUARD", &"target": "TGT", &"pause": "II", &"open_minimap": "MAP", &"cancel": "CANCEL",
 }
+const TOUCH_LAYOUT_PROFILE := preload("res://resources/definitions/touch_controls_layout.tres")
 
 var _touch_root: Control = null
 var _stick_base: Panel = null
@@ -270,17 +271,16 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2, minimap_rec
 	# thumb-home position. Secondary actions sit on a clean geometric arc around
 	# roll's edge at a fixed radius, evenly spaced by angle.
 	var roll_size := button * ROLL_PRIMARY_SCALE
+	var profile_offsets: Dictionary = TOUCH_LAYOUT_PROFILE.offsets()
+	var profile_scale := unit / BASE_CONTENT_SIZE.y
 	var min_extent := Vector2(INF, INF)
 	var max_extent := Vector2(-INF, -INF)
 	for action in BUTTON_ARC:
-		var arc: Dictionary = BUTTON_ARC[action]
-		var angle_deg := float(arc["angle"])
-		var radius := float(arc["radius"]) * step
-		var direction := Vector2(cos(deg_to_rad(angle_deg)), -sin(deg_to_rad(angle_deg)))
-		min_extent.x = minf(min_extent.x, direction.x * radius - button * 0.5)
-		min_extent.y = minf(min_extent.y, direction.y * radius - button * 0.5)
-		max_extent.x = maxf(max_extent.x, direction.x * radius + button * 0.5)
-		max_extent.y = maxf(max_extent.y, direction.y * radius + button * 0.5)
+		var center_offset: Vector2 = profile_offsets.get(action, Vector2.ZERO) * profile_scale
+		min_extent.x = minf(min_extent.x, center_offset.x - button * 0.5)
+		min_extent.y = minf(min_extent.y, center_offset.y - button * 0.5)
+		max_extent.x = maxf(max_extent.x, center_offset.x + button * 0.5)
+		max_extent.y = maxf(max_extent.y, center_offset.y + button * 0.5)
 	min_extent.x = minf(min_extent.x, -roll_size * 0.5)
 	min_extent.y = minf(min_extent.y, -roll_size * 0.5)
 	max_extent.x = maxf(max_extent.x, roll_size * 0.5)
@@ -292,11 +292,7 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2, minimap_rec
 	var buttons: Dictionary = {}
 	buttons[&"roll"] = Rect2(roll_center - Vector2(roll_size, roll_size) * 0.5, Vector2(roll_size, roll_size))
 	for action in BUTTON_ARC:
-		var arc: Dictionary = BUTTON_ARC[action]
-		var angle_deg := float(arc["angle"])
-		var radius := float(arc["radius"]) * step
-		var direction := Vector2(cos(deg_to_rad(angle_deg)), -sin(deg_to_rad(angle_deg)))
-		var center := roll_center + direction * radius
+		var center := roll_center + (profile_offsets.get(action, Vector2.ZERO) as Vector2) * profile_scale
 		buttons[action] = Rect2(center - Vector2(button, button) * 0.5, Vector2(button, button))
 	var pause_side := clampf(unit * 0.10, 14.0, 44.0)
 	var pause := Rect2(Vector2(maxf(margin, viewport_size.x - margin - pause_side), margin), Vector2(pause_side, pause_side * 0.8))

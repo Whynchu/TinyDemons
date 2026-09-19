@@ -75,6 +75,13 @@ Encrypted-vault deployment and operational verification are documented in
   `screen_state_controller`, `dungeon_minimap_controller`,
   `sprite_frame_library`, `display_controller`, `display_layout`,
   `hub_stone_accent_layer`.
+- **Palette presentation**: `actor_palette_material` owns the shared GPU
+  palette-swap materials (`shaders/palette_swap.gdshader`), one per palette.
+  `player_animation_component` serves raw fullsheet source frames plus the baked
+  grey MP-reference set instead of a texture per palette, and
+  `shaders/mp_desaturation.gdshader` carries the swap alongside MP desaturation.
+  `player_equipment_visual_component` builds palettes lazily (`ensure_palette`).
+  Slime frames remain on the CPU recolor in `slime_visual_component`.
 - **Settings/audio**: `settings_service` owns device-wide persisted options;
   `sound_manager` consumes the live music/SFX values and applies their dB
   offsets to the Master bus.

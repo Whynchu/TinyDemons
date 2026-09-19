@@ -1,82 +1,208 @@
-[gd_resource type="Resource" script_class="SlimeVariantCatalogData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SlimeVariantCatalogData" format=3 uid="uid://csvahxy3wpliv"]
 
-[ext_resource type="Script" path="res://scripts/slime_variant_catalog_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://8kfyonox4q1h" path="res://scripts/slime_variant_catalog_data.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 order = Array[StringName]([&"grey", &"red", &"blue", &"yellow", &"green", &"purple", &"orange", &"aquamarine", &"crimson"])
 definitions = {
-&"grey": {
-"base_stats": {"VIT": 2, "STR": 2, "DEF": 2, "AGI": 2, "INT": 0, "MND": 1},
-"damage_contract": &"physical",
-"display_name": "Normal Slime",
-"element": 0,
-"growth_weights": {"VIT": 0.24, "STR": 0.24, "DEF": 0.24, "AGI": 0.20, "INT": 0.0, "MND": 0.08},
-"variant": &"grey"
-},
-&"red": {
-"base_stats": {"VIT": 1, "STR": 4, "DEF": 2, "AGI": 1, "INT": 2, "MND": 1},
-"damage_contract": &"elemental_slime",
-"display_name": "Fire Slime",
-"element": 1,
-"growth_weights": {"VIT": 0.08, "STR": 0.48, "DEF": 0.16, "AGI": 0.12, "INT": 0.12, "MND": 0.04},
-"variant": &"red"
-},
-&"blue": {
-"base_stats": {"VIT": 2, "STR": 1, "DEF": 4, "AGI": 1, "INT": 2, "MND": 3},
-"damage_contract": &"elemental_slime",
-"display_name": "Water Slime",
-"element": 2,
-"growth_weights": {"VIT": 0.16, "STR": 0.08, "DEF": 0.44, "AGI": 0.10, "INT": 0.08, "MND": 0.14},
-"variant": &"blue"
-},
-&"yellow": {
-"base_stats": {"VIT": 2, "STR": 2, "DEF": 1, "AGI": 3, "INT": 3, "MND": 1},
-"damage_contract": &"elemental_slime",
-"display_name": "Electric Slime",
-"element": 3,
-"growth_weights": {"VIT": 0.16, "STR": 0.12, "DEF": 0.08, "AGI": 0.44, "INT": 0.16, "MND": 0.04},
-"variant": &"yellow"
-},
-&"green": {
-"base_stats": {"VIT": 4, "STR": 1, "DEF": 2, "AGI": 1, "INT": 2, "MND": 2},
-"damage_contract": &"elemental_slime",
-"display_name": "Grass Slime",
-"element": 4,
-"growth_weights": {"VIT": 0.44, "STR": 0.08, "DEF": 0.16, "AGI": 0.12, "INT": 0.10, "MND": 0.10},
-"variant": &"green"
-},
-&"purple": {
-"base_stats": {"VIT": 1, "STR": 3, "DEF": 1, "AGI": 3, "INT": 3, "MND": 1},
-"damage_contract": &"elemental_slime",
-"display_name": "Shadow Slime",
-"element": 5,
-"growth_weights": {"VIT": 0.06, "STR": 0.36, "DEF": 0.06, "AGI": 0.36, "INT": 0.12, "MND": 0.04},
-"variant": &"purple"
-},
-&"orange": {
-"base_stats": {"VIT": 3, "STR": 1, "DEF": 3, "AGI": 1, "INT": 2, "MND": 2},
-"damage_contract": &"elemental_slime",
-"display_name": "Ground Slime",
-"element": 6,
-"growth_weights": {"VIT": 0.28, "STR": 0.08, "DEF": 0.38, "AGI": 0.08, "INT": 0.10, "MND": 0.08},
-"variant": &"orange"
-},
 &"aquamarine": {
-"base_stats": {"VIT": 2, "STR": 2, "DEF": 1, "AGI": 3, "INT": 3, "MND": 2},
+"base_stats": {
+"AGI": 3,
+"DEF": 1,
+"INT": 3,
+"MND": 2,
+"STR": 2,
+"VIT": 2
+},
 "damage_contract": &"elemental_slime",
 "display_name": "Ice Slime",
 "element": 7,
-"growth_weights": {"VIT": 0.10, "STR": 0.14, "DEF": 0.08, "AGI": 0.50, "INT": 0.10, "MND": 0.08},
+"growth_weights": {
+"AGI": 0.5,
+"DEF": 0.08,
+"INT": 0.1,
+"MND": 0.08,
+"STR": 0.14,
+"VIT": 0.1
+},
 "variant": &"aquamarine"
 },
+&"blue": {
+"base_stats": {
+"AGI": 1,
+"DEF": 4,
+"INT": 2,
+"MND": 3,
+"STR": 1,
+"VIT": 2
+},
+"damage_contract": &"elemental_slime",
+"display_name": "Water Slime",
+"element": 2,
+"growth_weights": {
+"AGI": 0.1,
+"DEF": 0.44,
+"INT": 0.08,
+"MND": 0.14,
+"STR": 0.08,
+"VIT": 0.16
+},
+"variant": &"blue"
+},
 &"crimson": {
-"base_stats": {"VIT": 4, "STR": 3, "DEF": 3, "AGI": 0, "INT": 2, "MND": 1},
+"base_stats": {
+"AGI": 0,
+"DEF": 3,
+"INT": 2,
+"MND": 1,
+"STR": 3,
+"VIT": 4
+},
 "damage_contract": &"elemental_slime",
 "display_name": "Crimson Slime",
 "element": 1,
-"growth_weights": {"VIT": 0.34, "STR": 0.30, "DEF": 0.26, "AGI": 0.0, "INT": 0.06, "MND": 0.04},
+"growth_weights": {
+"AGI": 0.0,
+"DEF": 0.26,
+"INT": 0.06,
+"MND": 0.04,
+"STR": 0.3,
+"VIT": 0.34
+},
 "variant": &"crimson",
 "visual_source": "red"
+},
+&"green": {
+"base_stats": {
+"AGI": 1,
+"DEF": 2,
+"INT": 2,
+"MND": 2,
+"STR": 1,
+"VIT": 4
+},
+"damage_contract": &"elemental_slime",
+"display_name": "Grass Slime",
+"element": 4,
+"growth_weights": {
+"AGI": 0.12,
+"DEF": 0.16,
+"INT": 0.1,
+"MND": 0.1,
+"STR": 0.08,
+"VIT": 0.44
+},
+"variant": &"green"
+},
+&"grey": {
+"base_stats": {
+"AGI": 2,
+"DEF": 2,
+"INT": 0,
+"MND": 1,
+"STR": 2,
+"VIT": 2
+},
+"damage_contract": &"physical",
+"display_name": "Normal Slime",
+"element": 0,
+"growth_weights": {
+"AGI": 0.2,
+"DEF": 0.24,
+"INT": 0.0,
+"MND": 0.08,
+"STR": 0.24,
+"VIT": 0.24
+},
+"variant": &"grey"
+},
+&"orange": {
+"base_stats": {
+"AGI": 1,
+"DEF": 3,
+"INT": 2,
+"MND": 2,
+"STR": 1,
+"VIT": 3
+},
+"damage_contract": &"elemental_slime",
+"display_name": "Ground Slime",
+"element": 6,
+"growth_weights": {
+"AGI": 0.08,
+"DEF": 0.38,
+"INT": 0.1,
+"MND": 0.08,
+"STR": 0.08,
+"VIT": 0.28
+},
+"variant": &"orange"
+},
+&"purple": {
+"base_stats": {
+"AGI": 3,
+"DEF": 1,
+"INT": 3,
+"MND": 1,
+"STR": 3,
+"VIT": 1
+},
+"damage_contract": &"elemental_slime",
+"display_name": "Shadow Slime",
+"element": 5,
+"growth_weights": {
+"AGI": 0.36,
+"DEF": 0.06,
+"INT": 0.12,
+"MND": 0.04,
+"STR": 0.36,
+"VIT": 0.06
+},
+"variant": &"purple"
+},
+&"red": {
+"base_stats": {
+"AGI": 1,
+"DEF": 2,
+"INT": 2,
+"MND": 1,
+"STR": 4,
+"VIT": 1
+},
+"damage_contract": &"elemental_slime",
+"display_name": "Fire Slime",
+"element": 1,
+"growth_weights": {
+"AGI": 0.12,
+"DEF": 0.16,
+"INT": 0.12,
+"MND": 0.04,
+"STR": 0.48,
+"VIT": 0.08
+},
+"variant": &"red"
+},
+&"yellow": {
+"base_stats": {
+"AGI": 3,
+"DEF": 1,
+"INT": 3,
+"MND": 1,
+"STR": 2,
+"VIT": 2
+},
+"damage_contract": &"elemental_slime",
+"display_name": "Electric Slime",
+"element": 3,
+"growth_weights": {
+"AGI": 0.44,
+"DEF": 0.08,
+"INT": 0.16,
+"MND": 0.04,
+"STR": 0.12,
+"VIT": 0.16
+},
+"variant": &"yellow"
 }
 }
