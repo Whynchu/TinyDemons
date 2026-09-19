@@ -16,6 +16,11 @@ func _initialize() -> void:
 	_expect(policy.generated_candidate_count == 1 and policy.risk_reward_candidate_count == 3, "defaults keep the authored candidate pool sizes", failures)
 	_expect(policy.first_orb_depth == 3 and policy.first_special_depth == 4, "defaults keep the first orb/special depths", failures)
 	_expect(policy.primary_flames == [&"fire", &"water", &"electric"], "defaults keep the three primary flames", failures)
+	_expect(policy.risk_choice_min_y == 4 and policy.risk_choice_boss_margin == 2, "defaults keep the risk-route depth band", failures)
+	_expect(policy.elemental_vault_cap == 2 and policy.risk_route_shortcut_advantage == 1, "defaults keep the vault cap and route advantage", failures)
+	_expect(policy.is_valid_risk_choice_y(5, 10), "a room inside the risk band is a valid risk source", failures)
+	_expect(not policy.is_valid_risk_choice_y(3, 10), "a room above the risk band is rejected", failures)
+	_expect(not policy.is_valid_risk_choice_y(9, 10), "a room at the boss margin is rejected", failures)
 
 	var bad := DungeonGenerationPolicy.new()
 	bad.generated_candidate_count = 0
@@ -23,6 +28,8 @@ func _initialize() -> void:
 	bad.first_orb_depth = 0
 	bad.first_special_depth = 0
 	bad.primary_flames = []
+	bad.risk_choice_min_y = 0
+	bad.elemental_vault_cap = -1
 	_expect(not bad.validate().is_empty(), "empty/invalid policy is rejected", failures)
 
 	_expect(DungeonLayoutGenerator.policy() != null, "generator exposes the shared generation policy", failures)
