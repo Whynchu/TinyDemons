@@ -33,7 +33,10 @@ For an external product/design review, use the curated [`review/00-astra-review-
      historical record of the completed legacy-coupling cleanup and agent handoff.
  12. [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) —
      active long-term content composition, authoring, and performance direction.
- 13. [`component-composition-design.md`](component-composition-design.md) —
+ 13. [`peak-performance-plan.md`](peak-performance-plan.md) —
+     active end-to-end performance plan and release budgets for boot, menus,
+     browser runtime, and Samsung A17 verification.
+ 14. [`component-composition-design.md`](component-composition-design.md) —
      approved component contract, wiring rules, and the interchangeable-entity
      proof sequence.
 13. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
@@ -69,6 +72,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | historical completion record; the strict scorecard is 100% and the regression floor is re-baselined |
 | What is the component contract for reusable entity behavior? | [`component-composition-design.md`](component-composition-design.md) | wiring rules, adapter refinement, and the interchangeable-entity proof |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
+| What is the end-to-end performance execution plan? | [`peak-performance-plan.md`](peak-performance-plan.md) | boot/menu gates, capture scenarios, lifecycle separation, runtime budgets, and A17 verification |
 | What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |
 | Which product and design questions remain unresolved? | [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md) | current design authorities and interview decision records |
 | What is the ratified design contract? | [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md) | feature-specific plans and tuning values |

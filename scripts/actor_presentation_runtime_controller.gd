@@ -63,25 +63,16 @@ func build_slime_direction_textures(root: Object) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var paths := {}
 	for slime in slimes:
-		var palette := String(slime.get("variant"))
-		var definition := EnemyFactory.definition(StringName(palette)) if EnemyFactory.is_variant(StringName(palette)) else null
-		var source := definition.visual_source if definition != null else "green"
+		# All slime direction frames use the authored green source. The palette
+		# material is the single source of truth for the displayed variant, just
+		# like the attack/spawn/shocked libraries below. Loading SlimeRed/Blue/etc
+		# here as well would apply a green->palette shader to an already recolored
+		# image, which makes idle and attack frames disagree.
+		var source := "green"
 		var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
 		var prefix := "BOSS" if is_boss else ""
-		if is_boss:
-			source = "green"
 		paths[slime] = ["res://assets/artwork/%sSlime%sLeft.png" % [prefix, source.capitalize()], "res://assets/artwork/%sSlime%sRight.png" % [prefix, source.capitalize()]]
 	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(root, "_load_texture_or_null"))
-	var texture_cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
-	for palette in ["grey", "red", "blue", "yellow", "purple", "orange", "aquamarine"]:
-		var palette_slimes: Array[Sprite2D] = []
-		for slime in slimes:
-			var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
-			var needs_recolor: bool = is_boss or palette in ["grey", "yellow", "purple", "orange", "aquamarine"]
-			if String(slime.get("variant")) == palette and needs_recolor:
-				palette_slimes.append(slime)
-		if not palette_slimes.is_empty():
-			SlimeVisualComponent.recolor_direction_textures(palette_slimes, palette, texture_cache)
 
 
 func build_slime_attack_frames(root: Object) -> void:
@@ -177,6 +168,7 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 		shadow.name = "SlimeFloorShadow"
 		shadow.centered = false
 		slime.add_child(shadow)
+	SlimeVisualComponent.apply_palette_material(slime)
 	var animation_name := String(slime.get_meta("runtime_animation", "idle"))
 	var frame := int(slime.get_meta("runtime_animation_frame", 0))
 	if animation_name == "attack":

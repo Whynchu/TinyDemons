@@ -1,5 +1,7 @@
 extends SceneTree
 
+const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
+
 var _finished := false
 
 
@@ -101,26 +103,11 @@ func _initialize() -> void:
 	_expect(shadow_popcorn_count > 0, "shadow encounters produce a Normal Slime popcorn slot", failures)
 	rooms.free()
 
+	var purple_material := MATERIAL_SCRIPT.for_slime_palette("purple")
+	var purple_targets: PackedColorArray = purple_material.get_shader_parameter("to_color")
+	_expect(purple_targets.size() >= 3 and purple_targets[1].is_equal_approx(PaletteLibrary.normal("purple")), "purple slime uses the shader palette normal", failures)
 	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D
 	_expect(source != null, "green direction texture loads", failures)
-	if source != null:
-		var purple := SlimeVisualComponent.recolor_direction_texture(source, "purple", {})
-		_expect(purple != null, "purple direction texture recolors", failures)
-		if purple != null:
-			var image := purple.get_image()
-			var found_purple := false
-			var found_green := false
-			for y in image.get_height():
-				for x in image.get_width():
-					var color: Color = image.get_pixel(x, y)
-					if color.a <= 0.0:
-						continue
-					if color.is_equal_approx(Color8(118, 78, 142)):
-						found_purple = true
-					elif color.is_equal_approx(Color8(56, 183, 100)) or color.is_equal_approx(Color8(37, 113, 121)):
-						found_green = true
-			_expect(found_purple, "purple recolor actually introduces purple mid tone", failures)
-			_expect(not found_green, "purple recolor removes green tones", failures)
 
 	var actor := Sprite2D.new()
 	actor.texture = source

@@ -378,10 +378,10 @@ not a performance diagnosis or a mobile budget.
 
 ### Current hypotheses to measure — T3
 
-- `SpriteFrameLibrary`, `SlimeVisualComponent`, and player animation paths
-  perform per-pixel image recoloring and create `ImageTexture` resources. Caches
-  exist, but palette/animation combinations can still create a large texture
-  set during startup, room entry, or respawn.
+- `SpriteFrameLibrary` and some player/equipment fallback paths still perform
+  per-pixel image recoloring and create `ImageTexture` resources. Slime visual
+  frames have moved to shared source textures plus cached shader materials, so
+  their former palette/animation texture multiplication is no longer expected.
 - `EffectsSpawner` creates and updates pixel particles, damage numbers, sparks,
   and charge visuals as individual sprites. The pixel-particle cap is a safety
   limit, not proof that the effect path is inexpensive.
@@ -427,9 +427,11 @@ answer may be hybrid:
 - only expand the shader path if the Samsung A17 profile improves without
   increasing transition or effect costs.
 
-Do not replace all sprite sets with shaders before this A/B test. A shader will
-not fix excessive node counts, per-frame allocations, synchronous loading, or
-an overactive update loop.
+The slime set is now the controlled shader migration: its source-frame sharing,
+palette uniform mapping, and headless smoke coverage are in place. The live
+visual screenshot and fresh desktop/A17 measurements are still required before
+calling the migration proven. A shader will not fix excessive node counts,
+per-frame allocations, synchronous loading, or an overactive update loop.
 
 ### Performance exit criteria — T3
 
@@ -563,14 +565,14 @@ temporary-profile harness):
 | `initialize_player` (equipment) | 1228 ms | ~330 ms |
 | **total boot** | **~6.6 s** | **~3.6–3.9 s** |
 
-The heavily colour-mapped slime frames were also migrated to a GPU palette-swap
-material, which cut `build_slime_textures` 2433 → 450 ms, but that path rendered
-incorrectly in playtest and was **reverted**: slimes remain on the proven CPU
-recolor (`SlimeVisualComponent.recolor_*`), and the shader attempt was removed
-rather than left as dead code. Re-attempting it requires a screenshot-verified
-visual pass; the colour-pair mapping itself is exact and was characterized by a
-parity test before removal. Slime textures are now the largest remaining startup
-phase (~1.85 s), gated on that verification.
+The slime palette path now follows the same GPU design. Slime idle, attack,
+shocked, spawn, boss, and shadow libraries reuse the authored green source
+textures; `ActorPaletteMaterial.for_slime_palette()` supplies one shared shader
+material per target palette. The runtime no longer generates per-pixel slime
+`ImageTexture` variants. Headless palette/material smoke tests pass; a live
+screenshot and fresh boot capture remain the final verification after the editor
+reload. The old `2433 → 450 ms` experiment is historical evidence, not a current
+measurement.
 
 The baked player palette sheets were reduced to the grey MP-reference set only
 (~420 unused files removed); `tools/bake_palettes.gd` now bakes only that set.
@@ -592,7 +594,7 @@ The baked player palette sheets were reduced to the grey MP-reference set only
 
 Ordered by dependency: the performance harness runs first because every
 composition change touches the same hot paths (per-frame controller visits,
-sprite preparation, palette recolor), and without a baseline the T2/T1 work
+sprite preparation, palette material warmup), and without a baseline the T2/T1 work
 cannot be shown not to regress.
 
 1. **[x] Add the fixed-seed performance scenario harness** (`tests/performance_scenario_harness.gd` + `tools/run_perf_harness.ps1`). It reports frame time, active nodes/sprites, and room-transition timing on fixed seeds. The desktop baseline is recorded above; the **Samsung A17 run is the outstanding next measurement** and gates any optimization claim.

@@ -2,11 +2,12 @@ extends SceneTree
 
 const PALETTES := ["grey", "red", "blue", "yellow", "green", "purple", "orange", "aquamarine"]
 const ARRAY_STATES := ["jump", "slam", "shocked", "shadow_jump", "shadow_slam", "shadow_attack_left", "shadow_attack_right", "shadow_spawn", "shadow_shocked"]
+const MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
 	SlimeVisualComponent.frame_set_cache.clear()
-	SlimeVisualComponent.recolor_cache.clear()
+	MATERIAL_SCRIPT.clear_cache()
 	var library := SlimeVisualComponent._boss_ability_frame_library(SpriteFrameLibrary.new(), {}, Callable(self, "_warm"))
 	for palette in PALETTES:
 		_expect(library.has(palette), "%s boss palette exists" % palette, failures)
@@ -23,7 +24,10 @@ func _initialize() -> void:
 			continue
 		var frames := (library[palette] as Dictionary)["jump"] as Array
 		_expect(frames.size() == green_jump.size(), "%s preserves boss frame count" % palette, failures)
-		_expect(_image_differs(frames[0] as Texture2D, green_jump[0] as Texture2D), "%s recolors boss pixels" % palette, failures)
+		_expect((frames[0] as Texture2D).get_rid() == (green_jump[0] as Texture2D).get_rid(), "%s reuses the shared green boss frames" % palette, failures)
+		var material := MATERIAL_SCRIPT.for_slime_palette(palette)
+		var to_colors: PackedColorArray = material.get_shader_parameter("to_color")
+		_expect(to_colors.size() >= 3 and to_colors[1].is_equal_approx(PaletteLibrary.normal(palette)), "%s shader targets its canonical normal tone" % palette, failures)
 	if failures.is_empty():
 		print("BOSS_VISUAL_PALETTE_SMOKE_OK")
 		quit(0)
@@ -34,17 +38,6 @@ func _initialize() -> void:
 
 func _warm(_texture: Texture2D) -> void:
 	pass
-
-func _image_differs(left: Texture2D, right: Texture2D) -> bool:
-	var left_image := left.get_image()
-	var right_image := right.get_image()
-	if left_image.get_size() != right_image.get_size():
-		return true
-	for y in left_image.get_height():
-		for x in left_image.get_width():
-			if not left_image.get_pixel(x, y).is_equal_approx(right_image.get_pixel(x, y)):
-				return true
-	return false
 
 func _expect(condition: bool, message: String, failures: Array[String]) -> void:
 	if not condition:

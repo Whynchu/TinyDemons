@@ -15,19 +15,34 @@ class_name ActorPaletteMaterial
 
 const SHADER := preload("res://shaders/palette_swap.gdshader")
 const SOURCE_PALETTE := "blue"
+const SLIME_SOURCE_SHADOW := Color8(37, 113, 121)
+const SLIME_SOURCE_NORMAL := Color8(56, 183, 100)
+const SLIME_SOURCE_ACCENT := Color8(167, 240, 112)
 
 static var _materials: Dictionary = {}
+static var _slime_materials: Dictionary = {}
 
 
 static func for_palette(palette_name: String) -> ShaderMaterial:
 	if _materials.has(palette_name):
 		return _materials[palette_name] as ShaderMaterial
 	var pairs := color_pairs(palette_name)
-	var material := ShaderMaterial.new()
-	material.shader = SHADER
-	material.set_shader_parameter("from_color", pairs["from"])
-	material.set_shader_parameter("to_color", pairs["to"])
+	var material := _material_from_pairs(pairs)
 	_materials[palette_name] = material
+	return material
+
+
+## Slime animation sheets are authored from the green slime source art. Keep
+## those sheets shared and recolor them in the fragment shader instead of
+## creating a CPU ImageTexture for every palette/frame combination.
+static func for_slime_palette(palette_name: String) -> ShaderMaterial:
+	var palette := palette_name if PaletteLibrary.PALETTE_NAMES.has(palette_name) else "green"
+	if _slime_materials.has(palette):
+		return _slime_materials[palette] as ShaderMaterial
+	var material := _material_from_pairs(slime_color_pairs(palette))
+	material.set_meta("palette_source", "slime_green")
+	material.set_meta("actor_palette", palette)
+	_slime_materials[palette] = material
 	return material
 
 
@@ -39,6 +54,14 @@ static func apply_to(material: ShaderMaterial, palette_name: String) -> void:
 	var pairs := color_pairs(palette_name)
 	material.set_shader_parameter("from_color", pairs["from"])
 	material.set_shader_parameter("to_color", pairs["to"])
+
+
+static func _material_from_pairs(pairs: Dictionary) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = SHADER
+	material.set_shader_parameter("from_color", pairs["from"])
+	material.set_shader_parameter("to_color", pairs["to"])
+	return material
 
 
 ## Returns the source/target color pairs for a palette as {from: PackedColorArray,
@@ -64,6 +87,25 @@ static func color_pairs(palette_name: String) -> Dictionary:
 	}
 
 
+static func slime_color_pairs(palette_name: String) -> Dictionary:
+	var palette := palette_name if PaletteLibrary.PALETTE_NAMES.has(palette_name) else "green"
+	return {
+		"from": PackedColorArray([
+			SLIME_SOURCE_SHADOW,
+			SLIME_SOURCE_NORMAL,
+			SLIME_SOURCE_ACCENT,
+			Color.WHITE,
+		]),
+		"to": PackedColorArray([
+			PaletteLibrary.shadow(palette),
+			PaletteLibrary.normal(palette),
+			PaletteLibrary.accent(palette),
+			Color.WHITE,
+		]),
+	}
+
+
 ## Clears the shared material cache. Tests use this to avoid cross-run state.
 static func clear_cache() -> void:
 	_materials.clear()
+	_slime_materials.clear()
