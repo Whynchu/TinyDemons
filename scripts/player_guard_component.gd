@@ -87,14 +87,20 @@ func tick(context: PlayerGuardContext, delta: float, guard_held: bool) -> void:
 	else:
 		var can_guard := not bool(context.player_dead_get.call()) and not bool(context.player_death_pending_get.call()) and not bool(context.player_is_attacking_get.call()) and not bool(context.player_is_rolling_get.call()) and not bool(context.player_is_backflipping_get.call()) and float(context.player_hitstun_timer_get.call()) <= 0.0
 		var should_defend := guard_held and can_guard and durability > 0.0
+		# Lock-on owns the complete kit's facing: while targeting is held, the
+		# target direction wins over the guard's remembered defend facing, so the
+		# equipment and the player turn toward the locked target even mid-block.
+		var targeting_holds_facing := context.player_is_targeting_get.is_valid() and bool(context.player_is_targeting_get.call())
 		if should_defend and not facing_locked:
 			facing_left = bool(context.player.flip_h)
 			facing_locked = true
+		if targeting_holds_facing:
+			facing_locked = false
 		if not should_defend:
 			facing_locked = false
 		context.is_defending_set.call(should_defend)
 		guard_active_timer = guard_active_timer + delta if should_defend else 0.0
-		if should_defend:
+		if should_defend and not targeting_holds_facing:
 			context.player.flip_h = facing_left
 		if regen_delay_timer > 0.0:
 			regen_delay_timer = maxf(regen_delay_timer - delta, 0.0)

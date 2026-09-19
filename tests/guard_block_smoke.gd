@@ -42,6 +42,7 @@ func _initialize() -> void:
 	context.player_is_backflipping_get = func() -> Variant: return false
 	context.player_hitstun_timer_get = func() -> Variant: return 0.0
 	context.actor_foot = func(actor: Node) -> Vector2: return actor.global_position
+	context.player_is_targeting_get = func() -> Variant: return false
 	context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext:
 		var visual_context := PlayerEquipmentVisualContext.new()
 		visual_context.player = player
@@ -53,6 +54,35 @@ func _initialize() -> void:
 	_expect(bool(block["blocked"]), "a held guard in front of the source blocks the hit", failures)
 	_expect(is_equal_approx(float(block["shield_damage"]), 8.0) and is_equal_approx(float(block["health_damage"]), 2.0), "blocked hit splits 80 percent to the shield", failures)
 	_expect(guard.durability <= 0.001 and guard.cooldown_timer > 0.0, "an 8-point shield fully blocking a 10-point hit breaks it and starts recovery", failures)
+
+	# Lock-on must win over the guard's remembered defend facing: while a target
+	# is held, the guard does not re-apply its stale facing to the player.
+	var facing_context := CONTEXT_SCRIPT.new()
+	facing_context.player = player
+	facing_context.visuals = visuals
+	facing_context.overworld_ui_z = 4090
+	facing_context.is_defending_get = func() -> Variant: return true
+	facing_context.is_defending_set = func(value: Variant) -> void: pass
+	facing_context.player_dead_get = func() -> Variant: return false
+	facing_context.player_death_pending_get = func() -> Variant: return false
+	facing_context.player_is_attacking_get = func() -> Variant: return false
+	facing_context.player_is_rolling_get = func() -> Variant: return false
+	facing_context.player_is_backflipping_get = func() -> Variant: return false
+	facing_context.player_hitstun_timer_get = func() -> Variant: return 0.0
+	facing_context.actor_foot = func(actor: Node) -> Vector2: return actor.global_position
+	var targeting := [true]
+	facing_context.player_is_targeting_get = func() -> Variant: return targeting[0]
+	facing_context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext: return PlayerEquipmentVisualContext.new()
+	guard.maximum_durability = 8.0
+	guard.durability = 8.0
+	guard.display_durability = 8.0
+	player.flip_h = false
+	guard.tick(facing_context, 0.016, true)
+	var locked_facing := guard.facing_left
+	player.flip_h = true
+	targeting[0] = true
+	guard.tick(facing_context, 0.016, true)
+	_expect(not bool(player.flip_h == locked_facing) or guard.facing_left == false, "targeting releases the guard facing lock so the target direction wins", failures)
 
 	guard.free()
 	visuals.free()

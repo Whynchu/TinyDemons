@@ -305,6 +305,7 @@ func _guard_context(root: GameplayState, player: Sprite2D) -> PlayerGuardContext
 	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
 	context.player_is_rolling_get = func() -> Variant: return root.get("player_is_rolling")
 	context.player_is_backflipping_get = func() -> Variant: return root.get("player_is_backflipping")
+	context.player_is_targeting_get = func() -> Variant: return root.player_is_targeting
 	context.player_hitstun_timer_get = func() -> Variant: return root.get("player_hitstun_timer")
 	context.actor_foot = Callable(root, "_actor_foot")
 	context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext: return root.gameplay_frame_controller.equipment_visual_context(root)

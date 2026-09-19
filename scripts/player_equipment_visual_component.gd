@@ -1137,9 +1137,18 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 	var facing_left := bool(context.player_magic_flip_h_get.call()) if animation_name == "magic" else player.flip_h
 	if animation_name != "magic":
 		var guard := context.player_guard_component
-		if guard != null and bool(context.player_is_defending_get.call()):
+		var targeting_held := bool(context.is_target_input_held.call())
+		if targeting_held:
+			# Lock-on owns the equipment facing while held, so it turns toward the
+			# locked target even mid-block (target wins over the defend facing).
+			var target := context.valid_current_target.call() as Sprite2D
+			if target != null and not bool(context.player_is_attacking_get.call()):
+				facing_left = bool(context.target_facing_left.call(target))
+			elif guard != null and bool(context.player_is_defending_get.call()):
+				facing_left = guard.facing_left
+		elif guard != null and bool(context.player_is_defending_get.call()):
 			facing_left = guard.facing_left
-		elif not attack_animation and bool(context.is_target_input_held.call()):
+		elif not attack_animation:
 			var target := context.valid_current_target.call() as Sprite2D
 			if target != null and not bool(context.player_is_attacking_get.call()):
 				facing_left = bool(context.target_facing_left.call(target))
