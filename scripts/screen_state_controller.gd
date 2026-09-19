@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.54"
+const GAME_VERSION := "0.2.55"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -391,8 +391,7 @@ func apply_display_layout(root: GameplayState) -> void:
 		var row_buttons: Array[Button] = [title_start_button, title_continue_button, title_cloud_button, title_settings_button]
 		var row_selected := row_buttons[clampi(title_menu_row, 0, row_buttons.size() - 1)] if not row_buttons.is_empty() else null
 		if row_selected != null:
-			var base_y: float = row_selected.get_meta("title_base_y") as float if row_selected.has_meta("title_base_y") else row_selected.position.y
-			move_menu_cursor(title_cursor_text, Vector2(row_selected.position.x - CURSOR_LEFT_GAP, base_y + 4.0), false)
+			move_menu_cursor(title_cursor_text, _menu_cursor_target(row_selected), false)
 	if archetype_overlay != null:
 		var cover := archetype_overlay.get_node_or_null("ArchetypeHoldCover") as ColorRect
 		if cover != null: cover.size = display_view_size
@@ -435,7 +434,7 @@ func apply_display_layout(root: GameplayState) -> void:
 				label.position.x = (display_view_size.x - label.texture.get_width() * label.scale.x) * 0.5
 	if game_over_footer_text != null:
 		game_over_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
-	_position_game_over_controls(root, true)
+	_position_game_over_controls(root)
 	if run_complete_footer_text != null:
 		run_complete_footer_text.position = Vector2(display_view_size.x - 64.0, display_view_size.y - 18.0)
 	if save_select_footer_text != null:
@@ -491,25 +490,25 @@ func retro_button_alpha(timer: float) -> float:
 func retro_button_bob(timer: float) -> float: return snappedf(sin(timer / 3.6 * TAU) * 1.5, 0.5)
 
 
-func _position_game_over_controls(root: GameplayState, preserve_animation: bool = true) -> void:
+func _position_game_over_controls(root: GameplayState) -> void:
 	var restart := root.game_over_button
 	var title := root.game_over_title_button
 	if restart != null:
 		restart.position.x = (display_view_size.x - restart.size.x) * 0.5
-		restart.position.y = 105.0
+		restart.position.y = float(restart.get_meta("menu_base_y", 105.0))
 	if title != null:
 		title.position.x = (display_view_size.x - title.size.x) * 0.5
-		title.position.y = 121.0
-	var game_over := root.game_over_overlay
-	if preserve_animation and root.player_death_particles_started and game_over != null and game_over.visible:
-		var fade_timer := root.game_over_fade_timer
-		if restart != null: restart.position.y = 105.0 + retro_button_bob(fade_timer)
-		if title != null: title.position.y = 121.0 + retro_button_bob(fade_timer + 0.4)
+		title.position.y = float(title.get_meta("menu_base_y", 121.0))
 	var selected := title if game_over_row == 1 and title != null and not title.disabled else restart
 	if game_over_cursor_text != null:
 		game_over_cursor_text.visible = selected != null
 		if selected != null:
-			move_menu_cursor(game_over_cursor_text, Vector2(selected.position.x - CURSOR_LEFT_GAP, selected.position.y + 3.0), false)
+			move_menu_cursor(game_over_cursor_text, _menu_cursor_target(selected), false)
+
+
+func _menu_cursor_target(button: Button) -> Vector2:
+	var base_y := float(button.get_meta("menu_base_y", button.position.y))
+	return Vector2(button.position.x - CURSOR_LEFT_GAP, base_y + 4.0)
 
 func set_archetype_button_state(button: Button, active: bool, color: Color) -> void:
 	if button == null: return
@@ -584,8 +583,8 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		if button == null or button.disabled or not button.visible: continue
 		var phase := visible_index * 0.3
 		button.modulate.a = retro_button_alpha(frame_timer + phase)
-		var base_y := float(button.get_meta("title_base_y", 93.0 + visible_index * 16.0))
-		button.position.y = base_y + retro_button_bob(frame_timer + phase)
+		var base_y := float(button.get_meta("menu_base_y", 93.0 + visible_index * 16.0))
+		button.position.y = base_y
 		visible_index += 1
 	var command_list := title_command_list
 	if command_list != null:
@@ -603,11 +602,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		var selected := command_list.selected()
 		if cursor != null and selected != null:
 			cursor.visible = true
-			# The title buttons float up/down every frame (retro bob); anchor the
-			# cursor to the button's static base row so it stays put and bobs like the
-			# other menus instead of chasing the animated position.
-			var base_y2: float = selected.get_meta("title_base_y") as float if selected.has_meta("title_base_y") else selected.position.y
-			move_menu_cursor(cursor, Vector2(selected.position.x - CURSOR_LEFT_GAP, base_y2 + 4.0))
+			move_menu_cursor(cursor, _menu_cursor_target(selected))
 			cursor.texture = MENU_CURSOR_TEXTURE
 		if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
 			# Preserve the title transition's original fizzle cue for both NEW GAME
@@ -993,6 +988,8 @@ func build_game_over(parent: Node, pixel_texture: Callable, restart: Callable, r
 	focus_style.set_border_width_all(1)
 	var restart_button := _make_text_button("HUB", Vector2((display_view_size.x - 42.0) * 0.5, 105), normal_style, focus_style, pixel_texture, restart)
 	var title_button := _make_text_button("TITLE", Vector2((display_view_size.x - 42.0) * 0.5, 121), normal_style, focus_style, pixel_texture, return_title)
+	restart_button.set_meta("menu_base_y", 105.0)
+	title_button.set_meta("menu_base_y", 121.0)
 	restart_button.name = "GameOverHub"
 	title_button.name = "GameOverTitle"
 	overlay.add_child(restart_button)
@@ -4387,23 +4384,23 @@ func build_title(parent: Node, pixel_texture: Callable, new_game_callback: Calla
 	var title_text := create_sprite(overlay, "TitleText", title_texture, Vector2((display_view_size.x - title_texture.get_width() * 3.0) * 0.5, 48), false, Vector2(3, 3))
 	var version_text := create_sprite(overlay, "TitleVersion", pixel_texture.call(GAME_VERSION, Color8(148, 220, 255)) as Texture2D, Vector2(4, display_view_size.y - 8.0), false)
 	var new_game_button := make_retro_button("NEW GAME", Vector2((display_view_size.x - 64.0) * 0.5, 93), Vector2(64, 14), pixel_texture)
-	new_game_button.set_meta("title_base_y", 93.0)
+	new_game_button.set_meta("menu_base_y", 93.0)
 	new_game_button.focus_mode = Control.FOCUS_NONE
 	new_game_button.pressed.connect(new_game_callback)
 	overlay.add_child(new_game_button)
 	var continue_button := make_retro_button("CONTINUE", Vector2((display_view_size.x - 64.0) * 0.5, 109), Vector2(64, 14), pixel_texture)
-	continue_button.set_meta("title_base_y", 109.0)
+	continue_button.set_meta("menu_base_y", 109.0)
 	continue_button.focus_mode = Control.FOCUS_NONE
 	continue_button.pressed.connect(continue_callback)
 	continue_button.disabled = not has_profile
 	continue_button.visible = has_profile
 	overlay.add_child(continue_button)
 	var cloud_button := make_retro_button("CLOUD SAVE", Vector2((display_view_size.x - 64.0) * 0.5, 125), Vector2(64, 14), pixel_texture)
-	cloud_button.set_meta("title_base_y", 125.0); cloud_button.focus_mode = Control.FOCUS_NONE
+	cloud_button.set_meta("menu_base_y", 125.0); cloud_button.focus_mode = Control.FOCUS_NONE
 	if cloud_callback.is_valid(): cloud_button.pressed.connect(cloud_callback)
 	overlay.add_child(cloud_button)
 	var settings_button := make_retro_button("SETTINGS", Vector2((display_view_size.x - 64.0) * 0.5, 141), Vector2(64, 14), pixel_texture)
-	settings_button.set_meta("title_base_y", 141.0)
+	settings_button.set_meta("menu_base_y", 141.0)
 	settings_button.focus_mode = Control.FOCUS_NONE
 	if settings_callback.is_valid(): settings_button.pressed.connect(settings_callback)
 	overlay.add_child(settings_button)
@@ -4427,7 +4424,7 @@ func refresh_title_menu_layout(has_profile: bool) -> void:
 		if button == null or button.disabled or not button.visible: continue
 		var base_y := 93.0 + visible_row * 16.0
 		button.position.y = base_y
-		button.set_meta("title_base_y", base_y)
+		button.set_meta("menu_base_y", base_y)
 		available_rows.append(index)
 		visible_row += 1
 	if not available_rows.is_empty() and not available_rows.has(title_menu_row):
