@@ -62,8 +62,11 @@ func initialize(root: GameplayState) -> void:
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
 	var profile := ProfileSaveService.load_profile()
+	var requested_route := ProfileSaveService.consume_next_boot_route()
+	if requested_route.is_empty():
+		requested_route = profile.pending_route
 	var benchmark_mode := bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false))
-	var title_only_boot := not bool(root.get("debug_start_in_boss_room")) and not benchmark_mode and not (profile.has_started and (profile.pending_route == "hub" or profile.pending_route == "run"))
+	var title_only_boot := not bool(root.get("debug_start_in_boss_room")) and not benchmark_mode and not (profile.has_started and (requested_route == "hub" or requested_route == "run"))
 	root.settings_service = _add_runtime_node(root, SettingsService, "SettingsService") as SettingsService
 	root.settings_service.load_settings()
 	root.display_controller = _add_runtime_node(root, DisplayController, "DisplayController") as DisplayController
@@ -288,6 +291,9 @@ func initialize(root: GameplayState) -> void:
 	await root.get_tree().process_frame
 	_phase(&"build_ui_title")
 	root.call("_build_title_screen")
+	if profile.has_started and (requested_route == "hub" or requested_route == "run"):
+		var route_screens := root.get("screen_state_controller") as ScreenStateController
+		if route_screens.title_overlay != null: route_screens.title_overlay.visible = false
 	await root.get_tree().process_frame
 	_phase(&"build_ui_cloud_panel")
 	root.cloud_save_panel.build(root.ui)
@@ -304,7 +310,7 @@ func initialize(root: GameplayState) -> void:
 	root.call("_refresh_player_cloak_visual")
 	_phase(&"set_title_state")
 	var screens := root.get("screen_state_controller") as ScreenStateController
-	var enters_saved_route := profile.has_started and (profile.pending_route == "hub" or profile.pending_route == "run")
+	var enters_saved_route: bool = profile.has_started and (requested_route == "hub" or requested_route == "run")
 	if enters_saved_route:
 		# Full run boot may still construct the title scene for shared UI assets, but
 		# an active save route must never expose that overlay between loading and play.
@@ -340,7 +346,7 @@ func initialize(root: GameplayState) -> void:
 		root.set("loading_screen_active", false)
 		ProjectSettings.set_setting("debug/benchmark_start_in_boss_room", false)
 	else:
-		var route := profile.pending_route
+		var route := requested_route
 		profile.pending_route = "title"
 		profile.open_hub_on_load = false
 		if has_active_profile: root.call("_save_player_profile")
