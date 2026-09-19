@@ -30,7 +30,7 @@ func _initialize() -> void:
 			screens.title_settings_button.pressed.emit()
 		await process_frame
 		_expect(screens.settings_overlay != null and screens.settings_overlay.visible, "title Settings button opens the shared panel", failures)
-		_expect(screens.state == &"settings" and screens.settings_value_buttons.size() == 5, "settings panel enters its five-row state", failures)
+		_expect(screens.state == &"settings" and screens.settings_value_buttons.size() == 6, "settings panel enters its six-row state", failures)
 		gameplay.call("_select_setting_option", 1, 2)
 		gameplay.call("_adjust_setting", 3, -1)
 		_expect(str(settings.get_setting(&"aspect")) == "16:10", "aspect row applies immediately", failures)
@@ -40,7 +40,7 @@ func _initialize() -> void:
 		_expect(sound.sfx_volume() == 40, "SFX volume applies to the live sound manager", failures)
 		_expect(settings.load_settings().get("aspect") == "16:10", "settings changes persist through ConfigFile", failures)
 		_expect(settings.load_settings().get("sfx_volume") == 40, "audio settings persist through ConfigFile", failures)
-		_expect(screens.settings_option_buttons.size() == 5 and screens.settings_option_buttons[1].size() == 4 and screens.settings_option_buttons[3].size() == 11, "settings exposes direct horizontal option controls", failures)
+		_expect(screens.settings_option_buttons.size() == 6 and screens.settings_option_buttons[1].size() == 4 and screens.settings_option_buttons[3].size() == 11, "settings exposes direct horizontal option controls", failures)
 		# Confirming the navigable BACK row must close Settings without allowing the
 		# same held input to fall through to the title screen's New Game button.
 		screens.settings_row = screens.settings_value_buttons.size()
