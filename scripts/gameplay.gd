@@ -98,7 +98,7 @@ func _physics_process(delta: float) -> void:
 	# would overwrite it with the zero/default offset. The run-entry controller
 	# performs its explicit shadow refresh after the authored transform is ready.
 	var screens := screen_state_controller as ScreenStateController
-	var gameplay_presentation_ready: bool = gameplay_frame_controller != null and shadow_controller != null and not boot_active and not loading_screen_active and (screens == null or screens.state != &"title")
+	var gameplay_presentation_ready: bool = gameplay_frame_controller != null and shadow_controller != null and not boot_active and not loading_screen_active and (screens == null or screens.state == &"gameplay")
 	if gameplay_presentation_ready:
 		# Depth sorting runs inside the frame schedule for gameplay; the world is
 		# frozen during dialogue/overlays, so the last sort still stands there.

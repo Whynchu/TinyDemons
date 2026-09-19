@@ -17,6 +17,16 @@ var _frame_count := 0
 var _last_report: Dictionary = {}
 var _scope_totals: Dictionary = {}
 var _scope_counts: Dictionary = {}
+var _overlay: Label = null
+var _overlay_elapsed := 0.0
+
+
+func _ready() -> void:
+	# Phone runs usually have no keyboard for the F9 shortcut. Keep this opt-in
+	# so a debug build can start capture from project settings without changing
+	# release behavior or adding a permanent HUD element.
+	if bool(ProjectSettings.get_setting("debug/performance_capture_on_boot", false)):
+		call_deferred("start_capture")
 
 func _process(_delta: float) -> void:
 	if not capturing:
@@ -29,11 +39,15 @@ func _process(_delta: float) -> void:
 	if frame_msec >= HITCH_THRESHOLD_MSEC:
 		_hitches += 1
 	if now - _last_sample_msec < int(SAMPLE_INTERVAL * 1000.0):
+		_update_overlay()
 		return
 	_last_sample_msec = now
 	if _samples.size() >= MAX_SAMPLES:
 		_samples.pop_front()
 	_samples.append(_engine_sample(now, frame_msec))
+	_update_overlay()
+	if _samples.size() >= MAX_SAMPLES:
+		stop_capture()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not OS.has_feature("editor") and not OS.is_debug_build():
@@ -49,6 +63,7 @@ func start_capture() -> Dictionary:
 	if capturing:
 		return {"ok": false, "error": "capture_already_running"}
 	capturing = true
+	_create_overlay()
 	_started_msec = Time.get_ticks_msec()
 	_last_sample_msec = _started_msec
 	_samples.clear()
@@ -72,6 +87,7 @@ func stop_capture() -> Dictionary:
 	if not capturing:
 		return _last_report if not _last_report.is_empty() else {"ok": false, "error": "capture_not_running"}
 	capturing = false
+	_hide_overlay()
 	var report := _build_report()
 	_last_report = report
 	_write_report(report)
@@ -82,6 +98,50 @@ func get_status() -> Dictionary:
 
 func get_last_report_json() -> String:
 	return JSON.stringify(_last_report if not _last_report.is_empty() else get_status())
+
+
+func _create_overlay() -> void:
+	if _overlay != null and is_instance_valid(_overlay):
+		_overlay.visible = true
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "PerformanceCaptureOverlay"
+	layer.layer = 200
+	add_child(layer)
+	_overlay = Label.new()
+	_overlay.name = "Readout"
+	_overlay.position = Vector2(4, 4)
+	_overlay.add_theme_font_size_override("font_size", 12)
+	_overlay.add_theme_color_override("font_color", Color8(255, 235, 120))
+	_overlay.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_overlay.add_theme_constant_override("shadow_offset_x", 1)
+	_overlay.add_theme_constant_override("shadow_offset_y", 1)
+	layer.add_child(_overlay)
+
+
+func _hide_overlay() -> void:
+	if _overlay != null:
+		_overlay.visible = false
+
+
+func _update_overlay() -> void:
+	if _overlay == null or not is_instance_valid(_overlay):
+		return
+	_overlay_elapsed += get_process_delta_time()
+	if _overlay_elapsed < SAMPLE_INTERVAL:
+		return
+	_overlay_elapsed = 0.0
+	var average := _total_frame_msec / float(maxi(1, _frame_count))
+	var fps := 1000.0 / maxf(average, 0.001)
+	_overlay.text = "PERF  %.1f ms  %.0f FPS\nPHYS %.1f ms  worst %.1f\nNodes %d  Draw %d  Hitches %d" % [
+		average,
+		fps,
+		Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		_worst_frame_msec,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		_hitches,
+	]
 
 func prepare_benchmark_run() -> Dictionary:
 	if not OS.has_feature("editor") and not OS.is_debug_build():

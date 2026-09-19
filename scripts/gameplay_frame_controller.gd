@@ -418,11 +418,6 @@ func tick(root: GameplayState, delta: float) -> void:
 	if root.boot_active:
 		if root.loading_screen_active: root._update_loading_screen(delta)
 		return
-	var aspect_ability := root.player_aspect_ability_component
-	if aspect_ability != null:
-		aspect_ability.call("tick", delta)
-	var attack := root.player_attack_component
-	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta); attack.tick_spin_hits(delta)
 	if root.scene_transition_active:
 		var transition_timer: float = root.scene_transition_timer + delta; root.scene_transition_timer = transition_timer
 		root.scene_transition_overlay.modulate.a = clampf(transition_timer / 0.28, 0.0, 1.0)
@@ -475,9 +470,6 @@ func tick(root: GameplayState, delta: float) -> void:
 		if not ssc.title_transition_active: return
 	if root.loading_screen_active: root._update_loading_screen(delta); return
 	if root.walkable_outline.is_empty(): return
-	# Entry Orb presentation is independent of input, dialogue, and hitstop so
-	# its bob/twinkle animation remains alive while the room is being taught.
-	root._update_entry_orb_animation(delta)
 	var minimap := root.dungeon_minimap_controller
 	var input_router := root.input_router
 	if minimap != null and bool(minimap.call("is_map_open")):
@@ -517,6 +509,17 @@ func tick(root: GameplayState, delta: float) -> void:
 			ssc.menu_input_release_lock = false
 		else:
 			return
+	# Cooldowns, combo timers, and spin-hit windows are gameplay state. Keep them
+	# frozen while an overlay owns input so menu idling does not spend CPU on
+	# combat bookkeeping or silently advance a paused action.
+	var aspect_ability := root.player_aspect_ability_component
+	if aspect_ability != null:
+		aspect_ability.call("tick", delta)
+	var attack := root.player_attack_component
+	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta); attack.tick_spin_hits(delta)
+	# Entry Orb presentation remains alive during active gameplay and dialogue,
+	# but not underneath pause/Hub/map overlays where it cannot be seen.
+	root._update_entry_orb_animation(delta)
 	var npc := root.npc_controller; var dialogue_was_active: bool = npc != null and npc.dialogue_box != null and npc.dialogue_box.visible
 	if dialogue_was_active: npc.update_dialogue_from_root(root, delta); npc.update_dialogue_input(root); root._update_cloaked_demon_animation(delta)
 	var hitstop: float = root.hitstop_timer
