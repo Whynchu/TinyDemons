@@ -2,7 +2,7 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-17
+Updated: 2026-09-19
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
@@ -42,6 +42,9 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
 15. [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md)
     — exhaustive producer interview for resolving open product and design
     decisions.
+16. [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md)
+    — ratified decision record: firm principles, player-facing contracts,
+    approved/rejected directions, and evidence still needed.
 
 ## Authority by question
 
@@ -66,6 +69,7 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 | What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |
 | Which product and design questions remain unresolved? | [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md) | current design authorities and interview decision records |
+| What is the ratified design contract? | [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md) | feature-specific plans and tuning values |
 
 ## Document lifecycle
 
