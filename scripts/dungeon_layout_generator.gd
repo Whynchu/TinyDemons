@@ -19,7 +19,7 @@ static var _policy: DungeonGenerationPolicy = null
 
 static func policy() -> DungeonGenerationPolicy:
 	if _policy == null:
-		_policy = POLICY_SCRIPT.new() as DungeonGenerationPolicy
+		_policy = DungeonGenerationPolicy.default_data()
 	return _policy
 
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"

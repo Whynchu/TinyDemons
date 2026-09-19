@@ -325,7 +325,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 func _encounter_definition() -> EncounterDefinition:
 	if encounter_definition != null and encounter_definition.matchup_policy == matchup_policy:
 		return encounter_definition
-	var definition := EncounterDefinition.new()
+	var definition := EncounterDefinition.default_data()
 	definition.matchup_policy = matchup_policy
 	encounter_definition = definition
 	return definition
@@ -333,7 +333,7 @@ func _encounter_definition() -> EncounterDefinition:
 
 func _room_definition() -> RoomDefinition:
 	if room_definition == null:
-		room_definition = RoomDefinition.new()
+		room_definition = RoomDefinition.default_data()
 	return room_definition
 
 

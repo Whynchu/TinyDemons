@@ -7,6 +7,13 @@ class_name EncounterDefinition
 ## owns the mutable runtime state (claims, active actors, locks); this definition
 ## is immutable and reusable across rooms and runs.
 
+const DEFAULT_DATA_PATH := "res://resources/definitions/encounter_definition.tres"
+
+
+static func default_data() -> EncounterDefinition:
+	return load(DEFAULT_DATA_PATH) as EncounterDefinition
+
+
 const POLICY_RANK_DEFAULT := "rank_default"
 const POLICY_BASE_ADVANTAGE := "base_advantage"
 const POLICY_BASE_COUNTER := "base_counter"

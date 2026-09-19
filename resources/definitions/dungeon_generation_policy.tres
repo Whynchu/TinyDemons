@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DungeonGenerationPolicy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/dungeon_generation_policy.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+generated_candidate_count = 1
+risk_reward_candidate_count = 3
+first_orb_depth = 3
+first_special_depth = 4
+primary_flames = Array[StringName]([&"fire", &"water", &"electric"])
