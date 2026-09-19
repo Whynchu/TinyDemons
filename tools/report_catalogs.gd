@@ -16,6 +16,7 @@ func _run() -> void:
 	_report_encounter_definition()
 	_report_room_definition()
 	_report_generation_policy()
+	_report_reward_definition()
 	_report_run_layouts()
 	_report_puzzle_plans()
 	print("=== END DEFINITION CATALOG REPORT ===")
@@ -62,6 +63,11 @@ func _report_room_definition() -> void:
 func _report_generation_policy() -> void:
 	var policy := DungeonGenerationPolicy.default_data()
 	print("dungeon_generation_policy: candidates=%d risk_candidates=%d first_orb=%d first_special=%d flames=%s" % [policy.generated_candidate_count, policy.risk_reward_candidate_count, policy.first_orb_depth, policy.first_special_depth, ", ".join(policy.primary_flames.map(func(f): return String(f)))])
+
+
+func _report_reward_definition() -> void:
+	var definition := RewardDefinition.default_data()
+	print("reward_definition: base_drop=%.2f risk_bonus=%.2f double=%.2f triple=%.2f quad=%.2f grade(S/A/B/C/F)=%.1f/%.1f/%.1f/%.1f/%.1f" % [definition.drop_chance_base, definition.drop_chance_risk_bonus, definition.double_drop_base, definition.triple_drop_base, definition.quad_drop_base, definition.loot_grade_bonus("S"), definition.loot_grade_bonus("A"), definition.loot_grade_bonus("B"), definition.loot_grade_bonus("C"), definition.loot_grade_bonus("F")])
 
 
 func _report_run_layouts() -> void:

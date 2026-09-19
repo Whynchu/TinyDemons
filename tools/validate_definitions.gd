@@ -15,6 +15,7 @@ func _initialize() -> void:
 		{"path": "res://resources/definitions/encounter_definition.tres", "kind": "EncounterDefinition"},
 		{"path": "res://resources/definitions/room_definition.tres", "kind": "RoomDefinition"},
 		{"path": "res://resources/definitions/dungeon_generation_policy.tres", "kind": "DungeonGenerationPolicy"},
+		{"path": "res://resources/definitions/reward_definition.tres", "kind": "RewardDefinition"},
 		{"path": "res://resources/definitions/dungeon_layout_run1.tres", "kind": "DungeonRunDefinition"},
 		{"path": "res://resources/definitions/dungeon_layout_run2.tres", "kind": "DungeonRunDefinition"},
 		{"path": "res://resources/definitions/puzzle_map_r3.tres", "kind": "PuzzlePlanData"},

@@ -38,6 +38,7 @@ script,role,state,owner,target,load,notes
 "settings_panel_scene_smoke","gate","environment","settings & display","settings panel scene layout and back route","main","restricted run could not write user://"
 "settings_service_smoke","gate","environment","settings & display","SettingsService persistence via user://","pure","restricted run could not write user://"
 "enemy_definition_roundtrip_smoke","owner","unverified","content authoring","EnemyDefinition factory save/load round-trip","pure",""
+"reward_definition_smoke","owner","unverified","content authoring","RewardDefinition chest drop and grade curves","pure",""
 "dungeon_generation_policy_smoke","owner","unverified","generated layouts","DungeonGenerationPolicy explicit inputs and validation","pure",""
 "room_definition_smoke","owner","unverified","content authoring","RoomDefinition rank-curve difficulty and traffic policy","pure",""
 "encounter_definition_smoke","owner","unverified","content authoring","EncounterDefinition rank-gated pool and validation contract","pure",""

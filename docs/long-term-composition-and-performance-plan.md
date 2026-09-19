@@ -328,6 +328,17 @@ consume typed definitions and emit typed results/signals. Do not create a new
 global registry as a replacement service locator; catalogs should be narrow,
 validated dependencies.
 
+**Increment at `0.2.46`:** items, elements, and palettes already have typed
+`.tres` catalogs. `RewardDefinition` (`scripts/reward_definition.gd`) now
+captures the chest reward drop policy (item-drop chance, drop-count thresholds,
+loot-grade bonuses) as validated, editor-inspectable data,
+authored in `resources/definitions/reward_definition.tres`. `RunFlowController`
+reads the curves through `_reward_definition()`; `reward_definition_smoke`
+characterizes the curves and validation. The definition validator now checks
+12/12 resources and the composite is 20/20 surfaces at 100%. Remaining for E:
+an effects definition (spawner/particle policy), if a definition boundary is
+warranted beyond the existing `EffectsTuning` resource.
+
 ### F. Add authoring and validation feedback — T2
 
 The editor/designer workflow should answer “what can I add and what will break?”
