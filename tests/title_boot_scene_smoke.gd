@@ -31,6 +31,11 @@ func _initialize() -> void:
 		screens.refresh_title_menu_layout(true)
 		_expect(screens.title_continue_button.visible and not screens.title_continue_button.disabled, "restored profile reveals Continue immediately", failures)
 		_expect(is_equal_approx(screens.title_continue_button.position.y, 109.0) and is_equal_approx(screens.title_settings_button.position.y, 141.0), "profile title lays out all visible cards without gaps", failures)
+		screens.menu_input_release_lock = false
+		gameplay.call("_continue_game")
+		await create_timer(1.5).timeout
+		_expect(not screens.title_transition_active, "Continue transition completes without blocking the title loop", failures)
+		_expect(screens.save_select_overlay != null and screens.save_select_overlay.visible, "Continue opens the save-slot screen after its transition", failures)
 		_expect(screens.state == &"title", "screen state settles on title after boot", failures)
 	_expect(not bool(gameplay.get("boot_active")), "boot sequence completes", failures)
 	var loading := gameplay.get("loading_screen_overlay") as CanvasItem

@@ -122,11 +122,17 @@ func ensure_slime_visuals_ready(root: Object) -> void:
 	if slime_visuals_ready:
 		return
 	build_slime_direction_textures(root)
+	await root.get_tree().process_frame
 	build_slime_attack_frames(root)
+	await root.get_tree().process_frame
 	build_slime_shocked_frames(root)
+	await root.get_tree().process_frame
 	build_slime_spawn_frames(root)
+	await root.get_tree().process_frame
 	assign_slime_attack_frames(root)
+	await root.get_tree().process_frame
 	assign_slime_shocked_frames(root)
+	await root.get_tree().process_frame
 	assign_slime_spawn_frames(root)
 	slime_visuals_ready = true
 

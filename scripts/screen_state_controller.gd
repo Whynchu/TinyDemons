@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.56"
+const GAME_VERSION := "0.2.57"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -35,6 +35,7 @@ const CURSOR_VERTICAL_RAISE := 2.0
 const CURSOR_BOB_AMOUNT := 3.0
 const CURSOR_BOB_SLIDE_TIME := 0.36
 const CURSOR_BOB_SNAP_TIME := 0.07
+const MAX_TITLE_TRANSITION_PARTICLES := 128
 const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
 const HUB_ITEM_DETAIL_TOP := 105.0
 const HUB_ITEM_DETAIL_PITCH := 7.0
@@ -860,6 +861,8 @@ func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_t
 	noise.frequency = 0.28
 	for y in image.get_height():
 		for x in image.get_width():
+			if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES:
+				return
 			var color: Color = image.get_pixel(x, y)
 			if color.a <= 0.0:
 				continue
@@ -900,6 +903,8 @@ func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_tex
 
 
 func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, noise_value: float) -> void:
+	if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES:
+		return
 	var particle := Sprite2D.new()
 	particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
 	particle.centered = false

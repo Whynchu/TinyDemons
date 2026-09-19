@@ -188,6 +188,7 @@ func initialize(root: GameplayState) -> void:
 	root.current_dungeon_seed = dungeon_seed
 	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
+	await root.get_tree().process_frame
 	var minimap_travel_callback := Callable(root, "_on_minimap_flame_travel_requested")
 	if not root.dungeon_minimap_controller.is_connected(&"flame_travel_requested", minimap_travel_callback):
 		root.dungeon_minimap_controller.connect(&"flame_travel_requested", minimap_travel_callback)
@@ -210,6 +211,7 @@ func initialize(root: GameplayState) -> void:
 	root.room_controller.boss_variant_selection = root.debug_boss_variant
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
+	await root.get_tree().process_frame
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
 	_place_debug_player_at_boss_entry(root, player)
 	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
@@ -238,6 +240,7 @@ func initialize(root: GameplayState) -> void:
 	if player_hud != null: player_hud.visible = true
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
 	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
+	await root.get_tree().process_frame
 	# Warm long-running music after the loading screen has had a frame to draw;
 	# the first flame-room transition can then start its track from memory.
 	_phase(&"music_preload")
@@ -249,11 +252,14 @@ func initialize(root: GameplayState) -> void:
 	_phase(&"prewarm_transition_assets")
 	if not title_only_boot:
 		root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
+	await root.get_tree().process_frame
 	_phase(&"build_player_animation")
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
+	await root.get_tree().process_frame
 	_phase(&"build_fire_and_demon")
 	root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow")
+	await root.get_tree().process_frame
 	_phase(&"build_slime_textures")
 	var starts_in_title := title_only_boot
 	if starts_in_title:
@@ -261,27 +267,37 @@ func initialize(root: GameplayState) -> void:
 		# run entry owns this work; title/menu boot does not need enemy visuals.
 		pass
 	else:
-		root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
+		await root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
 	_phase(&"build_ui_enemy_health")
 	root.call("_build_enemy_health_ui")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_interact_prompt")
 	root.call("_build_interact_prompt")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_npc_dialogue")
 	root.call("_build_npc_dialogue")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_room_number")
 	root.call("_build_room_number_indicator")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_game_over")
 	root.call("_build_game_over_ui")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_run_complete")
 	root.call("_build_run_complete_ui")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_title")
 	root.call("_build_title_screen")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_cloud_panel")
 	root.cloud_save_panel.build(root.ui)
+	await root.get_tree().process_frame
 	_phase(&"build_ui_settings")
 	root.call("_build_settings_ui")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_hub")
 	root.call("_build_hub_ui")
+	await root.get_tree().process_frame
 	_phase(&"build_ui_scene_transition_and_layout")
 	root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
 	_phase(&"refresh_player_cloak_visual")
@@ -290,13 +306,17 @@ func initialize(root: GameplayState) -> void:
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
 	_phase(&"initialize_player")
 	_initialize_player(root, player)
+	await root.get_tree().process_frame
 	_phase(&"initialize_walkable_area")
 	_initialize_walkable_area(root, 0.35, 1.25)
+	await root.get_tree().process_frame
 	_phase(&"initialize_slimes")
 	_initialize_slimes(root, slimes)
+	await root.get_tree().process_frame
 	_phase(&"room_state_and_route")
 	root.room_controller.initialize_boss_jump_phase_pool(root)
 	root._apply_room_state(); root._build_depth_lists()
+	await root.get_tree().process_frame
 	if bool(root.get("debug_start_in_boss_room")) or bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false)):
 		# Initialize normal run resources without replacing the dungeon and boss room
 		# that were already selected and applied above.
