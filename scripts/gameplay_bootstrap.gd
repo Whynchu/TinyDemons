@@ -61,6 +61,9 @@ func _add_runtime_node(root: GameplayState, script: Script, node_name: StringNam
 func initialize(root: GameplayState) -> void:
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
+	var profile := ProfileSaveService.load_profile()
+	var benchmark_mode := bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false))
+	var title_only_boot := not bool(root.get("debug_start_in_boss_room")) and not benchmark_mode and not (profile.has_started and (profile.pending_route == "hub" or profile.pending_route == "run"))
 	root.settings_service = _add_runtime_node(root, SettingsService, "SettingsService") as SettingsService
 	root.settings_service.load_settings()
 	root.display_controller = _add_runtime_node(root, DisplayController, "DisplayController") as DisplayController
@@ -90,7 +93,6 @@ func initialize(root: GameplayState) -> void:
 	root.combat_runtime_controller = _add_runtime_node(root, COMBAT_RUNTIME_CONTROLLER_SCRIPT, "CombatRuntimeController")
 	root.slime_runtime_controller = _add_runtime_node(root, SLIME_RUNTIME_CONTROLLER_SCRIPT, "SlimeRuntimeController")
 	root.actor_presentation_runtime_controller = _add_runtime_node(root, ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT, "ActorPresentationRuntimeController")
-	var profile := ProfileSaveService.load_profile()
 	root.player_profile = profile
 	root.has_persistent_profile = has_profile
 	root.screen_state_controller = _add_runtime_node(root, ScreenStateController, "ScreenStateController") as ScreenStateController
@@ -135,6 +137,47 @@ func initialize(root: GameplayState) -> void:
 	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
 	root.chroma_pickup_controller = _add_runtime_node(root, ChromaPickupController, "ChromaPickupController") as ChromaPickupController
 	root.soul_pickup_controller = _add_runtime_node(root, SOUL_PICKUP_CONTROLLER_SCRIPT, "SoulPickupController") as SoulPickupController
+	# Establish a visible loading boundary before dungeon generation, room layout,
+	# actor setup, and presentation caches begin. The browser must get a rendered
+	# frame before the expensive gameplay preparation starts.
+	_phase(&"build_loading_screen")
+	root.call("_build_loading_screen")
+	root.set("loading_screen_active", true)
+	root.set("loading_screen_fading", false)
+	root.set("loading_screen_timer", 0.0)
+	var boot_loading := root.get("loading_screen_overlay") as ColorRect
+	if boot_loading != null:
+		boot_loading.visible = true
+		boot_loading.modulate.a = 1.0
+	root.set("boot_active", true)
+	await root.get_tree().process_frame
+	if title_only_boot:
+		# A title boot does not need room generation, actor initialization, enemy
+		# visuals, gameplay HUDs, or hub presentation. Keep only the player frame
+		# library needed by character creation previews and the menu surfaces that
+		# can be reached before a run. Starting a run transitions into a fresh scene,
+		# where the complete gameplay path below is initialized with its normal
+		# dependencies.
+		_phase(&"build_player_animation")
+		var title_player := root.get("player") as Sprite2D
+		root.player_animation_component = _ensure_player_component(title_player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
+		root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
+		_phase(&"build_ui_title")
+		root.call("_build_title_screen")
+		_phase(&"build_ui_cloud_panel")
+		root.cloud_save_panel.build(root.ui)
+		_phase(&"build_ui_settings")
+		root.call("_build_settings_ui")
+		_phase(&"build_ui_scene_transition_and_layout")
+		root.call("_build_scene_transition")
+		root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+		_phase(&"set_title_state")
+		(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
+		_show_title_after_boot(root, boot_loading)
+		root.gameplay_frame_controller.invalidate_contexts()
+		_phase(&"finalize")
+		root.set("boot_active", false)
+		return
 	var rng := root.rng
 	rng.randomize()
 	var run_state := RunState.new()
@@ -195,20 +238,6 @@ func initialize(root: GameplayState) -> void:
 	if player_hud != null: player_hud.visible = true
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
 	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
-	# Build and show the loading screen BEFORE the heavy frame/reticle build work,
-	# then yield one frame so it actually renders (the first frame would otherwise
-	# be blocked by this synchronous boot).  The build chain below must NOT rebuild
-	# the loading screen.
-	root.call("_build_loading_screen")
-	root.set("loading_screen_active", true)
-	root.set("loading_screen_fading", false)
-	root.set("loading_screen_timer", 0.0)
-	var boot_loading := root.get("loading_screen_overlay") as ColorRect
-	if boot_loading != null:
-		boot_loading.visible = true
-		boot_loading.modulate.a = 1.0
-	root.set("boot_active", true)
-	await root.get_tree().process_frame
 	# Warm long-running music after the loading screen has had a frame to draw;
 	# the first flame-room transition can then start its track from memory.
 	_phase(&"music_preload")
@@ -218,15 +247,15 @@ func initialize(root: GameplayState) -> void:
 	# main-scene tree or cloning a fresh boss guide source on the transition
 	# frame.
 	_phase(&"prewarm_transition_assets")
-	root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
+	if not title_only_boot:
+		root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
 	_phase(&"build_player_animation")
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
 	_phase(&"build_fire_and_demon")
 	root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow")
 	_phase(&"build_slime_textures")
-	var benchmark_mode := bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false))
-	var starts_in_title := not bool(root.get("debug_start_in_boss_room")) and not benchmark_mode and not (profile.has_started and (profile.pending_route == "hub" or profile.pending_route == "run"))
+	var starts_in_title := title_only_boot
 	if starts_in_title:
 		# Slime frame generation is the largest boot phase. The loading screen at
 		# run entry owns this work; title/menu boot does not need enemy visuals.
