@@ -2,7 +2,7 @@
 
 Status: live issue tracker; source fixes require runtime evidence before closure
 
-Updated: 2026-09-17
+Updated: 2026-09-19
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -569,6 +569,39 @@ Status: **Implemented in source — runtime color verification pending**
 - Scene smoke coverage checks neutral spawn color and live recoloring to red;
   visual checks for bound, temporary, and multiple simultaneous pickups remain
   pending.
+
+## Issue 12 — Save-slot portraits inherit the active Demon Cloak
+
+**Observed:** When one save/profile has the Demon Cloak equipped, the save
+selection screen can render the cloaked portrait for other populated saves.
+The portrait provider was reading the active runtime animation state rather than
+the profile represented by each save row.
+
+**Owners:** `PlayerProfile` for equipped-item identity,
+`screen_state_controller.gd` for save-row presentation, and
+`gameplay_state.gd`/`save_flow_controller.gd` for the portrait provider
+boundary.
+
+**Acceptance criteria:** Each save row derives its portrait form from that
+save's own equipped Body item. A cloaked profile shows the cloaked portrait, an
+ordinary profile shows the base portrait, and switching the active slot or
+runtime cloak state cannot alter another row. Live HUD, pause, and equipment
+portraits continue to follow the active profile. Add a regression fixture with
+two same-palette profiles and opposite cloak states.
+
+**Status:** **Implemented — focused save-isolation coverage added**
+
+### Implementation applied
+
+- `PlayerProfile.has_demon_cloak_equipped()` is now the shared profile-owned
+  rule for the visual state.
+- Save-select portrait creation passes each loaded profile's cloak state into
+  the portrait provider instead of reusing the active animation component.
+- The live portrait provider keeps its active-runtime fallback for HUD, Pause,
+  Equipment, and other current-profile consumers.
+- `tests/demon_cloak_smoke.gd` creates same-palette cloaked/plain save fixtures,
+  asserts distinct save-row portrait textures, and restores the developer's
+  original slot data afterward.
 
 ## Applied implementation order and remaining work
 

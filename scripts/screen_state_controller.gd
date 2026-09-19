@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.60"
+const GAME_VERSION := "0.2.61"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -4928,7 +4928,7 @@ func build_save_select(parent: Node, pixel_texture: Callable, select_callback: C
 		if profile != null and profile.has_started and portrait_texture.is_valid():
 			var portrait := Sprite2D.new()
 			portrait.name = "Save%dPortrait" % slot
-			portrait.texture = portrait_texture.call(palette_name) as Texture2D
+			portrait.texture = portrait_texture.call(palette_name, profile.has_demon_cloak_equipped()) as Texture2D
 			portrait.position = Vector2(1, 1)
 			portrait.centered = false
 			portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

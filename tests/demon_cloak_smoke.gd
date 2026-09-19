@@ -16,10 +16,13 @@ func _initialize() -> void:
 	for _frame in 120:
 		await process_frame
 	var profile := gameplay.get("player_profile") as PlayerProfile
-	var run_state := gameplay.get("run_state") as RunState
 	var anim := gameplay.get("player_animation_component") as PlayerAnimationComponent
-	_expect(profile != null and run_state != null and anim != null, "Demon Cloak owners are composed", failures)
-	if profile != null and run_state != null and anim != null:
+	var screens := gameplay.get("screen_state_controller") as Node
+	_expect(profile != null and anim != null and screens != null, "Demon Cloak owners are composed", failures)
+	if profile != null and anim != null and screens != null:
+		var run_state := gameplay.get("run_state") as RunState
+		if run_state == null:
+			run_state = RunState.new()
 		# Ignore any persistent-save pollution from earlier runs: this test owns
 		# the cloak purchase state it asserts on.
 		profile.demon_cloak_purchases = 0
@@ -74,6 +77,62 @@ func _initialize() -> void:
 		gameplay.call("_refresh_player_cloak_visual")
 		await process_frame
 		_expect(anim.cloaked, "equipping the Demon Cloak swaps the player sheet", failures)
+		_expect(profile.has_demon_cloak_equipped(), "the active profile owns its equipped Demon Cloak state", failures)
+
+		# Save-select portraits must resolve from each slot's profile, not the
+		# currently active runtime animation. Build two same-palette fixtures so a
+		# shared active cloak cannot hide behind a palette difference.
+		var original_slot := ProfileSaveService.current_slot()
+		var original_slot_data: Array[Dictionary] = []
+		var original_slot_present: Array[bool] = []
+		for slot in ProfileSaveService.SLOT_COUNT:
+			var saved_profile := ProfileSaveService.load_profile_for_slot(slot)
+			original_slot_present.append(saved_profile != null)
+			original_slot_data.append(saved_profile.to_dictionary() if saved_profile != null else {})
+		var cloaked_slot_profile := PlayerProfile.new()
+		cloaked_slot_profile.has_started = true
+		cloaked_slot_profile.player_name = "CLOAKED"
+		cloaked_slot_profile.starter_flame = &"fire"
+		var slot_cloak := ItemInstance.new()
+		slot_cloak.instance_id = "save-test-cloak"
+		slot_cloak.definition_id = &"demon_cloak"
+		slot_cloak.rarity = &"common"
+		cloaked_slot_profile.grant_item(slot_cloak)
+		cloaked_slot_profile.equip_item(slot_cloak.instance_id)
+		var plain_slot_profile := PlayerProfile.new()
+		plain_slot_profile.has_started = true
+		plain_slot_profile.player_name = "PLAIN"
+		plain_slot_profile.starter_flame = &"fire"
+		ProfileSaveService.select_slot(0)
+		ProfileSaveService.save_profile(cloaked_slot_profile)
+		ProfileSaveService.select_slot(1)
+		ProfileSaveService.save_profile(plain_slot_profile)
+		ProfileSaveService.select_slot(0)
+		var save_portrait_overlay := screens.call("build_save_select", gameplay.get("ui") as Node, Callable(gameplay, "_pixel_text_texture"), Callable(gameplay, "_select_save_slot"), Callable(gameplay, "_confirm_overwrite"), Callable(gameplay, "_save_overwrite_no"), Callable(gameplay, "_save_portrait_texture"), Callable(gameplay, "_close_save_select")) as ColorRect
+		var cloaked_portrait: Sprite2D = null
+		var plain_portrait: Sprite2D = null
+		for child in save_portrait_overlay.get_children():
+			if not child is Button or not child.has_meta("save_slot"):
+				continue
+			var slot := int(child.get_meta("save_slot"))
+			var slot_portrait := child.get_node_or_null("Save%dPortrait" % slot) as Sprite2D
+			if slot == 0:
+				cloaked_portrait = slot_portrait
+			elif slot == 1:
+				plain_portrait = slot_portrait
+		_expect(cloaked_slot_profile.has_demon_cloak_equipped() and not plain_slot_profile.has_demon_cloak_equipped(), "save fixtures keep cloak state isolated per profile", failures)
+		_expect(cloaked_portrait != null and plain_portrait != null and cloaked_portrait.texture != plain_portrait.texture, "save-slot portraits do not inherit the active profile's cloak", failures)
+		save_portrait_overlay.queue_free()
+		for slot in ProfileSaveService.SLOT_COUNT:
+			if original_slot_present[slot]:
+				var restore_profile := PlayerProfile.new()
+				restore_profile.load_dictionary(original_slot_data[slot])
+				ProfileSaveService.select_slot(slot)
+				ProfileSaveService.save_profile(restore_profile)
+			else:
+				ProfileSaveService.clear_slot(slot)
+		ProfileSaveService.select_slot(original_slot)
+
 		if profile != null:
 			_expect(profile.unequip_slot(&"body"), "Demon Cloak unequips", failures)
 		_expect(not profile._head_locked_by_body(catalog), "removing the cloak unlocks the head slot", failures)

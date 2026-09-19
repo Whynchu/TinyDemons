@@ -11,7 +11,7 @@ class_name SlimeTuning
 @export var attack_hit_range := 16.0
 @export var attack_vertical_hit_range := 10.0
 @export var aggro_range := 28.0
-@export var attack_cooldown := 1.0
+@export var attack_cooldown := 2.0
 @export var attack_lunge_distance := 8.0
 @export var attack_commit_frames_before_hit := 2
 @export var attack_overshoot_distance := 2.0

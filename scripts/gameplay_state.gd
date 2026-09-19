@@ -513,9 +513,7 @@ func _apply_profile_to_runtime() -> void:
 func _refresh_player_cloak_visual() -> void:
 	if player_profile == null or player_animation_component == null:
 		return
-	var body_instance_id := player_profile.get_equipped_instance_id(&"body")
-	var body_item := player_profile.find_item(body_instance_id)
-	player_animation_component.set_cloaked(gameplay_frame_controller.animation_context(self), body_item != null and body_item.definition_id == &"demon_cloak")
+	player_animation_component.set_cloaked(gameplay_frame_controller.animation_context(self), player_profile.has_demon_cloak_equipped())
 	# Menu portraits and the live HUD must resolve from the same equipped cloak
 	# state. Equipment changes can happen while the HUD remains mounted.
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
@@ -887,8 +885,7 @@ func _update_save_select_cursor() -> void:
 func _save_preview_texture(palette_name: String) -> Texture2D:
 	return save_flow_controller.call("save_preview_texture", self, palette_name) as Texture2D
 
-func _save_portrait_texture(palette_name: String) -> Texture2D:
-	return save_flow_controller.call("save_portrait_texture", self, palette_name, player_animation_component.cloaked if player_animation_component != null else false) as Texture2D
+func _save_portrait_texture(palette_name: String, cloaked_override: Variant = null) -> Texture2D: return save_flow_controller.call("save_portrait_texture", self, palette_name, player_animation_component.cloaked if cloaked_override == null and player_animation_component != null else bool(cloaked_override)) as Texture2D
 
 
 func _menu_player_context() -> MenuPlayerContext:
