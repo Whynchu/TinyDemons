@@ -15,6 +15,10 @@ run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://assets/artwork/tinydemonicon_pwa_512.png"
 
+[debug]
+
+performance_capture_on_boot=false
+
 [autoload]
 
 MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"

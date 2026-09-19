@@ -326,6 +326,7 @@ var current_player_palette_name := "blue"
 var player_mp_fill_size := Vector2.ZERO
 var mp_desaturation_material: ShaderMaterial = null
 var mp_desaturation_attack_material: ShaderMaterial = null
+var _last_mp_desaturation_saturation := -1.0
 var magic_input_was_down := false
 var magic_projectile_controller: MagicProjectileController = null
 var slime_last_valid_positions: Dictionary = {}
@@ -371,6 +372,9 @@ func _update_mp_desaturation() -> void:
 	if mp_desaturation_attack_material == null:
 		mp_desaturation_attack_material = _new_mp_desaturation_material()
 		material_was_created = true
+	if not material_was_created and is_equal_approx(saturation, _last_mp_desaturation_saturation):
+		return
+	_last_mp_desaturation_saturation = saturation
 	mp_desaturation_material.set_shader_parameter("grey_mix", 1.0 - saturation)
 	mp_desaturation_attack_material.set_shader_parameter("grey_mix", 1.0 - saturation)
 	if player != null:

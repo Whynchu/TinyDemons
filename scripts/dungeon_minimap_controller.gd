@@ -149,6 +149,11 @@ func _on_room_discovered(_room_id: StringName) -> void:
 func _process(delta: float) -> void:
 	if player_marker == null:
 		return
+	if not map_open and gameplay_root != null:
+		var screen := gameplay_root.get("screen_state_controller") as Node
+		if screen != null and StringName(screen.get("state")) != &"gameplay":
+			player_marker.visible = false
+			return
 	player_marker_timer = fmod(player_marker_timer + maxf(delta, 0.0), PLAYER_MARKER_BLINK_TIME * 2.0)
 	player_marker.visible = not map_open and player_marker_timer < PLAYER_MARKER_BLINK_TIME
 	_update_player_marker()
