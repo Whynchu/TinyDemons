@@ -9,6 +9,18 @@ const SLOT_COUNT := 3
 const WEB_ACTIVE_SLOT_KEY := "td_active_slot"
 const WEB_SLOT_KEY_PREFIX := "td_profile_"
 static var active_slot := -1
+static var _next_boot_route := ""
+
+
+static func request_next_boot_route(route: String) -> void:
+	if route in ["title", "hub", "run"]:
+		_next_boot_route = route
+
+
+static func consume_next_boot_route() -> String:
+	var route := _next_boot_route
+	_next_boot_route = ""
+	return route
 
 static func select_slot(slot: int) -> void:
 	active_slot = clampi(slot, 0, SLOT_COUNT - 1)

@@ -17,6 +17,11 @@ func build_title_screen(root: Object) -> void:
 	root.screen_state_controller.title_settings_text = controls["settings_text"] as Sprite2D
 	root.screen_state_controller.title_cursor_text = controls["cursor"] as Sprite2D
 	root.screen_state_controller.refresh_title_menu_layout(root.has_persistent_profile)
+	var enters_saved_route: bool = root.player_profile != null and root.player_profile.has_started and (root.player_profile.pending_route == "hub" or root.player_profile.pending_route == "run")
+	if enters_saved_route and root.screen_state_controller.title_overlay != null:
+		# Full-run boot still constructs the shared title assets, but the title must
+		# never become visible during the yielded loading phases before gameplay.
+		root.screen_state_controller.title_overlay.visible = false
 	build_archetype_screen(root)
 	var name_controls: Dictionary = root.screen_state_controller.build_name_entry(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_finish_name_entry"), Callable(root, "_cancel_name_entry"), Callable(root, "_save_preview_texture"))
 	root.screen_state_controller.name_entry_overlay = name_controls["overlay"] as ColorRect
@@ -349,6 +354,7 @@ func _load_continue_slot(root: Object, slot: int, loaded_profile: PlayerProfile)
 	root.player_profile = loaded_profile
 	root.player_profile.pending_route = "run"
 	root.pending_run_restore = ActiveRunSaveServiceScript.has_valid_snapshot(slot)
+	ProfileSaveService.request_next_boot_route("run")
 	ProfileSaveService.save_profile(root.player_profile)
 	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
