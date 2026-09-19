@@ -28,6 +28,12 @@ func _initialize() -> void:
 	_expect(int(crimson_definition.base_stats.get("VIT", 0)) > int(red_definition.base_stats.get("VIT", 0)), "crimson is a tankier variant than red (higher VIT)", failures)
 	_expect(int(crimson_definition.base_stats.get("AGI", 0)) < int(red_definition.base_stats.get("AGI", 0)), "crimson trades mobility for bulk (lower AGI)", failures)
 
+	var recolor_sources: Array[StringName] = [&"grey", &"purple", &"yellow", &"orange", &"aquamarine"]
+	for variant: StringName in recolor_sources:
+		_expect(EnemyDefinition.from_variant(variant).visual_source == "green", "%s recolor-only variant shares the green base art sheet" % variant, failures)
+	for variant: StringName in [&"red", &"blue", &"green"]:
+		_expect(EnemyDefinition.from_variant(variant).visual_source == String(variant), "%s art-sheet variant names its own source" % variant, failures)
+
 	var crimson_actor := EnemyFactory.assemble(crimson_definition)
 	root.add_child(crimson_actor)
 	_expect(crimson_actor.variant == "crimson", "factory assembles an actor with the crimson variant", failures)
