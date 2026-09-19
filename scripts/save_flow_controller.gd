@@ -371,7 +371,7 @@ func enter_starting_room_from_menu(root: Object) -> void:
 	root.loading_screen_overlay.modulate.a = 1.0
 	root.screen_state_controller.set_state(&"loading")
 	await root.get_tree().process_frame
-	root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
+	await root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
 	root.call("_place_player_at_hub_fire")
 	root.call("_apply_player_palette_async", root.screen_state_controller.player_palette_name)
 	root.call("_update_player_aggro_marker_colors")
