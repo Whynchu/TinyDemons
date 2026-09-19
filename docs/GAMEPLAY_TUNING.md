@@ -3,7 +3,7 @@
 Status: current external-resource-backed tuning index; hardcoded gap list remains
 planned work
 
-Updated: 2026-09-15
+Updated: 2026-09-19
 
 > Purpose: a single index of gameplay tuning knobs and where to change them.
 > The six core tuning defaults are now external `.tres` resources. Each
@@ -49,13 +49,19 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | Group | Fields |
 | --- | --- |
 | Movement | `scoot_distance` 5, `scoot_duration` 0.34, `steering_direction_count` 8, `steering_approach_weight` 1.0, `steering_orbit_weight` 0.42, `steering_ally_danger_weight` 1.25, `steering_blocked_danger_weight` 4.0, `steering_clearance` 7.0 |
-| Attack | `attack_frame_time` 0.08, `attack_hit_frame` 5, `attack_range` 14, `attack_hit_range` 16, `attack_vertical_hit_range` 10, `attack_lunge_distance` 8, `attack_cooldown` 1.0 |
+| Attack | `attack_frame_time` 0.08, `attack_hit_frame` 5, `attack_range` 14, `attack_hit_range` 16, `attack_vertical_hit_range` 10, `attack_lunge_distance` 8, `attack_cooldown` 2.0 |
 | Aggro/repаth | `aggro_range` 28, `repath_min` 0.7, `repath_max` 1.8, `hold_min` 0.22, `hold_max` 0.48, `aggro_hold_min` 0.08, `aggro_hold_max` 0.16, `chill_chance` 0.22, `chill_min` 1.0, `chill_max` 2.2, `idle_breath_time` 1.4 |
 | Boss | `boss_attack_cooldown_multiplier` 1.6, `boss_attack_frame_time_multiplier` 1.5, `boss_movement_speed_multiplier` 0.7 |
 | Regen | `regen_delay` 5.0, `regen_interval` 0.75, `regen_amount` 1.0 |
 | Health UI | `health_drain_fill_speed` 18, `health_regen_fill_speed` 4, `health_damage_hang_time` 0.14 |
 | Hit reaction | `hit_flash_time` 0.12, `hitstun_time` 1/30, `knockback_duration` 0.14 |
 | Shadow slime (ambush) | `ambush_reveal_window` 0.5, `ambush_block_stun` 1.0, `ambush_hit_extension` 0.5 |
+
+### `scripts/player_guard_component.gd` — blocking feel
+
+| Group | Fields |
+| --- | --- |
+| Block reaction | `normal_block_stun` 0.12 seconds; perfect blocks use exactly `2.0x` that duration (`0.24` seconds) while `perfect_window` remains 0.14 seconds |
 
 ### `scripts/combat_tuning.gd` — combat formulas (11 exports, all `inspector`)
 

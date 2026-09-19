@@ -195,6 +195,11 @@ func get_equipped_instance_id(slot: Variant) -> String:
 	return str(equipped_instance_ids.get(String(canonical), ""))
 
 
+func has_demon_cloak_equipped() -> bool:
+	var body_item := find_item(get_equipped_instance_id(&"body"))
+	return body_item != null and body_item.definition_id == &"demon_cloak"
+
+
 func record_clear_reward_slot(slot: Variant) -> void:
 	var canonical := ItemCatalog.canonical_slot(slot)
 	if canonical.is_empty():

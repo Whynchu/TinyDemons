@@ -3,6 +3,8 @@ class_name PlayerGuardComponent
 
 signal successful_block(shield_damage: float, health_damage: float)
 
+const PERFECT_BLOCK_STUN_MULTIPLIER := 2.0
+
 ## Editor-facing guard tuning.
 @export var max_durability := 8.0
 @export var damage_reduction := 0.80
@@ -15,7 +17,6 @@ signal successful_block(shield_damage: float, health_damage: float)
 @export var bar_hide_delay := 1.0
 @export var bar_fade_time := 0.24
 @export var normal_block_stun := 0.12
-@export var perfect_block_stun := 0.45
 @export var perfect_window := 0.14
 
 var durability := max_durability
@@ -160,7 +161,8 @@ func absorb_damage(context: PlayerGuardContext, incoming_damage: float, source_p
 			visuals.flash_guard(context.build_equipment_visual_context.call() if context.build_equipment_visual_context.is_valid() else null)
 	_update_meter(context)
 	successful_block.emit(shield_damage, health_damage)
-	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true, "perfect": perfect, "stun": perfect_block_stun if perfect else normal_block_stun}
+	var block_stun := normal_block_stun * PERFECT_BLOCK_STUN_MULTIPLIER if perfect else normal_block_stun
+	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true, "perfect": perfect, "stun": block_stun}
 
 
 func set_maximum_durability(value: float, preserve_ratio := true) -> void:

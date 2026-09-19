@@ -27,7 +27,7 @@ func _initialize() -> void:
 	guard.maximum_durability = 8.0
 	guard.durability = 8.0
 	guard.display_durability = 8.0
-	guard.guard_active_timer = 0.02
+	guard.guard_active_timer = guard.perfect_window + 0.02
 
 	var context := CONTEXT_SCRIPT.new()
 	context.player = player
@@ -53,7 +53,14 @@ func _initialize() -> void:
 	var block := guard.absorb_damage(context, 10.0, Vector2(1.0, 0.0))
 	_expect(bool(block["blocked"]), "a held guard in front of the source blocks the hit", failures)
 	_expect(is_equal_approx(float(block["shield_damage"]), 8.0) and is_equal_approx(float(block["health_damage"]), 2.0), "blocked hit splits 80 percent to the shield", failures)
+	_expect(not bool(block["perfect"]) and float(block["stun"]) > 0.0 and is_equal_approx(float(block["stun"]), guard.normal_block_stun), "a normal block always adds the small enemy stun", failures)
 	_expect(guard.durability <= 0.001 and guard.cooldown_timer > 0.0, "an 8-point shield fully blocking a 10-point hit breaks it and starts recovery", failures)
+	guard.cooldown_timer = 0.0
+	guard.durability = guard.maximum_durability
+	guard.display_durability = guard.maximum_durability
+	guard.guard_active_timer = 0.02
+	var perfect_block := guard.absorb_damage(context, 1.0, Vector2(1.0, 0.0))
+	_expect(bool(perfect_block["perfect"]) and is_equal_approx(float(perfect_block["stun"]), guard.normal_block_stun * 2.0), "a perfect block doubles the normal enemy stun", failures)
 
 	# Lock-on must win over the guard's remembered defend facing: while a target
 	# is held, the guard does not re-apply its stale facing to the player.

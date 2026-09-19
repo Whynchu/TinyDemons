@@ -14,6 +14,7 @@ class ContactRoot extends Node:
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var tuning := SlimeTuning.new()
+	_expect(is_equal_approx(tuning.attack_cooldown, 2.0), "regular slime attacks use a two-second recovery", failures)
 	_expect(tuning.boss_scoot_distance >= 6.0 and tuning.boss_scoot_distance <= 8.0, "boss scoot uses the authored heavy range", failures)
 	_expect(tuning.boss_scoot_duration >= 0.48 and tuning.boss_scoot_duration <= 0.62, "boss scoot has a committed duration", failures)
 	_expect(tuning.boss_attack_lunge_distance >= 8.0 and tuning.boss_attack_lunge_distance <= 12.0, "boss lunge has the committed authored attack distance", failures)
