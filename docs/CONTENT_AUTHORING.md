@@ -221,6 +221,59 @@ Add an asset to the sound catalog, specify its bus/volume/loop policy, and
 verify cold startup, repeated playback, unavailable-resource fallback, and
 volume settings when the sound is first used.
 
+## Worked authoring examples
+
+One concrete "add one piece" workflow per content kind. Each ends with the
+validator and catalog-report commands so "what can I add and what will break?"
+is answered by tooling, not by reading coordinators.
+
+### Example: add an enemy variant
+
+1. Add a row to `resources/definitions/slime_variant_catalog.tres` (stable id,
+   element, `base_stats`, `growth_weights`, `damage_contract`). Reuse an art
+   sheet via `visual_source` if no new texture exists.
+2. The catalog exposes it automatically (`EnemyFactory.definition(id)`).
+3. Add expected stats/element to `tests/slime_variant_smoke.gd` tables and a
+   factory-assembly assertion in `tests/enemy_definition_slice_smoke.gd`.
+4. Run `tools/validate_definitions.ps1` (catches malformed content) and
+   `tools/report_catalogs.ps1` (confirms the variant is present).
+
+Real example: `crimson` — a tanky Fire slime added as one catalog row with
+`visual_source: "red"`, proven by `enemy_definition_slice_smoke` and the
+save/load round-trip `enemy_definition_roundtrip_smoke`.
+
+### Example: add a room difficulty/traffic policy
+
+1. Edit `resources/definitions/room_definition.tres` (enemy cap, popcorn rates,
+   boss support counts, treasure chance).
+2. `RoomController` reads it through `_room_definition()` — no code change.
+3. Add a curve assertion to `tests/room_definition_smoke.gd`.
+4. Run `tools/validate_definitions.ps1`.
+
+### Example: add an encounter policy
+
+1. Edit `resources/definitions/encounter_definition.tres` (rank-gated variant
+   weights, shadow-bound policy).
+2. `RoomController` reads it through `_encounter_definition()` — no code change.
+3. Add a pool assertion to `tests/encounter_definition_smoke.gd`.
+4. Run `tools/validate_definitions.ps1`.
+
+### Example: add a reward/tuning change
+
+1. Edit the relevant `resources/tuning/*.tres` value and the matching row in
+   `docs/GAMEPLAY_TUNING.md`.
+2. Add a focused test for the value's timing, geometry, persistence, or economy
+   impact.
+3. Run the curated gate.
+
+### Example: add a generated-map policy
+
+1. Edit `resources/definitions/dungeon_generation_policy.tres` (candidate
+   counts, first-orb/special depth, primary flames).
+2. `DungeonLayoutGenerator.policy()` reads it — no code change.
+3. Add an assertion to `tests/dungeon_generation_policy_smoke.gd`.
+4. Run `tools/validate_definitions.ps1` and the generated-run smoke.
+
 ## Authoring checklist
 
 Before calling a content addition ready, record:

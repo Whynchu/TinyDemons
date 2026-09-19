@@ -332,17 +332,22 @@ without reading several coordinators. Add definition validation, catalog
 reports, deterministic preview commands, and one documented example each for
 an enemy, room, encounter, reward, and map.
 
-**First increment at `0.2.43`:** `tools/validate_definitions.ps1` (+ its Godot
-`tools/validate_definitions.gd`) loads every authored definition resource —
-item catalog, slime variant catalog, `EncounterDefinition`, `RoomDefinition`,
-`DungeonGenerationPolicy`, both `DungeonRunDefinition`s, and all four
-`PuzzlePlanData` resources — runs each `validate()` contract, and fails nonzero
-with a report on malformed content. It joins the CI preflight alongside
-`validate_composition.ps1` and `validate_test_manifest.ps1` (documented in
-`AGENTS.md`). The validator was negative-tested by corrupting
-`room_definition.tres` (`normal_enemy_cap = 0`), which correctly fails with
-"normal_enemy_cap must be >= 1". Remaining for F: catalog reports, deterministic
-preview commands, and one documented authoring example per content kind.
+**Increments at `0.2.43`–`0.2.44`:** `tools/validate_definitions.ps1` (+ its
+Godot `tools/validate_definitions.gd`) loads every authored definition
+resource — item catalog, slime variant catalog, `EncounterDefinition`,
+`RoomDefinition`, `DungeonGenerationPolicy`, both `DungeonRunDefinition`s, and
+all four `PuzzlePlanData` resources — runs each `validate()` contract (plus
+structural checks for data catalogs), and fails nonzero with a report on
+malformed content. `tools/report_catalogs.ps1` (+ `tools/report_catalogs.gd`)
+prints a deterministic summary of every surface and its stable IDs. Both join
+the CI preflight alongside `validate_composition.ps1` and
+`validate_test_manifest.ps1` (documented in `AGENTS.md`), and
+`docs/CONTENT_AUTHORING.md` now has one worked authoring example per content
+kind (enemy, room policy, encounter policy, reward/tuning, map policy). The
+validator was negative-tested by corrupting `room_definition.tres`
+(`normal_enemy_cap = 0`), which correctly fails with "normal_enemy_cap must be
+>= 1". Slice F's core deliverables are complete; future authoring feedback can
+add per-kind preview scenes and richer in-editor diagnostics.
 
 ## Performance investigation track — T3
 

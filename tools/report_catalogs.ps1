@@ -1,0 +1,20 @@
+param(
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$GodotBin = "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe"
+)
+
+## Catalog report (Slice F, T2). Runs the definition catalog report so a
+## designer can see "what content exists" without reading coordinators. Prints
+## surface counts and stable IDs; exits nonzero on any load failure.
+
+$ErrorActionPreference = "Stop"
+$userDataDir = Join-Path $env:TEMP ("tiny-demons-report-catalogs-{0}" -f $PID)
+$logFile = Join-Path $userDataDir "report_catalogs.log"
+New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
+
+& $GodotBin --headless --audio-driver Dummy --user-data-dir $userDataDir --path $ProjectRoot --log-file $logFile -s "res://tools/report_catalogs.gd"
+$exitCode = $LASTEXITCODE
+if (Test-Path $logFile) {
+    Get-Content $logFile | Select-String "===|item_catalog|slime_variant_catalog|encounter_definition|room_definition|dungeon_generation_policy|dungeon_layout_run|puzzle_map|LOAD_FAILED|ERROR" | ForEach-Object { Write-Host $_.Line.Trim() }
+}
+exit $exitCode
