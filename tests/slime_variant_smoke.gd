@@ -2,6 +2,7 @@ extends SceneTree
 
 const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
 
 var _finished := false
 
@@ -127,28 +128,12 @@ func _initialize() -> void:
 	_expect(shadow_ambush_count > 0 and shadow_ambush_count < shadow_bound_purple, "Shadow Slime ambush is an ability granted to only some Shadow Slimes", failures)
 	rooms.free()
 
-	var source := load("res://assets/artwork/SlimeGreenLeft.png") as Texture2D
-	_expect(source != null, "green direction texture loads for fallback recolors", failures)
-	if source != null:
-		for palette in ["grey", "yellow", "orange", "aquamarine"]:
-			var recolored := SlimeVisualComponent.recolor_direction_texture(source, palette, {})
-			_expect(recolored != null, "%s direction texture recolors" % palette, failures)
-			if recolored == null:
-				continue
-			var image := recolored.get_image()
-			var found_palette := false
-			var found_green := false
-			for y in image.get_height():
-				for x in image.get_width():
-					var color: Color = image.get_pixel(x, y)
-					if color.a <= 0.0:
-						continue
-					if color.is_equal_approx(PaletteLibrary.normal(palette)):
-						found_palette = true
-					elif color.is_equal_approx(Color8(56, 183, 100)) or color.is_equal_approx(Color8(37, 113, 121)):
-						found_green = true
-			_expect(found_palette, "%s recolor introduces its palette tone" % palette, failures)
-			_expect(not found_green, "%s recolor removes green tones" % palette, failures)
+	for palette in ["grey", "yellow", "orange", "aquamarine"]:
+		var material := MATERIAL_SCRIPT.for_slime_palette(palette)
+		var from_colors: PackedColorArray = material.get_shader_parameter("from_color")
+		var to_colors: PackedColorArray = material.get_shader_parameter("to_color")
+		_expect(from_colors.size() >= 3 and from_colors[1].is_equal_approx(Color8(56, 183, 100)), "%s shader keeps the green source normal" % palette, failures)
+		_expect(to_colors.size() >= 3 and to_colors[1].is_equal_approx(PaletteLibrary.normal(palette)), "%s shader targets the palette normal" % palette, failures)
 
 	stats.free()
 	yellow.free()

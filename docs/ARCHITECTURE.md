@@ -81,7 +81,8 @@ Encrypted-vault deployment and operational verification are documented in
   grey MP-reference set instead of a texture per palette, and
   `shaders/mp_desaturation.gdshader` carries the swap alongside MP desaturation.
   `player_equipment_visual_component` builds palettes lazily (`ensure_palette`).
-  Slime frames remain on the CPU recolor in `slime_visual_component`.
+  `slime_visual_component` likewise shares the authored green source frames and
+  applies one cached GPU palette material to the slime body and floor shadow.
 - **Settings/audio**: `settings_service` owns device-wide persisted options;
   `sound_manager` consumes the live music/SFX values and applies their dB
   offsets to the Master bus.

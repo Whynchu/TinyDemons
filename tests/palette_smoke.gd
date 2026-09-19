@@ -1,5 +1,7 @@
 extends SceneTree
 
+const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
+
 var _finished := false
 
 
@@ -27,15 +29,13 @@ func _initialize() -> void:
 		_expect(_luma(fire[0]) < _luma(fire[1]) and _luma(fire[1]) < _luma(fire[2]), "fire_triple() tones ascend in brightness for %s" % name, failures)
 		_expect(fire[2].r > fire[1].r or fire[2].g > fire[1].g or fire[2].b > fire[1].b, "fire_triple() brightens the tip for %s" % name, failures)
 	for palette_name in ["red", "blue", "purple"]:
-		var original := Color8(56, 183, 100)
-		var shadow_mapped := SlimeVisualComponent._palette_color(original, "257179", palette_name)
-		var normal_mapped := SlimeVisualComponent._palette_color(original, "38B764", palette_name)
-		var accent_mapped := SlimeVisualComponent._palette_color(original, "A7F070", palette_name)
-		_expect(shadow_mapped == library.shadow(palette_name), "slime shadow key maps to canonical shadow for %s" % palette_name, failures)
-		_expect(normal_mapped == library.normal(palette_name), "slime normal key maps to canonical normal for %s" % palette_name, failures)
-		_expect(accent_mapped == library.accent(palette_name), "slime accent key maps to canonical accent for %s" % palette_name, failures)
-	var unknown_palette := SlimeVisualComponent._palette_color(Color8(56, 183, 100), "38B764", "green")
-	_expect(unknown_palette == Color8(56, 183, 100), "slime palette mapping leaves undefined palettes untouched", failures)
+		var slime_pairs := MATERIAL_SCRIPT.slime_color_pairs(palette_name)
+		var slime_from: PackedColorArray = slime_pairs["from"]
+		var slime_to: PackedColorArray = slime_pairs["to"]
+		_expect(slime_from[0] == Color8(37, 113, 121) and slime_from[1] == Color8(56, 183, 100) and slime_from[2] == Color8(167, 240, 112), "slime shader uses the authored green source tones for %s" % palette_name, failures)
+		_expect(slime_to[0] == library.shadow(palette_name), "slime shader maps shadow to canonical tone for %s" % palette_name, failures)
+		_expect(slime_to[1] == library.normal(palette_name), "slime shader maps normal to canonical tone for %s" % palette_name, failures)
+		_expect(slime_to[2] == library.accent(palette_name), "slime shader maps accent to canonical tone for %s" % palette_name, failures)
 	var sprite_library := SpriteFrameLibrary.new()
 	var source := ImageTexture.create_from_image(Image.create(4, 4, false, Image.FORMAT_RGBA8))
 	var recolored := sprite_library.recolor_texture(source, "red")

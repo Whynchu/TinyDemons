@@ -21,6 +21,11 @@ func _initialize() -> void:
 		image.set_pixel(index, 0, samples[index])
 	var texture := ImageTexture.create_from_image(image)
 	var failures := 0
+	var shader := MATERIAL_SCRIPT.for_palette("blue").shader
+	var shader_code := shader.code if shader != null else ""
+	if "COLOR = tex * COLOR" in shader_code or not "COLOR = tex * vertex_tint" in shader_code:
+		failures += 1
+		push_error("PALETTE_MATERIAL_PARITY_FAIL shader must preserve vertex tint without multiplying the source texture twice")
 	var palettes: Array = PaletteLibrary.PALETTE_NAMES
 	for palette_value in palettes:
 		var palette := String(palette_value)

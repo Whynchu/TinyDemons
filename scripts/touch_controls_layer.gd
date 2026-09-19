@@ -121,8 +121,9 @@ func build() -> void:
 
 
 func set_input_context(next_context: int) -> void:
-	if _input_context != next_context:
-		_clear_transient_input()
+	if _input_context == next_context:
+		return
+	_clear_transient_input()
 	_input_context = next_context
 	if _built:
 		# The hub cancel control is nested inside HubOverlay, so refresh its

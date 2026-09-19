@@ -1,5 +1,6 @@
 extends SceneTree
 
+const MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -10,12 +11,13 @@ func _initialize() -> void:
 	var library := SpriteFrameLibrary.new()
 	var frames := library.slice_frames("res://assets/artwork/SlimeGreenSpawn.png", Vector2i(16, 16))
 	_expect(frames.size() == 7, "slime spawn strip slices into seven frames", failures)
-	var purple_frames := SlimeVisualComponent.recolor_attack_frame_set(frames, "purple", {})
-	_expect(purple_frames.size() == frames.size(), "spawn frames can be recolored for every slime palette", failures)
+	var slime_material := MATERIAL_SCRIPT.for_slime_palette("purple")
+	var slime_from: PackedColorArray = slime_material.get_shader_parameter("from_color")
+	_expect(slime_from.size() >= 3 and slime_from[1].is_equal_approx(Color8(56, 183, 100)), "slime shader uses the shared green source normal", failures)
 
 	# Content variants (crimson) share the art sheet named by their definition's
-	# visual_source; their attack/shocked/spawn frames must stay in that palette
-	# instead of falling back to the green base sheet.
+	# visual_source for idle art; their animation frames stay on the shared green
+	# source and receive the matching shader palette.
 	var frame_library := SpriteFrameLibrary.new()
 	var cache := {}
 	var warm := func(texture: Texture2D) -> void: pass
@@ -32,8 +34,10 @@ func _initialize() -> void:
 	var crimson_visual := crimson.get_node_or_null("Visual") as SlimeVisualComponent
 	_expect(crimson_visual != null and not crimson_visual.attack_left_frames.is_empty() and not crimson_visual.shocked_frames.is_empty() and not crimson_visual.spawn_frames.is_empty(), "crimson slime receives attack, shocked, and spawn frames", failures)
 	if crimson_visual != null and not crimson_visual.attack_left_frames.is_empty():
-		var red_reference := load("res://assets/artwork/SlimeRedLeft.png") as Texture2D
-		_expect(_frame_uses_palette(crimson_visual.attack_left_frames[0], red_reference), "crimson attack frames stay in the red art-sheet palette", failures)
+		var green_attack := (attack_library["green"] as Dictionary)["left"] as Array
+		_expect(crimson_visual.attack_left_frames[0].get_rid() == (green_attack[0] as Texture2D).get_rid(), "crimson attack frames reuse the shared green source", failures)
+		SlimeVisualComponent.apply_palette_material(crimson)
+		_expect(crimson.material == MATERIAL_SCRIPT.for_slime_palette("red"), "crimson uses the red shader palette on its source frames", failures)
 	crimson.queue_free()
 	await process_frame
 
@@ -67,26 +71,3 @@ func _initialize() -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
-
-
-func _frame_uses_palette(frame: Texture2D, reference: Texture2D) -> bool:
-	var frame_image := frame.get_image()
-	var reference_image := reference.get_image()
-	var reference_keys: Dictionary = {}
-	for y in reference_image.get_height():
-		for x in reference_image.get_width():
-			var color: Color = reference_image.get_pixel(x, y)
-			if color.a > 0.0:
-				reference_keys["%02X%02X%02X" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0)]] = true
-	var shared := 0
-	for y in frame_image.get_height():
-		for x in frame_image.get_width():
-			var color: Color = frame_image.get_pixel(x, y)
-			if color.a <= 0.0:
-				continue
-			var key := "%02X%02X%02X" % [roundi(color.r * 255.0), roundi(color.g * 255.0), roundi(color.b * 255.0)]
-			if reference_keys.has(key):
-				shared += 1
-	# The attack strip adds a dark outline tone and the eye white; the body
-	# colors themselves must all come from the reference art-sheet palette.
-	return shared >= 3

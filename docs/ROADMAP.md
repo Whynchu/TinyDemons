@@ -44,7 +44,7 @@ Work should move through one narrow slice at a time:
 | 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
 | 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard and editor composition at 100%; state bag and room owner at strict targets; legacy adapters retired; all authored definitions inspectable |
 | 0.60 | Make content authoring repeatable | Planned | validated definitions, factories, and an example workflow for rooms, enemies, rewards, and tuning |
-| 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios |
+| 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios; see [`peak-performance-plan.md`](peak-performance-plan.md) |
 | 0.80 | Establish long-term content composition | Planned | an enemy/room/map can be added through definitions and composition without central-state special cases |
 
 The numeric labels are sequencing markers, not release versions. The project

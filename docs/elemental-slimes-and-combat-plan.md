@@ -76,8 +76,8 @@ replacing the element identity with the current generic yellow crit color.
 ### In scope
 
 - A Gray/Neutral slime variant with even level-one stats.
-- Yellow/Electric slime support using the existing recolor pipeline.
-- Orange/Ground and aquamarine/Ice slime support using the existing recolor
+- Yellow/Electric slime support using the shared source-frame shader pipeline.
+- Orange/Ground and aquamarine/Ice slime support using the same shader
   pipeline, with dedicated damage-matchup rows and columns.
 - Explicit element identity on slime definitions and damage events.
 - Gen-III-inspired Fire/Water/Electric/Grass relationships with the custom
@@ -342,25 +342,22 @@ Review corrections and constraints:
 
 ## 7. Gray, Yellow, Ground, and Ice presentation plan
 
-No new imported sprite sheets are required. The verified pipeline already
-recolors the authored Green sheets for Purple
-(`actor_presentation_runtime_controller.gd:64-77`,
-`slime_visual_component.gd:149-155`). Reuse it for all four variants:
+No new imported sprite sheets are required. The presentation pipeline shares
+the authored Green sheets for variants without dedicated art and applies the
+target palette through `ActorPaletteMaterial` and
+`shaders/palette_swap.gdshader`:
 
 1. Source `SlimeGreenLeft.png` / `SlimeGreenRight.png` for variants without
-   dedicated art, exactly as Purple does today.
-2. Recolor the Green shadow/normal/accent source tones (`257179`, `38B764`,
-   `A7F070`) through `PaletteLibrary`. `grey`, `yellow`, `orange`, and
-   `aquamarine` all have `SHADOW`, `NORMAL`, and `ACCENT` entries, so they work
-   through the existing path with no imported sprite sheets.
-3. Add `grey`, `yellow`, `orange`, and `aquamarine` entries to the attack frame library
-   (`slime_visual_component.gd:59-64`) and shocked frame library
-   (`slime_visual_component.gd:88-93`).
-4. Generalize the Purple-only direction-texture fallback in
-   `build_slime_direction_textures` into a recolored-fallback list
-   (`grey`, `yellow`, `purple`, `orange`, `aquamarine`), each recolored exactly
-   once.
-5. Keep the visual variant key separate from the element ID.
+   dedicated art, exactly as Purple does today. Red and Blue retain their
+   authored idle sheets; their shared animation sheets still use Green source
+   art with the matching shader target.
+2. Map the Green shadow/normal/accent source tones (`257179`, `38B764`,
+   `A7F070`) to `PaletteLibrary` through one cached material per palette.
+   `grey`, `yellow`, `orange`, and `aquamarine` all have `SHADOW`, `NORMAL`,
+   and `ACCENT` entries.
+3. Keep attack, shocked, spawn, boss, and shadow frame libraries as shared
+   source arrays; do not create a CPU recolored texture for each palette.
+4. Keep the visual variant key separate from the element ID.
 
 Damage-number colors reuse `PaletteLibrary` — no second RGB table. Per
 element, use `PaletteLibrary.accent(palette_key)` with `normal(palette_key)`
@@ -399,7 +396,7 @@ All rows verified against the current tree:
 | Health application | `SlimeActor.damage_actor` (`slime_actor.gd:113`), `HealthComponent.apply_damage` | Unchanged amount-only API; typed event flows to feedback in parallel |
 | Damage number color | `CombatRuntimeController.spawn_damage_number` (`combat_runtime_controller.gd:395`), `spawn_player_damage_number` (`:406`), `EffectsSpawner.spawn_health_number` (`effects_spawner.gd:323`) | Optional color parameter forwarded through the existing `healing_color` override channel; no `EffectsSpawner` signature change |
 | Spawn pool | `RoomController._generate_enemy_encounter` (`room_controller.gd:85-138`), boss tables (`:140-162`) | Normal Slime is in the base pool; Yellow/Ground/Ice are depth-gated; Shadow stays rare, Shadow encounters guarantee a Normal Slime popcorn slot, boss rooms use two supports through R2, three through R6, and four thereafter, while mixed minors grow in steps from R5; popcorn levels stay `max(1, player level - 5)`, and popcorn slots respawn while the Shadow/scaled boss remains alive |
-| Visual source selection | `build_slime_direction_textures` (`actor_presentation_runtime_controller.gd:64-77`), `SlimeVisualComponent` frame libraries | Generalized fallback recoloring plus `grey`/`yellow` frame entries |
+| Visual source selection | `build_slime_direction_textures` (`actor_presentation_runtime_controller.gd`), `SlimeVisualComponent` frame libraries, `ActorPaletteMaterial` | Shared Green source frames plus shader palette materials for idle, attack, spawn, shocked, and shadow states; `visual_source` remains catalog metadata for future authored-source variants |
 
 The `ElementCatalog` must not become an alias for `PaletteLibrary`, and
 `PaletteLibrary` must not become the authority for damage. The catalog may ask
@@ -455,9 +452,8 @@ Exit condition: the type system and formulas work without a main scene.
   `hud_controller.gd:358,383` bar textures.
 - Tests: exact level-one stats per variant (Gray `2/2/2/2`), each variant's
   element, Yellow/Purple growth-direction assertions at level 25 (mirroring
-  `rogue_slime_smoke.gd:16-22`), and a grey/yellow recolor assertion on
-  `SlimeGreenLeft.png` output mirroring the existing purple test
-  (`rogue_slime_smoke.gd:77-96`).
+  `rogue_slime_smoke.gd:16-22`), and shader-pair assertions for the grey/yellow
+  palette materials.
 
 Exit condition: a configured Normal Slime renders, has even stats, and spawns
 without missing-texture special cases.
@@ -655,7 +651,7 @@ accepted.
 | `PlayerAttackComponent.apply_hitbox`, `SlimeActor.apply_attack_hit`/`damage_actor`, `HealthComponent` | Verified — damage crosses as float + crit bool only |
 | `MagicRuntimeController` Triangle path | Verified — grey ×1.10 / elemental ×1.15; palette is visual-only today and already reaches `magic_hit_slime` |
 | `EffectsSpawner.spawn_health_number` color rules | Verified — white default, crit yellow, non-white override channel; XP/gold/level-up/shield specials catalogued |
-| Purple-only Green-sheet recolor; `PaletteLibrary` has grey/yellow | Verified — `actor_presentation_runtime_controller.gd:64-77`; grey, yellow, orange, and aquamarine now have full SHADOW/NORMAL/ACCENT entries |
+| Shared Green-sheet source with shader palettes; `PaletteLibrary` has grey/yellow | Verified — `SlimeVisualComponent` and `ActorPaletteMaterial`; grey, yellow, orange, and aquamarine have full SHADOW/NORMAL/ACCENT entries |
 | Encounter pools and Purple rarity | Verified — `room_controller.gd:22-23,108-119,140-162` |
 | `SlimeActor` variant validation | Clarified — the enum lives at `slime_actor.gd:4`; the runtime fallback lives in `configure_slime_variant`, not in the actor |
 | `slime_tuning.gd` per-variant data | **Corrected** — none exists; variant stats come from the AllocationProfile mapping, so the variant catalog adds a new home rather than extending slime_tuning |

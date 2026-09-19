@@ -35,18 +35,12 @@ sneak/ambush mechanic:
 ## Modified Files
 
 ### `scripts/slime_visual_component.gd`
-- `_palette_color()`: added `"purple"` mapping
-  `{"257179": Color8(67,47,102), "38B764": Color8(118,78,142), "A7F070": Color8(200,184,210)}`
-  — dark/mid colors match the player purple palette; the `A7F070` highlight is a
-  lighter lavender (a blend of the purple tones) rather than the near-white used
-  by the other palettes, so the highlight reads as a shaded purple instead of a
-  stark white cap. The tiny `F4F4F4` specular glint stays white (same as every
-  other palette).
-- `build_attack_frame_library()`: added `"purple"` recolored attack frame set.
-- `build_shocked_frame_library()`: added `"purple"` recolored shocked frames.
-- `recolor_direction_textures(slimes, palette, cache)` and
-  `recolor_direction_texture(source, palette, cache)`: generate purple left/right
-  idle textures by recoloring the green ones (no `SlimePurpleLeft.png` artwork).
+- Purple and every other non-green variant now reuses the authored green source
+  frames and receives its palette through the shared slime shader material.
+- No per-pixel `ImageTexture` palette generation is performed for slime idle,
+  attack, shocked, spawn, boss, or shadow frames. The purple direction art is
+  therefore the same source texture as the other generated palettes, with the
+  target colors supplied by `ActorPaletteMaterial`.
 
 ### `scripts/stats_component.gd`
 - `AllocationProfile`: appended `FAVOR_STR_DEF` (index 4 — existing scene ints
@@ -84,8 +78,8 @@ sneak/ambush mechanic:
   sneak silently) but still aggro/approach.
 - `_closest_target()`: passes `_is_slime_targetable` to target lock.
 - `_slime_display_name()`: `"Shadow Slime"` for purple.
-- `_build_slime_direction_textures()`: purple sources the green idle textures then
-  recolors them to purple.
+- `_build_slime_direction_textures()`: purple shares the green idle source
+  textures and applies the purple shader material.
 
 ### `scripts/interaction_component.gd`
 - `closest_target()`: new optional `is_targetable` callable (skips hidden slimes).
@@ -126,7 +120,7 @@ sneak/ambush mechanic:
   **rogue_slime** / 30s main scene headless all PASSED.
 - `tests\rogue_slime_smoke.gd` (added to the suite): verifies `FAVOR_STR_DEF`
   base stats and that VIT stays relatively lower than the balanced profile,
-  that the purple recolor introduces purple mid tones and removes green tones,
+  that the purple shader targets the canonical purple tones,
   and the full ambush state machine (hidden -> strike reveal -> 0.5s window ->
   block stun 1s -> re-hide -> hit extension).
 

@@ -356,6 +356,7 @@ func _load_continue_slot(root: Object, slot: int, loaded_profile: PlayerProfile)
 
 
 func enter_starting_room_from_menu(root: Object) -> void:
+	root.call("_set_title_world_visible", true)
 	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
 	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
 	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false
@@ -370,6 +371,7 @@ func enter_starting_room_from_menu(root: Object) -> void:
 	root.loading_screen_overlay.modulate.a = 1.0
 	root.screen_state_controller.set_state(&"loading")
 	await root.get_tree().process_frame
+	root.call("_ensure_slime_visuals_ready")
 	root.call("_place_player_at_hub_fire")
 	root.call("_apply_player_palette_async", root.screen_state_controller.player_palette_name)
 	root.call("_update_player_aggro_marker_colors")

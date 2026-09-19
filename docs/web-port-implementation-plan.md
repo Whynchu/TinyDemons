@@ -104,7 +104,7 @@ Codebase audit results (evidence in §11):
 | Platform-specific code | None in runtime scripts | Nothing to stub out |
 | Shaders | One simple `canvas_item` shader (`shaders/mp_desaturation.gdshader`) | Compatibility-safe |
 | Audio | 268 `.wav` (~70 MB) + 1 `.mp3` via `sound_manager.gd` | Works; re-encode to OGG for download weight |
-| Runtime perf risk | Per-frame per-pixel occlusion rebuild (`occlusion_renderer.gd:386-415`); startup recolors cached (`slime_visual_component.gd`, `player_animation_component.gd`) | Main thing to profile on weak devices; loading screen absorbs startup cost |
+| Runtime perf risk | Per-frame per-pixel occlusion rebuild (`occlusion_renderer.gd:386-415`); source-frame slicing and shader material warmup (`slime_visual_component.gd`, `player_animation_component.gd`) | Main thing to profile on weak devices; loading screen absorbs remaining startup cost |
 | Dependencies | No C#, GDExtension, autoloads, threads | Nothing blocks single-threaded export |
 
 ## 3. Platform facts that shape the plan
@@ -454,10 +454,10 @@ Key evidence: renderer `project.godot:109`; input map `project.godot:26-103`;
 single poll seam `gameplay.gd:81` + `input_router.gd:19-28`; no `_input`
 handlers, no mouse/touch usage in `scripts/`; saves `user://`-only
 (`profile_save_service.gd:4-7`); occlusion hotspot
-`occlusion_renderer.gd:386-415`; startup recolors cached
-(`slime_visual_component.gd:38-48,121-133`,
-`actor_presentation_runtime_controller.gd:64-106`); ~70 MB WAV under
-`assets/sounds/`; single simple shader `shaders/mp_desaturation.gdshader`.
+`occlusion_renderer.gd:386-415`; slime source-frame slicing and shared shader
+materials (`slime_visual_component.gd`, `actor_palette_material.gd`); ~70 MB
+WAV under `assets/sounds/`; simple canvas-item shaders for palette swap and MP
+desaturation.
 
 ### Platform research (2026-08-26)
 

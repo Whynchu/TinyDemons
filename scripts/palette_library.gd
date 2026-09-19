@@ -11,11 +11,27 @@ const DATA := preload("res://resources/definitions/palette_library.tres") as Pal
 static var PALETTE_NAMES: Array = DATA.palette_names
 static var SELECTABLE_PALETTES: Array = DATA.selectable_palettes
 static var REST_FIRE_PALETTES: Array = DATA.rest_fire_palettes
-static var SHADOW: Dictionary = _normalize_color_dict(DATA.shadow)
-static var NORMAL: Dictionary = _normalize_color_dict(DATA.normal)
-static var ACCENT: Dictionary = _normalize_color_dict(DATA.accent)
+static var SHADOW: Dictionary = _normalize_color_dict(_with_fallbacks(DATA.shadow, {
+	"blue": Color8(41, 54, 111), "orange": Color8(171, 82, 54), "green": Color8(37, 113, 121), "red": Color8(93, 39, 93),
+	"yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82), "purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116), "grey_orb": Color8(86, 108, 134)
+}))
+static var NORMAL: Dictionary = _normalize_color_dict(_with_fallbacks(DATA.normal, {
+	"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83),
+	"yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151), "grey_orb": Color8(148, 176, 194)
+}))
+static var ACCENT: Dictionary = _normalize_color_dict(_with_fallbacks(DATA.accent, {
+	"blue": Color8(65, 166, 246), "orange": Color8(255, 205, 117), "green": Color8(167, 240, 112), "red": Color8(239, 125, 87),
+	"yellow": Color8(255, 240, 150), "purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194), "aquamarine": Color8(134, 203, 255), "grey_orb": Color8(244, 244, 244)
+}))
 static var ARCHETYPE_HIGHLIGHTS: Array = _normalize_color_array(DATA.archetype_highlights)
 static var WHITE: Color = _normalize_color(DATA.white)
+
+
+static func _with_fallbacks(authored: Dictionary, fallbacks: Dictionary) -> Dictionary:
+	var result := fallbacks.duplicate(true)
+	for key in authored:
+		result[key] = authored[key]
+	return result
 
 
 ## .tres serialization stores floats that can sit one ULP below the authored
@@ -56,15 +72,15 @@ static func archetype_highlights() -> Array:
 
 
 static func shadow(name: String) -> Color:
-	return SHADOW.get(name, SHADOW["blue"])
+	return SHADOW.get(name, Color8(41, 54, 111))
 
 
 static func normal(name: String) -> Color:
-	return NORMAL.get(name, NORMAL["blue"])
+	return NORMAL.get(name, Color8(59, 93, 201))
 
 
 static func accent(name: String) -> Color:
-	return ACCENT.get(name, NORMAL.get(name, NORMAL["blue"]))
+	return ACCENT.get(name, NORMAL.get(name, Color8(59, 93, 201)))
 
 
 static func pair(name: String) -> Array[Color]:

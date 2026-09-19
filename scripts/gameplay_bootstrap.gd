@@ -20,6 +20,7 @@ const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_control
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/touch_controls_layer.gd")
+const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/performance_capture_service.gd")
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/cloud_save_panel.gd")
 const SLIME_ROSTER_SIZE := 13
@@ -45,6 +46,9 @@ static func _phase(label: StringName) -> void:
 		boot_phases[_phase_label] = int(boot_phases.get(_phase_label, 0)) + (now - _phase_start_usec)
 	_phase_start_usec = now
 	_phase_label = label
+
+func boot_phase_report() -> Dictionary:
+	return boot_phases.duplicate()
 
 
 func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:
@@ -92,6 +96,7 @@ func initialize(root: GameplayState) -> void:
 	root.screen_state_controller = _add_runtime_node(root, ScreenStateController, "ScreenStateController") as ScreenStateController
 	root.call("_apply_profile_to_runtime")
 	root.gameplay_frame_controller = _add_runtime_node(root, GameplayFrameController, "GameplayFrameController") as GameplayFrameController
+	root.performance_capture_service = _add_runtime_node(root, PERFORMANCE_CAPTURE_SERVICE_SCRIPT, "PerformanceCaptureService")
 	var effects_tuning := root.effects_tuning
 	root.walkable_area = _add_runtime_node(root, WalkableArea, "WalkableArea") as WalkableArea
 	root.actor_collision_system = _add_runtime_node(root, ActorCollisionSystem, "ActorCollisionSystem") as ActorCollisionSystem
@@ -143,7 +148,7 @@ func initialize(root: GameplayState) -> void:
 	var minimap_travel_callback := Callable(root, "_on_minimap_flame_travel_requested")
 	if not root.dungeon_minimap_controller.is_connected(&"flame_travel_requested", minimap_travel_callback):
 		root.dungeon_minimap_controller.connect(&"flame_travel_requested", minimap_travel_callback)
-	if root.debug_start_in_boss_room:
+	if root.debug_start_in_boss_room or bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false)):
 		if root.dungeon_map_controller.has_complete_layout():
 			for candidate_id in dungeon_graph.get_room_ids():
 				var candidate := dungeon_graph.get_room(candidate_id)
@@ -220,7 +225,14 @@ func initialize(root: GameplayState) -> void:
 	_phase(&"build_fire_and_demon")
 	root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow")
 	_phase(&"build_slime_textures")
-	root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames")
+	var benchmark_mode := bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false))
+	var starts_in_title := not bool(root.get("debug_start_in_boss_room")) and not benchmark_mode and not (profile.has_started and (profile.pending_route == "hub" or profile.pending_route == "run"))
+	if starts_in_title:
+		# Slime frame generation is the largest boot phase. The loading screen at
+		# run entry owns this work; title/menu boot does not need enemy visuals.
+		pass
+	else:
+		root.call("_ensure_slime_visuals_ready")
 	_phase(&"build_ui_enemy_health")
 	root.call("_build_enemy_health_ui")
 	_phase(&"build_ui_interact_prompt")
@@ -256,7 +268,7 @@ func initialize(root: GameplayState) -> void:
 	_phase(&"room_state_and_route")
 	root.room_controller.initialize_boss_jump_phase_pool(root)
 	root._apply_room_state(); root._build_depth_lists()
-	if bool(root.get("debug_start_in_boss_room")):
+	if bool(root.get("debug_start_in_boss_room")) or bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false)):
 		# Initialize normal run resources without replacing the dungeon and boss room
 		# that were already selected and applied above.
 		root.call("_begin_new_run", true)
@@ -265,8 +277,10 @@ func initialize(root: GameplayState) -> void:
 		root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
 		root.call("_update_player_shadow")
 		root.call("_build_depth_lists")
+		root.call("_set_title_world_visible", true)
 		_enter_debug_gameplay(root)
 		root.set("loading_screen_active", false)
+		ProjectSettings.set_setting("debug/benchmark_start_in_boss_room", false)
 	else:
 		var route := profile.pending_route
 		profile.pending_route = "title"
@@ -320,6 +334,7 @@ func _place_debug_player_at_boss_entry(root: GameplayState, player: Sprite2D) ->
 
 func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> void:
 	root.loading_screen_active = false
+	root.call("_set_title_world_visible", false)
 	if boot_loading != null:
 		boot_loading.visible = false
 	var screens := root.screen_state_controller as ScreenStateController
