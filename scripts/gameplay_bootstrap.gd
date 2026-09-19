@@ -232,7 +232,7 @@ func initialize(root: GameplayState) -> void:
 		# run entry owns this work; title/menu boot does not need enemy visuals.
 		pass
 	else:
-		root.call("_ensure_slime_visuals_ready")
+		root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
 	_phase(&"build_ui_enemy_health")
 	root.call("_build_enemy_health_ui")
 	_phase(&"build_ui_interact_prompt")
@@ -277,7 +277,7 @@ func initialize(root: GameplayState) -> void:
 		root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
 		root.call("_update_player_shadow")
 		root.call("_build_depth_lists")
-		root.call("_set_title_world_visible", true)
+		root.actor_presentation_runtime_controller.set_title_world_visible(root, true)
 		_enter_debug_gameplay(root)
 		root.set("loading_screen_active", false)
 		ProjectSettings.set_setting("debug/benchmark_start_in_boss_room", false)
@@ -334,7 +334,7 @@ func _place_debug_player_at_boss_entry(root: GameplayState, player: Sprite2D) ->
 
 func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> void:
 	root.loading_screen_active = false
-	root.call("_set_title_world_visible", false)
+	root.actor_presentation_runtime_controller.set_title_world_visible(root, false)
 	if boot_loading != null:
 		boot_loading.visible = false
 	var screens := root.screen_state_controller as ScreenStateController

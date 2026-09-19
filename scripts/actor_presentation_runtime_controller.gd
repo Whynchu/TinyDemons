@@ -2,6 +2,10 @@ extends Node
 class_name ActorPresentationRuntimeController
 
 const ACTOR_DEPTH_TIE_WINDOW := 1.5
+var slime_visuals_ready := false
+var slime_attack_frames_by_palette: Dictionary = {}
+var slime_shocked_frames_by_palette: Dictionary = {}
+var slime_spawn_frames_by_palette: Dictionary = {}
 
 
 ## Owns actor-facing presentation: depth ordering, occlusion, authored geometry
@@ -80,12 +84,12 @@ func build_slime_attack_frames(root: Object) -> void:
 	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
 	var frame_size: Vector2i = root.get("SLIME_ATTACK_FRAME_SIZE")
 	var frames := SlimeVisualComponent.build_attack_frame_library(library, frame_size, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
-	root.set("slime_attack_frames_by_palette", frames)
+	slime_attack_frames_by_palette = frames
 	SlimeVisualComponent.assign_attack_frames(root.get("slimes") as Array[Sprite2D], frames)
 
 
 func assign_slime_attack_frames(root: Object) -> void:
-	SlimeVisualComponent.assign_attack_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_attack_frames_by_palette") as Dictionary)
+	SlimeVisualComponent.assign_attack_frames(root.get("slimes") as Array[Sprite2D], slime_attack_frames_by_palette)
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
 	SlimeVisualComponent.assign_boss_ability_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
@@ -97,7 +101,7 @@ func build_slime_shocked_frames(root: Object) -> void:
 	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
 	var frame_size: Vector2i = root.get("SLIME_ATTACK_FRAME_SIZE")
 	var frames := SlimeVisualComponent.build_shocked_frame_library(library, frame_size, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
-	root.set("slime_shocked_frames_by_palette", frames)
+	slime_shocked_frames_by_palette = frames
 	SlimeVisualComponent.assign_shocked_frames(root.get("slimes") as Array[Sprite2D], frames)
 
 
@@ -106,16 +110,38 @@ func build_slime_spawn_frames(root: Object) -> void:
 	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
 	var frame_size: Vector2i = root.get("SLIME_ATTACK_FRAME_SIZE")
 	var frames := SlimeVisualComponent.build_spawn_frame_library(library, frame_size, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
-	root.set("slime_spawn_frames_by_palette", frames)
+	slime_spawn_frames_by_palette = frames
 	SlimeVisualComponent.assign_spawn_frames(root.get("slimes") as Array[Sprite2D], frames)
 
 
 func assign_slime_spawn_frames(root: Object) -> void:
-	SlimeVisualComponent.assign_spawn_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_spawn_frames_by_palette") as Dictionary)
+	SlimeVisualComponent.assign_spawn_frames(root.get("slimes") as Array[Sprite2D], slime_spawn_frames_by_palette)
+
+
+func ensure_slime_visuals_ready(root: Object) -> void:
+	if slime_visuals_ready:
+		return
+	build_slime_direction_textures(root)
+	build_slime_attack_frames(root)
+	build_slime_shocked_frames(root)
+	build_slime_spawn_frames(root)
+	assign_slime_attack_frames(root)
+	assign_slime_shocked_frames(root)
+	assign_slime_spawn_frames(root)
+	slime_visuals_ready = true
+
+
+func set_title_world_visible(root: Object, visible: bool) -> void:
+	var map_canvas := root.get("map_root") as CanvasItem
+	if map_canvas != null:
+		map_canvas.visible = visible
+	var actors_canvas := root.get_node_or_null("Actors") as CanvasItem
+	if actors_canvas != null:
+		actors_canvas.visible = visible
 
 
 func assign_slime_shocked_frames(root: Object) -> void:
-	SlimeVisualComponent.assign_shocked_frames(root.get("slimes") as Array[Sprite2D], root.get("slime_shocked_frames_by_palette") as Dictionary)
+	SlimeVisualComponent.assign_shocked_frames(root.get("slimes") as Array[Sprite2D], slime_shocked_frames_by_palette)
 	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
 	SlimeVisualComponent.assign_boss_ability_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
@@ -261,6 +287,7 @@ func update_depth_sorting(root: Object) -> void:
 
 
 func update_actor_occlusion(root: Object, delta: float) -> void:
+	var started_usec := Time.get_ticks_usec()
 	var player := root.get("player") as Sprite2D
 	var target := root.call("_valid_current_target") as Sprite2D
 	var actors: Array[Sprite2D] = [player]
@@ -274,6 +301,9 @@ func update_actor_occlusion(root: Object, delta: float) -> void:
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
 		equipment_visual.update_occlusion(root.gameplay_frame_controller.equipment_visual_context(root), delta)
+	var capture := root.get("performance_capture_service") as Node
+	if capture != null and bool(capture.get("capturing")):
+		capture.call("record_scope", &"actor_occlusion", Time.get_ticks_usec() - started_usec)
 
 
 func is_actor_occlusion_flashing(root: Object, actor: Sprite2D) -> bool:

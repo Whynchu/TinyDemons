@@ -78,7 +78,8 @@ func _update_music_state() -> void:
 	else:
 		_fade_out_music()
 func _physics_process(delta: float) -> void:
-	var capture_active := OS.is_debug_build() and performance_capture_service != null and bool(performance_capture_service.get("capturing"))
+	var capture_service := get("performance_capture_service") as Node
+	var capture_active := OS.is_debug_build() and capture_service != null and bool(capture_service.get("capturing"))
 	var started_usec := Time.get_ticks_usec() if capture_active else 0
 	if input_router != null:
 		var input_started_usec := Time.get_ticks_usec() if capture_active else 0
@@ -86,18 +87,18 @@ func _physics_process(delta: float) -> void:
 		if input_device_tracker != null:
 			input_device_tracker.call("observe_polled_input")
 		if capture_active:
-			performance_capture_service.call("record_scope", &"input_poll", Time.get_ticks_usec() - input_started_usec)
+			capture_service.call("record_scope", &"input_poll", Time.get_ticks_usec() - input_started_usec)
 	var frame_started_usec := Time.get_ticks_usec() if capture_active else 0
 	gameplay_frame_controller.tick(self, delta)
 	if capture_active:
-		performance_capture_service.call("record_scope", &"frame_controller", Time.get_ticks_usec() - frame_started_usec)
+		capture_service.call("record_scope", &"frame_controller", Time.get_ticks_usec() - frame_started_usec)
 	# Depth sorting runs inside the frame schedule for gameplay; the world is
 	# frozen during dialogue/overlays, so the last sort still stands there.
 	_update_player_shadow()
 	_update_roll_dust(0.0)
 	_update_large_room_camera()
 	if capture_active:
-		performance_capture_service.call("record_scope", &"post_frame", Time.get_ticks_usec() - started_usec)
+		capture_service.call("record_scope", &"post_frame", Time.get_ticks_usec() - started_usec)
 func _update_game_over_input() -> void:
 	if screen_state_controller != null:
 		screen_state_controller.update_game_over_input(self)
