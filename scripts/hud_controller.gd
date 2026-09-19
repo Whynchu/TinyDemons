@@ -444,6 +444,21 @@ func _update_cooldown_icon(root: Object, ability_key: StringName, remaining: flo
 
 
 func update_overworld(root: Object, delta: float, ui_z: int) -> void:
+	# Pause and Hub keep the overworld HUD node alive for the currency/status
+	# presentation, but the interactive gameplay HUD is covered by the menu.
+	# Rebuilding prompt textures, cooldown textures, and every enemy overhead bar
+	# on every physics tick here is needless steady-state work on mobile and was
+	# especially noticeable while idling in menus. Keep only the small animated
+	# currency/timer elements that remain visible above the menu.
+	var screen_state := root.get("screen_state_controller") as Node
+	if screen_state != null:
+		var state := StringName(screen_state.get("state"))
+		if state == &"pause" or state == &"hub":
+			var menu_timer := fmod(gold_animation_timer + delta, 0.48)
+			gold_animation_timer = menu_timer
+			update_gold_indicator(gold_indicator, gold_animation_frames, menu_timer)
+			update_run_timer(root)
+			return
 	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter, root.get("input_device_tracker") as Node, Callable(root, "_pixel_text_texture"))
 	update_ability_prompt_hud(ability_prompt_hud, root.get("input_device_tracker") as Node, root.get("input_router") as InputRouter, Callable(root, "_pixel_text_texture"))
 	update_cooldown_hud(root, delta)
