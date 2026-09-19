@@ -107,7 +107,10 @@ func initialize(new_context: PlayerEquipmentVisualContext) -> void:
 	_create_layer(parent, "EquipmentShieldFront", 1)
 	_create_layer(parent, "EquipmentSwordFront", 1)
 	_create_occlusion_material()
-	precache_all_palettes(new_context)
+	# Only the active palette (built by apply_palette) and the grey MP-reference
+	# set are needed at boot. Other palettes build lazily on the next palette
+	# change, which removes the full eight-palette recolor from startup.
+	ensure_palette(new_context, "grey")
 
 
 func begin_imbue(new_context: PlayerEquipmentVisualContext, element: int, duration: float) -> void:
@@ -345,14 +348,15 @@ func _build_palette_frames(library: SpriteFrameLibrary, palette_name: String) ->
 	return built
 
 
-func precache_all_palettes(new_context: PlayerEquipmentVisualContext) -> void:
-	context = new_context
+## Builds a palette's equipment frames on demand. Called with the active palette
+## and the grey MP-reference set at boot, then lazily on later palette changes.
+func ensure_palette(new_context: PlayerEquipmentVisualContext, palette_name: String) -> void:
+	if frames_by_palette.has(palette_name):
+		return
 	var library := new_context.sprite_frame_library
 	if library == null:
 		return
-	for palette_name in PaletteLibrary.PALETTE_NAMES:
-		if not frames_by_palette.has(palette_name):
-			frames_by_palette[palette_name] = _build_palette_frames(library, palette_name)
+	frames_by_palette[palette_name] = _build_palette_frames(library, palette_name)
 
 
 func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color) -> Texture2D:

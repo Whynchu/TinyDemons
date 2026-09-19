@@ -10,6 +10,15 @@ const SLIME_AI_MOVEMENT_BUDGET := 10
 
 var _slime_movement_cursor := 0
 
+## Run-scoped cache for the boss jump/slam context. It depends only on stable
+## root references and callables, but was previously rebuilt for every active
+## slime on every frame. Call invalidate_contexts() if a source object is swapped.
+var _boss_jump_slam_context_cache: BossJumpSlamContext = null
+
+
+func invalidate_contexts() -> void:
+	_boss_jump_slam_context_cache = null
+
 
 ## Owns the enemy runtime loop: aggro, attacks, scooting, knockback, and the
 ## collision geometry queries used by those systems. GameplayState keeps only
@@ -182,9 +191,18 @@ func move_slimes(root: Object, delta: float) -> void:
 	_sanitize_active_slime_positions(root, slimes)
 	prepare_slime_frame_cache(root)
 	(root.get("combat_runtime_controller") as CombatRuntimeController).clear_enemy_max_health_frame_cache()
+	# Hoist the per-slime callbacks out of the loop: they are identical for every
+	# slime and were previously reconstructed for each one, every frame.
+	var is_dead := Callable(root, "_is_slime_dead")
+	var is_spawn_locked := Callable(root, "_is_slime_spawn_locked")
+	var update_knockback := Callable(root, "_update_slime_knockback")
+	var update_attack := Callable(root, "_update_slime_attack")
+	var is_aggroed := Callable(root, "_is_slime_aggroed")
+	var aggro_target := Callable(root, "_aggro_slime_target")
+	var update_scoot := Callable(root, "_update_slime_scoot")
 	# Spatial broad-phase for the crowd: built once per frame so slime-slime
 	# contact and AI steering only examine spatially local slimes.
-	(root.get("actor_collision_system") as ActorCollisionSystem).build_slime_grid(slimes, Callable(root, "_actor_foot"), Callable(root, "_is_slime_spawn_locked"))
+	(root.get("actor_collision_system") as ActorCollisionSystem).build_slime_grid(slimes, Callable(root, "_actor_foot"), is_spawn_locked)
 	# Per-frame movement budget: only a rotating subset of the crowd runs its
 	# expensive movement/steering pass each frame, so a packed room cannot spend
 	# the whole frame on enemy walkability. Combat, knockback, and attack stay at
@@ -205,9 +223,9 @@ func move_slimes(root: Object, delta: float) -> void:
 		var slime_actor := slime as SlimeActor
 		if slime_actor != null:
 			slime_actor.tick_components(delta)
-			slime_actor.tick_runtime(delta, Callable(root, "_is_slime_dead"), Callable(root, "_update_slime_knockback"), Callable(root, "_update_slime_attack"), Callable(root, "_is_slime_aggroed"), Callable(root, "_aggro_slime_target"), Callable(root, "_update_slime_scoot"), allow_movement)
+			slime_actor.tick_runtime(delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
 			continue
-		SlimeActor.tick_legacy_runtime(slime, delta, Callable(root, "_is_slime_dead"), Callable(root, "_update_slime_knockback"), Callable(root, "_update_slime_attack"), Callable(root, "_is_slime_aggroed"), Callable(root, "_aggro_slime_target"), Callable(root, "_update_slime_scoot"), allow_movement)
+		SlimeActor.tick_legacy_runtime(slime, delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
 	if last_movement_index >= 0:
 		_slime_movement_cursor = (last_movement_index + 1) % maxi(count, 1)
 	var separation_passes := 1 if slimes.size() >= 5 else 2
@@ -324,6 +342,8 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 
 
 func _boss_jump_slam_context(root: Object) -> BossJumpSlamContext:
+	if _boss_jump_slam_context_cache != null:
+		return _boss_jump_slam_context_cache
 	var context := BossJumpSlamContext.new()
 	context.player = root.get("player") as Sprite2D
 	context.rng = root.get("rng") as RandomNumberGenerator
@@ -342,6 +362,7 @@ func _boss_jump_slam_context(root: Object) -> BossJumpSlamContext:
 	context.slime_shadow_anchor = Callable(root, "_slime_shadow_anchor")
 	context.actor_foot = Callable(root, "_actor_foot")
 	context.nearest_slime_walkable_point = Callable(root, "_nearest_slime_walkable_point")
+	_boss_jump_slam_context_cache = context
 	return context
 
 

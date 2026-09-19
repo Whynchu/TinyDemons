@@ -22,9 +22,13 @@ func _initialize() -> void:
 	if animation != null and screen != null:
 		screen.starter_flame_index = 2
 		gameplay.call("_update_archetype_screen")
-		var yellow_frames: Dictionary = animation.frames_by_palette.get("yellow", {}) as Dictionary
-		var yellow_idle: Array[Texture2D] = yellow_frames.get("idle", []) as Array[Texture2D]
-		_expect(not yellow_idle.is_empty() and not screen.archetype_preview_frames.is_empty() and screen.archetype_preview_frames[0] == yellow_idle[0], "electric character creation preview uses the pre-rendered yellow idle", failures)
+		# The player GPU palette path keeps no per-palette frames; the preview is
+		# the base idle recolored on demand for this one palette.
+		var expected_frame: Texture2D = null
+		if not animation.idle_frames.is_empty():
+			expected_frame = animation.recolor_texture(animation.idle_frames[0], "yellow")
+		var preview_frame: Texture2D = screen.archetype_preview_frames[0] if not screen.archetype_preview_frames.is_empty() else null
+		_expect(expected_frame != null and preview_frame == expected_frame, "electric character creation preview uses the selected yellow palette", failures)
 	if profile != null:
 		var original_profile := profile.to_dictionary()
 		profile.has_started = true

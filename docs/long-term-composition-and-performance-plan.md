@@ -525,6 +525,56 @@ The remaining ~40 ms of the boss entry is the boss activation (enemy spawn +
 chest/room state) and the synchronous profile save; those are separate targets
 from the accent hitch.
 
+### Measured improvement — 2026-09-19 (startup + per-frame allocation churn)
+
+Two measured wins landed without changing authored art contracts.
+
+**Per-frame palette-context churn.** The closure-heavy runtime contexts
+(`animation_context`, `equipment_visual_context`, `magic_context`,
+`interaction_context`, `guard_context`, `roll_context`) were rebuilt on every
+call, and the boss jump/slam context was rebuilt per active slime per frame. The
+harness context probe now reports (combat room, per physics frame):
+
+| Metric | Before | After |
+|---|---:|---:|
+| Context constructions | 13.08 | 0.12 |
+| Callable fields installed | 443.7 | 3.4 |
+| Context build CPU | 203 µs | ~13 µs |
+
+Contexts are now built once per run and cached in `GameplayFrameController`
+(run-scoped, refreshed only for genuinely volatile fields such as
+`occluder_sprites`); per-slime callbacks are hoisted out of the crowd loop.
+
+**GPU palette swap vs. per-palette texture baking.** The player no longer
+generates or occlusion-warms a recoloured texture per palette.
+`PlayerAnimationComponent` serves raw fullsheet source frames plus a single baked
+grey MP-reference set, and `shaders/palette_swap.gdshader` (via
+`ActorPaletteMaterial`) applies the active palette through one shared material
+per palette. `shaders/mp_desaturation.gdshader` also carries the swap so the
+existing player material slot still owns MP desaturation. Equipment visuals now
+build palettes lazily (`ensure_palette`) — the active palette plus grey at boot,
+others on the next palette change. Boot phase timings (desktop headless,
+temporary-profile harness):
+
+| Phase | Before | After |
+|---|---:|---:|
+| `build_player_animation` | 1437–1650 ms | ~345 ms |
+| `refresh_player_cloak_visual` | 1462–1593 ms | ~360 ms |
+| `initialize_player` (equipment) | 1228 ms | ~330 ms |
+| **total boot** | **~6.6 s** | **~3.6–3.9 s** |
+
+The heavily colour-mapped slime frames were also migrated to a GPU palette-swap
+material, which cut `build_slime_textures` 2433 → 450 ms, but that path rendered
+incorrectly in playtest and was **reverted**: slimes remain on the proven CPU
+recolor (`SlimeVisualComponent.recolor_*`), and the shader attempt was removed
+rather than left as dead code. Re-attempting it requires a screenshot-verified
+visual pass; the colour-pair mapping itself is exact and was characterized by a
+parity test before removal. Slime textures are now the largest remaining startup
+phase (~1.85 s), gated on that verification.
+
+The baked player palette sheets were reduced to the grey MP-reference set only
+(~420 unused files removed); `tools/bake_palettes.gd` now bakes only that set.
+
 ## Guardrails
 
 - Prefer a new definition or direct typed dependency over a new global lookup.

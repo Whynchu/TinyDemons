@@ -55,6 +55,38 @@ func slice_sheet_row(path: String, row: int, frame_size: Vector2i, frame_count: 
 	return frames
 
 
+## Slices a full-width row and drops fully transparent frames, matching the
+## offline palette baker's frame set. The GPU palette path uses this so blank
+## authored slots never render as empty frames.
+func slice_full_row_visible(path: String, row: int, frame_size: Vector2i) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	if not ResourceLoader.exists(path):
+		return frames
+	var texture := load(path) as Texture2D
+	if texture == null:
+		return frames
+	var sheet := _cached_image(texture)
+	var frame_count := sheet.get_width() / frame_size.x
+	for frame_index in frame_count:
+		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
+		frame.blit_rect(
+			sheet,
+			Rect2i(frame_index * frame_size.x, row * frame_size.y, frame_size.x, frame_size.y),
+			Vector2i.ZERO
+		)
+		if _has_visible_pixel(frame):
+			frames.append(ImageTexture.create_from_image(frame))
+	return frames
+
+
+func _has_visible_pixel(image: Image) -> bool:
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+	return false
+
+
 func dither_roll_dust_frame(source: Texture2D, dissolve: float) -> Texture2D:
 	var source_image := _cached_image(source)
 	var image := source_image.duplicate()

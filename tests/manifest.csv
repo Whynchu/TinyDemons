@@ -131,3 +131,4 @@ script,role,state,owner,target,load,notes
 "fusion_menu_preview","report","unverified","gear & fusion","editor preview of fusion menu layout","pure","intentional standalone preview, not a runner test"
 "puzzle_map_reference_diff_report","report","unverified","generated layouts","R4/R5 authored-grid reference diff report","pure","intentional standalone report, not a runner test"
 "performance_scenario_harness","diagnostic","unverified","performance","fixed-seed 7-scenario frame-time, node/sprite, and transition baseline; desktop + A17 target","main","headless; not part of the release gate"
+"palette_material_parity_smoke","owner","verified","player presentation","GPU palette-swap mapping matches legacy CPU actor recolor","pure","all 8 palettes; guards the player shader migration"

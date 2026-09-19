@@ -1,13 +1,13 @@
 extends SceneTree
 
-## One-time asset baker. Run headless:
+## Grey-reference asset baker. Run headless:
 ##   godot --headless --path TinyDemons -s res://tools/bake_palettes.gd
 ##
-## Generates every palette-recolored player frame and packs them into per-animation
-## sprite sheets under res://assets/baked/player/{palette}/{anim}.png, plus the
-## cloaked Demon Cloak variant under res://assets/baked/player_cloaked/{palette}/{anim}.png.
-## The game loads these at boot instead of recoloring at runtime, removing the runtime
-## recolor cost.  Run it whenever the palette set or player art changes.
+## The player renders every palette through the shared GPU palette-swap material,
+## so the only baked set still needed is the grey MP-reference used by the
+## desaturation shader. This bakes that set under res://assets/baked/player/grey
+## and res://assets/baked/player_cloaked/grey. Run it whenever the player art
+## changes.
 
 const OUT_ROOT := "res://assets/baked/player"
 const CLOAKED_OUT_ROOT := "res://assets/baked/player_cloaked"
@@ -17,6 +17,8 @@ const DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend.png"
 const DEFEND_CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend-Cloaked.png"
 const PLAYER_FRAME := Vector2i(36, 36)
 const ATTACK_FRAME := Vector2i(36, 36)
+## The grey MP-reference is the only palette the runtime still loads from disk.
+const REFERENCE_PALETTES := ["grey"]
 
 const FULL_SHEET_ROWS := {
 	"idle": 0,
@@ -83,7 +85,7 @@ func _bake_sheet(library: SpriteFrameLibrary, full_sheet_path: String, out_root:
 	base["between"] = [between_frames[0]] as Array[Texture2D] if not between_frames.is_empty() else []
 	base["after"] = [after_frames[0]] as Array[Texture2D] if not after_frames.is_empty() else []
 
-	for palette_name: String in PaletteLibrary.PALETTE_NAMES:
+	for palette_name: String in REFERENCE_PALETTES:
 		var dir := out_root + "/" + palette_name
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 		for key: String in base:

@@ -24,6 +24,28 @@ const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/cloud_save_panel.gd")
 const SLIME_ROSTER_SIZE := 13
 
+## Opt-in boot phase timing for the performance harness. Disabled by default.
+static var boot_diagnostics_enabled := false
+static var boot_phases: Dictionary = {}
+static var _phase_start_usec := 0
+static var _phase_label := &""
+
+
+static func begin_boot_diagnostics() -> void:
+	boot_phases.clear()
+	_phase_start_usec = 0
+	_phase_label = &""
+
+
+static func _phase(label: StringName) -> void:
+	if not boot_diagnostics_enabled:
+		return
+	var now := Time.get_ticks_usec()
+	if _phase_start_usec > 0:
+		boot_phases[_phase_label] = int(boot_phases.get(_phase_label, 0)) + (now - _phase_start_usec)
+	_phase_start_usec = now
+	_phase_label = label
+
 
 func _add_runtime_node(root: GameplayState, script: Script, node_name: StringName, parent: Node = null) -> Node:
 	var node := script.new() as Node
@@ -184,19 +206,54 @@ func initialize(root: GameplayState) -> void:
 	await root.get_tree().process_frame
 	# Warm long-running music after the loading screen has had a frame to draw;
 	# the first flame-room transition can then start its track from memory.
+	_phase(&"music_preload")
 	root.sound_manager.preload_music_tracks()
 	# Parse and instantiate the boss authoring templates while the boot loading
 	# screen is visible. Room entry can then reuse them without loading a second
 	# main-scene tree or cloning a fresh boss guide source on the transition
 	# frame.
+	_phase(&"prewarm_transition_assets")
 	root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
+	_phase(&"build_player_animation")
 	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root)); root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow"); root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames"); root.call("_build_enemy_health_ui"); root.call("_build_interact_prompt"); root.call("_build_npc_dialogue"); root.call("_build_room_number_indicator"); root.call("_build_game_over_ui"); root.call("_build_run_complete_ui"); root.call("_build_title_screen"); root.cloud_save_panel.build(root.ui); root.call("_build_settings_ui"); root.call("_build_hub_ui"); root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+	root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
+	_phase(&"build_fire_and_demon")
+	root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow")
+	_phase(&"build_slime_textures")
+	root.call("_build_slime_direction_textures"); root.call("_build_slime_attack_frames"); root.call("_build_slime_shocked_frames"); root.call("_build_slime_spawn_frames"); root.call("_assign_slime_attack_frames"); root.call("_assign_slime_shocked_frames"); root.call("_assign_slime_spawn_frames")
+	_phase(&"build_ui_enemy_health")
+	root.call("_build_enemy_health_ui")
+	_phase(&"build_ui_interact_prompt")
+	root.call("_build_interact_prompt")
+	_phase(&"build_ui_npc_dialogue")
+	root.call("_build_npc_dialogue")
+	_phase(&"build_ui_room_number")
+	root.call("_build_room_number_indicator")
+	_phase(&"build_ui_game_over")
+	root.call("_build_game_over_ui")
+	_phase(&"build_ui_run_complete")
+	root.call("_build_run_complete_ui")
+	_phase(&"build_ui_title")
+	root.call("_build_title_screen")
+	_phase(&"build_ui_cloud_panel")
+	root.cloud_save_panel.build(root.ui)
+	_phase(&"build_ui_settings")
+	root.call("_build_settings_ui")
+	_phase(&"build_ui_hub")
+	root.call("_build_hub_ui")
+	_phase(&"build_ui_scene_transition_and_layout")
+	root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
+	_phase(&"refresh_player_cloak_visual")
 	root.call("_refresh_player_cloak_visual")
+	_phase(&"set_title_state")
 	(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
+	_phase(&"initialize_player")
 	_initialize_player(root, player)
+	_phase(&"initialize_walkable_area")
 	_initialize_walkable_area(root, 0.35, 1.25)
+	_phase(&"initialize_slimes")
 	_initialize_slimes(root, slimes)
+	_phase(&"room_state_and_route")
 	root.room_controller.initialize_boss_jump_phase_pool(root)
 	root._apply_room_state(); root._build_depth_lists()
 	if bool(root.get("debug_start_in_boss_room")):
@@ -227,6 +284,12 @@ func initialize(root: GameplayState) -> void:
 			root.call("_enter_starting_room_from_menu")
 		else:
 			_show_title_after_boot(root, boot_loading)
+	# Contexts built earlier in bootstrap (build_frames runs before
+	# _initialize_player creates the player components) may have captured null
+	# dependencies. Discard them so the first active frame rebuilds against fully
+	# wired state.
+	root.gameplay_frame_controller.invalidate_contexts()
+	_phase(&"finalize")
 	root.set("boot_active", false)
 
 
@@ -350,7 +413,9 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
 	root.player_aspect_ability_component.call("configure_mode_cooldowns", 2.0, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
+	_phase(&"initialize_player_equipment_visual")
 	equipment_visual.initialize(root.gameplay_frame_controller.equipment_visual_context(root)); root.player_equipment_visual_component = equipment_visual
+	_phase(&"initialize_player_after_equipment")
 	root._set_target_ui_visible(false)
 	var player_health: float = root._player_max_health(); health.maximum_health = player_health; health.reset(player_health); root.player_display_health = player_health; root._update_player_health_ui()
 	root._update_player_mp_ui()

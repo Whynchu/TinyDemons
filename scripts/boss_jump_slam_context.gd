@@ -4,6 +4,15 @@ class_name BossJumpSlamContext
 ## Typed dependencies for BossJumpSlamComponent. The gameplay controller builds
 ## this from the runtime so the component stays blind (no root reach-ins).
 
+## Diagnostic construction count. The performance harness resets and reads this
+## to confirm the context is cached instead of rebuilt per slime per frame.
+static var build_count := 0
+
+
+func _init() -> void:
+	build_count += 1
+
+
 var player: Sprite2D = null
 var rng: RandomNumberGenerator = null
 var slime_tuning: SlimeTuning = null

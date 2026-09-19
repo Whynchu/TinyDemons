@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TouchControlsLayoutProfile" format=3 uid="uid://corxmvidgue2y"]
+
+[ext_resource type="Script" uid="uid://bfmjxqt75dvil" path="res://scripts/touch_controls_layout_profile.gd" id="1_profile"]
+
+[resource]
+script = ExtResource("1_profile")
+attack_offset = Vector2(-30, 10)
+magic_offset = Vector2(-35, -16)
+guard_offset = Vector2(-16, -33)
+target_offset = Vector2(10, -31)
