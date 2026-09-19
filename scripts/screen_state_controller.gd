@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.57"
+const GAME_VERSION := "0.2.58"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -35,7 +35,8 @@ const CURSOR_VERTICAL_RAISE := 2.0
 const CURSOR_BOB_AMOUNT := 3.0
 const CURSOR_BOB_SLIDE_TIME := 0.36
 const CURSOR_BOB_SNAP_TIME := 0.07
-const MAX_TITLE_TRANSITION_PARTICLES := 128
+const MAX_TITLE_TRANSITION_PARTICLES := 192
+const MAX_TITLE_PARTICLES_PER_PIECE := 16
 const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
 const HUB_ITEM_DETAIL_TOP := 105.0
 const HUB_ITEM_DETAIL_PITCH := 7.0
@@ -832,6 +833,14 @@ func add_particle(particle_data: Dictionary) -> void:
 	title_particles.append(particle_data)
 
 
+func clear_title_particles() -> void:
+	for particle_data in title_particles:
+		var particle := particle_data.get("sprite") as Node
+		if particle != null and is_instance_valid(particle):
+			particle.queue_free()
+	title_particles.clear()
+
+
 func update_particles(delta: float, snap_position: Callable) -> void:
 	for index in range(title_particles.size() - 1, -1, -1):
 		var particle_data := title_particles[index]
@@ -850,18 +859,19 @@ func update_particles(delta: float, snap_position: Callable) -> void:
 		particle_data["timer"] = timer
 
 
-func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
+func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_texture: Callable, random_seed: int, particle_budget: int = MAX_TITLE_PARTICLES_PER_PIECE) -> void:
 	if source_sprite == null or source_sprite.texture == null:
 		return
 	var image := source_sprite.texture.get_image()
 	if image == null:
 		return
+	var initial_particle_count := title_particles.size()
 	var noise := FastNoiseLite.new()
 	noise.seed = random_seed
 	noise.frequency = 0.28
 	for y in image.get_height():
 		for x in image.get_width():
-			if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES:
+			if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES or title_particles.size() - initial_particle_count >= particle_budget:
 				return
 			var color: Color = image.get_pixel(x, y)
 			if color.a <= 0.0:
@@ -883,9 +893,10 @@ func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_t
 			add_particle({"sprite": particle, "velocity": Vector2(0.0, -(8.0 + (noise.get_noise_2d(float(x), float(y)) + 1.0) * 14.0)), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
 
 
-func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
+func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable, random_seed: int, particle_budget: int = MAX_TITLE_PARTICLES_PER_PIECE) -> void:
 	if button == null:
 		return
+	var initial_particle_count := title_particles.size()
 	var noise := FastNoiseLite.new()
 	noise.seed = random_seed
 	noise.frequency = 0.28
@@ -895,15 +906,15 @@ func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_tex
 	var width := int(button.size.x)
 	var height := int(button.size.y)
 	for x in range(width):
-		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, noise.get_noise_2d(float(x), 0.0))
-		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, noise.get_noise_2d(float(x), float(height - 1)))
+		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, noise.get_noise_2d(float(x), 0.0), initial_particle_count, particle_budget)
+		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, noise.get_noise_2d(float(x), float(height - 1)), initial_particle_count, particle_budget)
 	for y in range(1, height - 1):
-		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, noise.get_noise_2d(0.0, float(y)))
-		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, noise.get_noise_2d(float(width - 1), float(y)))
+		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, noise.get_noise_2d(0.0, float(y)), initial_particle_count, particle_budget)
+		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, noise.get_noise_2d(float(width - 1), float(y)), initial_particle_count, particle_budget)
 
 
-func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, noise_value: float) -> void:
-	if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES:
+func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, noise_value: float, initial_particle_count: int, particle_budget: int) -> void:
+	if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES or title_particles.size() - initial_particle_count >= particle_budget:
 		return
 	var particle := Sprite2D.new()
 	particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
@@ -5248,6 +5259,9 @@ func update_loading(overlay: ColorRect, text: Sprite2D, fading: bool, timer: flo
 		if timer >= 0.35:
 			fading = false
 			overlay.visible = false
+			if title_overlay != null: title_overlay.visible = false
+			if archetype_overlay != null: archetype_overlay.visible = false
+			if hub_overlay != null: hub_overlay.visible = false
 			set_state(&"gameplay")
 		return {"fading": fading, "timer": timer, "finished": timer >= 0.35}
 	timer += delta

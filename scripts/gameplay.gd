@@ -92,11 +92,19 @@ func _physics_process(delta: float) -> void:
 	gameplay_frame_controller.tick(self, delta)
 	if capture_active:
 		capture_service.call("record_scope", &"frame_controller", Time.get_ticks_usec() - frame_started_usec)
-	# Depth sorting runs inside the frame schedule for gameplay; the world is
-	# frozen during dialogue/overlays, so the last sort still stands there.
-	_update_player_shadow()
-	_update_roll_dust(0.0)
-	_update_large_room_camera()
+	# Presentation follows the explicit gameplay schedule. During the deferred
+	# title boot and the loading handoff, the authored shadow transform is not
+	# ready yet (or the world is intentionally hidden), so a post-frame update
+	# would overwrite it with the zero/default offset. The run-entry controller
+	# performs its explicit shadow refresh after the authored transform is ready.
+	var screens := screen_state_controller as ScreenStateController
+	var gameplay_presentation_ready: bool = gameplay_frame_controller != null and shadow_controller != null and not boot_active and not loading_screen_active and (screens == null or screens.state != &"title")
+	if gameplay_presentation_ready:
+		# Depth sorting runs inside the frame schedule for gameplay; the world is
+		# frozen during dialogue/overlays, so the last sort still stands there.
+		_update_player_shadow()
+		_update_roll_dust(0.0)
+		_update_large_room_camera()
 	if capture_active:
 		capture_service.call("record_scope", &"post_frame", Time.get_ticks_usec() - started_usec)
 func _update_game_over_input() -> void:

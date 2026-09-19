@@ -966,6 +966,7 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 		screen_state_controller.title_particle_layer = Node2D.new(); screen_state_controller.title_particle_layer.name = "TitleParticleLayer"; screen_state_controller.title_particle_layer.z_index = 10; ui.add_child(screen_state_controller.title_particle_layer)
 	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_ui_breakup() -> void:
+	screen_state_controller.clear_title_particles()
 	_spawn_title_pixel_breakup(screen_state_controller.title_screen_text)
 	var version: Sprite2D = screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if screen_state_controller.title_overlay != null else null
 	_spawn_title_pixel_breakup(version)
