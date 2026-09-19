@@ -106,7 +106,7 @@ func _initialize() -> void:
 	controller.on_room_entered(&"room_-1_9", GRAPH_SCRIPT.BOTTOM_LEFT)
 	_expect(d9_down_left_entry != null and d9_down_left_entry.source_room_id == &"room_-3_8" and d9_down_left_entry.allow_entry_before_source_clear, "D9 marks its down-left enemy branch as an early-open entrance", failures)
 	_expect(controller.is_connection_available(d9_down_left_entry, true), "D9's down-left entrance is open before the branch enemies are defeated", failures)
-	_expect(not controller.is_connection_available(d9_down_left_entry, false), "the down-left enemy room's own top exit remains clear-gated", failures)
+	_expect(controller.is_connection_available(d9_down_left_entry, false), "the arrival exit stays escapable so the player is not trapped in the authored room", failures)
 	var d9_state := controller.get("state") as DungeonMapState
 	if d9_state != null:
 		d9_state.set_puzzle_color(&"puzzle_a")

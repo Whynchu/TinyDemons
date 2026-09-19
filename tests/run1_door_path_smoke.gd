@@ -46,7 +46,7 @@ func _initialize() -> void:
 	var blue_socket := room_controller.dungeon_sockets.get(GRAPH_SCRIPT.WALL_LEFT) as DungeonSocket
 	var blue_visual := blue_socket.visual() as Sprite2D if blue_socket != null else null
 	_expect(blue_visual != null and blue_visual.texture != null and blue_visual.texture.resource_path.ends_with("DoorRight.png"), "available blue exit shows open-door art", failures)
-	_expect(not bool(gameplay.get("door_active")), "regression reproduces the legacy room-wide lock", failures)
+	_expect(bool(gameplay.get("door_active")), "room-wide door activates after a successful clear (legacy room-wide lock is resolved)", failures)
 
 	if blue_socket != null:
 		var trigger := blue_socket.trigger()
