@@ -11,6 +11,10 @@ func _initialize() -> void:
 	if packed == null:
 		_finish(failures)
 		return
+	# Routed hub/pause/game-over coverage requires the deferred gameplay phase.
+	# Request the deterministic benchmark room so this smoke does not depend on
+	# whatever profile route happens to exist in the local user data directory.
+	ProjectSettings.set_setting("debug/benchmark_start_in_boss_room", true)
 	var gameplay := packed.instantiate()
 	root.add_child(gameplay)
 	for _frame in 120:
