@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RoomDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/room_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+regular_room_treasure_chance = 0.5
+popcorn_chance_early = 0.25
+popcorn_chance_run2 = 0.4
+popcorn_chance_later = 0.24
+normal_enemy_cap = 7
+extra_enemy_base = 0.5
+extra_enemy_per_rank = 0.05
+extra_enemy_cap = 0.78
+extra_enemy_per_slot_falloff = 0.14
+extra_enemy_rank_bonus = 0.015
+extra_enemy_rank_bonus_cap = 0.1
+boss_support_popcorn_base = 3
+boss_support_popcorn_max = 6
+boss_mixed_support_start_rank = 5

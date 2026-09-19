@@ -7,6 +7,12 @@ class_name DungeonGenerationPolicy
 ## route, and milestone logic stays in DungeonLayoutGenerator; this resource is
 ## the authored policy surface.
 
+const DEFAULT_DATA_PATH := "res://resources/definitions/dungeon_generation_policy.tres"
+
+
+static func default_data() -> DungeonGenerationPolicy:
+	return load(DEFAULT_DATA_PATH) as DungeonGenerationPolicy
+
 const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
 const COMPACT_MAP_SIZE := Vector2i(35, 35)
 const COMPACT_MAP_ORIGIN := Vector2i(17, 32)

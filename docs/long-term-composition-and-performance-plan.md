@@ -288,16 +288,18 @@ Move room-specific enemy/reward choices into `EncounterDefinition` and
 distinct. Room runtime state should own claims, active actors, entrance locks,
 and clear state; definitions should remain reusable and immutable.
 
-**Increments at `0.2.39`–`0.2.41`:** `EncounterDefinition` captures the
-rank-gated enemy variant pool, and `RoomDefinition`
-(`scripts/room_definition.gd`) captures the rank-curve difficulty/traffic
-policy (enemy cap, extra-enemy chance, popcorn rates, boss support/minor
-counts, regular treasure chance). `RoomController` reads both through
-`_encounter_definition()`/`_room_definition()` instead of hardcoded rank
-constants; `encounter_definition_smoke` and `room_definition_smoke`
-characterize validation and the authored curves. `RoomController` shrank
-2,271 → 2,248 lines. Remaining for C: `RoomDefinition` for room-specific
-reward/tier choices and full `.tres` authoring of encounter data.
+**Increments at `0.2.39`–`0.2.42`:** `EncounterDefinition`, `RoomDefinition`,
+and `DungeonGenerationPolicy` now load their authored defaults from
+`resources/definitions/*.tres` (via `default_data()`), so all three are
+editor-inspectable definition surfaces (19/19 = 100%). `RoomController` reads
+the encounter pool and difficulty/traffic curves through
+`_encounter_definition()`/`_room_definition()`; `DungeonLayoutGenerator` reads
+candidate policy through `policy()`. `RoomController` shrank 2,271 → 2,248
+lines. `encounter_definition_smoke`, `room_definition_smoke`, and
+`dungeon_generation_policy_smoke` characterize validation and the authored
+curves. Remaining for C: room-specific reward/tier choices beyond the rank
+curves; remaining for D: route policy, milestone rules, and socket/reward
+policy as explicit inputs.
 
 ### D. Make dungeon and map authoring compositional — T2
 

@@ -39,6 +39,9 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
 14. [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md)
     — current combat roles, elemental identity, dungeon interaction, and
     minimalist content principles.
+15. [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md)
+    — exhaustive producer interview for resolving open product and design
+    decisions.
 
 ## Authority by question
 
@@ -62,6 +65,7 @@ in [`AUDIT.md`](AUDIT.md) section 3.2.
 | What is the component contract for reusable entity behavior? | [`component-composition-design.md`](component-composition-design.md) | wiring rules, adapter refinement, and the interchangeable-entity proof |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 | What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |
+| Which product and design questions remain unresolved? | [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md) | current design authorities and interview decision records |
 
 ## Document lifecycle
 

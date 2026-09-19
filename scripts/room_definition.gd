@@ -7,6 +7,12 @@ class_name RoomDefinition
 ## the hardcoded rank curves that used to live in RoomController. Immutable and
 ## reusable across rooms and runs; RoomController owns the runtime state.
 
+const DEFAULT_DATA_PATH := "res://resources/definitions/room_definition.tres"
+
+
+static func default_data() -> RoomDefinition:
+	return load(DEFAULT_DATA_PATH) as RoomDefinition
+
 @export var regular_room_treasure_chance := 0.50
 
 @export var popcorn_chance_early := 0.25
