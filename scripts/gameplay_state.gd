@@ -1,6 +1,8 @@
 extends Node2D
 class_name GameplayState
 
+# Runtime composition root; controller calls remain behind the explicit frame schedule.
+
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
@@ -185,6 +187,7 @@ var performance_capture_service: Node = null
 var slime_attack_frames_by_palette: Dictionary = {}
 var slime_shocked_frames_by_palette: Dictionary = {}
 var slime_spawn_frames_by_palette: Dictionary = {}
+var slime_visuals_ready := false
 var player_just_finished_attack2 := false
 var player_between_timer := 0.0
 var player_anim_name := "idle"
@@ -384,6 +387,7 @@ func _update_mp_desaturation() -> void:
 		# The first animation frame may have been assigned before the material
 		# existed, so initialize the sampler with its matching grey frame now.
 		player_animation_component.apply_frame(gameplay_frame_controller.animation_context(self as GameplayState))
+
 
 func _new_mp_desaturation_material() -> ShaderMaterial:
 	var desaturation_material := ShaderMaterial.new()
@@ -887,6 +891,13 @@ func _show_game_over() -> void:
 	if game_over_button != null: game_over_button.release_focus()
 	if game_over_title_button != null: game_over_title_button.release_focus()
 func _build_title_screen() -> void: save_flow_controller.call("build_title_screen", self)
+func _set_title_world_visible(visible: bool) -> void:
+	var map_canvas := map_root as CanvasItem
+	if map_canvas != null:
+		map_canvas.visible = visible
+	var actors_canvas := get_node_or_null("Actors") as CanvasItem
+	if actors_canvas != null:
+		actors_canvas.visible = visible
 func _open_cloud_save() -> void: cloud_save_panel.open()
 func _build_archetype_screen() -> void: save_flow_controller.call("build_archetype_screen", self)
 func _update_title_screen(delta: float) -> void: save_flow_controller.call("update_title_screen", self, delta)
@@ -1519,7 +1530,10 @@ func _finish_slime_spawn(slime: Sprite2D) -> void: slime_runtime_controller.call
 func _is_slime_hidden(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_hidden", self, slime))
 func _is_slime_targetable(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_targetable", self, slime))
 func _is_target_actor_dead(target: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_target_actor_dead", self, target))
-func _move_slimes(delta: float) -> void: slime_runtime_controller.call("move_slimes", self, delta)
+func _move_slimes(delta: float) -> void:
+	var started_usec := Time.get_ticks_usec()
+	slime_runtime_controller.call("move_slimes", self, delta)
+	_record_performance_scope(&"slime_runtime", started_usec)
 func _prepare_slime_frame_cache() -> void: slime_runtime_controller.call("prepare_slime_frame_cache", self)
 func _trigger_slime_notice(slime: Sprite2D) -> void: slime_runtime_controller.call("trigger_slime_notice", self, slime)
 func _slime_position_is_valid(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("slime_position_is_valid", self, slime))
@@ -1610,6 +1624,17 @@ func _build_slime_shocked_frames() -> void: actor_presentation_runtime_controlle
 func _build_slime_spawn_frames() -> void: actor_presentation_runtime_controller.call("build_slime_spawn_frames", self)
 func _assign_slime_spawn_frames() -> void: actor_presentation_runtime_controller.call("assign_slime_spawn_frames", self)
 func _assign_slime_shocked_frames() -> void: actor_presentation_runtime_controller.call("assign_slime_shocked_frames", self)
+func _ensure_slime_visuals_ready() -> void:
+	if slime_visuals_ready:
+		return
+	_build_slime_direction_textures()
+	_build_slime_attack_frames()
+	_build_slime_shocked_frames()
+	_build_slime_spawn_frames()
+	_assign_slime_attack_frames()
+	_assign_slime_shocked_frames()
+	_assign_slime_spawn_frames()
+	slime_visuals_ready = true
 func _build_enemy_health_ui() -> void: actor_presentation_runtime_controller.call("build_enemy_health_ui", self)
 func _refresh_enemy_palette_textures() -> void: actor_presentation_runtime_controller.call("refresh_enemy_palette_textures", self)
 func _build_cloaked_demon_frames() -> void: var frames := npc_controller.build_cloaked_demon_frames(sprite_frame_library, cloaked_demon, CLOAKED_DEMON_FRAME_SIZE, Callable(occlusion_renderer, "cached_texture_image")); npc_controller.demon_idle_frames = frames["idle"]; npc_controller.demon_walk_frames = frames["walk"]; npc_controller.demon_visual_bounds = frames["bounds"]
@@ -1627,7 +1652,13 @@ func _set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void: actor
 func _collect_occluders(node: Node) -> void: actor_presentation_runtime_controller.call("collect_occluders", self, node)
 func _add_depth_sprite(sprite: Sprite2D) -> void: actor_presentation_runtime_controller.call("add_depth_sprite", self, sprite)
 func _update_depth_sorting() -> void: actor_presentation_runtime_controller.call("update_depth_sorting", self)
-func _update_actor_occlusion(delta: float) -> void: actor_presentation_runtime_controller.call("update_actor_occlusion", self, delta)
+func _update_actor_occlusion(delta: float) -> void:
+	var started_usec := Time.get_ticks_usec()
+	actor_presentation_runtime_controller.call("update_actor_occlusion", self, delta)
+	_record_performance_scope(&"actor_occlusion", started_usec)
+func _record_performance_scope(scope_name: StringName, started_usec: int) -> void:
+	if OS.is_debug_build() and performance_capture_service != null and bool(performance_capture_service.get("capturing")):
+		performance_capture_service.call("record_scope", scope_name, Time.get_ticks_usec() - started_usec)
 func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool: return bool(actor_presentation_runtime_controller.call("is_actor_occlusion_flashing", self, actor))
 func _update_player_shadow() -> void: shadow_controller.update_player_shadow(self, DEPTH_Z_SCALE)
 func _update_cloaked_demon_shadow() -> void: shadow_controller.update_cloaked_demon_shadow(self, DEPTH_Z_SCALE)
