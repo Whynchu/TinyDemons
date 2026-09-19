@@ -170,6 +170,7 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 		"encounter_definition.gd",
 		"room_definition.gd",
 		"dungeon_generation_policy.gd",
+		"reward_definition.gd",
 		"dungeon_layout_run1.gd",
 		"dungeon_layout_run2.gd",
 		"puzzle_map_r3.gd",

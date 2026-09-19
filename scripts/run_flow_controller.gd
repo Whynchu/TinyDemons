@@ -4,6 +4,13 @@ class_name RunFlowController
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
+var reward_definition: RewardDefinition = null
+
+
+func _reward_definition() -> RewardDefinition:
+	if reward_definition == null:
+		reward_definition = RewardDefinition.default_data()
+	return reward_definition
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
 const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
 const ChestRewardResultScript = preload("res://scripts/chest_reward_result.gd")
@@ -17,7 +24,7 @@ func loot_grade_bonus(root: Object, grade: String = "") -> float:
 
 func loot_grade_bonus_for_profile(profile: PlayerProfile, grade: String = "") -> float:
 	var value: String = grade.to_upper() if not grade.is_empty() else (profile.last_run_grade if profile != null else "D")
-	return 3.0 if value == "S" else 2.0 if value == "A" else 1.0 if value == "B" else 0.5 if value == "C" else -0.5 if value == "F" else 0.0
+	return _reward_definition().loot_grade_bonus(value)
 
 
 func chest_item_drop_chance(root: Object) -> float:
@@ -27,15 +34,17 @@ func chest_item_drop_chance(root: Object) -> float:
 
 
 func chest_item_drop_chance_for_values(profile: PlayerProfile, run: RunState, tier: StringName) -> float:
-	var exploration_bonus: float = minf(float(run.chests_opened) * 0.025, 0.20) if run != null else 0.0
-	var base_chance := clampf(0.34 + exploration_bonus + float(run_rank_for_profile(profile) - 1) * 0.035 + loot_grade_bonus_for_profile(profile) * 0.025, 0.30, 0.88)
+	var exploration_bonus: float = minf(float(run.chests_opened) * _reward_definition().exploration_bonus_per_chest, _reward_definition().exploration_bonus_cap) if run != null else 0.0
+	var run_rank := run_rank_for_profile(profile)
+	var grade := profile.last_run_grade if profile != null else "D"
+	var definition := _reward_definition()
 	if tier == DungeonGraph.REWARD_VAULT:
 		return 1.0
 	if tier == DungeonGraph.REWARD_RISK:
 		# The dangerous route's material reward is a modest improvement over an
 		# ordinary combat chest; the elite vault remains the guaranteed premium.
-		return clampf(base_chance + 0.12, 0.30, 0.95)
-	return base_chance
+		return definition.risk_item_drop_chance(exploration_bonus, run_rank, grade)
+	return definition.item_drop_chance(exploration_bonus, run_rank, grade)
 
 
 func chest_item_drop_count(root: Object, roll: float) -> int:
@@ -46,14 +55,9 @@ func chest_item_drop_count(root: Object, roll: float) -> int:
 func chest_item_drop_count_for_values(profile: PlayerProfile, tier: StringName, roll: float) -> int:
 	if tier == DungeonGraph.REWARD_VAULT:
 		return 1
-	var double_drop_chance := clampf(0.35 + float(run_rank_for_profile(profile) - 1) * 0.06 + loot_grade_bonus_for_profile(profile) * 0.04, 0.25, 0.75)
-	var triple_drop_chance := clampf(0.01 + float(run_rank_for_profile(profile) - 1) * 0.0045 + loot_grade_bonus_for_profile(profile) * 0.006, 0.01, 0.15)
-	var quad_drop_chance := clampf(0.005 + float(run_rank_for_profile(profile) - 1) * 0.0035 + loot_grade_bonus_for_profile(profile) * 0.004, 0.005, 0.10)
-	if roll < quad_drop_chance:
-		return 4
-	if roll < triple_drop_chance:
-		return 3
-	return 2 if roll < double_drop_chance else 1
+	var run_rank := run_rank_for_profile(profile)
+	var grade := profile.last_run_grade if profile != null else "D"
+	return _reward_definition().drop_count_for(roll, run_rank, grade)
 
 
 func roll_run_loot_rarity_for_values(profile: PlayerProfile, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
