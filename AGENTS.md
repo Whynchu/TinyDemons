@@ -43,6 +43,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1
 # Definition validator: loads every authored definition resource and fails on
 # malformed content (runs before the release gate).
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_definitions.ps1
+# Catalog report: prints every authored definition surface and its stable IDs.
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/report_catalogs.ps1
 # Curated release gate; includes the web export and main-scene checks.
 pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1
 # Full runnable inventory — standalone/supervised only.
