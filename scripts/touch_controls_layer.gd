@@ -30,8 +30,15 @@ const MENU_SCROLL_DRAG_PX := 6.0
 const MENU_TOUCH_HIT_SLOP := 8.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
 const FUSION_DOUBLE_TAP_MS := 350
+## Discrete gameplay buttons emit a short, subtle haptic pulse on press (never
+## on release or stick drag). Use/interact still pulses through the world-tap
+## path; UI-only controls (pause, minimap, cancel) deliberately do not.
+const HAPTIC_ACTIONS := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
+const HAPTIC_PULSE_MS := 15
 
-const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"interact"]
+signal haptic_pulse(action: StringName)
+
+const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target"]
 ## Roll is the primary thumb-home action (the GameCube-A-style main button).
 ## Secondary actions sit on a clean geometric arc close around roll's edge:
 ## attack at the nearest radius (down-left of the thumb), the rest evenly
@@ -39,19 +46,20 @@ const BUTTON_ORDER := [&"attack", &"roll", &"magic", &"guard", &"target", &"inte
 ## screen degrees (0° = right, 90° = up, 180° = left). Radius is in
 ## (button + gap) steps from the roll center. The arc radius keeps adjacent
 ## 24 px buttons from overlapping while staying within thumb reach of roll.
+## The USE/interact button was removed; world taps drive interaction through
+## the TAP_INTERACT_ACTION path instead (see _finger_down).
 const ROLL_PRIMARY_SCALE := 1.5
 const BUTTON_ARC := {
 	&"attack": {"angle": 200.0, "radius": 0.95},
 	&"magic": {"angle": 170.0, "radius": 1.60},
 	&"guard": {"angle": 140.0, "radius": 1.60},
-	&"interact": {"angle": 110.0, "radius": 1.60},
-	&"target": {"angle": 80.0, "radius": 1.60},
+	&"target": {"angle": 110.0, "radius": 1.60},
 }
 ## Touch slop beyond the circle radius so near-miss taps still register.
 const CIRCLE_HIT_SLOP := 2.0
 const BUTTON_LABELS := {
 	&"attack": "ATK", &"roll": "ROLL", &"magic": "MAG",
-	&"guard": "GUARD", &"target": "TGT", &"interact": "USE", &"pause": "II", &"open_minimap": "MAP", &"cancel": "CANCEL",
+	&"guard": "GUARD", &"target": "TGT", &"pause": "II", &"open_minimap": "MAP", &"cancel": "CANCEL",
 }
 
 var _touch_root: Control = null
@@ -80,6 +88,9 @@ var _input_context := CONTEXT_GAMEPLAY
 var _controls_visible := false
 var _touch_input_enabled := false
 var _built := false
+## Testable haptic decision point. When null, the layer asks the parent's
+## settings service for the vibration toggle; haptics default on otherwise.
+var vibration_enabled_override: Variant = null
 
 
 func _ready() -> void:
@@ -203,7 +214,31 @@ func set_button_state(action: StringName, pressed: bool) -> void:
 	_pressed_actions[action] = pressed
 	if pressed:
 		_press_latches[action] = true
+		_trigger_press_haptic(action)
 	_update_button_visual(action)
+
+
+## Fires a short, subtle pulse for discrete gameplay button presses. Menu-only
+## controls and virtual-stick movement are deliberately excluded, and the
+## setting toggle (or an explicit test override) can disable it entirely.
+func _trigger_press_haptic(action: StringName) -> void:
+	if action not in HAPTIC_ACTIONS:
+		return
+	if not _haptics_enabled():
+		return
+	haptic_pulse.emit(action)
+	Input.vibrate_handheld(HAPTIC_PULSE_MS)
+
+
+func _haptics_enabled() -> bool:
+	if vibration_enabled_override != null:
+		return bool(vibration_enabled_override)
+	var host := get_parent()
+	if host != null:
+		var service := host.get("settings_service") as SettingsService
+		if service != null:
+			return bool(service.get_setting(&"vibration", true))
+	return true
 
 
 ## Pure layout math, kept separate so tests can assert behavior without a real

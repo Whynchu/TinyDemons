@@ -46,16 +46,32 @@ func _initialize() -> void:
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(router.pressed(&"attack") and router.just_pressed(&"attack"), "touch button reaches router held and edge state", failures)
 	_expect(router.movement(0.25).x > 0.9, "touch stick reaches router movement snapshot", failures)
-	layer.set_button_state(&"interact", true)
-	router.poll(InputRouter.Context.GAMEPLAY)
-	_expect(router.ui_accept_pressed() and router.ui_accept_just_pressed(), "touch interact aliases UI accept", failures)
-	router.poll(InputRouter.Context.GAMEPLAY)
-	_expect(router.pressed(&"attack") and not router.just_pressed(&"attack"), "held touch action does not repeat its edge", failures)
 	layer.set_button_state(&"attack", false)
-	layer.set_button_state(&"interact", false)
 	layer.set_virtual_stick(Vector2.ZERO)
 	router.poll(InputRouter.Context.GAMEPLAY)
 	_expect(router.just_released(&"attack"), "touch release reaches router release edge", failures)
+	layer.set_button_state(&"attack", true)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	router.poll(InputRouter.Context.GAMEPLAY)
+	_expect(router.pressed(&"attack") and not router.just_pressed(&"attack"), "held touch action does not repeat its edge", failures)
+	layer.set_button_state(&"attack", false)
+
+	# Discrete gameplay presses pulse a short haptic; releases, the virtual
+	# stick, and UI-only controls must not pulse.
+	var haptic_actions: Array[StringName] = []
+	layer.haptic_pulse.connect(func(action: StringName) -> void: haptic_actions.append(action))
+	layer.vibration_enabled_override = true
+	layer.set_button_state(&"magic", true)
+	layer.set_button_state(&"magic", false)
+	layer.set_virtual_stick(Vector2(1.0, 0.0))
+	layer.set_button_state(&"pause", true)
+	layer.set_button_state(&"pause", false)
+	_expect(haptic_actions.size() == 1 and haptic_actions[0] == &"magic", "a discrete gameplay press pulses haptics once; release, stick, and UI buttons do not", failures)
+	layer.vibration_enabled_override = false
+	layer.set_button_state(&"magic", true)
+	_expect(haptic_actions.size() == 1, "the vibration setting toggle suppresses the press pulse", failures)
+	layer.vibration_enabled_override = null
+	layer.set_button_state(&"magic", false)
 	var world_tap := InputEventScreenTouch.new()
 	world_tap.device = 0; world_tap.index = 13; world_tap.pressed = true; world_tap.position = Vector2(120.0, 60.0)
 	layer._input(world_tap)
@@ -362,21 +378,20 @@ func _initialize() -> void:
 			_expect(layout_window.encloses(layout_buttons[action] as Rect2), "action button stays inside the logical viewport", failures)
 		var attack_rect: Rect2 = layout_buttons[&"attack"]
 		var magic_rect: Rect2 = layout_buttons[&"magic"]
-		var use_rect: Rect2 = layout_buttons[&"interact"]
 		var roll_rect: Rect2 = layout_buttons[&"roll"]
 		var guard_rect: Rect2 = layout_buttons[&"guard"]
 		var target_layout_rect: Rect2 = layout_buttons[&"target"]
 		var roll_center := roll_rect.get_center()
 		var attack_distance := attack_rect.get_center().distance_to(roll_center)
 		var magic_distance := magic_rect.get_center().distance_to(roll_center)
-		var use_distance := use_rect.get_center().distance_to(roll_center)
 		var guard_distance := guard_rect.get_center().distance_to(roll_center)
 		var target_distance := target_layout_rect.get_center().distance_to(roll_center)
 		_expect(roll_rect.size.x > attack_rect.size.x and roll_rect.size.y > attack_rect.size.y, "roll is the primary button, larger than the secondaries", failures)
-		_expect(attack_distance < magic_distance and attack_distance < use_distance and attack_distance < guard_distance and attack_distance < target_distance, "attack sits nearest the roll thumb home", failures)
+		_expect(attack_distance < magic_distance and attack_distance < guard_distance and attack_distance < target_distance, "attack sits nearest the roll thumb home", failures)
 		_expect(attack_rect.position.y > roll_rect.position.y or magic_rect.position.y < roll_rect.position.y, "secondary actions spread around the roll button", failures)
 		_expect(magic_rect.get_center().x < roll_center.x and target_layout_rect.get_center().y < roll_center.y, "the left/up arc keeps Magic beside and Target above the roll", failures)
-		_expect(is_equal_approx(magic_distance, guard_distance) and is_equal_approx(guard_distance, use_distance) and is_equal_approx(use_distance, target_distance), "secondary actions sit on one even arc radius around roll", failures)
+		_expect(is_equal_approx(magic_distance, guard_distance) and is_equal_approx(guard_distance, target_distance), "secondary actions sit on one even arc radius around roll", failures)
+		_expect(not layout_buttons.has(&"interact"), "the USE button is removed from the action arc", failures)
 	_expect(float((layer._compute_layout(TouchControlsLayer.BASE_CONTENT_SIZE, TouchControlsLayer.BASE_CONTENT_SIZE))["button_size"]) >= TouchControlsLayer.BUTTON_MIN, "buttons keep the minimum logical size", failures)
 
 	router.free()

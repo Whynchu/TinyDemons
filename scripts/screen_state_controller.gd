@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.49"
+const GAME_VERSION := "0.2.50"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -4447,17 +4447,17 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 	var values: Array[Button] = []
 	var left_buttons: Array[Button] = []
 	var right_buttons: Array[Button] = []
-	var row_labels := ["FULLSCREEN", "ASPECT", "PIXEL PERFECT", "MUSIC", "SFX"]
-	var option_labels: Array[Array] = [["OFF", "ON"], ["FULL", "3:2", "16:10", "16:9"], ["OFF", "ON"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]]
-	var row_y := 31.0
+	var row_labels := ["FULLSCREEN", "ASPECT", "PIXEL PERFECT", "MUSIC", "SFX", "VIBRATION"]
+	var option_labels: Array[Array] = [["OFF", "ON"], ["FULL", "3:2", "16:10", "16:9"], ["OFF", "ON"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["OFF", "ON"]]
+	var row_y := 30.0
 	var option_start := maxf(90.0, display_view_size.x * 0.38)
 	for index in row_labels.size():
-		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(14, row_y + index * 18.0 + 3.0), false)
+		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(14, row_y + index * 16.0 + 3.0), false)
 		labels.append(label)
 		var options_for_row: Array[Button] = []
 		for option_index in option_labels[index].size():
 			var option_text: String = str(option_labels[index][option_index])
-			var option_button := make_retro_button(option_text, Vector2(option_start + option_index * 14.0, row_y + index * 18.0), Vector2(12, 12), pixel_texture)
+			var option_button := make_retro_button(option_text, Vector2(option_start + option_index * 14.0, row_y + index * 16.0), Vector2(12, 12), pixel_texture)
 			option_button.name = "SettingsOption%d_%d" % [index, option_index]
 			option_button.focus_mode = Control.FOCUS_NONE
 			if select_option_callback.is_valid(): option_button.pressed.connect(select_option_callback.bind(index, option_index))
@@ -4465,18 +4465,18 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 			options_for_row.append(option_button)
 		settings_option_buttons.append(options_for_row)
 		settings_option_labels.append(option_labels[index])
-		var left := make_retro_button("<", Vector2(option_start - 20.0, row_y + index * 18.0), Vector2(16, 12), pixel_texture)
+		var left := make_retro_button("<", Vector2(option_start - 20.0, row_y + index * 16.0), Vector2(16, 12), pixel_texture)
 		left.name = "SettingsLeft%d" % index
 		left.focus_mode = Control.FOCUS_NONE
 		if adjust_callback.is_valid(): left.pressed.connect(adjust_callback.bind(index, -1))
 		overlay.add_child(left)
 		left_buttons.append(left)
-		var value := make_retro_button("", Vector2(option_start, row_y + index * 18.0), Vector2(65, 12), pixel_texture)
+		var value := make_retro_button("", Vector2(option_start, row_y + index * 16.0), Vector2(65, 12), pixel_texture)
 		value.name = "SettingsValue%d" % index
 		if adjust_callback.is_valid(): value.pressed.connect(adjust_callback.bind(index, 1))
 		overlay.add_child(value)
 		values.append(value)
-		var right := make_retro_button(">", Vector2(option_start + 68.0, row_y + index * 18.0), Vector2(16, 12), pixel_texture)
+		var right := make_retro_button(">", Vector2(option_start + 68.0, row_y + index * 16.0), Vector2(16, 12), pixel_texture)
 		right.name = "SettingsRight%d" % index
 		right.focus_mode = Control.FOCUS_NONE
 		if adjust_callback.is_valid(): right.pressed.connect(adjust_callback.bind(index, 1))
@@ -4514,7 +4514,7 @@ func _position_settings_controls() -> void:
 	var rule := settings_overlay.get_node_or_null("SettingsTitleRule") as ColorRect
 	if rule != null: rule.size = Vector2(maxf(display_view_size.x - 16.0, 16.0), 1.0)
 	for index in settings_row_labels.size():
-		var y := 31.0 + index * 18.0
+		var y := 30.0 + index * 16.0
 		settings_row_labels[index].position = Vector2(14, y + 3.0)
 		settings_left_buttons[index].position = Vector2(option_start - 20.0, y)
 		settings_value_buttons[index].position = Vector2(option_start, y)
@@ -4588,7 +4588,7 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 	if service == null or settings_value_buttons.is_empty():
 		return
 	var values := service.values()
-	var value_labels := ["ON" if bool(values.get("fullscreen", false)) else "OFF", str(values.get("aspect", "FULL")), "ON" if bool(values.get("pixel_perfect", true)) else "OFF", str(values.get("music_volume", 100)), str(values.get("sfx_volume", 100))]
+	var value_labels := ["ON" if bool(values.get("fullscreen", false)) else "OFF", str(values.get("aspect", "FULL")), "ON" if bool(values.get("pixel_perfect", true)) else "OFF", str(values.get("music_volume", 100)), str(values.get("sfx_volume", 100)), "ON" if bool(values.get("vibration", true)) else "OFF"]
 	var highlight := PaletteLibrary.accent(String(root.get("current_player_palette_name")))
 	_set_button_text(settings_back_button, _menu_back_prompt_for(root), pixel_texture, highlight)
 	for index in settings_value_buttons.size():
@@ -4610,7 +4610,7 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 	if settings_back_button != null:
 		set_archetype_button_state(settings_back_button, settings_row == settings_value_buttons.size(), highlight)
 	if settings_description_text != null:
-		var descriptions := ["DISPLAY MODE", "LOGICAL ASPECT", "PIXEL FILTER", "MUSIC VOLUME", "SFX VOLUME", "RETURN"]
+		var descriptions := ["DISPLAY MODE", "LOGICAL ASPECT", "PIXEL FILTER", "MUSIC VOLUME", "SFX VOLUME", "VIBRATION", "RETURN"]
 		var description_index := clampi(settings_row, 0, descriptions.size() - 1)
 		settings_description_text.texture = pixel_texture.call(descriptions[description_index], Color8(148, 220, 255)) as Texture2D
 	_update_settings_cursor()
@@ -4624,6 +4624,7 @@ func _settings_option_index(row: int, values: Dictionary) -> int:
 		2: return 1 if bool(values.get("pixel_perfect", true)) else 0
 		3: return clampi(roundi(float(values.get("music_volume", 100)) / 10.0), 0, 10)
 		4: return clampi(roundi(float(values.get("sfx_volume", 100)) / 10.0), 0, 10)
+		5: return 1 if bool(values.get("vibration", true)) else 0
 	return 0
 
 
@@ -4638,7 +4639,7 @@ func select_setting_option(root: Object, row: int, option_index: int) -> void:
 	var service := root.get("settings_service") as SettingsService
 	if service == null:
 		return
-	settings_row = clampi(row, 0, 4)
+	settings_row = clampi(row, 0, 5)
 	match settings_row:
 		0: service.set_setting(&"fullscreen", option_index == 1)
 		1:
@@ -4647,6 +4648,7 @@ func select_setting_option(root: Object, row: int, option_index: int) -> void:
 		2: service.set_setting(&"pixel_perfect", option_index == 1)
 		3: service.set_setting(&"music_volume", clampi(option_index, 0, 10) * 10)
 		4: service.set_setting(&"sfx_volume", clampi(option_index, 0, 10) * 10)
+		5: service.set_setting(&"vibration", option_index == 1)
 	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -4654,7 +4656,7 @@ func adjust_setting(root: Object, row: int, direction: int) -> void:
 	var service := root.get("settings_service") as SettingsService
 	if service == null:
 		return
-	settings_row = clampi(row, 0, 4)
+	settings_row = clampi(row, 0, 5)
 	var current: Variant
 	match settings_row:
 		0:
@@ -4671,6 +4673,9 @@ func adjust_setting(root: Object, row: int, direction: int) -> void:
 			service.set_setting(&"music_volume", int(service.get_setting(&"music_volume", 100)) + (10 if direction >= 0 else -10))
 		4:
 			service.set_setting(&"sfx_volume", int(service.get_setting(&"sfx_volume", 100)) + (10 if direction >= 0 else -10))
+		5:
+			current = not bool(service.get_setting(&"vibration", true))
+			service.set_setting(&"vibration", current)
 	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 

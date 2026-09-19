@@ -1,6 +1,6 @@
 # Tiny Demons — Mobile Touch Button and Haptics Plan
 
-Status: approved direction (design interview 2026-09-18)
+Status: implemented (v0.2.50)
 
 Scope: touch-layer action buttons and mobile input haptics only; no change to
 desktop or gamepad mappings
@@ -15,7 +15,7 @@ checks
 
 Supersedes: none; this records interview decisions for regular implementation
 
-Updated: 2026-09-18
+Updated: 2026-09-19
 
 ## 1. Remove the USE button
 
@@ -43,7 +43,8 @@ Rationale:
 - Remove `&"interact"` from `BUTTON_ARC` and from `BUTTON_ORDER`.
 - Re-space the remaining arc actions (`attack`, `magic`, `guard`, `target`)
   around the `roll` primary so no button overlaps and the cluster stays within
-  thumb reach.
+  thumb reach. Implemented arc: attack 200°/0.95, magic 170°/1.60, guard
+  140°/1.60, target 110°/1.60 (even ~30° steps, no overlap).
 - Keep the `tap_interact` world-touch path and `set_button_state(&"interact",
   ...)` behavior intact; it must not depend on a visible button.
 - The `interact` input action itself remains for keyboard/controller and for
@@ -59,8 +60,11 @@ Guidance:
 - Small, short pulse on press; do not vibrate on release or on finger drag.
 - Keep it optional and user-controllable through the existing settings service
   (vibration toggle), consistent with the accessibility question in the design
-  questionnaire (Q17.6: adjust vibration, audio, or flash intensity).
+  questionnaire (Q17.6: adjust vibration, audio, or flash intensity). Added as
+  a VIBRATION row in the settings panel and the `vibration` setting default.
 - Respect device capability: no-op where haptics are unsupported or disabled.
+  Implemented via `Input.vibrate_handheld(HAPTIC_PULSE_MS)` gated by the
+  setting; a `haptic_pulse` signal exposes the decision point for tests.
 - Do not add vibration to the virtual stick movement; only discrete presses.
 - Intensity should be subtle, not a "hit" rumble — it signals button
   registration, not damage feedback.
