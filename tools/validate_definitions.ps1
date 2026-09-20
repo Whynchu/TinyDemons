@@ -16,7 +16,10 @@ $GodotBin = if ([string]::IsNullOrWhiteSpace($GodotBin)) {
 if (-not (Test-Path -LiteralPath $GodotBin -PathType Leaf)) {
     throw "Godot executable not found: $GodotBin. Set GODOT_BIN or pass -GodotBin."
 }
-$userDataDir = Join-Path $env:TEMP ("tiny-demons-validate-defs-{0}" -f $PID)
+$tempRoot = $env:RUNNER_TEMP
+if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = $env:TEMP }
+if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = [System.IO.Path]::GetTempPath() }
+$userDataDir = Join-Path $tempRoot ("tiny-demons-validate-defs-{0}" -f $PID)
 $logFile = Join-Path $userDataDir "validate_definitions.log"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
 

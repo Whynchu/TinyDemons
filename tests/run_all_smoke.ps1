@@ -55,7 +55,10 @@ if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) {
 	throw "Godot executable not found: $godot. Set GODOT_BIN or pass a configured binary."
 }
 
-$headlessUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}" -f $PID)
+$tempRoot = $env:RUNNER_TEMP
+if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = $env:TEMP }
+if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = [System.IO.Path]::GetTempPath() }
+$headlessUserData = Join-Path $tempRoot ("tiny-demons-headless-{0}" -f $PID)
 New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
 $logFile = Join-Path $headlessUserData "smoke.log"
 $resultsPath = if ($ResultsPath) { $ResultsPath } else { Join-Path $headlessUserData "smoke-results.csv" }
@@ -137,7 +140,7 @@ foreach ($test in $tests) {
 	$role = if ($row) { $row.role } else { "unclassified" }
 	$state = if ($row) { $row.state } else { "unclassified" }
 	$startedAt = Get-Date
-	$testUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}-{1}" -f $PID, $test)
+	$testUserData = Join-Path $tempRoot ("tiny-demons-headless-{0}-{1}" -f $PID, $test)
 	$testLogFile = Join-Path $testUserData "smoke.log"
 	New-Item -ItemType Directory -Path $testUserData -Force | Out-Null
 	$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $testUserData, "--path", $root, "--log-file", $testLogFile, "-s", ("res://tests/{0}.gd" -f $test))
