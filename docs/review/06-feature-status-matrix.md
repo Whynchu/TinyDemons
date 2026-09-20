@@ -5,7 +5,7 @@
 | Core run loop | Implemented | Is the loop varied enough after the first novelty wears off? |
 | Directional combat | Implemented | Does combat reward timing and positioning rather than repeated attacking? |
 | Slime foundation | Implemented | Can the four intended roles become meaningfully distinct? |
-| Additional enemy families | Partial/planned | Which enemy should prove the factory pipeline first? |
+| Additional enemy families | Partial/planned | Can a fresh data-only variant pass the factory/preview acceptance bar? |
 | Three starter elements | Implemented/verify in player flow | Do starters feel different without becoming power tiers? |
 | Full elemental class kits | Planned/partial | What is the smallest loadout slice that proves the concept? |
 | Mastery and cross-element binding | Partial/planned | Is mastery understandable and paced well? |
@@ -21,4 +21,3 @@
 | Web export | Implemented | Are browser persistence and input reliable enough for release? |
 | A17 performance | Not proven | What are the actual frame, memory, input, and battery budgets? |
 | Content authoring | Improving, not complete | Can a new enemy/room be added without central special cases? |
-

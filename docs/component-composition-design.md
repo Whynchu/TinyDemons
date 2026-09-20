@@ -328,15 +328,16 @@ not complete the slice.
    sites) and `player_equipment_visual_component.gd` (65) — the largest adapters.
 2. **[x] Definition surfaces to `Resource` + `.tres` (T2 start).** Slice 3
    converted `SlimeVariantCatalog`, `ElementCatalog`, and `PaletteLibrary` from
-   `const` dictionaries to editor-inspectable resources. The definition-editorability
+   `const` dictionaries to editor-inspectable resources. The enemy catalog now
+   holds typed `EnemyDefinition` sub-resources; the definition-editorability
    sub-metric is now 53% (9 of 17 surfaces); `item_catalog.gd`,
    `dungeon_layout_definition.gd`, and the Run 1–6 builders remain code-authored.
 3. **[x] `EnemyDefinition` + `EnemyFactory` slice (Slice B).** `EnemyDefinition`
-   is a typed `@export` contract over each `SlimeVariantCatalogData` record and
-   `EnemyFactory` assembles/configures a runtime slime actor from the definition
+   is a typed `@export` contract for each `SlimeVariantCatalogData` entry and
+   `EnemyFactory` materializes/configures a runtime slime actor from the definition
    (variant, combat element, damage contract, stats). The runtime spawn path and
    visual texture-source resolution now read through the factory. A second
-   variant ("crimson", tanky Fire) was added via one catalog row + one definition
+   variant ("crimson", tanky Fire) was added as one typed catalog sub-resource
    with zero `GameplayState` edits, mounted in the run-5+ encounter rotation,
    and proven by `enemy_definition_slice_smoke` plus the save/load round-trip
    `enemy_definition_roundtrip_smoke` (variant id persists and re-expands to

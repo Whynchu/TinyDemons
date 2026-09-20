@@ -1,5 +1,7 @@
 extends SceneTree
 
+const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+
 ## Slice B acceptance: definition-derived enemy runtime state round-trips
 ## through the persisted form (the stable variant id stored in room
 ## enemy_variants) and re-assembles to identical stats via EnemyFactory. Saves
@@ -13,7 +15,7 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 
-	for variant: StringName in [&"crimson", &"red", &"grey"]:
+	for variant: StringName in CatalogScript.variants():
 		var definition := EnemyFactory.definition(variant)
 		_expect(definition != null and definition.id == variant, "%s resolves to a definition" % variant, failures)
 

@@ -13,9 +13,21 @@ func _initialize() -> void:
 		_finish(failures)
 		return
 	var gameplay := packed.instantiate()
+	gameplay.set("debug_start_in_boss_room", true)
 	root.add_child(gameplay)
-	for _frame in 120:
+	var boot_ready := false
+	for _frame in 600:
 		await process_frame
+		var boot_slimes: Variant = gameplay.get("slimes")
+		if not bool(gameplay.get("boot_active")) and boot_slimes is Array and (boot_slimes as Array).size() >= 13 and gameplay.get("chest_gray_texture") != null:
+			boot_ready = true
+			break
+	_expect(boot_ready, "gameplay bootstrap materializes the factory enemy pool before room activation", failures)
+	if not boot_ready:
+		gameplay.queue_free()
+		await process_frame
+		_finish(failures)
+		return
 	var graph := gameplay.get("dungeon_graph") as DungeonGraph
 	var map := gameplay.get("dungeon_map_controller") as Node
 	var rooms := gameplay.get("room_controller") as RoomController

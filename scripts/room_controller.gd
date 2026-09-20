@@ -3,6 +3,7 @@ class_name RoomController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
+const ENEMY_FACTORY_SCRIPT = preload("res://scripts/enemy_factory.gd")
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/room_transition_result.gd")
 const ROOM_ACTIVATION_RESULT_SCRIPT = preload("res://scripts/room_activation_result.gd")
 const ROOM_SPAWN_RESULT_SCRIPT = preload("res://scripts/room_spawn_result.gd")
@@ -52,21 +53,6 @@ const SPECIAL_ROOM_RESPAWN_DELAY := 45.0
 const POPCORN_RESPAWN_MIN_DELAY := 30.0
 const POPCORN_RESPAWN_MAX_DELAY := 45.0
 const POPCORN_RESPAWN_RETRY_DELAY := 0.25
-const GREY_ENEMY_WEIGHT: float = 1.0
-const YELLOW_ENEMY_WEIGHT: float = 1.0
-const YELLOW_MIN_RANK := 5
-const GROUND_ENEMY_WEIGHT: float = 1.0
-const GROUND_MIN_RANK := 5
-const ICE_ENEMY_WEIGHT: float = 1.0
-const ICE_MIN_RANK := 5
-const SHADOW_ENEMY_WEIGHT: float = 0.12
-## Crimson is a tanky Fire slime (content-driven via EnemyDefinition). It enters
-## the rotation at the same run rank as the other late elemental families, with
-## a modest weight so it adds variety without becoming the default.
-const CRIMSON_ENEMY_WEIGHT: float = 0.6
-const CRIMSON_MIN_RANK := 5
-const SHADOW_BOUND_NORMAL_WEIGHT: float = 0.20
-const SHADOW_BOUND_VARIANT_WEIGHT: float = 0.80
 const SHADOW_BOSS_CHANCE: float = 0.04
 const ROOM_POPCORN := "ROOM_POPCORN"
 const ELITE_POPCORN := "ELITE_POPCORN"
@@ -215,39 +201,34 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		variant_pool.append({"variant": "purple", "weight": definition.shadow_bound_variant_weight})
 	# R1 is neutral-only. R2 teaches player advantage. R3 reverses that lesson.
 	# Authored R4 rooms may provide two explicit target families.
-	var primary_variant: String = preferred_enemy_variant if preferred_enemy_variant in ["blue", "green", "red", "yellow", "green"] else "grey"
-	var secondary_variant: String = secondary_enemy_variant if secondary_enemy_variant in ["blue", "green", "red", "yellow"] else "grey"
+	var primary_variant := _preferred_variant_or_grey(preferred_enemy_variant)
+	var secondary_variant := _preferred_variant_or_grey(secondary_enemy_variant)
 	if definition.matchup_policy == EncounterDefinition.POLICY_BASE_ADVANTAGE or (definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank == 2):
 		if primary_variant != "grey":
-			variant_pool.append({"variant": primary_variant, "weight": 0.75})
+			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
 	elif definition.matchup_policy == EncounterDefinition.POLICY_BASE_COUNTER:
 		if primary_variant != "grey":
-			variant_pool.append({"variant": primary_variant, "weight": 0.75})
+			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
 	elif definition.matchup_policy == EncounterDefinition.POLICY_FLAME_MIXED:
 		for family_variant in [primary_variant, secondary_variant]:
 			if family_variant != "grey" and not _variant_pool_has(variant_pool, family_variant):
-				variant_pool.append({"variant": family_variant, "weight": 0.75})
+				variant_pool.append({"variant": family_variant, "weight": _preferred_variant_weight(family_variant)})
 	elif definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank >= 3:
 		if primary_variant != "grey":
-			variant_pool.append({"variant": primary_variant, "weight": 0.75})
-		for elemental_variant in ["blue", "green", "red"]:
-			if elemental_variant != primary_variant:
-				variant_pool.append({"variant": elemental_variant, "weight": 0.35})
+			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
+		for elemental_variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
+			var elemental_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(elemental_variant)
+			if elemental_definition == null or elemental_definition.encounter_role != &"matchup" or elemental_definition.matchup_weight <= 0.0 or elemental_variant == StringName(primary_variant):
+				continue
+			variant_pool.append({"variant": String(elemental_variant), "weight": elemental_definition.matchup_weight})
 	if special_room:
 		count = mini(maxi(count + 1, 2), count_cap)
 	if encounter_tier == DungeonGraph.ENCOUNTER_DANGEROUS:
 		count = mini(count + 1, count_cap)
 	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
 		count = mini(count + 2, count_cap)
-	if progression_run_rank >= YELLOW_MIN_RANK:
-		variant_pool.append({"variant": "yellow", "weight": YELLOW_ENEMY_WEIGHT})
-	if progression_run_rank >= GROUND_MIN_RANK:
-		variant_pool.append({"variant": "orange", "weight": GROUND_ENEMY_WEIGHT})
-	if progression_run_rank >= ICE_MIN_RANK:
-		variant_pool.append({"variant": "aquamarine", "weight": ICE_ENEMY_WEIGHT})
-	if progression_run_rank >= CRIMSON_MIN_RANK:
-		variant_pool.append({"variant": "crimson", "weight": CRIMSON_ENEMY_WEIGHT})
-	if allow_shadow and progression_run_rank >= GROUND_MIN_RANK and not definition.is_shadow_bound():
+	variant_pool.append_array(definition.late_pool_entries(progression_run_rank))
+	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
@@ -343,6 +324,19 @@ func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
 			return true
 	return false
 
+
+func _preferred_variant_or_grey(candidate: String) -> String:
+	var candidate_id := StringName(candidate)
+	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(candidate_id):
+		return "grey"
+	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate_id)
+	return candidate if definition != null and definition.allow_preferred and definition.preferred_weight > 0.0 else "grey"
+
+
+func _preferred_variant_weight(variant: String) -> float:
+	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(StringName(variant))
+	return definition.preferred_weight if definition != null and definition.preferred_weight > 0.0 else 0.75
+
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := _generated_enemy_base_level(room_depth)
 	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
@@ -359,7 +353,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var boss_variant := boss_variant_selection
 	var has_explicit_boss_variant := SLIME_VARIANT_CATALOG_SCRIPT.is_variant(boss_variant)
 	if not has_explicit_boss_variant:
-		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.duplicate()
+		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.variants()
 		# Run 1 teaches the neutral encounter first. Later un-authored runs may
 		# sample the complete boss catalog; purple remains rare only in the minor
 		# conversion below.
@@ -377,7 +371,8 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		# A designer-selected lead variant is a complete boss identity. Keep the
 		# support wave on that identity as well; the seeded mixed roster is only
 		# used when the encounter was not authored with an explicit selection.
-		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < _room_definition().boss_mixed_support_start_rank else String(SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS[encounter_rng.randi_range(0, SLIME_VARIANT_CATALOG_SCRIPT.VARIANTS.size() - 1)])
+		var catalog_variants := SLIME_VARIANT_CATALOG_SCRIPT.variants()
+		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < _room_definition().boss_mixed_support_start_rank else String(catalog_variants[encounter_rng.randi_range(0, catalog_variants.size() - 1)])
 		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
@@ -1510,14 +1505,12 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 		return
 	var parent := template.get_parent()
 	for index in 3:
-		var popcorn := template.duplicate() as Sprite2D
+		var popcorn := ENEMY_FACTORY_SCRIPT.assemble(ENEMY_FACTORY_SCRIPT.definition(&"grey"))
 		if popcorn == null:
 			continue
 		popcorn.name = "BossJumpPhasePool%d" % index
+		popcorn.position = template.position
 		parent.add_child(popcorn)
-		var actor := popcorn as SlimeActor
-		if actor != null:
-			actor.ensure_components()
 		var health := popcorn.get_node_or_null("Health") as HealthComponent
 		if health != null:
 			health.damaged.connect(Callable(root, "_on_slime_health_damaged").bind(popcorn))
@@ -1844,7 +1837,12 @@ func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 		if not (root.get("occluder_sprites") as Array[Sprite2D]).has(chest): (root.get("occluder_sprites") as Array[Sprite2D]).append(chest)
 	else:
 		collision.erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest)
-	(root.get("occlusion_renderer") as OcclusionRenderer).sprite_images[chest] = (root.get("occlusion_renderer") as OcclusionRenderer).cached_texture_image(chest.texture)
+	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
+	if occlusion != null:
+		if chest.texture != null:
+			occlusion.sprite_images[chest] = occlusion.cached_texture_image(chest.texture)
+		else:
+			occlusion.sprite_images.erase(chest)
 
 
 func _chest_position_for_room(root: Object) -> Vector2:

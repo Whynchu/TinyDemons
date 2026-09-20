@@ -1,11 +1,9 @@
 extends Resource
 class_name EnemyDefinition
 
-## Typed, editor-inspectable enemy content contract. Each definition is a view
-## over one authored variant record in the SlimeVariantCatalogData resource, so
-## the catalog stays the single source of truth while runtime assembly reads a
-## typed contract instead of a raw dictionary. EnemyFactory assembles actors
-## from these definitions.
+## Typed, editor-inspectable enemy content contract. Each definition is an
+## authored sub-resource in SlimeVariantCatalogData, so the catalog stays the
+## single source of truth while runtime assembly reads a typed contract.
 
 @export var id: StringName = &""
 @export var display_name := ""
@@ -14,29 +12,50 @@ class_name EnemyDefinition
 @export var base_stats: Dictionary = {}
 @export var growth_weights: Dictionary = {}
 ## Artwork source name used to resolve direction/spawn/attack textures (for
-## example "red" resolves to SlimeRed.png; recolor-only palettes reuse a base
-## art sheet and recolor at runtime).
+## example "red" resolves to the shared red palette; recolor-only variants
+## explicitly reuse a base art sheet and recolor at runtime.
 @export var visual_source := "green"
+## Encounter metadata belongs to the enemy definition so adding a variant does
+## not require a RoomController branch or a parallel allowlist.
+@export var encounter_role: StringName = &"matchup"
+@export var encounter_weight := 0.0
+@export var encounter_min_rank := 1
+@export var matchup_weight := 0.0
+@export var preferred_weight := 0.0
+@export var allow_preferred := false
 
 
 static func from_variant(variant: StringName) -> EnemyDefinition:
 	var catalog := preload("res://scripts/slime_variant_catalog.gd")
-	var raw := catalog.definition(variant)
-	var definition := EnemyDefinition.new()
-	definition.id = StringName(str(raw.get("variant", String(variant))))
-	definition.display_name = str(raw.get("display_name", String(variant)))
-	definition.element = int(raw.get("element", 0))
-	definition.damage_contract = StringName(str(raw.get("damage_contract", "physical")))
-	definition.base_stats = (raw.get("base_stats", {}) as Dictionary).duplicate(true)
-	definition.growth_weights = (raw.get("growth_weights", {}) as Dictionary).duplicate(true)
-	# Recolor-only palettes share the green base art sheet and are tinted at
-	# runtime; only art-sheet variants (red/blue/green) and explicit overrides
-	# (crimson -> red) name a distinct source.
-	var raw_source := str(raw.get("visual_source", ""))
-	if raw_source.is_empty():
-		raw_source = "green" if String(variant) in ["grey", "purple", "yellow", "orange", "aquamarine"] else String(variant)
-	definition.visual_source = raw_source
-	return definition
+	var definition := catalog.definition_resource(variant)
+	if definition != null:
+		return definition
+	return catalog.definition_resource(&"grey")
+
+
+func validate() -> Array[String]:
+	var problems: Array[String] = []
+	if id.is_empty():
+		problems.append("id must not be empty")
+	if display_name.is_empty():
+		problems.append("display_name must not be empty")
+	if base_stats.is_empty():
+		problems.append("base_stats must not be empty")
+	if growth_weights.is_empty():
+		problems.append("growth_weights must not be empty")
+	if visual_source.is_empty():
+		problems.append("visual_source must not be empty")
+	if encounter_weight < 0.0:
+		problems.append("encounter_weight must be non-negative")
+	if encounter_min_rank < 1:
+		problems.append("encounter_min_rank must be >= 1")
+	if matchup_weight < 0.0:
+		problems.append("matchup_weight must be non-negative")
+	if preferred_weight < 0.0:
+		problems.append("preferred_weight must be non-negative")
+	if encounter_role not in [&"baseline", &"matchup", &"late", &"shadow"]:
+		problems.append("unknown encounter_role '%s'" % encounter_role)
+	return problems
 
 
 func to_record() -> Dictionary:
@@ -48,4 +67,10 @@ func to_record() -> Dictionary:
 		"base_stats": base_stats.duplicate(true),
 		"growth_weights": growth_weights.duplicate(true),
 		"visual_source": visual_source,
+		"encounter_role": encounter_role,
+		"encounter_weight": encounter_weight,
+		"encounter_min_rank": encounter_min_rank,
+		"matchup_weight": matchup_weight,
+		"preferred_weight": preferred_weight,
+		"allow_preferred": allow_preferred,
 	}

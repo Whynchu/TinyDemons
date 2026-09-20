@@ -947,10 +947,10 @@ func build_enemy_health_ui(
 	register_overhead: Callable,
 	pixel_particle: Callable
 ) -> Texture2D:
-	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png", "orange": "EnemyHpRedBar.png", "aquamarine": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png", "orange": "HpOverheadRedBar.png", "aquamarine": "HpOverheadRedBar.png"}
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png", "orange": "EnemyHpRedBar.png", "aquamarine": "EnemyHpRedBar.png", "purple": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png", "orange": "HpOverheadRedBar.png", "aquamarine": "HpOverheadRedBar.png", "purple": "HpOverheadRedBar.png"}
 	target_health_fill_textures.clear(); target_overhead_fill_textures.clear()
 	for slime in slimes:
-		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
+		var palette := SlimeVisualComponent.frame_palette_for(slime); if not target_bar_paths.has(palette): palette = "green"
 		target_health_fill_textures[slime] = load_texture.call("res://assets/artwork/" + target_bar_paths[palette]); target_overhead_fill_textures[slime] = load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette])
 	target_health_damage_fill_textures.clear(); target_overhead_damage_fill_textures.clear()
 	for slime in slimes:
@@ -976,9 +976,9 @@ func build_enemy_health_ui(
 
 
 func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Callable, bright_texture: Callable) -> void:
-	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png", "orange": "EnemyHpRedBar.png", "aquamarine": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png", "orange": "HpOverheadRedBar.png", "aquamarine": "HpOverheadRedBar.png"}
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png", "orange": "EnemyHpRedBar.png", "aquamarine": "EnemyHpRedBar.png", "purple": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png", "orange": "HpOverheadRedBar.png", "aquamarine": "HpOverheadRedBar.png", "purple": "HpOverheadRedBar.png"}
 	for slime in slimes:
-		var palette := String(slime.get("variant")); if not target_bar_paths.has(palette): palette = "green"
+		var palette := SlimeVisualComponent.frame_palette_for(slime); if not target_bar_paths.has(palette): palette = "green"
 		var target_texture := load_texture.call("res://assets/artwork/" + target_bar_paths[palette]) as Texture2D; var overhead_texture := load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette]) as Texture2D
 		target_health_fill_textures[slime] = target_texture; target_health_damage_fill_textures[slime] = bright_texture.call(target_texture)
 		target_overhead_fill_textures[slime] = overhead_texture; target_overhead_damage_fill_textures[slime] = bright_texture.call(overhead_texture)

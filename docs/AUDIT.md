@@ -1,8 +1,8 @@
-# Tiny Demons — Version 0.2.32 Codebase Baseline
+# Tiny Demons — Version 0.2.67 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
-Audit date: 2026-09-17
+Audit date: 2026-09-20
 
 Baseline commit: `8b162a2410ebea45bfea2e846b427838663ad61d` (the `0.2.23` tree that
 the measurements below describe; the `0.2.24` documentation/version checkpoint is
@@ -10,9 +10,9 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.32` (composition refactor structurally and editor-wise
+Current release: `0.2.67` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
-room/menu boundaries, and a fresh full-state baseline)
+room/menu boundaries, and the content-authoring enemy proof in progress)
 
 Supersedes: the `0.2.00` audit (`docs/AUDIT.md` at commit
 `bfe55782f43ee40fe32b5bebd45de988e34579d8`). That document remains available in
@@ -22,15 +22,15 @@ table in section 3 for comparison.
 
 ## Current measured snapshot (2026-09-20, version 0.2.67)
 
-The detailed audit below describes the `0.2.32` tree. The current tree at
+The detailed historical audit below describes the `0.2.32` tree. The current tree at
 version `0.2.67` measures:
 
 | Metric | 0.2.32 audit | 0.2.67 (2026-09-20) |
 | --- | ---: | ---: |
 | GDScript files in `scripts/` | 171 | 194 |
-| `root.call/get/set` sites | 2,488 | 2,198 |
+| `root.call/get/set` sites | 2,488 | 2,200 |
 | `GameplayState` lines / fields | 1,719 / 286 | 1,715 / 285 |
-| `RoomController` lines | 2,253 | 2,248 |
+| `RoomController` lines | 2,253 | 2,246 |
 | `screen_state_controller.gd` lines | 5,432 | 5,508 |
 | GDScript test/report files | 124 | 134 |
 | Registered runnable smoke paths | 122 | 132 |
@@ -46,9 +46,9 @@ resource fields are ignored in favor of duplicated code constants — see the
 trap register in [`authoring-system-plan.md`](authoring-system-plan.md). Treat
 the metric as a regression guard, not an authoring-completeness claim.
 
-A full re-measurement of the sections below (largest scripts, coupling profile,
-performance profile, persistence, and verification surface) is scheduled in
-Slice 0 of the authoring plan.
+The historical sections below retain their original baseline measurements; the
+current snapshot above and the focused verification commands are the live
+source for present-day counts.
 
 ## 1. Purpose
 
@@ -82,7 +82,7 @@ The audit inspected:
 - the 89 tracked Markdown documents under `docs/` plus `README.md` and
   `AGENTS.md` as the documentation surface.
 
-Verification performed for this baseline:
+Historical verification performed for the 0.2.32 baseline:
 
 - `tools/validate_composition.ps1` (regression floor and `-RequireTargets`
   strict audit) both pass: **100%** weighted progress, all strict targets met.
@@ -362,8 +362,8 @@ input characterization.
 
 ## 9. Testing and verification assessment
 
-The test investment is a major strength: 124 scripts, 122 registered runnable
-paths, a 43-path curated release gate, and a manifest registry
+The test investment is a major strength: 134 manifest rows, 132 registered
+runnable paths, a 44-path curated release gate, and a manifest registry
 (`tests/manifest.csv`) that drives the runner groups. The current harness
 limitations remain: each test launches a separate Godot process, the full run
 is slow, and visual acceptance is mostly manual.
@@ -535,9 +535,11 @@ balance change is required to preserve behavior after extraction.
 3. **Performance track (T3).** Record the Samsung A17 device profile for the
    fixed seed before any optimization claim; then choose between node/effect
    reduction, cache/atlas work, loading changes, and the palette-shader A/B.
-4. **Content composition (T2).** Build the `EnemyDefinition` + `EnemyFactory`
-   vertical proof around one existing slime variant, then extend the contract to
-   encounters, rooms, items, and effects. Add a content-validation step to CI.
+4. **Content composition (T2).** The enemy `EnemyDefinition` + `EnemyFactory`
+   proof now includes typed catalog entries, definition-owned encounter
+   metadata, factory-created runtime pool slots, and focused room-entry
+   coverage. Finish its preview/zero-edit acceptance bar, then extend the
+   contract to encounters, rooms, items, and effects.
 5. **Menu platform (Phase 0.30).** Migrate one screen at a time out of
    `ScreenStateController` using the `MenuPlayerContext` presenter pattern.
 6. **Remaining root-access owners.** Reduce `combat_runtime_controller.gd`,
@@ -551,7 +553,7 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.32 is past the legacy-coupling and editor-composition cleanup:
+Tiny Demons 0.2.67 is past the legacy-coupling and editor-composition cleanup:
 the composition scorecard is fully green (strict and editor halves both 100%),
 the state bag is at its measured target, the room lifecycle has typed
 boundaries, the frame schedule is a typed direct slice, and every authored
@@ -561,8 +563,8 @@ produces repeatable evidence.
 
 The next cycle is no longer "finish the coupling cleanup." It is: stabilize the
 boss-entry measurement into a repeatable gate and optimize that slow path,
-record the device performance profile, build the
-first content-definition/factory proof, and migrate menus and the remaining
+record the device performance profile, finish the enemy authoring proof's
+preview and fresh data-only acceptance, and migrate menus and the remaining
 root-access owners one vertical slice at a time. A broad rewrite would put the
 working combat, dungeon, save, input, web, and pixel-presentation foundation at
 unnecessary risk.

@@ -30,7 +30,7 @@ monolithic effort:
 | Track | Scope | Sequence gate | Tracked in |
 |---|---|---|---|
 | **T1 — Ownership cleanup** | Reduce `GameplayState` coupling, root reflection, oversized owners, transitional adapters | **Complete** — `tools/validate_composition.ps1` reports 100% and the strict audit passes; the regression floor now protects the achieved state | `composition-refactor-analysis.md` (historical record) |
-| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Slice-level execution is in [`authoring-system-plan.md`](authoring-system-plan.md): the enemy definition/factory proof exists, but a variant still needs code and test edits, so Slice 1 pins the zero-edit bar and slices 2–3 extend it | [`authoring-system-plan.md`](authoring-system-plan.md) + this document + [`component-composition-design.md`](component-composition-design.md) |
+| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Slice-level execution is in [`authoring-system-plan.md`](authoring-system-plan.md): the enemy catalog, encounter metadata, factory materialization, and runtime pool proof are landed; preview and a fresh zero-edit variant acceptance run remain | [`authoring-system-plan.md`](authoring-system-plan.md) + this document + [`component-composition-design.md`](component-composition-design.md) |
 | **T3 — Performance** | Device-backed frame-time, transition, memory, and startup budgets on desktop + Samsung A17 | First fixed-seed scenario harness; then A/B palette test | this document |
 
 Each track may be at a different progress point and can be picked up
@@ -144,9 +144,9 @@ The existing `DungeonLayoutDefinition` and `DungeonLayoutGenerator` are useful
 foundations. A generated layout result can remain a typed runtime object; the
 long-term improvement is to move reusable authored rules and content choices
 into inspectable definitions rather than growing more code-created special
-cases. Likewise, the current slime variant catalog and tuning resources are
-seeds of the enemy-definition system, but a dictionary lookup alone is not yet
-an editor-friendly enemy composition boundary.
+cases. The slime variant catalog is now the first typed enemy-definition
+boundary; the remaining content kinds still need the same registry, factory,
+preview, and validation treatment.
 
 ## What completion of the larger goal means
 
@@ -234,7 +234,7 @@ If the second variant cannot be added with ≤1 definition/catalog change and ze
 **Slice B status: complete at `0.2.34`.** `EnemyDefinition` is the typed
 `@export` resource; `EnemyFactory` assembles `SlimeActor` from a definition;
 the runtime spawn path and visual texture resolution read through the factory;
-"crimson" was added via one catalog row + definition with zero
+"crimson" was added via one typed catalog sub-resource with zero
 `GameplayState` edits; `enemy_definition_slice_smoke` proves the second-variant
 proof, `enemy_definition_roundtrip_smoke` proves the save/load round-trip
 (variant id persists and re-expands to identical stats), and crimson is now
@@ -250,19 +250,21 @@ The dictionary catalogs are moving to inspector-editable `Resource` subclasses.
 (`PuzzlePlanData`) now load from `resources/definitions/*.tres`; the six tuning
 classes load from `resources/tuning/*.tres`. **At `0.2.33`** the enemy vertical
 slice (Slice B) landed: `EnemyDefinition` (`scripts/enemy_definition.gd`) is a
-typed `@export` contract over each `SlimeVariantCatalogData` record, and
-`EnemyFactory` (`scripts/enemy_factory.gd`) assembles/configures `SlimeActor`
-from a definition (variant, combat element, damage contract, stats profile).
+typed `@export` contract for each authored `SlimeVariantCatalogData` entry, and
+`EnemyFactory` (`scripts/enemy_factory.gd`) materializes/configures `SlimeActor`
+from a definition (variant, combat element, damage contract, stats profile, and
+regular geometry).
 The runtime spawn path (`room_enemy_spawn_services.gd` and
 `combat_runtime_controller.gd` `configure_slime_variant`) and the visual
 texture source resolution (`actor_presentation_runtime_controller.gd`
 `build_slime_direction_textures`) now read through the factory/definition
 instead of raw dictionaries and a hardcoded palette→art mapping. A second
-variant ("crimson", a tanky Fire slime) was added via one catalog row + one
-`EnemyDefinition` view with **zero `GameplayState` edits**, proven by
-`enemy_definition_slice_smoke`. **Remaining:** the definition/run contracts
-for encounters, rooms, rewards, and effects do not yet have typed `Resource`
-definitions. The honest cost items that still apply to the unmigrated kinds:
+variant ("crimson", a tanky Fire slime) was added as one typed catalog
+sub-resource with **zero `GameplayState` edits**, proven by
+`enemy_definition_slice_smoke`. **Remaining:** the generic
+`ContentDefinition`/auto-discovery/preview contract and the complete
+registry/factory workflow for items, rooms, rewards, and effects are not yet
+landed. The honest cost items that still apply to the unmigrated kinds:
 
 - a `Resource` subclass per definition kind with `@export` fields and stable
   IDs;

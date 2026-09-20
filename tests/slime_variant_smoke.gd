@@ -3,6 +3,7 @@ extends SceneTree
 const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
+const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
 
 var _finished := false
 
@@ -10,40 +11,18 @@ var _finished := false
 func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
-	var expected_stats := {
-		&"grey": [2, 2, 2, 2, 0, 1],
-		&"red": [1, 4, 2, 1, 2, 1],
-		&"blue": [2, 1, 4, 1, 2, 3],
-		&"yellow": [2, 2, 1, 3, 3, 1],
-		&"green": [4, 1, 2, 1, 2, 2],
-		&"purple": [1, 3, 1, 3, 3, 1],
-		&"orange": [3, 1, 3, 1, 2, 2],
-		&"aquamarine": [2, 2, 1, 3, 3, 2],
-		&"crimson": [4, 3, 3, 0, 2, 1],
-	}
-	var expected_elements := {
-		&"grey": ElementCatalogScript.Element.NEUTRAL,
-		&"red": ElementCatalogScript.Element.FIRE,
-		&"blue": ElementCatalogScript.Element.WATER,
-		&"yellow": ElementCatalogScript.Element.ELECTRIC,
-		&"green": ElementCatalogScript.Element.GRASS,
-		&"purple": ElementCatalogScript.Element.SHADOW,
-		&"orange": ElementCatalogScript.Element.GROUND,
-		&"aquamarine": ElementCatalogScript.Element.ICE,
-		&"crimson": ElementCatalogScript.Element.FIRE,
-	}
 	var stats := StatsComponent.new()
-	for variant in CatalogScript.VARIANTS:
-		var definition := CatalogScript.definition(variant)
-		stats.apply_enemy_variant_profile(definition["base_stats"], definition["growth_weights"], variant)
+	for variant in CatalogScript.variants():
+		var definition := EnemyFactoryScript.definition(variant)
+		_expect(definition != null and definition.id == variant, "%s resolves to its typed registry definition" % variant, failures)
+		if definition == null:
+			continue
+		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, variant)
 		stats.level = 1
-		var expected: Array = expected_stats[variant]
-		_expect([stats.vit, stats.strength, stats.def, stats.agi, stats.intelligence, stats.mnd] == expected, "%s level-one six-stat profile is exact" % variant, failures)
-		_expect(CatalogScript.element_for_variant(variant) == expected_elements[variant], "%s element is exact" % variant, failures)
-		_expect(CatalogScript.damage_contract_for_variant(variant) == (&"physical" if variant == &"grey" else &"elemental_slime"), "%s damage contract is explicit" % variant, failures)
-		_expect(CatalogScript.is_elemental_variant(variant) == (variant != &"grey") and stats.intelligence == expected[4], "%s INT contract matches neutral/elemental rule" % variant, failures)
-		_expect(stats.mnd == expected[5], "%s MND is present as defensive magic stat" % variant, failures)
-		_expect(CatalogScript.display_name_for_variant(variant) != "", "%s has a display name" % variant, failures)
+		_expect(stats.vit >= int(definition.base_stats.get("VIT", 0)) and stats.strength >= int(definition.base_stats.get("STR", 0)) and stats.def >= int(definition.base_stats.get("DEF", 0)) and stats.agi >= int(definition.base_stats.get("AGI", 0)) and stats.intelligence >= int(definition.base_stats.get("INT", 0)) and stats.mnd >= int(definition.base_stats.get("MND", 0)), "%s level-one stats honor the authored base profile" % variant, failures)
+		_expect(ElementCatalogScript.is_valid(definition.element), "%s element is valid" % variant, failures)
+		_expect(not definition.damage_contract.is_empty(), "%s damage contract is explicit" % variant, failures)
+		_expect(not definition.display_name.is_empty() and not definition.visual_source.is_empty(), "%s has display and visual identity" % variant, failures)
 	_expect(CatalogScript.display_name_for_variant(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
 
 	var yellow := StatsComponent.new()

@@ -23,7 +23,10 @@ const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/touch_controls_layer.
 const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/performance_capture_service.gd")
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/cloud_save_panel.gd")
-const SLIME_ROSTER_SIZE := 13
+## Runtime enemy capacity is a pool size, not an authored content roster. Every
+## slot is materialized by EnemyFactory so a new definition never needs a scene
+## node added to main.tscn.
+const ENEMY_POOL_SIZE := 13
 
 ## Opt-in boot phase timing for the performance harness. Disabled by default.
 static var boot_diagnostics_enabled := false
@@ -219,7 +222,7 @@ func initialize(root: GameplayState) -> void:
 	_place_debug_player_at_boss_entry(root, player)
 	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
-	var slimes: Array[Sprite2D] = [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]; _expand_slime_roster(root, slimes); root.set("slimes", slimes)
+	var slimes: Array[Sprite2D] = _build_slime_roster(root); root.set("slimes", slimes)
 	var actors: Array[Sprite2D] = [player]; actors.append_array(slimes); root.set("actor_sprites", actors)
 	geometry_debug.configure(actors, Callable(root, "_actor_foot"), Callable(root, "_collision_rect"), Callable(root, "_slime_body_polygon"))
 	var collision: Array[Sprite2D] = [player]; collision.append_array(slimes); collision.append(chest); root.set("collision_sprites", collision)
@@ -520,14 +523,29 @@ func _initialize_slimes(root: Object, slimes: Array[Sprite2D]) -> void:
 		health.damaged.connect(Callable(root, "_on_slime_health_damaged").bind(slime)); health.healed.connect(Callable(root, "_on_slime_health_healed").bind(slime)); health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(slime)); var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = maximum; presenter.damage_fill_hold_timer = 0.0
 
 
-func _expand_slime_roster(root: Object, slimes: Array[Sprite2D]) -> void:
-	var template := root.get("slime_blue") as Sprite2D
-	if template == null:
-		return
-	var parent := template.get_parent()
-	for slot in range(slimes.size(), SLIME_ROSTER_SIZE):
-		var clone := template.duplicate() as Sprite2D
-		clone.name = "SlimeSlot%d" % (slot + 1)
-		clone.position = template.position
-		parent.add_child(clone)
-		slimes.append(clone)
+func _build_slime_roster(root: Object) -> Array[Sprite2D]:
+	var template := root.get("slime_green") as Sprite2D
+	var parent := template.get_parent() if template != null else null
+	var result: Array[Sprite2D] = []
+	if parent == null:
+		return result
+	# The three scene-authored slimes remain as editor/reference templates for
+	# shared HUD assets, but they are not gameplay roster slots anymore.
+	for template_node in [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]:
+		var scene_template := template_node as Sprite2D
+		if scene_template != null:
+			scene_template.visible = false
+	var template_positions: Array[Vector2] = []
+	for template_node in [root.get("slime_blue"), root.get("slime_green"), root.get("slime_red")]:
+		var scene_template := template_node as Sprite2D
+		if scene_template != null:
+			template_positions.append(scene_template.position)
+	while template_positions.size() < 3:
+		template_positions.append(Vector2.ZERO)
+	for slot in ENEMY_POOL_SIZE:
+		var actor := EnemyFactory.assemble(EnemyFactory.definition(&"grey"))
+		actor.name = "EnemySlot%d" % (slot + 1)
+		actor.position = template_positions[slot % template_positions.size()]
+		parent.add_child(actor)
+		result.append(actor)
+	return result

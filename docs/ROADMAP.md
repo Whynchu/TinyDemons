@@ -62,8 +62,9 @@ the active sequence for closing the gap between the score and a real workflow:
 1. Slice 0 — completed the authority-doc correction, recursive definition
    preflight, `GODOT_BIN` portability, class-cache bootstrap, catalog failure
    signaling, R5 identity check, UID coverage, and dead R3 plan cleanup.
-2. Slice 1 — typed enemy definitions, one registry, factory-only assembly,
-   preview, and a second variant with zero code and test edits.
+2. Slice 1 — typed enemy definitions, one registry, and factory-only assembly
+   are landed for enemies; preview and a fresh zero-edit variant acceptance
+   run remain.
 3. Slices 2–3 — items, elements, rooms, maps, and generation policy.
 4. Slice 4 — menu route registry and conversion of the code-built overlays.
 5. Slice 5 — shared-process fast suites and content-contract tests in CI.
@@ -189,8 +190,8 @@ settlement boundary.
 ## Phase 0.50 — Typed runtime ownership
 
 Complete. The composition scorecard is at 100%: `GameplayState` is at 1,715
-lines / 285 fields, dynamic root access is at 2,198, `RoomController` is at
-2,248 lines, and the transitional/legacy counts are zero. The strict audit
+lines / 285 fields, dynamic root access is at 2,200, `RoomController` is at
+2,246 lines, and the transitional/legacy counts are zero. The strict audit
 (`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
 floor now protects the achieved state. At `0.2.67` the editor-composition
 metric is also 100% by its own definition (all 20 components are blind and
@@ -233,11 +234,10 @@ the broader direction in
 and the component contract in
 [`component-composition-design.md`](component-composition-design.md). The
 composition refactor is complete on its scorecard, but that is not a claim that
-content authoring is complete. The enemy vertical proof landed at `0.2.34` as a
-factory/definition slice, yet a variant still requires code and test edits; the
-authoring plan's Slice 1 pins the zero-edit acceptance bar for a second
-variant, and slices 2–3 extend the same contract to items, elements, rooms, and
-dungeon/map definitions.
+content authoring is complete. The enemy vertical proof now has a typed catalog,
+definition-owned encounter metadata, and a factory-created runtime pool;
+preview and a fresh zero-edit variant acceptance run remain. Slices 2–3 extend
+the same contract to items, elements, rooms, and dungeon/map definitions.
 
 ## Out of scope for this cycle
 
