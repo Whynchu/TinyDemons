@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SlimeVariantCatalogData" load_steps=11 format=3 uid="uid://csvahxy3wpliv"]
+[gd_resource type="Resource" script_class="SlimeVariantCatalogData" load_steps=12 format=3 uid="uid://csvahxy3wpliv"]
 
 [ext_resource type="Script" uid="uid://8kfyonox4q1h" path="res://scripts/slime_variant_catalog_data.gd" id="1_catalog"]
 [ext_resource type="Script" uid="uid://bc7ncfaqqbeff" path="res://scripts/enemy_definition.gd" id="2_enemy"]
@@ -123,6 +123,19 @@ encounter_role = &"late"
 encounter_weight = 0.6
 encounter_min_rank = 5
 
+[sub_resource type="Resource" id="EnemyDefinition_guard_slime"]
+script = ExtResource("2_enemy")
+id = &"guard_slime"
+display_name = "Guard Slime"
+element = 0
+damage_contract = &"physical"
+base_stats = {"AGI": 0, "DEF": 5, "INT": 0, "MND": 2, "STR": 1, "VIT": 6}
+growth_weights = {"AGI": 0.0, "DEF": 0.42, "INT": 0.0, "MND": 0.1, "STR": 0.08, "VIT": 0.4}
+visual_source = "green"
+encounter_role = &"late"
+encounter_weight = 0.5
+encounter_min_rank = 3
+
 [resource]
 script = ExtResource("1_catalog")
-definitions = Array[Resource]([SubResource("EnemyDefinition_grey"), SubResource("EnemyDefinition_red"), SubResource("EnemyDefinition_blue"), SubResource("EnemyDefinition_yellow"), SubResource("EnemyDefinition_green"), SubResource("EnemyDefinition_purple"), SubResource("EnemyDefinition_orange"), SubResource("EnemyDefinition_aquamarine"), SubResource("EnemyDefinition_crimson")])
+definitions = Array[Resource]([SubResource("EnemyDefinition_grey"), SubResource("EnemyDefinition_red"), SubResource("EnemyDefinition_blue"), SubResource("EnemyDefinition_yellow"), SubResource("EnemyDefinition_green"), SubResource("EnemyDefinition_purple"), SubResource("EnemyDefinition_orange"), SubResource("EnemyDefinition_aquamarine"), SubResource("EnemyDefinition_crimson"), SubResource("EnemyDefinition_guard_slime")])
