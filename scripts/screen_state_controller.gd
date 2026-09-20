@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.66"
+const GAME_VERSION := "0.2.67"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2283,10 +2283,8 @@ func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: 
 		if item_index >= candidates.size():
 			continue
 		var item := candidates[item_index] as ItemInstance
-		var label := catalog.gear_name(item)
-		if item.enhancement_level > 0:
-			label += " F%d" % item.enhancement_level
-		model.rows.append({"label": label, "slot": str(catalog.definition_slot(item.definition_id)), "color": catalog.rarity_color(item.rarity), "soul_cost": profile.fusion_batch_cost(item, 1)})
+		var label := _fusion_item_label(catalog, profile, item)
+		model.rows.append({"label": label, "slot": str(catalog.definition_slot(item.definition_id)), "color": catalog.rarity_color(item.rarity), "soul_cost": profile.fusion_batch_cost(item, 1), "equipped": profile.equipped_instance_ids.values().has(item.instance_id), "stat_total": catalog.stat_allocation_total(item)})
 	model.selected_row = clampi(hub_item_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
 	if not candidates.is_empty():
 		var selected_index := clampi(hub_item_index, 0, candidates.size() - 1)
@@ -2301,6 +2299,15 @@ func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: 
 	model.message = hub_fusion_message
 	view.call("set_pixel_texture", pixel_texture)
 	view.call("render_fusion", model)
+
+
+func _fusion_item_label(catalog: ItemCatalog, profile: PlayerProfile, item: ItemInstance) -> String:
+	var label := catalog.gear_name(item)
+	if item.enhancement_level > 0:
+		label += " F%d" % item.enhancement_level
+	if profile.equipped_instance_ids.values().has(item.instance_id):
+		label += " E"
+	return label
 
 
 func _render_bind_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:

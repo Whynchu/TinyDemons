@@ -35,10 +35,31 @@ func _initialize() -> void:
 	material2.rarity = &"common"
 	root.player_profile.grant_item(material2)
 	_expect(controller.hub_fusion_candidates(root).is_empty(), "cached result stays stable until invalidated", failures)
+	var high_target := ItemInstance.new()
+	high_target.instance_id = "cache-high-target"
+	high_target.definition_id = &"arcane_body"
+	high_target.rarity = &"common"
+	var high_material := ItemInstance.new()
+	high_material.instance_id = "cache-high-material"
+	high_material.definition_id = &"arcane_body"
+	high_material.rarity = &"common"
+	root.player_profile.grant_item(high_target)
+	root.player_profile.grant_item(high_material)
+	var low_target := ItemInstance.new()
+	low_target.instance_id = "cache-low-target"
+	low_target.definition_id = &"plain_hood"
+	low_target.rarity = &"common"
+	var low_material := ItemInstance.new()
+	low_material.instance_id = "cache-low-material"
+	low_material.definition_id = &"plain_hood"
+	low_material.rarity = &"common"
+	root.player_profile.grant_item(low_target)
+	root.player_profile.grant_item(low_material)
 
 	controller.set_hub_page(root, 3)
 	var candidates := controller.hub_fusion_candidates(root)
-	_expect(candidates.size() == 1 and candidates[0].instance_id == target.instance_id, "matching unequipped copies collapse into one FUSE row", failures)
+	_expect(candidates.size() == 3 and candidates[0].instance_id == target.instance_id and candidates[1].instance_id == high_target.instance_id and candidates[2].instance_id == low_target.instance_id, "Fusion sorts equipped targets first, then descending total primary stats", failures)
+	_expect(catalog.stat_allocation_total(high_target) > catalog.stat_allocation_total(low_target), "Fusion sort fixture has distinct total primary stat allocations", failures)
 	_expect(root.screen_state_controller.hub_fusion_candidates_dirty == false, "refreshed fusion cache is clean", failures)
 	_expect(root.player_profile.fusion_owned_count(target.instance_id, catalog) == 2, "collapsed FUSE row reports both unequipped copies as owned", failures)
 	_expect(root.player_profile.fusion_material_count(target.instance_id, catalog) == 2, "matching basic swords remain usable as materials", failures)

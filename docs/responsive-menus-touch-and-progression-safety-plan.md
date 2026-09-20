@@ -1,4 +1,4 @@
-# Responsive menus, touch preview, and progression safety
+# Responsive menus, touch actions, and progression safety
 
 Status: Phases A–D (Demon Hub pass) implemented and verified; the remaining
 menu migration continues in the next pass.
@@ -6,7 +6,7 @@ menu migration continues in the next pass.
 Owner: `screen_state_controller.gd`, `display_controller.gd`,
 `display_layout.gd`, and `touch_controls_layer.gd`.
 
-Current code: Demon Hub and the responsive touch preview path are active;
+Current code: Demon Hub and the responsive direct-touch menu path are active;
 remaining menu migration and browser/device verification are open.
 
 Verification: responsive menu, touch menu, progression safety, and generated
@@ -27,9 +27,9 @@ Related contracts:
 
 This document records three decisions discovered while bringing the Equipment
 menu to the same standard as Pause: wide-screen menu composition must distribute
-its extra width, touch equipment selection needs a preview step, and generated
-doors must be proven reachable from the player's actual elemental state. These
-are shared product rules, not isolated Equipment fixes.
+its extra width, touch equipment selection must stay directly accessible, and
+generated doors must be proven reachable from the player's actual elemental
+state. These are shared product rules, not isolated Equipment fixes.
 
 Where an older menu document says that a wide layout expands only its left
 field while leaving authored content at its original x positions, the
@@ -47,13 +47,12 @@ anchors its command rail to the right while much of the authored content stays
 fixed on the left. The frame is technically responsive, but the composition is
 not: added width becomes empty space instead of useful spacing between groups.
 
-### 1.2 Touch commits a candidate before its comparison can be read
+### 1.2 Touch commits a candidate directly
 
-The candidate grid already calculates and renders the correct preview snapshot
-and green/red stat comparison. Keyboard and controller navigation expose that
-preview before Confirm. A touch candidate press currently selects the candidate
-and immediately invokes the equipment transaction, leaving no rendered frame in
-which the player can inspect the comparison.
+The candidate grid calculates and renders the correct preview snapshot and
+green/red stat comparison for controller navigation. Authored touch buttons use
+the visible command, slot, and candidate controls directly; a candidate tap
+invokes the shared equipment transaction without emulating controller nesting.
 
 ### 1.3 Generated-door validation assumes the wrong initial flame after Bind
 
@@ -103,20 +102,18 @@ one-off fullscreen offsets in controllers.
 
 ### 2.2 Touch equipment contract
 
-- The first touch on a candidate moves the active selection to that item.
-- That first touch renders its description, final bonuses, effective stat
-  values, and green/red differences without changing the equipped item.
-- A second touch on the same candidate commits the equipment transaction.
-- Touching a different candidate moves the preview and arms that new candidate.
-- Leaving the candidate grid, changing slots, pressing Back, committing an
-  item, or reopening Equipment clears the armed touch candidate.
+- Every visible authored Equipment command, slot, and candidate button is a
+  direct touch target.
+- Touching a visible candidate commits the equipment transaction immediately
+  through the shared transaction path, including profile save/recalculation,
+  sounds, and cursor-depth updates.
+- Touch follows the visible authored route without requiring controller-style
+  preview-and-confirm nesting. Buttons may be replaced as the route advances,
+  but each replacement remains directly touchable.
 - Keyboard and controller retain their current navigation-then-Confirm behavior.
-- Mouse behavior remains independent unless it is deliberately classified as
-  touch by the input-device layer.
 - The behavior is identical in Demon Hub Equipment and Pause Equipment.
-
-The touch arm must use the absolute candidate index or stable item instance ID,
-not merely the visible 2x4 cell, so scrolling cannot commit the wrong item.
+- Equipment route changes clear the legacy candidate-arm fields for save/test
+  compatibility; no touch arm is needed for a candidate commit.
 
 ### 2.3 Elemental progression safety contract
 
@@ -157,15 +154,15 @@ not merely the visible 2x4 cell, so scrolling cannot commit the wrong item.
 
 This phase is first because it addresses a live progression-blocking defect.
 
-### Phase B — touch candidate preview
+### Phase B — direct touch candidate action (revised)
 
-1. Add a touch-only armed-candidate state to the Equipment interaction owner.
-2. Route candidate button presses through a device-aware selection method.
-3. On first touch, update the candidate index and redraw without committing.
-4. On a second touch of the same armed candidate, use the existing transaction
-   path so save, equipment recalculation, sounds, and cursor depth remain shared.
-5. Reset the arm at every route boundary described in section 2.2.
-6. Exercise the behavior in both Hub and Pause instances of the authored scene.
+1. Keep controller/keyboard route state nested, while authored touch buttons
+   invoke their visible command, slot, or candidate action directly.
+2. Route candidate button presses through the shared equipment transaction path
+   without a touch-only preview gate.
+3. Clear the retained legacy candidate-arm fields at route boundaries.
+4. Exercise one-tap candidate actions in both Hub and Pause instances of the
+   authored scene.
 
 ### Phase C — shared responsive menu geometry
 
@@ -211,11 +208,12 @@ background fills the viewport.
 
 ### Touch equipment checks
 
-- First candidate tap changes preview but not equipped instance ID.
-- Preview renders effective values and the correct green/red/white comparison.
-- Second tap on the same item commits it.
-- Tapping A then B previews B and does not commit A.
-- Back, slot change, scroll-window change, and reopen clear the armed item.
+- Command, slot, and candidate buttons are directly touchable at their visible
+  authored positions.
+- One candidate tap commits through the shared equipment transaction path.
+- Candidate preview still renders effective values and the correct
+  green/red/white comparison for controller/keyboard navigation.
+- Back, slot change, scroll-window change, and reopen leave no stale touch arm.
 - Keyboard/controller Confirm remains single-confirm and unchanged.
 - Hub and Pause produce the same transaction result.
 
@@ -256,9 +254,9 @@ scope described above:
   starter flames, every valid elemental Bind (plus no Bind), and continued-run
   recovery.
 - Phase B is landed in `hub_flow_controller.gd`, `screen_state_controller.gd`,
-  and the shared Equipment scene path. Touch candidate presses preview first
-  and commit on a second tap of the same absolute candidate in both Hub and
-  Pause; route changes clear the arm.
+  and the shared Equipment scene path. Controller/keyboard navigation keeps its
+  nested route, while a visible touch candidate commits in one tap in both Hub
+  and Pause; retained legacy arm fields are cleared at route boundaries.
 - Phase C is landed in `menu_responsive_layout.gd`,
   `equipment_menu_layout.gd`, and `pause_menu_layout.gd` with controller-level
   wide-layout assertions. Native 240x160 coordinates remain authoritative,

@@ -117,13 +117,12 @@ func _initialize() -> void:
 		_expect((view.get_node("SlotIcon0") as Sprite2D).visible and view.slot_cursor.modulate == EquipmentMenuLayout.DIM_CURSOR_MODULATE, "the six equipped icons persist and the previous cursor dims by fifty percent", failures)
 		var input_tracker := gameplay.get("input_device_tracker") as InputDeviceTracker
 		var equipped_before_touch := profile.get_equipped_instance_id(&"weapon")
+		var touch_candidates := gameplay.call("_hub_gear_candidates", &"weapon") as Array[ItemInstance]
+		var expected_touch_equipped := equipped_before_touch if touch_candidates.is_empty() else touch_candidates[0].instance_id
 		if input_tracker != null: input_tracker.set_device(InputDeviceTracker.Device.TOUCH)
-		gameplay.call("_select_hub_gear_candidate", 0)
+		view.candidate_buttons[0].pressed.emit()
 		await process_frame
-		_expect(profile.get_equipped_instance_id(&"weapon") == equipped_before_touch and screens.hub_touch_candidate_index == 0, "first touch on a candidate previews without committing equipment", failures)
-		gameplay.call("_select_hub_gear_candidate", 0)
-		await process_frame
-		_expect(screens.hub_touch_candidate_index == -1, "second touch on the same candidate commits and clears the touch arm", failures)
+		_expect(profile.get_equipped_instance_id(&"weapon") == expected_touch_equipped and screens.hub_touch_candidate_index == -1 and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP, "one touch on a visible candidate commits the direct route and clears the legacy touch arm", failures)
 		gameplay.call("_close_hub_gear_browse")
 		await process_frame
 

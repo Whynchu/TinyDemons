@@ -698,6 +698,17 @@ func combat_primary_points(item: ItemInstance) -> Dictionary:
 	return result
 
 
+func stat_allocation_total(item: ItemInstance) -> float:
+	## Fusion ordering uses the six authored primary stat lanes. `combat_primary_points`
+	## also exposes derived speed as an AGI alias for combat callers, so sum the
+	## canonical lanes explicitly to avoid counting AGI twice.
+	var primary := combat_primary_points(item)
+	var total := 0.0
+	for stat in ["strength", "vitality", "defense", "agi", "intelligence", "mnd"]:
+		total += float(primary.get(stat, 0.0))
+	return total
+
+
 static func _normalize_stat_key(stat: String) -> String:
 	return {
 		"speed": "agi",

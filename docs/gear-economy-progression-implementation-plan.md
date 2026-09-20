@@ -44,13 +44,13 @@ Rarity price multipliers are Common 1.0, Rare 2.2, Epic 4.84, Legendary 10.65, a
 - [x] Implement monotonic primary-stat Fusion enhancement storage/migration.
 - [ ] Expand chest quantity to 1–4 and verify four-drop placement.
 - [ ] Apply rarity price ladder and update economy tests/tuning docs.
-- [x] Add Fusion-only same-row touch double-tap behavior.
+- [x] Keep Fusion-only same-row touch double-tap behavior.
 - [ ] Add/extend Fusion touch regression tests.
 - [ ] Run focused checks, then the appropriate Godot verification path and record results.
 
 ## Owners and safety
 
-Rarity, plus packages, and prices belong to `ItemCatalog`; Fusion state belongs to `PlayerProfile`; chest quantity belongs to `RunFlowController` and its drop-spawn caller; touch interpretation belongs at the touch/menu boundary and must remain Fusion-scoped. Existing dirty worktree changes are preserved. No broad refactor or unrelated shop-stock change is included.
+Rarity, plus packages, and prices belong to `ItemCatalog`; Fusion state belongs to `PlayerProfile`; chest quantity belongs to `RunFlowController` and its drop-spawn caller; touch interpretation belongs at the touch/menu boundary, with Fusion retaining its row double-tap while Equipment candidates commit directly. Existing dirty worktree changes are preserved. No broad refactor or unrelated shop-stock change is included.
 
 ## Save and test requirements
 
