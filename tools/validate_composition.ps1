@@ -26,6 +26,13 @@ param(
 ## the current tree has a regression.
 
 $ErrorActionPreference = "Stop"
+$powerShellExecutable = (Get-Command powershell.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+if ([string]::IsNullOrWhiteSpace($powerShellExecutable)) {
+	$powerShellExecutable = (Get-Command pwsh -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+}
+if ([string]::IsNullOrWhiteSpace($powerShellExecutable)) {
+	throw "No PowerShell executable found for composition self-test"
+}
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $resolvedScriptsDirectory = if ($ScriptsDirectory) { $ScriptsDirectory } else { Join-Path $projectRoot "scripts" }
 $resolvedBaselinePath = if ($BaselinePath) { $BaselinePath } else { Join-Path $PSScriptRoot "composition-baseline.json" }
@@ -173,7 +180,6 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 		"reward_definition.gd",
 		"dungeon_layout_run1.gd",
 		"dungeon_layout_run2.gd",
-		"puzzle_map_r3.gd",
 		"puzzle_map_r4.gd",
 		"puzzle_map_r5.gd",
 		"puzzle_map_r3_new.gd"
@@ -284,7 +290,7 @@ function Invoke-ValidatorForSelfTest([string]$FixtureScripts, [string]$FixtureBa
 	if ($FixtureRequireTargets) {
 		$arguments += "-RequireTargets"
 	}
-	$script:SelfTestLastOutput = @(& pwsh @arguments 2>&1) -join "`n"
+	$script:SelfTestLastOutput = @(& $powerShellExecutable @arguments 2>&1) -join "`n"
 	return $LASTEXITCODE
 }
 

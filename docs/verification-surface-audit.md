@@ -10,12 +10,17 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 Owner: verification infrastructure and repository maintainability
 
 Current code: the runner derives grouping from `tests/manifest.csv`. The
-manifest classifies all 123 test/report scripts with a role, state, owner,
-target, and load kind. Its default release gate selects 43 paths; `owner`,
+manifest classifies all 134 test/report scripts with a role, state, owner,
+target, and load kind. Its default release gate selects 44 paths; `owner`,
 `reference`, `diagnostic`, and `all` groups keep the remaining evidence
 available without making every check a default blocker. The two `report`
 scripts (`fusion_menu_preview`, `puzzle_map_reference_diff_report`) are
-intentionally not runner tests.
+intentionally not runner tests. Note that the executable manifest validator
+accepts only `gate`, `owner`, `reference`, `diagnostic`, and `report` roles;
+the `role:migration` and `role:retire-candidate` labels described below are
+policy vocabulary, not registered values. Slice 5 of
+[`authoring-system-plan.md`](authoring-system-plan.md) owns the shared-process
+fast suite, content-contract coverage, and CI wiring.
 
 Verification: inventory mode, focused standalone Godot checks, and a supervised
 full run when the environment permits it; `tools/validate_test_manifest.ps1`
@@ -79,11 +84,11 @@ can be separated into product, harness, and environment causes:
 
 | Command | Current scope | Use |
 |---|---:|---|
-| default / `-TestGroup gate` | 43 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
-| `-TestGroup owner` | 65 Godot paths | Focused feature-owner regressions |
+| default / `-TestGroup gate` | 44 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
+| `-TestGroup owner` | 74 Godot paths | Focused feature-owner regressions |
 | `-TestGroup reference` | 12 Godot paths | Opt-in authored/visual/reference checks |
-| `-TestGroup diagnostic` | 1 Godot path | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 121 runnable Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup diagnostic` | 2 Godot paths | Opt-in performance/diagnostic evidence |
+| `-TestGroup all` | 132 runnable Godot paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its

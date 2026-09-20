@@ -9,23 +9,50 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Some managed Windows hosts expose both PATH and Path in the inherited
+# environment block. Windows PowerShell's Start-Process materializes that block
+# into a case-insensitive dictionary and fails on the duplicate. Normalize it
+# once in this runner process before starting Godot workers.
+$processPath = $env:Path
+Remove-Item Env:PATH -ErrorAction SilentlyContinue
+if (-not [string]::IsNullOrWhiteSpace($processPath)) {
+	$env:Path = $processPath
+}
 $root = Split-Path -Parent $PSScriptRoot
 $godot = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
+$powerShell = (Get-Command powershell.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+if ([string]::IsNullOrWhiteSpace($powerShell)) {
+	$powerShell = (Get-Command pwsh -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+}
+if ([string]::IsNullOrWhiteSpace($powerShell)) {
+	throw "No PowerShell executable found for smoke preflight"
+}
 
+$definitionValidator = Join-Path $root "tools/validate_definitions.ps1"
 $manifestValidator = Join-Path $root "tools/validate_test_manifest.ps1"
-& pwsh -NoProfile -ExecutionPolicy Bypass -File $manifestValidator
+$compositionValidator = Join-Path $root "tools/validate_composition.ps1"
+
+& $powerShell -NoProfile -ExecutionPolicy Bypass -File $manifestValidator
 if ($LASTEXITCODE -ne 0) {
 	throw "Test manifest preflight failed"
 }
 
-$compositionValidator = Join-Path $root "tools/validate_composition.ps1"
-& pwsh -NoProfile -ExecutionPolicy Bypass -File $compositionValidator -SelfTest
+& $powerShell -NoProfile -ExecutionPolicy Bypass -File $compositionValidator -SelfTest
 if ($LASTEXITCODE -ne 0) {
 	throw "Composition ownership self-test failed"
 }
-& pwsh -NoProfile -ExecutionPolicy Bypass -File $compositionValidator
+& $powerShell -NoProfile -ExecutionPolicy Bypass -File $compositionValidator
 if ($LASTEXITCODE -ne 0) {
 	throw "Composition ownership preflight failed"
+}
+
+& $powerShell -NoProfile -ExecutionPolicy Bypass -File $definitionValidator -ProjectRoot $root -GodotBin $godot
+if ($LASTEXITCODE -ne 0) {
+	throw "Definition validation preflight failed"
+}
+
+if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) {
+	throw "Godot executable not found: $godot. Set GODOT_BIN or pass a configured binary."
 }
 
 $headlessUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}" -f $PID)
@@ -87,6 +114,19 @@ if ($InventoryOnly) {
 	exit 0
 }
 
+$importArguments = @(
+	"--headless",
+	"--import",
+	"--audio-driver", "Dummy",
+	"--user-data-dir", $headlessUserData,
+	"--path", $root,
+	"--log-file", $logFile
+)
+& $godot @importArguments
+if ($LASTEXITCODE -ne 0) {
+	throw "Godot import preflight failed with exit code $LASTEXITCODE"
+}
+
 $failed = $false
 $engineCrashCount = 0
 $failByState = @{}
@@ -97,14 +137,16 @@ foreach ($test in $tests) {
 	$role = if ($row) { $row.role } else { "unclassified" }
 	$state = if ($row) { $row.state } else { "unclassified" }
 	$startedAt = Get-Date
-	$stdoutPath = Join-Path $env:TEMP ("tiny-demons-$test-out.log")
-	$stderrPath = Join-Path $env:TEMP ("tiny-demons-$test-error.log")
 	$testUserData = Join-Path $env:TEMP ("tiny-demons-headless-{0}-{1}" -f $PID, $test)
 	$testLogFile = Join-Path $testUserData "smoke.log"
 	New-Item -ItemType Directory -Path $testUserData -Force | Out-Null
 	$arguments = @("--headless", "--audio-driver", "Dummy", "--user-data-dir", $testUserData, "--path", $root, "--log-file", $testLogFile, "-s", ("res://tests/{0}.gd" -f $test))
+	# Windows PowerShell 5.1 can misinterpret an ArgumentList array containing
+	# `--path` as a case-insensitive parameter map. Pass one explicitly quoted
+	# command-line string so the Godot process receives the intended arguments.
+	$argumentText = ($arguments | ForEach-Object { '"{0}"' -f ([string]$_).Replace('"', '\"') }) -join " "
 	try {
-		$process = Start-Process -FilePath $godot -ArgumentList $arguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
+		$process = Start-Process -FilePath $godot -ArgumentList $argumentText -WindowStyle Hidden -PassThru
 	} catch {
 		$detail = "failed to start Godot: $($_.Exception.Message)"
 		Write-Host "ENGINE_START_FAILURE: $test ($detail)" -ForegroundColor Red
@@ -131,8 +173,7 @@ foreach ($test in $tests) {
 		$process.WaitForExit()
 		$exitCode = $process.ExitCode
 		$elapsed = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
-		if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath | Write-Host }
-		if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath | Write-Host }
+		if (Test-Path -LiteralPath $testLogFile) { Get-Content -LiteralPath $testLogFile | Write-Host }
 		$isEngineCrash = $exitCode -lt 0 -or $exitCode -in @(3221225477, -1073741510)
 		if ($isEngineCrash) {
 			$engineCrashCount += 1
@@ -142,7 +183,6 @@ foreach ($test in $tests) {
 			if ($engineCrashCount -ge $StopAfterEngineCrashes) {
 				Write-Host "STOPPED: repeated Godot engine crashes" -ForegroundColor Red
 				$failed = $true
-				Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
 				break
 			}
 		} elseif ($exitCode -ne 0) {
@@ -155,7 +195,6 @@ foreach ($test in $tests) {
 			Add-Content -LiteralPath $resultsPath -Value ('"{0}",pass,0,{1},"{2}","{3}",""' -f $test, $elapsed, $role, $state)
 		}
 	}
-	Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
 }
 
 if ($failByState.Count -gt 0) {
@@ -181,7 +220,7 @@ if (-not $TestFilter -and $TestGroup -in @("gate", "all")) {
 	$webSmoke = Join-Path $PSScriptRoot "web_export_smoke.ps1"
 	$webSmokeArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $webSmoke)
 	if ($env:REQUIRE_WEB_EXPORT -eq "1") { $webSmokeArgs += "-RequireExport" }
-	& pwsh @webSmokeArgs
+	& $powerShell @webSmokeArgs
 	if ($LASTEXITCODE -ne 0) {
 		Write-Host "FAILED: web export smoke (exit $LASTEXITCODE)" -ForegroundColor Red
 		$failed = $true

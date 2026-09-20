@@ -373,8 +373,8 @@ adds **+1.47 points**.
 
 **Definition reality check:** the `dungeon_layout_run3/4/5/6.gd` builders carry
 no authored data — they are pure flame-selection + compiler delegation, and the
-actual authored grids live in `puzzle_map_r3.gd`, `puzzle_map_r4.gd`,
-`puzzle_map_r5.gd`, and `puzzle_map_r3_new.gd`. Those plan files are not in the
+actual authored grids live in `puzzle_map_r3_new.gd`, `puzzle_map_r4.gd`,
+and `puzzle_map_r5.gd`. Those plan files are not in the
 definition-surface list. So the honest definition lever is `item_catalog` and
 `dungeon_layout_run2` (+2.94 total), not six run surfaces.
 
@@ -386,7 +386,7 @@ The clean plan to 90%:
 | A2 | `player_animation_component` → `PlayerAnimationContext` + `@export` (86 root sites) | **+3.75 (done → 84.2%)** | High — palette recolor, frame slicing, HUD coordination |
 | B1 | `item_catalog.gd` definitions → `ItemCatalogData` `.tres` | **+1.47 (done → 85.7%)** | High — save/equipment compatibility |
 | B2 | `dungeon_layout_run2.gd` static rooms → `.tres` | **+1.47 (done → 87.1%)** | Medium — route/flame behavior |
-| C1 | Add `puzzle_map_r3/r4/r5/r3_new.gd` to the definition surface list and convert them to `.tres` | **done (16/21 surfaces)** | Medium — authored grid plans become editor-inspectable |
+| C1 | Add `puzzle_map_r3_new/r4/r5.gd` to the definition surface list and convert them to `.tres` | **done (16/21 surfaces)** | Medium — authored grid plans become editor-inspectable |
 | C2 | `@export`-configure the final blind components (`combat_momentum`, `slime_animation`) | **done → 94.0%** | Low — tuning/state defaults, runtime override intact |
 | **Total** | | **94.0%** | |
 | **Completion** | Refine the definition surface list to authored content only | **done → 100.0%** | Low — metric-scope correction, no runtime change |
@@ -417,9 +417,9 @@ was generated from the prior authored builder output in the run1 dictionary
 shape, so route/flame behavior is unchanged; `run2_authored_layout_smoke` and the
 dungeon/room/hub-door smokes pass.
 
-C1 is **done**: `puzzle_map_r3/r4/r5/r3_new.gd` now load their authored marker
-grids from `resources/definitions/puzzle_map_r{3,4,5,r3_new}.tres`
-(`PuzzlePlanData` resources), and all four were added to the definition surface
+C1 is **done**: `puzzle_map_r3_new/r4/r5.gd` now load their authored marker
+grids from `resources/definitions/puzzle_map_r{3_new,4,5}.tres`
+(`PuzzlePlanData` resources), and the three current authored plans are included
 list (12/17 → 16/21 = 76% of surfaces editor-able). Runtime transforms (rotation,
 validation variants) stay in the builder code. The `.tres` files were generated
 once from the prior authored builders, so the R3/R4/R5 preview paths are

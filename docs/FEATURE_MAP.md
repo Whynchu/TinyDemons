@@ -2,13 +2,15 @@
 
 Status: current baseline map; composition refactor complete, remaining root-access owners listed
 
-Updated: 2026-09-17
+Updated: 2026-09-20
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. The composition refactor is
 complete (strict scorecard at 100%); the remaining dynamic root-access owners
-are `screen_state_controller.gd`, `combat_runtime_controller.gd`,
-`slime_runtime_controller.gd`, and `magic_runtime_controller.gd`.
+are `screen_state_controller.gd`, `combat_runtime_controller.gd`, and
+`slime_runtime_controller.gd`. Content ownership and the current data traps are
+in [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md); the active authoring
+workstream is [`authoring-system-plan.md`](authoring-system-plan.md).
 
 | Feature | Primary owner / first place to look | State or data authority | Presentation / runtime support | Existing verification | Initial risk |
 |---|---|---|---|---|---|

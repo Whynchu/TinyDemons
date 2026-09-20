@@ -2,11 +2,12 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-17
+Updated: 2026-09-20
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.32`
+Current release: version `0.2.67`; the authoring and verification sequence is
+now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
@@ -43,46 +44,46 @@ Work should move through one narrow slice at a time:
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
 | 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard and editor composition at 100%; state bag and room owner at strict targets; legacy adapters retired; all authored definitions inspectable |
-| 0.60 | Make content authoring repeatable | Planned | validated definitions, factories, and an example workflow for rooms, enemies, rewards, and tuning |
-| 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios; see [`peak-performance-plan.md`](peak-performance-plan.md) |
-| 0.80 | Establish long-term content composition | Planned | an enemy/room/map can be added through definitions and composition without central-state special cases |
+| 0.60 | Make content authoring repeatable | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | typed definitions, single-source registries, factories, previews, and a data-only workflow for enemies, items, rooms, maps, and tuning |
+| 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios; shared-process fast suites are owned by Slice 5 of the authoring plan |
+| 0.80 | Establish long-term content composition | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | an enemy/room/map can be added through definitions and composition without central-state special cases |
 
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Next checkpoint after 0.2.32
+## Current checkpoint after 0.2.67
 
-Version `0.2.32` records the completed composition refactor in both halves (strict
-scorecard and editor composition at 100%), the fully authored-content definition
-surface, and the re-locked regression floor in `tools/composition-baseline.json`.
-The next checkpoint is a stabilization pass in this order:
+The composition refactor's strict scorecard and the validator's
+editor-composition score both read 100%, but that is a proxy: several authored
+resources are still untyped dictionaries that the runtime partly ignores. The
+authoring system in [`authoring-system-plan.md`](authoring-system-plan.md) is
+the active sequence for closing the gap between the score and a real workflow:
 
-1. Make the boss-entry measurement a stable gate: the perf harness reports one
-   noisy sample per run (~100–165 ms quiet, ~300–385 ms loaded), so average it
-   across several door entries before treating it as a trend. The boss door
-   entry is a genuine slow path (accent placer, boss activation/spawn, and the
-   synchronous profile save) to optimize after the A17 device profile. Keep the
-   manifest preflight and focused room/HUD checks green, then run the curated
-   standalone gate and record product, harness, environment, and crash outcomes
-   separately.
-2. Close the remaining verification-surface decisions: explicitly retain or
-   retire duplicate/implementation-detail checks, and link the audit documents
-   without duplicating the manifest classification table.
-3. Finish the remaining browser/device, native-resolution, cold/warm timing,
-   and representative gameplay evidence that cannot be established headlessly.
-4. Continue the room boundary one seam at a time: the typed entry/activation,
-   spawn, clear, and chest-reward results are in place; next tighten the reward
-   persistence/settlement boundaries while preserving authored/generated
-   distinctions and the explicit frame schedule.
-5. Select the first menu or content-definition extraction only after the
-   active contract evidence is current.
+1. Slice 0 — completed the authority-doc correction, recursive definition
+   preflight, `GODOT_BIN` portability, class-cache bootstrap, catalog failure
+   signaling, R5 identity check, UID coverage, and dead R3 plan cleanup.
+2. Slice 1 — typed enemy definitions, one registry, factory-only assembly,
+   preview, and a second variant with zero code and test edits.
+3. Slices 2–3 — items, elements, rooms, maps, and generation policy.
+4. Slice 4 — menu route registry and conversion of the code-built overlays.
+5. Slice 5 — shared-process fast suites and content-contract tests in CI.
+6. Slice 6 — feature folders, generated content/metric docs, and the
+   link-checked archive.
+
+Items that stay in this roadmap rather than the authoring plan:
+
+- Make the boss-entry measurement a stable gate: the perf harness reports one
+  noisy sample per run, so average it across several door entries before
+  treating it as a trend, and optimize only after the A17 device profile exists
+  (see `AUDIT.md` section 11.2).
+- Finish the browser/device, native-resolution, cold/warm timing, and
+  representative gameplay evidence that cannot be established headlessly.
+- Close the remaining verification-surface role/state decisions.
 
 Each item should keep its existing owner, add or correct a focused
-characterization check, and record the result in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
-Do not begin the first broad ownership extraction until the generated-route,
-recovery, doorway, and menu contracts are either passing or explicitly
-classified as approved design changes. After that gate, take one typed boundary
-at a time, with the room transition or checkpoint result as the first candidates.
+characterization check, and record the result in
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md). Do not begin a broad ownership extraction
+while the authoring slices are in flight.
 
 The approved product direction for generated R6+ maps is documented in
 [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md).
@@ -122,6 +123,8 @@ This phase is the current documentation pass. The canonical surface is:
 - [`project_direction.md`](project_direction.md) for product intent and design
   principles;
 - this file for sequence and exit gates;
+- [`authoring-system-plan.md`](authoring-system-plan.md) for the content,
+  verification, and documentation workstream;
 - [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) for adding content;
 - [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for open findings;
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`FEATURE_MAP.md`](FEATURE_MAP.md)
@@ -167,11 +170,11 @@ Move one screen at a time out of `screen_state_controller.gd`. Keep route state
 and callbacks explicit, preserve the central frame schedule, and compare the
 render at native 240×160 before checking wider modes.
 
-**Status (0.2.38):** the shared `MenuCommandList` primitive is extracted and both
-the title and pause screens delegate their command-rail navigation to it
-(characterized by `menu_command_list_smoke`). Remaining: extract the shared
-frame/cursor/footer components for the remaining screens (settings, save select,
-hub), then adopt them one screen at a time.
+**Status (0.2.38; extended 2026-09-20):** the shared `MenuCommandList` primitive
+is extracted and both the title and pause screens delegate their command-rail
+navigation to it (characterized by `menu_command_list_smoke`). Remaining: the
+route registry and conversion of the eight code-built overlays, owned by
+Slice 4 of [`authoring-system-plan.md`](authoring-system-plan.md).
 
 ## Phase 0.40 — Room and encounter boundaries
 
@@ -185,56 +188,56 @@ settlement boundary.
 
 ## Phase 0.50 — Typed runtime ownership
 
-Complete. The composition scorecard is at 100%: `GameplayState` is at 1,719
-lines / 286 fields, dynamic root access is at 2,488, `RoomController` is at
-2,253 lines, and the transitional/legacy counts are zero. The strict audit
+Complete. The composition scorecard is at 100%: `GameplayState` is at 1,715
+lines / 285 fields, dynamic root access is at 2,198, `RoomController` is at
+2,248 lines, and the transitional/legacy counts are zero. The strict audit
 (`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
-floor now protects the achieved state. At `0.2.32` the editor-composition half
-is also 100%: all 20 components are blind and `@export`-configured, and all 16
-authored definition surfaces are editor-inspectable resources (see
-`docs/component-composition-design.md` for the A1/A2/B1/B2/C1/C2/scope sequence).
-Remaining dynamic-access owners (`screen_state_controller.gd`,
+floor now protects the achieved state. At `0.2.67` the editor-composition
+metric is also 100% by its own definition (all 20 components are blind and
+`@export`-configured; 20 editor-able definition surfaces), though that metric
+does not prove the content workflows work. See
+`docs/component-composition-design.md` for the A1/A2/B1/B2/C1/C2/scope
+sequence and `docs/authoring-system-plan.md` for the remaining authoring
+reality. Remaining dynamic-access owners (`screen_state_controller.gd`,
 `combat_runtime_controller.gd`, `slime_runtime_controller.gd`,
 `magic_runtime_controller.gd`) are the next vertical migration candidates and
 should be reduced feature by feature while preserving frame order and removing
-obsolete wrappers only after their final consumer migrates. At `0.2.35`,
-`magic_runtime_controller.gd` was migrated to a typed `MagicRuntimeContext`
-(141 root sites → 0), dropping the total from 2,308 → 2,201; the remaining
-owners are `screen_state_controller` (326), `combat_runtime_controller` (234),
-and `slime_runtime_controller` (199).
+obsolete wrappers only after their final consumer migrates.
 
 ## Phase 0.60 — Content authoring
 
-Use [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) to make one new room,
-enemy, reward, and tuning example repeatable. The long-term target is a typed
-definition/catalog/factory path for enemies, encounters, rooms, and dungeon
-layouts, with validators at each boundary before more data moves out of code.
-Keep stable IDs and save migrations part of every data change.
+Owned by [`authoring-system-plan.md`](authoring-system-plan.md) slices 0–3.
+Use [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) for the current workflow and
+its trap table; do not follow it blind, because several authored resource
+fields are currently ignored. The exit bar is a typed
+definition/catalog/factory path for enemies, items, elements, rooms, and
+dungeon layouts, with validators at each boundary and a second piece of each
+kind added with data only. Keep stable IDs and save migrations part of every
+data change.
 
 ## Phase 0.70 — Feedback infrastructure
 
-Group fast tests into shared-process suites where safe, retain focused scene
-tests for visual contracts, and record desktop/web/mobile timing scenarios.
-Profile the known dynamic-call, per-pixel palette/image, synchronous-loading,
-particle, occlusion, and menu-refresh paths before optimizing them. Include the
-Samsung A17 as an explicit target rather than inferring mobile performance from
-desktop.
+Owned by Slice 5 of [`authoring-system-plan.md`](authoring-system-plan.md):
+shared-process fast suites, a content-contract suite, and CI coverage. Keep
+focused scene tests for visual contracts and record desktop/web/mobile timing
+scenarios. Profile the known dynamic-call, per-pixel palette/image,
+synchronous-loading, particle, occlusion, and menu-refresh paths before
+optimizing them. Include the Samsung A17 as an explicit target rather than
+inferring mobile performance from desktop.
 
 ## Phase 0.80 — Long-term content composition
 
-The broader direction is documented in
-[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md);
-the approved component contract, wiring rules, and the interchangeable-entity
-proof sequence are in
+Owned by [`authoring-system-plan.md`](authoring-system-plan.md) slices 1–6, with
+the broader direction in
+[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
+and the component contract in
 [`component-composition-design.md`](component-composition-design.md). The
-composition refactor is complete (100% on the strict scorecard), which
-closes the legacy-coupling checkpoint; it is not a claim that content authoring
-is complete. Start with one existing slime
-variant behind an `EnemyDefinition` and factory, then make adding a second
-variant require no central `GameplayState` or room special case. Extend the
-same contract to encounters, rooms, and dungeon/map definitions only after the
-reference slice has scene parity, persistence rules, deterministic tests, and a
-measured performance profile.
+composition refactor is complete on its scorecard, but that is not a claim that
+content authoring is complete. The enemy vertical proof landed at `0.2.34` as a
+factory/definition slice, yet a variant still requires code and test edits; the
+authoring plan's Slice 1 pins the zero-edit acceptance bar for a second
+variant, and slices 2–3 extend the same contract to items, elements, rooms, and
+dungeon/map definitions.
 
 ## Out of scope for this cycle
 

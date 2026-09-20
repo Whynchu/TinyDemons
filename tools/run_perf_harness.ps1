@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-	[string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
-	[string]$GodotBin = "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe",
+	[string]$ProjectRoot = "",
+	[string]$GodotBin = "",
 	[string]$OutputPath = "",
 	[string]$ScenarioFilter = ""
 )
@@ -19,6 +19,13 @@ param(
 ## stdout from the device.
 
 $ErrorActionPreference = "Stop"
+$ProjectRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) { Split-Path -Parent $PSScriptRoot } else { $ProjectRoot }
+$GodotBin = if ([string]::IsNullOrWhiteSpace($GodotBin)) {
+	if (-not [string]::IsNullOrWhiteSpace($env:GODOT_BIN)) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
+} else { $GodotBin }
+if (-not (Test-Path -LiteralPath $GodotBin -PathType Leaf)) {
+	throw "Godot executable not found: $GodotBin. Set GODOT_BIN or pass -GodotBin."
+}
 $harnessScript = "res://tests/performance_scenario_harness.gd"
 $userDataDir = Join-Path $env:TEMP ("tiny-demons-perf-{0}" -f $PID)
 $logFile = Join-Path $userDataDir "perf.log"
@@ -26,6 +33,19 @@ New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
 
 if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot "tests/performance_scenario_harness.gd"))) {
 	throw "Scenario harness not found: $harnessScript"
+}
+
+$importArguments = @(
+	"--headless",
+	"--import",
+	"--audio-driver", "Dummy",
+	"--user-data-dir", $userDataDir,
+	"--path", $ProjectRoot,
+	"--log-file", $logFile
+)
+& $GodotBin @importArguments
+if ($LASTEXITCODE -ne 0) {
+	throw "Godot import failed with exit code $LASTEXITCODE"
 }
 
 $arguments = @(

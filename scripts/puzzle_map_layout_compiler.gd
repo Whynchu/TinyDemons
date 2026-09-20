@@ -11,7 +11,6 @@ class_name PuzzleMapLayoutCompiler
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
 const GRID_SCRIPT = preload("res://scripts/puzzle_map_grid.gd")
 const R3_NEW_SCRIPT = preload("res://scripts/puzzle_map_r3_new.gd")
-const R3_SCRIPT = preload("res://scripts/puzzle_map_r3.gd")
 const R4_SCRIPT = preload("res://scripts/puzzle_map_r4.gd")
 const R5_SCRIPT = preload("res://scripts/puzzle_map_r5.gd")
 

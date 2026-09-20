@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_gjrdd")
-plan_id = &"r4"
+plan_id = &"r5"
 markers = Array[Dictionary]([{
 "coordinate": Vector2i(16, 2),
 "kind": &"gate_grey"

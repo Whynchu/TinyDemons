@@ -26,8 +26,8 @@ foreach ($file in $files) {
     $lines = @(Get-Content -LiteralPath $file.FullName)
     $classMatch = $lines | Select-String -Pattern '^class_name\s+([^\s]+)' | Select-Object -First 1
     $baseMatch = $lines | Select-String -Pattern '^extends\s+(.+)$' | Select-Object -First 1
-    $class = if ($null -eq $classMatch) { "—" } else { $classMatch.Matches[0].Groups[1].Value }
-    $base = if ($null -eq $baseMatch) { "—" } else { $baseMatch.Matches[0].Groups[1].Value.Trim() }
+    $class = if ($null -eq $classMatch) { "-" } else { $classMatch.Matches[0].Groups[1].Value }
+    $base = if ($null -eq $baseMatch) { "-" } else { $baseMatch.Matches[0].Groups[1].Value.Trim() }
     $signals = @($lines | Select-String -Pattern '^signal\s+' ).Count
     $exports = @($lines | Select-String -Pattern '^@export' ).Count
     $functions = [System.Collections.Generic.List[string]]::new()
@@ -35,16 +35,16 @@ foreach ($file in $files) {
         $name = $match.Matches[0].Groups[1].Value
         $functions.Add("[$name](../${relative}:$($match.LineNumber))")
     }
-    $functionText = if ($functions.Count -eq 0) { "—" } else { ($functions -join ", ") }
+    $functionText = if ($functions.Count -eq 0) { "-" } else { ($functions -join ", ") }
     $display = "[$relative](../$relative)"
-    if ($lines.Count -ge 1000) { $display += " ⚠️" }
+    if ($lines.Count -ge 1000) { $display += " [large]" }
     $rows.Add("| $display | $($lines.Count) | ``$class`` / ``$base`` | $signals | $exports | $functionText |")
 }
 
 $rows.Add("")
 $rows.Add("## Navigation notes")
 $rows.Add("")
-$rows.Add("- ⚠️ marks a script at or above 1,000 lines; size alone is not a refactor instruction.")
+$rows.Add("- [large] marks a script at or above 1,000 lines; size alone is not a refactor instruction.")
 $rows.Add("- Function links point to the declaration line in the current checkout.")
 $rows.Add("- Generated indexes should be refreshed in the same change as script moves so links remain useful.")
 

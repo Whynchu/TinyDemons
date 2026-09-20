@@ -30,7 +30,7 @@ monolithic effort:
 | Track | Scope | Sequence gate | Tracked in |
 |---|---|---|---|
 | **T1 — Ownership cleanup** | Reduce `GameplayState` coupling, root reflection, oversized owners, transitional adapters | **Complete** — `tools/validate_composition.ps1` reports 100% and the strict audit passes; the regression floor now protects the achieved state | `composition-refactor-analysis.md` (historical record) |
-| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Enemy-definition proof slice (B); then one slice per content kind | this document + [`component-composition-design.md`](component-composition-design.md) |
+| **T2 — Content authoring** | Definitions, factories, catalogs for enemy/room/encounter/dungeon/item/effect; workflow tests | Slice-level execution is in [`authoring-system-plan.md`](authoring-system-plan.md): the enemy definition/factory proof exists, but a variant still needs code and test edits, so Slice 1 pins the zero-edit bar and slices 2–3 extend it | [`authoring-system-plan.md`](authoring-system-plan.md) + this document + [`component-composition-design.md`](component-composition-design.md) |
 | **T3 — Performance** | Device-backed frame-time, transition, memory, and startup budgets on desktop + Samsung A17 | First fixed-seed scenario harness; then A/B palette test | this document |
 
 Each track may be at a different progress point and can be picked up

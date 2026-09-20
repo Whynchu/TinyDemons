@@ -1,21 +1,42 @@
 # Tiny Demons Content Authoring Guide
 
-Status: working guide; authored data is editor-inspectable (`.tres` resources and
-`@export` tuning), while runtime factories for new enemy/room definitions are
-still the planned T2 workflow
+Status: working guide; some authored data is live, some is currently ignored in
+favor of duplicated code constants. Read the trap table below before editing
+any `.tres`.
 
-Updated: 2026-09-17
+Updated: 2026-09-20
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
-framework or a gameplay balance change. The long-term target for definition-
-driven content, runtime factories, and performance-aware authoring is in
-[`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md).
+framework or a gameplay balance change. The target for definition-driven
+content, runtime factories, previews, and verification is
+[`authoring-system-plan.md`](authoring-system-plan.md).
 
 This guide answers the practical question: “Where should a new piece of Tiny
 Demons content be added?” The safest current workflow is to identify the
 stable ID and owning catalog or layout definition first, then add focused
-verification before changing runtime orchestration.
+verification before changing runtime orchestration. **Verify that the runtime
+consumer reads the field you are editing**; several resources are only
+partially wired.
+
+## Data paths that currently do nothing
+
+Measured 2026-09-20 (version `0.2.67`). Until the listed slice in
+[`authoring-system-plan.md`](authoring-system-plan.md) lands, these paths are
+traps:
+
+| Authored data | Current runtime behavior | Owner slice |
+|---|---|---|
+| `encounter_definition.tres`: `yellow_weight`, `yellow_min_rank`, `ground_weight`, `ground_min_rank`, `ice_weight`, `ice_min_rank`, `crimson_weight`, `crimson_min_rank` | Ignored. Runtime uses the duplicated consts in `room_controller.gd:55-69`. `late_pool_entries()` is only called by its own test. | 1 |
+| `dungeon_generation_policy.tres`: `first_orb_depth`, `first_special_depth`, `primary_flames` | Ignored. The generator uses `dungeon_layout_generator.gd:31-32,50`. | 3 |
+| `slime_variant_catalog.tres`: the `order` array | Dead data; nothing reads it. Boss selection uses the hardcoded `VARIANTS` array in `slime_variant_catalog.gd:10-20`. | 1 |
+| Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
+| `item_catalog.tres`: records added only to `definitions` (not `live_base_definitions`) | Never drop or appear in the shop; the legacy section is loadable but excluded from generation. | 2 |
+| Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
+| `element_catalog.tres` and `palette_library.tres` | Now included in recursive definition validation; runtime wiring and typed consolidation remain Slice 2 work. | 2 |
+
+The definition validator is part of the release gate and web CI. The catalog
+report exits nonzero when a required surface cannot load.
 
 ## Shared rules
 
@@ -50,7 +71,7 @@ Current owners:
   `scripts/dungeon_map_controller.gd`; and
 - room activation and persistence in `scripts/room_controller.gd`.
 
-Workflow:
+Workflow (current, before Slice 3):
 
 1. Define the run scope and whether its map is an authored pixel contract.
 2. Edit the authored room/connection or puzzle-plan `.tres` resource (or add a
@@ -62,6 +83,26 @@ Workflow:
 5. Add or update the run-specific contract test and inspect the rendered map at
    native 240×160.
 6. Verify room entry, clear, revisit, chest/pickup claims, and save recovery.
+
+Known traps:
+- The former `puzzle_map_r3.tres` path was removed in Slice 0; use
+  `puzzle_map_r3_new.tres` for the current R3 plan.
+- Layout validation at runtime only calls `push_error`
+  (`room_controller.gd` callers of `DungeonLayoutDefinition.validate()` via
+  `dungeon_map_controller.gd:65-101`); it does not fail the run.
+- The puzzle-map compiler currently cannot emit the puzzle room type, so an
+  authored pixel plan cannot express `ROOM_PUZZLE`.
+- Room-type aliases (`ROOM_FIRE == ROOM_REST`, `ROOM_CLOAKED == ROOM_NPC`,
+  `ROOM_BOSS == ROOM_DOWNSTAIRS`) mean room type alone does not identify
+  semantics.
+- Puzzle gate colors and room-type whitelists are duplicated across
+  `dungeon_graph.gd`, `dungeon_map_state.gd:11-16`,
+  `dungeon_map_controller.gd:19-22`, and
+  `puzzle_map_layout_compiler.gd:218-228`.
+- Run 1 has bespoke validation branches that other runs do not share.
+
+Slice 3 turns room/connection payloads into typed resources and makes
+validation fail fast in the validator and CI.
 
 Do not make a new room by adding a special case to `gameplay.gd` or by silently
 reusing an existing room ID. If a new room type is needed, document its
@@ -109,18 +150,37 @@ Current owners:
   `slime_visual_component.gd`; and
 - balance values: `slime_tuning.gd` and combat tuning.
 
-Workflow:
+Workflow (current, before Slice 1):
 
 1. Decide whether the addition is a visual variant, gameplay element, behavior
    variant, or a new actor class.
-2. Give it a stable variant/element ID and record its visual-to-gameplay
-   mapping.
-3. Define stats, attack timing, body geometry, collision bounds, and any
-   special room rules together.
-4. Ensure spawn validation keeps the complete actor body inside usable
-   walkable space and away from unreachable geometry.
-5. Add variant, damage, placement, and engagement coverage as applicable.
-6. Verify normal, scaled/boss, wall-adjacent, and attack-contact behavior.
+2. Add the variant row to `resources/definitions/slime_variant_catalog.tres`
+   (stable id, element, display name, `base_stats`, `growth_weights`,
+   `damage_contract`, and `visual_source` when the art sheet is not the green
+   base sheet).
+3. Add the id to the hardcoded `VARIANTS` array in
+   `scripts/slime_variant_catalog.gd:10-20`. It is not derived from the
+   resource and it drives boss roster sampling and the tests.
+4. Add the encounter eligibility below by editing the consts and pool code in
+   `scripts/room_controller.gd:55-69` and `:211-254`. The matching fields in
+   `encounter_definition.tres` are currently ignored (see trap table).
+5. If the variant prefers an element family (matchup advantage), add it to the
+   allowlists in `room_controller.gd:218-219,233` and
+   `gameplay_state.gd:1342-1364`.
+6. If it uses a palette that the HUD health bars or slime visual library do not
+   know yet, extend `slime_visual_component.gd:29` and the palette map in
+   `hud_controller.gd:950,979`.
+7. Update the count-pinned tests or the gate will fail on a correct addition:
+   `tests/slime_variant_smoke.gd`, `tests/boss_variant_selection_smoke.gd`,
+   `tests/encounter_definition_smoke.gd`, and any palette/overhead coverage.
+8. Add any new test file to `tests/manifest.csv` or the manifest preflight
+   fails.
+9. Verify normal, scaled/boss, wall-adjacent, and attack-contact behavior.
+
+Slice 1 of the authoring plan replaces steps 3-7 with a typed `EnemyDefinition`
+registry, a factory-only spawn path, and registry-driven contract tests. After
+that slice, adding a variant is one definition plus, if needed, one palette
+entry, with no test edits.
 
 Do not implement a new enemy only as a recolor if its combat identity differs.
 Do not alter global tuning to solve a room-specific placement problem.
@@ -138,21 +198,36 @@ Current owners:
 - player-facing contracts: `gear-catalogue-spec.md`,
   `gear-effect-contracts.md`, and `gear-catalogue.md`.
 
-Workflow:
+Workflow (current, before Slice 2):
 
 1. Choose one of the six canonical slots: weapon, head, body, arm, shield, or
    accessory. Preserve the legacy `armor` compatibility key where required.
-2. Add a stable base ID, display name, family, rarity behavior, source tags,
-   stat lane, and effect status to the catalogue.
-3. Decide whether the effect is active or `future`. A future effect may remain
+2. Add the base ID to `live_base_ids` **and** a record to
+   `live_base_definitions` in `resources/definitions/item_catalog.tres`.
+   Records added only to the legacy `definitions` section do not drop or shop.
+3. Add source tags, rarity gates, metadata, and effect status to
+   `definition_metadata`; the loader merges it over the base record.
+4. For a set piece, add the set data and the set ID to
+   `scripts/item_catalog.gd:45` (`SET_IDS`). Set acquisition tags and rarity
+   gates are hardcoded in `item_catalog.gd`'s set synthesis today.
+5. Decide whether the effect is active or `future`. A future effect may remain
    inspectable but must not enter live generation until its owner and action
    contract exist.
-4. Confirm serialization, shop identity, exact sell identity, fusion identity,
-   equip behavior, and visual fallback.
-5. Add catalogue/schema coverage and an acquisition test if the item can enter
-   a source pool.
-6. Check the item at each supported rarity/enhancement path without changing
+6. Update the count-pinned tests or the gate fails on a correct addition:
+   `tests/gear_system_rework_smoke.gd:13` (66 live definitions),
+   `tests/gear_catalogue_expansion_smoke.gd:22` (45 bases by slot),
+   `tests/drop_art_smoke.gd:37`, and any shop/tooltip coverage.
+7. Add catalogue/schema coverage and an acquisition test if the item can enter
+   a source pool; add any new test file to `tests/manifest.csv`.
+8. Check the item at each supported rarity/enhancement path without changing
    unrelated balance.
+
+Known traps: `visual_id` is never read (item art is slot-level), `demon_cloak`
+is special-cased across `player_profile.gd`, `run_state.gd`,
+`equipment_component.gd`, and `hub_flow_controller.gd`, and there is no
+`validate()` on `ItemCatalogData`, so malformed keys fail at runtime. Slice 2
+replaces this with typed `ItemDefinition` entries, one registry, and
+registry-driven tests.
 
 Gear identity includes more than the display name. Enhancement, rarity,
 affixes, random stats, transmutation, and fusion investment determine the
@@ -178,6 +253,18 @@ numeric table. Keep `gray`/`grey` presentation differences at the palette
 boundary. A new elemental rule must specify current element, bound element,
 Chroma amount, pickup behavior, zero-resource behavior, combat element, gate
 requirements, visual palette, and save compatibility.
+
+Known traps: element identity currently lives in four parallel tables — the
+`ElementCatalog.Element` enum (`element_catalog.gd:11-20`), the numeric keys and
+`element_count` in `element_catalog.tres`, the `PlayerChromaComponent.Aspect`
+enum (`player_chroma_component.gd:14-23`), and the flame/palette/recipe strings
+in `aspect_catalog.gd:4-32`. `element_for_palette()` is a hand-written switch
+that can drift from the resource, `element_count` has two defaults, and
+`element_catalog.tres` is now loaded by the recursive definition validator. Adding
+a ninth element also breaks the hardcoded 8×8 table in
+`tests/element_catalog_smoke.gd:12-21`, the `<= Aspect.ICE` validity bound, and
+the `element_for_aspect` numeric adapter at the same time. Slice 2 collapses
+this to one source with schema validation.
 
 Verify Gray/Normal collection, bound depletion, temporary fusion depletion,
 pickup coloring, save/load at zero, and any relevant gate route. Do not fold a
@@ -209,9 +296,17 @@ define its input context, selection ownership, confirm/back behavior, touch hit
 targets, and cursor visibility. Do not add a separate navigation convention
 for one screen.
 
-Menu work is currently a planned extraction boundary. Keep dynamic route state
-and callbacks in the controller until a focused presenter has scene parity and
-characterization coverage.
+Menu work is a planned extraction boundary (Slice 4 of the authoring plan).
+Current reality: pause, Demon Hub, equipment, shop, and fusion are
+scene-authored with presenters; title, archetype, save select, name entry,
+settings, game over, run complete, and loading are still built imperatively in
+`screen_state_controller.gd` and cannot be opened in the editor. Adding a route
+or row currently touches several of: the controller build function
+(`build_hub` alone takes 33 callables), the route's layout script, the
+navigation state in `hub_flow_controller.gd` or the controller, the touch
+active-root list in `touch_controls_layer.gd`, a scene smoke, and
+`tests/manifest.csv`. Start from the Pause and Demon Hub visual contracts and
+follow the presenter pattern rather than adding a new navigation convention.
 
 ## Adding audio
 
@@ -223,24 +318,34 @@ volume settings when the sound is first used.
 
 ## Worked authoring examples
 
-One concrete "add one piece" workflow per content kind. Each ends with the
-validator and catalog-report commands so "what can I add and what will break?"
-is answered by tooling, not by reading coordinators.
+One concrete "add one piece" workflow per content kind. These are the current
+truthful paths; slices in [`authoring-system-plan.md`](authoring-system-plan.md)
+replace them with data-only workflows.
 
 ### Example: add an enemy variant
 
+Current steps (Slice 1 will reduce these to one definition):
+
 1. Add a row to `resources/definitions/slime_variant_catalog.tres` (stable id,
-   element, `base_stats`, `growth_weights`, `damage_contract`). Reuse an art
-   sheet via `visual_source` if no new texture exists.
-2. The catalog exposes it automatically (`EnemyFactory.definition(id)`).
-3. Add expected stats/element to `tests/slime_variant_smoke.gd` tables and a
-   factory-assembly assertion in `tests/enemy_definition_slice_smoke.gd`.
-4. Run `tools/validate_definitions.ps1` (catches malformed content) and
-   `tools/report_catalogs.ps1` (confirms the variant is present).
+   element, `base_stats`, `growth_weights`, `damage_contract`) and set
+   `visual_source` explicitly when the variant is not a documented recolor of
+   the green base sheet.
+2. Add the id to the hardcoded `VARIANTS` array in
+   `scripts/slime_variant_catalog.gd:10-20`.
+3. Add encounter weight/rank consts and pool entries in
+   `scripts/room_controller.gd:55-69` and `:211-254`.
+4. Update `tests/slime_variant_smoke.gd` tables,
+   `tests/boss_variant_selection_smoke.gd` expectations, and any palette or
+   overhead coverage; register new test files in `tests/manifest.csv`.
+5. Run `tools/validate_definitions.ps1` (catches malformed content) and
+   `tools/report_catalogs.ps1` (confirms the variant is present). Neither is in
+   the release gate yet, so also run the focused smoke tests.
 
 Real example: `crimson` — a tanky Fire slime added as one catalog row with
 `visual_source: "red"`, proven by `enemy_definition_slice_smoke` and the
-save/load round-trip `enemy_definition_roundtrip_smoke`.
+save/load round-trip `enemy_definition_roundtrip_smoke`. Note that the crimson
+addition still required the `VARIANTS` array, `room_controller.gd` consts, and
+test-table updates; it was not data-only.
 
 ### Example: add a room difficulty/traffic policy
 
@@ -252,9 +357,16 @@ save/load round-trip `enemy_definition_roundtrip_smoke`.
 
 ### Example: add an encounter policy
 
-1. Edit `resources/definitions/encounter_definition.tres` (rank-gated variant
-   weights, shadow-bound policy).
-2. `RoomController` reads it through `_encounter_definition()` — no code change.
+Current caveat: the rank-gated late-family weights (`yellow`, `ground`, `ice`,
+`crimson`) in `encounter_definition.tres` are **ignored**; only
+`grey_weight`, `shadow_weight`, `shadow_bound_*`, and `matchup_policy` are read
+at runtime. For late families, edit `room_controller.gd:55-69` instead until
+Slice 1 lands.
+
+1. Edit `resources/definitions/encounter_definition.tres` for the fields the
+   runtime actually reads (see caveat).
+2. `RoomController` reads it through `_encounter_definition()` — no code change
+   for those fields.
 3. Add a pool assertion to `tests/encounter_definition_smoke.gd`.
 4. Run `tools/validate_definitions.ps1`.
 
@@ -264,12 +376,17 @@ save/load round-trip `enemy_definition_roundtrip_smoke`.
    `docs/GAMEPLAY_TUNING.md`.
 2. Add a focused test for the value's timing, geometry, persistence, or economy
    impact.
-3. Run the curated gate.
+3. Run the focused check, then the curated gate.
 
 ### Example: add a generated-map policy
 
-1. Edit `resources/definitions/dungeon_generation_policy.tres` (candidate
-   counts, first-orb/special depth, primary flames).
+Current caveat: `first_orb_depth`, `first_special_depth`, and `primary_flames`
+in `dungeon_generation_policy.tres` are validated but ignored; the generator
+uses `dungeon_layout_generator.gd:31-32,50`. The candidate counts, risk-choice
+band, vault cap, and route-advantage fields are read.
+
+1. Edit `resources/definitions/dungeon_generation_policy.tres` for the fields
+   the generator actually reads (see caveat).
 2. `DungeonLayoutGenerator.policy()` reads it — no code change.
 3. Add an assertion to `tests/dungeon_generation_policy_smoke.gd`.
 4. Run `tools/validate_definitions.ps1` and the generated-run smoke.

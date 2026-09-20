@@ -20,6 +20,36 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
+## Current measured snapshot (2026-09-20, version 0.2.67)
+
+The detailed audit below describes the `0.2.32` tree. The current tree at
+version `0.2.67` measures:
+
+| Metric | 0.2.32 audit | 0.2.67 (2026-09-20) |
+| --- | ---: | ---: |
+| GDScript files in `scripts/` | 171 | 194 |
+| `root.call/get/set` sites | 2,488 | 2,198 |
+| `GameplayState` lines / fields | 1,719 / 286 | 1,715 / 285 |
+| `RoomController` lines | 2,253 | 2,248 |
+| `screen_state_controller.gd` lines | 5,432 | 5,508 |
+| GDScript test/report files | 124 | 134 |
+| Registered runnable smoke paths | 122 | 132 |
+| Curated release-gate paths | 43 | 44 |
+| Project Markdown documents under `docs/` | 89 | 104 |
+
+The strict composition audit and the regression floor both pass. The
+editor-composition metric reads 100% by its own definition, but that metric
+counts component blindness, `@export` presence, and definition scripts loading
+`.tres`; it does not prove that the authored data is typed, validated, or read
+at runtime. Several catalogs are still untyped dictionaries and several
+resource fields are ignored in favor of duplicated code constants — see the
+trap register in [`authoring-system-plan.md`](authoring-system-plan.md). Treat
+the metric as a regression guard, not an authoring-completeness claim.
+
+A full re-measurement of the sections below (largest scripts, coupling profile,
+performance profile, persistence, and verification surface) is scheduled in
+Slice 0 of the authoring plan.
+
 ## 1. Purpose
 
 This document records what Tiny Demons is and how its implementation is shaped
@@ -209,7 +239,7 @@ through `room_entry_services.gd` and `room_activation_services.gd`),
 `resources/tuning/*.tres`, deep-duplicated per runtime. Authored definition data
 loads from `resources/definitions/*.tres` through typed resources:
 `ItemCatalogData`, `DungeonRunDefinition` (run1/run2), and `PuzzlePlanData`
-(r3/r4/r5/r3_new).
+(r3_new/r4/r5).
 
 `GameplayState` remains the composition root and a compatibility facade, but it
 is now at its smallest measured size (1,719 lines / 286 fields / 479 functions)
@@ -288,7 +318,7 @@ records, metadata, transmutations) from `resources/definitions/item_catalog.tres
 (`ItemCatalogData`); the authored Run 1 and Run 2 layouts load from
 `resources/definitions/dungeon_layout_run1.tres` / `dungeon_layout_run2.tres`
 (`DungeonRunDefinition`); and the four authored puzzle plans load from
-`resources/definitions/puzzle_map_r{3,4,5,r3_new}.tres` (`PuzzlePlanData`). The
+`resources/definitions/puzzle_map_r{3_new,4,5}.tres` (`PuzzlePlanData`). The
 six tuning classes load external defaults. Procedural run builders
 (`dungeon_layout_run3/4/5/6`) and the shared layout contract remain code, since
 their authored content lives in the puzzle-plan resources above. This is the
