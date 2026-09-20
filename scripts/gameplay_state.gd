@@ -13,7 +13,6 @@ const RoomCheckpointContextScript = preload("res://scripts/room_checkpoint_conte
 const RunCheckpointContextScript = preload("res://scripts/run_checkpoint_context.gd")
 const RunCheckpointServiceScript = preload("res://scripts/run_checkpoint_service.gd")
 const MenuPlayerContextScript = preload("res://scripts/menu_player_context.gd")
-const TitlePixelParticleLayerScript = preload("res://scripts/title_pixel_particle_layer.gd")
 const DEFAULT_COMBAT_TUNING: CombatTuning = preload("res://resources/tuning/combat_default.tres")
 const DEFAULT_PROGRESSION_TUNING: ProgressionTuning = preload("res://resources/tuning/progression_default.tres")
 const DEFAULT_PLAYER_TUNING: PlayerTuning = preload("res://resources/tuning/player_default.tres")
@@ -965,7 +964,7 @@ func _update_loading_screen(delta: float) -> void: save_flow_controller.call("up
 func _update_player_aggro_marker_colors() -> void: hud_controller.update_aggro_markers(hud_controller.target_overhead_aggro_markers, screen_state_controller.player_palette_name, Callable(self, "_pixel_particle_texture"))
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	if screen_state_controller.title_particle_layer == null:
-		screen_state_controller.title_particle_layer = TitlePixelParticleLayerScript.new() as Node2D; screen_state_controller.title_particle_layer.name = "TitleParticleLayer"; screen_state_controller.title_particle_layer.z_index = 13; ui.add_child(screen_state_controller.title_particle_layer)
+		screen_state_controller.title_particle_layer = Node2D.new(); screen_state_controller.title_particle_layer.name = "TitleParticleLayer"; screen_state_controller.title_particle_layer.z_index = 10; ui.add_child(screen_state_controller.title_particle_layer)
 	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_ui_breakup() -> void:
 	screen_state_controller.clear_title_particles()
@@ -980,8 +979,6 @@ func _spawn_title_ui_breakup() -> void:
 		screen_state_controller.spawn_button_frame_breakup(button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 	if screen_state_controller.title_cursor_text != null and screen_state_controller.title_cursor_text.visible:
 		_spawn_title_pixel_breakup(screen_state_controller.title_cursor_text)
-	if screen_state_controller.title_particle_layer.has_method("refresh"):
-		screen_state_controller.title_particle_layer.call("refresh")
 func _build_scene_transition() -> void:
 	var view_size := Vector2(display_controller.view_size_value()) if display_controller != null else Vector2(DisplayLayout.NATIVE_SIZE)
 	scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", view_size, Color.BLACK, 200); scene_transition_overlay.set_meta("display_full_view", true); scene_transition_overlay.modulate.a = 0.0

@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.64"
+const GAME_VERSION := "0.2.65"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -35,10 +35,6 @@ const CURSOR_VERTICAL_RAISE := 2.0
 const CURSOR_BOB_AMOUNT := 3.0
 const CURSOR_BOB_SLIDE_TIME := 0.36
 const CURSOR_BOB_SNAP_TIME := 0.07
-## Legacy Sprite2D fallback limits. The normal title path uses the batched
-## TitlePixelParticleLayer and does not cap opaque source pixels.
-const MAX_TITLE_TRANSITION_PARTICLES := 8192
-const MAX_TITLE_PARTICLES_PER_PIECE := 4096
 const RUN_COMPLETE_LINE_POSITIONS := [Vector2(19, 33), Vector2(19, 47), Vector2(19, 62), Vector2(123, 62), Vector2(19, 79), Vector2(123, 79), Vector2(19, 115), Vector2(19, 125), Vector2(86, 125)]
 const HUB_ITEM_DETAIL_TOP := 105.0
 const HUB_ITEM_DETAIL_PITCH := 7.0
@@ -836,8 +832,6 @@ func add_particle(particle_data: Dictionary) -> void:
 
 
 func clear_title_particles() -> void:
-	if title_particle_layer != null and title_particle_layer.has_method("clear_particles"):
-		title_particle_layer.call("clear_particles")
 	for particle_data in title_particles:
 		var particle := particle_data.get("sprite") as Node
 		if particle != null and is_instance_valid(particle):
@@ -846,9 +840,6 @@ func clear_title_particles() -> void:
 
 
 func update_particles(delta: float, snap_position: Callable) -> void:
-	if title_particle_layer != null and title_particle_layer.has_method("update_particles"):
-		title_particle_layer.call("update_particles", delta, snap_position)
-		return
 	for index in range(title_particles.size() - 1, -1, -1):
 		var particle_data := title_particles[index]
 		var particle := particle_data["sprite"] as Sprite2D
@@ -866,21 +857,17 @@ func update_particles(delta: float, snap_position: Callable) -> void:
 		particle_data["timer"] = timer
 
 
-func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_texture: Callable, random_seed: int, particle_budget: int = MAX_TITLE_PARTICLES_PER_PIECE) -> void:
+func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
 	if source_sprite == null or source_sprite.texture == null:
 		return
 	var image := source_sprite.texture.get_image()
 	if image == null:
 		return
-	var initial_particle_count := title_particles.size()
 	var noise := FastNoiseLite.new()
 	noise.seed = random_seed
 	noise.frequency = 0.28
-	var batched_layer := particle_parent.has_method("add_pixel_particle")
 	for y in image.get_height():
 		for x in image.get_width():
-			if not batched_layer and (title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES or title_particles.size() - initial_particle_count >= particle_budget):
-				return
 			var color: Color = image.get_pixel(x, y)
 			if color.a <= 0.0:
 				continue
@@ -889,12 +876,6 @@ func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_t
 			if source_sprite.centered:
 				pixel_position -= Vector2(image.get_width(), image.get_height()) * pixel_size * 0.5
 			pixel_position += Vector2(x, y) * pixel_size
-			var velocity := Vector2(0.0, -(8.0 + (noise.get_noise_2d(float(x), float(y)) + 1.0) * 14.0))
-			if batched_layer:
-				if particle_parent is Node2D:
-					pixel_position = (particle_parent as Node2D).to_local(pixel_position)
-				particle_parent.call("add_pixel_particle", pixel_position, pixel_size, color, velocity, 1.14)
-				continue
 			var particle := Sprite2D.new()
 			particle.texture = pixel_texture.call(color) as Texture2D
 			particle.centered = false
@@ -904,13 +885,12 @@ func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_t
 			particle.z_index = 3
 			particle.position = pixel_position
 			particle_parent.add_child(particle)
-			add_particle({"sprite": particle, "velocity": velocity, "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
+			add_particle({"sprite": particle, "velocity": Vector2(0.0, -(8.0 + (noise.get_noise_2d(float(x), float(y)) + 1.0) * 14.0)), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
 
 
-func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable, random_seed: int, particle_budget: int = MAX_TITLE_PARTICLES_PER_PIECE) -> void:
+func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
 	if button == null:
 		return
-	var initial_particle_count := title_particles.size()
 	var noise := FastNoiseLite.new()
 	noise.seed = random_seed
 	noise.frequency = 0.28
@@ -920,20 +900,14 @@ func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_tex
 	var width := int(button.size.x)
 	var height := int(button.size.y)
 	for x in range(width):
-		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, noise.get_noise_2d(float(x), 0.0), initial_particle_count, particle_budget)
-		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, noise.get_noise_2d(float(x), float(height - 1)), initial_particle_count, particle_budget)
+		_spawn_frame_particle(origin + Vector2(x, 0), particle_parent, pixel_texture, noise.get_noise_2d(float(x), 0.0))
+		_spawn_frame_particle(origin + Vector2(x, height - 1), particle_parent, pixel_texture, noise.get_noise_2d(float(x), float(height - 1)))
 	for y in range(1, height - 1):
-		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, noise.get_noise_2d(0.0, float(y)), initial_particle_count, particle_budget)
-		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, noise.get_noise_2d(float(width - 1), float(y)), initial_particle_count, particle_budget)
+		_spawn_frame_particle(origin + Vector2(0, y), particle_parent, pixel_texture, noise.get_noise_2d(0.0, float(y)))
+		_spawn_frame_particle(origin + Vector2(width - 1, y), particle_parent, pixel_texture, noise.get_noise_2d(float(width - 1), float(y)))
 
 
-func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, noise_value: float, initial_particle_count: int, particle_budget: int) -> void:
-	var rise_speed := 8.0 + (noise_value + 1.0) * 14.0
-	if particle_parent.has_method("add_pixel_particle"):
-		particle_parent.call("add_pixel_particle", frame_position, Vector2.ONE, Color.WHITE, Vector2(0.0, -rise_speed), 1.14)
-		return
-	if title_particles.size() >= MAX_TITLE_TRANSITION_PARTICLES or title_particles.size() - initial_particle_count >= particle_budget:
-		return
+func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel_texture: Callable, noise_value: float) -> void:
 	var particle := Sprite2D.new()
 	particle.texture = pixel_texture.call(Color.WHITE) as Texture2D
 	particle.centered = false
@@ -942,6 +916,7 @@ func _spawn_frame_particle(frame_position: Vector2, particle_parent: Node, pixel
 	particle.z_index = 3
 	particle.position = frame_position
 	particle_parent.add_child(particle)
+	var rise_speed := 8.0 + (noise_value + 1.0) * 14.0
 	add_particle({"sprite": particle, "velocity": Vector2(0.0, -rise_speed), "timer": 1.14, "lifetime": 1.14, "gravity": 0.0})
 
 
