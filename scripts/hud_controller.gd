@@ -50,6 +50,10 @@ var cooldown_previous_remaining := {&"magic": -1.0, &"imbue": -1.0, &"sword_beam
 var cooldown_timer_texture_cache: Dictionary = {}
 var last_combo_text := ""
 var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
+var _button_hud_device := -1
+var _button_hud_keyboard_texture_ready := false
+var _ability_prompt_hud_device := -1
+var _ability_prompt_keyboard_texture_ready := false
 
 
 func target_name_position() -> Vector2:
@@ -313,21 +317,26 @@ func update_button_hud(buttons: Array[Sprite2D], _devices: Array[int], router: I
 		pressed[2] = router.button_pressed(JOY_BUTTON_A)
 		pressed[3] = router.button_pressed(JOY_BUTTON_B)
 	var device := int(input_device_tracker.get("current_device")) if input_device_tracker != null else 1
-	var keyboard_labels := ["U", "J", "K", "E"]
+	var keyboard_texture_ready := device == 0 and pixel_texture.is_valid()
+	var refresh_visuals := device != _button_hud_device or keyboard_texture_ready != _button_hud_keyboard_texture_ready
+	if refresh_visuals:
+		_button_hud_device = device
+		_button_hud_keyboard_texture_ready = keyboard_texture_ready
+		var keyboard_labels := ["U", "J", "K", "E"]
+		for index in buttons.size():
+			var button := buttons[index]
+			if device == 2:
+				button.visible = false
+			elif keyboard_texture_ready:
+				button.visible = true
+				button.texture = pixel_texture.call(keyboard_labels[index] if index < keyboard_labels.size() else "", Color.WHITE) as Texture2D
+			else:
+				button.visible = true
+				var gamepad_texture: Variant = button.get_meta("gamepad_texture", button.texture)
+				if gamepad_texture is Texture2D:
+					button.texture = gamepad_texture as Texture2D
 	for index in buttons.size():
 		var button := buttons[index]
-		if device == 2:
-			button.visible = false
-			button.modulate = Color.WHITE
-		elif device == 0 and pixel_texture.is_valid():
-			button.visible = true
-			button.texture = pixel_texture.call(keyboard_labels[index] if index < keyboard_labels.size() else "", Color.WHITE) as Texture2D
-			button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
-		else:
-			button.visible = true
-			var gamepad_texture: Variant = button.get_meta("gamepad_texture", button.texture)
-			if gamepad_texture is Texture2D:
-				button.texture = gamepad_texture as Texture2D
 		button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
 
 
@@ -336,21 +345,32 @@ func update_ability_prompt_hud(prompts: Array[Sprite2D], input_device_tracker: N
 		return
 	var device := int(input_device_tracker.get("current_device")) if input_device_tracker != null else 1
 	var pressed := router != null and router.action_pressed(&"magic")
+	var keyboard_texture_ready := device == 0 and pixel_texture.is_valid()
+	var refresh_visuals := device != _ability_prompt_hud_device or keyboard_texture_ready != _ability_prompt_keyboard_texture_ready
+	if refresh_visuals:
+		_ability_prompt_hud_device = device
+		_ability_prompt_keyboard_texture_ready = keyboard_texture_ready
+		for prompt in prompts:
+			if prompt == null:
+				continue
+			if device == 2:
+				prompt.visible = false
+			elif keyboard_texture_ready:
+				prompt.visible = true
+				prompt.texture = pixel_texture.call("U", Color.WHITE) as Texture2D
+			else:
+				prompt.visible = true
+				var gamepad_texture: Variant = prompt.get_meta("gamepad_texture", prompt.texture)
+				if gamepad_texture is Texture2D:
+					prompt.texture = gamepad_texture as Texture2D
 	for prompt in prompts:
 		if prompt == null:
 			continue
 		if device == 2:
-			prompt.visible = false
 			prompt.modulate = Color.WHITE
-		elif device == 0 and pixel_texture.is_valid():
-			prompt.visible = true
-			prompt.texture = pixel_texture.call("U", Color.WHITE) as Texture2D
+		elif keyboard_texture_ready:
 			prompt.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed else Color.WHITE
 		else:
-			prompt.visible = true
-			var gamepad_texture: Variant = prompt.get_meta("gamepad_texture", prompt.texture)
-			if gamepad_texture is Texture2D:
-				prompt.texture = gamepad_texture as Texture2D
 			prompt.modulate = Color(1.7, 1.7, 1.0, 1.0) if pressed else Color.WHITE
 
 

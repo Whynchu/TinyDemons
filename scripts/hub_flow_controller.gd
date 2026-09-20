@@ -142,6 +142,7 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	if root.loading_screen_overlay != null: root.loading_screen_overlay.visible = false
 	if root.game_over_overlay != null: root.game_over_overlay.visible = false
 	root.screen_state_controller.hub_overlay.visible = true
+	root.screen_state_controller.set_menu_world_hidden(root, true)
 	if root.screen_state_controller.pause_overlay != null: root.screen_state_controller.pause_overlay.visible = false
 	# STATS is the first (and default) command in the reworked hub. STATUS is
 	# retained only as a compatibility page alias for older callers.
@@ -176,6 +177,7 @@ func open_pause_menu(root: Object) -> void:
 	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
 	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
 	root.screen_state_controller.pause_overlay.visible = true
+	root.screen_state_controller.set_menu_world_hidden(root, true)
 	root.screen_state_controller.set_state(&"pause")
 	root.screen_state_controller.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_pause", 0.0, 1.0)
@@ -204,6 +206,7 @@ func close_hub_to_run(root: Object) -> void:
 	root.screen_state_controller.menu_input_release_lock = bool(root.call("_is_menu_cancel_input_pressed"))
 	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false
 	if root.screen_state_controller.pause_overlay != null: root.screen_state_controller.pause_overlay.visible = false
+	root.screen_state_controller.set_menu_world_hidden(root, false)
 	root.screen_state_controller.hub_opened_from_npc = false
 	root.screen_state_controller.hub_pause_mode = false
 	root.screen_state_controller.hub_is_root = true
@@ -1351,6 +1354,7 @@ func start_from_hub(root: Object) -> void:
 		root.call("_close_hub_to_run")
 		return
 	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false
+	root.screen_state_controller.set_menu_world_hidden(root, false)
 	if root.player_profile != null:
 		root.player_profile.open_hub_on_load = false
 		root.player_profile.pending_route = "run"

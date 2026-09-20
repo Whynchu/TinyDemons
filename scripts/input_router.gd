@@ -16,8 +16,10 @@ var _menu_repeat_elapsed: Dictionary = {}
 var _menu_direction_events: Dictionary = {}
 var _target_axis := 0.0
 var _guard_axis := 0.0
+var _has_connected_joypads := false
 var touch_provider: Node = null
 var _touch_snapshot: Dictionary = {}
+var _empty_touch_snapshot: Dictionary = {}
 
 const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"open_minimap", &"target", &"guard", &"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right", &"move_left", &"move_right", &"move_up", &"move_down"]
 const MENU_REPEAT_INITIAL_DELAY := 0.32
@@ -34,7 +36,16 @@ func poll(next_context: int, delta: float = 1.0 / 60.0) -> void:
 	_touch_snapshot = _read_touch_snapshot()
 	for action in ACTIONS:
 		_current[action] = Input.is_action_pressed(action) or _touch_action_pressed(action) or _touch_action_just_pressed(action)
-	devices = connected_devices()
+	var connected_joypads := Input.get_connected_joypads()
+	_has_connected_joypads = not connected_joypads.is_empty()
+	devices.clear()
+	for device in connected_joypads:
+		devices.append(int(device))
+	if devices.is_empty():
+		# Keep the legacy fallback device visible to callers that use the array as
+		# a controller-device contract, while avoiding physical joypad queries
+		# when the platform has no connected controller.
+		devices.append(0)
 	# Menu intent is deliberately separate from Godot's built-in ui_accept and
 	# ui_cancel actions. The game's contract is Circle / Xbox B = confirm and
 	# Cross / Xbox A = back, so a platform default cannot silently invert it.
@@ -185,13 +196,14 @@ func _read_movement() -> Vector2:
 	if pressed(&"move_right"): value.x += 1.0
 	if pressed(&"move_up"): value.y -= 1.0
 	if pressed(&"move_down"): value.y += 1.0
-	for device in devices:
-		var stick := Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X as JoyAxis), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y as JoyAxis))
-		if stick.length() > value.length(): value = stick
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_RIGHT as JoyButton): value.x += 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_LEFT as JoyButton): value.x -= 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN as JoyButton): value.y += 1.0
-		if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_UP as JoyButton): value.y -= 1.0
+	if _has_connected_joypads:
+		for device in devices:
+			var stick := Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X as JoyAxis), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y as JoyAxis))
+			if stick.length() > value.length(): value = stick
+			if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_RIGHT as JoyButton): value.x += 1.0
+			if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_LEFT as JoyButton): value.x -= 1.0
+			if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN as JoyButton): value.y += 1.0
+			if Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_UP as JoyButton): value.y -= 1.0
 	var touch_movement: Variant = _touch_snapshot.get("movement", Vector2.ZERO)
 	if touch_movement is Vector2 and (touch_movement as Vector2).length() > value.length():
 		value = touch_movement as Vector2
@@ -200,26 +212,28 @@ func _read_movement() -> Vector2:
 
 func _read_touch_snapshot() -> Dictionary:
 	if touch_provider == null or not touch_provider.has_method("is_active"):
-		return {}
+		return _empty_touch_snapshot
 	if not bool(touch_provider.call("is_active")):
-		return {}
+		return _empty_touch_snapshot
 	if not touch_provider.has_method("snapshot"):
-		return {}
+		return _empty_touch_snapshot
 	var snapshot: Variant = touch_provider.call("snapshot")
-	return snapshot as Dictionary if snapshot is Dictionary else {}
+	return snapshot as Dictionary if snapshot is Dictionary else _empty_touch_snapshot
 
 
 func _touch_action_pressed(action: StringName) -> bool:
-	var actions: Variant = _touch_snapshot.get("actions", {})
+	var actions: Variant = _touch_snapshot.get("actions")
 	return bool((actions as Dictionary).get(action, false)) if actions is Dictionary else false
 
 
 func _touch_action_just_pressed(action: StringName) -> bool:
-	var pressed_edges: Variant = _touch_snapshot.get("just_pressed", {})
+	var pressed_edges: Variant = _touch_snapshot.get("just_pressed")
 	return bool((pressed_edges as Dictionary).get(action, false)) if pressed_edges is Dictionary else false
 
 
 func _strongest_axis(axis: JoyAxis) -> float:
+	if not _has_connected_joypads:
+		return 0.0
 	var strongest := 0.0
 	for device in devices:
 		var value := Input.get_joy_axis(device, axis)
@@ -228,6 +242,8 @@ func _strongest_axis(axis: JoyAxis) -> float:
 
 
 func _strongest_trigger(axis: JoyAxis) -> float:
+	if not _has_connected_joypads:
+		return 0.0
 	var strongest := 0.0
 	for device in devices:
 		strongest = maxf(strongest, Input.get_joy_axis(device, axis))

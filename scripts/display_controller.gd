@@ -12,6 +12,7 @@ const FRAME_COLOR := Color8(6, 6, 6)
 const TOP_BAR_HEIGHT := 16.0
 const BOTTOM_BAR_HEIGHT := 15.0
 const WORLD_CENTER := Vector2(120.0, 80.0)
+const SURFACE_POLL_INTERVAL := 0.25
 
 var settings_service: SettingsService = null
 var current_view_size := DisplayLayout.NATIVE_SIZE
@@ -33,6 +34,7 @@ var _applying_settings := false
 var _presentation_refresh_queued := false
 var _pending_surface_size := Vector2.ZERO
 var _last_live_surface_size := Vector2.ZERO
+var _surface_poll_elapsed := 0.0
 
 
 func initialize(root: Node, service: SettingsService) -> void:
@@ -51,12 +53,20 @@ func initialize(root: Node, service: SettingsService) -> void:
 	if window != null and not window.size_changed.is_connected(_on_window_size_changed):
 		window.size_changed.connect(_on_window_size_changed)
 	_last_live_surface_size = _live_window_size()
+	# Native builds receive the authoritative Window.size_changed signal. The
+	# polling fallback is only needed by browser shells that resize their canvas
+	# without forwarding that signal.
+	set_process(OS.has_feature("web"))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	# Some browser shells/home-screen launches resize the canvas without
 	# forwarding a Godot Window.size_changed signal. Polling the surface gives
 	# orientation changes the same settled layout path as desktop resizes.
+	_surface_poll_elapsed += maxf(delta, 0.0)
+	if _surface_poll_elapsed < SURFACE_POLL_INTERVAL:
+		return
+	_surface_poll_elapsed = fmod(_surface_poll_elapsed, SURFACE_POLL_INTERVAL)
 	if _applying_settings:
 		return
 	var live_size := _live_window_size()
