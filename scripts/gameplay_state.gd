@@ -619,6 +619,7 @@ func _update_settings_input() -> void:
 func _close_settings() -> void:
 	screen_state_controller.close_settings(self)
 func _quit_to_title_from_pause() -> void:
+	screen_state_controller.set_menu_world_hidden(self, false)
 	if screen_state_controller.pause_overlay != null:
 		screen_state_controller.pause_overlay.visible = false
 	if screen_state_controller.hub_overlay != null:

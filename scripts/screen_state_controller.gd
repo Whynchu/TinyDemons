@@ -15,7 +15,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.65"
+const GAME_VERSION := "0.2.66"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -87,6 +87,10 @@ signal state_changed(state: StringName)
 var state: StringName = &"gameplay"
 var title_particles: Array[Dictionary] = []
 var _prompt_texture_cache: Dictionary = {}
+var _menu_world_hidden := false
+var _menu_world_background_visible := true
+var _menu_world_map_visible := true
+var _menu_world_actors_visible := true
 var hub_overlay: ColorRect = null
 var hub_summary_text: Sprite2D = null
 var hub_points_text: Sprite2D = null
@@ -526,6 +530,38 @@ func set_state(new_state: StringName) -> void:
 		return
 	state = new_state
 	state_changed.emit(state)
+
+
+func set_menu_world_hidden(root: Object, hidden: bool) -> void:
+	var gameplay := root as GameplayState
+	if gameplay == null:
+		return
+	var background: CanvasItem = gameplay.background_environment
+	var map: CanvasItem = gameplay.map_root
+	var actors := gameplay.get_node_or_null("Actors") as CanvasItem
+	if hidden:
+		if _menu_world_hidden:
+			return
+		_menu_world_hidden = true
+		if background != null:
+			_menu_world_background_visible = background.visible
+			background.visible = false
+		if map != null:
+			_menu_world_map_visible = map.visible
+			map.visible = false
+		if actors != null:
+			_menu_world_actors_visible = actors.visible
+			actors.visible = false
+		return
+	if not _menu_world_hidden:
+		return
+	_menu_world_hidden = false
+	if background != null:
+		background.visible = _menu_world_background_visible
+	if map != null:
+		map.visible = _menu_world_map_visible
+	if actors != null:
+		actors.visible = _menu_world_actors_visible
 
 
 func update_title_flow(root: GameplayState, delta: float) -> void:
@@ -4556,6 +4592,7 @@ func open_settings(root: Object, origin: StringName) -> void:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 		if pause_overlay != null:
 			pause_overlay.visible = false
+		set_menu_world_hidden(root, true)
 	elif origin == &"title":
 		if title_overlay != null:
 			title_overlay.visible = false
@@ -4579,6 +4616,7 @@ func close_settings(root: Object) -> void:
 		set_state(&"pause")
 		update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	else:
+		set_menu_world_hidden(root, false)
 		if title_overlay != null: title_overlay.visible = true
 		menu_input_release_lock = true
 		set_state(&"title")
