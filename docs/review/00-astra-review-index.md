@@ -5,6 +5,8 @@ Purpose: give Astra a compact, source-backed understanding of the game before cr
 
 ## Read order
 
+0. `07-astra-gameplay-brief.md` — compact, source-backed presentation of the
+   current player loop, feature state, pickup/reward gaps, and review questions.
 1. `01-current-game-reality.md` — what exists now.
 2. `02-design-intent-and-interview-contract.md` — what the creator wants the game to become.
 3. `03-production-and-architecture-state.md` — what is safe to extend and what is not.
@@ -33,4 +35,3 @@ Assess whether Tiny Demons is becoming a coherent, distinctive, production-ready
 - One smallest compelling vertical slice.
 - Highest production and performance risks.
 - Prioritized 30/60/90-day recommendations.
-

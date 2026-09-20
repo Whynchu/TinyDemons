@@ -2,11 +2,14 @@
 
 Status: live register for the `0.2.x` cycle
 
-Updated: 2026-09-17
+Updated: 2026-09-20
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.32`
+Current release: version `0.2.67`. The current smoke inventory is 134 manifest
+rows / 132 runnable paths / 44-path default gate; the counts quoted in older
+sections below are historical snapshots. The authoring and verification
+sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in
@@ -16,6 +19,33 @@ reports, reproduction notes, and acceptance criteria remain in
 “Implemented in source” means that a code path and focused assertions exist. It
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
+
+## Tooling verification gaps — Slice 0 resolved 2026-09-20
+
+These issues were independently reproduced with Godot 4.7.1 headless (`-s`
+script runs, no editor peer active) and resolved in Slice 0 of
+[`authoring-system-plan.md`](authoring-system-plan.md):
+
+- **Resolved: stale global class cache blocked focused content tests.** With the
+  pre-existing `.godot/global_script_class_cache.cfg` (25 KB, missing newer
+  classes), `tests/encounter_definition_smoke.gd` and
+  `tools/report_catalogs.gd` fail at parse time with
+  `Identifier "EncounterDefinition" not declared`. A `--import` pass
+  regenerated the cache (35 KB, 189 classes) and both then ran
+  (`ENCOUNTER_DEFINITION_SMOKE_OK`, report exit 0). A clean checkout has no
+  cache at all, so the runner and focused tools must import first.
+- **Resolved: `puzzle_map_r5.tres` declared `plan_id = "r4"`.** The validator
+  now checks the R5 identity explicitly.
+- **Resolved: definition-resource UID coverage.** The reported UID warning was
+  caused by the stale class/import cache; the resource UID matches its script
+  sidecar and `validate_godot_uids.ps1` now checks definition resources.
+- **Resolved: tool portability.** `tools/validate_composition.ps1 -SelfTest` hardcoded
+  `pwsh`, and `tools/run_headless.ps1` hardcodes both the development Godot path
+  and its own `$ProjectRoot` default. They work on the primary development
+  machine and fail on hosts without `pwsh` or the same directory layout.
+- **Resolved: catalog reporting and definition coverage.** The report preloads
+  its definition scripts, returns nonzero on load failures, and the validator
+  recursively covers all 14 remaining resources in `resources/definitions/`.
 
 ## Focused baseline verification — 2026-09-11
 

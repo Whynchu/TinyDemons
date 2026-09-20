@@ -18,10 +18,10 @@ if ($duplicates) {
 	exit 1
 }
 
-$scene_files = Get-ChildItem -LiteralPath (Join-Path $root "scenes"), (Join-Path $root "scripts"), (Join-Path $root "tests") -Include *.tscn,*.gd -Recurse
+$referencing_files = Get-ChildItem -LiteralPath (Join-Path $root "scenes"), (Join-Path $root "scripts"), (Join-Path $root "tests"), (Join-Path $root "resources/definitions") -Include *.tscn,*.gd,*.tres -Recurse
 $script_uids = @{}
 foreach ($record in $records) { $script_uids[$record.Uid] = $record.Path }
-foreach ($file in $scene_files) {
+foreach ($file in $referencing_files) {
 	foreach ($match in [regex]::Matches((Get-Content -LiteralPath $file.FullName -Raw), 'uid="(uid://[a-z0-9]+)" path="res://scripts/([^"]+\.gd)"')) {
 		$uid = $match.Groups[1].Value
 		$expected = Join-Path $root ("scripts/{0}" -f $match.Groups[2].Value)

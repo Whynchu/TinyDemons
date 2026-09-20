@@ -173,6 +173,11 @@ through the same router boundary.
 
 ## Extension guide
 
+For content data (enemies, items, elements, rooms, maps), start from
+[`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) and the trap register in
+[`authoring-system-plan.md`](authoring-system-plan.md); several authored
+resources are not yet authoritative at runtime.
+
 ### Add a player capability (e.g. a new action)
 
 1. Add the bind in the Input Map and route it through the existing input boundary.
@@ -189,12 +194,23 @@ through the same router boundary.
 
 ### Add an enemy variant
 
-1. Add variant data to `slime_tuning.gd` (or a new `*_tuning.gd`) and an
-   archetype entry in the runtime spawn table inside `gameplay.gd`.
-2. Reuse the `slime_*` components; extend `enemy_tactics_component` only for
-   genuinely new tactical state. Encounter rules stay in the coordinator.
-3. See `docs/rogue_slime_ambush.md` and `docs/speed_stat_design.md` for the
-   two most recent variant additions as worked examples.
+Current path (Slice 1 of the authoring plan makes this data-only):
+
+1. Add the variant to `resources/definitions/slime_variant_catalog.tres` and to
+   the hardcoded `VARIANTS` array in `slime_variant_catalog.gd:10-20`.
+2. Add its encounter weight/rank gate in `room_controller.gd:55-69` and
+   `:211-254`; the matching `encounter_definition.tres` fields are currently
+   ignored.
+3. Reuse the `slime_*` components; extend `enemy_tactics_component` only for
+   genuinely new tactical state.
+4. Update the variant tests and palette/HUD maps listed in
+   `docs/CONTENT_AUTHORING.md`.
+5. See `docs/rogue_slime_ambush.md` and `docs/speed_stat_design.md` for earlier
+   variant additions as worked examples.
+
+Do not add a new enemy as a special case in `gameplay.gd` or
+`gameplay_state.gd`. Read the trap table in `docs/CONTENT_AUTHORING.md` before
+editing catalog data.
 
 ### Add a room interaction
 
@@ -232,8 +248,8 @@ through the same router boundary.
 - **Run the full smoke suite only as a supervised standalone check** (with no
   MCP Godot runtime active):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
-  The default command runs the curated 43-path release gate, including web
-  export and main-scene checks. Use `-TestGroup all` to run the complete 121-
+  The default command runs the curated 44-path release gate, including web
+  export and main-scene checks. Use `-TestGroup all` to run the complete 132-
   path runnable inventory. Grouping comes from `tests/manifest.csv`, which
   records each script's role, state, owner, target, and load kind. A headless
   renderer crash can multiply into Windows memory-error dialogs. Start with one

@@ -1,6 +1,6 @@
 param(
-    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
-    [string]$GodotBin = "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe"
+    [string]$ProjectRoot = "",
+    [string]$GodotBin = ""
 )
 
 ## Definition validator (Slice F, T2). Runs the Godot definition validator
@@ -9,6 +9,13 @@ param(
 ## validate_composition.ps1 and validate_test_manifest.ps1.
 
 $ErrorActionPreference = "Stop"
+$ProjectRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) { Split-Path -Parent $PSScriptRoot } else { $ProjectRoot }
+$GodotBin = if ([string]::IsNullOrWhiteSpace($GodotBin)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:GODOT_BIN)) { $env:GODOT_BIN } else { "C:\Development\Tiny-Demons\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe" }
+} else { $GodotBin }
+if (-not (Test-Path -LiteralPath $GodotBin -PathType Leaf)) {
+    throw "Godot executable not found: $GodotBin. Set GODOT_BIN or pass -GodotBin."
+}
 $userDataDir = Join-Path $env:TEMP ("tiny-demons-validate-defs-{0}" -f $PID)
 $logFile = Join-Path $userDataDir "validate_definitions.log"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
