@@ -62,7 +62,7 @@ static func _ensure_regular_geometry(actor: SlimeActor) -> void:
 		collision_polygon = Polygon2D.new()
 		collision_polygon.name = "CollisionPolygon"
 		actor.add_child(collision_polygon)
-	collision_polygon.polygon = PackedVector2Array([3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10])
+	collision_polygon.polygon = PackedVector2Array([Vector2(3, 7), Vector2(13, 7), Vector2(13, 10), Vector2(12, 10), Vector2(12, 11), Vector2(11, 11), Vector2(11, 12), Vector2(5, 12), Vector2(5, 11), Vector2(4, 11), Vector2(4, 10), Vector2(3, 10)])
 	collision_polygon.visible = false
 
 	var body_hitbox := actor.get_node_or_null("BodyHitbox") as Polygon2D
@@ -70,7 +70,7 @@ static func _ensure_regular_geometry(actor: SlimeActor) -> void:
 		body_hitbox = Polygon2D.new()
 		body_hitbox.name = "BodyHitbox"
 		actor.add_child(body_hitbox)
-	body_hitbox.polygon = PackedVector2Array([5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5])
+	body_hitbox.polygon = PackedVector2Array([Vector2(5, 3), Vector2(11, 3), Vector2(13, 5), Vector2(14, 8), Vector2(14, 11), Vector2(12, 13), Vector2(10, 14), Vector2(6, 14), Vector2(4, 13), Vector2(2, 11), Vector2(2, 8), Vector2(3, 5)])
 	body_hitbox.visible = false
 
 	for guide_name: StringName in [&"AttackGuideL", &"AttackGuideR"]:
@@ -79,6 +79,7 @@ static func _ensure_regular_geometry(actor: SlimeActor) -> void:
 			attack_guide = EDITOR_COLLISION_GUIDE_SCRIPT.new() as Node2D
 			attack_guide.name = guide_name
 			actor.add_child(attack_guide)
+		attack_guide.position = Vector2(-6, -8)
 		attack_guide.set("rect_position", Vector2(5, 8) if guide_name == &"AttackGuideL" else Vector2(14.5, 8))
 		attack_guide.set("rect_size", Vector2(8.5, 16))
 		attack_guide.set("draw_in_game", false)

@@ -23,6 +23,7 @@ var _slime_grid_valid := false
 
 func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides: Callable) -> void:
 	for actor in actors_to_stabilize:
+		var is_slime := actor is SlimeActor
 		var actor_scale := actor.scale
 		if absf(actor_scale.x) < 0.001 or absf(actor_scale.y) < 0.001:
 			continue
@@ -32,10 +33,10 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 				# scaling them makes the runtime guide detach from the editor-authored
 				# position after the boss sprite is enlarged. CollisionPolygon is the
 				# boss's foot/walkability shape, so it must inherit that same scale too.
-				if child.name in [&"CollisionGuide", &"CollisionPolygon"] and actor.name.begins_with("Slime") and float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
+				if child.name in [&"CollisionGuide", &"CollisionPolygon"] and is_slime and float(actor.get_meta("encounter_scale", 1.0)) > 1.0:
 					continue
 				(child as Node2D).scale = Vector2(1.0 / actor_scale.x, 1.0 / actor_scale.y)
-		if actor.name.begins_with("Slime"):
+		if is_slime:
 			update_attack_guides.call(actor)
 
 
