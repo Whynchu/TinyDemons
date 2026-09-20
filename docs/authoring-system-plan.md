@@ -16,9 +16,9 @@ catalogs and factories (`enemy_factory.gd`, `slime_variant_catalog.gd`,
 `screen_state_controller.gd`, and `tests/manifest.csv`
 
 Verification: each slice has a pinned acceptance bar plus
-`tools/validate_composition.ps1`, `tools/validate_definitions.ps1` (to be
-wired into the runner and CI in Slice 0), `tools/validate_test_manifest.ps1`,
-and focused smoke tests
+`tools/validate_composition.ps1`, `tools/validate_definitions.ps1` (wired into
+the runner and CI), `tools/validate_test_manifest.ps1`, and focused smoke
+tests
 
 Supersedes: none. This plan operationalizes the T2 (content authoring) track of
 [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
@@ -55,10 +55,10 @@ of that trap and proves the replacement with a second piece of content.
 | Surface | Measurement |
 |---|---|
 | Runtime scripts | 194 files / ~50,300 physical lines, flat under `scripts/` |
-| `root.call/get/set` sites | 2,198 (validator metric; regression floor green) |
+| `root.call/get/set` sites | 2,200 (validator metric; regression floor green) |
 | `gameplay_state.gd` | 1,715 lines / 285 fields |
-| `screen_state_controller.gd` | 5,508 physical lines, 10 routes; root access is included in the global 2,198-site validator metric |
-| `room_controller.gd` | 2,248 lines |
+| `screen_state_controller.gd` | 5,508 physical lines, 10 routes; root access is included in the global 2,200-site validator metric |
+| `room_controller.gd` | 2,246 lines |
 | `dungeon_layout_generator.gd` | 2,487 lines, ~100 static functions |
 | Definitions | 14 `.tres` under `resources/definitions/`, 6 tuning `.tres`; validator covers 14 |
 | Tests | 134 manifest rows / 132 runnable / 44-path default gate, process-per-test |
@@ -188,40 +188,51 @@ malformed definition.
 
 Goal: prove the whole pipeline on the smallest kind, end to end.
 
+Progress: the typed enemy catalog, registry lookup, definition-owned encounter
+metadata, factory materialization, registry-driven contract coverage, and
+normal-room pool bootstrap landed on 2026-09-20. The remaining work is the
+generic base/auto-discovery layer, a preview workbench, and a fresh second
+variant acceptance run that changes only authored data.
+
 Work items:
 
 - [ ] Add `ContentDefinition` base (`id`, `display_name`, `validate()`,
   `schema_version`) and `ContentRegistry` with duplicate-ID detection and soft
   failure in game / hard failure in validation.
-- [ ] Convert the slime catalog to typed `EnemyDefinition` entries. Either one
-  typed sub-resource per variant in `resources/content/enemies/enemy_catalog.tres`,
-  or one `.tres` per variant plus a checked-in manifest; the loader supports
-  both.
-- [ ] Delete the parallel registries: `slime_variant_catalog.gd:10-20`
-  (`VARIANTS`), the dead `.tres` `order`, and the recolor fallback list in
-  `enemy_definition.gd:35-38` (replace with an explicit `visual_source`).
-- [ ] Move the encounter weights and rank gates out of `room_controller.gd:55-69`
-  into `EncounterDefinition`, and consume them at runtime. Remove
-  `late_pool_entries()` if it stays test-only.
-- [ ] Derive the HUD palette map (`hud_controller.gd:950,979`) and the
-  `slime_visual_component.gd` palette list from the registry.
-- [ ] Add the `EnemyDefinition` contract test that iterates the registry, and
-  convert `slime_variant_smoke.gd` / `boss_variant_selection_smoke.gd` count
-  tables to registry-driven invariants plus named golden cases.
-- [ ] Make `EnemyFactory` the materialization path, not only a configurator.
-  Today `gameplay_bootstrap.gd` expands a fixed 13-slot roster cloned from
-  scene-authored sprites (`SLIME_ROSTER_SIZE`, `_expand_slime_roster`) and the
-  factory only configures an existing `SlimeActor`. The spawn path must
-  instantiate from the definition so the factory owns scene, geometry, visual,
-  stats, and component assembly.
+- [x] Convert the slime catalog to typed `EnemyDefinition` entries. The current
+  proof uses one typed sub-resource per variant in
+  `resources/definitions/slime_variant_catalog.tres`; the loader owns the
+  registry lookup.
+- [x] Delete the parallel registries: the old
+  `slime_variant_catalog.gd:10-20` (`VARIANTS`) list, the dead `.tres` `order`,
+  and the recolor fallback list in `enemy_definition.gd` were removed in favor
+  of explicit `visual_source` and registry iteration.
+- [x] Move encounter weights and rank gates out of `room_controller.gd` into
+  `EnemyDefinition` metadata and consume them at runtime through
+  `EncounterDefinition.late_pool_entries()`.
+- [x] Make HUD palette resolution definition-aware and convert the enemy
+  variant smoke/boss selection checks to registry-driven invariants. The base
+  `SlimeVisualComponent.PALETTES` list remains a presentation-library surface
+  until a new palette authoring slice exists.
+- [x] Add the `EnemyDefinition` contract coverage that iterates the registry,
+  plus named Crimson golden assertions and save/load coverage.
+- [x] Make `EnemyFactory` the materialization path. The bootstrap now creates
+  a capacity pool through the factory, and normal room configuration applies
+  selected definitions to those actors; scene-authored enemy slots are no
+  longer the content roster.
 - [ ] Add the enemy preview workbench (reuse `scenes/boss_slime_authoring.tscn`
   rather than inventing a new host if practical).
 
-Acceptance bar (`component-composition-design.md` bar, made real): add a second
-content variant using one definition file, run `dev.ps1 verify` and
-`dev.ps1 test -Suite content`; zero code edits, zero test edits, gate green.
-The variant must spawn through the factory in a normal room when no
-scene-authored roster slot exists for it.
+Current proof: `crimson` is resolved from the typed catalog, materialized by
+`EnemyFactory`, configured in the factory-created runtime pool, and exercised
+by the definition, round-trip, and normal-room entrance smoke tests. Slice 1 is
+not complete until a fresh variant is added by changing only authored data and
+the preview workbench can inspect it without booting a run.
+
+Remaining acceptance bar: add a second fresh content variant using one
+definition file, run the focused content checks and the curated gate, make zero
+central-runtime or test edits, and confirm that it spawns through the factory
+in a normal room without a scene-authored roster slot.
 
 ### Slice 2 — Items and elements
 
@@ -371,21 +382,20 @@ and file name, and every count in the docs matches the tooling output.
 
 | Trap | Evidence | Owner slice |
 |---|---|---|
-| Encounter weights and rank gates ignore the authored resource | `room_controller.gd:55-69` vs `resources/definitions/encounter_definition.tres`; `late_pool_entries()` called only by its test | 1 |
-| Variant registries disagree (const, dead `order`, definitions, tests) | `slime_variant_catalog.gd:10-20`, `slime_variant_catalog.tres:7`, `tests/slime_variant_smoke.gd:13-34` | 1 |
 | Policy fields validated but never read | `dungeon_generation_policy.gd:21-25` vs `dungeon_layout_generator.gd:31-32,50` | 3 |
 | Item base needs three `.tres` registries plus code lists | `item_catalog_data.gd:8-13`, `item_catalog.gd:45` | 2 |
 | Element identity is four parallel tables | `element_catalog.gd`, `element_catalog_data.gd`, `aspect_catalog.gd:4-32`, `player_chroma_component.gd:14-23` | 2 |
-| Count-pinned tests block content additions | `gear_system_rework_smoke.gd:13`, `gear_catalogue_expansion_smoke.gd:22`, `boss_variant_selection_smoke.gd:31`, `element_catalog_smoke.gd:12-21` | 1/2/5 |
-| Docs claim state that is not true | `README.md` counts, `ARCHITECTURE.md` enemy guide, `AGENTS.md` `-RequireTargets` note | 0 |
+| Count-pinned tests block content additions | `gear_system_rework_smoke.gd:13`, `gear_catalogue_expansion_smoke.gd:22`, `element_catalog_smoke.gd:12-21` | 2/5 |
 
-Slice 0 resolved the class-cache, validator coverage, catalog exit-code,
-portability, R5 identity, UID-validation, and dead-R3 traps. The remaining
-rows are content-system migration work owned by later slices.
+Slices 0 and 1 resolved the class-cache, validator coverage, catalog exit-code,
+portability, R5 identity, UID-validation, dead-R3, enemy-registry, and
+enemy-encounter traps. The remaining rows are content-system migration work
+owned by later slices.
 
 ## 6. Command surface
 
-`tools/dev.ps1` is introduced in Slice 0 as a thin wrapper and grows per slice:
+`tools/dev.ps1` is the planned thin wrapper; the current checkout still uses
+the focused scripts directly. It will grow per slice:
 
 | Command | Purpose |
 |---|---|

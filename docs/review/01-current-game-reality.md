@@ -29,11 +29,10 @@ The following are design directions or incomplete content systems rather than fu
 ## Current engineering checkpoint
 
 - Composition audit: 100% strict scorecard.
-- Dynamic `root.call/get/set`: 2,202 sites, below the 2,499 threshold.
-- `GameplayState`: 1,718 lines / 286 fields.
-- `RoomController`: 2,248 lines.
+- Dynamic `root.call/get/set`: 2,200 sites, below the 2,499 threshold.
+- `GameplayState`: 1,715 lines / 285 fields.
+- `RoomController`: 2,246 lines.
 - Editor composition: 100% for measured components and definitions.
-- Test manifest: 134 rows, 132 runnable paths, 43 curated release-gate paths.
+- Test manifest: 134 rows, 132 runnable paths, 44 curated release-gate paths.
 
 These numbers indicate structural readiness, not finished content or guaranteed performance.
-

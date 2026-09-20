@@ -40,6 +40,9 @@ func _initialize() -> void:
 	_expect(crimson_actor.combat_element == ElementCatalogScript.Element.FIRE, "factory sets the actor's combat element from the definition", failures)
 	_expect(String(crimson_actor.get_meta("damage_contract", "")) == "elemental_slime", "factory sets the actor's damage contract from the definition", failures)
 	_expect(String(crimson_actor.get_meta("enemy_definition_id", "")) == "crimson", "factory records the definition id on the actor", failures)
+	_expect(bool(crimson_actor.get_meta("content_materialized", false)), "factory marks the actor as content-materialized", failures)
+	_expect(crimson_actor.get_node_or_null("CollisionGuide") != null and crimson_actor.get_node_or_null("CollisionPolygon") != null and crimson_actor.get_node_or_null("BodyHitbox") != null, "factory owns regular enemy collision geometry", failures)
+	_expect(crimson_actor.get_node_or_null("AttackGuideL") != null and crimson_actor.get_node_or_null("AttackGuideR") != null, "factory owns regular enemy attack geometry", failures)
 	var crimson_stats := crimson_actor.get_node_or_null("Stats") as StatsComponent
 	_expect(crimson_stats != null and crimson_stats.vit >= int(crimson_definition.base_stats.get("VIT", 0)), "factory applies the variant stats profile", failures)
 

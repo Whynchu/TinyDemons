@@ -24,7 +24,10 @@ static func _guard_context(root: Object) -> PlayerGuardContext:
 	context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext: return root.gameplay_frame_controller.equipment_visual_context(root)
 	return context
 
-@export_enum("blue", "green", "red", "purple", "grey", "yellow", "orange", "aquamarine") var variant := "green"
+## Content ids come from EnemyDefinition resources. Keep this as a string
+## rather than an editor enum so new authored variants do not require a script
+## edit before the factory can materialize them.
+@export var variant := "green"
 @export var tuning: SlimeTuning
 var combat_element: int = ElementCatalogScript.Element.GRASS
 

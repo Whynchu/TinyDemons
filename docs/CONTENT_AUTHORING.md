@@ -1,8 +1,8 @@
 # Tiny Demons Content Authoring Guide
 
-Status: working guide; some authored data is live, some is currently ignored in
-favor of duplicated code constants. Read the trap table below before editing
-any `.tres`.
+Status: working guide; enemy definitions and encounter eligibility now use the
+typed catalog/factory path. Other authored surfaces are still only partially
+wired. Read the trap table below before editing any `.tres`.
 
 Updated: 2026-09-20
 
@@ -27,9 +27,7 @@ traps:
 
 | Authored data | Current runtime behavior | Owner slice |
 |---|---|---|
-| `encounter_definition.tres`: `yellow_weight`, `yellow_min_rank`, `ground_weight`, `ground_min_rank`, `ice_weight`, `ice_min_rank`, `crimson_weight`, `crimson_min_rank` | Ignored. Runtime uses the duplicated consts in `room_controller.gd:55-69`. `late_pool_entries()` is only called by its own test. | 1 |
 | `dungeon_generation_policy.tres`: `first_orb_depth`, `first_special_depth`, `primary_flames` | Ignored. The generator uses `dungeon_layout_generator.gd:31-32,50`. | 3 |
-| `slime_variant_catalog.tres`: the `order` array | Dead data; nothing reads it. Boss selection uses the hardcoded `VARIANTS` array in `slime_variant_catalog.gd:10-20`. | 1 |
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
 | `item_catalog.tres`: records added only to `definitions` (not `live_base_definitions`) | Never drop or appear in the shop; the legacy section is loadable but excluded from generation. | 2 |
 | Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
@@ -150,37 +148,33 @@ Current owners:
   `slime_visual_component.gd`; and
 - balance values: `slime_tuning.gd` and combat tuning.
 
-Workflow (current, before Slice 1):
+Workflow (current, typed enemy-definition path):
 
 1. Decide whether the addition is a visual variant, gameplay element, behavior
    variant, or a new actor class.
-2. Add the variant row to `resources/definitions/slime_variant_catalog.tres`
-   (stable id, element, display name, `base_stats`, `growth_weights`,
-   `damage_contract`, and `visual_source` when the art sheet is not the green
-   base sheet).
-3. Add the id to the hardcoded `VARIANTS` array in
-   `scripts/slime_variant_catalog.gd:10-20`. It is not derived from the
-   resource and it drives boss roster sampling and the tests.
-4. Add the encounter eligibility below by editing the consts and pool code in
-   `scripts/room_controller.gd:55-69` and `:211-254`. The matching fields in
-   `encounter_definition.tres` are currently ignored (see trap table).
-5. If the variant prefers an element family (matchup advantage), add it to the
-   allowlists in `room_controller.gd:218-219,233` and
-   `gameplay_state.gd:1342-1364`.
-6. If it uses a palette that the HUD health bars or slime visual library do not
-   know yet, extend `slime_visual_component.gd:29` and the palette map in
-   `hud_controller.gd:950,979`.
-7. Update the count-pinned tests or the gate will fail on a correct addition:
-   `tests/slime_variant_smoke.gd`, `tests/boss_variant_selection_smoke.gd`,
-   `tests/encounter_definition_smoke.gd`, and any palette/overhead coverage.
-8. Add any new test file to `tests/manifest.csv` or the manifest preflight
-   fails.
-9. Verify normal, scaled/boss, wall-adjacent, and attack-contact behavior.
+2. Add one typed `EnemyDefinition` sub-resource to the `definitions` array in
+   `resources/definitions/slime_variant_catalog.tres`. Set its stable `id`,
+   element, display name, `base_stats`, `growth_weights`, `damage_contract`,
+   and explicit `visual_source`.
+3. Set encounter metadata on that same definition when it should enter normal
+   generation: `encounter_role` (`baseline`, `matchup`, `late`, or `shadow`),
+   `encounter_weight`, `encounter_min_rank`, and any preferred/matchup weight.
+   `EncounterDefinition` and `RoomController` consume these fields at runtime.
+4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
+   roster slot, or a count-table expectation. The registry discovers the typed
+   entry, `EnemyFactory` materializes it, and the runtime pool configures the
+   selected slot from the definition.
+5. If the variant introduces a genuinely new palette or behavior, extend that
+   narrow owner and add a focused golden assertion. Reusing an existing
+   `visual_source` is data-only.
+6. Run `tools/validate_definitions.ps1`, `tools/report_catalogs.ps1`,
+   `tests/slime_variant_smoke.gd`, and the enemy definition/room-entry smoke
+   tests. Verify normal, scaled/boss, wall-adjacent, and attack-contact
+   behavior when the content is intended for those paths.
 
-Slice 1 of the authoring plan replaces steps 3-7 with a typed `EnemyDefinition`
-registry, a factory-only spawn path, and registry-driven contract tests. After
-that slice, adding a variant is one definition plus, if needed, one palette
-entry, with no test edits.
+The remaining Slice 1 work is a preview workbench and the generic
+`ContentDefinition`/auto-discovery layer. The current enemy path already
+removes the old parallel registries and central encounter branches.
 
 Do not implement a new enemy only as a recolor if its combat identity differs.
 Do not alter global tuning to solve a room-specific placement problem.
@@ -324,28 +318,22 @@ replace them with data-only workflows.
 
 ### Example: add an enemy variant
 
-Current steps (Slice 1 will reduce these to one definition):
+Current steps:
 
-1. Add a row to `resources/definitions/slime_variant_catalog.tres` (stable id,
-   element, `base_stats`, `growth_weights`, `damage_contract`) and set
-   `visual_source` explicitly when the variant is not a documented recolor of
-   the green base sheet.
-2. Add the id to the hardcoded `VARIANTS` array in
-   `scripts/slime_variant_catalog.gd:10-20`.
-3. Add encounter weight/rank consts and pool entries in
-   `scripts/room_controller.gd:55-69` and `:211-254`.
-4. Update `tests/slime_variant_smoke.gd` tables,
-   `tests/boss_variant_selection_smoke.gd` expectations, and any palette or
-   overhead coverage; register new test files in `tests/manifest.csv`.
-5. Run `tools/validate_definitions.ps1` (catches malformed content) and
-   `tools/report_catalogs.ps1` (confirms the variant is present). Neither is in
-   the release gate yet, so also run the focused smoke tests.
+1. Add one typed `EnemyDefinition` sub-resource to the catalog with its stable
+   ID, stats, element, damage contract, `visual_source`, and encounter fields.
+2. Run `tools/validate_definitions.ps1` and `tools/report_catalogs.ps1`; the
+   report should list the new ID and the validator should load every authored
+   definition.
+3. Run the registry-driven variant smoke plus the factory and room-entry smoke
+   tests. No registry list, central controller, scene roster, or test count
+   should need editing.
 
 Real example: `crimson` — a tanky Fire slime added as one catalog row with
-`visual_source: "red"`, proven by `enemy_definition_slice_smoke` and the
-save/load round-trip `enemy_definition_roundtrip_smoke`. Note that the crimson
-addition still required the `VARIANTS` array, `room_controller.gd` consts, and
-test-table updates; it was not data-only.
+`visual_source: "red"`, proven by `enemy_definition_slice_smoke`, the
+save/load round-trip `enemy_definition_roundtrip_smoke`, and the normal-room
+entrance smoke. Its original proof required parallel registry and controller
+edits; the current migrated path no longer does.
 
 ### Example: add a room difficulty/traffic policy
 
@@ -357,18 +345,17 @@ test-table updates; it was not data-only.
 
 ### Example: add an encounter policy
 
-Current caveat: the rank-gated late-family weights (`yellow`, `ground`, `ice`,
-`crimson`) in `encounter_definition.tres` are **ignored**; only
-`grey_weight`, `shadow_weight`, `shadow_bound_*`, and `matchup_policy` are read
-at runtime. For late families, edit `room_controller.gd:55-69` instead until
-Slice 1 lands.
+The encounter resource owns baseline/shadow policy and the enemy definitions
+own variant-specific late/matchup eligibility. To add a late variant, edit its
+typed catalog entry; do not add a rank gate or weight to `RoomController`.
 
-1. Edit `resources/definitions/encounter_definition.tres` for the fields the
-   runtime actually reads (see caveat).
-2. `RoomController` reads it through `_encounter_definition()` — no code change
-   for those fields.
-3. Add a pool assertion to `tests/encounter_definition_smoke.gd`.
-4. Run `tools/validate_definitions.ps1`.
+1. Edit `resources/definitions/encounter_definition.tres` only for shared
+   baseline/shadow policy, or edit the enemy definition for variant-specific
+   eligibility.
+2. `RoomController` reads the shared policy through `_encounter_definition()`
+   and resolves variant entries through the typed catalog.
+3. Run `tools/validate_definitions.ps1`, `tools/report_catalogs.ps1`, and the
+   encounter/variant smoke tests.
 
 ### Example: add a reward/tuning change
 

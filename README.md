@@ -104,7 +104,7 @@ this shape:
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,715 lines / 285 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
-| `root.call/get/set` | 2,198 sites | Below the strict target; the remaining sites are the next vertical migration seams |
+| `root.call/get/set` | 2,200 sites | Below the strict target; the remaining sites are the next vertical migration seams |
 | Tests | 134 manifest rows / 132 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
@@ -136,8 +136,9 @@ The practical sequence is:
 
 1. Slice 0 — completed the authority-doc correction, recursive definition
    preflight, verification bootstrap, portability fixes, and dead R3 cleanup.
-2. Slice 1 — prove the pipeline on enemies: typed `EnemyDefinition` registry,
-   factory-only assembly, preview, and a second variant with zero code edits.
+2. Slice 1 — the typed `EnemyDefinition` registry and factory-only enemy
+   assembly are landed; preview and a fresh second-variant zero-edit proof
+   remain.
 3. Slice 2 — convert items and elements; replace count-pinned tests with
    registry invariants.
 4. Slice 3 — convert rooms, maps, and generation policy to typed definitions
@@ -188,11 +189,8 @@ The runner derives its groups from `tests/manifest.csv`, which classifies every
 test/report script with a role, state, owner, target, and load kind:
 
 Set `GODOT_BIN` to use a Godot executable outside the repository’s default
-Windows development path. `tests/run_all_smoke.ps1` and
-`tests/web_export_smoke.ps1` honor it today; `tools/run_headless.ps1` takes
-`-GodotBin`, and the remaining `tools/` scripts are scheduled to honor
-`GODOT_BIN` in Slice 0 of
-[`docs/authoring-system-plan.md`](docs/authoring-system-plan.md). The runner
+Windows development path. The smoke runner and focused `tools/` wrappers honor
+it today; each also accepts an explicit `-GodotBin`. The runner
 derives the project root from its own location, so it can be launched from a
 clean checkout.
 

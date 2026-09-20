@@ -1,5 +1,7 @@
 extends SceneTree
 
+const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+
 ## Slice C characterization: EncounterDefinition captures the rank-gated enemy
 ## pool as validated, editor-inspectable data. It must reject bad weights/policy,
 ## gate late families by run rank, and reproduce the authored shadow-bound
@@ -19,7 +21,12 @@ func _initialize() -> void:
 	var late_rank_1 := definition.late_pool_entries(1)
 	_expect(late_rank_1.is_empty(), "no late elemental families below rank five", failures)
 	var late_rank_5 := definition.late_pool_entries(5)
-	_expect(late_rank_5.size() == 4, "rank five enables all four late families", failures)
+	var authored_late_count := 0
+	for variant in CatalogScript.variants():
+		var authored_definition := CatalogScript.definition_resource(variant)
+		if authored_definition != null and authored_definition.encounter_role == &"late" and authored_definition.encounter_min_rank <= 5 and authored_definition.encounter_weight > 0.0:
+			authored_late_count += 1
+	_expect(late_rank_5.size() == authored_late_count, "rank five includes every authored late definition", failures)
 	var late_names: Array[String] = []
 	for entry in late_rank_5: late_names.append(str(entry["variant"]))
 	_expect("yellow" in late_names and "orange" in late_names and "aquamarine" in late_names and "crimson" in late_names, "rank five pool includes yellow/ground/ice/crimson", failures)
@@ -30,7 +37,7 @@ func _initialize() -> void:
 	bad.matchup_policy = "not_a_policy"
 	_expect(not bad.validate().is_empty(), "unknown matchup policy is rejected", failures)
 	var bad_weight := EncounterDefinition.new()
-	bad_weight.crimson_weight = -1.0
+	bad_weight.grey_weight = -1.0
 	_expect(not bad_weight.validate().is_empty(), "negative weight is rejected", failures)
 
 	var shadow := EncounterDefinition.new()

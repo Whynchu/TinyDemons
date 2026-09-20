@@ -275,7 +275,8 @@ playtests.
 
 ## 11. Encounter generation
 
-Production boss selection consumes `SlimeVariantCatalog.VARIANTS`. The selection
+Production boss selection consumes `SlimeVariantCatalog.variants()`, which is
+derived from the typed catalog definitions. The selection
 policy may use run rank, authored curriculum, weights, or exclusions, but the
 implementation path must support every entry.
 

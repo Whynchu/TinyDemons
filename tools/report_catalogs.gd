@@ -6,6 +6,7 @@ extends SceneTree
 ## tools/report_catalogs.ps1.
 
 const ENCOUNTER_DEFINITION_SCRIPT = preload("res://scripts/encounter_definition.gd")
+const ENEMY_DEFINITION_SCRIPT = preload("res://scripts/enemy_definition.gd")
 const ROOM_DEFINITION_SCRIPT = preload("res://scripts/room_definition.gd")
 const GENERATION_POLICY_SCRIPT = preload("res://scripts/dungeon_generation_policy.gd")
 const REWARD_DEFINITION_SCRIPT = preload("res://scripts/reward_definition.gd")
@@ -57,11 +58,15 @@ func _report_slime_variants() -> void:
 		print("slime_variant_catalog: LOAD_FAILED")
 		_failures.append("slime_variant_catalog.tres")
 		return
-	var definitions := data.get("definitions") as Dictionary
-	print("slime_variant_catalog: %d variants" % definitions.size())
-	var ids: Array = definitions.keys()
-	ids.sort_custom(func(a, b): return String(a) < String(b))
-	print("  ids: %s" % ", ".join(ids.map(func(id): return String(id))))
+	var definitions := data.get("definitions") as Array
+	var ids: Array[String] = []
+	for entry in definitions:
+		var definition := entry as Resource
+		if definition != null:
+			ids.append(String(definition.get("id")))
+	ids.sort()
+	print("slime_variant_catalog: %d variants" % ids.size())
+	print("  ids: %s" % ", ".join(ids))
 
 
 func _report_encounter_definition() -> void:
@@ -69,7 +74,8 @@ func _report_encounter_definition() -> void:
 	if definition == null:
 		_failures.append("encounter_definition.tres")
 		return
-	print("encounter_definition: weights grey=%.2f shadow=%.2f crimson=%.2f, gates yellow=%d ground=%d ice=%d crimson=%d, policy=%s" % [definition.grey_weight, definition.shadow_weight, definition.crimson_weight, definition.yellow_min_rank, definition.ground_min_rank, definition.ice_min_rank, definition.crimson_min_rank, definition.matchup_policy])
+	var late_entries := definition.late_pool_entries(5)
+	print("encounter_definition: grey=%.2f shadow=%.2f shadow_min_rank=%d late_rank5=%d policy=%s" % [definition.grey_weight, definition.shadow_weight, definition.shadow_min_rank, late_entries.size(), definition.matchup_policy])
 
 
 func _report_room_definition() -> void:

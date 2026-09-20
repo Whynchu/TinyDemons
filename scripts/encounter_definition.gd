@@ -8,6 +8,7 @@ class_name EncounterDefinition
 ## is immutable and reusable across rooms and runs.
 
 const DEFAULT_DATA_PATH := "res://resources/definitions/encounter_definition.tres"
+const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 
 
 static func default_data() -> EncounterDefinition:
@@ -22,20 +23,9 @@ const POLICY_SHADOW_BOUND := "shadow_bound"
 
 ## Grey is the neutral baseline present in every normal encounter.
 @export var grey_weight := 1.0
-## Late-run elemental families enter the rotation at these run ranks. Weight 0
-## disables the family entirely.
-@export var yellow_weight := 1.0
-@export var yellow_min_rank := 5
-@export var ground_weight := 1.0
-@export var ground_min_rank := 5
-@export var ice_weight := 1.0
-@export var ice_min_rank := 5
 ## Shadow Slimes are a rare pressure spike, not a normal roster member.
 @export var shadow_weight := 0.12
 @export var shadow_min_rank := 5
-## Content-driven tanky Fire variant (added via EnemyDefinition).
-@export var crimson_weight := 0.6
-@export var crimson_min_rank := 5
 ## Shadow-bound encounters replace most normal slots with Shadow Slimes.
 @export var shadow_bound_normal_weight := 0.20
 @export var shadow_bound_variant_weight := 0.80
@@ -50,14 +40,11 @@ var allowed_policies: Array[String] = [POLICY_RANK_DEFAULT, POLICY_BASE_ADVANTAG
 func validate() -> Array[String]:
 	var problems: Array[String] = []
 	if grey_weight < 0.0: problems.append("grey_weight must be non-negative")
-	for key in ["yellow", "ground", "ice", "crimson"]:
-		var weight := float(get("%s_weight" % key))
-		if weight < 0.0: problems.append("%s_weight must be non-negative" % key)
 	if shadow_weight < 0.0: problems.append("shadow_weight must be non-negative")
 	if shadow_bound_normal_weight < 0.0 or shadow_bound_variant_weight < 0.0:
 		problems.append("shadow-bound weights must be non-negative")
-	if yellow_min_rank < 1 or ground_min_rank < 1 or ice_min_rank < 1 or crimson_min_rank < 1:
-		problems.append("min ranks must be >= 1")
+	if shadow_min_rank < 1:
+		problems.append("shadow_min_rank must be >= 1")
 	if not allowed_policies.has(matchup_policy):
 		problems.append("unknown matchup_policy '%s'" % matchup_policy)
 	return problems
@@ -66,10 +53,12 @@ func validate() -> Array[String]:
 ## Late-run weighted entries that enter once the run rank passes their gate.
 func late_pool_entries(run_rank: int) -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
-	if run_rank >= yellow_min_rank and yellow_weight > 0.0: entries.append({"variant": "yellow", "weight": yellow_weight})
-	if run_rank >= ground_min_rank and ground_weight > 0.0: entries.append({"variant": "orange", "weight": ground_weight})
-	if run_rank >= ice_min_rank and ice_weight > 0.0: entries.append({"variant": "aquamarine", "weight": ice_weight})
-	if run_rank >= crimson_min_rank and crimson_weight > 0.0: entries.append({"variant": "crimson", "weight": crimson_weight})
+	for variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
+		var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(variant)
+		if definition == null or definition.encounter_role != &"late":
+			continue
+		if run_rank >= definition.encounter_min_rank and definition.encounter_weight > 0.0:
+			entries.append({"variant": String(definition.id), "weight": definition.encounter_weight})
 	return entries
 
 

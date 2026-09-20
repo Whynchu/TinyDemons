@@ -5,16 +5,8 @@
 [resource]
 script = ExtResource("1")
 grey_weight = 1.0
-yellow_weight = 1.0
-yellow_min_rank = 5
-ground_weight = 1.0
-ground_min_rank = 5
-ice_weight = 1.0
-ice_min_rank = 5
 shadow_weight = 0.12
 shadow_min_rank = 5
-crimson_weight = 0.6
-crimson_min_rank = 5
 shadow_bound_normal_weight = 0.2
 shadow_bound_variant_weight = 0.8
 matchup_policy = "rank_default"

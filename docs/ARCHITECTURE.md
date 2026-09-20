@@ -194,17 +194,19 @@ resources are not yet authoritative at runtime.
 
 ### Add an enemy variant
 
-Current path (Slice 1 of the authoring plan makes this data-only):
+Current path (the enemy portion of Slice 1 is now typed and factory-backed):
 
-1. Add the variant to `resources/definitions/slime_variant_catalog.tres` and to
-   the hardcoded `VARIANTS` array in `slime_variant_catalog.gd:10-20`.
-2. Add its encounter weight/rank gate in `room_controller.gd:55-69` and
-   `:211-254`; the matching `encounter_definition.tres` fields are currently
-   ignored.
-3. Reuse the `slime_*` components; extend `enemy_tactics_component` only for
-   genuinely new tactical state.
-4. Update the variant tests and palette/HUD maps listed in
-   `docs/CONTENT_AUTHORING.md`.
+1. Add a typed `EnemyDefinition` sub-resource to the `definitions` array in
+   `resources/definitions/slime_variant_catalog.tres`, including explicit
+   visual and encounter metadata.
+2. Reuse the `slime_*` components; extend `enemy_tactics_component` only for
+   genuinely new tactical state. `EnemyFactory` materializes the actor and the
+   runtime pool configures selected slots from the definition.
+3. Run the definition validator, catalog report, registry-driven variant
+   smoke, factory contract smoke, and normal-room entrance smoke.
+4. A genuinely new palette or behavior still belongs to its narrow owner, but
+   an existing palette/source is data-only. Do not add a central roster list,
+   `RoomController` encounter constant, or scene-authored enemy slot.
 5. See `docs/rogue_slime_ambush.md` and `docs/speed_stat_design.md` for earlier
    variant additions as worked examples.
 

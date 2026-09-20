@@ -1,36 +1,44 @@
 extends RefCounted
 class_name SlimeVariantCatalog
 
-## Editor-inspectable slime variant definitions. The authored data lives in
-## resources/definitions/slime_variant_catalog.tres as the single source of
-## truth; this class keeps the static lookup API over that resource.
+## Editor-inspectable slime variant registry. The authored data lives in
+## resources/definitions/slime_variant_catalog.tres as typed EnemyDefinition
+## sub-resources; this class is the narrow runtime lookup API over that data.
 
 const DATA := preload("res://resources/definitions/slime_variant_catalog.tres") as SlimeVariantCatalogData
 
-const VARIANTS: Array[StringName] = [
-	&"grey",
-	&"red",
-	&"blue",
-	&"yellow",
-	&"green",
-	&"purple",
-	&"orange",
-	&"aquamarine",
-	&"crimson",
-]
-
-
 static func definitions() -> Dictionary:
-	return DATA.definitions
+	var result: Dictionary = {}
+	for entry in DATA.definitions:
+		var definition := entry as EnemyDefinition
+		if definition != null:
+			result[definition.id] = definition
+	return result
+
+
+static func variants() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for entry in DATA.definitions:
+		var definition := entry as EnemyDefinition
+		if definition != null:
+			result.append(definition.id)
+	return result
 
 
 static func is_variant(variant: StringName) -> bool:
 	return definitions().has(variant)
 
 
+static func definition_resource(variant: StringName) -> EnemyDefinition:
+	var definition := definitions().get(variant) as EnemyDefinition
+	return definition
+
+
 static func definition(variant: StringName) -> Dictionary:
-	var key := variant if is_variant(variant) else &"grey"
-	return (definitions()[key] as Dictionary).duplicate(true)
+	var definition_resource_value := definition_resource(variant)
+	if definition_resource_value == null:
+		definition_resource_value = definition_resource(&"grey")
+	return definition_resource_value.to_record() if definition_resource_value != null else {}
 
 
 static func element_for_variant(variant: StringName) -> int:
