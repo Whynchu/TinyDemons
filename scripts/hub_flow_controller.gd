@@ -390,9 +390,9 @@ func _get_screen_property_if_available(screen: Object, property_name: StringName
 
 
 func _clear_touch_candidate(screen: Object) -> void:
-	# Equipment touch-preview state is optional for small controller callers and
-	# test doubles. Keep its reset at one seam so those callers do not need to
-	# reproduce the full ScreenStateController surface.
+	# Retained as a compatibility reset for older callers and test doubles. Touch
+	# equipment actions are direct now, so no candidate remains armed between
+	# route transitions.
 	_set_screen_property_if_available(screen, &"hub_touch_candidate_slot", "")
 	_set_screen_property_if_available(screen, &"hub_touch_candidate_index", -1)
 
@@ -800,21 +800,11 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
 		return
 	root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = candidate_index
-	# Touch needs a visible preview pass before committing so the player can read
-	# the item description and green/red stat comparison. Keyboard/controller
-	# navigation keeps its existing single-Confirm transaction behavior.
-	var is_touch_input_device := root.has_method("_is_touch_input_device") and bool(root.call("_is_touch_input_device"))
-	if is_touch_input_device:
-		var screen: ScreenStateController = root.screen_state_controller
-		var same_candidate: bool = screen.hub_touch_candidate_slot == String(slot) and screen.hub_touch_candidate_index == candidate_index
-		if not same_candidate:
-			screen.hub_touch_candidate_slot = String(slot)
-			screen.hub_touch_candidate_index = candidate_index
-			screen.refresh_equipment_menu(root)
-			root.call("_play_sound", "ui_hover", -6.0, 1.0)
-			return
-		screen.hub_touch_candidate_slot = ""
-		screen.hub_touch_candidate_index = -1
+	# Authored Equipment buttons are direct touch targets. Controller/keyboard
+	# navigation still enters the same candidate mode and confirms separately,
+	# while a visible touch candidate commits through the shared transaction path
+	# in one tap instead of requiring controller-style preview nesting.
+	_clear_touch_candidate(root.screen_state_controller)
 	hub_item_action(root)
 
 
@@ -842,9 +832,9 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 			grouped[key] = {"representative": item, "items": []}
 		var group: Dictionary = grouped[key]
 		(group["items"] as Array).append(item)
-		var item_equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
+		var item_equipped := _fusion_candidate_is_equipped(root.player_profile, item)
 		var current := group["representative"] as ItemInstance
-		var current_equipped: bool = root.player_profile.get_equipped_instance_id(slot) == current.instance_id
+		var current_equipped := _fusion_candidate_is_equipped(root.player_profile, current)
 		if item_equipped and not current_equipped:
 			group["representative"] = item
 	var equipped_candidates: Array[ItemInstance] = []
@@ -859,11 +849,38 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 		# hiding valid targets that had exactly one duplicate.
 		if valid_material_count < 1 and not can_salvage:
 			continue
-		var slot := catalog.definition_slot(item.definition_id)
-		var equipped: bool = root.player_profile.get_equipped_instance_id(slot) == item.instance_id
+		var equipped := _fusion_candidate_is_equipped(root.player_profile, item)
 		(equipped_candidates if equipped else unequipped_candidates).append(item)
+	_sort_fusion_candidates(equipped_candidates, root.player_profile, catalog)
+	_sort_fusion_candidates(unequipped_candidates, root.player_profile, catalog)
 	root.screen_state_controller.hub_fusion_candidates.append_array(equipped_candidates)
 	root.screen_state_controller.hub_fusion_candidates.append_array(unequipped_candidates)
+
+
+func _fusion_candidate_is_equipped(profile: PlayerProfile, item: ItemInstance) -> bool:
+	return profile != null and item != null and profile.equipped_instance_ids.values().has(item.instance_id)
+
+
+func _sort_fusion_candidates(candidates: Array[ItemInstance], profile: PlayerProfile, catalog: ItemCatalog) -> void:
+	candidates.sort_custom(func(left: ItemInstance, right: ItemInstance) -> bool:
+		var left_equipped := _fusion_candidate_is_equipped(profile, left)
+		var right_equipped := _fusion_candidate_is_equipped(profile, right)
+		if left_equipped != right_equipped:
+			return left_equipped
+		var left_total := catalog.stat_allocation_total(left)
+		var right_total := catalog.stat_allocation_total(right)
+		if not is_equal_approx(left_total, right_total):
+			return left_total > right_total
+		var left_name := catalog.gear_name(left)
+		var right_name := catalog.gear_name(right)
+		if left_name != right_name:
+			return left_name < right_name
+		var left_definition := String(left.definition_id)
+		var right_definition := String(right.definition_id)
+		if left_definition != right_definition:
+			return left_definition < right_definition
+		return left.instance_id < right.instance_id
+	)
 
 
 func invalidate_hub_fusion_candidates(root: Object) -> void:
@@ -993,6 +1010,7 @@ func hub_item_action(root: Object) -> void:
 		# The visible EQUIP command is a route transition. It must not silently
 		# select the first slot or open an item picker beneath the command row.
 		if root.screen_state_controller.hub_equipment_mode == EQUIPMENT_MODE_COMMAND or root.screen_state_controller.hub_equipment_action_focus:
+			root.screen_state_controller.hub_is_root = false
 			_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_EQUIP)
 			root.screen_state_controller.hub_content_focus = true
 			root.screen_state_controller.hub_item_index = clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
@@ -1155,6 +1173,7 @@ func remove_hub_gear(root: Object) -> void:
 	if root.screen_state_controller.hub_equipment_mode == EQUIPMENT_MODE_COMMAND:
 		# REMOVE descends into the same six-panel slot grid as EQUIP. A second
 		# confirm on a slot performs the actual unequip.
+		root.screen_state_controller.hub_is_root = false
 		_clear_touch_candidate(root.screen_state_controller)
 		_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_SLOT_REMOVE)
 		root.screen_state_controller.hub_content_focus = true
@@ -1188,6 +1207,7 @@ func remove_all_hub_gear(root: Object) -> void:
 			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 			return
 		_clear_touch_candidate(root.screen_state_controller)
+		root.screen_state_controller.hub_is_root = false
 		_set_equipment_mode(root.screen_state_controller, EQUIPMENT_MODE_REMOVE_ALL_CONFIRM)
 		# Confirmation is direct: Confirm accepts and Back cancels.  The index is
 		# retained only for compatibility with the old hidden Yes/No controls.

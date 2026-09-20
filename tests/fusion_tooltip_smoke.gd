@@ -97,11 +97,14 @@ func _initialize() -> void:
 	controller_instance.hub_content_focus = true
 	controller_instance.hub_item_index = 0
 	controller_instance.hub_gear_browsing = false
+	profile.equipped_instance_ids["weapon"] = duplicate.instance_id
 	controller_instance.call("update_hub_ui", root, pixel)
 	_expect(fusion_view != null and fusion_view.visible, "Fusion route uses its dedicated visible presenter", failures)
 	_expect(fusion_view.get_node("ShopListPanel").visible and fusion_view.get_node("ShopStatsPanel").visible, "Fusion keeps Shop's independent body panels", failures)
 	_expect((fusion_view.get_node("OwnedText") as Sprite2D).texture != null, "Fusion renders the owned footer", failures)
 	_expect((fusion_view.get_node("ListClip/SellRowSoulAmount0") as Sprite2D).texture != null and (fusion_view.get_node("ListClip/SellRowSoulIcon0") as Sprite2D).texture != null, "Fusion renders inline Soul amount and icon", failures)
+	var fusion_model := fusion_view.get("_last_fusion_model") as FusionMenuModel
+	_expect(fusion_model != null and not fusion_model.rows.is_empty() and str(fusion_model.rows[0].get("label", "")).ends_with(" E"), "Fusion marks the equipped row with an E suffix", failures)
 	_expect(not details[0].visible and not controller_instance.hub_item_detail_panel.visible, "legacy item detail presenter stays hidden on FUSE", failures)
 	root._set_page(2)
 	controller_instance.hub_page = 2
