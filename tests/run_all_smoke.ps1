@@ -164,7 +164,14 @@ foreach ($test in $tests) {
 	}
 	$completed = $process.WaitForExit($TestTimeoutSeconds * 1000)
 	if (-not $completed) {
-		$process.Kill($true)
+		# Process.Kill(bool) is unavailable on the .NET/Windows PowerShell
+		# combination used by some local and CI hosts. The fallback still ends
+		# the timed-out worker; the smoke runner does not own a process tree.
+		try {
+			$process.Kill($true)
+		} catch {
+			$process.Kill()
+		}
 		$process.WaitForExit()
 		$elapsed = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
 		$detail = "timeout after $TestTimeoutSeconds seconds"

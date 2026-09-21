@@ -1,7 +1,8 @@
 # Tiny Demons Content Authoring Guide
 
 Status: working guide; enemy definitions and encounter eligibility now use the
-typed catalog/factory path. Other authored surfaces are still only partially
+typed catalog/factory path, including standalone one-file definitions and the
+enemy preview workbench. Other authored surfaces are still only partially
 wired. Read the trap table below before editing any `.tres`.
 
 Updated: 2026-09-20
@@ -21,7 +22,7 @@ partially wired.
 
 ## Data paths that currently do nothing
 
-Measured 2026-09-20 (version `0.2.67`). Until the listed slice in
+Measured 2026-09-20 (version `0.2.70`). Until the listed slice in
 [`authoring-system-plan.md`](authoring-system-plan.md) lands, these paths are
 traps:
 
@@ -152,10 +153,12 @@ Workflow (current, typed enemy-definition path):
 
 1. Decide whether the addition is a visual variant, gameplay element, behavior
    variant, or a new actor class.
-2. Add one typed `EnemyDefinition` sub-resource to the `definitions` array in
-   `resources/definitions/slime_variant_catalog.tres`. Set its stable `id`,
-   element, display name, `base_stats`, `growth_weights`, `damage_contract`,
-   and explicit `visual_source`.
+2. Create one standalone definition with
+   `pwsh -File tools/dev.ps1 new enemy <id>`; this writes
+   `resources/definitions/<id>.tres`. Existing embedded catalog entries in
+   `slime_variant_catalog.tres` remain valid, but new content should use the
+   one-file path. Set the stable `id`, element, display name, `base_stats`,
+   `growth_weights`, `damage_contract`, and explicit `visual_source`.
 3. Set encounter metadata on that same definition when it should enter normal
    generation: `encounter_role` (`baseline`, `matchup`, `late`, or `shadow`),
    `encounter_weight`, `encounter_min_rank`, and any preferred/matchup weight.
@@ -167,14 +170,16 @@ Workflow (current, typed enemy-definition path):
 5. If the variant introduces a genuinely new palette or behavior, extend that
    narrow owner and add a focused golden assertion. Reusing an existing
    `visual_source` is data-only.
-6. Run `tools/validate_definitions.ps1`, `tools/report_catalogs.ps1`,
-   `tests/slime_variant_smoke.gd`, and the enemy definition/room-entry smoke
-   tests. Verify normal, scaled/boss, wall-adjacent, and attack-contact
-   behavior when the content is intended for those paths.
+6. Run `pwsh -File tools/dev.ps1 verify`, then preview the definition with
+   `pwsh -File tools/dev.ps1 preview enemy <id>` and run
+   `pwsh -File tools/dev.ps1 test -Suite content`. Verify normal, scaled/boss,
+   wall-adjacent, and attack-contact behavior when the content is intended for
+   those paths.
 
-The remaining Slice 1 work is a preview workbench and the generic
-`ContentDefinition`/auto-discovery layer. The current enemy path already
-removes the old parallel registries and central encounter branches.
+The enemy-specific one-file discovery and preview workbench are now landed.
+The generic `ContentDefinition`/`ContentRegistry` layer remains future work;
+the current enemy path already removes the old parallel registries and central
+encounter branches.
 
 Do not implement a new enemy only as a recolor if its combat identity differs.
 Do not alter global tuning to solve a room-specific placement problem.
@@ -320,20 +325,25 @@ replace them with data-only workflows.
 
 Current steps:
 
-1. Add one typed `EnemyDefinition` sub-resource to the catalog with its stable
-   ID, stats, element, damage contract, `visual_source`, and encounter fields.
-2. Run `tools/validate_definitions.ps1` and `tools/report_catalogs.ps1`; the
-   report should list the new ID and the validator should load every authored
-   definition.
-3. Run the registry-driven variant smoke plus the factory and room-entry smoke
-   tests. No registry list, central controller, scene roster, or test count
-   should need editing.
+1. Run `tools/dev.ps1 new enemy <id>` and edit the generated definition with
+   its stable ID, stats, element, damage contract, `visual_source`, and
+   encounter fields.
+2. Run `tools/dev.ps1 verify`; the report should list the new ID and the
+   validator should load every authored definition.
+3. Run `tools/dev.ps1 preview enemy <id>` and
+   `tools/dev.ps1 test -Suite content`. No registry list, central controller,
+   scene roster, or test count should need editing.
 
 Real example: `crimson` — a tanky Fire slime added as one catalog row with
 `visual_source: "red"`, proven by `enemy_definition_slice_smoke`, the
 save/load round-trip `enemy_definition_roundtrip_smoke`, and the normal-room
 entrance smoke. Its original proof required parallel registry and controller
 edits; the current migrated path no longer does.
+
+The standalone one-file proof is `ember_guard`. It is discovered by the
+registry, previewed through the factory, and covered by the registry-driven
+slice, round-trip, encounter, boss, and room-entry checks without a central
+runtime or per-variant test edit.
 
 ### Example: add a room difficulty/traffic policy
 

@@ -115,12 +115,12 @@ docs/CONTENT_INDEX.md regenerated from the registry
 ### 3.2 The authoring loop (target)
 
 ```powershell
-pwsh -File tools/dev.ps1 new enemy crimson2     # scaffolds a definition + preview entry
-# edit resources/content/enemies/crimson2.tres
+pwsh -File tools/dev.ps1 new enemy crimson2     # scaffolds one definition file
+# edit resources/definitions/crimson2.tres
 pwsh -File tools/dev.ps1 verify                  # schema, duplicate IDs, dangling refs, stale docs
 pwsh -File tools/dev.ps1 preview enemy crimson2  # workbench scene or screenshot
 pwsh -File tools/dev.ps1 test -Suite content     # contract tests, seconds not minutes
-pwsh -File tools/dev.ps1 report                  # regenerates CONTENT_INDEX.md and metric blocks
+pwsh -File tools/dev.ps1 report                  # prints the authored catalog report
 ```
 
 A content addition is one or two files. Tests and docs are not edited by hand.
@@ -189,10 +189,10 @@ malformed definition.
 Goal: prove the whole pipeline on the smallest kind, end to end.
 
 Progress: the typed enemy catalog, registry lookup, definition-owned encounter
-metadata, factory materialization, registry-driven contract coverage, and
-normal-room pool bootstrap landed on 2026-09-20. The remaining work is the
-generic base/auto-discovery layer, a preview workbench, and a fresh second
-variant acceptance run that changes only authored data.
+metadata, factory materialization, registry-driven contract coverage,
+normal-room pool bootstrap, enemy-specific one-file discovery, preview
+workbench, and fresh second-variant proof landed on 2026-09-20. The remaining
+work is the generic base/auto-discovery layer shared by future content kinds.
 
 Work items:
 
@@ -220,19 +220,23 @@ Work items:
   a capacity pool through the factory, and normal room configuration applies
   selected definitions to those actors; scene-authored enemy slots are no
   longer the content roster.
-- [ ] Add the enemy preview workbench (reuse `scenes/boss_slime_authoring.tscn`
-  rather than inventing a new host if practical).
+- [x] Add `scenes/enemy_preview_workbench.tscn` and a headless preview driver;
+  it materializes any registry enemy through `EnemyFactory` and shows the
+  runtime collision/attack geometry without booting a run.
+- [x] Prove a fresh standalone `ember_guard.tres` definition through the
+  registry-driven preview, round-trip, encounter, boss, and room-entry checks
+  without a per-variant test edit.
 
-Current proof: `crimson` is resolved from the typed catalog, materialized by
-`EnemyFactory`, configured in the factory-created runtime pool, and exercised
-by the definition, round-trip, and normal-room entrance smoke tests. Slice 1 is
-not complete until a fresh variant is added by changing only authored data and
-the preview workbench can inspect it without booting a run.
+Current proof: `crimson` remains the embedded migration proof, while
+`ember_guard.tres` is discovered as a standalone authored resource, resolved
+from the registry, materialized by `EnemyFactory`, previewed without booting a
+run, and exercised by the registry-driven definition, round-trip, encounter,
+boss, and normal-room entrance smoke tests.
 
-Remaining acceptance bar: add a second fresh content variant using one
-definition file, run the focused content checks and the curated gate, make zero
-central-runtime or test edits, and confirm that it spawns through the factory
-in a normal room without a scene-authored roster slot.
+Remaining acceptance bar: run the focused content checks and the curated gate,
+keep the fresh variant at one definition file with zero per-variant runtime or
+test edits, and confirm that it spawns through the factory in a normal room
+without a scene-authored roster slot.
 
 ### Slice 2 — Items and elements
 
@@ -394,17 +398,17 @@ owned by later slices.
 
 ## 6. Command surface
 
-`tools/dev.ps1` is the planned thin wrapper; the current checkout still uses
-the focused scripts directly. It will grow per slice:
+`tools/dev.ps1` is now the thin wrapper for the enemy authoring slice. It will
+grow as later content kinds land:
 
 | Command | Purpose |
 |---|---|
-| `verify` | manifest + composition + definitions + UIDs + generated-index freshness |
-| `test -Suite fast\|content\|gate\|all` | shared-process fast suite, content contract suite, release gate, full inventory |
-| `preview <kind> <id>` | opens or screenshots the workbench for a definition |
-| `new <kind> <id>` | scaffolds a definition, registry entry, and contract row |
-| `report` | regenerates `CONTENT_INDEX.md`, `SCRIPT_INDEX.md`, and the metric block |
-| `doctor` | detects stale docs, hard-coded paths, and obsolete resources |
+| `verify` | manifest + composition + definitions + UIDs + catalog report |
+| `test -Suite fast\|content\|gate\|all` | focused definition/content checks, release gate, or full inventory |
+| `preview enemy <id>` | validates the enemy workbench without booting a run; `-Editor` opens the scene |
+| `new enemy <id>` | scaffolds one standalone `resources/definitions/<id>.tres` |
+| `report` | prints the authored catalog report |
+| `doctor` | checks the project root and configured Godot executable |
 
 All commands accept `-GodotBin` and honor `GODOT_BIN`; none require a running
 editor; none launch the full process-per-test inventory unless asked.

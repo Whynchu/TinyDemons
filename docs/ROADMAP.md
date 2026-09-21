@@ -6,7 +6,7 @@ Updated: 2026-09-20
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.67`; the authoring and verification sequence is
+Current release: version `0.2.70`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This roadmap sequences infrastructure work around the working game. It does
@@ -51,7 +51,7 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Current checkpoint after 0.2.67
+## Current checkpoint after 0.2.70
 
 The composition refactor's strict scorecard and the validator's
 editor-composition score both read 100%, but that is a proxy: several authored
@@ -62,9 +62,9 @@ the active sequence for closing the gap between the score and a real workflow:
 1. Slice 0 — completed the authority-doc correction, recursive definition
    preflight, `GODOT_BIN` portability, class-cache bootstrap, catalog failure
    signaling, R5 identity check, UID coverage, and dead R3 plan cleanup.
-2. Slice 1 — typed enemy definitions, one registry, and factory-only assembly
-   are landed for enemies; preview and a fresh zero-edit variant acceptance
-   run remain.
+2. Slice 1 — typed enemy definitions, one registry, factory-only assembly,
+   preview, and a fresh zero-edit variant acceptance run are landed for
+   enemies; the curated gate remains the acceptance check.
 3. Slices 2–3 — items, elements, rooms, maps, and generation policy.
 4. Slice 4 — menu route registry and conversion of the code-built overlays.
 5. Slice 5 — shared-process fast suites and content-contract tests in CI.
@@ -235,9 +235,10 @@ and the component contract in
 [`component-composition-design.md`](component-composition-design.md). The
 composition refactor is complete on its scorecard, but that is not a claim that
 content authoring is complete. The enemy vertical proof now has a typed catalog,
-definition-owned encounter metadata, and a factory-created runtime pool;
-preview and a fresh zero-edit variant acceptance run remain. Slices 2–3 extend
-the same contract to items, elements, rooms, and dungeon/map definitions.
+standalone definitions, definition-owned encounter metadata, a preview
+workbench, and a factory-created runtime pool; the curated gate remains. Slices
+2–3 extend the same contract to items, elements, rooms, and dungeon/map
+definitions.
 
 ## Out of scope for this cycle
 

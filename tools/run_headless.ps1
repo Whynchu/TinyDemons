@@ -5,7 +5,8 @@ param(
     [string]$Script = "",
     [switch]$Editor,
     [int]$QuitAfter = 0,
-    [string[]]$ExtraArgs = @()
+    [string[]]$ExtraArgs = @(),
+    [string[]]$UserArgs = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +54,10 @@ if (-not [string]::IsNullOrWhiteSpace($Script)) {
     $arguments += @("-s", $Script)
 }
 $arguments += $ExtraArgs
+if ($UserArgs.Count -gt 0) {
+	$arguments += "--"
+	$arguments += $UserArgs
+}
 
 & $GodotBin @arguments
 $exitCode = $LASTEXITCODE
