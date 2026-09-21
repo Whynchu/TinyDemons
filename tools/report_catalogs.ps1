@@ -20,8 +20,13 @@ if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = $env:TEMP }
 if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = [System.IO.Path]::GetTempPath() }
 $userDataDir = Join-Path $tempRoot ("tiny-demons-report-catalogs-{0}" -f $PID)
 $logFile = Join-Path $userDataDir "report_catalogs.log"
+$importLogFile = Join-Path $userDataDir "import.log"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
 
+& $GodotBin --headless --import --audio-driver Dummy --user-data-dir $userDataDir --path $ProjectRoot --log-file $importLogFile
+if ($LASTEXITCODE -ne 0) {
+	throw "Godot import failed with exit code $LASTEXITCODE"
+}
 & $GodotBin --headless --audio-driver Dummy --user-data-dir $userDataDir --path $ProjectRoot --log-file $logFile -s "res://tools/report_catalogs.gd"
 $exitCode = $LASTEXITCODE
 if (Test-Path $logFile) {

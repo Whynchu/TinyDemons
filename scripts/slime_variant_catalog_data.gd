@@ -1,23 +1,53 @@
 extends Resource
 class_name SlimeVariantCatalogData
 
-## Editor-inspectable slime variant definitions. Each entry is an authored
-## EnemyDefinition sub-resource so the catalog remains the single registry and
-## the runtime never has to reconstruct a typed definition from a raw record.
+## Editor-inspectable slime variant definitions. Existing entries may remain
+## embedded sub-resources for compatibility, while standalone EnemyDefinition
+## resources in this directory are discovered as authored content. That gives
+## content authors a one-file path without introducing a second runtime list.
 
 @export var definitions: Array[Resource] = []
+
+const DEFINITION_ROOT := "res://resources/definitions"
+const CATALOG_FILE := "slime_variant_catalog.tres"
+
+
+func authored_definitions() -> Array[EnemyDefinition]:
+	var result: Array[EnemyDefinition] = []
+	for entry in definitions:
+		var definition := entry as EnemyDefinition
+		if definition != null:
+			result.append(definition)
+
+	var external_paths: Array[String] = []
+	var directory := DirAccess.open(DEFINITION_ROOT)
+	if directory != null:
+		directory.list_dir_begin()
+		var entry := directory.get_next()
+		while not entry.is_empty():
+			if entry != "." and entry != ".." and not directory.current_is_dir() and entry.get_extension().to_lower() == "tres" and entry != CATALOG_FILE:
+				external_paths.append(DEFINITION_ROOT.path_join(entry))
+			entry = directory.get_next()
+		directory.list_dir_end()
+
+	external_paths.sort()
+	for path in external_paths:
+		var definition := load(path) as EnemyDefinition
+		if definition != null:
+			result.append(definition)
+	return result
 
 
 func validate() -> Array[String]:
 	var problems: Array[String] = []
-	if definitions.is_empty():
+	var authored := authored_definitions()
+	if authored.is_empty():
 		problems.append("slime variant definitions are empty")
 	var seen: Dictionary = {}
 	for entry in definitions:
-		var definition := entry as EnemyDefinition
-		if definition == null:
+		if entry as EnemyDefinition == null:
 			problems.append("slime variant catalog contains a non-EnemyDefinition entry")
-			continue
+	for definition in authored:
 		if seen.has(definition.id):
 			problems.append("duplicate enemy definition id '%s'" % definition.id)
 		seen[definition.id] = true

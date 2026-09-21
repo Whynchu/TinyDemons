@@ -95,12 +95,12 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-20; version `0.2.67`) gives us
+The latest source scan (working tree on 2026-09-20; version `0.2.70`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 194 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 195 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,715 lines / 285 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
@@ -136,9 +136,9 @@ The practical sequence is:
 
 1. Slice 0 — completed the authority-doc correction, recursive definition
    preflight, verification bootstrap, portability fixes, and dead R3 cleanup.
-2. Slice 1 — the typed `EnemyDefinition` registry and factory-only enemy
-   assembly are landed; preview and a fresh second-variant zero-edit proof
-   remain.
+2. Slice 1 — the typed `EnemyDefinition` registry, factory-only enemy
+   assembly, preview workbench, and fresh standalone second-variant zero-edit
+   proof are landed; the curated gate is the remaining acceptance check.
 3. Slice 2 — convert items and elements; replace count-pinned tests with
    registry invariants.
 4. Slice 3 — convert rooms, maps, and generation policy to typed definitions
@@ -221,6 +221,19 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_definitions.ps1
 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1 -RequireTargets
 ```
 
+For the current enemy authoring slice, use the shared command surface:
+
+```powershell
+pwsh -File tools/dev.ps1 new enemy example_guard
+pwsh -File tools/dev.ps1 preview enemy example_guard
+pwsh -File tools/dev.ps1 test -Suite content
+pwsh -File tools/dev.ps1 verify
+```
+
+`new enemy` creates one standalone definition under
+`resources/definitions/`; the registry, factory, preview, validator, and
+content contracts discover it without a central runtime or test edit.
+
 If Windows memory-error dialogs start repeating, stop the smoke runner and
 terminate only the `Godot_v4.7.1-stable_win64_console` worker processes. Keep
 the main editor/MCP process alive if it remains healthy.
@@ -251,7 +264,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.69**. Every push to `main` must increment the
+Current game version: **0.2.70**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

@@ -6,12 +6,14 @@ extends SceneTree
 ## and its factory output is genuinely distinct from the migrated variant.
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+const PREVIEW_SCENE := preload("res://scenes/enemy_preview_workbench.tscn")
 
 var _finished := false
 
 
 func _initialize() -> void:
-	call_deferred("_watchdog")
+	create_timer(10.0).timeout.connect(_watchdog)
 	var failures: Array[String] = []
 
 	var red_definition := EnemyFactory.definition(&"red")
@@ -45,6 +47,23 @@ func _initialize() -> void:
 	_expect(crimson_actor.get_node_or_null("AttackGuideL") != null and crimson_actor.get_node_or_null("AttackGuideR") != null, "factory owns regular enemy attack geometry", failures)
 	var crimson_stats := crimson_actor.get_node_or_null("Stats") as StatsComponent
 	_expect(crimson_stats != null and crimson_stats.vit >= int(crimson_definition.base_stats.get("VIT", 0)), "factory applies the variant stats profile", failures)
+
+	# The preview contract iterates the registry rather than naming a fixed set.
+	# A new standalone definition therefore gains preview coverage without a
+	# test edit of its own.
+	for variant: StringName in CatalogScript.variants():
+		var preview := PREVIEW_SCENE.instantiate()
+		preview.set("enemy_id", variant)
+		root.add_child(preview)
+		await process_frame
+		var summary := preview.call("get_preview_summary") as Dictionary
+		_expect(bool(summary.get("ready", false)), "%s preview workbench is ready" % variant, failures)
+		_expect(String(summary.get("id", "")) == String(variant), "%s preview keeps the stable id" % variant, failures)
+		_expect(bool(summary.get("geometry_valid", false)), "%s preview exposes valid geometry" % variant, failures)
+		var preview_actor := preview.get("preview_actor") as SlimeActor
+		_expect(preview_actor != null and bool(preview_actor.get_meta("content_materialized", false)), "%s preview uses the factory materialization path" % variant, failures)
+		_expect(preview_actor != null and preview_actor.texture != null, "%s preview has a renderable source texture" % variant, failures)
+		preview.queue_free()
 
 	crimson_actor.queue_free()
 	_finished = true

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1_enemy"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"ember_guard"
+display_name = "Ember Guard"
+element = 1
+damage_contract = &"elemental_slime"
+base_stats = {"AGI": 1, "DEF": 4, "INT": 2, "MND": 1, "STR": 3, "VIT": 5}
+growth_weights = {"AGI": 0.08, "DEF": 0.34, "INT": 0.08, "MND": 0.04, "STR": 0.24, "VIT": 0.22}
+visual_source = "red"
+encounter_role = &"late"
+encounter_weight = 0.5
+encounter_min_rank = 3

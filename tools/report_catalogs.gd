@@ -10,6 +10,7 @@ const ENEMY_DEFINITION_SCRIPT = preload("res://scripts/enemy_definition.gd")
 const ROOM_DEFINITION_SCRIPT = preload("res://scripts/room_definition.gd")
 const GENERATION_POLICY_SCRIPT = preload("res://scripts/dungeon_generation_policy.gd")
 const REWARD_DEFINITION_SCRIPT = preload("res://scripts/reward_definition.gd")
+const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 
 var _failures: Array[String] = []
 
@@ -53,17 +54,9 @@ func _report_items() -> void:
 
 
 func _report_slime_variants() -> void:
-	var data := load("res://resources/definitions/slime_variant_catalog.tres") as Resource
-	if data == null:
-		print("slime_variant_catalog: LOAD_FAILED")
-		_failures.append("slime_variant_catalog.tres")
-		return
-	var definitions := data.get("definitions") as Array
 	var ids: Array[String] = []
-	for entry in definitions:
-		var definition := entry as Resource
-		if definition != null:
-			ids.append(String(definition.get("id")))
+	for variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
+		ids.append(String(variant))
 	ids.sort()
 	print("slime_variant_catalog: %d variants" % ids.size())
 	print("  ids: %s" % ", ".join(ids))

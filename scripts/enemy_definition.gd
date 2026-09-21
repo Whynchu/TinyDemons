@@ -26,8 +26,11 @@ class_name EnemyDefinition
 
 
 static func from_variant(variant: StringName) -> EnemyDefinition:
-	var catalog := preload("res://scripts/slime_variant_catalog.gd")
-	var definition := catalog.definition_resource(variant)
+	# Use a runtime load here instead of a compile-time preload. The catalog
+	# itself owns the authored .tres resource, so preloading it from this script
+	# creates a cold-start cycle when the definition validator scans resources.
+	var catalog = load("res://scripts/slime_variant_catalog.gd")
+	var definition := catalog.definition_resource(variant) as EnemyDefinition
 	if definition != null:
 		return definition
 	return catalog.definition_resource(&"grey")

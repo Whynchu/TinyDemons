@@ -1,4 +1,4 @@
-# Tiny Demons — Version 0.2.67 Codebase Audit
+# Tiny Demons — Version 0.2.70 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
@@ -10,9 +10,9 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.67` (composition refactor structurally and editor-wise
+Current release: `0.2.70` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
-room/menu boundaries, and the content-authoring enemy proof in progress)
+room/menu boundaries, and the enemy authoring slice proof landed)
 
 Supersedes: the `0.2.00` audit (`docs/AUDIT.md` at commit
 `bfe55782f43ee40fe32b5bebd45de988e34579d8`). That document remains available in
@@ -20,14 +20,14 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
-## Current measured snapshot (2026-09-20, version 0.2.67)
+## Current measured snapshot (2026-09-20, version 0.2.70)
 
 The detailed historical audit below describes the `0.2.32` tree. The current tree at
-version `0.2.67` measures:
+version `0.2.70` measures:
 
-| Metric | 0.2.32 audit | 0.2.67 (2026-09-20) |
+| Metric | 0.2.32 audit | 0.2.70 (2026-09-20) |
 | --- | ---: | ---: |
-| GDScript files in `scripts/` | 171 | 194 |
+| GDScript files in `scripts/` | 171 | 195 |
 | `root.call/get/set` sites | 2,488 | 2,200 |
 | `GameplayState` lines / fields | 1,719 / 286 | 1,715 / 285 |
 | `RoomController` lines | 2,253 | 2,246 |
@@ -332,8 +332,8 @@ The long-term target is validated `Resource` definitions plus factories for
 enemies, encounters, rooms, dungeon/map rules, items, rewards, and effects.
 The first proof is the `EnemyDefinition` vertical slice (T2 slice B): move one
 existing slime variant behind an inspector-editable `Resource` and an
-`EnemyFactory`, then prove a second variant can be added with one definition +
-one catalog row and **zero** `GameplayState` edits. See
+`EnemyFactory`, then prove a second variant can be added with one standalone
+definition file and **zero** `GameplayState` edits. See
 [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
 for the pinned acceptance bars.
 
@@ -538,8 +538,9 @@ balance change is required to preserve behavior after extraction.
 4. **Content composition (T2).** The enemy `EnemyDefinition` + `EnemyFactory`
    proof now includes typed catalog entries, definition-owned encounter
    metadata, factory-created runtime pool slots, and focused room-entry
-   coverage. Finish its preview/zero-edit acceptance bar, then extend the
-   contract to encounters, rooms, items, and effects.
+    coverage. The preview/zero-edit proof is landed; finish the curated gate
+    acceptance bar, then extend the contract to encounters, rooms, items, and
+    effects.
 5. **Menu platform (Phase 0.30).** Migrate one screen at a time out of
    `ScreenStateController` using the `MenuPlayerContext` presenter pattern.
 6. **Remaining root-access owners.** Reduce `combat_runtime_controller.gd`,
@@ -553,7 +554,7 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.67 is past the legacy-coupling and editor-composition cleanup:
+Tiny Demons 0.2.70 is past the legacy-coupling and editor-composition cleanup:
 the composition scorecard is fully green (strict and editor halves both 100%),
 the state bag is at its measured target, the room lifecycle has typed
 boundaries, the frame schedule is a typed direct slice, and every authored
@@ -563,8 +564,7 @@ produces repeatable evidence.
 
 The next cycle is no longer "finish the coupling cleanup." It is: stabilize the
 boss-entry measurement into a repeatable gate and optimize that slow path,
-record the device performance profile, finish the enemy authoring proof's
-preview and fresh data-only acceptance, and migrate menus and the remaining
-root-access owners one vertical slice at a time. A broad rewrite would put the
-working combat, dungeon, save, input, web, and pixel-presentation foundation at
-unnecessary risk.
+finish the curated gate timeout investigation, record the device performance
+profile, and migrate menus and the remaining root-access owners one vertical
+slice at a time. A broad rewrite would put the working combat, dungeon, save,
+input, web, and pixel-presentation foundation at unnecessary risk.

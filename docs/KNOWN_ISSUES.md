@@ -6,7 +6,7 @@ Updated: 2026-09-20
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.67`. The current smoke inventory is 134 manifest
+Current release: version `0.2.70`. The current smoke inventory is 134 manifest
 rows / 132 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -45,7 +45,13 @@ script runs, no editor peer active) and resolved in Slice 0 of
   machine and fail on hosts without `pwsh` or the same directory layout.
 - **Resolved: catalog reporting and definition coverage.** The report preloads
   its definition scripts, returns nonzero on load failures, and the validator
-  recursively covers all 14 remaining resources in `resources/definitions/`.
+  recursively covers all 15 authored resources in `resources/definitions/`.
+- **Open: one curated-gate scene timeout remains environment-sensitive.** The
+  focused content suite and authoring preflight pass, but the standalone
+  2026-09-20 curated gate timed out in `chroma_projectile_scene_smoke` before
+  reaching its assertions. `tests/run_all_smoke.ps1` now records that timeout
+  on Windows PowerShell instead of crashing while killing the worker; this is
+  separate from the enemy authoring proof.
 
 ## Focused baseline verification — 2026-09-11
 

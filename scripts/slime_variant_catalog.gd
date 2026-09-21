@@ -2,27 +2,32 @@ extends RefCounted
 class_name SlimeVariantCatalog
 
 ## Editor-inspectable slime variant registry. The authored data lives in
-## resources/definitions/slime_variant_catalog.tres as typed EnemyDefinition
-## sub-resources; this class is the narrow runtime lookup API over that data.
+## resources/definitions as typed EnemyDefinition resources: the historical
+## catalog sub-resources plus standalone one-file definitions. This class is
+## the narrow runtime lookup API over both forms.
 
 const DATA := preload("res://resources/definitions/slime_variant_catalog.tres") as SlimeVariantCatalogData
+static var _cache_loaded := false
+static var _definition_cache: Dictionary = {}
+static var _variant_cache: Array[StringName] = []
+
+
+static func _ensure_cache() -> void:
+	if _cache_loaded:
+		return
+	for definition in DATA.authored_definitions():
+		_definition_cache[definition.id] = definition
+		_variant_cache.append(definition.id)
+	_cache_loaded = true
 
 static func definitions() -> Dictionary:
-	var result: Dictionary = {}
-	for entry in DATA.definitions:
-		var definition := entry as EnemyDefinition
-		if definition != null:
-			result[definition.id] = definition
-	return result
+	_ensure_cache()
+	return _definition_cache
 
 
 static func variants() -> Array[StringName]:
-	var result: Array[StringName] = []
-	for entry in DATA.definitions:
-		var definition := entry as EnemyDefinition
-		if definition != null:
-			result.append(definition.id)
-	return result
+	_ensure_cache()
+	return _variant_cache
 
 
 static func is_variant(variant: StringName) -> bool:
