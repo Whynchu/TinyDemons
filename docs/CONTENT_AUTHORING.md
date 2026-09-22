@@ -5,7 +5,7 @@ typed catalog/factory path, including standalone one-file definitions and the
 enemy preview workbench. Other authored surfaces are still only partially
 wired. Read the trap table below before editing any `.tres`.
 
-Updated: 2026-09-20
+Updated: 2026-09-21
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -22,7 +22,7 @@ partially wired.
 
 ## Data paths that currently do nothing
 
-Measured 2026-09-20 (version `0.2.70`). Until the listed slice in
+Measured 2026-09-20 (version `0.2.71`). Until the listed slice in
 [`authoring-system-plan.md`](authoring-system-plan.md) lands, these paths are
 traps:
 
@@ -188,8 +188,10 @@ Do not alter global tuning to solve a room-specific placement problem.
 
 Current owners:
 
-- definitions and stable IDs: `resources/definitions/item_catalog.tres`
+- legacy definitions and stable IDs: `resources/definitions/item_catalog.tres`
   (`ItemCatalogData`), loaded by `scripts/item_catalog.gd`;
+- new standalone definitions: `resources/definitions/items/*.tres`
+  (`ItemDefinition`), discovered by the same catalog registry;
 - serialized instance identity: `scripts/item_instance.gd`;
 - equip/unequip state: `scripts/equipment_component.gd`;
 - equipment presentation: `scripts/player_equipment_visual_component.gd`;
@@ -197,36 +199,33 @@ Current owners:
 - player-facing contracts: `gear-catalogue-spec.md`,
   `gear-effect-contracts.md`, and `gear-catalogue.md`.
 
-Workflow (current, before Slice 2):
+Workflow (current, during Slice 2 migration):
 
 1. Choose one of the six canonical slots: weapon, head, body, arm, shield, or
    accessory. Preserve the legacy `armor` compatibility key where required.
-2. Add the base ID to `live_base_ids` **and** a record to
-   `live_base_definitions` in `resources/definitions/item_catalog.tres`.
-   Records added only to the legacy `definitions` section do not drop or shop.
-3. Add source tags, rarity gates, metadata, and effect status to
-   `definition_metadata`; the loader merges it over the base record.
-4. For a set piece, add the set data and the set ID to
-   `scripts/item_catalog.gd:45` (`SET_IDS`). Set acquisition tags and rarity
-   gates are hardcoded in `item_catalog.gd`'s set synthesis today.
-5. Decide whether the effect is active or `future`. A future effect may remain
-   inspectable but must not enter live generation until its owner and action
-   contract exist.
-6. Update the count-pinned tests or the gate fails on a correct addition:
-   `tests/gear_system_rework_smoke.gd:13` (66 live definitions),
-   `tests/gear_catalogue_expansion_smoke.gd:22` (45 bases by slot),
-   `tests/drop_art_smoke.gd:37`, and any shop/tooltip coverage.
-7. Add catalogue/schema coverage and an acquisition test if the item can enter
-   a source pool; add any new test file to `tests/manifest.csv`.
-8. Check the item at each supported rarity/enhancement path without changing
-   unrelated balance.
+2. For a new live item, run `pwsh -File tools/dev.ps1 new item <id>` and edit
+   the generated `resources/definitions/items/<id>.tres`. Set the stable ID,
+   display name, slot, tier/stat, bonuses, source tags, rarity gates, and any
+   effect status on that one typed resource.
+3. Do not edit `item_catalog.tres`, `live_base_ids`, `definition_metadata`,
+   `SET_IDS`, or a count-pinned test for a standalone item. The registry
+   discovers the resource, converts it through the compatibility boundary, and
+   exposes it to live generation.
+4. Run `pwsh -File tools/dev.ps1 test -Suite content` and
+   `pwsh -File tools/dev.ps1 verify`. The validator checks every standalone
+   `ItemDefinition`, the report lists its ID, and the registry smoke covers
+   validation plus stable-ID save round-trip.
+5. Check the item at each supported rarity/enhancement path without changing
+   unrelated balance. Set synthesis and the remaining legacy catalogue
+   migration are still Slice 2 work.
 
 Known traps: `visual_id` is never read (item art is slot-level), `demon_cloak`
 is special-cased across `player_profile.gd`, `run_state.gd`,
-`equipment_component.gd`, and `hub_flow_controller.gd`, and there is no
-`validate()` on `ItemCatalogData`, so malformed keys fail at runtime. Slice 2
-replaces this with typed `ItemDefinition` entries, one registry, and
-registry-driven tests.
+`equipment_component.gd`, and `hub_flow_controller.gd`. The legacy catalog
+still uses dictionaries and set synthesis still lives in `item_catalog.gd`, but
+standalone `ItemDefinition` resources now have a schema validator and one
+registry path. Do not treat this migration proof as a completed item preview or
+full catalog conversion.
 
 Gear identity includes more than the display name. Enhancement, rarity,
 affixes, random stats, transmutation, and fusion investment determine the
@@ -318,8 +317,8 @@ volume settings when the sound is first used.
 ## Worked authoring examples
 
 One concrete "add one piece" workflow per content kind. These are the current
-truthful paths; slices in [`authoring-system-plan.md`](authoring-system-plan.md)
-replace them with data-only workflows.
+truthful paths; later slices extend the same contracts to the remaining legacy
+surfaces.
 
 ### Example: add an enemy variant
 
@@ -344,6 +343,21 @@ The standalone one-file proof is `ember_guard`. It is discovered by the
 registry, previewed through the factory, and covered by the registry-driven
 slice, round-trip, encounter, boss, and room-entry checks without a central
 runtime or per-variant test edit.
+
+### Example: add a weapon
+
+1. Run `tools/dev.ps1 new item <id>` and edit the generated
+   `resources/definitions/items/<id>.tres` with its slot, stat package, source
+   tags, rarity gates, and description.
+2. Run `tools/dev.ps1 test -Suite content`; the item registry smoke validates
+   every standalone item and checks stable-ID save round-trips.
+3. Run `tools/dev.ps1 verify`; the catalog report should list the item and no
+   legacy catalog, central runtime, or per-item test edit should be needed.
+
+The concrete proof is `cinder_blade.tres`: it is a live weapon with no edit to
+`item_catalog.tres`, and the existing gear contracts continue to pass after its
+addition. Item card/drop preview and full legacy catalogue migration remain
+open Slice 2 work.
 
 ### Example: add a room difficulty/traffic policy
 

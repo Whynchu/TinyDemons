@@ -10,6 +10,7 @@ const ENEMY_DEFINITION_SCRIPT = preload("res://scripts/enemy_definition.gd")
 const ROOM_DEFINITION_SCRIPT = preload("res://scripts/room_definition.gd")
 const GENERATION_POLICY_SCRIPT = preload("res://scripts/dungeon_generation_policy.gd")
 const REWARD_DEFINITION_SCRIPT = preload("res://scripts/reward_definition.gd")
+const ITEM_CATALOG_SCRIPT = preload("res://scripts/item_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
 
 var _failures: Array[String] = []
@@ -38,16 +39,16 @@ func _run() -> void:
 
 
 func _report_items() -> void:
-	var data := load("res://resources/definitions/item_catalog.tres") as Resource
-	if data == null:
+	var catalog = ITEM_CATALOG_SCRIPT.new()
+	if catalog == null:
 		print("item_catalog: LOAD_FAILED")
 		_failures.append("item_catalog.tres")
 		return
-	var definitions := data.get("definitions") as Dictionary
-	var live := data.get("live_base_definitions") as Dictionary
-	var sets := data.get("set_definitions") as Dictionary
-	var transmutations := data.get("transmutations") as Dictionary
-	print("item_catalog: %d expansion definitions, %d live bases, %d sets, %d transmutations" % [definitions.size(), live.size(), sets.size(), transmutations.size()])
+	var definitions: Dictionary = catalog.definitions
+	var live: Dictionary = catalog.live_base_definitions
+	var sets: Dictionary = catalog.set_definitions
+	var transmutations: Dictionary = catalog.transmutations
+	print("item_catalog: %d definitions, %d live bases, %d standalone live, %d sets, %d transmutations" % [definitions.size(), live.size(), catalog.authored_live_ids.size(), sets.size(), transmutations.size()])
 	var ids: Array = definitions.keys()
 	ids.sort_custom(func(a, b): return String(a) < String(b))
 	print("  ids: %s" % ", ".join(ids.map(func(id): return String(id))))

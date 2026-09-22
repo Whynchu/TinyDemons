@@ -11,3 +11,90 @@ class_name ItemCatalogData
 @export var definitions: Dictionary = {}
 @export var definition_metadata: Dictionary = {}
 @export var transmutations: Dictionary = {}
+
+const AUTHORED_ITEM_ROOT := "res://resources/definitions/items"
+var _authored_definition_resources_cache: Array[Resource] = []
+var _authored_definition_resources_loaded := false
+
+
+func authored_definition_resources() -> Array[Resource]:
+	if _authored_definition_resources_loaded:
+		return _authored_definition_resources_cache
+	var resources: Array[Resource] = []
+	var paths := _discover_authored_paths(AUTHORED_ITEM_ROOT)
+	for path: String in paths:
+		var resource := load(path) as Resource
+		if resource != null:
+			resources.append(resource)
+	_authored_definition_resources_cache = resources
+	_authored_definition_resources_loaded = true
+	return _authored_definition_resources_cache
+
+
+func authored_definition_data() -> Dictionary:
+	var result: Dictionary = {}
+	for resource: Resource in authored_definition_resources():
+		if not resource.has_method("to_record") or not resource.has_method("validate"):
+			continue
+		var definition_id := StringName(str(resource.get("id")))
+		if definition_id.is_empty():
+			continue
+		result[definition_id] = resource.call("to_record")
+	return result
+
+
+func authored_live_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for resource: Resource in authored_definition_resources():
+		if not bool(resource.get("live")):
+			continue
+		var definition_id := StringName(str(resource.get("id")))
+		if not definition_id.is_empty():
+			result.append(definition_id)
+	return result
+
+
+func validate() -> Array[String]:
+	var problems: Array[String] = []
+	if live_base_ids.is_empty():
+		problems.append("live_base_ids must not be empty")
+	if live_base_definitions.is_empty():
+		problems.append("live_base_definitions must not be empty")
+	var seen: Dictionary = {}
+	for definition_id: Variant in live_base_definitions:
+		seen[StringName(str(definition_id))] = "item_catalog.tres"
+	for definition_id: Variant in definitions:
+		seen[StringName(str(definition_id))] = "item_catalog.tres"
+	for resource: Resource in authored_definition_resources():
+		if not resource.has_method("to_record") or not resource.has_method("validate"):
+			problems.append("%s: resource must use the ItemDefinition contract" % resource.resource_path)
+			continue
+		var definition_id := StringName(str(resource.get("id")))
+		if definition_id in seen:
+			problems.append("duplicate item definition id '%s' (already owned by %s)" % [definition_id, seen[definition_id]])
+		else:
+			seen[definition_id] = resource.resource_path
+		var resource_problems := resource.call("validate") as Array
+		for problem: Variant in resource_problems:
+			problems.append("%s: %s" % [resource.resource_path, str(problem)])
+	return problems
+
+
+func _discover_authored_paths(directory_path: String) -> Array[String]:
+	var paths: Array[String] = []
+	var directory := DirAccess.open(directory_path)
+	if directory == null:
+		return paths
+	directory.list_dir_begin()
+	var entry := directory.get_next()
+	while not entry.is_empty():
+		if entry != "." and entry != "..":
+			var entry_path := directory_path.path_join(entry)
+			if directory.current_is_dir():
+				paths.append_array(_discover_authored_paths(entry_path))
+			elif entry.get_extension().to_lower() == "tres":
+				paths.append(entry_path)
+		entry = directory.get_next()
+	directory.list_dir_end()
+	paths.sort()
+	return paths

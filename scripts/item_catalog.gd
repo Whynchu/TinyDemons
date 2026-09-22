@@ -56,6 +56,8 @@ var set_definitions: Dictionary = {}
 var definitions: Dictionary = {}
 var definition_metadata: Dictionary = {}
 var transmutations: Dictionary = {}
+var authored_live_ids: Array[StringName] = []
+var authored_definition_resources: Array[Resource] = []
 
 
 func _init() -> void:
@@ -68,6 +70,11 @@ func _init() -> void:
 	definitions = data.definitions
 	definition_metadata = data.definition_metadata
 	transmutations = data.transmutations
+	authored_definition_resources = data.authored_definition_resources()
+	authored_live_ids = data.authored_live_ids()
+	var authored_data := data.authored_definition_data()
+	for definition_id: StringName in authored_data:
+		definitions[definition_id] = authored_data[definition_id]
 
 static func canonical_slot(slot: Variant) -> StringName:
 	var normalized := str(slot).to_lower()
@@ -84,6 +91,9 @@ func slot_label(slot: Variant) -> String:
 
 func live_definition_ids() -> Array[StringName]:
 	var result: Array[StringName] = live_base_ids.duplicate()
+	for definition_id: StringName in authored_live_ids:
+		if definition_id not in result:
+			result.append(definition_id)
 	for set_id: StringName in SET_IDS:
 		for slot: StringName in SLOTS:
 			result.append(StringName("%s_%s" % [String(set_id), String(slot)]))
@@ -135,7 +145,7 @@ func _live_set_definition(definition_id: StringName) -> Dictionary:
 
 
 func definition_data(definition_id: StringName) -> Dictionary:
-	var is_live := live_base_definitions.has(definition_id) or _is_live_set_definition(definition_id)
+	var is_live := live_base_definitions.has(definition_id) or definition_id in authored_live_ids or _is_live_set_definition(definition_id)
 	var base: Dictionary = live_base_definitions.get(definition_id, {}).duplicate(true) if live_base_definitions.has(definition_id) else _live_set_definition(definition_id)
 	if base.is_empty() and definitions.has(definition_id):
 		base = definitions.get(definition_id, {}).duplicate(true)
@@ -269,7 +279,7 @@ func definition_effects(definition_id: StringName) -> Dictionary:
 
 
 func definition_is_runtime_ready(definition_id: StringName) -> bool:
-	if live_base_definitions.has(definition_id) or _is_live_set_definition(definition_id):
+	if live_base_definitions.has(definition_id) or definition_id in authored_live_ids or _is_live_set_definition(definition_id):
 		return true
 	if not definitions.has(definition_id):
 		return false
@@ -473,7 +483,7 @@ func _is_basic_gear(definition_id: StringName) -> bool:
 
 
 func _is_live_definition(definition_id: StringName) -> bool:
-	return live_base_definitions.has(definition_id) or _is_live_set_definition(definition_id)
+	return live_base_definitions.has(definition_id) or definition_id in authored_live_ids or _is_live_set_definition(definition_id)
 
 
 func _gear_drop_weight(definition_id: StringName) -> float:

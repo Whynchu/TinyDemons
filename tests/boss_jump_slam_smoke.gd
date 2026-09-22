@@ -57,6 +57,32 @@ func _initialize() -> void:
 					break
 			_expect(saw_active, "boss enters the jump/slam phase", failures)
 			_expect(saw_popcorn, "jump phase creates three SlimeBossJumpPhasePopcorn enemies", failures)
+			if saw_popcorn:
+				var wave := (gameplay.get("room_controller") as RoomController).boss_jump_phase_waves.get(boss.get_instance_id(), []) as Array
+				var hud := gameplay.get("hud_controller") as HudController
+				var normal_slimes := gameplay.get("slimes") as Array[Sprite2D]
+				var normal: Sprite2D = null
+				for candidate in normal_slimes:
+					if candidate != boss and float(candidate.get_meta("encounter_scale", 1.0)) <= 1.0:
+						normal = candidate
+						break
+				var normal_bar_offset := hud.target_overhead_offsets.get(normal, Vector2.INF) as Vector2 if hud != null and normal != null else Vector2.INF
+				var normal_aggro_offset := hud.target_overhead_aggro_offsets.get(normal, Vector2.INF) as Vector2 if hud != null and normal != null else Vector2.INF
+				for popcorn in wave:
+					var support := popcorn as Sprite2D
+					var support_bar := support.get_node_or_null("HpOverhead") as Sprite2D if support != null else null
+					var support_fill := support.get_node_or_null("HpOverheadFill") as Sprite2D if support != null else null
+					var support_marker := support.get_node_or_null("AggroMarker") as Sprite2D if support != null else null
+					_expect(support_bar != null and support_fill != null and support_marker != null, "boss-jump support uses the normal enemy health/aggro nodes", failures)
+					_expect(hud != null and hud.target_overhead_frames.has(support) and hud.target_overhead_fills.has(support) and hud.target_overhead_aggro_markers.has(support), "boss-jump support is registered with the normal overhead HUD", failures)
+					if hud != null:
+						var support_bar_offset := hud.target_overhead_offsets.get(support, Vector2.INF) as Vector2
+						var support_aggro_offset := hud.target_overhead_aggro_offsets.get(support, Vector2.INF) as Vector2
+						_expect(support_bar_offset.is_equal_approx(normal_bar_offset), "boss-jump support health bar keeps the normal enemy offset", failures)
+						_expect(support_aggro_offset.is_equal_approx(normal_aggro_offset), "boss-jump support aggro marker keeps the normal enemy offset", failures)
+					if support_bar != null and support_marker != null and hud != null and support != null:
+						var expected_marker_position := support.global_position + (hud.target_overhead_aggro_offsets.get(support, Vector2.ZERO) as Vector2) + Vector2(0, -2)
+						_expect(support_marker.global_position.is_equal_approx(expected_marker_position), "boss-jump support aggro marker uses the normal enemy placement rule", failures)
 			_expect(saw_launch_protection, "boss becomes invulnerable and stun-resistant after launch", failures)
 			_expect(saw_launch_protection and boss.offset.y < component.base_sprite_offset.y, "boss remains visibly airborne after launch", failures)
 			_expect(component.frame >= 5, "boss airborne movement begins only at launch frame", failures)

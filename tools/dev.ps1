@@ -82,7 +82,7 @@ function Invoke-ContentTests {
 	Assert-GodotAvailable
 	$tests = switch ($Suite) {
 		"fast" { @("enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke") }
-		"content" { @("enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke", "slime_variant_smoke", "boss_variant_selection_smoke", "enemy_room_entrance_scene_smoke") }
+		"content" { @("enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke", "item_definition_slice_smoke", "slime_variant_smoke", "boss_variant_selection_smoke", "enemy_room_entrance_scene_smoke") }
 		default { @() }
 	}
 	if ($Suite -in @("gate", "all")) {
@@ -144,6 +144,58 @@ encounter_min_rank = 3
 	Write-Host "Next: edit the resource, then run 'pwsh -File tools/dev.ps1 preview enemy $Id' and 'pwsh -File tools/dev.ps1 verify'."
 }
 
+function New-ItemDefinition {
+	if ($Kind -ne "item") { throw "new currently supports: new enemy <id> or new item <id>" }
+	if ([string]::IsNullOrWhiteSpace($Id) -or $Id -notmatch "^[a-z][a-z0-9_]*$") {
+		throw "Item id must match ^[a-z][a-z0-9_]*$"
+	}
+	$definitionsRoot = Join-Path $resolvedRoot "resources/definitions/items"
+	New-Item -ItemType Directory -Force -Path $definitionsRoot | Out-Null
+	$definitionPath = Join-Path $definitionsRoot ("{0}.tres" -f $Id)
+	if ((Test-Path -LiteralPath $definitionPath -PathType Leaf) -and -not $Force) {
+		throw "Definition already exists: $definitionPath. Use -Force only to replace it."
+	}
+	$allDefinitionsRoot = Join-Path $resolvedRoot "resources/definitions"
+	$pattern = '(^[\s]*id[\s]*=[\s]*&"' + [regex]::Escape($Id) + '"|&"' + [regex]::Escape($Id) + '"[\s]*:)'
+	$existingMatches = @(Get-ChildItem -LiteralPath $allDefinitionsRoot -Filter "*.tres" -File -Recurse | Select-String -Pattern $pattern -List)
+	if ($existingMatches.Count -gt 0 -and -not $Force) {
+		throw "An authored definition already uses id '$Id': $($existingMatches[0].Path)"
+	}
+	$displayName = (($Id -split "_") | Where-Object { $_ } | ForEach-Object { $_.Substring(0, 1).ToUpperInvariant() + $_.Substring(1) }) -join " "
+	$template = @"
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"$Id"
+display_name = "$($displayName.ToUpperInvariant())"
+slot = &"weapon"
+gear_tier = &"basic"
+tier_stat = &"strength"
+bonuses = {"strength": 1.0}
+description = "An authored equipment definition."
+price = 25
+source_tags = Array[String](["shop", "chest", "clear_reward"])
+minimum_run_rank = 1
+minimum_player_level = 1
+rarity_floor = &"common"
+rarity_ceiling = &"mythic"
+shop_eligible = true
+live = true
+family = &"$Id"
+role = &"strength"
+role_tags = Array[String](["strength"])
+fusion_group = &"$Id"
+visual_id = &"$Id"
+"@
+	$utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+	[System.IO.File]::WriteAllText($definitionPath, $template, $utf8NoBom)
+	Write-Host "NEW_ITEM_DEFINITION $definitionPath" -ForegroundColor Green
+	Write-Host "Next: edit the resource, then run 'pwsh -File tools/dev.ps1 test -Suite content' and 'pwsh -File tools/dev.ps1 verify'."
+}
+
 function Show-Help {
 	@"
 Tiny Demons authoring commands
@@ -154,6 +206,7 @@ Tiny Demons authoring commands
   preview enemy <id>             Validate and report a workbench preview without booting a run.
   preview enemy <id> -Editor     Open the preview workbench in the Godot editor.
   new enemy <id>                 Create one standalone EnemyDefinition resource.
+  new item <id>                  Create one standalone ItemDefinition resource.
   report                         Print the authored catalog report.
   doctor                         Check the project and configured Godot executable.
 
@@ -175,7 +228,13 @@ switch ($Command) {
 		}
 		Invoke-HeadlessScript "res://tools/preview_enemy.gd" @(("--enemy-id={0}" -f $Id))
 	}
-	"new" { New-EnemyDefinition }
+	"new" {
+		switch ($Kind) {
+			"enemy" { New-EnemyDefinition }
+			"item" { New-ItemDefinition }
+			default { throw "Usage: dev.ps1 new enemy <id> or dev.ps1 new item <id>" }
+		}
+	}
 	"report" {
 		Assert-GodotAvailable
 		Invoke-RepoPowerShell (Join-Path $resolvedRoot "tools/report_catalogs.ps1") @("-ProjectRoot", $resolvedRoot, "-GodotBin", $resolvedGodot)

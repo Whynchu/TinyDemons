@@ -24,6 +24,7 @@ script,role,state,owner,target,load,notes
 "input_device_tracker_smoke","gate","verified","input & touch","InputDeviceTracker device classification","pure","focused pass 2026-09-15; handoff test waits on the production wall-clock grace window"
 "input_router_smoke","gate","unverified","input & touch","InputRouter context routing","pure",""
 "item_economy_smoke","gate","verified","gear & fusion","item economy: ItemInstance/PlayerProfile/equipment","pure","core smoke checklist evidence"
+"item_definition_slice_smoke","owner","verified","gear & fusion","standalone typed item definition registry","pure","data-only cinder_blade proof"
 "menu_route_scene_smoke","gate","verified","hub & menus","menu routing via ScreenStateController","main","game-over harness fixed 2026-09-13: injected _menu_direction_events; passes"
 "pause_menu_scene_smoke","gate","verified","hub & menus","pause menu scene layout and typed player presentation context","main","focused run 2026-09-15; authored rail/frame, typed player-card context, status/equipment routes, responsive layout, and profile-safe fixture"
 "player_hud_scene_smoke","gate","verified","HUD","player HUD scene contract","fixture","focused run 2026-09-13; prompt paths aligned with authored cooldown-icon hierarchy"

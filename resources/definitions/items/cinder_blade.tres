@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/item_definition.gd" id="1_cinder"]
+
+[resource]
+script = ExtResource("1_cinder")
+id = &"cinder_blade"
+display_name = "CINDER BLADE"
+slot = &"weapon"
+gear_tier = &"basic"
+tier_stat = &"strength"
+bonuses = {
+"strength": 3.0,
+"agi": -1.0
+}
+description = "A warm blade that favors decisive strikes."
+price = 38
+source_tags = Array[String](["shop", "chest", "clear_reward"])
+minimum_run_rank = 2
+minimum_player_level = 2
+rarity_floor = &"common"
+rarity_ceiling = &"mythic"
+shop_eligible = true
+live = true
+family = &"cinder"
+role = &"strength"
+role_tags = Array[String](["cinder", "strength"])
+fusion_group = &"cinder"
+visual_id = &"cinder_blade"

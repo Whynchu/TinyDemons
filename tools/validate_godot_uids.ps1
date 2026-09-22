@@ -18,7 +18,7 @@ if ($duplicates) {
 	exit 1
 }
 
-$referencing_files = Get-ChildItem -LiteralPath (Join-Path $root "scenes"), (Join-Path $root "scripts"), (Join-Path $root "tests"), (Join-Path $root "resources/definitions") -Include *.tscn,*.gd,*.tres -Recurse
+$referencing_files = @(Get-ChildItem -LiteralPath (Join-Path $root "scenes"), (Join-Path $root "scripts"), (Join-Path $root "tests"), (Join-Path $root "resources/definitions") -Include *.tscn,*.gd,*.tres -Recurse | Where-Object { -not $_.PSIsContainer })
 $script_uids = @{}
 foreach ($record in $records) { $script_uids[$record.Uid] = $record.Path }
 foreach ($file in $referencing_files) {
