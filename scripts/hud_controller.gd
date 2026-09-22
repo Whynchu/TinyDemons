@@ -27,6 +27,9 @@ var target_overhead_fill_sizes: Dictionary = {}
 var target_overhead_aggro_markers: Dictionary = {}
 var target_overhead_aggro_offsets: Dictionary = {}
 var target_overhead_elite_symbols: Dictionary = {}
+var enemy_overhead_offset := Vector2(3, 0)
+var enemy_overhead_frame_template: Sprite2D = null
+var enemy_overhead_fill_template: Sprite2D = null
 var bright_bar_cache: Dictionary = {}
 var aggro_marker_texture_cache: Dictionary = {}
 var last_run_timer_text := ""
@@ -964,14 +967,13 @@ func build_enemy_health_ui(
 	var player_damage_fill := duplicate_fill.call(player_health_fill, "HpBarDamageFill") as Sprite2D
 	player_damage_fill.texture = bright_texture.call(player_health_fill.texture); player_damage_fill.z_index = 1; player_health_fill.z_index = 2; player_damage_fill.z_as_relative = true; player_health_fill.z_as_relative = true; player_damage_fill.get_parent().move_child(player_damage_fill, player_health_fill.get_index())
 	var base_texture := player_health_fill.texture
-	register_overhead.call(slime_green, hp_overhead, hp_overhead_fill, hp_overhead.global_position - slime_green.global_position, duplicate_fill, pixel_particle)
+	enemy_overhead_frame_template = hp_overhead
+	enemy_overhead_fill_template = hp_overhead_fill
+	enemy_overhead_offset = hp_overhead.global_position - slime_green.global_position
+	register_overhead.call(slime_green, hp_overhead, hp_overhead_fill, enemy_overhead_offset, duplicate_fill, pixel_particle)
 	for slime in slimes:
 		if slime == slime_green: continue
-		var frame := Sprite2D.new(); frame.name = "HpOverhead"; frame.texture = hp_overhead.texture; frame.centered = hp_overhead.centered; frame.position = hp_overhead.position; frame.z_index = 0; frame.z_as_relative = false; slime.add_child(frame)
-		var overhead_texture := target_overhead_texture_for(slime)
-		var damage_fill := Sprite2D.new(); damage_fill.name = "HpOverheadDamageFill"; damage_fill.texture = target_overhead_damage_texture_for(slime, overhead_texture); damage_fill.centered = hp_overhead_fill.centered; damage_fill.position = hp_overhead_fill.position; damage_fill.z_index = 1; damage_fill.z_as_relative = false; slime.add_child(damage_fill)
-		var fill := Sprite2D.new(); fill.name = "HpOverheadFill"; fill.texture = overhead_texture; fill.centered = hp_overhead_fill.centered; fill.position = hp_overhead_fill.position; fill.z_index = 2; fill.z_as_relative = false; slime.add_child(fill)
-		register_overhead.call(slime, frame, fill, hp_overhead.global_position - slime_green.global_position, duplicate_fill, pixel_particle)
+		ensure_overhead_bar(slime, hp_overhead, hp_overhead_fill, enemy_overhead_offset, duplicate_fill, pixel_particle)
 	return base_texture
 
 
@@ -1017,6 +1019,44 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 	aggro_marker.top_level = true
 	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset; target_overhead_elite_symbols[slime] = elite_symbol
 	frame.visible = false; damage_fill.visible = false; fill.visible = false; aggro_marker.visible = false
+
+
+## Adds the same runtime overhead presentation used by ordinary enemies to an
+## actor materialized after the initial HUD build (for example a boss-jump
+## support enemy). The bar is runtime UI, not a boss-specific scene surface;
+## keeping creation here makes every factory-created enemy use the same
+## authored offset and aggro-marker registration.
+func ensure_overhead_bar(slime: Sprite2D, frame_template: Sprite2D, fill_template: Sprite2D, offset: Vector2, duplicate_fill: Callable, pixel_particle: Callable) -> void:
+	if frame_template == null:
+		frame_template = enemy_overhead_frame_template
+	if fill_template == null:
+		fill_template = enemy_overhead_fill_template
+	if slime == null or frame_template == null or fill_template == null:
+		return
+	var frame := slime.get_node_or_null("HpOverhead") as Sprite2D
+	if frame == null:
+		frame = _copy_sprite_template(frame_template, "HpOverhead")
+		slime.add_child(frame)
+	var fill := slime.get_node_or_null("HpOverheadFill") as Sprite2D
+	if fill == null:
+		fill = _copy_sprite_template(fill_template, "HpOverheadFill")
+		slime.add_child(fill)
+	register_overhead_bar(slime, frame, fill, offset, duplicate_fill, pixel_particle)
+
+
+func _copy_sprite_template(template: Sprite2D, sprite_name: String) -> Sprite2D:
+	var sprite := Sprite2D.new()
+	sprite.name = sprite_name
+	sprite.texture = template.texture
+	sprite.centered = template.centered
+	sprite.position = template.position
+	sprite.offset = template.offset
+	sprite.scale = template.scale
+	sprite.region_enabled = template.region_enabled
+	sprite.region_rect = template.region_rect
+	sprite.texture_filter = template.texture_filter
+	sprite.z_as_relative = false
+	return sprite
 
 
 func duplicate_fill_sprite(source: Sprite2D, sprite_name: String) -> Sprite2D:

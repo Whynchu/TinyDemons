@@ -6,7 +6,7 @@ Updated: 2026-09-20
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.70`; the authoring and verification sequence is
+Current release: version `0.2.71`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This roadmap sequences infrastructure work around the working game. It does
@@ -51,7 +51,7 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Current checkpoint after 0.2.70
+## Current checkpoint after 0.2.71
 
 The composition refactor's strict scorecard and the validator's
 editor-composition score both read 100%, but that is a proxy: several authored

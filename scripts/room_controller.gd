@@ -1526,10 +1526,7 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 	var hud := root.get("hud_controller") as HudController
 	if hud != null:
 		for popcorn in boss_jump_phase_pool:
-			var frame := popcorn.get_node_or_null("HpOverhead") as Sprite2D
-			var fill := popcorn.get_node_or_null("HpOverheadFill") as Sprite2D
-			if frame != null and fill != null:
-				hud.register_overhead_bar(popcorn, frame, fill, frame.global_position - popcorn.global_position, Callable(hud, "duplicate_fill_sprite"), Callable(root, "_pixel_particle_texture"))
+			hud.ensure_overhead_bar(popcorn, null, null, hud.enemy_overhead_offset, Callable(hud, "duplicate_fill_sprite"), Callable(root, "_pixel_particle_texture"))
 
 
 func prepare_boss_jump_phase_pool(root: Object, variant: String) -> void:

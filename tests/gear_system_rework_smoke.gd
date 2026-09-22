@@ -10,7 +10,8 @@ func _initialize() -> void:
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(catalog)
 
-	_expect(catalog.live_definition_ids().size() == 66, "live catalogue contains 12 plain/basic pieces and 54 set pieces", failures)
+	_expect(catalog.live_definition_ids().size() >= 66, "live catalogue retains the baseline plain/basic and set pieces", failures)
+	_expect(catalog.definition_exists(&"cinder_blade") and &"cinder_blade" in catalog.live_definition_ids(), "standalone authored weapons join the live registry", failures)
 	_expect(profile.base_vit == 2 and profile.base_str == 2 and profile.base_def == 2 and profile.base_agi == 2 and profile.base_int == 2 and profile.base_mnd == 2, "new profiles use the even two-point baseline", failures)
 	var forbidden_names := ["maul", "rod", "claw", "mask", "veil", "circlet", "mantle", "ear", "talisman"]
 	for definition_id: StringName in catalog.live_definition_ids():

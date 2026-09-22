@@ -27,7 +27,7 @@ and the factory/definition contract in
 not change the T1/T3 direction, the product contract, or the explicit frame
 schedule.
 
-Updated: 2026-09-20
+Updated: 2026-09-21
 
 ## 1. Why this plan exists
 
@@ -242,6 +242,13 @@ without a scene-authored roster slot.
 
 Goal: the two highest-volume content kinds become data-only.
 
+Current proof slice (2026-09-21): standalone `ItemDefinition` resources under
+`resources/definitions/items/` are discovered by `ItemCatalogData`, converted at
+the compatibility boundary, included in live generation, validated, reported,
+and covered by a registry-driven stable-ID round-trip smoke. `cinder_blade.tres`
+is the named proof item. The legacy dictionary catalogue and element/flame
+tables remain in migration.
+
 Work items:
 
 - [ ] Split `item_catalog.tres` (2,046 lines of nested dictionaries) into typed
@@ -398,8 +405,8 @@ owned by later slices.
 
 ## 6. Command surface
 
-`tools/dev.ps1` is now the thin wrapper for the enemy authoring slice. It will
-grow as later content kinds land:
+`tools/dev.ps1` is now the thin wrapper for the enemy and item authoring proof
+slices. It will grow as later content kinds land:
 
 | Command | Purpose |
 |---|---|
@@ -407,6 +414,7 @@ grow as later content kinds land:
 | `test -Suite fast\|content\|gate\|all` | focused definition/content checks, release gate, or full inventory |
 | `preview enemy <id>` | validates the enemy workbench without booting a run; `-Editor` opens the scene |
 | `new enemy <id>` | scaffolds one standalone `resources/definitions/<id>.tres` |
+| `new item <id>` | scaffolds one standalone `resources/definitions/items/<id>.tres` |
 | `report` | prints the authored catalog report |
 | `doctor` | checks the project root and configured Godot executable |
 
