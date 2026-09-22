@@ -6,7 +6,6 @@
 [ext_resource type="Texture2D" uid="uid://b7v1k8gok6lhs" path="res://assets/artwork/WallRight.png" id="4_wall_right"]
 [ext_resource type="Texture2D" uid="uid://c2k6nhy3riyvq" path="res://assets/artwork/DoorRight.png" id="5_door"]
 [ext_resource type="Texture2D" uid="uid://bdfi7adnkl6sx" path="res://assets/artwork/ChestGrey.png" id="6_chest"]
-[ext_resource type="Texture2D" uid="uid://dy7ra3eprvwy6" path="res://assets/artwork/TinyDemon.png" id="7_demon"]
 [ext_resource type="Texture2D" uid="uid://c0krlv2p2r8hp" path="res://assets/artwork/SlimeBlue.png" id="8_slime_blue"]
 [ext_resource type="Texture2D" uid="uid://by84hoph461ir" path="res://assets/artwork/SlimeGreen.png" id="9_slime_green"]
 [ext_resource type="Texture2D" uid="uid://8fgx5pr7dffa" path="res://assets/artwork/SlimeRed.png" id="10_slime_red"]
@@ -21,7 +20,6 @@
 [ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/stats_component.gd" id="20_stats_component"]
 [ext_resource type="Texture2D" uid="uid://p0m8jsy5sls1" path="res://assets/artwork/EnemyHpGreenBar.png" id="22_enemy_hp_green"]
 [ext_resource type="Texture2D" uid="uid://dno3saxcguqrt" path="res://assets/artwork/HpOverheadGreenBar.png" id="25_hp_overhead_green"]
-[ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="26_equipment_component"]
 [ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="28_isometric_room_layer"]
 [ext_resource type="Texture2D" uid="uid://l17ya4sh8lu4" path="res://assets/artwork/TileFloor.png" id="29_tile_floor"]
 [ext_resource type="Texture2D" uid="uid://brd1e4d23tsph" path="res://assets/artwork/TileLface.png" id="30_tile_lface"]
@@ -29,14 +27,11 @@
 [ext_resource type="Script" uid="uid://b7cke64rytrh1" path="res://scripts/dungeon_socket.gd" id="32_dungeon_socket"]
 [ext_resource type="Texture2D" uid="uid://ma3hpplhe1x" path="res://assets/artwork/Fire.png" id="33_fire"]
 [ext_resource type="Texture2D" uid="uid://dowvff0q335kb" path="res://assets/artwork/TinyDemonCloacked-Idle.png" id="34_cloaked_idle"]
-[ext_resource type="Texture2D" uid="uid://c2pko5socmgq1" path="res://assets/artwork/TinyDemon-attack1.png" id="35_attack1"]
-[ext_resource type="Texture2D" uid="uid://bihe7fbxbqepy" path="res://assets/artwork/TinyDemon-attack2.png" id="36_attack2"]
-[ext_resource type="Script" uid="uid://cp0oej4aup068" path="res://scripts/attack_hitbox_guide.gd" id="37_attack_hitbox_guide"]
-[ext_resource type="Texture2D" uid="uid://lcd0kfkssh61" path="res://assets/artwork/TinyDemon-Spin_Attack.png" id="41_spin_attack"]
 [ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="38_aggro_dot"]
 [ext_resource type="Texture2D" uid="uid://bvwy8po4byina" path="res://assets/artwork/firepit.png" id="39_firepit"]
 [ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/player_hud.tscn" id="40_player_hud"]
 [ext_resource type="Script" uid="uid://dqalh1uc2w2ev" path="res://scripts/hub_stone_accent_layer.gd" id="42_hub_stone_accent_layer"]
+[ext_resource type="PackedScene" path="res://scenes/player_placement.tscn" id="43_player_placement"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -148,7 +143,7 @@ position = Vector2(105, 95)
 color = Color(0.1, 1, 0.35, 0.28)
 polygon = PackedVector2Array(-49, -6, -49, -7, 13, -38, 17, -38, 79, -7, 79, -6, 67, -1, 67, 0, 75, 3, 75, 4, 65, 9, 61, 9, 55, 6, 17, 25, 13, 25, -25, 6, -31, 9, -35, 9, -45, 4, -45, 3, -37, 0, -37, -1)
 
-[node name="FloorUnderlay" type="Polygon2D" parent="Map/FloorTiles"]
+[node name="FloorUnderlay" type="Polygon2D" parent="Map/FloorTiles" unique_id=479404236]
 z_index = -1
 color = Color(0.580392, 0.690196, 0.760784, 1)
 polygon = PackedVector2Array(118, 57, 122, 57, 184, 88, 184, 89, 122, 120, 118, 120, 56, 89, 56, 88)
@@ -285,10 +280,10 @@ block_trigger_when_closed = true
 [node name="SpawnMarker" type="Marker2D" parent="Map/Sockets/BOTTOM_RIGHT" unique_id=429081338]
 position = Vector2(160, 85)
 
-[node name="HubStoneAccentLayer" type="Node2D" parent="Map"]
-texture_filter = 1
-z_index = 1
+[node name="HubStoneAccentLayer" type="Node2D" parent="Map" unique_id=1784746831]
 visible = false
+z_index = 1
+texture_filter = 1
 script = ExtResource("42_hub_stone_accent_layer")
 
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
@@ -327,7 +322,6 @@ color = Color(1, 1, 1, 0.40784314)
 polygon = PackedVector2Array(-8, 0.9749985, -3, -2.0250015, -1, -3.0250015, 1, -3.0250015, 3, -2.0250015, 8, 0.9749985, 8, 3.9749985, 3, 6.9749985, 1, 7.9749985, -1, 7.9749985, -3, 6.9749985, -8, 3.9749985)
 
 [node name="FireLight" type="PointLight2D" parent="Actors/RestFire" unique_id=739137859]
-color = Color(1, 1, 1, 1)
 energy = 0.12
 texture = SubResource("GradientTexture2D_fire_light")
 offset = Vector2(0, 4)
@@ -348,137 +342,9 @@ rect_size = Vector2(11, 6)
 fill_color = Color(0.1, 0.45, 1, 0.22)
 outline_color = Color(0.1, 0.35, 1, 0.85)
 
-[node name="TinyDemon" type="Sprite2D" parent="Actors" unique_id=505468505]
-position = Vector2(71, 81)
-texture = ExtResource("7_demon")
-centered = false
-
-[node name="Stats" type="Node" parent="Actors/TinyDemon" unique_id=402301846]
-script = ExtResource("20_stats_component")
-
-[node name="Equipment" type="Node" parent="Actors/TinyDemon" unique_id=1798955296]
-script = ExtResource("26_equipment_component")
-
-[node name="CollisionGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1478677281]
-script = ExtResource("19_collision_guide")
-rect_position = Vector2(6.5, 10.5)
-rect_size = Vector2(4, 5)
-
-[node name="DoorFeetGuide" type="Node2D" parent="Actors/TinyDemon" unique_id=1516849712]
-script = ExtResource("19_collision_guide")
-rect_position = Vector2(6.5, 13.5)
-rect_size = Vector2(4, 2)
-fill_color = Color(1, 0.85, 0.1, 0.22)
-outline_color = Color(1, 0.7, 0.05, 0.9)
-
-[node name="Attack1HitboxShape" type="Node2D" parent="Actors/TinyDemon" unique_id=2087826386]
-position = Vector2(-10, -10)
-script = ExtResource("37_attack_hitbox_guide")
-attack_sheet = ExtResource("35_attack1")
-
-[node name="Preview" type="Sprite2D" parent="Actors/TinyDemon/Attack1HitboxShape" unique_id=585454505]
-z_index = 20
-texture = ExtResource("35_attack1")
-centered = false
-hframes = 4
-frame = 2
-
-[node name="Hitbox" type="Polygon2D" parent="Actors/TinyDemon/Attack1HitboxShape" unique_id=1265154729]
-z_index = 21
-color = Color(1, 0.85, 0.1, 0.28)
-polygon = PackedVector2Array(18, 6, 25, 6, 31, 9, 35, 14, 35, 24, 34, 27, 31, 31, 25, 34, 8, 34, 13, 28, 22, 28, 24, 19, 23, 10)
-
-[node name="Attack2HitboxShape" type="Node2D" parent="Actors/TinyDemon" unique_id=1483052288]
-position = Vector2(-10, -10)
-script = ExtResource("37_attack_hitbox_guide")
-attack_sheet = ExtResource("36_attack2")
-show_preview = false
-
-[node name="Preview" type="Sprite2D" parent="Actors/TinyDemon/Attack2HitboxShape" unique_id=119548490]
-visible = false
-z_index = 20
-texture = ExtResource("36_attack2")
-centered = false
-hframes = 4
-frame = 2
-
-[node name="Hitbox" type="Polygon2D" parent="Actors/TinyDemon/Attack2HitboxShape" unique_id=1856988149]
-visible = false
-z_index = 21
-color = Color(1, 0.35, 0.15, 0.28)
-polygon = PackedVector2Array(20, 2, 25, 2, 33, 8, 35, 12, 36, 18, 36, 22, 31, 31, 25, 34, 12, 34, 18, 30, 23, 25, 24, 12, 17, 10)
-
-[node name="SpinAttackHitboxShape" type="Node2D" parent="Actors/TinyDemon"]
-position = Vector2(-10, -10)
-script = ExtResource("37_attack_hitbox_guide")
-attack_sheet = ExtResource("41_spin_attack")
-frame_index = 3
-use_frame_hitboxes = true
-
-[node name="Preview" type="Sprite2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-z_index = 20
-texture = ExtResource("41_spin_attack")
-centered = false
-hframes = 8
-frame = 3
-
-[node name="HitboxFrame0" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(17, 8, 25, 8, 31, 13, 31, 24, 25, 29, 17, 29, 20, 23, 23, 18, 20, 13)
-
-[node name="HitboxFrame1" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(13, 6, 27, 6, 33, 11, 35, 18, 33, 25, 27, 31, 13, 31, 7, 25, 5, 18, 7, 11)
-
-[node name="HitboxFrame2" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(10, 3, 26, 3, 33, 8, 35, 18, 33, 28, 26, 33, 10, 33, 3, 28, 1, 18, 3, 8)
-
-[node name="HitboxFrame3" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(8, 1, 28, 1, 35, 8, 35, 28, 28, 35, 8, 35, 1, 28, 1, 8)
-
-[node name="HitboxFrame4" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(8, 1, 28, 1, 35, 8, 35, 28, 28, 35, 8, 35, 1, 28, 1, 8)
-
-[node name="HitboxFrame5" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(8, 1, 28, 1, 35, 8, 35, 28, 28, 35, 8, 35, 1, 28, 1, 8)
-
-[node name="HitboxFrame6" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(10, 3, 26, 3, 33, 8, 35, 18, 33, 28, 26, 33, 10, 33, 3, 28, 1, 18, 3, 8)
-
-[node name="HitboxFrame7" type="Polygon2D" parent="Actors/TinyDemon/SpinAttackHitboxShape"]
-visible = false
-z_index = 21
-color = Color(0.85, 0.85, 0.9, 0.28)
-polygon = PackedVector2Array(13, 6, 27, 6, 33, 11, 35, 18, 33, 25, 27, 31, 13, 31, 7, 25, 5, 18, 7, 11)
-
-[node name="TinyDemonAttack" type="Sprite2D" parent="Actors" unique_id=1810667410]
-position = Vector2(61, 71)
-centered = false
-
-[node name="TinyDemonShadow" type="Sprite2D" parent="Actors" unique_id=9400076]
-self_modulate = Color(1, 1, 1, 0.25)
-position = Vector2(71, 87)
-scale = Vector2(1, 0.6874999)
-texture = ExtResource("18_demon_shadow")
-centered = false
+[node name="PlayerPlacement" parent="Actors" instance=ExtResource("43_player_placement")]
+position = Vector2(83, 71)
+editable_children = true
 
 [node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
 position = Vector2(112, 57)

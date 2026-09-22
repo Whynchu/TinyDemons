@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SlimeVariantCatalogData" load_steps=12 format=3 uid="uid://csvahxy3wpliv"]
+[gd_resource type="Resource" script_class="SlimeVariantCatalogData" format=3 uid="uid://csvahxy3wpliv"]
 
 [ext_resource type="Script" uid="uid://8kfyonox4q1h" path="res://scripts/slime_variant_catalog_data.gd" id="1_catalog"]
 [ext_resource type="Script" uid="uid://bc7ncfaqqbeff" path="res://scripts/enemy_definition.gd" id="2_enemy"]
@@ -7,11 +7,22 @@
 script = ExtResource("2_enemy")
 id = &"grey"
 display_name = "Normal Slime"
-element = 0
-damage_contract = &"physical"
-base_stats = {"AGI": 2, "DEF": 2, "INT": 0, "MND": 1, "STR": 2, "VIT": 2}
-growth_weights = {"AGI": 0.2, "DEF": 0.24, "INT": 0.0, "MND": 0.08, "STR": 0.24, "VIT": 0.24}
-visual_source = "green"
+base_stats = {
+"AGI": 2,
+"DEF": 2,
+"INT": 0,
+"MND": 1,
+"STR": 2,
+"VIT": 2
+}
+growth_weights = {
+"AGI": 0.2,
+"DEF": 0.24,
+"INT": 0.0,
+"MND": 0.08,
+"STR": 0.24,
+"VIT": 0.24
+}
 encounter_role = &"baseline"
 
 [sub_resource type="Resource" id="EnemyDefinition_red"]
@@ -20,10 +31,23 @@ id = &"red"
 display_name = "Fire Slime"
 element = 1
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 1, "DEF": 2, "INT": 2, "MND": 1, "STR": 4, "VIT": 1}
-growth_weights = {"AGI": 0.12, "DEF": 0.16, "INT": 0.12, "MND": 0.04, "STR": 0.48, "VIT": 0.08}
+base_stats = {
+"AGI": 1,
+"DEF": 2,
+"INT": 2,
+"MND": 1,
+"STR": 4,
+"VIT": 1
+}
+growth_weights = {
+"AGI": 0.12,
+"DEF": 0.16,
+"INT": 0.12,
+"MND": 0.04,
+"STR": 0.48,
+"VIT": 0.08
+}
 visual_source = "red"
-encounter_role = &"matchup"
 matchup_weight = 0.35
 preferred_weight = 0.75
 allow_preferred = true
@@ -34,10 +58,23 @@ id = &"blue"
 display_name = "Water Slime"
 element = 2
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 1, "DEF": 4, "INT": 2, "MND": 3, "STR": 1, "VIT": 2}
-growth_weights = {"AGI": 0.1, "DEF": 0.44, "INT": 0.08, "MND": 0.14, "STR": 0.08, "VIT": 0.16}
+base_stats = {
+"AGI": 1,
+"DEF": 4,
+"INT": 2,
+"MND": 3,
+"STR": 1,
+"VIT": 2
+}
+growth_weights = {
+"AGI": 0.1,
+"DEF": 0.44,
+"INT": 0.08,
+"MND": 0.14,
+"STR": 0.08,
+"VIT": 0.16
+}
 visual_source = "blue"
-encounter_role = &"matchup"
 matchup_weight = 0.35
 preferred_weight = 0.75
 allow_preferred = true
@@ -48,9 +85,22 @@ id = &"yellow"
 display_name = "Electric Slime"
 element = 3
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 3, "DEF": 1, "INT": 3, "MND": 1, "STR": 2, "VIT": 2}
-growth_weights = {"AGI": 0.44, "DEF": 0.08, "INT": 0.16, "MND": 0.04, "STR": 0.12, "VIT": 0.16}
-visual_source = "green"
+base_stats = {
+"AGI": 3,
+"DEF": 1,
+"INT": 3,
+"MND": 1,
+"STR": 2,
+"VIT": 2
+}
+growth_weights = {
+"AGI": 0.44,
+"DEF": 0.08,
+"INT": 0.16,
+"MND": 0.04,
+"STR": 0.12,
+"VIT": 0.16
+}
 encounter_role = &"late"
 encounter_weight = 1.0
 encounter_min_rank = 5
@@ -63,10 +113,22 @@ id = &"green"
 display_name = "Grass Slime"
 element = 4
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 1, "DEF": 2, "INT": 2, "MND": 2, "STR": 1, "VIT": 4}
-growth_weights = {"AGI": 0.12, "DEF": 0.16, "INT": 0.1, "MND": 0.1, "STR": 0.08, "VIT": 0.44}
-visual_source = "green"
-encounter_role = &"matchup"
+base_stats = {
+"AGI": 1,
+"DEF": 2,
+"INT": 2,
+"MND": 2,
+"STR": 1,
+"VIT": 4
+}
+growth_weights = {
+"AGI": 0.12,
+"DEF": 0.16,
+"INT": 0.1,
+"MND": 0.1,
+"STR": 0.08,
+"VIT": 0.44
+}
 matchup_weight = 0.35
 preferred_weight = 0.75
 allow_preferred = true
@@ -77,9 +139,22 @@ id = &"purple"
 display_name = "Shadow Slime"
 element = 5
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 3, "DEF": 1, "INT": 3, "MND": 1, "STR": 3, "VIT": 1}
-growth_weights = {"AGI": 0.36, "DEF": 0.06, "INT": 0.12, "MND": 0.04, "STR": 0.36, "VIT": 0.06}
-visual_source = "green"
+base_stats = {
+"AGI": 3,
+"DEF": 1,
+"INT": 3,
+"MND": 1,
+"STR": 3,
+"VIT": 1
+}
+growth_weights = {
+"AGI": 0.36,
+"DEF": 0.06,
+"INT": 0.12,
+"MND": 0.04,
+"STR": 0.36,
+"VIT": 0.06
+}
 encounter_role = &"shadow"
 encounter_weight = 0.12
 encounter_min_rank = 5
@@ -90,9 +165,22 @@ id = &"orange"
 display_name = "Ground Slime"
 element = 6
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 1, "DEF": 3, "INT": 2, "MND": 2, "STR": 1, "VIT": 3}
-growth_weights = {"AGI": 0.08, "DEF": 0.38, "INT": 0.1, "MND": 0.08, "STR": 0.08, "VIT": 0.28}
-visual_source = "green"
+base_stats = {
+"AGI": 1,
+"DEF": 3,
+"INT": 2,
+"MND": 2,
+"STR": 1,
+"VIT": 3
+}
+growth_weights = {
+"AGI": 0.08,
+"DEF": 0.38,
+"INT": 0.1,
+"MND": 0.08,
+"STR": 0.08,
+"VIT": 0.28
+}
 encounter_role = &"late"
 encounter_weight = 1.0
 encounter_min_rank = 5
@@ -103,9 +191,22 @@ id = &"aquamarine"
 display_name = "Ice Slime"
 element = 7
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 3, "DEF": 1, "INT": 3, "MND": 2, "STR": 2, "VIT": 2}
-growth_weights = {"AGI": 0.5, "DEF": 0.08, "INT": 0.1, "MND": 0.08, "STR": 0.14, "VIT": 0.1}
-visual_source = "green"
+base_stats = {
+"AGI": 3,
+"DEF": 1,
+"INT": 3,
+"MND": 2,
+"STR": 2,
+"VIT": 2
+}
+growth_weights = {
+"AGI": 0.5,
+"DEF": 0.08,
+"INT": 0.1,
+"MND": 0.08,
+"STR": 0.14,
+"VIT": 0.1
+}
 encounter_role = &"late"
 encounter_weight = 1.0
 encounter_min_rank = 5
@@ -116,8 +217,22 @@ id = &"crimson"
 display_name = "Crimson Slime"
 element = 1
 damage_contract = &"elemental_slime"
-base_stats = {"AGI": 0, "DEF": 3, "INT": 2, "MND": 1, "STR": 3, "VIT": 4}
-growth_weights = {"AGI": 0.0, "DEF": 0.26, "INT": 0.06, "MND": 0.04, "STR": 0.3, "VIT": 0.34}
+base_stats = {
+"AGI": 0,
+"DEF": 3,
+"INT": 2,
+"MND": 1,
+"STR": 3,
+"VIT": 4
+}
+growth_weights = {
+"AGI": 0.0,
+"DEF": 0.26,
+"INT": 0.06,
+"MND": 0.04,
+"STR": 0.3,
+"VIT": 0.34
+}
 visual_source = "red"
 encounter_role = &"late"
 encounter_weight = 0.6
@@ -127,11 +242,22 @@ encounter_min_rank = 5
 script = ExtResource("2_enemy")
 id = &"guard_slime"
 display_name = "Guard Slime"
-element = 0
-damage_contract = &"physical"
-base_stats = {"AGI": 0, "DEF": 5, "INT": 0, "MND": 2, "STR": 1, "VIT": 6}
-growth_weights = {"AGI": 0.0, "DEF": 0.42, "INT": 0.0, "MND": 0.1, "STR": 0.08, "VIT": 0.4}
-visual_source = "green"
+base_stats = {
+"AGI": 0,
+"DEF": 5,
+"INT": 0,
+"MND": 2,
+"STR": 1,
+"VIT": 6
+}
+growth_weights = {
+"AGI": 0.0,
+"DEF": 0.42,
+"INT": 0.0,
+"MND": 0.1,
+"STR": 0.08,
+"VIT": 0.4
+}
 encounter_role = &"late"
 encounter_weight = 0.5
 encounter_min_rank = 3

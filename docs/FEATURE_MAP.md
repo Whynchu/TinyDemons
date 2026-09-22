@@ -2,7 +2,7 @@
 
 Status: current baseline map; composition refactor complete, remaining root-access owners listed
 
-Updated: 2026-09-20
+Updated: 2026-09-22
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. The composition refactor is
@@ -24,6 +24,7 @@ workstream is [`authoring-system-plan.md`](authoring-system-plan.md).
 | Dungeon topology | `dungeon_graph.gd`, `dungeon_map_controller.gd` | `dungeon_map_state.gd` | minimap, doors, room layers | map and door tests | High: multiple layout authorities |
 | Generated layouts | `dungeon_layout_generator.gd`, `puzzle_route_generator.gd`, route plan/solver scripts | layout definitions and generated route metadata | generated preview scenes and minimap | generated layout, reachability, and R6+ risk/reward smoke tests | High: focused generation passes; runtime playtest and visual verification pending |
 | Stone accents | `hub_stone_accent_layer.gd` | fixed Hub reference, seeded 3–5-piece subtraction, bounded non-Hub jitter, safe same-surface anchor swaps, reserved outer-right wall slot, fixed crack anchors, two-pixel wall solver buffer, connected-layout distinction, room-tint propagation, cached constraint checks, and live geometry validator | `scenes/main.tscn` `Map/HubStoneAccentLayer` and runtime accent assets | `hub_stone_accent_scene_smoke.gd` | Low: weighted variants, mirroring, and actor-distance rules deferred |
+| Hub world authoring preview | `hub_world_preview.gd` | the authored Hub composition embedded in `main.tscn` | `scenes/hub_world_preview.tscn`, `tools/dev.ps1 preview hub` | `hub_world_preview_scene_smoke.gd` | Medium: design preview is landed; isolated interactive workbench deferred |
 | Chroma and elements | `player_chroma_component.gd`, `element_catalog.gd` | chroma/profile state | pickups, spells, palette-driven fire effects (`gameplay.gd`, `effects_spawner.gd`) | chroma, binding, elemental, and fire-palette tests | Medium |
 | Projectiles and magic | `magic_projectile_controller.gd`, `magic_runtime_controller.gd` | combat/runtime state | projectile scenes and effects | imbue and projectile-related tests | High: documented coordinator seams |
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |

@@ -105,7 +105,7 @@ this shape:
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,715 lines / 285 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
 | `root.call/get/set` | 2,200 sites | Below the strict target; the remaining sites are the next vertical migration seams |
-| Tests | 135 manifest rows / 133 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
+| Tests | 136 manifest rows / 134 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -179,7 +179,7 @@ When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
 one separate Godot process per selected test. The default release gate is
-currently 44 paths; the explicit `-TestGroup all` inventory runs all 132
+currently 44 paths; the explicit `-TestGroup all` inventory runs all 134
 runnable paths. A single headless renderer failure can create repeated Windows
 memory-error dialogs.
 
@@ -226,6 +226,7 @@ For the current enemy and item authoring slices, use the shared command surface:
 ```powershell
 pwsh -File tools/dev.ps1 new enemy example_guard
 pwsh -File tools/dev.ps1 preview enemy example_guard
+pwsh -File tools/dev.ps1 preview hub -Editor
 pwsh -File tools/dev.ps1 new item cinder_blade
 pwsh -File tools/dev.ps1 test -Suite content
 pwsh -File tools/dev.ps1 verify

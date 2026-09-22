@@ -88,7 +88,7 @@ can be separated into product, harness, and environment causes:
 | `-TestGroup owner` | 74 Godot paths | Focused feature-owner regressions |
 | `-TestGroup reference` | 12 Godot paths | Opt-in authored/visual/reference checks |
 | `-TestGroup diagnostic` | 2 Godot paths | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 132 runnable Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup all` | 134 runnable Godot paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its

@@ -201,6 +201,16 @@ func _initialize() -> void:
 	root.add_child(gameplay)
 	for _frame in 120:
 		await process_frame
+	# A fresh headless profile intentionally boots to the title route. Enter the
+	# Hub through the normal run-start boundary before asserting room-entry
+	# wiring; otherwise this fixture only observes the title-only bootstrap.
+	var profile := gameplay.get("player_profile") as PlayerProfile
+	if profile != null:
+		profile.has_started = true
+		profile.pending_route = "hub"
+		gameplay.call("_begin_new_run")
+		for _frame in 120:
+			await process_frame
 	_assert(gameplay.get("current_room_type") == &"START", "runtime begins in the Hub room")
 	_assert(layer.visible, "room-entered wiring shows the accent layer in the Hub")
 	_assert(layer.get_child_count() == 21, "runtime reuses the static composition")

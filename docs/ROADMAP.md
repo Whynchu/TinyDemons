@@ -2,7 +2,7 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-20
+Updated: 2026-09-22
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -62,14 +62,31 @@ the active sequence for closing the gap between the score and a real workflow:
 1. Slice 0 — completed the authority-doc correction, recursive definition
    preflight, `GODOT_BIN` portability, class-cache bootstrap, catalog failure
    signaling, R5 identity check, UID coverage, and dead R3 plan cleanup.
-2. Slice 1 — typed enemy definitions, one registry, factory-only assembly,
-   preview, and a fresh zero-edit variant acceptance run are landed for
-   enemies; the curated gate remains the acceptance check.
+2. Slice 1 — typed enemy definitions, registry, factory assembly, and preview
+   implementations are landed. The normal-room `guard_slime` acceptance gap was
+   closed on 2026-09-22 by making the room-entry fixture initialize the same
+   run-start palette contract as production. The focused content suite is now
+   7/7 green. A standalone animated Hub world design preview now reuses the
+   `main.tscn` composition without booting a run. The standalone curated gate
+   was attempted but remains open on unrelated UI smoke failures and scene
+   timeouts; it is not a clean release result yet.
 3. Slices 2–3 — items, elements, rooms, maps, and generation policy.
 4. Slice 4 — menu route registry and conversion of the code-built overlays.
 5. Slice 5 — shared-process fast suites and content-contract tests in CI.
 6. Slice 6 — feature folders, generated content/metric docs, and the
    link-checked archive.
+
+Execution order is governed by the authoring plan's M0–M5 milestones: classify
+the acceptance baseline, build the shared editor/preview and fast-validation
+foundation, finish enemy/art authoring, then gear/elements, visual room/map
+authoring, and remaining presentation and handoff work. The editor experience
+has three deliberate tiers—animated design preview, isolated interactive
+workbench, and full-game playtest—and the refactor is considered complete at a
+seam only when the typed owner, runtime factory/compiler, preview, focused test,
+and producer workflow all agree. Slice numbers above are workstream
+identifiers, not a requirement to defer verification until the end. Each
+content milestone includes artwork, performance measurements, and independent
+production usability evidence.
 
 Items that stay in this roadmap rather than the authoring plan:
 
@@ -191,9 +208,9 @@ settlement boundary.
 
 Complete. The composition scorecard is at 100%: `GameplayState` is at 1,715
 lines / 285 fields, dynamic root access is at 2,200, `RoomController` is at
-2,246 lines, and the transitional/legacy counts are zero. The strict audit
+2,243 lines, and the transitional/legacy counts are zero. The strict audit
 (`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
-floor now protects the achieved state. At `0.2.67` the editor-composition
+floor now protects the achieved state. At `0.2.71` the editor-composition
 metric is also 100% by its own definition (all 20 components are blind and
 `@export`-configured; 20 editor-able definition surfaces), though that metric
 does not prove the content workflows work. See
@@ -212,19 +229,22 @@ Use [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) for the current workflow and
 its trap table; do not follow it blind, because several authored resource
 fields are currently ignored. The exit bar is a typed
 definition/catalog/factory path for enemies, items, elements, rooms, and
-dungeon layouts, with validators at each boundary and a second piece of each
-kind added with data only. Keep stable IDs and save migrations part of every
-data change.
+dungeon layouts, an editor dock plus native Inspector/scene workflows, animated
+design previews, isolated interactive workbenches, and validators at each
+boundary. A second piece of each kind must be added with data only. Keep stable
+IDs, asset import/move behavior, cache invalidation, and save migrations part
+of every data change.
 
 ## Phase 0.70 — Feedback infrastructure
 
 Owned by Slice 5 of [`authoring-system-plan.md`](authoring-system-plan.md):
-shared-process fast suites, a content-contract suite, and CI coverage. Keep
-focused scene tests for visual contracts and record desktop/web/mobile timing
-scenarios. Profile the known dynamic-call, per-pixel palette/image,
-synchronous-loading, particle, occlusion, and menu-refresh paths before
-optimizing them. Include the Samsung A17 as an explicit target rather than
-inferring mobile performance from desktop.
+shared-process fast suites, a content-contract suite, CI coverage, editor
+authoring smoke, and preview-contract checks. Keep focused scene tests for
+visual contracts and record desktop/web/mobile timing scenarios. Profile the
+known dynamic-call, per-pixel palette/image, synchronous-loading, particle,
+occlusion, menu-refresh, and editor-preview paths before optimizing them.
+Include the Samsung A17 as an explicit target rather than inferring mobile
+performance from desktop.
 
 ## Phase 0.80 — Long-term content composition
 
@@ -236,9 +256,12 @@ and the component contract in
 composition refactor is complete on its scorecard, but that is not a claim that
 content authoring is complete. The enemy vertical proof now has a typed catalog,
 standalone definitions, definition-owned encounter metadata, a preview
-workbench, and a factory-created runtime pool; the curated gate remains. Slices
-2–3 extend the same contract to items, elements, rooms, and dungeon/map
-definitions.
+workbench, a factory-created runtime pool, and a passing focused room-entry
+acceptance. The current workbench is a static validation baseline; the animated
+design-preview adapter, isolated interactive workbench, and authoring dock are
+the next M1 work. The curated release gate remains open on unrelated existing
+paths. Slices 2–3 extend the same contract to items, elements, rooms, and
+dungeon/map definitions.
 
 ## Out of scope for this cycle
 

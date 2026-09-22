@@ -2,10 +2,11 @@
 
 Status: working guide; enemy definitions and encounter eligibility now use the
 typed catalog/factory path, including standalone one-file definitions and the
-enemy preview workbench. Other authored surfaces are still only partially
-wired. Read the trap table below before editing any `.tres`.
+enemy preview workbench. The authored Hub world now has a standalone animated
+design preview; other content surfaces are still only partially wired. Read
+the trap table below before editing any `.tres`.
 
-Updated: 2026-09-21
+Updated: 2026-09-22
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -136,6 +137,43 @@ For the current baseline, authored R1–R5 remain preserved and generated maps
 are used from R6 onward. Existing R6 assets and compiler paths remain historical
 or compatibility material unless a separate content decision changes that
 policy.
+
+## Viewing the Hub world in the editor
+
+The production Hub world is currently embedded in `scenes/main.tscn` because
+the runtime reuses its room shell for dungeon transitions. Opening `main.tscn`
+is therefore not the normal authoring view: the root gameplay script is a
+runtime bootstrap, the title route hides the world, and the generated Hub stone
+accent layer waits for room-entry wiring.
+
+Open `scenes/hub_world_preview.tscn` for the design view instead. It reuses the
+same main-world composition without loading a profile or starting a run, shows
+the authored map, Hub actors, doors, fire, chest, and stone accents, and hides
+the pooled dungeon enemies, HUD, and collision/debug guides by default. The
+Inspector controls are:
+
+- `animate_preview` — step the existing fire, cloaked-NPC, and player idle
+  frames in the editor;
+- `show_collision_guides` — reveal the authored alignment guides when tuning
+  geometry; and
+- `show_hud` — include the runtime HUD when inspecting its composition.
+
+Under `Player Presentation`, `player_element` controls the player palette and
+eye-highlight correction; it defaults to Water. The player is now an authored
+placement root with its artwork, attack layer, shadow, collision guides,
+runtime components, and editor metadata grouped beneath it. Select
+`Main/Actors/PlayerPlacement` and drag that root in the 2D viewport. Save
+`hub_world_preview.tscn` to preserve that local position override without
+changing the runtime `main.tscn` source. The root exposes a stable
+`placement_id` and authoring category in the Inspector; this is the first
+vertical slice of the planned layered prefab workflow.
+
+The agent-friendly equivalent is `pwsh -File tools/dev.ps1 preview hub`; add
+`-Editor` to open the same scene directly in Godot.
+
+This is the safe design-preview tier. It is not yet the interactive Hub
+workbench: use the normal game for progression, save, input, and room-entry
+behavior until that isolated workbench lands in the authoring plan.
 
 ## Adding an enemy or enemy variant
 

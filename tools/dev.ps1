@@ -203,6 +203,8 @@ Tiny Demons authoring commands
   verify                         Run manifest, composition, definitions, UID, and catalog checks.
   test -Suite fast|content       Run focused definition/content checks.
   test -Suite gate|all           Run the curated gate or full manifest inventory.
+  preview hub                    Open or validate the standalone Hub world preview.
+  preview hub -Editor            Open the Hub world design preview in the Godot editor.
   preview enemy <id>             Validate and report a workbench preview without booting a run.
   preview enemy <id> -Editor     Open the preview workbench in the Godot editor.
   new enemy <id>                 Create one standalone EnemyDefinition resource.
@@ -220,6 +222,15 @@ switch ($Command) {
 	"verify" { Invoke-Verification }
 	"test" { Invoke-ContentTests }
 	"preview" {
+		if ($Kind -eq "hub") {
+			Assert-GodotAvailable
+			if ($Editor) {
+				& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/hub_world_preview.tscn"
+				exit $LASTEXITCODE
+			}
+			Invoke-HeadlessScript "res://tests/hub_world_preview_scene_smoke.gd"
+			return
+		}
 		if ($Kind -ne "enemy" -or [string]::IsNullOrWhiteSpace($Id)) { throw "Usage: dev.ps1 preview enemy <id>" }
 		Assert-GodotAvailable
 		if ($Editor) {
