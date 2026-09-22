@@ -43,6 +43,10 @@ func _initialize() -> void:
 		# proof independent of a lucky random draw while still exercising the
 		# real map -> room -> activation -> factory configuration path.
 		gameplay.player_profile.difficulty_rank = 3
+		# This test enters the authored room directly instead of going through the
+		# new-run flow, so preserve the starter-flame palette that the real flow
+		# records before it resets the temporary player palette to Gray.
+		gameplay.run_start_palette_name = "red"
 		var guard_seed := _find_guard_run_seed(rooms)
 		_expect(guard_seed >= 0, "rank-three normal encounters can select guard_slime", failures)
 		if guard_seed < 0:

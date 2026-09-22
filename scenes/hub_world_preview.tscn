@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/main.tscn" id="1_main"]
+[ext_resource type="Script" path="res://scripts/hub_world_preview.gd" id="2_preview"]
+
+[node name="HubWorldPreview" type="Node2D"]
+texture_filter = 1
+script = ExtResource("2_preview")
+
+[node name="Main" parent="." instance=ExtResource("1_main")]
+editable_children = true
+
+[node name="PreviewCamera" type="Camera2D" parent="."]
+position = Vector2(120, 80)
+enabled = true

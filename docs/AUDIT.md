@@ -362,7 +362,7 @@ input characterization.
 
 ## 9. Testing and verification assessment
 
-The test investment is a major strength: 135 manifest rows, 133 registered
+The test investment is a major strength: 136 manifest rows, 134 registered
 runnable paths, a 44-path curated release gate, and a manifest registry
 (`tests/manifest.csv`) that drives the runner groups. The current harness
 limitations remain: each test launches a separate Godot process, the full run
