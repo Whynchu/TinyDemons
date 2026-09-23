@@ -95,17 +95,17 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-21; version `0.2.71`) gives us
+The latest source scan (working tree on 2026-09-22; version `0.2.72`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 196 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 199 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,715 lines / 285 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
 | `root.call/get/set` | 2,200 sites | Below the strict target; the remaining sites are the next vertical migration seams |
-| Tests | 136 manifest rows / 134 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
+| Tests | 137 manifest rows / 135 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -179,7 +179,7 @@ When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
 one separate Godot process per selected test. The default release gate is
-currently 44 paths; the explicit `-TestGroup all` inventory runs all 134
+currently 44 paths; the explicit `-TestGroup all` inventory runs all 135
 runnable paths. A single headless renderer failure can create repeated Windows
 memory-error dialogs.
 
@@ -268,7 +268,7 @@ remappable in-editor. Defaults:
 
 ## Web build
 
-Current game version: **0.2.71**. Every push to `main` must increment the
+Current game version: **0.2.72**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

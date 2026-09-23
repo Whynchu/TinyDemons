@@ -32,6 +32,7 @@
 [ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/player_hud.tscn" id="40_player_hud"]
 [ext_resource type="Script" uid="uid://dqalh1uc2w2ev" path="res://scripts/hub_stone_accent_layer.gd" id="42_hub_stone_accent_layer"]
 [ext_resource type="PackedScene" path="res://scenes/player_placement.tscn" id="43_player_placement"]
+[ext_resource type="Script" path="res://scripts/placement_root_2d.gd" id="44_placement_root"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -110,6 +111,10 @@ texture = ExtResource("1_bg")
 centered = false
 
 [node name="Map" type="Node2D" parent="." unique_id=635886819]
+script = ExtResource("44_placement_root")
+placement_id = &"hub_environment"
+authoring_layer = "Environment"
+anchor_mode = "Origin"
 
 [node name="FloorTiles" type="Node2D" parent="Map" unique_id=238769299]
 
@@ -287,62 +292,88 @@ texture_filter = 1
 script = ExtResource("42_hub_stone_accent_layer")
 
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
+script = ExtResource("44_placement_root")
+placement_id = &"hub_actor_layer"
+authoring_layer = "Actors"
+anchor_mode = "Origin"
 
-[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors" unique_id=110558620]
-position = Vector2(144, 71)
-scale = Vector2(1, 0.6875)
-texture = ExtResource("18_demon_shadow")
-centered = false
+[node name="Props" type="Node2D" parent="Actors"]
+script = ExtResource("44_placement_root")
+placement_id = &"hub_props"
+authoring_layer = "Props"
+anchor_mode = "Origin"
 
-[node name="CloakedDemon" type="Sprite2D" parent="Actors" unique_id=1755463594]
+[node name="Characters" type="Node2D" parent="Actors"]
+script = ExtResource("44_placement_root")
+placement_id = &"hub_characters"
+authoring_layer = "Actors"
+anchor_mode = "Origin"
+
+[node name="CloakedDemon" type="Sprite2D" parent="Actors/Characters" unique_id=1755463594]
 position = Vector2(152, 73)
 texture = ExtResource("34_cloaked_idle")
 hframes = 5
+script = ExtResource("44_placement_root")
+placement_id = &"hub_npc"
+authoring_layer = "Actors"
 
-[node name="CollisionGuide" type="Node2D" parent="Actors/CloakedDemon" unique_id=375845748]
+[node name="CollisionGuide" type="Node2D" parent="Actors/Characters/CloakedDemon" unique_id=375845748]
 script = ExtResource("19_collision_guide")
 rect_position = Vector2(-2, 4.5)
 rect_size = Vector2(5, 3)
 
-[node name="DepthMarker" type="Marker2D" parent="Actors/CloakedDemon" unique_id=297377238]
+[node name="DepthMarker" type="Marker2D" parent="Actors/Characters/CloakedDemon" unique_id=297377238]
 position = Vector2(8, 34)
 
-[node name="RestFire" type="Sprite2D" parent="Actors" unique_id=521275519]
+[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors/Characters/CloakedDemon" unique_id=110558620]
+show_behind_parent = true
+position = Vector2(-8, -2)
+scale = Vector2(1, 0.6875)
+texture = ExtResource("18_demon_shadow")
+centered = false
+
+[node name="RestFire" type="Sprite2D" parent="Actors/Props" unique_id=521275519]
 position = Vector2(120, 79.025)
 texture = ExtResource("33_fire")
 hframes = 6
+script = ExtResource("44_placement_root")
+placement_id = &"hub_rest_fire"
+authoring_layer = "Props"
 
-[node name="Firepit" type="Sprite2D" parent="Actors/RestFire" unique_id=438523957]
+[node name="Firepit" type="Sprite2D" parent="Actors/Props/RestFire" unique_id=438523957]
 show_behind_parent = true
 position = Vector2(0, 2)
 texture = ExtResource("39_firepit")
 
-[node name="CollisionPolygon" type="Polygon2D" parent="Actors/RestFire/Firepit" unique_id=1320656307]
+[node name="CollisionPolygon" type="Polygon2D" parent="Actors/Props/RestFire/Firepit" unique_id=1320656307]
 color = Color(1, 1, 1, 0.40784314)
 polygon = PackedVector2Array(-8, 0.9749985, -3, -2.0250015, -1, -3.0250015, 1, -3.0250015, 3, -2.0250015, 8, 0.9749985, 8, 3.9749985, 3, 6.9749985, 1, 7.9749985, -1, 7.9749985, -3, 6.9749985, -8, 3.9749985)
 
-[node name="FireLight" type="PointLight2D" parent="Actors/RestFire" unique_id=739137859]
+[node name="FireLight" type="PointLight2D" parent="Actors/Props/RestFire" unique_id=739137859]
 energy = 0.12
 texture = SubResource("GradientTexture2D_fire_light")
 offset = Vector2(0, 4)
 texture_scale = 0.7
 
-[node name="DepthMarker" type="Marker2D" parent="Actors/RestFire" unique_id=377784978]
+[node name="DepthMarker" type="Marker2D" parent="Actors/Props/RestFire" unique_id=377784978]
 position = Vector2(0, 8)
 
-[node name="Chest" type="Sprite2D" parent="Actors" unique_id=382431945]
+[node name="Chest" type="Sprite2D" parent="Actors/Props" unique_id=382431945]
 position = Vector2(157, 69)
 texture = ExtResource("6_chest")
 centered = false
+script = ExtResource("44_placement_root")
+placement_id = &"hub_chest"
+authoring_layer = "Collectables"
 
-[node name="CollisionGuide" type="Node2D" parent="Actors/Chest" unique_id=75466058]
+[node name="CollisionGuide" type="Node2D" parent="Actors/Props/Chest" unique_id=75466058]
 script = ExtResource("19_collision_guide")
 rect_position = Vector2(2.5, 8.5)
 rect_size = Vector2(11, 6)
 fill_color = Color(0.1, 0.45, 1, 0.22)
 outline_color = Color(0.1, 0.35, 1, 0.85)
 
-[node name="PlayerPlacement" parent="Actors" instance=ExtResource("43_player_placement")]
+[node name="PlayerPlacement" parent="Actors/Characters" instance=ExtResource("43_player_placement")]
 position = Vector2(83, 71)
 editable_children = true
 

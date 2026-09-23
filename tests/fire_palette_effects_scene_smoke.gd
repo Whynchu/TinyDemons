@@ -19,7 +19,7 @@ func _initialize() -> void:
 	for _frame in 120:
 		await process_frame
 
-	var fire_light := gameplay.get_node_or_null("Actors/RestFire/FireLight") as PointLight2D
+	var fire_light := gameplay.get_node_or_null("Actors/Props/RestFire/FireLight") as PointLight2D
 	var fire := gameplay.get("rest_fire") as Sprite2D
 	var effects := gameplay.get("effects_spawner") as EffectsSpawner
 	_expect(fire_light != null and fire != null and effects != null, "fire glow and effect owners are composed", failures)

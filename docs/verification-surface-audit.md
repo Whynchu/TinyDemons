@@ -10,7 +10,7 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 Owner: verification infrastructure and repository maintainability
 
 Current code: the runner derives grouping from `tests/manifest.csv`. The
-manifest classifies all 134 test/report scripts with a role, state, owner,
+manifest classifies all 137 test/report scripts with a role, state, owner,
 target, and load kind. Its default release gate selects 44 paths; `owner`,
 `reference`, `diagnostic`, and `all` groups keep the remaining evidence
 available without making every check a default blocker. The two `report`
@@ -85,10 +85,10 @@ can be separated into product, harness, and environment causes:
 | Command | Current scope | Use |
 |---|---:|---|
 | default / `-TestGroup gate` | 44 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
-| `-TestGroup owner` | 74 Godot paths | Focused feature-owner regressions |
+| `-TestGroup owner` | 77 Godot paths | Focused feature-owner regressions |
 | `-TestGroup reference` | 12 Godot paths | Opt-in authored/visual/reference checks |
 | `-TestGroup diagnostic` | 2 Godot paths | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 134 runnable Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup all` | 135 runnable Godot paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its

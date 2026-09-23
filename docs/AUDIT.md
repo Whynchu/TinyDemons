@@ -1,4 +1,4 @@
-# Tiny Demons — Version 0.2.71 Codebase Audit
+# Tiny Demons — Version 0.2.72 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.71` (composition refactor structurally and editor-wise
+Current release: `0.2.72` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
 room/menu boundaries, and the enemy authoring slice proof landed)
 
@@ -20,22 +20,22 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
-## Current measured snapshot (2026-09-21, version 0.2.71)
+## Current measured snapshot (2026-09-22, version 0.2.72)
 
 The detailed historical audit below describes the `0.2.32` tree. The current tree at
-version `0.2.71` working tree measures:
+version `0.2.72` working tree measures:
 
-| Metric | 0.2.32 audit | 0.2.71 working tree (2026-09-21) |
+| Metric | 0.2.32 audit | 0.2.72 working tree (2026-09-22) |
 | --- | ---: | ---: |
-| GDScript files in `scripts/` | 171 | 196 |
+| GDScript files in `scripts/` | 171 | 199 |
 | `root.call/get/set` sites | 2,488 | 2,200 |
 | `GameplayState` lines / fields | 1,719 / 286 | 1,715 / 285 |
 | `RoomController` lines | 2,253 | 2,246 |
 | `screen_state_controller.gd` lines | 5,432 | 5,508 |
-| GDScript test/report files | 124 | 135 |
-| Registered runnable smoke paths | 122 | 133 |
+| GDScript test/report files | 124 | 137 |
+| Registered runnable smoke paths | 122 | 135 |
 | Curated release-gate paths | 43 | 44 |
-| Project Markdown documents under `docs/` | 89 | 104 |
+| Project Markdown documents under `docs/` | 89 | 105 |
 
 The strict composition audit and the regression floor both pass. The
 editor-composition metric reads 100% by its own definition, but that metric
@@ -70,11 +70,11 @@ not more legacy-coupling cleanup.
 
 The audit inspected:
 
-- all 196 runtime/editor GDScript files under `scripts/`;
+- all 199 runtime/editor GDScript files under `scripts/`;
 - the main scene and 18 supporting project scenes under `scenes/` (the MCP
   addon editor scene is outside this project-scene count);
 - project input, renderer, viewport, export, and CI configuration;
-- all 135 GDScript test/report files under `tests/` and the manifest registry;
+- all 137 GDScript test/report files under `tests/` and the manifest registry;
 - permanent profile, active-run, local, web, and cloud save boundaries;
 - authored and generated dungeon definitions;
 - combat, Chroma, progression, equipment, room, enemy, UI, touch, and audio
@@ -362,7 +362,7 @@ input characterization.
 
 ## 9. Testing and verification assessment
 
-The test investment is a major strength: 136 manifest rows, 134 registered
+The test investment is a major strength: 137 manifest rows, 135 registered
 runnable paths, a 44-path curated release gate, and a manifest registry
 (`tests/manifest.csv`) that drives the runner groups. The current harness
 limitations remain: each test launches a separate Godot process, the full run
@@ -554,7 +554,7 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.71 is past the legacy-coupling and editor-composition cleanup:
+Tiny Demons 0.2.72 is past the legacy-coupling and editor-composition cleanup:
 the composition scorecard is fully green (strict and editor halves both 100%),
 the state bag is at its measured target, the room lifecycle has typed
 boundaries, the frame schedule is a typed direct slice, and every authored
