@@ -1,3 +1,4 @@
+@tool
 extends RefCounted
 class_name SpriteFrameLibrary
 
@@ -134,7 +135,7 @@ func recolor_frames(frames: Array[Texture2D], palette_name: String) -> Array[Tex
 ## the palette ACCENT, and the brightest (yellow) becomes the lightened tip.
 func recolor_fire_frames(frames: Array[Texture2D], palette_name: String) -> Array[Texture2D]:
 	var target: Array[Color] = PaletteLibrary.fire_triple(palette_name)
-	var source := [PaletteLibrary.NORMAL["red"], PaletteLibrary.NORMAL["orange"], PaletteLibrary.NORMAL["yellow"]]
+	var source := [PaletteLibrary.normal("red"), PaletteLibrary.normal("orange"), PaletteLibrary.normal("yellow")]
 	var source_keys: Array[int] = []
 	for source_color: Color in source:
 		source_keys.append(_rgb_int(source_color))

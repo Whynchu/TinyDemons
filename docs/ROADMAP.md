@@ -6,7 +6,7 @@ Updated: 2026-09-22
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.71`; the authoring and verification sequence is
+Current release: version `0.2.72`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This roadmap sequences infrastructure work around the working game. It does
@@ -51,7 +51,7 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Current checkpoint after 0.2.71
+## Current checkpoint after 0.2.72
 
 The composition refactor's strict scorecard and the validator's
 editor-composition score both read 100%, but that is a proxy: several authored
@@ -66,8 +66,9 @@ the active sequence for closing the gap between the score and a real workflow:
    implementations are landed. The normal-room `guard_slime` acceptance gap was
    closed on 2026-09-22 by making the room-entry fixture initialize the same
    run-start palette contract as production. The focused content suite is now
-   7/7 green. A standalone animated Hub world design preview now reuses the
-   `main.tscn` composition without booting a run. The standalone curated gate
+   8/8 green. A standalone animated Hub world design preview and project-owned
+   authoring dock now reuse the `main.tscn` composition without booting a run.
+   The standalone curated gate
    was attempted but remains open on unrelated UI smoke failures and scene
    timeouts; it is not a clean release result yet.
 3. Slices 2–3 — items, elements, rooms, maps, and generation policy.
@@ -210,7 +211,7 @@ Complete. The composition scorecard is at 100%: `GameplayState` is at 1,715
 lines / 285 fields, dynamic root access is at 2,200, `RoomController` is at
 2,243 lines, and the transitional/legacy counts are zero. The strict audit
 (`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
-floor now protects the achieved state. At `0.2.71` the editor-composition
+floor now protects the achieved state. At `0.2.72` the editor-composition
 metric is also 100% by its own definition (all 20 components are blind and
 `@export`-configured; 20 editor-able definition surfaces), though that metric
 does not prove the content workflows work. See
@@ -257,11 +258,11 @@ composition refactor is complete on its scorecard, but that is not a claim that
 content authoring is complete. The enemy vertical proof now has a typed catalog,
 standalone definitions, definition-owned encounter metadata, a preview
 workbench, a factory-created runtime pool, and a passing focused room-entry
-acceptance. The current workbench is a static validation baseline; the animated
-design-preview adapter, isolated interactive workbench, and authoring dock are
-the next M1 work. The curated release gate remains open on unrelated existing
-paths. Slices 2–3 extend the same contract to items, elements, rooms, and
-dungeon/map definitions.
+acceptance. The current authoring slice adds the editor-neutral placement
+catalog, an authoring dock, and live animated Hub preview bindings. The
+isolated interactive workbench remains the next M1 work. The curated release
+gate remains open on unrelated existing paths. Slices 2–3 extend the same
+contract to items, elements, rooms, and dungeon/map definitions.
 
 ## Out of scope for this cycle
 

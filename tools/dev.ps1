@@ -82,7 +82,7 @@ function Invoke-ContentTests {
 	Assert-GodotAvailable
 	$tests = switch ($Suite) {
 		"fast" { @("enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke") }
-		"content" { @("enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke", "item_definition_slice_smoke", "slime_variant_smoke", "boss_variant_selection_smoke", "enemy_room_entrance_scene_smoke") }
+		"content" { @("authoring_placement_catalog_smoke", "enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke", "item_definition_slice_smoke", "slime_variant_smoke", "boss_variant_selection_smoke", "enemy_room_entrance_scene_smoke") }
 		default { @() }
 	}
 	if ($Suite -in @("gate", "all")) {

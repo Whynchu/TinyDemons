@@ -27,6 +27,7 @@ const PLAYER_IDLE_FRAME_TIME := 0.18
 const SpriteFrameLibraryScript = preload("res://scripts/sprite_frame_library.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
+const PaletteLibraryScript = preload("res://scripts/palette_library.gd")
 const PLAYER_DEFAULT_ELEMENT := ElementCatalogScript.Element.WATER
 
 @export_category("Hub Preview")
@@ -40,33 +41,38 @@ const PLAYER_DEFAULT_ELEMENT := ElementCatalogScript.Element.WATER
 @export var show_collision_guides := false:
 	set(value):
 		show_collision_guides = value
-		call_deferred("_configure_preview")
+		_request_preview_refresh()
 
 @export var show_hud := false:
 	set(value):
 		show_hud = value
-		call_deferred("_configure_preview")
+		_request_preview_refresh()
 
 @export var refresh_preview := false:
 	set(value):
 		if value:
-			call_deferred("_configure_preview")
+			_request_preview_refresh()
 		refresh_preview = false
 
 @export_category("Player Presentation")
 @export_enum("Neutral:0", "Fire:1", "Water:2", "Electric:3", "Grass:4", "Shadow:5", "Ground:6", "Ice:7") var player_element: int = PLAYER_DEFAULT_ELEMENT:
 	set(value):
 		player_element = clampi(value, 0, ElementCatalogScript.element_count() - 1)
-		call_deferred("_configure_preview")
+		_request_preview_refresh()
 
 var _configured := false
 var _animation_time := 0.0
+var _fire_base_frames: Array[Texture2D] = []
 var _fire_frames: Array[Texture2D] = []
 var _cloaked_idle_frames: Array[Texture2D] = []
 var _player_idle_frames: Array[Texture2D] = []
 
 
 func _ready() -> void:
+	# The editor's design scene can inherit a paused process tree. Always-on
+	# processing keeps the preview clock alive without affecting runtime gameplay.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process(true)
 	call_deferred("_configure_preview")
 
 
@@ -78,7 +84,20 @@ func _process(delta: float) -> void:
 	_apply_animation_frames()
 
 
+func _request_preview_refresh() -> void:
+	# Inspector setters run while the scene is already inside the editor tree.
+	# Refresh synchronously in that case so dropdowns and toggles immediately
+	# change the rendered preview; keep the deferred path for scene deserialization
+	# before the child world has entered the tree.
+	if is_inside_tree():
+		_configure_preview()
+	else:
+		call_deferred("_configure_preview")
+
+
 func _configure_preview() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process(true)
 	var main := get_node_or_null(MAIN_SCENE_NODE) as Node2D
 	if main == null:
 		return
@@ -94,16 +113,16 @@ func _configure_preview() -> void:
 	_set_node_visible(main, ^"Actors/SlimeBlue", false)
 	_set_node_visible(main, ^"Actors/SlimeGreen", false)
 	_set_node_visible(main, ^"Actors/SlimeRed", false)
-	_set_node_visible(main, ^"Actors/PlayerPlacement/TinyDemonAttack", false)
-	_set_node_visible(main, ^"Actors/PlayerPlacement/TinyDemon/Attack1HitboxShape", show_collision_guides)
-	_set_node_visible(main, ^"Actors/PlayerPlacement/TinyDemon/Attack2HitboxShape", show_collision_guides)
-	_set_node_visible(main, ^"Actors/PlayerPlacement/TinyDemon/SpinAttackHitboxShape", show_collision_guides)
-	_set_node_visible(main, ^"Actors/PlayerPlacement/TinyDemon", true)
-	_set_node_visible(main, ^"Actors/CloakedDemon", true)
-	_set_node_visible(main, ^"Actors/RestFire", true)
-	_set_node_visible(main, ^"Actors/Chest", true)
-	_set_node_visible(main, ^"Actors/PlayerPlacement/TinyDemonShadow", true)
-	_set_node_visible(main, ^"Actors/CloakedDemonShadow", true)
+	_set_node_visible(main, ^"Actors/Characters/PlayerPlacement/TinyDemonAttack", false)
+	_set_node_visible(main, ^"Actors/Characters/PlayerPlacement/TinyDemon/Attack1HitboxShape", show_collision_guides)
+	_set_node_visible(main, ^"Actors/Characters/PlayerPlacement/TinyDemon/Attack2HitboxShape", show_collision_guides)
+	_set_node_visible(main, ^"Actors/Characters/PlayerPlacement/TinyDemon/SpinAttackHitboxShape", show_collision_guides)
+	_set_node_visible(main, ^"Actors/Characters/PlayerPlacement/TinyDemon", true)
+	_set_node_visible(main, ^"Actors/Characters/CloakedDemon", true)
+	_set_node_visible(main, ^"Actors/Props/RestFire", true)
+	_set_node_visible(main, ^"Actors/Props/Chest", true)
+	_set_node_visible(main, ^"Actors/Characters/PlayerPlacement/TinyDemonShadow", true)
+	_set_node_visible(main, ^"Actors/Characters/CloakedDemon/CloakedDemonShadow", true)
 
 	_configure_guides(main)
 	_configure_hub_accents(main)
@@ -137,7 +156,8 @@ func _configure_guides(main: Node) -> void:
 
 func _build_animation_frames() -> void:
 	var library := SpriteFrameLibraryScript.new()
-	_fire_frames = _slice_horizontal(library, FIRE_PATH, FIRE_FRAME_COUNT)
+	_fire_base_frames = _slice_horizontal(library, FIRE_PATH, FIRE_FRAME_COUNT)
+	_fire_frames = library.recolor_fire_frames(_fire_base_frames, ElementCatalogScript.palette_key(player_element))
 	_cloaked_idle_frames = _slice_horizontal(library, CLOAKED_IDLE_PATH, CLOAKED_IDLE_FRAME_COUNT)
 	_player_idle_frames = library.slice_full_row_visible(PLAYER_FULLSHEET_PATH, 0, PLAYER_FRAME_SIZE)
 
@@ -154,17 +174,21 @@ func _apply_animation_frames() -> void:
 	var main := get_node_or_null(MAIN_SCENE_NODE) as Node2D
 	if main == null:
 		return
-	var fire := main.get_node_or_null(^"Actors/RestFire") as Sprite2D
+	var palette_name := ElementCatalogScript.palette_key(player_element)
+	var fire := main.get_node_or_null(^"Actors/Props/RestFire") as Sprite2D
 	if fire != null and not _fire_frames.is_empty():
 		fire.texture = _fire_frames[_frame_for(_animation_time, FIRE_FRAME_TIME, _fire_frames.size())]
 		fire.hframes = 1
 		fire.frame = 0
-	var cloaked_demon := main.get_node_or_null(^"Actors/CloakedDemon") as Sprite2D
+	var fire_light := fire.get_node_or_null("FireLight") as PointLight2D if fire != null else null
+	if fire_light != null:
+		fire_light.color = PaletteLibraryScript.fire_triple(palette_name)[2]
+	var cloaked_demon := main.get_node_or_null(^"Actors/Characters/CloakedDemon") as Sprite2D
 	if cloaked_demon != null and not _cloaked_idle_frames.is_empty():
 		cloaked_demon.texture = _cloaked_idle_frames[_frame_for(_animation_time, CLOAKED_IDLE_FRAME_TIME, _cloaked_idle_frames.size())]
 		cloaked_demon.hframes = 1
 		cloaked_demon.frame = 0
-	var player := main.get_node_or_null(^"Actors/PlayerPlacement/TinyDemon") as Sprite2D
+	var player := main.get_node_or_null(^"Actors/Characters/PlayerPlacement/TinyDemon") as Sprite2D
 	if player != null and not _player_idle_frames.is_empty():
 		player.texture = _player_idle_frames[_frame_for(_animation_time, PLAYER_IDLE_FRAME_TIME, _player_idle_frames.size())]
 		# Match PlayerAnimationComponent's render offset. The node position is the
@@ -173,9 +197,9 @@ func _apply_animation_frames() -> void:
 		player.offset = Vector2(-10.0, -10.0)
 		player.hframes = 1
 		player.frame = 0
-		var palette_name := ElementCatalogScript.palette_key(player_element)
+	if player != null:
 		player.material = ActorPaletteMaterialScript.for_palette(palette_name)
-		var player_attack := main.get_node_or_null(^"Actors/PlayerPlacement/TinyDemonAttack") as Sprite2D
+		var player_attack := main.get_node_or_null(^"Actors/Characters/PlayerPlacement/TinyDemonAttack") as Sprite2D
 		if player_attack != null:
 			player_attack.material = ActorPaletteMaterialScript.for_palette(palette_name)
 		_sync_player_shadow(main, player)
@@ -184,7 +208,7 @@ func _apply_animation_frames() -> void:
 func _sync_player_shadow(main: Node2D, player: Sprite2D) -> void:
 	if main == null or player == null:
 		return
-	var shadow := main.get_node_or_null(^"Actors/PlayerPlacement/TinyDemonShadow") as Sprite2D
+	var shadow := main.get_node_or_null(^"Actors/Characters/PlayerPlacement/TinyDemonShadow") as Sprite2D
 	if shadow == null:
 		return
 	# This is the resolved runtime relationship: actor foot (+8,+15), then

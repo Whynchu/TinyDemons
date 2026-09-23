@@ -23,7 +23,7 @@ partially wired.
 
 ## Data paths that currently do nothing
 
-Measured 2026-09-20 (version `0.2.71`). Until the listed slice in
+Measured 2026-09-22 (version `0.2.72`). Until the listed slice in
 [`authoring-system-plan.md`](authoring-system-plan.md) lands, these paths are
 traps:
 
@@ -158,18 +158,50 @@ Inspector controls are:
   geometry; and
 - `show_hud` — include the runtime HUD when inspecting its composition.
 
-Under `Player Presentation`, `player_element` controls the player palette and
-eye-highlight correction; it defaults to Water. The player is now an authored
+Under `Player Presentation`, `player_element` controls the player palette,
+eye-highlight correction, and preview flame palette; it defaults to Water. The
+player is now an authored
 placement root with its artwork, attack layer, shadow, collision guides,
 runtime components, and editor metadata grouped beneath it. Select
-`Main/Actors/PlayerPlacement` and drag that root in the 2D viewport. Save
+`Main/Actors/Characters/PlayerPlacement` and drag that root in the 2D viewport. Save
 `hub_world_preview.tscn` to preserve that local position override without
 changing the runtime `main.tscn` source. The root exposes a stable
 `placement_id` and authoring category in the Inspector; this is the first
 vertical slice of the planned layered prefab workflow.
 
+These preview controls are live editor controls: changing `player_element`,
+`show_hud`, or `show_collision_guides` refreshes the rendered scene as soon as
+the preview node is ready. No manual method call or scene restart is required;
+`refresh_preview` remains available as an explicit reapply button when a
+producer has changed source artwork or another authored dependency.
+
+The Hub composition now exposes the same grouping boundary around the rest of
+the authored scene: `Main/Map` is the Environment root,
+`Main/Actors/Props` groups the fire and chest, and
+`Main/Actors/Characters` groups the NPC, player placement, and their shadows.
+Move a group root to reposition the complete subtree, or select an individual
+placement such as `Main/Actors/Props/Chest` when only one authored object
+needs adjustment. The pooled slime slots remain runtime-owned children of
+`Actors` and are intentionally hidden from the normal Hub design view.
+
 The agent-friendly equivalent is `pwsh -File tools/dev.ps1 preview hub`; add
 `-Editor` to open the same scene directly in Godot.
+
+When the project plugin is enabled, the `Tiny Demons Authoring` dock appears in
+the editor's right dock. It lists every `PlacementRoot2D` in the open scene by
+category, stable ID, and scene path. Selecting an entry selects the real node in
+the editor; `Open Hub Preview` and `Refresh` keep the common workflow visible
+without replacing Godot's native Inspector or undo/redo behavior. The current
+placement actions are deliberately narrow: `Create` can add an empty placement
+or a `PlayerPlacement` prefab under the selected authoring layer, `Duplicate`
+creates fresh IDs for a placement subtree through the editor undo/redo stack,
+and `Validate` reports missing, malformed, duplicate, or unsupported placement
+metadata. The dock is not yet a generic enemy/gear/level factory; those typed
+content operations remain planned domain work rather than guessed scene
+mutations.
+After creating or duplicating content, save the edited scene with Godot's normal
+save command; the dock intentionally leaves save timing and version-control
+review in the producer's hands.
 
 This is the safe design-preview tier. It is not yet the interactive Hub
 workbench: use the normal game for progression, save, input, and room-entry

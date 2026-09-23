@@ -82,19 +82,19 @@ The result is a trap for both people and agents: **the file you are told to
 edit is often not the file the game reads.** Every slice below removes a class
 of that trap and proves the replacement with a second piece of content.
 
-## 2. Measured starting point (2026-09-22, version 0.2.71)
+## 2. Measured current point (2026-09-22, version 0.2.72)
 
 | Surface | Measurement |
 |---|---|
-| Runtime scripts | 194 files / ~50,300 physical lines, flat under `scripts/` |
+| Runtime scripts | 199 files / ~50,300 physical lines, flat under `scripts/` |
 | `root.call/get/set` sites | 2,200 (validator metric; regression floor green) |
 | `gameplay_state.gd` | 1,715 lines / 285 fields |
 | `screen_state_controller.gd` | 5,508 physical lines, 10 routes; root access is included in the global 2,200-site validator metric |
 | `room_controller.gd` | 2,243 lines |
 | `dungeon_layout_generator.gd` | 2,487 lines, ~100 static functions |
 | Definitions | 16 authored `.tres` under `resources/definitions/`; validator covers 16/16; composition audit reports 19 editor-able definition surfaces |
-| Tests | 136 manifest rows / 134 runnable / 44-path default gate, process-per-test |
-| Docs | 104 Markdown files under `docs/` and frozen counts in the authority docs |
+| Tests | 137 manifest rows / 135 runnable / 44-path default gate, process-per-test |
+| Docs | 105 Markdown files under `docs/` and frozen counts in the authority docs |
 
 Reference commands (current behavior):
 
@@ -459,6 +459,20 @@ baseline, not the final live-editor experience.
   `Main` instance.
   `hub_world_preview_scene_smoke.gd` proves this visual setup without booting a
   run; the interactive workbench remains open.
+- [x] Promote the Hub's existing spatial boundaries into authoring roots. The
+  `Map` root is the Environment layer, `Actors/Props` groups the fire and
+  collectable chest, and `Actors/Characters` groups the NPC and player
+  placements. Each root carries a stable placement ID and category, so moving
+  a layer preserves child-local offsets while runtime node ownership remains
+  explicit through `GameplayState`.
+- [x] Add the first project-owned authoring dock and placement lifecycle slice.
+  It discovers the same `PlacementRoot2D` contract used by focused smoke tests,
+  groups roots by category, selects the real scene node, opens the Hub design
+  preview, and refreshes on scene changes. The dock now creates an empty
+  placement or the PlayerPlacement prefab, duplicates a selected placement
+  subtree with undoable fresh stable IDs, and validates placement IDs/layers.
+  Generic typed enemy, gear, level, and artwork operations plus the isolated
+  interactive preview remain open for the next slices.
 - [ ] Generate a deterministically ordered manifest through the shared editor
   save/refresh and CLI generation operation. Verification checks freshness
   without silently rewriting files. CI rejects stale or invalid manifests;

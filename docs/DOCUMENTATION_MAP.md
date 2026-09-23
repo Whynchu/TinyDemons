@@ -2,12 +2,12 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-20
+Updated: 2026-09-22
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
 The baseline being preserved is version `0.2.00`; the latest measured current
-state is version `0.2.71` (see `README.md` and `AUDIT.md`). Historical documents
+state is version `0.2.72` (see `README.md` and `AUDIT.md`). Historical documents
 remain useful for compatibility and design rationale, but they must link
 forward to the current authority.
 
