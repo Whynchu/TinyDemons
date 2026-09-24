@@ -18,7 +18,7 @@ var player_aspect_ability_component: Node = null
 var player_equipment_visual_component: PlayerEquipmentVisualComponent = null
 var magic_projectile_controller: Node = null
 var effects_spawner: EffectsSpawner = null
-var hud_controller: Node = null
+var hud_controller: HudController = null
 var rng: RandomNumberGenerator = null
 
 var player_is_magic_casting_get: Callable = Callable()

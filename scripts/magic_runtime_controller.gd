@@ -61,7 +61,7 @@ func update_player_mp_ui(context: MagicRuntimeContext, delta := 0.0) -> void:
 	if is_equal_approx(displayed_chroma, chroma):
 		displayed_chroma = chroma
 	if context.hud_controller != null:
-		context.hud_controller.call("set_fill_ratio", fill, fill_size, clampf(displayed_chroma / max_mp, 0.0, 1.0))
+		context.hud_controller.set_chroma_bar_values(fill, context.hud_controller.chroma_highlight_target, fill_size, chroma, displayed_chroma, max_mp)
 	var text := context.player_mp_text_get.call() as Sprite2D
 	if text != null:
 		text.texture = context.pixel_text_texture.call("%d/%d" % [ceili(chroma), int(max_mp)], Color.WHITE)

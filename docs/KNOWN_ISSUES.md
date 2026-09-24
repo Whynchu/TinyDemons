@@ -2,12 +2,12 @@
 
 Status: live register for the `0.2.x` cycle
 
-Updated: 2026-09-21
+Updated: 2026-09-23
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.72`. The current smoke inventory is 137 manifest
-rows / 135 runnable paths / 44-path default gate; the counts quoted in older
+Current release: version `0.2.74`. The current smoke inventory is 141 manifest
+rows / 139 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
 
@@ -392,13 +392,27 @@ The neighboring sound-balance and sound-mix-profile checks also pass. Their
 canonical runtime key is `sword_beam_charge` for charging and `sword_beam` for
 the launched projectile; both now have explicit catalog/profile coverage.
 
+### 2026-09-23 intermittent gameplay hitch observation - open
+
+Manual playtesting observed occasional frame hitches or skips during room
+transitions, enemy deaths, and some other effect-heavy moments. The cause is
+not yet confirmed. Cold asset/shader work, synchronous room-transition setup,
+and CPU-side pixel-image work used by death particles are plausible suspects,
+but this note deliberately does not promote any of them to a diagnosis.
+
+Next evidence: capture cold-versus-warm frame-time samples around a room
+transition and enemy death, record the first-use resource/shader path, and
+compare the result with the existing `performance_scenario_harness` before
+moving work off the transition frame or adding more prewarming. This remains a
+performance investigation, not a gameplay-contract failure.
+
 ## Verification surface audit — open
 
 The repository has a large test/report inventory. `tests/manifest.csv` now
-classifies all 137 scripts with a role (gate/owner/reference/diagnostic/report),
+classifies all 141 scripts with a role (gate/owner/reference/diagnostic/report),
 state, owner, target, and load kind. The runner derives its grouping from that
 manifest: the default release gate selects 44 paths; `-TestGroup all` covers the
-135 runnable paths. The 2026-09-13 pruning slice removed the stale
+139 runnable paths. The 2026-09-13 pruning slice removed the stale
 `backtrack_popcorn_smoke` expectation and consolidated the three identical
 R3/R4/R5 layout wrappers into `authored_layouts_smoke`; no gate coverage or web
 export coverage was removed. The separate classification and pruning issue is

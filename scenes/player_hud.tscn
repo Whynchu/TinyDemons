@@ -362,7 +362,7 @@ texture = ExtResource("4_frame")
 centered = false
 
 [node name="MpBarFill" type="Sprite2D" parent="PlayerStatus/Mana" unique_id=885208127]
-z_index = 1
+z_index = 2
 texture_filter = 1
 texture = SubResource("ImageTexture_vpp3t")
 centered = false
@@ -373,7 +373,7 @@ metadata/fill_track_width = 46.0
 
 [node name="MpBarHighlight" type="Sprite2D" parent="PlayerStatus/Mana"]
 visible = false
-z_index = 2
+z_index = 1
 texture_filter = 1
 texture = SubResource("ImageTexture_vpp3t")
 centered = false
