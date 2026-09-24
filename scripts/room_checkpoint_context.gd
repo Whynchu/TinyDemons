@@ -15,6 +15,7 @@ var chest_claimed := false
 var chest_evaporated := false
 var world_item_drops: Array[Dictionary] = []
 var chroma_pickup_controller: ChromaPickupController = null
+var gold_pickups: Array = []
 
 
 func _init(
@@ -27,7 +28,8 @@ func _init(
 	new_chest_claimed: bool,
 	new_chest_evaporated: bool,
 	new_world_item_drops: Array[Dictionary],
-	new_chroma_pickup_controller: ChromaPickupController
+	new_chroma_pickup_controller: ChromaPickupController,
+	new_gold_pickup_controller: GoldPickupController
 ) -> void:
 	room_id = new_room_id
 	room_type = new_room_type
@@ -39,6 +41,7 @@ func _init(
 	chest_evaporated = new_chest_evaporated
 	world_item_drops = new_world_item_drops
 	chroma_pickup_controller = new_chroma_pickup_controller
+	gold_pickups = new_gold_pickup_controller.snapshot() if new_gold_pickup_controller != null else []
 
 
 func is_valid() -> bool:

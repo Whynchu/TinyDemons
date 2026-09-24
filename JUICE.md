@@ -65,31 +65,31 @@ source of truth for *what response must exist*.
 
 Every collectable follows the same chain: spawn → world motion (arc, bob,
 scale pulse) → proximity collection → **delivery to the HUD** → HUD
-acknowledgment. The delivery and acknowledgment legs are the current gap.
+acknowledgment. Chroma, Souls, items, and gold now complete the delivery and
+acknowledgment legs, including their collection feedback where applicable.
 
 - Chroma: world arc, bob, scale pulse, burst, floating text, and sound exist.
-  Delivery to the HUD does not.
-- Souls: world arc and bob exist. Burst, delivery, and HUD acknowledgment do
-  not.
-- Items: chest drop arc and "acquired" text exist. Delivery to the HUD does
-  not.
-- Gold: **currently has no world pickup** — it is granted instantly from chests.
-  The agreed direction is rupee-style: chests roll a total, decompose it into
-  denomination coins (value = color = denomination), and drop them as
-  auto-collecting pickups that arc, rest, bob, and deliver to the gold readout.
-  The world sprite reuses the HUD `GoldFresh2.png` spin frames. The **payout
-  total is unchanged** — coins only present the same value that chests grant
-  today, so there is no economy or save migration. Value is granted per coin as
-  it is collected.
+  Delivery to the HUD and a color-matched MP highlight on landing exist.
+- Souls: world arc, bob, purple collection burst, delivery, and HUD
+  acknowledgment exist. The Soul counter counts up and punches after delivery.
+- Items: chest drop arc, "acquired" text, delivery, and chest acknowledgment
+  exist.
+- Gold: chests roll a total, decompose it into denomination coins (value =
+  color = denomination), and drop auto-collecting pickups that arc, rest, bob,
+  spin, and deliver to the gold readout. The world sprite reuses the HUD
+  `GoldFresh2.png` frames. The **payout total is unchanged** — coins only
+  present the same value that chests grant today, so there is no economy or
+  save migration. Value is granted per coin as it is collected; any remainder
+  is granted at the room boundary and persisted while the room remains active.
 
 ### HUD reactions
 
 - Health: drain animation with a damage hang exists and is the model for other
   bars.
-- Chroma/MP: fill **snaps** to the new value; it must tween.
+- Chroma/MP: fill eases to the new value and uses a transient Chroma-colored
+  highlight on pickup delivery and Chroma spend.
 - XP/level: fill snaps; it must tween.
-- Currency counters: gold and souls update by **texture swap only**; they must
-  count up and scale-punch on change.
+- Currency counters: gold and Souls count up and scale-punch after delivery.
 - Combo: updates texture and fill with no punch; it must acknowledge the change.
 - Affordability: no HUD cost feedback exists. Ability cooldown icons carry an
   unavailable/flash shader; shop rows only play a deny sound. Costs the player
@@ -101,14 +101,15 @@ acknowledgment. The delivery and acknowledgment legs are the current gap.
 - Hitstop: exists as a custom timer in `gameplay_frame_controller.gd`; it is not
   `Engine.time_scale` and must stay frame-scheduled.
 - Knockback: exists for player and enemies.
-- Damage numbers: exist with shadow and critical outline; they do **not** scale
-  pop.
+- Damage numbers: exist with shadow and critical outline; they now scale-pop on
+  spawn, with a heavier critical profile.
 - Death: enemy pixel-debris and player death sequence exist.
-- Regular-hit particle burst: **missing.** Particles fire only for pickups,
-  chests, deaths, ambient fire, charge aura, and roll dust.
-- Screen shake: **missing** everywhere.
-- Critical hits: differentiated by color, outline, number, and audio; not by
-  weight or camera.
+- Regular-hit particle burst: element-colored impact sparks exist for landed
+  player hits, guard impacts, enemy hits, and boss slams.
+- Screen shake: exists through the frame-driven world camera seam, with bounded
+  light, critical, player-hit, guard, and boss-slam weights.
+- Critical hits: differentiated by color, outline, number, impact burst density,
+  and heavier camera shake.
 
 Combat feedback splits into two roles. The **information layer** — hit flash,
 damage number, critical outline, health bars, knockback, and hitstop — stays
@@ -169,8 +170,9 @@ health. Rapid multi-hits merge into one pulse rather than stacking.
 
 - Scene reload fade, loading fade, and the title pixel-breakup intro exist.
 - Room-to-room transitions are an **instant swap** with no wipe or fade.
-- Follow smoothing exists only for large rooms. There is no gameplay camera in
-  normal rooms, so screen shake, lookahead, and impact zoom need a new seam.
+- The centered gameplay `Camera2D` is owned by `display_controller.gd`; large
+  rooms use their follow camera. Screen shake now uses the active camera without
+  moving the HUD. Lookahead and impact zoom remain open.
 
 ## Current inventory
 
@@ -178,19 +180,20 @@ health. Rapid multi-hits merge into one pulse rather than stacking.
 |---|---|---|
 | Chroma pickup world life + burst + text + sound | Exists | `pickup_runtime_controller.gd`, `effects_spawner.gd` |
 | Soul pickup world life | Exists | `pickup_runtime_controller.gd` |
-| Soul pickup burst | Missing | `pickup_runtime_controller.gd` |
-| Pickups fly to HUD | Missing | `pickup_runtime_controller.gd`, `hud_controller.gd` |
-| Gold world pickup | Missing | `chest_controller.gd`, `pickup_runtime_controller.gd` |
-| Currency count-up / HUD punch | Missing | `hud_controller.gd`, `gameplay_state.gd` |
+| Soul pickup burst | Exists | `pickup_runtime_controller.gd`, `effects_spawner.gd` |
+| Chroma/Souls/items fly to HUD | Exists | `pickup_runtime_controller.gd`, `effects_spawner.gd`, `hud_controller.gd` |
+| Gold world pickup | Exists | `chest_controller.gd`, `pickup_runtime_controller.gd`, `gold_pickup_controller.gd` |
+| Currency count-up / HUD punch | Exists (Gold and Souls) | `hud_controller.gd`, `pickup_runtime_controller.gd` |
 | Enemy/player hit flash | Exists | `combat_runtime_controller.gd`, `slime_actor.gd` |
 | Hitstop | Exists | `gameplay_frame_controller.gd` |
 | Knockback | Exists | `actor_motor.gd`, `combat_runtime_controller.gd` |
 | Damage numbers with crit outline | Exists | `effects_spawner.gd` |
-| Damage-number scale pop | Partial | `effects_spawner.gd` |
-| Regular-hit particle burst | Missing | `combat_runtime_controller.gd` |
-| Screen shake | Missing | `display_controller.gd` (seam needed) |
+| Damage-number scale pop | Exists | `effects_spawner.gd` |
+| Regular-hit particle burst | Exists | `combat_runtime_controller.gd`, `slime_actor.gd`, `effects_spawner.gd` |
+| Screen shake | Exists | `display_controller.gd`, `gameplay_frame_controller.gd` |
 | Health bar drain + hang | Exists | `hud_controller.gd` |
-| Chroma / XP bar tween | Missing | `magic_runtime_controller.gd`, `hud_controller.gd` |
+| Chroma bar tween + spend/delivery highlight | Exists | `magic_runtime_controller.gd`, `hud_controller.gd` |
+| XP bar tween | Missing | `combat_runtime_controller.gd`, `hud_controller.gd` |
 | Cost-affordability visual | Partial | `hud_controller.gd`, shop layouts |
 | Menu cursor tween + bob | Exists | `menu_cursor.gd` |
 | Touch haptics / press feel | Exists | `touch_controls_layer.gd`, `hud_controller.gd` |

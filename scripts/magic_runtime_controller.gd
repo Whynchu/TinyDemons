@@ -17,6 +17,7 @@ const IMBUE_COST := 40
 const IMBUE_DURATION := 15.0
 const IMBUE_COOLDOWN := 20.0
 const IMBUE_HOLD_THRESHOLD := 0.35
+const CHROMA_FILL_TWEEN_SPEED := 180.0
 
 var magic_animation_active := false
 var magic_animation_timer := 0.0
@@ -35,9 +36,10 @@ var magic_hold_triggered := false
 var imbue_cooldown_remaining := 0.0
 var imbue_remaining := 0.0
 var imbued_element := ElementCatalogScript.Element.NEUTRAL
+var displayed_chroma := -1.0
 
 
-func update_player_mp_ui(context: MagicRuntimeContext) -> void:
+func update_player_mp_ui(context: MagicRuntimeContext, delta := 0.0) -> void:
 	# The visual state must update even while the MP HUD is not built or visible.
 	# In particular, a spell can consume MP before the HUD is ready.
 	context.update_mp_desaturation.call()
@@ -52,8 +54,14 @@ func update_player_mp_ui(context: MagicRuntimeContext) -> void:
 	context.player_mp_fill_size_set.call(fill_size)
 	var max_mp := float(context.imbue_mp_cost) if context.player_tuning == null else 100.0
 	var chroma := current_player_chroma(context)
+	if displayed_chroma < 0.0:
+		displayed_chroma = chroma
+	else:
+		displayed_chroma = move_toward(displayed_chroma, chroma, CHROMA_FILL_TWEEN_SPEED * maxf(float(delta), 0.0))
+	if is_equal_approx(displayed_chroma, chroma):
+		displayed_chroma = chroma
 	if context.hud_controller != null:
-		context.hud_controller.call("set_fill_ratio", fill, fill_size, clampf(chroma / max_mp, 0.0, 1.0))
+		context.hud_controller.call("set_fill_ratio", fill, fill_size, clampf(displayed_chroma / max_mp, 0.0, 1.0))
 	var text := context.player_mp_text_get.call() as Sprite2D
 	if text != null:
 		text.texture = context.pixel_text_texture.call("%d/%d" % [ceili(chroma), int(max_mp)], Color.WHITE)
@@ -141,10 +149,14 @@ func try_cast_magic(context: MagicRuntimeContext, allow_candidate := false) -> b
 	var chroma := context.player_chroma_component
 	if ability == null or chroma == null:
 		return false
+	var chroma_before := current_player_chroma(context)
+	var feedback_color := chroma_highlight_color(context)
 	var accepted := bool(ability.call("try_activate", chroma, context.execute_current_aspect_ability))
 	if accepted:
 		context.sync_chroma_presentation.call()
 		context.update_player_mp_ui.call()
+		if current_player_chroma(context) < chroma_before:
+			_acknowledge_chroma_use(context, feedback_color)
 	return accepted
 
 
@@ -303,6 +315,7 @@ func _activate_pending_imbue(context: MagicRuntimeContext) -> void:
 	if chroma == null or not is_instance_valid(chroma):
 		return
 	var cost := context.imbue_mp_cost
+	var feedback_color := chroma_highlight_color(context)
 	if not bool(chroma.call("spend_chroma", cost)):
 		return
 	imbued_element = pending_imbue_element
@@ -316,7 +329,22 @@ func _activate_pending_imbue(context: MagicRuntimeContext) -> void:
 		equipment_visual.begin_imbue(context.build_equipment_visual_context.call(), imbued_element, duration)
 	context.sync_chroma_presentation.call()
 	context.update_player_mp_ui.call()
+	_acknowledge_chroma_use(context, feedback_color)
 	context.play_sound.call("magic_cast", -8.0, 0.85)
+
+
+func chroma_highlight_color(context: MagicRuntimeContext) -> Color:
+	var component := context.player_chroma_component
+	if component == null or not is_instance_valid(component):
+		return PaletteLibrary.accent("grey")
+	var flame := String(component.call("aspect_name"))
+	var palette := "grey" if flame == "gray" else AspectCatalogScript.palette_for_flame(StringName(flame))
+	return PaletteLibrary.accent(palette if not palette.is_empty() else "grey")
+
+
+func _acknowledge_chroma_use(context: MagicRuntimeContext, color: Color) -> void:
+	if context.acknowledge_chroma_feedback.is_valid():
+		context.acknowledge_chroma_feedback.call(color)
 
 
 func _spawn_pending_magic_projectile(context: MagicRuntimeContext) -> void:
@@ -445,8 +473,7 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	projectile.z_as_relative = false
 	projectile.z_index = player.z_index + 1
-	projectile.position = origin
-	_add_child_to_runtime(context, projectile)
+	_add_child_to_runtime(context, projectile, origin)
 	var outline := Sprite2D.new()
 	outline.name = "MagicProjectileOutline"
 	outline.texture = magic_projectile_outline_texture(context, base_color, accent_color)
@@ -454,16 +481,16 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	outline.z_as_relative = false
 	outline.z_index = player.z_index + 1
-	outline.position = origin
-	_add_child_to_runtime(context, outline)
+	_add_child_to_runtime(context, outline, origin)
 	var controller := context.magic_projectile_controller
 	controller.spawn(projectile, outline, direction, context.magic_projectile_lifetime, palette, homing_target, ability_mode)
 
 
-func _add_child_to_runtime(context: MagicRuntimeContext, node: Node) -> void:
+func _add_child_to_runtime(context: MagicRuntimeContext, node: Node2D, world_position: Vector2) -> void:
 	var parent := context.player.get_parent() if context.player != null else null
 	if parent != null:
 		parent.add_child(node)
+		node.global_position = world_position
 
 
 func spawn_sword_beam(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, palette_override: String = "") -> void:
@@ -480,8 +507,7 @@ func spawn_sword_beam(context: MagicRuntimeContext, origin: Vector2, direction: 
 	beam.flip_h = direction.x < 0.0
 	beam.z_as_relative = false
 	beam.z_index = player.z_index + 1
-	beam.global_position = origin + direction.normalized() * 10.0
-	_add_child_to_runtime(context, beam)
+	_add_child_to_runtime(context, beam, origin + direction.normalized() * 10.0)
 	var controller := context.magic_projectile_controller
 	var ability_mode := int(context.player_chroma_component.call("ability_mode")) if context.player_chroma_component != null else ChromaComponentScript.AbilityMode.GRAY
 	controller.spawn_beam(beam, direction, 0.75, palette, ability_mode)
@@ -656,8 +682,8 @@ func spawn_magic_trail(context: MagicRuntimeContext, world_position: Vector2, pa
 		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
 		particle.centered = false
 	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	particle.z_as_relative = false; particle.z_index = player.z_index if is_beam else player.z_index + 1; particle.position = world_position
-	_add_child_to_runtime(context, particle)
+	particle.z_as_relative = false; particle.z_index = player.z_index if is_beam else player.z_index + 1
+	_add_child_to_runtime(context, particle, world_position)
 	var lifetime := 0.35
 	effects.pixel_particles.append({"sprite": particle, "velocity": Vector2.ZERO, "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 	if is_beam:
@@ -669,8 +695,7 @@ func spawn_magic_trail(context: MagicRuntimeContext, world_position: Vector2, pa
 		fizzle.hframes = 6; fizzle.frame = 0; fizzle.centered = true; fizzle.flip_h = facing_left
 		fizzle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		fizzle.z_as_relative = false; fizzle.z_index = player.z_index
-		fizzle.position = world_position
-		_add_child_to_runtime(context, fizzle)
+		_add_child_to_runtime(context, fizzle, world_position)
 		var return_velocity := Vector2(24.0 if facing_left else -24.0, rng.randf_range(-3.0, 3.0))
 		effects.pixel_particles.append({"sprite": fizzle, "velocity": return_velocity, "timer": lifetime + fizzle_lifetime, "lifetime": fizzle_lifetime, "gravity": 0.0, "delay": lifetime})
 
@@ -687,8 +712,7 @@ func spawn_magic_impact(context: MagicRuntimeContext, world_position: Vector2, p
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = player.z_index + 1
-		particle.position = world_position
-		_add_child_to_runtime(context, particle)
+		_add_child_to_runtime(context, particle, world_position)
 		var angle := float(i) / 8.0 * TAU
 		var speed := float(rng.randf_range(14.0, 30.0))
 		var lifetime := float(rng.randf_range(0.3, 0.5))

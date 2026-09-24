@@ -57,8 +57,8 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 				direction = direction.lerp(to_target.normalized(), 0.10).normalized()
 				data["direction"] = direction
 		var travel_speed := float(data.get("speed", speed))
-		sprite.position = snap_position.call(sprite.position + direction * travel_speed * delta)
-		if outline != null: outline.position = sprite.position
+		sprite.global_position = snap_position.call(sprite.global_position + direction * travel_speed * delta)
+		if outline != null: outline.global_position = sprite.global_position
 		var is_beam := bool(data.get("beam", false))
 		if is_beam:
 			var beam_hit_cooldowns: Dictionary = data.get("beam_hit_cooldowns", {})

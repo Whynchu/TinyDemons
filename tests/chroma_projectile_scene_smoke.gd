@@ -19,14 +19,26 @@ func _initialize() -> void:
 		_finish(failures)
 		return
 	var gameplay := packed.instantiate()
+	gameplay.set("debug_start_in_boss_room", true)
 	get_root().add_child(gameplay)
-	for _frame in 30:
+	var boot_ready := false
+	for _frame in 600:
 		await process_frame
+		if not bool(gameplay.get("boot_active")) and gameplay.get("chest_gray_texture") != null:
+			boot_ready = true
+			break
+	_expect(boot_ready, "gameplay bootstrap is ready for Chroma coverage", failures)
+	if not boot_ready:
+		gameplay.queue_free()
+		await process_frame
+		_finish(failures)
+		return
 	var chroma := gameplay.get("player_chroma_component") as Node
 	var ability := gameplay.get("player_aspect_ability_component") as Node
 	var projectile_controller := gameplay.get_node_or_null("MagicProjectileController") as Node
 	var pickup_controller := gameplay.get_node_or_null("ChromaPickupController") as Node
 	var player_hud := gameplay.get_node_or_null("InterfaceCanvas/UI/PlayerHud") as Node
+	var hud_controller := gameplay.get("hud_controller") as HudController
 	_expect(chroma != null, "player Chroma component is installed", failures)
 	_expect(ability != null, "aspect ability component is installed", failures)
 	_expect(projectile_controller != null, "projectile lifecycle owner is installed", failures)
@@ -121,6 +133,18 @@ func _initialize() -> void:
 	var player_animation := gameplay.get("player_animation_component") as PlayerAnimationComponent
 	var equipment_visual := gameplay.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	var magic_runtime := gameplay.get("magic_runtime_controller") as MagicRuntimeController
+	if magic_runtime != null and ability != null and chroma != null and hud_controller != null:
+		chroma.call("attune", 1)
+		ability.set("cooldown_remaining", 0.0)
+		var spell_started := magic_runtime.try_cast_magic(_magic_context(gameplay))
+		_expect(spell_started, "elemental spell accepts a charged Chroma state", failures)
+		_expect(hud_controller.chroma_reaction_color.is_equal_approx(PaletteLibrary.ACCENT["red"]), "using Chroma sends the active element highlight into the HUD", failures)
+		_expect(hud_controller.chroma_highlight_target != null and hud_controller.chroma_highlight_target.visible, "using Chroma shows the MP highlight layer", failures)
+		_expect(magic_runtime.displayed_chroma < float(chroma.get("current_chroma")), "MP display holds its previous value while Chroma spends", failures)
+		magic_runtime.update_player_mp_ui(_magic_context(gameplay), 1.0)
+		_expect(is_equal_approx(magic_runtime.displayed_chroma, float(chroma.get("current_chroma"))), "MP display catches up through the frame-driven tween", failures)
+		magic_runtime.cancel_magic_animation(_magic_context(gameplay))
+		ability.set("cooldown_remaining", 0.0)
 	_expect(player_animation != null and player_animation.magic_frames.size() == 5, "triangle cast loads five body magic frames (got %d)" % (player_animation.magic_frames.size() if player_animation != null else -1), failures)
 	if equipment_visual != null:
 		var magic_equipment_frames: Dictionary = equipment_visual.get("frames") as Dictionary

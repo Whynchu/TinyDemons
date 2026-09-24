@@ -79,15 +79,12 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 				room_controller.save_treasure_chest_state(root)
 			root.set("chest_collect_flash_timer", flash_time); start_flash(root)
 			var scaled_gold := int(root.call("_chest_gold_reward", reward_gold))
-			var profile := root.get("player_profile") as PlayerProfile
-			var current_gold := profile.gold if profile != null else 0
-			root.call("_set_gold_value", current_gold + scaled_gold)
-			(root.get("effects_spawner") as EffectsSpawner).spawn_gold_from_root(root, chest.global_position + Vector2(5, -8), scaled_gold)
+			if pickup_runtime_controller != null and gameplay != null:
+				pickup_runtime_controller.spawn_chest_gold_drops(gameplay, scaled_gold)
 			# The claim is a safe, idempotent room-state boundary. Persist it before
 			# the presentation flash so a browser restart cannot replay the reward.
 			root.call("_checkpoint_safe_run_state")
 			root.call("_play_sound", "chest_reward", -3.0, 1.0)
-			print("Gold: %d" % (current_gold + scaled_gold))
 		elif near_fire:
 			flame_hold_active = true
 			flame_hold_timer = 0.0

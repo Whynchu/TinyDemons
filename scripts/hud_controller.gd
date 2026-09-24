@@ -8,12 +8,18 @@ const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_
 const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://assets/artwork/eliteslimeoverheadsymbol.png")
 const TARGET_HEALTH_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/EnemyHpRedBar.png")
 const TARGET_OVERHEAD_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/HpOverheadRedBar.png")
+const INVENTORY_CHEST_IDLE_TEXTURE: Texture2D = preload("res://assets/artwork/ChestGrey.png")
+const INVENTORY_CHEST_RECEIVING_TEXTURE: Texture2D = preload("res://assets/artwork/Chest.png")
 
 const COOLDOWN_FLASH_DURATION := 0.14
 const COOLDOWN_ICON_DIM := 0.58
 const COOLDOWN_ICON_DESATURATION := 0.92
 const COOLDOWN_ELAPSED_BRIGHTNESS := 0.82
 const COOLDOWN_TIMER_SHADOW_COLOR := Color8(17, 19, 24, 235)
+const INVENTORY_CHEST_REACTION_DURATION := 0.24
+const RESOURCE_DELIVERY_REACTION_DURATION := 0.20
+const GOLD_COUNTUP_SPEED := 420.0
+const SOUL_COUNTUP_SPEED := 420.0
 
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
@@ -37,8 +43,27 @@ var room_number_indicator: Sprite2D = null
 var dungeon_run_indicator: Sprite2D = null
 var gold_indicator: Sprite2D = null
 var gold_amount_indicator: Sprite2D = null
+var gold_reaction_id := 0
+var gold_target_base_scale := Vector2.ONE
+var gold_reaction_color := Color.WHITE
+var displayed_gold := -1
+var gold_display_target := -1
 var soul_icon_indicator: Sprite2D = null
 var soul_amount_indicator: Sprite2D = null
+var inventory_chest: Sprite2D = null
+var inventory_chest_receiving: Sprite2D = null
+var inventory_chest_reaction_id := 0
+var inventory_chest_base_scale := Vector2.ONE
+var chroma_delivery_target: Sprite2D = null
+var chroma_highlight_target: Sprite2D = null
+var soul_delivery_target: Sprite2D = null
+var chroma_reaction_id := 0
+var soul_reaction_id := 0
+var chroma_reaction_color := Color.WHITE
+var displayed_souls := -1
+var soul_display_target := -1
+var soul_target_base_scale := Vector2.ONE
+var feedback_animation_registry: FeedbackAnimationRegistry = null
 var run_timer_indicator: Sprite2D = null
 var combo_label: Sprite2D = null
 var combo_base: Sprite2D = null
@@ -79,6 +104,8 @@ func apply_display_layout(root: Object) -> void:
 			player_status.position = Vector2.ZERO
 		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
 		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
+		_set_layout_position(player_hud.get_node_or_null("InventoryChest") as Node2D, &"inventory_chest")
+		_set_layout_position(player_hud.get_node_or_null("InventoryChestReceiving") as Node2D, &"inventory_chest")
 		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")
 	_set_layout_position(combo_label, &"combo")
 	_set_layout_position(combo_base, &"combo")
@@ -117,6 +144,226 @@ func _set_layout_position(node: Node2D, anchor: StringName, base_override: Vecto
 			base = node.position
 			node.set_meta("display_layout_base_position", base)
 	node.position = DisplayLayout.position_for(base, anchor, display_view_size)
+
+
+func inventory_chest_target_position() -> Vector2:
+	if inventory_chest == null or not is_instance_valid(inventory_chest):
+		return Vector2(198, 10)
+	var target := inventory_chest.global_position
+	if inventory_chest.texture != null:
+		target += inventory_chest.texture.get_size() * 0.5
+	return target
+
+
+func chroma_target_position() -> Vector2:
+	if chroma_delivery_target == null or not is_instance_valid(chroma_delivery_target):
+		return Vector2.INF
+	var target := chroma_delivery_target.global_position
+	if chroma_delivery_target.texture != null:
+		var track_start := float(chroma_delivery_target.get_meta("fill_track_start_x", 0.0))
+		var track_width := float(chroma_delivery_target.get_meta("fill_track_width", chroma_delivery_target.texture.get_size().x))
+		target += Vector2(track_start + track_width, chroma_delivery_target.texture.get_size().y * 0.5)
+	return target
+
+
+func soul_target_position() -> Vector2:
+	if soul_delivery_target == null or not is_instance_valid(soul_delivery_target):
+		return Vector2.INF
+	var target := soul_delivery_target.global_position
+	if soul_delivery_target.texture != null:
+		target += soul_delivery_target.texture.get_size() * 0.5
+	return target
+
+
+func gold_target_position() -> Vector2:
+	if gold_indicator == null or not is_instance_valid(gold_indicator):
+		return Vector2.INF
+	var target := gold_indicator.global_position
+	if gold_indicator.texture != null:
+		target += gold_indicator.texture.get_size() * 0.5
+	return target
+
+
+func sync_gold_value(value: int) -> void:
+	displayed_gold = maxi(value, 0)
+	gold_display_target = displayed_gold
+
+
+func acknowledge_gold_delivery(color: Color, value: int) -> void:
+	if displayed_gold < 0:
+		displayed_gold = 0
+	if gold_display_target < displayed_gold:
+		gold_display_target = displayed_gold
+	gold_display_target += maxi(value, 0)
+	gold_reaction_color = color if color.a > 0.0 else Color.WHITE
+	if gold_indicator == null or not is_instance_valid(gold_indicator):
+		return
+	if gold_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(gold_reaction_id)
+	gold_reaction_id = 0
+	if feedback_animation_registry == null:
+		return
+	gold_reaction_id = feedback_animation_registry.register(
+		gold_indicator,
+		RESOURCE_DELIVERY_REACTION_DURATION,
+		Callable(self, "_update_gold_delivery_reaction").bind(gold_reaction_color),
+		Callable(self, "_finish_gold_delivery_reaction"))
+
+
+func _update_gold_delivery_reaction(progress: float, color: Color) -> void:
+	if gold_indicator == null or not is_instance_valid(gold_indicator):
+		return
+	var pulse := sin(progress * PI)
+	gold_indicator.scale = gold_target_base_scale * (1.0 + pulse * 0.10)
+	gold_indicator.modulate = Color(color.r, color.g, color.b, 0.80 + pulse * 0.20)
+
+
+func _finish_gold_delivery_reaction() -> void:
+	gold_reaction_id = 0
+	if gold_indicator != null and is_instance_valid(gold_indicator):
+		gold_indicator.scale = gold_target_base_scale
+		gold_indicator.modulate = Color.WHITE
+
+
+func _tick_gold_counter(root: Object, delta: float) -> void:
+	if gold_amount_indicator == null or not is_instance_valid(gold_amount_indicator) or gold_display_target < 0:
+		return
+	if displayed_gold < gold_display_target:
+		displayed_gold = mini(gold_display_target, displayed_gold + maxi(1, int(ceil(GOLD_COUNTUP_SPEED * maxf(delta, 0.0)))))
+		gold_amount_indicator.texture = root.call("_pixel_text_texture", str(displayed_gold), Color8(255, 205, 117)) as Texture2D
+
+
+func sync_soul_value(value: int) -> void:
+	displayed_souls = maxi(value, 0)
+	soul_display_target = displayed_souls
+
+
+func acknowledge_soul_delivery(_color: Color, value: int) -> void:
+	if displayed_souls < 0:
+		displayed_souls = 0
+	if soul_display_target < displayed_souls:
+		soul_display_target = displayed_souls
+	soul_display_target += maxi(value, 0)
+	if soul_delivery_target == null or not is_instance_valid(soul_delivery_target):
+		return
+	if soul_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(soul_reaction_id)
+	soul_reaction_id = 0
+	if feedback_animation_registry == null:
+		soul_delivery_target.scale = soul_target_base_scale
+		return
+	soul_reaction_id = feedback_animation_registry.register(
+		soul_delivery_target,
+		RESOURCE_DELIVERY_REACTION_DURATION,
+		Callable(self, "_update_soul_delivery_reaction"),
+		Callable(self, "_finish_soul_delivery_reaction"))
+
+
+func _tick_soul_counter(root: Object, delta: float) -> void:
+	if soul_amount_indicator == null or not is_instance_valid(soul_amount_indicator) or soul_display_target < 0:
+		return
+	if displayed_souls < soul_display_target:
+		displayed_souls = mini(soul_display_target, displayed_souls + maxi(1, int(ceil(SOUL_COUNTUP_SPEED * maxf(delta, 0.0)))))
+		soul_amount_indicator.texture = root.call("_pixel_text_texture", str(displayed_souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D
+
+
+func acknowledge_inventory_delivery(color: Color) -> void:
+	if inventory_chest == null or not is_instance_valid(inventory_chest):
+		return
+	if inventory_chest_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(inventory_chest_reaction_id)
+	inventory_chest_reaction_id = 0
+	var reaction_color := color if color.a > 0.0 else Color.WHITE
+	if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+		inventory_chest_receiving.visible = true
+		inventory_chest_receiving.modulate = Color(reaction_color.r, reaction_color.g, reaction_color.b, 1.0)
+	if feedback_animation_registry == null:
+		inventory_chest.scale = inventory_chest_base_scale
+		if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+			inventory_chest_receiving.visible = false
+		return
+	inventory_chest_reaction_id = feedback_animation_registry.register(
+		inventory_chest,
+		INVENTORY_CHEST_REACTION_DURATION,
+		Callable(self, "_update_inventory_chest_reaction").bind(reaction_color),
+		Callable(self, "_finish_inventory_chest_reaction"))
+
+
+func _update_inventory_chest_reaction(progress: float, color: Color) -> void:
+	if inventory_chest == null or not is_instance_valid(inventory_chest):
+		return
+	var pulse := sin(progress * PI)
+	inventory_chest.scale = inventory_chest_base_scale * (1.0 + pulse * 0.08)
+	if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+		inventory_chest_receiving.visible = true
+		inventory_chest_receiving.modulate = Color(color.r, color.g, color.b, 0.82 + pulse * 0.18)
+
+
+func _finish_inventory_chest_reaction() -> void:
+	inventory_chest_reaction_id = 0
+	if inventory_chest != null and is_instance_valid(inventory_chest):
+		inventory_chest.scale = inventory_chest_base_scale
+	if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+		inventory_chest_receiving.visible = false
+
+
+func acknowledge_chroma_delivery(color: Color) -> void:
+	_acknowledge_chroma_reaction(color)
+
+
+func acknowledge_chroma_use(color: Color) -> void:
+	_acknowledge_chroma_reaction(color)
+
+
+func _acknowledge_chroma_reaction(color: Color) -> void:
+	if chroma_delivery_target == null or not is_instance_valid(chroma_delivery_target):
+		return
+	if chroma_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(chroma_reaction_id)
+	chroma_reaction_id = 0
+	chroma_reaction_color = color if color.a > 0.0 else Color.WHITE
+	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
+		var texture_size := chroma_delivery_target.texture.get_size() if chroma_delivery_target.texture != null else Vector2(82, 16)
+		chroma_highlight_target.texture = _solid_texture(Vector2i(texture_size), chroma_reaction_color)
+		chroma_highlight_target.region_rect = chroma_delivery_target.region_rect
+		chroma_highlight_target.visible = true
+		chroma_highlight_target.modulate = Color.WHITE
+	if feedback_animation_registry == null:
+		_finish_chroma_delivery_reaction()
+		return
+	chroma_reaction_id = feedback_animation_registry.register(
+		chroma_delivery_target,
+		RESOURCE_DELIVERY_REACTION_DURATION,
+		Callable(self, "_update_chroma_delivery_reaction"),
+		Callable(self, "_finish_chroma_delivery_reaction"))
+
+
+func _update_chroma_delivery_reaction(progress: float) -> void:
+	if chroma_delivery_target == null or not is_instance_valid(chroma_delivery_target):
+		return
+	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
+		chroma_highlight_target.visible = true
+		chroma_highlight_target.modulate = Color(1.0, 1.0, 1.0, 1.0 - progress)
+
+
+func _finish_chroma_delivery_reaction() -> void:
+	chroma_reaction_id = 0
+	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
+		chroma_highlight_target.visible = false
+		chroma_highlight_target.modulate = Color.WHITE
+
+
+func _update_soul_delivery_reaction(progress: float) -> void:
+	if soul_delivery_target == null or not is_instance_valid(soul_delivery_target):
+		return
+	var pulse := sin(progress * PI)
+	soul_delivery_target.scale = soul_target_base_scale * (1.0 + pulse * 0.12)
+
+
+func _finish_soul_delivery_reaction() -> void:
+	soul_reaction_id = 0
+	if soul_delivery_target != null and is_instance_valid(soul_delivery_target):
+		soul_delivery_target.scale = soul_target_base_scale
 
 
 func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_fill: CanvasItem, target_fill: CanvasItem, target_health_text: CanvasItem, visible: bool) -> void:
@@ -216,8 +463,16 @@ func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 		var source_width := maxf(track_start + track_width, track_start)
 		var visible_width := clampf(track_start + roundf(track_width * clamped_ratio), 0.0, source_width)
 		fill.region_rect = Rect2(Vector2.ZERO, Vector2(visible_width, fill_size.y))
+		_sync_chroma_highlight_region(fill)
 		return
 	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clamped_ratio, fill_size.y))
+	_sync_chroma_highlight_region(fill)
+
+
+func _sync_chroma_highlight_region(fill: Sprite2D) -> void:
+	if fill != chroma_delivery_target or chroma_highlight_target == null or not is_instance_valid(chroma_highlight_target) or not chroma_highlight_target.visible:
+		return
+	chroma_highlight_target.region_rect = fill.region_rect
 
 
 func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, health: float, display_health: float, max_health: float) -> void:
@@ -479,6 +734,8 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 		if state == &"pause" or state == &"hub":
 			var menu_timer := fmod(gold_animation_timer + delta, 0.48)
 			gold_animation_timer = menu_timer
+			_tick_gold_counter(root, delta)
+			_tick_soul_counter(root, delta)
 			update_gold_indicator(gold_indicator, gold_animation_frames, menu_timer)
 			update_run_timer(root)
 			return
@@ -486,7 +743,7 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_ability_prompt_hud(ability_prompt_hud, root.get("input_device_tracker") as Node, root.get("input_router") as InputRouter, Callable(root, "_pixel_text_texture"))
 	update_cooldown_hud(root, delta)
 	update_combo_hud(root)
-	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; update_gold_indicator(gold_indicator, gold_animation_frames, timer)
+	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; _tick_gold_counter(root, delta); _tick_soul_counter(root, delta); update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))
 
@@ -770,6 +1027,31 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		gold_amount.position = Vector2(72, 2)
 		parent.add_child(gold_amount)
+	var inventory_chest := layout.get_node_or_null("InventoryChest") as Sprite2D if layout != null else null
+	if inventory_chest == null:
+		inventory_chest = Sprite2D.new()
+		inventory_chest.name = "InventoryChest"
+		hud_parent.add_child(inventory_chest)
+		inventory_chest.position = Vector2(190, 2)
+	inventory_chest.centered = false
+	inventory_chest.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	inventory_chest.z_index = 2
+	if inventory_chest.texture == null:
+		inventory_chest.texture = INVENTORY_CHEST_IDLE_TEXTURE
+	var inventory_chest_receiving := layout.get_node_or_null("InventoryChestReceiving") as Sprite2D if layout != null else null
+	if inventory_chest_receiving == null:
+		inventory_chest_receiving = Sprite2D.new()
+		inventory_chest_receiving.name = "InventoryChestReceiving"
+		hud_parent.add_child(inventory_chest_receiving)
+		inventory_chest_receiving.position = inventory_chest.position
+	inventory_chest_receiving.centered = false
+	inventory_chest_receiving.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	inventory_chest_receiving.z_index = 3
+	inventory_chest_receiving.texture = INVENTORY_CHEST_RECEIVING_TEXTURE
+	inventory_chest_receiving.visible = false
+	self.inventory_chest = inventory_chest
+	self.inventory_chest_receiving = inventory_chest_receiving
+	inventory_chest_base_scale = inventory_chest.scale
 	var soul_display := layout.get_node_or_null("SoulDisplay") as Node2D if layout != null else null
 	if soul_display == null:
 		soul_display = Node2D.new()
@@ -817,10 +1099,24 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	gold.vframes = 1
 	gold.frame = 0
 	gold.texture = gold_frames[0] if not gold_frames.is_empty() else null
+	self.gold_indicator = gold
+	self.gold_amount_indicator = gold_amount
+	gold_target_base_scale = gold.scale
 	soul_icon.hframes = 1
 	soul_icon.vframes = 1
 	soul_icon.frame = 0
 	soul_icon.texture = SoulVisualsScript.texture()
+	self.chroma_delivery_target = layout.get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D if layout != null else null
+	self.chroma_highlight_target = layout.get_node_or_null("PlayerStatus/Mana/MpBarHighlight") as Sprite2D if layout != null else null
+	if chroma_delivery_target != null and chroma_highlight_target == null:
+		chroma_highlight_target = duplicate_fill_sprite(chroma_delivery_target, "MpBarHighlight")
+	self.soul_delivery_target = soul_icon
+	if chroma_highlight_target != null:
+		chroma_highlight_target.z_index = chroma_delivery_target.z_index + 1
+		chroma_highlight_target.visible = false
+		chroma_highlight_target.region_rect = chroma_delivery_target.region_rect
+	if soul_delivery_target != null:
+		soul_target_base_scale = soul_delivery_target.scale
 	var buttons: Array[Sprite2D] = []
 	var button_names := ["TrianglePrompt", "SquarePrompt", "XPrompt", "CirclePrompt"]
 	var button_textures := ["triangle55.png", "square55.png", "x55.png", "circle55.png"]
@@ -901,7 +1197,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "ability_prompts": ability_prompts, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "inventory_chest": inventory_chest, "inventory_chest_receiving": inventory_chest_receiving, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "ability_prompts": ability_prompts, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
 	var marker_texture := _aggro_marker_texture(_palette_name)

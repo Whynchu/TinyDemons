@@ -752,10 +752,10 @@ func _create_fade_overlays(new_context: PlayerEquipmentVisualContext) -> void:
 			overlay.z_as_relative = false
 			overlay.z_index = equipment_layer.z_index + 2
 			overlay.texture = _white_copy(equipment_layer.texture)
-			overlay.global_position = equipment_layer.global_position
 			overlay.flip_h = equipment_layer.flip_h
 			overlay.modulate = Color(1.0, 1.0, 1.0, 0.0)
 			new_context.player.get_parent().add_child(overlay)
+			overlay.global_position = equipment_layer.global_position
 			fade_overlays[equipment_layer] = overlay
 
 
@@ -1110,8 +1110,8 @@ func _spawn_imbue_bleed(new_context: PlayerEquipmentVisualContext) -> void:
 		# Keep bleed pixels on the same depth plane as the sword that spawned them.
 		particle.z_index = layer.z_index
 		var origin := layer.global_position + Vector2(pixel_x, source_pixel.y)
-		particle.position = origin
 		new_context.player.get_parent().add_child(particle)
+		particle.global_position = origin
 		var noise_value := imbue_noise.get_noise_2d(float(source_pixel.x), float(source_pixel.y) + float(Time.get_ticks_msec()) * 0.002)
 		var lifetime := random_source.randf_range(0.45, 0.90)
 		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_value * 5.0, -(8.0 + (noise_value + 1.0) * 14.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": &"imbue_weapon", "logical_position": origin})

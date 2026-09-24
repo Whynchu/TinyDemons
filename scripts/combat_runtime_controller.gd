@@ -6,6 +6,12 @@ const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.g
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CombatDamageRequestScript = preload("res://scripts/combat_damage_request.gd")
 
+const LIGHT_HIT_SHAKE_STRENGTH := 1.2
+const CRITICAL_HIT_SHAKE_STRENGTH := 1.7
+const PLAYER_HIT_SHAKE_STRENGTH := 2.2
+const BLOCK_HIT_SHAKE_STRENGTH := 1.3
+const BOSS_SLAM_SHAKE_STRENGTH := 2.8
+
 
 func _guard_context(root: Object) -> PlayerGuardContext:
 	var context := PlayerGuardContext.new()
@@ -26,6 +32,18 @@ func _guard_context(root: Object) -> PlayerGuardContext:
 	context.actor_foot = Callable(root, "_actor_foot")
 	context.build_equipment_visual_context = func() -> PlayerEquipmentVisualContext: return root.gameplay_frame_controller.equipment_visual_context(root)
 	return context
+
+
+func _request_screen_shake(root: Object, strength: float, duration: float) -> void:
+	var state := root as GameplayState
+	if state != null and state.display_controller != null:
+		state.display_controller.request_screen_shake(strength, duration)
+
+
+func _spawn_combat_impact(root: Object, world_position: Vector2, color: Color, critical: bool = false) -> void:
+	var state := root as GameplayState
+	if state != null and state.effects_spawner != null:
+		state.effects_spawner.spawn_combat_hit_burst_from_root(root, world_position, color, critical)
 
 const ENEMY_HEALTH_R1_FACTOR := 0.50
 const ENEMY_HEALTH_R2_FACTOR := 0.65
@@ -85,6 +103,16 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 		var tuning := root.get("slime_tuning") as SlimeTuning
 		ambush.extend_rehide(slime, tuning.ambush_hit_extension)
 	SlimeActor.damage_actor(root, slime, amount, was_critical, attack_element, immune, show_damage_number)
+	if not immune and amount > 0.0:
+		var state := root as GameplayState
+		if state != null:
+			var impact_position := state._actor_foot(slime)
+			var impact_color := ElementCatalogScript.damage_number_color(attack_element)
+			var lethal := state._is_slime_dead(slime)
+			_spawn_combat_impact(root, impact_position, impact_color, was_critical)
+			_request_screen_shake(root, CRITICAL_HIT_SHAKE_STRENGTH if was_critical else LIGHT_HIT_SHAKE_STRENGTH, 0.13 if was_critical else 0.08)
+			if lethal:
+				_request_screen_shake(root, 2.0, 0.12)
 	var rng := root.get("rng") as RandomNumberGenerator
 	root.call("_play_sound", "slash", -15.0, 0.95 + rng.randf_range(-0.10, 0.10))
 	root.call("_play_sound", "enemy_hit", -10.0, 0.88 + rng.randf_range(-0.06, 0.06))
@@ -531,6 +559,8 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null:
 		health.apply_damage(damage)
+	_spawn_combat_impact(root, player_foot, ElementCatalogScript.damage_number_color(damage_result.element), true)
+	_request_screen_shake(root, BOSS_SLAM_SHAKE_STRENGTH, 0.22)
 	root.call("_mark_player_in_combat")
 	if bool(root.get("player_is_attacking")):
 		root.call("_interrupt_player_attack")

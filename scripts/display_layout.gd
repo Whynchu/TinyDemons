@@ -23,6 +23,7 @@ const HUD_ANCHORS := {
 	"dungeon_run": ANCHOR_LEFT,
 	"gold": ANCHOR_RIGHT,
 	"souls": ANCHOR_RIGHT,
+	"inventory_chest": ANCHOR_RIGHT,
 	"run_timer": ANCHOR_RIGHT,
 	"ability_icons": ANCHOR_LEFT,
 	# Compatibility alias for older callers; ability indicators now live beside

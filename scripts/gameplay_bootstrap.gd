@@ -3,6 +3,8 @@ class_name GameplayBootstrap
 
 const PLAYER_CHROMA_COMPONENT_SCRIPT = preload("res://scripts/player_chroma_component.gd")
 const SOUL_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/soul_pickup_controller.gd")
+const GOLD_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/gold_pickup_controller.gd")
+const FEEDBACK_ANIMATION_REGISTRY_SCRIPT = preload("res://scripts/feedback_animation_registry.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/player_aspect_ability_component.gd")
 const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/profile_runtime_controller.gd")
 const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/pickup_runtime_controller.gd")
@@ -104,6 +106,7 @@ func initialize(root: GameplayState) -> void:
 	root.screen_state_controller = _add_runtime_node(root, ScreenStateController, "ScreenStateController") as ScreenStateController
 	root.call("_apply_profile_to_runtime")
 	root.gameplay_frame_controller = _add_runtime_node(root, GameplayFrameController, "GameplayFrameController") as GameplayFrameController
+	root.feedback_animation_registry = FEEDBACK_ANIMATION_REGISTRY_SCRIPT.new() as FeedbackAnimationRegistry
 	root.performance_capture_service = _add_runtime_node(root, PERFORMANCE_CAPTURE_SERVICE_SCRIPT, "PerformanceCaptureService")
 	var effects_tuning := root.effects_tuning
 	root.walkable_area = _add_runtime_node(root, WalkableArea, "WalkableArea") as WalkableArea
@@ -136,10 +139,15 @@ func initialize(root: GameplayState) -> void:
 	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
 	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
+	root.hud_controller.feedback_animation_registry = root.feedback_animation_registry
 	root.dungeon_minimap_controller = _add_runtime_node(root, DUNGEON_MINIMAP_CONTROLLER_SCRIPT, "DungeonMinimapController", root.ui) as Node
 	root.sound_manager = _add_runtime_node(root, SoundManager, "SoundManager") as SoundManager
 	root.sound_manager.configure_settings(root.settings_service)
 	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
+	root.effects_spawner.configure_item_acquisition_delivery(root.ui, root.hud_controller, root.feedback_animation_registry, root.screen_state_controller, root.dungeon_minimap_controller)
+	root.pickup_runtime_controller.configure_acquisition_presentation(Callable(root.effects_spawner, "spawn_pickup_acquisition_delivery"))
+	var gold_pickup_controller := _add_runtime_node(root, GOLD_PICKUP_CONTROLLER_SCRIPT, "GoldPickupController", root.pickup_runtime_controller) as GoldPickupController
+	root.pickup_runtime_controller.gold_pickup_controller = gold_pickup_controller
 	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
 	root.chroma_pickup_controller = _add_runtime_node(root, ChromaPickupController, "ChromaPickupController") as ChromaPickupController
 	root.soul_pickup_controller = _add_runtime_node(root, SOUL_PICKUP_CONTROLLER_SCRIPT, "SoulPickupController") as SoulPickupController

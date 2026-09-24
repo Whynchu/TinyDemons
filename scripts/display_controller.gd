@@ -13,6 +13,7 @@ const TOP_BAR_HEIGHT := 16.0
 const BOTTOM_BAR_HEIGHT := 15.0
 const WORLD_CENTER := Vector2(120.0, 80.0)
 const SURFACE_POLL_INTERVAL := 0.25
+const SCREEN_SHAKE_MAX_OFFSET := 3.0
 
 var settings_service: SettingsService = null
 var current_view_size := DisplayLayout.NATIVE_SIZE
@@ -27,6 +28,14 @@ var _bottom_bar: ColorRect = null
 var _world_offset := Vector2.ZERO
 var _world_camera: Camera2D = null
 var _large_room_camera_active := false
+var _screen_shake_camera: Camera2D = null
+var _screen_shake_base_offset := Vector2.ZERO
+var _screen_shake_offset := Vector2.ZERO
+var _screen_shake_remaining := 0.0
+var _screen_shake_duration := 0.0
+var _screen_shake_strength := 0.0
+var _screen_shake_request_count := 0
+var _screen_shake_rng := RandomNumberGenerator.new()
 var _aspect_mode := "3:2"
 var _content_scale_aspect := Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT
 var _windowed_size_before_fixed_aspect := Vector2i.ZERO
@@ -110,6 +119,45 @@ func aspect_mode() -> String:
 
 func world_camera() -> Camera2D:
 	return _world_camera
+
+
+func screen_shake_remaining_value() -> float:
+	return _screen_shake_remaining
+
+
+func screen_shake_offset_value() -> Vector2:
+	return _screen_shake_offset
+
+
+func request_screen_shake(strength: float, duration: float) -> void:
+	if strength <= 0.0 or duration <= 0.0:
+		return
+	_bind_screen_shake_camera(_active_world_camera())
+	_screen_shake_strength = maxf(_screen_shake_strength, clampf(strength, 0.0, SCREEN_SHAKE_MAX_OFFSET))
+	_screen_shake_duration = maxf(_screen_shake_duration, duration)
+	_screen_shake_remaining = maxf(_screen_shake_remaining, duration)
+	_screen_shake_request_count += 1
+	_screen_shake_rng.seed = 0x5EED0000 + _screen_shake_request_count * 7919
+	_apply_screen_shake_offset()
+
+
+func tick_screen_shake(delta: float, hold_during_hitstop: bool = false) -> void:
+	_bind_screen_shake_camera(_active_world_camera())
+	if hold_during_hitstop:
+		_apply_screen_shake_offset(false)
+		return
+	_screen_shake_remaining = maxf(_screen_shake_remaining - maxf(delta, 0.0), 0.0)
+	if _screen_shake_remaining <= 0.0:
+		_screen_shake_strength = 0.0
+		_screen_shake_duration = 0.0
+	_apply_screen_shake_offset()
+
+
+func clear_screen_shake() -> void:
+	_screen_shake_remaining = 0.0
+	_screen_shake_duration = 0.0
+	_screen_shake_strength = 0.0
+	_apply_screen_shake_offset()
 
 
 func apply_settings() -> void:
@@ -353,6 +401,43 @@ func _sync_world_camera() -> void:
 		return
 	_world_camera.global_position = WORLD_CENTER
 	_world_camera.enabled = not _large_room_camera_active
+
+
+func _active_world_camera() -> Camera2D:
+	var viewport := get_viewport()
+	var camera := viewport.get_camera_2d() if viewport != null else null
+	if camera != null and is_instance_valid(camera):
+		return camera
+	if _world_camera != null and is_instance_valid(_world_camera):
+		return _world_camera
+	return null
+
+
+func _bind_screen_shake_camera(camera: Camera2D) -> void:
+	if _screen_shake_camera == camera:
+		return
+	if _screen_shake_camera != null and is_instance_valid(_screen_shake_camera):
+		_screen_shake_camera.offset = _screen_shake_base_offset
+	_screen_shake_camera = camera
+	_screen_shake_base_offset = camera.offset if camera != null else Vector2.ZERO
+
+
+func _apply_screen_shake_offset(randomize_offset: bool = true) -> void:
+	if _screen_shake_camera == null or not is_instance_valid(_screen_shake_camera):
+		_screen_shake_offset = Vector2.ZERO
+		return
+	if _screen_shake_remaining <= 0.0 or _screen_shake_duration <= 0.0 or _screen_shake_strength <= 0.0:
+		_screen_shake_offset = Vector2.ZERO
+		_screen_shake_camera.offset = _screen_shake_base_offset
+		return
+	if randomize_offset:
+		var progress := clampf(_screen_shake_remaining / _screen_shake_duration, 0.0, 1.0)
+		var envelope := pow(progress, 0.72)
+		var angle := _screen_shake_rng.randf_range(0.0, TAU)
+		var magnitude := _screen_shake_strength * envelope * _screen_shake_rng.randf_range(0.65, 1.0)
+		_screen_shake_offset = Vector2.from_angle(angle) * magnitude
+		_screen_shake_offset = Vector2(roundf(_screen_shake_offset.x), roundf(_screen_shake_offset.y))
+	_screen_shake_camera.offset = _screen_shake_base_offset + _screen_shake_offset
 
 
 func _ensure_world_camera() -> void:

@@ -273,6 +273,15 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 		damage = float(guard_result["health_damage"])
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null: health.apply_damage(damage)
+	if blocked or damage > 0.0:
+		var state := root as GameplayState
+		if state != null:
+			var impact_position := state._actor_foot(player)
+			var impact_color := Color8(148, 220, 255) if blocked else ElementCatalogScript.damage_number_color(damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL)
+			if state.effects_spawner != null:
+				state.effects_spawner.spawn_combat_hit_burst_from_root(root, impact_position, impact_color)
+			if state.display_controller != null:
+				state.display_controller.request_screen_shake(1.3 if blocked else 2.2, 0.10 if blocked else 0.16)
 	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
 	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); if damage > 0.0: root.call("_spawn_player_damage_number", damage, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, false); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
 	if blocked and combat != null:

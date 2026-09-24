@@ -16,6 +16,8 @@
 [ext_resource type="Texture2D" uid="uid://3tcdt6njrd5w" path="res://assets/artwork/magic button 16x16.png" id="18_magic"]
 [ext_resource type="Texture2D" uid="uid://ctn8lj5ucplqi" path="res://assets/artwork/imbue button 16x16.png" id="19_imbue"]
 [ext_resource type="Shader" uid="uid://citiu2ckjdol" path="res://shaders/ability_cooldown_icon.gdshader" id="20_cooldown_shader"]
+[ext_resource type="Texture2D" uid="uid://bdfi7adnkl6sx" path="res://assets/artwork/ChestGrey.png" id="21_inventory_chest_idle"]
+[ext_resource type="Texture2D" uid="uid://d2fqso8xjjnlu" path="res://assets/artwork/Chest.png" id="22_inventory_chest_receiving"]
 
 [sub_resource type="Image" id="Image_3pvjt"]
 data = {
@@ -369,6 +371,17 @@ region_rect = Rect2(0, 0, 63, 16)
 metadata/fill_track_start_x = 17.0
 metadata/fill_track_width = 46.0
 
+[node name="MpBarHighlight" type="Sprite2D" parent="PlayerStatus/Mana"]
+visible = false
+z_index = 2
+texture_filter = 1
+texture = SubResource("ImageTexture_vpp3t")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 63, 16)
+metadata/fill_track_start_x = 17.0
+metadata/fill_track_width = 46.0
+
 [node name="MpText" type="Sprite2D" parent="PlayerStatus/Mana" unique_id=722189651]
 visible = false
 z_index = 2
@@ -406,6 +419,21 @@ z_index = 2
 texture_filter = 1
 position = Vector2(7, 0)
 texture = SubResource("ImageTexture_8kotc")
+centered = false
+
+[node name="InventoryChest" type="Sprite2D" parent="."]
+z_index = 2
+texture_filter = 1
+position = Vector2(190, 2)
+texture = ExtResource("21_inventory_chest_idle")
+centered = false
+
+[node name="InventoryChestReceiving" type="Sprite2D" parent="."]
+visible = false
+z_index = 3
+texture_filter = 1
+position = Vector2(190, 2)
+texture = ExtResource("22_inventory_chest_receiving")
 centered = false
 
 [node name="RoomNumber" type="Sprite2D" parent="." unique_id=1691252500]

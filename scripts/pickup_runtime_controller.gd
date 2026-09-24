@@ -2,6 +2,7 @@ extends Node
 class_name PickupRuntimeController
 
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+const GOLD_PICKUP_TEXTURE: Texture2D = preload("res://assets/artwork/GoldFresh2.png")
 
 const CHEST_INTERACT_DISTANCE := 16.0
 const DEPTH_Z_SCALE := 10.0
@@ -27,6 +28,20 @@ const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
 const SOUL_PICKUP_AIR_TIME := 0.38
 const SOUL_PICKUP_LAUNCH_SPEED := 18.0
 const SOUL_PICKUP_LAUNCH_SPREAD := 10.0
+const GOLD_PICKUP_COLLECTION_DISTANCE := 12.0
+const GOLD_PICKUP_AIR_TIME := 0.38
+const GOLD_PICKUP_BOB_SPEED := 4.5
+const GOLD_PICKUP_BOB_AMPLITUDE := 1.5
+const GOLD_PICKUP_SCALE_PULSE := 0.08
+const GOLD_PICKUP_FRAME_TIME := 0.12
+const GOLD_DENOMINATIONS: Array[int] = [50, 25, 10, 5, 1]
+const GOLD_TIER_COLORS := {
+	50: Color8(255, 205, 117),
+	25: Color8(200, 184, 210),
+	10: Color8(239, 125, 87),
+	5: Color8(65, 166, 246),
+	1: Color8(171, 82, 54),
+}
 const ITEM_DROP_TEXTURE_PATHS := {
 	&"weapon": "res://assets/artwork/sword_pickup.png",
 	&"head": "res://assets/artwork/helm_pickup.png",
@@ -46,6 +61,8 @@ const ITEM_TYPE_LABELS := {
 
 var chroma_light_texture: Texture2D = null
 var soul_pickup_texture_cache: Texture2D = null
+var gold_pickup_controller: GoldPickupController = null
+var acquisition_presentation_handler: Callable
 
 
 func placeholder_item_texture() -> Texture2D:
@@ -79,6 +96,74 @@ func item_type_label(item: ItemInstance) -> String:
 
 func item_acquired_text(item: ItemInstance) -> String:
 	return "%s ACQUIRED!" % item_type_label(item)
+
+
+func gold_color(value: int) -> Color:
+	return GOLD_TIER_COLORS.get(value, GOLD_TIER_COLORS[1]) as Color
+
+
+func decompose_gold(amount: int) -> Array[int]:
+	var total := maxi(amount, 0)
+	if total <= 0:
+		return []
+	# Aim for a readable handful of coins while keeping the denomination ladder
+	# exact. The fallback below still preserves the total if a future reward band
+	# grows beyond the 16-coin presentation budget.
+	var minimum_count := mini(total, 4)
+	var target_count := clampi(int(round(float(total) / 20.0)), minimum_count, 10)
+	var combination: Array[int] = []
+	for count in range(target_count, 17):
+		combination = _gold_combination(total, count)
+		if not combination.is_empty():
+			return combination
+	for count in range(target_count - 1, 0, -1):
+		combination = _gold_combination(total, count)
+		if not combination.is_empty():
+			return combination
+	var remainder := total
+	var fallback: Array[int] = []
+	for denomination in GOLD_DENOMINATIONS:
+		while remainder >= denomination:
+			fallback.append(denomination)
+			remainder -= denomination
+	return fallback
+
+
+func _gold_combination(total: int, count: int) -> Array[int]:
+	if total <= 0 or count <= 0:
+		return []
+	var states: Dictionary = {0: []}
+	for _slot in count:
+		var next_states: Dictionary = {}
+		for sum_value in states.keys():
+			var previous_path: Array = states[sum_value] as Array
+			for denomination in GOLD_DENOMINATIONS:
+				var next_sum := int(sum_value) + denomination
+				if next_sum > total or next_states.has(next_sum):
+					continue
+				var next_path: Array = previous_path.duplicate()
+				next_path.append(denomination)
+				next_states[next_sum] = next_path
+		states = next_states
+		if states.is_empty():
+			return []
+	var found: Variant = states.get(total, null)
+	if not (found is Array):
+		return []
+	var result: Array[int] = []
+	var found_array := found as Array
+	for value in found_array:
+		result.append(int(value))
+	return result
+
+
+func configure_acquisition_presentation(handler: Callable) -> void:
+	acquisition_presentation_handler = handler
+
+
+func _present_acquisition(result: PickupAcquisitionResult) -> void:
+	if result != null and result.succeeded() and acquisition_presentation_handler.is_valid():
+		acquisition_presentation_handler.call(result)
 
 
 func _safe_drop_position(root: Object, point: Vector2) -> Vector2:
@@ -470,6 +555,179 @@ func update_world_item_drops(root: Object, delta: float) -> void:
 	_update_world_item_labels(root)
 
 
+func _gold_presentation_texture(root: GameplayState) -> Texture2D:
+	var hud := root.hud_controller
+	if hud != null and not hud.gold_animation_frames.is_empty():
+		return hud.gold_animation_frames[0]
+	return GOLD_PICKUP_TEXTURE
+
+
+func _create_gold_pickup(root: GameplayState, value: int, position: Vector2, launch_seed: int) -> Sprite2D:
+	var sprite := Sprite2D.new()
+	sprite.name = "GoldPickup"
+	sprite.texture = GOLD_PICKUP_TEXTURE
+	sprite.hframes = 4
+	sprite.vframes = 1
+	sprite.frame = 0
+	sprite.centered = true
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_as_relative = false
+	sprite.modulate = gold_color(value)
+	sprite.set_meta("gold_value", value)
+	var launch_rng := RandomNumberGenerator.new()
+	launch_rng.seed = launch_seed
+	sprite.set_meta("gold_bob_phase", launch_rng.randf_range(0.0, TAU))
+	sprite.set_meta("gold_bob_time", 0.0)
+	sprite.set_meta("gold_base_position", position)
+	sprite.set_meta("gold_last_valid_position", position)
+	root.add_child(sprite)
+	sprite.global_position = position
+	return sprite
+
+
+func spawn_chest_gold_drops(root: GameplayState, amount: int) -> void:
+	clear_gold_pickups(root)
+	var values := decompose_gold(amount)
+	var controller := gold_pickup_controller
+	if values.is_empty() or controller == null:
+		return
+	var chest_rect := _chest_drop_rect(root)
+	var reserved_landings: Array[Vector2] = []
+	var base_seed := root.current_dungeon_seed ^ String(root.current_room_id).hash() ^ amount * 7919
+	for index in values.size():
+		var value := values[index]
+		var launch_rng := RandomNumberGenerator.new()
+		launch_rng.seed = base_seed + index * 104729
+		var launch_position := _chest_drop_launch_position(root, chest_rect)
+		var landing_position := _chest_drop_landing_position(root, chest_rect, index, values.size(), reserved_landings, launch_rng)
+		reserved_landings.append(landing_position)
+		var sprite := _create_gold_pickup(root, value, launch_position, base_seed + index * 104729)
+		sprite.set_meta("gold_air_time", GOLD_PICKUP_AIR_TIME)
+		sprite.set_meta("gold_flight_elapsed", 0.0)
+		sprite.set_meta("gold_launch_position", launch_position)
+		sprite.set_meta("gold_landing_position", landing_position)
+		sprite.set_meta("gold_trajectory_mode", &"chest_arc")
+		controller.add_pickup(sprite, value, Vector2.ZERO, GOLD_PICKUP_AIR_TIME)
+
+
+func restore_gold_pickups(root: GameplayState, saved_pickups: Array) -> void:
+	clear_gold_pickups(root)
+	var controller := gold_pickup_controller
+	if controller == null:
+		return
+	for index in saved_pickups.size():
+		var saved_value: Variant = saved_pickups[index]
+		if not (saved_value is Dictionary):
+			continue
+		var saved := saved_value as Dictionary
+		var value := maxi(int(saved.get("value", 1)), 1)
+		var position := _safe_drop_position(root, saved.get("position", root.chest_start_position) as Vector2)
+		var sprite := _create_gold_pickup(root, value, position, root.current_dungeon_seed + index * 104729)
+		sprite.set_meta("gold_air_time", 0.0)
+		sprite.set_meta("gold_flight_elapsed", 0.0)
+		sprite.set_meta("gold_launch_position", position)
+		sprite.set_meta("gold_landing_position", position)
+		sprite.set_meta("gold_trajectory_mode", &"landed")
+		controller.add_pickup(sprite, value, Vector2.ZERO, 0.0)
+
+
+func clear_gold_pickups(_root: GameplayState) -> void:
+	var controller := gold_pickup_controller
+	if controller != null:
+		controller.clear()
+
+
+func update_gold_pickups(root: GameplayState, delta: float) -> void:
+	var controller := gold_pickup_controller
+	if controller == null:
+		return
+	var index := controller.sprites.size() - 1
+	while index >= 0:
+		var pickup := controller.sprites[index]
+		if pickup == null or not is_instance_valid(pickup):
+			controller.remove(index)
+			index -= 1
+			continue
+		var value := controller.values[index]
+		var air_time := controller.air_times[index]
+		if air_time > 0.0:
+			air_time = maxf(air_time - delta, 0.0)
+			var flight_elapsed := minf(float(pickup.get_meta("gold_flight_elapsed", 0.0)) + delta, GOLD_PICKUP_AIR_TIME)
+			var flight_t := clampf(flight_elapsed / GOLD_PICKUP_AIR_TIME, 0.0, 1.0)
+			var launch_position: Vector2 = pickup.get_meta("gold_launch_position", pickup.global_position) as Vector2
+			var landing_position: Vector2 = pickup.get_meta("gold_landing_position", pickup.global_position) as Vector2
+			var arc_position := launch_position.lerp(landing_position, flight_t)
+			arc_position.y -= sin(flight_t * PI) * ITEM_DROP_ARC_HEIGHT
+			pickup.global_position = arc_position
+			pickup.set_meta("gold_flight_elapsed", flight_elapsed)
+			if air_time <= 0.0:
+				pickup.global_position = landing_position
+				pickup.set_meta("gold_base_position", landing_position)
+				pickup.set_meta("gold_last_valid_position", landing_position)
+		else:
+			var base_position: Vector2 = pickup.get_meta("gold_base_position", pickup.global_position) as Vector2
+			if not _drop_position_is_walkable(root, base_position):
+				base_position = _safe_drop_position(root, pickup.global_position)
+			pickup.set_meta("gold_base_position", base_position)
+			pickup.set_meta("gold_last_valid_position", base_position)
+			var bob_time := float(pickup.get_meta("gold_bob_time", 0.0)) + delta
+			pickup.set_meta("gold_bob_time", bob_time)
+			var bob_phase := float(pickup.get_meta("gold_bob_phase", 0.0))
+			var bobbed_position := base_position + Vector2(0.0, sin(bob_time * GOLD_PICKUP_BOB_SPEED + bob_phase) * GOLD_PICKUP_BOB_AMPLITUDE)
+			pickup.global_position = bobbed_position if root._is_slime_walkable_point(bobbed_position) else base_position
+			var player_foot: Vector2 = root._actor_foot(root.player)
+			if player_foot.distance_to(pickup.global_position) <= GOLD_PICKUP_COLLECTION_DISTANCE:
+				collect_gold_pickup(root, index)
+				index -= 1
+				continue
+		controller.air_times[index] = air_time
+		var animation_time := fmod(float(pickup.get_meta("gold_bob_time", 0.0)), GOLD_PICKUP_FRAME_TIME * 4.0)
+		pickup.frame = mini(int(animation_time / GOLD_PICKUP_FRAME_TIME), 3)
+		var bob_phase_for_scale := float(pickup.get_meta("gold_bob_phase", 0.0))
+		pickup.scale = Vector2.ONE * (1.0 + sin(float(pickup.get_meta("gold_bob_time", 0.0)) * GOLD_PICKUP_BOB_SPEED + bob_phase_for_scale) * GOLD_PICKUP_SCALE_PULSE)
+		pickup.modulate = gold_color(value)
+		pickup.z_index = int(round(pickup.global_position.y * DEPTH_Z_SCALE)) + 2
+		index -= 1
+
+
+func collect_gold_pickup(root: GameplayState, index: int) -> PickupAcquisitionResult:
+	var result := PickupAcquisitionResult.new()
+	var controller := gold_pickup_controller
+	if controller == null or index < 0 or index >= controller.values.size() or root.player_profile == null:
+		return result
+	var value := controller.values[index]
+	var pickup := controller.sprites[index]
+	root.player_profile.gold += value
+	root._save_player_profile()
+	result.status = PickupAcquisitionResult.Status.ACQUIRED
+	result.kind = PickupAcquisitionResult.Kind.GOLD
+	result.value = value
+	result.source_position = pickup.global_position if pickup != null and is_instance_valid(pickup) else root._actor_foot(root.player)
+	result.presentation_texture = _gold_presentation_texture(root)
+	result.display_text = "+%d GOLD" % value
+	result.accent_color = gold_color(value)
+	result.target_key = &"gold"
+	root._play_sound("item_pickup", -12.0, 0.9 + float(value) / 100.0)
+	controller.remove(index)
+	_present_acquisition(result)
+	return result
+
+
+func settle_gold_pickups(root: GameplayState) -> int:
+	var controller := gold_pickup_controller
+	if controller == null:
+		return 0
+	var total := 0
+	for value in controller.values:
+		total += value
+	if total > 0 and root.player_profile != null:
+		root.player_profile.gold += total
+		root._save_player_profile()
+		root._update_gold_indicator()
+	controller.clear()
+	return total
+
+
 func _world_item_drop_is_interactable(root: Object, drop: Dictionary) -> bool:
 	var sprite := drop.get("sprite") as Sprite2D
 	if sprite == null or not is_instance_valid(sprite) or float(drop.get("air_time", 0.0)) > 0.0:
@@ -519,16 +777,25 @@ func can_interact_with_world_item(root: Object) -> bool:
 	return not _interactable_world_item_drop(root).is_empty()
 
 
-func collect_world_item_drop(root: Object) -> bool:
+func collect_world_item_drop(root: Object) -> PickupAcquisitionResult:
+	var result := PickupAcquisitionResult.new()
 	var drop := _interactable_world_item_drop(root)
 	var sprite := drop.get("sprite") as Sprite2D
 	var item := drop.get("item") as ItemInstance
 	if sprite == null or not is_instance_valid(sprite) or item == null or root.player_profile == null:
-		return false
+		return result
 	if not root.player_profile.grant_item(item):
-		return false
+		return result
+	result.status = PickupAcquisitionResult.Status.ACQUIRED
+	result.kind = PickupAcquisitionResult.Kind.ITEM
+	result.item = item
+	result.source_position = sprite.global_position
+	result.presentation_texture = sprite.texture
+	result.display_text = item_acquired_text(item)
+	result.accent_color = ItemCatalog.new().rarity_color(item.rarity)
+	result.target_key = &"inventory_chest"
 	root.call("_save_player_profile")
-	var acquired_text := item_acquired_text(item)
+	var acquired_text := result.display_text
 	var acquired_color := Color("ffd866")
 	var acquired_origin: Vector2 = root.call("_player_floating_number_origin", acquired_text, acquired_color) as Vector2
 	root.call("_spawn_floating_number", acquired_origin + Vector2(0, -20), 0, Vector2(0, -12), false, false, acquired_color, acquired_text)
@@ -544,7 +811,8 @@ func collect_world_item_drop(root: Object) -> bool:
 	sprite.queue_free()
 	if label != null and is_instance_valid(label):
 		label.queue_free()
-	return true
+	_present_acquisition(result)
+	return result
 
 
 func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
@@ -640,24 +908,39 @@ func update_chroma_pickups(root: Object, delta: float) -> void:
 		index -= 1
 
 
-func collect_chroma_pickup(root: Object, index: int) -> void:
+func collect_chroma_pickup(root: Object, index: int) -> PickupAcquisitionResult:
+	var result := PickupAcquisitionResult.new()
+	if index < 0 or index >= root.chroma_pickup_controller.values.size():
+		return result
 	var value: int = root.chroma_pickup_controller.values[index]
 	var pickup: Sprite2D = root.chroma_pickup_controller.sprites[index]
 	var restored := false
 	if root.player_chroma_component != null and is_instance_valid(root.player_chroma_component):
 		restored = bool(root.player_chroma_component.call("restore_neutral_chroma", value))
 		root.call("_update_player_mp_ui")
+	if not restored:
+		return result
 	if restored:
 		# A successful pickup may wake a depleted bound identity or return a
 		# temporary fusion to its permanent aspect. Refresh the player before
 		# choosing effect colors so the burst and HUD agree with the new state.
 		root.call("_sync_chroma_presentation")
 		var chroma_color := _chroma_color(root)
+		result.status = PickupAcquisitionResult.Status.ACQUIRED
+		result.kind = PickupAcquisitionResult.Kind.CHROMA
+		result.value = value
+		result.source_position = pickup.global_position if pickup != null and is_instance_valid(pickup) else root.call("_actor_foot", root.player) as Vector2
+		result.presentation_texture = pickup.texture if pickup != null and is_instance_valid(pickup) else null
+		result.display_text = "+%d CHROMA" % value
+		result.accent_color = chroma_color
+		result.target_key = &"chroma"
 		if pickup != null and is_instance_valid(pickup):
 			root.call("_spawn_chroma_pickup_burst", pickup.global_position, chroma_color)
 		root.call("_spawn_floating_number", root.call("_actor_foot", root.player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, chroma_color, "+%d CHROMA" % value)
 		root.call("_play_sound", "item_pickup", -12.0, 1.15)
 		remove_chroma_pickup(root, index)
+		_present_acquisition(result)
+	return result
 
 
 func _chroma_palette_name(root: Object) -> String:
@@ -764,21 +1047,36 @@ func update_soul_pickups(root: Object, delta: float) -> void:
 		index -= 1
 
 
-func collect_soul_pickup(root: Object, index: int) -> void:
+func collect_soul_pickup(root: Object, index: int) -> PickupAcquisitionResult:
+	var result := PickupAcquisitionResult.new()
 	if index < 0 or index >= root.soul_pickup_controller.values.size():
-		return
+		return result
 	var value: int = root.soul_pickup_controller.values[index]
 	if root.player_profile == null:
 		remove_soul_pickup(root, index)
-		return
+		return result
 	root.player_profile.add_souls(value)
 	root.call("_save_player_profile")
-	root.call("_update_soul_indicator")
 	var acquired_text := "+%d SOUL%s" % [value, "" if value == 1 else "S"]
+	result.status = PickupAcquisitionResult.Status.ACQUIRED
+	result.kind = PickupAcquisitionResult.Kind.SOUL
+	result.value = value
+	var pickup := root.soul_pickup_controller.sprites[index] as Sprite2D if index < root.soul_pickup_controller.sprites.size() else null
+	var source_position := pickup.global_position if pickup != null and is_instance_valid(pickup) else root.call("_actor_foot", root.player) as Vector2
+	result.source_position = source_position
+	result.presentation_texture = pickup.texture if pickup != null and is_instance_valid(pickup) else soul_pickup_texture()
+	result.display_text = acquired_text
+	result.accent_color = SOUL_COLOR
+	result.target_key = &"souls"
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	if effects != null:
+		effects.spawn_soul_pickup_burst_from_root(root, source_position, SOUL_COLOR)
 	var acquired_origin: Vector2 = root.call("_player_floating_number_origin", acquired_text, SOUL_COLOR) as Vector2
 	root.call("_spawn_floating_number", acquired_origin + Vector2(0, -18), 0, Vector2(0, -12), false, false, SOUL_COLOR, acquired_text)
 	root.call("_play_sound", "item_pickup", -10.0, 1.0)
 	remove_soul_pickup(root, index)
+	_present_acquisition(result)
+	return result
 
 
 func remove_soul_pickup(root: Object, index: int) -> void:
