@@ -152,12 +152,15 @@ func apply_bar_colors(_player_color: Color = XP_COLOR, chroma_color: Color = MP_
 	var xp_fill := get_node_or_null("PlayerStatus/LevelXp/XpBarFill") as Sprite2D
 	var hp_fill := get_node_or_null("PlayerStatus/Health/HpBarFill") as Sprite2D
 	var mp_fill := get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D
+	var mp_highlight := get_node_or_null("PlayerStatus/Mana/MpBarHighlight") as Sprite2D
 	if xp_fill != null:
 		xp_fill.texture = _solid_texture(_xp_source, XP_COLOR)
 	if hp_fill != null:
 		hp_fill.texture = _solid_texture(_hp_source, HP_COLOR)
 	if mp_fill != null:
 		mp_fill.texture = _solid_texture(_mp_source, chroma_color)
+	if mp_highlight != null:
+		mp_highlight.texture = _solid_texture(_mp_source, chroma_color)
 	for frame_path in ["PlayerStatus/LevelXp/XpBar", "PlayerStatus/Health/HpBar", "PlayerStatus/Mana/MpBar"]:
 		var frame := get_node_or_null(frame_path) as Sprite2D
 		if frame != null:

@@ -1,6 +1,7 @@
 extends Node
 class_name EffectsSpawner
 
+const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
 const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.png")
 # The supplied 3x5 plus artwork is reused for every pixel-text plus glyph.
 
@@ -53,7 +54,8 @@ func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
 	var tuning := root.get("effects_tuning") as EffectsTuning
 	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
 	var source_texture: Texture2D = occlusion.original_actor_textures.get(slime, slime.texture)
-	spawn_slime_death_particles(root, source_texture, slime.global_position, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"))
+	var palette := SlimeVisualComponent.frame_palette_for(slime)
+	spawn_slime_death_particles(root, source_texture, slime.global_position, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"), palette)
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
@@ -800,7 +802,7 @@ func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vect
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": effect_tag})
 
 
-func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, speed_min: float, speed_max: float, lifetime: float, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:
+func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, speed_min: float, speed_max: float, lifetime: float, random_source: RandomNumberGenerator, pixel_texture: Callable, palette_name: String = "green") -> void:
 	if texture == null:
 		return
 	var image := texture.get_image()
@@ -815,7 +817,7 @@ func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vec
 	for index in mini(count, pixels.size()):
 		var source_pixel := pixels[index]
 		var particle := Sprite2D.new()
-		particle.texture = pixel_texture.call(image.get_pixelv(source_pixel)) as Texture2D
+		particle.texture = pixel_texture.call(slime_death_particle_color(image.get_pixelv(source_pixel), palette_name)) as Texture2D
 		particle.centered = false
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
@@ -824,6 +826,38 @@ func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vec
 		particle.global_position = position + Vector2(source_pixel) + Vector2(0, -2)
 		var direction := -1.0 if float(source_pixel.x) < float(image.get_width()) * 0.5 else 1.0
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(direction * random_source.randf_range(speed_min * 0.5, speed_max * 0.75), random_source.randf_range(-10.0, -2.0)), "timer": lifetime, "gravity": 30.0})
+
+
+static func slime_death_particle_color(source_color: Color, palette_name: String) -> Color:
+	if source_color.a <= 0.0:
+		return source_color
+	var palette := palette_name if PaletteLibrary.PALETTE_NAMES.has(palette_name) else "green"
+	var source_colors: Array[Color] = [
+		ActorPaletteMaterialScript.SLIME_SOURCE_SHADOW,
+		ActorPaletteMaterialScript.SLIME_SOURCE_NORMAL,
+		ActorPaletteMaterialScript.SLIME_SOURCE_ACCENT,
+		Color.WHITE,
+	]
+	var target_colors: Array[Color] = [
+		PaletteLibrary.shadow(palette),
+		PaletteLibrary.normal(palette),
+		PaletteLibrary.accent(palette),
+		Color.WHITE,
+	]
+	var source_rgb := Vector3(source_color.r, source_color.g, source_color.b)
+	var nearest_index := -1
+	var nearest_distance := INF
+	for index in source_colors.size():
+		var candidate := source_colors[index]
+		var candidate_rgb := Vector3(candidate.r, candidate.g, candidate.b)
+		var distance := source_rgb.distance_squared_to(candidate_rgb)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			nearest_index = index
+	if nearest_index < 0 or nearest_distance > 0.0002:
+		return source_color
+	var target := target_colors[nearest_index]
+	return Color(target.r, target.g, target.b, source_color.a)
 
 
 func spawn_chest_evaporation_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, lifetime_min: float, lifetime_max: float, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:

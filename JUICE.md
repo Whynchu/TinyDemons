@@ -103,7 +103,8 @@ acknowledgment legs, including their collection feedback where applicable.
 - Knockback: exists for player and enemies.
 - Damage numbers: exist with shadow and critical outline; they now scale-pop on
   spawn, with a heavier critical profile.
-- Death: enemy pixel-debris and player death sequence exist.
+- Death: enemy pixel-debris and player death sequence exist; enemy debris now
+  follows the active slime palette instead of always using the green source art.
 - Regular-hit particle burst: element-colored impact sparks exist for landed
   player hits, guard impacts, enemy hits, and boss slams.
 - Screen shake: exists through the frame-driven world camera seam, with bounded

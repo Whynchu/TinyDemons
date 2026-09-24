@@ -325,7 +325,6 @@ func _acknowledge_chroma_reaction(color: Color) -> void:
 	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
 		var texture_size := chroma_delivery_target.texture.get_size() if chroma_delivery_target.texture != null else Vector2(82, 16)
 		chroma_highlight_target.texture = _solid_texture(Vector2i(texture_size), chroma_reaction_color)
-		chroma_highlight_target.region_rect = chroma_delivery_target.region_rect
 		chroma_highlight_target.visible = true
 		chroma_highlight_target.modulate = Color.WHITE
 	if feedback_animation_registry == null:
@@ -339,11 +338,11 @@ func _acknowledge_chroma_reaction(color: Color) -> void:
 
 
 func _update_chroma_delivery_reaction(progress: float) -> void:
-	if chroma_delivery_target == null or not is_instance_valid(chroma_delivery_target):
-		return
 	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
-		chroma_highlight_target.visible = true
-		chroma_highlight_target.modulate = Color(1.0, 1.0, 1.0, 1.0 - progress)
+		# The highlight is a health-style transition fill behind the regular bar.
+		# Its visibility and clipped region are owned by set_chroma_bar_values;
+		# this reaction only keeps the authored accent opaque while it catches up.
+		chroma_highlight_target.modulate = Color.WHITE
 
 
 func _finish_chroma_delivery_reaction() -> void:
@@ -463,16 +462,24 @@ func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 		var source_width := maxf(track_start + track_width, track_start)
 		var visible_width := clampf(track_start + roundf(track_width * clamped_ratio), 0.0, source_width)
 		fill.region_rect = Rect2(Vector2.ZERO, Vector2(visible_width, fill_size.y))
-		_sync_chroma_highlight_region(fill)
 		return
 	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clamped_ratio, fill_size.y))
-	_sync_chroma_highlight_region(fill)
 
 
-func _sync_chroma_highlight_region(fill: Sprite2D) -> void:
-	if fill != chroma_delivery_target or chroma_highlight_target == null or not is_instance_valid(chroma_highlight_target) or not chroma_highlight_target.visible:
+func set_chroma_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, chroma: float, display_chroma: float, max_chroma: float) -> void:
+	if main_fill == null or max_chroma <= 0.0:
 		return
-	chroma_highlight_target.region_rect = fill.region_rect
+	var chroma_ratio := clampf(chroma / max_chroma, 0.0, 1.0)
+	var display_ratio := clampf(display_chroma / max_chroma, 0.0, 1.0)
+	var main_ratio := display_ratio if display_chroma < chroma else chroma_ratio
+	var transition_ratio := chroma_ratio if display_chroma < chroma else display_ratio
+	set_fill_ratio(main_fill, fill_size, main_ratio)
+	if transition_fill == null:
+		return
+	set_fill_ratio(transition_fill, fill_size, transition_ratio)
+	var transition_active := not is_equal_approx(main_ratio, transition_ratio)
+	transition_fill.visible = transition_active
+	transition_fill.modulate = Color.WHITE
 
 
 func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, health: float, display_health: float, max_health: float) -> void:

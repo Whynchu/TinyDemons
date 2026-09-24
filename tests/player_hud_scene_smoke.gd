@@ -89,7 +89,13 @@ func _initialize() -> void:
 	_expect(inventory_chest_receiving != null and not inventory_chest_receiving.visible, "inventory chest receiving layer starts hidden", failures)
 	_expect(inventory_chest != null and inventory_chest.position.is_equal_approx(Vector2(190, 2)), "inventory chest keeps its authored HUD position", failures)
 	var mp_highlight := hud.get_node_or_null("PlayerStatus/Mana/MpBarHighlight") as Sprite2D
-	_expect(mp_highlight != null and not mp_highlight.visible and mp_highlight.z_index > (fills[2] as Sprite2D).z_index, "Chroma highlight layer starts hidden above the MP fill", failures)
+	_expect(mp_highlight != null and not mp_highlight.visible and mp_highlight.z_index < (fills[2] as Sprite2D).z_index, "Chroma highlight layer starts hidden behind the MP fill", failures)
+	if mp_highlight != null and fills[2] != null:
+		hud_controller.set_chroma_bar_values(fills[2] as Sprite2D, mp_highlight, Vector2(82, 16), 40.0, 20.0, 100.0)
+		_expect(is_equal_approx((fills[2] as Sprite2D).region_rect.size.x, 26.0), "Chroma regular fill stays at the displayed value while gaining", failures)
+		_expect(is_equal_approx(mp_highlight.region_rect.size.x, 35.0) and mp_highlight.visible, "Chroma gain highlights only the newly filled segment", failures)
+		hud_controller.set_chroma_bar_values(fills[2] as Sprite2D, mp_highlight, Vector2(82, 16), 40.0, 40.0, 100.0)
+		_expect(not mp_highlight.visible, "Chroma highlight hides when the regular fill catches up", failures)
 	var target_health_text := hud.get_node_or_null("TargetHud/TargetHealthText") as Sprite2D
 	_expect(target_health_text != null and target_health_text.z_index > 3, "enemy health text is above the health-bar layers", failures)
 	var target := Sprite2D.new()
