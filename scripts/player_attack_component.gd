@@ -2,6 +2,7 @@ extends Node
 class_name PlayerAttackComponent
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const CircularInputRecognizerScript = preload("res://scripts/circular_input_recognizer.gd")
 
 ## Editor-facing attack tuning.
@@ -158,8 +159,11 @@ func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animati
 	if new_kind == AttackKind.CHARGED_ATTACK2:
 		var chroma := root.player_chroma_component
 		var beam_palette := String(root.current_player_palette_name)
+		var beam_feedback_palette := AspectCatalogScript.palette_for_flame(StringName(chroma.call("aspect_name"))) if chroma != null else "grey"
 		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", sword_beam_chroma_cost)):
 			root._sync_chroma_presentation()
+			if root.hud_controller != null:
+				root.hud_controller.acknowledge_chroma_use(PaletteLibrary.accent(beam_feedback_palette if not beam_feedback_palette.is_empty() else "grey"))
 			var direction: Vector2 = root._player_facing_vector()
 			if direction.length_squared() <= 0.0001:
 				direction = Vector2.LEFT if root.player_attack_flip_h else Vector2.RIGHT

@@ -94,26 +94,29 @@ The selected first slice. Highest visibility, no new architecture.
 
 - **Delivery-to-HUD.** On collection, a transient icon arcs from the world
   position to the target HUD node's screen position, then fires the HUD
-  acknowledgment. Applies to Chroma, Souls, and items.
-- **Gold becomes a world collectable.** The chest rolls its total from
+  acknowledgment. Applies to Chroma, Souls, and items. Chroma's landing
+  acknowledgment uses the active Chroma accent on the MP highlight layer.
+- **Gold becomes a world collectable.** Landed. The chest rolls its total from
   `_chest_gold_reward`, then decomposes it into denomination coins that arc out,
-  rest, bob, and auto-collect on proximity, reusing the chroma pickup path and
-  the `GoldFresh2.png` spin frames (`hud_controller.gd:815`) as the world sprite.
+  rest, bob, spin, and auto-collect on proximity, reusing the shared pickup
+  delivery path and the `GoldFresh2.png` spin frames as the world sprite.
 - **Payout invariant.** Coins sum to exactly the value `_chest_gold_reward`
   returns today. No economy change, no save migration. Value is granted per
   coin on collection; to keep the payout identical when a player leaves coins
   behind, remaining coins are vacuum-collected or granted on room exit.
-- **Denomination ladder.** Value maps to color, rupee-style, calibrated to the
+- **Denomination ladder.** Implemented as 1 / 5 / 10 / 25 / 50. Value maps to color, rupee-style, calibrated to the
   observed total range (base `CHEST_REWARD_GOLD = 100`, rolled ×0.75–1.30,
   ×run-rank/loot up to 1.90, ×0.50 regular treasure → roughly 40–250). Proposed
   tiers: copper = 1, blue = 5, red = 10, purple = 25, gold = 50.
-- **Decomposition rule.** Bias toward a satisfying coin count (roughly 4–10)
-  rather than pure largest-first, so a chest sprinkles coins instead of dropping
-  two. Sum must remain exact; cap total coins spawned at 12–16 so a large chest
-  does not flood the room.
-- **Burst parity.** Souls gain a collection burst matching Chroma.
-- **HUD acknowledgment.** Gold and soul counters count up and scale-punch;
-  the Chroma/MP fill tweens instead of snapping.
+- **Decomposition rule.** Implemented with a deterministic exact-sum solver that
+  targets roughly 4–10 coins, so a chest sprinkles coins instead of dropping
+  two. Normal reward bands stay within the 16-coin presentation budget; the
+  fallback remains exact if a future economy band grows beyond it.
+- **Burst parity.** Souls now gain a purple flash and splash collection burst
+  matching the Chroma feedback path.
+- **HUD acknowledgment.** Gold and Souls count up and scale-punch after
+  delivery; the Chroma/MP fill eases instead of snapping and flashes its active
+  accent when Chroma is delivered or spent.
 
 Owner: `pickup_runtime_controller.gd`, `chest_controller.gd`,
 `effects_spawner.gd`, `hud_controller.gd`.
@@ -127,16 +130,19 @@ Resolved decision: gold auto-collects on proximity, chroma-consistent.
 
 ### J2 — Combat impact
 
+The first combat-impact slice is now landed: screen shake, impact sparks, and
+damage-number scale pops are frame-scheduled and characterized.
+
 Particle work follows the **information vs texture** split: particles add
 *texture* (sparks, embers, dust, trails, debris) while information (flash,
 damage number, crit outline, bars, knockback) stays deterministic.
 
-- Regular-hit particle burst (first use of the new emitter path).
+- Regular-hit particle burst (first use of the shared colored burst path).
 - Damage-number scale pop.
-- Screen-shake via the camera node introduced in J4, or a temporary
-  world-layer offset if J2 lands first. Shake is a decaying value driven by the
-  frame schedule, not a new `_process()`.
-- Critical-hit distinction by weight and camera, not color alone.
+- Screen-shake through the existing active `Camera2D`. Shake is a bounded,
+  decaying value driven by the frame schedule, not a new `_process()`; it holds
+  its offset during hitstop.
+- Critical-hit distinction by burst density and camera weight, not color alone.
 - Hitstop duration/curve tuning review (no balance change to damage).
 
 Owner: `combat_runtime_controller.gd`, `effects_spawner.gd`,
@@ -159,11 +165,10 @@ Owner: `hud_controller.gd`, `magic_runtime_controller.gd`, shop layouts.
 
 ### J4 — Transitions and camera
 
-- Introduce a real gameplay `Camera2D` as the single owner of screen shake,
-  lookahead, and impact zoom. This is a **display-layer restructure**: the world
-  currently renders through `BackgroundCanvas`/`InterfaceCanvas` with no camera
-  (`main.tscn`), so characterize the current layer/offset behavior before
-  moving the world under a camera.
+- Extend the existing `display_controller.gd` camera seam with large-room
+  lookahead and optional subtle impact zoom. The normal-room camera is already
+  centered without changing authored world coordinates; screen shake landed in
+  J2 without a display-layer restructure.
 - Room-to-room wipe or fade replacing the instant swap.
 - Large-room camera lookahead; optional subtle impact zoom.
 
@@ -280,18 +285,16 @@ owners.
 
 ## Animation mechanics contract
 
-Gameplay feedback animation (count-ups, HUD punches, delivery arcs, shake
-decay, scale pops) is ticked once per frame from `gameplay_frame_controller.gd`
-through a shared registry, mirroring how `effects_spawner.gd` already hand-rolls
-particle state. This keeps one timing authority and avoids SceneTree tweens
-continuing to run during hitstop.
+Gameplay feedback animation (count-ups, HUD punches, delivery arcs, and scale
+pops) is ticked once per frame from `gameplay_frame_controller.gd` through a
+shared registry. Camera shake uses the same frame entry point and is owned by
+`display_controller.gd`; both paths avoid SceneTree tweens and hold or decay
+according to the hitstop contract.
 
 ## Open decisions
 
-1. Confirm the proposed denomination ladder (1 / 5 / 10 / 25 / 50) and
-   coin-spawn cap as tuning values during J1; they are presentational and can
-   change without touching the payout.
-2. Confirm the room-exit safeguard (vacuum remaining coins vs grant remainder)
-   that preserves the current payout when a player leaves coins behind (J1).
+1. The denomination ladder and exact-sum decomposition are implemented as
+   presentational tuning; they can change without touching the payout.
+2. Room exit grants remaining coins so the chest payout cannot be lost.
 3. Haptics control: keep the existing on/off `vibration` toggle, or add a
    magnitude/intensity setting for both channels (J7).

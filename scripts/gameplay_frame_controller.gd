@@ -234,6 +234,7 @@ func magic_context(root: GameplayState) -> MagicRuntimeContext:
 	context.pixel_text_texture = Callable(root, "_pixel_text_texture")
 	context.start_player_palette_flash = Callable(root, "_start_player_palette_flash")
 	context.sync_chroma_presentation = Callable(root, "_sync_chroma_presentation")
+	context.acknowledge_chroma_feedback = Callable(root.hud_controller, "acknowledge_chroma_use") if root.hud_controller != null else Callable()
 	context.update_player_mp_ui = Callable(root, "_update_player_mp_ui")
 	context.update_mp_desaturation = Callable(root, "_update_mp_desaturation")
 	context.snap_half_pixel = Callable(root, "_snap_half_pixel")
@@ -413,6 +414,8 @@ func _update_magic_input(root: GameplayState, delta: float) -> void:
 
 
 func tick(root: GameplayState, delta: float) -> void:
+	if root.display_controller != null:
+		root.display_controller.tick_screen_shake(delta, root.hitstop_timer > 0.0)
 	root._update_mp_desaturation()
 	root._update_music_state()
 	if root.boot_active:
@@ -473,6 +476,8 @@ func tick(root: GameplayState, delta: float) -> void:
 	var minimap := root.dungeon_minimap_controller
 	var input_router := root.input_router
 	if minimap != null and bool(minimap.call("is_map_open")):
+		if root.effects_spawner != null:
+			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		if input_router != null and input_router.just_pressed(&"pause"):
 			minimap.call("close_map")
 			root._open_pause_menu()
@@ -482,6 +487,8 @@ func tick(root: GameplayState, delta: float) -> void:
 	if minimap != null and input_router != null and input_router.just_pressed(&"open_minimap") and bool(minimap.call("can_open_map", root)):
 		if bool(minimap.call("open_map", root)):
 			root._play_sound("ui_pause", 0.0, 1.0)
+			if root.effects_spawner != null:
+				root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		return
 	var pause_overlay := ssc.pause_overlay
 	if pause_overlay != null and pause_overlay.visible:
@@ -502,6 +509,8 @@ func tick(root: GameplayState, delta: float) -> void:
 		return
 	var run_complete_overlay := ssc.run_complete_overlay
 	if run_complete_overlay != null and run_complete_overlay.visible:
+		if root.effects_spawner != null:
+			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		root._update_run_complete_input()
 		return
 	if ssc.menu_input_release_lock:
@@ -530,6 +539,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		if motor == null or not motor.is_in_knockback(): root._start_player_death()
 		return
 	if root.player_dead:
+		if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta)
 		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); root.player_equipment_visual_component.tick_death(root.gameplay_frame_controller.equipment_visual_context(root)); root._update_damage_numbers(delta)
 		var tuning := root.player_tuning
 		if root.player_death_particles_started and root.player_death_timer >= tuning.death_particle_delay + tuning.death_particle_lifetime: root._move_slimes(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta)
@@ -562,9 +572,9 @@ func tick(root: GameplayState, delta: float) -> void:
 	if root.player_roll_component != null: root.player_roll_component.update_from_root(_roll_context(root), delta)
 	root._update_roll_dust(delta); root.player_motor.update_player_hit_reaction(root, delta); root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta)
-	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
+	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
-		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
+		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
 		# The charge pose is rendered by the base player sprite. The shared attack
 		# visual updater must not turn the previous attack frame back on after the
 		# animation component has deliberately hidden it.

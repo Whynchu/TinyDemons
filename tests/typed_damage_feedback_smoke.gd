@@ -25,6 +25,12 @@ func _initialize() -> void:
 	_expect(critical_sprite != null and _contains_color(critical_sprite.texture, PaletteLibrary.accent("red")), "critical interior keeps the original Fire color", failures)
 	_expect(critical_outline != null and _contains_color(critical_outline.texture, Color.BLACK), "elemental critical number creates a black outline", failures)
 	_expect(critical_sprite != null and critical_outline != null and critical_sprite.texture.get_width() < critical_outline.texture.get_width(), "critical outline extends beyond the glyph", failures)
+	var critical_initial_scale := critical_sprite.scale.x if critical_sprite != null else 0.0
+	_expect(critical_initial_scale > 1.0, "critical damage number starts with a readable scale pop", failures)
+	effects.update_damage_numbers(0.05, snap_position, 1.0)
+	_expect(critical_sprite != null and critical_sprite.scale.x > 1.0 and critical_sprite.scale.x < critical_initial_scale, "critical damage number eases down from its pop", failures)
+	effects.update_damage_numbers(0.05, snap_position, 1.0)
+	_expect(critical_sprite != null and is_equal_approx(critical_sprite.scale.x, 1.0), "critical damage number settles at its authored scale", failures)
 
 	var normal_critical_color := ElementCatalogScript.damage_number_color(ElementCatalogScript.Element.NEUTRAL, true)
 	effects.spawn_health_number(parent, Vector2.ZERO, 7, Vector2.ZERO, true, false, normal_critical_color, pixel_number, snap_position, 1.0, 0.1)

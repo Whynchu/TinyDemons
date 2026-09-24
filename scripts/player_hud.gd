@@ -24,6 +24,7 @@ const BAR_TRACKS := {
 	"PlayerStatus/LevelXp/XpBarFill": Vector2(17, 34),
 	"PlayerStatus/Health/HpBarFill": Vector2(17, 62),
 	"PlayerStatus/Mana/MpBarFill": Vector2(17, 46),
+	"PlayerStatus/Mana/MpBarHighlight": Vector2(17, 46),
 }
 
 var _xp_source: Texture2D
@@ -85,7 +86,7 @@ func _configure_sprites() -> void:
 		gold.hframes = 4
 		gold.vframes = 1
 		gold.frame = 0
-	for path in ["PlayerStatus/LevelXp/XpBarFill", "PlayerStatus/Health/HpBarFill", "PlayerStatus/Mana/MpBarFill"]:
+	for path in ["PlayerStatus/LevelXp/XpBarFill", "PlayerStatus/Health/HpBarFill", "PlayerStatus/Mana/MpBarFill", "PlayerStatus/Mana/MpBarHighlight"]:
 		var fill := get_node_or_null(path) as Sprite2D
 		if fill == null:
 			continue

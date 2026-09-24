@@ -794,6 +794,7 @@ func apply_state_context(context: RoomActivationContext) -> void:
 	services.clear_active_world_drop.call()
 	services.clear_chroma_pickups.call()
 	services.clear_soul_pickups.call()
+	services.clear_gold_pickups.call()
 	services.apply_special_enemy_color_policy.call()
 	if is_cleared(context.room_id):
 		state["finished"] = true
@@ -822,6 +823,7 @@ func apply_state_context(context: RoomActivationContext) -> void:
 		services.reset_slimes_for_room.call()
 	services.restore_world_drop.call()
 	services.restore_chroma_pickups.call()
+	services.restore_gold_pickups.call()
 	services.apply_chest_map_tint.call()
 
 
@@ -889,6 +891,10 @@ func save_current_room_state(context: RoomCheckpointContext) -> RoomCheckpointRe
 		state.erase("chroma_pickups")
 	else:
 		state["chroma_pickups"] = saved_pickups
+	if context.gold_pickups.is_empty():
+		state.erase("gold_pickups")
+	else:
+		state["gold_pickups"] = context.gold_pickups
 	room_states[context.room_id] = state
 	result.status = RoomCheckpointResult.Status.SAVED
 	result.finished = bool(state.get("finished", false))
@@ -903,6 +909,7 @@ func _restore_chroma_pickups(root: Object, state: Dictionary) -> void:
 	var saved_pickups: Variant = state.get("chroma_pickups", [])
 	if saved_pickups is Array:
 		root.call("_restore_chroma_pickups", saved_pickups as Array)
+
 
 func _restore_world_drop(root: Object, state: Dictionary) -> void:
 	var saved_drops: Variant = state.get("world_item_drops", [])

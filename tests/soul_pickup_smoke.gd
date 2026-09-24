@@ -14,13 +14,26 @@ func _initialize() -> void:
 		_finish(failures)
 		return
 	var gameplay := packed.instantiate()
+	gameplay.set("debug_start_in_boss_room", true)
 	root.add_child(gameplay)
-	for _frame in 120:
+	var boot_ready := false
+	for _frame in 600:
 		await process_frame
+		if not bool(gameplay.get("boot_active")) and gameplay.get("chest_gray_texture") != null:
+			boot_ready = true
+			break
+	_expect(boot_ready, "gameplay bootstrap is ready for Soul pickup coverage", failures)
+	if not boot_ready:
+		gameplay.queue_free()
+		await process_frame
+		_finish(failures)
+		return
 	var pickup_runtime := gameplay.get("pickup_runtime_controller") as Node
 	var soul_controller := gameplay.get("soul_pickup_controller") as Node
 	var profile := gameplay.get("player_profile") as PlayerProfile
-	var hud_controller := gameplay.get("hud_controller") as Node
+	var hud_controller := gameplay.get("hud_controller") as HudController
+	var effects := gameplay.get("effects_spawner") as EffectsSpawner
+	var registry := gameplay.get("feedback_animation_registry") as FeedbackAnimationRegistry
 	var texture := pickup_runtime.call("soul_pickup_texture") as Texture2D if pickup_runtime != null else null
 	_expect(texture != null and texture.get_width() == 5 and texture.get_height() == 5, "Soul pickup uses the authored 5x5 Souls icon", failures)
 	_expect(soul_controller != null, "Soul pickup controller is composed", failures)
@@ -38,7 +51,7 @@ func _initialize() -> void:
 		_expect(soul_image != null and soul_image.get_pixel(2, 1).is_equal_approx(SoulVisualsScript.SOUL_COLOR), "Soul body uses the existing soul-purple currency colour", failures)
 		_expect(soul_image != null and soul_image.get_pixel(1, 0).is_equal_approx(SoulVisualsScript.SOUL_HIGHLIGHT_COLOR), "Soul outline uses a highlight of the soul-purple base", failures)
 		_expect(soul_image != null and soul_image.get_pixel(1, 2).is_equal_approx(Color.WHITE), "Soul eyes remain white after recoloring", failures)
-		_expect(soul_image != null and source_image != null and soul_image.get_pixel(1, 2).is_equal_approx(source_image.get_pixel(1, 2)), "Soul eyes remain the authored white pixels", failures)
+		_expect(soul_image != null and source_image != null and is_equal_approx(soul_image.get_pixel(1, 2).a, source_image.get_pixel(1, 2).a), "Soul eyes retain the authored eye opacity", failures)
 		_expect(soul_image != null and source_image != null and not soul_image.get_pixel(2, 1).is_equal_approx(source_image.get_pixel(2, 1)), "Soul grey body is recoloured", failures)
 		_expect(soul_image != null and source_image != null and not soul_image.get_pixel(1, 0).is_equal_approx(source_image.get_pixel(1, 0)), "Soul light outline is recoloured independently", failures)
 		var hub_screen := gameplay.get("screen_state_controller") as Node
@@ -51,6 +64,7 @@ func _initialize() -> void:
 			_expect(hub_currency_icon != null and hub_currency_icon.visible and hub_currency_icon.texture == texture, "Binding currency header uses the authored soul icon", failures)
 	if soul_controller != null and profile != null:
 		var before := profile.souls
+		var display_before := hud_controller.displayed_souls if hud_controller != null else -1
 		var player := gameplay.get("player") as Sprite2D
 		var player_foot: Vector2 = gameplay.call("_actor_foot", player) as Vector2
 		gameplay.call("_spawn_soul_pickup", player_foot, 2, 777, Vector2.ZERO)
@@ -61,6 +75,27 @@ func _initialize() -> void:
 			gameplay.call("_update_soul_pickups", 0.01)
 		_expect(profile.souls == before + 2, "Soul pickup adds its value to the persistent profile currency", failures)
 		_expect(soul_controller.get("sprites").is_empty(), "Soul pickup is removed after collection", failures)
+		_expect(hud_controller == null or hud_controller.displayed_souls == display_before, "Soul counter waits for HUD delivery before counting up", failures)
+		var soul_burst_count := 0
+		if effects != null:
+			for particle_data: Dictionary in effects.pixel_particles:
+				if particle_data.get("effect_tag", &"") == &"soul_pickup":
+					soul_burst_count += 1
+		_expect(soul_burst_count == 15, "Soul pickup emits a flash and purple splash burst", failures)
+		_expect(effects == null or effects.pickup_flights.size() == 1, "Soul pickup starts a HUD delivery flight", failures)
+		if effects != null and registry != null:
+			for _delivery_frame in 8:
+				registry.tick(0.05)
+				effects.update_pixel_particles_from_root(gameplay, 0.05)
+			_expect(effects.pickup_flights.is_empty(), "Soul delivery flight completes", failures)
+			if hud_controller != null:
+				_expect(hud_controller.soul_display_target == display_before + 2, "Soul HUD acknowledges the delivered value", failures)
+				_expect(hud_controller.soul_reaction_id > 0, "Soul HUD acknowledges with an icon reaction", failures)
+				hud_controller.call("_tick_soul_counter", gameplay, 0.001)
+				_expect(hud_controller.displayed_souls == display_before + 1, "Soul counter begins counting up after delivery", failures)
+				for _counter_frame in 8:
+					hud_controller.call("_tick_soul_counter", gameplay, 0.05)
+				_expect(hud_controller.displayed_souls == before + 2, "Soul counter counts up to the delivered total", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

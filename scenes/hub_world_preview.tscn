@@ -1,15 +1,15 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://dy6sdx4sp0qff"]
 
-[ext_resource type="PackedScene" path="res://scenes/main.tscn" id="1_main"]
-[ext_resource type="Script" path="res://scripts/hub_world_preview.gd" id="2_preview"]
+[ext_resource type="PackedScene" uid="uid://cqglsgesc12h7" path="res://scenes/main.tscn" id="1_main"]
+[ext_resource type="Script" uid="uid://dy8slh22ej0o1" path="res://scripts/hub_world_preview.gd" id="2_preview"]
 
-[node name="HubWorldPreview" type="Node2D"]
+[node name="HubWorldPreview" type="Node2D" unique_id=505404437]
+process_mode = 3
 texture_filter = 1
 script = ExtResource("2_preview")
+show_hud = true
 
-[node name="Main" parent="." instance=ExtResource("1_main")]
-editable_children = true
+[node name="Main" parent="." unique_id=1024429201 instance=ExtResource("1_main")]
 
-[node name="PreviewCamera" type="Camera2D" parent="."]
+[node name="PreviewCamera" type="Camera2D" parent="." unique_id=514331851]
 position = Vector2(120, 80)
-enabled = true

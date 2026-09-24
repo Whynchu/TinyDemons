@@ -27,9 +27,20 @@ func _initialize() -> void:
 		_finish(failures)
 		return
 	var gameplay := packed.instantiate()
+	gameplay.set("debug_start_in_boss_room", true)
 	root.add_child(gameplay)
-	for _frame in 30:
+	var boot_ready := false
+	for _frame in 600:
 		await process_frame
+		if not bool(gameplay.get("boot_active")) and gameplay.get("chest_gray_texture") != null:
+			boot_ready = true
+			break
+	_expect(boot_ready, "gameplay bootstrap is ready for IMBUE coverage", failures)
+	if not boot_ready:
+		gameplay.queue_free()
+		await process_frame
+		_finish(failures)
+		return
 	var runtime := gameplay.get("magic_runtime_controller") as MagicRuntimeController
 	var chroma := gameplay.get("player_chroma_component") as Node
 	var ability := gameplay.get("player_aspect_ability_component") as Node
@@ -41,6 +52,40 @@ func _initialize() -> void:
 		await process_frame
 		_finish(failures)
 		return
+
+	var effects := gameplay.get("effects_spawner") as EffectsSpawner
+	var world_player := gameplay.get("player") as Sprite2D
+	if runtime != null and projectiles != null and effects != null and world_player != null:
+		var world_origin := world_player.global_position + Vector2(5, 1)
+		var context := _magic_context(gameplay)
+		runtime.spawn_magic_projectile(context, world_origin, Vector2.RIGHT)
+		var projectile := (projectiles.projectiles.back() as Dictionary).get("sprite") as Sprite2D
+		_expect(projectile != null and projectile.global_position.is_equal_approx(world_origin), "magic projectile is placed in world space under the authored player placement", failures)
+		projectiles.clear()
+		runtime.spawn_sword_beam(context, world_origin, Vector2.RIGHT, "grey")
+		var beam := (projectiles.projectiles.back() as Dictionary).get("sprite") as Sprite2D
+		_expect(beam != null and beam.global_position.is_equal_approx(world_origin + Vector2(10, 0)), "sword beam keeps its world-space cast origin", failures)
+		projectiles.clear()
+		var before_trail_count := effects.pixel_particles.size()
+		runtime.spawn_magic_trail(context, world_origin, "grey", true, false)
+		_expect(effects.pixel_particles.size() >= before_trail_count + 2, "beam trail creates both its stamp and delayed fizzle", failures)
+		if effects.pixel_particles.size() >= before_trail_count + 2:
+			var trail := (effects.pixel_particles[before_trail_count] as Dictionary).get("sprite") as Sprite2D
+			var fizzle := (effects.pixel_particles[before_trail_count + 1] as Dictionary).get("sprite") as Sprite2D
+			_expect(trail != null and trail.global_position.is_equal_approx(world_origin), "beam trail stays at the hit world position", failures)
+			_expect(fizzle != null and fizzle.global_position.is_equal_approx(world_origin), "beam fizzle stays at the hit world position", failures)
+		for particle_data in effects.pixel_particles:
+			var particle := (particle_data as Dictionary).get("sprite") as Sprite2D
+			if particle != null and is_instance_valid(particle):
+				particle.queue_free()
+		effects.pixel_particles.clear()
+		var test_image := Image.create(2, 2, false, Image.FORMAT_RGBA8)
+		test_image.fill(Color.WHITE)
+		var test_texture := ImageTexture.create_from_image(test_image)
+		effects.spawn_player_death_particles(world_player.get_parent(), test_texture, world_origin, Vector2.ZERO, Vector2.ONE, 10, 0.75, 12, Callable(gameplay, "_pixel_particle_texture"), false, &"coordinate_test")
+		var breakup_particle := (effects.pixel_particles[0] as Dictionary).get("sprite") as Sprite2D if not effects.pixel_particles.is_empty() else null
+		_expect(breakup_particle != null and breakup_particle.global_position.x >= world_origin.x and breakup_particle.global_position.x <= world_origin.x + 2.0 and breakup_particle.global_position.y >= world_origin.y and breakup_particle.global_position.y <= world_origin.y + 2.0, "equipment fizzle particles stay on the equipment's world-space origin", failures)
+		effects.clear_effect_particles(&"coordinate_test")
 
 	var hud := gameplay.get("hud_controller") as HudController
 	_expect(hud != null and hud.cooldown_hud.size() == 9, "HUD builds all cooldown icon widgets", failures)

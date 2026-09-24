@@ -58,6 +58,9 @@ func _initialize() -> void:
 	for path in [
 		"SoulDisplay/SoulIcon",
 		"SoulDisplay/SoulAmount",
+		"PlayerStatus/Mana/MpBarHighlight",
+		"InventoryChest",
+		"InventoryChestReceiving",
 		"InputPrompts/TrianglePrompt",
 		"InputPrompts/SquarePrompt",
 		"InputPrompts/XPrompt",
@@ -79,6 +82,14 @@ func _initialize() -> void:
 	]:
 		var authored := hud.get_node_or_null(path) as Sprite2D
 		_expect(authored != null, "%s is authored in the player HUD scene" % path, failures)
+	var inventory_chest := hud.get_node_or_null("InventoryChest") as Sprite2D
+	var inventory_chest_receiving := hud.get_node_or_null("InventoryChestReceiving") as Sprite2D
+	_expect(inventory_chest != null and inventory_chest.texture != null and inventory_chest.texture.resource_path.ends_with("ChestGrey.png"), "inventory chest starts with the idle artwork", failures)
+	_expect(inventory_chest_receiving != null and inventory_chest_receiving.texture != null and inventory_chest_receiving.texture.resource_path.ends_with("Chest.png"), "inventory chest has a receiving artwork layer", failures)
+	_expect(inventory_chest_receiving != null and not inventory_chest_receiving.visible, "inventory chest receiving layer starts hidden", failures)
+	_expect(inventory_chest != null and inventory_chest.position.is_equal_approx(Vector2(190, 2)), "inventory chest keeps its authored HUD position", failures)
+	var mp_highlight := hud.get_node_or_null("PlayerStatus/Mana/MpBarHighlight") as Sprite2D
+	_expect(mp_highlight != null and not mp_highlight.visible and mp_highlight.z_index > (fills[2] as Sprite2D).z_index, "Chroma highlight layer starts hidden above the MP fill", failures)
 	var target_health_text := hud.get_node_or_null("TargetHud/TargetHealthText") as Sprite2D
 	_expect(target_health_text != null and target_health_text.z_index > 3, "enemy health text is above the health-bar layers", failures)
 	var target := Sprite2D.new()

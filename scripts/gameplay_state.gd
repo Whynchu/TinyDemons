@@ -181,6 +181,7 @@ var music_wanted := false
 var music_track_wanted: StringName = &""
 var title_menu_frames := 0
 var effects_spawner: EffectsSpawner = null
+var feedback_animation_registry: FeedbackAnimationRegistry = null
 var screen_state_controller: Node = null
 var gameplay_frame_controller: GameplayFrameController = null
 var performance_capture_service: Node = null
@@ -540,7 +541,7 @@ func _world_item_drop_position() -> Vector2:
 func _can_interact_with_world_item() -> bool:
 	return bool(pickup_runtime_controller.call("can_interact_with_world_item", self))
 func _collect_world_item_drop() -> bool:
-	return bool(pickup_runtime_controller.call("collect_world_item_drop", self))
+	return pickup_runtime_controller.collect_world_item_drop(self).succeeded()
 func _spawn_chroma_pickup(spawn_position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
 	return pickup_runtime_controller.call("spawn_chroma_pickup", self, spawn_position, value, launch_seed, launch_direction, avoid_position) as Vector2
 func _restore_chroma_pickups(saved_pickups: Array) -> void:
@@ -1047,14 +1048,14 @@ func _build_npc_dialogue() -> void:
 	npc_controller.dialogue_no_button = dialogue["no_button"] as Button
 func _build_room_number_indicator() -> void:
 	var hud: Dictionary = hud_controller.build_world_hud(ui, sprite_frame_library, Callable(self, "_load_texture_or_null"), target_health_bar, target_health_fill, player_health_fill)
-	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.soul_icon_indicator = hud["soul"] as Sprite2D; hud_controller.soul_amount_indicator = hud["soul_amount"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.combo_label = hud["combo_label"] as Sprite2D; hud_controller.combo_base = hud["combo_base"] as Sprite2D; hud_controller.combo_fill = hud["combo_fill"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.ability_prompt_hud = hud["ability_prompts"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator(); _update_soul_indicator()
+	hud_controller.room_number_indicator = hud["room"] as Sprite2D; hud_controller.dungeon_run_indicator = hud["dungeon_run"] as Sprite2D; hud_controller.gold_indicator = hud["gold"] as Sprite2D; hud_controller.gold_amount_indicator = hud["gold_amount"] as Sprite2D; hud_controller.soul_icon_indicator = hud["soul"] as Sprite2D; hud_controller.soul_amount_indicator = hud["soul_amount"] as Sprite2D; hud_controller.inventory_chest = hud["inventory_chest"] as Sprite2D; hud_controller.inventory_chest_receiving = hud["inventory_chest_receiving"] as Sprite2D; hud_controller.run_timer_indicator = hud["timer"] as Sprite2D; hud_controller.combo_label = hud["combo_label"] as Sprite2D; hud_controller.combo_base = hud["combo_base"] as Sprite2D; hud_controller.combo_fill = hud["combo_fill"] as Sprite2D; hud_controller.gold_animation_frames = hud["gold_frames"] as Array[Texture2D]; hud_controller.button_hud_sprites = hud["buttons"] as Array[Sprite2D]; hud_controller.ability_prompt_hud = hud["ability_prompts"] as Array[Sprite2D]; hud_controller.cooldown_hud = hud["cooldowns"] as Dictionary; target_health_text = hud["target_text"] as Sprite2D; focus_label = hud["focus_label"] as Sprite2D; focus_label_base = hud["focus_label_base"] as Sprite2D; player_health_text = hud["player_text"] as Sprite2D; _update_room_number_indicator(); _update_gold_indicator(); _update_soul_indicator()
 	var hud_root := ui.get_node("PlayerHud") as Node2D
 	var player_hud_color := _health_feedback_color(screen_state_controller.player_palette_name)
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
 	hud_root.call("apply_bar_colors", player_hud_color, PaletteLibrary.accent(screen_state_controller.player_palette_name))
 	_update_player_progression_ui()
-func _update_gold_indicator() -> void: if hud_controller.gold_indicator != null: hud_controller.gold_amount_indicator.texture = _pixel_text_texture(str(player_profile.gold if player_profile != null else 0), Color8(255, 205, 117))
-func _update_soul_indicator() -> void: if hud_controller.soul_amount_indicator != null: hud_controller.soul_amount_indicator.texture = _pixel_text_texture(str(player_profile.souls if player_profile != null else 0), SOUL_HIGHLIGHT_COLOR)
+func _update_gold_indicator() -> void: var value := player_profile.gold if player_profile != null else 0; if hud_controller != null: hud_controller.sync_gold_value(value); if hud_controller != null and hud_controller.gold_indicator != null: hud_controller.gold_amount_indicator.texture = _pixel_text_texture(str(value), Color8(255, 205, 117))
+func _update_soul_indicator() -> void: var value := player_profile.souls if player_profile != null else 0; if hud_controller != null: hud_controller.sync_soul_value(value); if hud_controller != null and hud_controller.soul_amount_indicator != null: hud_controller.soul_amount_indicator.texture = _pixel_text_texture(str(value), SOUL_HIGHLIGHT_COLOR)
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _update_cloaked_demon_animation(delta: float) -> void:
 	var near_player := _can_interact_with_npc(); var patrolling := (current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC) and not near_player and (npc_controller.dialogue_box == null or not npc_controller.dialogue_box.visible)
@@ -1471,7 +1472,8 @@ func _room_checkpoint_context() -> RoomCheckpointContext:
 		chest_claimed,
 		chest_evaporated,
 		world_item_drops,
-		chroma_pickup_controller)
+		chroma_pickup_controller,
+		pickup_runtime_controller.gold_pickup_controller)
 	return context
 
 
@@ -1485,8 +1487,7 @@ func _room_enemy_runtime_context() -> RoomEnemyRuntimeContext:
 		health_components.append(slime.get_node_or_null("Health") as HealthComponent)
 	return RoomEnemyRuntimeContext.new(current_room_id, state.get("enemy_variants", []) as Array, slimes, combat_components, health_components)
 
-func _save_current_room_state() -> RoomCheckpointResult:
-	return room_controller.save_current_room_state(_room_checkpoint_context())
+func _save_current_room_state() -> RoomCheckpointResult: pickup_runtime_controller.settle_gold_pickups(self); return room_controller.save_current_room_state(_room_checkpoint_context())
 func _apply_room_state() -> RoomActivationResult: return room_controller.activate_room(self)
 func _apply_rest_room_state() -> void: room_controller.apply_rest_state(self)
 func _apply_npc_room_state() -> void: room_controller.apply_npc_state(self)
@@ -1661,7 +1662,7 @@ func _slime_display_name(slime: Sprite2D) -> String:
 	return str(targeting_runtime_controller.call("slime_display_name", self, slime))
 func _update_player_health_ui(delta: float = 0.0) -> void: var result: Dictionary = hud_controller.update_player_health_ui(player_health_component.current_health if player_health_component != null else 0.0, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values")); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
 func _magic_context() -> MagicRuntimeContext: return gameplay_frame_controller.magic_context(self) if gameplay_frame_controller != null else MagicRuntimeContext.new()
-func _update_player_mp_ui(_delta: float = 0.0) -> void: magic_runtime_controller.update_player_mp_ui(_magic_context())
+func _update_player_mp_ui(delta: float = 0.0) -> void: magic_runtime_controller.update_player_mp_ui(_magic_context(), delta)
 func _current_player_chroma() -> float: return magic_runtime_controller.current_player_chroma(_magic_context())
 func _restore_player_mp() -> void: magic_runtime_controller.restore_player_mp(_magic_context())
 func _try_cast_magic() -> bool: return magic_runtime_controller.try_cast_magic(_magic_context())
@@ -1685,7 +1686,7 @@ func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String,
 func _player_weapon_element() -> int: return magic_runtime_controller.player_weapon_element(_magic_context())
 func _spawn_magic_trail(world_position: Vector2, palette: String) -> void: magic_runtime_controller.spawn_magic_trail(_magic_context(), world_position, palette)
 func _spawn_magic_impact(world_position: Vector2, palette: String) -> void: magic_runtime_controller.spawn_magic_impact(_magic_context(), world_position, palette)
-func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
+func _update_overworld_ui() -> void: effects_spawner.resolve_item_acquisition_deliveries_if_blocked(); hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _depth_key(sprite: Sprite2D) -> float: return float(actor_presentation_runtime_controller.call("depth_key", self, sprite))
 func _equipment_occlusion_depth_key(sprite: Sprite2D) -> float: return float(actor_presentation_runtime_controller.call("equipment_occlusion_depth_key", self, sprite))
 func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2: return actor_presentation_runtime_controller.call("sprite_source_global_rect", self, sprite) as Rect2

@@ -21,7 +21,16 @@ var pixel_particles: Array[Dictionary] = []
 ## already-visible effects finish their life.
 const MAX_DAMAGE_NUMBERS := 20
 const MAX_PIXEL_PARTICLES := 90
+const MAX_PICKUP_FLIGHTS := 16
+const PICKUP_FLIGHT_DURATION := 0.28
+const PICKUP_FLIGHT_ARC_HEIGHT := 6.0
 var slime_notice_effects: Array[Dictionary] = []
+var pickup_flights: Array[Dictionary] = []
+var item_delivery_ui: Node2D = null
+var item_delivery_hud: HudController = null
+var item_delivery_registry: FeedbackAnimationRegistry = null
+var item_delivery_screen_state: Node = null
+var item_delivery_minimap: Node = null
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
 var charge_aura_timer := 0.0
@@ -32,6 +41,14 @@ var charge_aura_active := false
 var charge_ready_highlight: Sprite2D = null
 
 
+func configure_item_acquisition_delivery(ui: Node2D, hud: HudController, registry: FeedbackAnimationRegistry, screen_state: Node, minimap: Node) -> void:
+	item_delivery_ui = ui
+	item_delivery_hud = hud
+	item_delivery_registry = registry
+	item_delivery_screen_state = screen_state
+	item_delivery_minimap = minimap
+
+
 func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
 	var tuning := root.get("effects_tuning") as EffectsTuning
 	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
@@ -40,7 +57,7 @@ func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
-	var tuning := root.get("effects_tuning") as EffectsTuning; var sprite := Sprite2D.new(); sprite.texture = root.call("_pixel_text_texture", "+%d" % amount, Color8(255, 205, 117)); sprite.centered = false; sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; sprite.z_as_relative = false; sprite.z_index = int(root.get("OVERWORLD_UI_Z")) + 2; sprite.position = world_position; root.add_child(sprite); damage_numbers.append({"sprite": sprite, "timer": tuning.damage_number_lifetime})
+	var tuning := root.get("effects_tuning") as EffectsTuning; var sprite := Sprite2D.new(); sprite.texture = root.call("_pixel_text_texture", "+%d" % amount, Color8(255, 205, 117)); sprite.centered = false; sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; sprite.z_as_relative = false; sprite.z_index = int(root.get("OVERWORLD_UI_Z")) + 2; root.add_child(sprite); sprite.global_position = world_position; damage_numbers.append({"sprite": sprite, "timer": tuning.damage_number_lifetime})
 
 
 func spawn_chest_evaporation_from_root(root: Object) -> void:
@@ -48,40 +65,201 @@ func spawn_chest_evaporation_from_root(root: Object) -> void:
 
 
 func spawn_chroma_pickup_burst_from_root(root: Object, world_position: Vector2, chroma_color: Color = PaletteLibrary.ACCENT["grey"]) -> void:
+	_spawn_colored_burst_from_root(root, world_position, chroma_color, &"chroma_pickup", "ChromaPickup", 18)
+
+
+func spawn_soul_pickup_burst_from_root(root: Object, world_position: Vector2, soul_color: Color = Color8(167, 59, 167)) -> void:
+	_spawn_colored_burst_from_root(root, world_position, soul_color, &"soul_pickup", "SoulPickup", 14)
+
+
+func spawn_combat_hit_burst_from_root(root: Object, world_position: Vector2, impact_color: Color, critical: bool = false) -> void:
+	_spawn_colored_burst_from_root(root, world_position, impact_color, &"combat_hit", "CombatHit", 10 if critical else 6)
+
+
+func _spawn_colored_burst_from_root(root: Object, world_position: Vector2, burst_color: Color, effect_tag: StringName, name_prefix: String, particle_count: int) -> void:
 	var random_source := RandomNumberGenerator.new()
 	var seed_value := int(round(world_position.x * 100.0)) ^ int(round(world_position.y * 101.0)) ^ Time.get_ticks_msec()
 	random_source.seed = seed_value
 	var origin: Vector2 = root.call("_snap_half_pixel", world_position) as Vector2
 	var z_index := int(round(world_position.y * float(root.get("DEPTH_Z_SCALE")))) + 4
 	var flash := Sprite2D.new()
-	flash.name = "ChromaPickupFlash"
-	flash.texture = root.call("_pixel_particle_texture", chroma_color.lerp(Color.WHITE, 0.7), 3) as Texture2D
+	flash.name = "%sFlash" % name_prefix
+	flash.texture = root.call("_pixel_particle_texture", burst_color.lerp(Color.WHITE, 0.7), 3) as Texture2D
 	flash.centered = true
 	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	flash.z_as_relative = false
 	flash.z_index = z_index + 1
-	flash.position = origin
+	flash.position = Vector2.ZERO
 	root.add_child(flash)
-	pixel_particles.append({"sprite": flash, "velocity": Vector2.ZERO, "timer": 0.16, "lifetime": 0.16, "gravity": 0.0, "effect_tag": &"chroma_pickup", "logical_position": origin})
-	for index in 18:
+	flash.global_position = origin
+	pixel_particles.append({"sprite": flash, "velocity": Vector2.ZERO, "timer": 0.16, "lifetime": 0.16, "gravity": 0.0, "effect_tag": effect_tag, "logical_position": origin})
+	for index in particle_count:
 		var particle := Sprite2D.new()
-		particle.name = "ChromaPickupSplash%d" % index
-		var particle_color := chroma_color.lerp(Color.WHITE, random_source.randf_range(0.05, 0.55))
+		particle.name = "%sSplash%d" % [name_prefix, index]
+		var particle_color := burst_color.lerp(Color.WHITE, random_source.randf_range(0.05, 0.55))
 		particle.texture = root.call("_pixel_particle_texture", particle_color, 1 if index % 3 else 2) as Texture2D
 		particle.centered = true
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = z_index
-		particle.position = origin
 		root.add_child(particle)
-		var angle := TAU * float(index) / 18.0 + random_source.randf_range(-0.16, 0.16)
+		particle.global_position = origin
+		var angle := TAU * float(index) / float(maxi(particle_count, 1)) + random_source.randf_range(-0.16, 0.16)
 		var speed := random_source.randf_range(18.0, 38.0)
 		var lifetime := random_source.randf_range(0.28, 0.48)
 		var velocity := Vector2.from_angle(angle) * speed + Vector2(0.0, -random_source.randf_range(2.0, 9.0))
-		pixel_particles.append({"sprite": particle, "velocity": velocity, "timer": lifetime, "lifetime": lifetime, "gravity": 30.0, "effect_tag": &"chroma_pickup", "logical_position": origin})
+		pixel_particles.append({"sprite": particle, "velocity": velocity, "timer": lifetime, "lifetime": lifetime, "gravity": 30.0, "effect_tag": effect_tag, "logical_position": origin})
+
+
+func spawn_item_acquisition_delivery(result: PickupAcquisitionResult) -> void:
+	spawn_pickup_acquisition_delivery(result)
+
+
+func spawn_pickup_acquisition_delivery(result: PickupAcquisitionResult) -> void:
+	if result == null or not result.succeeded() or result.presentation_texture == null:
+		return
+	var ui := item_delivery_ui
+	var hud := item_delivery_hud
+	var registry := item_delivery_registry
+	if ui == null or hud == null or not is_instance_valid(ui) or not is_instance_valid(hud):
+		return
+	if registry == null:
+		_acknowledge_pickup_delivery(hud, result)
+		return
+	var target_position := _pickup_delivery_target_position(hud, result.target_key)
+	if target_position == Vector2.INF:
+		_acknowledge_pickup_delivery(hud, result)
+		return
+	while pickup_flights.size() >= MAX_PICKUP_FLIGHTS:
+		_discard_pickup_flight(pickup_flights.pop_front() as Dictionary)
+	var flight := Sprite2D.new()
+	flight.name = "ItemAcquisitionDelivery"
+	flight.texture = result.presentation_texture
+	flight.centered = true
+	flight.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	flight.modulate = result.accent_color if result.accent_color.a > 0.0 else Color.WHITE
+	flight.z_index = 20
+	var source_position := _world_position_to_ui(result.source_position)
+	flight.position = _snap_ui_position(source_position)
+	ui.add_child(flight)
+	var animation_id := registry.register(
+		flight,
+		PICKUP_FLIGHT_DURATION,
+		Callable(self, "_update_pickup_acquisition_flight").bind(flight, source_position, hud, result.target_key),
+		Callable(self, "_complete_pickup_acquisition_flight").bind(hud, flight, result))
+	if animation_id <= 0:
+		flight.queue_free()
+		return
+	pickup_flights.append({"sprite": flight, "animation_id": animation_id, "hud": hud, "result": result})
+
+
+func _update_pickup_acquisition_flight(progress: float, flight: Sprite2D, source_position: Vector2, hud: HudController, target_key: StringName) -> void:
+	if flight == null or not is_instance_valid(flight):
+		return
+	var eased_progress := 1.0 - pow(1.0 - progress, 3.0)
+	var target_position := source_position
+	if hud != null and is_instance_valid(hud):
+		target_position = _pickup_delivery_target_position(hud, target_key)
+	if target_position == Vector2.INF:
+		target_position = source_position
+	var position := source_position.lerp(target_position, eased_progress)
+	position.y -= sin(progress * PI) * PICKUP_FLIGHT_ARC_HEIGHT
+	flight.position = _snap_ui_position(position)
+	flight.scale = Vector2.ONE * lerpf(1.0, 0.82, progress)
+
+
+func _complete_pickup_acquisition_flight(hud: HudController, flight: Sprite2D, result: PickupAcquisitionResult) -> void:
+	if flight != null and is_instance_valid(flight):
+		flight.queue_free()
+	_remove_pickup_flight(flight)
+	_acknowledge_pickup_delivery(hud, result)
+
+
+func _pickup_delivery_target_position(hud: HudController, target_key: StringName) -> Vector2:
+	if hud == null or not is_instance_valid(hud):
+		return Vector2.INF
+	match target_key:
+		&"inventory_chest":
+			return hud.inventory_chest_target_position()
+		&"chroma":
+			return hud.chroma_target_position()
+		&"souls":
+			return hud.soul_target_position()
+		&"gold":
+			return hud.gold_target_position()
+	return Vector2.INF
+
+
+func _acknowledge_pickup_delivery(hud: HudController, result: PickupAcquisitionResult) -> void:
+	if hud == null or result == null:
+		return
+	match result.target_key:
+		&"inventory_chest":
+			hud.acknowledge_inventory_delivery(result.accent_color)
+		&"chroma":
+			hud.acknowledge_chroma_delivery(result.accent_color)
+		&"souls":
+			hud.acknowledge_soul_delivery(result.accent_color, result.value)
+		&"gold":
+			hud.acknowledge_gold_delivery(result.accent_color, result.value)
+
+
+func _remove_pickup_flight(flight: Sprite2D) -> void:
+	for index in range(pickup_flights.size() - 1, -1, -1):
+		if (pickup_flights[index] as Dictionary).get("sprite") == flight:
+			pickup_flights.remove_at(index)
+
+
+func _discard_pickup_flight(flight_data: Dictionary) -> void:
+	var animation_id := int(flight_data.get("animation_id", 0))
+	if item_delivery_registry != null and animation_id > 0:
+		item_delivery_registry.cancel(animation_id)
+	var flight := flight_data.get("sprite") as Sprite2D
+	if flight != null and is_instance_valid(flight):
+		flight.queue_free()
+	var hud := flight_data.get("hud") as HudController
+	var result := flight_data.get("result") as PickupAcquisitionResult
+	_acknowledge_pickup_delivery(hud, result)
+
+
+func _prune_item_acquisition_deliveries() -> void:
+	for index in range(pickup_flights.size() - 1, -1, -1):
+		var flight := (pickup_flights[index] as Dictionary).get("sprite") as Sprite2D
+		if flight == null or not is_instance_valid(flight):
+			pickup_flights.remove_at(index)
+
+
+func resolve_item_acquisition_deliveries_if_blocked() -> void:
+	var blocked := item_delivery_screen_state != null and StringName(item_delivery_screen_state.get("state")) != &"gameplay"
+	if not blocked and item_delivery_minimap != null and item_delivery_minimap.has_method("is_map_open"):
+		blocked = bool(item_delivery_minimap.call("is_map_open"))
+	if not blocked:
+		return
+	var pending := pickup_flights.duplicate()
+	for flight_data in pending:
+		var animation_id := int((flight_data as Dictionary).get("animation_id", 0))
+		if item_delivery_registry != null and animation_id > 0:
+			item_delivery_registry.finish(animation_id)
+		else:
+			_discard_pickup_flight(flight_data as Dictionary)
+	pickup_flights.clear()
+
+
+func _world_position_to_ui(world_position: Vector2) -> Vector2:
+	var ui := item_delivery_ui
+	var viewport: Viewport = ui.get_viewport() if ui != null else null
+	if ui == null or viewport == null:
+		return world_position
+	var viewport_position := viewport.get_canvas_transform() * world_position
+	return ui.get_global_transform_with_canvas().affine_inverse() * viewport_position
+
+
+func _snap_ui_position(position: Vector2) -> Vector2:
+	return Vector2(roundf(position.x), roundf(position.y))
 
 
 func update_pixel_particles_from_root(root: Object, delta: float) -> void:
+	_prune_item_acquisition_deliveries()
 	update_charge_aura_from_root(root, delta)
 	update_pixel_particles(delta, Callable(root, "_snap_half_pixel"), (root.get("effects_tuning") as EffectsTuning).slime_death_particle_lifetime)
 	update_slime_notices(root, delta)
@@ -157,11 +335,11 @@ func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerT
 	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	particle.z_as_relative = false
 	particle.z_index = maxi(player.z_index - 2, 0)
-	particle.position = origin
 	particle.modulate = Color(air_color.r, air_color.g, air_color.b, lerpf(0.38, 0.78, progress))
 	particle.scale = Vector2(1.0, 2.0 if progress >= 0.70 else 1.0)
 	particle.rotation = Vector2(horizontal_speed, vertical_speed).angle() + PI * 0.5
 	root.add_child(particle)
+	particle.global_position = origin
 	var lifetime := maxf(tuning.charge_aura_particle_lifetime * random_source.randf_range(0.78, 1.12), 0.05)
 	pixel_particles.append({
 		"sprite": particle,
@@ -309,11 +487,11 @@ func update_fire_sparks_from_root(root: Object, delta: float) -> void:
 	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	particle.z_as_relative = false
 	particle.z_index = fire.z_index + 2
-	particle.position = origin
 	var fire_palette := _fire_palette_from_root(root)
 	var fire_tones := PaletteLibrary.fire_triple(fire_palette)
 	particle.modulate = fire_tones[0]
 	root.add_child(particle)
+	particle.global_position = origin
 	var lifetime: float = float(root.get("rng").randf_range(0.28, 0.5))
 	pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_speed * 5.0, root.get("rng").randf_range(-18.0, -11.0)), "timer": lifetime, "lifetime": lifetime, "gravity": -3.0, "fire_spark": true, "fire_palette": fire_palette})
 
@@ -616,8 +794,8 @@ func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vect
 		particle.z_as_relative = false
 		particle.z_index = z_index
 		var pixel_x := image.get_width() - 1 - source_pixel.x if flip_h else source_pixel.x
-		particle.position = origin + offset + Vector2(pixel_x, source_pixel.y) * scale
 		parent.add_child(particle)
+		particle.global_position = origin + offset + Vector2(pixel_x, source_pixel.y) * scale
 		var lifetime := randf_range(1.2, lifetime_max)
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": effect_tag})
 
@@ -642,8 +820,8 @@ func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vec
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = z_index
-		particle.position = position + Vector2(source_pixel) + Vector2(0, -2)
 		parent.add_child(particle)
+		particle.global_position = position + Vector2(source_pixel) + Vector2(0, -2)
 		var direction := -1.0 if float(source_pixel.x) < float(image.get_width()) * 0.5 else 1.0
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(direction * random_source.randf_range(speed_min * 0.5, speed_max * 0.75), random_source.randf_range(-10.0, -2.0)), "timer": lifetime, "gravity": 30.0})
 
@@ -659,7 +837,7 @@ func spawn_chest_evaporation_particles(parent: Node, texture: Texture2D, positio
 			if image.get_pixel(x, y).a > 0.0 and noise.get_noise_2d(float(x), float(y)) > -0.18: candidates.append(Vector2i(x, y))
 	candidates.shuffle()
 	for index in mini(count, candidates.size()):
-		var source_pixel := candidates[index]; var particle := Sprite2D.new(); particle.texture = pixel_texture.call(image.get_pixelv(source_pixel)); particle.centered = false; particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; particle.z_as_relative = false; particle.z_index = z_index; particle.position = position + Vector2(source_pixel); parent.add_child(particle)
+		var source_pixel := candidates[index]; var particle := Sprite2D.new(); particle.texture = pixel_texture.call(image.get_pixelv(source_pixel)); particle.centered = false; particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; particle.z_as_relative = false; particle.z_index = z_index; parent.add_child(particle); particle.global_position = position + Vector2(source_pixel)
 		var lifetime := random_source.randf_range(lifetime_min, lifetime_max); pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, random_source.randf_range(-24.0, -12.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 
 
@@ -679,8 +857,10 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	shadow.z_as_relative = false
 	shadow.z_index = 4091
-	shadow.position = snap_position.call(world_position + Vector2(0.0, 0.5))
 	parent.add_child(shadow)
+	shadow.global_position = snap_position.call(world_position + Vector2(0.0, 0.5))
+	var pop_scale := (1.48 if was_critical else 1.26) if pop_time > 0.0 else 1.0
+	shadow.scale = Vector2.ONE * pop_scale
 	var outline: Sprite2D = null
 	if was_critical:
 		var outline_color := Color.WHITE if color.is_equal_approx(Color.WHITE) or color.is_equal_approx(Color.BLACK) else Color.BLACK
@@ -691,19 +871,21 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 		outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		outline.z_as_relative = false
 		outline.z_index = 4091
-		outline.position = snap_position.call(world_position - Vector2.ONE)
 		parent.add_child(outline)
+		outline.global_position = snap_position.call(world_position - Vector2.ONE)
+		outline.scale = Vector2.ONE * pop_scale
 	var sprite := Sprite2D.new()
 	sprite.texture = pixel_number.call(number_text, color) as Texture2D
 	sprite.centered = false
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false
 	sprite.z_index = 4092
-	sprite.position = world_position
 	parent.add_child(sprite)
+	sprite.global_position = world_position
+	sprite.scale = Vector2.ONE * pop_scale
 	if damage_numbers.size() >= MAX_DAMAGE_NUMBERS:
 		_discard_damage_number(damage_numbers[0])
-	damage_numbers.append({"sprite": sprite, "shadow": shadow, "outline": outline, "timer": lifetime, "pop_timer": pop_time, "velocity": velocity})
+	damage_numbers.append({"sprite": sprite, "shadow": shadow, "outline": outline, "timer": lifetime, "pop_timer": pop_time, "pop_duration": pop_time, "pop_scale": pop_scale, "velocity": velocity})
 
 
 func _discard_damage_number(damage_number: Dictionary) -> void:
@@ -763,10 +945,10 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 		velocity.y += float(particle_data.get("gravity", 18.0)) * delta
 		if particle_data.get("effect_tag", &"") == CHARGE_AURA_TAG:
 			velocity.x += float(particle_data.get("curl", 0.0)) * delta
-		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
+		var logical_position := particle_data.get("logical_position", particle.global_position) as Vector2
 		logical_position += velocity * delta
 		particle_data["logical_position"] = logical_position
-		particle.position = snap_position.call(logical_position)
+		particle.global_position = snap_position.call(logical_position)
 		var color := particle.modulate
 		var lifetime := float(particle_data.get("lifetime", default_lifetime))
 		color.a = float(particle_data.get("alpha_scale", 1.0)) * clampf(timer / lifetime, 0.0, 1.0)
@@ -805,7 +987,17 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 			continue
 		var pop_timer := float(damage_number.get("pop_timer", 0.0))
 		if pop_timer > 0.0:
-			damage_number["pop_timer"] = maxf(pop_timer - delta, 0.0)
+			var pop_duration := maxf(float(damage_number.get("pop_duration", pop_timer)), 0.0001)
+			var next_pop_timer := maxf(pop_timer - delta, 0.0)
+			var pop_progress := 1.0 - clampf(next_pop_timer / pop_duration, 0.0, 1.0)
+			var pop_eased := 1.0 - pow(1.0 - pop_progress, 2.0)
+			var pop_scale := lerpf(float(damage_number.get("pop_scale", 1.0)), 1.0, pop_eased)
+			sprite.scale = Vector2.ONE * pop_scale
+			if shadow != null:
+				shadow.scale = Vector2.ONE * pop_scale
+			if outline != null:
+				outline.scale = Vector2.ONE * pop_scale
+			damage_number["pop_timer"] = next_pop_timer
 			sprite.modulate = Color.WHITE
 			continue
 		var timer := float(damage_number["timer"]) - delta
@@ -817,14 +1009,14 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 				outline.queue_free()
 			damage_numbers.remove_at(index)
 			continue
-		var logical_position := damage_number.get("logical_position", sprite.position) as Vector2
+		var logical_position := damage_number.get("logical_position", sprite.global_position) as Vector2
 		logical_position += damage_number.get("velocity", Vector2.ZERO) as Vector2 * delta
 		damage_number["logical_position"] = logical_position
-		sprite.position = snap_position.call(logical_position)
+		sprite.global_position = snap_position.call(logical_position)
 		if shadow != null:
-			shadow.position = snap_position.call(logical_position + Vector2(0.0, 0.5))
+			shadow.global_position = snap_position.call(logical_position + Vector2(0.0, 0.5))
 		if outline != null:
-			outline.position = snap_position.call(logical_position - Vector2.ONE)
+			outline.global_position = snap_position.call(logical_position - Vector2.ONE)
 		var alpha := clampf(timer / default_lifetime, 0.0, 1.0)
 		sprite.modulate.a = alpha
 		if shadow != null:
@@ -840,7 +1032,7 @@ func start_roll_dust(parent: Node, player: Sprite2D, direction: Vector2, frames:
 	roll_dust_flipped = direction.x > 0.01 or (absf(direction.x) <= 0.01 and not player.flip_h)
 	var active_frames := flipped_frames if roll_dust_flipped else frames
 	roll_dust_sprite = Sprite2D.new(); roll_dust_sprite.name = "RollDust"; roll_dust_sprite.texture = active_frames[0]; roll_dust_sprite.centered = false; roll_dust_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; roll_dust_sprite.z_as_relative = false; roll_dust_sprite.z_index = maxi(player.z_index - 2, 0)
-	var emission_anchor: Vector2 = actor_foot.call(player) + Vector2(0.0, -3.0) - direction * 2.0 + Vector2(0.0, 3.0); var texture_anchor := Vector2(15.0, 15.0) if roll_dust_flipped else Vector2(0.0, 15.0); roll_dust_sprite.global_position = snap_position.call(emission_anchor - texture_anchor); roll_dust_origin = roll_dust_sprite.global_position; roll_dust_drift = Vector2.LEFT if roll_dust_flipped else Vector2.RIGHT; parent.add_child(roll_dust_sprite); roll_dust_frame = 0; roll_dust_timer = 0.0
+	var emission_anchor: Vector2 = actor_foot.call(player) + Vector2(0.0, -3.0) - direction * 2.0 + Vector2(0.0, 3.0); var texture_anchor := Vector2(15.0, 15.0) if roll_dust_flipped else Vector2(0.0, 15.0); var spawn_position: Vector2 = snap_position.call(emission_anchor - texture_anchor) as Vector2; roll_dust_drift = Vector2.LEFT if roll_dust_flipped else Vector2.RIGHT; parent.add_child(roll_dust_sprite); roll_dust_sprite.global_position = spawn_position; roll_dust_origin = spawn_position; roll_dust_frame = 0; roll_dust_timer = 0.0
 
 
 func update_roll_dust(delta: float, player_z: int, frames: Array[Texture2D], flipped_frames: Array[Texture2D], frame_time: float, snap_position: Callable) -> void:
