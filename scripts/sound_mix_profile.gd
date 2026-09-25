@@ -43,6 +43,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	&"ui_unequip": &"ui_unequip_db",
 	&"ui_buy_sell": &"ui_buy_sell_db",
 	&"ui_pause": &"ui_pause_db",
+	&"pickup_counter_tick": &"pickup_counter_tick_db",
 	&"ui_unpause": &"ui_unpause_db",
 	&"enemy_alert": &"enemy_alert_db",
 	&"item_pickup": &"item_pickup_db",
@@ -74,7 +75,7 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	"crit", "imbue_impact",
 	"magic_hit", "ui_hover", "ui_confirm", "ui_decline", "ui_no_input",
 	"ui_denied", "ui_use_item", "ui_equip", "ui_unequip", "ui_buy_sell",
-	"ui_pause", "sword_beam", "sword_beam_charge", "use_flame", "ui_unpause", "enemy_alert",
+	"ui_pause", "pickup_counter_tick", "sword_beam", "sword_beam_charge", "use_flame", "ui_unpause", "enemy_alert",
 	"item_pickup", "chest_unlock", "chest_reward", "run_clear", "level_up",
 	"enemy_hit_1", "enemy_hit_2", "enemy_hit_3", "enemy_hit_4", "orb_hit",
 	"enemy_hit_5", "enemy_hit_6", "target_release", "foot_left", "foot_right",
@@ -132,6 +133,7 @@ var play_preview_action: Callable = _play_preview
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_unequip_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_buy_sell_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_pause_db := -8.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var pickup_counter_tick_db := -8.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_unpause_db := -6.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var item_pickup_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var chest_unlock_db := 0.0

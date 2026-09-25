@@ -38,6 +38,7 @@ const CLIPS: Dictionary = {
 	"ui_unequip": UI_PATH + "071_Unequip_01.wav",
 	"ui_buy_sell": UI_PATH + "079_Buy_sell_01.wav",
 	"ui_pause": SELFMADE_REVERB_PATH + "Blip.wav",
+	"pickup_counter_tick": SELFMADE_REVERB_PATH + "Blip.wav",
 	"sword_beam_charge": SELFMADE_REVERB_PATH + "ChargedAttackwav.wav",
 	"use_flame": SELFMADE_PATH + "UseFlame.wav",
 	"ui_unpause": KH_UI_PATH + "sys-close.sms-real.wav",

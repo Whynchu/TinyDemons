@@ -3,7 +3,7 @@
 Status: current external-resource-backed tuning index; hardcoded gap list remains
 planned work
 
-Updated: 2026-09-19
+Updated: 2026-09-24
 
 > Purpose: a single index of gameplay tuning knobs and where to change them.
 > The six core tuning defaults are now external `.tres` resources. Each
@@ -25,7 +25,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | `resources/tuning/effects_default.tres` | `EffectsTuning` | Damage numbers, particles, and screen effects |
 | `resources/tuning/chroma_default.tres` | `ChromaTuning` | Chroma pickup and elemental resource values |
 
-### `scripts/player_tuning.gd` — player feel (81 exports, all `inspector`)
+### `scripts/player_tuning.gd` — player feel (85 exports, all `inspector`)
 
 | Group | Fields |
 | --- | --- |
@@ -42,7 +42,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | Running attack | `run_attack_lunge_multiplier` 2.0 (16px from the 8px base), original `attack_lunge_duration`, `run_attack_damage_multiplier` 1.10, `run_attack_knockback_multiplier` 1.25, `run_attack_hitstop_multiplier` 1.20, `run_attack_extra_cooldown_frames` 1.5; a live run starts directly at Attack 2 and consumes the run state |
 | Damage | `attack2_damage_multiplier` 1.25, `attack2_multi_target_damage_multiplier` 1.10 |
 | Regen | `regen_delay` 2.0, `regen_interval` 1.0, `regen_amount` 1.0 |
-| Death/hitstop | `death_particle_lifetime` 1.8, `death_fade_time` 0.7, `death_particle_delay` 0.7, `hitstop_duration` 1/40, `death_observe_time` 1.4, `health_damage_hang_time` 0.14 |
+| Death/hitstop | `death_particle_lifetime` 1.8, `death_fade_time` 0.7, `death_particle_delay` 0.7, `hitstop_duration` 1/40, `critical_hitstop_multiplier` 1.8 (critical hits use up to 1.8x base hitstop), `death_observe_time` 1.4, `health_damage_hang_time` 0.14 |
 
 ### `scripts/slime_tuning.gd` — enemy behavior (41 exports, all `inspector`)
 
@@ -61,7 +61,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 
 | Group | Fields |
 | --- | --- |
-| Block reaction | `normal_block_stun` 0.12 seconds; perfect blocks use exactly `2.0x` that duration (`0.24` seconds) while `perfect_window` remains 0.14 seconds |
+| Block reaction | `normal_block_stun` 0.12 seconds; perfect blocks use exactly `2.0x` that duration (`0.24` seconds) while `perfect_window` remains 0.14 seconds; blocked player knockback is `0.25x`, the counter shove is `1.0x`, and perfect-block counter shove is `1.5x`. Counter recoil ignores the player's current attack multiplier so the full shove stays visible, including on a blocked boss slam. |
 
 ### `scripts/combat_tuning.gd` — combat formulas (11 exports, all `inspector`)
 
@@ -132,9 +132,10 @@ into the seed.
 
 `scripts/element_catalog.gd` owns the eight-element matchup matrix. Neutral is
 the player defender in this slice. Weakness is `1.25x`, resistance is `0.8x`,
-and Neutral is immune to Shadow while Shadow damages Neutral at `1.0x`;
-Shadow into Shadow is `1.25x`. Ground
-is immune to Electric, while Ice is strong against Ground and Grass.
+and Shadow strongly resists Neutral at `0.25x` while Shadow damages Neutral at
+`1.0x`; Shadow into Shadow is `1.25x`. Ground strongly resists Electric at
+`0.25x`, while Ice is strong against Ground and Grass. No current elemental
+matchup grants full immunity.
 Regular encounters include Gray at weight 1.0 immediately; Yellow joins at
 room depth 2 with weight 1.0, Ground joins at depth 3, and Ice joins at depth 4.
 Purple remains the rare `0.12` regular-encounter variant and `0.04` boss-minor

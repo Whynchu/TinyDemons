@@ -5,3 +5,4 @@
 [resource]
 resource_name = "Default Player Tuning"
 script = ExtResource("1_player")
+critical_hitstop_multiplier = 1.8

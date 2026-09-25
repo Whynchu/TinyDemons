@@ -166,6 +166,14 @@ func _present_acquisition(result: PickupAcquisitionResult) -> void:
 		acquisition_presentation_handler.call(result)
 
 
+func _spawn_pickup_contact_feedback(root: Object, result: PickupAcquisitionResult) -> void:
+	if root == null or result == null or not result.succeeded():
+		return
+	var effects := root.get("effects_spawner") as EffectsSpawner
+	if effects != null:
+		effects.spawn_pickup_contact_burst_from_root(root, result.source_position, result.accent_color)
+
+
 func _safe_drop_position(root: Object, point: Vector2) -> Vector2:
 	var candidate: Vector2 = root.call("_nearest_slime_walkable_point", point) as Vector2
 	if bool(root.call("_is_slime_walkable_point", candidate)):
@@ -707,6 +715,7 @@ func collect_gold_pickup(root: GameplayState, index: int) -> PickupAcquisitionRe
 	result.display_text = "+%d GOLD" % value
 	result.accent_color = gold_color(value)
 	result.target_key = &"gold"
+	_spawn_pickup_contact_feedback(root, result)
 	root._play_sound("item_pickup", -12.0, 0.9 + float(value) / 100.0)
 	controller.remove(index)
 	_present_acquisition(result)
@@ -797,8 +806,8 @@ func collect_world_item_drop(root: Object) -> PickupAcquisitionResult:
 	root.call("_save_player_profile")
 	var acquired_text := result.display_text
 	var acquired_color := Color("ffd866")
-	var acquired_origin: Vector2 = root.call("_player_floating_number_origin", acquired_text, acquired_color) as Vector2
-	root.call("_spawn_floating_number", acquired_origin + Vector2(0, -20), 0, Vector2(0, -12), false, false, acquired_color, acquired_text)
+	_spawn_pickup_contact_feedback(root, result)
+	root.call("_spawn_player_number", acquired_text, 0, acquired_color, false, acquired_text)
 	root.call("_play_sound", "item_pickup", -4.0, 1.0)
 	var drop_index := -1
 	for index in root.world_item_drops.size():
@@ -934,9 +943,9 @@ func collect_chroma_pickup(root: Object, index: int) -> PickupAcquisitionResult:
 		result.display_text = "+%d CHROMA" % value
 		result.accent_color = chroma_color
 		result.target_key = &"chroma"
-		if pickup != null and is_instance_valid(pickup):
-			root.call("_spawn_chroma_pickup_burst", pickup.global_position, chroma_color)
-		root.call("_spawn_floating_number", root.call("_actor_foot", root.player) + Vector2(0, -18), 0, Vector2(0, -12), false, false, chroma_color, "+%d CHROMA" % value)
+		_spawn_pickup_contact_feedback(root, result)
+		var acquired_text := "+%d CHROMA" % value
+		root.call("_spawn_player_number", acquired_text, 0, chroma_color, false, acquired_text)
 		root.call("_play_sound", "item_pickup", -12.0, 1.15)
 		remove_chroma_pickup(root, index)
 		_present_acquisition(result)
@@ -1068,11 +1077,8 @@ func collect_soul_pickup(root: Object, index: int) -> PickupAcquisitionResult:
 	result.display_text = acquired_text
 	result.accent_color = SOUL_COLOR
 	result.target_key = &"souls"
-	var effects := root.get("effects_spawner") as EffectsSpawner
-	if effects != null:
-		effects.spawn_soul_pickup_burst_from_root(root, source_position, SOUL_COLOR)
-	var acquired_origin: Vector2 = root.call("_player_floating_number_origin", acquired_text, SOUL_COLOR) as Vector2
-	root.call("_spawn_floating_number", acquired_origin + Vector2(0, -18), 0, Vector2(0, -12), false, false, SOUL_COLOR, acquired_text)
+	_spawn_pickup_contact_feedback(root, result)
+	root.call("_spawn_player_number", acquired_text, 0, SOUL_COLOR, false, acquired_text)
 	root.call("_play_sound", "item_pickup", -10.0, 1.0)
 	remove_soul_pickup(root, index)
 	_present_acquisition(result)

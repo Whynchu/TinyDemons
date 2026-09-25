@@ -263,11 +263,17 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 	var damage := damage_result.amount if damage_result != null else float(root.call("_slime_attack_damage", slime))
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var blocked := false
+	var perfect_block := false
 	var block_stun := 0.0
+	var player_knockback_multiplier := 1.0
+	var counter_knockback_multiplier := 0.0
 	if guard != null:
 		var guard_result := guard.absorb_damage(_guard_context(root), damage, root.call("_actor_foot", slime))
 		blocked = bool(guard_result["blocked"])
+		perfect_block = bool(guard_result.get("perfect", false))
 		block_stun = float(guard_result.get("stun", 0.0))
+		player_knockback_multiplier = float(guard_result.get("player_knockback_multiplier", 1.0))
+		counter_knockback_multiplier = float(guard_result.get("counter_knockback_multiplier", 0.0))
 		var shield_damage := float(guard_result["shield_damage"])
 		if shield_damage > 0.0: root.call("_spawn_player_shield_damage_number", shield_damage)
 		damage = float(guard_result["health_damage"])
@@ -277,17 +283,32 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 		var state := root as GameplayState
 		if state != null:
 			var impact_position := state._actor_foot(player)
-			var impact_color := Color8(148, 220, 255) if blocked else ElementCatalogScript.damage_number_color(damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL)
+			if blocked:
+				impact_position = impact_position.lerp(state._actor_foot(slime), 0.35)
 			if state.effects_spawner != null:
-				state.effects_spawner.spawn_combat_hit_burst_from_root(root, impact_position, impact_color)
+				if blocked:
+					state.effects_spawner.spawn_shield_block_burst_from_root(root, impact_position, perfect_block)
+				else:
+					var impact_color := ElementCatalogScript.damage_number_color(damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL)
+					state.effects_spawner.spawn_combat_hit_burst_from_root(root, impact_position, impact_color)
 			if state.display_controller != null:
-				state.display_controller.request_screen_shake(1.3 if blocked else 2.2, 0.10 if blocked else 0.16)
+				var shake_strength := 1.8 if perfect_block else (1.3 if blocked else 2.2)
+				var shake_duration := 0.13 if perfect_block else (0.10 if blocked else 0.16)
+				state.display_controller.request_screen_shake(shake_strength, shake_duration)
 	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
-	var player_tuning := root.get("player_tuning") as PlayerTuning; root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time); root.set("player_hitstun_timer", player_tuning.hitstun_time); root.call("_apply_player_hit_knockback", slime); if damage > 0.0: root.call("_spawn_player_damage_number", damage, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, false); root.call("_update_player_health_ui"); root.set("hitstop_timer", player_tuning.hitstop_duration)
+	var player_tuning := root.get("player_tuning") as PlayerTuning
+	root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time)
+	root.set("player_hitstun_timer", player_tuning.hitstun_time)
+	root.call("_apply_player_hit_knockback", slime, player_knockback_multiplier)
+	if damage > 0.0: root.call("_spawn_player_damage_number", damage, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, false)
+	root.call("_update_player_health_ui")
+	root.set("hitstop_timer", player_tuning.hitstop_duration)
 	if blocked and combat != null:
 		combat.active = false
 		combat.timer = 0.0
 		combat.hit_done = true
+		if counter_knockback_multiplier > 0.0:
+			root.call("_knockback_slime", slime, counter_knockback_multiplier, false, false)
 		# Blocking interrupts the swing, but it still consumes the enemy's normal
 		# attack recovery. Without this, the interrupted attack can restart on the
 		# very next frame and turn a successful block into a punishment.

@@ -8,6 +8,7 @@ class_name InteractionContext
 
 var player: Sprite2D = null
 var chest: Sprite2D = null
+var cloaked_demon: Sprite2D = null
 var npc_controller: NpcController = null
 var interact_prompt: Sprite2D = null
 
@@ -17,6 +18,8 @@ var target_input_was_down_get: Callable = Callable()
 var target_input_was_down_set: Callable = Callable()
 var last_player_facing_left_get: Callable = Callable()
 var last_player_facing_left_set: Callable = Callable()
+var mouse_target_locked_get: Callable = Callable()
+var mouse_target_locked_set: Callable = Callable()
 
 var actor_foot: Callable = Callable()
 var is_target_input_held: Callable = Callable()
@@ -29,6 +32,8 @@ var target_cycle_direction: Callable = Callable()
 var cycle_target: Callable = Callable()
 var update_target_ui: Callable = Callable()
 var player_facing_vector: Callable = Callable()
+var mouse_aim_active: Callable = Callable()
+var mouse_aim_direction: Callable = Callable()
 var can_interact_with_chest: Callable = Callable()
 var can_interact_with_npc: Callable = Callable()
 var can_interact_with_world_item: Callable = Callable()

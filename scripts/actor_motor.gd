@@ -44,7 +44,11 @@ func move_player(root: Object, delta: float) -> void:
 	if not moving:
 		root.set("player_roll_hold_armed", false)
 		return
-	update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))
+	# Mouse aim is the facing source while it is active. Movement still controls
+	# travel, but only a new keyboard/controller input returns facing to movement.
+	var mouse_aim_active := root.has_method("_mouse_aim_active") and bool(root.call("_mouse_aim_active"))
+	if not mouse_aim_active:
+		update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))
 	var tuning := root.get("player_tuning") as PlayerTuning
 	var guard_speed_scale := 0.5 if bool(root.get("player_is_defending")) else 1.0
 	var speed_multiplier := float(root.get("player_speed_multiplier"))

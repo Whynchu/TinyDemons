@@ -104,8 +104,11 @@ func apply_display_layout(root: Object) -> void:
 			player_status.position = Vector2.ZERO
 		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
 		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
-		_set_layout_position(player_hud.get_node_or_null("InventoryChest") as Node2D, &"inventory_chest")
-		_set_layout_position(player_hud.get_node_or_null("InventoryChestReceiving") as Node2D, &"inventory_chest")
+		var inventory_chest := player_hud.get_node_or_null("InventoryChest") as Node2D
+		var inventory_chest_receiving := player_hud.get_node_or_null("InventoryChestReceiving") as Node2D
+		_set_layout_position(inventory_chest, &"inventory_chest")
+		var chest_base_position: Vector2 = inventory_chest.get_meta("display_layout_base_position", inventory_chest.position) as Vector2 if inventory_chest != null else Vector2.INF
+		_set_layout_position(inventory_chest_receiving, &"inventory_chest", chest_base_position)
 		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")
 	_set_layout_position(combo_label, &"combo")
 	_set_layout_position(combo_base, &"combo")
@@ -147,12 +150,10 @@ func _set_layout_position(node: Node2D, anchor: StringName, base_override: Vecto
 
 
 func inventory_chest_target_position() -> Vector2:
-	if inventory_chest == null or not is_instance_valid(inventory_chest):
+	var target_sprite := inventory_chest if inventory_chest != null and is_instance_valid(inventory_chest) else inventory_chest_receiving
+	if target_sprite == null or not is_instance_valid(target_sprite):
 		return Vector2(198, 10)
-	var target := inventory_chest.global_position
-	if inventory_chest.texture != null:
-		target += inventory_chest.texture.get_size() * 0.5
-	return target
+	return target_sprite.to_global(target_sprite.get_rect().get_center())
 
 
 func chroma_target_position() -> Vector2:
@@ -187,6 +188,23 @@ func gold_target_position() -> Vector2:
 func sync_gold_value(value: int) -> void:
 	displayed_gold = maxi(value, 0)
 	gold_display_target = displayed_gold
+
+
+func set_gold_amount_texture(texture: Texture2D) -> void:
+	_set_currency_amount_texture(gold_indicator, gold_amount_indicator, texture)
+
+
+func set_soul_amount_texture(texture: Texture2D) -> void:
+	_set_currency_amount_texture(soul_icon_indicator, soul_amount_indicator, texture)
+
+
+func _set_currency_amount_texture(icon: Sprite2D, amount: Sprite2D, texture: Texture2D) -> void:
+	if icon == null or amount == null:
+		return
+	amount.texture = texture
+	amount.centered = false
+	if texture != null:
+		amount.position.x = icon.position.x - 1.0 - texture.get_width()
 
 
 func acknowledge_gold_delivery(color: Color, value: int) -> void:
@@ -230,7 +248,7 @@ func _tick_gold_counter(root: Object, delta: float) -> void:
 		return
 	if displayed_gold < gold_display_target:
 		displayed_gold = mini(gold_display_target, displayed_gold + maxi(1, int(ceil(GOLD_COUNTUP_SPEED * maxf(delta, 0.0)))))
-		gold_amount_indicator.texture = root.call("_pixel_text_texture", str(displayed_gold), Color8(255, 205, 117)) as Texture2D
+		set_gold_amount_texture(root.call("_pixel_text_texture", str(displayed_gold), Color8(255, 205, 117)) as Texture2D)
 
 
 func sync_soul_value(value: int) -> void:
@@ -264,7 +282,7 @@ func _tick_soul_counter(root: Object, delta: float) -> void:
 		return
 	if displayed_souls < soul_display_target:
 		displayed_souls = mini(soul_display_target, displayed_souls + maxi(1, int(ceil(SOUL_COUNTUP_SPEED * maxf(delta, 0.0)))))
-		soul_amount_indicator.texture = root.call("_pixel_text_texture", str(displayed_souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D
+		set_soul_amount_texture(root.call("_pixel_text_texture", str(displayed_souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D)
 
 
 func acknowledge_inventory_delivery(color: Color) -> void:
@@ -323,9 +341,7 @@ func _acknowledge_chroma_reaction(color: Color) -> void:
 	chroma_reaction_id = 0
 	chroma_reaction_color = color if color.a > 0.0 else Color.WHITE
 	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
-		var texture_size := chroma_delivery_target.texture.get_size() if chroma_delivery_target.texture != null else Vector2(82, 16)
-		chroma_highlight_target.texture = _solid_texture(Vector2i(texture_size), chroma_reaction_color)
-		chroma_highlight_target.visible = true
+		chroma_highlight_target.texture = _tint_bar_mask(chroma_delivery_target.texture, chroma_reaction_color.lerp(Color.WHITE, 0.35))
 		chroma_highlight_target.modulate = Color.WHITE
 	if feedback_animation_registry == null:
 		_finish_chroma_delivery_reaction()
@@ -348,7 +364,6 @@ func _update_chroma_delivery_reaction(progress: float) -> void:
 func _finish_chroma_delivery_reaction() -> void:
 	chroma_reaction_id = 0
 	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
-		chroma_highlight_target.visible = false
 		chroma_highlight_target.modulate = Color.WHITE
 
 
@@ -476,8 +491,8 @@ func set_chroma_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_
 	set_fill_ratio(main_fill, fill_size, main_ratio)
 	if transition_fill == null:
 		return
-	set_fill_ratio(transition_fill, fill_size, transition_ratio)
 	var transition_active := not is_equal_approx(main_ratio, transition_ratio)
+	set_fill_ratio(transition_fill, fill_size, transition_ratio)
 	transition_fill.visible = transition_active
 	transition_fill.modulate = Color.WHITE
 
@@ -837,6 +852,21 @@ func _solid_texture(size: Vector2i, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+func _tint_bar_mask(source: Texture2D, color: Color) -> Texture2D:
+	if source == null:
+		return null
+	var source_image: Image = source.get_image()
+	if source_image == null:
+		return null
+	var image: Image = source_image.duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var alpha := image.get_pixel(x, y).a
+			if alpha > 0.0:
+				image.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
+	return ImageTexture.create_from_image(image)
+
+
 func cooldown_timer_texture(seconds: float, color: Color) -> Texture2D:
 	var display_seconds := ceilf(maxf(seconds, 0.0) * 10.0) / 10.0
 	var text := "%.1f" % display_seconds
@@ -1015,7 +1045,6 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		room_number.position = Vector2(5, 141)
 		parent.add_child(room_number)
-	var gold_display := layout.get_node_or_null("GoldDisplay") as Node2D if layout != null else null
 	var gold := layout.get_node("GoldDisplay/Gold") as Sprite2D if layout != null else Sprite2D.new()
 	gold.name = "GoldIndicator"
 	gold.centered = false
@@ -1024,8 +1053,6 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		gold.position = Vector2(64, 2)
 		parent.add_child(gold)
-	if gold_display != null:
-		gold_display.position.y = 2.0
 	var gold_amount := layout.get_node("GoldDisplay/GoldAmount") as Sprite2D if layout != null else Sprite2D.new()
 	gold_amount.name = "GoldAmount"
 	gold_amount.centered = false
@@ -1065,14 +1092,12 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		soul_display.name = "SoulDisplay"
 		soul_display.position = Vector2(205, 9) if layout != null else Vector2(64, 9)
 		(layout if layout != null else parent).add_child(soul_display)
-	else:
-		soul_display.position = Vector2(205, 9) if layout != null else Vector2(64, 9)
 	var soul_icon := soul_display.get_node_or_null("SoulIcon") as Sprite2D
 	if soul_icon == null:
 		soul_icon = Sprite2D.new()
 		soul_icon.name = "SoulIcon"
 		soul_display.add_child(soul_icon)
-	soul_icon.position = Vector2.ZERO
+		soul_icon.position = Vector2.ZERO
 	soul_icon.centered = false
 	soul_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	soul_icon.z_index = 2
@@ -1081,7 +1106,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		soul_amount = Sprite2D.new()
 		soul_amount.name = "SoulAmount"
 		soul_display.add_child(soul_amount)
-	soul_amount.position = Vector2(7, 0)
+		soul_amount.position = Vector2(7, 0)
 	soul_amount.centered = false
 	soul_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	soul_amount.z_index = 2
@@ -1119,7 +1144,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 		chroma_highlight_target = duplicate_fill_sprite(chroma_delivery_target, "MpBarHighlight")
 	self.soul_delivery_target = soul_icon
 	if chroma_highlight_target != null:
-		chroma_highlight_target.z_index = chroma_delivery_target.z_index + 1
+		chroma_highlight_target.z_index = chroma_delivery_target.z_index - 1
 		chroma_highlight_target.visible = false
 		chroma_highlight_target.region_rect = chroma_delivery_target.region_rect
 	if soul_delivery_target != null:

@@ -80,8 +80,9 @@ on-screen UI following the **last device that produced deliberate input**.
   (§11). Menu lists instead scroll through reliable `InputEventScreenDrag`
   swipe-to-scroll in the touch layer, which drives the same `ui_up`/`ui_down`
   navigation the controller uses.
-- Mouse-driven gameplay changes. Desktop mouse behavior is unchanged; menus
-  already accept clicks via real `Button` nodes.
+- New mouse-specific gameplay actions. Desktop mouse clicks and drags may use
+  the virtual touch-control hit regions during gameplay without showing the
+  touch overlay; menus continue to use their native `Button` nodes.
 - In-game input remapping UI. The Input Map stays the binding authority.
 - Backbone-specific code. A Backbone attached to a phone is a standard
   browser gamepad (§3); it must work through the generic path.

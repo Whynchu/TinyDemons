@@ -26,6 +26,34 @@ func closest_target(root: Object) -> Sprite2D:
 	return (root.get("interaction_component") as InteractionComponent).closest_target(root.get("player") as Sprite2D, candidates, TARGET_LOCK_MAX_DISTANCE, Callable(root, "_actor_foot"), Callable(root, "_is_target_actor_dead"), Callable(root, "_is_slime_targetable"))
 
 
+func target_at_position(root: Object, world_position: Vector2) -> Sprite2D:
+	var candidates: Array[Sprite2D] = (root.get("slimes") as Array[Sprite2D]).duplicate()
+	candidates.append_array(root.get("puzzle_torches") as Array[Sprite2D])
+	var best: Sprite2D = null
+	var best_distance := INF
+	for candidate in candidates:
+		if candidate == null or not is_instance_valid(candidate) or not bool(root.call("_is_slime_targetable", candidate)):
+			continue
+		var hit := false
+		var hit_center := Vector2.ZERO
+		if (root.get("slimes") as Array[Sprite2D]).has(candidate):
+			var body: PackedVector2Array = root.call("_slime_body_polygon", candidate)
+			if body.size() >= 3:
+				hit = Geometry2D.is_point_in_polygon(world_position, body)
+				hit_center = ActorGeometry.polygon_center(body)
+		if not hit:
+			var bounds: Rect2 = root.call("_collision_rect", candidate)
+			hit = bounds.has_point(world_position)
+			hit_center = bounds.get_center()
+		if not hit:
+			continue
+		var distance := hit_center.distance_squared_to(world_position)
+		if distance < best_distance:
+			best = candidate
+			best_distance = distance
+	return best
+
+
 func cycle_target(root: Object, direction: int) -> void:
 	if direction == 0:
 		return
@@ -64,6 +92,8 @@ func set_current_target(root: Object, target: Sprite2D, play_feedback: bool = tr
 	if target != null and not is_instance_valid(target):
 		target = null
 	var previous := valid_current_target(root)
+	if target == null:
+		root.set("mouse_target_locked", false)
 	if previous == target:
 		return
 	var actors := root.get("actor_sprites") as Array[Sprite2D]

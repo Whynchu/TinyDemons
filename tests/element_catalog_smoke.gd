@@ -10,10 +10,10 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var e := ElementCatalogScript.Element
 	var expected := [
-		[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0],
+		[1.0, 1.0, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0],
 		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.0, 1.25],
 		[1.0, 1.25, 0.8, 1.0, 0.8, 1.0, 1.25, 1.0],
-		[1.0, 1.0, 1.25, 0.8, 0.8, 1.0, 0.0, 1.0],
+		[1.0, 1.0, 1.25, 0.8, 0.8, 1.0, 0.25, 1.0],
 		[1.0, 0.8, 1.25, 1.0, 0.8, 1.0, 1.25, 1.0],
 		[1.0, 1.0, 1.0, 1.0, 1.0, 1.25, 1.0, 1.0],
 		[1.0, 1.25, 1.0, 1.25, 0.8, 1.0, 0.8, 1.0],
@@ -22,7 +22,7 @@ func _initialize() -> void:
 	for attacker in ElementCatalogScript.element_count():
 		for defender in ElementCatalogScript.element_count():
 			_expect(is_equal_approx(ElementCatalogScript.effectiveness(attacker, defender), expected[attacker][defender]), "matchup %d -> %d" % [attacker, defender], failures)
-	_expect(ElementCatalogScript.effectiveness(e.NEUTRAL, e.SHADOW) == 0.0, "Neutral is immune into Shadow", failures)
+	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.NEUTRAL, e.SHADOW), 0.25), "Neutral is strongly resisted by Shadow", failures)
 	_expect(ElementCatalogScript.effectiveness(e.SHADOW, e.NEUTRAL) == 1.0, "Shadow damages Normal slimes", failures)
 	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.SHADOW, e.SHADOW), 1.25), "Shadow is weak to Shadow", failures)
 	_expect(ElementCatalogScript.element_for_aspect(0) == e.NEUTRAL, "Gray aspect maps to Neutral", failures)
@@ -43,7 +43,7 @@ func _initialize() -> void:
 	_expect(ElementCatalogScript.palette_key(e.SHADOW) == "purple", "Shadow uses purple palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.GROUND) == "orange", "Ground uses orange palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.ICE) == "aquamarine", "Ice uses aquamarine palette", failures)
-	_expect(ElementCatalogScript.effectiveness(e.ELECTRIC, e.GROUND) == 0.0, "Electric is immune into Ground", failures)
+	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.ELECTRIC, e.GROUND), 0.25), "Electric is strongly resisted by Ground", failures)
 	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.ICE, e.GROUND), 1.25), "Ice is strong into Ground", failures)
 	var fire_damage_color := ElementCatalogScript.damage_number_color(e.FIRE)
 	var fire_accent := PaletteLibrary.accent("red")

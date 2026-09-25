@@ -117,16 +117,25 @@ func update_magic_input(context: MagicRuntimeContext, magic_down: bool, was_down
 func _begin_magic_candidate(context: MagicRuntimeContext) -> bool:
 	if _magic_action_blocked(context):
 		return false
-	var current := context.valid_current_target.call() as Sprite2D
-	var target := current if current != null and bool(context.is_slime_targetable.call(current)) else context.closest_target.call() as Sprite2D
 	var player := context.player
 	var direction := Vector2.RIGHT
-	if target != null:
-		var to_target: Vector2 = magic_target_point(context, target) - player_visual_center(context)
-		direction = to_target.normalized() if to_target.length_squared() > 0.0001 else direction
+	var target: Sprite2D = null
+	var pointer_aim_active := context.mouse_aim_active.is_valid() and bool(context.mouse_aim_active.call())
+	if pointer_aim_active:
+		var pointer_direction: Variant = context.mouse_aim_direction.call() if context.mouse_aim_direction.is_valid() else Vector2.ZERO
+		if pointer_direction is Vector2 and (pointer_direction as Vector2).length_squared() > 0.0001:
+			direction = pointer_direction as Vector2
+		elif player != null:
+			direction = Vector2.LEFT if player.flip_h else Vector2.RIGHT
 	else:
-		var last_input: Vector2 = context.last_player_input_direction_get.call()
-		direction = last_input.normalized() if last_input.length_squared() > 0.0001 else (Vector2.LEFT if player != null and player.flip_h else Vector2.RIGHT)
+		var current := context.valid_current_target.call() as Sprite2D
+		target = current if current != null and bool(context.is_slime_targetable.call(current)) else context.closest_target.call() as Sprite2D
+		if target != null:
+			var to_target: Vector2 = magic_target_point(context, target) - player_visual_center(context)
+			direction = to_target.normalized() if to_target.length_squared() > 0.0001 else direction
+		else:
+			var last_input: Vector2 = context.last_player_input_direction_get.call()
+			direction = last_input.normalized() if last_input.length_squared() > 0.0001 else (Vector2.LEFT if player != null and player.flip_h else Vector2.RIGHT)
 	return begin_magic_animation(context, direction, target, ChromaComponentScript.AbilityMode.GRAY, false, true)
 
 

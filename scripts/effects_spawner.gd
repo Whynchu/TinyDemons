@@ -32,6 +32,7 @@ var item_delivery_hud: HudController = null
 var item_delivery_registry: FeedbackAnimationRegistry = null
 var item_delivery_screen_state: Node = null
 var item_delivery_minimap: Node = null
+var pickup_delivery_sound_player: Callable = Callable()
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
 var charge_aura_timer := 0.0
@@ -42,12 +43,13 @@ var charge_aura_active := false
 var charge_ready_highlight: Sprite2D = null
 
 
-func configure_item_acquisition_delivery(ui: Node2D, hud: HudController, registry: FeedbackAnimationRegistry, screen_state: Node, minimap: Node) -> void:
+func configure_item_acquisition_delivery(ui: Node2D, hud: HudController, registry: FeedbackAnimationRegistry, screen_state: Node, minimap: Node, sound_player: Callable = Callable()) -> void:
 	item_delivery_ui = ui
 	item_delivery_hud = hud
 	item_delivery_registry = registry
 	item_delivery_screen_state = screen_state
 	item_delivery_minimap = minimap
+	pickup_delivery_sound_player = sound_player
 
 
 func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
@@ -74,11 +76,29 @@ func spawn_soul_pickup_burst_from_root(root: Object, world_position: Vector2, so
 	_spawn_colored_burst_from_root(root, world_position, soul_color, &"soul_pickup", "SoulPickup", 14)
 
 
+func spawn_pickup_contact_burst_from_root(root: Object, world_position: Vector2, pickup_color: Color) -> void:
+	_spawn_colored_burst_from_root(root, world_position, pickup_color, &"pickup_contact", "PickupContact", 8)
+
+
 func spawn_combat_hit_burst_from_root(root: Object, world_position: Vector2, impact_color: Color, critical: bool = false) -> void:
-	_spawn_colored_burst_from_root(root, world_position, impact_color, &"combat_hit", "CombatHit", 10 if critical else 6)
+	if critical:
+		var critical_color := impact_color.lerp(Color8(255, 218, 132), 0.60)
+		_spawn_colored_burst_from_root(root, world_position, critical_color, &"critical_hit", "CriticalHit", 12, 4, 0.20, 24.0, 46.0)
+	else:
+		_spawn_colored_burst_from_root(root, world_position, impact_color, &"combat_hit", "CombatHit", 6)
 
 
-func _spawn_colored_burst_from_root(root: Object, world_position: Vector2, burst_color: Color, effect_tag: StringName, name_prefix: String, particle_count: int) -> void:
+func spawn_shield_block_burst_from_root(root: Object, world_position: Vector2, perfect: bool = false) -> void:
+	var block_color := Color8(255, 219, 142) if perfect else Color8(148, 220, 255)
+	var particle_count := 12 if perfect else 8
+	var flash_size := 4 if perfect else 3
+	var flash_lifetime := 0.20 if perfect else 0.16
+	var speed_min := 24.0 if perfect else 18.0
+	var speed_max := 46.0 if perfect else 38.0
+	_spawn_colored_burst_from_root(root, world_position, block_color, &"shield_block", "ShieldBlock", particle_count, flash_size, flash_lifetime, speed_min, speed_max)
+
+
+func _spawn_colored_burst_from_root(root: Object, world_position: Vector2, burst_color: Color, effect_tag: StringName, name_prefix: String, particle_count: int, flash_size: int = 3, flash_lifetime: float = 0.16, speed_min: float = 18.0, speed_max: float = 38.0) -> void:
 	var random_source := RandomNumberGenerator.new()
 	var seed_value := int(round(world_position.x * 100.0)) ^ int(round(world_position.y * 101.0)) ^ Time.get_ticks_msec()
 	random_source.seed = seed_value
@@ -86,7 +106,7 @@ func _spawn_colored_burst_from_root(root: Object, world_position: Vector2, burst
 	var z_index := int(round(world_position.y * float(root.get("DEPTH_Z_SCALE")))) + 4
 	var flash := Sprite2D.new()
 	flash.name = "%sFlash" % name_prefix
-	flash.texture = root.call("_pixel_particle_texture", burst_color.lerp(Color.WHITE, 0.7), 3) as Texture2D
+	flash.texture = root.call("_pixel_particle_texture", burst_color.lerp(Color.WHITE, 0.7), flash_size) as Texture2D
 	flash.centered = true
 	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	flash.z_as_relative = false
@@ -94,7 +114,7 @@ func _spawn_colored_burst_from_root(root: Object, world_position: Vector2, burst
 	flash.position = Vector2.ZERO
 	root.add_child(flash)
 	flash.global_position = origin
-	pixel_particles.append({"sprite": flash, "velocity": Vector2.ZERO, "timer": 0.16, "lifetime": 0.16, "gravity": 0.0, "effect_tag": effect_tag, "logical_position": origin})
+	pixel_particles.append({"sprite": flash, "velocity": Vector2.ZERO, "timer": flash_lifetime, "lifetime": flash_lifetime, "gravity": 0.0, "effect_tag": effect_tag, "logical_position": origin})
 	for index in particle_count:
 		var particle := Sprite2D.new()
 		particle.name = "%sSplash%d" % [name_prefix, index]
@@ -107,7 +127,7 @@ func _spawn_colored_burst_from_root(root: Object, world_position: Vector2, burst
 		root.add_child(particle)
 		particle.global_position = origin
 		var angle := TAU * float(index) / float(maxi(particle_count, 1)) + random_source.randf_range(-0.16, 0.16)
-		var speed := random_source.randf_range(18.0, 38.0)
+		var speed := random_source.randf_range(speed_min, speed_max)
 		var lifetime := random_source.randf_range(0.28, 0.48)
 		var velocity := Vector2.from_angle(angle) * speed + Vector2(0.0, -random_source.randf_range(2.0, 9.0))
 		pixel_particles.append({"sprite": particle, "velocity": velocity, "timer": lifetime, "lifetime": lifetime, "gravity": 30.0, "effect_tag": effect_tag, "logical_position": origin})
@@ -167,7 +187,9 @@ func _update_pickup_acquisition_flight(progress: float, flight: Sprite2D, source
 	var position := source_position.lerp(target_position, eased_progress)
 	position.y -= sin(progress * PI) * PICKUP_FLIGHT_ARC_HEIGHT
 	flight.position = _snap_ui_position(position)
-	flight.scale = Vector2.ONE * lerpf(1.0, 0.82, progress)
+	var contact_pop_progress := clampf(progress / 0.12, 0.0, 1.0)
+	var contact_pop := 1.0 + sin(contact_pop_progress * PI) * 0.24
+	flight.scale = Vector2.ONE * lerpf(1.0, 0.82, progress) * contact_pop
 
 
 func _complete_pickup_acquisition_flight(hud: HudController, flight: Sprite2D, result: PickupAcquisitionResult) -> void:
@@ -204,6 +226,8 @@ func _acknowledge_pickup_delivery(hud: HudController, result: PickupAcquisitionR
 			hud.acknowledge_soul_delivery(result.accent_color, result.value)
 		&"gold":
 			hud.acknowledge_gold_delivery(result.accent_color, result.value)
+	if result.target_key in [&"chroma", &"souls", &"gold"] and pickup_delivery_sound_player.is_valid():
+		pickup_delivery_sound_player.call("pickup_counter_tick", -14.0, 1.25)
 
 
 func _remove_pickup_flight(flight: Sprite2D) -> void:

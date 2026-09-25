@@ -8,6 +8,10 @@ const PHASE_DAMAGE := &"damage_and_progression"
 const PHASE_PRESENTATION := &"presentation"
 const PHASE_TRANSITIONS := &"transitions"
 const PHASE_ORDER: Array[StringName] = [PHASE_INPUT, PHASE_SIMULATION, PHASE_CONTACT, PHASE_DAMAGE, PHASE_PRESENTATION, PHASE_TRANSITIONS]
+## A quick click on an enemy selects it; a deliberate hold also attacks it.
+const MOUSE_TARGET_HOLD_ATTACK_DELAY := 0.18
+
+enum MouseLeftHoldMode { NONE, ATTACK, TARGET, INTERACTION }
 
 ## Opt-in diagnostics for the performance harness. Disabled by default, so the
 ## disabled path is a single boolean test at each context builder. Access counts
@@ -24,6 +28,9 @@ static var context_build_counts: Dictionary = {}
 ## stable for the lifetime of the runtime. Call invalidate_contexts() if a source
 ## object such as a tuning resource or equipment component is ever swapped.
 var _context_cache: Dictionary = {}
+var _mouse_left_hold_mode := MouseLeftHoldMode.NONE
+var _mouse_target_hold_elapsed := 0.0
+var _mouse_left_attack_held := false
 
 
 func invalidate_contexts() -> void:
@@ -153,15 +160,10 @@ func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualConte
 	context.player_between_timer_get = func() -> Variant: return root.get("player_between_timer")
 	context.player_death_timer_get = func() -> Variant: return root.get("player_death_timer")
 	context.player_death_particles_started_get = func() -> Variant: return root.get("player_death_particles_started")
-	context.player_attack_flip_h_get = func() -> Variant: return root.get("player_attack_flip_h")
-	context.player_magic_flip_h_get = func() -> Variant: return root.get("player_magic_flip_h")
 	context.player_stat_snapshot = Callable(root, "_player_stat_snapshot")
 	context.equipment_occlusion_depth_key = Callable(root, "_equipment_occlusion_depth_key")
 	context.sprite_source_global_rect = Callable(root, "_sprite_source_global_rect")
 	context.pixel_particle_texture = Callable(root, "_pixel_particle_texture")
-	context.is_target_input_held = Callable(root, "_is_target_input_held")
-	context.valid_current_target = Callable(root, "_valid_current_target")
-	context.target_facing_left = Callable(root, "_target_facing_left")
 	context.actor_screen_scale = Callable(root, "_actor_screen_scale")
 	context.actor_visual_offset = Callable(root, "_actor_visual_offset")
 	return context
@@ -197,6 +199,8 @@ func magic_context(root: GameplayState) -> MagicRuntimeContext:
 	context.player_dead_get = func() -> Variant: return root.get("player_dead")
 	context.last_player_facing_left_get = func() -> Variant: return root.get("last_player_facing_left")
 	context.last_player_input_direction_get = func() -> Variant: return root.get("last_player_input_direction")
+	context.mouse_aim_active = Callable(root, "_mouse_aim_active")
+	context.mouse_aim_direction = Callable(root, "_mouse_aim_direction")
 	context.current_player_palette_name_get = func() -> Variant: return root.get("current_player_palette_name")
 	context.player_agi_get = func() -> Variant: return root.get("player_agi")
 	context.player_spd_get = func() -> Variant: return root.get("player_spd")
@@ -321,6 +325,7 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	_context_cache[&"interaction_context"] = context
 	context.player = root.player
 	context.chest = root.chest
+	context.cloaked_demon = root.cloaked_demon
 	context.npc_controller = root.npc_controller
 	context.interact_prompt = root.interact_prompt
 	context.player_is_attacking_get = func() -> Variant: return root.get("player_is_attacking")
@@ -329,6 +334,8 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	context.target_input_was_down_set = func(value: Variant) -> void: root.set("target_input_was_down", value)
 	context.last_player_facing_left_get = func() -> Variant: return root.get("last_player_facing_left")
 	context.last_player_facing_left_set = func(value: Variant) -> void: root.set("last_player_facing_left", value)
+	context.mouse_target_locked_get = func() -> Variant: return root.get("mouse_target_locked")
+	context.mouse_target_locked_set = func(value: Variant) -> void: root.set("mouse_target_locked", value)
 	context.actor_foot = Callable(root, "_actor_foot")
 	context.is_target_input_held = Callable(root, "_is_target_input_held")
 	context.set_current_target = Callable(root, "_set_current_target")
@@ -340,6 +347,8 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	context.cycle_target = Callable(root, "_cycle_target")
 	context.update_target_ui = Callable(root, "_update_target_ui")
 	context.player_facing_vector = Callable(root, "_player_facing_vector")
+	context.mouse_aim_active = Callable(root, "_mouse_aim_active")
+	context.mouse_aim_direction = Callable(root, "_mouse_aim_direction")
 	context.can_interact_with_chest = Callable(root, "_can_interact_with_chest")
 	context.can_interact_with_npc = Callable(root, "_can_interact_with_npc")
 	context.can_interact_with_world_item = Callable(root, "_can_interact_with_world_item")
@@ -352,12 +361,75 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	return context
 
 
+func _resolve_mouse_left_click(root: GameplayState, delta: float) -> bool:
+	_mouse_left_attack_held = false
+	if root.input_router == null:
+		_mouse_left_hold_mode = MouseLeftHoldMode.NONE
+		_mouse_target_hold_elapsed = 0.0
+		return false
+	var click_pressed := root.input_router.consume_mouse_left_press()
+	var button_held := root.input_router.mouse_left_button_pressed()
+	var mouse_attack_click := false
+	if click_pressed:
+		var click_position := root.input_router.mouse_left_click_position()
+		root.mouse_click_aim_direction_this_frame = root._mouse_aim_direction_at(click_position)
+		_update_mouse_facing(root)
+		var world_position := root._mouse_world_position_at(click_position)
+		var target := root._target_at_mouse_position(world_position)
+		_mouse_target_hold_elapsed = 0.0
+		if target != null:
+			if not root.mouse_target_locked:
+				root.player_facing_left_before_target = root.last_player_facing_left
+			root.mouse_target_locked = true
+			root._set_current_target(target)
+			_mouse_left_hold_mode = MouseLeftHoldMode.TARGET
+		elif root._mouse_interaction_at(world_position):
+			root.mouse_interact_input_this_frame = true
+			_mouse_left_hold_mode = MouseLeftHoldMode.INTERACTION
+		else:
+			_mouse_left_hold_mode = MouseLeftHoldMode.ATTACK
+			mouse_attack_click = true
+	elif not button_held:
+		_mouse_left_hold_mode = MouseLeftHoldMode.NONE
+		_mouse_target_hold_elapsed = 0.0
+
+	if button_held:
+		if _mouse_left_hold_mode == MouseLeftHoldMode.ATTACK:
+			_mouse_left_attack_held = true
+		elif _mouse_left_hold_mode == MouseLeftHoldMode.TARGET:
+			_mouse_target_hold_elapsed += maxf(delta, 0.0)
+			_mouse_left_attack_held = _mouse_target_hold_elapsed >= MOUSE_TARGET_HOLD_ATTACK_DELAY
+	elif not click_pressed:
+		_mouse_left_hold_mode = MouseLeftHoldMode.NONE
+		_mouse_target_hold_elapsed = 0.0
+	return mouse_attack_click
+
+
+func _update_mouse_facing(root: GameplayState) -> void:
+	if not root._mouse_aim_active() or root.player == null:
+		return
+	if root.player_is_attacking or root.player_is_magic_casting or root.player_is_rolling or root.player_is_backflipping:
+		return
+	var direction: Vector2 = root._mouse_aim_direction()
+	if absf(direction.x) <= ActorMotor.HORIZONTAL_FACING_DEADZONE:
+		return
+	var facing_left := direction.x < 0.0
+	root.player.flip_h = facing_left
+	root.last_player_facing_left = facing_left
+
+
 func update_player_input(root: GameplayState, delta: float) -> void:
-	var attack_down: bool = root._is_attack_input_pressed(); var attack := root.player_attack_component
+	var mouse_attack_click := _resolve_mouse_left_click(root, delta)
+	var mouse_roll_click := root.input_router.consume_mouse_right_press() if root.input_router != null else false
+	var mouse_magic_click := root.input_router.consume_mouse_middle_press() if root.input_router != null else false
+	if mouse_magic_click and root.input_router != null:
+		root.mouse_click_aim_direction_this_frame = root._mouse_aim_direction_at(root.input_router.mouse_middle_click_position())
+	_update_mouse_facing(root)
+	var attack_down: bool = root._is_attack_input_pressed() or _mouse_left_attack_held; var attack := root.player_attack_component
 	if attack != null:
 		attack.set_attack_input_held(attack_down)
 		attack.update_spin_input(root, root._raw_movement_input(), delta, not root.player_is_attacking and not root.player_is_magic_casting and not root.player_is_rolling and not root.player_is_backflipping and not root.player_is_defending)
-	if attack_down and not root.player_attack_input_was_down:
+	if (attack_down and not root.player_attack_input_was_down) or mouse_attack_click:
 		var accepted_attack := false
 		if not root.player_is_attacking and not root.player_is_magic_casting and not root.player_is_rolling and not root.player_is_backflipping and not root.player_is_defending and (attack == null or attack.can_start_attack2()):
 			if attack != null and attack.spin_gesture.is_armed():
@@ -375,7 +447,7 @@ func update_player_input(root: GameplayState, delta: float) -> void:
 			attack.buffer_combo(root.player_tuning.combo_window); attack.set_combo_movement(root._movement_input()); accepted_attack = true
 		root._record_run_action_input(&"attack", accepted_attack)
 	root.player_attack_input_was_down = attack_down
-	var roll_down: bool = root._is_roll_input_pressed()
+	var roll_down: bool = root._is_roll_input_pressed() or mouse_roll_click
 	if roll_down and not root.player_roll_input_was_down:
 		var accepted_roll := false
 		if not root.player_is_attacking and not root.player_is_magic_casting and not root.player_is_rolling and not root.player_is_backflipping and not root.player_is_defending and (root.player_motor == null or not root.player_motor.is_in_knockback()):
@@ -401,12 +473,13 @@ func update_player_input(root: GameplayState, delta: float) -> void:
 		# Remember the facing from just before the lock-on so a no-target backflip
 		# retreats while keeping the player's original facing.
 		root.player_facing_left_before_target = root.last_player_facing_left
-	root.player_is_targeting = target_down
-	_update_magic_input(root, delta)
+		root.mouse_target_locked = false
+	root.player_is_targeting = target_down or root.mouse_target_locked
+	_update_magic_input(root, delta, mouse_magic_click)
 
 
-func _update_magic_input(root: GameplayState, delta: float) -> void:
-	var magic_down: bool = root._is_magic_input_pressed()
+func _update_magic_input(root: GameplayState, delta: float, mouse_magic_click: bool = false) -> void:
+	var magic_down: bool = root._is_magic_input_pressed() or mouse_magic_click
 	var accepted_magic: bool = root._update_magic_input(magic_down, root.magic_input_was_down, delta)
 	if accepted_magic:
 		root._record_run_action_input(&"magic", accepted_magic)
@@ -414,6 +487,8 @@ func _update_magic_input(root: GameplayState, delta: float) -> void:
 
 
 func tick(root: GameplayState, delta: float) -> void:
+	root.mouse_interact_input_this_frame = false
+	root.mouse_click_aim_direction_this_frame = Vector2.ZERO
 	if root.display_controller != null:
 		root.display_controller.tick_screen_shake(delta, root.hitstop_timer > 0.0)
 	root._update_mp_desaturation()
@@ -555,11 +630,19 @@ func tick(root: GameplayState, delta: float) -> void:
 	if guard != null: guard.tick(_guard_context(root), delta, not player_input_locked and root._is_guard_input_held())
 	if not player_input_locked:
 		update_player_input(root, delta)
-	elif root.player_is_magic_casting or root.magic_input_was_down:
-		# The shared magic animation is also the hold-to-IMBUE decision window.
-		# Keep polling Triangle while that window is active, even though movement
-		# and the other player actions remain locked.
-		_update_magic_input(root, delta)
+	else:
+		if root.input_router != null:
+			root.input_router.consume_mouse_left_press()
+			root.input_router.consume_mouse_right_press()
+			root.input_router.consume_mouse_middle_press()
+		_mouse_left_hold_mode = MouseLeftHoldMode.NONE
+		_mouse_target_hold_elapsed = 0.0
+		_mouse_left_attack_held = false
+		if root.player_is_magic_casting or root.magic_input_was_down:
+			# The shared magic animation is also the hold-to-IMBUE decision window.
+			# Keep polling Triangle while that window is active, even though movement
+			# and the other player actions remain locked.
+			_update_magic_input(root, delta)
 	player_input_locked = dialogue_was_active or root.player_is_magic_casting
 	var player_attack := root.player_attack_component
 	if player_attack != null and not player_input_locked:

@@ -33,7 +33,7 @@ traps:
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
 | `item_catalog.tres`: records added only to `definitions` (not `live_base_definitions`) | Never drop or appear in the shop; the legacy section is loadable but excluded from generation. | 2 |
 | Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
-| `element_catalog.tres` and `palette_library.tres` | Now included in recursive definition validation; runtime wiring and typed consolidation remain Slice 2 work. | 2 |
+| `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs; element identity still spans parallel enums/adapters, and typed consolidation remains Slice 2 work. | 2 |
 
 The definition validator is part of the release gate and web CI. The catalog
 report exits nonzero when a required surface cannot load.

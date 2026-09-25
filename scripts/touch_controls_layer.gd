@@ -9,6 +9,7 @@ class_name TouchControlsLayer
 ## top of it.
 
 const DEVICE_TOUCH := 2
+const DEVICE_GAMEPAD := 1
 const CONTEXT_GAMEPLAY := 0
 const CONTEXT_DIALOGUE := 1
 const CONTEXT_HUB := 2
@@ -16,6 +17,7 @@ const CONTEXT_MENU := 3
 const CONTEXT_PAUSE := 4
 const EMULATED_DEVICE_ID := -1
 const MOUSE_FINGER_ID := -2
+const EMULATED_MOUSE_FINGER_ID := -3
 
 const BASE_CONTENT_SIZE := Vector2(240.0, 160.0)
 const BUTTON_FRACTION := 0.15
@@ -30,6 +32,7 @@ const MENU_SCROLL_DRAG_PX := 6.0
 const MENU_TOUCH_HIT_SLOP := 8.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
 const FUSION_DOUBLE_TAP_MS := 350
+const MOUSE_INPUT_SNAPSHOT_SCRIPT = preload("res://scripts/mouse_input_snapshot.gd")
 ## Discrete gameplay buttons emit a short, subtle haptic pulse on press (never
 ## on release or stick drag). Use/interact still pulses through the world-tap
 ## path; UI-only controls (pause, minimap, cancel) deliberately do not.
@@ -88,6 +91,19 @@ var _last_input_device := -1
 var _input_context := CONTEXT_GAMEPLAY
 var _controls_visible := false
 var _touch_input_enabled := false
+var _mouse_controls_enabled := false
+var _mouse_position := Vector2.ZERO
+var _mouse_position_valid := false
+var _mouse_aim_active := false
+var _mouse_left_button_pressed := false
+var _mouse_left_click_pending := false
+var _mouse_left_click_position := Vector2.ZERO
+var _mouse_right_button_pressed := false
+var _mouse_right_click_pending := false
+var _mouse_right_click_position := Vector2.ZERO
+var _mouse_middle_button_pressed := false
+var _mouse_middle_click_pending := false
+var _mouse_middle_click_position := Vector2.ZERO
 var _built := false
 ## Testable haptic decision point. When null, the layer asks the parent's
 ## settings service for the vibration toggle; haptics default on otherwise.
@@ -125,6 +141,14 @@ func set_input_context(next_context: int) -> void:
 		return
 	_clear_transient_input()
 	_input_context = next_context
+	if next_context != CONTEXT_GAMEPLAY:
+		_mouse_aim_active = false
+		_mouse_left_button_pressed = false
+		_mouse_left_click_pending = false
+		_mouse_right_button_pressed = false
+		_mouse_right_click_pending = false
+		_mouse_middle_button_pressed = false
+		_mouse_middle_click_pending = false
 	if _built:
 		# The hub cancel control is nested inside HubOverlay, so refresh its
 		# position whenever a menu becomes visible or closes.
@@ -136,11 +160,19 @@ func set_last_input_device(device: int) -> void:
 	if _last_input_device != device:
 		_clear_transient_input()
 	_last_input_device = device
+	if device == DEVICE_GAMEPAD or device == DEVICE_TOUCH:
+		_mouse_aim_active = false
+		_mouse_left_button_pressed = false
+		_mouse_left_click_pending = false
+		_mouse_right_button_pressed = false
+		_mouse_right_click_pending = false
+		_mouse_middle_button_pressed = false
+		_mouse_middle_click_pending = false
 	_refresh_controls()
 
 
 func is_active() -> bool:
-	return _touch_input_enabled
+	return _touch_input_enabled or _mouse_controls_enabled
 
 
 func refresh_layout() -> void:
@@ -149,7 +181,7 @@ func refresh_layout() -> void:
 
 
 func movement_vector() -> Vector2:
-	return _stick_vector if _controls_visible else Vector2.ZERO
+	return _stick_vector if _controls_visible or _mouse_controls_enabled else Vector2.ZERO
 
 
 func action_pressed(action: StringName) -> bool:
@@ -163,14 +195,14 @@ func action_pressed(action: StringName) -> bool:
 		return bool(_pressed_actions.get(&"interact", false)) or not _menu_accept_fingers.is_empty()
 	if action == &"cancel" or action == &"ui_cancel":
 		return bool(_pressed_actions.get(&"cancel", false)) or (bool(_pressed_actions.get(&"pause", false)) if _controls_visible else false)
-	if not _controls_visible:
+	if not _controls_visible and not _mouse_controls_enabled:
 		return false
 	return bool(_pressed_actions.get(action, false))
 
 
 func snapshot() -> Dictionary:
-	if not _touch_input_enabled:
-		return {"active": false, "movement": Vector2.ZERO, "actions": {}, "just_pressed": {}}
+	if not is_active():
+		return _input_snapshot(false)
 	_clear_stale_menu_accepts()
 	var actions: Dictionary = {}
 	for action in [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"open_minimap", &"target", &"guard"]:
@@ -193,12 +225,40 @@ func snapshot() -> Dictionary:
 	_menu_scroll_y = 0.0
 	_press_latches.clear()
 	_menu_accept_latch = false
-	return {"active": true, "movement": _stick_vector, "actions": actions, "just_pressed": just_pressed, "scroll_y": scroll_y}
+	return _input_snapshot(true, actions, just_pressed, scroll_y)
+
+
+func _input_snapshot(active: bool, actions: Dictionary = {}, just_pressed: Dictionary = {}, scroll_y: float = 0.0) -> Dictionary:
+	var mouse_input: RefCounted = MOUSE_INPUT_SNAPSHOT_SCRIPT.new()
+	mouse_input.set("pointer_position", _mouse_position)
+	mouse_input.set("has_pointer_position", _mouse_position_valid)
+	mouse_input.set("aim_active", _mouse_aim_active and _input_context == CONTEXT_GAMEPLAY)
+	mouse_input.set("left_button_pressed", _mouse_left_button_pressed)
+	mouse_input.set("left_click_just_pressed", _mouse_left_click_pending)
+	mouse_input.set("left_click_position", _mouse_left_click_position)
+	mouse_input.set("right_button_pressed", _mouse_right_button_pressed)
+	mouse_input.set("right_click_just_pressed", _mouse_right_click_pending)
+	mouse_input.set("right_click_position", _mouse_right_click_position)
+	mouse_input.set("middle_button_pressed", _mouse_middle_button_pressed)
+	mouse_input.set("middle_click_just_pressed", _mouse_middle_click_pending)
+	mouse_input.set("middle_click_position", _mouse_middle_click_position)
+	var snapshot := {
+		"active": active,
+		"movement": _stick_vector if active else Vector2.ZERO,
+		"actions": actions,
+		"just_pressed": just_pressed,
+		"scroll_y": scroll_y,
+		"mouse_input": mouse_input,
+	}
+	_mouse_left_click_pending = false
+	_mouse_right_click_pending = false
+	_mouse_middle_click_pending = false
+	return snapshot
 
 
 ## Testable input-provider seams. Real GUI events use the same methods.
 func set_virtual_stick(value: Vector2) -> void:
-	if not _controls_visible:
+	if not _controls_visible and not _mouse_controls_enabled:
 		_stick_vector = Vector2.ZERO
 	else:
 		_stick_vector = value.limit_length(1.0)
@@ -208,7 +268,7 @@ func set_virtual_stick(value: Vector2) -> void:
 func set_button_state(action: StringName, pressed: bool) -> void:
 	var menu_cancel_enabled := action == &"cancel" and _touch_input_enabled
 	var menu_minimap_enabled := action == &"open_minimap" and _touch_input_enabled and _input_context == CONTEXT_MENU and _is_minimap_open()
-	if not _controls_visible and not menu_cancel_enabled and not menu_minimap_enabled:
+	if not _controls_visible and not _mouse_controls_enabled and not menu_cancel_enabled and not menu_minimap_enabled:
 		if not pressed:
 			_pressed_actions[action] = false
 			_update_button_visual(action)
@@ -366,10 +426,16 @@ func _panel_style(background: Color, border: Color, width: int, radius: int = 2)
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var key_event := event as InputEventKey
+		if key_event.pressed and not key_event.echo:
+			_mouse_aim_active = false
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.device == EMULATED_DEVICE_ID:
 			return
+		_mouse_aim_active = false
 		# The device tracker classifies touches on its own; this fallback keeps
 		# the controls discoverable on browsers with delayed touch reporting.
 		if _last_input_device != DEVICE_TOUCH:
@@ -382,40 +448,87 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		if drag.device != EMULATED_DEVICE_ID:
+			_mouse_aim_active = false
 			if _last_input_device != DEVICE_TOUCH:
 				set_last_input_device(DEVICE_TOUCH)
 			_finger_moved(drag.index, drag.position)
 		return
-	if not _touch_input_enabled:
-		return
 	if event is InputEventMouseButton:
-		# Real-mouse path so the overlay can be tested on desktop; emulated
-		# echoes of real touches are skipped to avoid double state changes.
 		var mouse_button := event as InputEventMouseButton
-		if mouse_button.button_index != MOUSE_BUTTON_LEFT:
+		if mouse_button.button_index not in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
 			return
 		if mouse_button.device == EMULATED_DEVICE_ID:
+			if mouse_button.button_index != MOUSE_BUTTON_LEFT:
+				return
 			# A browser may provide only the emulated mouse stream. Bootstrap can
 			# already know that the device is touch-capable, so accept that stream
 			# only when it is not a duplicate of an active screen touch.
 			if _last_input_device != DEVICE_TOUCH or _has_real_touch_capture():
 				return
-		elif _is_menu_context():
-			# Let native Godot Buttons receive an actual desktop mouse click.
+			if mouse_button.pressed:
+				_finger_down(EMULATED_MOUSE_FINGER_ID, mouse_button.position)
+			else:
+				_finger_up(EMULATED_MOUSE_FINGER_ID, mouse_button.position)
 			return
+		if not mouse_button.pressed:
+			if mouse_button.button_index == MOUSE_BUTTON_LEFT:
+				_mouse_left_button_pressed = false
+				if _finger_actions.has(MOUSE_FINGER_ID):
+					_finger_up(MOUSE_FINGER_ID, mouse_button.position)
+			elif mouse_button.button_index == MOUSE_BUTTON_RIGHT:
+				_mouse_right_button_pressed = false
+			elif mouse_button.button_index == MOUSE_BUTTON_MIDDLE:
+				_mouse_middle_button_pressed = false
+			elif _finger_actions.has(MOUSE_FINGER_ID):
+				_finger_up(MOUSE_FINGER_ID, mouse_button.position)
+			return
+		if _is_menu_context() or not _mouse_controls_enabled:
+			# Let native Godot Buttons receive actual desktop mouse clicks.
+			return
+		_mouse_position = mouse_button.position
+		_mouse_position_valid = true
 		if mouse_button.pressed:
-			_finger_down(MOUSE_FINGER_ID, mouse_button.position)
-		else:
-			_finger_up(MOUSE_FINGER_ID, mouse_button.position)
+			if _is_mouse_gameplay_position(mouse_button.position):
+				_mouse_aim_active = true
+				if mouse_button.button_index == MOUSE_BUTTON_LEFT:
+					_mouse_left_button_pressed = true
+					_mouse_left_click_pending = true
+					_mouse_left_click_position = mouse_button.position
+				elif mouse_button.button_index == MOUSE_BUTTON_RIGHT:
+					_mouse_right_button_pressed = true
+					_mouse_right_click_pending = true
+					_mouse_right_click_position = mouse_button.position
+				elif mouse_button.button_index == MOUSE_BUTTON_MIDDLE:
+					_mouse_middle_button_pressed = true
+					_mouse_middle_click_pending = true
+					_mouse_middle_click_position = mouse_button.position
+			else:
+				_mouse_aim_active = false
+				if mouse_button.button_index == MOUSE_BUTTON_LEFT:
+					_mouse_left_button_pressed = false
+					# Preserve the authored chest pause and minimap touch targets for a
+					# desktop mouse. Blank world clicks are handled by gameplay combat.
+					_finger_down(MOUSE_FINGER_ID, mouse_button.position)
+					# Preserve the authored chest pause and minimap touch targets for a
+					# desktop mouse. Blank world clicks are handled by gameplay combat.
+					_finger_down(MOUSE_FINGER_ID, mouse_button.position)
 		return
 	if event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
-		if motion.device != EMULATED_DEVICE_ID:
+		if motion.device == EMULATED_DEVICE_ID:
+			return
+		_mouse_position = motion.position
+		_mouse_position_valid = true
+		if _input_context == CONTEXT_GAMEPLAY and _mouse_controls_enabled and motion.relative.length_squared() > 0.0:
+			_mouse_aim_active = _is_mouse_gameplay_position(motion.position)
+		elif not _is_mouse_gameplay_position(motion.position):
+			_mouse_aim_active = false
+		if _touch_input_enabled or _mouse_controls_enabled:
 			_finger_moved(MOUSE_FINGER_ID, motion.position)
 
 
 func _finger_down(finger_id: int, position: Vector2) -> void:
-	if not _touch_input_enabled:
+	if not _touch_input_enabled and not _mouse_controls_enabled:
 		return
 	# The MAP button remains available while the full map is open so a touch
 	# player can close the overlay after opening it from gameplay.
@@ -518,7 +631,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 			return
 	var buttons: Dictionary = _layout.get("buttons", {})
 	for action in buttons:
-		if _circle_contains(buttons[action] as Rect2, position, CIRCLE_HIT_SLOP):
+		if (finger_id != MOUSE_FINGER_ID or _controls_visible) and _circle_contains(buttons[action] as Rect2, position, CIRCLE_HIT_SLOP):
 			_finger_actions[finger_id] = action
 			if action == &"target":
 				_target_toggle_active = not _target_toggle_active
@@ -527,7 +640,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 				set_button_state(action, true)
 			_update_touch_capture_filter()
 			return
-	if minimap.has_point(position) and _controls_visible and _input_context == CONTEXT_GAMEPLAY:
+	if minimap.has_point(position) and (_controls_visible or finger_id == MOUSE_FINGER_ID) and _input_context == CONTEXT_GAMEPLAY:
 		_finger_actions[finger_id] = &"open_minimap"
 		set_button_state(&"open_minimap", true)
 		_update_touch_capture_filter()
@@ -539,7 +652,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 		_update_touch_capture_filter()
 		return
 	var zone: Rect2 = _layout.get("stick_zone", Rect2())
-	if _stick_pointer_id < 0 and zone.has_point(position):
+	if (finger_id != MOUSE_FINGER_ID or _controls_visible) and _stick_pointer_id < 0 and zone.has_point(position):
 		_stick_pointer_id = finger_id
 		_stick_origin = _clamped_stick_origin(position)
 		set_virtual_stick(_stick_value_from_position(position))
@@ -550,7 +663,7 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 	# existing USE button for players who prefer an explicit action control, but
 	# let a tap on an interactable (or empty) world position use the same input
 	# path without requiring a second button press.
-	if _input_context == CONTEXT_GAMEPLAY:
+	if _input_context == CONTEXT_GAMEPLAY and finger_id != MOUSE_FINGER_ID:
 		_finger_actions[finger_id] = TAP_INTERACT_ACTION
 		_tap_interact_origins[finger_id] = position
 		set_button_state(&"interact", true)
@@ -558,6 +671,8 @@ func _finger_down(finger_id: int, position: Vector2) -> void:
 
 
 func _finger_moved(finger_id: int, position: Vector2) -> void:
+	if not _touch_input_enabled and not _mouse_controls_enabled:
+		return
 	var menu_y: float = _menu_scroll_coordinate(position) if _is_scrollable_menu() else position.y
 	if _menu_touch_buttons.has(finger_id):
 		if _is_scrollable_menu() and _menu_button_origins.has(finger_id):
@@ -698,6 +813,53 @@ func _buttons_contain(buttons: Dictionary, position: Vector2) -> bool:
 
 func _is_menu_context() -> bool:
 	return _input_context == CONTEXT_HUB or _input_context == CONTEXT_MENU or _input_context == CONTEXT_PAUSE
+
+
+func _is_mouse_gameplay_position(viewport_position: Vector2) -> bool:
+	if _input_context != CONTEXT_GAMEPLAY or not _mouse_controls_enabled:
+		return false
+	var host := get_parent()
+	if host != null and host.has_method("_input_context") and int(host.call("_input_context")) != CONTEXT_GAMEPLAY:
+		return false
+	if _is_minimap_open():
+		return false
+	var window_rect: Rect2 = _layout.get("window_rect", Rect2())
+	if not window_rect.has_point(viewport_position):
+		return false
+	var pause_rect: Rect2 = _layout.get("pause", Rect2())
+	if pause_rect.has_point(viewport_position):
+		return false
+	var minimap_rect: Rect2 = _layout.get("minimap", Rect2())
+	if minimap_rect.has_point(viewport_position):
+		return false
+	if _controls_visible:
+		var buttons: Dictionary = _layout.get("buttons", {})
+		if _buttons_contain(buttons, viewport_position):
+			return false
+		var stick_zone: Rect2 = _layout.get("stick_zone", Rect2())
+		if stick_zone.has_point(viewport_position):
+			return false
+	var ui: Node = host.get("ui") as Node if host != null else null
+	var player_hud := ui.get_node_or_null("PlayerHud") if ui != null else null
+	if player_hud != null and _visible_sprite_at(player_hud, viewport_position):
+		return false
+	return true
+
+
+func _visible_sprite_at(node: Node, viewport_position: Vector2) -> bool:
+	if node is Sprite2D:
+		var sprite := node as Sprite2D
+		if sprite.is_visible_in_tree() and sprite.texture != null:
+			var local_rect := sprite.get_rect()
+			var transform := sprite.get_global_transform_with_canvas()
+			var top_left := transform * local_rect.position
+			var bottom_right := transform * local_rect.end
+			if Rect2(top_left, bottom_right - top_left).abs().grow(1.0).has_point(viewport_position):
+				return true
+	for child in node.get_children():
+		if _visible_sprite_at(child, viewport_position):
+			return true
+	return false
 
 
 func _menu_control_contains(control: Control, viewport_position: Vector2, padding: float = 0.0) -> bool:
@@ -906,9 +1068,26 @@ func _update_layout() -> void:
 		if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 			viewport_size = content_size
 	_layout = _compute_layout(viewport_size, content_size, _live_minimap_rect())
+	var hud_pause_rect := _live_hud_chest_rect()
+	if hud_pause_rect.size.x > 0.0 and hud_pause_rect.size.y > 0.0:
+		_layout["pause"] = hud_pause_rect
 	if _stick_pointer_id < 0:
 		_stick_origin = _layout["stick_home"]
 	_apply_layout()
+
+
+func _live_hud_chest_rect() -> Rect2:
+	var host := get_parent()
+	var ui := host.get("ui") as Node if host != null else null
+	var chest := ui.get_node_or_null("PlayerHud/InventoryChest") as Sprite2D if ui != null else null
+	if chest == null or not chest.is_visible_in_tree() or chest.texture == null:
+		return Rect2()
+	var local_rect := chest.get_rect()
+	var canvas_transform := chest.get_global_transform_with_canvas()
+	var first := canvas_transform * local_rect.position
+	var second := canvas_transform * local_rect.end
+	var bounds := Rect2(first, second - first).abs()
+	return bounds.grow(maxf(float(_layout.get("margin", 4.0)) * 0.5, 2.0))
 
 
 func _live_minimap_rect() -> Rect2:
@@ -1020,6 +1199,7 @@ func _update_button_visual(action: StringName) -> void:
 func _refresh_controls() -> void:
 	_controls_visible = _last_input_device == DEVICE_TOUCH and (_input_context == CONTEXT_GAMEPLAY or _input_context == CONTEXT_DIALOGUE)
 	_touch_input_enabled = _last_input_device == DEVICE_TOUCH and _input_context in [CONTEXT_GAMEPLAY, CONTEXT_DIALOGUE, CONTEXT_HUB, CONTEXT_MENU, CONTEXT_PAUSE]
+	_mouse_controls_enabled = _input_context == CONTEXT_GAMEPLAY or _input_context == CONTEXT_DIALOGUE
 	_update_touch_capture_filter()
 	if not _controls_visible:
 		_clear_gameplay_input()
@@ -1041,7 +1221,7 @@ func _refresh_controls() -> void:
 		if action == &"cancel":
 			control_visible = _cancel_control_visible()
 		elif action == &"pause":
-			control_visible = _controls_visible
+			control_visible = false
 		elif action == &"open_minimap":
 			# The full map owns its own select/back prompts. Keep the legacy MAP
 			# touch route alive for input compatibility, but never draw a second
@@ -1089,6 +1269,13 @@ func _clear_transient_input() -> void:
 	_pressed_actions.clear()
 	_target_toggle_active = false
 	_press_latches.clear()
+	_mouse_aim_active = false
+	_mouse_left_button_pressed = false
+	_mouse_left_click_pending = false
+	_mouse_right_button_pressed = false
+	_mouse_right_click_pending = false
+	_mouse_middle_button_pressed = false
+	_mouse_middle_click_pending = false
 	for action in _button_nodes:
 		_update_button_visual(action)
 	_update_touch_capture_filter()
