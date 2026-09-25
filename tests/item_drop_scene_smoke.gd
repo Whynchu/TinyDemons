@@ -150,7 +150,8 @@ func _initialize() -> void:
 					_expect(hud_controller.chroma_reaction_id > 0, "Chroma HUD acknowledges the delivered pickup", failures)
 					var chroma_highlight := hud_controller.chroma_highlight_target
 					_expect(hud_controller.chroma_reaction_color.is_equal_approx(PaletteLibrary.ACCENT["grey"]), "Chroma delivery carries the neutral highlight color into the HUD", failures)
-					_expect(chroma_highlight != null and chroma_highlight.visible and chroma_highlight.texture != null and _contains_color(chroma_highlight.texture.get_image(), PaletteLibrary.ACCENT["grey"]), "Chroma delivery reveals the colored MP highlight layer", failures)
+					var highlight_image := chroma_highlight.texture.get_image() if chroma_highlight != null and chroma_highlight.texture != null else null
+					_expect(highlight_image != null and is_zero_approx(highlight_image.get_pixel(5, 8).a) and highlight_image.get_pixel(20, 8).a > 0.0, "Chroma delivery keeps its brighter texture confined to the MP line", failures)
 					for _reaction_frame in 6:
 						registry.tick(0.05)
 			var soul_controller := gameplay.get("soul_pickup_controller") as Node

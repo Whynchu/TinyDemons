@@ -30,10 +30,10 @@ func _initialize() -> void:
 	_expect(water_into_grass.amount <= water_baseline.amount, "Water resistance reduces damage", failures)
 	_expect(is_equal_approx(water_into_grass.effectiveness, 0.8), "Water into Grass is 0.8x", failures)
 
-	var immune := _calculate(attacker, defender, ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.SHADOW, 404, tuning)
-	_expect(is_zero_approx(immune.amount), "immunity bypasses the minimum-one rule", failures)
-	_expect(immune.immune, "immune result is marked", failures)
-	_expect(is_equal_approx(immune.effectiveness, 0.0), "immune result records zero effectiveness", failures)
+	var shadow_resistance := _calculate(attacker, defender, ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.SHADOW, 404, tuning)
+	_expect(shadow_resistance.amount >= 1.0, "strong resistance still deals reduced damage", failures)
+	_expect(not shadow_resistance.immune, "reduced effectiveness is not marked immune", failures)
+	_expect(is_equal_approx(shadow_resistance.effectiveness, 0.25), "Shadow strongly resists Neutral damage at 0.25x", failures)
 
 	var crit := _calculate_forced_critical(attacker, defender, ElementCatalogScript.Element.FIRE, ElementCatalogScript.Element.GRASS, tuning)
 	_expect(crit.critical, "forced critical result is marked critical", failures)

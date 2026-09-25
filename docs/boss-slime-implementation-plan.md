@@ -405,8 +405,8 @@ Automated coverage must include:
 
 Scene/playtest coverage must run at all supported display aspects and include at
 least Normal, one starter element, one fusion element, Shadow, and Ground's
-Electric immunity. Before production rollout, run the complete eight-variant
-matrix.
+strong resistance to Electric. Before production rollout, run the complete
+eight-variant matrix.
 
 ## 15. Non-goals
 

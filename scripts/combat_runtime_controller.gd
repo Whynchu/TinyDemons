@@ -7,7 +7,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CombatDamageRequestScript = preload("res://scripts/combat_damage_request.gd")
 
 const LIGHT_HIT_SHAKE_STRENGTH := 1.2
-const CRITICAL_HIT_SHAKE_STRENGTH := 1.7
+const CRITICAL_HIT_SHAKE_STRENGTH := 2.0
 const PLAYER_HIT_SHAKE_STRENGTH := 2.2
 const BLOCK_HIT_SHAKE_STRENGTH := 1.3
 const BOSS_SLAM_SHAKE_STRENGTH := 2.8
@@ -110,7 +110,12 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 			var impact_color := ElementCatalogScript.damage_number_color(attack_element)
 			var lethal := state._is_slime_dead(slime)
 			_spawn_combat_impact(root, impact_position, impact_color, was_critical)
-			_request_screen_shake(root, CRITICAL_HIT_SHAKE_STRENGTH if was_critical else LIGHT_HIT_SHAKE_STRENGTH, 0.13 if was_critical else 0.08)
+			_request_screen_shake(root, CRITICAL_HIT_SHAKE_STRENGTH if was_critical else LIGHT_HIT_SHAKE_STRENGTH, 0.15 if was_critical else 0.07)
+			if was_critical:
+				var player_tuning := root.get("player_tuning") as PlayerTuning
+				if player_tuning != null:
+					var critical_hitstop := player_tuning.hitstop_duration * player_tuning.critical_hitstop_multiplier
+					root.set("hitstop_timer", maxf(float(root.get("hitstop_timer")), critical_hitstop))
 			if lethal:
 				_request_screen_shake(root, 2.0, 0.12)
 	var rng := root.get("rng") as RandomNumberGenerator
@@ -346,13 +351,13 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 	_enemy_max_health_frame_cache.clear()
 
 
-func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true) -> void:
+func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true, attack_scaled: bool = true, ignore_phase_resistance: bool = false, direction_override: Vector2 = Vector2.ZERO) -> void:
 	if bool(root.call("_is_slime_dead", slime)):
 		return
 	var phase_combat := root.call("_slime_combat", slime) as SlimeCombatComponent
-	if phase_combat != null and phase_combat.boss_jump_phase_stun_resistant:
+	if phase_combat != null and phase_combat.boss_jump_phase_stun_resistant and not ignore_phase_resistance:
 		return
-	var direction: Vector2 = root.call("_slime_knockback_direction", slime)
+	var direction: Vector2 = direction_override.normalized() if direction_override.length_squared() > 0.0001 else root.call("_slime_knockback_direction", slime)
 	var transmutation := root.get("equipment_transmutation_component") as EquipmentTransmutationComponent
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	var player_tuning := root.get("player_tuning") as PlayerTuning
@@ -362,7 +367,12 @@ func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float 
 		var combat_tuning := root.get("combat_tuning") as CombatTuning
 		if combat_tuning != null:
 			multiplier *= combat_tuning.knockback_multiplier_for_strength(player_stat_snapshot(root).strength)
-	var combo := attack.base_knockback_multiplier(player_tuning) if attack != null else player_tuning.attack1_knockback_multiplier
+	# Guard counters are independent of the player's previous swing. Their recoil
+	# uses the guard multiplier directly instead of inheriting Attack 1's smaller
+	# knockback coefficient.
+	var combo := 1.0
+	if attack_scaled:
+		combo = attack.base_knockback_multiplier(player_tuning) if attack != null else player_tuning.attack1_knockback_multiplier
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_velocity = root.call("_perspective_movement", direction.normalized() * (player_tuning.attack_knockback * combo * multiplier / slime_tuning.knockback_duration))
 	combat.knockback_timer = slime_tuning.knockback_duration
@@ -552,9 +562,15 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 		root.call("_spawn_player_damage_number", 0.0, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, true)
 		return
 	var damage := damage_result.amount * 1.25
+	var blocked := false
+	var block_stun := 0.0
+	var counter_knockback_multiplier := 0.0
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null:
 		var guard_result := guard.absorb_damage(_guard_context(root), damage, anchor)
+		blocked = bool(guard_result.get("blocked", false))
+		block_stun = float(guard_result.get("stun", 0.0))
+		counter_knockback_multiplier = float(guard_result.get("counter_knockback_multiplier", 0.0))
 		damage = float(guard_result["health_damage"])
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null:
@@ -565,6 +581,15 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 	if bool(root.get("player_is_attacking")):
 		root.call("_interrupt_player_attack")
 	root.set("player_hitstun_timer", (root.get("player_tuning") as PlayerTuning).hitstun_time)
+	if blocked:
+		var combat := root.call("_slime_combat", boss) as SlimeCombatComponent
+		if combat != null:
+			combat.hitstun_timer = maxf(combat.hitstun_timer, block_stun)
+		if counter_knockback_multiplier > 0.0:
+			var counter_direction := anchor - player_foot
+			if counter_direction.length_squared() <= 0.0001:
+				counter_direction = Vector2.LEFT if guard != null and guard.facing_left else Vector2.RIGHT
+			knockback_slime(root, boss, counter_knockback_multiplier, false, false, true, counter_direction)
 	root.call("_spawn_player_damage_number", damage, damage_result.element, false)
 	root.call("_update_player_health_ui")
 
@@ -600,7 +625,7 @@ func slime_attack_lunge_vector(root: Object, slime: Sprite2D) -> Vector2:
 	return Vector2.ZERO if player == null else slime_attack_commitment_vector(root, slime, root.call("_collision_rect", player).get_center())
 
 
-func apply_player_hit_knockback(root: Object, slime: Sprite2D) -> void:
+func apply_player_hit_knockback(root: Object, slime: Sprite2D, knockback_multiplier: float = 1.0) -> void:
 	var player := root.get("player") as Sprite2D
 	var direction: Vector2 = root.call("_actor_foot", player) - root.call("_actor_foot", slime)
 	if direction.length_squared() < 0.01:
@@ -608,7 +633,8 @@ func apply_player_hit_knockback(root: Object, slime: Sprite2D) -> void:
 	var motor := root.get("player_motor") as ActorMotor
 	var tuning := root.get("player_tuning") as PlayerTuning
 	if motor != null:
-		motor.start_knockback(root.call("_perspective_movement", direction.normalized() * (tuning.hit_knockback / tuning.hit_knockback_duration)), tuning.hit_knockback_duration)
+		var scaled_knockback := tuning.hit_knockback * maxf(knockback_multiplier, 0.0)
+		motor.start_knockback(root.call("_perspective_movement", direction.normalized() * (scaled_knockback / tuning.hit_knockback_duration)), tuning.hit_knockback_duration)
 
 
 func update_slime_knockback(root: Object, slime: Sprite2D, delta: float) -> bool:
@@ -675,7 +701,8 @@ func spawn_damage_number(root: Object, slime: Sprite2D, amount: float, was_criti
 func spawn_player_number(root: Object, text: String, value: int, color: Color, is_healing: bool, display_text: String) -> void:
 	var origin: Vector2 = root.call("_player_floating_number_origin", text, color)
 	var speed := (root.get("effects_tuning") as EffectsTuning).damage_number_float_speed
-	root.call("_spawn_floating_number", origin, value, Vector2(0.0, speed), false, is_healing, color, display_text)
+	# Player feedback starts below the actor foot and travels down from the sprite.
+	root.call("_spawn_floating_number", origin, value, Vector2.DOWN * speed, false, is_healing, color, display_text)
 
 
 func spawn_player_damage_number(root: Object, amount: float, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
@@ -689,7 +716,7 @@ func spawn_player_shield_damage_number(root: Object, amount: float) -> void:
 	var color := Color8(148, 220, 255)
 	var origin: Vector2 = root.call("_player_floating_number_origin", str(maxi(value, 0)), color) + Vector2(8, 0)
 	var speed := (root.get("effects_tuning") as EffectsTuning).damage_number_float_speed
-	root.call("_spawn_floating_number", origin, value, Vector2(0.0, speed), false, false, color, str(maxi(value, 0)))
+	root.call("_spawn_floating_number", origin, value, Vector2.DOWN * speed, false, false, color, str(maxi(value, 0)))
 
 
 func spawn_player_healing_number(root: Object, amount: float, color: Color) -> void:
@@ -725,9 +752,7 @@ func spawn_slime_healing_number(root: Object, slime: Sprite2D, amount: float, co
 
 func spawn_floating_number(root: Object, world_position: Vector2, value: int, velocity: Vector2, was_critical: bool = false, is_healing: bool = false, healing_color: Color = Color.WHITE, display_text := "") -> void:
 	var priority_offset := Vector2.ZERO
-	if display_text.contains("lv!"):
-		priority_offset = Vector2(0.0, -6.0)
-	elif display_text.contains("xp"):
+	if display_text.contains("lv!") or display_text.contains("xp"):
 		priority_offset = Vector2(0.0, 6.0)
 	world_position += priority_offset
 	var tuning := root.get("effects_tuning") as EffectsTuning
@@ -754,7 +779,7 @@ func configure_equipment_transmutations(root: Object) -> void:
 func on_transmutation_effect_triggered(root: Object, effect_id: StringName, message: String) -> void:
 	if effect_id == &"duelist_focus" or root.get("player") == null or message.is_empty():
 		return
-	root.call("_spawn_floating_number", root.call("_actor_foot", root.get("player")) + Vector2(0, -14), 0, Vector2(0, -10), false, false, Color8(148, 220, 255), message)
+	spawn_player_number(root, message, 0, Color8(148, 220, 255), false, message)
 
 
 func xp_required_for_level(root: Object, level: int) -> int:

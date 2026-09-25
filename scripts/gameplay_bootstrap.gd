@@ -144,7 +144,7 @@ func initialize(root: GameplayState) -> void:
 	root.sound_manager = _add_runtime_node(root, SoundManager, "SoundManager") as SoundManager
 	root.sound_manager.configure_settings(root.settings_service)
 	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
-	root.effects_spawner.configure_item_acquisition_delivery(root.ui, root.hud_controller, root.feedback_animation_registry, root.screen_state_controller, root.dungeon_minimap_controller)
+	root.effects_spawner.configure_item_acquisition_delivery(root.ui, root.hud_controller, root.feedback_animation_registry, root.screen_state_controller, root.dungeon_minimap_controller, Callable(root, "_play_sound"))
 	root.pickup_runtime_controller.configure_acquisition_presentation(Callable(root.effects_spawner, "spawn_pickup_acquisition_delivery"))
 	var gold_pickup_controller := _add_runtime_node(root, GOLD_PICKUP_CONTROLLER_SCRIPT, "GoldPickupController", root.pickup_runtime_controller) as GoldPickupController
 	root.pickup_runtime_controller.gold_pickup_controller = gold_pickup_controller

@@ -51,20 +51,41 @@ func target_is_in_front(context: InteractionContext, target_position: Vector2) -
 
 func update_targeting(context: InteractionContext) -> void:
 	var should_target := bool(context.is_target_input_held.call())
-	if not should_target:
-		context.set_current_target.call(null); context.set_target_ui_visible.call(false); context.target_input_was_down_set.call(false); target_cycle_axis = 0; return
-	if not bool(context.target_input_was_down_get.call()):
+	var mouse_target_locked := bool(context.mouse_target_locked_get.call()) if context.mouse_target_locked_get.is_valid() else false
+	if not should_target and not mouse_target_locked:
+		context.set_current_target.call(null)
+		context.set_target_ui_visible.call(false)
+		context.target_input_was_down_set.call(false)
+		target_cycle_axis = 0
+		if not bool(context.player_is_attacking_get.call()) and not bool(context.player_is_magic_casting_get.call()):
+			_apply_mouse_facing(context)
+		return
+	if should_target and not bool(context.target_input_was_down_get.call()):
+		if context.mouse_target_locked_set.is_valid():
+			context.mouse_target_locked_set.call(false)
+		mouse_target_locked = false
 		context.set_current_target.call(context.closest_target.call()); context.target_input_was_down_set.call(true)
+	elif not should_target:
+		context.target_input_was_down_set.call(false)
 	var target := context.valid_current_target.call() as Sprite2D
-	if target != null and not bool(context.is_slime_targetable.call(target)): context.set_current_target.call(null); target = null
-	var cycle_direction := int(context.target_cycle_direction.call())
+	if mouse_target_locked and target == null:
+		mouse_target_locked = false
+		if context.mouse_target_locked_set.is_valid(): context.mouse_target_locked_set.call(false)
+	if target != null and not bool(context.is_slime_targetable.call(target)):
+		context.set_current_target.call(null)
+		target = null
+		mouse_target_locked = false
+		if context.mouse_target_locked_set.is_valid(): context.mouse_target_locked_set.call(false)
+	var cycle_direction := int(context.target_cycle_direction.call()) if should_target else 0
 	if cycle_direction != 0 and cycle_direction != target_cycle_axis:
 		context.cycle_target.call(cycle_direction)
 	target_cycle_axis = cycle_direction
 	target = context.valid_current_target.call() as Sprite2D
 	var player := context.player
 	if not bool(context.player_is_attacking_get.call()) and not bool(context.player_is_magic_casting_get.call()):
-		if target != null:
+		if _apply_mouse_facing(context):
+			pass
+		elif target != null:
 			var target_left := target_facing_left(context, target)
 			# Targeting owns the complete kit's horizontal facing, including while
 			# the player is holding shield and moving backwards. Keep the selected
@@ -76,6 +97,39 @@ func update_targeting(context: InteractionContext) -> void:
 			# no target to stare at, so the lock keeps them looking that way.
 			player.flip_h = context.last_player_facing_left_get.call() == true
 	context.update_target_ui.call()
+
+
+func _apply_mouse_facing(context: InteractionContext) -> bool:
+	if not context.mouse_aim_active.is_valid() or not bool(context.mouse_aim_active.call()):
+		return false
+	var direction: Variant = context.mouse_aim_direction.call() if context.mouse_aim_direction.is_valid() else Vector2.ZERO
+	if not (direction is Vector2) or absf((direction as Vector2).x) <= ActorMotor.HORIZONTAL_FACING_DEADZONE:
+		return true
+	var player := context.player
+	if player == null:
+		return true
+	var facing_left := (direction as Vector2).x < 0.0
+	player.flip_h = facing_left
+	context.last_player_facing_left_set.call(facing_left)
+	return true
+
+
+func mouse_interaction_at(context: InteractionContext, world_position: Vector2) -> bool:
+	if bool(context.can_interact_with_chest.call()) and (context.collision_rect.call(context.chest) as Rect2).grow(2.0).has_point(world_position):
+		return true
+	if bool(context.can_interact_with_npc.call()) and context.cloaked_demon != null:
+		var npc_bounds: Rect2 = context.collision_rect.call(context.cloaked_demon)
+		if context.cloaked_demon.texture != null:
+			var local_rect := context.cloaked_demon.get_rect()
+			var world_transform := context.cloaked_demon.get_global_transform()
+			var top_left := world_transform * local_rect.position
+			var bottom_right := world_transform * local_rect.end
+			npc_bounds = npc_bounds.merge(Rect2(top_left, bottom_right - top_left).abs())
+		if npc_bounds.grow(3.0).has_point(world_position):
+			return true
+	if bool(context.can_interact_with_world_item.call()) and (context.world_item_drop_position.call() as Vector2).distance_squared_to(world_position) <= 64.0:
+		return true
+	return bool(context.can_interact_with_fire.call()) and (context.fire_anchor.call() as Vector2).distance_squared_to(world_position) <= 100.0
 
 
 func update_world_prompt(context: InteractionContext, delta: float, bob_time: float, ui_z: int) -> void:

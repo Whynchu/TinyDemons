@@ -110,9 +110,9 @@ The type used by the damage matchup calculation. The current catalog is:
 NEUTRAL, FIRE, WATER, ELECTRIC, GRASS, SHADOW, GROUND, ICE
 ```
 
-`NEUTRAL` is the combat equivalent of the Normal-type role needed for the
-Shadow/Ghost immunities. It is not the same thing as "no element" in the data
-model; an attack must always resolve to an explicit element.
+`NEUTRAL` is the combat equivalent of the Normal-type role used in Shadow/Ghost
+matchups. It is not the same thing as "no element" in the data model; an
+attack must always resolve to an explicit element.
 
 ### Aspect
 
@@ -149,7 +149,9 @@ available until all presentation consumers have read it.
 The relationship layout follows the Generation III subset for Normal, Fire,
 Water, Electric, Grass, Ghost, Ground, and Ice. Tiny Demons intentionally uses
 different strengths than Pokémon: a weakness is `1.25x`, a resistance is
-`0.8x`, and an immunity is `0.0x`. Neutral is `1.0x`.
+`0.8x`, and a strong resistance is `0.25x`. Neutral is `1.0x`. The two
+matchups that previously used full immunity now use strong resistance, so the
+current matchup table has no zero-effectiveness elemental pairs.
 
 The original Generation III chart uses `2x`, `0.5x`, and `0x`; the source
 reference is the [Generation III type chart](https://bulbapedia.bulbagarden.net/wiki/Type_chart_%28Generation_III%29)
@@ -162,16 +164,16 @@ Rows are attacking elements. Columns are defending elements.
 
 | Attacker ↓ / Defender → | Neutral | Fire | Water | Electric | Grass | Shadow | Ground | Ice |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Neutral | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | **0.00** | 1.00 | 1.00 |
+| Neutral | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | **0.25** | 1.00 | 1.00 |
 | Fire | 1.00 | 0.80 | 0.80 | 1.00 | **1.25** | 1.00 | 1.00 | **1.25** |
 | Water | 1.00 | **1.25** | 0.80 | 1.00 | 0.80 | 1.00 | **1.25** | 1.00 |
-| Electric | 1.00 | 1.00 | **1.25** | 0.80 | 0.80 | 1.00 | **0.00** | 1.00 |
+| Electric | 1.00 | 1.00 | **1.25** | 0.80 | 0.80 | 1.00 | **0.25** | 1.00 |
 | Grass | 1.00 | 0.80 | **1.25** | 1.00 | 0.80 | 1.00 | **1.25** | 1.00 |
-| Shadow | **0.00** | 1.00 | 1.00 | 1.00 | 1.00 | **1.25** | 1.00 | 1.00 |
+| Shadow | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | **1.25** | 1.00 | 1.00 |
 | Ground | 1.00 | **1.25** | 1.00 | **1.25** | 0.80 | 1.00 | 0.80 | 1.00 |
 | Ice | 1.00 | 0.80 | 0.80 | 1.00 | **1.25** | 1.00 | **1.25** | 0.80 |
 
-The bold cells are the intentional weakness/immunity moments. This means:
+The bold cells are the intentional weakness/strong-resistance moments. This means:
 
 - Fire is strong against Grass and resisted by Fire/Water.
 - Water is strong against Fire and resisted by Water/Grass.
@@ -180,25 +182,26 @@ The bold cells are the intentional weakness/immunity moments. This means:
   correction: the earlier draft also listed Electric as resisting Grass. In
   the Generation III chart Grass attacking Electric is neutral — it is
   Electric attacking Grass that is resisted — so Grass → Electric is `1.00`.)
-- Ground is strong against Fire and Electric, and is resisted by Grass; an
-  Electric attack has no effect on Ground.
+- Ground is strong against Fire and Electric, and is resisted by Grass; Ground
+  strongly resists Electric attacks at `0.25x`.
 - Ice is strong against Grass and Ground, and is resisted by Fire, Water, and
   Ice.
-- Neutral attacks cannot damage Shadow.
+- Neutral attacks deal reduced `0.25x` damage to Shadow.
 - Shadow attacks damage Neutral at full `1.0x`.
 - Shadow is weak to Shadow, matching Ghost attacking Ghost.
 - The four elemental types have no special interaction with Shadow in this
   first slice.
 
-The Neutral → Shadow immunity and Shadow → Neutral normal damage are approved.
-Rationale: Shadow slimes are already a rare, high-pressure ambush variant
+Neutral → Shadow strong resistance (`0.25x`) and Shadow → Neutral normal damage
+(`1.0x`) are the current rules. Rationale: Shadow slimes are already a rare,
+high-pressure ambush variant
 (`room_controller.gd:22-23`, `SHADOW_ENEMY_WEIGHT 0.12`, `SHADOW_BOSS_CHANCE
-0.04`), so keeping the neutral sword unable to damage them creates a deliberate
-"use an elemental Triangle" moment without affecting the common room curve.
+0.04`), so strongly reducing neutral damage encourages an elemental Triangle
+without making the neutral sword useless or affecting the common room curve.
 Shadow's own bite deals `1.0x` to a Neutral-aspect player, so a Shadow slime's
 ambush stays a real threat; its low per-hit output is still offset by its
-rarity. If playtesting shows Purple feels toothless, the first balance lever is
-its STR/SPD stats, not restoring the damage immunity.
+rarity. If playtesting shows Purple feels too resistant, tune the matchup
+multiplier before changing its STR/SPD profile.
 
 ## 5. Damage formula integration
 
@@ -423,8 +426,8 @@ commit, and register every new test file in the hard-coded list at
   keys, the eight-by-eight table from §4, `effectiveness(attacker, defender)`,
   `damage_number_color(element)` (10%-boosted ACCENT with NORMAL fallback), and the
   `aspect → element` / `magic palette → element` adapters.
-- New `tests/element_catalog_smoke.gd`: every table cell, both immunity
-  directions, Shadow-vs-Shadow weakness, adapter mappings, color fallback.
+- New `tests/element_catalog_smoke.gd`: every table cell, both strong-resistance
+  matchups, Shadow-vs-Shadow weakness, adapter mappings, color fallback.
 - Extend `CombatCalculator.DamageResult` and `calculate_snapshot_damage` with
   optional element parameters defaulting to Neutral.
 - New `tests/elemental_damage_smoke.gd`: neutral-vs-non-Shadow damage is
@@ -471,13 +474,13 @@ without missing-texture special cases.
 - `magic_hit_slime` maps its palette argument to an element (§5).
 - Delete `last_damage_was_critical` from `gameplay_state.gd` and both call
   sites.
-- Tests: sword into Shadow = 0/`immune`; Fire Triangle into Grass gets
-  `1.25x`; Ground and Ice slime bites carry their own elements; guard reduction math is
-  unchanged for Neutral.
+- Tests: sword into Shadow deals damage at `0.25x`; Fire Triangle into Grass
+  gets `1.25x`; Ground and Ice slime bites carry their own elements; guard
+  reduction math is unchanged for Neutral.
 
-Exit condition: every damage path has an explicit element, Neutral-versus-
-non-Shadow numbers match the pre-element baseline, and the global crit flag
-is gone.
+Exit condition: every damage path has an explicit element, Neutral damage
+matches the pre-element baseline except for Shadow's `0.25x` resistance, and
+the global crit flag is gone.
 
 ### Phase 4 — Element-colored feedback
 
@@ -545,7 +548,7 @@ create an accidental early-game difficulty spike.
   Grass → Electric = `1.00` (the review correction).
 - Neutral damage is unchanged at `1.0x`.
 - Fire/Water/Electric/Grass use `0.8x` and `1.25x`, not `0.5x` and `2.0x`.
-- Neutral → Shadow is immune; Shadow → Neutral is `1.0x`.
+- Neutral → Shadow is strongly resisted at `0.25x`; Shadow → Neutral is `1.0x`.
 - Shadow → Shadow is `1.25x`.
 - Immunity produces zero even when the old minimum-damage rule would produce
   one.
@@ -587,10 +590,10 @@ These settle the nine review questions from the draft, with code evidence:
 1. **Stable spelling**: `neutral` element ID, `grey` palette key, `Gray`
    display name. Approved — matches the verified gray/grey split already in
    the codebase.
-2. **Neutral into Shadow**: full immunity (`0.0x`), not limited to a future
-   "physical" tag. Approved — matches Normal → Ghost in Gen III, and Purple's
-   existing rare-pressure role keeps it fair. See §4 for the player-side
-   consequence and its mitigation levers.
+2. **Neutral into Shadow**: strong resistance (`0.25x`), not full immunity.
+   This keeps Neutral attacks useful while making an elemental Triangle more
+   effective against Purple's rare, high-pressure ambush role. See §4 for the
+   current matchup rationale.
 3. **Basic attack typing**: always Neutral; active Chroma aspects do not
    retype the sword. Approved — verified the sword path is untyped today, so
    this costs nothing and keeps the sword reliable.
@@ -632,11 +635,12 @@ accepted.
 - Result: the draft table matched Gen III in 35 of 36 cells. Corrected:
   **Grass attacking Electric is `1.00`, not `0.80`** — in Gen III, Electric
   resists Electric and Grass resists Electric, but Electric does not resist
-  Grass. Both immunities (Neutral↔Shadow), Shadow → Shadow weakness, and all
+  Grass. Both strong-resistance matchups (Neutral → Shadow and Electric →
+  Ground), Shadow → Shadow weakness, and all
   Fire/Water/Electric/Grass relationships were confirmed accurate.
-- The `0.8`/`1.25` strengths are an intentional, documented deviation from
-  the source's `0.5`/`2.0`.
-- Ground is immune to Electric, Ground is strong against Fire/Electric, and
+- The `0.25`/`0.8`/`1.25` effectiveness values are intentional balance choices
+  instead of the source chart's `0.0`/`0.5`/`2.0`.
+- Ground strongly resists Electric; Ground is strong against Fire/Electric, and
   Ice is strong against Grass/Ground; these relationships are carried into the
   scaled eight-by-eight runtime table.
 

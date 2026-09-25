@@ -42,7 +42,7 @@ func hide_editor_only_guides(root: Object) -> void:
 	(root.get("room_controller") as RoomController).hide_editor_only_guides(root.get("floor_tiles") as Node2D)
 	var player := root.get("player") as Sprite2D
 	if player != null:
-		for node_name in [&"Attack1HitboxShape", &"Attack2HitboxShape", &"CollisionGuide", &"DoorFeetGuide"]:
+		for node_name in [&"Attack1HitboxShape", &"Attack2HitboxShape", &"SpinAttackHitboxShape", &"CollisionGuide", &"DoorFeetGuide"]:
 			var guide := player.get_node_or_null(NodePath(node_name)) as CanvasItem
 			if guide != null:
 				guide.visible = false

@@ -18,6 +18,9 @@ const PERFECT_BLOCK_STUN_MULTIPLIER := 2.0
 @export var bar_fade_time := 0.24
 @export var normal_block_stun := 0.12
 @export var perfect_window := 0.14
+@export_range(0.0, 1.0, 0.05) var blocked_player_knockback_multiplier := 0.25
+@export_range(0.0, 1.5, 0.05) var block_counter_knockback_multiplier := 1.0
+@export_range(0.0, 1.5, 0.05) var perfect_block_counter_knockback_multiplier := 1.5
 
 var durability := max_durability
 var maximum_durability := max_durability
@@ -162,7 +165,16 @@ func absorb_damage(context: PlayerGuardContext, incoming_damage: float, source_p
 	_update_meter(context)
 	successful_block.emit(shield_damage, health_damage)
 	var block_stun := normal_block_stun * PERFECT_BLOCK_STUN_MULTIPLIER if perfect else normal_block_stun
-	return {"health_damage": health_damage, "shield_damage": shield_damage, "blocked": true, "perfect": perfect, "stun": block_stun}
+	var counter_knockback := perfect_block_counter_knockback_multiplier if perfect else block_counter_knockback_multiplier
+	return {
+		"health_damage": health_damage,
+		"shield_damage": shield_damage,
+		"blocked": true,
+		"perfect": perfect,
+		"stun": block_stun,
+		"player_knockback_multiplier": clampf(blocked_player_knockback_multiplier, 0.0, 1.0),
+		"counter_knockback_multiplier": clampf(counter_knockback, 0.0, 1.5),
+	}
 
 
 func set_maximum_durability(value: float, preserve_ratio := true) -> void:

@@ -1,6 +1,8 @@
 extends Node
 class_name InputRouter
 
+const MOUSE_INPUT_SNAPSHOT_SCRIPT = preload("res://scripts/mouse_input_snapshot.gd")
+
 ## One per-frame polling boundary for gameplay, dialogue, hub, and menu input.
 
 enum Context { GAMEPLAY, DIALOGUE, HUB, MENU, PAUSE }
@@ -20,6 +22,16 @@ var _has_connected_joypads := false
 var touch_provider: Node = null
 var _touch_snapshot: Dictionary = {}
 var _empty_touch_snapshot: Dictionary = {}
+var _mouse_input: RefCounted = MOUSE_INPUT_SNAPSHOT_SCRIPT.new()
+var _mouse_left_button_pressed := false
+var _mouse_left_click_pending := false
+var _mouse_left_click_position := Vector2.ZERO
+var _mouse_right_button_pressed := false
+var _mouse_right_click_pending := false
+var _mouse_right_click_position := Vector2.ZERO
+var _mouse_middle_button_pressed := false
+var _mouse_middle_click_pending := false
+var _mouse_middle_click_position := Vector2.ZERO
 
 const ACTIONS := [&"attack", &"interact", &"roll", &"magic", &"cancel", &"pause", &"open_minimap", &"target", &"guard", &"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right", &"move_left", &"move_right", &"move_up", &"move_down"]
 const MENU_REPEAT_INITIAL_DELAY := 0.32
@@ -34,8 +46,36 @@ func poll(next_context: int, delta: float = 1.0 / 60.0) -> void:
 	_previous_menu_directions = _menu_directions.duplicate()
 	_current.clear()
 	_touch_snapshot = _read_touch_snapshot()
+	var mouse_input: Variant = _touch_snapshot.get("mouse_input")
+	if mouse_input is RefCounted and mouse_input.get_script() == MOUSE_INPUT_SNAPSHOT_SCRIPT:
+		_mouse_input = mouse_input as RefCounted
+	else:
+		_mouse_input = MOUSE_INPUT_SNAPSHOT_SCRIPT.new()
+	if context == Context.GAMEPLAY:
+		_mouse_left_button_pressed = bool(_mouse_input.get("left_button_pressed"))
+		_mouse_left_click_pending = _mouse_left_click_pending or bool(_mouse_input.get("left_click_just_pressed"))
+		_mouse_right_click_pending = _mouse_right_click_pending or bool(_mouse_input.get("right_click_just_pressed"))
+		_mouse_middle_click_pending = _mouse_middle_click_pending or bool(_mouse_input.get("middle_click_just_pressed"))
+		_mouse_right_button_pressed = bool(_mouse_input.get("right_button_pressed"))
+		_mouse_middle_button_pressed = bool(_mouse_input.get("middle_button_pressed"))
+		if bool(_mouse_input.get("left_click_just_pressed")):
+			_mouse_left_click_position = _mouse_input.get("left_click_position") as Vector2
+		if bool(_mouse_input.get("right_click_just_pressed")):
+			_mouse_right_click_position = _mouse_input.get("right_click_position") as Vector2
+		if bool(_mouse_input.get("middle_click_just_pressed")):
+			_mouse_middle_click_position = _mouse_input.get("middle_click_position") as Vector2
+	else:
+		_mouse_left_button_pressed = false
+		_mouse_left_click_pending = false
+		_mouse_right_click_pending = false
+		_mouse_middle_click_pending = false
+		_mouse_right_button_pressed = false
+		_mouse_middle_button_pressed = false
 	for action in ACTIONS:
-		_current[action] = Input.is_action_pressed(action) or _touch_action_pressed(action) or _touch_action_just_pressed(action)
+		# Physical mouse holds join the named action path so right-click can remain
+		# held through the roll-to-run transition and middle-click can charge magic.
+		var mouse_action_pressed: bool = (action == &"roll" and _mouse_right_button_pressed) or (action == &"magic" and _mouse_middle_button_pressed)
+		_current[action] = Input.is_action_pressed(action) or _touch_action_pressed(action) or _touch_action_just_pressed(action) or mouse_action_pressed
 	var connected_joypads := Input.get_connected_joypads()
 	_has_connected_joypads = not connected_joypads.is_empty()
 	devices.clear()
@@ -188,6 +228,61 @@ func touch_scroll_y() -> float:
 	## Accumulated touch drag in logical pixels since the last poll. Menus use
 	## this to scroll their list content on a swipe without moving the cursor.
 	return float(_touch_snapshot.get("scroll_y", 0.0))
+
+
+func mouse_position() -> Vector2:
+	var position: Variant = _mouse_input.get("pointer_position")
+	return position as Vector2 if position is Vector2 else Vector2.ZERO
+
+
+func has_mouse_position() -> bool:
+	return bool(_mouse_input.get("has_pointer_position"))
+
+
+func mouse_aim_active() -> bool:
+	return context == Context.GAMEPLAY and bool(_mouse_input.get("aim_active"))
+
+
+func mouse_left_just_pressed() -> bool:
+	return _mouse_left_click_pending
+
+
+func consume_mouse_left_press() -> bool:
+	var pressed := mouse_left_just_pressed()
+	_mouse_left_click_pending = false
+	return pressed
+
+
+func mouse_left_click_position() -> Vector2:
+	return _mouse_left_click_position
+
+
+func mouse_left_button_pressed() -> bool:
+	return context == Context.GAMEPLAY and _mouse_left_button_pressed
+
+
+func mouse_right_just_pressed() -> bool:
+	return _mouse_right_click_pending
+
+
+func consume_mouse_right_press() -> bool:
+	var pressed := mouse_right_just_pressed()
+	_mouse_right_click_pending = false
+	return pressed
+
+
+func mouse_right_click_position() -> Vector2:
+	return _mouse_right_click_position
+
+
+func consume_mouse_middle_press() -> bool:
+	var pressed := _mouse_middle_click_pending
+	_mouse_middle_click_pending = false
+	return pressed
+
+
+func mouse_middle_click_position() -> Vector2:
+	return _mouse_middle_click_position
 
 
 func _read_movement() -> Vector2:

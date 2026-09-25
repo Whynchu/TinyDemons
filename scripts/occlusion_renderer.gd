@@ -58,7 +58,7 @@ func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]
 
 
 func _register_sprite(actor: Sprite2D) -> void:
-	if actor == null or actor.texture == null:
+	if actor == null or not is_instance_valid(actor) or actor.texture == null:
 		return
 	actor_default_textures[actor] = actor.texture
 	actor_default_materials[actor] = actor.material
@@ -75,8 +75,44 @@ func _register_sprite(actor: Sprite2D) -> void:
 	white_actor_textures[actor] = white_effect_texture_for(actor.texture, image)
 
 
+func _has_sprite_registration(actor: Sprite2D) -> bool:
+	return (
+		actor != null
+		and actor_default_textures.has(actor)
+		and actor_default_materials.has(actor)
+		and original_actor_textures.has(actor)
+		and original_actor_images.has(actor)
+		and original_actor_scales.has(actor)
+		and actor_visual_scales.has(actor)
+		and occluded_actor_textures.has(actor)
+		and highlighted_actor_textures.has(actor)
+		and grey_highlighted_actor_textures.has(actor)
+		and white_actor_textures.has(actor)
+		and sprite_images.has(actor)
+		and actor_occlusion_grace.has(actor)
+	)
+
+
+func _ensure_sprite_registered(actor: Sprite2D) -> bool:
+	if actor == null or not is_instance_valid(actor):
+		return false
+	if _has_sprite_registration(actor):
+		return true
+	if actor.texture == null:
+		return false
+	_register_sprite(actor)
+	return _has_sprite_registration(actor)
+
+
 func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
-	if texture == null: return
+	if actor == null or not is_instance_valid(actor) or texture == null: return
+	# Enemy slots can be registered before their first idle frame is assigned.
+	# In that case register_sprites skipped the textureless slot, so the first
+	# base-texture update must initialize every cache, including its scale data.
+	if not _has_sprite_registration(actor):
+		actor.texture = texture
+		_register_sprite(actor)
+		return
 	if original_actor_textures.get(actor) == texture:
 		actor.texture = texture; return
 	original_actor_textures[actor] = texture
@@ -126,6 +162,8 @@ func orb_highlighted_texture(source: Texture2D) -> Texture2D:
 
 
 func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, use_grey_highlight: bool, delta: float, apply_actor_scale: Callable, _grace_duration: float) -> void:
+	if not _ensure_sprite_registered(actor):
+		return
 	var grace := maxf(float(actor_occlusion_grace.get(actor, 0.0)) - delta, 0.0)
 	actor_occlusion_grace[actor] = grace
 	if grace > 0.0 and actor.texture == occluded_actor_textures.get(actor):
@@ -170,9 +208,13 @@ func update_actor_occlusion(
 	restore_actor_scale: Callable
 ) -> void:
 	for actor in actors:
+		if actor == null or not is_instance_valid(actor):
+			continue
 		if not actor.visible:
 			if actor == player:
 				restore_actor_scale.call(actor)
+			continue
+		if not _ensure_sprite_registered(actor):
 			continue
 		if bool(is_flashing.call(actor)):
 			actor.texture = white_actor_textures[actor]
@@ -436,6 +478,8 @@ func source_pixel_position(sprite: Sprite2D, world_pixel: Vector2, actor_screen_
 
 
 func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array[Sprite2D], is_target: bool, use_grey_highlight: bool, is_pixel_covered: Callable, actor_visual_offset: Callable) -> Texture2D:
+	if not _ensure_sprite_registered(actor):
+		return null
 	var source_image := original_actor_images[actor] as Image
 	var result_image := make_effect_image(source_image)
 	var original_scale := original_actor_scales[actor] as Vector2

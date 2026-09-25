@@ -63,12 +63,12 @@ func _initialize() -> void:
 	_expect(is_equal_approx(mnd_result.physical_after_mitigation, imbue_result.physical_after_mitigation) and mnd_result.magic_after_mitigation < imbue_result.magic_after_mitigation, "MND-derived M.DEF mitigates only the magic composite portion", failures)
 	_expect(CombatCalculator.physical_defense_for_snapshot(higher_defender) == higher_defender.def and CombatCalculator.magic_defense_for_snapshot(higher_mnd_defender) == higher_mnd_defender.mnd, "derived defense helpers remain distinct", failures)
 
-	var immune := CombatDamageRequestScript.elemental_slime(1.5, 0.85, 0.75, 0.5, ElementCatalogScript.Element.ELECTRIC, ElementCatalogScript.Element.GROUND)
-	var immune_result := CombatCalculator.calculate_request(immune, attacker, defender, rng, tuning)
-	_expect(immune_result.category == CombatDamageRequestScript.DamageCategory.ELEMENTAL_SLIME and immune_result.contract_id == CombatDamageRequestScript.CONTRACT_ELEMENTAL_SLIME, "elemental slimes use their separate composite contract", failures)
-	_expect(immune_result.physical_raw > 0.0 and immune_result.magic_raw > 0.0 and immune_result.immune and is_zero_approx(immune_result.amount), "elemental immunity zeros the full composite packet", failures)
+	var resisted := CombatDamageRequestScript.elemental_slime(1.5, 0.85, 0.75, 0.5, ElementCatalogScript.Element.ELECTRIC, ElementCatalogScript.Element.GROUND)
+	var resisted_result := CombatCalculator.calculate_request(resisted, attacker, defender, rng, tuning)
+	_expect(resisted_result.category == CombatDamageRequestScript.DamageCategory.ELEMENTAL_SLIME and resisted_result.contract_id == CombatDamageRequestScript.CONTRACT_ELEMENTAL_SLIME, "elemental slimes use their separate composite contract", failures)
+	_expect(resisted_result.physical_raw > 0.0 and resisted_result.magic_raw > 0.0 and not resisted_result.immune and resisted_result.amount >= 1.0 and is_equal_approx(resisted_result.effectiveness, 0.25), "strong resistance reduces the full composite packet", failures)
 	_expect(is_equal_approx(ElementCatalogScript.effectiveness(ElementCatalogScript.Element.SHADOW, ElementCatalogScript.Element.NEUTRAL), 1.0), "Shadow damages normal slimes", failures)
-	_expect(is_zero_approx(ElementCatalogScript.effectiveness(ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.SHADOW)), "normal damage remains ineffective against Shadow slimes", failures)
+	_expect(is_equal_approx(ElementCatalogScript.effectiveness(ElementCatalogScript.Element.NEUTRAL, ElementCatalogScript.Element.SHADOW), 0.25), "normal damage is strongly resisted by Shadow slimes", failures)
 
 	var root := CombatRoot.new()
 	root.player_stats = StatsComponent.new()

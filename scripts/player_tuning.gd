@@ -112,6 +112,7 @@ func charge_multiplier_for_agi(agi: float) -> float:
 @export var death_fade_time := 0.7
 @export var death_particle_delay := 0.7
 @export var hitstop_duration := 1.0 / 40.0
+@export_range(1.0, 3.0, 0.1) var critical_hitstop_multiplier := 1.8
 @export var death_observe_time := 1.4
 @export var attack_lunge_distance := 8.0
 @export var attack_lunge_duration := 0.18

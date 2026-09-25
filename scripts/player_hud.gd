@@ -160,7 +160,8 @@ func apply_bar_colors(_player_color: Color = XP_COLOR, chroma_color: Color = MP_
 	if mp_fill != null:
 		mp_fill.texture = _solid_texture(_mp_source, chroma_color)
 	if mp_highlight != null:
-		mp_highlight.texture = _solid_texture(_mp_source, chroma_color)
+		var highlight_color := chroma_color.lerp(Color.WHITE, 0.35)
+		mp_highlight.texture = _solid_texture(_mp_source, highlight_color)
 	for frame_path in ["PlayerStatus/LevelXp/XpBar", "PlayerStatus/Health/HpBar", "PlayerStatus/Mana/MpBar"]:
 		var frame := get_node_or_null(frame_path) as Sprite2D
 		if frame != null:
@@ -222,9 +223,10 @@ func _solid_texture(source: Texture2D, color: Color) -> Texture2D:
 	var cache_key := "%s:%s" % [source.get_rid(), color.to_html(false)]
 	if _solid_texture_cache.has(cache_key):
 		return _solid_texture_cache[cache_key] as Texture2D
-	var image := source.get_image()
-	if image == null:
+	var source_image: Image = source.get_image()
+	if source_image == null:
 		return source
+	var image: Image = source_image.duplicate()
 	for y in image.get_height():
 		for x in image.get_width():
 			var alpha := image.get_pixel(x, y).a

@@ -46,7 +46,7 @@ func _initialize() -> void:
 	var shadow := _make_slime(root, ElementCatalogScript.Element.SHADOW, &"purple")
 	root.rng.seed = 808
 	var sword_into_shadow := controller.player_attack_damage_result_against(root, shadow, ElementCatalogScript.Element.NEUTRAL)
-	_expect(sword_into_shadow.immune and is_zero_approx(sword_into_shadow.amount), "basic sword is Neutral and immune into Shadow", failures)
+	_expect(not sword_into_shadow.immune and sword_into_shadow.amount >= 1.0 and is_equal_approx(sword_into_shadow.effectiveness, 0.25), "basic sword still damages Shadow at strongly reduced effectiveness", failures)
 	_expect(sword_into_shadow.element == ElementCatalogScript.Element.NEUTRAL, "basic sword result preserves Neutral", failures)
 
 	var grass := _make_slime(root, ElementCatalogScript.Element.GRASS, &"green")

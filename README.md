@@ -253,12 +253,14 @@ viewport while keeping the 160 px logical height.
 
 ## Controls
 
-Bindings are defined in the **Input Map** (Project Settings > Input Map) and
-remappable in-editor. Defaults:
+Keyboard and controller bindings are defined in the **Input Map** (Project
+Settings > Input Map) and remappable in-editor. Mouse gameplay uses left,
+middle, and right buttons. Defaults:
 
 - Move: Arrow keys / WASD / left stick / D-pad
-- Attack: `J` / Space / controller X
-- Roll: `K` / controller A
+- Attack: Left mouse click / `J` / Space / controller X
+- Magic: Middle mouse click / `U` / controller Y
+- Roll / Run: Right mouse button / `K` / controller A (hold after the dodge to run)
 - Target lock: `Q` / Tab / controller right shoulder or right trigger
 - Guard: `L` / Shift / controller left shoulder or left trigger
 - Interact / confirm: `E` / Enter / controller B (PlayStation Circle)
@@ -266,9 +268,19 @@ remappable in-editor. Defaults:
 - Pause: Escape / controller Start
 - Open minimap: `M` / controller Share or Options (DS4) / touch MAP
 
+During gameplay, moving the mouse aims the player's facing while movement still
+controls travel; keyboard/controller input hands facing back to those controls.
+A quick left-click on an enemy selects it; holding on the
+enemy starts an attack after a brief hold. Clicking an available world
+interaction uses it, and clicking open ground attacks; holding that attack
+charges it toward a sword beam when available. Re-clicking the selected enemy
+keeps it selected.
+Right-click dodges and can be held after the roll to run; middle-click casts
+magic.
+
 ## Web build
 
-Current game version: **0.2.75**. Every push to `main` must increment the
+Current game version: **0.2.76**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 
