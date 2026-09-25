@@ -6,6 +6,7 @@ class_name InteractionComponent
 
 var prompt_timer := 0.0
 var target_cycle_axis := 0
+var mouse_target_locked := false
 
 
 func closest_target(player: Sprite2D, slimes: Array[Sprite2D], max_distance: float, actor_foot: Callable, is_dead: Callable, is_targetable: Callable = Callable()) -> Sprite2D:
@@ -51,7 +52,6 @@ func target_is_in_front(context: InteractionContext, target_position: Vector2) -
 
 func update_targeting(context: InteractionContext) -> void:
 	var should_target := bool(context.is_target_input_held.call())
-	var mouse_target_locked := bool(context.mouse_target_locked_get.call()) if context.mouse_target_locked_get.is_valid() else false
 	if not should_target and not mouse_target_locked:
 		context.set_current_target.call(null)
 		context.set_target_ui_visible.call(false)
@@ -61,8 +61,6 @@ func update_targeting(context: InteractionContext) -> void:
 			_apply_mouse_facing(context)
 		return
 	if should_target and not bool(context.target_input_was_down_get.call()):
-		if context.mouse_target_locked_set.is_valid():
-			context.mouse_target_locked_set.call(false)
 		mouse_target_locked = false
 		context.set_current_target.call(context.closest_target.call()); context.target_input_was_down_set.call(true)
 	elif not should_target:
@@ -70,12 +68,10 @@ func update_targeting(context: InteractionContext) -> void:
 	var target := context.valid_current_target.call() as Sprite2D
 	if mouse_target_locked and target == null:
 		mouse_target_locked = false
-		if context.mouse_target_locked_set.is_valid(): context.mouse_target_locked_set.call(false)
 	if target != null and not bool(context.is_slime_targetable.call(target)):
 		context.set_current_target.call(null)
 		target = null
 		mouse_target_locked = false
-		if context.mouse_target_locked_set.is_valid(): context.mouse_target_locked_set.call(false)
 	var cycle_direction := int(context.target_cycle_direction.call()) if should_target else 0
 	if cycle_direction != 0 and cycle_direction != target_cycle_axis:
 		context.cycle_target.call(cycle_direction)

@@ -31,6 +31,8 @@ var _context_cache: Dictionary = {}
 var _mouse_left_hold_mode := MouseLeftHoldMode.NONE
 var _mouse_target_hold_elapsed := 0.0
 var _mouse_left_attack_held := false
+var _mouse_interact_input_this_frame := false
+var _mouse_click_aim_direction_this_frame := Vector2.ZERO
 
 
 func invalidate_contexts() -> void:
@@ -199,8 +201,8 @@ func magic_context(root: GameplayState) -> MagicRuntimeContext:
 	context.player_dead_get = func() -> Variant: return root.get("player_dead")
 	context.last_player_facing_left_get = func() -> Variant: return root.get("last_player_facing_left")
 	context.last_player_input_direction_get = func() -> Variant: return root.get("last_player_input_direction")
-	context.mouse_aim_active = Callable(root, "_mouse_aim_active")
-	context.mouse_aim_direction = Callable(root, "_mouse_aim_direction")
+	context.mouse_aim_active = Callable(self, "mouse_aim_active").bind(root)
+	context.mouse_aim_direction = Callable(self, "mouse_aim_direction").bind(root)
 	context.current_player_palette_name_get = func() -> Variant: return root.get("current_player_palette_name")
 	context.player_agi_get = func() -> Variant: return root.get("player_agi")
 	context.player_spd_get = func() -> Variant: return root.get("player_spd")
@@ -334,8 +336,6 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	context.target_input_was_down_set = func(value: Variant) -> void: root.set("target_input_was_down", value)
 	context.last_player_facing_left_get = func() -> Variant: return root.get("last_player_facing_left")
 	context.last_player_facing_left_set = func(value: Variant) -> void: root.set("last_player_facing_left", value)
-	context.mouse_target_locked_get = func() -> Variant: return root.get("mouse_target_locked")
-	context.mouse_target_locked_set = func(value: Variant) -> void: root.set("mouse_target_locked", value)
 	context.actor_foot = Callable(root, "_actor_foot")
 	context.is_target_input_held = Callable(root, "_is_target_input_held")
 	context.set_current_target = Callable(root, "_set_current_target")
@@ -347,8 +347,8 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	context.cycle_target = Callable(root, "_cycle_target")
 	context.update_target_ui = Callable(root, "_update_target_ui")
 	context.player_facing_vector = Callable(root, "_player_facing_vector")
-	context.mouse_aim_active = Callable(root, "_mouse_aim_active")
-	context.mouse_aim_direction = Callable(root, "_mouse_aim_direction")
+	context.mouse_aim_active = Callable(self, "mouse_aim_active").bind(root)
+	context.mouse_aim_direction = Callable(self, "mouse_aim_direction").bind(root)
 	context.can_interact_with_chest = Callable(root, "_can_interact_with_chest")
 	context.can_interact_with_npc = Callable(root, "_can_interact_with_npc")
 	context.can_interact_with_world_item = Callable(root, "_can_interact_with_world_item")
@@ -359,6 +359,33 @@ func interaction_context(root: GameplayState) -> InteractionContext:
 	context.fire_anchor = Callable(root, "_fire_anchor")
 	context.snap_half_pixel = Callable(root, "_snap_half_pixel")
 	return context
+
+
+func mouse_aim_active(root: GameplayState) -> bool:
+	return _mouse_click_aim_direction_this_frame.length_squared() > 0.0001 or (root.input_router != null and root.input_router.mouse_aim_active() and root.input_router.has_mouse_position())
+
+
+func mouse_aim_direction(root: GameplayState) -> Vector2:
+	if _mouse_click_aim_direction_this_frame.length_squared() > 0.0001:
+		return _mouse_click_aim_direction_this_frame.normalized()
+	if root.input_router == null or not root.input_router.mouse_aim_active() or not root.input_router.has_mouse_position() or root.player == null:
+		return Vector2.ZERO
+	return mouse_aim_direction_at(root, root.input_router.mouse_position())
+
+
+func mouse_world_position_at(root: GameplayState, screen_position: Vector2) -> Vector2:
+	return root.get_viewport().get_canvas_transform().affine_inverse() * screen_position
+
+
+func mouse_aim_direction_at(root: GameplayState, screen_position: Vector2) -> Vector2:
+	if root.player == null:
+		return Vector2.ZERO
+	var mouse_world := mouse_world_position_at(root, screen_position)
+	return (mouse_world - root._actor_foot(root.player)).normalized()
+
+
+func mouse_interaction_pressed() -> bool:
+	return _mouse_interact_input_this_frame
 
 
 func _resolve_mouse_left_click(root: GameplayState, delta: float) -> bool:
@@ -372,19 +399,19 @@ func _resolve_mouse_left_click(root: GameplayState, delta: float) -> bool:
 	var mouse_attack_click := false
 	if click_pressed:
 		var click_position := root.input_router.mouse_left_click_position()
-		root.mouse_click_aim_direction_this_frame = root._mouse_aim_direction_at(click_position)
+		_mouse_click_aim_direction_this_frame = mouse_aim_direction_at(root, click_position)
 		_update_mouse_facing(root)
-		var world_position := root._mouse_world_position_at(click_position)
-		var target := root._target_at_mouse_position(world_position)
+		var world_position := mouse_world_position_at(root, click_position)
+		var target: Sprite2D = root.targeting_runtime_controller.target_at_position(root, world_position)
 		_mouse_target_hold_elapsed = 0.0
 		if target != null:
-			if not root.mouse_target_locked:
+			if not root.interaction_component.mouse_target_locked:
 				root.player_facing_left_before_target = root.last_player_facing_left
-			root.mouse_target_locked = true
+			root.interaction_component.mouse_target_locked = true
 			root._set_current_target(target)
 			_mouse_left_hold_mode = MouseLeftHoldMode.TARGET
-		elif root._mouse_interaction_at(world_position):
-			root.mouse_interact_input_this_frame = true
+		elif root.interaction_component.mouse_interaction_at(interaction_context(root), world_position):
+			_mouse_interact_input_this_frame = true
 			_mouse_left_hold_mode = MouseLeftHoldMode.INTERACTION
 		else:
 			_mouse_left_hold_mode = MouseLeftHoldMode.ATTACK
@@ -406,11 +433,11 @@ func _resolve_mouse_left_click(root: GameplayState, delta: float) -> bool:
 
 
 func _update_mouse_facing(root: GameplayState) -> void:
-	if not root._mouse_aim_active() or root.player == null:
+	if not mouse_aim_active(root) or root.player == null:
 		return
 	if root.player_is_attacking or root.player_is_magic_casting or root.player_is_rolling or root.player_is_backflipping:
 		return
-	var direction: Vector2 = root._mouse_aim_direction()
+	var direction: Vector2 = mouse_aim_direction(root)
 	if absf(direction.x) <= ActorMotor.HORIZONTAL_FACING_DEADZONE:
 		return
 	var facing_left := direction.x < 0.0
@@ -423,7 +450,7 @@ func update_player_input(root: GameplayState, delta: float) -> void:
 	var mouse_roll_click := root.input_router.consume_mouse_right_press() if root.input_router != null else false
 	var mouse_magic_click := root.input_router.consume_mouse_middle_press() if root.input_router != null else false
 	if mouse_magic_click and root.input_router != null:
-		root.mouse_click_aim_direction_this_frame = root._mouse_aim_direction_at(root.input_router.mouse_middle_click_position())
+		_mouse_click_aim_direction_this_frame = mouse_aim_direction_at(root, root.input_router.mouse_middle_click_position())
 	_update_mouse_facing(root)
 	var attack_down: bool = root._is_attack_input_pressed() or _mouse_left_attack_held; var attack := root.player_attack_component
 	if attack != null:
@@ -473,8 +500,8 @@ func update_player_input(root: GameplayState, delta: float) -> void:
 		# Remember the facing from just before the lock-on so a no-target backflip
 		# retreats while keeping the player's original facing.
 		root.player_facing_left_before_target = root.last_player_facing_left
-		root.mouse_target_locked = false
-	root.player_is_targeting = target_down or root.mouse_target_locked
+		root.interaction_component.mouse_target_locked = false
+	root.player_is_targeting = target_down or root.interaction_component.mouse_target_locked
 	_update_magic_input(root, delta, mouse_magic_click)
 
 
@@ -487,8 +514,8 @@ func _update_magic_input(root: GameplayState, delta: float, mouse_magic_click: b
 
 
 func tick(root: GameplayState, delta: float) -> void:
-	root.mouse_interact_input_this_frame = false
-	root.mouse_click_aim_direction_this_frame = Vector2.ZERO
+	_mouse_interact_input_this_frame = false
+	_mouse_click_aim_direction_this_frame = Vector2.ZERO
 	if root.display_controller != null:
 		root.display_controller.tick_screen_shake(delta, root.hitstop_timer > 0.0)
 	root._update_mp_desaturation()
@@ -654,7 +681,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	if player_attack != null: player_attack.update_lunge(root, delta)
 	if root.player_roll_component != null: root.player_roll_component.update_from_root(_roll_context(root), delta)
 	root._update_roll_dust(delta); root.player_motor.update_player_hit_reaction(root, delta); root._update_entry_orb_player_reaction()
-	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta)
+	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta, mouse_aim_active(root))
 	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
 		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
