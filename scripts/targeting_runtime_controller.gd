@@ -88,12 +88,13 @@ func cycle_target(root: Object, direction: int) -> void:
 		set_current_target(root, best)
 
 
-func set_current_target(root: Object, target: Sprite2D, play_feedback: bool = true) -> void:
+func set_current_target(root: GameplayState, target: Sprite2D, play_feedback: bool = true) -> void:
 	if target != null and not is_instance_valid(target):
 		target = null
 	var previous := valid_current_target(root)
 	if target == null:
-		root.set("mouse_target_locked", false)
+		if root.interaction_component != null:
+			root.interaction_component.mouse_target_locked = false
 	if previous == target:
 		return
 	var actors := root.get("actor_sprites") as Array[Sprite2D]

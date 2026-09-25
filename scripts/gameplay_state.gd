@@ -245,9 +245,6 @@ var player_sprite_shadow: Sprite2D = null
 var cloaked_demon_sprite_shadow: Sprite2D = null
 var current_target: Sprite2D = null
 var target_input_was_down := false
-var mouse_target_locked := false
-var mouse_interact_input_this_frame := false
-var mouse_click_aim_direction_this_frame := Vector2.ZERO
 var combat_momentum: CombatMomentumComponent = null
 var player_death_pending := false
 var player_dead := false
@@ -1057,19 +1054,10 @@ func _build_room_number_indicator() -> void:
 	hud_root.call("set_static_text", "lv. 1", player_hud_color)
 	hud_root.call("apply_bar_colors", player_hud_color, PaletteLibrary.accent(screen_state_controller.player_palette_name))
 	_update_player_progression_ui()
-	if touch_controls_layer != null and touch_controls_layer.has_method("refresh_layout"):
-		touch_controls_layer.refresh_layout()
 func _update_gold_indicator() -> void:
-	var value := player_profile.gold if player_profile != null else 0
-	if hud_controller != null:
-		hud_controller.sync_gold_value(value)
-		hud_controller.set_gold_amount_texture(_pixel_text_texture(str(value), Color8(255, 205, 117)))
-
+	var value := player_profile.gold if player_profile != null else 0; if hud_controller != null: hud_controller.sync_gold_value(value); hud_controller.set_gold_amount_texture(_pixel_text_texture(str(value), Color8(255, 205, 117)))
 func _update_soul_indicator() -> void:
-	var value := player_profile.souls if player_profile != null else 0
-	if hud_controller != null:
-		hud_controller.sync_soul_value(value)
-		hud_controller.set_soul_amount_texture(_pixel_text_texture(str(value), SOUL_HIGHLIGHT_COLOR))
+	var value := player_profile.souls if player_profile != null else 0; if hud_controller != null: hud_controller.sync_soul_value(value); hud_controller.set_soul_amount_texture(_pixel_text_texture(str(value), SOUL_HIGHLIGHT_COLOR))
 func _update_room_number_indicator() -> void: hud_controller.update_room_number(self)
 func _update_cloaked_demon_animation(delta: float) -> void:
 	var near_player := _can_interact_with_npc(); var patrolling := (current_room_type == DungeonGraph.ROOM_START or current_room_type == DungeonGraph.ROOM_NPC) and not near_player and (npc_controller.dialogue_box == null or not npc_controller.dialogue_box.visible)
@@ -1646,29 +1634,11 @@ func _update_targeting() -> void: interaction_component.update_targeting(gamepla
 func _target_facing_left(target: Sprite2D) -> bool: return interaction_component.target_facing_left(gameplay_frame_controller.interaction_context(self), target)
 func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
 func _raw_movement_input() -> Vector2: return input_router.raw_movement() if input_router != null else Vector2.ZERO
-func _mouse_aim_active() -> bool: return mouse_click_aim_direction_this_frame.length_squared() > 0.0001 or (input_router != null and input_router.mouse_aim_active() and input_router.has_mouse_position())
-func _mouse_aim_direction() -> Vector2:
-	if mouse_click_aim_direction_this_frame.length_squared() > 0.0001:
-		return mouse_click_aim_direction_this_frame.normalized()
-	if input_router == null or not input_router.mouse_aim_active() or not input_router.has_mouse_position() or player == null:
-		return Vector2.ZERO
-	return _mouse_aim_direction_at(input_router.mouse_position())
-func _mouse_world_position_at(screen_position: Vector2) -> Vector2:
-	return get_viewport().get_canvas_transform().affine_inverse() * screen_position
-func _mouse_aim_direction_at(screen_position: Vector2) -> Vector2:
-	if player == null:
-		return Vector2.ZERO
-	var mouse_world := _mouse_world_position_at(screen_position)
-	return (mouse_world - _actor_foot(player)).normalized()
-func _target_at_mouse_position(world_position: Vector2) -> Sprite2D:
-	return targeting_runtime_controller.call("target_at_position", self, world_position) as Sprite2D
-func _mouse_interaction_at(world_position: Vector2) -> bool:
-	return interaction_component.mouse_interaction_at(gameplay_frame_controller.interaction_context(self), world_position)
 func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _target_cycle_direction() -> int: return player_controller.target_cycle_direction(_controller_devices(), CONTROLLER_DEADZONE)
 func _is_guard_input_held() -> bool: return player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
 func _is_attack_input_pressed() -> bool: return player_controller.action_pressed(&"attack", _controller_devices(), JOY_BUTTON_X)
-func _is_interact_input_pressed() -> bool: return mouse_interact_input_this_frame or player_controller.action_pressed(&"interact", _controller_devices(), JOY_BUTTON_B)
+func _is_interact_input_pressed() -> bool: return (gameplay_frame_controller != null and gameplay_frame_controller.mouse_interaction_pressed()) or player_controller.action_pressed(&"interact", _controller_devices(), JOY_BUTTON_B)
 func _is_roll_input_pressed() -> bool: return player_controller.action_pressed(&"roll", _controller_devices(), JOY_BUTTON_A)
 func _is_magic_input_pressed() -> bool: return player_controller.action_pressed(&"magic", _controller_devices(), JOY_BUTTON_Y)
 func _controller_devices() -> Array[int]: return player_controller.connected_devices()

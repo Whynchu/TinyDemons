@@ -15,7 +15,7 @@ var rolling := false
 const HORIZONTAL_FACING_DEADZONE := 0.1
 
 
-func move_player(root: Object, delta: float) -> void:
+func move_player(root: Object, delta: float, mouse_aim_active: bool = false) -> void:
 	var controller := root.get("player_controller") as PlayerController
 	if controller != null and not controller.can_receive_input():
 		root.set("player_is_moving", false)
@@ -46,7 +46,6 @@ func move_player(root: Object, delta: float) -> void:
 		return
 	# Mouse aim is the facing source while it is active. Movement still controls
 	# travel, but only a new keyboard/controller input returns facing to movement.
-	var mouse_aim_active := root.has_method("_mouse_aim_active") and bool(root.call("_mouse_aim_active"))
 	if not mouse_aim_active:
 		update_horizontal_facing(root, input, not bool(root.get("player_is_defending")))
 	var tuning := root.get("player_tuning") as PlayerTuning

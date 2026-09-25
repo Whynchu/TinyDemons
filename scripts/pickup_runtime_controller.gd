@@ -952,11 +952,8 @@ func collect_chroma_pickup(root: Object, index: int) -> PickupAcquisitionResult:
 	return result
 
 
-func _chroma_palette_name(root: Object) -> String:
-	var component := root.get("player_chroma_component") as Node
-	if component != null and component.has_method("chroma_palette_name"):
-		return str(component.call("chroma_palette_name"))
-	return "grey"
+func _chroma_palette_name(root: GameplayState) -> String:
+	return root.player_chroma_component.chroma_palette_name() if root.player_chroma_component != null else "grey"
 
 
 func _chroma_color(root: Object) -> Color:
