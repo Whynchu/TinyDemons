@@ -212,7 +212,7 @@ func _recalculate() -> void:
 		var extra_points := maxi(total_stat_points() - allocated, 0)
 		if enemy_variant_profile_enabled:
 			var tuning := enemy_progression_tuning if enemy_progression_tuning != null else ProgressionTuning.new()
-			extra_points = tuning.cumulative_stat_points_at_level(level)
+			extra_points = tuning.cumulative_enemy_stat_points_at_level(level)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _growth_seed()
 		for point_index in extra_points:
