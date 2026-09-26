@@ -212,5 +212,12 @@ func update_focus_indicator(root: Object, delta: float = 0.0) -> void:
 func slime_display_name(root: Object, slime: Sprite2D) -> String:
 	var palette := str(slime.get("variant"))
 	var display_name := SLIME_VARIANT_CATALOG_SCRIPT.display_name_for_variant(StringName(palette))
+	var enemy_type := StringName(str(slime.get_meta("enemy_type_id", "slime")))
+	if enemy_type == &"slime":
+		display_name = "Slime %s" % display_name
+	else:
+		var definition := EnemyFactory.definition(StringName(palette))
+		if definition != null and not definition.display_name.is_empty():
+			display_name = definition.display_name
 	var stats := root.call("_slime_stats", slime) as StatsComponent
 	return "lv.%d %s" % [stats.level if stats != null else 1, display_name]

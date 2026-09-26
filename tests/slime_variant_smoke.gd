@@ -4,6 +4,7 @@ const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
 const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
+const TargetingRuntimeControllerScript = preload("res://scripts/targeting_runtime_controller.gd")
 
 var _finished := false
 
@@ -24,6 +25,16 @@ func _initialize() -> void:
 		_expect(not definition.damage_contract.is_empty(), "%s damage contract is explicit" % variant, failures)
 		_expect(not definition.display_name.is_empty() and not definition.visual_source.is_empty(), "%s has display and visual identity" % variant, failures)
 	_expect(CatalogScript.display_name_for_variant(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
+	var targeting := TargetingRuntimeControllerScript.new()
+	var name_root := Node.new()
+	var slime_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"grey"))
+	var skeleton_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"skeleton"))
+	_expect(targeting.slime_display_name(name_root, slime_actor) == "lv.1 Slime Normal", "target label includes Slime family and variant name", failures)
+	_expect(targeting.slime_display_name(name_root, skeleton_actor) == "lv.1 Skeleton", "target label keeps authored Skeleton family name", failures)
+	slime_actor.free()
+	skeleton_actor.free()
+	name_root.free()
+	targeting.free()
 
 	var yellow := StatsComponent.new()
 	var yellow_definition := CatalogScript.definition(&"yellow")
