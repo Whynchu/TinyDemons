@@ -6,6 +6,7 @@ extends SceneTree
 ## runtime. Run via tools/validate_definitions.ps1.
 
 const DEFINITION_ROOT := "res://resources/definitions"
+const ENEMY_FACTORY_SCRIPT = preload("res://scripts/enemy_factory.gd")
 
 var _definition_paths: Array[String] = []
 
@@ -30,6 +31,8 @@ func _run() -> void:
 				failures.append("%s: %s" % [path, str(problem)])
 		else:
 			failures.append_array(_structural_checks(path, resource, _kind_for_path(path)))
+	if ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton").is_empty():
+		failures.append("enemy catalog has no registered skeleton variants with encounter weight")
 	print("DEFINITION_VALIDATOR loaded=%d/%d" % [loaded, _definition_paths.size()])
 	if failures.is_empty():
 		print("DEFINITION_VALIDATOR_OK")

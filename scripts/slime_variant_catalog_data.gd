@@ -2,10 +2,9 @@
 extends Resource
 class_name SlimeVariantCatalogData
 
-## Editor-inspectable slime variant definitions. Existing entries may remain
-## embedded sub-resources for compatibility, while standalone EnemyDefinition
-## resources in this directory are discovered as authored content. That gives
-## content authors a one-file path without introducing a second runtime list.
+## Editor-inspectable enemy definitions. Standalone resources are registered
+## here so their dependencies are explicit in exported builds; directory
+## discovery remains a convenience for unregistered editor-authored resources.
 
 @export var definitions: Array[Resource] = []
 
@@ -15,10 +14,12 @@ const CATALOG_FILE := "slime_variant_catalog.tres"
 
 func authored_definitions() -> Array[EnemyDefinition]:
 	var result: Array[EnemyDefinition] = []
+	var registered_ids: Dictionary = {}
 	for entry in definitions:
 		var definition := entry as EnemyDefinition
-		if definition != null:
+		if definition != null and not registered_ids.has(definition.variant_id):
 			result.append(definition)
+			registered_ids[definition.variant_id] = true
 
 	var external_paths: Array[String] = []
 	var directory := DirAccess.open(DEFINITION_ROOT)
@@ -34,8 +35,9 @@ func authored_definitions() -> Array[EnemyDefinition]:
 	external_paths.sort()
 	for path in external_paths:
 		var definition := load(path) as EnemyDefinition
-		if definition != null:
+		if definition != null and not registered_ids.has(definition.variant_id):
 			result.append(definition)
+			registered_ids[definition.variant_id] = true
 	return result
 
 
