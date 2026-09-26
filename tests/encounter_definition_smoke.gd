@@ -3,6 +3,7 @@ extends SceneTree
 const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
 const EnemySpawnServicesScript = preload("res://scripts/room_enemy_spawn_services.gd")
+const SlimeRuntimeControllerScript = preload("res://scripts/slime_runtime_controller.gd")
 
 var rebound_enemy_damage_count := 0
 
@@ -39,6 +40,12 @@ func _initialize() -> void:
 
 	var skeleton_entries := EnemyFactoryScript.weighted_variants_for_type(&"skeleton")
 	_expect(skeleton_entries.size() == 8, "catalog registers the normal and seven elemental skeleton variants", failures)
+	var slime_runtime := SlimeRuntimeControllerScript.new() as SlimeRuntimeController
+	var bone_frames := slime_runtime._skeleton_bone_projectile_frames()
+	_expect(bone_frames.size() == 4, "bone projectile sheet loads four frames through the resource loader", failures)
+	for frame in bone_frames:
+		_expect(frame.get_size() == Vector2(5.0, 5.0), "bone projectile frame keeps its authored 5x5 dimensions", failures)
+	slime_runtime.free()
 	var rooms := RoomController.new()
 	rooms.progression_run_rank = 4
 	var skeleton_before_r5 := false
@@ -69,6 +76,10 @@ func _initialize() -> void:
 	var collision_sprites: Array[Sprite2D] = [actor_slot]
 	var hud := HudController.new()
 	root.add_child(hud)
+	var occlusion_renderer := OcclusionRenderer.new()
+	root.add_child(occlusion_renderer)
+	occlusion_renderer.original_actor_scales[actor_slot] = Vector2(2.0, 2.0)
+	occlusion_renderer.actor_visual_scales[actor_slot] = Vector2(1.5, 1.5)
 	var actor_hp_frame := Sprite2D.new()
 	actor_hp_frame.name = "HpOverhead"
 	actor_slot.add_child(actor_hp_frame)
@@ -84,6 +95,7 @@ func _initialize() -> void:
 	spawn_services.collision_sprites = collision_sprites
 	spawn_services.last_valid_positions = last_valid_positions
 	spawn_services.hud_controller = hud
+	spawn_services.occlusion_renderer = occlusion_renderer
 	spawn_services.enemy_health_damaged_callback = Callable(self, "_on_test_enemy_damaged")
 	spawn_services.enemy_health_healed_callback = Callable(self, "_on_test_enemy_healed")
 	spawn_services.enemy_health_changed_callback = Callable(self, "_on_test_enemy_health_changed")
@@ -93,6 +105,8 @@ func _initialize() -> void:
 	_expect(actor_hp_frame.get_parent() == actor_pool[0] and hud.target_overhead_frames.has(actor_pool[0]), "enemy HP bar remains attached and registered after family replacement", failures)
 	_expect(actor_aggro_marker.get_parent() == actor_pool[0] and hud.target_overhead_aggro_markers.has(actor_pool[0]), "aggro marker remains attached and registered after family replacement", failures)
 	_expect(not last_valid_positions.has(actor_slot) and last_valid_positions.get(actor_pool[0]) == Vector2(42.0, 84.0), "last valid walkable position follows the replacement actor", failures)
+	_expect(not occlusion_renderer.original_actor_scales.has(actor_slot) and occlusion_renderer.original_actor_scales.get(actor_pool[0]) == Vector2(2.0, 2.0), "presentation scale registration follows the replacement actor", failures)
+	_expect(actor_pool[0].scale == Vector2(3.0, 3.0), "replacement actor keeps its composed presentation scale", failures)
 	var replacement_health := actor_pool[0].get_node("Health") as HealthComponent
 	replacement_health.reset(1.0)
 	replacement_health.apply_damage(0.5)

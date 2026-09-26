@@ -6,7 +6,7 @@ Updated: 2026-09-26
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.81`; the authoring and verification sequence is
+Current release: version `0.2.82`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This roadmap sequences infrastructure work around the working game. It does

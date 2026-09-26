@@ -37,6 +37,32 @@ func set_occluders(new_occluders: Array[Sprite2D]) -> void:
 	occluders = new_occluders.duplicate()
 
 
+func rebind_actor(old_actor: Sprite2D, new_actor: Sprite2D) -> void:
+	if old_actor == null or new_actor == null:
+		return
+	var original_scale: Vector2 = original_actor_scales.get(old_actor, old_actor.scale)
+	var visual_scale: Vector2 = actor_visual_scales.get(old_actor, Vector2.ONE)
+	var grace := float(actor_occlusion_grace.get(old_actor, 0.0))
+	var actor_caches: Array[Dictionary] = [
+		actor_default_textures, actor_default_materials, original_actor_textures,
+		original_actor_images, original_actor_scales, actor_visual_scales,
+		sprite_images, actor_occlusion_grace, occluded_actor_textures,
+		highlighted_actor_textures, grey_highlighted_actor_textures,
+		white_actor_textures,
+	]
+	# Pixel/effect caches belong to the old texture. Discard those references and
+	# preserve only the scale state so the replacement registers from its own art.
+	for actor_cache in actor_caches:
+		actor_cache.erase(old_actor)
+	original_actor_scales[new_actor] = original_scale
+	actor_visual_scales[new_actor] = visual_scale
+	actor_occlusion_grace[new_actor] = grace
+	new_actor.scale = original_scale * visual_scale
+	var occluder_index := occluders.find(old_actor)
+	if occluder_index >= 0:
+		occluders[occluder_index] = new_actor
+
+
 func register_sprites(actors: Array[Sprite2D], occluder_sprites: Array[Sprite2D]) -> void:
 	original_actor_textures.clear()
 	actor_default_textures.clear()

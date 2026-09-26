@@ -726,10 +726,15 @@ func _skeleton_bone_projectile_frames() -> Array[Texture2D]:
 		return _skeleton_bone_frames
 	_skeleton_bone_frames_load_attempted = true
 	var source_path := "res://assets/artwork/Bone-projectile_right.png"
-	var sheet := Image.new()
-	var load_error := sheet.load(source_path)
-	if load_error != OK:
+	# Use ResourceLoader so exported PCK/web builds resolve the imported texture.
+	# Image.load(path) reads loose files and can fail once the source PNG is packed.
+	var source_texture := ResourceLoader.load(source_path) as Texture2D
+	if source_texture == null:
 		push_error("Could not load Skeleton bone projectile sheet: %s" % source_path)
+		return _skeleton_bone_frames
+	var sheet := source_texture.get_image()
+	if sheet == null or sheet.is_empty():
+		push_error("Could not read Skeleton bone projectile sheet pixels: %s" % source_path)
 		return _skeleton_bone_frames
 	if sheet.get_width() < SKELETON_BONE_FRAME_SIZE.x or sheet.get_height() < SKELETON_BONE_FRAME_SIZE.y:
 		push_error("Skeleton bone projectile sheet is smaller than its 5x5 frame size.")
