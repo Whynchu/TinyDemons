@@ -13,6 +13,7 @@ const SKELETON_BONE_FRAME_SIZE := Vector2i(5, 5)
 const SKELETON_BONE_DISPLAY_SCALE := 1.5
 const SKELETON_BONE_OVERSHOOT_DISTANCE := 7.0
 const SKELETON_BONE_ARC_HEIGHT := 10.0
+const SKELETON_BONE_MAX_RANGE := 192.0
 const SKELETON_WALK_SPEED := 16.0
 const SKELETON_NOTICE_STAGGER_MAX := 0.9
 const SKELETON_ATTACK_STAGGER_MAX := 0.75
@@ -238,6 +239,8 @@ func move_slimes(root: Object, delta: float) -> void:
 	for offset in count:
 		var index := (cursor + offset) % count
 		var slime := slimes[index]
+		if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree():
+			continue
 		if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
 			continue
 		var allow_movement := movement_left > 0
@@ -286,6 +289,8 @@ func prepare_slime_frame_cache(root: Object) -> void:
 	var tuning := root.get("slime_tuning") as SlimeTuning
 	for index in slimes.size():
 		var slime := slimes[index]
+		if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree():
+			continue
 		if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
 			continue
 		slot_cache[slime] = index
@@ -357,8 +362,22 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 		combat.dead = true
 		combat.active = false
+		combat.timer = 0.0
+		combat.hit_done = true
+		combat.knockback_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		# Position recovery can run during this actor's own knockback tick. Cancel
+		# its attack immediately so it cannot emit a delayed bone while hidden.
+		combat.cooldown = maxf(combat.cooldown, (root.get("slime_tuning") as SlimeTuning).attack_cooldown)
 		(root.get("collision_sprites") as Array[Sprite2D]).erase(slime)
 		(root.get("actor_sprites") as Array[Sprite2D]).erase(slime)
+		(root.get("depth_sprites") as Array[Sprite2D]).erase(slime)
+		(root.get("occluder_sprites") as Array[Sprite2D]).erase(slime)
+		var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+		if tactics != null:
+			tactics.reset()
+		(root.get("slime_frame_aggro") as Dictionary).erase(slime)
+		(root.get("slime_frame_slots") as Dictionary).erase(slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_timer = 0.0
 	combat.knockback_velocity = Vector2.ZERO
@@ -429,6 +448,7 @@ func start_slime_attack(root: Object, slime: Sprite2D) -> void:
 		combat.frame = 0
 		combat.hit_done = false
 		slime.set_meta("attack_hit_frame_override", (slime as SkeletonActor).bone_throw_sequence_frame_index())
+		_ensure_skeleton_renderer_registration(gameplay, slime as SkeletonActor)
 		gameplay._restore_slime_idle_texture(slime)
 		return
 	SlimeActor.start_attack_actor(root, slime)
@@ -488,6 +508,7 @@ func set_slime_notice_frame(root: Object, slime: Sprite2D, frame_index: int) -> 
 			var shocked_index := clampi(frame_index, 0, frames.size() - 1)
 			slime.set_meta("runtime_animation", "shocked")
 			slime.set_meta("runtime_animation_frame", shocked_index)
+			_ensure_skeleton_renderer_registration(gameplay, slime as SkeletonActor)
 			gameplay._set_actor_base_texture(slime, frames[shocked_index])
 			(gameplay.actor_presentation_runtime_controller as ActorPresentationRuntimeController).sync_slime_shadow(gameplay, slime)
 		return
@@ -512,14 +533,25 @@ func restore_slime_idle_texture(root: Object, slime: Sprite2D) -> void:
 		var skeleton := slime as SkeletonActor
 		var frames := skeleton.idle_left_frames if combat != null and combat.face_left else skeleton.idle_frames
 		if not frames.is_empty():
+			_ensure_skeleton_renderer_registration(gameplay, skeleton)
 			gameplay._set_actor_base_texture(slime, frames[0])
 			(gameplay.actor_presentation_runtime_controller as ActorPresentationRuntimeController).sync_slime_shadow(gameplay, slime)
 		return
 	root.call("_set_slime_facing", slime, -1.0 if combat.face_left else 1.0)
 
 
+func _ensure_skeleton_renderer_registration(gameplay: GameplayState, skeleton: SkeletonActor) -> void:
+	if gameplay == null or skeleton == null or not is_instance_valid(skeleton):
+		return
+	var renderer := gameplay.occlusion_renderer as OcclusionRenderer
+	if renderer != null:
+		renderer.ensure_actor_registered(skeleton)
+
+
 func can_slime_attack_player(root: Object, slime: Sprite2D) -> bool:
-	if is_slime_spawn_locked(root, slime):
+	if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree() or is_slime_spawn_locked(root, slime):
+		return false
+	if slime is SkeletonActor and slime_attack_offset(root, slime).length() > SKELETON_BONE_MAX_RANGE:
 		return false
 	var brain := root.call("_slime_brain", slime) as SlimeBrain
 	if brain != null and brain.is_noticing():
@@ -561,7 +593,7 @@ func can_slime_attack_player(root: Object, slime: Sprite2D) -> bool:
 
 
 func is_slime_aggroed(root: Object, slime: Sprite2D) -> bool:
-	if is_slime_spawn_locked(root, slime):
+	if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree() or is_slime_spawn_locked(root, slime):
 		return false
 	var cache := root.get("slime_frame_aggro") as Dictionary
 	if bool(root.get("slime_frame_cache_valid")) and cache.has(slime):
@@ -618,6 +650,10 @@ func aggro_slime_target(root: Object, slime: Sprite2D) -> Vector2:
 
 
 func apply_slime_attack_hit(root: Object, slime: Sprite2D) -> void:
+	# Attack timers can outlive a visibility change during room/state cleanup.
+	# Never let a hidden actor emit a projectile or apply a delayed melee hit.
+	if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree():
+		return
 	if slime is SkeletonActor:
 		_launch_skeleton_bone(root, slime)
 		return
@@ -632,7 +668,7 @@ func apply_slime_attack_hit(root: Object, slime: Sprite2D) -> void:
 func _launch_skeleton_bone(root: Object, skeleton: Sprite2D) -> void:
 	var gameplay := root as GameplayState
 	var player := gameplay.player
-	if player == null or skeleton.get_parent() == null:
+	if player == null or skeleton.get_parent() == null or not skeleton.visible or not skeleton.is_visible_in_tree():
 		return
 	var rightward_frames := _skeleton_bone_projectile_frames()
 	if rightward_frames.is_empty():
@@ -668,8 +704,10 @@ func _launch_skeleton_bone(root: Object, skeleton: Sprite2D) -> void:
 	skeleton.get_parent().add_child(projectile)
 	var launch_global := gameplay._actor_foot(skeleton) - Vector2(0.0, 2.0)
 	projectile.global_position = launch_global
-	var flight_direction := (target_global - launch_global).normalized()
-	var impact_global := target_global + flight_direction * SKELETON_BONE_OVERSHOOT_DISTANCE
+	var flight_vector := target_global - launch_global
+	var flight_distance := minf(flight_vector.length(), SKELETON_BONE_MAX_RANGE)
+	var flight_direction := flight_vector.normalized() if flight_vector.length_squared() > 0.001 else Vector2.RIGHT
+	var impact_global := launch_global + flight_direction * (flight_distance + SKELETON_BONE_OVERSHOOT_DISTANCE)
 	projectile.rotation = flight_direction.angle()
 	var stats := skeleton.get_node_or_null("Stats") as StatsComponent
 	var agility := stats.agi if stats != null else 0
