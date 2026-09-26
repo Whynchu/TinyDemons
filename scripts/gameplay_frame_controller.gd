@@ -636,15 +636,26 @@ func tick(root: GameplayState, delta: float) -> void:
 	var hitstop: float = root.hitstop_timer
 	if hitstop > 0.0: root.hitstop_timer = maxf(hitstop - delta, 0.0); return
 	if root.player_death_pending and not root.player_dead:
-		root.player_motor.update_player_hit_reaction(root, delta); root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root)); root._update_damage_numbers(delta)
+		root.player_motor.update_player_hit_reaction(root, delta)
+		root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root))
+		if root.player_guard_component != null:
+			root.player_guard_component.clear_for_death(_guard_context(root))
+		if root.player_animation_component != null:
+			root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
+		root._update_player_health_ui(delta)
+		root._update_enemy_health(delta)
+		root._update_damage_numbers(delta)
 		var motor := root.player_motor
 		if motor == null or not motor.is_in_knockback(): root._start_player_death()
 		return
 	if root.player_dead:
+		if root.player_guard_component != null:
+			root.player_guard_component.clear_for_death(_guard_context(root))
+		root._update_player_health_ui(delta)
+		root._update_enemy_health(delta)
 		if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta)
 		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); root.player_equipment_visual_component.tick_death(root.gameplay_frame_controller.equipment_visual_context(root)); root._update_damage_numbers(delta)
-		var tuning := root.player_tuning
-		if root.player_death_particles_started and root.player_death_timer >= tuning.death_particle_delay + tuning.death_particle_lifetime: root._move_slimes(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta)
+		root._update_enemy_hit_flashes(delta)
 		root._update_depth_sorting(); root._update_actor_occlusion(delta); _stabilize(root); root._update_overworld_ui(); root._update_game_over_input(); return
 	if root._is_pause_input_just_pressed():
 		root._open_pause_menu()
