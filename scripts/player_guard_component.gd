@@ -129,6 +129,17 @@ func tick(context: PlayerGuardContext, delta: float, guard_held: bool) -> void:
 	_update_meter(context)
 
 
+func clear_for_death(context: PlayerGuardContext) -> void:
+	context.is_defending_set.call(false)
+	facing_locked = false
+	guard_active_timer = 0.0
+	bar_alpha = 0.0
+	bar_hide_timer = 0.0
+	damage_hold_timer = 0.0
+	display_durability = durability
+	_update_meter(context)
+
+
 func absorb_damage(context: PlayerGuardContext, incoming_damage: float, source_position: Vector2) -> Dictionary:
 	if not bool(context.is_defending_get.call()) or cooldown_timer > 0.0 or durability <= 0.0:
 		return {"health_damage": incoming_damage, "shield_damage": 0.0, "blocked": false, "perfect": false, "stun": 0.0}

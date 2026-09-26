@@ -288,7 +288,7 @@ magic.
 
 ## Web build
 
-Current game version: **0.2.84**. Every push to `main` must increment the
+Current game version: **0.2.85**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

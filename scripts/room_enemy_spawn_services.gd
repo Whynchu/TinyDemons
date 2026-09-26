@@ -152,8 +152,10 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	replacement.rotation = current_actor.rotation
 	replacement.scale = current_actor.scale
 	replacement.skew = current_actor.skew
-	replacement.modulate = current_actor.modulate
-	replacement.self_modulate = current_actor.self_modulate
+	# Room slots are reused across enemy families. Never carry a transient
+	# ambush tint (including alpha 0.5) into the replacement actor.
+	replacement.modulate = Color.WHITE
+	replacement.self_modulate = Color.WHITE
 	replacement.visible = false
 	replacement.z_index = current_actor.z_index
 	replacement.z_as_relative = current_actor.z_as_relative
@@ -215,9 +217,11 @@ func configure_slime_ambush(slime: Sprite2D, enabled: bool) -> void:
 			slime.add_child(ambush)
 		ambush.configure(true, slime_tuning.ambush_reveal_window, slime_tuning.ambush_block_stun, slime_tuning.ambush_hit_extension)
 		ambush.apply_hidden(slime)
-	elif ambush != null:
-		ambush.configure(false, 0.0, 0.0, 0.0)
+	else:
+		if ambush != null:
+			ambush.configure(false, 0.0, 0.0, 0.0)
 		slime.self_modulate = Color.WHITE
+		slime.modulate = Color.WHITE
 
 
 func clear_slime_without_effects(slime: Sprite2D) -> void:

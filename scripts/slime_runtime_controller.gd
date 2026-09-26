@@ -477,6 +477,10 @@ func shocked_frames_for(root: Object, slime: Sprite2D) -> Array[Texture2D]:
 func set_slime_notice_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:
 	if slime is SkeletonActor:
 		var gameplay := root as GameplayState
+		var player := gameplay.player
+		var combat := gameplay._slime_combat(slime) as SlimeCombatComponent
+		if player != null and combat != null:
+			combat.face_left = player.global_position.x < slime.global_position.x
 		var frames := shocked_frames_for(root, slime)
 		if not frames.is_empty():
 			var shocked_index := clampi(frame_index, 0, frames.size() - 1)
@@ -704,7 +708,10 @@ func _resolve_bone_projectile_impact(root: Object, projectile: Sprite2D, player:
 		var hit_rect := Rect2(projectile.global_position - hit_size * 0.5, hit_size)
 		if swept_hit or hit_rect.intersects(current_player_rect):
 			SlimeActor.apply_attack_hit(root, skeleton, true)
+	var outline := projectile.get_node_or_null("BoneProjectileOutline") as Sprite2D
 	_spawn_skeleton_bone_impact(root, projectile.texture, impact_position)
+	if outline != null and outline.texture != null:
+		_spawn_skeleton_bone_impact(root, outline.texture, impact_position)
 	projectile.queue_free()
 
 

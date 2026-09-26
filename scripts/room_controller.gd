@@ -366,12 +366,16 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var scales: Array[float] = [3.0]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
+	var support_variant_pool := EnemyFactory.weighted_variants_for_type(&"slime")
+	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
+		var skeleton_support_pool := EnemyFactory.weighted_variants_for_type(&"skeleton")
+		EncounterDefinition.balance_enemy_family_weights(support_variant_pool, skeleton_support_pool)
+	var use_neutral_boss_support := progression_run_number < SKELETON_FIRST_RUN_NUMBER and progression_run_rank < _room_definition().boss_mixed_support_start_rank
 	for index in minor_count:
 		# A designer-selected lead variant is a complete boss identity. Keep the
 		# support wave on that identity as well; the seeded mixed roster is only
 		# used when the encounter was not authored with an explicit selection.
-		var catalog_variants := EnemyFactory.variants_for_type(&"slime")
-		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < _room_definition().boss_mixed_support_start_rank else String(catalog_variants[encounter_rng.randi_range(0, catalog_variants.size() - 1)])
+		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if use_neutral_boss_support else EncounterDefinition.select_weighted_variant(support_variant_pool, encounter_rng)
 		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
@@ -388,12 +392,15 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		popcorn_types.append("")
 		ambush_flags.append(variants[index] == "purple" and encounter_rng.randf() < 0.40)
 	for _support_index in _boss_support_popcorn_count():
-		variants.append(String(boss_variant))
+		var support_variant := String(boss_variant)
+		if progression_run_number >= SKELETON_FIRST_RUN_NUMBER and not has_explicit_boss_variant and not support_variant_pool.is_empty():
+			support_variant = EncounterDefinition.select_weighted_variant(support_variant_pool, encounter_rng)
+		variants.append(support_variant)
 		levels.append(_popcorn_enemy_level())
 		scales.append(1.0)
 		popcorn_flags.append(true)
 		popcorn_types.append(ELITE_POPCORN)
-		ambush_flags.append(false)
+		ambush_flags.append(support_variant == "purple" and encounter_rng.randf() < 0.40)
 	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
 
 

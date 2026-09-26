@@ -302,7 +302,9 @@ static func apply_attack_hit(root: Object, slime: Sprite2D, ranged_hit: bool = f
 				state.display_controller.request_screen_shake(shake_strength, shake_duration)
 	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
 	var player_tuning := root.get("player_tuning") as PlayerTuning
-	root.set("player_hit_flash_timer", 0.0 if blocked else player_tuning.hit_flash_time)
+	# Shielding changes damage and knockback, but a successful hit still needs
+	# to read clearly on the player as well as the equipment.
+	root.set("player_hit_flash_timer", player_tuning.hit_flash_time)
 	root.set("player_hitstun_timer", player_tuning.hitstun_time)
 	root.call("_apply_player_hit_knockback", slime, player_knockback_multiplier)
 	if damage > 0.0: root.call("_spawn_player_damage_number", damage, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, false)

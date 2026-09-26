@@ -80,6 +80,13 @@ static func choose_spawn_position(
 				minimum_spawn_distance,
 				minimum_socket_distance):
 				return candidate_foot - actor_foot_offset
+	# Dense rooms can exhaust the preferred separation distances, especially
+	# with the larger skeleton collision guides. Last-resort placements preserve
+	# floor and chest safety while allowing nearby enemies to share space.
+	if area != null:
+		for candidate_foot in area.points:
+			if valid_spawn_foot(slime, candidate_foot, player_foot, chest_rect, occupied, area, actor_foot_offset, active_door_sockets, active_entrance_sockets, 8.0, 0.0, 0.0):
+				return candidate_foot - actor_foot_offset
 	return Vector2(INF, INF)
 
 
