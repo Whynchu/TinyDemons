@@ -6,7 +6,7 @@ Updated: 2026-09-26
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.82`. The current smoke inventory is 143 manifest
+Current release: version `0.2.83`. The current smoke inventory is 143 manifest
 rows / 141 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
