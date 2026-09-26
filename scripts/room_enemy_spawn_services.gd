@@ -104,6 +104,11 @@ func is_slime_spawn_locked(slime: Sprite2D) -> bool:
 
 func configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 	var definition := EnemyFactory.definition(StringName(variant))
+	if definition == null:
+		return
+	slime = _replace_actor_family_for_definition(slime, definition)
+	if slime == null:
+		return
 	var palette := String(definition.variant_id)
 	slime.set("variant", palette)
 	slime.set_meta("element", definition.element)
@@ -118,6 +123,51 @@ func configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 	configure_slime_ambush(slime, false)
 	if clear_enemy_max_health_cache.is_valid():
 		clear_enemy_max_health_cache.call()
+
+
+func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: EnemyDefinition) -> Sprite2D:
+	if current_actor == null or definition == null:
+		return current_actor
+	var current_slime := current_actor as SlimeActor
+	if current_slime == null:
+		push_error("Enemy roster slot '%s' is not a SlimeActor." % current_actor.name)
+		return null
+	var needs_skeleton_actor := definition.type_id == &"skeleton"
+	if (current_slime is SkeletonActor) == needs_skeleton_actor:
+		return current_actor
+	var parent := current_actor.get_parent()
+	if parent == null:
+		push_error("Cannot replace detached enemy roster slot '%s'." % current_actor.name)
+		return null
+	var replacement := EnemyFactory.assemble(definition)
+	if replacement == null:
+		return null
+	replacement.name = current_actor.name
+	replacement.position = current_actor.position
+	replacement.rotation = current_actor.rotation
+	replacement.scale = current_actor.scale
+	replacement.skew = current_actor.skew
+	replacement.modulate = current_actor.modulate
+	replacement.self_modulate = current_actor.self_modulate
+	replacement.visible = false
+	replacement.z_index = current_actor.z_index
+	replacement.z_as_relative = current_actor.z_as_relative
+	var old_sibling_index := current_actor.get_index()
+	parent.add_child(replacement)
+	parent.move_child(replacement, old_sibling_index)
+	_replace_actor_reference(slimes, current_actor, replacement)
+	_replace_actor_reference(actor_sprites, current_actor, replacement)
+	_replace_actor_reference(collision_sprites, current_actor, replacement)
+	_replace_actor_reference(depth_sprites, current_actor, replacement)
+	_replace_actor_reference(occluder_sprites, current_actor, replacement)
+	current_actor.queue_free()
+	return replacement
+
+
+func _replace_actor_reference(actors_to_update: Array[Sprite2D], old_actor: Sprite2D, new_actor: Sprite2D) -> void:
+	var actor_index := actors_to_update.find(old_actor)
+	if actor_index >= 0:
+		actors_to_update[actor_index] = new_actor
 
 
 func configure_slime_ambush(slime: Sprite2D, enabled: bool) -> void:

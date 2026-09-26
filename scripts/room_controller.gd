@@ -230,13 +230,16 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
 		count = mini(count + 2, count_cap)
 	variant_pool.append_array(definition.late_pool_entries(progression_run_rank))
+	var skeleton_variant_pool: Array[Dictionary] = []
 	if room_depth >= SKELETON_FIRST_ROOM_DEPTH:
-		variant_pool.append_array(ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton"))
+		skeleton_variant_pool = ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton")
 	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
 		variant_pool.append({"variant": "purple", "weight": definition.shadow_weight})
+	if not skeleton_variant_pool.is_empty():
+		EncounterDefinition.balance_enemy_family_weights(variant_pool, skeleton_variant_pool)
 	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
 	if force_debug_enemy:
 		variant_pool.clear()

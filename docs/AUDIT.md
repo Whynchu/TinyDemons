@@ -1,4 +1,4 @@
-# Tiny Demons — Version 0.2.79 Codebase Audit
+# Tiny Demons — Version 0.2.80 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.79` (composition refactor structurally and editor-wise
+Current release: `0.2.80` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
 room/menu boundaries, and the enemy authoring slice proof landed)
 
@@ -20,12 +20,12 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
-## Current measured snapshot (2026-09-26, version 0.2.79)
+## Current measured snapshot (2026-09-26, version 0.2.80)
 
 The detailed historical audit below describes the `0.2.32` tree. The current
-`0.2.79` working tree measures:
+`0.2.80` working tree measures:
 
-| Metric | 0.2.32 audit | 0.2.79 working tree (2026-09-26) |
+| Metric | 0.2.32 audit | 0.2.80 working tree (2026-09-26) |
 | --- | ---: | ---: |
 | GDScript files in `scripts/` | 171 | 206 |
 | `root.call/get/set` sites | 2,488 | 2,201 |
@@ -548,7 +548,7 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.79 remains past the legacy-coupling and editor-composition
+Tiny Demons 0.2.80 remains past the legacy-coupling and editor-composition
 cleanup. The latest composition validation reports 2,202 root accesses,
 `GameplayState` at 1,717 lines / 286 fields, and `RoomController` at 2,250
 lines; both the strict scorecard and editor-composition measure pass. The test
