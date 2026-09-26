@@ -358,6 +358,7 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 		# An enemy that cannot occupy the current room is worse than a missing
 		# enemy: it can keep the encounter open while remaining impossible to hit.
 		# Disable it immediately and let the room runtime persist it as dead.
+		var gameplay := root as GameplayState
 		slime.visible = false
 		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 		combat.dead = true
@@ -368,16 +369,16 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 		combat.knockback_velocity = Vector2.ZERO
 		# Position recovery can run during this actor's own knockback tick. Cancel
 		# its attack immediately so it cannot emit a delayed bone while hidden.
-		combat.cooldown = maxf(combat.cooldown, (root.get("slime_tuning") as SlimeTuning).attack_cooldown)
-		(root.get("collision_sprites") as Array[Sprite2D]).erase(slime)
-		(root.get("actor_sprites") as Array[Sprite2D]).erase(slime)
-		(root.get("depth_sprites") as Array[Sprite2D]).erase(slime)
-		(root.get("occluder_sprites") as Array[Sprite2D]).erase(slime)
+		combat.cooldown = maxf(combat.cooldown, gameplay.slime_tuning.attack_cooldown)
+		gameplay.collision_sprites.erase(slime)
+		gameplay.actor_sprites.erase(slime)
+		gameplay.depth_sprites.erase(slime)
+		gameplay.occluder_sprites.erase(slime)
 		var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
 		if tactics != null:
 			tactics.reset()
-		(root.get("slime_frame_aggro") as Dictionary).erase(slime)
-		(root.get("slime_frame_slots") as Dictionary).erase(slime)
+		gameplay.slime_frame_aggro.erase(slime)
+		gameplay.slime_frame_slots.erase(slime)
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_timer = 0.0
 	combat.knockback_velocity = Vector2.ZERO
