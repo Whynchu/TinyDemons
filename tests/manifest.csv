@@ -67,7 +67,7 @@ script,role,state,owner,target,load,notes
 "guard_block_smoke","owner","unverified","player combat","guard block visual callable freeze regression","pure",""
 "combat_momentum_smoke","owner","unverified","player combat","combat momentum component","pure",""
 "composite_elemental_damage_smoke","owner","unverified","chroma & elements","composite elemental damage","pure",""
-"enemy_late_run_damage_smoke","owner","verified","player combat","late-run enemy strength damage ramp","pure","focused run 2026-09-26; rank 20 threshold and rank 40 cap"
+"enemy_late_run_damage_smoke","owner","unverified","player combat","enemy stat growth follows player progression awards","pure",""
 "demon_cloak_smoke","owner","verified","gear & fusion","demon cloak purchase and presentation","main","passes in isolated headless run 2026-09-13"
 "dungeon_map_event_smoke","owner","verified","dungeon topology","dungeon map event contract","pure","2026-09-11 focused evidence"
 "elite_slime_overhead_smoke","owner","unverified","HUD","elite slime overhead symbol","pure",""

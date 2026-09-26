@@ -63,7 +63,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | --- | --- |
 | Block reaction | `normal_block_stun` 0.12 seconds; perfect blocks use exactly `2.0x` that duration (`0.24` seconds) while `perfect_window` remains 0.14 seconds; blocked player knockback is `0.25x`, the counter shove is `1.0x`, and perfect-block counter shove is `1.5x`. Counter recoil ignores the player's current attack multiplier so the full shove stays visible, including on a blocked boss slam. |
 
-### `scripts/combat_tuning.gd` — combat formulas (11 exports, all `inspector`)
+### `scripts/combat_tuning.gd` — combat formulas
 
 | Field | Default | Meaning |
 | --- | ---: | --- |
@@ -72,8 +72,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | `health_per_level` | 0.0 | Leveling grants no Core HP; HP comes from VIT and HP-specific gear |
 | `health_vit_core_rate` | 0.03 | Extra HP from VIT-based gear multiplier |
 | `damage_base` | 2.0 | Flat damage before STR |
-| `enemy_damage_per_strength` | 1.0 | Enemy STR coefficient before late-run adjustment |
-| Late-run enemy damage ramp | Starts after rank 20, reaches +40% STR damage at rank 40, then caps | `CombatTuning`; affects physical and elemental physical enemy hits, not player damage or enemy stats |
+| `enemy_damage_per_strength` | 1.0 | Enemy STR coefficient; enemy stat growth handles level scaling |
 | `defense_scale` | 12.0 | Higher = DEF matters less |
 | `damage_roll_min` / `damage_roll_max` | 0.85 / 1.15 | Damage variance range |
 | `critical_hit_chance` | 0.10 | Crit chance |
@@ -143,10 +142,10 @@ room depth 2 with weight 1.0, Ground joins at depth 3, and Ice joins at depth 4.
 Purple remains the rare `0.12` regular-encounter variant and `0.04` boss-minor
 conversion.
 
-Enemy STR damage receives a separate late-run multiplier beginning after rank
-20 and ramping to `1.4x` at rank 40. This addresses geared-player DEF outpacing
-enemy STR without changing low-rank balance, authored enemy stats, or elemental
-magic damage. `CombatTuning` owns the threshold, cap rank, and maximum bonus.
+Enemy variants use the same per-level stat point awards as the player,
+distributed automatically according to each authored variant's growth weights.
+Enemy STR damage has no separate late-run multiplier; attack damage follows the
+enemy's grown stats and the shared combat formulas.
 
 ## Item / stat economy
 

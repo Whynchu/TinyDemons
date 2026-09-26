@@ -12,6 +12,9 @@ class_name ItemCatalogData
 @export var definitions: Dictionary = {}
 @export var definition_metadata: Dictionary = {}
 @export var transmutations: Dictionary = {}
+## Explicit resource references keep special-acquisition definitions reachable
+## in exported builds; directory discovery remains useful for editor authoring.
+@export var authored_definitions: Array[Resource] = []
 
 const AUTHORED_ITEM_ROOT := "res://resources/definitions/items"
 var _authored_definition_resources_cache: Array[Resource] = []
@@ -21,9 +24,15 @@ var _authored_definition_resources_loaded := false
 func authored_definition_resources() -> Array[Resource]:
 	if _authored_definition_resources_loaded:
 		return _authored_definition_resources_cache
-	var resources: Array[Resource] = []
+	var resources: Array[Resource] = authored_definitions.duplicate()
+	var referenced_paths: Dictionary = {}
+	for resource: Resource in resources:
+		if resource != null and not resource.resource_path.is_empty():
+			referenced_paths[resource.resource_path] = true
 	var paths := _discover_authored_paths(AUTHORED_ITEM_ROOT)
 	for path: String in paths:
+		if referenced_paths.has(path):
+			continue
 		var resource := load(path) as Resource
 		if resource != null:
 			resources.append(resource)

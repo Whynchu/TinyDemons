@@ -84,6 +84,7 @@ var enemy_variant_profile_enabled := false
 var enemy_variant_base_values: Dictionary = {}
 var enemy_variant_growth_weights: Dictionary = {}
 var enemy_variant_seed_token := &""
+var enemy_progression_tuning: ProgressionTuning = null
 
 
 func _ready() -> void:
@@ -183,6 +184,12 @@ func clear_enemy_variant_profile() -> void:
 	enemy_variant_base_values.clear()
 	enemy_variant_growth_weights.clear()
 	enemy_variant_seed_token = &""
+	enemy_progression_tuning = null
+	_recalculate()
+
+
+func set_enemy_progression_tuning(tuning: ProgressionTuning) -> void:
+	enemy_progression_tuning = tuning
 	_recalculate()
 
 
@@ -203,6 +210,9 @@ func _recalculate() -> void:
 		for stat in STAT_NAMES:
 			allocated += int(values[_stat_from_name(stat)])
 		var extra_points := maxi(total_stat_points() - allocated, 0)
+		if enemy_variant_profile_enabled:
+			var tuning := enemy_progression_tuning if enemy_progression_tuning != null else ProgressionTuning.new()
+			extra_points = tuning.cumulative_stat_points_at_level(level)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _growth_seed()
 		for point_index in extra_points:
