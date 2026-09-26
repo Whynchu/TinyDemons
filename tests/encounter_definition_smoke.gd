@@ -45,6 +45,20 @@ func _initialize() -> void:
 	_expect(bone_frames.size() == 4, "bone projectile sheet loads four frames through the resource loader", failures)
 	for frame in bone_frames:
 		_expect(frame.get_size() == Vector2(5.0, 5.0), "bone projectile frame keeps its authored 5x5 dimensions", failures)
+	var red_outline_color := PaletteLibrary.normal("red")
+	var bone_outline_found := false
+	for frame in bone_frames:
+		var outline := slime_runtime._bone_projectile_outline_texture(frame, "red")
+		if outline == null:
+			continue
+		_expect(outline.get_size() == Vector2(7.0, 7.0), "elemental bone outline adds a one-pixel transparent border", failures)
+		var outline_image := outline.get_image()
+		for y in outline_image.get_height():
+			for x in outline_image.get_width():
+				if outline_image.get_pixel(x, y).is_equal_approx(red_outline_color):
+					bone_outline_found = true
+	_expect(bone_outline_found, "elemental bone outline uses the element normal color", failures)
+	_expect(slime_runtime._bone_projectile_outline_texture(bone_frames[0], "grey") == null, "normal bones remain unoutlined", failures)
 	slime_runtime.free()
 	var rooms := RoomController.new()
 	rooms.progression_run_rank = 4

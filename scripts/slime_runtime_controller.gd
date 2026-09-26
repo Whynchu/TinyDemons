@@ -1,8 +1,6 @@
 extends Node
 class_name SlimeRuntimeController
 
-const ACTOR_PALETTE_MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
-
 ## Per-frame movement budget for the slime crowd. Only this many slimes run their
 ## expensive movement/steering pass per frame (rotating round-robin); combat,
 ## knockback, and attack stay at full rate. Rooms with fewer slimes are
@@ -23,6 +21,7 @@ const ROOM_ENEMY_PROJECTILE_GROUP := &"room_enemy_projectile"
 var _slime_movement_cursor := 0
 var _skeleton_bone_frames: Array[Texture2D] = []
 var _skeleton_bone_frames_load_attempted := false
+var _skeleton_bone_outline_cache: Dictionary = {}
 
 ## Run-scoped cache for the boss jump/slam context. It depends only on stable
 ## root references and callables, but was previously rebuilt for every active
@@ -648,9 +647,18 @@ func _launch_skeleton_bone(root: Object, skeleton: Sprite2D) -> void:
 	projectile.centered = true
 	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	projectile.texture = flight_frames[0]
-	projectile.material = ACTOR_PALETTE_MATERIAL_SCRIPT.for_bone_projectile(String(skeleton.get_meta("visual_source", "grey")))
+	projectile.material = null
 	projectile.z_index = 20
 	projectile.scale = Vector2.ONE * SKELETON_BONE_DISPLAY_SCALE
+	var element_palette := String(skeleton.get_meta("visual_source", "grey"))
+	projectile.set_meta("element_palette", element_palette)
+	var outline := Sprite2D.new()
+	outline.name = "BoneProjectileOutline"
+	outline.texture = _bone_projectile_outline_texture(flight_frames[0], element_palette)
+	outline.centered = true
+	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	outline.z_index = -1
+	projectile.add_child(outline)
 	skeleton.get_parent().add_child(projectile)
 	var launch_global := gameplay._actor_foot(skeleton) - Vector2(0.0, 2.0)
 	projectile.global_position = launch_global
@@ -750,6 +758,34 @@ func _skeleton_bone_projectile_frames() -> Array[Texture2D]:
 func _set_bone_projectile_frame(projectile: Sprite2D, frame: Texture2D) -> void:
 	if is_instance_valid(projectile):
 		projectile.texture = frame
+		var outline := projectile.get_node_or_null("BoneProjectileOutline") as Sprite2D
+		if outline != null:
+			outline.texture = _bone_projectile_outline_texture(frame, String(projectile.get_meta("element_palette", "grey")))
+
+
+func _bone_projectile_outline_texture(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null or palette_name == "grey" or not PaletteLibrary.PALETTE_NAMES.has(palette_name):
+		return null
+	var cache_key := "%s:%s" % [source.get_rid(), palette_name]
+	if _skeleton_bone_outline_cache.has(cache_key):
+		return _skeleton_bone_outline_cache[cache_key] as Texture2D
+	var source_image := source.get_image()
+	if source_image == null or source_image.is_empty():
+		return null
+	var outline_color := PaletteLibrary.normal(palette_name)
+	var outline_image := Image.create_empty(source_image.get_width() + 2, source_image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	var cardinal_offsets := [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			if source_image.get_pixel(x, y).a <= 0.0:
+				continue
+			for offset: Vector2i in cardinal_offsets:
+				var neighbor := Vector2i(x, y) + offset
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= source_image.get_width() or neighbor.y >= source_image.get_height() or source_image.get_pixelv(neighbor).a <= 0.0:
+					outline_image.set_pixel(x + 1 + offset.x, y + 1 + offset.y, outline_color)
+	var outline_texture := ImageTexture.create_from_image(outline_image)
+	_skeleton_bone_outline_cache[cache_key] = outline_texture
+	return outline_texture
 
 
 func update_slime_scoot(root: Object, slime: Sprite2D, delta: float) -> void:
