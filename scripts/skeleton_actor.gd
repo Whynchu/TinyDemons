@@ -49,6 +49,8 @@ var animation_facing_left := false
 func apply_authored_visuals() -> void:
 	warm_authored_frames()
 	idle_frames = _cached_idle_frames.duplicate()
+	if texture == null and not idle_frames.is_empty():
+		texture = idle_frames[0]
 	walk_frames = _cached_walk_frames.duplicate()
 	attack_frames = _cached_attack_frames.duplicate()
 	shocked_frames = _cached_shocked_frames.duplicate()

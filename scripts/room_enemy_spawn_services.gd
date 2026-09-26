@@ -150,7 +150,8 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	replacement.name = current_actor.name
 	replacement.position = current_actor.position
 	replacement.rotation = current_actor.rotation
-	replacement.scale = current_actor.scale
+	# The previous family's scale can contain a slime squish or boss transform.
+	# Keep the new actor's authored scale when a room slot changes family.
 	replacement.skew = current_actor.skew
 	# Room slots are reused across enemy families. Never carry a transient
 	# ambush tint (including alpha 0.5) into the replacement actor.
