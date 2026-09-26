@@ -91,6 +91,13 @@ static func balance_enemy_family_weights(slime_pool: Array[Dictionary], skeleton
 		slime_pool.append(balanced_entry)
 
 
+static func boss_support_variant_pool(include_skeletons: bool) -> Array[Dictionary]:
+	var support_pool := EnemyFactory.weighted_variants_for_type(&"slime")
+	if include_skeletons:
+		balance_enemy_family_weights(support_pool, EnemyFactory.weighted_variants_for_type(&"skeleton"))
+	return support_pool
+
+
 static func ensure_room_popcorn_slot(
 	force_debug_enemy: bool,
 	shadow_bound: bool,

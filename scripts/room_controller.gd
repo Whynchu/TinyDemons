@@ -366,24 +366,17 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var scales: Array[float] = [3.0]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
-	var support_variant_pool := EnemyFactory.weighted_variants_for_type(&"slime")
-	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
-		var skeleton_support_pool := EnemyFactory.weighted_variants_for_type(&"skeleton")
-		EncounterDefinition.balance_enemy_family_weights(support_variant_pool, skeleton_support_pool)
+	var support_variant_pool := EncounterDefinition.boss_support_variant_pool(progression_run_number >= SKELETON_FIRST_RUN_NUMBER)
 	var use_neutral_boss_support := progression_run_number < SKELETON_FIRST_RUN_NUMBER and progression_run_rank < _room_definition().boss_mixed_support_start_rank
 	for index in minor_count:
-		# A designer-selected lead variant is a complete boss identity. Keep the
-		# support wave on that identity as well; the seeded mixed roster is only
-		# used when the encounter was not authored with an explicit selection.
+		# Preserve authored boss identity; otherwise choose from the seeded roster.
 		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if use_neutral_boss_support else EncounterDefinition.select_weighted_variant(support_variant_pool, encounter_rng)
 		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))
 		scales.append(1.0)
-	# Boss rooms always include a run-scaled group of low-level Normal Slime
-	# support slots. This is the boss counterpart to Shadow's guaranteed
-	# mana-recovery opportunity.
+	# Boss rooms add run-scaled popcorn support, mirroring Shadow's mana drops.
 	var popcorn_flags: Array[bool] = []
 	var popcorn_types: Array[String] = []
 	var ambush_flags: Array[bool] = []
