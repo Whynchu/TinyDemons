@@ -6,8 +6,7 @@ class_name SlimeRuntimeController
 ## knockback, and attack stay at full rate. Rooms with fewer slimes are
 ## unaffected. This bounds the worst frame in packed boss rooms.
 const SLIME_AI_MOVEMENT_BUDGET := 10
-const SKELETON_BONE_ORIGIN_SPEED := 60.0
-const SKELETON_BONE_SPEED_PER_AGI := 8.0
+const SKELETON_BONE_PROJECTILE_SPEED := 48.0
 const SKELETON_BONE_FRAME_TIME := 0.09
 const SKELETON_BONE_FRAME_SIZE := Vector2i(5, 5)
 const SKELETON_BONE_DISPLAY_SCALE := 1.5
@@ -710,10 +709,7 @@ func _launch_skeleton_bone(root: Object, skeleton: Sprite2D) -> void:
 	var flight_direction := flight_vector.normalized() if flight_vector.length_squared() > 0.001 else Vector2.RIGHT
 	var impact_global := launch_global + flight_direction * (flight_distance + SKELETON_BONE_OVERSHOOT_DISTANCE)
 	projectile.rotation = flight_direction.angle()
-	var stats := skeleton.get_node_or_null("Stats") as StatsComponent
-	var agility := stats.agi if stats != null else 0
-	var projectile_speed := SKELETON_BONE_ORIGIN_SPEED + float(agility) * SKELETON_BONE_SPEED_PER_AGI
-	var flight_duration := maxf(launch_global.distance_to(impact_global) / projectile_speed, 0.1)
+	var flight_duration := maxf(launch_global.distance_to(impact_global) / SKELETON_BONE_PROJECTILE_SPEED, 0.1)
 	var flight_tween := projectile.create_tween()
 	flight_tween.tween_method(Callable(self, "_update_bone_projectile_flight").bind(projectile, launch_global, impact_global, SKELETON_BONE_ARC_HEIGHT, root, player, skeleton), 0.0, 1.0, flight_duration).set_trans(Tween.TRANS_LINEAR)
 	flight_tween.tween_callback(Callable(self, "_resolve_bone_projectile_impact").bind(root, projectile, player, skeleton, impact_global))
