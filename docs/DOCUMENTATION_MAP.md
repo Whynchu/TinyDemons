@@ -2,12 +2,12 @@
 
 Status: current navigation guide for the `0.2.x` cycle
 
-Updated: 2026-09-22
+Updated: 2026-09-26
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
 The baseline being preserved is version `0.2.00`; the latest measured current
-state is version `0.2.72` (see `README.md` and `AUDIT.md`). Historical documents
+state is version `0.2.78` (see `README.md` and `AUDIT.md`). Historical documents
 remain useful for compatibility and design rationale, but they must link
 forward to the current authority.
 
@@ -67,7 +67,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | What is the accepted refactor route? | [`refactor-route.md`](refactor-route.md) | historical checkpoints |
 | What is the player-facing direction? | [`project_direction.md`](project_direction.md) and the current feature design | proposals and rationale |
 | Where are balance values? | [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) | tuning plans and design notes |
-| What is the current dungeon/content contract? | [`runtime-map.md`](runtime-map.md) and the relevant generator or layout definition | run-specific history |
+| What is the current dungeon/content contract? | The relevant generator or layout definition ([`procedural-dungeon-design.md`](procedural-dungeon-design.md), [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md)) | [`runtime-map.md`](runtime-map.md) — historical map only |
 | What is the approved R6+ generation direction? | [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md) | compact-generator implementation history and tuning evidence |
 | What must remain compatible in saves and exports? | [`production-boundary.md`](production-boundary.md), save plans, and [`VERSIONING.md`](VERSIONING.md) | migration history |
 | How is a change verified? | [`README.md`](../README.md), [`gameplay-smoke-checklist.md`](gameplay-smoke-checklist.md), and `tests/manifest.csv` | focused test reports |

@@ -1,7 +1,12 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://hxbk530snspl"]
 
 [ext_resource type="Script" uid="uid://b8t4ry683m6uw" path="res://scripts/enemy_preview_workbench.gd" id="1_preview"]
 
-[node name="EnemyPreviewWorkbench" type="Node2D"]
+[node name="EnemyPreviewWorkbench" type="Node2D" unique_id=2089970631]
+process_mode = 3
 script = ExtResource("1_preview")
-enemy_id = &"guard_slime"
+enemy = "Skeleton"
+variant = "Skeleton"
+facing_direction = 0
+preview_actor_size = 1
+geometry_edit_target = 3

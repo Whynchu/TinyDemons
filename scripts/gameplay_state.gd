@@ -23,6 +23,7 @@ const DEFAULT_CHROMA_TUNING: ChromaTuning = preload("res://resources/tuning/chro
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
 @export var debug_boss_variant: StringName = &""
+@export var debug_enemy_test_id: StringName = &""
 @export var debug_actor_geometry := false
 @export var debug_stat_breakdown := false
 
@@ -659,9 +660,9 @@ func _hub_back_or_close() -> void:
 		hub_flow_controller.call("back_from_hub_route", self)
 func _update_hub_input() -> void: hub_flow_controller.call("update_hub_input", self)
 func _update_pause_input() -> void: screen_state_controller.update_pause_input(self)
-func _is_hub_previous_page_input_pressed() -> bool: return player_controller.guard_held(_controller_devices(), 0.35)
-func _is_hub_next_page_input_pressed() -> bool: return player_controller.target_held(_controller_devices(), 0.35)
-func _is_menu_cancel_input_pressed() -> bool: return player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
+func _is_hub_previous_page_input_pressed() -> bool: return player_controller != null and player_controller.guard_held(_controller_devices(), 0.35)
+func _is_hub_next_page_input_pressed() -> bool: return player_controller != null and player_controller.target_held(_controller_devices(), 0.35)
+func _is_menu_cancel_input_pressed() -> bool: return player_controller != null and player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
 func _is_pause_input_just_pressed() -> bool:
 	var is_down := input_router != null and input_router.pressed(&"pause")
 	var just_pressed: bool = is_down and not bool(screen_state_controller.pause_input_was_down)
@@ -1632,16 +1633,16 @@ func _update_player_shadow() -> void: shadow_controller.update_player_shadow(sel
 func _update_cloaked_demon_shadow() -> void: shadow_controller.update_cloaked_demon_shadow(self, DEPTH_Z_SCALE)
 func _update_targeting() -> void: interaction_component.update_targeting(gameplay_frame_controller.interaction_context(self))
 func _target_facing_left(target: Sprite2D) -> bool: return interaction_component.target_facing_left(gameplay_frame_controller.interaction_context(self), target)
-func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE)
+func _movement_input() -> Vector2: return player_controller.movement_input(_controller_devices(), CONTROLLER_DEADZONE) if player_controller != null else Vector2.ZERO
 func _raw_movement_input() -> Vector2: return input_router.raw_movement() if input_router != null else Vector2.ZERO
-func _is_target_input_held() -> bool: return player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
-func _target_cycle_direction() -> int: return player_controller.target_cycle_direction(_controller_devices(), CONTROLLER_DEADZONE)
-func _is_guard_input_held() -> bool: return player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
-func _is_attack_input_pressed() -> bool: return player_controller.action_pressed(&"attack", _controller_devices(), JOY_BUTTON_X)
-func _is_interact_input_pressed() -> bool: return (gameplay_frame_controller != null and gameplay_frame_controller.mouse_interaction_pressed()) or player_controller.action_pressed(&"interact", _controller_devices(), JOY_BUTTON_B)
-func _is_roll_input_pressed() -> bool: return player_controller.action_pressed(&"roll", _controller_devices(), JOY_BUTTON_A)
-func _is_magic_input_pressed() -> bool: return player_controller.action_pressed(&"magic", _controller_devices(), JOY_BUTTON_Y)
-func _controller_devices() -> Array[int]: return player_controller.connected_devices()
+func _is_target_input_held() -> bool: return player_controller != null and player_controller.target_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
+func _target_cycle_direction() -> int: return player_controller.target_cycle_direction(_controller_devices(), CONTROLLER_DEADZONE) if player_controller != null else 0
+func _is_guard_input_held() -> bool: return player_controller != null and player_controller.guard_held(_controller_devices(), CONTROLLER_TRIGGER_DEADZONE)
+func _is_attack_input_pressed() -> bool: return player_controller != null and player_controller.action_pressed(&"attack", _controller_devices(), JOY_BUTTON_X)
+func _is_interact_input_pressed() -> bool: return (gameplay_frame_controller != null and gameplay_frame_controller.mouse_interaction_pressed()) or (player_controller != null and player_controller.action_pressed(&"interact", _controller_devices(), JOY_BUTTON_B))
+func _is_roll_input_pressed() -> bool: return player_controller != null and player_controller.action_pressed(&"roll", _controller_devices(), JOY_BUTTON_A)
+func _is_magic_input_pressed() -> bool: return player_controller != null and player_controller.action_pressed(&"magic", _controller_devices(), JOY_BUTTON_Y)
+func _controller_devices() -> Array[int]: return player_controller.connected_devices() if player_controller != null else []
 func _closest_target() -> Sprite2D:
 	return targeting_runtime_controller.call("closest_target", self) as Sprite2D
 func _valid_current_target() -> Sprite2D:

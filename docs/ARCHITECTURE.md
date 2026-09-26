@@ -2,7 +2,7 @@
 
 Status: current ownership and extension guide for the `0.2.x` baseline
 
-Updated: 2026-09-22
+Updated: 2026-09-26
 
 Authority: [`AUDIT.md`](AUDIT.md) records measured findings; this document
 defines the intended runtime boundaries and safe extension rules.
@@ -202,12 +202,18 @@ resources are not yet authoritative at runtime.
 
 Current path (the enemy portion of Slice 1 is now typed and factory-backed):
 
-1. Add a typed `EnemyDefinition` sub-resource to the `definitions` array in
-   `resources/definitions/slime_variant_catalog.tres`, including explicit
-   visual and encounter metadata.
-2. Reuse the `slime_*` components; extend `enemy_tactics_component` only for
-   genuinely new tactical state. `EnemyFactory` materializes the actor and the
-   runtime pool configures selected slots from the definition.
+1. Add a standalone typed `EnemyDefinition` under `resources/definitions/`
+   with a unique stable `id`, supported family `type_id`, and explicit visual
+   and encounter metadata. The serialized `id` is exposed to new code as
+   `variant_id`; Slime variants use `slime`, and Skeleton currently uses
+   `skeleton`.
+2. `EnemyFactory` uses `type_id` to choose the actor family, then the variant
+   ID to configure that actor. Reuse the `slime_*` components; extend
+   `enemy_tactics_component` only for genuinely new tactical state. A new
+   family needs its own actor implementation and factory route. Skeleton is
+   the first separate-family proof, with authored idle, walk, attack, and
+   between-attack animation sheets; its bone projectile remains a code-drawn
+   stub pending final projectile artwork.
 3. Run the definition validator, catalog report, registry-driven variant
    smoke, factory contract smoke, and normal-room entrance smoke.
 4. A genuinely new palette or behavior still belongs to its narrow owner, but
@@ -257,8 +263,8 @@ editing catalog data.
   MCP Godot runtime active):
   `pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`
   The default command runs the curated 44-path release gate, including web
-  export and main-scene checks. Use `-TestGroup all` to run the complete 132-
-  path runnable inventory. Grouping comes from `tests/manifest.csv`, which
+export and main-scene checks. Use `-TestGroup all` to run the complete 141-
+path runnable inventory. Grouping comes from `tests/manifest.csv`, which
   records each script's role, state, owner, target, and load kind. A headless
   renderer crash can multiply into Windows memory-error dialogs. Start with one
   focused test and stop the runner at the first repeating crash.

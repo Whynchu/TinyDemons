@@ -53,12 +53,12 @@ func _initialize() -> void:
 	profile.ensure_starter_items(ItemCatalog.new())
 	var duplicate := ItemInstance.new()
 	duplicate.instance_id = "dupe-weapon-1"
-	duplicate.definition_id = &"soldier_sword"
+	duplicate.definition_id = &"soldier_weapon"
 	duplicate.rarity = &"rare"
 	profile.grant_item(duplicate)
 	var duplicate2 := ItemInstance.new()
 	duplicate2.instance_id = "dupe-weapon-2"
-	duplicate2.definition_id = &"soldier_sword"
+	duplicate2.definition_id = &"soldier_weapon"
 	duplicate2.rarity = &"rare"
 	profile.grant_item(duplicate2)
 	root.player_profile = profile

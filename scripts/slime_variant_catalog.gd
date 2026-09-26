@@ -7,6 +7,7 @@ class_name SlimeVariantCatalog
 ## the narrow runtime lookup API over both forms.
 
 const DATA := preload("res://resources/definitions/slime_variant_catalog.tres") as SlimeVariantCatalogData
+const CATALOG_RESOURCE_PATH := "res://resources/definitions/slime_variant_catalog.tres"
 static var _cache_loaded := false
 static var _definition_cache: Dictionary = {}
 static var _variant_cache: Array[StringName] = []
@@ -16,8 +17,8 @@ static func _ensure_cache() -> void:
 	if _cache_loaded:
 		return
 	for definition in DATA.authored_definitions():
-		_definition_cache[definition.id] = definition
-		_variant_cache.append(definition.id)
+		_definition_cache[definition.variant_id] = definition
+		_variant_cache.append(definition.variant_id)
 	_cache_loaded = true
 
 static func definitions() -> Dictionary:
@@ -30,33 +31,59 @@ static func variants() -> Array[StringName]:
 	return _variant_cache
 
 
-static func is_variant(variant: StringName) -> bool:
-	return definitions().has(variant)
+static func variant_ids() -> Array[StringName]:
+	return variants()
 
 
-static func definition_resource(variant: StringName) -> EnemyDefinition:
-	var definition := definitions().get(variant) as EnemyDefinition
+static func is_variant(variant_id: StringName) -> bool:
+	return definitions().has(variant_id)
+
+
+static func invalidate_cache() -> void:
+	_cache_loaded = false
+	_definition_cache.clear()
+	_variant_cache.clear()
+
+
+static func save_definition(definition: EnemyDefinition) -> Error:
+	if definition == null:
+		return ERR_INVALID_PARAMETER
+	if DATA.definitions.has(definition):
+		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
+	if definition.resource_path.is_empty():
+		return ERR_FILE_NOT_FOUND
+	return ResourceSaver.save(definition, definition.resource_path)
+
+
+static func definition_source_path(definition: EnemyDefinition) -> String:
+	if DATA.definitions.has(definition):
+		return CATALOG_RESOURCE_PATH
+	return definition.resource_path
+
+
+static func definition_resource(variant_id: StringName) -> EnemyDefinition:
+	var definition := definitions().get(variant_id) as EnemyDefinition
 	return definition
 
 
-static func definition(variant: StringName) -> Dictionary:
-	var definition_resource_value := definition_resource(variant)
+static func definition(variant_id: StringName) -> Dictionary:
+	var definition_resource_value := definition_resource(variant_id)
 	if definition_resource_value == null:
 		definition_resource_value = definition_resource(&"grey")
 	return definition_resource_value.to_record() if definition_resource_value != null else {}
 
 
-static func element_for_variant(variant: StringName) -> int:
-	return int(definition(variant)["element"])
+static func element_for_variant(variant_id: StringName) -> int:
+	return int(definition(variant_id)["element"])
 
 
-static func display_name_for_variant(variant: StringName) -> String:
-	return str(definition(variant)["display_name"])
+static func display_name_for_variant(variant_id: StringName) -> String:
+	return str(definition(variant_id)["display_name"])
 
 
-static func damage_contract_for_variant(variant: StringName) -> StringName:
-	return StringName(str(definition(variant).get("damage_contract", "physical")))
+static func damage_contract_for_variant(variant_id: StringName) -> StringName:
+	return StringName(str(definition(variant_id).get("damage_contract", "physical")))
 
 
-static func is_elemental_variant(variant: StringName) -> bool:
-	return damage_contract_for_variant(variant) == &"elemental_slime"
+static func is_elemental_variant(variant_id: StringName) -> bool:
+	return damage_contract_for_variant(variant_id) == &"elemental_slime"

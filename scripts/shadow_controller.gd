@@ -24,6 +24,22 @@ func sync_player_attack_shadow(root: Object, depth_scale: float) -> void:
 	update_player_shadow(root, depth_scale)
 
 
+func update_enemy_drop_shadow(root: GameplayState, actor: Sprite2D, shadow: Sprite2D, depth_scale: float) -> void:
+	var player_shadow := root.player_shadow
+	if actor == null or shadow == null or player_shadow == null:
+		return
+	var foot: Vector2 = root._actor_foot(actor)
+	shadow.texture = player_shadow.texture
+	shadow.visible = actor.visible and not root._is_slime_dead(actor)
+	shadow.top_level = true
+	shadow.global_position = foot + root.player_shadow_offset
+	shadow.global_scale = root.player_shadow_scale
+	shadow.flip_h = actor.flip_h
+	shadow.self_modulate = Color(1.0, 1.0, 1.0, 0.25)
+	shadow.z_as_relative = false
+	shadow.z_index = z_index_for(foot.y, depth_scale)
+
+
 func update_cloaked_demon_shadow(root: Object, depth_scale: float) -> void:
 	var demon := root.get("cloaked_demon") as Sprite2D; var shadow := root.get("cloaked_demon_shadow") as Sprite2D
 	if shadow == null: return

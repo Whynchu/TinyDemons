@@ -64,7 +64,7 @@ func _initialize() -> void:
 		_expect(float(scaled_bonuses.get("agi", 0.0)) > float(cloak_bonuses.get("agi", 0.0)) and float(scaled_bonuses.get("defense", 0.0)) > float(cloak_bonuses.get("defense", 0.0)), "both AGI and DEF scale with rarity and enhancement", failures)
 		var head_item := ItemInstance.new()
 		head_item.instance_id = "test-head"
-		head_item.definition_id = &"iron_helm"
+		head_item.definition_id = &"basic_hood"
 		head_item.rarity = &"common"
 		profile.grant_item(head_item)
 		_expect(profile.equip_item(head_item.instance_id), "a head item equips before the cloak", failures)

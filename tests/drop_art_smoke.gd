@@ -16,7 +16,6 @@ func _initialize() -> void:
 		&"accessory": "acc_pickup.png",
 	}
 	var covered: Dictionary = {}
-	var total := 0
 	for slot in ItemCatalog.SLOTS:
 		for definition_id in catalog.definitions_for_slot(slot):
 			var item := ItemInstance.new()
@@ -31,10 +30,8 @@ func _initialize() -> void:
 			var expected: String = String(expected_by_slot.get(actual_slot, "MISSING"))
 			_expect(file == expected, "%s (%s) uses %s, expected %s" % [definition_id, actual_slot, file, expected], failures)
 			covered[actual_slot] = int(covered.get(actual_slot, 0)) + 1
-			total += 1
 	for slot in ItemCatalog.SLOTS:
-		_expect(covered.get(slot, 0) > 0, "slot %s has drop art coverage" % slot, failures)
-	_expect(total >= 66, "full catalogue checked (%d definitions)" % total, failures)
+		_expect(covered.get(slot, 0) > 0, "live slot %s has drop art coverage" % slot, failures)
 	if failures.is_empty():
 		print("DROP_ART_SMOKE_OK")
 		quit(0)

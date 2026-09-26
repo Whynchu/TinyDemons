@@ -17,7 +17,7 @@ func _initialize() -> void:
 		var problems := resource.call("validate") as Array
 		_expect(problems.is_empty(), "%s validates" % definition_id, failures)
 		_expect(catalog.definition_exists(definition_id), "%s resolves through ItemCatalog" % definition_id, failures)
-		_expect(definition_id in catalog.live_definition_ids(), "%s is available to runtime sources" % definition_id, failures)
+		_expect(definition_id in catalog.playable_definition_ids(), "%s has a current gameplay acquisition path" % definition_id, failures)
 		var instance = ITEM_INSTANCE_SCRIPT.new()
 		instance.definition_id = definition_id
 		instance.rarity = &"common"

@@ -1,3 +1,4 @@
+@tool
 extends Node
 class_name SlimeVisualComponent
 
@@ -29,21 +30,43 @@ static var direction_texture_cache: Dictionary = {}
 const PALETTES := ["grey", "red", "blue", "yellow", "green", "purple", "orange", "aquamarine"]
 
 
-## Resolves a slime variant to the palette key used by the shared frame
-## libraries. Base palettes key their own entry; content variants (crimson)
-## share the art sheet named by EnemyDefinition.visual_source, which is a
-## real palette key in the frame libraries.
+## Resolves the selected definition's explicit palette key. Variant identity
+## and appearance stay separate; the variant ID is only a fallback for older
+## definitions whose visual_source is not a recognized palette.
 static func frame_palette_for(slime: Sprite2D) -> String:
 	var variant := String(slime.get("variant"))
-	if variant in PALETTES:
-		return variant
 	var definition := EnemyFactory.definition(StringName(variant))
-	var source := definition.visual_source if definition != null else "green"
-	return source if source in PALETTES else "green"
+	return palette_for_definition(definition, variant)
+
+
+static func palette_for_definition(definition: EnemyDefinition, fallback_variant: String = "") -> String:
+	if definition != null and definition.visual_source in PALETTES:
+		return definition.visual_source
+	if definition != null:
+		var definition_variant := String(definition.variant_id)
+		if definition_variant in PALETTES:
+			return definition_variant
+	return fallback_variant if fallback_variant in PALETTES else "green"
+
+
+static func direction_texture_paths(is_boss: bool) -> Array[String]:
+	# Direction sprites deliberately use the green source sheet; the shared
+	# palette material recolors it for each enemy definition.
+	var prefix := "BOSS" if is_boss else ""
+	return [
+		"res://assets/artwork/%sSlimeGreenLeft.png" % prefix,
+		"res://assets/artwork/%sSlimeGreenRight.png" % prefix,
+	]
 
 
 static func apply_palette_material(slime: Sprite2D) -> void:
 	if slime == null or not is_instance_valid(slime):
+		return
+	if slime.get_meta("enemy_type_id", &"") == &"skeleton":
+		var skeleton_palette := String(slime.get_meta("visual_source", "grey"))
+		var skeleton_material: ShaderMaterial = ACTOR_PALETTE_MATERIAL_SCRIPT.for_skeleton_palette(skeleton_palette)
+		if slime.material != skeleton_material:
+			slime.material = skeleton_material
 		return
 	var palette := frame_palette_for(slime)
 	var material: ShaderMaterial = null

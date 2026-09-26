@@ -9,6 +9,7 @@ func _initialize() -> void:
 	_expect(PlayerProfile.supports_schema_version(8), "save service accepts the oldest supported migration schema", failures)
 	_expect(PlayerProfile.supports_schema_version(9), "save service accepts the six-stat migration schema", failures)
 	_expect(PlayerProfile.supports_schema_version(10), "save service accepts the demon-cloak migration schema", failures)
+	_expect(PlayerProfile.supports_schema_version(13), "save service accepts the pre-retired-item catalog schema", failures)
 	_expect(PlayerProfile.supports_schema_version(PlayerProfile.CURRENT_SCHEMA_VERSION), "save service accepts the current schema", failures)
 	_expect(not PlayerProfile.supports_schema_version(PlayerProfile.CURRENT_SCHEMA_VERSION + 1), "save service rejects an unknown future schema", failures)
 	var legacy_data := {
@@ -33,7 +34,7 @@ func _initialize() -> void:
 	}
 	var profile := PlayerProfile.new()
 	profile.load_dictionary(legacy_data)
-	_expect(profile.schema_version == PlayerProfile.CURRENT_SCHEMA_VERSION, "schema 8 loads as schema 13", failures)
+	_expect(profile.schema_version == PlayerProfile.CURRENT_SCHEMA_VERSION, "schema 8 loads as schema 14", failures)
 	_expect(profile.base_vit == 2 and profile.base_str == 2 and profile.base_def == 2 and profile.base_agi == 2 and profile.base_int == 2 and profile.base_mnd == 2, "pre-baseline saves migrate to the even 2/2/2/2/2/2 base", failures)
 	_expect(profile.allocated_vit == 2 and profile.allocated_str == 4 and profile.allocated_def == 1 and profile.allocated_agi == 3, "schema 8 allocations retain every invested point", failures)
 	_expect(profile.allocated_int == 0 and profile.allocated_mnd == 0, "schema 8 INT/MND carry no invested points", failures)
@@ -43,7 +44,7 @@ func _initialize() -> void:
 	_expect(saved.get("schema_version") == PlayerProfile.CURRENT_SCHEMA_VERSION and saved.has("base_agi") and saved.has("base_int") and saved.has("base_mnd"), "normal save emits canonical six-stat fields", failures)
 	var round_trip := PlayerProfile.new()
 	round_trip.load_dictionary(saved)
-	_expect(round_trip.base_agi == 2 and round_trip.allocated_agi == 3 and round_trip.base_int == 2 and round_trip.base_mnd == 2, "schema 13 round trip preserves canonical stats on the even baseline", failures)
+	_expect(round_trip.base_agi == 2 and round_trip.allocated_agi == 3 and round_trip.base_int == 2 and round_trip.base_mnd == 2, "schema 14 round trip preserves canonical stats on the even baseline", failures)
 	_expect(round_trip.unspent_stat_points == 9, "schema 9 round trip preserves banked points", failures)
 
 	var allocation_profile := PlayerProfile.new()

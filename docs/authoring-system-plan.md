@@ -28,7 +28,7 @@ and the factory/definition contract in
 not change the T1/T3 direction, the product contract, or the explicit frame
 schedule.
 
-Updated: 2026-09-22
+Updated: 2026-09-26
 
 ## 0. Decision principles and research basis
 
@@ -82,7 +82,7 @@ The result is a trap for both people and agents: **the file you are told to
 edit is often not the file the game reads.** Every slice below removes a class
 of that trap and proves the replacement with a second piece of content.
 
-## 2. Measured current point (2026-09-22, version 0.2.72)
+## 2. Measured point (2026-09-22 snapshot, version 0.2.72; test count refreshed 2026-09-26)
 
 | Surface | Measurement |
 |---|---|
@@ -93,7 +93,7 @@ of that trap and proves the replacement with a second piece of content.
 | `room_controller.gd` | 2,243 lines |
 | `dungeon_layout_generator.gd` | 2,487 lines, ~100 static functions |
 | Definitions | 16 authored `.tres` under `resources/definitions/`; validator covers 16/16; composition audit reports 19 editor-able definition surfaces |
-| Tests | 137 manifest rows / 135 runnable / 44-path default gate, process-per-test |
+| Tests | 143 manifest rows / 141 runnable / 44-path default gate, process-per-test |
 | Docs | 105 Markdown files under `docs/` and frozen counts in the authority docs |
 
 Reference commands (current behavior):
@@ -110,9 +110,13 @@ Code inspection narrows the implementation route:
 
 - `EnemyDefinition`, `EnemyFactory`, the slime catalog, and the current
   `enemy_preview_workbench.gd` are a usable first vertical slice. The
-  workbench is already `@tool` and factory-backed, but it disables the preview
-  actor and currently presents a static/base-texture summary. It proves
-  materialization and geometry, not an animated design workflow.
+  workbench is `@tool` and factory-backed, with a catalog-fed Inspector picker,
+  starter-definition creation, an inline editable view of the selected typed
+  definition, save-to-source support, and a native-size design canvas for shared
+  animation states. Definition edits update the preview and unsaved edits block
+  selection changes. It disables actor processing and is still a design
+  preview, not an isolated interactive workbench or proof of live enemy
+  behavior.
 - `slime_visual_component.gd` already contains the project's real frame
   vocabulary—idle direction, attack, hurt/shocked, spawn, boss jump/slam, and
   shadow states—while `slime_actor.gd` and `slime_runtime_controller.gd` own
@@ -204,7 +208,7 @@ docs/CONTENT_INDEX.md regenerated from the registry
 ### 3.2 The authoring loop (target)
 
 ```powershell
-pwsh -File tools/dev.ps1 new enemy crimson2     # scaffolds one definition file
+pwsh -File tools/dev.ps1 new variant crimson2   # scaffolds one Slime variant file
 # edit resources/definitions/crimson2.tres
 pwsh -File tools/dev.ps1 verify                  # schema, duplicate IDs, dangling refs, stale docs
 pwsh -File tools/dev.ps1 preview enemy crimson2  # workbench scene or screenshot
@@ -430,7 +434,7 @@ M1's shared editor and preview foundation precedes bulk content migration.
 Artwork ships with its owning milestone. Independent work may proceed in
 parallel, but each milestone requires its prerequisites and evidence before
 acceptance. Record a responsible engineer and production reviewer when
-assigning each milestone. The current static enemy workbench is an M0/M1
+assigning each milestone. The current enemy design preview is an M0/M1
 baseline, not the final live-editor experience.
 
 ### Editor interaction and content lifecycle (M1 foundation)
@@ -675,16 +679,29 @@ Work items:
 - [x] Add `scenes/enemy_preview_workbench.tscn` and a headless preview driver;
   it materializes any registry enemy through `EnemyFactory` and shows the
   runtime collision/attack geometry without booting a run.
-- [ ] Add the M1 design-preview adapter so the workbench can step idle, move,
-  attack, hurt, spawn, death, and boss states using the authored visual frame
-  contract. The current static summary/geometry view remains useful as a
-  validation fallback but is not the live-editor acceptance proof.
+- [ ] Complete acceptance of the M1 design-preview adapter. The current
+  workbench selects authored IDs, creates a starter definition, edits all
+  current `EnemyDefinition` fields inline, saves embedded or standalone
+  resources, and steps idle, move, attack, shocked, spawn, and boss jump/slam
+  states through the shared visual frame contract. Enemy definitions now own
+  collision shapes, body hitboxes, collision guides, and left/right attack
+  guides; the factory applies that geometry to the preview and runtime actors.
+  The workbench has independent guide toggles, in-preview vertex and rectangle
+  editing, reset, and geometry undo/redo. Add a death-effect preview and verify
+  catalog refresh, saved-resource lifecycle, geometry interaction, and visible
+  output in the editor before closing acceptance.
 - [ ] Add the isolated interactive enemy workbench and the first authoring dock
   actions. It must launch the selected definition with a deterministic seed,
   temporary profile, normal factory assembly, and explicit cleanup.
 - [x] Complete acceptance of the standalone `ember_guard.tres` definition through the
   registry-driven preview, round-trip, encounter, boss, and room-entry checks
   without a per-variant test edit.
+- [ ] Separate enemy-family authoring from variant authoring. Skeleton is the
+  first non-Slime family proof, with a standalone definition, dedicated actor
+  route, authored idle/walk/attack/recovery animations, and a stub bone throw. The
+  workbench still needs distinct `Create Enemy` and `Create Variant` flows,
+  family-level authoring, and a command path that scaffolds the family without
+  an implicit Slime default.
 
 Current proof: `crimson` remains the embedded migration proof, while
 `ember_guard.tres` is discovered as a standalone authored resource, resolved
@@ -707,19 +724,23 @@ Current proof slice (2026-09-21): standalone `ItemDefinition` resources under
 `resources/definitions/items/` are discovered by `ItemCatalogData`, converted at
 the compatibility boundary, included in live generation, validated, reported,
 and covered by a registry-driven stable-ID round-trip smoke. `cinder_blade.tres`
-is the named proof item. The legacy dictionary catalogue and element/flame
-tables remain in migration.
+is the named proof item. The first item design-preview workbench now uses the
+same catalog for typed-resource editing, live-item browsing, card/drop/instance/
+effect views, and the `preview item` command. Retired expansion item and
+transmutation records have been purged; saved profiles migrate by dropping those
+retired IDs while preserving Demon Cloak as a typed special-acquisition item.
+The live baseline/set dictionaries and element/flame tables remain in migration;
+item artwork remains slot-level until `visual_id` becomes authoritative.
 
 Work items:
 
-- [ ] Split `item_catalog.tres` (2,046 lines of nested dictionaries) into typed
-  `ItemDefinition` entries in `resources/content/items/`.
+- [ ] Split the remaining live baseline/set dictionaries in `item_catalog.tres`
+  into typed `ItemDefinition` entries in `resources/content/items/`.
 - [ ] Collapse the three registries (`live_base_ids`, `live_base_definitions`,
   `definition_metadata`) into one, and move `SET_IDS` and the set synthesis
   rules from `item_catalog.gd` into data.
-- [ ] Replace the count-pinned gear tests (`gear_system_rework_smoke.gd:13` = 66,
-  `gear_catalogue_expansion_smoke.gd:22` = 45, `drop_art_smoke.gd:37`) with
-  registry invariants and specific golden items.
+- [x] Replace count-pinned legacy-catalogue expectations with live-registry
+  invariants, retired-ID checks, and focused current-item fixtures.
 - [ ] Decide the `demon_cloak` model: either a `single_instance`/`unique` flag
   in the definition or a documented special case with one owner, not four
   (`player_profile.gd`, `run_state.gd`, `equipment_component.gd`,
@@ -731,8 +752,14 @@ Work items:
 - [ ] Move `AspectCatalog` flame/palette/recipe tables
   (`aspect_catalog.gd:4-32`) and the `PlayerChromaComponent` aspect mirror into
   typed definitions or generate them from the element registry.
-- [ ] Add the item and element previews (card/drop for items, palette/effect
-  sample for elements).
+- [x] Add the first ItemDefinition design-preview workbench. It provides
+  `preview item <id>`, typed-resource editing and save/create actions, plus
+  Card/Drop/Instance/Effects views backed by `ItemCatalog`; only current playable
+  IDs appear, catalog-owned baselines/sets remain read-only, and item art remains
+  slot-level.
+- [ ] Finish item-specific visual ownership and replacement through `visual_id`,
+  then add the element palette/effect preview and complete the item/element
+  preview acceptance checks.
 - [ ] Include `element_catalog.tres` and `palette_library.tres` in the
   validator with real schema checks.
 
@@ -929,7 +956,9 @@ slices. It will grow as later content kinds land:
 | `test -Suite fast\|content\|gate\|all` | focused definition/content checks, release gate, or full inventory |
 | `preview hub` | validates the standalone animated Hub design view; `-Editor` opens it without booting a run |
 | `preview enemy <id>` | validates the enemy workbench without booting a run; `-Editor` opens the scene; future `-Mode design\|interactive` selects the preview tier |
-| `new enemy <id>` | scaffolds one standalone `resources/definitions/<id>.tres` |
+| `preview item <id>` | validates the ItemCatalog-driven item design preview without booting a run; `-Editor` opens the workbench |
+| `new variant <id>` | scaffolds one standalone Slime variant in `resources/definitions/<id>.tres` |
+| `new enemy <id>` | reserved for a distinct family; Skeleton is the first manually authored family proof, while generic family scaffolding remains future work |
 | `new item <id>` | scaffolds one standalone `resources/definitions/items/<id>.tres` |
 | `report` | prints the authored catalog report |
 | `doctor` | checks the project root and configured Godot executable |
@@ -938,7 +967,6 @@ Planned extensions use the same surface rather than adding ad hoc scripts:
 
 | Command | Purpose |
 |---|---|
-| `preview item <id>` | inspect card, drop, generated instance, and effect presentation |
 | `preview room <id>` | inspect geometry, sockets, walkability, encounters, and rewards |
 | `preview map <id>` | inspect graph connectivity, route policy, gates, and landmarks |
 | `preview art <kind> <id>` | inspect resolved frames, palettes, anchors, and native-scale output |

@@ -2,21 +2,28 @@
 
 ## Status
 
+Historical plan: legacy-only expansion items and their transmutation bindings
+were retired from the active backend in schema 14. Current authoring and runtime
+state are described in [`authoring-system-plan.md`](authoring-system-plan.md)
+and [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md).
+
 Owner: `item_catalog.gd`, `item_instance.gd`, and `equipment_component.gd`.
 
-Current code: the six-slot catalogue and current authored rows are active;
-Phase 6 remains intentionally gated behind effect contracts and tuning tests.
+Current code: the six-slot live baseline/set catalog and standalone typed items
+are active; the legacy expansion rows and their transmutation bindings are
+removed. Demon Cloak is retained as a typed special-acquisition item.
 
 Verification: gear, equipment, shop, fusion, and save compatibility tests under
 `tests/`.
 
 Supersedes: the earlier four-slot catalogue direction.
 
-**Implementation checkpoint — Phases 0–5 are landed; Phase 6 remains gated.**
+**Historical implementation checkpoint — Phases 0–5 were landed; Phase 6
+remained gated when the legacy expansion catalog was retired.**
 This plan follows [`gear-catalogue-spec.md`](gear-catalogue-spec.md) and does
 not authorize future weapon families or passive effects that lack an action
-contract. Runtime generation excludes authored rows whose effect metadata is
-still marked `future`, while the complete 44-row catalogue remains inspectable.
+contract. The complete 44-row catalogue below is retained for design history;
+its entries are not current runtime items.
 
 | Phase | Current state | Evidence |
 | --- | --- | --- |
@@ -24,9 +31,9 @@ still marked `future`, while the complete 44-row catalogue remains inspectable.
 | 1 — Slot/save compatibility | Complete | Canonical six slots, Armor alias, starter Head/Arm, schema migration smoke |
 | 2 — Shared catalogue schema | Complete | Authored metadata, deterministic generation, fail-closed definitions |
 | 3 — Equipment/menu flow | Complete | Six-slot Equipment, command → slot → item route, shared snapshot previews, Pause read-only routes |
-| 4 — Catalogue content | Complete for authored data | All 44 rows exist; future-effect rows are intentionally runtime-gated |
+| 4 — Catalogue content | Retired | Legacy-only expansion records were removed from the active backend in schema 14 |
 | 5 — Drops/shop/fusion | Complete for current contracts | Source tags, missing-slot priority, clear anti-repeat history, six-option shop |
-| 6 — Effect hooks/balance | Pending by design | Existing effects remain active; future action/elemental contracts need their owner and tuning tests |
+| 6 — Effect hooks/balance | Deferred | No retired expansion item binds the old transmutations; future contracts need a current live item, owner, and tuning tests |
 
 ## Objective
 

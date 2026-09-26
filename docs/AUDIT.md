@@ -1,8 +1,8 @@
-# Tiny Demons — Version 0.2.72 Codebase Audit
+# Tiny Demons — Version 0.2.78 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
-Audit date: 2026-09-20
+Audit date: 2026-09-26
 
 Baseline commit: `8b162a2410ebea45bfea2e846b427838663ad61d` (the `0.2.23` tree that
 the measurements below describe; the `0.2.24` documentation/version checkpoint is
@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.72` (composition refactor structurally and editor-wise
+Current release: `0.2.78` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
 room/menu boundaries, and the enemy authoring slice proof landed)
 
@@ -20,22 +20,22 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
-## Current measured snapshot (2026-09-22, version 0.2.72)
+## Current measured snapshot (2026-09-26, version 0.2.78)
 
-The detailed historical audit below describes the `0.2.32` tree. The current tree at
-version `0.2.72` working tree measures:
+The detailed historical audit below describes the `0.2.32` tree. The current
+`0.2.78` working tree measures:
 
-| Metric | 0.2.32 audit | 0.2.72 working tree (2026-09-22) |
+| Metric | 0.2.32 audit | 0.2.78 working tree (2026-09-26) |
 | --- | ---: | ---: |
-| GDScript files in `scripts/` | 171 | 199 |
-| `root.call/get/set` sites | 2,488 | 2,200 |
-| `GameplayState` lines / fields | 1,719 / 286 | 1,715 / 285 |
+| GDScript files in `scripts/` | 171 | 206 |
+| `root.call/get/set` sites | 2,488 | 2,201 |
+| `GameplayState` lines / fields | 1,719 / 286 | 1,718 / 286 |
 | `RoomController` lines | 2,253 | 2,246 |
 | `screen_state_controller.gd` lines | 5,432 | 5,508 |
-| GDScript test/report files | 124 | 137 |
-| Registered runnable smoke paths | 122 | 135 |
+| GDScript test/report files | 124 | 143 |
+| Registered runnable smoke paths | 122 | 141 |
 | Curated release-gate paths | 43 | 44 |
-| Project Markdown documents under `docs/` | 89 | 105 |
+| Project Markdown documents under `docs/` | 89 | 104 |
 
 The strict composition audit and the regression floor both pass. The
 editor-composition metric reads 100% by its own definition, but that metric
@@ -70,16 +70,16 @@ not more legacy-coupling cleanup.
 
 The audit inspected:
 
-- all 199 runtime/editor GDScript files under `scripts/`;
-- the main scene and 18 supporting project scenes under `scenes/` (the MCP
+- all 203 runtime/editor GDScript files under `scripts/`;
+- the main scene and 22 supporting project scenes under `scenes/` (the MCP
   addon editor scene is outside this project-scene count);
 - project input, renderer, viewport, export, and CI configuration;
-- all 137 GDScript test/report files under `tests/` and the manifest registry;
+- all 141 GDScript test/report files under `tests/` and the manifest registry;
 - permanent profile, active-run, local, web, and cloud save boundaries;
 - authored and generated dungeon definitions;
 - combat, Chroma, progression, equipment, room, enemy, UI, touch, and audio
   ownership paths; and
-- the 89 tracked Markdown documents under `docs/` plus `README.md` and
+- the 104 tracked Markdown documents under `docs/` plus `README.md` and
   `AGENTS.md` as the documentation surface.
 
 Historical verification performed for the 0.2.32 baseline:
@@ -165,9 +165,10 @@ includes:
 - eight stable elements (Neutral, Fire, Water, Electric, Grass, Shadow, Ground,
   Ice) with weakness/resistance/immunity/neutral matchups, Chroma attunement,
   binding, fusion, orb charging, and ability modes;
-- a slime enemy family with Neutral and elemental variants, shared movement and
-  combat components, contextual steering, ambush, popcorn respawn, spawn
-  animation, health presentation, and boss jump/slam behavior;
+- Slime variants with shared movement/combat, contextual steering, ambush,
+  popcorn respawn, spawn animation, health presentation, and boss jump/slam;
+  plus a first Skeleton family actor route reusing that runtime, with authored
+  idle/walk/attack/recovery animations and a stub bone projectile;
 - authored Runs 1–5 plus deterministic generated Runs 6+ (R6+ risk/reward
   policy is the approved generated direction);
 - compact minimap and expanded travel map over the same dungeon graph/state;
@@ -313,9 +314,11 @@ gameplay-significant metadata should become typed state where practical.
 ## 7. Content authoring assessment
 
 Content authoring is moving from code-driven to editor-inspectable data. The
-item catalogue now loads all authored gear data (live bases, sets, expansion
-records, metadata, transmutations) from `resources/definitions/item_catalog.tres`
-(`ItemCatalogData`); the authored Run 1 and Run 2 layouts load from
+item catalogue loads live baseline/set data and their metadata from
+`resources/definitions/item_catalog.tres` (`ItemCatalogData`); retired expansion
+item/transmutation records were removed, Demon Cloak now has a standalone typed
+definition, and the old item IDs are pruned from saved profiles. The authored
+Run 1 and Run 2 layouts load from
 `resources/definitions/dungeon_layout_run1.tres` / `dungeon_layout_run2.tres`
 (`DungeonRunDefinition`); and the four authored puzzle plans load from
 `resources/definitions/puzzle_map_r{3_new,4,5}.tres` (`PuzzlePlanData`). The
@@ -382,9 +385,9 @@ full supervised standalone gate.
 
 ## 10. Persistence and compatibility
 
-`PlayerProfile` writes schema 13 and accepts legacy schemas 8–13. Compatibility
+`PlayerProfile` writes schema 14 and accepts legacy schemas 8–13. Compatibility
 includes the SPD-to-AGI transition, six-stat migration, equipment slot
-migration, Demon Cloak behavior, gear-system revisions, and current stat
+migration, retired-item pruning, typed Demon Cloak data, and current stat
 baselines. Permanent profiles use three slots, temporary writes, validation,
 backups, and web localStorage mirroring. Active runs use a separate schema-1
 snapshot with normalized vectors, run identity, room state, map state, player
@@ -515,56 +518,50 @@ Infrastructure work must continue to preserve:
 Structural and gameplay-balance changes should not share a patch unless the
 balance change is required to preserve behavior after extraction.
 
-## 15. Recommended next sequence after 0.2.32
+## 15. Recommended next sequence from 0.2.78
 
-1. **Stabilize the measured floor.** Make the perf harness average the boss-entry
-   transition across several door entries (it currently reports one noisy sample),
-   keep the manifest preflight and focused room/HUD checks green, and record a
-   supervised curated-gate result. The boss door entry is a genuine slow path —
-   dominated by the accent placer, boss activation/spawn, and the synchronous
-   profile save — and should be optimized only after the A17 device profile
-   exists (see section 11.2).
-2. **Triage the remaining gate failures — resolved at `0.2.47`.** The curated
-   release gate is fully green. `run1_door_path_smoke` and
-   `run1_map_contract_smoke` had stale assertions pinning an obsolete legacy
-   room-wide door lock (now correctly resolved) and the authored-room escape
-   contract; both were reconciled. `wall_socket_geometry_smoke` was a
-   profile-dependent flake — it relied on the ambient saved profile selecting
-   Run 1; the test now forces the authored Run 1 layout explicitly via
-   `begin_run(..., 0, ...)`, making it deterministic.
-3. **Performance track (T3).** Record the Samsung A17 device profile for the
-   fixed seed before any optimization claim; then choose between node/effect
-   reduction, cache/atlas work, loading changes, and the palette-shader A/B.
-4. **Content composition (T2).** The enemy `EnemyDefinition` + `EnemyFactory`
-   proof now includes typed catalog entries, definition-owned encounter
-   metadata, factory-created runtime pool slots, and focused room-entry
-    coverage. The preview/zero-edit proof is landed; finish the curated gate
-    acceptance bar, then extend the contract to encounters, rooms, items, and
-    effects.
-5. **Menu platform (Phase 0.30).** Migrate one screen at a time out of
-   `ScreenStateController` using the `MenuPlayerContext` presenter pattern.
-6. **Remaining root-access owners.** Reduce `combat_runtime_controller.gd`,
-   `slime_runtime_controller.gd`, and `magic_runtime_controller.gd` root glue
-   vertically, preserving the explicit frame schedule.
-7. **Verification infrastructure (Phase 0.70).** Group fast tests into
-   shared-process suites, keep focused scene/journey tests separate, and add
-   screenshot/geometry checks for fragile visual contracts.
-8. **Repository layout (Phase 0.80+).** Move scripts, scenes, tests, and content
-   by completed feature boundary, preserving UIDs and validating all references.
+1. **Keep the composition scorecard green.** The strict ownership cleanup is
+   complete. Continue moving state to its feature owner when new work calls for
+   it, but do not start another broad `GameplayState` or root-access cleanup.
+2. **Close the M0 verification gap.** The manifest validator passes, but that is
+   not a curated-gate result. The last recorded gate attempt timed out in
+   `chroma_projectile_scene_smoke`; no fresh 0.2.78 curated-gate result is
+   recorded. Run the gate as a supervised standalone check and classify any
+   remaining product versus environment failures.
+3. **Finish M1's shared authoring foundation.** The enemy design preview now
+   edits all current `EnemyDefinition` fields inline, updates its preview as
+   they change, saves to the owning catalog or standalone resource, and guards
+   unsaved edits. Accept it after checking the catalog picker, starter creation,
+   visible frame output, save/refresh lifecycle, and undo/redo; then add the
+   isolated interactive workbench and close the remaining cache, manifest, and
+   cleanup checks. Use the acceptance bars in `authoring-system-plan.md` rather
+   than the editor composition percentage as proof.
+4. **Continue Slice 2 after the M1 workflow is dependable.** Finish the full
+   item catalog migration and consolidate element identity, then prove gear
+   and flame authoring through data-only additions, previews, and save/load.
+5. **Keep performance work evidence-led.** Capture repeatable cold/warm room-
+   transition and enemy-death measurements, including the Samsung A17 profile,
+   before optimizing the known synchronous and rendering paths.
+6. **Return to menu and controller extractions as targeted slices.** Preserve
+   the explicit frame schedule, add focused coverage for each boundary, and
+   remove wrappers only after their final consumer moves.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.72 is past the legacy-coupling and editor-composition cleanup:
-the composition scorecard is fully green (strict and editor halves both 100%),
-the state bag is at its measured target, the room lifecycle has typed
-boundaries, the frame schedule is a typed direct slice, and every authored
-definition surface is editor-inspectable. The game surface is broad and
-distinctive, the test investment is deep, and the performance harness now
-produces repeatable evidence.
+Tiny Demons 0.2.78 remains past the legacy-coupling and editor-composition
+cleanup. The latest composition validation reports 2,202 root accesses,
+`GameplayState` at 1,717 lines / 286 fields, and `RoomController` at 2,250
+lines; both the strict scorecard and editor-composition measure pass. The test
+manifest validates at 143 rows, 141 runnable paths, two reports, and a 44-path
+default gate. These are focused validation results, not a fresh run of the full
+curated gate.
 
-The next cycle is no longer "finish the coupling cleanup." It is: stabilize the
-boss-entry measurement into a repeatable gate and optimize that slow path,
-finish the curated gate timeout investigation, record the device performance
-profile, and migrate menus and the remaining root-access owners one vertical
-slice at a time. A broad rewrite would put the working combat, dungeon, save,
-input, web, and pixel-presentation foundation at unnecessary risk.
+Content authoring is the active refactor work. The placement dock and Hub design
+preview are landed. The enemy design-preview adapter now edits and saves its
+typed definitions inline, while editor acceptance, the isolated interactive
+workbench, and the remaining authoring lifecycle checks are still open. The
+next sequence is to complete that shared M1 foundation, then continue the item
+and element migration in Slice 2. The curated gate and device-backed
+performance evidence remain separate open verification work. Keep future
+structural work vertical and owner-led; do not reopen a broad composition
+rewrite.

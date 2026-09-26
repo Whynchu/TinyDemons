@@ -1,16 +1,18 @@
 # Tiny Demons — Gear Effect Contracts
 
-Status: approved current effect contract registry
+Status: approved effect contract registry; retired item bindings removed
 
-Updated: 2026-09-11
+Updated: 2026-09-26
 
 ## Status
 
-**Approved contract registry — active existing effects are implemented; future
-effects remain gated.** Every effect added to the catalogue must be assigned to
-one of these contracts or receive a reviewed new contract before code is
-written. The equipment/snapshot read model preserves declared future effects
-for UI and review without activating them in combat.
+**Approved contract registry.** Effect-owner support remains available, but the
+retired legacy-item transmutation bindings are no longer present in the runtime
+catalogue. Future effects remain gated until a current live item and its owner
+are approved. Every effect added to the catalogue must be assigned to one of
+these contracts or receive a reviewed new contract before code is written. The
+equipment/snapshot read model preserves declared future effects for UI and review
+without activating them in combat.
 
 ## Contract principles
 
@@ -177,7 +179,8 @@ not authored frame identity.
 
 Transmutations remain separate from ordinary numeric effects. They are rare,
 behavioral, and attached to a particular item definition or explicitly
-controlled process. Current transmutations are:
+controlled process. The following table records the retired legacy item
+bindings; none are currently selectable or generated:
 
 | ID | Slot | Trigger/result |
 | --- | --- | --- |

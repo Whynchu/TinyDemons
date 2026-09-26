@@ -1,16 +1,20 @@
 # Tiny Demons Repository Map
 
-Status: current navigation map; composition refactor complete
+Status: historical repository map; superseded by [`DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md) and [`FEATURE_MAP.md`](FEATURE_MAP.md) for current navigation
 
 Map date: 2026-09-17
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
-(current measured state: version `0.2.32`, see [`AUDIT.md`](AUDIT.md))
+(map captures the `0.2.32` tree; the current measured state is version `0.2.77`,
+see [`AUDIT.md`](AUDIT.md)). Rows below may lag the typed-definition and
+generated-route changes; treat this as history and use the current authority
+docs for ownership.
 
-This document is the practical navigation map for the repository. It describes
-the current worktree, not an idealized future architecture. Existing audit and
-refactor documents remain the decision records; this file points to the code
-that actually runs.
+This document was the practical navigation map for the repository at the
+`0.2.32` tree. It is retained as history; for the current worktree use
+[`DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md), [`FEATURE_MAP.md`](FEATURE_MAP.md),
+and [`ARCHITECTURE.md`](ARCHITECTURE.md). Existing audit and refactor documents
+remain the decision records.
 
 ## How To Use This Map
 
@@ -122,7 +126,7 @@ this schedule rather than adding unrelated `_process()` loops.
 | Room content | `room_controller.gd` | `room_states` dictionaries | room scenes, enemy roster, chest | `enemy_room_entrance_scene_smoke.gd`, `treasure_chest_persistence_smoke.gd` |
 | Dungeon topology | `dungeon_graph.gd`, `dungeon_map_controller.gd` | `dungeon_map_state.gd` | sockets, doors, minimap | `dungeon_map_event_smoke.gd`, `run1_map_contract_smoke.gd` |
 | Authored layouts | `dungeon_layout_run1.gd` through `run6.gd` | `dungeon_layout_definition.gd` | room/map builders | `run1_*`, `run2_authored_layout_smoke.gd` |
-| Generated layouts | `puzzle_route_generator.gd`, `dungeon_layout_generator.gd` | route plan/solver and map state | generated preview scenes | `generated_layout_smoke.gd`, `r7_native_generator_smoke.gd` |
+| Generated layouts | `puzzle_route_generator.gd`, `dungeon_layout_generator.gd` | route plan/solver and map state | generated preview scenes | `generated_layout_smoke.gd`; `r7_native_generator_smoke.gd` filename is retained for runner compatibility but now samples the active R6+ route |
 | Puzzle rooms | `room_puzzle_controller.gd`, puzzle map scripts | puzzle state and route plan | puzzle grids, torches, orb doors | `puzzle_map_grid_smoke.gd`, `generated_bound_reachability_smoke.gd` |
 | Progression | `progression_controller.gd`, `run_flow_controller.gd` | `RunState`, `PlayerProfile` | HUD, hub, completion screen | `progression_smoke.gd`, `run_grade_smoke.gd` |
 | Run settlement | `run_settlement.gd`, `run_flow_controller.gd` | profile and run settlement contract | run-complete UI | `generated_run_scene_smoke.gd`, `run_label_progression_smoke.gd` |

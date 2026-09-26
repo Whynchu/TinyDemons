@@ -64,6 +64,7 @@ func _add_runtime_node(root: GameplayState, script: Script, node_name: StringNam
 
 
 func initialize(root: GameplayState) -> void:
+	SkeletonActor.warm_authored_frames()
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
 	var profile := ProfileSaveService.load_profile()
@@ -71,7 +72,15 @@ func initialize(root: GameplayState) -> void:
 	if requested_route.is_empty():
 		requested_route = profile.pending_route
 	var benchmark_mode := bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false))
-	var title_only_boot := not bool(root.get("debug_start_in_boss_room")) and not benchmark_mode and not (profile.has_started and (requested_route == "hub" or requested_route == "run"))
+	var configured_debug_enemy_id := root.debug_enemy_test_id
+	var debug_enemy_test_id := EnemyFactory.resolve_variant_id(configured_debug_enemy_id)
+	var debug_enemy_test_enabled := not debug_enemy_test_id.is_empty()
+	if not configured_debug_enemy_id.is_empty() and not debug_enemy_test_enabled:
+		push_warning("Unknown debug_enemy_test_id '%s'; starting the normal title flow." % configured_debug_enemy_id)
+	elif debug_enemy_test_enabled:
+		print("DEBUG ENEMY TEST ACTIVE: %s (%s)" % [debug_enemy_test_id, EnemyFactory.definition(debug_enemy_test_id).display_name])
+	root.debug_enemy_test_id = debug_enemy_test_id
+	var title_only_boot := not root.debug_start_in_boss_room and not debug_enemy_test_enabled and not benchmark_mode and not (profile.has_started and (requested_route == "hub" or requested_route == "run"))
 	root.settings_service = _add_runtime_node(root, SettingsService, "SettingsService") as SettingsService
 	root.settings_service.load_settings()
 	root.display_controller = _add_runtime_node(root, DisplayController, "DisplayController") as DisplayController
@@ -223,6 +232,7 @@ func initialize(root: GameplayState) -> void:
 	root.current_room_id = initial_room_id
 	root._sync_current_room_metadata()
 	root.room_controller.boss_variant_selection = root.debug_boss_variant
+	root.room_controller.debug_enemy_variant = debug_enemy_test_id if debug_enemy_test_enabled else &""
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
 	await root.get_tree().process_frame
@@ -532,6 +542,7 @@ func _initialize_slimes(root: Object, slimes: Array[Sprite2D]) -> void:
 
 
 func _build_slime_roster(root: Object) -> Array[Sprite2D]:
+	var gameplay := root as GameplayState
 	var template := root.get("slime_green") as Sprite2D
 	var parent := template.get_parent() if template != null else null
 	var result: Array[Sprite2D] = []
@@ -550,8 +561,11 @@ func _build_slime_roster(root: Object) -> Array[Sprite2D]:
 			template_positions.append(scene_template.position)
 	while template_positions.size() < 3:
 		template_positions.append(Vector2.ZERO)
+	var debug_enemy_id := EnemyFactory.resolve_variant_id(gameplay.debug_enemy_test_id)
+	var initial_enemy_id := debug_enemy_id if not debug_enemy_id.is_empty() else &"grey"
+	var initial_enemy_definition := EnemyFactory.definition(initial_enemy_id)
 	for slot in ENEMY_POOL_SIZE:
-		var actor := EnemyFactory.assemble(EnemyFactory.definition(&"grey"))
+		var actor := EnemyFactory.assemble(initial_enemy_definition)
 		actor.name = "EnemySlot%d" % (slot + 1)
 		actor.position = template_positions[slot % template_positions.size()]
 		parent.add_child(actor)

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://cayum6il8c65w"]
+
+[ext_resource type="Script" uid="uid://d30qis3vlcibk" path="res://scripts/item_definition.gd" id="1_poolv"]
+
+[resource]
+script = ExtResource("1_poolv")
+id = &"demon_cloak"
+display_name = "DEMON CLOAK"
+slot = &"body"
+gear_tier = &"legacy"
+tier_stat = &"agi"
+tier_stats = Array[String](["defense"])
+bonuses = {
+"agility": 4.0,
+"defense": 3.0,
+"mnd": 2.0,
+"vitality": 2.0
+}
+description = "A living cloak from the Cloaked Demon. It wears over Body and Head together, and only he sells it — each one costs more than the last."
+price = 200
+source_tags = Array[String](["cloaked_demon"])
+live = false
+family = &"cloak"
+role = &"agility"
+role_tags = Array[String](["agility", "defense", "vitality", "mnd", "premium", "dual_slot"])
+fusion_group = &"cloak"
+visual_id = &"cloak_demon"

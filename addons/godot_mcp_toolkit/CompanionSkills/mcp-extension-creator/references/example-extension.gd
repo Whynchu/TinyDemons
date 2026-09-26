@@ -56,4 +56,4 @@ func _write(params: Dictionary) -> Dictionary:
 	file.store_string(content)
 	file.close()
 
-	return MCPToolkitSuccess.ok({"path": file_path, "bytes": content.length()})
+	return MCPToolkitSuccess.ok({"path": file_path, "bytes": content.to_utf8_buffer().size()})

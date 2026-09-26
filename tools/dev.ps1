@@ -82,7 +82,7 @@ function Invoke-ContentTests {
 	Assert-GodotAvailable
 	$tests = switch ($Suite) {
 		"fast" { @("enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke") }
-		"content" { @("authoring_placement_catalog_smoke", "enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke", "item_definition_slice_smoke", "slime_variant_smoke", "boss_variant_selection_smoke", "enemy_room_entrance_scene_smoke") }
+		"content" { @("authoring_placement_catalog_smoke", "enemy_definition_slice_smoke", "enemy_definition_roundtrip_smoke", "encounter_definition_smoke", "item_definition_slice_smoke", "item_preview_workbench_smoke", "retired_item_purge_smoke", "slime_variant_smoke", "boss_variant_selection_smoke", "enemy_room_entrance_scene_smoke") }
 		default { @() }
 	}
 	if ($Suite -in @("gate", "all")) {
@@ -104,10 +104,10 @@ function Invoke-ContentTests {
 	Write-Host ("DEV_TEST_OK suite={0} tests={1}" -f $Suite, $tests.Count) -ForegroundColor Green
 }
 
-function New-EnemyDefinition {
-	if ($Kind -ne "enemy") { throw "new currently supports only: new enemy <id>" }
+function New-EnemyVariantDefinition {
+	if ($Kind -ne "variant") { throw "Usage: new variant <id>" }
 	if ([string]::IsNullOrWhiteSpace($Id) -or $Id -notmatch "^[a-z][a-z0-9_]*$") {
-		throw "Enemy id must match ^[a-z][a-z0-9_]*$"
+		throw "Variant id must match ^[a-z][a-z0-9_]*$"
 	}
 	$definitionsRoot = Join-Path $resolvedRoot "resources/definitions"
 	$definitionPath = Join-Path $definitionsRoot ("{0}.tres" -f $Id)
@@ -129,6 +129,7 @@ function New-EnemyDefinition {
 script = ExtResource("1_enemy")
 id = &"$Id"
 display_name = "$displayName"
+type_id = &"slime"
 element = 0
 damage_contract = &"physical"
 base_stats = {"AGI": 2, "DEF": 2, "INT": 0, "MND": 1, "STR": 2, "VIT": 2}
@@ -140,12 +141,12 @@ encounter_min_rank = 3
 "@
 	$utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
 	[System.IO.File]::WriteAllText($definitionPath, $template, $utf8NoBom)
-	Write-Host "NEW_ENEMY_DEFINITION $definitionPath" -ForegroundColor Green
+	Write-Host "NEW_ENEMY_VARIANT_DEFINITION $definitionPath" -ForegroundColor Green
 	Write-Host "Next: edit the resource, then run 'pwsh -File tools/dev.ps1 preview enemy $Id' and 'pwsh -File tools/dev.ps1 verify'."
 }
 
 function New-ItemDefinition {
-	if ($Kind -ne "item") { throw "new currently supports: new enemy <id> or new item <id>" }
+	if ($Kind -ne "item") { throw "new currently supports: new variant <id>, new enemy <id>, or new item <id>" }
 	if ([string]::IsNullOrWhiteSpace($Id) -or $Id -notmatch "^[a-z][a-z0-9_]*$") {
 		throw "Item id must match ^[a-z][a-z0-9_]*$"
 	}
@@ -193,7 +194,7 @@ visual_id = &"$Id"
 	$utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
 	[System.IO.File]::WriteAllText($definitionPath, $template, $utf8NoBom)
 	Write-Host "NEW_ITEM_DEFINITION $definitionPath" -ForegroundColor Green
-	Write-Host "Next: edit the resource, then run 'pwsh -File tools/dev.ps1 test -Suite content' and 'pwsh -File tools/dev.ps1 verify'."
+	Write-Host "Next: edit the resource, run 'pwsh -File tools/dev.ps1 preview item $Id', then run the content tests and verification."
 }
 
 function Show-Help {
@@ -207,7 +208,10 @@ Tiny Demons authoring commands
   preview hub -Editor            Open the Hub world design preview in the Godot editor.
   preview enemy <id>             Validate and report a workbench preview without booting a run.
   preview enemy <id> -Editor     Open the preview workbench in the Godot editor.
-  new enemy <id>                 Create one standalone EnemyDefinition resource.
+  preview item <id>              Validate and report an item preview without booting a run.
+  preview item <id> -Editor      Open the item preview workbench in the Godot editor.
+  new variant <id>               Create one standalone Slime variant definition.
+  new enemy <id>                  Create a new enemy family (requires a family definition and actor route; not available yet).
   new item <id>                  Create one standalone ItemDefinition resource.
   report                         Print the authored catalog report.
   doctor                         Check the project and configured Godot executable.
@@ -231,6 +235,16 @@ switch ($Command) {
 			Invoke-HeadlessScript "res://tests/hub_world_preview_scene_smoke.gd"
 			return
 		}
+		if ($Kind -eq "item") {
+			if ([string]::IsNullOrWhiteSpace($Id)) { throw "Usage: dev.ps1 preview item <id>" }
+			Assert-GodotAvailable
+			if ($Editor) {
+				& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/item_preview_workbench.tscn" "--" ("--item-id={0}" -f $Id)
+				exit $LASTEXITCODE
+			}
+			Invoke-HeadlessScript "res://tools/preview_item.gd" @(('--item-id={0}' -f $Id))
+			return
+		}
 		if ($Kind -ne "enemy" -or [string]::IsNullOrWhiteSpace($Id)) { throw "Usage: dev.ps1 preview enemy <id>" }
 		Assert-GodotAvailable
 		if ($Editor) {
@@ -241,9 +255,10 @@ switch ($Command) {
 	}
 	"new" {
 		switch ($Kind) {
-			"enemy" { New-EnemyDefinition }
+			"variant" { New-EnemyVariantDefinition }
+			"enemy" { throw "New enemy families need a family definition and a supported EnemyFactory actor route. Use 'new variant <id>' to add a Slime variant." }
 			"item" { New-ItemDefinition }
-			default { throw "Usage: dev.ps1 new enemy <id> or dev.ps1 new item <id>" }
+			default { throw "Usage: dev.ps1 new variant <id>, new enemy <id>, or new item <id>" }
 		}
 	}
 	"report" {

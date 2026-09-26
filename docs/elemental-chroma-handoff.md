@@ -270,10 +270,14 @@ source of truth.
 - Add the four approved recipes and unbound fusion chaining.
 - Preserve bound aspect identity at zero Chroma.
 - Make current-element doors accept current unbound elements and latch open.
-- Add mandatory entrance-orb fusion gates to generated Run 6+ layouts, with
-  the chained Grass/Ice curriculum beginning on Run 8.
-- Keep fusion results exclusive to their resulting element, latch opened
-  Puzzle Color doors, and guarantee each chained fusion Orb before its gate.
+- Fusion entrance-orb gates were originally added as mandatory generated Run 6+
+  content with a chained Grass/Ice curriculum from Run 8. **Superseded:** the
+  active [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md)
+  removes mandatory fusion chains from the critical path; fusion gates now
+  protect optional bonus content.
+- Keep fusion results exclusive to their resulting element and latch opened
+  Puzzle Color doors; when a fusion gate is present, guarantee its Orb before
+  the gate.
 - Implement weakened non-elemental variants only where the ability contract
   approves them.
 - Follow [`elemental-binding-and-fusion-implementation-plan.md`](elemental-binding-and-fusion-implementation-plan.md)

@@ -2,7 +2,7 @@
 
 Status: approved current equipment contract for the `0.2.x` baseline
 
-Updated: 2026-09-11
+Updated: 2026-09-26
 
 ## Status and authority
 
@@ -10,6 +10,12 @@ Updated: 2026-09-11
 Slot migration, authored definitions, source selection, equipment previews, and
 save compatibility are implemented; effect rows marked `future` remain
 intentionally gated from live generation until their action owner exists.
+
+The schema-14 item cleanup retires legacy-only expansion items and their
+transmutation bindings from the runtime catalog. Current item identity comes
+from live baseline/set definitions and standalone `ItemDefinition` resources;
+Demon Cloak remains a typed special-acquisition item. Old saved instances of
+retired IDs are removed during profile migration.
 
 This is the authoritative content and rules specification for the next
 equipment expansion. It supersedes the equipment-slot, rarity, and affix
@@ -19,7 +25,8 @@ this document defines how the larger gear catalogue will use it.
 
 Companion documents:
 
-- [`gear-catalogue.md`](gear-catalogue.md) — the authored item list.
+- [`gear-catalogue.md`](gear-catalogue.md) — historical record of the retired
+  44-row expansion proposal.
 - [`gear-effect-contracts.md`](gear-effect-contracts.md) — effect ownership,
   stacking, formulas, and test contracts.
 - [`gear-drop-tables.md`](gear-drop-tables.md) — source rules, progression
@@ -278,7 +285,16 @@ values are finalized. Existing items remain compatible during that review.
 
 ## Catalogue size and implementation boundary
 
-The approved design catalogue contains 44 authored bases:
+**Retirement note (schema 14).** The 44-base expansion below was the approved
+design target at the time of writing. That legacy expansion and its
+transmutation bindings have since been **retired from the runtime catalog**; the
+counts are retained here as design history only. Current item identity is the
+live Plain/Basic baselines, generated set pieces, standalone `ItemDefinition`
+resources, and the special-acquisition Demon Cloak. See
+[`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) for the current workflow and
+[`gear-catalogue.md`](gear-catalogue.md) for the historical catalogue.
+
+The approved design catalogue contained 44 authored bases:
 
 | Slot | Target bases |
 | --- | ---: |
@@ -290,9 +306,11 @@ The approved design catalogue contains 44 authored bases:
 | Accessory | 8 |
 | **Total** | **44** |
 
-All 44 entries may be designed and reviewed together. Implementation should
-land them in tested batches, beginning with the two new slots and migration
-support, not with every future weapon family.
+At the time, all 44 entries were to be designed and reviewed together and
+landed in tested batches, beginning with the two new slots and migration
+support rather than every future weapon family. That plan was superseded by the
+schema-14 retirement described above; new item content now follows the
+standalone `ItemDefinition` workflow.
 
 ## UI and readability requirements
 

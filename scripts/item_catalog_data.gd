@@ -1,3 +1,4 @@
+@tool
 extends Resource
 class_name ItemCatalogData
 
@@ -29,6 +30,42 @@ func authored_definition_resources() -> Array[Resource]:
 	_authored_definition_resources_cache = resources
 	_authored_definition_resources_loaded = true
 	return _authored_definition_resources_cache
+
+
+func invalidate_authored_definition_cache() -> void:
+	_authored_definition_resources_cache.clear()
+	_authored_definition_resources_loaded = false
+
+
+func authored_definition_resource(definition_id: StringName) -> ItemDefinition:
+	for resource: Resource in authored_definition_resources():
+		var definition := resource as ItemDefinition
+		if definition != null and definition.id == definition_id:
+			return definition
+	return null
+
+
+func save_authored_definition(definition: ItemDefinition) -> int:
+	if definition == null:
+		return ERR_INVALID_PARAMETER
+	var source_path := definition.resource_path
+	if not source_path.begins_with(AUTHORED_ITEM_ROOT + "/") or source_path.get_extension().to_lower() != "tres":
+		return ERR_INVALID_PARAMETER
+	if not definition.validate().is_empty():
+		return ERR_INVALID_DATA
+	for raw_id: Variant in live_base_definitions.keys():
+		if StringName(str(raw_id)) == definition.id:
+			return ERR_ALREADY_EXISTS
+	for raw_id: Variant in definitions.keys():
+		if StringName(str(raw_id)) == definition.id:
+			return ERR_ALREADY_EXISTS
+	var existing := authored_definition_resource(definition.id)
+	if existing != null and existing != definition and existing.resource_path != source_path:
+		return ERR_ALREADY_EXISTS
+	var save_error := ResourceSaver.save(definition, source_path)
+	if save_error == OK:
+		invalidate_authored_definition_cache()
+	return save_error
 
 
 func authored_definition_data() -> Dictionary:

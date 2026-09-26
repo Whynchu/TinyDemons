@@ -579,6 +579,7 @@ func update_overhead_bars(
 			var marker_width := aggro_marker.texture.get_size().x if aggro_marker.texture != null else 0.0
 			aggro_marker.global_position = Vector2(overhead_position.x - marker_width, overhead_position.y)
 		else:
+			# Skeletons use the same authored HUD bar layout as regular slimes.
 			aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3

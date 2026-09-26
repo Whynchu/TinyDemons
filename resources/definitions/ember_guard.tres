@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_enemy")
 id = &"ember_guard"
+type_id = &"slime"
 display_name = "Ember Guard"
 element = 1
 damage_contract = &"elemental_slime"

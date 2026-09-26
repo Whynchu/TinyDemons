@@ -249,7 +249,8 @@ element, or a shared entrance-Orb charge.
 - Validate authored/procedural routes before accepting them:
   - each required input flame is reachable;
   - each fusion's second flame is reachable;
-  - a matching Orb is reachable before every mandatory fusion gate;
+  - a matching Orb is reachable before every required fusion gate (generated
+    R6+ fusion gates are optional bonus content, not critical-path doors);
   - the required Orb Room and door are reachable immediately after the
     intended action, with no prerequisite placed behind that gate;
   - no route requires returning to the Demon just to pass a mandatory door;
@@ -442,9 +443,12 @@ composition root:
 - Gate records distinguish puzzle-color, current-element, and entrance-orb
   requirements; solved color, elemental, and entrance-orb gates latch in the
   run map.
-- Generated Run 6+ layouts contain validated mandatory entrance-orb fusion
-  gates. Run 8+ adds the chained Grass and Ice gates, with the second Orb
-  guaranteed before the Ice gate.
+- Generated Run 6+ fusion gates were originally mandatory and validated, with
+  Run 8+ chained Grass and Ice gates. **Superseded:** the active
+  [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md)
+  removes mandatory fusion chains from the generated critical path; fusion gates
+  now protect optional bonus content. Reachability validation and gate latching
+  remain.
 - The shared Orb palette/element state drives room tint, door activation, and
   minimap door color through one resolver.
 - `tests/elemental_binding_smoke.gd` covers recipes, economy, state separation,

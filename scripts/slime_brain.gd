@@ -22,6 +22,8 @@ var notice_timer := 0.0
 var notice_duration := 0.0
 var notice_started := false
 var notice_animation_finished := false
+var notice_stagger_pending := false
+var notice_stagger_timer := 0.0
 
 
 static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
@@ -53,6 +55,22 @@ func tick(delta: float) -> void:
 	blocked_repath_cooldown = maxf(blocked_repath_cooldown - delta, 0.0)
 	detour_timer = maxf(detour_timer - delta, 0.0)
 	notice_timer = maxf(notice_timer - delta, 0.0)
+	if notice_stagger_pending:
+		notice_stagger_timer = maxf(notice_stagger_timer - delta, 0.0)
+
+
+func queue_notice_stagger(delay: float) -> void:
+	notice_stagger_pending = true
+	notice_stagger_timer = maxf(delay, 0.0)
+
+
+func consume_notice_stagger() -> bool:
+	if not notice_stagger_pending:
+		return true
+	if notice_stagger_timer > 0.0:
+		return false
+	notice_stagger_pending = false
+	return true
 
 
 func begin_notice(duration: float) -> void:

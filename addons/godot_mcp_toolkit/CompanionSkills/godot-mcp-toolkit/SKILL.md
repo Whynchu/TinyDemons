@@ -184,8 +184,9 @@ group).
 
 ### Script writing patterns
 
-- Always add `class_name` — enables script-to-script references without
-  `load()`/`preload()`.
+- Add `class_name` when a script needs a project-wide type/name reference; it
+  enables typed script-to-script references without `load()`/`preload()`. Keep
+  scene-local scripts local when they do not need a global name.
 - `@export` for properties visible in the inspector and via
   `runtime_get_node_state`.
 - Declare signals with typed parameters: `signal health_changed(new_hp: int)`.
@@ -342,11 +343,12 @@ hot-reload, so this doesn't apply.
 editing `.mcp.json`, reconnect the MCP client — the tool list is decided at
 connect time, and a reconnect respawns the server with the fresh env.
 
-**GDScript pattern — prefer load() over preload().** Use `class_name` on every
-script for script-to-script references (no preload/load needed). Use `load()` for
-PackedScene instantiation and resource references — it evaluates at runtime and
-tolerates creation order. Never use `preload()` in generated code unless the
-target already exists and there are no circular dependencies.
+**GDScript pattern — prefer `load()` over `preload()`.** Use `class_name` only
+when a script needs a project-wide type/name reference; it is not required on
+every script. Use `load()` for PackedScene instantiation and resource references
+when creation order may matter — it evaluates at runtime. Avoid `preload()` in
+generated code unless the target already exists and there are no circular
+dependencies.
 
 **GDScript pattern — use %UniqueName for node references.** Mark
 frequently-referenced nodes with `unique_name: true` (via `scene_create_node`, or
@@ -448,11 +450,11 @@ response, and the context it occupies:
   cause beats blindly retrying `input_simulate` five times.
 - **Use `classdb_get_info` with `sections`.** All sections on a complex class
   returns thousands of lines — ask for `["properties"]` or `["signals"]` only.
-- **Use specific keys for project settings.** `project_get_settings(prefix:
-  "display")` returns hundreds of settings (including defaults); use a single
-  `key` for one value. For a broad survey, `Read(project.godot)` is far cheaper —
-  it holds only non-default settings. If the spec states the value, skip the read
-  and set it directly.
+- **Use a narrow prefix for project settings.** `project_get_settings` accepts
+  `prefix`, not a single `key`; broad prefixes such as `"display"` can return
+  hundreds of settings (including defaults). For a quick survey of saved
+  non-default values, read `project.godot`. If the spec states the value, skip the
+  read and set it directly.
 - **Follow the `hint` field** on both errors and successes instead of
   re-querying or blindly retrying — it names the recovery step or the next tool.
 

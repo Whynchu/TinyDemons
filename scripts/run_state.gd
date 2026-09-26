@@ -89,7 +89,7 @@ func restore_from_dictionary(data: Dictionary) -> bool:
 	active = true
 	settled = bool(data.get("settled", false))
 	result = StringName(str(data.get("result", "")))
-	shop_stock = _dictionary_array(data.get("shop_stock", []))
+	shop_stock = _filter_retired_shop_items(_dictionary_array(data.get("shop_stock", [])))
 	difficulty_bonus = maxi(int(data.get("difficulty_bonus", 0)), 0)
 	timer_started = bool(data.get("timer_started", false))
 	elapsed_time = maxf(float(data.get("elapsed_time", 0.0)), 0.0)
@@ -148,6 +148,25 @@ static func _dictionary_array(value: Variant) -> Array[Dictionary]:
 			if entry is Dictionary:
 				converted.append(entry.duplicate(true))
 	return converted
+
+
+func _filter_retired_shop_items(entries: Array[Dictionary]) -> Array[Dictionary]:
+	var retained: Array[Dictionary] = []
+	for entry: Dictionary in entries:
+		var raw_item: Variant = entry.get("item", {})
+		if not raw_item is Dictionary:
+			continue
+		var item_data := raw_item as Dictionary
+		var definition_id := StringName(str(item_data.get("definition_id", "")))
+		if ItemCatalog.RETIRED_DEFINITION_IDS.has(definition_id):
+			continue
+		var transmutation_id := StringName(str(item_data.get("transmutation_id", "")))
+		if ItemCatalog.RETIRED_TRANSMUTATION_IDS.has(transmutation_id):
+			var cleaned_item := item_data.duplicate(true)
+			cleaned_item["transmutation_id"] = ""
+			entry["item"] = cleaned_item
+		retained.append(entry)
+	return retained
 
 
 func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: float = 1.0) -> void:

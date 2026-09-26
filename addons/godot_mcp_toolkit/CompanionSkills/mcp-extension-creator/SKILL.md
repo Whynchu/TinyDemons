@@ -412,9 +412,9 @@ are in "Getting listed in the extension catalog" in
 
 Three checks confirm a new extension works end-to-end:
 
-1. **It loads** — register the tool, then validate GDScript (run
-   `validate_gdscript.sh` from your project root). No parse errors in the Output
-   panel, and the loader discovered the class (or `extensions_refresh` reports it).
+1. **It loads** — for GDScript, run `script_check` on the extension `.gd` file;
+   for C#, run `dotnet build`. Resolve any parse/compile errors, then confirm the
+   loader discovered the class (or `extensions_refresh` reports it).
 2. **It registers** — the tool appears via `discover_tools` (grouped) or in the
    tool list (ungrouped).
 3. **It works** — verify interactively: one happy-path call succeeds, one bad-input
@@ -451,7 +451,9 @@ Three checks confirm a new extension works end-to-end:
 - `properties`: one entry per parameter, each a `type` (`"string"`, `"integer"`,
   `"number"`, `"boolean"`, `"object"`, `"array"`) plus a `description`.
 - `required`: array of parameter names the caller must supply.
-- `enum`: restricts a value to a fixed set. `default`: the value assumed when omitted.
+- `enum`: restricts a value to a fixed set. `default`: documents the intended
+  fallback; apply it in the handler (for example, `params.get("count", 10)`)
+  rather than relying on the client or toolkit to insert it.
 
 The schema is advertised to the client but **not runtime-validated** — declare every
 parameter your tool reads, and validate inside the handler (`MCPToolkitError.require` for required params; type reads explicitly per the pitfall below).

@@ -18,6 +18,7 @@ const ROOM_ENEMY_PLACEMENT_SCRIPT = preload("res://scripts/room_enemy_placement.
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
 const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
 const ROOM_GEOMETRY_CONTROLLER_SCRIPT = preload("res://scripts/room_geometry_controller.gd")
+const SKELETON_FIRST_ROOM_DEPTH := 5
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(result: RoomClearResult)
@@ -31,6 +32,7 @@ var player_level := 1
 var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
 var boss_variant_selection: StringName = &""
+var debug_enemy_variant: StringName = &""
 var matchup_policy := "rank_default"
 var encounter_definition: EncounterDefinition = null
 var room_definition: RoomDefinition = null
@@ -216,9 +218,9 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	elif definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank >= 3:
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
-		for elemental_variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
+		for elemental_variant in ENEMY_FACTORY_SCRIPT.variants_for_type(&"slime"):
 			var elemental_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(elemental_variant)
-			if elemental_definition == null or elemental_definition.encounter_role != &"matchup" or elemental_definition.matchup_weight <= 0.0 or elemental_variant == StringName(primary_variant):
+			if elemental_definition.encounter_role != &"matchup" or elemental_definition.matchup_weight <= 0.0 or elemental_variant == StringName(primary_variant):
 				continue
 			variant_pool.append({"variant": String(elemental_variant), "weight": elemental_definition.matchup_weight})
 	if special_room:
@@ -228,11 +230,17 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
 		count = mini(count + 2, count_cap)
 	variant_pool.append_array(definition.late_pool_entries(progression_run_rank))
+	if room_depth >= SKELETON_FIRST_ROOM_DEPTH:
+		variant_pool.append_array(ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton"))
 	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
 		variant_pool.append({"variant": "purple", "weight": definition.shadow_weight})
+	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
+	if force_debug_enemy:
+		variant_pool.clear()
+		variant_pool.append({"variant": String(debug_enemy_variant), "weight": 1.0})
 	# Popcorn is deliberately tied to the player's durable level instead of the
 	# dungeon run curve. It is recovery fodder, so it should remain five levels
 	# below the player even when a high-level player revisits an early run.
@@ -247,22 +255,14 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var ambush_flags: Array[bool] = []
 	var elite_flags: Array[bool] = []
 	for enemy_index in count:
-		var total_weight := 0.0
-		for entry in variant_pool:
-			total_weight += float(entry["weight"])
-		var roll := encounter_rng.randf_range(0.0, total_weight)
-		var selected: String = "grey"
-		for entry in variant_pool:
-			roll -= float(entry["weight"])
-			if roll <= 0.0:
-				selected = entry["variant"] as String
-				break
+		var selected := EncounterDefinition.select_weighted_variant(variant_pool, encounter_rng)
 		variants.append(selected)
 		ambush_flags.append(selected == "purple" and encounter_rng.randf() < 0.40)
 		# A Shadow Slime is never itself a popcorn roll. That keeps the shadow
 		# pressure spike intact while guaranteeing every actual popcorn slot in a
 		# shadow encounter is a Normal Slime.
-		var is_popcorn := selected != "purple" and encounter_rng.randf() < _popcorn_enemy_chance()
+		var selected_definition := ENEMY_FACTORY_SCRIPT.definition(StringName(selected))
+		var is_popcorn := not force_debug_enemy and selected != "purple" and selected_definition != null and selected_definition.type_id == &"slime" and encounter_rng.randf() < _popcorn_enemy_chance()
 		popcorn_flags.append(is_popcorn)
 		popcorn_types.append(ROOM_POPCORN if is_popcorn else "")
 		elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn)
@@ -279,16 +279,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	# weighted identity policy: forcing a relief slot there would turn the
 	# authored 20/80 Shadow/Normal ratio into a much larger Normal bias on the
 	# small one-slot encounters.
-	if not popcorn_flags.has(true) and not definition.is_shadow_bound():
-		for index in range(variants.size() - 1, -1, -1):
-			if variants[index] != "purple":
-				variants[index] = "grey"
-				levels[index] = _popcorn_enemy_level()
-				popcorn_flags[index] = true
-				popcorn_types[index] = ROOM_POPCORN
-				ambush_flags[index] = false
-				elite_flags[index] = false
-				break
+	EncounterDefinition.ensure_room_popcorn_slot(force_debug_enemy, definition.is_shadow_bound(), variants, levels, popcorn_flags, popcorn_types, ambush_flags, elite_flags, _popcorn_enemy_level(), ROOM_POPCORN)
 	# Shadow encounters keep any low-level mana-recovery slots readable: every
 	# popcorn slot beside a Shadow Slime becomes a Normal Slime. The weighted
 	# composition above intentionally does not append a guaranteed slot; doing so
@@ -330,7 +321,7 @@ func _preferred_variant_or_grey(candidate: String) -> String:
 	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(candidate_id):
 		return "grey"
 	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate_id)
-	return candidate if definition != null and definition.allow_preferred and definition.preferred_weight > 0.0 else "grey"
+	return candidate if definition != null and ENEMY_FACTORY_SCRIPT.variant_is_type(candidate_id, &"slime") and definition.allow_preferred and definition.preferred_weight > 0.0 else "grey"
 
 
 func _preferred_variant_weight(variant: String) -> float:
@@ -339,6 +330,8 @@ func _preferred_variant_weight(variant: String) -> float:
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := _generated_enemy_base_level(room_depth)
+	if not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant):
+		return EnemyFactory.single_variant_encounter(debug_enemy_variant, mini(boss_level, _enemy_level_cap()))
 	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
 	# Normal/elemental minor slimes join the roster starting with Run 5.
 	# Run 5 is the first mixed-support boss encounter. Add only one minor at
@@ -351,9 +344,10 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var boss_rng := RandomNumberGenerator.new()
 	boss_rng.seed = generation_seed + 991
 	var boss_variant := boss_variant_selection
-	var has_explicit_boss_variant := SLIME_VARIANT_CATALOG_SCRIPT.is_variant(boss_variant)
+	var selected_boss_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(boss_variant)
+	var has_explicit_boss_variant := selected_boss_definition != null and selected_boss_definition.type_id == &"slime"
 	if not has_explicit_boss_variant:
-		var roster: Array[StringName] = SLIME_VARIANT_CATALOG_SCRIPT.variants()
+		var roster := EnemyFactory.variants_for_type(&"slime")
 		# Run 1 teaches the neutral encounter first. Later un-authored runs may
 		# sample the complete boss catalog; purple remains rare only in the minor
 		# conversion below.
@@ -371,7 +365,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		# A designer-selected lead variant is a complete boss identity. Keep the
 		# support wave on that identity as well; the seeded mixed roster is only
 		# used when the encounter was not authored with an explicit selection.
-		var catalog_variants := SLIME_VARIANT_CATALOG_SCRIPT.variants()
+		var catalog_variants := EnemyFactory.variants_for_type(&"slime")
 		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if progression_run_rank < _room_definition().boss_mixed_support_start_rank else String(catalog_variants[encounter_rng.randi_range(0, catalog_variants.size() - 1)])
 		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
@@ -648,6 +642,8 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 		return result
 	runtime.room_transition_locked = true
 	begin_transition()
+	if runtime.slime_runtime_controller != null:
+		runtime.slime_runtime_controller.clear_room_projectiles()
 	# A combo is local to an encounter. Entering a new room must not carry the
 	# previous room's timer or multiplier into the next one.
 	runtime._reset_combo()

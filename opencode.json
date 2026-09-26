@@ -1,0 +1,8 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [
+      "addons/godot_mcp_toolkit/CompanionSkills"
+    ]
+  }
+}

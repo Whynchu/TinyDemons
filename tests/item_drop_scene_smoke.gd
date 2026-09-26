@@ -171,6 +171,24 @@ func _initialize() -> void:
 						effects.update_pixel_particles_from_root(gameplay, 0.05)
 					_expect(effects.pickup_flights.is_empty(), "Soul delivery flight completes", failures)
 					_expect(hud_controller.soul_reaction_id > 0, "Soul HUD acknowledges the delivered pickup", failures)
+	var pickup_runtime := gameplay.get("pickup_runtime_controller") as Node
+	var player_node := gameplay.get("player") as Sprite2D
+	var restore_position := player_node.global_position if player_node != null else Vector2.ZERO
+	var current_saved_item := ItemInstance.new()
+	current_saved_item.instance_id = "current-saved-drop"
+	current_saved_item.definition_id = &"basic_sword"
+	var saved_drops := [
+		{"item": {"instance_id": "retired-saved-drop", "definition_id": "ash_mantle"}, "position": restore_position},
+		{"item": current_saved_item.to_dictionary(), "position": restore_position},
+	]
+	if pickup_runtime != null:
+		pickup_runtime.call("restore_chest_item_drops", gameplay, saved_drops)
+	var restored_drops := gameplay.get("world_item_drops") as Array
+	_expect(pickup_runtime != null and restored_drops.size() == 1, "checkpoint restore omits retired item drops", failures)
+	if restored_drops.size() == 1:
+		var restored_drop := restored_drops[0] as Dictionary
+		var restored_item := restored_drop.get("item") as ItemInstance
+		_expect(restored_item != null and restored_item.definition_id == &"basic_sword", "checkpoint restore retains current item drops", failures)
 	gameplay.call("_clear_world_item_drops")
 	gameplay.queue_free()
 	await process_frame

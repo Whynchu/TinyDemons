@@ -2,7 +2,7 @@
 
 Status: current baseline map; composition refactor complete, remaining root-access owners listed
 
-Updated: 2026-09-22
+Updated: 2026-09-26
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. The composition refactor is
@@ -24,11 +24,11 @@ workstream is [`authoring-system-plan.md`](authoring-system-plan.md).
 | Dungeon topology | `dungeon_graph.gd`, `dungeon_map_controller.gd` | `dungeon_map_state.gd` | minimap, doors, room layers | map and door tests | High: multiple layout authorities |
 | Generated layouts | `dungeon_layout_generator.gd`, `puzzle_route_generator.gd`, route plan/solver scripts | layout definitions and generated route metadata | generated preview scenes and minimap | generated layout, reachability, and R6+ risk/reward smoke tests | High: focused generation passes; runtime playtest and visual verification pending |
 | Stone accents | `hub_stone_accent_layer.gd` | fixed Hub reference, seeded 3–5-piece subtraction, bounded non-Hub jitter, safe same-surface anchor swaps, reserved outer-right wall slot, fixed crack anchors, two-pixel wall solver buffer, connected-layout distinction, room-tint propagation, cached constraint checks, and live geometry validator | `scenes/main.tscn` `Map/HubStoneAccentLayer` and runtime accent assets | `hub_stone_accent_scene_smoke.gd` | Low: weighted variants, mirroring, and actor-distance rules deferred |
-| Hub world authoring preview | `hub_world_preview.gd`, `authoring_placement_catalog.gd`, `addons/tiny_demons_authoring/` | the authored Hub composition and stable `PlacementRoot2D` IDs embedded in `main.tscn` | `scenes/hub_world_preview.tscn`, Tiny Demons Authoring dock, `tools/dev.ps1 preview hub` | `hub_world_preview_scene_smoke.gd`, `authoring_placement_catalog_smoke.gd` | Medium: design preview and placement lifecycle slice are landed; typed enemy/gear/level CRUD and isolated interactive workbench deferred |
+| Hub world authoring preview | `hub_world_preview.gd`, `authoring_placement_catalog.gd`, `addons/tiny_demons_authoring/` | the authored Hub composition and stable `PlacementRoot2D` IDs embedded in `main.tscn` | `scenes/hub_world_preview.tscn`, Tiny Demons Authoring dock, `tools/dev.ps1 preview hub` | `hub_world_preview_scene_smoke.gd`, `authoring_placement_catalog_smoke.gd` | Medium: design preview and placement lifecycle slice are landed; typed level CRUD and isolated interactive workbenches deferred |
 | Chroma and elements | `player_chroma_component.gd`, `element_catalog.gd` | chroma/profile state | pickups, spells, palette-driven fire effects (`gameplay.gd`, `effects_spawner.gd`) | chroma, binding, elemental, and fire-palette tests | Medium |
 | Projectiles and magic | `magic_projectile_controller.gd`, `magic_runtime_controller.gd` | combat/runtime state | projectile scenes and effects | imbue and projectile-related tests | High: documented coordinator seams |
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |
-| Gear and fusion | `item_catalog.gd` (authored data in `resources/definitions/item_catalog.tres`), `item_instance.gd`, `equipment_component.gd` | profile item instances and equipped IDs | equipment/fusion/bind menus | gear, fusion, equipment tests | Medium: legacy compatibility paths |
+| Gear and fusion | `item_catalog.gd`, `item_definition.gd`, `item_preview_workbench.gd`, `item_instance.gd`, `equipment_component.gd` | live baselines/sets, standalone definitions, and profile instance IDs | item preview workbench, equipment/fusion/bind menus, slot-level item visual resolver | item-definition, retired-item-purge, item-preview, gear, fusion, equipment tests | Medium: schema-14 retired-item/transmutation save cleanup landed; live baseline/set data remains dictionary-backed and item art is slot-level |
 | Hub and menus | `screen_state_controller.gd` | profile/menu state | menu scenes and layout scripts | menu, hub, touch-menu tests | High: large mixed owner |
 | HUD | `player_hud.gd`, `hud_controller.gd` | player/combat display data | `scenes/player_hud.tscn` | player HUD smoke test | Medium: focused scene contract passes; live layout evidence remains |
 | Save and profile | `profile_save_service.gd`, `active_run_save_service.gd` | profile and active-run snapshots | cloud panel and recovery UI | save/cloud/recovery tests | Critical: data integrity |

@@ -19,9 +19,16 @@ const SOURCE_PALETTE := "blue"
 const SLIME_SOURCE_SHADOW := Color8(37, 113, 121)
 const SLIME_SOURCE_NORMAL := Color8(56, 183, 100)
 const SLIME_SOURCE_ACCENT := Color8(167, 240, 112)
+const SKELETON_SOURCE_SHADOW := Color8(51, 60, 87)
+const SKELETON_SOURCE_NORMAL := Color8(86, 108, 134)
+const SKELETON_SOURCE_ACCENT := Color8(148, 176, 194)
+const SKELETON_SOURCE_WHITE := Color8(244, 244, 244)
+const BONE_SOURCE_WHITE := Color8(244, 244, 244)
 
 static var _materials: Dictionary = {}
 static var _slime_materials: Dictionary = {}
+static var _skeleton_materials: Dictionary = {}
+static var _bone_materials: Dictionary = {}
 
 
 static func for_palette(palette_name: String) -> ShaderMaterial:
@@ -44,6 +51,41 @@ static func for_slime_palette(palette_name: String) -> ShaderMaterial:
 	material.set_meta("palette_source", "slime_green")
 	material.set_meta("actor_palette", palette)
 	_slime_materials[palette] = material
+	return material
+
+
+## Skeleton artwork has its own grey ramp; preserve the white bones while
+## recoloring its three grey shades to the selected enemy palette.
+static func for_skeleton_palette(palette_name: String) -> ShaderMaterial:
+	if palette_name == "grey" or not PaletteLibrary.PALETTE_NAMES.has(palette_name):
+		return null
+	if _skeleton_materials.has(palette_name):
+		return _skeleton_materials[palette_name] as ShaderMaterial
+	var material := _material_from_pairs({
+		"from": PackedColorArray([SKELETON_SOURCE_SHADOW, SKELETON_SOURCE_NORMAL, SKELETON_SOURCE_ACCENT, SKELETON_SOURCE_WHITE]),
+		"to": PackedColorArray([PaletteLibrary.shadow(palette_name), PaletteLibrary.normal(palette_name), PaletteLibrary.accent(palette_name), SKELETON_SOURCE_WHITE]),
+	})
+	material.set_meta("palette_source", "skeleton_grey")
+	material.set_meta("actor_palette", palette_name)
+	_skeleton_materials[palette_name] = material
+	return material
+
+
+## Bones are white in the source sheet. Use the palette highlight for most
+## elements; green and yellow use their base tone so the projectile stays legible.
+static func for_bone_projectile(palette_name: String) -> ShaderMaterial:
+	if palette_name == "grey" or not PaletteLibrary.PALETTE_NAMES.has(palette_name):
+		return null
+	if _bone_materials.has(palette_name):
+		return _bone_materials[palette_name] as ShaderMaterial
+	var bone_color := PaletteLibrary.normal(palette_name) if palette_name in ["green", "yellow"] else PaletteLibrary.accent(palette_name)
+	var material := _material_from_pairs({
+		"from": PackedColorArray([BONE_SOURCE_WHITE, BONE_SOURCE_WHITE, BONE_SOURCE_WHITE, BONE_SOURCE_WHITE]),
+		"to": PackedColorArray([bone_color, bone_color, bone_color, bone_color]),
+	})
+	material.set_meta("palette_source", "bone_white")
+	material.set_meta("actor_palette", palette_name)
+	_bone_materials[palette_name] = material
 	return material
 
 
@@ -110,3 +152,5 @@ static func slime_color_pairs(palette_name: String) -> Dictionary:
 static func clear_cache() -> void:
 	_materials.clear()
 	_slime_materials.clear()
+	_skeleton_materials.clear()
+	_bone_materials.clear()

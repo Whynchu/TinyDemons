@@ -3,7 +3,9 @@ class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 
-const CURRENT_SCHEMA_VERSION := 13
+## Schema 14 removes retired catalog-only gear from loaded inventories and
+## equips current starter items in slots left empty by that migration.
+const CURRENT_SCHEMA_VERSION := 14
 const EVEN_BASELINE_SCHEMA_VERSION := 13
 const LEGACY_EVEN_BASELINE_SCHEMA_VERSION := 12
 const LEGACY_GEAR_REWORK_SCHEMA_VERSION := 11
@@ -15,6 +17,7 @@ const LEGACY_SPEED_SCHEMA_VERSION := 8
 static func supports_schema_version(value: int) -> bool:
 	return value in [
 		CURRENT_SCHEMA_VERSION,
+		EVEN_BASELINE_SCHEMA_VERSION,
 		LEGACY_EVEN_BASELINE_SCHEMA_VERSION,
 		LEGACY_GEAR_REWORK_SCHEMA_VERSION,
 		LEGACY_DEMON_CLOAK_SCHEMA_VERSION,
@@ -108,6 +111,7 @@ func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 	var items := catalog if catalog != null else ItemCatalog.new()
 	for slot: StringName in ItemCatalog.SLOTS:
 		var starter := items.starter_item(slot)
+		var slot_locked := slot == &"head" and _head_locked_by_body(items)
 		# Existing four-slot files may already own `starter-armor`; retain that
 		# stable instance ID as Body instead of duplicating it as `starter-body`.
 		if slot == &"body" and find_item("starter-armor") != null and find_item(starter.instance_id) == null:
@@ -126,7 +130,7 @@ func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 					inventory_revision += 1
 					break
 		grant_item(starter)
-		if get_equipped_instance_id(slot).is_empty():
+		if get_equipped_instance_id(slot).is_empty() and not slot_locked:
 			equipped_instance_ids[String(slot)] = starter.instance_id
 	_sync_body_alias()
 
@@ -723,7 +727,26 @@ func load_dictionary(data: Dictionary) -> void:
 	starter_soul_gift_claimed = bool(data.get("starter_soul_gift_claimed", false))
 	demon_cloak_purchases = maxi(int(data.get("demon_cloak_purchases", 0)), 0)
 	var saved_inventory: Variant = data.get("inventory", [])
-	inventory.assign(saved_inventory if saved_inventory is Array else [])
+	var item_catalog := ItemCatalog.new()
+	var retired_items_removed := 0
+	var retired_transmutations_removed := 0
+	var migrated_inventory: Array[Dictionary] = []
+	if saved_inventory is Array:
+		for raw_item: Variant in saved_inventory:
+			if not raw_item is Dictionary:
+				continue
+			var item_data := raw_item as Dictionary
+			var definition_id := StringName(str(item_data.get("definition_id", "")))
+			if ItemCatalog.RETIRED_DEFINITION_IDS.has(definition_id):
+				retired_items_removed += 1
+				continue
+			var transmutation_id := StringName(str(item_data.get("transmutation_id", "")))
+			if ItemCatalog.RETIRED_TRANSMUTATION_IDS.has(transmutation_id):
+				item_data = item_data.duplicate(true)
+				item_data["transmutation_id"] = ""
+				retired_transmutations_removed += 1
+			migrated_inventory.append(item_data.duplicate(true))
+	inventory = migrated_inventory
 	inventory_revision = 0
 	equipped_instance_ids = {"weapon": "", "head": "", "body": "", "armor": "", "arm": "", "shield": "", "accessory": ""}
 	var saved_equipment: Variant = data.get("equipped_instance_ids", {})
@@ -737,6 +760,22 @@ func load_dictionary(data: Dictionary) -> void:
 			saved_body = str(saved_equipment.get("armor", ""))
 		equipped_instance_ids["body"] = saved_body
 	_sync_body_alias()
+	var valid_instance_ids: Dictionary = {}
+	for item_data: Dictionary in inventory:
+		var instance_id := str(item_data.get("instance_id", ""))
+		var definition_id := StringName(str(item_data.get("definition_id", "")))
+		if not instance_id.is_empty() and item_catalog.definition_exists(definition_id):
+			valid_instance_ids[instance_id] = true
+	for slot: StringName in ItemCatalog.SLOTS:
+		var equipped_id := get_equipped_instance_id(slot)
+		if not equipped_id.is_empty() and not valid_instance_ids.has(equipped_id):
+			equipped_instance_ids[String(slot)] = ""
+	_sync_body_alias()
+	if has_demon_cloak_equipped():
+		equipped_instance_ids["head"] = ""
+	_sync_body_alias()
+	if retired_items_removed > 0 or retired_transmutations_removed > 0:
+		push_warning("PlayerProfile: removed %d retired item instance(s) and cleared %d retired transmutation(s) from the saved profile." % [retired_items_removed, retired_transmutations_removed])
 	var saved_mastery: Variant = data.get("family_mastery", {})
 	family_mastery.clear()
 	if saved_mastery is Dictionary:

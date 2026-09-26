@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://drrflaua23c2p"]
+
+[ext_resource type="Script" uid="uid://bsn47j45eo7tm" path="res://scripts/item_preview_workbench.gd" id="1_bdlx5"]
+
+[node name="ItemPreviewWorkbench" type="Node2D" unique_id=268417950]
+process_mode = 3
+texture_filter = 1
+script = ExtResource("1_bdlx5")
+item_id = &"cinder_blade"
+preview_seed = 1
