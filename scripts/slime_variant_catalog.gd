@@ -48,15 +48,35 @@ static func invalidate_cache() -> void:
 static func save_definition(definition: EnemyDefinition) -> Error:
 	if definition == null:
 		return ERR_INVALID_PARAMETER
-	if DATA.definitions.has(definition):
-		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
 	if definition.resource_path.is_empty():
 		return ERR_FILE_NOT_FOUND
-	return ResourceSaver.save(definition, definition.resource_path)
+	if definition.resource_path.contains("::"):
+		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
+	var save_error := ResourceSaver.save(definition, definition.resource_path)
+	if save_error != OK:
+		return save_error
+	if not DATA.definitions.has(definition):
+		DATA.definitions.append(definition)
+		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
+	return OK
+
+
+static func register_definition(definition: EnemyDefinition) -> Error:
+	if definition == null or definition.resource_path.is_empty():
+		return ERR_INVALID_PARAMETER
+	if DATA.definitions.has(definition):
+		return OK
+	if definition_resource(definition.variant_id) != null:
+		return ERR_ALREADY_EXISTS
+	DATA.definitions.append(definition)
+	var save_error := ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
+	if save_error != OK:
+		DATA.definitions.erase(definition)
+	return save_error
 
 
 static func definition_source_path(definition: EnemyDefinition) -> String:
-	if DATA.definitions.has(definition):
+	if definition.resource_path.contains("::"):
 		return CATALOG_RESOURCE_PATH
 	return definition.resource_path
 

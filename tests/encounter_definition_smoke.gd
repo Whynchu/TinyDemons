@@ -1,6 +1,7 @@
 extends SceneTree
 
 const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
 
 ## Slice C characterization: EncounterDefinition captures the rank-gated enemy
 ## pool as validated, editor-inspectable data. It must reject bad weights/policy,
@@ -32,6 +33,23 @@ func _initialize() -> void:
 	_expect("yellow" in late_names and "orange" in late_names and "aquamarine" in late_names and "crimson" in late_names, "rank five pool includes yellow/ground/ice/crimson", failures)
 	for entry in late_rank_5:
 		_expect(float(entry["weight"]) > 0.0, "%s late entry carries a positive weight" % str(entry["variant"]), failures)
+
+	var skeleton_entries := EnemyFactoryScript.weighted_variants_for_type(&"skeleton")
+	_expect(skeleton_entries.size() == 8, "catalog registers the normal and seven elemental skeleton variants", failures)
+	var rooms := RoomController.new()
+	rooms.progression_run_rank = 1
+	var skeleton_before_r5 := false
+	var skeleton_at_r5 := false
+	for seed in range(1, 65):
+		var early_encounter := rooms._generate_enemy_encounter(seed, 4)
+		var r5_encounter := rooms._generate_enemy_encounter(seed, 5)
+		for variant in early_encounter["variants"] as Array:
+			skeleton_before_r5 = skeleton_before_r5 or EnemyFactoryScript.variant_is_type(StringName(variant), &"skeleton")
+		for variant in r5_encounter["variants"] as Array:
+			skeleton_at_r5 = skeleton_at_r5 or EnemyFactoryScript.variant_is_type(StringName(variant), &"skeleton")
+	_expect(not skeleton_before_r5, "skeletons do not enter the regular pool before R5", failures)
+	_expect(skeleton_at_r5, "registered skeletons can roll into regular R5 encounters", failures)
+	rooms.free()
 
 	var bad := EncounterDefinition.new()
 	bad.matchup_policy = "not_a_policy"

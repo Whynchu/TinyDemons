@@ -694,6 +694,10 @@ func create_authored_variant() -> void:
 	if save_error != OK:
 		_set_workbench_error("Could not create %s (error %d)" % [resource_path, save_error])
 		return
+	save_error = SlimeVariantCatalogScript.register_definition(new_definition)
+	if save_error != OK:
+		_set_workbench_error("Could not register %s (error %d)" % [candidate_id, save_error])
+		return
 
 	SlimeVariantCatalogScript.invalidate_cache()
 	enemy_id = authored_id
