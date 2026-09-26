@@ -212,7 +212,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Popcorn respawn delay | 5.0 seconds before a defeated support slime returns; temporary blocked spawns retry after 0.25 seconds | `room_controller.gd:POPCORN_RESPAWN_DELAY`, `POPCORN_RESPAWN_RETRY_DELAY` |
 | Authored normal-room popcorn | R3/R4 normal combat rooms schedule a new randomized popcorn cap after each clear; 45-second delay, cap rolls from 1 through the latest defeated normal-enemy count, excluded from Hub/Fire/Orb rooms | R4 authored-map plan; future `RoomController` room-clear popcorn policy |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
-| Encounter progression rank | `completed_runs + 1` | `gameplay_state.gd:_ensure_current_room_layout`, `combat_runtime_controller.gd:encounter_run_rank` |
+| Numbered run / enemy-family unlocks | `completed_runs + 1`; skeletons enter the regular family pool on run 5 and remain available after a death/retry, independent of performance difficulty rank | `room_controller.gd:ensure_layout`, `_generate_enemy_encounter` |
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
 | Late-run difficulty bonus | `max(0, encounter_rank - 8)` | `combat_runtime_controller.gd:run_enemy_level_bonus` |
 | Performance-over-baseline bonus | `max(0, difficulty_rank - (completed_runs + 1))` | `run_flow_controller.gd:run_difficulty_bonus` |
