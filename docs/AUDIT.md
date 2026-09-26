@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.92` (composition refactor structurally and editor-wise
+Current release: `0.2.93` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
 room/menu boundaries, and the enemy authoring slice proof landed)
 

@@ -79,7 +79,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | `critical_damage_multiplier` | 1.5 | Crit damage multiplier |
 | `target_health_max` | 10.0 | Cap for targeting display |
 
-### `scripts/progression_tuning.gd` — leveling economy (5 exports, all `inspector`)
+### `scripts/progression_tuning.gd` — leveling economy (6 exports, all `inspector`)
 
 Enemy XP rewards use a global `2.0x` multiplier in addition to the encounter
 and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
@@ -91,6 +91,7 @@ and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
 | `xp_exponent` | 1.5 | XP curve exponent |
 | `point_band_max_levels` | [5,10,20,35,99] | Level bands for stat points |
 | `point_band_awards` | [1,2,3,4,5] | Points awarded per band |
+| `enemy_stat_growth_multiplier` | 0.5 | Enemies auto-distribute half the cumulative player level-up stat points |
 
 ### `scripts/effects_tuning.gd` — particles/numbers (9 exports, all `inspector`)
 

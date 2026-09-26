@@ -6,6 +6,7 @@ class_name ProgressionTuning
 @export var xp_exponent := 1.4
 @export var point_band_max_levels := PackedInt32Array([5, 10, 20, 35, 99])
 @export var point_band_awards := PackedInt32Array([1, 2, 3, 4, 5])
+@export_range(0.0, 1.0, 0.05) var enemy_stat_growth_multiplier := 0.5
 
 
 func xp_required_for_level(level: int) -> int:
@@ -29,3 +30,7 @@ func cumulative_stat_points_at_level(level: int) -> int:
 	for reached_level in range(2, clampi(level, 1, 99) + 1):
 		total += stat_points_for_level(reached_level)
 	return total
+
+
+func cumulative_enemy_stat_points_at_level(level: int) -> int:
+	return floori(float(cumulative_stat_points_at_level(level)) * clampf(enemy_stat_growth_multiplier, 0.0, 1.0))

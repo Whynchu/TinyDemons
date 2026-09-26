@@ -8,7 +8,9 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var progression: ProgressionTuning = ProgressionTuning.new()
 	var level_50_points: int = progression.cumulative_stat_points_at_level(50)
-	_expect(level_50_points == 179, "level 50 enemy uses the player's cumulative level-up point schedule", failures)
+	var level_50_enemy_points: int = progression.cumulative_enemy_stat_points_at_level(50)
+	_expect(level_50_points == 179, "player level 50 progression schedule totals 179 points", failures)
+	_expect(level_50_enemy_points == 89, "enemy level 50 growth uses half the player progression pool", failures)
 
 	var stats: StatsComponent = StatsComponent.new()
 	stats.apply_enemy_variant_profile(
@@ -19,7 +21,7 @@ func _initialize() -> void:
 	stats.set_enemy_progression_tuning(progression)
 	stats.level = 50
 	var total_stats := stats.vit + stats.strength + stats.def + stats.agi + stats.intelligence + stats.mnd
-	_expect(total_stats == 12 + level_50_points, "enemy growth distributes every player progression point on top of authored base stats", failures)
+	_expect(total_stats == 12 + level_50_enemy_points, "enemy growth distributes half the player progression points on authored base stats", failures)
 	stats.free()
 	_finished = true
 	call_deferred("_finish", failures)
