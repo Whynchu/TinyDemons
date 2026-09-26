@@ -361,7 +361,18 @@ func _load_continue_slot(root: Object, slot: int, loaded_profile: PlayerProfile)
 	root.call("_begin_scene_transition")
 
 
-func enter_starting_room_from_menu(root: Object) -> void:
+func enter_starting_room_from_menu(root: GameplayState) -> void:
+	# A title-only boot skips gameplay components to keep startup light. A newly
+	# created profile must reload through the saved run route before entering the
+	# room, just like Continue, so bootstrap creates Motor and hides editor guides.
+	if root.player_motor == null:
+		if root.player_profile != null:
+			root.player_profile.pending_route = "run"
+			root.player_profile.open_hub_on_load = false
+			ProfileSaveService.request_next_boot_route("run")
+			root._save_player_profile()
+		root._begin_scene_transition()
+		return
 	root.actor_presentation_runtime_controller.set_title_world_visible(root, true)
 	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
 	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false

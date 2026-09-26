@@ -437,6 +437,10 @@ func _reset_dungeon_for_new_run(root: Object) -> void:
 	room_controller.set_current_room(next_room_id, root.get("current_room_type"))
 	root.call("_ensure_current_room_layout")
 	root.call("_apply_room_state")
+	# New Game rebuilds this layout after title boot already hid the original
+	# editor guides. Hide the newly created floor/socket and actor guides before
+	# the room becomes visible, matching the full-scene Continue boot path.
+	root._hide_editor_only_guides()
 	var minimap := root.get("dungeon_minimap_controller") as Node
 	if minimap != null:
 		minimap.call("configure", map_controller)

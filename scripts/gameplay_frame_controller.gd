@@ -528,6 +528,9 @@ func tick(root: GameplayState, delta: float) -> void:
 		root.scene_transition_overlay.modulate.a = clampf(transition_timer / 0.28, 0.0, 1.0)
 		if transition_timer >= 0.34: root.get_tree().reload_current_scene()
 		return
+	if root.loading_screen_active:
+		root._update_loading_screen(delta)
+		return
 	var ssc := root.screen_state_controller as ScreenStateController
 	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
 		if ssc.save_select_footer_text != null:
@@ -636,7 +639,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	var hitstop: float = root.hitstop_timer
 	if hitstop > 0.0: root.hitstop_timer = maxf(hitstop - delta, 0.0); return
 	if root.player_death_pending and not root.player_dead:
-		root.player_motor.update_player_hit_reaction(root, delta)
+		if root.player_motor != null: root.player_motor.update_player_hit_reaction(root, delta)
 		root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root))
 		if root.player_guard_component != null:
 			root.player_guard_component.clear_for_death(_guard_context(root))
@@ -691,7 +694,9 @@ func tick(root: GameplayState, delta: float) -> void:
 	if player_attack != null and player_attack.combo_buffered and not root.player_is_attacking and root.player_between_timer <= 0.0 and player_attack.can_start_attack2(): player_attack.start_player_attack(root, 2); player_attack.consume_combo()
 	if player_attack != null: player_attack.update_lunge(root, delta)
 	if root.player_roll_component != null: root.player_roll_component.update_from_root(_roll_context(root), delta)
-	root._update_roll_dust(delta); root.player_motor.update_player_hit_reaction(root, delta); root._update_entry_orb_player_reaction()
+	root._update_roll_dust(delta)
+	if root.player_motor != null: root.player_motor.update_player_hit_reaction(root, delta)
+	root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta, mouse_aim_active(root))
 	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
