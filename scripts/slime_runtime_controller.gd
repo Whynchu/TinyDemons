@@ -247,6 +247,8 @@ func move_slimes(root: Object, delta: float) -> void:
 		var slime_actor := slime as SlimeActor
 		if slime_actor != null:
 			slime_actor.tick_components(delta)
+			if slime_actor is SkeletonActor:
+				_tick_skeleton_notice_presentation(root as GameplayState, slime_actor)
 			slime_actor.tick_runtime(delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
 			continue
 		SlimeActor.tick_legacy_runtime(slime, delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
@@ -801,6 +803,8 @@ func update_slime_scoot(root: Object, slime: Sprite2D, delta: float) -> void:
 	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
 	var brain := root.call("_slime_brain", slime) as SlimeBrain
 	brain.set_aggro(is_slime_aggroed(root, slime))
+	if slime is SkeletonActor and brain.is_noticing():
+		return
 	if brain.is_noticing():
 		var frames := shocked_frames_for(root, slime)
 		if frames.is_empty():
@@ -825,6 +829,21 @@ func update_slime_scoot(root: Object, slime: Sprite2D, delta: float) -> void:
 		return
 	var set_visual_scale := Callable(root, "_set_actor_visual_scale")
 	brain.tick_scoot(slime, delta, root.get("slime_tuning") as SlimeTuning, Callable(root, "_is_slime_aggroed"), Callable(root, "_try_move_actor"), set_visual_scale, Callable(root, "_repath_slime_after_block"), Callable(root, "_start_slime_hold"), Callable(root, "_start_slime_scoot"))
+
+
+func _tick_skeleton_notice_presentation(gameplay: GameplayState, skeleton: SkeletonActor) -> void:
+	var brain := skeleton.get_node_or_null("Brain") as SlimeBrain
+	if brain == null or not brain.notice_started:
+		return
+	gameplay._set_actor_visual_scale(skeleton, Vector2.ONE)
+	if brain.is_noticing():
+		var frames := shocked_frames_for(gameplay, skeleton)
+		if not frames.is_empty():
+			var progress := 1.0 - clampf(brain.notice_timer / brain.notice_duration, 0.0, 1.0)
+			set_slime_notice_frame(gameplay, skeleton, int(floor(progress * float(frames.size()))))
+	elif not brain.notice_animation_finished:
+		brain.notice_animation_finished = true
+		restore_slime_idle_texture(gameplay, skeleton)
 
 
 func _update_skeleton_walk(root: Object, skeleton: Sprite2D, brain: SlimeBrain, delta: float) -> void:
