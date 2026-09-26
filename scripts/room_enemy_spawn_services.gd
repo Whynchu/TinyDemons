@@ -18,6 +18,7 @@ var dungeon_graph: DungeonGraph = null
 var dungeon_map_controller: DungeonMapController = null
 var effects_spawner: EffectsSpawner = null
 var hud_controller: HudController = null
+var occlusion_renderer: OcclusionRenderer = null
 var player: Sprite2D = null
 var chest: Sprite2D = null
 var slimes: Array[Sprite2D] = []
@@ -167,6 +168,8 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	_replace_actor_reference(collision_sprites, current_actor, replacement)
 	_replace_actor_reference(depth_sprites, current_actor, replacement)
 	_replace_actor_reference(occluder_sprites, current_actor, replacement)
+	if occlusion_renderer != null:
+		occlusion_renderer.rebind_actor(current_actor, replacement)
 	if last_valid_positions.has(current_actor):
 		last_valid_positions[replacement] = last_valid_positions[current_actor]
 		last_valid_positions.erase(current_actor)
