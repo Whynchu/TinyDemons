@@ -2,6 +2,7 @@ extends SceneTree
 
 const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
+const EnemySpawnServicesScript = preload("res://scripts/room_enemy_spawn_services.gd")
 
 ## Slice C characterization: EncounterDefinition captures the rank-gated enemy
 ## pool as validated, editor-inspectable data. It must reject bad weights/policy,
@@ -39,17 +40,40 @@ func _initialize() -> void:
 	var rooms := RoomController.new()
 	rooms.progression_run_rank = 1
 	var skeleton_before_r5 := false
-	var skeleton_at_r5 := false
-	for seed in range(1, 65):
+	var skeleton_slots_at_r5 := 0
+	var total_slots_at_r5 := 0
+	for seed in range(1, 513):
 		var early_encounter := rooms._generate_enemy_encounter(seed, 4)
 		var r5_encounter := rooms._generate_enemy_encounter(seed, 5)
 		for variant in early_encounter["variants"] as Array:
 			skeleton_before_r5 = skeleton_before_r5 or EnemyFactoryScript.variant_is_type(StringName(variant), &"skeleton")
 		for variant in r5_encounter["variants"] as Array:
-			skeleton_at_r5 = skeleton_at_r5 or EnemyFactoryScript.variant_is_type(StringName(variant), &"skeleton")
+			total_slots_at_r5 += 1
+			if EnemyFactoryScript.variant_is_type(StringName(variant), &"skeleton"):
+				skeleton_slots_at_r5 += 1
 	_expect(not skeleton_before_r5, "skeletons do not enter the regular pool before R5", failures)
-	_expect(skeleton_at_r5, "registered skeletons can roll into regular R5 encounters", failures)
+	var skeleton_share_at_r5 := float(skeleton_slots_at_r5) / float(maxi(total_slots_at_r5, 1))
+	_expect(skeleton_share_at_r5 >= 0.45 and skeleton_share_at_r5 <= 0.55, "R5 and later enemy slots split evenly between skeletons and slimes (observed %.1f%%)" % (skeleton_share_at_r5 * 100.0), failures)
 	rooms.free()
+	var actor_parent := Node2D.new()
+	root.add_child(actor_parent)
+	var actor_slot := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"grey"))
+	actor_slot.name = "EnemySlot1"
+	actor_parent.add_child(actor_slot)
+	var actor_pool: Array[Sprite2D] = [actor_slot]
+	var actor_sprites: Array[Sprite2D] = [actor_slot]
+	var collision_sprites: Array[Sprite2D] = [actor_slot]
+	var spawn_services := EnemySpawnServicesScript.new() as RoomEnemySpawnServices
+	spawn_services.slimes = actor_pool
+	spawn_services.actor_sprites = actor_sprites
+	spawn_services.collision_sprites = collision_sprites
+	spawn_services.configure_slime_variant(actor_slot, "skeleton")
+	_expect(actor_pool[0] is SkeletonActor, "selected skeleton definition replaces the pooled slime actor family", failures)
+	_expect(actor_sprites[0] is SkeletonActor and collision_sprites[0] is SkeletonActor, "actor and collision lists follow family replacement", failures)
+	var skeleton_slot := actor_pool[0]
+	spawn_services.configure_slime_variant(skeleton_slot, "grey")
+	_expect(actor_pool[0] is SlimeActor and not actor_pool[0] is SkeletonActor, "slime variant restores the slime actor family", failures)
+	actor_parent.free()
 
 	var bad := EncounterDefinition.new()
 	bad.matchup_policy = "not_a_policy"

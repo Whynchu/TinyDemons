@@ -74,6 +74,23 @@ static func select_weighted_variant(entries: Array[Dictionary], rng: RandomNumbe
 	return "grey"
 
 
+static func balance_enemy_family_weights(slime_pool: Array[Dictionary], skeleton_pool: Array[Dictionary]) -> void:
+	var slime_weight := 0.0
+	for entry in slime_pool:
+		slime_weight += float(entry.get("weight", 0.0))
+	var skeleton_weight := 0.0
+	for entry in skeleton_pool:
+		skeleton_weight += float(entry.get("weight", 0.0))
+	if slime_weight <= 0.0 or skeleton_weight <= 0.0:
+		return
+	# Balance families independently from the count of authored variants.
+	var skeleton_scale := slime_weight / skeleton_weight
+	for entry in skeleton_pool:
+		var balanced_entry := entry.duplicate()
+		balanced_entry["weight"] = float(balanced_entry["weight"]) * skeleton_scale
+		slime_pool.append(balanced_entry)
+
+
 static func ensure_room_popcorn_slot(
 	force_debug_enemy: bool,
 	shadow_bound: bool,

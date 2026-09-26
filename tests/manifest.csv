@@ -43,7 +43,7 @@ script,role,state,owner,target,load,notes
 "reward_definition_smoke","owner","unverified","content authoring","RewardDefinition chest drop and grade curves","pure",""
 "dungeon_generation_policy_smoke","owner","unverified","generated layouts","DungeonGenerationPolicy explicit inputs and validation","pure",""
 "room_definition_smoke","owner","unverified","content authoring","RoomDefinition rank-curve difficulty and traffic policy","pure",""
-"encounter_definition_smoke","owner","unverified","content authoring","EncounterDefinition rank-gated pool, R5 skeleton variants, and validation contract","pure",""
+"encounter_definition_smoke","owner","unverified","content authoring","EncounterDefinition rank-gated pool, R5 50/50 skeleton/slime family weighting, family-swapped runtime actors, and validation contract","pure",""
 "enemy_definition_slice_smoke","owner","unverified","content authoring","EnemyDefinition contract + EnemyFactory assemble and second-variant proof","pure",""
 "slime_spawn_smoke","gate","verified","slime enemies","slime spawn visuals and actors","pure","2026-09-11 focused evidence"
 "sound_mix_profile_smoke","gate","verified","audio","sound mix profile clip resolution","pure","focused run 2026-09-13; every catalog cue has an editor volume entry"
