@@ -548,7 +548,6 @@ func begin_player_death(root: Object, depth_scale: float) -> void:
 		return
 	root.set("player_dead", true); root.set("player_death_pending", false); root.set("player_death_timer", 0.0); root.set("player_death_particles_started", false)
 	root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.set("player_is_backflipping", false); root.call("_clear_roll_dust")
-	root.set("player_is_defending", false)
 	var player := root.get("player") as Sprite2D
 	(root.get("player_attack_visual") as Sprite2D).visible = false
 	var renderer := root.get("occlusion_renderer") as OcclusionRenderer
