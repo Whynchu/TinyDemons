@@ -57,6 +57,11 @@ func rebind_actor(old_actor: Sprite2D, new_actor: Sprite2D) -> void:
 	actor_visual_scales[new_actor] = Vector2.ONE
 	actor_occlusion_grace[new_actor] = grace
 	new_actor.scale = authored_scale
+	# Family-swapped roster slots can temporarily have no base texture. Register
+	# as soon as the new actor resolves its authored animation frame, not on the
+	# next room-wide bootstrap pass.
+	if new_actor.texture != null:
+		_register_sprite(new_actor)
 	var occluder_index := occluders.find(old_actor)
 	if occluder_index >= 0:
 		occluders[occluder_index] = new_actor
@@ -127,6 +132,10 @@ func _ensure_sprite_registered(actor: Sprite2D) -> bool:
 		return false
 	_register_sprite(actor)
 	return _has_sprite_registration(actor)
+
+
+func ensure_actor_registered(actor: Sprite2D) -> bool:
+	return _ensure_sprite_registered(actor)
 
 
 func set_actor_base_texture(actor: Sprite2D, texture: Texture2D) -> void:
