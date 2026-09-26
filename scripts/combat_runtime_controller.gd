@@ -218,7 +218,11 @@ func combat_damage_request(root: Object, attacker_stats: StatsComponent, defende
 	var equipment := root.get("player_equipment") as EquipmentComponent
 	var attacker_snapshot := CombatStatSnapshot.from_components(attacker_stats, equipment if attacker_stats == player_stats else null)
 	var defender_snapshot := CombatStatSnapshot.from_components(defender_stats, equipment if defender_stats == player_stats else null)
-	return CombatCalculator.calculate_request(request, attacker_snapshot, defender_snapshot, root.get("rng") as RandomNumberGenerator, root.get("combat_tuning") as CombatTuning)
+	var tuning := root.get("combat_tuning") as CombatTuning
+	if attacker_stats != player_stats and request is CombatDamageRequest:
+		var enemy_request := request as CombatDamageRequest
+		enemy_request.physical_stat_scale *= enemy_late_run_damage_multiplier(encounter_run_rank(root), tuning)
+	return CombatCalculator.calculate_request(request, attacker_snapshot, defender_snapshot, root.get("rng") as RandomNumberGenerator, tuning)
 
 
 func max_health_for_stats(root: Object, stats: StatsComponent) -> float:
@@ -306,6 +310,14 @@ func run_enemy_level_bonus(root: Object) -> int:
 func encounter_run_rank(root: Object) -> int:
 	var profile := root.get("player_profile") as PlayerProfile
 	return maxi(1, profile.completed_runs + 1 if profile != null else 1)
+
+
+static func enemy_late_run_damage_multiplier(run_rank: int, tuning: CombatTuning) -> float:
+	if tuning == null or run_rank <= tuning.enemy_late_run_damage_start_rank:
+		return 1.0
+	var ramp_range := maxi(tuning.enemy_late_run_damage_max_rank - tuning.enemy_late_run_damage_start_rank, 1)
+	var progress := clampf(float(run_rank - tuning.enemy_late_run_damage_start_rank) / float(ramp_range), 0.0, 1.0)
+	return 1.0 + maxf(tuning.enemy_late_run_damage_max_bonus, 0.0) * progress
 
 
 func soul_drop_value_for_slime(root: Object, slime: Sprite2D) -> int:

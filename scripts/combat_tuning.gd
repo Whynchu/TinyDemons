@@ -11,6 +11,12 @@ class_name CombatTuning
 @export var damage_base := 2.0
 @export var damage_per_strength := 0.5
 @export var enemy_damage_per_strength := 1.0
+@export_group("Late-run enemy damage")
+## Added to enemy STR damage only after the late-game threshold. This closes
+## the gear/DEF gap gradually without changing early-run hits or enemy stats.
+@export var enemy_late_run_damage_start_rank := 20
+@export var enemy_late_run_damage_max_rank := 40
+@export var enemy_late_run_damage_max_bonus := 0.4
 @export var defense_scale := 12.0
 @export var magic_base := 2.0
 @export var magic_per_int := 0.75
