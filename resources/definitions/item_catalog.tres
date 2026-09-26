@@ -1,9 +1,11 @@
-[gd_resource type="Resource" script_class="ItemCatalogData" format=3 uid="uid://c6u8l5k5iuq7w"]
+[gd_resource type="Resource" script_class="ItemCatalogData" load_steps=3 format=3 uid="uid://c6u8l5k5iuq7w"]
 
 [ext_resource type="Script" uid="uid://bo1ky7owql3to" path="res://scripts/item_catalog_data.gd" id="1_54nx5"]
+[ext_resource type="Resource" path="res://resources/definitions/items/demon_cloak.tres" id="2_demon_cloak"]
 
 [resource]
 script = ExtResource("1_54nx5")
+authored_definitions = Array[Resource]([ExtResource("2_demon_cloak")])
 live_base_ids = Array[StringName]([&"plain_blade", &"plain_hood", &"plain_tunic", &"plain_wraps", &"plain_shield", &"plain_ring", &"basic_sword", &"basic_hood", &"basic_tunic", &"basic_wraps", &"basic_shield", &"basic_charm"])
 live_base_definitions = {
 &"basic_charm": {

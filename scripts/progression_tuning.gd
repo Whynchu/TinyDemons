@@ -22,3 +22,10 @@ func stat_points_for_level(level: int) -> int:
 		if level <= point_band_max_levels[index]:
 			return clampi(point_band_awards[index], 0, 5)
 	return clampi(point_band_awards[count - 1], 0, 5) if count > 0 else 0
+
+
+func cumulative_stat_points_at_level(level: int) -> int:
+	var total := 0
+	for reached_level in range(2, clampi(level, 1, 99) + 1):
+		total += stat_points_for_level(reached_level)
+	return total
