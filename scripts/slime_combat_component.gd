@@ -126,7 +126,10 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 			if progress_delta > 0.0:
 				lunge_applied_progress = lunge_progress
 				apply_lunge.call(actor, progress_delta)
-		if frame_index == hit_frame and not hit_done and confirm_hit():
+		# Physics ticks can cross an authored animation frame when frame time is
+		# low or delta spikes. Resolve the hit on the first tick at or beyond it
+		# so ranged attacks cannot silently lose their projectile launch.
+		if frame_index >= hit_frame and not hit_done and confirm_hit():
 			# Cooldown starts at impact so a full recovery window is guaranteed
 			# from the actual attack, not merely from animation cleanup.
 			cooldown = maxf(cooldown, cooldown_after)

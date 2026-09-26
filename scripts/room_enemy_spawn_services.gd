@@ -26,6 +26,7 @@ var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
 var depth_sprites: Array[Sprite2D] = []
 var occluder_sprites: Array[Sprite2D] = []
+var last_valid_positions: Dictionary = {}
 var actor_foot_offset := Vector2.ZERO
 
 var set_actor_visual_scale: Callable = Callable()
@@ -45,6 +46,9 @@ var set_door_active: Callable = Callable()
 var set_entrance_open: Callable = Callable()
 var build_depth_lists: Callable = Callable()
 var clear_enemy_max_health_cache: Callable = Callable()
+var enemy_health_damaged_callback: Callable = Callable()
+var enemy_health_healed_callback: Callable = Callable()
+var enemy_health_changed_callback: Callable = Callable()
 
 
 func is_valid() -> bool:
@@ -155,13 +159,42 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	var old_sibling_index := current_actor.get_index()
 	parent.add_child(replacement)
 	parent.move_child(replacement, old_sibling_index)
+	if slime_tuning != null:
+		replacement.tuning = slime_tuning
+	_transfer_enemy_hud_children(current_actor, replacement)
 	_replace_actor_reference(slimes, current_actor, replacement)
 	_replace_actor_reference(actor_sprites, current_actor, replacement)
 	_replace_actor_reference(collision_sprites, current_actor, replacement)
 	_replace_actor_reference(depth_sprites, current_actor, replacement)
 	_replace_actor_reference(occluder_sprites, current_actor, replacement)
+	if last_valid_positions.has(current_actor):
+		last_valid_positions[replacement] = last_valid_positions[current_actor]
+		last_valid_positions.erase(current_actor)
+	if hud_controller != null:
+		hud_controller.rebind_enemy_actor(current_actor, replacement)
+	_bind_enemy_health_signals(replacement)
 	current_actor.queue_free()
 	return replacement
+
+
+func _transfer_enemy_hud_children(old_actor: Sprite2D, new_actor: Sprite2D) -> void:
+	for child_name in ["HpOverhead", "HpOverheadFill", "HpOverheadDamageFill", "AggroMarker", "EliteOverheadSymbol"]:
+		var child := old_actor.get_node_or_null(child_name)
+		if child != null:
+			old_actor.remove_child(child)
+			new_actor.add_child(child)
+
+
+func _bind_enemy_health_signals(actor: SlimeActor) -> void:
+	var health := actor.get_node_or_null("Health") as HealthComponent
+	if health == null:
+		return
+	if enemy_health_damaged_callback.is_valid():
+		health.damaged.connect(enemy_health_damaged_callback.bind(actor))
+	if enemy_health_healed_callback.is_valid():
+		health.healed.connect(enemy_health_healed_callback.bind(actor))
+	if enemy_health_changed_callback.is_valid():
+		health.health_changed.connect(enemy_health_changed_callback.bind(actor))
 
 
 func _replace_actor_reference(actors_to_update: Array[Sprite2D], old_actor: Sprite2D, new_actor: Sprite2D) -> void:

@@ -1373,6 +1373,29 @@ func ensure_overhead_bar(slime: Sprite2D, frame_template: Sprite2D, fill_templat
 	register_overhead_bar(slime, frame, fill, offset, duplicate_fill, pixel_particle)
 
 
+func rebind_enemy_actor(old_actor: Sprite2D, new_actor: Sprite2D) -> void:
+	if old_actor == null or new_actor == null:
+		return
+	var actor_caches: Array[Dictionary] = [
+		target_health_fill_textures,
+		target_health_damage_fill_textures,
+		target_overhead_fill_textures,
+		target_overhead_damage_fill_textures,
+		target_overhead_frames,
+		target_overhead_damage_fills,
+		target_overhead_fills,
+		target_overhead_offsets,
+		target_overhead_fill_sizes,
+		target_overhead_aggro_markers,
+		target_overhead_aggro_offsets,
+		target_overhead_elite_symbols,
+	]
+	for actor_cache in actor_caches:
+		if actor_cache.has(old_actor):
+			actor_cache[new_actor] = actor_cache[old_actor]
+			actor_cache.erase(old_actor)
+
+
 func _copy_sprite_template(template: Sprite2D, sprite_name: String) -> Sprite2D:
 	var sprite := Sprite2D.new()
 	sprite.name = sprite_name

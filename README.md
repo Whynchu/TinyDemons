@@ -99,7 +99,7 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-26; version `0.2.80`) gives us
+The latest source scan (working tree on 2026-09-26; version `0.2.81`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
@@ -288,7 +288,7 @@ magic.
 
 ## Web build
 
-Current game version: **0.2.80**. Every push to `main` must increment the
+Current game version: **0.2.81**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 
