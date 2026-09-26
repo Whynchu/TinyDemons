@@ -307,7 +307,9 @@ Binding cost merely to pass. A generated or authored route must guarantee:
 
 - the input flame needed for the recipe is reachable;
 - the recipe's second flame is reachable;
-- a matching entrance Orb is reachable before each mandatory fusion gate;
+- if a fusion gate is used as a required door, a matching entrance Orb is
+  reachable before it (generated R6+ gates are optional bonus content and are
+  not required on the critical path);
 - the required Orb Room and door are reachable after the fusion, without
   inheriting an unrelated ordinary color key;
 - the route does not depend on an unbound element surviving an arbitrary
@@ -318,22 +320,23 @@ Optional secret or mastery doors may explicitly require a permanently bound
 element, but that must be communicated as optional content rather than used as
 the critical path.
 
-### 7.1 Generated fusion curriculum
+### 7.1 Generated fusion curriculum — superseded
 
-Procedural runs begin requiring a fusion result on Run 6 (the generator's
+**Superseded.** The mandatory generated fusion curriculum described here was
+superseded by
+[`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md),
+which removes mandatory fusion chains from the generated critical path. Fusion
+results are now optional bonus-content gates, not required route progress. The
+paragraph below is retained as implementation history only; do not treat it as
+the current generated-route contract.
+
+~~Procedural runs begin requiring a fusion result on Run 6 (the generator's
 `completed_runs >= 5` threshold). Run 6 places two input flames on the main
-route before a mandatory result-element door. The input pair rotates across
-the three base combinations on later early fusion runs so the curriculum does
-not always teach the same hybrid first.
-
-Run 8 and later teach the chained Water + Electric → Grass, then Grass + Water
-→ Ice sequence. The Grass and Ice gates are each placed after their required
-input flames. The player charges the shared Orb Room with each result before
-passing its corresponding entrance-orb gate. The second Orb is placed beside
-the depth-10 Water fire room, before the Ice gate, rather than behind that
-gate. Layout validation performs a reachability pass for every generated
-fusion gate, including reaching an Orb Room with the required result, and the
-solved state is latched when the Orb charge opens the route.
+route before a mandatory result-element door.~~ Run 8 and later chained
+Water + Electric → Grass, then Grass + Water → Ice sequences are likewise
+historical. Layout validation still performs a reachability pass for any
+generated fusion gate and latches its solved state, but those gates are no
+longer mandatory on the critical path.
 
 ## 8. Chroma and zero-MP behavior
 

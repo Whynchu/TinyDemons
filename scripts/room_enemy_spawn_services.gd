@@ -104,16 +104,17 @@ func is_slime_spawn_locked(slime: Sprite2D) -> bool:
 
 func configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 	var definition := EnemyFactory.definition(StringName(variant))
-	var palette := String(definition.id)
+	var palette := String(definition.variant_id)
 	slime.set("variant", palette)
 	slime.set_meta("element", definition.element)
 	slime.set_meta("damage_contract", String(definition.damage_contract))
+	slime.set_meta("visual_source", definition.visual_source)
 	var actor := slime as SlimeActor
 	if actor != null:
 		EnemyFactory.configure_actor(actor, definition)
 	var stats := slime.get_node_or_null("Stats") as StatsComponent
 	if stats != null and actor == null:
-		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.id)
+		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.variant_id)
 	configure_slime_ambush(slime, false)
 	if clear_enemy_max_health_cache.is_valid():
 		clear_enemy_max_health_cache.call()

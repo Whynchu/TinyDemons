@@ -6,7 +6,7 @@ enemy preview workbench. The authored Hub world now has a standalone animated
 design preview; other content surfaces are still only partially wired. Read
 the trap table below before editing any `.tres`.
 
-Updated: 2026-09-22
+Updated: 2026-09-26
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -31,7 +31,7 @@ traps:
 |---|---|---|
 | `dungeon_generation_policy.tres`: `first_orb_depth`, `first_special_depth`, `primary_flames` | Ignored. The generator uses `dungeon_layout_generator.gd:31-32,50`. | 3 |
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
-| `item_catalog.tres`: records added only to `definitions` (not `live_base_definitions`) | Never drop or appear in the shop; the legacy section is loadable but excluded from generation. | 2 |
+| Retired `item_catalog.tres` expansion records | Removed in the schema-14 catalog cleanup; current baseline/set data and standalone `ItemDefinition` resources remain. | resolved |
 | Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
 | `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs; element identity still spans parallel enums/adapters, and typed consolidation remains Slice 2 work. | 2 |
 
@@ -221,14 +221,22 @@ Current owners:
 
 Workflow (current, typed enemy-definition path):
 
-1. Decide whether the addition is a visual variant, gameplay element, behavior
-   variant, or a new actor class.
-2. Create one standalone definition with
-   `pwsh -File tools/dev.ps1 new enemy <id>`; this writes
+1. Decide whether this is a variant of an existing enemy family or a new
+   family. The authored Slime entries use `type_id = slime`; Skeleton is the
+   first separate family and uses `type_id = skeleton`. New families still
+   need an actor route in `EnemyFactory`; changing a variant's `type_id` alone
+   does not create a new enemy.
+2. Create one standalone variant definition with
+   `pwsh -File tools/dev.ps1 new variant <id>`; this writes
    `resources/definitions/<id>.tres`. Existing embedded catalog entries in
    `slime_variant_catalog.tres` remain valid, but new content should use the
-   one-file path. Set the stable `id`, element, display name, `base_stats`,
-   `growth_weights`, `damage_contract`, and explicit `visual_source`.
+   one-file path. Set `id` to the stable variant ID and `type_id` to the owning
+   family (`slime` for Slime variants; `skeleton` for Skeleton entries),
+   then author the element, display name, `base_stats`, `growth_weights`,
+   `damage_contract`, and explicit `visual_source`. The resource keeps the
+   serialized property name `id`; code and the workbench also expose it as
+   `variant_id`. `visual_source` is a palette ID (for example `grey`), and the
+   workbench selector and runtime renderer resolve that same field.
 3. Set encounter metadata on that same definition when it should enter normal
    generation: `encounter_role` (`baseline`, `matchup`, `late`, or `shadow`),
    `encounter_weight`, `encounter_min_rank`, and any preferred/matchup weight.
@@ -239,7 +247,8 @@ Workflow (current, typed enemy-definition path):
    selected slot from the definition.
 5. If the variant introduces a genuinely new palette or behavior, extend that
    narrow owner and add a focused golden assertion. Reusing an existing
-   `visual_source` is data-only.
+   `visual_source` is data-only; invalid palette IDs fail enemy-definition
+   validation.
 6. Run `pwsh -File tools/dev.ps1 verify`, then preview the definition with
    `pwsh -File tools/dev.ps1 preview enemy <id>` and run
    `pwsh -File tools/dev.ps1 test -Suite content`. Verify normal, scaled/boss,
@@ -251,6 +260,98 @@ The generic `ContentDefinition`/`ContentRegistry` layer remains future work;
 the current enemy path already removes the old parallel registries and central
 encounter branches.
 
+Open `scenes/enemy_preview_workbench.tscn` for the enemy design preview, or run
+`pwsh -File tools/dev.ps1 preview enemy <id> -Editor` to open a selected enemy.
+In the workbench Inspector, `Enemy` selects the actor family (`Slime` or
+`Skeleton`) and `Variant` selects an authored entry from that family.
+Variant picker labels omit the redundant family name and stable ID, so the
+choices read `Normal`, `Fire`, `Guard`, and so on. `Selected Variant ID` shows
+the stable ID. The picker adds an ID only if two variants in one family share
+a display name. `Ember Guard` keeps its authored name. `Selected Type ID` shows
+its actor family (`slime`), and `Selected Enemy Name` shows its friendly name.
+Slime entries use the `slime` type and share the Slime actor implementation.
+Skeleton has its own factory actor route and authored idle, walk, attack, and
+between-attack sheets. Its attack throws the authored four-frame bone projectile.
+Skeleton variants are `skeleton` (Neutral), `skeleton_fire`, `skeleton_water`,
+`skeleton_electric`, `skeleton_grass`, `skeleton_shadow`, `skeleton_ground`,
+and `skeleton_ice`. Elemental variants share the Skeleton art and use the
+elemental damage contract. Normal Slime encounter rolls filter by `type_id`,
+so these definitions cannot enter the Slime pool accidentally.
+
+For a live gameplay check, select the `Main` root in `scenes/main.tscn`, set
+`debug_enemy_test_id` to `skeleton` (or an elemental Skeleton ID) in the
+Inspector, save the scene, then start or continue a run and enter an encounter.
+The Output panel confirms the resolved ID; the override forces encounter slots
+to use that definition and its actor family. Setting the ID alone does not skip
+the title. To start directly in a boss room, enable `debug_start_in_boss_room`
+as well; the debug encounter keeps the Skeleton at normal size. Clear
+`debug_enemy_test_id` when finished to restore normal room generation. This
+local debug override does not change encounter weights.
+
+The workbench preview displays the Skeleton's authored frames with geometry
+guides enabled by default. `Geometry Guides` and its visible-overlay options
+toggle collision, body, and attack guides; the selected guide can be dragged in
+the preview and saved to the enemy definition. For live positioning checks,
+`debug_actor_geometry` draws the actor foot anchor, collision bounds, and body
+hitbox in gameplay.
+
+To add a Slime
+variant, select
+the closest existing variant, enter a
+lowercase variant ID under `Add Variant`, and click `Create Variant from
+Selected`. The workbench copies that variant's stats, geometry, palette, and
+encounter settings into a new standalone definition, derives its initial name
+from the ID, and selects it for editing. The Inspector presents the selected
+definition as editable sections instead of exposing its raw dictionaries and
+polygon arrays:
+
+- `Identity & Appearance`: display name, element, damage type, and appearance
+  palette.
+- `Combat & Growth`: starting values for all six stats, followed by each stat's
+  growth weight per level.
+- `Encounter`: spawn role, weight, minimum rank, matchup and preference weights,
+  and whether preferred selection is allowed.
+- `Preview`: animation state, facing, actor scale, playback, and frame timing.
+- `Geometry Guides`: independent guide visibility and a viewport edit target.
+- `Save & Validation`: current edit/validation status and the save action.
+
+The separate `Add Enemy Family` section marks the family boundary. The
+workbench can create variants for a registered family; a new runtime family
+still needs a family definition and a supported actor route in `EnemyFactory`
+before it can be previewed or spawned. Skeleton is the current second family
+proof. The family workflow remains: create the family (stable ID, display name,
+actor route), create its first variant from that family, and add sibling
+variants as needed.
+
+Edits appear in the preview as you make them. The workbench marks unsaved edits
+and blocks enemy switching or creation until you save. Click `Save Enemy
+Changes` to write the owning resource: standalone definitions save to their own
+`.tres`, while embedded catalog definitions save through
+`slime_variant_catalog.tres`. The variant ID is the stable identity used by
+the current catalog and runtime compatibility paths. Keep it stable after
+content is referenced; create a new variant ID for a distinct entry. The type ID
+selects the actor family and must match a supported family (`slime` or
+`skeleton` at present).
+
+In `Geometry Guides`, enable the overlay you want, then choose the target under
+`Edit in Preview`. Drag polygon vertices or drag inside a rectangle to move it;
+drag a rectangle corner to resize. Edits snap to half-pixels. Undo, redo, and
+reset operate on canvas edits to the selected guide; other Inspector edits use
+Godot's regular undo history. These fields live on the selected
+`EnemyDefinition`; `EnemyFactory` applies the same authored geometry to this
+preview and to runtime actors.
+Definition validation rejects polygons with infinite or NaN coordinates,
+zero area, or self-intersections, and rectangles with zero or negative sizes.
+
+The other buttons pause/resume, step one frame, restart the selected state, and
+refresh the preview and catalog. Idle breathing and move squish are
+presentation-only; the preview uses the enemy factory and shared slime frame
+builders but does not run AI or combat. The sprite is positioned inside the
+project's 240-by-160 preview canvas. Boss jump/slam sheets require `Boss actor`
+preview size. Death currently has no authored slime frame sequence and remains
+an effect-preview gap. Automatic asset reimport refresh and the isolated
+interactive workbench remain open M1 work.
+
 Do not implement a new enemy only as a recolor if its combat identity differs.
 Do not alter global tuning to solve a room-specific placement problem.
 
@@ -258,8 +359,9 @@ Do not alter global tuning to solve a room-specific placement problem.
 
 Current owners:
 
-- legacy definitions and stable IDs: `resources/definitions/item_catalog.tres`
-  (`ItemCatalogData`), loaded by `scripts/item_catalog.gd`;
+- live baseline/set definitions and retained metadata:
+  `resources/definitions/item_catalog.tres` (`ItemCatalogData`), loaded by
+  `scripts/item_catalog.gd`;
 - new standalone definitions: `resources/definitions/items/*.tres`
   (`ItemDefinition`), discovered by the same catalog registry;
 - serialized instance identity: `scripts/item_instance.gd`;
@@ -274,7 +376,8 @@ Workflow (current, during Slice 2 migration):
 1. Choose one of the six canonical slots: weapon, head, body, arm, shield, or
    accessory. Preserve the legacy `armor` compatibility key where required.
 2. For a new live item, run `pwsh -File tools/dev.ps1 new item <id>` and edit
-   the generated `resources/definitions/items/<id>.tres`. Set the stable ID,
+   the generated `resources/definitions/items/<id>.tres`, or select a typed seed
+   in the workbench and use `Create Item from Selected`. Set the stable ID,
    display name, slot, tier/stat, bonuses, source tags, rarity gates, and any
    effect status on that one typed resource.
 3. Do not edit `item_catalog.tres`, `live_base_ids`, `definition_metadata`,
@@ -285,17 +388,35 @@ Workflow (current, during Slice 2 migration):
    `pwsh -File tools/dev.ps1 verify`. The validator checks every standalone
    `ItemDefinition`, the report lists its ID, and the registry smoke covers
    validation plus stable-ID save round-trip.
-5. Check the item at each supported rarity/enhancement path without changing
-   unrelated balance. Set synthesis and the remaining legacy catalogue
-   migration are still Slice 2 work.
+5. Run `pwsh -File tools/dev.ps1 preview item <id>` and inspect each supported
+   rarity/enhancement path in the workbench without changing unrelated balance.
+   Remaining live baseline/set data consolidation is still Slice 2 work.
 
 Known traps: `visual_id` is never read (item art is slot-level), `demon_cloak`
-is special-cased across `player_profile.gd`, `run_state.gd`,
-`equipment_component.gd`, and `hub_flow_controller.gd`. The legacy catalog
+has a special acquisition/equip rule in `player_profile.gd`, `run_state.gd`,
+`equipment_component.gd`, and `hub_flow_controller.gd`. Live baseline/set data
 still uses dictionaries and set synthesis still lives in `item_catalog.gd`, but
-standalone `ItemDefinition` resources now have a schema validator and one
-registry path. Do not treat this migration proof as a completed item preview or
-full catalog conversion.
+the retired expansion definitions and their transmutation bindings are purged.
+Schema-14 profile loading removes saved instances of those retired IDs and
+restores starter equipment for slots they left empty. Standalone
+`ItemDefinition` resources use the same catalog path and validator. The design
+workbench covers typed editing and card/drop/instance/effect previews;
+per-item visual ownership and full catalog conversion remain unfinished.
+
+Open `scenes/item_preview_workbench.tscn` to browse the item design preview, or
+run `pwsh -File tools/dev.ps1 preview item <id> -Editor` to open a selected item.
+The `Item` picker uses `ItemCatalog.playable_definition_ids()`: current
+baseline/set items, standalone live `ItemDefinition` resources, and special-
+source items such as Demon Cloak. Retired expansion records are deleted and
+cannot be selected. Catalog-owned baseline/set entries are preview-only;
+standalone `ItemDefinition` resources can be edited, duplicated with `Create
+Item from Selected`, or saved with `Save Item Changes`.
+`Preview` selects Card, Drop, Instance, or Effects;
+rarity, enhancement, seed, and transmutation controls configure a temporary
+preview instance. The preview uses `ItemCatalog` calculations and does not change
+profile or gameplay state. Item drop art still resolves by slot; `visual_id` is
+shown for authoring but is not yet an item-specific art reference. The headless
+check is `pwsh -File tools/dev.ps1 preview item <id>`.
 
 Gear identity includes more than the display name. Enhancement, rarity,
 affixes, random stats, transmutation, and fusion investment determine the
@@ -394,7 +515,7 @@ surfaces.
 
 Current steps:
 
-1. Run `tools/dev.ps1 new enemy <id>` and edit the generated definition with
+1. Run `tools/dev.ps1 new variant <id>` and edit the generated definition with
    its stable ID, stats, element, damage contract, `visual_source`, and
    encounter fields.
 2. Run `tools/dev.ps1 verify`; the report should list the new ID and the

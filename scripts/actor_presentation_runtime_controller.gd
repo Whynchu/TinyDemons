@@ -67,15 +67,13 @@ func build_slime_direction_textures(root: Object) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	var paths := {}
 	for slime in slimes:
-		# All slime direction frames use the authored green source. The palette
-		# material is the single source of truth for the displayed variant, just
-		# like the attack/spawn/shocked libraries below. Loading SlimeRed/Blue/etc
-		# here as well would apply a green->palette shader to an already recolored
-		# image, which makes idle and attack frames disagree.
-		var source := "green"
+		if slime is SkeletonActor:
+			(slime as SkeletonActor).apply_authored_visuals()
+			continue
 		var is_boss := float(slime.get_meta("encounter_scale", 1.0)) > 1.0
-		var prefix := "BOSS" if is_boss else ""
-		paths[slime] = ["res://assets/artwork/%sSlime%sLeft.png" % [prefix, source.capitalize()], "res://assets/artwork/%sSlime%sRight.png" % [prefix, source.capitalize()]]
+		# All slime direction frames use the same green source as the design
+		# preview. The palette material recolors it for each enemy definition.
+		paths[slime] = SlimeVisualComponent.direction_texture_paths(is_boss)
 	SlimeVisualComponent.build_direction_textures(slimes, paths, Callable(root, "_load_texture_or_null"))
 
 
@@ -200,6 +198,12 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 		shadow.name = "SlimeFloorShadow"
 		shadow.centered = false
 		slime.add_child(shadow)
+	if slime is SkeletonActor:
+		var gameplay := root as GameplayState
+		var shadow_controller := gameplay.shadow_controller
+		if shadow_controller != null:
+			shadow_controller.update_enemy_drop_shadow(gameplay, slime, shadow, gameplay.DEPTH_Z_SCALE)
+		return
 	SlimeVisualComponent.apply_palette_material(slime)
 	var animation_name := String(slime.get_meta("runtime_animation", "idle"))
 	var frame := int(slime.get_meta("runtime_animation_frame", 0))
@@ -398,4 +402,8 @@ func sync_actor_geometry_offset(root: Object, actor: Sprite2D) -> void:
 		if not geometry.has_meta("authored_position"):
 			geometry.set_meta("authored_position", geometry.position)
 		var authored_position := geometry.get_meta("authored_position") as Vector2
-		geometry.position = authored_position + actor.offset
+		# Skeleton artwork is offset as a whole to align its 36x36 canvas with
+		# the shared floor anchor. Its collision guides are authored in that same
+		# anchored coordinate space, so shifting them with Sprite2D.offset moves
+		# the feet and body hitbox away from the visible artwork.
+		geometry.position = authored_position if actor is SkeletonActor else authored_position + actor.offset

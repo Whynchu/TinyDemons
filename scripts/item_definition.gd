@@ -1,3 +1,4 @@
+@tool
 extends Resource
 class_name ItemDefinition
 
@@ -10,6 +11,7 @@ class_name ItemDefinition
 @export var slot: StringName = &""
 @export var gear_tier: StringName = &"basic"
 @export var tier_stat: StringName = &""
+@export var tier_stats: Array[String] = []
 @export var bonuses: Dictionary = {}
 @export var description := ""
 @export var price := 0
@@ -44,6 +46,9 @@ func validate() -> Array[String]:
 		problems.append("slot must be one of the six canonical equipment slots")
 	if gear_tier not in [&"plain", &"basic", &"set", &"legacy", &"expansion"]:
 		problems.append("unknown gear_tier '%s'" % gear_tier)
+	for stat: String in tier_stats:
+		if stat not in ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]:
+			problems.append("unknown tier_stats entry '%s'" % stat)
 	if price < 0:
 		problems.append("price must be non-negative")
 	if minimum_run_rank < 1:
@@ -66,6 +71,7 @@ func to_record() -> Dictionary:
 		"slot": slot,
 		"gear_tier": gear_tier,
 		"tier_stat": tier_stat,
+		"tier_stats": tier_stats.duplicate(),
 		"bonuses": bonuses.duplicate(true),
 		"price": price,
 		"source_tags": source_tags.duplicate(),

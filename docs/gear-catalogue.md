@@ -1,18 +1,22 @@
 # Tiny Demons — Authored Gear Catalogue
 
-Status: approved current catalogue reference; future-effect rows remain gated
+Status: historical design catalogue; its retired expansion item records are no longer in the runtime backend
 
-Updated: 2026-09-11
+Updated: 2026-09-26
 
 ## Status
 
-**Approved catalogue — all 44 rows are authored in the runtime schema and
-available to the shared read model.** Names and numerical values remain
-balance-review material. The slot structure, source metadata, and content direction are approved;
-implementation uses the contracts in [`gear-catalogue-spec.md`](gear-catalogue-spec.md)
-and [`gear-effect-contracts.md`](gear-effect-contracts.md). Rows with
-`future` effect status remain visible to inspection but are gated from live
-generation until their owner is implemented.
+**Historical expansion proposal.** Legacy-only rows have been removed from the
+runtime backend; overlapping Plain/Basic baseline IDs remain supplied by the
+live baseline catalog. The Demon Cloak row remains as design rationale for the
+separate active special item, now defined by
+`resources/definitions/items/demon_cloak.tres`. The current game uses its live
+Plain/Basic baselines, generated set pieces, standalone typed `ItemDefinition`
+resources, and Demon Cloak. See
+[`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) for the current item workflow. The
+slot/stat/effect design contracts remain in
+[`gear-catalogue-spec.md`](gear-catalogue-spec.md) and
+[`gear-effect-contracts.md`](gear-effect-contracts.md).
 
 The catalogue deliberately distinguishes an item’s *identity* from its rarity.
 One authored base can produce Common through Mythic instances while retaining
@@ -44,9 +48,9 @@ the same family question and visual identity.
 | `rootbreaker` | ROOTBREAKER | New | Maul | P: DEF or STR; S: knockback/charge lane | Can weight and positioning control a room without becoming a raw damage stick? |
 | `mindweave_rod` | MINDWEAVE ROD | New | Focus/Rod | P: INT; S: MND and Imbue support | Can a magic-forward weapon make Triangle and Imbue distinct choices? |
 
-Existing weapon transmutation associations remain explicit:
+Retired weapon transmutation associations (historical):
 
-| Base | Current transmutation | Catalogue role |
+| Base | Retired transmutation | Historical design role |
 | --- | --- | --- |
 | SOLDIER SWORD | Gathering Edge | Multi-target Attack 1 into Attack 2 |
 | BLOOD BLADE | Blood Feed | Damage-to-healing identity |
@@ -87,9 +91,9 @@ second Accessory with a general gold, Souls, or drop-rate multiplier.
 | `rootplate` | ROOTPLATE | New | Heavy plate | P: DEF; S: knockback resistance and AGI penalty | Can the player hold ground against forceful enemies? |
 | `demon_cloak` | DEMON CLOAK | New | Cloak | P: AGI + DEF (both scale); S: VIT, MND; occupies Body + Head | Can a premium merchant cloak become the best-in-slot body at mythic without ever dropping? |
 
-Existing Body transmutation:
+Retired Body transmutation:
 
-| Base | Current transmutation | Catalogue role |
+| Base | Retired transmutation | Historical design role |
 | --- | --- | --- |
 | BLOODWOVEN TUNIC | Bloodwoven Core | Core HP and VIT-health identity |
 
@@ -132,9 +136,9 @@ running-attack boundaries where possible. They may not directly award Style.
 | `mirror_ward` | MIRROR WARD | New | Ward shield | P: MND; S: elemental ward and lighter guard | Can magic defense matter while the shield remains interactive? |
 | `frostwall` | FROSTWALL | New | Heavy shield | P: DEF; S: Ice Ward and AGI penalty | Can a stable wall build control elemental pressure? |
 
-Existing Shield transmutation:
+Retired Shield transmutation:
 
-| Base | Current transmutation | Catalogue role |
+| Base | Retired transmutation | Historical design role |
 | --- | --- | --- |
 | LIVING BULWARK | Bastion Core | DEF-scaled durability and Attack 2 knockback charges |
 
@@ -151,9 +155,9 @@ Existing Shield transmutation:
 | `runebound_knot` | RUNEBOUND KNOT | New | Knot | P: AGI or INT; combo-window utility | Can sustained contact be supported without directly adding Style? |
 | `elemental_knot` | ELEMENTAL KNOT | New | Knot | P: INT or MND; Imbue Resonance | Can matching an active aspect make the composite weapon contract sing? |
 
-Existing Accessory transmutation:
+Retired Accessory transmutation:
 
-| Base | Current transmutation | Catalogue role |
+| Base | Retired transmutation | Historical design role |
 | --- | --- | --- |
 | DUELIST SEAL | Duelist Focus | Locked-target STR scaling with an off-target tradeoff |
 

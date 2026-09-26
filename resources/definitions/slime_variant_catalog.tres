@@ -6,7 +6,7 @@
 [sub_resource type="Resource" id="EnemyDefinition_grey"]
 script = ExtResource("2_enemy")
 id = &"grey"
-display_name = "Normal Slime"
+display_name = "Normal"
 base_stats = {
 "AGI": 2,
 "DEF": 2,
@@ -23,12 +23,15 @@ growth_weights = {
 "STR": 0.24,
 "VIT": 0.24
 }
+visual_source = "grey"
 encounter_role = &"baseline"
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_red"]
 script = ExtResource("2_enemy")
 id = &"red"
-display_name = "Fire Slime"
+display_name = "Fire"
 element = 1
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -51,11 +54,13 @@ visual_source = "red"
 matchup_weight = 0.35
 preferred_weight = 0.75
 allow_preferred = true
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_blue"]
 script = ExtResource("2_enemy")
 id = &"blue"
-display_name = "Water Slime"
+display_name = "Water"
 element = 2
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -78,11 +83,13 @@ visual_source = "blue"
 matchup_weight = 0.35
 preferred_weight = 0.75
 allow_preferred = true
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_yellow"]
 script = ExtResource("2_enemy")
 id = &"yellow"
-display_name = "Electric Slime"
+display_name = "Electric"
 element = 3
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -101,16 +108,19 @@ growth_weights = {
 "STR": 0.12,
 "VIT": 0.16
 }
+visual_source = "yellow"
 encounter_role = &"late"
 encounter_weight = 1.0
 encounter_min_rank = 5
 preferred_weight = 0.75
 allow_preferred = true
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_green"]
 script = ExtResource("2_enemy")
 id = &"green"
-display_name = "Grass Slime"
+display_name = "Grass"
 element = 4
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -132,11 +142,13 @@ growth_weights = {
 matchup_weight = 0.35
 preferred_weight = 0.75
 allow_preferred = true
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_purple"]
 script = ExtResource("2_enemy")
 id = &"purple"
-display_name = "Shadow Slime"
+display_name = "Shadow"
 element = 5
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -155,14 +167,17 @@ growth_weights = {
 "STR": 0.36,
 "VIT": 0.06
 }
+visual_source = "purple"
 encounter_role = &"shadow"
 encounter_weight = 0.12
 encounter_min_rank = 5
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_orange"]
 script = ExtResource("2_enemy")
 id = &"orange"
-display_name = "Ground Slime"
+display_name = "Ground"
 element = 6
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -181,14 +196,17 @@ growth_weights = {
 "STR": 0.08,
 "VIT": 0.28
 }
+visual_source = "orange"
 encounter_role = &"late"
 encounter_weight = 1.0
 encounter_min_rank = 5
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_aquamarine"]
 script = ExtResource("2_enemy")
 id = &"aquamarine"
-display_name = "Ice Slime"
+display_name = "Ice"
 element = 7
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -207,14 +225,17 @@ growth_weights = {
 "STR": 0.14,
 "VIT": 0.1
 }
+visual_source = "aquamarine"
 encounter_role = &"late"
 encounter_weight = 1.0
 encounter_min_rank = 5
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_crimson"]
 script = ExtResource("2_enemy")
 id = &"crimson"
-display_name = "Crimson Slime"
+display_name = "Crimson"
 element = 1
 damage_contract = &"elemental_slime"
 base_stats = {
@@ -237,11 +258,13 @@ visual_source = "red"
 encounter_role = &"late"
 encounter_weight = 0.6
 encounter_min_rank = 5
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [sub_resource type="Resource" id="EnemyDefinition_guard_slime"]
 script = ExtResource("2_enemy")
 id = &"guard_slime"
-display_name = "Guard Slime"
+display_name = "Guard"
 base_stats = {
 "AGI": 0,
 "DEF": 5,
@@ -258,9 +281,12 @@ growth_weights = {
 "STR": 0.08,
 "VIT": 0.4
 }
+visual_source = "grey"
 encounter_role = &"late"
 encounter_weight = 0.5
 encounter_min_rank = 3
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
 [resource]
 script = ExtResource("1_catalog")

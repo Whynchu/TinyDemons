@@ -55,10 +55,10 @@ func _initialize() -> void:
 
 	# + packages scale price steeply: ++ is clearly more valuable than +, and
 	# +++ on a rare item is a premium purchase.
-	var plain_sword := ItemInstance.new(); plain_sword.definition_id = &"soldier_sword"; plain_sword.rarity = &"common"; plain_sword.quality = 1.0
-	var plus_sword := ItemInstance.new(); plus_sword.definition_id = &"soldier_sword"; plus_sword.rarity = &"common"; plus_sword.quality = 1.0; plus_sword.random_stat_points = {"strength": 1}
-	var double_plus_sword := ItemInstance.new(); double_plus_sword.definition_id = &"soldier_sword"; double_plus_sword.rarity = &"common"; double_plus_sword.quality = 1.0; double_plus_sword.random_stat_points = {"strength": 2}
-	var triple_rare := ItemInstance.new(); triple_rare.definition_id = &"soldier_sword"; triple_rare.rarity = &"rare"; triple_rare.quality = 1.0; triple_rare.random_stat_points = {"strength": 3}
+	var plain_sword := ItemInstance.new(); plain_sword.definition_id = &"basic_sword"; plain_sword.rarity = &"common"; plain_sword.quality = 1.0
+	var plus_sword := ItemInstance.new(); plus_sword.definition_id = &"basic_sword"; plus_sword.rarity = &"common"; plus_sword.quality = 1.0; plus_sword.random_stat_points = {"strength": 1}
+	var double_plus_sword := ItemInstance.new(); double_plus_sword.definition_id = &"basic_sword"; double_plus_sword.rarity = &"common"; double_plus_sword.quality = 1.0; double_plus_sword.random_stat_points = {"strength": 2}
+	var triple_rare := ItemInstance.new(); triple_rare.definition_id = &"basic_sword"; triple_rare.rarity = &"rare"; triple_rare.quality = 1.0; triple_rare.random_stat_points = {"strength": 3}
 	_expect(catalog.price(plus_sword) > catalog.price(plain_sword), "+ gear costs more than plain gear", failures)
 	_expect(catalog.price(double_plus_sword) > catalog.price(plus_sword), "++ costs meaningfully more than +", failures)
 	_expect(catalog.price(triple_rare) > catalog.price(plain_sword) * 3, "+++ on rare gear is a very expensive premium find", failures)

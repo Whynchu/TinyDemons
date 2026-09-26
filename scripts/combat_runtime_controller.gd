@@ -1,6 +1,8 @@
 extends Node
 class_name CombatRuntimeController
 
+const SKELETON_KNOCKBACK_MULTIPLIER := 1.2
+
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
@@ -334,16 +336,17 @@ func apply_enemy_room_level(root: Object, slime: Sprite2D, level_override: int =
 
 func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> void:
 	var definition := EnemyFactory.definition(StringName(variant))
-	var palette := String(definition.id)
+	var palette := String(definition.variant_id)
 	slime.set("variant", palette)
 	slime.set_meta("element", definition.element)
 	slime.set_meta("damage_contract", String(definition.damage_contract))
+	slime.set_meta("visual_source", definition.visual_source)
 	var actor := slime as SlimeActor
 	if actor != null:
 		EnemyFactory.configure_actor(actor, definition)
 	var stats := root.call("_slime_stats", slime) as StatsComponent
 	if stats != null and actor == null:
-		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.id)
+		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.variant_id)
 	# Ambush is encounter-slot data, not an inherent property of every purple
 	# slime. RoomController applies the stored per-slot decision after variant
 	# configuration.
@@ -373,6 +376,8 @@ func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float 
 	var combo := 1.0
 	if attack_scaled:
 		combo = attack.base_knockback_multiplier(player_tuning) if attack != null else player_tuning.attack1_knockback_multiplier
+	if slime is SkeletonActor:
+		multiplier *= SKELETON_KNOCKBACK_MULTIPLIER
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_velocity = root.call("_perspective_movement", direction.normalized() * (player_tuning.attack_knockback * combo * multiplier / slime_tuning.knockback_duration))
 	combat.knockback_timer = slime_tuning.knockback_duration
@@ -799,8 +804,29 @@ func xp_reward_for_slime(root: Object, slime: Sprite2D) -> int:
 	return maxi(1, roundi(float(reward) * XP_REWARD_MULTIPLIER))
 
 
+## Simultaneous kills (for example one area attack landing on three enemies)
+## are batched into a single XP award and one floating number below the player,
+## instead of overlapping a separate "+xp" event per enemy.
+var _pending_xp_reward := 0
+var _pending_xp_flush_queued := false
+
+
 func award_slime_xp(root: Object, slime: Sprite2D) -> void:
-	var reward := xp_reward_for_slime(root, slime)
+	_pending_xp_reward += maxi(xp_reward_for_slime(root, slime), 0)
+	if _pending_xp_flush_queued:
+		return
+	_pending_xp_flush_queued = true
+	# Flush after this frame's damage resolution so every kill in the same frame
+	# contributes to one summed event.
+	call_deferred("flush_pending_xp", root)
+
+
+func flush_pending_xp(root: Object) -> void:
+	_pending_xp_flush_queued = false
+	var reward := _pending_xp_reward
+	_pending_xp_reward = 0
+	if reward <= 0:
+		return
 	var progression := {"levels": 0}
 	var profile := root.get("player_profile") as PlayerProfile
 	if profile != null:

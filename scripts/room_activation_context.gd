@@ -4,14 +4,14 @@ class_name RoomActivationContext
 ## Typed runtime input for applying one room's persisted state.
 ##
 var services: RoomActivationServices = null
-var room_controller: RoomController = null
+var room_controller: Node = null
 var room_id: StringName = &""
 var room_type: StringName = &""
 var room: DungeonGraph.RoomRecord = null
 var state: Dictionary = {}
 
 
-func _init(new_services: RoomActivationServices, new_room_controller: RoomController, new_room_id: StringName, new_room_type: StringName, new_room: DungeonGraph.RoomRecord, new_state: Dictionary) -> void:
+func _init(new_services: RoomActivationServices, new_room_controller: Node, new_room_id: StringName, new_room_type: StringName, new_room: DungeonGraph.RoomRecord, new_state: Dictionary) -> void:
 	services = new_services
 	room_controller = new_room_controller
 	room_id = new_room_id

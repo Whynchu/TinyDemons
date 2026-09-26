@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://l8mhminka4wq"]
+
+[ext_resource type="Script" uid="uid://bc7ncfaqqbeff" path="res://scripts/enemy_definition.gd" id="1_enemy"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"skeleton_ground"
+type_id = &"skeleton"
+display_name = "Ground (Skeleton)"
+element = 6
+damage_contract = &"elemental_slime"
+base_stats = {
+"AGI": 2,
+"DEF": 1,
+"INT": 1,
+"MND": 1,
+"STR": 2,
+"VIT": 2
+}
+growth_weights = {
+"AGI": 0.24,
+"DEF": 0.12,
+"INT": 0.12,
+"MND": 0.12,
+"STR": 0.2,
+"VIT": 0.2
+}
+visual_source = "orange"
+encounter_role = &"baseline"
+encounter_weight = 0.08
+collision_guide_rect = Rect2(5, 11, 6, 3)
+collision_polygon = PackedVector2Array(5, 11, 11, 11, 12, 13, 11, 15, 5, 15, 4, 13)
+body_hitbox_polygon = PackedVector2Array(8, 2, 11, 3, 12, 7, 11, 12, 9, 15, 6, 14, 4, 11, 4, 6, 5, 3)
+attack_guide_left_rect = Rect2(-1, 0, 9, 16)
+attack_guide_right_rect = Rect2(8, 0, 9, 16)

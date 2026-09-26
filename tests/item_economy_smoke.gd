@@ -7,6 +7,7 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var catalog := ItemCatalog.new()
+	_add_transmutation_fixtures(catalog)
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(catalog)
 	_expect(profile.inventory.size() == 6, "six starter items", failures)
@@ -35,13 +36,13 @@ func _initialize() -> void:
 	_expect(is_equal_approx(catalog.rarity_stat_rate(&"common"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"rare"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"epic"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"legendary"), 0.0) and is_equal_approx(catalog.rarity_stat_rate(&"mythic"), 0.0), "live gear has no hidden rarity percentage rates", failures)
 	var basic_tunic := ItemInstance.new(); basic_tunic.definition_id = &"basic_tunic"
 	var basic_shield := ItemInstance.new(); basic_shield.definition_id = &"basic_shield"
-	var bangle := ItemInstance.new(); bangle.definition_id = &"bangle"
+	var basic_charm := ItemInstance.new(); basic_charm.definition_id = &"basic_charm"
 	var tunic_bonuses := catalog.bonuses(basic_tunic)
 	var shield_bonuses := catalog.bonuses(basic_shield)
-	var bangle_bonuses := catalog.bonuses(bangle)
+	var basic_charm_bonuses := catalog.bonuses(basic_charm)
 	_expect(is_equal_approx(tunic_bonuses.get("vitality", 0.0), 1.0) and is_equal_approx(tunic_bonuses.get("defense", 0.0), 1.0), "basic tunic package is VIT 1 DEF 1", failures)
 	_expect(is_equal_approx(shield_bonuses.get("vitality", 0.0), 1.0) and is_equal_approx(shield_bonuses.get("speed", 0.0), -1.0) and is_equal_approx(shield_bonuses.get("defense", 0.0), 2.0), "basic shield package is VIT 1 SPD -1 DEF 2", failures)
-	_expect(is_equal_approx(bangle_bonuses.get("strength", 0.0), 1.0) and is_equal_approx(bangle_bonuses.get("vitality", 0.0), 1.0) and is_equal_approx(bangle_bonuses.get("speed", 0.0), 1.0), "bangle package is STR 1 VIT 1 SPD 1", failures)
+	_expect(is_equal_approx(basic_charm_bonuses.get("strength", 0.0), 1.0) and is_equal_approx(basic_charm_bonuses.get("vitality", 0.0), 1.0), "basic charm package is STR 1 VIT 1", failures)
 	var common_price_item := ItemInstance.new(); common_price_item.definition_id = &"basic_sword"; common_price_item.rarity = &"common"
 	legendary.definition_id = &"basic_sword"; legendary.quality = 1.0; mythic.definition_id = &"basic_sword"; mythic.quality = 1.0
 	_expect(catalog.price(mythic) > catalog.price(legendary) and catalog.price(legendary) > catalog.price(common_price_item), "higher rarity has higher shop value", failures)
@@ -92,17 +93,17 @@ func _initialize() -> void:
 	restored.gold = int(entry["price"])
 	_expect(restored.purchase_item(shop_item, int(entry["price"])), "purchase succeeds atomically", failures)
 	_expect(restored.gold == 0 and restored.find_item(shop_item.instance_id) != null, "purchase spends and grants", failures)
-	var fusion_base := ItemInstance.new(); fusion_base.instance_id = "fusion-equipped"; fusion_base.definition_id = &"soldier_sword"; fusion_base.rarity = &"rare"
-	var fusion_duplicate := ItemInstance.new(); fusion_duplicate.instance_id = "fusion-consume"; fusion_duplicate.definition_id = &"soldier_sword"; fusion_duplicate.rarity = &"rare"; fusion_duplicate.affixes = {"keen": 2}
+	var fusion_base := ItemInstance.new(); fusion_base.instance_id = "fusion-equipped"; fusion_base.definition_id = &"basic_sword"; fusion_base.rarity = &"rare"
+	var fusion_duplicate := ItemInstance.new(); fusion_duplicate.instance_id = "fusion-consume"; fusion_duplicate.definition_id = &"basic_sword"; fusion_duplicate.rarity = &"rare"; fusion_duplicate.affixes = {"keen": 2}
 	_expect(restored.grant_item(fusion_base), "fusion base granted", failures)
 	_expect(restored.grant_item(fusion_duplicate), "fusion duplicate granted", failures)
 	_expect(restored.equip_item(fusion_base.instance_id, catalog), "fusion base equips", failures)
 	var inventory_before_fusion := restored.inventory.size()
 	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 1, "one duplicate is available as material", failures)
 	_expect(restored.fusion_material_count(fusion_duplicate.instance_id, catalog) <= 1, "equipped base is not a material", failures)
-	var common_plus_ten := ItemInstance.new(); common_plus_ten.definition_id = &"soldier_sword"; common_plus_ten.rarity = &"common"; common_plus_ten.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
-	var common_plus_zero := ItemInstance.new(); common_plus_zero.definition_id = &"soldier_sword"; common_plus_zero.rarity = &"common"; common_plus_zero.enhancement_level = 0
-	var rare_plus_one := ItemInstance.new(); rare_plus_one.definition_id = &"soldier_sword"; rare_plus_one.rarity = &"rare"; rare_plus_one.enhancement_level = 1
+	var common_plus_ten := ItemInstance.new(); common_plus_ten.definition_id = &"basic_sword"; common_plus_ten.rarity = &"common"; common_plus_ten.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+	var common_plus_zero := ItemInstance.new(); common_plus_zero.definition_id = &"basic_sword"; common_plus_zero.rarity = &"common"; common_plus_zero.enhancement_level = 0
+	var rare_plus_one := ItemInstance.new(); rare_plus_one.definition_id = &"basic_sword"; rare_plus_one.rarity = &"rare"; rare_plus_one.enhancement_level = 1
 	_expect(restored.fusion_batch_cost(common_plus_zero, 1) == 1, "common +0 to +1 starts at 1 Soul", failures)
 	_expect(restored.fusion_batch_cost(common_plus_ten, 1) == 10, "common +10 to rare costs 10 Souls", failures)
 	_expect(restored.fusion_batch_cost(fusion_base, 1) == 11, "rare +0 to +1 costs 11 Souls", failures)
@@ -115,7 +116,7 @@ func _initialize() -> void:
 	_expect(restored.fusion_material_count(fusion_base.instance_id, catalog) == 0, "no materials remain after fusion", failures)
 	_expect(not restored.fuse_duplicates(fusion_base.instance_id, 1, catalog), "fusion fails without materials", failures)
 	_expect(restored.fusion_batch_cost(restored.find_item(fusion_base.instance_id), 1) == 12, "fusion cost scales with target enhancement", failures)
-	var overflow_item := ItemInstance.new(); overflow_item.instance_id = "overflow-salvage"; overflow_item.definition_id = &"soldier_sword"; overflow_item.rarity = &"mythic"; overflow_item.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
+	var overflow_item := ItemInstance.new(); overflow_item.instance_id = "overflow-salvage"; overflow_item.definition_id = &"basic_sword"; overflow_item.rarity = &"mythic"; overflow_item.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
 	_expect(restored.grant_item(overflow_item), "overflow item granted", failures)
 	var gold_before_salvage := restored.gold
 	_expect(not restored.can_salvage_overflow(fusion_base.instance_id, catalog), "equipped overflow item cannot salvage", failures)
@@ -123,7 +124,7 @@ func _initialize() -> void:
 	var salvage_value := restored.salvage_overflow(overflow_item.instance_id, catalog)
 	_expect(salvage_value == catalog.overflow_salvage_value(overflow_item) and restored.gold == gold_before_salvage + salvage_value, "overflow salvage grants deterministic gold", failures)
 	_expect(restored.find_item(overflow_item.instance_id) == null, "salvage consumes overflow once", failures)
-	var plain_source := ItemInstance.new(); plain_source.definition_id = &"soldier_sword"
+	var plain_source := ItemInstance.new(); plain_source.definition_id = &"basic_sword"
 	var plain_bonuses := catalog.bonuses(plain_source, 0)
 	var enhanced_item := restored.find_item(fusion_base.instance_id)
 	var enhanced_bonuses := catalog.bonuses(enhanced_item, 0)
@@ -131,15 +132,15 @@ func _initialize() -> void:
 	equipment.configure_from_profile(restored, catalog)
 	var equipped_shield := restored.find_item(restored.equipped_instance_ids["shield"])
 	_expect(not enhanced_bonuses.has("damage_rate"), "ordinary gear has no damage-rate bonus", failures)
-	var affixed := ItemInstance.new(); affixed.definition_id = &"soldier_sword"; affixed.affixes = {"keen": 2}
+	var affixed := ItemInstance.new(); affixed.definition_id = &"basic_sword"; affixed.affixes = {"keen": 2}
 	var affixed_plain := catalog.bonuses(affixed, 0)
 	affixed.enhancement_level = 1
 	var affixed_enhanced := catalog.bonuses(affixed, 0)
-	_expect(is_equal_approx(affixed_plain.get("strength", 0.0), 3.0) and is_equal_approx(affixed_enhanced.get("strength", 0.0), 3.1), "legacy affixes do not bypass the tier package", failures)
+	_expect(is_equal_approx(affixed_plain.get("strength", 0.0), 2.0) and is_equal_approx(affixed_enhanced.get("strength", 0.0), 2.1), "affix fields do not bypass the live tier package", failures)
 	_expect(not affixed_enhanced.has("damage_rate"), "damage affixes are not ordinary gear stats", failures)
 	var fusion_round_trip := PlayerProfile.new(); fusion_round_trip.load_dictionary(restored.to_dictionary())
 	_expect(fusion_round_trip.find_item(fusion_base.instance_id).enhancement_level == 1, "fusion enhancement persists", failures)
-	var bastion_shield := ItemInstance.new(); bastion_shield.instance_id = "bastion-test"; bastion_shield.definition_id = &"living_bulwark"; bastion_shield.rarity = &"epic"; bastion_shield.transmutation_id = &"bastion_core"
+	var bastion_shield := ItemInstance.new(); bastion_shield.instance_id = "bastion-test"; bastion_shield.definition_id = &"test_bastion_shield"; bastion_shield.rarity = &"epic"; bastion_shield.transmutation_id = &"bastion_core"
 	var bastion_round_trip := ItemInstance.from_dictionary(bastion_shield.to_dictionary())
 	_expect(bastion_round_trip.transmutation_id == &"bastion_core", "transmutation persists on item", failures)
 	_expect(restored.grant_item(bastion_shield) and restored.equip_item(bastion_shield.instance_id, catalog), "bastion shield equips", failures)
@@ -154,14 +155,14 @@ func _initialize() -> void:
 	_expect(transmutations.bastion_charges == 0 and transmutations.attack_knockback_multiplier() > 1.0, "attack 2 consumes bastion charges", failures)
 	transmutations.finish_attack()
 	_expect(is_equal_approx(transmutations.attack_knockback_multiplier(), 1.0), "bastion boost ends with attack", failures)
-	var duelist_seal := ItemInstance.new(); duelist_seal.instance_id = "duelist-test"; duelist_seal.definition_id = &"duelist_seal"; duelist_seal.rarity = &"epic"; duelist_seal.transmutation_id = &"duelist_focus"
+	var duelist_seal := ItemInstance.new(); duelist_seal.instance_id = "duelist-test"; duelist_seal.definition_id = &"test_duelist_accessory"; duelist_seal.rarity = &"epic"; duelist_seal.transmutation_id = &"duelist_focus"
 	_expect(restored.grant_item(duelist_seal) and restored.equip_item(duelist_seal.instance_id, catalog), "duelist seal equips", failures)
 	equipment.configure_from_profile(restored, catalog); transmutations.configure(equipment)
 	var locked_target := Sprite2D.new(); var other_target := Sprite2D.new()
 	_expect(transmutations.duelist_damage_multiplier(locked_target, locked_target, 8) > 1.0, "duelist boosts locked target with STR", failures)
 	_expect(is_equal_approx(transmutations.duelist_damage_multiplier(other_target, locked_target, 8), 0.80), "duelist penalizes other targets", failures)
 	locked_target.free(); other_target.free()
-	var gathering_sword := ItemInstance.new(); gathering_sword.instance_id = "gathering-test"; gathering_sword.definition_id = &"soldier_sword"; gathering_sword.rarity = &"epic"; gathering_sword.transmutation_id = &"gathering_edge"
+	var gathering_sword := ItemInstance.new(); gathering_sword.instance_id = "gathering-test"; gathering_sword.definition_id = &"test_gathering_weapon"; gathering_sword.rarity = &"epic"; gathering_sword.transmutation_id = &"gathering_edge"
 	_expect(restored.grant_item(gathering_sword) and restored.equip_item(gathering_sword.instance_id, catalog), "gathering sword equips", failures)
 	equipment.configure_from_profile(restored, catalog); transmutations.configure(equipment)
 	var gathered_a := Sprite2D.new(); var gathered_b := Sprite2D.new(); var outside_target := Sprite2D.new()
@@ -176,6 +177,40 @@ func _initialize() -> void:
 	equipment.free()
 	_finished = true
 	call_deferred("_finish", failures)
+
+
+func _add_transmutation_fixture(catalog: ItemCatalog, definition_id: StringName,
+		slot: StringName, bonuses: Dictionary, tier_stat: StringName,
+		transmutation_id: StringName, shield: Dictionary = {}) -> void:
+	catalog.definitions[definition_id] = {
+		"id": String(definition_id),
+		"name": "TEST %s" % String(definition_id).to_upper(),
+		"slot": slot,
+		"gear_tier": "basic",
+		"tier_stat": tier_stat,
+		"bonuses": bonuses.duplicate(true),
+		"shield": shield.duplicate(true),
+		"effects": {},
+		"source_tags": ["test_fixture"],
+		"price": 100,
+	}
+	catalog.transmutations[transmutation_id] = {
+		"definitions": [definition_id],
+		"min_rarity": "epic",
+		"name": String(transmutation_id).to_upper(),
+		"slot": slot,
+		"effects": {},
+	}
+
+
+func _add_transmutation_fixtures(catalog: ItemCatalog) -> void:
+	_add_transmutation_fixture(catalog, &"test_bastion_shield", &"shield",
+		{"agi": -2.0, "defense": 3.0, "vitality": 1.0}, &"defense",
+		&"bastion_core", {"guard_durability": 4.0, "guard_reduction": 3.0})
+	_add_transmutation_fixture(catalog, &"test_duelist_accessory", &"accessory",
+		{"agi": -1.0, "strength": 2.0}, &"strength", &"duelist_focus")
+	_add_transmutation_fixture(catalog, &"test_gathering_weapon", &"weapon",
+		{"agi": -1.0, "strength": 3.0}, &"strength", &"gathering_edge")
 
 
 func _watchdog() -> void:

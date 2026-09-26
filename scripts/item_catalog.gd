@@ -1,3 +1,4 @@
+@tool
 extends RefCounted
 class_name ItemCatalog
 
@@ -43,11 +44,29 @@ const BASIC_GEAR_DROP_WEIGHT := 5.0
 const SET_GEAR_DROP_WEIGHT := 0.5
 const RANDOM_STAT_KEYS: Array[String] = ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]
 const SET_IDS: Array[StringName] = [&"swift", &"soldier", &"guard", &"blood", &"arcane", &"soul", &"edge", &"oath", &"rune"]
+## Tombstones for definitions deliberately removed from the playable catalog.
+## PlayerProfile and RunState use this list to purge those IDs from old saves;
+## never reuse one of these IDs for a different item.
+const RETIRED_DEFINITION_IDS: Array[StringName] = [
+	&"ash_mantle", &"bangle", &"blood_blade", &"bloodwoven_tunic", &"chainmail",
+	&"chroma_talisman", &"cloth_wraps", &"duelist_gloves", &"duelist_seal",
+	&"elemental_knot", &"ember_crown", &"emberbrand", &"feather_cap", &"feather_cloak",
+	&"frostwall", &"guard_bracers", &"guardian_blade", &"iron_cuirass", &"iron_gauntlets",
+	&"iron_helm", &"iron_maul", &"living_bulwark", &"mind_circlet", &"mindweave_robe",
+	&"mindweave_rod", &"mirror_ward", &"parry_buckler", &"quick_dagger", &"rootbreaker",
+	&"rootplate", &"runebound_knot", &"sage_sleeves", &"shadow_mask", &"soldier_sword",
+	&"soul_locket", &"swift_boots", &"thorn_claws", &"thorn_guard", &"tideglass_rapier",
+	&"warrior_charm",
+]
+## Tombstones for transmutation identifiers removed with the legacy catalog.
+## Profile migration clears these values from surviving current items.
+const RETIRED_TRANSMUTATION_IDS: Array[StringName] = [
+	&"bastion_core", &"blood_feed", &"bloodwoven_core", &"duelist_focus", &"gathering_edge",
+]
 
-## Authoring data loads from resources/definitions/item_catalog.tres so the full
-## catalogue (live bases, sets, expansion records, metadata, transmutations) is
-## editor-inspectable. Instance fields keep the legacy bare-identifier call sites
-## working without a static rewrite.
+## Authoring data loads from resources/definitions/item_catalog.tres for live
+## baselines, sets, and their metadata. Standalone ItemDefinitions are discovered
+## alongside those records; instance fields keep compatibility call sites working.
 const DATA_PATH := "res://resources/definitions/item_catalog.tres"
 
 var live_base_ids: Array[StringName] = []
@@ -58,16 +77,21 @@ var definition_metadata: Dictionary = {}
 var transmutations: Dictionary = {}
 var authored_live_ids: Array[StringName] = []
 var authored_definition_resources: Array[Resource] = []
+var _catalog_data: ItemCatalogData = null
 
 
 func _init() -> void:
 	var data := load(DATA_PATH) as ItemCatalogData
 	if data == null:
 		return
+	_catalog_data = data
 	live_base_ids = data.live_base_ids
 	live_base_definitions = data.live_base_definitions
 	set_definitions = data.set_definitions
-	definitions = data.definitions
+	# Keep each catalog instance's compatibility projection private. The
+	# authored ItemCatalogData resource is shared by ResourceLoader and must not
+	# accumulate per-instance synthesized definitions.
+	definitions = data.definitions.duplicate()
 	definition_metadata = data.definition_metadata
 	transmutations = data.transmutations
 	authored_definition_resources = data.authored_definition_resources()
@@ -98,6 +122,71 @@ func live_definition_ids() -> Array[StringName]:
 		for slot: StringName in SLOTS:
 			result.append(StringName("%s_%s" % [String(set_id), String(slot)]))
 	return result
+
+
+## IDs available through current gameplay acquisition paths. This includes
+## generated/live definitions plus explicitly acquired special items such as
+## Demon Cloak, but excludes legacy dictionary records with no live source.
+func playable_definition_ids() -> Array[StringName]:
+	var result := live_definition_ids()
+	for definition_id: StringName in all_definition_ids():
+		if definition_id in result:
+			continue
+		var sources: Variant = definition_data(definition_id).get("source_tags", [])
+		if sources is Array and "cloaked_demon" in sources:
+			result.append(definition_id)
+	result.sort_custom(func(left: StringName, right: StringName) -> bool:
+		return String(left) < String(right)
+	)
+	return result
+
+
+func all_definition_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for definition_id: StringName in live_definition_ids():
+		_append_definition_id(result, definition_id)
+	for raw_id: Variant in live_base_definitions.keys():
+		_append_definition_id(result, raw_id)
+	for raw_id: Variant in definitions.keys():
+		_append_definition_id(result, raw_id)
+	for resource: Resource in authored_definition_resources:
+		if resource is ItemDefinition:
+			_append_definition_id(result, (resource as ItemDefinition).id)
+	result.sort_custom(func(left: StringName, right: StringName) -> bool:
+		return String(left) < String(right)
+	)
+	return result
+
+
+func _append_definition_id(target: Array[StringName], raw_id: Variant) -> void:
+	var definition_id := StringName(str(raw_id))
+	if definition_id.is_empty() or definition_id in target or not definition_exists(definition_id):
+		return
+	target.append(definition_id)
+
+
+func definition_resource(definition_id: StringName) -> ItemDefinition:
+	if _catalog_data == null:
+		return null
+	return _catalog_data.authored_definition_resource(definition_id)
+
+
+func definition_source_path(definition_id: StringName) -> String:
+	var resource := definition_resource(definition_id)
+	if resource != null:
+		return resource.resource_path
+	return DATA_PATH if definition_exists(definition_id) else ""
+
+
+func save_authored_definition(definition: ItemDefinition) -> int:
+	if _catalog_data == null:
+		return ERR_FILE_NOT_FOUND
+	return _catalog_data.save_authored_definition(definition)
+
+
+func invalidate_authored_definition_cache() -> void:
+	if _catalog_data != null:
+		_catalog_data.invalidate_authored_definition_cache()
 
 
 func definition_exists(definition_id: StringName) -> bool:
@@ -215,7 +304,7 @@ func definition_data(definition_id: StringName) -> Dictionary:
 	base["designer_notes"] = str(base.get("designer_notes", ""))
 	base["salvage_policy"] = str(base.get("salvage_policy", "price * %.0f%%" % (OVERFLOW_SALVAGE_RATE * 100.0)))
 	base["implementation_status"] = "starter" if bool(base.get("starter_only", false)) else "ready" if definition_is_runtime_ready(definition_id) else "future"
-	base["drop_eligible"] = definition_is_runtime_ready(definition_id) and not bool(base.get("starter_only", false))
+	base["drop_eligible"] = is_live and definition_is_runtime_ready(definition_id) and not bool(base.get("starter_only", false))
 	base["player_description"] = base.get("description", "")
 	return base
 
@@ -461,6 +550,34 @@ func generate_item(slot: StringName, generation_seed: int, level: int = 1, minim
 					eligible.append(transmutation_id)
 			if not eligible.is_empty():
 				item.transmutation_id = eligible[rng.randi_range(0, eligible.size() - 1)]
+	return item
+
+
+## Creates a deterministic, non-persistent instance for an editor preview.
+## Runtime generation continues to use generate_item(); this helper fixes the
+## selected definition while sharing the same rarity and random-roll rules.
+func create_preview_instance(definition_id: StringName, preview_seed: int = 1,
+		requested_rarity: StringName = &"", enhancement_level: int = 0,
+		transmutation_id: StringName = &"") -> ItemInstance:
+	if not definition_exists(definition_id):
+		return null
+	var definition := definition_data(definition_id)
+	var item := ItemInstance.new()
+	item.instance_id = "preview-%s" % String(definition_id)
+	item.definition_id = definition_id
+	var rarity := requested_rarity
+	if rarity.is_empty():
+		rarity = StringName(str(definition.get("rarity_floor", "common")))
+	item.rarity = _clamp_rarity_to_definition(rarity, definition_id)
+	item.quality = 1.0
+	item.enhancement_level = clampi(enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT)
+	item.fusion_count = item.enhancement_level
+	item.fusion_stat_points = item.enhancement_level
+	var rng := RandomNumberGenerator.new()
+	rng.seed = preview_seed
+	item.random_stat_points = _roll_random_stat_points(item.rarity, rng)
+	if transmutation_is_eligible(definition_id, transmutation_id, item.rarity):
+		item.transmutation_id = transmutation_id
 	return item
 
 

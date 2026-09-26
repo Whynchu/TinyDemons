@@ -432,7 +432,7 @@ MCPToolkitExtensionOptions.new("List all physics bodies in the current scene")
 ```
 
 Commands sharing a group name are collected together. The MCP client loads
-the group by calling `discover_tools({"groups": ["physics_tools"]})` or
+the group by calling `discover_tools({"request": ["physics_tools"]})` or
 by keyword search: `discover_tools({"request": "physics"})`.
 
 **Keywords** help `discover_tools` find your group when the LLM searches

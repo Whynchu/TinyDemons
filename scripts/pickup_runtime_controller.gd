@@ -42,22 +42,6 @@ const GOLD_TIER_COLORS := {
 	5: Color8(65, 166, 246),
 	1: Color8(171, 82, 54),
 }
-const ITEM_DROP_TEXTURE_PATHS := {
-	&"weapon": "res://assets/artwork/sword_pickup.png",
-	&"head": "res://assets/artwork/helm_pickup.png",
-	&"body": "res://assets/artwork/armor_pickup.png",
-	&"arm": "res://assets/artwork/hand_pickup.png",
-	&"shield": "res://assets/artwork/shield_pickup.png",
-	&"accessory": "res://assets/artwork/acc_pickup.png",
-}
-const ITEM_TYPE_LABELS := {
-	&"weapon": "SWORD",
-	&"head": "HEAD",
-	&"body": "BODY",
-	&"arm": "ARM",
-	&"shield": "SHIELD",
-	&"accessory": "ACCESSORY",
-}
 
 var chroma_light_texture: Texture2D = null
 var soul_pickup_texture_cache: Texture2D = null
@@ -82,16 +66,12 @@ func soul_pickup_texture() -> Texture2D:
 
 
 func item_drop_texture(item: ItemInstance) -> Texture2D:
-	var slot := ItemCatalog.new().definition_slot(item.definition_id)
-	var path := str(ITEM_DROP_TEXTURE_PATHS.get(slot, ""))
-	return load(path) as Texture2D if not path.is_empty() and ResourceLoader.exists(path) else placeholder_item_texture()
+	var texture := ItemVisualResolver.item_drop_texture(item)
+	return texture if texture != null else placeholder_item_texture()
 
 
 func item_type_label(item: ItemInstance) -> String:
-	if item == null:
-		return "ITEM"
-	var slot := ItemCatalog.new().definition_slot(item.definition_id)
-	return str(ITEM_TYPE_LABELS.get(slot, "ITEM"))
+	return ItemVisualResolver.item_type_label(item)
 
 
 func item_acquired_text(item: ItemInstance) -> String:
@@ -446,7 +426,17 @@ func restore_chest_item_drops(root: Object, saved_drops: Array) -> void:
 		if not (saved_value is Dictionary):
 			continue
 		var saved := saved_value as Dictionary
-		var item := ItemInstance.from_dictionary(saved.get("item", {}) as Dictionary)
+		var raw_item: Variant = saved.get("item", {})
+		if not raw_item is Dictionary:
+			continue
+		var item_data := (raw_item as Dictionary).duplicate(true)
+		var definition_id := StringName(str(item_data.get("definition_id", "")))
+		if ItemCatalog.RETIRED_DEFINITION_IDS.has(definition_id):
+			continue
+		var transmutation_id := StringName(str(item_data.get("transmutation_id", "")))
+		if ItemCatalog.RETIRED_TRANSMUTATION_IDS.has(transmutation_id):
+			item_data["transmutation_id"] = ""
+		var item := ItemInstance.from_dictionary(item_data)
 		if item.instance_id.is_empty():
 			continue
 		items.append(item)

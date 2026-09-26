@@ -1,3 +1,4 @@
+@tool
 extends Sprite2D
 class_name SlimeActor
 
@@ -43,6 +44,10 @@ static func component(actor: Sprite2D, node_name: String, component_type: Varian
 
 
 func _ready() -> void:
+	# The editor design preview assembles this actor to reuse its runtime geometry
+	# and stats wiring. Keep ordinary scene instances inert while editing.
+	if Engine.is_editor_hint():
+		return
 	if tuning == null:
 		tuning = SlimeTuning.new()
 	ensure_components()
@@ -232,19 +237,19 @@ static func start_attack_actor(root: Object, slime: Sprite2D) -> void:
 	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
 
 
-static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
+static func apply_attack_hit(root: Object, slime: Sprite2D, ranged_hit: bool = false) -> void:
 	if root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime)):
 		return
 	var player := root.get("player") as Sprite2D
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
-	if root.has_method("_play_sound"):
+	if not ranged_hit and root.has_method("_play_sound"):
 		root.call("_play_sound", "bite", -8.0, 0.95 + RandomNumberGenerator.new().randf_range(-0.08, 0.08))
 	var slime_body := root.call("_slime_body_polygon", slime) as PackedVector2Array
 	var player_rect := root.call("_collision_rect", player) as Rect2
 	var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
 	if slime_body.size() < 3:
 		return
-	if Geometry2D.intersect_polygons(slime_body, player_body).is_empty():
+	if not ranged_hit and Geometry2D.intersect_polygons(slime_body, player_body).is_empty():
 		return
 	var run_state := root.get("run_state") as RunState
 	if run_state != null:
@@ -307,7 +312,9 @@ static func apply_attack_hit(root: Object, slime: Sprite2D) -> void:
 		combat.active = false
 		combat.timer = 0.0
 		combat.hit_done = true
-		if counter_knockback_multiplier > 0.0:
+		# A blocked ranged bone throw can interrupt/stun the skeleton, but the
+		# shield counter should only shove attackers whose strike is in melee.
+		if counter_knockback_multiplier > 0.0 and not slime is SkeletonActor:
 			root.call("_knockback_slime", slime, counter_knockback_multiplier, false, false)
 		# Blocking interrupts the swing, but it still consumes the enemy's normal
 		# attack recovery. Without this, the interrupted attack can restart on the
@@ -344,6 +351,8 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		brain.notice_duration = 0.0
 		brain.notice_started = false
 		brain.notice_animation_finished = false
+		brain.notice_stagger_pending = false
+		brain.notice_stagger_timer = 0.0
 		brain.orbit_direction = 0.0
 		brain.attack_cooldown = 0.0
 		brain.blocked_repath_cooldown = 0.0

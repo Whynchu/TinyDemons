@@ -100,6 +100,7 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 	var frame_time := tuning.attack_frame_time * (tuning.boss_attack_frame_time_multiplier if is_boss else 1.0)
 	frame_time *= float(actor.get_meta("attack_speed_multiplier", 1.0))
 	var cooldown_after := tuning.attack_cooldown * (tuning.boss_attack_cooldown_multiplier if is_boss else 1.0)
+	var ranged_stationary_attack := bool(actor.get_meta("ranged_stationary_attack", false))
 	if timer > 0.0:
 		timer += delta
 		if frames.is_empty():
@@ -109,15 +110,15 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 		frame = frame_index
 		set_frame.call(actor, frame_index)
 		set_texture.call(actor, frames[frame_index])
-		var hit_frame := tuning.boss_attack_hit_frame if is_boss else tuning.attack_hit_frame
+		var hit_frame := int(actor.get_meta("attack_hit_frame_override", tuning.boss_attack_hit_frame if is_boss else tuning.attack_hit_frame))
 		var commit_frames := tuning.boss_attack_commit_frames_before_hit if is_boss else tuning.attack_commit_frames_before_hit
 		if not attack_committed and frame_index >= maxi(hit_frame - commit_frames, 0):
 			if commit_attack.is_valid():
 				commit_attack.call(actor)
-		if not hit_done and frame_index >= hit_frame - 2 and lunge_remaining <= 0.0:
+		if not ranged_stationary_attack and not hit_done and frame_index >= hit_frame - 2 and lunge_remaining <= 0.0:
 			var lunge_duration := tuning.boss_attack_lunge_duration if is_boss else regular_attack_lunge_duration
 			begin_lunge(attack_lunge_vector, lunge_duration)
-		if lunge_remaining > 0.0:
+		if not ranged_stationary_attack and lunge_remaining > 0.0:
 			var step := minf(maxf(delta, 0.0), lunge_remaining)
 			lunge_remaining = maxf(lunge_remaining - step, 0.0)
 			lunge_progress = clampf(1.0 - lunge_remaining / lunge_total, 0.0, 1.0)

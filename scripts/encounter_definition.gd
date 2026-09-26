@@ -58,8 +58,46 @@ func late_pool_entries(run_rank: int) -> Array[Dictionary]:
 		if definition == null or definition.encounter_role != &"late":
 			continue
 		if run_rank >= definition.encounter_min_rank and definition.encounter_weight > 0.0:
-			entries.append({"variant": String(definition.id), "weight": definition.encounter_weight})
+			entries.append({"variant": String(definition.variant_id), "weight": definition.encounter_weight})
 	return entries
+
+
+static func select_weighted_variant(entries: Array[Dictionary], rng: RandomNumberGenerator) -> String:
+	var total_weight := 0.0
+	for entry in entries:
+		total_weight += float(entry["weight"])
+	var roll := rng.randf_range(0.0, total_weight)
+	for entry in entries:
+		roll -= float(entry["weight"])
+		if roll <= 0.0:
+			return entry["variant"] as String
+	return "grey"
+
+
+static func ensure_room_popcorn_slot(
+	force_debug_enemy: bool,
+	shadow_bound: bool,
+	variants: Array[String],
+	levels: Array[int],
+	popcorn_flags: Array[bool],
+	popcorn_types: Array[String],
+	ambush_flags: Array[bool],
+	elite_flags: Array[bool],
+	popcorn_level: int,
+	room_popcorn_id: String
+) -> void:
+	if force_debug_enemy or popcorn_flags.has(true) or shadow_bound:
+		return
+	for index in range(variants.size() - 1, -1, -1):
+		if variants[index] == "purple" or not EnemyFactory.variant_is_type(StringName(variants[index]), &"slime"):
+			continue
+		variants[index] = "grey"
+		levels[index] = popcorn_level
+		popcorn_flags[index] = true
+		popcorn_types[index] = room_popcorn_id
+		ambush_flags[index] = false
+		elite_flags[index] = false
+		break
 
 
 func is_shadow_bound() -> bool:

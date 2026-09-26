@@ -1,3 +1,4 @@
+@tool
 extends Resource
 class_name SlimeVariantCatalogData
 
@@ -48,9 +49,11 @@ func validate() -> Array[String]:
 		if entry as EnemyDefinition == null:
 			problems.append("slime variant catalog contains a non-EnemyDefinition entry")
 	for definition in authored:
-		if seen.has(definition.id):
-			problems.append("duplicate enemy definition id '%s'" % definition.id)
-		seen[definition.id] = true
+		if definition.type_id not in [&"slime", &"skeleton"]:
+			problems.append("%s: unsupported enemy type_id '%s'" % [definition.variant_id, definition.type_id])
+		if seen.has(definition.variant_id):
+			problems.append("duplicate enemy variant id '%s'" % definition.variant_id)
+		seen[definition.variant_id] = true
 		for problem in definition.validate():
-			problems.append("%s: %s" % [definition.id, problem])
+			problems.append("%s: %s" % [definition.variant_id, problem])
 	return problems

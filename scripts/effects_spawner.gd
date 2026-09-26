@@ -53,11 +53,15 @@ func configure_item_acquisition_delivery(ui: Node2D, hud: HudController, registr
 
 
 func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
+	var gameplay := root as GameplayState
 	var tuning := root.get("effects_tuning") as EffectsTuning
 	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
 	var source_texture: Texture2D = occlusion.original_actor_textures.get(slime, slime.texture)
 	var palette := SlimeVisualComponent.frame_palette_for(slime)
-	spawn_slime_death_particles(root, source_texture, slime.global_position, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"), palette)
+	var particle_origin := slime.global_position
+	if slime is SkeletonActor:
+		particle_origin += gameplay._actor_visual_offset(slime) * slime.scale
+	spawn_slime_death_particles(root, source_texture, particle_origin, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"), palette)
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
@@ -485,7 +489,15 @@ func update_slime_notices(_root: Object, delta: float) -> void:
 		var duration := maxf(float(effect.get("duration", 0.01)), 0.01)
 		var progress := 1.0 - clampf(timer / duration, 0.0, 1.0)
 		var encounter_scale := float(slime.get_meta("encounter_scale", 1.0))
-		marker.global_position = slime.global_position + Vector2(8.0, -5.0 - 13.0 * (encounter_scale - 1.0) - progress * 3.0)
+		if slime is SkeletonActor:
+			var body_polygon := ActorGeometry.body_polygon(slime, (_root as GameplayState).ACTOR_FOOT_OFFSET)
+			if body_polygon.size() >= 3:
+				var body_bounds := ActorGeometry.global_points_bounds(body_polygon)
+				marker.global_position = Vector2(body_bounds.get_center().x, body_bounds.position.y - 3.0 - progress * 3.0)
+			else:
+				marker.global_position = slime.global_position + Vector2(8.0, -5.0 - progress * 3.0)
+		else:
+			marker.global_position = slime.global_position + Vector2(8.0, -5.0 - 13.0 * (encounter_scale - 1.0) - progress * 3.0)
 		# Keep the glyph at native 1:1 pixels; the upward motion supplies the pop.
 		marker.scale = Vector2.ONE
 		marker.modulate = Color(1.0, 1.0, 1.0, clampf(timer / minf(duration, 0.16), 0.0, 1.0))

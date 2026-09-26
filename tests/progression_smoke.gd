@@ -122,19 +122,30 @@ func _initialize() -> void:
 
 	var shield_catalog := ItemCatalog.new()
 	var base_bulwark := ItemInstance.new()
-	base_bulwark.definition_id = &"living_bulwark"
+	base_bulwark.definition_id = &"basic_shield"
 	base_bulwark.rarity = &"rare"
 	var enhanced_bulwark := ItemInstance.from_dictionary(base_bulwark.to_dictionary())
 	enhanced_bulwark.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
 	var base_shield_values := shield_catalog.shield_bonuses(base_bulwark)
 	var enhanced_shield_values := shield_catalog.shield_bonuses(enhanced_bulwark)
-	_expect(is_equal_approx(shield_catalog.combat_primary_points(base_bulwark).get("speed", 0.0), -2.0), "shield speed trade-off is part of the flat package", failures)
+	_expect(is_equal_approx(shield_catalog.combat_primary_points(base_bulwark).get("speed", 0.0), -1.0), "shield speed trade-off is part of the flat package", failures)
 	_expect(is_equal_approx(base_shield_values.get("strength_penalty", 0.0), 0.0) and is_equal_approx(base_shield_values.get("speed_penalty", 0.0), 0.0), "shield has no hidden primary-stat penalties", failures)
 	_expect(enhanced_shield_values["guard_durability"] > base_shield_values["guard_durability"], "shield guard durability still improves with enhancement", failures)
 	_expect(shield_catalog.combat_primary_points(enhanced_bulwark)["defense"] > shield_catalog.combat_primary_points(base_bulwark)["defense"], "shield DEF still improves with enhancement", failures)
-	var bloodwoven := ItemInstance.new(); bloodwoven.instance_id = "bloodwoven-test"; bloodwoven.definition_id = &"bloodwoven_tunic"; bloodwoven.rarity = &"epic"; bloodwoven.transmutation_id = &"bloodwoven_core"
-	var bloodwoven_profile := PlayerProfile.new(); bloodwoven_profile.ensure_starter_items(); bloodwoven_profile.grant_item(bloodwoven); bloodwoven_profile.equip_item(bloodwoven.instance_id)
-	var bloodwoven_equipment := EquipmentComponent.new(); bloodwoven_equipment.configure_from_profile(bloodwoven_profile)
+	var bloodwoven_catalog := ItemCatalog.new()
+	bloodwoven_catalog.definitions[&"test_blood_body"] = {
+		"name": "TEST BLOOD BODY", "slot": &"body", "gear_tier": "basic",
+		"tier_stat": "vitality", "bonuses": {"vitality": 2.0}, "effects": {},
+		"source_tags": ["test_fixture"], "price": 100,
+	}
+	bloodwoven_catalog.transmutations[&"bloodwoven_core"] = {
+		"definitions": [&"test_blood_body"], "min_rarity": "epic",
+		"name": "TEST BLOODWOVEN CORE", "slot": &"body",
+		"effects": {"core_health_rate": 0.12, "vit_health_multiplier": 0.20},
+	}
+	var bloodwoven := ItemInstance.new(); bloodwoven.instance_id = "bloodwoven-test"; bloodwoven.definition_id = &"test_blood_body"; bloodwoven.rarity = &"epic"; bloodwoven.transmutation_id = &"bloodwoven_core"
+	var bloodwoven_profile := PlayerProfile.new(); bloodwoven_profile.ensure_starter_items(bloodwoven_catalog); bloodwoven_profile.grant_item(bloodwoven); bloodwoven_profile.equip_item(bloodwoven.instance_id, bloodwoven_catalog)
+	var bloodwoven_equipment := EquipmentComponent.new(); bloodwoven_equipment.configure_from_profile(bloodwoven_profile, bloodwoven_catalog)
 	var bloodwoven_snapshot := CombatStatSnapshot.from_components(stats, bloodwoven_equipment)
 	_expect(is_equal_approx(bloodwoven_snapshot.core_health_rate_bonus, 0.12), "bloodwoven adds Core HP scaling", failures)
 	_expect(is_equal_approx(bloodwoven_snapshot.vit_health_multiplier_bonus, 0.20), "bloodwoven improves VIT health", failures)
@@ -143,12 +154,9 @@ func _initialize() -> void:
 	var bloodwoven_health := CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot)
 	_expect(bloodwoven_health > plain_health, "bloodwoven raises real maximum health", failures)
 	_expect(is_equal_approx(CombatCalculator.max_health_for_snapshot(bloodwoven_snapshot), bloodwoven_health), "ordinary gear does not add HP rate", failures)
-	var generated_legacy_found := false
 	var catalog := ItemCatalog.new()
-	for seed in 256:
-		var generated_armor := catalog.generate_item(&"armor", seed, 20, &"epic")
-		generated_legacy_found = generated_legacy_found or generated_armor.definition_id in [&"bloodwoven_tunic", &"feather_cloak", &"iron_cuirass", &"mindweave_robe"]
-	_expect(not generated_legacy_found, "new armor generation excludes legacy catalogue definitions", failures)
+	for retired_id: StringName in ItemCatalog.RETIRED_DEFINITION_IDS:
+		_expect(not catalog.definition_exists(retired_id), "%s is absent after catalog retirement" % retired_id, failures)
 	var generated_set_found := false
 	for seed in 256:
 		var generated_weapon := catalog.generate_item(&"weapon", seed, 20, &"epic")
@@ -159,6 +167,7 @@ func _initialize() -> void:
 	tall_stats.free()
 	equipment.free()
 	bloodwoven_equipment.free()
+	bloodwoven_catalog = null
 	_finished = true
 	call_deferred("_finish", failures)
 

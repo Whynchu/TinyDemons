@@ -21,10 +21,13 @@ Current gameplay includes:
 ## Current Focus
 
 The active gameplay work is the **Elemental Chroma system**: starter-flame
-attunement, Gray/elemental state, Chroma pickups and casting, and mandatory
-elemental puzzle rooms. In parallel, the codebase is entering a staged
-feature-oriented refactor so these systems have typed owners instead of
-continuing to grow inside the gameplay coordinator.
+attunement, Gray/elemental state, Chroma pickups and casting, plus elemental
+binding and flame fusion. Generated Run 6+ routes use the risk/reward plan in
+[`docs/r6-plus-risk-reward-generation-plan.md`](docs/r6-plus-risk-reward-generation-plan.md),
+which removes the older mandatory elemental/fusion gate chains from the critical
+path; elemental doors now protect optional bonus content. In parallel, the
+codebase is continuing a staged feature-oriented refactor so these systems have
+typed owners instead of growing inside the gameplay coordinator.
 
 The next combat design slice is documented in
 [`docs/elemental-slimes-and-combat-plan.md`](docs/elemental-slimes-and-combat-plan.md):
@@ -57,12 +60,13 @@ its 240x160 geometry, fixed command rail, responsive anchors, and migration
 order are tracked in
 [`docs/menu-ui-migration-plan.md`](docs/menu-ui-migration-plan.md).
 
-The next progression content slice is the approved six-slot equipment
-catalogue. Its documentation-first boundary is in
-[`docs/gear-catalogue-spec.md`](docs/gear-catalogue-spec.md), with the authored
-44-base list, effect contracts, drop rules, and implementation sequence in the
-linked companion documents. Head and Arm are approved additions; future weapon
-families remain documented extension points until their combat contracts exist.
+The six-slot equipment foundation is live, and the item system is now
+data-driven through live baseline/set definitions and standalone typed
+`ItemDefinition` resources. The legacy 44-base expansion and its transmutation
+bindings were retired from the runtime catalog in schema 14; see
+[`docs/CONTENT_AUTHORING.md`](docs/CONTENT_AUTHORING.md) for the current item
+workflow and [`docs/gear-catalogue.md`](docs/gear-catalogue.md) for the
+historical catalogue. Head and Arm remain live slots.
 
 Start with [`docs/DOCUMENTATION_MAP.md`](docs/DOCUMENTATION_MAP.md) for the
 documentation authority, then [`docs/AUDIT.md`](docs/AUDIT.md) for current
@@ -95,17 +99,17 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-24; version `0.2.75`) gives us
+The latest source scan (working tree on 2026-09-26; version `0.2.78`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 202 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 206 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
-| `gameplay_state.gd` | 1,716 lines / 286 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
-| `root.call/get/set` | 2,201 sites | Below the strict target; the remaining sites are the next vertical migration seams |
-| Tests | 141 manifest rows / 139 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
+| `gameplay_state.gd` | 1,718 lines / 286 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
+| `root.call/get/set` | 2,201 sites | Below the strict target; any future reductions should remain feature-scoped and owner-led |
+| Tests | 143 manifest rows / 141 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -179,7 +183,7 @@ When the Godot MCP editor peer is active, perform verification through MCP:
 scene inspection, script diagnostics, playtests, screenshots, and runtime
 logs. Do not run the full standalone smoke runner from that session. It starts
 one separate Godot process per selected test. The default release gate is
-currently 44 paths; the explicit `-TestGroup all` inventory runs all 135
+currently 44 paths; the explicit `-TestGroup all` inventory runs all 141
 runnable paths. A single headless renderer failure can create repeated Windows
 memory-error dialogs.
 
@@ -224,19 +228,23 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File tools/validate_composition.ps1 -Re
 For the current enemy and item authoring slices, use the shared command surface:
 
 ```powershell
-pwsh -File tools/dev.ps1 new enemy example_guard
+pwsh -File tools/dev.ps1 new variant example_guard
 pwsh -File tools/dev.ps1 preview enemy example_guard
 pwsh -File tools/dev.ps1 preview hub -Editor
-pwsh -File tools/dev.ps1 new item cinder_blade
+pwsh -File tools/dev.ps1 new item example_blade
+pwsh -File tools/dev.ps1 preview item example_blade
 pwsh -File tools/dev.ps1 test -Suite content
 pwsh -File tools/dev.ps1 verify
 ```
 
-`new enemy` creates one standalone definition under `resources/definitions/`;
+`new variant` creates one standalone Slime variant under `resources/definitions/`.
+`new enemy` is reserved for creating a distinct family and currently reports the
+missing family-definition/actor-route prerequisite;
 `new item` creates one under `resources/definitions/items/`. The corresponding
 registry, validator, and content contracts discover these resources without a
-central runtime or per-content test edit. Item preview is the next part of the
-Slice 2 work; the current item proof uses the registry and runtime contracts.
+central runtime or per-content test edit. `preview item <id>` opens the ItemCatalog-
+backed card/drop/instance/effect design preview; retired expansion entries have
+been removed, and drop art is still shared by equipment slot.
 
 If Windows memory-error dialogs start repeating, stop the smoke runner and
 terminate only the `Godot_v4.7.1-stable_win64_console` worker processes. Keep
@@ -280,7 +288,7 @@ magic.
 
 ## Web build
 
-Current game version: **0.2.77**. Every push to `main` must increment the
+Current game version: **0.2.78**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

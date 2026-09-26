@@ -294,43 +294,13 @@ script = ExtResource("42_hub_stone_accent_layer")
 [node name="Actors" type="Node2D" parent="." unique_id=1069239336]
 script = ExtResource("44_placement_root")
 placement_id = &"hub_actor_layer"
-authoring_layer = "Actors"
 anchor_mode = "Origin"
 
-[node name="Props" type="Node2D" parent="Actors"]
+[node name="Props" type="Node2D" parent="Actors" unique_id=1372185332]
 script = ExtResource("44_placement_root")
 placement_id = &"hub_props"
 authoring_layer = "Props"
 anchor_mode = "Origin"
-
-[node name="Characters" type="Node2D" parent="Actors"]
-script = ExtResource("44_placement_root")
-placement_id = &"hub_characters"
-authoring_layer = "Actors"
-anchor_mode = "Origin"
-
-[node name="CloakedDemon" type="Sprite2D" parent="Actors/Characters" unique_id=1755463594]
-position = Vector2(152, 73)
-texture = ExtResource("34_cloaked_idle")
-hframes = 5
-script = ExtResource("44_placement_root")
-placement_id = &"hub_npc"
-authoring_layer = "Actors"
-
-[node name="CollisionGuide" type="Node2D" parent="Actors/Characters/CloakedDemon" unique_id=375845748]
-script = ExtResource("19_collision_guide")
-rect_position = Vector2(-2, 4.5)
-rect_size = Vector2(5, 3)
-
-[node name="DepthMarker" type="Marker2D" parent="Actors/Characters/CloakedDemon" unique_id=297377238]
-position = Vector2(8, 34)
-
-[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors/Characters/CloakedDemon" unique_id=110558620]
-show_behind_parent = true
-position = Vector2(-8, -2)
-scale = Vector2(1, 0.6875)
-texture = ExtResource("18_demon_shadow")
-centered = false
 
 [node name="RestFire" type="Sprite2D" parent="Actors/Props" unique_id=521275519]
 position = Vector2(120, 79.025)
@@ -373,9 +343,35 @@ rect_size = Vector2(11, 6)
 fill_color = Color(0.1, 0.45, 1, 0.22)
 outline_color = Color(0.1, 0.35, 1, 0.85)
 
-[node name="PlayerPlacement" parent="Actors/Characters" instance=ExtResource("43_player_placement")]
+[node name="Characters" type="Node2D" parent="Actors" unique_id=610918552]
+script = ExtResource("44_placement_root")
+placement_id = &"hub_characters"
+anchor_mode = "Origin"
+
+[node name="CloakedDemon" type="Sprite2D" parent="Actors/Characters" unique_id=1755463594]
+position = Vector2(152, 73)
+texture = ExtResource("34_cloaked_idle")
+hframes = 5
+script = ExtResource("44_placement_root")
+placement_id = &"hub_npc"
+
+[node name="CollisionGuide" type="Node2D" parent="Actors/Characters/CloakedDemon" unique_id=375845748]
+script = ExtResource("19_collision_guide")
+rect_position = Vector2(-2, 4.5)
+rect_size = Vector2(5, 3)
+
+[node name="DepthMarker" type="Marker2D" parent="Actors/Characters/CloakedDemon" unique_id=297377238]
+position = Vector2(8, 34)
+
+[node name="CloakedDemonShadow" type="Sprite2D" parent="Actors/Characters/CloakedDemon" unique_id=110558620]
+show_behind_parent = true
+position = Vector2(-8, -2)
+scale = Vector2(1, 0.6875)
+texture = ExtResource("18_demon_shadow")
+centered = false
+
+[node name="PlayerPlacement" parent="Actors/Characters" unique_id=1861699678 instance=ExtResource("43_player_placement")]
 position = Vector2(83, 71)
-editable_children = true
 
 [node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
 position = Vector2(112, 57)

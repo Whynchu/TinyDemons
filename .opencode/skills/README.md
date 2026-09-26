@@ -1,10 +1,12 @@
-# Vendored skills (GodotPrompter subset)
+# Agent skills
 
-A curated, trimmed subset of [GodotPrompter](https://github.com/jame581/GodotPrompter)
-(MIT) vendored for this project. Selected to match the feature owners in
-`docs/ARCHITECTURE.md` and `AGENTS.md`.
+This project exposes two skill sources to OpenCode: a curated, trimmed subset of
+[GodotPrompter](https://github.com/jame581/GodotPrompter) (MIT) vendored here,
+and the Godot MCP Toolkit's companion skills, discovered through the root
+`opencode.json`. The GodotPrompter subset is selected to match the feature owners
+in `docs/ARCHITECTURE.md` and `AGENTS.md`.
 
-## Installed skills
+## GodotPrompter subset
 
 | Skill | Owner / first place to look |
 | --- | --- |
@@ -22,7 +24,7 @@ A curated, trimmed subset of [GodotPrompter](https://github.com/jame581/GodotPro
 | `responsive-ui` | `display_controller.gd`, `display_layout.gd` |
 | `audio-system` | `sound_manager.gd` |
 
-## Deliberately excluded
+## Deliberately excluded from the GodotPrompter subset
 
 - `event-bus` — pushes a global EventBus autoload; this project prefers typed
   signals and the narrowest-feature-owner rule.
@@ -32,16 +34,30 @@ A curated, trimmed subset of [GodotPrompter](https://github.com/jame581/GodotPro
   scaffolding that conflicts with existing `docs/ARCHITECTURE.md` ownership.
 - 3D, C#, multiplayer, addon-specific, XR, and mobile skills — out of scope.
 
+## Godot MCP Toolkit companion skills
+
+The project config adds
+`addons/godot_mcp_toolkit/CompanionSkills/` as a skill search path, so the
+toolkit's own files remain the source of truth rather than being copied into
+this directory.
+
+| Skill | Purpose |
+| --- | --- |
+| `godot-mcp-toolkit` | MCP tool selection, scene/script workflows, playtest verification, and efficient tool use |
+| `mcp-extension-creator` | Authoring and validating project-specific MCP extension tools |
+
 ## Upgrade notes
 
-`Related skills:` cross-references were trimmed to this subset and C# notes were
-removed from GDScript-only files. When updating from upstream, re-apply the same
-trimming and re-run the reference check. The upstream validator
-(`scripts/validate-skills.mjs`) validates the whole repo; a subset reference
-check can be reproduced with the PowerShell snippet pattern used during vendoring.
+`Related skills:` cross-references were trimmed to the GodotPrompter subset and
+C# notes were removed from GDScript-only files. When updating from upstream,
+re-apply the same trimming and re-run the reference check. The upstream
+validator (`scripts/validate-skills.mjs`) validates the whole repo; a subset
+reference check can be reproduced with the PowerShell snippet pattern used
+during vendoring.
 
 ## Authority
 
-These skills are engine reference only. Where they conflict with
-`AGENTS.md`, `docs/ARCHITECTURE.md`, or `docs/component-composition-design.md`,
-the project documents win.
+The GodotPrompter skills are engine reference; the companion skills describe
+the MCP Toolkit workflow and API. Where either conflicts with `AGENTS.md`,
+`docs/ARCHITECTURE.md`, or `docs/component-composition-design.md`, the project
+documents win.

@@ -82,6 +82,8 @@ static func sync_overlay(overlay: Sprite2D, actor: Sprite2D) -> void:
 static func visual_offset(actor: Sprite2D, player: Sprite2D, slimes: Array[Sprite2D], actor_foot_offset: Vector2) -> Vector2:
 	if actor == player:
 		return Vector2(-10, -10)
+	if actor is SkeletonActor:
+		return SkeletonActor.FRAME_OFFSET
 	if slimes.has(actor):
 		return Vector2.ZERO
 	return Vector2.ZERO

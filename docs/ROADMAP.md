@@ -2,11 +2,11 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-22
+Updated: 2026-09-26
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.72`; the authoring and verification sequence is
+Current release: version `0.2.78`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 This roadmap sequences infrastructure work around the working game. It does
@@ -51,13 +51,15 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
-## Current checkpoint after 0.2.72
+## Current checkpoint after 0.2.78
 
-The composition refactor's strict scorecard and the validator's
-editor-composition score both read 100%, but that is a proxy: several authored
-resources are still untyped dictionaries that the runtime partly ignores. The
-authoring system in [`authoring-system-plan.md`](authoring-system-plan.md) is
-the active sequence for closing the gap between the score and a real workflow:
+The 0.2.78 composition check passes at 2,201 root accesses, 1,718
+`GameplayState` lines / 286 fields, and 2,250 `RoomController` lines. The strict
+scorecard and editor-composition measure both read 100%, but that is a proxy:
+several authored resources are still untyped dictionaries that the runtime
+partly ignores. The authoring system in
+[`authoring-system-plan.md`](authoring-system-plan.md) remains the active
+sequence for closing the gap between the score and a real workflow:
 
 1. Slice 0 — completed the authority-doc correction, recursive definition
    preflight, `GODOT_BIN` portability, class-cache bootstrap, catalog failure
@@ -207,21 +209,22 @@ settlement boundary.
 
 ## Phase 0.50 — Typed runtime ownership
 
-Complete. The composition scorecard is at 100%: `GameplayState` is at 1,715
-lines / 285 fields, dynamic root access is at 2,200, `RoomController` is at
-2,243 lines, and the transitional/legacy counts are zero. The strict audit
-(`tools/validate_composition.ps1 -RequireTargets`) passes, and the regression
-floor now protects the achieved state. At `0.2.72` the editor-composition
-metric is also 100% by its own definition (all 20 components are blind and
-`@export`-configured; 20 editor-able definition surfaces), though that metric
+Complete. The latest 0.2.78 composition check is at 100%: `GameplayState` is
+at 1,717 lines / 286 fields, dynamic root access is at 2,202, `RoomController`
+is at 2,250 lines, and the transitional/legacy counts are zero. The strict
+audit (`tools/validate_composition.ps1 -RequireTargets`) passes, and the
+regression floor protects the achieved state. The editor-composition measure
+also remains 100% by its definition (all 20 components are blind and
+`@export`-configured; 19 editor-able definition surfaces), though that metric
 does not prove the content workflows work. See
 `docs/component-composition-design.md` for the A1/A2/B1/B2/C1/C2/scope
 sequence and `docs/authoring-system-plan.md` for the remaining authoring
 reality. Remaining dynamic-access owners (`screen_state_controller.gd`,
 `combat_runtime_controller.gd`, `slime_runtime_controller.gd`,
-`magic_runtime_controller.gd`) are the next vertical migration candidates and
-should be reduced feature by feature while preserving frame order and removing
-obsolete wrappers only after their final consumer migrates.
+`magic_runtime_controller.gd`) remain possible targeted migration candidates.
+The current execution priority is the shared authoring foundation in M1; any
+later controller extraction should stay feature-scoped, preserve frame order,
+and remove wrappers only after their final consumer migrates.
 
 ## Phase 0.60 — Content authoring
 

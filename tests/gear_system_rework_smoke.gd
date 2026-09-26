@@ -10,8 +10,13 @@ func _initialize() -> void:
 	var profile := PlayerProfile.new()
 	profile.ensure_starter_items(catalog)
 
-	_expect(catalog.live_definition_ids().size() >= 66, "live catalogue retains the baseline plain/basic and set pieces", failures)
-	_expect(catalog.definition_exists(&"cinder_blade") and &"cinder_blade" in catalog.live_definition_ids(), "standalone authored weapons join the live registry", failures)
+	var live_ids := catalog.live_definition_ids()
+	for baseline_id: StringName in [&"plain_blade", &"plain_hood", &"plain_tunic", &"plain_wraps", &"plain_shield", &"plain_ring", &"basic_sword", &"basic_hood", &"basic_tunic", &"basic_wraps", &"basic_shield", &"basic_charm"]:
+		_expect(baseline_id in live_ids, "%s remains a live baseline item" % baseline_id, failures)
+	_expect(catalog.definition_exists(&"cinder_blade") and &"cinder_blade" in live_ids, "standalone authored weapons join the live registry", failures)
+	_expect(&"demon_cloak" in catalog.playable_definition_ids(), "special-acquisition Demon Cloak remains playable", failures)
+	for retired_id: StringName in ItemCatalog.RETIRED_DEFINITION_IDS:
+		_expect(not catalog.definition_exists(retired_id), "%s is removed from the item backend" % retired_id, failures)
 	_expect(profile.base_vit == 2 and profile.base_str == 2 and profile.base_def == 2 and profile.base_agi == 2 and profile.base_int == 2 and profile.base_mnd == 2, "new profiles use the even two-point baseline", failures)
 	var forbidden_names := ["maul", "rod", "claw", "mask", "veil", "circlet", "mantle", "ear", "talisman"]
 	for definition_id: StringName in catalog.live_definition_ids():
@@ -30,26 +35,38 @@ func _initialize() -> void:
 			_expect(not definition.is_empty() and str(definition.get("gear_tier", "")) == "set", "set has a live definition: %s" % definition_id, failures)
 			_expect(str(definition.get("set_id", "")) == String(set_id) and catalog.definition_slot(definition_id) == slot, "set keeps its slot identity: %s" % definition_id, failures)
 
+	var baseline_ids_by_slot: Dictionary = {
+		&"weapon": [&"plain_blade", &"basic_sword"],
+		&"head": [&"plain_hood", &"basic_hood"],
+		&"body": [&"plain_tunic", &"basic_tunic"],
+		&"arm": [&"plain_wraps", &"basic_wraps"],
+		&"shield": [&"plain_shield", &"basic_shield"],
+		&"accessory": [&"plain_ring", &"basic_charm"],
+	}
 	for slot: StringName in ItemCatalog.SLOTS:
 		var source_definitions := catalog.definitions_for_slot(slot, &"chest", 1, 1)
-		_expect(source_definitions.size() == 11, "each slot exposes two baseline and nine set drops: %s" % slot, failures)
+		for baseline_id: StringName in baseline_ids_by_slot[slot]:
+			_expect(baseline_id in source_definitions, "%s remains available to current chest sourcing" % baseline_id, failures)
+		for set_id: StringName in ItemCatalog.SET_IDS:
+			var set_item_id := StringName("%s_%s" % [String(set_id), String(slot)])
+			_expect(set_item_id in source_definitions, "%s remains available to current chest sourcing" % set_item_id, failures)
 	var observed_tiers: Dictionary = {}
 	for seed in range(1, 512):
 		var generated := catalog.generate_item(&"weapon", seed, 12, &"common", false, &"chest", 12)
 		observed_tiers[str(catalog.definition_data(generated.definition_id).get("gear_tier", ""))] = true
 	_expect(observed_tiers.has("plain") and observed_tiers.has("basic") and observed_tiers.has("set"), "chest generation reaches every live gear tier", failures)
 
-	# A set accessory must beat the flexible basic bangle, not copy or trail it.
+	# A set accessory must beat the current basic charm, not a retired bangle.
 	var oath_charm := ItemInstance.new(); oath_charm.definition_id = &"oath_accessory"; oath_charm.rarity = &"common"
-	var bangle := ItemInstance.new(); bangle.definition_id = &"bangle"; bangle.rarity = &"common"
+	var basic_charm := ItemInstance.new(); basic_charm.definition_id = &"basic_charm"; basic_charm.rarity = &"common"
 	var oath_bonuses := catalog.bonuses(oath_charm)
-	var bangle_bonuses := catalog.bonuses(bangle)
+	var basic_charm_bonuses := catalog.bonuses(basic_charm)
 	var oath_sum := 0.0
 	for value in oath_bonuses.values(): oath_sum += float(value)
-	var bangle_sum := 0.0
-	for value in bangle_bonuses.values(): bangle_sum += float(value)
-	_expect(oath_bonuses.has("defense") and oath_sum > bangle_sum, "Oath Charm is a stronger defense-tier set accessory than the bangle", failures)
-	_expect(catalog.price(oath_charm) > catalog.price(bangle), "Oath Charm prices above the basic bangle", failures)
+	var basic_charm_sum := 0.0
+	for value in basic_charm_bonuses.values(): basic_charm_sum += float(value)
+	_expect(oath_bonuses.has("defense") and oath_sum > basic_charm_sum, "Oath Charm is a stronger defense-tier set accessory than the current basic charm", failures)
+	_expect(catalog.price(oath_charm) > catalog.price(basic_charm), "Oath Charm prices above the current basic charm", failures)
 
 	var plus_item := ItemInstance.new()
 	plus_item.instance_id = "plus-display"

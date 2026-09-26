@@ -31,7 +31,7 @@ var puzzle_solved := false
 var chest_visible := true
 
 
-static func from_runtime(runtime: GameplayState, controller: RoomController, state: Dictionary, room_type: StringName) -> RoomActivationServices:
+static func from_runtime(runtime: GameplayState, controller: Node, state: Dictionary, room_type: StringName) -> RoomActivationServices:
 	var services := RoomActivationServices.new()
 	services.player = runtime.player; services.slimes = runtime.slimes; services.dungeon_graph = runtime.dungeon_graph
 	services.hide_chest_presentation = Callable(controller, "hide_chest_presentation").bind(runtime)
@@ -45,7 +45,7 @@ static func from_runtime(runtime: GameplayState, controller: RoomController, sta
 	services.apply_puzzle_state = Callable(controller, "apply_puzzle_state").bind(runtime, bool(state.get("finished", false)))
 	services.apply_orb_state = Callable(controller, "apply_orb_state").bind(runtime)
 	services.apply_finished_room_state = Callable(runtime, "_apply_finished_room_state")
-	var treasure_claimed := controller._treasure_chest_claimed_from_state(state)
+	var treasure_claimed := bool(controller.call("_treasure_chest_claimed_from_state", state))
 	var regular_treasure := bool(state.get("regular_room_treasure", false)) and room_type == DungeonGraph.ROOM_COMBAT
 	services.reset_chest_for_room = Callable(controller, "reset_chest_for_room").bind(runtime, (room_type == DungeonGraph.ROOM_TREASURE and not treasure_claimed) or (regular_treasure and not treasure_claimed))
 	services.reset_slimes_for_room = Callable(controller, "reset_slimes_for_room").bind(runtime)
