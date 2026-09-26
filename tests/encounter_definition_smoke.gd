@@ -61,7 +61,8 @@ func _initialize() -> void:
 	_expect(slime_runtime._bone_projectile_outline_texture(bone_frames[0], "grey") == null, "normal bones remain unoutlined", failures)
 	slime_runtime.free()
 	var rooms := RoomController.new()
-	rooms.progression_run_rank = 4
+	rooms.progression_run_rank = 1
+	rooms.progression_run_number = 4
 	var skeleton_before_r5 := false
 	var skeleton_slots_at_r5 := 0
 	var total_slots_at_r5 := 0
@@ -69,7 +70,7 @@ func _initialize() -> void:
 		var early_encounter := rooms._generate_enemy_encounter(seed, 1)
 		for variant in early_encounter["variants"] as Array:
 			skeleton_before_r5 = skeleton_before_r5 or EnemyFactoryScript.variant_is_type(StringName(variant), &"skeleton")
-	rooms.progression_run_rank = 5
+	rooms.progression_run_number = 5
 	for seed in range(1, 513):
 		var r5_encounter := rooms._generate_enemy_encounter(seed, 1)
 		for variant in r5_encounter["variants"] as Array:

@@ -18,7 +18,7 @@ const ROOM_ENEMY_PLACEMENT_SCRIPT = preload("res://scripts/room_enemy_placement.
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
 const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
 const ROOM_GEOMETRY_CONTROLLER_SCRIPT = preload("res://scripts/room_geometry_controller.gd")
-const SKELETON_FIRST_RUN_RANK := 5
+const SKELETON_FIRST_RUN_NUMBER := 5
 
 signal room_entered(room_id: StringName, room_type: StringName)
 signal room_cleared(result: RoomClearResult)
@@ -28,6 +28,7 @@ var arrival_socket_id: StringName = &""
 var transition_locked := false
 var room_states: Dictionary = {}
 var progression_run_rank := 1
+var progression_run_number := 1
 var player_level := 1
 var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
@@ -101,6 +102,7 @@ func prewarm_transition_assets(stone_layer: HubStoneAccentLayer = null) -> void:
 
 
 func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.RoomRecord, room_type: StringName, room_depth: int) -> Dictionary:
+	progression_run_number = maxi(graph.completed_run_count + 1, 1)
 	var state := room_states.get(room_id, {}) as Dictionary
 	# Generated route policy is carried with the room state so active-run
 	# snapshots retain the exact encounter/reward contract. Missing keys are safe
@@ -231,7 +233,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		count = mini(count + 2, count_cap)
 	variant_pool.append_array(definition.late_pool_entries(progression_run_rank))
 	var skeleton_variant_pool: Array[Dictionary] = []
-	if progression_run_rank >= SKELETON_FIRST_RUN_RANK:
+	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
 		skeleton_variant_pool = ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton")
 	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
 		# Purple is a rare pressure spike, not a normal member of the enemy
