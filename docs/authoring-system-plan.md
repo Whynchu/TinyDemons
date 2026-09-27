@@ -30,6 +30,12 @@ schedule.
 
 Updated: 2026-09-26
 
+> **Note (2026-09-27):** a bounded architecture cleanup is running alongside
+> this plan as enabling work, recorded under "Added workstream — architecture
+> cleanup" in [`ROADMAP.md`](ROADMAP.md). Its goal is to shrink the surface an
+> implementer must read to add a definition, so the factory slices below land on
+> a cleaner tree. It does not change this plan's acceptance bars.
+
 ## 0. Decision principles and research basis
 
 This plan is grounded in the repository's current seams and in the way mature

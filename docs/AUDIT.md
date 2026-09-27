@@ -574,3 +574,35 @@ and element migration in Slice 2. The curated gate and device-backed
 performance evidence remain separate open verification work. Keep future
 structural work vertical and owner-led; do not reopen a broad composition
 rewrite.
+
+## 17. Architecture cleanup (added 2026-09-27)
+
+Recorded in [`ROADMAP.md`](ROADMAP.md) as an added 0.3.x workstream that is
+explicitly sequenced as enabling work for the content-authoring and
+verification track, rather than a competing rewrite.
+
+Landed so far:
+
+- **C0** (`f089c30`) removed a per-frame no-op regeneration call
+  (`combat_runtime_controller.gd`, `gameplay_state.gd`,
+  `gameplay_frame_controller.gd`) and glyph entries that were immediately
+  overridden in `effects_spawner.gd`; the script index was regenerated and the
+  one stale tuning reference corrected.
+- **C1** (`357f62b`) cached the per-frame `DebugSessionController` lookup,
+  skipped the per-frame `performance_capture_service` property lookup in release
+  builds, and replaced the 200 ms sound-mix-profile file read-and-hash with a
+  metadata stat. Verified by `sound_mix_live_reload_smoke`,
+  `sound_mix_profile_smoke`, `sound_balance_smoke`, and
+  `composition_root_baseline_smoke`.
+
+Current composition check after C0/C1: **2,199** root accesses, `GameplayState`
+**1,717** lines / 286 fields, `RoomController` 2,251 lines; the strict scorecard
+and regression floor still pass.
+
+Two wordings from the initial cleanup scan are corrected here: the title/save
+overlap between `save_flow_controller.gd` and `screen_state_controller.gd` is
+**circular delegation and split ownership**, not mutual recursion; and
+`hub_flow_controller.gd` is a **split owner**, not an empty facade. The
+"synchronous disk I/O in frame paths" finding was broader than the evidence -
+pickup profile saves are already coalesced into a pending flag and flushed from
+the frame schedule, and the sound-profile poll is signature-gated.

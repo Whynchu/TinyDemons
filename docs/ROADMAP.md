@@ -55,6 +55,43 @@ Work should move through one narrow slice at a time:
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
+## Added workstream — architecture cleanup (0.3.x)
+
+Status: **added after the 0.3.0 checkpoint.** This is a recorded change to the
+0.3.x sequence, not part of the original plan.
+
+The original sequence made content authoring
+([`authoring-system-plan.md`](authoring-system-plan.md)) and verification the
+active track, and warned against broad ownership extraction while they were in
+flight. A bounded architecture cleanup is now treated as **enabling work for
+that track**: a smaller, statically traceable tree makes adding enemies, items,
+and rooms cheaper and less error-prone for people and agents alike. This is a
+deliberate divergence; the authoring and verification authorities are unchanged.
+
+Stopping rules:
+
+- decompose the known ownership defects into one narrow, characterized slice at
+  a time;
+- favor changes that reduce how much an implementer must read to add content;
+- do not make "split the monolith" or "reduce root calls" the acceptance bar by
+  itself;
+- record each slice and its focused verification here as it lands.
+
+| Slice | Work | State |
+|---|---|---|
+| C0 | Removed the dead per-frame regen no-op and overridden glyph entries; refreshed the script index | Complete (`f089c30`) |
+| C1 | Cached the per-frame debug lookup, replaced the 200 ms mix-profile file read with a metadata stat, and skipped the release capture lookup | Complete (`357f62b`) |
+| C2 | Consolidate genuine duplication and boilerplate | In progress |
+| C3 | Collapse the split title/save and hub ownership | Planned |
+| C4 | Extract `screen_state_controller` into a menu platform | Deferred until menu work is an active feature |
+| C5 | Targeted dynamic-call reduction on authoring-adjacent owners | Planned |
+
+Corrections to the initial scan that prompted this workstream: the title/save
+overlap is **circular delegation and split ownership**, not mutual recursion;
+`hub_flow_controller` is a **split owner**, not an empty facade; and the
+"synchronous frame I/O" finding was **too broad**, since pickup saves are
+already coalesced and the sound poll is signature-gated.
+
 ## Current checkpoint after 0.2.78
 
 The 0.2.78 composition check passes at 2,201 root accesses, 1,718
