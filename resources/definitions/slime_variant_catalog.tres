@@ -10,6 +10,8 @@
 [ext_resource type="Resource" uid="uid://bst5fys3dv1mo" path="res://resources/definitions/skeleton_shadow.tres" id="8_skeleton_shadow"]
 [ext_resource type="Resource" uid="uid://bamaar04ttbpe" path="res://resources/definitions/skeleton_water.tres" id="9_skeleton_water"]
 [ext_resource type="Resource" uid="uid://kb1ynb8yu5d4" path="res://resources/definitions/skeleton_electric.tres" id="10_skeleton_electric"]
+[ext_resource type="Resource" uid="uid://e3c3o7r5gots" path="res://resources/definitions/healer_slime.tres" id="11_healer_slime"]
+[ext_resource type="Resource" path="res://resources/definitions/ember_guard.tres" id="12_ember_guard"]
 
 [sub_resource type="Resource" id="EnemyDefinition_grey"]
 script = ExtResource("2_enemy")
@@ -298,4 +300,4 @@ body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 
 
 [resource]
 script = ExtResource("1_catalog")
-definitions = Array[Resource]([SubResource("EnemyDefinition_grey"), SubResource("EnemyDefinition_red"), SubResource("EnemyDefinition_blue"), SubResource("EnemyDefinition_yellow"), SubResource("EnemyDefinition_green"), SubResource("EnemyDefinition_purple"), SubResource("EnemyDefinition_orange"), SubResource("EnemyDefinition_aquamarine"), SubResource("EnemyDefinition_crimson"), SubResource("EnemyDefinition_guard_slime"), ExtResource("3_skeleton"), ExtResource("4_skeleton_fire"), ExtResource("5_skeleton_grass"), ExtResource("6_skeleton_ground"), ExtResource("7_skeleton_ice"), ExtResource("8_skeleton_shadow"), ExtResource("9_skeleton_water"), ExtResource("10_skeleton_electric")])
+definitions = Array[Resource]([SubResource("EnemyDefinition_grey"), SubResource("EnemyDefinition_red"), SubResource("EnemyDefinition_blue"), SubResource("EnemyDefinition_yellow"), SubResource("EnemyDefinition_green"), SubResource("EnemyDefinition_purple"), SubResource("EnemyDefinition_orange"), SubResource("EnemyDefinition_aquamarine"), SubResource("EnemyDefinition_crimson"), SubResource("EnemyDefinition_guard_slime"), ExtResource("12_ember_guard"), ExtResource("11_healer_slime"), ExtResource("3_skeleton"), ExtResource("4_skeleton_fire"), ExtResource("5_skeleton_grass"), ExtResource("6_skeleton_ground"), ExtResource("7_skeleton_ice"), ExtResource("8_skeleton_shadow"), ExtResource("9_skeleton_water"), ExtResource("10_skeleton_electric")])

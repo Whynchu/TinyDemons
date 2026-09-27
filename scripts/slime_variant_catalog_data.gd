@@ -2,9 +2,9 @@
 extends Resource
 class_name SlimeVariantCatalogData
 
-## Editor-inspectable enemy definitions. Standalone resources are registered
-## here so their dependencies are explicit in exported builds; directory
-## discovery remains a convenience for unregistered editor-authored resources.
+## Editor-inspectable enemy definitions. Standalone resources can be registered
+## here to declare explicit dependencies; ResourceLoader directory discovery
+## also finds authored resources in exported PCKs.
 
 @export var definitions: Array[Resource] = []
 
@@ -22,15 +22,9 @@ func authored_definitions() -> Array[EnemyDefinition]:
 			registered_ids[definition.variant_id] = true
 
 	var external_paths: Array[String] = []
-	var directory := DirAccess.open(DEFINITION_ROOT)
-	if directory != null:
-		directory.list_dir_begin()
-		var entry := directory.get_next()
-		while not entry.is_empty():
-			if entry != "." and entry != ".." and not directory.current_is_dir() and entry.get_extension().to_lower() == "tres" and entry != CATALOG_FILE:
-				external_paths.append(DEFINITION_ROOT.path_join(entry))
-			entry = directory.get_next()
-		directory.list_dir_end()
+	for entry in ResourceLoader.list_directory(DEFINITION_ROOT):
+		if entry.get_extension().to_lower() == "tres" and entry != CATALOG_FILE:
+			external_paths.append(DEFINITION_ROOT.path_join(entry))
 
 	external_paths.sort()
 	for path in external_paths:

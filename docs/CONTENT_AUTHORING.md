@@ -2,9 +2,11 @@
 
 Status: working guide; enemy definitions and encounter eligibility now use the
 typed catalog/factory path, including standalone one-file definitions and the
-enemy preview workbench. The authored Hub world now has a standalone animated
-design preview; other content surfaces are still only partially wired. Read
-the trap table below before editing any `.tres`.
+enemy preview workbench. Runtime discovery uses `ResourceLoader.list_directory`
+so standalone definitions remain discoverable in exported PCKs. The authored
+Hub world now has a standalone animated design preview; other content surfaces
+are still only partially wired. Read the trap table below before editing any
+`.tres`.
 
 Updated: 2026-09-26
 
@@ -243,8 +245,8 @@ Workflow (current, typed enemy-definition path):
    `EncounterDefinition` and `RoomController` consume these fields at runtime.
 4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
    roster slot, or a count-table expectation. The registry discovers the typed
-   entry, `EnemyFactory` materializes it, and the runtime pool configures the
-   selected slot from the definition.
+   entry with `ResourceLoader.list_directory`, `EnemyFactory` materializes it,
+   and the runtime pool configures the selected slot from the definition.
 5. If the variant introduces a genuinely new palette or behavior, extend that
    narrow owner and add a focused golden assertion. Reusing an existing
    `visual_source` is data-only; invalid palette IDs fail enemy-definition
