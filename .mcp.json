@@ -1,16 +1,3 @@
 {
-	"mcpServers": {
-		"godot-mcp-toolkit": {
-			"args": [
-				"/c",
-				"npx",
-				"-y",
-				"@npgamedev/godot-mcp-server"
-			],
-			"command": "cmd",
-			"env": {
-				"GODOT_MCP_CONFIG_VERSION": "1"
-			}
-		}
-	}
+  "mcpServers": {}
 }
