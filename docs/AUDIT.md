@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.3.03` (composition refactor structurally and editor-wise
+Current release: `0.3.04` (composition refactor structurally and editor-wise
 complete: the strict scorecard and regression floor both pass at 100%, with 2,198
 root accesses and `GameplayState` at 1,717 lines / 286 fields. The debug-menu
 dispatch added in 0.2.96 was extracted into `DebugSessionController` to restore

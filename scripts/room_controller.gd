@@ -152,7 +152,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["enemy_popcorn"] = encounter["popcorn"]
 			state["enemy_popcorn_types"] = encounter["popcorn_types"]
 			state["enemy_ambush"] = encounter["ambush"]
-			state["enemy_elite"] = encounter["elite"]
+			state["enemy_elite"] = encounter["elite"]; state["support_companions_processed"] = true
 		if not state.has("enemy_elite"):
 			var elite_flags: Array[bool] = []
 			var popcorn_flags := state.get("enemy_popcorn", []) as Array
@@ -165,7 +165,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < _room_definition().regular_room_treasure_chance)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
-		room_states[room_id] = state
+		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, _generated_enemy_base_level(room_depth), progression_run_rank, _enemy_level_cap(), _room_definition(), debug_enemy_variant.is_empty()); room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		if not state.has("enemy_variants"):
 			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)

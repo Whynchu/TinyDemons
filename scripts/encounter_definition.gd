@@ -9,6 +9,7 @@ class_name EncounterDefinition
 
 const DEFAULT_DATA_PATH := "res://resources/definitions/encounter_definition.tres"
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
+const SAVED_ROOM_SUPPORT_ROLL_SALT := 0x48534C4D
 
 
 static func default_data() -> EncounterDefinition:
@@ -153,6 +154,28 @@ func finalize_room_encounter(
 				popcorn_types[index] = elite_popcorn_id
 				ambush_flags[index] = false
 				elite_flags[index] = false
+	append_support_companions(
+		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
+		ambush_flags, elite_flags, encounter_rng, room_policy, run_rank,
+		base_level, level_spread, encounter_tier, enemy_level_cap)
+
+
+static func append_support_companions(
+	force_debug_enemy: bool,
+	variants: Array[String],
+	levels: Array[int],
+	popcorn_flags: Array[bool],
+	popcorn_types: Array[String],
+	ambush_flags: Array[bool],
+	elite_flags: Array[bool],
+	encounter_rng: RandomNumberGenerator,
+	room_policy: RoomDefinition,
+	run_rank: int,
+	base_level: int,
+	level_spread: int,
+	encounter_tier: StringName,
+	enemy_level_cap: int
+) -> int:
 	var slime_companion_count := 0
 	for variant in variants:
 		var companion_definition := EnemyFactory.definition(StringName(variant))
@@ -161,7 +184,8 @@ func finalize_room_encounter(
 	var support_variant_pool := EnemyFactory.weighted_variants_for_role(&"slime", &"support", run_rank)
 	var support_roll_count := room_policy.support_companion_roll_count(slime_companion_count)
 	if force_debug_enemy or support_variant_pool.is_empty():
-		return
+		return 0
+	var appended_count := 0
 	for _support_roll in range(support_roll_count):
 		if encounter_rng.randf() >= clampf(room_policy.support_companion_chance_per_group, 0.0, 1.0):
 			continue
@@ -176,6 +200,72 @@ func finalize_room_encounter(
 		popcorn_types.append("")
 		ambush_flags.append(false)
 		elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE)
+		appended_count += 1
+	return appended_count
+
+
+static func migrate_saved_room_support_companions(
+	state: Dictionary,
+	room: DungeonGraph.RoomRecord,
+	room_type: StringName,
+	normal_base_level: int,
+	run_rank: int,
+	enemy_level_cap: int,
+	room_policy: RoomDefinition,
+	allow_migration: bool
+) -> void:
+	if bool(state.get("support_companions_processed", false)):
+		return
+	var variants := state.get("enemy_variants", []) as Array
+	if allow_migration and not bool(state.get("finished", false)) and not variants.is_empty():
+		var has_existing_support := false
+		for value in variants:
+			var definition := EnemyFactory.definition(StringName(str(value)))
+			if definition != null and definition.type_id == &"slime" and definition.encounter_role == &"support":
+				has_existing_support = true
+				break
+		if not has_existing_support:
+			var is_extra_room := room_type == DungeonGraph.ROOM_SPECIAL_ENEMY or room_type == DungeonGraph.ROOM_TREASURE
+			var base_level := normal_base_level + (1 if is_extra_room else 0)
+			if room.encounter_tier == DungeonGraph.ENCOUNTER_DANGEROUS:
+				base_level += 1
+			elif room.encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
+				base_level += 2
+			var level_spread := 1 if run_rank <= 3 else 2
+			var levels: Array[int] = []
+			var popcorn_flags: Array[bool] = []
+			var popcorn_types: Array[String] = []
+			var ambush_flags: Array[bool] = []
+			var elite_flags: Array[bool] = []
+			var stored_levels := state.get("enemy_levels", []) as Array
+			var stored_popcorn := state.get("enemy_popcorn", []) as Array
+			var stored_popcorn_types := state.get("enemy_popcorn_types", []) as Array
+			var stored_ambush := state.get("enemy_ambush", []) as Array
+			var stored_elite := state.get("enemy_elite", []) as Array
+			for slot in variants.size():
+				var is_popcorn := bool(stored_popcorn[slot]) if slot < stored_popcorn.size() else false
+				levels.append(int(stored_levels[slot]) if slot < stored_levels.size() else base_level)
+				popcorn_flags.append(is_popcorn)
+				popcorn_types.append(str(stored_popcorn_types[slot]) if slot < stored_popcorn_types.size() else "")
+				ambush_flags.append(bool(stored_ambush[slot]) if slot < stored_ambush.size() else false)
+				elite_flags.append(bool(stored_elite[slot]) if slot < stored_elite.size() else room.encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn)
+			var typed_variants: Array[String] = []
+			for value in variants:
+				typed_variants.append(str(value))
+			var support_rng := RandomNumberGenerator.new()
+			support_rng.seed = room.generation_seed ^ SAVED_ROOM_SUPPORT_ROLL_SALT
+			var added := append_support_companions(
+				false, typed_variants, levels, popcorn_flags, popcorn_types,
+				ambush_flags, elite_flags, support_rng, room_policy, run_rank,
+				base_level, level_spread, room.encounter_tier, enemy_level_cap)
+			if added > 0:
+				state["enemy_variants"] = typed_variants
+				state["enemy_levels"] = levels
+				state["enemy_popcorn"] = popcorn_flags
+				state["enemy_popcorn_types"] = popcorn_types
+				state["enemy_ambush"] = ambush_flags
+				state["enemy_elite"] = elite_flags
+	state["support_companions_processed"] = true
 
 
 func is_shadow_bound() -> bool:
