@@ -241,7 +241,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Enemy Soul drop | 1 Soul per defeated ordinary enemy; scaled bosses drop 5 Souls on Run 1 and +2 Souls per completed run, with +1 per encounter-scale step above the authored 3.0 boss scale | `combat_runtime_controller.gd:soul_drop_value_for_slime` |
 | Soul pickup | Authored 5x5 `Souls.png` sprite with `#A73BA7` soul-purple body (matching the Square-button icon) and a lighter highlight outline derived from that base; 10.0 collection distance, 0.38s launch arc | `soul_visuals.gd`, `pickup_runtime_controller.gd`, `gameplay_state.gd` |
 | Fire use / Swap | Full HP, full active Chroma, and earned element attunement for 5 Souls; first starter use is also paid | `gameplay_state.gd:FLAME_SWAP_SOUL_COST` |
-| Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `combat_runtime_controller.gd:update_player_health_regen`, `gameplay_state.gd:_interact_with_fire` |
+| Fire passive recovery | None; HP and Chroma restoration happen only after an explicit paid fire interaction | `gameplay_state.gd:_interact_with_fire` |
 | Starter Soul grant | 5-Soul grant from the Cloaked Demon whenever the player is out of Souls (a conditional bailout, not one-time) | `npc_controller.gd`, `player_profile.gd` |
 | Flame interaction gesture | Quick press swaps on release; holding for 0.35 seconds fuses | `chest_controller.gd`, `gameplay_state.gd:FLAME_FUSION_HOLD_THRESHOLD` |
 | Flame Fusion | 5 Souls; uses current element plus the contacted flame and produces an unbound recipe result | `gameplay_state.gd:FLAME_FUSION_SOUL_COST` |

@@ -538,12 +538,6 @@ func on_slime_health_healed(root: Object, slime: Sprite2D, amount: float) -> voi
 	root.call("_spawn_slime_healing_number", slime, amount, root.call("_health_feedback_color", String(slime.get("variant"))) as Color)
 
 
-func update_player_health_regen(_root: Object, _delta: float) -> void:
-	# Fire rooms are paid services now. Do not let the old rest-room regeneration
-	# path silently heal the player without an explicit fire interaction.
-	pass
-
-
 func apply_slime_attack_lunge(root: Object, slime: Sprite2D, fraction: float = 1.0) -> void:
 	if fraction <= 0.0:
 		return

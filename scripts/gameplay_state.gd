@@ -1550,7 +1550,6 @@ func _on_player_health_healed(amount: float) -> void: combat_runtime_controller.
 func _on_slime_health_damaged(_amount: float, slime: Sprite2D) -> void: combat_runtime_controller.call("on_slime_health_damaged", self, slime)
 func _on_slime_health_changed(_current: float, _maximum: float, slime: Sprite2D) -> void: combat_runtime_controller.call("on_slime_health_changed", self, slime)
 func _on_slime_health_healed(amount: float, slime: Sprite2D) -> void: combat_runtime_controller.call("on_slime_health_healed", self, slime, amount)
-func _update_player_health_regen(delta: float) -> void: combat_runtime_controller.call("update_player_health_regen", self, delta)
 func _apply_slime_attack_lunge(slime: Sprite2D, fraction: float = 1.0) -> void: combat_runtime_controller.call("apply_slime_attack_lunge", self, slime, fraction)
 func _slime_attack_lunge_vector(slime: Sprite2D) -> Vector2: return combat_runtime_controller.call("slime_attack_lunge_vector", self, slime) as Vector2
 func _slime_attack_commitment_vector(slime: Sprite2D, target_point: Vector2) -> Vector2: return combat_runtime_controller.call("slime_attack_commitment_vector", self, slime, target_point) as Vector2

@@ -708,7 +708,6 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_enemy_hit_flashes(delta)
 		root._update_enemy_health(delta)
 	root._update_target_ui()
-	root._update_player_health_regen(delta)
 	root._update_player_health_ui(delta)
 	root._update_player_mp_ui(delta)
 	root._update_magic_projectiles(delta)
