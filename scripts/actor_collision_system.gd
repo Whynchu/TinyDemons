@@ -143,6 +143,23 @@ func _grid_cell(point: Vector2) -> Vector2i:
 func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:
 	var actor_start := actor.position
 	var other_start := other.position
+	var actor_cast_locked := _is_support_cast_locked(actor)
+	var other_cast_locked := _is_support_cast_locked(other)
+	if actor_cast_locked or other_cast_locked:
+		if actor_cast_locked and other_cast_locked:
+			return false
+		var movable := other if actor_cast_locked else actor
+		# A boss and a healer both hold their authored position during these
+		# contacts. Preserve the overlap instead of displacing either actor.
+		if _uses_body_contact(movable):
+			return false
+		var movable_start := movable.position
+		var displacement := -push if actor_cast_locked else push
+		movable.position += displacement
+		if _position_is_valid(root, movable):
+			return true
+		movable.position = movable_start
+		return false
 	var actor_is_boss := _uses_body_contact(actor)
 	var other_is_boss := _uses_body_contact(other)
 	# Bosses own their movement lane. A regular slime caught in that lane takes
@@ -163,6 +180,11 @@ func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: 
 	actor.position = actor_start
 	other.position = other_start
 	return false
+
+
+func _is_support_cast_locked(actor: Sprite2D) -> bool:
+	var support := actor.get_node_or_null("Support")
+	return support != null and bool(support.call("is_cast_active"))
 
 
 func _move_regular_away_from_boss(root: Object, regular: Sprite2D, preferred_direction: Vector2) -> bool:

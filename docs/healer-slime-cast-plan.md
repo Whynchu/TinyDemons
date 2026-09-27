@@ -4,10 +4,12 @@ Status: implemented; focused verification fixture added
 
 Updated: 2026-09-27
 
-Scope: one support-role enemy that channels an interruptible, bounded single-ally
-heal with a visible cast bar and heal VFX, plus the minimal behavior-selection and
-tuning seams it needs. Companion to the combat-role slice from the 2026-09-27
-advisor pass.
+Scope: one support-role enemy that channels an interruptible, bounded
+single-primary-ally heal with a visible cast bar and heal VFX, plus the minimal
+behavior-selection and tuning seams it needs. The healer can recover itself
+while another ally is alive, and it can join combat when a nearby ally is
+aggroed or showing its notice reaction. Companion to the combat-role slice from
+the 2026-09-27 advisor pass.
 
 The successful heal plays the authored `Healing.ogg` cue through the sound mix
 profile. Chroma resource pickups play the existing `manapickup.wav` cue.
@@ -26,7 +28,9 @@ Verification: the support smoke and definition validator passed before the
 2026-09-27 animation-phase correction. The smoke now covers separate casting
 and spell preview states; rerun it with an in-game readability playtest before
 calling this refinement verified. The audio mix fixture passed with both new
-cues registered. Planned checks include
+cues registered. The arc/self-heal/ally-notice refinement is implemented; an
+MCP playtest is still needed to confirm its visual readability and combat feel.
+Planned checks include
 `tools/dev.ps1 verify`, `tools/dev.ps1 test -Suite content`,
 `tools/validate_definitions.ps1`, and an MCP playtest/screenshot at 240×160.
 Do **not** run `tests/run_all_smoke.ps1` from an editor session
@@ -46,18 +50,30 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
 - Damage **cancels** the channel (a real cancel, not a hitstun pause).
 - The **Casting** animation loops while the cast bar fills.
 - When loading ends, the **Spell Cast** animation starts. The heal resolves once
-  on its configured frame (default index 1, the second displayed frame), then
-  the animation plays through before the slime returns to idle.
+  on its configured impact frame (default index 4, where the authored sheet
+  blooms), then the animation plays through before the slime returns to idle.
 - During cast: a **green charge aura** plays on the caster (sword-beam-charge-like).
-- During cast: a **green curved target arc** connects the caster to its selected
-  ally, with a clean, single-pixel, non-antialiased line and single-pixel glints.
+- During cast: a slightly transparent, green curved target arc starts at the
+  caster's shared body-geometry edge and ends at the target's edge. It outlines
+  the target in the same single-pixel style, and its glimmers travel over pixels
+  in the trail. Keep the existing sparkle around the target.
 - On resolve: **green "+" particles** drift upward, per-particle speed driven by
   noise, with varying sizes.
 - A **cast bar below the caster** fills, changes color at full, pops slightly,
   then vanishes when the spell resolves.
+- Healing potency is **10 HP plus 2 HP per healer INT**, so enemy stat growth
+  makes later-run healers restore more health.
+- If another living enemy ally is present, the healer can target itself. At or
+  below 45% health, it prioritizes a full-strength self-heal; otherwise, a
+  successful heal on another ally also heals the caster for 50% of that cast's
+  potency. If no ally needs healing, it may self-heal while another ally lives.
+- Healing may begin when the caster is aggroed or a nearby living ally is
+  aggroed or in its notice/shock reaction. This is a read-only local check: the
+  healer does not change its neighbors' aggro or notice state.
 - AI: the caster keeps a **gap from the player** and prefers positions with an
   **ally between it and the player**.
-- The heal is **single-target**, bounded, **never self**, **never the player**.
+- The primary heal is bounded and never targets the player. Self-healing is
+  available only while another living enemy ally remains.
 - A second `support` definition requires **zero code edits** (data-only proof).
 - Each group of up to three regular Slimes independently gets a **50% chance**
   to add one healer; a partial final group also gets a roll, so four Slimes get
@@ -102,9 +118,9 @@ enemy-side `cancel_cast(reason)` (today only the player-block path cancels).
    `boss_jump_slam_component.gd`. Do **not** overload `SlimeCombatComponent`.
 3. **Two animation phases:** the component loops the authored Casting frames
    during the cast timer. At completion it switches to Spell Cast frame 0 and
-   resolves the heal once at `support_heal_frame` (default index 1), then plays
-   the rest of that authored sequence before returning to idle. The sheets
-   describe phases, never facing directions.
+   resolves the heal once at `support_heal_frame` (default index 4, the authored
+   bloom frame), then plays the rest of that authored sequence before returning
+   to idle. The sheets describe phases, never facing directions.
 4. **Interruption is a cancel.** `tick_runtime` returns early during hitstun
    (`scripts/slime_actor.gd:126-130`), which would only *pause* a channel.
    Subscribe to `Health.damaged` and knockback → `cancel_cast("damaged")`.
@@ -128,15 +144,17 @@ enemy-side `cancel_cast(reason)` (today only the player-block path cancels).
 **Phase 0 — data + characterization (first)**
 - Add `behavior_id` to `enemy_definition.gd`, validated + round-tripped; focused
   test that existing definitions default to empty and still materialize.
-- Add cast/heal fields to `SlimeTuning`: `cast_time=2.0`, `heal_frame=1`,
-  `animation_frame_time=0.08`,
-  `heal_amount`, `heal_radius`, `heal_cooldown`, `cast_preferred_range`,
-  `cast_ally_bias`.
+- Add cast/heal fields to `SlimeTuning`: `support_cast_time=2.0`,
+  `support_heal_frame=4`, `support_animation_frame_time=0.08`,
+  `support_heal_amount=10`, `support_heal_per_intelligence=2`,
+  `support_heal_radius`, `support_heal_cooldown`, `support_preferred_range`,
+  `support_ally_bias`.
 
 **Phase 1 — cast state machine (no VFX)**
 - `slime_support_component.gd`: target select (most-damaged living ally in range;
-  exclude self and player), cast timer, cooldown, `start_cast()` /
-  `cancel_cast(reason)`, movement lock.
+  allow self only when another living ally remains, prioritize self at the
+  configured low-health threshold, and never target the player), cast timer,
+  cooldown, `start_cast()` / `cancel_cast(reason)`, movement lock.
 - Hook in `ensure_components()` + `tick_components()`; intercept in
   `update_slime_attack` (`scripts/slime_runtime_controller.gd:388-396`) beside
   BossJumpSlam; gate like `BossJumpSlamComponent._can_begin`.

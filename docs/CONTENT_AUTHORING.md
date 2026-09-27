@@ -357,16 +357,24 @@ runtime actor.
 `behavior_id = support_caster` composes ally healing onto the normal Slime
 actor family; keep `type_id = slime` so it uses Slime geometry, visuals, health,
 and family routing. It selects a living, damaged enemy ally across mob families,
-channels for two seconds, and heals one ally per cast. It keeps seeking injured
-allies throughout the room, repeats the bounded cast as they come into range,
-and uses the normal Slime attack when no living ally needs healing. A green,
-single-pixel, pixel-snapped arc connects the healer to its chosen ally for the
-cast. Damage or knockback cancels the cast. Cast timing, heal
-amount/radius/cooldown, preferred range, and ally steering bias are global
-`SlimeTuning` values in `resources/tuning/slime_default.tres`. Encounter
-eligibility uses `encounter_min_rank`; the healer is eligible from rank 1 and
-is rolled as a companion after the regular room lineup, so a healer room always
-keeps at least one non-support enemy. The consumed room policy in
+channels for two seconds, and heals one primary ally per cast. It keeps seeking
+injured allies throughout the room, repeats the bounded cast as they come into
+range, and uses the normal Slime attack when no eligible healing target remains.
+At or below 45% health, it prioritizes a full-strength self-heal while
+another living enemy ally remains. Successful heals on another ally also heal
+the caster for half potency; when no ally needs healing, it may self-heal if
+another ally is alive.
+The healer can begin when it is aggroed or a nearby ally is aggroed or showing
+its notice/shock reaction. This reads ally state without changing it. A slightly
+transparent green arc starts and ends at the shared body-geometry edges, traces
+the target outline, and moves single-pixel glimmers along the trail while
+preserving the target sparkle. Damage or knockback cancels the cast. Heal
+potency is 10 HP plus 2 HP per healer INT. Cast timing, heal potency/radius,
+self-heal priority and multiplier, cooldown, preferred range, and ally steering
+bias are global `SlimeTuning` values in `resources/tuning/slime_default.tres`.
+Encounter eligibility uses `encounter_min_rank`; the healer is eligible from
+rank 1 and is rolled as a companion after the regular room lineup, so a healer
+room always keeps at least one non-support enemy. The consumed room policy in
 `resources/definitions/room_definition.tres` gives each group of up to three
 regular Slimes an independent 50% healer roll; a partial final group also gets
 a roll, so four Slimes get two chances. Support `encounter_weight` values select

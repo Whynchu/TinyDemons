@@ -52,9 +52,13 @@ class_name SlimeTuning
 @export var steering_clearance := 7.0
 @export_group("Support Slime")
 @export var support_cast_time := 2.0
-@export var support_heal_frame := 1
+# The authored spell sheet reaches its heal-impact bloom on frame 4.
+@export var support_heal_frame := 4
 @export var support_animation_frame_time := 0.08
-@export var support_heal_amount := 8.0
+@export var support_heal_amount := 10.0
+@export var support_heal_per_intelligence := 2.0
+@export_range(0.0, 1.0, 0.01) var support_self_heal_threshold := 0.45
+@export_range(0.0, 1.0, 0.01) var support_self_heal_multiplier := 0.5
 @export var support_heal_radius := 40.0
 @export var support_heal_cooldown := 0.25
 @export var support_cast_release_time := 0.18

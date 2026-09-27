@@ -54,6 +54,8 @@ func tick(context: SlimeSupportContext, actor: Sprite2D, delta: float) -> bool:
 	var tuning := context.slime_tuning
 	if tuning == null:
 		return false
+	if state != State.READY and actor.position.distance_squared_to(cast_position) > 0.01:
+		actor.position = cast_position
 	_heal_cooldown_remaining = maxf(_heal_cooldown_remaining - maxf(delta, 0.0), 0.0)
 	if state == State.READY:
 		cooldown_remaining = maxf(cooldown_remaining - maxf(delta, 0.0), 0.0)
@@ -66,9 +68,6 @@ func tick(context: SlimeSupportContext, actor: Sprite2D, delta: float) -> bool:
 					return true
 		return false
 	if state == State.CASTING:
-		# Contact separation should not turn a rooted channel into a sliding cast.
-		if actor.position.distance_squared_to(cast_position) > 0.01:
-			actor.position = cast_position
 		if not _is_heal_target_valid(context, actor, heal_target, tuning):
 			cancel_cast(&"target_lost")
 			return false
@@ -119,16 +118,27 @@ func _resolve_heal(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeT
 	if heal_resolved:
 		return
 	heal_resolved = true
-	var healed_amount := 0.0
-	if heal_target != null and is_instance_valid(heal_target) and heal_target != actor and heal_target != context.player and not bool(context.is_dead.call(heal_target)):
+	var target_healed_amount := 0.0
+	var caster_healed_amount := 0.0
+	var heal_amount := _heal_potency(actor, tuning)
+	if _is_heal_target_valid(context, actor, heal_target, tuning):
 		var target_health := heal_target.get_node_or_null("Health") as HealthComponent
 		if target_health != null:
-			healed_amount = target_health.apply_healing(tuning.support_heal_amount)
-	if healed_amount > 0.0:
+			target_healed_amount = target_health.apply_healing(heal_amount)
+			if heal_target != actor and target_healed_amount > 0.0:
+				var caster_health := actor.get_node_or_null("Health") as HealthComponent
+				if caster_health != null:
+					var reflected_heal := heal_amount * clampf(tuning.support_self_heal_multiplier, 0.0, 1.0)
+					caster_healed_amount = caster_health.apply_healing(reflected_heal)
+	if target_healed_amount > 0.0 or caster_healed_amount > 0.0:
 		context.play_healing_sound.call("healing", 0.0, 1.0, 0.025)
 		var effects := context.effects_spawner as EffectsSpawner
 		if effects != null:
-			effects.spawn_heal_burst(context, context.actor_foot.call(heal_target) as Vector2, tuning.support_heal_particle_count)
+			if target_healed_amount > 0.0:
+				effects.spawn_heal_burst(context, context.actor_foot.call(heal_target) as Vector2, tuning.support_heal_particle_count)
+			if caster_healed_amount > 0.0:
+				var self_burst_count := maxi(2, ceili(float(tuning.support_heal_particle_count) * 0.5))
+				effects.spawn_heal_burst(context, context.actor_foot.call(actor) as Vector2, self_burst_count)
 		_heal_cooldown_remaining = maxf(tuning.support_heal_cooldown, 0.0)
 	if cast_bar != null and is_instance_valid(cast_bar):
 		cast_bar.call("set_progress", 1.0)
@@ -189,6 +199,7 @@ func _on_health_damaged(_amount: float) -> void:
 
 
 func _can_seek_heal_target(context: SlimeSupportContext, actor: Sprite2D) -> bool:
+	var tuning := context.slime_tuning
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null or combat.active or combat.hitstun_timer > 0.0 or combat.knockback_timer > 0.0:
 		return false
@@ -197,13 +208,23 @@ func _can_seek_heal_target(context: SlimeSupportContext, actor: Sprite2D) -> boo
 	var spawn := actor.get_node_or_null("Spawn")
 	if spawn != null and bool(spawn.call("is_active")):
 		return false
-	return bool(context.is_aggroed.call(actor))
+	if context.is_aggroed.is_valid() and bool(context.is_aggroed.call(actor)):
+		return true
+	return _has_nearby_alerted_ally(context, actor, tuning)
 
 
 func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeTuning) -> Sprite2D:
 	var actor_foot: Vector2 = context.actor_foot.call(actor)
 	var actor_pool := context.slimes
 	var player := context.player
+	var can_self_heal := _has_living_ally(context, actor)
+	var self_health := actor.get_node_or_null("Health") as HealthComponent
+	var self_missing := 0.0
+	if self_health != null:
+		self_missing = maxf(self_health.maximum_health - self_health.current_health, 0.0)
+		var health_ratio := self_health.current_health / maxf(self_health.maximum_health, 0.01)
+		if can_self_heal and self_missing > 0.0 and health_ratio <= clampf(tuning.support_self_heal_threshold, 0.0, 1.0):
+			return actor
 	var best_in_range: Sprite2D
 	var best_in_range_missing := 0.0
 	var best_in_range_distance := INF
@@ -233,7 +254,11 @@ func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: 
 			nearest_out_of_range = candidate
 			nearest_out_of_range_distance = distance
 			nearest_out_of_range_missing = missing
-	return best_in_range if best_in_range != null else nearest_out_of_range
+	if best_in_range != null:
+		return best_in_range
+	if nearest_out_of_range != null:
+		return nearest_out_of_range
+	return actor if can_self_heal and self_missing > 0.0 else null
 
 
 func _is_heal_target_in_range(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D, tuning: SlimeTuning) -> bool:
@@ -243,7 +268,9 @@ func _is_heal_target_in_range(context: SlimeSupportContext, actor: Sprite2D, tar
 
 
 func _is_heal_target_valid(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D, tuning: SlimeTuning) -> bool:
-	if target == null or target == actor or target == context.player or not is_instance_valid(target) or not target.visible:
+	if target == null or target == context.player or not is_instance_valid(target) or not target.visible:
+		return false
+	if target == actor and not _has_living_ally(context, actor):
 		return false
 	if bool(context.is_dead.call(target)):
 		return false
@@ -251,6 +278,48 @@ func _is_heal_target_valid(context: SlimeSupportContext, actor: Sprite2D, target
 	if health == null or health.current_health <= 0.0 or health.current_health >= health.maximum_health:
 		return false
 	return _is_heal_target_in_range(context, actor, target, tuning)
+
+
+func _heal_potency(actor: Sprite2D, tuning: SlimeTuning) -> float:
+	var caster_stats := actor.get_node_or_null("Stats") as StatsComponent
+	var intelligence := caster_stats.get_stat(StatsComponent.Stat.INT) if caster_stats != null else 0
+	return maxf(tuning.support_heal_amount, 0.0) + float(intelligence) * maxf(tuning.support_heal_per_intelligence, 0.0)
+
+
+func _has_living_ally(context: SlimeSupportContext, actor: Sprite2D) -> bool:
+	for candidate_value in context.slimes:
+		var candidate := candidate_value as Sprite2D
+		if candidate == null or candidate == actor or candidate == context.player or not is_instance_valid(candidate) or not candidate.visible:
+			continue
+		if bool(context.is_dead.call(candidate)):
+			continue
+		var health := candidate.get_node_or_null("Health") as HealthComponent
+		if health != null and health.current_health > 0.0:
+			return true
+	return false
+
+
+func _has_nearby_alerted_ally(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeTuning) -> bool:
+	var radius := maxf(tuning.support_heal_radius, tuning.aggro_range)
+	var radius_squared := radius * radius
+	var actor_foot: Vector2 = context.actor_foot.call(actor)
+	for candidate_value in context.slimes:
+		var candidate := candidate_value as Sprite2D
+		if candidate == null or candidate == actor or candidate == context.player or not is_instance_valid(candidate) or not candidate.visible:
+			continue
+		if bool(context.is_dead.call(candidate)):
+			continue
+		var health := candidate.get_node_or_null("Health") as HealthComponent
+		if health != null and health.current_health <= 0.0:
+			continue
+		var candidate_foot: Vector2 = context.actor_foot.call(candidate)
+		if actor_foot.distance_squared_to(candidate_foot) > radius_squared:
+			continue
+		var brain := candidate.get_node_or_null("Brain") as SlimeBrain
+		var is_noticing := brain != null and (brain.is_noticing() or (brain.notice_started and not brain.notice_animation_finished))
+		if is_noticing or (context.is_aggroed.is_valid() and bool(context.is_aggroed.call(candidate))):
+			return true
+	return false
 
 
 func _begin_cast(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D, tuning: SlimeTuning) -> void:
