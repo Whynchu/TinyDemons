@@ -83,7 +83,7 @@ Stopping rules:
 | C1 | Cached the per-frame debug lookup, replaced the 200 ms mix-profile file read with a metadata stat, and skipped the release capture lookup | Complete (`357f62b`) |
 | C2 | Deduplicated the authored Run 1/Run 2 layout assembly; characterized and closed the remaining candidates as not worth the churn | Complete (`e6d4b30`) |
 | C3a | Moved archetype screen flow into `screen_state_controller`, removing the save-flow circular delegation and the dead title path | Complete |
-| C3b | Move hub input ownership from `screen_state_controller` into `hub_flow_controller` | Planned |
+| C3b | Declared the hub boundary: `screen_state_controller` owns hub state, input, and presentation; `hub_flow_controller` owns hub transactions. Removed the false input router. Moving the 192-line handler into `hub_flow` was rejected because the hub state it reads lives in `screen_state`. Known follow-up: the `HUB_PAGE_*` constants are duplicated in both files. | Complete |
 | C4 | Extract `screen_state_controller` into a menu platform | Deferred until menu work is an active feature |
 | C5 | Targeted dynamic-call reduction on authoring-adjacent owners | Planned |
 

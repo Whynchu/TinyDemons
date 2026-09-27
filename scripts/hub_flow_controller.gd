@@ -239,10 +239,6 @@ func close_hub_to_run(root: Object) -> void:
 		return
 
 
-func update_hub_input(root: Object) -> void:
-	root.screen_state_controller.update_hub_input(root)
-
-
 func set_hub_page(root: Object, page: int) -> void:
 	var screen: Object = root.screen_state_controller
 	if page < 0:

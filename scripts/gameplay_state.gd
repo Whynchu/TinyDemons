@@ -658,7 +658,7 @@ func _hub_back_or_close() -> void:
 		_pause_back()
 	elif screen_state_controller.hub_overlay != null and screen_state_controller.hub_overlay.visible:
 		hub_flow_controller.call("back_from_hub_route", self)
-func _update_hub_input() -> void: hub_flow_controller.call("update_hub_input", self)
+func _update_hub_input() -> void: screen_state_controller.call("update_hub_input", self)
 func _update_pause_input() -> void: screen_state_controller.update_pause_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller != null and player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller != null and player_controller.target_held(_controller_devices(), 0.35)
