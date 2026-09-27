@@ -264,6 +264,46 @@ static func _room_has_puzzle_a_exit(layout, room_id: StringName) -> bool:
 	return false
 
 
+static func add_rooms_from_data(layout, data, flame_resolver: Callable = Callable()) -> void:
+	for entry in data.rooms:
+		var room := entry as Dictionary
+		var room_flame := room.get("fire_flame", &"") as StringName
+		if flame_resolver.is_valid():
+			room_flame = flame_resolver.call(room_flame) as StringName
+		layout.add_room(layout.make_room_spec(
+			room["id"] as StringName,
+			room["coordinate"] as Vector2i,
+			room["minimap_coordinate"] as Vector2i,
+			room["room_type"] as StringName,
+			int(room.get("chest_count", 0)),
+			room.get("respawn_color", &"") as StringName,
+			0,
+			room_flame,
+			room.get("chest_position", Vector2.ZERO) as Vector2
+		))
+
+
+static func add_connections_from_data(layout, data) -> void:
+	for entry in data.connections:
+		var link := entry as Dictionary
+		var source: Variant = layout.room_by_id(link["source_room_id"] as StringName)
+		var destination: Variant = layout.room_by_id(link["destination_room_id"] as StringName)
+		if source == null or destination == null:
+			continue
+		var exit_socket := link["exit_socket"] as StringName
+		var destination_entry := DungeonGraph.paired_socket(exit_socket)
+		layout.add_connection(layout.make_connection_spec(
+			link["source_room_id"] as StringName,
+			exit_socket,
+			link["destination_room_id"] as StringName,
+			destination_entry,
+			link.get("color_requirement", &"") as StringName,
+			false,
+			&"",
+			link.get("minimap_coordinate", Vector2i.ZERO) as Vector2i
+		))
+
+
 func make_connection_spec(
 	new_source_room_id: StringName,
 	new_exit_socket: StringName,
