@@ -99,16 +99,16 @@ active forward direction — content definitions, factories, and device-backed
 performance — is in
 [`docs/long-term-composition-and-performance-plan.md`](docs/long-term-composition-and-performance-plan.md).
 
-The latest source scan (working tree on 2026-09-26; version `0.2.84`) gives us
+The latest source scan (working tree on 2026-09-26; version `0.2.97`) gives us
 this shape:
 
 | Surface | Current measurement | What it tells us |
 |---|---:|---|
-| Runtime scripts | 206 | The project already has a substantial feature vocabulary |
+| Runtime scripts | 208 | The project already has a substantial feature vocabulary |
 | Explicit `*Component` classes | 20 | Player, slime, Chroma, equipment, health, and interaction composition is established |
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,718 lines / 286 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
-| `root.call/get/set` | 2,201 sites | Below the strict target; any future reductions should remain feature-scoped and owner-led |
+| `root.call/get/set` | 2,200 sites | Below the recorded 2,202 baseline; `validate_composition.ps1` reports 100% and passes the regression floor |
 | Tests | 145 manifest rows / 143 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
@@ -122,8 +122,10 @@ editor-inspectable definition resources for slime variants, elements, palettes,
 the item catalogue, the Run 1/Run 2 layouts, and the authored puzzle plans.
 Under the strict ownership scorecard in
 [`docs/composition-refactor-analysis.md`](docs/composition-refactor-analysis.md),
-the legacy-coupling cleanup is **complete (100%)**: the strict audit passes and
-the regression floor now protects the achieved state. The **editor-composition
+the legacy-coupling cleanup is **complete (100%)**: `validate_composition.ps1`
+reports 2,200 root accesses and `GameplayState` at 1,718 lines / 286 fields, so
+the strict audit passes and the regression floor protects the achieved state.
+The **editor-composition
 score is 100%** by the validator's definition (components blind +
 `@export`-configured; definition scripts loading `.tres`), but that score is a
 proxy, not authoring proof: several catalog payloads are still untyped
@@ -288,7 +290,7 @@ magic.
 
 ## Web build
 
-Current game version: **0.2.96**. Every push to `main` must increment the
+Current game version: **0.2.97**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

@@ -1,4 +1,4 @@
-# Tiny Demons — Version 0.2.84 Codebase Audit
+# Tiny Demons — Version 0.2.97 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
@@ -10,9 +10,11 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.96` (composition refactor structurally and editor-wise
-complete: strict scorecard at 100% and editor composition at 100%, typed
-room/menu boundaries, and the enemy authoring slice proof landed)
+Current release: `0.2.97` (composition refactor structurally and editor-wise
+complete: the strict scorecard and regression floor both pass at 100%, with 2,200
+root accesses and `GameplayState` at 1,718 lines / 286 fields. The debug-menu
+dispatch added in 0.2.96 was extracted into `DebugSessionController` to restore
+the floor.)
 
 Supersedes: the `0.2.00` audit (`docs/AUDIT.md` at commit
 `bfe55782f43ee40fe32b5bebd45de988e34579d8`). That document remains available in
@@ -20,31 +22,33 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
-## Current measured snapshot (2026-09-26, version 0.2.84)
+## Current measured snapshot (2026-09-26, version 0.2.97)
 
 The detailed historical audit below describes the `0.2.32` tree. The current
-`0.2.84` working tree measures:
+`0.2.97` working tree measures:
 
-| Metric | 0.2.32 audit | 0.2.84 working tree (2026-09-26) |
+| Metric | 0.2.32 audit | 0.2.97 working tree (2026-09-26) |
 | --- | ---: | ---: |
-| GDScript files in `scripts/` | 171 | 206 |
-| `root.call/get/set` sites | 2,488 | 2,201 |
+| GDScript files in `scripts/` | 171 | 208 |
+| `root.call/get/set` sites | 2,488 | 2,200 |
 | `GameplayState` lines / fields | 1,719 / 286 | 1,718 / 286 |
-| `RoomController` lines | 2,253 | 2,246 |
-| `screen_state_controller.gd` lines | 5,432 | 5,508 |
-| GDScript test/report files | 124 | 143 |
-| Registered runnable smoke paths | 122 | 141 |
+| `RoomController` lines | 2,253 | 2,251 |
+| `screen_state_controller.gd` lines | 5,432 | 5,571 |
+| GDScript test/report files | 124 | 145 |
+| Registered runnable smoke paths | 122 | 143 |
 | Curated release-gate paths | 43 | 44 |
-| Project Markdown documents under `docs/` | 89 | 104 |
+| Project Markdown documents under `docs/` | 89 | 100 |
 
-The strict composition audit and the regression floor both pass. The
-editor-composition metric reads 100% by its own definition, but that metric
-counts component blindness, `@export` presence, and definition scripts loading
-`.tres`; it does not prove that the authored data is typed, validated, or read
-at runtime. Several catalogs are still untyped dictionaries and several
-resource fields are ignored in favor of duplicated code constants — see the
-trap register in [`authoring-system-plan.md`](authoring-system-plan.md). Treat
-the metric as a regression guard, not an authoring-completeness claim.
+The strict composition audit and the regression floor both pass at **100%**
+(`validate_composition.ps1`: 2,200 root accesses, `GameplayState` 1,718 lines /
+286 fields, `RoomController` 2,251 lines). The editor-composition metric reads
+100% by its own definition, but
+that metric counts component blindness, `@export` presence, and definition
+scripts loading `.tres`; it does not prove that the authored data is typed,
+validated, or read at runtime. Several catalogs are still untyped dictionaries
+and several resource fields are ignored in favor of duplicated code constants -
+see the trap register in [`authoring-system-plan.md`](authoring-system-plan.md).
+Treat the metric as a regression guard, not an authoring-completeness claim.
 
 The historical sections below retain their original baseline measurements; the
 current snapshot above and the focused verification commands are the live
@@ -548,10 +552,12 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.84 remains past the legacy-coupling and editor-composition
-cleanup. The latest composition validation reports 2,202 root accesses,
-`GameplayState` at 1,717 lines / 286 fields, and `RoomController` at 2,250
-lines; both the strict scorecard and editor-composition measure pass. The test
+Tiny Demons 0.2.97 remains past the legacy-coupling and editor-composition
+cleanup. The latest composition validation reports 2,200 root accesses
+(baseline 2,202), `GameplayState` at 1,718 lines / 286 fields (baseline 1,718),
+and `RoomController` at 2,251 lines; the strict scorecard and editor-composition
+measure both pass at 100%. The 0.2.96 debug-menu dispatch was moved out of the
+composition root into `DebugSessionController`. The test
 manifest validates at 145 rows, 143 runnable paths, two reports, and a 44-path
 default gate. These are focused validation results, not a fresh run of the full
 curated gate.

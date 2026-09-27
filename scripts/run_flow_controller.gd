@@ -252,8 +252,8 @@ func apply_run_rank_grade(root: Object, grade: String) -> void:
 	ProgressionController.apply_run_grade(root.player_profile, grade)
 
 
-func begin_new_run(root: Object, preserve_current_dungeon := false) -> void:
-	var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> void:
+	var debug_session := root.get_node_or_null("DebugSessionController") as Node
 	if debug_session == null or not bool(debug_session.get("active")):
 		debug_run_number = 0
 	# A new run must never inherit a previous interrupted run's checkpoint.
@@ -464,7 +464,7 @@ func return_to_hub(root: Object) -> void:
 	root.call("_begin_scene_transition")
 
 
-func settle_current_run(root: Object, result: StringName) -> bool:
+func settle_current_run(root: GameplayState, result: StringName) -> bool:
 	if not RunSettlement.can_settle(root.run_state, result):
 		return false
 	root.call("_sync_runtime_progression_to_profile")
@@ -472,7 +472,7 @@ func settle_current_run(root: Object, result: StringName) -> bool:
 	var settlement := RunSettlement.settle_context(settlement_context)
 	if settlement.succeeded():
 		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
-		var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+		var debug_session := root.get_node_or_null("DebugSessionController") as Node
 		if debug_session == null or not bool(debug_session.get("active")):
 			debug_run_number = 0
 	return settlement.succeeded()

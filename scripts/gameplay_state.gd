@@ -750,32 +750,6 @@ func _set_pause_status_page() -> void:
 	screen_state_controller.set_pause_page(self, 1)
 func _set_pause_equipment_page() -> void:
 	screen_state_controller.set_pause_page(self, 2)
-func _open_debug_page() -> void:
-	var debug_session := get_node_or_null("DebugSessionController")
-	if run_state == null or not run_state.active or not bool(settings_service.get_setting(&"debug_menu_enabled", false)) or debug_session == null:
-		return
-	debug_session.call("begin", self)
-	screen_state_controller.set_pause_page(self, 3)
-	screen_state_controller.refresh_debug_menu(self)
-func _on_debug_menu_action(action: StringName, _amount: int = 0) -> void:
-	var debug_session := get_node_or_null("DebugSessionController")
-	if debug_session == null:
-		return
-	match action:
-		&"run_decrease": debug_session.call("change_run_number", -1)
-		&"run_increase": debug_session.call("change_run_number", 1)
-		&"level_decrease": debug_session.call("change_player_level", self, -1)
-		&"level_increase": debug_session.call("change_player_level", self, 1)
-		&"toggle_invulnerable": debug_session.call("toggle", self, &"invulnerable")
-		&"toggle_unlimited_chroma": debug_session.call("toggle", self, &"unlimited_chroma")
-		&"toggle_pause_enemies": debug_session.call("toggle", self, &"pause_enemies")
-		&"toggle_geometry_guides": debug_session.call("toggle", self, &"geometry_guides")
-		&"reset_run": debug_session.call("reset_run", self)
-		&"back": screen_state_controller.set_pause_page(self, 0)
-		&"end_session":
-			debug_session.call("end", self)
-			screen_state_controller.set_pause_page(self, 0)
-	screen_state_controller.refresh_debug_menu(self)
 func _pause_back() -> void:
 	screen_state_controller.pause_back(self)
 func _pause_equipment_back() -> void:
@@ -804,11 +778,7 @@ func _apply_run_rank_grade(grade: String) -> void:
 func _begin_new_run(preserve_current_dungeon := false) -> void:
 	run_flow_controller.call("begin_new_run", self, preserve_current_dungeon)
 func _save_active_run_checkpoint() -> bool:
-	if not OS.has_feature("web") or run_state == null or not run_state.active:
-		return false
-	if run_flow_controller != null and run_flow_controller.debug_run_number > 0:
-		# A debug-selected layout/rank is a transient playtest route and cannot be
-		# represented by the normal active-run checkpoint schema.
+	if not OS.has_feature("web") or run_state == null or not run_state.active or (run_flow_controller != null and run_flow_controller.debug_run_number > 0):
 		return false
 	var snapshot := ActiveRunSnapshotScript.create_context(_active_run_snapshot_context())
 	if snapshot.is_empty():
@@ -1320,9 +1290,7 @@ func _ensure_current_room_layout() -> void:
 	# the completed-run curve so rank milestones (boss minors, popcorn, etc.)
 	# keep their 1:1 meaning without any per-room (depth) difficulty.
 	room_controller.progression_run_rank = _run_rank()
-	var debug_session := get_node_or_null("DebugSessionController")
-	var debug_level := int(debug_session.get("player_level_override")) if debug_session != null else 0
-	room_controller.player_level = debug_level if debug_level > 0 else maxi(1, player_profile.level if player_profile != null else player_stats.level)
+	room_controller.player_level = int((get_node("DebugSessionController") as Node).call("effective_player_level", maxi(1, player_profile.level if player_profile != null else player_stats.level)))
 	var base_palette := run_start_palette_name if not run_start_palette_name.is_empty() else current_player_palette_name
 	var layout_origin_flame := StringName(dungeon_map_controller.call("layout_origin_flame")) if dungeon_map_controller != null else &""
 	var encounter_origin_flame := layout_origin_flame if not layout_origin_flame.is_empty() else (player_profile.starter_flame if player_profile != null else &"fire")

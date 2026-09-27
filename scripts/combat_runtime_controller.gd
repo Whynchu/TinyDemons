@@ -844,10 +844,10 @@ func flush_pending_xp(root: Object) -> void:
 	root.call("_sync_runtime_progression_to_profile")
 
 
-func apply_player_level(root: Object) -> void:
+func apply_player_level(root: GameplayState) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	var stats := root.get("player_stats") as StatsComponent
-	var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+	var debug_session := root.get_node_or_null("DebugSessionController") as Node
 	var debug_level := int(debug_session.get("player_level_override")) if debug_session != null else 0
 	stats.level = debug_level if debug_level > 0 else (profile.level if profile != null else stats.level)
 	var health := root.get("player_health_component") as HealthComponent
@@ -858,14 +858,14 @@ func apply_player_level(root: Object) -> void:
 	root.call("_update_player_health_ui")
 
 
-func update_player_progression_ui(root: Object) -> void:
+func update_player_progression_ui(root: GameplayState) -> void:
 	var level_text := root.get("player_level_text") as Sprite2D
 	var xp_fill := root.get("player_xp_fill") as Sprite2D
 	var xp_text := root.get("player_xp_text") as Sprite2D
 	if not is_instance_valid(level_text) or not is_instance_valid(xp_fill) or not is_instance_valid(xp_text):
 		return
 	var profile := root.get("player_profile") as PlayerProfile
-	var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+	var debug_session := root.get_node_or_null("DebugSessionController") as Node
 	var debug_level := int(debug_session.get("player_level_override")) if debug_session != null else 0
 	var level := debug_level if debug_level > 0 else (profile.level if profile != null else 1)
 	var xp := profile.xp if profile != null else 0

@@ -19,7 +19,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.96"
+const GAME_VERSION := "0.2.97"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -4167,33 +4167,33 @@ func update_pause_input(root: Object) -> void:
 
 
 
-func refresh_debug_menu(root: Object) -> void:
+func refresh_debug_menu(root: GameplayState) -> void:
 	if debug_menu_layout == null:
 		return
-	var session := root.call("get_node_or_null", "DebugSessionController") as Node
+	var session := root.get_node_or_null("DebugSessionController") as Node
 	if session == null:
 		return
-	var stats := root.get("player_stats") as StatsComponent
+	var stats := root.player_stats
 	var debug_level := int(session.get("player_level_override"))
 	var level := debug_level if debug_level > 0 else (stats.level if stats != null else 1)
-	var geometry := root.get("actor_geometry_debug_drawer") as ActorGeometryDebugDrawer
+	var geometry := root.actor_geometry_debug_drawer
 	debug_menu_layout.call("refresh", Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
 	for index in debug_menu_buttons.size():
 		debug_menu_buttons[index].scale = Vector2.ONE * (1.06 if index == debug_menu_row else 1.0)
 
 
-func _update_debug_page_input(root: Object) -> void:
+func _update_debug_page_input(root: GameplayState) -> void:
 	if debug_menu_buttons.is_empty():
 		return
-	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+	if bool(root._is_menu_direction_just_pressed(&"ui_up")):
 		debug_menu_row = posmod(debug_menu_row - 1, debug_menu_buttons.size())
 		refresh_debug_menu(root)
-	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+	elif bool(root._is_menu_direction_just_pressed(&"ui_down")):
 		debug_menu_row = posmod(debug_menu_row + 1, debug_menu_buttons.size())
 		refresh_debug_menu(root)
-	elif bool(root.call("_is_menu_confirm_just_pressed")):
+	elif bool(root._is_menu_confirm_just_pressed()):
 		debug_menu_buttons[debug_menu_row].pressed.emit()
-		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+		root._play_sound("ui_confirm", 0.0, 1.0)
 
 
 func _update_pause_equipment_input(root: Object) -> void:
