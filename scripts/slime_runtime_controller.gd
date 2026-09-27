@@ -29,10 +29,12 @@ var _skeleton_bone_outline_cache: Dictionary = {}
 ## root references and callables, but was previously rebuilt for every active
 ## slime on every frame. Call invalidate_contexts() if a source object is swapped.
 var _boss_jump_slam_context_cache: BossJumpSlamContext = null
+var _slime_support_context_cache: SlimeSupportContext = null
 
 
 func invalidate_contexts() -> void:
 	_boss_jump_slam_context_cache = null
+	_slime_support_context_cache = null
 
 
 ## Owns the enemy runtime loop: aggro, attacks, scooting, knockback, and the
@@ -388,8 +390,8 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	if slime.get_meta("behavior_id", &"") == &"support_caster":
-		var support := slime.get_node_or_null("Support") as Node
-		if support != null and bool(support.call("tick", root, slime, delta)):
+		var support := slime.get_node_or_null("Support") as SlimeSupportComponent
+		if support != null and support.tick(_slime_support_context(root), slime, delta):
 			return true
 	var boss_jump_slam: BossJumpSlamComponent = slime.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
 	if boss_jump_slam != null:
@@ -406,7 +408,10 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 
 
 func set_slime_support_animation_frame(root: Object, slime: Sprite2D, phase: StringName, frame_index: int) -> void:
-	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	var gameplay := root as GameplayState
+	if gameplay == null:
+		return
+	var visual := SlimeActor.component(slime, "Visual", SlimeVisualComponent) as SlimeVisualComponent
 	if visual == null:
 		return
 	var animation_phase := &"spell" if phase == &"spell" else &"casting"
@@ -417,8 +422,39 @@ func set_slime_support_animation_frame(root: Object, slime: Sprite2D, phase: Str
 	slime.set_meta("runtime_animation", "cast")
 	slime.set_meta("support_animation_phase", animation_phase)
 	slime.set_meta("runtime_animation_frame", index)
-	root.call("_set_actor_base_texture", slime, frames[index])
-	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
+	gameplay._set_actor_base_texture(slime, frames[index])
+	var presentation := gameplay.actor_presentation_runtime_controller as ActorPresentationRuntimeController
+	if presentation != null:
+		presentation.sync_slime_shadow(gameplay, slime)
+
+
+func _slime_support_context(root: Object) -> SlimeSupportContext:
+	var gameplay := root as GameplayState
+	if gameplay == null:
+		return null
+	if _slime_support_context_cache == null or _slime_support_context_cache.slime_tuning != gameplay.slime_tuning:
+		var context := SlimeSupportContext.new()
+		context.world_root = gameplay
+		context.actor_foot = Callable(gameplay, "_actor_foot")
+		context.is_dead = Callable(gameplay, "_is_slime_dead")
+		context.is_aggroed = Callable(gameplay, "_is_slime_aggroed")
+		context.magic_target_point = Callable(gameplay, "_magic_target_point")
+		context.pixel_particle_texture = Callable(gameplay, "_pixel_particle_texture")
+		context.snap_half_pixel = Callable(gameplay, "_snap_half_pixel")
+		context.set_animation_frame = Callable(gameplay, "_set_slime_support_animation_frame")
+		context.play_healing_sound = Callable(gameplay, "_play_sound_with_perlin_pitch")
+		context.restore_idle_texture = Callable(gameplay, "_restore_slime_idle_texture")
+		_slime_support_context_cache = context
+	var cached := _slime_support_context_cache
+	cached.player = gameplay.player
+	cached.slimes = gameplay.slimes
+	cached.slime_tuning = gameplay.slime_tuning
+	cached.rng = gameplay.rng
+	cached.effects_spawner = gameplay.effects_spawner
+	cached.player_guard_component = gameplay.player_guard_component
+	cached.overworld_ui_z = gameplay.OVERWORLD_UI_Z
+	cached.depth_z_scale = gameplay.DEPTH_Z_SCALE
+	return cached
 
 
 func _boss_jump_slam_context(root: Object) -> BossJumpSlamContext:

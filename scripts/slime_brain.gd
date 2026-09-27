@@ -221,6 +221,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var collision := root.get("actor_collision_system") as ActorCollisionSystem
 	var nearby_radius := maxf(tuning.steering_clearance, tuning.support_preferred_range) if support_positioning else tuning.steering_clearance
 	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, nearby_radius) if collision != null else []
+	var gameplay := root as GameplayState
 
 	for index in direction_count:
 		var angle := TAU * float(index) / float(direction_count)
@@ -269,7 +270,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 			if player_distance_from_candidate > 0.01:
 				var direction_to_player := to_player_from_candidate / player_distance_from_candidate
 				for buddy in nearby:
-					if buddy == actor or not buddy.visible or bool(root.call("_is_slime_dead", buddy)):
+					if buddy == actor or not buddy.visible or gameplay._is_slime_dead(buddy):
 						continue
 					var buddy_from_candidate: Vector2 = actor_foot.call(buddy) - candidate_foot
 					var along := buddy_from_candidate.dot(direction_to_player)

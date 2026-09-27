@@ -124,5 +124,59 @@ static func ensure_room_popcorn_slot(
 		break
 
 
+func finalize_room_encounter(
+	force_debug_enemy: bool,
+	variants: Array[String],
+	levels: Array[int],
+	popcorn_flags: Array[bool],
+	popcorn_types: Array[String],
+	ambush_flags: Array[bool],
+	elite_flags: Array[bool],
+	popcorn_level: int,
+	room_popcorn_id: String,
+	elite_popcorn_id: String,
+	encounter_rng: RandomNumberGenerator,
+	room_policy: RoomDefinition,
+	run_rank: int,
+	base_level: int,
+	level_spread: int,
+	encounter_tier: StringName,
+	enemy_level_cap: int
+) -> void:
+	# Preserve the room's relief slot and its shadow-bound identity ratio before
+	# adding any support-role companions.
+	ensure_room_popcorn_slot(force_debug_enemy, is_shadow_bound(), variants, levels, popcorn_flags, popcorn_types, ambush_flags, elite_flags, popcorn_level, room_popcorn_id)
+	if variants.has("purple"):
+		for index in variants.size():
+			if popcorn_flags[index]:
+				variants[index] = "grey"
+				popcorn_types[index] = elite_popcorn_id
+				ambush_flags[index] = false
+				elite_flags[index] = false
+	var slime_companion_count := 0
+	for variant in variants:
+		var companion_definition := EnemyFactory.definition(StringName(variant))
+		if companion_definition != null and companion_definition.type_id == &"slime" and companion_definition.encounter_role != &"support":
+			slime_companion_count += 1
+	var support_variant_pool := EnemyFactory.weighted_variants_for_role(&"slime", &"support", run_rank)
+	var support_roll_count := room_policy.support_companion_roll_count(slime_companion_count)
+	if force_debug_enemy or support_variant_pool.is_empty():
+		return
+	for _support_roll in range(support_roll_count):
+		if encounter_rng.randf() >= clampf(room_policy.support_companion_chance_per_group, 0.0, 1.0):
+			continue
+		var support_variant := select_weighted_variant(support_variant_pool, encounter_rng)
+		var support_definition := EnemyFactory.definition(StringName(support_variant))
+		if support_definition == null or support_definition.encounter_role != &"support":
+			continue
+		variants.append(support_variant)
+		var support_level := encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
+		levels.append(clampi(support_level, 1, enemy_level_cap))
+		popcorn_flags.append(false)
+		popcorn_types.append("")
+		ambush_flags.append(false)
+		elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE)
+
+
 func is_shadow_bound() -> bool:
 	return matchup_policy == POLICY_SHADOW_BOUND

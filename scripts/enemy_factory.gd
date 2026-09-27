@@ -86,11 +86,11 @@ static func is_variant(variant_id: StringName) -> bool:
 	return SLIME_VARIANT_CATALOG_SCRIPT.is_variant(variant_id)
 
 
-static func variants_for_type(type_id: StringName) -> Array[StringName]:
+static func variants_for_type(type_id: StringName, excluded_role: StringName = &"") -> Array[StringName]:
 	var matches: Array[StringName] = []
 	for variant_id in SLIME_VARIANT_CATALOG_SCRIPT.variants():
 		var enemy_definition := definition(variant_id)
-		if enemy_definition != null and enemy_definition.type_id == type_id:
+		if enemy_definition != null and enemy_definition.type_id == type_id and (excluded_role.is_empty() or enemy_definition.encounter_role != excluded_role):
 			matches.append(variant_id)
 	return matches
 

@@ -201,7 +201,6 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var variant_pool: Array[Dictionary] = [
 		{"variant": "grey", "weight": definition.shadow_bound_normal_weight if definition.is_shadow_bound() else definition.grey_weight},
 	]
-	var support_variant_pool := ENEMY_FACTORY_SCRIPT.weighted_variants_for_role(&"slime", &"support", progression_run_rank)
 	if definition.is_shadow_bound() and allow_shadow:
 		variant_pool.append({"variant": "purple", "weight": definition.shadow_bound_variant_weight})
 	# R1 is neutral-only. R2 teaches player advantage. R3 reverses that lesson.
@@ -280,49 +279,11 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(level_floor, base_level + level_spread)
 		var level_cap := _enemy_level_cap() + ELITE_ENCOUNTER_LEVEL_BONUS if encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn else _enemy_level_cap()
 		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, level_cap))
-	# Ordinary rooms keep one room-popcorn slot so the respawn system remains
-	# observable even when all random rolls miss. Shadow-bound composition is a
-	# weighted identity policy: forcing a relief slot there would turn the
-	# authored 20/80 Shadow/Normal ratio into a much larger Normal bias on the
-	# small one-slot encounters.
-	EncounterDefinition.ensure_room_popcorn_slot(force_debug_enemy, definition.is_shadow_bound(), variants, levels, popcorn_flags, popcorn_types, ambush_flags, elite_flags, _popcorn_enemy_level(), ROOM_POPCORN)
-	# Shadow encounters keep any low-level mana-recovery slots readable: every
-	# popcorn slot beside a Shadow Slime becomes a Normal Slime. The weighted
-	# composition above intentionally does not append a guaranteed slot; doing so
-	# would violate the approximately 20 percent Normal relief target.
-	if variants.has("purple"):
-		for index in variants.size():
-			if popcorn_flags[index]:
-				variants[index] = "grey"
-				popcorn_types[index] = ELITE_POPCORN
-				ambush_flags[index] = false
-				elite_flags[index] = false
-	# Support-role enemies are extra companions, never replacements for the
-	# normal slime lineup. Each group of up to N regular Slimes gets an
-	# independent roll from the authored room policy.
-	var slime_companion_count := 0
-	for variant in variants:
-		var companion_definition := ENEMY_FACTORY_SCRIPT.definition(StringName(variant))
-		if companion_definition == null:
-			continue
-		if companion_definition.type_id == &"slime" and companion_definition.encounter_role != &"support":
-			slime_companion_count += 1
-	var support_roll_policy := _room_definition()
-	var support_roll_count := support_roll_policy.support_companion_roll_count(slime_companion_count)
-	if not force_debug_enemy and not support_variant_pool.is_empty():
-		for _support_roll in range(support_roll_count):
-			if encounter_rng.randf() >= clampf(support_roll_policy.support_companion_chance_per_group, 0.0, 1.0):
-				continue
-			var support_variant := EncounterDefinition.select_weighted_variant(support_variant_pool, encounter_rng)
-			var support_definition := ENEMY_FACTORY_SCRIPT.definition(StringName(support_variant))
-			if support_definition != null and support_definition.encounter_role == &"support":
-				variants.append(support_variant)
-				var support_level := encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
-				levels.append(clampi(support_level, 1, _enemy_level_cap()))
-				popcorn_flags.append(false)
-				popcorn_types.append("")
-				ambush_flags.append(false)
-				elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE)
+	definition.finalize_room_encounter(
+		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
+		ambush_flags, elite_flags, _popcorn_enemy_level(), ROOM_POPCORN,
+		ELITE_POPCORN, encounter_rng, _room_definition(), progression_run_rank,
+		base_level, level_spread, encounter_tier, _enemy_level_cap())
 	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags, "elite": elite_flags}
 
 
@@ -379,11 +340,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var selected_boss_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(boss_variant)
 	var has_explicit_boss_variant := selected_boss_definition != null and selected_boss_definition.type_id == &"slime"
 	if not has_explicit_boss_variant:
-		var roster: Array[StringName] = []
-		for candidate in EnemyFactory.variants_for_type(&"slime"):
-			var candidate_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate)
-			if candidate_definition != null and candidate_definition.encounter_role != &"support":
-				roster.append(candidate)
+		var roster := EnemyFactory.variants_for_type(&"slime", &"support")
 		# Run 1 teaches the neutral encounter first. Later un-authored runs may
 		# sample the complete boss catalog; purple remains rare only in the minor
 		# conversion below. Support-role variants can join the minor group but are
