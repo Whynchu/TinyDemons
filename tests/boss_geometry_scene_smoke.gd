@@ -41,7 +41,7 @@ func _initialize() -> void:
 					break
 		_expect(debug_player != null and debug_spawn != Vector2.INF and debug_player.global_position.is_equal_approx(debug_spawn), "boss debug player starts at its authored arrival socket", failures)
 		_expect(debug_player != null and bool(gameplay.call("_can_actor_stand_at_current_position", debug_player)), "boss debug arrival socket is inside the walkable floor", failures)
-		_expect(debug_player != null and debug_player.position.is_equal_approx(gameplay.get("player_start_position")), "boss debug start position is reusable for room reset", failures)
+		_expect(debug_player != null and debug_player.global_position.is_equal_approx(gameplay.get("player_start_position")), "boss debug start position is reusable for room reset", failures)
 		var boss_door_left := gameplay.get_node_or_null("Map/Walls/DoorLeft") as Sprite2D
 		var boss_door_right := gameplay.get_node_or_null("Map/Walls/DoorRight") as Sprite2D
 		_expect(boss_door_left != null and boss_door_left.position.is_equal_approx(Vector2(58, 55)), "boss left wall door keeps authored placement", failures)
@@ -179,6 +179,30 @@ func _initialize() -> void:
 			door_player.global_position = boss_entry_socket.spawn_marker().global_position
 			gameplay.set("room_transition_locked", false)
 			_expect(not bool(gameplay.call("_try_enter_any_active_socket")), "sealed boss arrival entrance rejects reverse traversal", failures)
+		var workbench_scene := load("res://scenes/enemy_preview_workbench.tscn") as PackedScene
+		var workbench := workbench_scene.instantiate() as Node2D if workbench_scene != null else null
+		_expect(workbench != null, "enemy workbench scene loads for boss-guide parity", failures)
+		if workbench != null:
+			workbench.set("enemy_id", &"grey")
+			workbench.set("preview_actor_size", 1)
+			get_root().add_child(workbench)
+			await process_frame
+			var preview_actor := workbench.get("preview_actor") as SlimeActor
+			var authored_boss_scene := load("res://scenes/boss_slime_authoring.tscn") as PackedScene
+			var authored_boss := authored_boss_scene.instantiate() if authored_boss_scene != null else null
+			_expect(preview_actor != null and StringName(preview_actor.get_meta("enemy_type_id", "")) == &"slime", "boss-size slime workbench preview builds the selected slime", failures)
+			for geometry_name: StringName in [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]:
+				var preview_geometry := preview_actor.get_node_or_null(NodePath(geometry_name)) as Node if preview_actor != null else null
+				var authored_geometry := authored_boss.get_node_or_null(NodePath(geometry_name)) as Node if authored_boss != null else null
+				_expect(preview_geometry != null and authored_geometry != null, "boss preview and runtime authoring expose %s" % geometry_name, failures)
+				if preview_geometry != null and authored_geometry != null:
+					for property_name: StringName in [&"position", &"rotation", &"scale", &"rect_position", &"rect_size", &"polygon"]:
+						var expected_value: Variant = authored_geometry.get(property_name)
+						if expected_value != null:
+							_expect(preview_geometry.get(property_name) == expected_value, "boss preview %s matches authored %s" % [geometry_name, property_name], failures)
+			if authored_boss != null:
+				authored_boss.free()
+			workbench.queue_free()
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

@@ -124,8 +124,21 @@ static func resolve_variant_id(value: StringName) -> StringName:
 	return &""
 
 
+static func geometry_definition(definition: EnemyDefinition) -> EnemyDefinition:
+	if definition == null:
+		return null
+	if definition.type_id == TYPE_SKELETON and definition.variant_id != &"skeleton":
+		var normal_skeleton := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(&"skeleton") as EnemyDefinition
+		if normal_skeleton != null:
+			return normal_skeleton
+	return definition
+
+
 static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> void:
 	if actor == null or definition == null:
+		return
+	var geometry := geometry_definition(definition)
+	if geometry == null:
 		return
 	var collision_guide := actor.get_node_or_null("CollisionGuide") as Node2D
 	if collision_guide == null:
@@ -135,8 +148,8 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 	collision_guide.position = Vector2.ZERO
 	collision_guide.rotation = 0.0
 	collision_guide.scale = Vector2.ONE
-	collision_guide.set("rect_position", definition.collision_guide_rect.position)
-	collision_guide.set("rect_size", definition.collision_guide_rect.size)
+	collision_guide.set("rect_position", geometry.collision_guide_rect.position)
+	collision_guide.set("rect_size", geometry.collision_guide_rect.size)
 	collision_guide.set("draw_in_game", false)
 	collision_guide.visible = false
 
@@ -148,7 +161,7 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 	collision_polygon.position = Vector2.ZERO
 	collision_polygon.rotation = 0.0
 	collision_polygon.scale = Vector2.ONE
-	collision_polygon.polygon = definition.collision_polygon.duplicate()
+	collision_polygon.polygon = geometry.collision_polygon.duplicate()
 	collision_polygon.visible = false
 
 	var body_hitbox := actor.get_node_or_null("BodyHitbox") as Polygon2D
@@ -159,7 +172,7 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 	body_hitbox.position = Vector2.ZERO
 	body_hitbox.rotation = 0.0
 	body_hitbox.scale = Vector2.ONE
-	body_hitbox.polygon = definition.body_hitbox_polygon.duplicate()
+	body_hitbox.polygon = geometry.body_hitbox_polygon.duplicate()
 	body_hitbox.visible = false
 
 	for guide_name: StringName in [&"AttackGuideL", &"AttackGuideR"]:
@@ -171,7 +184,7 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 		attack_guide.position = Vector2.ZERO
 		attack_guide.rotation = 0.0
 		attack_guide.scale = Vector2.ONE
-		var rect: Rect2 = definition.attack_guide_left_rect if guide_name == &"AttackGuideL" else definition.attack_guide_right_rect
+		var rect: Rect2 = geometry.attack_guide_left_rect if guide_name == &"AttackGuideL" else geometry.attack_guide_right_rect
 		attack_guide.set("rect_position", rect.position)
 		attack_guide.set("rect_size", rect.size)
 		attack_guide.set("draw_in_game", false)

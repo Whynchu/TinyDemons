@@ -13,15 +13,24 @@ func _initialize() -> void:
 	if packed == null:
 		_finish(failures)
 		return
+	# Force the production-style full boot used after entering gameplay. A normal
+	# fresh title boot deliberately defers Hub/Pause UI and runtime owners.
+	ProjectSettings.set_setting("debug/benchmark_start_in_boss_room", true)
 	var gameplay := packed.instantiate()
 	root.add_child(gameplay)
 	for _frame in 120:
 		await process_frame
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var profile := gameplay.get("player_profile") as PlayerProfile
+	var settings := gameplay.get("settings_service") as SettingsService
+	if settings != null:
+		settings._values = SettingsService.DEFAULTS.duplicate(true)
+		settings._loaded = true
 	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
 	_expect(screens != null and profile != null, "pause menu owners are composed", failures)
 	if screens != null and profile != null:
+		screens.display_view_size = Vector2(240.0, 160.0)
+		screens.call("_position_pause_controls")
 		var menu_player_context := gameplay.call("_menu_player_context") as MenuPlayerContext
 		_expect(menu_player_context != null and menu_player_context.is_valid() and menu_player_context.profile == profile and menu_player_context.snapshot != null, "pause player card receives a typed presentation context", failures)
 		var starting_gold := profile.gold
@@ -55,8 +64,8 @@ func _initialize() -> void:
 			_expect(pause_gold_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 18.0) and pause_soul_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 11.0), "pause resource icons use the authored three-pixel inner margin", failures)
 			if pause_gold_text != null and pause_soul_text != null and pause_gold_text.texture != null and pause_soul_text.texture != null:
 				_expect(pause_gold_text.position == Vector2(screens.display_view_size.x - pause_gold_text.texture.get_width() - 6.0, screens.display_view_size.y - 18.0) and pause_soul_text.position == Vector2(screens.display_view_size.x - pause_soul_text.texture.get_width() - 6.0, screens.display_view_size.y - 11.0), "pause resource counts use the authored right margin", failures)
-		_expect(screens.pause_menu_buttons.size() == 4, "pause exposes Status, Equipment, Settings, and Quit to Title", failures)
-		if screens.pause_menu_buttons.size() >= 4:
+		_expect(screens.pause_menu_buttons.size() == 5 and not screens.pause_menu_buttons[3].visible and screens.pause_menu_buttons[3].disabled, "pause exposes four default commands and keeps opt-in Debug access hidden", failures)
+		if screens.pause_menu_buttons.size() >= 5:
 			_expect(screens.pause_menu_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.pause_menu_buttons[3].position.y == 49.0, "pause command rail uses the authored x and y positions", failures)
 		_expect(screens.pause_back_button != null and screens.pause_back_button.position == PauseMenuLayoutScript.back_button_position(screens.display_view_size), "pause back prompt uses the authored rail-anchored footer row", failures)
 		# The native card remains the visual reference, while a wider logical
@@ -72,8 +81,9 @@ func _initialize() -> void:
 		_expect(screens.pause_player_portrait.position.x == expected_wide_portrait_x and screens.pause_player_card_texts[6].position.x == expected_wide_card_x and screens.pause_menu_buttons[0].position == PauseMenuLayoutScript.command_button_position(wide_pause_size, 0), "pause spreads player groups while keeping the command rail edge-anchored on wide layouts", failures)
 		screens.display_view_size = native_pause_size
 		screens.call("_position_pause_controls")
-		for button in screens.pause_menu_buttons:
-			_expect(button.visible, "pause menu action is visible", failures)
+		for index in screens.pause_menu_buttons.size():
+			var button := screens.pause_menu_buttons[index]
+			_expect(button.visible == (index != 3), "pause menu visibility follows its opt-in Debug preference", failures)
 		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null and screens.pause_player_card_texts[6].texture != null and screens.pause_player_card_texts[6].visible, "pause shows the player info block and level", failures)
 		if screens.pause_player_card_texts.size() >= 7:
 			_expect(screens.pause_player_card_texts[0].position == Vector2(43.0, 29.0) and screens.pause_player_card_texts[1].position == Vector2(88.0, 29.0) and screens.pause_player_card_texts[2].position == Vector2(88.0, 37.0) and screens.pause_player_card_texts[6].position == Vector2(138.0, 29.0), "pause player card uses the authored three-column top row", failures)
@@ -81,6 +91,22 @@ func _initialize() -> void:
 		_expect(pause_portrait != null and pause_portrait.texture != null, "pause shows the palette-aware player portrait", failures)
 		_expect(screens.pause_cursor_text != null and screens.pause_cursor_text.z_index >= 4095 and screens.pause_cursor_text.has_method("move_to"), "pause cursor owns top draw order and unified motion", failures)
 		_expect(screens.pause_status_texts.size() >= 16 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
+		var debug_page := screens.pause_page_roots.get(3) as Control
+		var debug_frame := debug_page.get_node_or_null("Background") as NinePatchRect if debug_page != null else null
+		var debug_title := debug_page.get_node_or_null("Title") as Sprite2D if debug_page != null else null
+		var debug_cursor := debug_page.get_node_or_null("DebugCursor") as Sprite2D if debug_page != null else null
+		_expect(debug_frame != null and debug_frame.texture != null and debug_frame.patch_margin_left == 3, "Debug page uses the pause menu's pixel frame artwork", failures)
+		_expect(debug_title != null and debug_title.texture != null and debug_title.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "Debug page title uses nearest-filtered pixel text", failures)
+		screens.call("set_pause_page", gameplay, 3)
+		_expect(debug_page != null and debug_page.visible and debug_cursor != null and debug_cursor.visible, "Debug page shows the shared menu cursor on entry", failures)
+		if debug_cursor != null and screens.debug_menu_buttons.size() > 4:
+			screens.debug_menu_layout.call("select_row", 4)
+			var selected_debug_button := screens.debug_menu_buttons[4]
+			_expect(debug_cursor.position.x < selected_debug_button.position.x and debug_cursor.position.y >= selected_debug_button.position.y, "Debug selection cursor follows pixel-menu navigation without scaling text", failures)
+			screens.debug_menu_layout.call("refresh", Callable(gameplay, "_pixel_text_texture"), 1, 999, 1234, false, {})
+			var debug_level_text := screens.debug_menu_layout.get("level_value") as Sprite2D
+			_expect(debug_level_text != null and debug_level_text.texture != null and debug_level_text.position.x + debug_level_text.texture.get_width() <= selected_debug_button.position.x, "three-digit debug levels fit before the increment button", failures)
+		screens.call("set_pause_page", gameplay, 0)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()
 		var status_background := screens.pause_page_roots[1].get_node_or_null("Background") as NinePatchRect

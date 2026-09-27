@@ -114,7 +114,10 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.pause_back_button = controls["pause_back"] as Button
 	root.screen_state_controller.pause_status_button = controls["pause_status_button"] as Button
 	root.screen_state_controller.pause_equipment_button = controls["pause_equipment_button"] as Button
-	root.screen_state_controller.pause_debug_button = controls["debug_button"] as Button
+	var debug_button := controls.get("debug_button") as Button
+	if debug_button == null and root.screen_state_controller.pause_menu_buttons.size() > 3:
+		debug_button = root.screen_state_controller.pause_menu_buttons[3]
+	root.screen_state_controller.pause_debug_button = debug_button
 	root.screen_state_controller.pause_resume_button = null
 	if root.screen_state_controller.pause_menu_buttons.size() >= 5:
 		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[2]

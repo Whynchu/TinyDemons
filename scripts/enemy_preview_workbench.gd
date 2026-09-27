@@ -21,6 +21,7 @@ const IDLE_BREATH_HEIGHT := 0.04
 const GEOMETRY_SNAP := 0.5
 const GEOMETRY_HANDLE_HIT_RADIUS := 8.0
 const MAX_GEOMETRY_UNDO_STEPS := 64
+const BOSS_SLIME_AUTHORING_SCENE: PackedScene = preload("res://scenes/boss_slime_authoring.tscn")
 const PALETTE_DISPLAY_NAMES := {
 	"grey": "Gray",
 	"red": "Red",
@@ -816,6 +817,8 @@ func _build_preview() -> void:
 	preview_actor.set_meta("encounter_scale", 2.0 if _is_boss_preview() else 1.0)
 	preview_actor.position = _actor_preview_position()
 	preview_actor.scale = Vector2.ONE * _actor_preview_scale()
+	if _is_boss_preview() and definition.type_id == &"slime":
+		_apply_boss_authoring_geometry()
 	add_child(preview_actor)
 	_ensure_geometry_overlay()
 	_configure_visuals()
@@ -1240,6 +1243,26 @@ func _create_preview_shadow(visual: SlimeVisualComponent) -> void:
 	preview_shadow.z_as_relative = true
 	preview_shadow.z_index = -1
 	preview_actor.add_child(preview_shadow)
+
+
+func _apply_boss_authoring_geometry() -> void:
+	var authored := BOSS_SLIME_AUTHORING_SCENE.instantiate()
+	if authored == null:
+		return
+	for geometry_name: StringName in [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]:
+		var source := authored.get_node_or_null(NodePath(geometry_name)) as Node
+		if source == null:
+			continue
+		var existing := preview_actor.get_node_or_null(NodePath(geometry_name)) as Node
+		if existing != null:
+			existing.free()
+		var clone := source.duplicate() as Node
+		if clone == null:
+			continue
+		preview_actor.add_child(clone)
+		if clone is CanvasItem:
+			(clone as CanvasItem).visible = false
+	authored.free()
 
 
 func _show_geometry() -> void:

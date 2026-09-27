@@ -1,15 +1,22 @@
 # Tiny Demons — Known Issues and Verification Gaps
 
-Status: live register for the `0.2.x` cycle
+Status: live register for the `0.3.x` cycle
 
-Updated: 2026-09-26
+Updated: 2026-09-27
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.99`. The current smoke inventory is 145 manifest
+Current release: version `0.3.0`. The current smoke inventory is 145 manifest
 rows / 143 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
+
+The 0.3.0 checkpoint includes the authored start-position and teleport
+correction, working controller access to the pause Debug preference, debug
+level/stat-budget behavior, shared Skeleton variant geometry, boss-preview
+geometry, and a Debug page styled with the pause menu's pixel frame, text, and
+cursor. Bone-hit attack preservation is accepted from playtesting. The mobile
+room freeze remains open for profiling.
 
 This page is the short navigation view of current problems. The detailed
 reports, reproduction notes, and acceptance criteria remain in
@@ -392,21 +399,25 @@ The neighboring sound-balance and sound-mix-profile checks also pass. Their
 canonical runtime key is `sword_beam_charge` for charging and `sword_beam` for
 the launched projectile; both now have explicit catalog/profile coverage.
 
-### 2026-09-26 gameplay stability reports - active
+### 2026-09-27 gameplay stability reports - active
 
 Playtesting reported doorway combat pinning, hitches around pickups/flame
 interaction, intermittent freezes during mobile-browser boss AOE/reward
-sequences, and skeletons closing inside a useful throwing distance. The
-collection path confirms synchronous profile writes; this is a plausible hitch
+sequences, and skeletons closing inside a useful throwing distance. The latest
+playtest reports that bone hits no longer interrupt player attacks as intended.
+The collection path confirms synchronous profile writes; this is a plausible hitch
 source, not a confirmed explanation for every report. Same-frame pickup saves
 are now coalesced. Doorway contact handling and skeleton range steering have
 initial source corrections; focused movement and in-game acceptance remain
-open. The mobile freeze remains untriaged pending isolated Web profiling.
+open. The mobile freeze remains a potentially open issue and is untriaged
+pending isolated Web profiling. Do not close it based on desktop stability.
 
 The investigation, owners, evidence plan, and acceptance bar are recorded in
 [`gameplay-stability-investigation-plan.md`](gameplay-stability-investigation-plan.md).
-The same plan now includes the playtest request that bone hits preserve active
-player attacks and sword-beam charge.
+The same plan records bone hits preserving active player attacks and sword-beam
+charge as resolved by the latest user playtest. The mobile freeze, collection
+hitches, doorway escape, and skeleton spacing still need their own acceptance
+evidence.
 
 ### 2026-09-26 gear-drop distribution correction
 
@@ -468,10 +479,19 @@ ordinary active-run checkpoints. Cheat toggles and the level override clear at
 the END DEBUG action. A selected route remains the active run's identity until
 that run settles, then the ordinary profile-derived number resumes.
 
-Remaining proof: run the focused popup/settings checks and exercise the DEBUG
-page with mouse/touch/controller across aspect ratios, including reset and
-session cleanup. The current Godot playtest was already running during this
-implementation, so no fresh runtime or curated-gate result is claimed here.
+Focused checks pass for controller selection of the persisted DEBUG setting,
+the pause Debug page's pixel frame/text/cursor treatment, composition, manifest,
+definitions, and Web export. The 2026-09-27 Windows run of the 44-path curated
+gate did not pass: nine paths failed or timed out (Demon Hub, responsive display,
+generated-bound reachability, generated layout, generated run construction,
+player HUD, touch controls, wall-socket geometry, and Equipment menu setup), and
+the runner then stopped because the optional SFX-lab virtualenv is absent. Some
+scene paths report deferred-UI fixture errors and the generated checks hit the
+90-second timeout; these results need triage before treating the curated suite
+as green. They do not indicate a failure in the Debug page smoke or the separate
+Web export, but they remain release verification gaps. Manual Debug-page
+exploration with mouse/touch/controller across aspect ratios and run-reset/session
+cleanup checks also remain useful follow-up.
 
 ## Infrastructure findings
 

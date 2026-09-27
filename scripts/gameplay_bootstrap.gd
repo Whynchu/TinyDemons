@@ -240,7 +240,7 @@ func initialize(root: GameplayState) -> void:
 	await root.get_tree().process_frame
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
 	_place_debug_player_at_boss_entry(root, player)
-	root.set("player_start_position", player.position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
+	root.set("player_start_position", player.global_position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
 	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
 	var slimes: Array[Sprite2D] = _build_slime_roster(root); root.set("slimes", slimes)
 	var actors: Array[Sprite2D] = [player]; actors.append_array(slimes); root.set("actor_sprites", actors)
@@ -361,7 +361,7 @@ func initialize(root: GameplayState) -> void:
 		# that were already selected and applied above.
 		root.call("_begin_new_run", true)
 		_place_debug_player_at_boss_entry(root, player)
-		root.set("player_start_position", player.position)
+		root.set("player_start_position", player.global_position)
 		root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
 		root.call("_update_player_shadow")
 		root.call("_build_depth_lists")

@@ -431,10 +431,15 @@ func show_active_run_restore_failure(root: Object) -> void:
 
 
 func place_player_at_hub_fire(root: Object) -> void:
-	if root.rest_fire == null: return
-	var requested_foot: Vector2 = root.rest_fire.global_position + Vector2(-14.0, 3.0)
-	var valid_foot: Vector2 = root.call("_nearest_slime_walkable_point", requested_foot)
-	root.player.global_position = valid_foot - root.ACTOR_FOOT_OFFSET
+	if root.player == null: return
+	var requested_position: Vector2 = root.player_start_position
+	root.player.global_position = requested_position
+	if root._can_actor_stand_at_current_position(root.player):
+		return
+	var requested_foot: Vector2 = root._actor_foot(root.player)
+	var valid_foot: Vector2 = root._nearest_slime_walkable_point(requested_foot)
+	if valid_foot != Vector2.INF:
+		root.player.global_position = valid_foot - root.ACTOR_FOOT_OFFSET
 
 
 func update_archetype_input(root: Object, delta: float) -> void:

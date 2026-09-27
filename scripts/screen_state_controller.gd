@@ -19,7 +19,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.99"
+const GAME_VERSION := "0.3.0"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -1706,7 +1706,7 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 	overlay.add_child(back)
 	var cursor := create_sprite(pause_root_page, "PauseCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); cursor.visible = false
 	debug_menu_layout = DebugMenuLayoutScript.new() as RefCounted
-	var debug_controls := debug_menu_layout.call("build", overlay, pixel_texture) as Dictionary
+	var debug_controls := debug_menu_layout.call("build", overlay, pixel_texture, Callable(self, "make_menu_command_button"), MENU_CURSOR_TEXTURE) as Dictionary
 	debug_menu_layout.connect(&"action_requested", func(action: StringName, amount: int): debug_action_requested.emit(action, amount))
 	pause_page_roots[3] = debug_controls["page"] as Control
 	debug_menu_buttons = debug_controls["buttons"] as Array[Button]
@@ -4177,9 +4177,8 @@ func refresh_debug_menu(root: GameplayState) -> void:
 	var debug_level := int(session.get("player_level_override"))
 	var level := debug_level if debug_level > 0 else (stats.level if stats != null else 1)
 	var geometry := root.actor_geometry_debug_drawer
-	debug_menu_layout.call("refresh", Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
-	for index in debug_menu_buttons.size():
-		debug_menu_buttons[index].scale = Vector2.ONE * (1.06 if index == debug_menu_row else 1.0)
+	debug_menu_layout.call("refresh", Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, int(session.get("debug_unassigned_stat_points")), bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
+	debug_menu_layout.call("select_row", debug_menu_row)
 
 
 func _update_debug_page_input(root: GameplayState) -> void:
@@ -4734,6 +4733,7 @@ func _settings_option_index(row: int, values: Dictionary) -> int:
 		3: return clampi(roundi(float(values.get("music_volume", 100)) / 10.0), 0, 10)
 		4: return clampi(roundi(float(values.get("sfx_volume", 100)) / 10.0), 0, 10)
 		5: return 1 if bool(values.get("vibration", true)) else 0
+		6: return 1 if bool(values.get("debug_menu_enabled", false)) else 0
 	return 0
 
 
@@ -4991,7 +4991,7 @@ func update_settings_input(root: Object) -> void:
 		if settings_row == settings_value_buttons.size() and settings_back_button != null:
 			settings_back_button.pressed.emit()
 		elif settings_row >= 0 and settings_row < settings_value_buttons.size():
-			settings_value_buttons[settings_row].pressed.emit()
+			adjust_setting(root, settings_row, 1)
 
 func build_save_select(parent: Node, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable = Callable(), overwrite_no: Callable = Callable(), portrait_texture: Callable = Callable(), back_callback: Callable = Callable()) -> ColorRect:
 	display_view_size = _view_size_for_parent(parent)

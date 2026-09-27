@@ -1,11 +1,11 @@
 # Gameplay Stability Investigation and Correction Plan
 
-Status: active; first low-risk corrections are in source, hitch and device
-acceptance remain open
+Status: active; bone-hit attack preservation accepted in playtest; mobile
+freeze, hitch, doorway, and skeleton-spacing acceptance remain open
 
 Owner: movement/collision, pickup persistence, effects/combat, and enemy AI
 
-Reports: 2026-09-26 playtesting; hitching is the highest-priority concern
+Reports: 2026-09-26–27 playtesting; hitching is the highest-priority concern
 
 ## Reported behavior
 
@@ -88,7 +88,7 @@ Acceptance: observe skeletons at open floor, near walls, and in a boss room;
 they should hold a visible mid-range, reposition when the player closes in, and
 continue throwing reliably without approaching into melee contact.
 
-### 5. Bone hits during player attacks — first combat correction
+### 5. Bone hits during player attacks — resolved in playtest
 
 Skeleton bones use the ranged-hit path in `SlimeActor.apply_attack_hit`. That
 path previously called the same attack interruption routine as melee hits.
@@ -97,9 +97,9 @@ not cancel an active attack or charge. The attack must still complete if the
 player holds the input; death and ordinary melee-hit interruption behavior are
 unchanged.
 
-Acceptance: while holding a sword-beam charge, take a bone hit and confirm the
-charge continues and can be released. Repeat during a regular sword attack and
-confirm its authored animation resolves.
+Acceptance: the user reports this behavior now works. Reopen only if a
+regression appears; the code path keeps its damage feedback while preserving
+the player's active attack and charge.
 
 ## Work order
 
@@ -107,9 +107,10 @@ confirm its authored animation resolves.
 2. Confirm the doorway escape behavior with focused movement evidence and
    correct any remaining socket-specific geometry issue.
 3. Use the skeleton preferred-range rule and tune only from gameplay evidence.
-4. Confirm bone hits preserve player attacks and charge while damage feedback
-   remains visible.
-5. Reproduce the boss AOE freeze with isolated and combined Web scenarios.
+4. Bone-hit attack preservation is accepted; retain it during future combat
+   changes.
+5. Reproduce the potentially open boss AOE freeze with isolated and combined
+   Web scenarios.
 6. Optimize the measured freeze cause, then compare before/after on desktop and
    mobile browser/device. Keep a repeat-run and long-session memory check.
 

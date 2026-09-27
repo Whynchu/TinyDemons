@@ -9,4 +9,4 @@ enemy = "Skeleton"
 variant = "Skeleton"
 facing_direction = 0
 preview_actor_size = 1
-geometry_edit_target = 3
+show_geometry_guides = false
