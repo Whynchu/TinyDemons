@@ -590,7 +590,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		else:
 			return
 	if archetype_overlay != null and archetype_overlay.visible and not title_transition_active:
-		root._update_archetype_input(delta)
+		update_archetype_input(root, delta)
 		return
 	if title_transition_active:
 		update_particles(delta, Callable(root, "_snap_half_pixel"))
@@ -683,25 +683,25 @@ func update_archetype_input(root: GameplayState, delta: float) -> void:
 		return
 	archetype_frame_timer += delta
 	archetype_arrow_anim_timer = maxf(archetype_arrow_anim_timer - delta, 0.0)
-	root._update_archetype_preview_animation()
-	root._update_archetype_arrow_animation()
+	update_archetype_preview_animation(root)
+	update_archetype_arrow_animation(root)
 	var button := archetype_start_button
 	button.modulate.a = retro_button_alpha(archetype_frame_timer)
 	button.position.y = 104.0 + retro_button_bob(archetype_frame_timer)
 	var row := archetype_menu_row
 	if root._is_menu_direction_just_pressed(&"ui_up"):
-		root._select_archetype_menu_row(row - 1); root._play_sound("ui_hover", -6.0, 1.0)
+		select_archetype_menu_row(root, row - 1); root._play_sound("ui_hover", -6.0, 1.0)
 	elif root._is_menu_direction_just_pressed(&"ui_down"):
-		root._select_archetype_menu_row(row + 1); root._play_sound("ui_hover", -6.0, 1.0)
+		select_archetype_menu_row(root, row + 1); root._play_sound("ui_hover", -6.0, 1.0)
 	elif root._is_menu_direction_just_pressed(&"ui_left") or root._is_menu_direction_just_pressed(&"ui_right"):
 		var direction := -1 if root._is_menu_direction_just_pressed(&"ui_left") else 1
-		if row == 0: root._shift_archetype(direction)
-		else: root._select_archetype_menu_row(1)
+		if row == 0: shift_archetype(root, direction)
+		else: select_archetype_menu_row(root, 1)
 		root._play_sound("ui_hover", -6.0, 1.0)
 	if root._is_menu_confirm_just_pressed():
 		root._play_sound("ui_confirm", 0.0, 1.0)
-		if row == 1: root._start_selected_archetype()
-		else: root._select_archetype_menu_row(1)
+		if row == 1: start_selected_archetype(root)
+		else: select_archetype_menu_row(root, 1)
 
 
 func start_selected_archetype(root: GameplayState) -> void:
@@ -733,25 +733,73 @@ func start_selected_archetype(root: GameplayState) -> void:
 	root._enter_starting_room_from_menu()
 
 
-func start_new_game(root: GameplayState) -> void:
-	if title_overlay == null or not title_overlay.visible:
-		return
-	root._spawn_title_ui_breakup()
-	title_overlay.visible = true; title_overlay.modulate.a = 1.0
-	title_transition_active = true; title_transition_timer = 0.0
-	if title_screen_text != null: title_screen_text.visible = false
-	var version := title_overlay.get_node_or_null("TitleVersion") as Sprite2D
-	if version != null: version.visible = false
-	if title_start_text != null: title_start_text.visible = false
-	if title_start_button != null: title_start_button.visible = false; title_start_button.release_focus()
-	if title_continue_button != null: title_continue_button.visible = false; title_continue_button.release_focus()
-	if title_settings_button != null: title_settings_button.visible = false; title_settings_button.release_focus()
-	if title_cloud_button != null: title_cloud_button.visible = false; title_cloud_button.release_focus()
-	if title_cursor_text != null: title_cursor_text.visible = false
-	archetype_overlay.visible = true; set_state(&"archetype")
-	archetype_overlay.modulate.a = 1.0
-	archetype_hold_cover.visible = true
-	archetype_transition_active = true; archetype_transition_timer = -1.0; archetype_fade_out = false
+func shift_archetype(root: GameplayState, direction: int) -> void:
+	starter_flame_index = posmod(starter_flame_index + direction, ASPECT_CATALOG_SCRIPT.STARTER_FLAMES.size())
+	archetype_index = starter_flame_index
+	archetype_arrow_pulse(root, direction)
+	update_archetype_screen(root)
+
+
+func shift_archetype_color(root: GameplayState, direction: int) -> void:
+	archetype_color_index = posmod(archetype_color_index + direction, PaletteLibrary.SELECTABLE_PALETTES.size())
+	archetype_arrow_pulse(root, direction)
+	update_archetype_screen(root)
+
+
+func archetype_arrow_pulse(_root: GameplayState, direction: int) -> void:
+	archetype_arrow_anim_direction = direction
+	archetype_arrow_anim_timer = 0.18
+
+
+func update_archetype_arrow_animation(_root: GameplayState) -> void:
+	var amount: float = clampf(archetype_arrow_anim_timer / 0.18, 0.0, 1.0)
+	var pulse: float = 1.0 + amount * 0.22
+	archetype_type_left_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 0 else 1.0)
+	archetype_type_right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 0 else 1.0)
+	for button in archetype_left_buttons: button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction < 0 and archetype_menu_row == 1 else 1.0)
+	for right_button in archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if archetype_arrow_anim_direction > 0 and archetype_menu_row == 1 else 1.0)
+
+
+func select_archetype_menu_row(root: GameplayState, row: int) -> void:
+	archetype_menu_row = posmod(row, 2)
+	update_archetype_screen(root)
+
+
+func update_archetype_screen(root: GameplayState) -> void:
+	var display := root.get("display_controller") as DisplayController
+	var view_width: float = layout_view_size().x
+	var flame: StringName = ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[starter_flame_index]
+	var flame_name: String = ASPECT_CATALOG_SCRIPT.display_name(flame)
+	var flame_palette: String = ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)
+	archetype_name_text.texture = root.call("_pixel_text_texture", flame_name, PaletteLibrary.normal(flame_palette) if archetype_menu_row == 0 else Color.WHITE) as Texture2D
+	archetype_name_text.position = Vector2((view_width - archetype_name_text.texture.get_width()) * 0.5, 36)
+	var colors: Array[String] = [flame_palette]
+	var cached_palette_frames: Dictionary = root.player_animation_component.frames_by_palette.get(flame_palette, {}) as Dictionary
+	var preview_source_frames: Array[Texture2D] = []
+	var idle_value: Variant = cached_palette_frames.get("idle")
+	if idle_value is Array:
+		for frame: Texture2D in idle_value:
+			preview_source_frames.append(frame)
+	if preview_source_frames.is_empty():
+		for frame in root.player_animation_component.idle_frames:
+			preview_source_frames.append(root.player_animation_component.recolor_texture(frame, flame_palette))
+	if not preview_source_frames.is_empty():
+		if archetype_preview_palette != colors[0] or archetype_preview_frames.size() != preview_source_frames.size():
+			archetype_preview_frames.clear()
+			archetype_preview_palette = colors[0]
+			for frame in preview_source_frames: archetype_preview_frames.append(frame)
+		update_archetype_preview_animation(root)
+	update_archetype_button_styles(root)
+
+
+func update_archetype_preview_animation(root: GameplayState) -> void:
+	if archetype_preview == null or archetype_preview_frames.is_empty(): return
+	var frame_time: float = maxf(root.player_tuning.idle_frame_time, 0.01)
+	var frame_index: int = posmod(int(archetype_frame_timer / frame_time), archetype_preview_frames.size())
+	archetype_preview.texture = archetype_preview_frames[frame_index]
+	var display := root.get("display_controller") as DisplayController
+	var view_width: float = layout_view_size().x
+	archetype_preview.position = Vector2((view_width - archetype_preview.texture.get_width() * archetype_preview.scale.x) * 0.5, 48)
 
 
 func start_save_select(root: GameplayState, mode: String) -> void:

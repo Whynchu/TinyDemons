@@ -81,8 +81,9 @@ Stopping rules:
 |---|---|---|
 | C0 | Removed the dead per-frame regen no-op and overridden glyph entries; refreshed the script index | Complete (`f089c30`) |
 | C1 | Cached the per-frame debug lookup, replaced the 200 ms mix-profile file read with a metadata stat, and skipped the release capture lookup | Complete (`357f62b`) |
-| C2 | Consolidate genuine duplication and boilerplate | In progress |
-| C3 | Collapse the split title/save and hub ownership | Planned |
+| C2 | Deduplicated the authored Run 1/Run 2 layout assembly; characterized and closed the remaining candidates as not worth the churn | Complete (`e6d4b30`) |
+| C3a | Moved archetype screen flow into `screen_state_controller`, removing the save-flow circular delegation and the dead title path | Complete |
+| C3b | Move hub input ownership from `screen_state_controller` into `hub_flow_controller` | Planned |
 | C4 | Extract `screen_state_controller` into a menu platform | Deferred until menu work is an active feature |
 | C5 | Targeted dynamic-call reduction on authoring-adjacent owners | Planned |
 

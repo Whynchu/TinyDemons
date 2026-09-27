@@ -48,7 +48,7 @@ func build_archetype_screen(root: Object) -> void:
 	root.screen_state_controller.archetype_type_right_button = controls["type_right"] as Button
 	root.screen_state_controller.archetype_start_button = controls["start"] as Button
 	root.screen_state_controller.archetype_hold_cover = controls["cover"] as ColorRect
-	update_archetype_screen(root)
+	root.screen_state_controller.update_archetype_screen(root)
 
 
 func update_title_screen(root: Object, delta: float) -> void:
@@ -440,92 +440,6 @@ func place_player_at_hub_fire(root: Object) -> void:
 	var valid_foot: Vector2 = root._nearest_slime_walkable_point(requested_foot)
 	if valid_foot != Vector2.INF:
 		root.player.global_position = valid_foot - root.ACTOR_FOOT_OFFSET
-
-
-func update_archetype_input(root: Object, delta: float) -> void:
-	root.screen_state_controller.update_archetype_input(root, delta)
-
-
-func shift_archetype(root: Object, direction: int) -> void:
-	root.screen_state_controller.starter_flame_index = posmod(root.screen_state_controller.starter_flame_index + direction, AspectCatalogScript.STARTER_FLAMES.size())
-	root.screen_state_controller.archetype_index = root.screen_state_controller.starter_flame_index
-	root.call("_archetype_arrow_pulse", direction)
-	root.call("_update_archetype_screen")
-
-
-func shift_archetype_color(root: Object, direction: int) -> void:
-	root.screen_state_controller.archetype_color_index = posmod(root.screen_state_controller.archetype_color_index + direction, PaletteLibrary.SELECTABLE_PALETTES.size())
-	root.call("_archetype_arrow_pulse", direction)
-	root.call("_update_archetype_screen")
-
-
-func archetype_arrow_pulse(root: Object, direction: int) -> void:
-	root.screen_state_controller.archetype_arrow_anim_direction = direction
-	root.screen_state_controller.archetype_arrow_anim_timer = 0.18
-
-
-func update_archetype_arrow_animation(root: Object) -> void:
-	var amount: float = clampf(root.screen_state_controller.archetype_arrow_anim_timer / 0.18, 0.0, 1.0)
-	var pulse: float = 1.0 + amount * 0.22
-	root.screen_state_controller.archetype_type_left_button.scale = Vector2.ONE * (pulse if root.screen_state_controller.archetype_arrow_anim_direction < 0 and root.screen_state_controller.archetype_menu_row == 0 else 1.0)
-	root.screen_state_controller.archetype_type_right_button.scale = Vector2.ONE * (pulse if root.screen_state_controller.archetype_arrow_anim_direction > 0 and root.screen_state_controller.archetype_menu_row == 0 else 1.0)
-	for button in root.screen_state_controller.archetype_left_buttons: button.scale = Vector2.ONE * (pulse if root.screen_state_controller.archetype_arrow_anim_direction < 0 and root.screen_state_controller.archetype_menu_row == 1 else 1.0)
-	for right_button in root.screen_state_controller.archetype_right_buttons: right_button.scale = Vector2.ONE * (pulse if root.screen_state_controller.archetype_arrow_anim_direction > 0 and root.screen_state_controller.archetype_menu_row == 1 else 1.0)
-
-
-func select_archetype_menu_row(root: Object, row: int) -> void:
-	root.screen_state_controller.archetype_menu_row = posmod(row, 2)
-	root.call("_update_archetype_screen")
-
-
-func update_archetype_screen(root: Object) -> void:
-	var display := root.get("display_controller") as DisplayController
-	var view_width: float = root.screen_state_controller.layout_view_size().x if root.screen_state_controller != null else (float(display.view_size_value().x) if display != null else 240.0)
-	var flame: StringName = AspectCatalogScript.STARTER_FLAMES[root.screen_state_controller.starter_flame_index]
-	var flame_name: String = AspectCatalogScript.display_name(flame)
-	var flame_palette: String = AspectCatalogScript.palette_for_flame(flame)
-	root.screen_state_controller.archetype_name_text.texture = root.call("_pixel_text_texture", flame_name, PaletteLibrary.normal(flame_palette) if root.screen_state_controller.archetype_menu_row == 0 else Color.WHITE)
-	root.screen_state_controller.archetype_name_text.position = Vector2((view_width - root.screen_state_controller.archetype_name_text.texture.get_width()) * 0.5, 36)
-	var colors: Array[String] = [flame_palette]
-	var cached_palette_frames: Dictionary = root.player_animation_component.frames_by_palette.get(flame_palette, {}) as Dictionary
-	var preview_source_frames: Array[Texture2D] = []
-	var idle_value: Variant = cached_palette_frames.get("idle")
-	if idle_value is Array:
-		for frame: Texture2D in idle_value:
-			preview_source_frames.append(frame)
-	if preview_source_frames.is_empty():
-		# Shader-palette mode keeps no per-palette frames; recolor the base idle
-		# set for this preview only. SpriteFrameLibrary caches per source+palette.
-		for frame in root.player_animation_component.idle_frames:
-			preview_source_frames.append(root.player_animation_component.recolor_texture(frame, flame_palette))
-	if not preview_source_frames.is_empty():
-		# Use the pre-rendered palette frames directly. Recoloring the active blue
-		# frames here bypasses the baked green/yellow eye treatment and shows the
-		# old base-colored eyes in character creation.
-		if root.screen_state_controller.archetype_preview_palette != colors[0] or root.screen_state_controller.archetype_preview_frames.size() != preview_source_frames.size():
-			root.screen_state_controller.archetype_preview_frames.clear()
-			root.screen_state_controller.archetype_preview_palette = colors[0]
-			for frame in preview_source_frames: root.screen_state_controller.archetype_preview_frames.append(frame)
-		update_archetype_preview_animation(root)
-	root.call("_update_archetype_button_styles")
-
-
-func update_archetype_preview_animation(root: Object) -> void:
-	if root.screen_state_controller.archetype_preview == null or root.screen_state_controller.archetype_preview_frames.is_empty(): return
-	var frame_time: float = maxf(root.player_tuning.idle_frame_time, 0.01)
-	var frame_index: int = posmod(int(root.screen_state_controller.archetype_frame_timer / frame_time), root.screen_state_controller.archetype_preview_frames.size())
-	root.screen_state_controller.archetype_preview.texture = root.screen_state_controller.archetype_preview_frames[frame_index]
-	var display := root.get("display_controller") as DisplayController
-	var view_width: float = root.screen_state_controller.layout_view_size().x if root.screen_state_controller != null else (float(display.view_size_value().x) if display != null else 240.0)
-	root.screen_state_controller.archetype_preview.position = Vector2((view_width - root.screen_state_controller.archetype_preview.texture.get_width() * root.screen_state_controller.archetype_preview.scale.x) * 0.5, 48)
-
-
-func update_archetype_button_styles(root: Object) -> void:
-	root.screen_state_controller.update_archetype_button_styles(root)
-
-
-func start_selected_archetype(root: Object) -> void:
-	root.screen_state_controller.start_selected_archetype(root)
 
 
 func build_loading_screen(root: Object) -> void:
