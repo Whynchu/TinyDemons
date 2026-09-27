@@ -93,7 +93,7 @@ of that trap and proves the replacement with a second piece of content.
 | `room_controller.gd` | 2,243 lines |
 | `dungeon_layout_generator.gd` | 2,487 lines, ~100 static functions |
 | Definitions | 16 authored `.tres` under `resources/definitions/`; validator covers 16/16; composition audit reports 19 editor-able definition surfaces |
-| Tests | 143 manifest rows / 141 runnable / 44-path default gate, process-per-test |
+| Tests | 145 manifest rows / 143 runnable / 44-path default gate, process-per-test |
 | Docs | 105 Markdown files under `docs/` and frozen counts in the authority docs |
 
 Reference commands (current behavior):

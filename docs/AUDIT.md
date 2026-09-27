@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.95` (composition refactor structurally and editor-wise
+Current release: `0.2.96` (composition refactor structurally and editor-wise
 complete: strict scorecard at 100% and editor composition at 100%, typed
 room/menu boundaries, and the enemy authoring slice proof landed)
 
@@ -552,7 +552,7 @@ Tiny Demons 0.2.84 remains past the legacy-coupling and editor-composition
 cleanup. The latest composition validation reports 2,202 root accesses,
 `GameplayState` at 1,717 lines / 286 fields, and `RoomController` at 2,250
 lines; both the strict scorecard and editor-composition measure pass. The test
-manifest validates at 143 rows, 141 runnable paths, two reports, and a 44-path
+manifest validates at 145 rows, 143 runnable paths, two reports, and a 44-path
 default gate. These are focused validation results, not a fresh run of the full
 curated gate.
 

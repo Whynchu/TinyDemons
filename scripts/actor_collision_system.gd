@@ -252,6 +252,10 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 	elif other == root.get("cloaked_demon"):
 		separate_actor(root, actor, other)
 	elif actor == root.get("player") or other == root.get("player"):
+		# An active doorway is a narrow escape lane. Enemy contact should not pin
+		# the player against the socket while they are trying to leave a fight.
+		if _player_occupies_active_doorway(root):
+			return
 		# The player should be able to push an enemy even while that enemy is in
 		# an attack animation.  Slime AI intentionally stops its own scoot during
 		# attacks, so making the player absorb the overlap turns an attacking
@@ -349,6 +353,8 @@ func player_contact_movement(root: Object, movement: Vector2) -> Vector2:
 	var player := root.get("player") as Sprite2D
 	if player == null or movement.length_squared() <= 0.0001:
 		return movement
+	if _player_occupies_active_doorway(root):
+		return movement
 	var result := movement
 	for slime in root.get("slimes") as Array[Sprite2D]:
 		if not is_instance_valid(slime) or not slime.visible or bool(slime.get_meta("boss_airborne", false)) or not actors_are_in_contact(root, player, slime):
@@ -370,6 +376,26 @@ func player_contact_movement(root: Object, movement: Vector2) -> Vector2:
 
 func _uses_body_contact(actor: Sprite2D) -> bool:
 	return actor != null and float(actor.get_meta("encounter_scale", 1.0)) > 1.0
+
+
+func _player_occupies_active_doorway(root: Object) -> bool:
+	var state := root as GameplayState
+	var room_controller := state.room_controller if state != null else null
+	var player := state.player if state != null else null
+	if state == null or room_controller == null or player == null or state.dungeon_graph == null or state.room_transition_locked:
+		return false
+	var feet := room_controller._player_door_feet_rect(state, player)
+	for socket_id in room_controller.dungeon_sockets:
+		var socket := room_controller.dungeon_sockets.get(socket_id) as DungeonSocket
+		var is_entrance := room_controller.active_entrance_sockets.has(socket_id)
+		if socket == null or (not is_entrance and not room_controller.active_door_sockets.has(socket_id)):
+			continue
+		var connection := state.dungeon_graph.get_connection_for_entry(state.current_room_id, socket_id) if is_entrance else state.dungeon_graph.get_connection(state.current_room_id, socket_id)
+		if connection == null or not state._map_connection_available(connection, is_entrance):
+			continue
+		if room_controller._rect_touches_polygon(feet, room_controller._socket_trigger_polygon(socket)):
+			return true
+	return false
 
 
 func _rect_overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:

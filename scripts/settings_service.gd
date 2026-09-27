@@ -16,6 +16,7 @@ const DEFAULTS := {
 	"music_volume": 100,
 	"sfx_volume": 100,
 	"vibration": true,
+	"debug_menu_enabled": false,
 }
 const VALID_ASPECTS := ["FULL", "3:2", "16:10", "16:9"]
 
@@ -94,7 +95,7 @@ func _ensure_loaded() -> void:
 
 func _normalize_value(key: StringName, value: Variant) -> Variant:
 	match key:
-		&"fullscreen", &"pixel_perfect", &"vibration":
+		&"fullscreen", &"pixel_perfect", &"vibration", &"debug_menu_enabled":
 			if value is String:
 				return String(value).to_lower() in ["true", "1", "on", "yes"]
 			return bool(value)

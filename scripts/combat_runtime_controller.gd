@@ -847,7 +847,9 @@ func flush_pending_xp(root: Object) -> void:
 func apply_player_level(root: Object) -> void:
 	var profile := root.get("player_profile") as PlayerProfile
 	var stats := root.get("player_stats") as StatsComponent
-	stats.level = profile.level if profile != null else stats.level
+	var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+	var debug_level := int(debug_session.get("player_level_override")) if debug_session != null else 0
+	stats.level = debug_level if debug_level > 0 else (profile.level if profile != null else stats.level)
 	var health := root.get("player_health_component") as HealthComponent
 	var maximum := float(root.call("_player_max_health"))
 	if health != null:
@@ -863,7 +865,9 @@ func update_player_progression_ui(root: Object) -> void:
 	if not is_instance_valid(level_text) or not is_instance_valid(xp_fill) or not is_instance_valid(xp_text):
 		return
 	var profile := root.get("player_profile") as PlayerProfile
-	var level := profile.level if profile != null else 1
+	var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+	var debug_level := int(debug_session.get("player_level_override")) if debug_session != null else 0
+	var level := debug_level if debug_level > 0 else (profile.level if profile != null else 1)
 	var xp := profile.xp if profile != null else 0
 	var required := xp_required_for_level(root, level)
 	var ui := root.get("ui") as Node2D

@@ -13,6 +13,8 @@ const SKELETON_BONE_DISPLAY_SCALE := 1.0
 const SKELETON_BONE_OVERSHOOT_DISTANCE := 7.0
 const SKELETON_BONE_ARC_HEIGHT := 10.0
 const SKELETON_BONE_MAX_RANGE := 192.0
+const SKELETON_PREFERRED_RANGE := 72.0
+const SKELETON_PREFERRED_RANGE_TOLERANCE := 12.0
 const SKELETON_WALK_SPEED := 16.0
 const SKELETON_NOTICE_STAGGER_MAX := 0.9
 const SKELETON_ATTACK_STAGGER_MAX := 0.75
@@ -563,7 +565,7 @@ func can_slime_attack_player(root: Object, slime: Sprite2D) -> bool:
 		# aggroed and its notice animation has completed before reserving an attack.
 		if not is_slime_aggroed(root, slime):
 			return false
-		attack_distance = maxf(attack_distance, 120.0)
+		attack_distance = maxf(attack_distance, SKELETON_PREFERRED_RANGE + SKELETON_PREFERRED_RANGE_TOLERANCE)
 	if bool(root.get("player_dead")) or slime_attack_offset(root, slime).length() > attack_distance:
 		return false
 	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent

@@ -300,7 +300,9 @@ static func apply_attack_hit(root: Object, slime: Sprite2D, ranged_hit: bool = f
 				var shake_strength := 1.8 if perfect_block else (1.3 if blocked else 2.2)
 				var shake_duration := 0.13 if perfect_block else (0.10 if blocked else 0.16)
 				state.display_controller.request_screen_shake(shake_strength, shake_duration)
-	if bool(root.get("player_is_attacking")): root.call("_interrupt_player_attack")
+	# A bone projectile deals its normal damage, hit flash, hitstop, and
+	# knockback, but it does not cancel an in-progress player attack or charge.
+	if bool(root.get("player_is_attacking")) and not ranged_hit: root.call("_interrupt_player_attack")
 	var player_tuning := root.get("player_tuning") as PlayerTuning
 	# Shielding changes damage and knockback, but a successful hit still needs
 	# to read clearly on the player as well as the equipment.

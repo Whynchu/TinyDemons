@@ -139,6 +139,9 @@ damage number, crit outline, bars, knockback) stays deterministic.
 
 - Regular-hit particle burst (first use of the shared colored burst path).
 - Damage-number scale pop.
+- Four-update still hold after the scale pop and before number drift; apply it
+  consistently to damage, healing, XP, pickup, and gold labels (see
+  [`popup-and-debug-menu-plan.md`](popup-and-debug-menu-plan.md)).
 - Screen-shake through the existing active `Camera2D`. Shake is a bounded,
   decaying value driven by the frame schedule, not a new `_process()`; it holds
   its offset during hitstop.

@@ -39,9 +39,9 @@ const OVERFLOW_SALVAGE_RATE := 0.35
 const SELL_RATE := 0.25
 const PLUS_PACKAGE_THRESHOLDS := {"one": 0.90, "two": 0.97, "three": 0.995}
 
-const PLAIN_GEAR_DROP_WEIGHT := 6.0
-const BASIC_GEAR_DROP_WEIGHT := 5.0
-const SET_GEAR_DROP_WEIGHT := 0.5
+const PLAIN_GEAR_DROP_WEIGHT := 5.0
+const BASIC_GEAR_DROP_WEIGHT := 4.5
+const SET_GEAR_DROP_WEIGHT := 0.6
 const RANDOM_STAT_KEYS: Array[String] = ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]
 const SET_IDS: Array[StringName] = [&"swift", &"soldier", &"guard", &"blood", &"arcane", &"soul", &"edge", &"oath", &"rune"]
 ## Tombstones for definitions deliberately removed from the playable catalog.
@@ -330,24 +330,19 @@ func definitions_for_slot(slot: StringName, source_tag: StringName = &"", run_ra
 	return result
 
 
-func select_slot_for_source(profile: PlayerProfile, generation_seed: int, player_level: int = 1, source_tag: StringName = &"", run_rank: int = 1, avoid_slots: Array = []) -> StringName:
-	## Deterministic source policy shared by chests and clear rewards. A Head or
-	## Arm that is still empty or only has its zero-power starter receives a
-	## strong early weight, while the complete six-slot loadout remains eligible.
+func select_slot_for_source(_profile: PlayerProfile, generation_seed: int, player_level: int = 1, source_tag: StringName = &"", run_rank: int = 1, avoid_slots: Array = []) -> StringName:
+	## Deterministic source policy shared by chests and clear rewards. Every
+	## eligible slot has equal weight; clear rewards can still avoid recent slots.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = generation_seed
 	var weights: Array[float] = []
 	for slot: StringName in SLOTS:
 		var weight := 1.0
-		var needs_introduction := slot_needs_introduction(profile, slot) if slot == &"head" or slot == &"arm" else false
-		if needs_introduction:
-			weight = 8.0
 		if definitions_for_slot(slot, source_tag, run_rank, player_level).is_empty():
 			weight = 0.0
-		elif String(slot) in avoid_slots and not needs_introduction:
+		elif String(slot) in avoid_slots:
 			# Clear rewards use the last few slots as a deterministic anti-repeat
-			# window. An introduction roll for the new Head/Arm still wins over the
-			# avoidance window so early catalogue coverage is not delayed.
+			# window when other eligible slots remain available.
 			weight = 0.0
 		weights.append(weight)
 	var available_slots: Array[StringName] = []

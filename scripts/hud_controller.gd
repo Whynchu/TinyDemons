@@ -825,6 +825,9 @@ func update_room_number(root: Object) -> void:
 		# performance-sensitive and can fall after an F, but a failed R2 must still
 		# restart as R2 rather than appearing to roll back to R1.
 		var run_number := profile.completed_runs + 1 if profile != null else 1
+		var run_flow := root.get("run_flow_controller") as RunFlowController
+		if run_flow != null and run_flow.debug_run_number > 0:
+			run_number = run_flow.debug_run_number
 		var grade := profile.last_run_grade if profile != null else "D"
 		run_indicator.texture = root.call("_pixel_text_texture", "%s R%d" % [DungeonGraph.DUNGEON_NAME, run_number], _run_grade_color(grade))
 

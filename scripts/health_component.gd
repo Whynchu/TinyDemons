@@ -18,6 +18,7 @@ var current_health: float = 0.0
 var regen_delay_timer: float = 0.0
 var regen_accumulator: float = 0.0
 var _dead := false
+var debug_invulnerable := false
 
 
 func _ready() -> void:
@@ -44,6 +45,8 @@ func set_maximum_health(value: float, preserve_ratio := true) -> void:
 
 
 func apply_damage(amount: float) -> float:
+	if debug_invulnerable:
+		return 0.0
 	var applied: float = minf(maxf(amount, 0.0), current_health)
 	if applied <= 0.0:
 		return 0.0

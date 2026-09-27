@@ -5,6 +5,7 @@ const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 var reward_definition: RewardDefinition = null
+var debug_run_number := 0
 
 
 func _reward_definition() -> RewardDefinition:
@@ -237,6 +238,8 @@ func run_difficulty_bonus(root: Object) -> int:
 
 
 func run_rank(root: Object) -> int:
+	if debug_run_number > 0:
+		return debug_run_number
 	var profile := root.get("player_profile") as PlayerProfile
 	return run_rank_for_profile(profile)
 
@@ -250,6 +253,9 @@ func apply_run_rank_grade(root: Object, grade: String) -> void:
 
 
 func begin_new_run(root: Object, preserve_current_dungeon := false) -> void:
+	var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+	if debug_session == null or not bool(debug_session.get("active")):
+		debug_run_number = 0
 	# A new run must never inherit a previous interrupted run's checkpoint.
 	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
 	# Every run begins at the hub in Gray. The selected starter flame is present
@@ -419,7 +425,10 @@ func _reset_dungeon_for_new_run(root: Object) -> void:
 	var start_starter_flame: StringName = root.player_profile.starter_flame if root.player_profile != null else &"fire"
 	var start_bound_flame: StringName = root.player_profile.bound_element if root.player_profile != null and root.player_profile.has_bound_element else &""
 	var rotation_turns := int(root.player_profile.puzzle_attempt_rotation_quarter_turns) if root.player_profile != null else int(root.get("puzzle_attempt_rotation_quarter_turns"))
-	var start_room_id: StringName = StringName(map_controller.call("begin_run", graph, new_seed, root.player_profile.completed_runs if root.player_profile != null else 0, start_starter_flame, start_bound_flame, rotation_turns))
+	var completed_runs_for_layout: int = root.player_profile.completed_runs if root.player_profile != null else 0
+	if debug_run_number > 0:
+		completed_runs_for_layout = debug_run_number - 1
+	var start_room_id: StringName = StringName(map_controller.call("begin_run", graph, new_seed, completed_runs_for_layout, start_starter_flame, start_bound_flame, rotation_turns))
 	room_controller.room_states.clear()
 	var next_room_id := start_room_id
 	if bool(root.get("debug_start_in_boss_room")):
@@ -463,6 +472,9 @@ func settle_current_run(root: Object, result: StringName) -> bool:
 	var settlement := RunSettlement.settle_context(settlement_context)
 	if settlement.succeeded():
 		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
+		var debug_session := root.call("get_node_or_null", "DebugSessionController") as Node
+		if debug_session == null or not bool(debug_session.get("active")):
+			debug_run_number = 0
 	return settlement.succeeded()
 
 

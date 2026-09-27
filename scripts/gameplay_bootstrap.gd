@@ -23,6 +23,7 @@ const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_minimap
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/touch_controls_layer.gd")
 const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/performance_capture_service.gd")
+const DEBUG_SESSION_CONTROLLER_SCRIPT = preload("res://scripts/debug_session_controller.gd")
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/cloud_save_panel.gd")
 ## Runtime enemy capacity is a pool size, not an authored content roster. Every
@@ -98,6 +99,7 @@ func initialize(root: GameplayState) -> void:
 	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
 	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController") as PickupRuntimeController
 	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController") as RunFlowController
+	_add_runtime_node(root, DEBUG_SESSION_CONTROLLER_SCRIPT, "DebugSessionController")
 	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as DungeonMapController
 	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
 	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")

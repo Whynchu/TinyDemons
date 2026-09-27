@@ -48,8 +48,10 @@ and other weapon families are deferred.
 Plain gear has no authored stats, but a plus roll can give it a small random
 stat package. Basic gear has small, fixed, dependable stats. Set gear carries
 a clear primary identity, optional secondary stats, and explicit flat
-tradeoffs. Plain and Basic should make up most drops; Set gear is the exciting
-identity-driven find.
+tradeoffs. Plain and Basic remain the majority of individual gear drops, but
+Set pieces collectively should appear often enough to make builds feel
+attainable. Gear slot selection is even across eligible slots; empty or Plain
+Head/Arm slots do not receive catch-up weighting.
 
 ## Sets
 

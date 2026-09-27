@@ -47,6 +47,18 @@ var chroma_light_texture: Texture2D = null
 var soul_pickup_texture_cache: Texture2D = null
 var gold_pickup_controller: GoldPickupController = null
 var acquisition_presentation_handler: Callable
+var profile_save_pending := false
+
+
+func request_profile_save() -> void:
+	profile_save_pending = true
+
+
+func flush_pending_profile_save(root: GameplayState) -> void:
+	if not profile_save_pending or root.player_profile == null:
+		return
+	profile_save_pending = false
+	root._save_player_profile()
 
 
 func placeholder_item_texture() -> Texture2D:
@@ -696,7 +708,7 @@ func collect_gold_pickup(root: GameplayState, index: int) -> PickupAcquisitionRe
 	var value := controller.values[index]
 	var pickup := controller.sprites[index]
 	root.player_profile.gold += value
-	root._save_player_profile()
+	request_profile_save()
 	result.status = PickupAcquisitionResult.Status.ACQUIRED
 	result.kind = PickupAcquisitionResult.Kind.GOLD
 	result.value = value
@@ -793,7 +805,7 @@ func collect_world_item_drop(root: Object) -> PickupAcquisitionResult:
 	result.display_text = item_acquired_text(item)
 	result.accent_color = ItemCatalog.new().rarity_color(item.rarity)
 	result.target_key = &"inventory_chest"
-	root.call("_save_player_profile")
+	request_profile_save()
 	var acquired_text := result.display_text
 	var acquired_color := Color("ffd866")
 	_spawn_pickup_contact_feedback(root, result)
@@ -1052,7 +1064,7 @@ func collect_soul_pickup(root: Object, index: int) -> PickupAcquisitionResult:
 		remove_soul_pickup(root, index)
 		return result
 	root.player_profile.add_souls(value)
-	root.call("_save_player_profile")
+	request_profile_save()
 	var acquired_text := "+%d SOUL%s" % [value, "" if value == 1 else "S"]
 	result.status = PickupAcquisitionResult.Status.ACQUIRED
 	result.kind = PickupAcquisitionResult.Kind.SOUL

@@ -444,6 +444,12 @@ player experience; do not invent a desktop-only number and call mobile done.
 Every optimization must include a before/after measurement and a visual
 regression check at native pixel scale.
 
+The current pickup/flame hitch and mobile boss-AOE reports are tracked in
+[`gameplay-stability-investigation-plan.md`](gameplay-stability-investigation-plan.md).
+The synchronous profile save is a confirmed cost in the collection path, but
+the mobile freeze still needs an isolated browser/device trace before its cause
+can be named.
+
 ## Measured baseline — 2026-09-15
 
 The fixed-seed scenario harness (`tests/performance_scenario_harness.gd`,

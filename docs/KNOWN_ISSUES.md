@@ -6,8 +6,8 @@ Updated: 2026-09-26
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.91`. The current smoke inventory is 143 manifest
-rows / 141 runnable paths / 44-path default gate; the counts quoted in older
+Current release: version `0.2.96`. The current smoke inventory is 145 manifest
+rows / 143 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
 
@@ -392,6 +392,38 @@ The neighboring sound-balance and sound-mix-profile checks also pass. Their
 canonical runtime key is `sword_beam_charge` for charging and `sword_beam` for
 the launched projectile; both now have explicit catalog/profile coverage.
 
+### 2026-09-26 gameplay stability reports - active
+
+Playtesting reported doorway combat pinning, hitches around pickups/flame
+interaction, intermittent freezes during mobile-browser boss AOE/reward
+sequences, and skeletons closing inside a useful throwing distance. The
+collection path confirms synchronous profile writes; this is a plausible hitch
+source, not a confirmed explanation for every report. Same-frame pickup saves
+are now coalesced. Doorway contact handling and skeleton range steering have
+initial source corrections; focused movement and in-game acceptance remain
+open. The mobile freeze remains untriaged pending isolated Web profiling.
+
+The investigation, owners, evidence plan, and acceptance bar are recorded in
+[`gameplay-stability-investigation-plan.md`](gameplay-stability-investigation-plan.md).
+The same plan now includes the playtest request that bone hits preserve active
+player attacks and sword-beam charge.
+
+### 2026-09-26 gear-drop distribution correction
+
+Review found an 8x Head/Arm introduction weight in the shared chest and
+clear-reward slot selector. That catch-up bonus has been removed so eligible
+slots roll evenly. Plain and Basic definition weights were also eased slightly
+against Set pieces; the chance that a chest offers gear and the clear-reward
+anti-repeat window are unchanged.
+
+### Popup hold and pause Debug menu — planned
+
+The requested four-update popup pause and opt-in pause `DEBUG` page have a
+design handoff in [`popup-and-debug-menu-plan.md`](popup-and-debug-menu-plan.md).
+No runtime behavior is implemented yet. `R#` means the player-facing run number
+(for example, finishing R5 advances to R6), not room depth; the selector and
+reset action use that run number.
+
 ### 2026-09-23 intermittent gameplay hitch observation - open
 
 Manual playtesting observed occasional frame hitches or skips during room
@@ -409,10 +441,10 @@ performance investigation, not a gameplay-contract failure.
 ## Verification surface audit — open
 
 The repository has a large test/report inventory. `tests/manifest.csv` now
-classifies all 143 scripts with a role (gate/owner/reference/diagnostic/report),
+classifies all 145 scripts with a role (gate/owner/reference/diagnostic/report),
 state, owner, target, and load kind. The runner derives its grouping from that
 manifest: the default release gate selects 44 paths; `-TestGroup all` covers the
-141 runnable paths. The 2026-09-13 pruning slice removed the stale
+143 runnable paths. The 2026-09-13 pruning slice removed the stale
 `backtrack_popcorn_smoke` expectation and consolidated the three identical
 R3/R4/R5 layout wrappers into `authored_layouts_smoke`; no gate coverage or web
 export coverage was removed. The separate classification and pruning issue is
@@ -420,11 +452,32 @@ export coverage was removed. The separate classification and pruning issue is
 remaining exit criteria are met, the total smoke count is an inventory metric,
 not a quality score or release gate.
 
+## Floating popup timing and pause DEBUG page — implemented in source
+
+Floating damage/reward text now uses one pop, four-update hold, then drift/fade
+lifecycle. Gold uses the same shadowed number path. A focused lifecycle smoke
+script covers the hold boundary; it is registered but not yet run.
+
+Settings now include a persisted, default-off `DEBUG MENU` preference. When
+enabled, the pause rail opens a separate DEBUG page with a confirmed R# reset,
+temporary player-level override, invulnerability, unlimited Chroma, enemy
+pause, and geometry-guide toggles. R# is the player's run number; the override
+changes the generated route, runtime rank/rewards, and HUD together without
+writing `completed_runs` to the profile. A debug-selected route is omitted from
+ordinary active-run checkpoints. Cheat toggles and the level override clear at
+the END DEBUG action. A selected route remains the active run's identity until
+that run settles, then the ordinary profile-derived number resumes.
+
+Remaining proof: run the focused popup/settings checks and exercise the DEBUG
+page with mouse/touch/controller across aspect ratios, including reset and
+session cleanup. The current Godot playtest was already running during this
+implementation, so no fresh runtime or curated-gate result is claimed here.
+
 ## Infrastructure findings
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
-| Full smoke runner has 141 runnable manifest paths; the default gate selects 44 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
+| Full smoke runner has 143 runnable manifest paths; the default gate selects 44 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
 | Boss-room door entry is a genuine slow path (measured 300–385 ms on loaded runs, 100–165 ms on quiet runs) | The boss transition is the worst synchronous path; the harness's single-sample reading is too noisy to gate on | Average the boss-entry measurement across several door entries, then optimize the accent placer, boss activation/spawn, and synchronous profile-save phases after the A17 device profile. Tracked in [`AUDIT.md`](AUDIT.md) section 11.2 |
 | Six formerly unregistered `role:owner` checks are now triaged and resolved | All six have reliable states recorded in `tests/manifest.csv` | `actor_geometry_smoke` harness fixed; `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`, `resource_drop_motion_smoke` verified; `touch_menu_scroll_smoke` rewritten for the dialogue-context contract and verified |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |

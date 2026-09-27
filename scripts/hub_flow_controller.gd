@@ -114,10 +114,15 @@ func build_hub_ui(root: Object) -> void:
 	root.screen_state_controller.pause_back_button = controls["pause_back"] as Button
 	root.screen_state_controller.pause_status_button = controls["pause_status_button"] as Button
 	root.screen_state_controller.pause_equipment_button = controls["pause_equipment_button"] as Button
+	root.screen_state_controller.pause_debug_button = controls["debug_button"] as Button
 	root.screen_state_controller.pause_resume_button = null
-	if root.screen_state_controller.pause_menu_buttons.size() >= 4:
+	if root.screen_state_controller.pause_menu_buttons.size() >= 5:
 		root.screen_state_controller.pause_settings_button = root.screen_state_controller.pause_menu_buttons[2]
-		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[3]
+		root.screen_state_controller.pause_quit_button = root.screen_state_controller.pause_menu_buttons[4]
+	if not root.screen_state_controller.debug_page_requested.is_connected(Callable(root, "_open_debug_page")):
+		root.screen_state_controller.debug_page_requested.connect(Callable(root, "_open_debug_page"))
+	if not root.screen_state_controller.debug_action_requested.is_connected(Callable(root, "_on_debug_menu_action")):
+		root.screen_state_controller.debug_action_requested.connect(Callable(root, "_on_debug_menu_action"))
 
 
 func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) -> void:

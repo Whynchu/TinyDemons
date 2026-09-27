@@ -1,10 +1,14 @@
 extends Node
 class_name ScreenStateController
 
+signal debug_page_requested
+signal debug_action_requested(action: StringName, amount: int)
+
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
 const HubProgressionDraftScript = preload("res://scripts/hub_progression_draft.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
+const DebugMenuLayoutScript = preload("res://scripts/debug_menu_layout.gd")
 const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
 const FusionMenuLayoutScript = preload("res://scripts/fusion_menu_layout.gd")
 const BindMenuLayoutScript = preload("res://scripts/bind_menu_layout.gd")
@@ -15,7 +19,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.2.95"
+const GAME_VERSION := "0.2.96"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -238,6 +242,10 @@ var pause_description_text: Sprite2D = null
 var pause_back_button: Button = null
 var pause_status_button: Button = null
 var pause_equipment_button: Button = null
+var pause_debug_button: Button = null
+var debug_menu_layout: RefCounted = null
+var debug_menu_buttons: Array[Button] = []
+var debug_menu_row := 0
 var hub_item_name_text: Sprite2D = null
 var hub_item_list_texts: Array[Sprite2D] = []
 var hub_item_row_buttons: Array[Button] = []
@@ -1676,7 +1684,7 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 	pause_gold_text = create_sprite(overlay, "PauseGoldText", null, PauseMenuLayoutScript.resource_text_position(display_view_size, 0.0, false), false)
 	pause_soul_text = create_sprite(overlay, "PauseSoulText", null, PauseMenuLayoutScript.resource_text_position(display_view_size, 0.0, true), false)
 	var buttons: Array[Button] = []
-	var labels := ["STATUS", "EQUIPMENT", "SETTINGS", "QUIT TITLE"]
+	var labels := ["STATUS", "EQUIPMENT", "SETTINGS", "DEBUG", "QUIT TITLE"]
 	for index in labels.size():
 		var button := make_menu_command_button(labels[index], PauseMenuLayoutScript.command_button_position(display_view_size, index), PauseMenuLayoutScript.COMMAND_BUTTON_SIZE, pixel_texture)
 		button.name = "Pause%s" % labels[index].replace(" ", "").capitalize()
@@ -1688,7 +1696,8 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 			if pause_equipment.is_valid(): button.pressed.connect(pause_equipment)
 			else: button.pressed.connect(set_pause_page.bind(2))
 		elif index == 2 and pause_settings.is_valid(): button.pressed.connect(pause_settings)
-		elif index == 3 and pause_quit.is_valid(): button.pressed.connect(pause_quit)
+		elif index == 3: button.pressed.connect(func(): debug_page_requested.emit())
+		elif index == 4 and pause_quit.is_valid(): button.pressed.connect(pause_quit)
 		pause_root_page.add_child(button); buttons.append(button)
 	var back := make_menu_command_button("BACK", PauseMenuLayoutScript.back_button_position(display_view_size), PauseMenuLayoutScript.BACK_BUTTON_SIZE, pixel_texture)
 	back.name = "PauseBack"
@@ -1696,7 +1705,12 @@ func _build_pause_overlay(parent: Node, pixel_texture: Callable, _pause_resume: 
 	if pause_back_callback.is_valid(): back.pressed.connect(pause_back_callback)
 	overlay.add_child(back)
 	var cursor := create_sprite(pause_root_page, "PauseCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); cursor.visible = false
-	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "equipment_menu": pause_equipment_menu, "description": description, "back": back, "status_button": buttons[0], "equipment_button": buttons[1]}
+	debug_menu_layout = DebugMenuLayoutScript.new() as RefCounted
+	var debug_controls := debug_menu_layout.call("build", overlay, pixel_texture) as Dictionary
+	debug_menu_layout.connect(&"action_requested", func(action: StringName, amount: int): debug_action_requested.emit(action, amount))
+	pause_page_roots[3] = debug_controls["page"] as Control
+	debug_menu_buttons = debug_controls["buttons"] as Array[Button]
+	return {"overlay": overlay, "title": title, "buttons": buttons, "cursor": cursor, "card": card_texts, "status": status_texts, "equipment": equipment_texts, "equipment_menu": pause_equipment_menu, "description": description, "back": back, "status_button": buttons[0], "equipment_button": buttons[1], "debug_button": buttons[3]}
 
 
 func _position_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = false, preserve_motion: bool = false) -> void:
@@ -2006,6 +2020,7 @@ func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_moti
 		resource_divider.position = Vector2(divider_x, height - PauseMenuLayoutScript.RESOURCE_PANEL_HEIGHT)
 		resource_divider.size = Vector2(maxf(width - divider_x - 1.0, 1.0), 1.0)
 	for index in pause_menu_buttons.size(): pause_menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(display_view_size, index)
+	if debug_menu_layout != null: debug_menu_layout.call("apply_layout", display_view_size)
 	if pause_back_button != null: pause_back_button.position = PauseMenuLayoutScript.back_button_position(display_view_size)
 	if pause_player_portrait != null:
 		pause_player_portrait.position = Vector2(PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, width), PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.y)
@@ -3151,9 +3166,13 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		_update_pause_player_info_context(menu_player_context, pixel_texture)
 	else:
 		_update_pause_player_info(root, pixel_texture)
+	var settings := root.get("settings_service") as SettingsService
+	var debug_menu_enabled := settings != null and bool(settings.get_setting(&"debug_menu_enabled", false))
 	for index in pause_menu_buttons.size():
 		var button := pause_menu_buttons[index]
-		button.visible = pause_page == 0
+		var debug_command_hidden := index == 3 and not debug_menu_enabled
+		button.visible = pause_page == 0 and not debug_command_hidden
+		button.disabled = debug_command_hidden
 		# The command rail is intentionally text-only. The cursor is the sole
 		# selected-state treatment, matching the Demon Hub and FFIII reference.
 		set_archetype_button_state(button, false, highlight)
@@ -3181,6 +3200,8 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		return
 	elif pause_page == 2:
 		_update_pause_equipment(root, pixel_texture)
+	elif pause_page == 3:
+		refresh_debug_menu(root)
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
 		pause_cursor_text.visible = pause_page == 0
@@ -3252,7 +3273,7 @@ func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
 
 
 func set_pause_page(root: Object, page: int) -> void:
-	pause_page = clampi(page, 0, 2)
+	pause_page = clampi(page, 0, 3)
 	# A pause page transition is a fresh route entry. Never carry a touch
 	# candidate arm from Hub Equipment (or an earlier pause page) into it.
 	hub_touch_candidate_slot = ""
@@ -3265,6 +3286,9 @@ func set_pause_page(root: Object, page: int) -> void:
 		hub_gear_browsing = false
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	elif pause_page == 1:
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+	elif pause_page == 3:
+		debug_menu_row = 0
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 
@@ -4116,6 +4140,9 @@ func update_pause_input(root: Object) -> void:
 	if bool(root.call("_is_menu_back_just_pressed")):
 		root.call("_pause_back")
 		return
+	if pause_page == 3:
+		_update_debug_page_input(root)
+		return
 	if pause_page != 0:
 		return
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")) or bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
@@ -4137,6 +4164,36 @@ func update_pause_input(root: Object) -> void:
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		else:
 			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+
+
+
+func refresh_debug_menu(root: Object) -> void:
+	if debug_menu_layout == null:
+		return
+	var session := root.call("get_node_or_null", "DebugSessionController") as Node
+	if session == null:
+		return
+	var stats := root.get("player_stats") as StatsComponent
+	var debug_level := int(session.get("player_level_override"))
+	var level := debug_level if debug_level > 0 else (stats.level if stats != null else 1)
+	var geometry := root.get("actor_geometry_debug_drawer") as ActorGeometryDebugDrawer
+	debug_menu_layout.call("refresh", Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
+	for index in debug_menu_buttons.size():
+		debug_menu_buttons[index].scale = Vector2.ONE * (1.06 if index == debug_menu_row else 1.0)
+
+
+func _update_debug_page_input(root: Object) -> void:
+	if debug_menu_buttons.is_empty():
+		return
+	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
+		debug_menu_row = posmod(debug_menu_row - 1, debug_menu_buttons.size())
+		refresh_debug_menu(root)
+	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
+		debug_menu_row = posmod(debug_menu_row + 1, debug_menu_buttons.size())
+		refresh_debug_menu(root)
+	elif bool(root.call("_is_menu_confirm_just_pressed")):
+		debug_menu_buttons[debug_menu_row].pressed.emit()
+		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 
 
 func _update_pause_equipment_input(root: Object) -> void:
@@ -4495,17 +4552,18 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 	var values: Array[Button] = []
 	var left_buttons: Array[Button] = []
 	var right_buttons: Array[Button] = []
-	var row_labels := ["FULLSCREEN", "ASPECT", "PIXEL PERFECT", "MUSIC", "SFX", "VIBRATION"]
-	var option_labels: Array[Array] = [["OFF", "ON"], ["FULL", "3:2", "16:10", "16:9"], ["OFF", "ON"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["OFF", "ON"]]
-	var row_y := 30.0
+	var row_labels := ["FULLSCREEN", "ASPECT", "PIXEL PERFECT", "MUSIC", "SFX", "VIBRATION", "DEBUG MENU"]
+	var option_labels: Array[Array] = [["OFF", "ON"], ["FULL", "3:2", "16:10", "16:9"], ["OFF", "ON"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"], ["OFF", "ON"], ["OFF", "ON"]]
+	var row_y := 23.0
 	var option_start := maxf(90.0, display_view_size.x * 0.38)
+	var row_pitch := minf(16.0, maxf(12.0, (display_view_size.y - 65.0) / maxf(float(row_labels.size()), 1.0)) )
 	for index in row_labels.size():
-		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(14, row_y + index * 16.0 + 3.0), false)
+		var label := create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_labels[index], Color.WHITE) as Texture2D, Vector2(14, row_y + index * row_pitch + 3.0), false)
 		labels.append(label)
 		var options_for_row: Array[Button] = []
 		for option_index in option_labels[index].size():
 			var option_text: String = str(option_labels[index][option_index])
-			var option_button := make_retro_button(option_text, Vector2(option_start + option_index * 14.0, row_y + index * 16.0), Vector2(12, 12), pixel_texture)
+			var option_button := make_retro_button(option_text, Vector2(option_start + option_index * 14.0, row_y + index * row_pitch), Vector2(12, 12), pixel_texture)
 			option_button.name = "SettingsOption%d_%d" % [index, option_index]
 			option_button.focus_mode = Control.FOCUS_NONE
 			if select_option_callback.is_valid(): option_button.pressed.connect(select_option_callback.bind(index, option_index))
@@ -4513,18 +4571,18 @@ func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Call
 			options_for_row.append(option_button)
 		settings_option_buttons.append(options_for_row)
 		settings_option_labels.append(option_labels[index])
-		var left := make_retro_button("<", Vector2(option_start - 20.0, row_y + index * 16.0), Vector2(16, 12), pixel_texture)
+		var left := make_retro_button("<", Vector2(option_start - 20.0, row_y + index * row_pitch), Vector2(16, 12), pixel_texture)
 		left.name = "SettingsLeft%d" % index
 		left.focus_mode = Control.FOCUS_NONE
 		if adjust_callback.is_valid(): left.pressed.connect(adjust_callback.bind(index, -1))
 		overlay.add_child(left)
 		left_buttons.append(left)
-		var value := make_retro_button("", Vector2(option_start, row_y + index * 16.0), Vector2(65, 12), pixel_texture)
+		var value := make_retro_button("", Vector2(option_start, row_y + index * row_pitch), Vector2(65, 12), pixel_texture)
 		value.name = "SettingsValue%d" % index
 		if adjust_callback.is_valid(): value.pressed.connect(adjust_callback.bind(index, 1))
 		overlay.add_child(value)
 		values.append(value)
-		var right := make_retro_button(">", Vector2(option_start + 68.0, row_y + index * 16.0), Vector2(16, 12), pixel_texture)
+		var right := make_retro_button(">", Vector2(option_start + 68.0, row_y + index * row_pitch), Vector2(16, 12), pixel_texture)
 		right.name = "SettingsRight%d" % index
 		right.focus_mode = Control.FOCUS_NONE
 		if adjust_callback.is_valid(): right.pressed.connect(adjust_callback.bind(index, 1))
@@ -4562,7 +4620,8 @@ func _position_settings_controls() -> void:
 	var rule := settings_overlay.get_node_or_null("SettingsTitleRule") as ColorRect
 	if rule != null: rule.size = Vector2(maxf(display_view_size.x - 16.0, 16.0), 1.0)
 	for index in settings_row_labels.size():
-		var y := 30.0 + index * 16.0
+		var row_pitch := minf(16.0, maxf(12.0, (display_view_size.y - 65.0) / maxf(float(settings_row_labels.size()), 1.0)))
+		var y := 23.0 + index * row_pitch
 		settings_row_labels[index].position = Vector2(14, y + 3.0)
 		settings_left_buttons[index].position = Vector2(option_start - 20.0, y)
 		settings_value_buttons[index].position = Vector2(option_start, y)
@@ -4619,7 +4678,7 @@ func close_settings(root: Object) -> void:
 			pause_overlay.visible = true
 		hub_pause_mode = true
 		pause_page = 0
-		pause_menu_row = 3
+		pause_menu_row = 2
 		set_state(&"pause")
 		update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	else:
@@ -4638,7 +4697,7 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 	if service == null or settings_value_buttons.is_empty():
 		return
 	var values := service.values()
-	var value_labels := ["ON" if bool(values.get("fullscreen", false)) else "OFF", str(values.get("aspect", "FULL")), "ON" if bool(values.get("pixel_perfect", true)) else "OFF", str(values.get("music_volume", 100)), str(values.get("sfx_volume", 100)), "ON" if bool(values.get("vibration", true)) else "OFF"]
+	var value_labels := ["ON" if bool(values.get("fullscreen", false)) else "OFF", str(values.get("aspect", "FULL")), "ON" if bool(values.get("pixel_perfect", true)) else "OFF", str(values.get("music_volume", 100)), str(values.get("sfx_volume", 100)), "ON" if bool(values.get("vibration", true)) else "OFF", "ON" if bool(values.get("debug_menu_enabled", false)) else "OFF"]
 	var highlight := PaletteLibrary.accent(String(root.get("current_player_palette_name")))
 	_set_button_text(settings_back_button, _menu_back_prompt_for(root), pixel_texture, highlight)
 	for index in settings_value_buttons.size():
@@ -4660,7 +4719,7 @@ func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
 	if settings_back_button != null:
 		set_archetype_button_state(settings_back_button, settings_row == settings_value_buttons.size(), highlight)
 	if settings_description_text != null:
-		var descriptions := ["DISPLAY MODE", "LOGICAL ASPECT", "PIXEL FILTER", "MUSIC VOLUME", "SFX VOLUME", "VIBRATION", "RETURN"]
+		var descriptions := ["DISPLAY MODE", "LOGICAL ASPECT", "PIXEL FILTER", "MUSIC VOLUME", "SFX VOLUME", "VIBRATION", "PAUSE MENU DEBUG ACCESS", "RETURN"]
 		var description_index := clampi(settings_row, 0, descriptions.size() - 1)
 		settings_description_text.texture = pixel_texture.call(descriptions[description_index], Color8(148, 220, 255)) as Texture2D
 	_update_settings_cursor()
@@ -4689,7 +4748,7 @@ func select_setting_option(root: Object, row: int, option_index: int) -> void:
 	var service := root.get("settings_service") as SettingsService
 	if service == null:
 		return
-	settings_row = clampi(row, 0, 5)
+	settings_row = clampi(row, 0, 6)
 	match settings_row:
 		0: service.set_setting(&"fullscreen", option_index == 1)
 		1:
@@ -4699,6 +4758,7 @@ func select_setting_option(root: Object, row: int, option_index: int) -> void:
 		3: service.set_setting(&"music_volume", clampi(option_index, 0, 10) * 10)
 		4: service.set_setting(&"sfx_volume", clampi(option_index, 0, 10) * 10)
 		5: service.set_setting(&"vibration", option_index == 1)
+		6: service.set_setting(&"debug_menu_enabled", option_index == 1)
 	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -4706,7 +4766,7 @@ func adjust_setting(root: Object, row: int, direction: int) -> void:
 	var service := root.get("settings_service") as SettingsService
 	if service == null:
 		return
-	settings_row = clampi(row, 0, 5)
+	settings_row = clampi(row, 0, 6)
 	var current: Variant
 	match settings_row:
 		0:
@@ -4726,6 +4786,9 @@ func adjust_setting(root: Object, row: int, direction: int) -> void:
 		5:
 			current = not bool(service.get_setting(&"vibration", true))
 			service.set_setting(&"vibration", current)
+		6:
+			current = not bool(service.get_setting(&"debug_menu_enabled", false))
+			service.set_setting(&"debug_menu_enabled", current)
 	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 

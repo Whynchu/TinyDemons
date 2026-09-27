@@ -698,9 +698,27 @@ func tick(root: GameplayState, delta: float) -> void:
 	if root.player_motor != null: root.player_motor.update_player_hit_reaction(root, delta)
 	root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta, mouse_aim_active(root))
-	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta); root.player_animation_component.tick_coordinator_animation(animation_context(root), delta); root._tick_run_telemetry(delta); root._move_slimes(delta); root._update_special_enemy_respawns(delta); root._update_enemy_hit_flashes(delta); root._update_enemy_health(delta); root._update_target_ui(); root._update_player_health_regen(delta); root._update_player_health_ui(delta); root._update_player_mp_ui(delta); root._update_magic_projectiles(delta); root._update_damage_numbers(delta); if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta); root.effects_spawner.update_pixel_particles_from_root(root, delta); root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
+	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta)
+	root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
+	root._tick_run_telemetry(delta)
+	var debug_session := root.get_node_or_null("DebugSessionController") as Node
+	if debug_session == null or not bool(debug_session.get("enemies_paused")):
+		root._move_slimes(delta)
+		root._update_special_enemy_respawns(delta)
+		root._update_enemy_hit_flashes(delta)
+		root._update_enemy_health(delta)
+	root._update_target_ui()
+	root._update_player_health_regen(delta)
+	root._update_player_health_ui(delta)
+	root._update_player_mp_ui(delta)
+	root._update_magic_projectiles(delta)
+	root._update_damage_numbers(delta)
+	if root.feedback_animation_registry != null:
+		root.feedback_animation_registry.tick(delta)
+	root.effects_spawner.update_pixel_particles_from_root(root, delta)
+	root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
-		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
+		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root.pickup_runtime_controller.flush_pending_profile_save(root); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
 		# The charge pose is rendered by the base player sprite. The shared attack
 		# visual updater must not turn the previous attack frame back on after the
 		# animation component has deliberately hidden it.

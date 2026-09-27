@@ -109,7 +109,7 @@ this shape:
 | `gameplay.gd` | 255 lines | The old giant coordinator has already been reduced |
 | `gameplay_state.gd` | 1,718 lines / 286 fields | The composition root and compatibility surface remain, but the state bag no longer owns room/geometry/frame-schedule seams |
 | `root.call/get/set` | 2,201 sites | Below the strict target; any future reductions should remain feature-scoped and owner-led |
-| Tests | 143 manifest rows / 141 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
+| Tests | 145 manifest rows / 143 runnable / 44-path default gate | Deep coverage; the process-per-test run remains slow and is not CI-enforced |
 
 Completed refactor foundations include the explicit frame scheduler, runtime
 bootstrap wiring, player and slime components, typed reward and settlement
@@ -288,7 +288,7 @@ magic.
 
 ## Web build
 
-Current game version: **0.2.95**. Every push to `main` must increment the
+Current game version: **0.2.96**. Every push to `main` must increment the
 patch version by at least `0.0.01`; update the in-game title-menu version and
 this README in the same commit.
 

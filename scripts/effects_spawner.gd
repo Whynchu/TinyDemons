@@ -65,7 +65,8 @@ func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
-	var tuning := root.get("effects_tuning") as EffectsTuning; var sprite := Sprite2D.new(); sprite.texture = root.call("_pixel_text_texture", "+%d" % amount, Color8(255, 205, 117)); sprite.centered = false; sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; sprite.z_as_relative = false; sprite.z_index = int(root.get("OVERWORLD_UI_Z")) + 2; root.add_child(sprite); sprite.global_position = world_position; damage_numbers.append({"sprite": sprite, "timer": tuning.damage_number_lifetime})
+	var tuning := root.get("effects_tuning") as EffectsTuning
+	spawn_health_number(root, world_position, amount, Vector2(0.0, -tuning.damage_number_float_speed), false, false, Color8(255, 205, 117), Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), tuning.damage_number_lifetime, tuning.damage_number_pop_time, "+%d" % amount)
 
 
 func spawn_chest_evaporation_from_root(root: Object) -> void:
@@ -959,7 +960,7 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	sprite.scale = Vector2.ONE * pop_scale
 	if damage_numbers.size() >= MAX_DAMAGE_NUMBERS:
 		_discard_damage_number(damage_numbers[0])
-	damage_numbers.append({"sprite": sprite, "shadow": shadow, "outline": outline, "timer": lifetime, "pop_timer": pop_time, "pop_duration": pop_time, "pop_scale": pop_scale, "velocity": velocity})
+	damage_numbers.append({"sprite": sprite, "shadow": shadow, "outline": outline, "timer": lifetime, "pop_timer": pop_time, "pop_duration": pop_time, "hold_frames": 4, "pop_scale": pop_scale, "velocity": velocity, "logical_position": world_position})
 
 
 func _discard_damage_number(damage_number: Dictionary) -> void:
@@ -1073,6 +1074,13 @@ func update_damage_numbers(delta: float, snap_position: Callable, default_lifeti
 				outline.scale = Vector2.ONE * pop_scale
 			damage_number["pop_timer"] = next_pop_timer
 			sprite.modulate = Color.WHITE
+			continue
+		var hold_frames := int(damage_number.get("hold_frames", 0))
+		if hold_frames > 0:
+			damage_number["hold_frames"] = hold_frames - 1
+			sprite.modulate.a = 1.0
+			if shadow != null: shadow.modulate.a = 1.0
+			if outline != null: outline.modulate.a = 1.0
 			continue
 		var timer := float(damage_number["timer"]) - delta
 		if timer <= 0.0:

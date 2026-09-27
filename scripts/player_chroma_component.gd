@@ -34,6 +34,7 @@ enum AbilityMode {
 
 var current_aspect: Aspect = Aspect.NONE
 var current_chroma := 0
+var debug_unlimited_chroma := false
 # The permanent identity is deliberately separate from current_aspect. A
 # fusion may change the current element without changing this value.
 var bound_aspect: Aspect = Aspect.NONE
@@ -105,7 +106,7 @@ func restore_neutral_chroma(value: int = chroma_pickup_value) -> bool:
 
 
 func can_use_elemental_ability() -> bool:
-	return current_aspect != Aspect.NONE and current_chroma >= elemental_ability_cost
+	return current_aspect != Aspect.NONE and (debug_unlimited_chroma or current_chroma >= elemental_ability_cost)
 
 
 func spend_elemental_ability() -> bool:
@@ -115,10 +116,12 @@ func spend_elemental_ability() -> bool:
 
 
 func can_spend_chroma(amount: int) -> bool:
-	return amount > 0 and current_chroma >= amount
+	return amount > 0 and (debug_unlimited_chroma or current_chroma >= amount)
 
 
 func spend_chroma(amount: int) -> bool:
+	if debug_unlimited_chroma:
+		return amount > 0
 	if not can_spend_chroma(amount):
 		return false
 	var next_chroma := current_chroma - amount

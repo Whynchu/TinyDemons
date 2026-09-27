@@ -1,6 +1,9 @@
 extends Node
 class_name SlimeBrain
 
+const SKELETON_PREFERRED_RANGE := 72.0
+const SKELETON_RANGE_TOLERANCE := 12.0
+
 ## Decision-state boundary for slime actors.
 ## Movement and collision remain coordinated by gameplay during migration.
 
@@ -28,7 +31,10 @@ var notice_stagger_timer := 0.0
 
 static func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
 	var slime_foot: Vector2 = root.call("_actor_foot", slime); var player_foot: Vector2 = root.call("_actor_foot", root.get("player")); var approach := slime_foot - player_foot; if approach.length_squared() < 0.01: approach = Vector2.RIGHT
-	var tuning := root.get("slime_tuning") as SlimeTuning; var desired := player_foot + approach.normalized() * (tuning.attack_range * 0.72); var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	var tuning := root.get("slime_tuning") as SlimeTuning; var desired_range := tuning.attack_range * 0.72
+	if slime is SkeletonActor:
+		desired_range = SKELETON_PREFERRED_RANGE
+	var desired := player_foot + approach.normalized() * desired_range; var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
 	if tactics != null:
 		desired += tactics.approach_offset(approach)
 	var buddy_avoidance := Vector2.ZERO
@@ -199,6 +205,8 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var distance := to_player.length()
 	var towards_player := to_player.normalized()
 	var desired_distance := tuning.attack_range * 0.72
+	if actor is SkeletonActor:
+		desired_distance = SKELETON_PREFERRED_RANGE
 	if _is_boss(actor):
 		desired_distance = tuning.attack_range + tuning.boss_attack_lunge_distance * 0.65
 	var best_direction := towards_player
@@ -235,7 +243,12 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		# lane follows the game's isometric mapping instead of screen axes.
 		var candidate_world := candidate_movement.normalized()
 		var approach_interest := candidate_world.dot(towards_player)
-		if distance < desired_distance:
+		if actor is SkeletonActor:
+			if distance < desired_distance - SKELETON_RANGE_TOLERANCE:
+				approach_interest = -approach_interest
+			elif distance <= desired_distance + SKELETON_RANGE_TOLERANCE:
+				approach_interest = 0.0
+		elif distance < desired_distance:
 			approach_interest = -approach_interest
 		var orbit := Vector2(-towards_player.y, towards_player.x) * orbit_direction
 		var orbit_factor := clampf(1.0 - absf(distance - desired_distance) / tuning.attack_range, 0.0, 1.0)

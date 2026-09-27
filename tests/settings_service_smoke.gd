@@ -14,6 +14,7 @@ func _initialize() -> void:
 	_expect(defaults.get("pixel_perfect", null) == true, "missing settings use pixel-perfect default", failures)
 	_expect(defaults.get("music_volume", -1) == 100 and defaults.get("sfx_volume", -1) == 100, "missing settings use full volume defaults", failures)
 	_expect(defaults.get("vibration", null) == true, "missing settings enable mobile vibration", failures)
+	_expect(defaults.get("debug_menu_enabled", null) == false, "debug menu setting defaults off", failures)
 
 	service.set_setting(&"fullscreen", true)
 	service.set_setting(&"aspect", "16:9")
@@ -21,20 +22,24 @@ func _initialize() -> void:
 	service.set_setting(&"music_volume", 60)
 	service.set_setting(&"sfx_volume", 30)
 	service.set_setting(&"vibration", false)
+	service.set_setting(&"debug_menu_enabled", true)
 	var round_trip := SettingsService.new(TEST_PATH)
 	root.add_child(round_trip)
 	var loaded := round_trip.load_settings()
 	_expect(loaded.get("fullscreen", false) == true and loaded.get("aspect", "") == "16:9", "settings round-trip booleans and aspect", failures)
 	_expect(loaded.get("pixel_perfect", true) == false and loaded.get("music_volume", -1) == 60 and loaded.get("sfx_volume", -1) == 30, "settings round-trip scaling and volumes", failures)
 	_expect(loaded.get("vibration", true) == false, "settings round-trip the vibration toggle", failures)
+	_expect(loaded.get("debug_menu_enabled", false) == true, "debug menu preference persists independently", failures)
 
 	service.set_setting(&"music_volume", -5)
 	service.set_setting(&"sfx_volume", 155)
 	service.set_setting(&"aspect", "4:3")
 	service.set_setting(&"vibration", "no")
+	service.set_setting(&"debug_menu_enabled", "off")
 	_expect(service.get_setting(&"music_volume", -1) == 0 and service.get_setting(&"sfx_volume", -1) == 100, "settings clamp volume values", failures)
 	_expect(service.get_setting(&"aspect", "") == "FULL", "settings reject unsupported aspect", failures)
 	_expect(service.get_setting(&"vibration", true) == false, "settings parse a string vibration toggle", failures)
+	_expect(service.get_setting(&"debug_menu_enabled", true) == false, "settings parse a string debug menu toggle", failures)
 
 	var corrupt := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	if corrupt != null:

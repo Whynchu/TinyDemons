@@ -102,7 +102,8 @@ acknowledgment legs, including their collection feedback where applicable.
   `Engine.time_scale` and must stay frame-scheduled.
 - Knockback: exists for player and enemies.
 - Damage numbers: exist with shadow and critical outline; they now scale-pop on
-  spawn, with a heavier critical profile.
+  spawn, with a heavier critical profile. A four-update still hold before drift
+  is planned in [`popup-and-debug-menu-plan.md`](docs/popup-and-debug-menu-plan.md).
 - Death: enemy pixel-debris and player death sequence exist; enemy debris now
   follows the active slime palette instead of always using the green source art.
 - Regular-hit particle burst: element-colored impact sparks exist for landed

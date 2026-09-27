@@ -143,3 +143,4 @@ script,role,state,owner,target,load,notes
 "slime_death_particle_palette_smoke","owner","unverified","enemy presentation","slime death particles preserve each actor palette","pure",""
 "item_preview_workbench_smoke","owner","verified","gear & fusion","ItemCatalog-driven preview workbench covers registered item definitions","pure","focused headless pass 2026-09-26; typed/legacy source behavior, catalog parity, deterministic previews, planned-effect presentation"
 "retired_item_purge_smoke","owner","unverified","gear & fusion / saves","retired catalog records and saved item instances are purged with Demon Cloak/current items preserved","pure",""
+"floating_popup_lifecycle_smoke","owner","unverified","combat presentation","floating gameplay text holds for four scheduled updates after its scale pop before drifting","pure",""
