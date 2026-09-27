@@ -11,6 +11,10 @@ func _initialize() -> void:
 	if packed == null:
 		_finish(failures)
 		return
+	# Routed hub coverage requires the full gameplay boot; a fresh headless
+	# instantiate would otherwise take the title-only boot path and never build
+	# the hub overlay.
+	ProjectSettings.set_setting("debug/benchmark_start_in_boss_room", true)
 	var gameplay := packed.instantiate()
 	root.add_child(gameplay)
 	for _frame in 120:
