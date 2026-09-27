@@ -21,8 +21,14 @@ func _initialize() -> void:
 		await process_frame
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var input_router := gameplay.get("input_router") as InputRouter
-	_expect(screens != null and input_router != null, "hub and input owners are composed", failures)
-	if screens != null and input_router != null:
+	var settings := gameplay.get("settings_service") as SettingsService
+	_expect(screens != null and input_router != null and settings != null, "hub and input owners are composed", failures)
+	if screens != null and input_router != null and settings != null:
+		# Pin the deterministic 3:2 logical view (240x160) so the authored native
+		# menu geometry below is checked as authored. The default FULL view is
+		# wider and reflows the panels proportionally.
+		settings.set_setting(&"aspect", "3:2")
+		await process_frame
 		gameplay.call("_show_hub", true, false)
 		await process_frame
 		_expect(screens.hub_overlay.visible and not screens.pause_overlay.visible and screens.hub_pause_mode == false, "Demon interaction opens only the preparation overlay", failures)
@@ -168,7 +174,7 @@ func _initialize() -> void:
 		gameplay.call("_open_pause_menu")
 		await process_frame
 		_expect(screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "pause opens a distinct overlay and state", failures)
-		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 4, "pause uses its own four-command full-screen shell", failures)
+		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 5, "pause uses its own five-command full-screen shell", failures)
 		_expect(gameplay.call("_input_context") == InputRouter.Context.PAUSE, "pause routes through the dedicated input context", failures)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()
