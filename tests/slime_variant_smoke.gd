@@ -29,7 +29,7 @@ func _initialize() -> void:
 	var name_root := Node.new()
 	var slime_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"grey"))
 	var skeleton_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"skeleton"))
-	_expect(targeting.slime_display_name(name_root, slime_actor) == "lv.1 Slime Normal", "target label includes Slime family and variant name", failures)
+	_expect(targeting.slime_display_name(name_root, slime_actor) == "lv.1 Normal Slime", "target label shows variant before Slime family", failures)
 	_expect(targeting.slime_display_name(name_root, skeleton_actor) == "lv.1 Skeleton", "target label keeps authored Skeleton family name", failures)
 	slime_actor.free()
 	skeleton_actor.free()

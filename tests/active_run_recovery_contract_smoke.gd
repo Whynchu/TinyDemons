@@ -10,7 +10,8 @@ const RUN_CHECKPOINT_SERVICE_SCRIPT = preload("res://scripts/run_checkpoint_serv
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	ProfileSaveService.select_slot(1)
+	var profile_slot := ProfileSaveService.current_slot()
+	var other_profile_slot := posmod(profile_slot + 1, ProfileSaveService.SLOT_COUNT)
 	var run := RunState.new()
 	run.begin(424242, 3, 48.0)
 	run.start_timer()
@@ -38,7 +39,7 @@ func _initialize() -> void:
 	var chroma := PlayerChromaComponent.new()
 	var typed_context := ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT.new(profile, run, map_controller, room_controller, health, chroma, 424242, &"room_next", &"combat", 1, 0, true, true)
 	var typed_snapshot := ACTIVE_RUN_SNAPSHOT_SCRIPT.create_context(typed_context)
-	_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(typed_snapshot, 1), "typed checkpoint context produces a valid recovery snapshot", failures)
+	_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(typed_snapshot, profile_slot), "typed checkpoint context produces a valid recovery snapshot", failures)
 	var no_drops: Array[Dictionary] = []
 	var room_context := ROOM_CHECKPOINT_CONTEXT_SCRIPT.new(&"room_next", &"combat", null, room_controller, false, false, false, false, no_drops, null, null)
 	var checkpoint_context := RUN_CHECKPOINT_CONTEXT_SCRIPT.new(profile, run, room_context, typed_context, 0)
@@ -48,7 +49,7 @@ func _initialize() -> void:
 	var snapshot := {
 		"format": ACTIVE_RUN_SNAPSHOT_SCRIPT.FORMAT,
 		"schema_version": ACTIVE_RUN_SNAPSHOT_SCRIPT.SCHEMA_VERSION,
-		"profile_slot": 1,
+		"profile_slot": profile_slot,
 		"profile_identity": {"player_name": "Tester", "profile_schema": 7, "has_started": true},
 		"created_at": 123.0,
 		"run_state": run.to_dictionary(),
@@ -70,7 +71,7 @@ func _initialize() -> void:
 	_expect(parsed is Dictionary, "active-run snapshot survives JSON encoding", failures)
 	if parsed is Dictionary:
 		var decoded := parsed as Dictionary
-		_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(decoded, 1), "valid snapshot passes schema and slot validation", failures)
+		_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(decoded, profile_slot), "valid snapshot passes schema and slot validation", failures)
 		_expect(String(decoded.get("layout_bound_flame", "")) == "water", "active-run recovery preserves the generated layout origin", failures)
 		var restored_run := RunState.new()
 		_expect(restored_run.restore_from_dictionary(decoded["run_state"] as Dictionary), "run state restores from snapshot data", failures)
@@ -81,12 +82,12 @@ func _initialize() -> void:
 		_expect(restored_map.is_room_completed(&"room_start") and restored_map.is_event_revealed(&"event_one"), "map completion and event discovery round-trip", failures)
 		var malformed_room := decoded.duplicate(true)
 		(malformed_room["room_states"] as Dictionary)["room_next"] = "not a dictionary"
-		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(malformed_room, 1), "malformed room state is rejected", failures)
+		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(malformed_room, profile_slot), "malformed room state is rejected", failures)
 		var future := decoded.duplicate(true)
 		future["schema_version"] = ACTIVE_RUN_SNAPSHOT_SCRIPT.SCHEMA_VERSION + 1
-		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(future, 1), "future snapshot schema is rejected", failures)
+		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(future, profile_slot), "future snapshot schema is rejected", failures)
 		var wrong_slot := decoded.duplicate(true)
-		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(wrong_slot, 0), "snapshot cannot cross profile slots", failures)
+		_expect(not ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(wrong_slot, other_profile_slot), "snapshot cannot cross profile slots", failures)
 	map_controller.free()
 	room_controller.free()
 	health.free()

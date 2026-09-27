@@ -214,7 +214,7 @@ func slime_display_name(root: Object, slime: Sprite2D) -> String:
 	var display_name := SLIME_VARIANT_CATALOG_SCRIPT.display_name_for_variant(StringName(palette))
 	var enemy_type := StringName(str(slime.get_meta("enemy_type_id", "slime")))
 	if enemy_type == &"slime":
-		display_name = "Slime %s" % display_name
+		display_name = "%s Slime" % display_name
 	else:
 		var definition := EnemyFactory.definition(StringName(palette))
 		if definition != null and not definition.display_name.is_empty():

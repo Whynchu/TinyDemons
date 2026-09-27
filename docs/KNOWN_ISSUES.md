@@ -6,7 +6,7 @@ Updated: 2026-09-26
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.2.98`. The current smoke inventory is 145 manifest
+Current release: version `0.2.99`. The current smoke inventory is 145 manifest
 rows / 143 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -262,7 +262,7 @@ the existing local gate is already accepted for this pass.
 
 Doorways were checked in gameplay on 2026-09-13 and are functioning as intended:
 the player can traverse active openings and closed doorway behavior is correct
-for the current authored rooms. On 2026-09-13,
+for the current authored rooms. This verifies socket traversal and closed-door behavior; it does not cover sustained combat contact in the opening. The 2026-09-26 combat-pinning report reopens that separate case under the gameplay stability plan. On 2026-09-13,
 `wall_socket_geometry_smoke` was reconciled with the current portal-based
 walkability model and passed in the isolated headless runner. The test covers
 closed-socket portal exclusion, closed transition rejection, open portal
@@ -416,11 +416,11 @@ slots roll evenly. Plain and Basic definition weights were also eased slightly
 against Set pieces; the chance that a chest offers gear and the clear-reward
 anti-repeat window are unchanged.
 
-### Popup hold and pause Debug menu — planned
+### Popup hold and pause Debug menu — implemented in source
 
 The requested four-update popup pause and opt-in pause `DEBUG` page have a
 design handoff in [`popup-and-debug-menu-plan.md`](popup-and-debug-menu-plan.md).
-No runtime behavior is implemented yet. `R#` means the player-facing run number
+Runtime, touch, and responsive-layout proof remains open. `R#` means the player-facing run number
 (for example, finishing R5 advances to R6), not room depth; the selector and
 reset action use that run number.
 
