@@ -1,4 +1,4 @@
-# Tiny Demons — Version 0.2.97 Codebase Audit
+# Tiny Demons — Version 0.2.98 Codebase Audit
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.2.97` (composition refactor structurally and editor-wise
+Current release: `0.2.98` (composition refactor structurally and editor-wise
 complete: the strict scorecard and regression floor both pass at 100%, with 2,200
 root accesses and `GameplayState` at 1,718 lines / 286 fields. The debug-menu
 dispatch added in 0.2.96 was extracted into `DebugSessionController` to restore
@@ -22,12 +22,12 @@ Git history as the historical `0.2.00` baseline; this file is now the current
 source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
 table in section 3 for comparison.
 
-## Current measured snapshot (2026-09-26, version 0.2.97)
+## Current measured snapshot (2026-09-26, version 0.2.98)
 
 The detailed historical audit below describes the `0.2.32` tree. The current
-`0.2.97` working tree measures:
+`0.2.98` working tree measures:
 
-| Metric | 0.2.32 audit | 0.2.97 working tree (2026-09-26) |
+| Metric | 0.2.32 audit | 0.2.98 working tree (2026-09-26) |
 | --- | ---: | ---: |
 | GDScript files in `scripts/` | 171 | 208 |
 | `root.call/get/set` sites | 2,488 | 2,200 |
@@ -552,12 +552,15 @@ balance change is required to preserve behavior after extraction.
 
 ## 16. Immediate conclusions
 
-Tiny Demons 0.2.97 remains past the legacy-coupling and editor-composition
+Tiny Demons 0.2.98 remains past the legacy-coupling and editor-composition
 cleanup. The latest composition validation reports 2,200 root accesses
 (baseline 2,202), `GameplayState` at 1,718 lines / 286 fields (baseline 1,718),
 and `RoomController` at 2,251 lines; the strict scorecard and editor-composition
 measure both pass at 100%. The 0.2.96 debug-menu dispatch was moved out of the
-composition root into `DebugSessionController`. The test
+composition root into `DebugSessionController`. The two stale player-combat and
+recovery contract smoke scripts that no longer compiled were repaired and now
+pass standalone (`spin_damage_smoke`, `active_run_recovery_contract_smoke`). The
+test
 manifest validates at 145 rows, 143 runnable paths, two reports, and a 44-path
 default gate. These are focused validation results, not a fresh run of the full
 curated gate.

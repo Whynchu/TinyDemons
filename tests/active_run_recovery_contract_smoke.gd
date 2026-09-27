@@ -10,6 +10,7 @@ const RUN_CHECKPOINT_SERVICE_SCRIPT = preload("res://scripts/run_checkpoint_serv
 
 func _initialize() -> void:
 	var failures: Array[String] = []
+	ProfileSaveService.select_slot(1)
 	var run := RunState.new()
 	run.begin(424242, 3, 48.0)
 	run.start_timer()
@@ -37,9 +38,9 @@ func _initialize() -> void:
 	var chroma := PlayerChromaComponent.new()
 	var typed_context := ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT.new(profile, run, map_controller, room_controller, health, chroma, 424242, &"room_next", &"combat", 1, 0, true, true)
 	var typed_snapshot := ACTIVE_RUN_SNAPSHOT_SCRIPT.create_context(typed_context)
-	_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(typed_snapshot, 0), "typed checkpoint context produces a valid recovery snapshot", failures)
+	_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(typed_snapshot, 1), "typed checkpoint context produces a valid recovery snapshot", failures)
 	var no_drops: Array[Dictionary] = []
-	var room_context := ROOM_CHECKPOINT_CONTEXT_SCRIPT.new(&"room_next", &"combat", null, room_controller, false, false, false, false, no_drops, null)
+	var room_context := ROOM_CHECKPOINT_CONTEXT_SCRIPT.new(&"room_next", &"combat", null, room_controller, false, false, false, false, no_drops, null, null)
 	var checkpoint_context := RUN_CHECKPOINT_CONTEXT_SCRIPT.new(profile, run, room_context, typed_context, 0)
 	_expect(checkpoint_context.is_valid(), "typed safe-checkpoint context exposes durable dependencies", failures)
 	var unavailable_checkpoint := RUN_CHECKPOINT_SERVICE_SCRIPT.save_safe_state(checkpoint_context)

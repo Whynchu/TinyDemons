@@ -1,16 +1,12 @@
 extends SceneTree
 
 
-class DamageRoot extends Node:
-	var player: Sprite2D
-	var player_tuning: PlayerTuning
-	var player_attack_flip_h := false
-	var player_anim_frame := 3
-	var player_is_running := false
-	var hitstop_timer := 0.0
-	var slimes: Array[Sprite2D] = []
-	var puzzle_torches: Array[Sprite2D] = []
-	var run_state: RunState = null
+## Focused spin/attack damage contract. The attack component is typed against
+## GameplayState, so the harness subclasses it and overrides the combat seams it
+## would otherwise reach through the composition root. The instance is kept out
+## of the scene tree so GameplayState's @onready node lookups never evaluate.
+
+class DamageRoot extends GameplayState:
 	var target_polygon := PackedVector2Array([
 		Vector2(3, 3), Vector2(33, 3), Vector2(33, 33), Vector2(3, 33),
 	])
@@ -28,7 +24,11 @@ class DamageRoot extends Node:
 		return target_polygon
 
 
-	func _player_attack_damage_result_against(_slime: Sprite2D, _attack_element: int) -> CombatCalculator.DamageResult:
+	func _slime_combat(_slime: Sprite2D) -> SlimeCombatComponent:
+		return null
+
+
+	func _player_attack_damage_result_against(_slime: Sprite2D, _attack_element: int = 0) -> CombatCalculator.DamageResult:
 		var result := CombatCalculator.DamageResult.new()
 		result.amount = 20.0
 		result.critical = false
@@ -47,12 +47,20 @@ class DamageRoot extends Node:
 		damage_values.append(amount)
 
 
-	func _knockback_slime(_slime: Sprite2D, multiplier: float = 1.0) -> void:
-		knockback_values.append(multiplier)
+	func _knockback_slime(_slime: Sprite2D, knockback_multiplier: float = 1.0, _strength_scaled: bool = true, _attack_scaled: bool = true, _ignore_phase_resistance: bool = false, _direction_override: Vector2 = Vector2.ZERO) -> void:
+		knockback_values.append(knockback_multiplier)
 
 
 	func _play_sound(sound_name: String, _volume_db: float = 0.0, _pitch_scale: float = 1.0) -> void:
 		sound_events.append(sound_name)
+
+
+	func _apply_player_lifesteal(_damage: float) -> void:
+		pass
+
+
+	func _record_run_style_action(_action: StringName) -> void:
+		pass
 
 
 func _initialize() -> void:
@@ -68,7 +76,6 @@ func _initialize() -> void:
 	var target_b := Sprite2D.new()
 	root.add_child(target_a)
 	root.add_child(target_b)
-	get_root().add_child(root)
 	var attack := PlayerAttackComponent.new()
 	root.add_child(attack)
 
@@ -103,6 +110,7 @@ func _initialize() -> void:
 
 	root.damage_values.clear()
 	root.damage_targets.clear()
+	root.player_anim_frame = root.player_tuning.spin_hit_start_frame + 2
 	attack.begin(1, PlayerAttackComponent.AttackKind.SPIN)
 	attack.apply_hitbox(root)
 	var spin_single := root.damage_values[0] if root.damage_values.size() == 1 else 0.0
