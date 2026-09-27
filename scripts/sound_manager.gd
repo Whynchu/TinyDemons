@@ -398,9 +398,7 @@ func _refresh_audio_volumes() -> void:
 
 
 func _profile_file_signature() -> int:
-	if not FileAccess.file_exists(SOUND_MIX_PROFILE_PATH):
-		return 0
-	return FileAccess.get_file_as_string(SOUND_MIX_PROFILE_PATH).hash()
+	return FileAccess.get_modified_time(SOUND_MIX_PROFILE_PATH)
 
 
 func _profile_value_signature() -> int:

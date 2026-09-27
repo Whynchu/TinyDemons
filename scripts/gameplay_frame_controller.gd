@@ -33,10 +33,17 @@ var _mouse_target_hold_elapsed := 0.0
 var _mouse_left_attack_held := false
 var _mouse_interact_input_this_frame := false
 var _mouse_click_aim_direction_this_frame := Vector2.ZERO
+var _debug_session_controller: Node = null
 
 
 func invalidate_contexts() -> void:
 	_context_cache.clear()
+
+
+func _debug_session(root: GameplayState) -> Node:
+	if _debug_session_controller == null or not is_instance_valid(_debug_session_controller):
+		_debug_session_controller = root.get_node_or_null("DebugSessionController") as Node
+	return _debug_session_controller
 
 
 static func phase_order() -> Array[StringName]:
@@ -701,7 +708,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta)
 	root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
 	root._tick_run_telemetry(delta)
-	var debug_session := root.get_node_or_null("DebugSessionController") as Node
+	var debug_session := _debug_session(root)
 	if debug_session == null or not bool(debug_session.get("enemies_paused")):
 		root._move_slimes(delta)
 		root._update_special_enemy_respawns(delta)

@@ -78,8 +78,11 @@ func _update_music_state() -> void:
 	else:
 		_fade_out_music()
 func _physics_process(delta: float) -> void:
-	var capture_service := get("performance_capture_service") as Node
-	var capture_active := OS.is_debug_build() and capture_service != null and bool(capture_service.get("capturing"))
+	var capture_service: Node = null
+	var capture_active := false
+	if OS.is_debug_build():
+		capture_service = get("performance_capture_service") as Node
+		capture_active = capture_service != null and bool(capture_service.get("capturing"))
 	var started_usec := Time.get_ticks_usec() if capture_active else 0
 	if input_router != null:
 		var input_started_usec := Time.get_ticks_usec() if capture_active else 0
