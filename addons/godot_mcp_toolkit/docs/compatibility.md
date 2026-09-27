@@ -1,8 +1,8 @@
 # Godot Version Compatibility
 
-**Minimum supported:** Godot 4.2
-**Full functionality:** Godot 4.5+
-**Recommended:** Godot 4.5+
+**Minimum supported:** Godot 4.2<br>
+**Full functionality:** Godot 4.5+<br>
+**Recommended:** Godot 4.5+<br>
 **Tested up to:** Godot 4.7.0
 
 Future Godot versions (4.8+) are not blocked. The plugin runs normally on

@@ -5,8 +5,7 @@
 [node name="EnemyPreviewWorkbench" type="Node2D" unique_id=2089970631]
 process_mode = 3
 script = ExtResource("1_preview")
-enemy = "Skeleton"
-variant = "Skeleton"
+enemy = "Slime"
+variant = "Healer"
 facing_direction = 0
-preview_actor_size = 1
 show_geometry_guides = false

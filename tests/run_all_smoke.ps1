@@ -5,7 +5,8 @@ param(
 	[int]$TestTimeoutSeconds = 90,
 	[string]$ResultsPath = "",
 	[int]$StopAfterEngineCrashes = 2,
-	[switch]$InventoryOnly
+	[switch]$InventoryOnly,
+	[switch]$RequireSfxLab
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,6 +32,7 @@ if ([string]::IsNullOrWhiteSpace($powerShell)) {
 $definitionValidator = Join-Path $root "tools/validate_definitions.ps1"
 $manifestValidator = Join-Path $root "tools/validate_test_manifest.ps1"
 $compositionValidator = Join-Path $root "tools/validate_composition.ps1"
+$uidValidator = Join-Path $root "tools/validate_godot_uids.ps1"
 
 & $powerShell -NoProfile -ExecutionPolicy Bypass -File $manifestValidator
 if ($LASTEXITCODE -ne 0) {
@@ -49,6 +51,14 @@ if ($LASTEXITCODE -ne 0) {
 & $powerShell -NoProfile -ExecutionPolicy Bypass -File $definitionValidator -ProjectRoot $root -GodotBin $godot
 if ($LASTEXITCODE -ne 0) {
 	throw "Definition validation preflight failed"
+}
+
+# UID sidecar drift silently breaks scene/script references at load time; this
+# guard is pure file inspection (no Godot process) and is already part of
+# `tools/dev.ps1 verify`, so the release gate must run it too.
+& $powerShell -NoProfile -ExecutionPolicy Bypass -File $uidValidator
+if ($LASTEXITCODE -ne 0) {
+	throw "Godot UID validation preflight failed"
 }
 
 if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) {
@@ -130,7 +140,10 @@ if ($LASTEXITCODE -ne 0) {
 	throw "Godot import preflight failed with exit code $LASTEXITCODE"
 }
 
-$failed = $false
+# Missing test scripts are recorded in $missingTests before the run loop and
+# skipped inside it; make them fail the suite so the result is honest even if a
+# preflight was bypassed.
+$failed = $missingTests.Count -gt 0
 $engineCrashCount = 0
 $failByState = @{}
 foreach ($test in $tests) {
@@ -217,14 +230,33 @@ if ($failByState.Count -gt 0) {
 
 if (-not $TestFilter -and $TestGroup -in @("gate", "all")) {
 	Write-Host "=== sfx lab pytest ==="
-	$sfxLabPy = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_reconstruction\.venv311\Scripts\python.exe"
-	$sfxLabTests = "C:\Development\Tiny-Demons\TinyDemons\tools\sfx_lab\tests"
-	& $sfxLabPy -m pytest $sfxLabTests -q
-	if ($LASTEXITCODE -ne 0) {
-		Write-Host "FAILED: sfx lab pytest (exit $LASTEXITCODE)" -ForegroundColor Red
-		$failed = $true
+	# The sfx-lab pytest suite is OPTIONAL tooling: its virtualenv is not part of
+	# the project and may be absent on a clean checkout or CI host. Its absence
+	# must not fail the release gate. It also cannot be a hardcoded Windows path
+	# if the gate is ever run cross-platform. Resolve the interpreter by probing
+	# the platform-specific venv layouts, and skip unless -RequireSfxLab is set.
+	$sfxLabTests = Join-Path $root "tools/sfx_lab/tests"
+	$sfxLabPythonCandidates = @(
+		(Join-Path $root "tools/sfx_reconstruction/.venv311/Scripts/python.exe"),
+		(Join-Path $root "tools/sfx_reconstruction/.venv311/bin/python")
+	)
+	$sfxLabPython = @($sfxLabPythonCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })[0]
+	$sfxLabAvailable = ($null -ne $sfxLabPython) -and (Test-Path -LiteralPath $sfxLabTests -PathType Container)
+	if (-not $sfxLabAvailable) {
+		if ($RequireSfxLab) {
+			Write-Host "FAILED: sfx lab unavailable (venv or tests missing) and -RequireSfxLab was set" -ForegroundColor Red
+			$failed = $true
+		} else {
+			Write-Host "SKIPPED: sfx lab pytest (optional; venv or tests not present)" -ForegroundColor Yellow
+		}
 	} else {
-		Write-Host "PASSED: sfx lab pytest" -ForegroundColor Green
+		& $sfxLabPython -m pytest $sfxLabTests -q
+		if ($LASTEXITCODE -ne 0) {
+			Write-Host "FAILED: sfx lab pytest (exit $LASTEXITCODE)" -ForegroundColor Red
+			$failed = $true
+		} else {
+			Write-Host "PASSED: sfx lab pytest" -ForegroundColor Green
+		}
 	}
 	Write-Host "=== web export smoke ==="
 	$webSmoke = Join-Path $PSScriptRoot "web_export_smoke.ps1"

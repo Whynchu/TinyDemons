@@ -387,6 +387,10 @@ func recover_slime_position(root: Object, slime: Sprite2D) -> void:
 
 func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if slime.get_meta("behavior_id", &"") == &"support_caster":
+		var support := slime.get_node_or_null("Support") as Node
+		if support != null and bool(support.call("tick", root, slime, delta)):
+			return true
 	var boss_jump_slam: BossJumpSlamComponent = slime.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
 	if boss_jump_slam != null:
 		var boss_phase_running: bool = boss_jump_slam.tick(_boss_jump_slam_context(root), slime, delta)
@@ -399,6 +403,22 @@ func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
 		if tactics != null:
 			tactics.release_attack_slot()
 	return result
+
+
+func set_slime_support_animation_frame(root: Object, slime: Sprite2D, phase: StringName, frame_index: int) -> void:
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	if visual == null:
+		return
+	var animation_phase := &"spell" if phase == &"spell" else &"casting"
+	var frames := visual.support_spell_frames if animation_phase == &"spell" else visual.support_casting_frames
+	if frames.is_empty():
+		return
+	var index := clampi(frame_index, 0, frames.size() - 1)
+	slime.set_meta("runtime_animation", "cast")
+	slime.set_meta("support_animation_phase", animation_phase)
+	slime.set_meta("runtime_animation_frame", index)
+	root.call("_set_actor_base_texture", slime, frames[index])
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
 
 
 func _boss_jump_slam_context(root: Object) -> BossJumpSlamContext:

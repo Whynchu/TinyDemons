@@ -6,7 +6,7 @@ Updated: 2026-09-27
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.0`. The current smoke inventory is 145 manifest
+Current release: version `0.3.01`. The current smoke inventory is 145 manifest
 rows / 143 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -416,8 +416,24 @@ The investigation, owners, evidence plan, and acceptance bar are recorded in
 [`gameplay-stability-investigation-plan.md`](gameplay-stability-investigation-plan.md).
 The same plan records bone hits preserving active player attacks and sword-beam
 charge as resolved by the latest user playtest. The mobile freeze, collection
-hitches, doorway escape, and skeleton spacing still need their own acceptance
-evidence.
+hitches, and doorway escape still need their own acceptance evidence, but the
+latest player update below says hitches are much better and skeleton combat is
+working well. These older reports should not drive the next work slice without
+a new reproduction or other evidence.
+
+**Player update (2026-09-27):** the latest user playtest reports that hitches
+are much better and skeleton combat is fun and working well. Chroma, bound
+identity, save/load, and flame travel also feel good. These areas are not the
+next priority; the earlier reports remain historical context rather than a
+request for immediate changes. This update is player feedback, not a measured
+performance result or a broad compatibility verification.
+
+Touch follow-up: the Equipment menu needs direct touch interaction across its
+routes. The first tap on an item should highlight it without activating it;
+touch should not require the controller's separate Equip confirmation, and
+tapping an item while Equip is highlighted should enter that item's equipment
+flow. Record and resolve this separately from the existing Pause Equipment
+scroll-clipping report.
 
 ### 2026-09-26 gear-drop distribution correction
 

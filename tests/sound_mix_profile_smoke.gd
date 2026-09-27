@@ -21,6 +21,8 @@ func _initialize() -> void:
 		_expect(bool(profile.call("has_volume_entry", &"use_flame")), "profile contains use flame", failures)
 		_expect(bool(profile.call("has_volume_entry", &"slime_spawn")), "profile contains slime spawn", failures)
 		_expect(bool(profile.call("has_volume_entry", &"slime_move")), "profile contains slime move", failures)
+		_expect(bool(profile.call("has_volume_entry", &"healing")), "profile contains healing cue", failures)
+		_expect(bool(profile.call("has_volume_entry", &"mana_pickup")), "profile contains Mana pickup cue", failures)
 		_expect(profile.has_method("_play_preview"), "profile exposes the editor preview action", failures)
 		_expect(_in_slider_range(float(profile.get("title_music_db"))), "title music level stays inside the editor slider range", failures)
 		_expect(_in_slider_range(float(profile.get("run_music_db"))), "run music level stays inside the editor slider range", failures)
@@ -28,7 +30,9 @@ func _initialize() -> void:
 		_expect(_in_slider_range(float(profile.get("ui_unpause_db"))), "unpause level stays inside the editor slider range", failures)
 		_expect(_in_slider_range(float(profile.get("slime_spawn_db"))), "slime spawn level stays inside the editor slider range", failures)
 		_expect(_in_slider_range(float(profile.get("slime_move_db"))), "slime move level stays inside the editor slider range", failures)
-	for sound_name in [&"slime_spawn", &"slime_move"]:
+		_expect(_in_slider_range(float(profile.get("healing_db"))), "healing cue level stays inside the editor slider range", failures)
+		_expect(_in_slider_range(float(profile.get("mana_pickup_db"))), "Mana pickup cue level stays inside the editor slider range", failures)
+	for sound_name in [&"slime_spawn", &"slime_move", &"healing", &"mana_pickup"]:
 		var clip_path := SoundClipCatalogScript.path_for(sound_name)
 		_expect(ResourceLoader.exists(clip_path), "%s source clip exists" % sound_name, failures)
 

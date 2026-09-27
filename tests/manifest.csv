@@ -1,4 +1,4 @@
-script,role,state,owner,target,load,notes
+"script","role","state","owner","target","load","notes"
 "active_run_recovery_contract_smoke","gate","verified","save & profile","active-run snapshot recovery contract","pure","2026-09-13 focused evidence"
 "authoring_placement_catalog_smoke","owner","verified","Hub authoring","shared discovery of editor placement roots and stable IDs","pure","focused run 2026-09-22; editor-neutral catalog covers validation, prefab creation, nested re-keying, Environment, Props, Collectables, and Characters roots"
 "boss_exit_path_scene_smoke","gate","unverified","dungeon topology","boss room exit path via debug scene","fixture",""
@@ -46,7 +46,7 @@ script,role,state,owner,target,load,notes
 "encounter_definition_smoke","owner","unverified","content authoring","EncounterDefinition run-rank-5 50/50 skeleton/slime family weighting, family-swapped runtime actors, and validation contract","pure",""
 "enemy_definition_slice_smoke","owner","unverified","content authoring","EnemyDefinition contract + EnemyFactory assemble and second-variant proof","pure",""
 "slime_spawn_smoke","gate","verified","slime enemies","slime spawn visuals and actors","pure","2026-09-11 focused evidence"
-"sound_mix_profile_smoke","gate","verified","audio","sound mix profile clip resolution","pure","focused run 2026-09-13; every catalog cue has an editor volume entry"
+"sound_mix_profile_smoke","gate","verified","audio","sound mix profile clip resolution","pure","focused run 2026-09-13; every catalog cue has an editor volume entry; Healing.ogg and mana pickup cue verified 2026-09-27"
 "title_boot_scene_smoke","gate","unverified","boot & run loop","main.tscn boots into title with cloud/save panel","main",""
 "menu_command_list_smoke","owner","unverified","menus & UI","shared command-list navigation primitive","pure",""
 "touch_controls_smoke","gate","verified","input & touch","TouchControlsLayer gestures and menu policy","pure","2026-09-13 focused evidence; callback fixture and menu policy reconciled"
@@ -144,3 +144,4 @@ script,role,state,owner,target,load,notes
 "item_preview_workbench_smoke","owner","verified","gear & fusion","ItemCatalog-driven preview workbench covers registered item definitions","pure","focused headless pass 2026-09-26; typed/legacy source behavior, catalog parity, deterministic previews, planned-effect presentation"
 "retired_item_purge_smoke","owner","unverified","gear & fusion / saves","retired catalog records and saved item instances are purged with Demon Cloak/current items preserved","pure",""
 "floating_popup_lifecycle_smoke","owner","unverified","combat presentation","floating gameplay text holds for four scheduled updates after its scale pop before drifting","pure",""
+"slime_support_component_smoke","owner","verified","slime support","Healer slime definition, family identity, factory composition, and encounter unlock","pure","standalone Godot 4.7.1 pass 2026-09-27; family routing verified"

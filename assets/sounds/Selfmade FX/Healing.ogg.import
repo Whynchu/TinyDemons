@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cdk2fatjamv2x"
+path="res://.godot/imported/Healing.ogg-685d98a46361d8064a4ac69d51f60f2f.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Healing.ogg"
+dest_files=["res://.godot/imported/Healing.ogg-685d98a46361d8064a4ac69d51f60f2f.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

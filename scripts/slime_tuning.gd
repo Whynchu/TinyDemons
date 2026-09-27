@@ -50,6 +50,19 @@ class_name SlimeTuning
 @export var steering_ally_danger_weight := 1.25
 @export var steering_blocked_danger_weight := 4.0
 @export var steering_clearance := 7.0
+@export_group("Support Slime")
+@export var support_cast_time := 2.0
+@export var support_heal_frame := 1
+@export var support_animation_frame_time := 0.08
+@export var support_heal_amount := 8.0
+@export var support_heal_radius := 40.0
+@export var support_heal_cooldown := 0.25
+@export var support_cast_release_time := 0.18
+@export var support_cancel_recovery := 0.5
+@export var support_preferred_range := 48.0
+@export var support_ally_bias := 1.25
+@export var support_charge_interval := 0.08
+@export var support_heal_particle_count := 6
 @export var regen_delay := 5.0
 @export var regen_interval := 0.75
 @export var regen_amount := 1.0

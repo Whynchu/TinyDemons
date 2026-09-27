@@ -267,7 +267,9 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 			var player := root.get("player") as Sprite2D
 			var enemy := other if actor == player else actor
 			var enemy_push := -push if actor == player else push
-			var can_move_enemy := enemy != null and enemy != player
+			var support := enemy.get_node_or_null("Support") as Node if enemy != null else null
+			var cast_locked := support != null and bool(support.call("is_cast_active"))
+			var can_move_enemy := enemy != null and enemy != player and not cast_locked
 			if can_move_enemy and try_move_swept(enemy, enemy_push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static")):
 				return
 			# If the enemy is pinned against room geometry, preserve the old

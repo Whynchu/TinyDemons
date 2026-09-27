@@ -66,11 +66,13 @@ const VOLUME_PROPERTY_BY_KEY: Dictionary = {
 	&"use_flame": &"use_flame_db",
 	&"slime_spawn": &"slime_spawn_db",
 	&"slime_move": &"slime_move_db",
+	&"healing": &"healing_db",
+	&"mana_pickup": &"mana_pickup_db",
 }
 
 @export_category("Preview")
 @export_enum(
-	"slime_spawn", "slime_move", "slash", "miss", "flesh", "bite", "block",
+	"slime_spawn", "slime_move", "healing", "mana_pickup", "slash", "miss", "flesh", "bite", "block",
 	"flee", "enemy_death", "impact_flesh", "encounter", "claw", "magic_cast",
 	"crit", "imbue_impact",
 	"magic_hit", "ui_hover", "ui_confirm", "ui_decline", "ui_no_input",
@@ -121,6 +123,8 @@ var play_preview_action: Callable = _play_preview
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var use_flame_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var slime_spawn_db := 0.0
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var slime_move_db := 0.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var healing_db := -4.0
+@export_range(-80.0, 6.0, 0.5, "suffix:dB") var mana_pickup_db := -4.0
 
 @export_category("UI and Items")
 @export_range(-80.0, 6.0, 0.5, "suffix:dB") var ui_hover_db := 0.0

@@ -10,6 +10,8 @@ var attack_left_frames: Array[Texture2D] = []
 var attack_right_frames: Array[Texture2D] = []
 var shocked_frames: Array[Texture2D] = []
 var spawn_frames: Array[Texture2D] = []
+var support_casting_frames: Array[Texture2D] = []
+var support_spell_frames: Array[Texture2D] = []
 var shadow_idle_texture: Texture2D = null
 var shadow_attack_left_frames: Array[Texture2D] = []
 var shadow_attack_right_frames: Array[Texture2D] = []
@@ -27,6 +29,7 @@ var boss_shadow_slam_frames: Array[Texture2D] = []
 ## shadow, including the idle direction textures.
 static var frame_set_cache: Dictionary = {}
 static var direction_texture_cache: Dictionary = {}
+static var support_animation_frame_cache: Dictionary = {}
 const PALETTES := ["grey", "red", "blue", "yellow", "green", "purple", "orange", "aquamarine"]
 
 
@@ -194,6 +197,78 @@ static func assign_spawn_frames(slimes: Array[Sprite2D], frames_by_palette: Dict
 		var palette := frame_palette_for(slime)
 		var source_frames: Dictionary = frames_by_palette if float(slime.get_meta("encounter_scale", 1.0)) <= 1.0 else frames_by_palette.get("boss", frames_by_palette) as Dictionary
 		visual.spawn_frames = (source_frames as Dictionary)[palette] as Array[Texture2D]
+
+
+static func assign_support_animation_frames(slimes: Array[Sprite2D], frames: Dictionary = {}) -> void:
+	for slime in slimes:
+		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
+		if visual == null:
+			continue
+		var fallback_frames := _build_support_cast_frames(visual.right_texture)
+		visual.support_casting_frames = frames.get("casting", []) as Array[Texture2D] if not frames.is_empty() else fallback_frames
+		visual.support_spell_frames = frames.get("spell", []) as Array[Texture2D] if not frames.is_empty() else fallback_frames
+		if visual.support_casting_frames.is_empty():
+			visual.support_casting_frames = fallback_frames
+		if visual.support_spell_frames.is_empty():
+			visual.support_spell_frames = fallback_frames
+
+
+static func build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
+	return _build_support_cast_frames(source)
+
+
+static func build_authored_support_animation_frames(_frame_library: SpriteFrameLibrary, frame_size: Vector2i, warm_texture: Callable) -> Dictionary:
+	var casting_frames := _slice_authored_cast_sheet("res://Artwork/SlimeGreen_Casting.png", frame_size)
+	var spell_frames := _slice_authored_cast_sheet("res://Artwork/SlimeGreen_Spell_Cast.png", frame_size)
+	for texture in casting_frames:
+		warm_texture.call(texture)
+	for texture in spell_frames:
+		warm_texture.call(texture)
+	return {"casting": casting_frames, "spell": spell_frames}
+
+
+static func _slice_authored_cast_sheet(path: String, frame_size: Vector2i) -> Array[Texture2D]:
+	var absolute_path := ProjectSettings.globalize_path(path)
+	if not FileAccess.file_exists(absolute_path):
+		return []
+	var image := Image.new()
+	if image.load(absolute_path) != OK:
+		return []
+	var frames: Array[Texture2D] = []
+	for frame_index in range(image.get_width() / frame_size.x):
+		var frame := Image.create_empty(frame_size.x, frame_size.y, false, image.get_format())
+		frame.blit_rect(image, Rect2i(frame_index * frame_size.x, 0, frame_size.x, frame_size.y), Vector2i.ZERO)
+		frames.append(ImageTexture.create_from_image(frame))
+	return frames
+
+
+static func _build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	if source == null:
+		return frames
+	var cache_key := source.get_instance_id()
+	if support_animation_frame_cache.has(cache_key):
+		return support_animation_frame_cache[cache_key] as Array[Texture2D]
+	var source_image := source.get_image()
+	if source_image == null or source_image.is_empty():
+		return frames
+	var width := source_image.get_width()
+	var height := source_image.get_height()
+	for frame_index in 2:
+		var vertical_scale := 0.84 if frame_index == 0 else 1.08
+		var lift := 0.0 if frame_index == 0 else -1.0
+		var image := Image.create(width, height, false, Image.FORMAT_RGBA8)
+		for y in height:
+			var target_y := roundi((float(y) - float(height - 1)) * vertical_scale + float(height - 1) + lift)
+			if target_y < 0 or target_y >= height:
+				continue
+			for x in width:
+				var color := source_image.get_pixel(x, y)
+				if color.a > 0.0:
+					image.set_pixel(x, target_y, color)
+		frames.append(ImageTexture.create_from_image(image))
+	support_animation_frame_cache[cache_key] = frames
+	return frames
 
 
 static func assign_boss_ability_frames(slimes: Array[Sprite2D], frame_library: SpriteFrameLibrary, cache: Dictionary, warm_texture: Callable) -> void:

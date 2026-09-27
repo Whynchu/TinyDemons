@@ -60,6 +60,8 @@ const CLIPS: Dictionary = {
 	"foot_right": KH_UI_PATH + "sys-sr-footr.sms-real.wav",
 	"slime_spawn": SELFMADE_PATH + "SlimeSpawn.wav",
 	"slime_move": SELFMADE_PATH + "SlimeMove.wav",
+	"healing": SELFMADE_PATH + "Healing.ogg",
+	"mana_pickup": SELFMADE_PATH + "manapickup.wav",
 }
 
 

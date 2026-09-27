@@ -1522,6 +1522,7 @@ func _slime_position_is_valid(slime: Sprite2D) -> bool: return bool(slime_runtim
 func _recover_slime_position(slime: Sprite2D) -> void: slime_runtime_controller.call("recover_slime_position", self, slime)
 func _update_slime_attack(slime: Sprite2D, delta: float) -> bool: return bool(slime_runtime_controller.call("update_slime_attack", self, slime, delta))
 func _set_slime_attack_frame(slime: Sprite2D, frame_index: int) -> void: slime_runtime_controller.call("set_slime_attack_frame", self, slime, frame_index)
+func _set_slime_support_animation_frame(slime: Sprite2D, phase: StringName, frame_index: int) -> void: slime_runtime_controller.call("set_slime_support_animation_frame", self, slime, phase, frame_index)
 func _start_slime_attack(slime: Sprite2D) -> void: slime_runtime_controller.call("start_slime_attack", self, slime)
 func _slime_attack_frames(slime: Sprite2D) -> Array[Texture2D]: return slime_runtime_controller.call("attack_frames_for", self, slime) as Array[Texture2D]
 func _slime_shocked_frames(slime: Sprite2D) -> Array[Texture2D]: return slime_runtime_controller.call("shocked_frames_for", self, slime) as Array[Texture2D]

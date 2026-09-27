@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://dm1x64i3ulgq2"
+path="res://.godot/imported/Healing.wav-cb4180d14bee412d301b713c8d87e771.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/Healing.wav"
+dest_files=["res://.godot/imported/Healing.wav-cb4180d14bee412d301b713c8d87e771.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

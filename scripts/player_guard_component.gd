@@ -4,6 +4,7 @@ class_name PlayerGuardComponent
 signal successful_block(shield_damage: float, health_damage: float)
 
 const PERFECT_BLOCK_STUN_MULTIPLIER := 2.0
+const BLOCK_BAR_OFFSET := Vector2(1.0, 19.0)
 
 ## Editor-facing guard tuning.
 @export var max_durability := 8.0
@@ -13,7 +14,7 @@ const PERFECT_BLOCK_STUN_MULTIPLIER := 2.0
 @export var break_cooldown := 5.0
 @export var damage_hang_time := 0.28
 @export var damage_drain_rate := 18.0
-@export var bar_offset := Vector2(1, 19)
+@export var bar_offset := BLOCK_BAR_OFFSET
 @export var bar_hide_delay := 1.0
 @export var bar_fade_time := 0.24
 @export var normal_block_stun := 0.12

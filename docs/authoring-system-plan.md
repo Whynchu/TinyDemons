@@ -28,7 +28,17 @@ and the factory/definition contract in
 not change the T1/T3 direction, the product contract, or the explicit frame
 schedule.
 
-Updated: 2026-09-26
+Updated: 2026-09-27
+
+> **Family geometry decision (2026-09-27):** collision, body-hitbox, and attack
+> guide geometry is family-authored. Editing any elemental variant updates the
+> canonical family profile consumed by every variant in that family. The
+> profile resources are `geometry/slime.tres` and `geometry/skeleton.tres`.
+
+> **Support behavior slice (2026-09-27):** `EnemyDefinition.behavior_id` now
+> composes `support_caster` onto `type_id = slime`; the healer is an authored
+> support-role variant that resolves through Slime family geometry and factory
+> routing. Tuning stays in the consumed global `SlimeTuning` resource.
 
 > **Note (2026-09-27):** a bounded architecture cleanup is running alongside
 > this plan as enabling work, recorded under "Added workstream — architecture
@@ -678,6 +688,9 @@ Work items:
   until a new palette authoring slice exists.
 - [x] Add the `EnemyDefinition` contract coverage that iterates the registry,
   plus named Crimson golden assertions and save/load coverage.
+- [x] Add the data-selected healer slime support behavior: target and rank
+  filtering, interruption, cast visuals/VFX, preview state, and a focused
+  family/factory/encounter fixture. The healer remains `type_id = slime`.
 - [x] Make `EnemyFactory` the materialization path. The bootstrap now creates
   a capacity pool through the factory, and normal room configuration applies
   selected definitions to those actors; scene-authored enemy slots are no
@@ -689,13 +702,17 @@ Work items:
   workbench selects authored IDs, creates a starter definition, edits all
   current `EnemyDefinition` fields inline, saves embedded or standalone
   resources, and steps idle, move, attack, shocked, spawn, and boss jump/slam
-  states through the shared visual frame contract. Enemy definitions now own
+  states through the shared visual frame contract. Family geometry profiles own
   collision shapes, body hitboxes, collision guides, and left/right attack
-  guides; the factory applies that geometry to the preview and runtime actors.
+  guides; the factory applies the same family geometry to every variant's
+  preview and runtime actor.
   The workbench has independent guide toggles, in-preview vertex and rectangle
-  editing, reset, and geometry undo/redo. Add a death-effect preview and verify
-  catalog refresh, saved-resource lifecycle, geometry interaction, and visible
-  output in the editor before closing acceptance.
+  editing, reset, and geometry undo/redo. Verify catalog refresh,
+  saved-resource lifecycle, geometry interaction, death-effect playback, and
+  visible output in the editor before closing acceptance. The workbench now
+  includes a deterministic `Preview Death Effect` action that reuses the
+  runtime death palette mapping and default effects tuning; editor acceptance
+  is still open.
 - [ ] Add the isolated interactive enemy workbench and the first authoring dock
   actions. It must launch the selected definition with a deterministic seed,
   temporary profile, normal factory assembly, and explicit cleanup.

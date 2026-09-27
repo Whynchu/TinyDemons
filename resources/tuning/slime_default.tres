@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="SlimeTuning" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SlimeTuning" format=3 uid="uid://t6g2cyh8mff3"]
 
-[ext_resource type="Script" path="res://scripts/slime_tuning.gd" id="1_slime"]
+[ext_resource type="Script" uid="uid://dwxtylrcgtggb" path="res://scripts/slime_tuning.gd" id="1_slime"]
 
 [resource]
 resource_name = "Default Slime Tuning"

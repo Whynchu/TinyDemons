@@ -5,11 +5,12 @@ extends Node2D
 ## Animation frames come from the same visual component and frame library as
 ## gameplay; this node never starts enemy AI, combat, timers, or save services.
 
-enum PreviewState { IDLE, MOVE, ATTACK, SHOCKED, SPAWN, BOSS_JUMP, BOSS_SLAM }
+enum PreviewState { IDLE, MOVE, ATTACK, SHOCKED, SPAWN, BOSS_JUMP, BOSS_SLAM, SUPPORT_CASTING, SUPPORT_SPELL }
 enum PreviewActorSize { REGULAR, BOSS }
 enum GeometryEditTarget { NONE, COLLISION_SHAPE, BODY_HITBOX, COLLISION_GUIDE, ATTACK_LEFT, ATTACK_RIGHT }
 
-const PREVIEW_STATE_LABELS := ["Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam"]
+const PREVIEW_STATE_LABELS := ["Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam", "Support Casting", "Support Spell"]
+const SUPPORT_CAST_PREVIEW_STATES := [PreviewState.SUPPORT_CASTING, PreviewState.SUPPORT_SPELL]
 const PREVIEW_CANVAS_SIZE := Vector2(240.0, 160.0)
 const BASE_PREVIEW_SCALE := 4.0
 const BOSS_PREVIEW_SCALE := 2.0
@@ -22,6 +23,7 @@ const GEOMETRY_SNAP := 0.5
 const GEOMETRY_HANDLE_HIT_RADIUS := 8.0
 const MAX_GEOMETRY_UNDO_STEPS := 64
 const BOSS_SLIME_AUTHORING_SCENE: PackedScene = preload("res://scenes/boss_slime_authoring.tscn")
+const EFFECTS_TUNING: Resource = preload("res://resources/tuning/effects_default.tres")
 const PALETTE_DISPLAY_NAMES := {
 	"grey": "Gray",
 	"red": "Red",
@@ -33,17 +35,20 @@ const PALETTE_DISPLAY_NAMES := {
 	"aquamarine": "Aquamarine",
 }
 const DEFINITION_EDITOR_PROPERTIES := [
-	"display_name", "element", "damage_type", "appearance_palette",
+	"display_name", "element", "damage_type", "enemy_behavior", "appearance_palette",
 	"vitality", "strength", "defense", "agility", "intelligence", "mind",
 	"vitality_growth", "strength_growth", "defense_growth", "agility_growth",
 	"intelligence_growth", "mind_growth", "spawn_role", "spawn_weight",
 	"minimum_rank", "matchup_weight", "preferred_weight", "allow_preferred",
 ]
+const SUPPORT_CAST_STATE_DEFINITIONS := [&"support_caster"]
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SlimeVisualComponentScript = preload("res://scripts/slime_visual_component.gd")
 const SpriteFrameLibraryScript = preload("res://scripts/sprite_frame_library.gd")
 const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+const EffectsSpawnerScript = preload("res://scripts/effects_spawner.gd")
+
 
 @export_group("Enemy Selection")
 ## Selects an enemy family by display label. The dropdown currently contains Slime once.
@@ -140,6 +145,12 @@ const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.g
 	set(value):
 		_set_definition_field(&"damage_contract", _damage_contract_id_for_display_name(value))
 
+@export_enum("Default", "Support Caster") var enemy_behavior: String:
+	get:
+		return "Support Caster" if definition != null and definition.behavior_id == &"support_caster" else "Default"
+	set(value):
+		_set_definition_field(&"behavior_id", &"support_caster" if value == "Support Caster" else &"")
+
 @export_enum("Gray", "Red", "Blue", "Yellow", "Green", "Purple", "Orange", "Aquamarine") var appearance_palette: String:
 	get:
 		var palette_id := SlimeVisualComponentScript.palette_for_definition(definition) if definition != null else "green"
@@ -214,7 +225,7 @@ const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.g
 		_set_growth_weight("MND", value)
 
 @export_group("Encounter")
-@export_enum("Baseline", "Matchup", "Late", "Shadow") var spawn_role: String:
+@export_enum("Baseline", "Matchup", "Late", "Shadow", "Support") var spawn_role: String:
 	get:
 		return _spawn_role_display_name(definition.encounter_role) if definition != null else "Matchup"
 	set(value):
@@ -249,9 +260,11 @@ const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.g
 
 @export_group("Preview")
 @export_subgroup("State & Facing")
-@export_enum("Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam") var preview_state: int = PreviewState.IDLE:
+@export_enum("Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam", "Support Casting", "Support Spell") var preview_state: int = PreviewState.IDLE:
 	set(value):
-		preview_state = clampi(value, PreviewState.IDLE, PreviewState.BOSS_SLAM)
+		preview_state = clampi(value, PreviewState.IDLE, PreviewState.SUPPORT_SPELL)
+		if preview_state in SUPPORT_CAST_PREVIEW_STATES and _selected_definition_behavior_id() not in SUPPORT_CAST_STATE_DEFINITIONS:
+			preview_state = PreviewState.IDLE
 		_current_frame = 0
 		_frame_accumulator = 0.0
 		_animation_finished = false
@@ -288,6 +301,7 @@ const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.g
 @export_tool_button("Step One Frame") var step_frame_button: Callable
 @export_tool_button("Restart State") var restart_button: Callable
 @export_tool_button("Refresh Preview") var refresh_button: Callable
+@export_tool_button("Preview Death Effect") var death_effect_button: Callable
 
 @export_group("Geometry Guides")
 @export var show_geometry_guides := true:
@@ -359,16 +373,22 @@ var error_message := ""
 var _current_frame := 0
 var _frame_accumulator := 0.0
 var _animation_finished := false
+var _death_effect_active := false
+var _death_effect_completed := false
+var _death_effect_particles: Array[Dictionary] = []
+var _death_particle_textures: Dictionary = {}
 var _initializing_preview := true
 var _enemy_variant_id: StringName = &"guard_slime"
 var _selected_enemy_type_id: StringName = &"slime"
 var _resolved_direction_assets: Array[String] = []
 var _cached_frame_sets: Dictionary = {}
+var _support_frame_repair_actor_id := 0
 var _selected_definition: EnemyDefinition
 var _tracked_definition: EnemyDefinition
 var _original_variant_id: StringName = &""
 var _observed_definition_record: Dictionary = {}
 var _saved_definition_record: Dictionary = {}
+var _saved_family_geometry: Dictionary = {}
 var _workbench_notice := ""
 var _geometry_drag_active := false
 var _geometry_drag_target := GeometryEditTarget.NONE
@@ -444,6 +464,7 @@ func _set_enemy_variant(requested_variant_id: StringName) -> void:
 		return
 	_enemy_variant_id = requested_variant_id
 	_selected_enemy_type_id = selected_definition_resource.type_id
+	_sync_support_cast_preview_state(selected_definition_resource)
 	if is_node_ready() and not _initializing_preview:
 		call_deferred("_build_preview")
 	notify_property_list_changed()
@@ -564,6 +585,8 @@ func _set_definition_field(field_name: StringName, value: Variant) -> void:
 	if definition == null or definition.get(field_name) == value:
 		return
 	definition.set(field_name, value)
+	if field_name == &"behavior_id":
+		_sync_support_cast_preview_state(definition)
 	definition.emit_changed()
 	_poll_definition_edits()
 
@@ -602,6 +625,7 @@ func _ready() -> void:
 		var authored_ids := _authored_variant_ids()
 		if not authored_ids.is_empty():
 			enemy_id = authored_ids[0]
+	_sync_support_cast_preview_state(EnemyFactory.definition(enemy_id))
 	_build_preview()
 	_initializing_preview = false
 
@@ -615,6 +639,8 @@ func _enter_tree() -> void:
 		restart_button = Callable(self, "_restart_preview_state")
 	if refresh_button.is_null():
 		refresh_button = Callable(self, "refresh_preview")
+	if death_effect_button.is_null():
+		death_effect_button = Callable(self, "preview_death_effect")
 	if save_definition_button.is_null():
 		save_definition_button = Callable(self, "save_selected_definition")
 	if create_variant_button.is_null():
@@ -631,6 +657,10 @@ func _process(delta: float) -> void:
 	if not Engine.is_editor_hint():
 		return
 	_poll_definition_edits()
+	if _death_effect_active:
+		if not playback_paused:
+			_update_death_effect_preview(maxf(delta, 0.0))
+		return
 	if _geometry_drag_active:
 		return
 	if playback_paused or _animation_finished:
@@ -687,6 +717,7 @@ func create_authored_variant() -> void:
 	if new_definition == null:
 		_set_workbench_error("Could not copy the selected variant.")
 		return
+	new_definition.apply_geometry_record(EnemyFactory.geometry_profile(definition).call("geometry_record"))
 	var source_variant_name := definition.display_name
 	new_definition.id = authored_id
 	new_definition.display_name = _new_variant_display_name(candidate_id)
@@ -712,9 +743,6 @@ func save_selected_definition() -> void:
 	if definition == null:
 		_set_definition_notice("Select an authored variant first.")
 		return
-	var saved_display_name := definition.display_name.strip_edges()
-	if definition.type_id == &"slime" and saved_display_name.to_lower().ends_with(" slime"):
-		definition.display_name = saved_display_name.substr(0, saved_display_name.length() - 6).strip_edges()
 	if definition.variant_id != _original_variant_id:
 		_set_definition_notice("Restore the original enemy ID before saving.")
 		return
@@ -722,6 +750,10 @@ func save_selected_definition() -> void:
 	if not problems.is_empty():
 		_set_definition_notice("Cannot save: %s" % "; ".join(problems))
 		return
+	var saved_display_name := definition.display_name.strip_edges()
+	if definition.type_id == &"slime" and saved_display_name.to_lower().ends_with(" slime"):
+		definition.display_name = saved_display_name.substr(0, saved_display_name.length() - 6).strip_edges()
+	var geometry_profile := EnemyFactory.geometry_profile(definition)
 	var source_path := SlimeVariantCatalogScript.definition_source_path(definition)
 	if source_path.is_empty():
 		_set_definition_notice("The selected definition has no authored file.")
@@ -730,9 +762,15 @@ func save_selected_definition() -> void:
 	if save_error != OK:
 		_set_definition_notice("Could not save definition (error %d)." % save_error)
 		return
+	if geometry_profile.resource_path != "":
+		save_error = ResourceSaver.save(geometry_profile, geometry_profile.resource_path)
+		if save_error != OK:
+			_set_definition_notice("Definition was saved, but family geometry profile could not be saved (error %d)." % save_error)
+			return
 	definition.emit_changed()
 	_observed_definition_record = definition.to_record().duplicate(true)
 	_saved_definition_record = _observed_definition_record.duplicate(true)
+	_saved_family_geometry = geometry_profile.call("geometry_record").duplicate(true)
 	SlimeVariantCatalogScript.invalidate_cache()
 	_workbench_notice = "Saved definition"
 	error_message = ""
@@ -782,6 +820,7 @@ func _build_preview() -> void:
 	_current_frame = 0
 	_frame_accumulator = 0.0
 	_animation_finished = false
+	_clear_death_effect_preview()
 	_release_preview_actor()
 	if frame_library == null:
 		frame_library = SpriteFrameLibraryScript.new() as SpriteFrameLibrary
@@ -789,7 +828,7 @@ func _build_preview() -> void:
 	var selected_is_active := _selected_definition != null \
 		and _selected_definition == _tracked_definition \
 		and enemy_id == _original_variant_id
-	if not EnemyFactory.is_variant(enemy_id) and not selected_is_active:
+	if not SlimeVariantCatalogScript.is_variant(enemy_id) and not selected_is_active:
 		error_message = "Unknown enemy id: %s" % enemy_id
 		_clear_definition_binding()
 		queue_redraw()
@@ -837,20 +876,24 @@ func _track_definition(value: EnemyDefinition) -> void:
 		_original_variant_id = value.variant_id
 		_observed_definition_record = value.to_record().duplicate(true)
 		_saved_definition_record = _observed_definition_record.duplicate(true)
+		_saved_family_geometry = EnemyFactory.geometry_profile(value).call("geometry_record").duplicate(true)
 		_geometry_undo_stack.clear()
 		_geometry_redo_stack.clear()
 		_workbench_notice = ""
 	_selected_definition = value
+	_sync_support_cast_preview_state(value)
 	notify_property_list_changed()
 
 
 func _clear_definition_binding() -> void:
 	definition = null
 	_selected_definition = null
+	_sync_support_cast_preview_state(null)
 	_tracked_definition = null
 	_original_variant_id = &""
 	_observed_definition_record.clear()
 	_saved_definition_record.clear()
+	_saved_family_geometry.clear()
 	_geometry_undo_stack.clear()
 	_geometry_redo_stack.clear()
 	_geometry_drag_active = false
@@ -858,10 +901,29 @@ func _clear_definition_binding() -> void:
 	notify_property_list_changed()
 
 
+func _sync_support_cast_preview_state(value: EnemyDefinition) -> void:
+	var cast_available := value != null and value.behavior_id in SUPPORT_CAST_STATE_DEFINITIONS
+	if preview_state in SUPPORT_CAST_PREVIEW_STATES and not cast_available:
+		preview_state = PreviewState.IDLE
+		_current_frame = 0
+		_animation_finished = false
+		_apply_preview_frame()
+	notify_property_list_changed()
+
+
+func _selected_definition_behavior_id() -> StringName:
+	if _selected_definition != null:
+		return _selected_definition.behavior_id
+	if definition != null:
+		return definition.behavior_id
+	return &""
+
+
 func _definition_is_dirty() -> bool:
 	return definition != null \
 		and not _saved_definition_record.is_empty() \
-		and definition.to_record() != _saved_definition_record
+		and (definition.to_record() != _saved_definition_record \
+			or _capture_geometry() != _saved_family_geometry)
 
 
 func _poll_definition_edits() -> void:
@@ -871,7 +933,7 @@ func _poll_definition_edits() -> void:
 	if current_record == _observed_definition_record:
 		return
 	var previous_geometry := _geometry_snapshot_from_record(_observed_definition_record)
-	var current_geometry := _capture_geometry()
+	var current_geometry := _geometry_snapshot_from_record(current_record)
 	_observed_definition_record = current_record.duplicate(true)
 	if not _geometry_drag_active and previous_geometry != current_geometry:
 		# Inspector property edits already participate in Godot's editor undo
@@ -888,6 +950,7 @@ func _poll_definition_edits() -> void:
 func _apply_definition_edits_to_preview() -> void:
 	if definition == null or preview_actor == null or not is_instance_valid(preview_actor):
 		return
+	_clear_death_effect_preview()
 	preview_actor.variant = String(_original_variant_id)
 	preview_actor.combat_element = definition.element
 	preview_actor.set_meta("element", definition.element)
@@ -895,6 +958,17 @@ func _apply_definition_edits_to_preview() -> void:
 	preview_actor.set_meta("enemy_definition_id", definition.variant_id)
 	preview_actor.set_meta("enemy_variant_id", definition.variant_id)
 	preview_actor.set_meta("enemy_type_id", definition.type_id)
+	preview_actor.set_meta("behavior_id", definition.behavior_id)
+	var support := preview_actor.get_node_or_null("Support") as Node
+	if definition.behavior_id == &"support_caster":
+		if support == null:
+			support = load("res://scripts/slime_support_component.gd").new() as Node
+			support.name = "Support"
+			preview_actor.add_child(support)
+		support.call("configure", true)
+		_assign_preview_support_cast_frames()
+	elif support != null:
+		support.call("configure", false)
 	preview_actor.set_meta("visual_source", definition.visual_source)
 	preview_actor.set_meta("encounter_role", String(definition.encounter_role))
 	preview_actor.set_meta("encounter_weight", definition.encounter_weight)
@@ -1075,7 +1149,8 @@ func _finish_geometry_drag() -> void:
 	if _geometry_drag_start_geometry != _capture_geometry():
 		_push_geometry_undo(_geometry_drag_start_geometry)
 		_geometry_redo_stack.clear()
-		definition.emit_changed()
+		var geometry_profile := EnemyFactory.geometry_profile(definition)
+		geometry_profile.emit_changed()
 		_observed_definition_record = definition.to_record().duplicate(true)
 		_workbench_notice = ""
 	_geometry_drag_start_geometry.clear()
@@ -1092,7 +1167,8 @@ func _push_geometry_undo(snapshot: Dictionary) -> void:
 func _apply_geometry_snapshot(snapshot: Dictionary) -> void:
 	if definition == null:
 		return
-	definition.apply_geometry_record(snapshot)
+	var geometry_profile := EnemyFactory.geometry_profile(definition)
+	geometry_profile.call("apply_geometry_record", snapshot)
 	_observed_definition_record = definition.to_record().duplicate(true)
 	EnemyFactory.apply_geometry(preview_actor, definition)
 	_show_geometry()
@@ -1104,7 +1180,9 @@ func _apply_geometry_snapshot(snapshot: Dictionary) -> void:
 
 
 func _capture_geometry() -> Dictionary:
-	return definition.geometry_record().duplicate(true) if definition != null else {}
+	if definition == null:
+		return {}
+	return EnemyFactory.geometry_profile(definition).call("geometry_record").duplicate(true)
 
 
 func _geometry_snapshot_from_record(record: Dictionary) -> Dictionary:
@@ -1172,6 +1250,7 @@ func _rect_corners(rect: Rect2) -> PackedVector2Array:
 
 
 func _release_preview_actor() -> void:
+	_clear_death_effect_preview()
 	if preview_actor == null or not is_instance_valid(preview_actor):
 		preview_actor = null
 		preview_shadow = null
@@ -1195,6 +1274,7 @@ func _configure_visuals() -> void:
 	var visual := preview_actor.get_node_or_null("Visual") as SlimeVisualComponent
 	if visual == null:
 		return
+	_assign_preview_support_cast_frames()
 	var frame_sets := _get_shared_frame_sets()
 	SlimeVisualComponentScript.assign_attack_frames(actor_nodes, frame_sets["attack"] as Dictionary)
 	SlimeVisualComponentScript.assign_shocked_frames(actor_nodes, frame_sets["shocked"] as Dictionary)
@@ -1208,6 +1288,11 @@ func _configure_visuals() -> void:
 	_create_preview_shadow(visual)
 	if not preview_actor is SkeletonActor:
 		SlimeVisualComponentScript.apply_palette_material(preview_actor)
+func _assign_preview_support_cast_frames() -> void:
+	if frame_library == null or preview_actor == null or preview_actor is SkeletonActor:
+		return
+	var frames := SlimeVisualComponentScript.build_authored_support_animation_frames(frame_library, Vector2i(16, 16), Callable(self, "_ignore_warm_texture"))
+	SlimeVisualComponentScript.assign_support_animation_frames([preview_actor], frames)
 
 
 func _get_shared_frame_sets() -> Dictionary:
@@ -1370,6 +1455,10 @@ func _selected_frames() -> Array[Texture2D]:
 			return skeleton.spawn_left_frames if facing_direction == 0 else skeleton.spawn_frames
 		return frames
 	match preview_state:
+		PreviewState.SUPPORT_CASTING:
+			frames = _support_animation_frames(visual, &"support_casting_frames")
+		PreviewState.SUPPORT_SPELL:
+			frames = _support_animation_frames(visual, &"support_spell_frames")
 		PreviewState.ATTACK:
 			frames = visual.attack_left_frames if facing_direction == 0 else visual.attack_right_frames
 		PreviewState.SHOCKED:
@@ -1381,6 +1470,31 @@ func _selected_frames() -> Array[Texture2D]:
 		PreviewState.BOSS_SLAM:
 			frames = visual.boss_slam_frames if _is_boss_preview() else frames
 	return frames
+
+
+func _support_animation_frames(visual: SlimeVisualComponent, property_name: StringName) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	var frame_value: Variant = visual.get(property_name)
+	if not (frame_value is Array) or frame_value.is_empty():
+		var actor_instance_id := preview_actor.get_instance_id() if preview_actor != null else 0
+		if actor_instance_id != 0 and actor_instance_id != _support_frame_repair_actor_id:
+			_support_frame_repair_actor_id = actor_instance_id
+			_assign_preview_support_cast_frames()
+			frame_value = visual.get(property_name)
+	if not (frame_value is Array):
+		return frames
+	for texture in frame_value:
+		if texture is Texture2D:
+			frames.append(texture)
+	return frames
+
+
+func _preview_state_loops() -> bool:
+	if preview_state == PreviewState.SUPPORT_CASTING:
+		return true
+	if preview_state == PreviewState.SUPPORT_SPELL:
+		return false
+	return loop_animation
 
 
 func _selected_shadow_frames() -> Array[Texture2D]:
@@ -1422,7 +1536,7 @@ func _advance_preview_frame() -> void:
 		return
 	if _current_frame + 1 < frame_count:
 		_current_frame += 1
-	elif loop_animation:
+	elif _preview_state_loops():
 		_current_frame = 0
 	else:
 		_current_frame = frame_count - 1
@@ -1536,6 +1650,7 @@ func get_preview_summary() -> Dictionary:
 		"display_name": definition.display_name,
 		"element": ElementCatalogScript.display_name(definition.element),
 		"damage_contract": String(definition.damage_contract),
+		"behavior_id": String(definition.behavior_id),
 		"base_stats": definition.base_stats.duplicate(true),
 		"growth_weights": definition.growth_weights.duplicate(true),
 		"visual_source": definition.visual_source,
@@ -1551,7 +1666,7 @@ func get_preview_summary() -> Dictionary:
 		"frame_index": _current_frame,
 		"frame_count": _selected_frame_count(),
 		"playing": not playback_paused and not _animation_finished,
-		"geometry": definition.geometry_record(),
+		"geometry": EnemyFactory.geometry_profile(definition).call("geometry_record"),
 		"geometry_valid": _geometry_is_valid(),
 		"ready": preview_ready,
 	}
@@ -1587,8 +1702,138 @@ func _draw() -> void:
 	if not error_message.is_empty():
 		status_color = Color("ff8f8f")
 	draw_string(ThemeDB.fallback_font, Vector2(12, 154), status, HORIZONTAL_ALIGNMENT_LEFT, 216, 8, status_color)
+	if _death_effect_active:
+		draw_string(ThemeDB.fallback_font, Vector2(148, 145), "DEATH EFFECT", HORIZONTAL_ALIGNMENT_LEFT, 82, 8, Color("ffcf7a"))
+	elif _death_effect_completed:
+		draw_string(ThemeDB.fallback_font, Vector2(148, 145), "EFFECT COMPLETE", HORIZONTAL_ALIGNMENT_LEFT, 82, 8, Color("8dffb1"))
 	if preview_state in [PreviewState.BOSS_JUMP, PreviewState.BOSS_SLAM] and not _is_boss_preview():
 		draw_string(ThemeDB.fallback_font, Vector2(166, 123), "select Boss actor", HORIZONTAL_ALIGNMENT_LEFT, 70, 8, Color("ffcf7a"))
+
+
+## Plays a deterministic, editor-only version of the shared enemy death breakup.
+func preview_death_effect() -> void:
+	_clear_death_effect_preview()
+	if definition == null or preview_actor == null or preview_actor.texture == null:
+		_set_workbench_error("Select an enemy with a visible frame before previewing its death effect.")
+		return
+	var source_image := preview_actor.texture.get_image()
+	if source_image == null or source_image.is_empty():
+		_set_workbench_error("Could not read the selected enemy frame for its death effect.")
+		return
+	var source_pixels: Array[Vector2i] = []
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			if source_image.get_pixel(x, y).a > 0.0:
+				source_pixels.append(Vector2i(x, y))
+	if source_pixels.is_empty():
+		_set_workbench_error("The selected enemy frame has no visible pixels to preview.")
+		return
+
+	var random_source := RandomNumberGenerator.new()
+	random_source.seed = 426731
+	for index in range(source_pixels.size() - 1, 0, -1):
+		var swap_index := random_source.randi_range(0, index)
+		var swap_pixel := source_pixels[index]
+		source_pixels[index] = source_pixels[swap_index]
+		source_pixels[swap_index] = swap_pixel
+
+	var palette := SlimeVisualComponentScript.palette_for_definition(definition)
+	var actor_scale := preview_actor.scale
+	var particle_origin := preview_actor.position + preview_actor.offset * actor_scale
+	var particle_count := mini(int(EFFECTS_TUNING.get("slime_death_particle_count")), source_pixels.size())
+	var lifetime := float(EFFECTS_TUNING.get("slime_death_particle_lifetime"))
+	var speed_min := float(EFFECTS_TUNING.get("slime_death_particle_speed_min"))
+	var speed_max := float(EFFECTS_TUNING.get("slime_death_particle_speed_max"))
+	for index in particle_count:
+		var source_pixel := source_pixels[index]
+		var source_color := source_image.get_pixelv(source_pixel)
+		var particle := Sprite2D.new()
+		particle.name = "DeathEffectPixel"
+		particle.texture = _death_particle_texture(EffectsSpawnerScript.slime_death_particle_color(source_color, palette))
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.scale = actor_scale
+		particle.position = particle_origin + Vector2(source_pixel.x, source_pixel.y - 2) * actor_scale
+		add_child(particle)
+		var direction := -1.0 if float(source_pixel.x) < float(source_image.get_width()) * 0.5 else 1.0
+		var velocity := Vector2(
+			direction * random_source.randf_range(speed_min * 0.5, speed_max * 0.75),
+			random_source.randf_range(-10.0, -2.0)
+		) * actor_scale
+		_death_effect_particles.append({
+			"sprite": particle,
+			"velocity": velocity,
+			"timer": lifetime,
+			"lifetime": lifetime,
+			"gravity": 30.0 * actor_scale.y,
+			"logical_position": particle.position,
+		})
+	preview_actor.visible = false
+	if preview_shadow != null and is_instance_valid(preview_shadow):
+		preview_shadow.visible = false
+	_death_effect_active = true
+	_death_effect_completed = false
+	playback_paused = false
+	_workbench_notice = ""
+	queue_redraw()
+
+
+func _update_death_effect_preview(delta: float) -> void:
+	for index in range(_death_effect_particles.size() - 1, -1, -1):
+		var particle_data := _death_effect_particles[index]
+		var particle := particle_data.get("sprite") as Sprite2D
+		var timer := float(particle_data.get("timer", 0.0)) - delta
+		if particle == null or not is_instance_valid(particle) or timer <= 0.0:
+			if particle != null and is_instance_valid(particle):
+				particle.queue_free()
+			_death_effect_particles.remove_at(index)
+			continue
+		var velocity := particle_data.get("velocity", Vector2.ZERO) as Vector2
+		velocity.y += float(particle_data.get("gravity", 0.0)) * delta
+		var logical_position := particle_data.get("logical_position", particle.position) as Vector2
+		logical_position += velocity * delta
+		particle.position = Vector2(roundf(logical_position.x * 2.0), roundf(logical_position.y * 2.0)) * 0.5
+		var color := particle.modulate
+		color.a = clampf(timer / maxf(float(particle_data.get("lifetime", 1.0)), 0.001), 0.0, 1.0)
+		particle.modulate = color
+		particle_data["velocity"] = velocity
+		particle_data["timer"] = timer
+		particle_data["logical_position"] = logical_position
+		_death_effect_particles[index] = particle_data
+	if _death_effect_particles.is_empty():
+		_death_effect_active = false
+		_death_effect_completed = true
+		_animation_finished = true
+		if preview_actor != null and is_instance_valid(preview_actor):
+			preview_actor.visible = true
+		if preview_shadow != null and is_instance_valid(preview_shadow):
+			preview_shadow.visible = true
+	queue_redraw()
+
+
+func _clear_death_effect_preview() -> void:
+	for particle_data in _death_effect_particles:
+		var particle := particle_data.get("sprite") as Node
+		if particle != null and is_instance_valid(particle):
+			particle.queue_free()
+	_death_effect_particles.clear()
+	_death_effect_active = false
+	_death_effect_completed = false
+	if preview_actor != null and is_instance_valid(preview_actor):
+		preview_actor.visible = true
+	if preview_shadow != null and is_instance_valid(preview_shadow):
+		preview_shadow.visible = true
+
+
+func _death_particle_texture(color: Color) -> Texture2D:
+	var key := color.to_html(true)
+	if _death_particle_textures.has(key):
+		return _death_particle_textures[key] as Texture2D
+	var image := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	image.set_pixel(0, 0, color)
+	var texture := ImageTexture.create_from_image(image)
+	_death_particle_textures[key] = texture
+	return texture
 
 
 func _draw_geometry_overlay(overlay: Node2D) -> void:

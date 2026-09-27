@@ -18,6 +18,9 @@ const PALETTE_LIBRARY_SCRIPT = preload("res://scripts/palette_library.gd")
 @export var display_name := ""
 @export var element := 0
 @export var damage_contract: StringName = &"physical"
+## Optional behavior composition selected by the factory. Empty keeps the
+## family default; support_caster opts a Slime into the healer component.
+@export var behavior_id: StringName = &""
 @export var base_stats: Dictionary = {}
 @export var growth_weights: Dictionary = {}
 ## Palette ID applied to the shared slime frame set. Variant identity and
@@ -89,8 +92,14 @@ func validate() -> Array[String]:
 		problems.append("matchup_weight must be non-negative")
 	if preferred_weight < 0.0:
 		problems.append("preferred_weight must be non-negative")
-	if encounter_role not in [&"baseline", &"matchup", &"late", &"shadow"]:
+	if encounter_role not in [&"baseline", &"matchup", &"late", &"shadow", &"support"]:
 		problems.append("unknown encounter_role '%s'" % encounter_role)
+	if behavior_id not in [&"", &"support_caster"]:
+		problems.append("unknown behavior_id '%s'" % behavior_id)
+	if behavior_id == &"support_caster" and type_id != &"slime":
+		problems.append("support_caster behavior is currently only supported by Slime actors")
+	if behavior_id == &"support_caster" and encounter_role != &"support":
+		problems.append("support_caster variants must use the support encounter role")
 	_validate_polygon(collision_polygon, "collision_polygon", problems)
 	_validate_polygon(body_hitbox_polygon, "body_hitbox_polygon", problems)
 	_validate_rect(collision_guide_rect, "collision_guide_rect", problems)
@@ -164,6 +173,7 @@ func to_record() -> Dictionary:
 		"display_name": display_name,
 		"element": element,
 		"damage_contract": damage_contract,
+		"behavior_id": behavior_id,
 		"base_stats": base_stats.duplicate(true),
 		"growth_weights": growth_weights.duplicate(true),
 		"visual_source": visual_source,

@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.3.0` (composition refactor structurally and editor-wise
+Current release: `0.3.01` (composition refactor structurally and editor-wise
 complete: the strict scorecard and regression floor both pass at 100%, with 2,200
 root accesses and `GameplayState` at 1,718 lines / 286 fields. The debug-menu
 dispatch added in 0.2.96 was extracted into `DebugSessionController` to restore
@@ -535,11 +535,14 @@ balance change is required to preserve behavior after extraction.
 3. **Finish M1's shared authoring foundation.** The enemy design preview now
    edits all current `EnemyDefinition` fields inline, updates its preview as
    they change, saves to the owning catalog or standalone resource, and guards
-   unsaved edits. Accept it after checking the catalog picker, starter creation,
-   visible frame output, save/refresh lifecycle, and undo/redo; then add the
-   isolated interactive workbench and close the remaining cache, manifest, and
-   cleanup checks. Use the acceptance bars in `authoring-system-plan.md` rather
-   than the editor composition percentage as proof.
+   unsaved edits. It now has a deterministic `Preview Death Effect` action
+   using the runtime palette mapping and default effects tuning. Accept it after
+   checking the catalog picker, starter creation, visible frame output,
+   save/refresh lifecycle, geometry interaction, death-effect playback, and
+   undo/redo; then add the isolated interactive workbench and close the
+   remaining cache, manifest, and cleanup checks. Use the acceptance bars in
+   `authoring-system-plan.md` rather than the editor composition percentage as
+   proof.
 4. **Continue Slice 2 after the M1 workflow is dependable.** Finish the full
    item catalog migration and consolidate element identity, then prove gear
    and flame authoring through data-only additions, previews, and save/load.

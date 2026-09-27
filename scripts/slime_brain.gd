@@ -205,6 +205,9 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var distance := to_player.length()
 	var towards_player := to_player.normalized()
 	var desired_distance := tuning.attack_range * 0.72
+	var support_positioning: bool = actor.get_meta("behavior_id", &"") == &"support_caster" and bool(actor.get_meta("support_heal_available", false))
+	if support_positioning:
+		desired_distance = maxf(desired_distance, tuning.support_preferred_range)
 	if actor is SkeletonActor:
 		desired_distance = SKELETON_PREFERRED_RANGE
 	if _is_boss(actor):
@@ -216,7 +219,8 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	# the broad-phase grid once instead of re-scanning the whole crowd per
 	# candidate direction.
 	var collision := root.get("actor_collision_system") as ActorCollisionSystem
-	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, tuning.steering_clearance) if collision != null else []
+	var nearby_radius := maxf(tuning.steering_clearance, tuning.support_preferred_range) if support_positioning else tuning.steering_clearance
+	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, nearby_radius) if collision != null else []
 
 	for index in direction_count:
 		var angle := TAU * float(index) / float(direction_count)
@@ -258,6 +262,22 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		var cone_preference := clampf((cone_alignment - cone_cosine) / maxf(1.0 - cone_cosine, 0.01), -1.0, 1.0)
 		interest += cone_preference * tuning.steering_attack_cone_weight
 		interest += candidate.dot(orbit) * orbit_factor * (tuning.boss_orbit_weight if _is_boss(actor) else tuning.steering_orbit_weight)
+		if support_positioning:
+			var to_player_from_candidate := player_foot - candidate_foot
+			var player_distance_from_candidate := to_player_from_candidate.length()
+			var ally_between := false
+			if player_distance_from_candidate > 0.01:
+				var direction_to_player := to_player_from_candidate / player_distance_from_candidate
+				for buddy in nearby:
+					if buddy == actor or not buddy.visible or bool(root.call("_is_slime_dead", buddy)):
+						continue
+					var buddy_from_candidate: Vector2 = actor_foot.call(buddy) - candidate_foot
+					var along := buddy_from_candidate.dot(direction_to_player)
+					var across := absf(buddy_from_candidate.cross(direction_to_player))
+					if along > 4.0 and along < player_distance_from_candidate - 3.0 and across <= tuning.steering_clearance * 1.5:
+						ally_between = true
+						break
+			interest += tuning.support_ally_bias if ally_between else -tuning.support_ally_bias * 0.35
 		var score := interest - danger
 		if score > best_score:
 			best_score = score

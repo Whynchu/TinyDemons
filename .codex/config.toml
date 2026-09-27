@@ -1,0 +1,8 @@
+[features]
+# Keep Codex sessions for this repo out of the detached shared daemon. On
+# Windows, Codex 0.157.x visibly opens consoles for daemon child processes.
+daemon_auto_start = false
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 1

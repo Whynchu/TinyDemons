@@ -23,6 +23,25 @@
 14. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
 15. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
 16. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
+17. `docs/agent-workflow.md` — project-scoped Pip, Thorn, and Hexley advisory roles and usage.
+## Coordination with other agents
+
+More than one AI agent may work this repo at the same time (opencode and codex
+share the one Godot editor through separate MCP bridges). The Godot toolkit's
+mutation lock and scene lease prevent write races but carry no identity or
+messages, so use the file-based board in `coord/`:
+
+- **At task start:** read `coord/BOARD.md` and both `coord/status-*.md` files.
+- **Before editing:** add your claim row to `coord/BOARD.md` (agent, paths or
+  scenes, one-line intent). Remove it when the work lands.
+- **While working:** keep your own `coord/status-<you>.md` current (focus, in
+  flight, blockers, handoff). Write only your own file.
+- **Log events:** append `claim` / `handoff` / `blocker` / `done` lines to
+  `coord/journal.md`.
+- **Commit the board with the code** at task boundaries.
+
+Protocol and formats: `coord/README.md`. Keep one Godot editor; never open this
+project directory in a second editor (`addons/godot_mcp_toolkit/docs/multi-instance.md`).
 
 ## Verification
 

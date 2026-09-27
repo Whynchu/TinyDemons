@@ -948,7 +948,7 @@ func collect_chroma_pickup(root: Object, index: int) -> PickupAcquisitionResult:
 		_spawn_pickup_contact_feedback(root, result)
 		var acquired_text := "+%d CHROMA" % value
 		root.call("_spawn_player_number", acquired_text, 0, chroma_color, false, acquired_text)
-		root.call("_play_sound", "item_pickup", -12.0, 1.15)
+		root.call("_play_sound", "mana_pickup", -12.0, 1.15)
 		remove_chroma_pickup(root, index)
 		_present_acquisition(result)
 	return result

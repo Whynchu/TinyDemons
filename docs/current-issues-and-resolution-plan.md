@@ -2,7 +2,7 @@
 
 Status: live issue tracker; source fixes require runtime evidence before closure
 
-Updated: 2026-09-19
+Updated: 2026-09-27
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -35,6 +35,20 @@ This is the active tracker for the menu, gear, progression identity, and
 backtracking issues reported during playtesting. It is a working document: code
 changes should update the status and verification notes here as each issue is
 resolved.
+
+## Latest player update — 2026-09-27
+
+The player reports that hitches are much better, skeleton combat is fun and
+working well, and Chroma, bound identity, save/load, and flame travel feel good.
+These areas are not the immediate priority; this feedback does not claim a
+measured performance result or exhaustive platform verification. Revisit only
+if new evidence or a regression changes that assessment.
+
+The remaining touch note is specific to Equipment: the first tap on an item
+should highlight it without activating it; touch should apply the currently
+highlighted command without a separate controller-style Equip press. When Equip
+is highlighted, tapping an item should enter that item's equipment flow. Track
+this separately from Issue 5's scroll clipping and bounds.
 
 ## Historical focused baseline verification — 2026-09-11
 
@@ -325,6 +339,19 @@ Status: **Focused Equipment/Pause scene contracts verified; runtime touch verifi
   scene, route, and responsive contracts with profile-safe live fixtures.
 - Runtime touch verification is still needed for fast swipes and both Hub and
   Pause instances at the supported aspect presets.
+
+## Follow-up — Equipment menu touch selection and activation
+
+**Player report (2026-09-27):** the first tap on an item should move the
+highlight without activating the item. Touch input should act on the currently
+highlighted equipment command without requiring the controller's separate
+Equip confirmation; when Equip is highlighted, tapping an item should enter
+that item's equipment flow.
+
+This is a separate interaction contract from Issue 5's row clipping and scroll
+bounds. Confirm the intended tap sequence with the player during the follow-up,
+then verify both Hub and Pause equipment contexts and preserve controller
+behavior.
 
 ## Issue 6 — R5 and R6 currently produce identical rooms
 

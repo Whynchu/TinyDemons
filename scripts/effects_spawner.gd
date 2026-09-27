@@ -7,6 +7,8 @@ const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.p
 
 signal effect_requested(kind: StringName, position: Vector2)
 const CHARGE_AURA_TAG := &"charge_aura"
+const SUPPORT_HEAL_CHARGE_TAG := &"support_heal_charge"
+const SUPPORT_HEAL_BURST_TAG := &"support_heal_burst"
 const SWORD_BEAM_CHROMA_COST := 20
 var damage_number_texture_cache: Dictionary = {}
 var critical_outline_texture_cache: Dictionary = {}
@@ -35,6 +37,8 @@ var item_delivery_minimap: Node = null
 var pickup_delivery_sound_player: Callable = Callable()
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
+var support_heal_noise := FastNoiseLite.new()
+var support_heal_noise_cursor := 0.0
 var charge_aura_timer := 0.0
 var charge_ready_blink_timer := 0.0
 var charge_ready_opaque_timer := 0.0
@@ -384,6 +388,85 @@ func _spawn_charge_aura_particle(root: Object, player: Sprite2D, tuning: PlayerT
 		"curl": side * curl * random_source.randf_range(0.75, 1.25),
 		"charge_progress": progress,
 	})
+
+
+func spawn_heal_charge_from_root(root: Object, actor: Sprite2D, progress: float) -> void:
+	if root == null or actor == null or not is_instance_valid(actor):
+		return
+	var random_source := root.get("rng") as RandomNumberGenerator
+	if random_source == null:
+		random_source = RandomNumberGenerator.new()
+		random_source.randomize()
+	var origin: Vector2 = root.call("_actor_foot", actor) + Vector2(0.0, -7.0)
+	var green := PaletteLibrary.accent("green")
+	var eased := clampf(progress, 0.0, 1.0)
+	for _index in 2:
+		var side := -1.0 if random_source.randf() < 0.5 else 1.0
+		var particle := Sprite2D.new()
+		particle.name = "SupportHealCharge"
+		particle.texture = root.call("_pixel_particle_texture", green, 1 if eased < 0.65 else 2) as Texture2D
+		particle.centered = true
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = maxi(actor.z_index + 2, 0)
+		particle.modulate = Color(green.r, green.g, green.b, lerpf(0.28, 0.72, eased))
+		root.add_child(particle)
+		particle.global_position = root.call("_snap_half_pixel", origin + Vector2(side * random_source.randf_range(2.0, 6.0), random_source.randf_range(-1.5, 1.5)))
+		var lifetime := random_source.randf_range(0.22, 0.42)
+		pixel_particles.append({
+			"sprite": particle,
+			"velocity": Vector2(side * random_source.randf_range(2.0, 8.0), -random_source.randf_range(12.0, 22.0) * lerpf(0.8, 1.3, eased)),
+			"timer": lifetime,
+			"lifetime": lifetime,
+			"gravity": -4.0,
+			"effect_tag": SUPPORT_HEAL_CHARGE_TAG,
+			"logical_position": particle.global_position,
+			"curl": -side * 13.0,
+			"alpha_scale": lerpf(0.28, 0.72, eased),
+			"charge_progress": eased,
+		})
+
+
+func spawn_heal_burst_from_root(root: Object, world_position: Vector2, particle_count: int) -> void:
+	if root == null:
+		return
+	var random_source := root.get("rng") as RandomNumberGenerator
+	if random_source == null:
+		random_source = RandomNumberGenerator.new()
+		random_source.randomize()
+	support_heal_noise.frequency = 0.32
+	support_heal_noise.seed = random_source.randi()
+	var origin: Vector2 = root.call("_snap_half_pixel", world_position)
+	var color := PaletteLibrary.accent("green")
+	var z_index := int(round(world_position.y * float(root.get("DEPTH_Z_SCALE")))) + 5
+	for index in clampi(particle_count, 1, 12):
+		var particle := Sprite2D.new()
+		particle.name = "HealPlusParticle"
+		particle.texture = GEAR_PLUS_TEXTURE
+		particle.centered = true
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = z_index
+		var particle_size := random_source.randf_range(0.8, 1.5)
+		particle.scale = Vector2.ONE * particle_size
+		particle.modulate = color.lerp(Color.WHITE, random_source.randf_range(0.1, 0.35))
+		root.add_child(particle)
+		var position := origin + Vector2(random_source.randf_range(-6.0, 6.0), random_source.randf_range(-2.0, 2.0))
+		particle.global_position = position
+		support_heal_noise_cursor += 0.37
+		var noise_speed := support_heal_noise.get_noise_1d(support_heal_noise_cursor)
+		var lifetime := random_source.randf_range(0.42, 0.68)
+		pixel_particles.append({
+			"sprite": particle,
+			"velocity": Vector2(noise_speed * 8.0, -15.0 - (noise_speed + 1.0) * 8.0),
+			"timer": lifetime,
+			"lifetime": lifetime,
+			"gravity": -2.0,
+			"effect_tag": SUPPORT_HEAL_BURST_TAG,
+			"logical_position": position,
+			"particle_scale": Vector2.ONE * particle_size,
+			"alpha_scale": 0.95,
+		})
 
 
 func _update_charge_ready_highlight(root: Object, player: Sprite2D, progress: float, delta: float) -> void:
@@ -1017,7 +1100,7 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 			continue
 		var velocity := particle_data["velocity"] as Vector2
 		velocity.y += float(particle_data.get("gravity", 18.0)) * delta
-		if particle_data.get("effect_tag", &"") == CHARGE_AURA_TAG:
+		if particle_data.get("effect_tag", &"") in [CHARGE_AURA_TAG, SUPPORT_HEAL_CHARGE_TAG]:
 			velocity.x += float(particle_data.get("curl", 0.0)) * delta
 		var logical_position := particle_data.get("logical_position", particle.global_position) as Vector2
 		logical_position += velocity * delta
@@ -1026,10 +1109,12 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 		var color := particle.modulate
 		var lifetime := float(particle_data.get("lifetime", default_lifetime))
 		color.a = float(particle_data.get("alpha_scale", 1.0)) * clampf(timer / lifetime, 0.0, 1.0)
-		if particle_data.get("effect_tag", &"") == CHARGE_AURA_TAG:
+		if particle_data.get("effect_tag", &"") in [CHARGE_AURA_TAG, SUPPORT_HEAL_CHARGE_TAG]:
 			particle.rotation = velocity.angle() + PI * 0.5
 			var charge_progress := float(particle_data.get("charge_progress", 0.0))
 			particle.scale = Vector2(1.0, 2.0 if charge_progress >= 0.70 else 1.0)
+		elif particle_data.has("particle_scale"):
+			particle.scale = particle_data["particle_scale"] as Vector2
 		if bool(particle_data.get("fire_spark", false)):
 			var progress := 1.0 - clampf(timer / lifetime, 0.0, 1.0)
 			var fire_palette := String(particle_data.get("fire_palette", "grey"))

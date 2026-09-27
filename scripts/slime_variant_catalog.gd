@@ -8,6 +8,8 @@ class_name SlimeVariantCatalog
 
 const DATA := preload("res://resources/definitions/slime_variant_catalog.tres") as SlimeVariantCatalogData
 const CATALOG_RESOURCE_PATH := "res://resources/definitions/slime_variant_catalog.tres"
+const SLIME_GEOMETRY_PROFILE: Resource = preload("res://resources/definitions/geometry/slime.tres")
+const SKELETON_GEOMETRY_PROFILE: Resource = preload("res://resources/definitions/geometry/skeleton.tres")
 static var _cache_loaded := false
 static var _definition_cache: Dictionary = {}
 static var _variant_cache: Array[StringName] = []
@@ -84,6 +86,15 @@ static func definition_source_path(definition: EnemyDefinition) -> String:
 static func definition_resource(variant_id: StringName) -> EnemyDefinition:
 	var definition := definitions().get(variant_id) as EnemyDefinition
 	return definition
+
+
+static func family_geometry_profile(type_id: StringName) -> Resource:
+	match type_id:
+		&"slime":
+			return SLIME_GEOMETRY_PROFILE
+		&"skeleton":
+			return SKELETON_GEOMETRY_PROFILE
+	return null
 
 
 static func definition(variant_id: StringName) -> Dictionary:

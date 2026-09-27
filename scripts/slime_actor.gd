@@ -122,6 +122,9 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		return
 	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
 	if update_knockback.call(self, delta):
+		var support := get_node_or_null("Support") as Node
+		if support != null:
+			support.call("cancel_cast", &"knockback")
 		return
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 	if combat.hitstun_timer > 0.0:
@@ -399,6 +402,9 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		boss_jump_slam.presentation_offset = Vector2.ZERO
 		set_meta("boss_airborne", false)
 		self_modulate.a = 1.0
+	var support := get_node_or_null("Support") as Node
+	if support != null:
+		support.call("reset")
 
 
 func _ensure_component(node_name: String, component_type: Variant) -> Node:

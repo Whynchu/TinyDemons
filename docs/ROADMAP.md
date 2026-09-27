@@ -6,7 +6,7 @@ Updated: 2026-09-27
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.0`; the authoring and verification sequence is
+Current release: version `0.3.01`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 The 0.3.0 checkpoint closes the known start-position, controller Debug access,

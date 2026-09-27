@@ -21,6 +21,10 @@ static func default_data() -> RoomDefinition:
 
 @export var normal_enemy_cap := 7
 
+## Each group of up to this many non-support Slimes gets an independent roll.
+@export var support_companion_slimes_per_group := 3
+@export var support_companion_chance_per_group := 0.50
+
 ## Base extra-enemy chance at rank 1, and per-rank growth/clamp.
 @export var extra_enemy_base := 0.50
 @export var extra_enemy_per_rank := 0.05
@@ -38,6 +42,10 @@ static func default_data() -> RoomDefinition:
 func validate() -> Array[String]:
 	var problems: Array[String] = []
 	if normal_enemy_cap < 1: problems.append("normal_enemy_cap must be >= 1")
+	if support_companion_slimes_per_group < 1:
+		problems.append("support_companion_slimes_per_group must be >= 1")
+	if support_companion_chance_per_group < 0.0 or support_companion_chance_per_group > 1.0:
+		problems.append("support_companion_chance_per_group must be in [0,1]")
 	if regular_room_treasure_chance < 0.0 or regular_room_treasure_chance > 1.0:
 		problems.append("regular_room_treasure_chance must be in [0,1]")
 	for key in ["popcorn_chance_early", "popcorn_chance_run2", "popcorn_chance_later"]:
@@ -48,6 +56,11 @@ func validate() -> Array[String]:
 		problems.append("boss support popcorn counts must be ordered")
 	if boss_mixed_support_start_rank < 1: problems.append("boss_mixed_support_start_rank must be >= 1")
 	return problems
+
+
+func support_companion_roll_count(slime_count: int) -> int:
+	var group_size := maxi(support_companion_slimes_per_group, 1)
+	return ceili(float(maxi(slime_count, 0)) / float(group_size))
 
 
 func popcorn_chance_for_rank(run_rank: int) -> float:

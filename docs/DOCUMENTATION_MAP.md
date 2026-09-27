@@ -56,6 +56,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
 19. [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md)
     — ratified decision record: firm principles, player-facing contracts,
     approved/rejected directions, and evidence still needed.
+20. [`agent-workflow.md`](agent-workflow.md) — project-scoped Codex advisor roles
+    and the workflow for asking Pip, Thorn, and Hexley for input.
 
 ## Authority by question
 

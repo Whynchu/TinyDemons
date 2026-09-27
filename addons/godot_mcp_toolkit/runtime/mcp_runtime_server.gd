@@ -20,7 +20,6 @@ extends Node
 # would parse-fail this autoload in an export template (godot#91713) — GDScript
 # resolves identifiers at parse time, before any runtime guard can help.
 const Coerce := preload("res://addons/godot_mcp_toolkit/contract/coerce.gd")
-const MCPToolkitError := preload("res://addons/godot_mcp_toolkit/contract/mcp_toolkit_error.gd")
 const ExecuteHints := preload("res://addons/godot_mcp_toolkit/contract/execute_hints.gd")
 const Pagination := preload("res://addons/godot_mcp_toolkit/contract/pagination.gd")
 const PropertySetCheck := preload("res://addons/godot_mcp_toolkit/contract/property_set_check.gd")
@@ -93,14 +92,6 @@ func _ready() -> void:
 	# `set_process(false)` + no TCPServer means zero work per frame and
 	# no port bind — the Node's presence is purely bookkeeping.
 	if Engine.is_editor_hint():
-		set_process(false)
-		return
-	# Standalone smoke tests use the editor executable with --headless, which
-	# still reports the "editor" feature. Do not start the MCP WebSocket server
-	# or touch its registry in that mode: headless verification has no editor
-	# peer to serve, and concurrent editor/test processes can otherwise compete
-	# for runtime resources during startup and teardown.
-	if DisplayServer.get_name() == "headless":
 		set_process(false)
 		return
 	# --check-only is a parse-only pass — no runtime server needed.

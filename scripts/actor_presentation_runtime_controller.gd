@@ -88,8 +88,12 @@ func build_slime_attack_frames(root: Object) -> void:
 
 func assign_slime_attack_frames(root: Object) -> void:
 	SlimeVisualComponent.assign_attack_frames(root.get("slimes") as Array[Sprite2D], slime_attack_frames_by_palette)
-	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
+	var frame_library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	var cache := (root.get("occlusion_renderer") as OcclusionRenderer).texture_image_cache
+	var tuning: PlayerAnimationComponent = root.get("player_animation_component") as PlayerAnimationComponent
+	var support_frames := SlimeVisualComponent.build_authored_support_animation_frames(frame_library, root.get("SLIME_ATTACK_FRAME_SIZE"), Callable(tuning, "warm_texture_cache"))
+	SlimeVisualComponent.assign_support_animation_frames(root.get("slimes") as Array[Sprite2D], support_frames)
+	var library := root.get("sprite_frame_library") as SpriteFrameLibrary
 	SlimeVisualComponent.assign_boss_ability_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
 	SlimeVisualComponent.assign_regular_shadow_frames(root.get("slimes") as Array[Sprite2D], library, cache, Callable((root.get("player_animation_component") as PlayerAnimationComponent), "warm_texture_cache"))
 
@@ -173,6 +177,10 @@ func refresh_enemy_palette_textures(root: Object) -> void:
 
 func set_slime_facing(root: Object, slime: Sprite2D, direction_x: float) -> void:
 	SlimeVisualComponent.set_facing(root.get("occlusion_renderer") as OcclusionRenderer, slime, direction_x, Callable(root, "_set_actor_base_texture"), Callable(root, "_update_slime_attack_guides"))
+	var support := slime.get_node_or_null("Support") as Node
+	if support != null and bool(support.call("is_cast_active")):
+		var phase := StringName(slime.get_meta("support_animation_phase", &"casting"))
+		root.call("_set_slime_support_animation_frame", slime, phase, int(slime.get_meta("runtime_animation_frame", 0)))
 	sync_slime_shadow(root, slime)
 
 
@@ -207,7 +215,9 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 	SlimeVisualComponent.apply_palette_material(slime)
 	var animation_name := String(slime.get_meta("runtime_animation", "idle"))
 	var frame := int(slime.get_meta("runtime_animation_frame", 0))
-	if animation_name == "attack":
+	if animation_name == "cast":
+		shadow.texture = visual.shadow_idle_texture
+	elif animation_name == "attack":
 		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 		var attack_frames := visual.shadow_attack_left_frames if combat != null and combat.face_left else visual.shadow_attack_right_frames
 		if not attack_frames.is_empty():

@@ -44,7 +44,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | Regen | `regen_delay` 2.0, `regen_interval` 1.0, `regen_amount` 1.0 |
 | Death/hitstop | `death_particle_lifetime` 1.8, `death_fade_time` 0.7, `death_particle_delay` 0.7, `hitstop_duration` 1/40, `critical_hitstop_multiplier` 1.8 (critical hits use up to 1.8x base hitstop), `death_observe_time` 1.4, `health_damage_hang_time` 0.14 |
 
-### `scripts/slime_tuning.gd` — enemy behavior (41 exports, all `inspector`)
+### `scripts/slime_tuning.gd` — enemy behavior (52 exports, all `inspector`)
 
 | Group | Fields |
 | --- | --- |
@@ -56,6 +56,10 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | Health UI | `health_drain_fill_speed` 18, `health_regen_fill_speed` 4, `health_damage_hang_time` 0.14 |
 | Hit reaction | `hit_flash_time` 0.12, `hitstun_time` 1/30, `knockback_duration` 0.14 |
 | Shadow slime (ambush) | `ambush_reveal_window` 0.5, `ambush_block_stun` 1.0, `ambush_hit_extension` 0.5 |
+| Support slime | `support_cast_time` 2.0s, Casting animation loops during the load, one-shot Spell Cast starts at cast completion and resolves the heal on frame index 1, `support_animation_frame_time` 0.08s, heal 8 HP within 40px, 0.25s successful-heal cooldown, at least 0.18s release (extended to show the full spell animation), 0.5s interruption recovery, preferred range 48px, ally-lane bias 1.25, charge interval 0.08s, 6 burst particles; green single-pixel target arc |
+
+The support cast plays the `healing` cue on successful health restoration;
+`assets/sounds/sound_mix_profile.tres` controls its `healing_db` trim.
 
 ### `scripts/player_guard_component.gd` — blocking feel
 
@@ -220,6 +224,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Authored normal-room popcorn | R3/R4 normal combat rooms schedule a new randomized popcorn cap after each clear; 45-second delay, cap rolls from 1 through the latest defeated normal-enemy count, excluded from Hub/Fire/Orb rooms | R4 authored-map plan; future `RoomController` room-clear popcorn policy |
 | Enemy health ramp | `0.50` on R1, `0.65` on R2, +0.15/run to `1.0` | `combat_runtime_controller.gd:enemy_health_factor` |
 | Numbered run / enemy-family unlocks | `completed_runs + 1`; skeletons enter the regular family pool on run 5 and remain available after a death/retry, independent of performance difficulty rank | `room_controller.gd:ensure_layout`, `_generate_enemy_encounter` |
+| Healer slime availability | Eligible at encounter rank 1; `support_companion_chance_per_group` 0.5 and `support_companion_slimes_per_group` 3 give each full or partial group an independent roll (four Slimes get two) | `resources/definitions/room_definition.tres`, `room_controller.gd:_generate_enemy_encounter` |
 | Enemy level cap | `3` on R1, `5` on R2, then +1/run | `combat_runtime_controller.gd:enemy_level_cap_for_run` |
 | Late-run difficulty bonus | `max(0, encounter_rank - 8)` | `combat_runtime_controller.gd:run_enemy_level_bonus` |
 | Performance-over-baseline bonus | `max(0, difficulty_rank - (completed_runs + 1))` | `run_flow_controller.gd:run_difficulty_bonus` |

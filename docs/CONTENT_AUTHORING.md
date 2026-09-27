@@ -238,7 +238,7 @@ Workflow (current, typed enemy-definition path):
    `variant_id`. `visual_source` is a palette ID (for example `grey`), and the
    workbench selector and runtime renderer resolve that same field.
 3. Set encounter metadata on that same definition when it should enter normal
-   generation: `encounter_role` (`baseline`, `matchup`, `late`, or `shadow`),
+   generation: `encounter_role` (`baseline`, `matchup`, `late`, `shadow`, or `support`),
    `encounter_weight`, `encounter_min_rank`, and any preferred/matchup weight.
    `EncounterDefinition` and `RoomController` consume these fields at runtime.
 4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
@@ -269,6 +269,10 @@ choices read `Normal`, `Fire`, `Guard`, and so on. `Selected Variant ID` shows
 the stable ID. The picker adds an ID only if two variants in one family share
 a display name. `Ember Guard` keeps its authored name. `Selected Type ID` shows
 its actor family (`slime`), and `Selected Enemy Name` shows its friendly name.
+Use the Inspector's `Preview Death Effect` button to play a deterministic
+palette-colored breakup for the currently visible enemy frame. It uses the
+shared death-particle color mapping and `effects_default.tres` tuning; it does
+not start enemy combat or mutate the selected definition.
 Slime entries use the `slime` type and share the Slime actor implementation.
 Skeleton has its own factory actor route and authored idle, walk, attack, and
 between-attack sheets. Its attack throws the authored four-frame bone projectile.
@@ -291,7 +295,11 @@ local debug override does not change encounter weights.
 The workbench preview displays the Skeleton's authored frames with geometry
 guides enabled by default. `Geometry Guides` and its visible-overlay options
 toggle collision, body, and attack guides; the selected guide can be dragged in
-the preview and saved to the enemy definition. For live positioning checks,
+the preview and saved to the enemy family's canonical geometry profile. Slime
+variants share the `slime` profile; Skeleton variants share `skeleton`.
+Editing any variant changes the geometry used by every variant in that family,
+while each variant keeps its identity, stats, element, palette, and encounter
+settings. For live positioning checks,
 `debug_actor_geometry` draws the actor foot anchor, collision bounds, and body
 hitbox in gameplay.
 
@@ -337,9 +345,30 @@ In `Geometry Guides`, enable the overlay you want, then choose the target under
 `Edit in Preview`. Drag polygon vertices or drag inside a rectangle to move it;
 drag a rectangle corner to resize. Edits snap to half-pixels. Undo, redo, and
 reset operate on canvas edits to the selected guide; other Inspector edits use
-Godot's regular undo history. These fields live on the selected
-`EnemyDefinition`; `EnemyFactory` applies the same authored geometry to this
-preview and to runtime actors.
+Godot's regular undo history. Geometry edits resolve to the family profile:
+`resources/definitions/geometry/slime.tres` for Slime and
+`resources/definitions/geometry/skeleton.tres` for Skeleton. `EnemyFactory`
+applies that same authored family geometry to every variant's preview and
+runtime actor.
+
+`healer_slime` is the first `support` encounter-role variant. Its
+`behavior_id = support_caster` composes ally healing onto the normal Slime
+actor family; keep `type_id = slime` so it uses Slime geometry, visuals, health,
+and family routing. It selects a living, damaged enemy ally across mob families,
+channels for two seconds, and heals one ally per cast. It keeps seeking injured
+allies throughout the room, repeats the bounded cast as they come into range,
+and uses the normal Slime attack when no living ally needs healing. A green,
+single-pixel, pixel-snapped arc connects the healer to its chosen ally for the
+cast. Damage or knockback cancels the cast. Cast timing, heal
+amount/radius/cooldown, preferred range, and ally steering bias are global
+`SlimeTuning` values in `resources/tuning/slime_default.tres`. Encounter
+eligibility uses `encounter_min_rank`; the healer is eligible from rank 1 and
+is rolled as a companion after the regular room lineup, so a healer room always
+keeps at least one non-support enemy. The consumed room policy in
+`resources/definitions/room_definition.tres` gives each group of up to three
+regular Slimes an independent 50% healer roll; a partial final group also gets
+a roll, so four Slimes get two chances. Support `encounter_weight` values select
+which eligible support variant appears when a roll succeeds.
 Definition validation rejects polygons with infinite or NaN coordinates,
 zero area, or self-intersections, and rectangles with zero or negative sizes.
 

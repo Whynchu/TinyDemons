@@ -8,6 +8,7 @@ class_name EnemyFactory
 ## by the selected actor implementation.
 
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
+const SLIME_SUPPORT_COMPONENT_SCRIPT = preload("res://scripts/slime_support_component.gd")
 const EDITOR_COLLISION_GUIDE_SCRIPT = preload("res://scripts/editor_collision_guide.gd")
 const TYPE_SLIME: StringName = &"slime"
 const TYPE_SKELETON: StringName = &"skeleton"
@@ -55,6 +56,7 @@ static func configure_actor(actor: SlimeActor, definition: EnemyDefinition) -> v
 	actor.set_meta("enemy_variant_id", definition.variant_id)
 	actor.set_meta("enemy_type_id", definition.type_id)
 	actor.set_meta("ranged_stationary_attack", definition.type_id == TYPE_SKELETON)
+	actor.set_meta("behavior_id", definition.behavior_id)
 	if definition.type_id == TYPE_SKELETON:
 		actor.set_meta("attack_hit_frame_override", SkeletonActor.BONE_THROW_ATTACK_FRAME_INDEX)
 	actor.set_meta("visual_source", definition.visual_source)
@@ -64,6 +66,15 @@ static func configure_actor(actor: SlimeActor, definition: EnemyDefinition) -> v
 		stats.name = "Stats"
 		actor.add_child(stats)
 	stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.variant_id)
+	var support := actor.get_node_or_null("Support") as Node
+	if definition.behavior_id == &"support_caster":
+		if support == null:
+			support = SLIME_SUPPORT_COMPONENT_SCRIPT.new() as Node
+			support.name = "Support"
+			actor.add_child(support)
+		support.call("configure", true)
+	elif support != null:
+		support.call("configure", false)
 	actor.set_meta("content_materialized", true)
 
 
@@ -98,6 +109,17 @@ static func weighted_variants_for_type(type_id: StringName) -> Array[Dictionary]
 	return weighted_variants
 
 
+static func weighted_variants_for_role(type_id: StringName, encounter_role: StringName, minimum_rank: int) -> Array[Dictionary]:
+	var weighted_variants: Array[Dictionary] = []
+	for variant_id in variants_for_type(type_id):
+		var enemy_definition := definition(variant_id)
+		if enemy_definition.encounter_role == encounter_role \
+			and enemy_definition.encounter_min_rank <= minimum_rank \
+			and enemy_definition.encounter_weight > 0.0:
+			weighted_variants.append({"variant": String(variant_id), "weight": enemy_definition.encounter_weight})
+	return weighted_variants
+
+
 static func single_variant_encounter(variant_id: StringName, level: int) -> Dictionary:
 	return {
 		"variants": [String(variant_id)],
@@ -124,20 +146,22 @@ static func resolve_variant_id(value: StringName) -> StringName:
 	return &""
 
 
-static func geometry_definition(definition: EnemyDefinition) -> EnemyDefinition:
+static func geometry_profile(definition: EnemyDefinition) -> Resource:
 	if definition == null:
 		return null
-	if definition.type_id == TYPE_SKELETON and definition.variant_id != &"skeleton":
-		var normal_skeleton := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(&"skeleton") as EnemyDefinition
-		if normal_skeleton != null:
-			return normal_skeleton
-	return definition
+	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(definition.type_id)
+
+
+static func family_geometry_profile(type_id: StringName) -> Resource:
+	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(type_id)
 
 
 static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> void:
 	if actor == null or definition == null:
 		return
-	var geometry := geometry_definition(definition)
+	var geometry: Resource = geometry_profile(definition)
+	if geometry == null:
+		return
 	if geometry == null:
 		return
 	var collision_guide := actor.get_node_or_null("CollisionGuide") as Node2D
@@ -148,8 +172,9 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 	collision_guide.position = Vector2.ZERO
 	collision_guide.rotation = 0.0
 	collision_guide.scale = Vector2.ONE
-	collision_guide.set("rect_position", geometry.collision_guide_rect.position)
-	collision_guide.set("rect_size", geometry.collision_guide_rect.size)
+	var collision_guide_rect: Rect2 = geometry.get("collision_guide_rect")
+	collision_guide.set("rect_position", collision_guide_rect.position)
+	collision_guide.set("rect_size", collision_guide_rect.size)
 	collision_guide.set("draw_in_game", false)
 	collision_guide.visible = false
 
@@ -161,7 +186,7 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 	collision_polygon.position = Vector2.ZERO
 	collision_polygon.rotation = 0.0
 	collision_polygon.scale = Vector2.ONE
-	collision_polygon.polygon = geometry.collision_polygon.duplicate()
+	collision_polygon.polygon = (geometry.get("collision_polygon") as PackedVector2Array).duplicate()
 	collision_polygon.visible = false
 
 	var body_hitbox := actor.get_node_or_null("BodyHitbox") as Polygon2D
@@ -172,7 +197,7 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 	body_hitbox.position = Vector2.ZERO
 	body_hitbox.rotation = 0.0
 	body_hitbox.scale = Vector2.ONE
-	body_hitbox.polygon = geometry.body_hitbox_polygon.duplicate()
+	body_hitbox.polygon = (geometry.get("body_hitbox_polygon") as PackedVector2Array).duplicate()
 	body_hitbox.visible = false
 
 	for guide_name: StringName in [&"AttackGuideL", &"AttackGuideR"]:
@@ -184,7 +209,7 @@ static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> vo
 		attack_guide.position = Vector2.ZERO
 		attack_guide.rotation = 0.0
 		attack_guide.scale = Vector2.ONE
-		var rect: Rect2 = geometry.attack_guide_left_rect if guide_name == &"AttackGuideL" else geometry.attack_guide_right_rect
+		var rect: Rect2 = geometry.get("attack_guide_left_rect") if guide_name == &"AttackGuideL" else geometry.get("attack_guide_right_rect")
 		attack_guide.set("rect_position", rect.position)
 		attack_guide.set("rect_size", rect.size)
 		attack_guide.set("draw_in_game", false)
