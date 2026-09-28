@@ -332,3 +332,14 @@ Aligned 0.3.19 across the in-game title and release documentation, preserved
 the web Compatibility renderer override, and prepared the gameplay/status and
 gear changes for release. Local MCP configuration and timed-floor planning
 changes remain outside the release. No Godot runtime or suite was launched.
+
+## 2026-09-28T22:51Z — codex — claim
+Composition audit after 0.3.19 regressed root dynamic access by 26 sites and
+GameplayState by 20 lines. Replace status-slice reflection with typed access
+and move status-marker presentation fully into HudController.
+
+## 2026-09-28T22:53Z — codex — done
+Removed all 26 root dynamic accesses added by the status slice, routed status
+ticks directly through the typed combat controller, and returned GameplayState
+to 1,717 lines. The regression-floor and strict composition audits pass.
+MCP script checks were disconnected; no Godot process was launched.

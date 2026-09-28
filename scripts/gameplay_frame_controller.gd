@@ -90,7 +90,7 @@ func animation_context(root: GameplayState) -> PlayerAnimationContext:
 	context.player_equipment_visual_component = root.player_equipment_visual_component
 	context.player_tuning = root.player_tuning
 	context.attack_frame_size = root.PLAYER_ATTACK_FRAME_SIZE
-	context.player_dead_get = func() -> Variant: return root.get("player_dead")
+	context.player_dead_get = func() -> Variant: return root.player_dead
 	context.current_player_palette_name_get = func() -> Variant: return root.get("current_player_palette_name")
 	context.player_anim_name_get = func() -> Variant: return root.get("player_anim_name")
 	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
@@ -649,7 +649,9 @@ func tick(root: GameplayState, delta: float) -> void:
 	var hitstop: float = root.hitstop_timer
 	if hitstop > 0.0: root.hitstop_timer = maxf(hitstop - delta, 0.0); return
 	if root.player != null:
-		root.call("_tick_actor_statuses", root.player, delta, true)
+		var combat_runtime := root.combat_runtime_controller as CombatRuntimeController
+		if combat_runtime != null:
+			combat_runtime.tick_actor_statuses(root, root.player, delta, true)
 	if root.player_death_pending and not root.player_dead:
 		if root.player_motor != null: root.player_motor.update_player_hit_reaction(root, delta)
 		root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root))

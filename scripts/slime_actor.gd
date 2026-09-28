@@ -290,10 +290,12 @@ static func apply_attack_hit(root: Object, slime: Sprite2D, ranged_hit: bool = f
 		damage = float(guard_result["health_damage"])
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null: health.apply_damage(damage)
+	var state := root as GameplayState
 	if damage > 0.0 and damage_result != null:
-		root.call("_try_apply_status", player, damage_result.element, damage_result.effectiveness)
+		var combat_runtime := state.combat_runtime_controller as CombatRuntimeController if state != null else null
+		if combat_runtime != null:
+			combat_runtime.try_apply_status(state, player, damage_result.element, damage_result.effectiveness)
 	if blocked or damage > 0.0:
-		var state := root as GameplayState
 		if state != null:
 			var impact_position := state._actor_foot(player)
 			if blocked:

@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Prepare version 0.3.19 with current status, gear reward, and Fusion changes; runtime acceptance remains open
+**Focus:** Composition floor restored after 0.3.19 status integration; prepare the 0.3.20 correction release
 **Updated:** 2026-09-28
 
 ## In flight
@@ -128,8 +128,16 @@ Focused offline MCP script diagnostics pass. Visual alignment, readability,
 death/cloak behavior, and the uncaptured magenta artifact remain open for a
 color playtest. Do not launch a Godot process in this session.
 
-Version metadata is aligned at 0.3.19 for the in-game title, web README, and
+Version metadata is aligned at 0.3.20 for the in-game title, web README, and
 release references. The web Compatibility renderer override is retained. The
 release excludes the local `.mcp.json` configuration and timed-floor design
 edits. Focused diagnostics were already run for the source changes; no runtime
 or test suite was run for this release.
+
+The post-release composition failure came from 26 new dynamic root accesses in
+status integration and a 20-line `GameplayState` growth. Status paths now use
+typed runtime access, the two status forwarding wrappers are removed, and
+player status marks update through `HudController`. Both regression-floor and
+strict composition audits pass: 2,202 root accesses and 1,717 `GameplayState`
+lines / 286 fields. MCP script checks were unavailable (`DISCONNECTED`); no
+Godot process was launched due the recorded session restriction.

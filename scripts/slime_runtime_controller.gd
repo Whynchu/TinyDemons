@@ -239,6 +239,8 @@ func move_slimes(root: Object, delta: float) -> void:
 	var count := slimes.size()
 	var cursor := _slime_movement_cursor
 	var last_movement_index := -1
+	var gameplay := root as GameplayState
+	var combat_runtime := gameplay.combat_runtime_controller as CombatRuntimeController if gameplay != null else null
 	for offset in count:
 		var index := (cursor + offset) % count
 		var slime := slimes[index]
@@ -253,9 +255,10 @@ func move_slimes(root: Object, delta: float) -> void:
 		var slime_actor := slime as SlimeActor
 		if slime_actor != null:
 			slime_actor.tick_components(delta)
-			root.call("_tick_actor_statuses", slime_actor, delta, false)
+			if combat_runtime != null:
+				combat_runtime.tick_actor_statuses(gameplay, slime_actor, delta, false)
 			if slime_actor is SkeletonActor:
-				_tick_skeleton_notice_presentation(root as GameplayState, slime_actor)
+				_tick_skeleton_notice_presentation(gameplay, slime_actor)
 			slime_actor.tick_runtime(delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
 			continue
 		SlimeActor.tick_legacy_runtime(slime, delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)

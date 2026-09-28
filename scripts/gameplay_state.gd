@@ -994,7 +994,6 @@ func _update_roll_dust(delta: float) -> void: effects_spawner.update_roll_dust(d
 func _clear_roll_dust() -> void: effects_spawner.clear_roll_dust()
 func _damage_slime(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false, effectiveness: float = -1.0) -> void: combat_runtime_controller.call("damage_slime", self, slime, amount, was_critical, attack_element, immune, effectiveness)
 func _damage_slime_with_number(slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = 0, immune: bool = false, effectiveness: float = -1.0) -> void: combat_runtime_controller.call("damage_slime_with_number", self, slime, amount, was_critical, show_damage_number, attack_element, immune, effectiveness)
-func _try_apply_status(target: Node, element: int, effectiveness: float) -> bool: return bool(combat_runtime_controller.call("try_apply_status", self, target, element, effectiveness))
 func _player_attack_damage_result_against(slime: Sprite2D, attack_element: int = 0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_attack_damage_result_against", self, slime, attack_element) as CombatCalculator.DamageResult
 func _player_magic_damage_result_against(slime: Sprite2D, attack_element: int, magic_base_bonus: float = 0.0) -> CombatCalculator.DamageResult: return combat_runtime_controller.call("player_magic_damage_result_against", self, slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
 func _combat_momentum() -> CombatMomentumComponent: return combat_runtime_controller.call("combat_momentum", self) as CombatMomentumComponent
@@ -1561,7 +1560,6 @@ func _reset_slime_scoot(slime: Sprite2D) -> void: combat_runtime_controller.call
 func _show_slime_hit_flash(slime: Sprite2D) -> void: combat_runtime_controller.call("show_slime_hit_flash", self, slime)
 func _update_enemy_hit_flashes(delta: float) -> void: combat_runtime_controller.call("update_enemy_hit_flashes", self, delta)
 func _update_enemy_health(delta: float) -> void: combat_runtime_controller.call("update_enemy_health", self, delta)
-func _tick_actor_statuses(actor: Sprite2D, delta: float, is_player: bool = false) -> void: combat_runtime_controller.call("tick_actor_statuses", self, actor, delta, is_player)
 func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_damage_number", self, slime, amount, was_critical, attack_element, immune)
 func _spawn_player_number(text: String, value: int, color: Color, is_healing: bool, display_text: String) -> void: combat_runtime_controller.call("spawn_player_number", self, text, value, color, is_healing, display_text)
 func _spawn_player_damage_number(amount: float, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_player_damage_number", self, amount, attack_element, immune)
@@ -1663,26 +1661,7 @@ func _update_focus_indicator(delta: float = 0.0) -> void:
 	targeting_runtime_controller.call("update_focus_indicator", self, delta)
 func _slime_display_name(slime: Sprite2D) -> String:
 	return str(targeting_runtime_controller.call("slime_display_name", self, slime))
-func _update_player_health_ui(delta: float = 0.0) -> void:
-	var status_component := player.get_node_or_null("Status") as StatusComponent if player != null else null
-	var result: Dictionary = hud_controller.update_player_health_ui(
-		player_health_component.current_health if player_health_component != null else 0.0,
-		player_display_health,
-		player_damage_fill_hold_timer,
-		delta,
-		slime_tuning.health_regen_fill_speed,
-		slime_tuning.health_drain_fill_speed,
-		_player_max_health(),
-		player_health_fill,
-		player_health_damage_fill,
-		player_health_fill_size,
-		player_health_text,
-		Callable(self, "_pixel_text_texture"),
-		Callable(hud_controller, "set_health_bar_values")
-	)
-	hud_controller.update_player_status_marks(player_health_fill, status_component, Callable(self, "_pixel_text_texture"))
-	player_display_health = result["display_health"]
-	player_damage_fill_hold_timer = result["damage_hold"]
+func _update_player_health_ui(delta: float = 0.0) -> void: var status_component := player.get_node_or_null("Status") as StatusComponent if player != null else null; var result: Dictionary = hud_controller.update_player_health_ui(player_health_component.current_health if player_health_component != null else 0.0, player_display_health, player_damage_fill_hold_timer, delta, slime_tuning.health_regen_fill_speed, slime_tuning.health_drain_fill_speed, _player_max_health(), player_health_fill, player_health_damage_fill, player_health_fill_size, player_health_text, Callable(self, "_pixel_text_texture"), Callable(hud_controller, "set_health_bar_values"), status_component); player_display_health = result["display_health"]; player_damage_fill_hold_timer = result["damage_hold"]
 func _magic_context() -> MagicRuntimeContext: return gameplay_frame_controller.magic_context(self) if gameplay_frame_controller != null else MagicRuntimeContext.new()
 func _update_player_mp_ui(delta: float = 0.0) -> void: magic_runtime_controller.update_player_mp_ui(_magic_context(), delta)
 func _current_player_chroma() -> float: return magic_runtime_controller.current_player_chroma(_magic_context())
